@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -102,7 +103,8 @@ func TestListReadsEachRoot(t *testing.T) {
 	if !got.ReadsShared || got.NoSwitch != "" {
 		t.Errorf("reads shared %v, no switch %q", got.ReadsShared, got.NoSwitch)
 	}
-	shared := Codex{}.Shared(context.Background(), deeper)
+	all, _ := Codex{}.List(context.Background(), deeper)
+	shared := slices.DeleteFunc(all.Skills, func(s model.Skill) bool { return s.Source != "shared" })
 	if len(shared) != 4 {
 		t.Errorf("shared: %s", listed(shared))
 	}

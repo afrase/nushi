@@ -34,6 +34,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pig"
@@ -57,7 +58,7 @@ func roots(folder string) []root {
 	if !skillfile.Linked(folder, ".pig/skills") {
 		out = append(out, root{path: filepath.Join(folder, ".pig", "skills"), source: "project", project: true})
 	}
-	top := skillfile.Top(realPath(folder))
+	top := skillfile.Top(git.RealPath(folder))
 	for _, r := range skillfile.Roots(folder, walkTop(folder, top), ".agents/skills") {
 		if filepath.Dir(filepath.Dir(r)) != home { // your own, read as yours below
 			out = append(out, root{path: r, source: "shared", project: true})
@@ -75,20 +76,13 @@ func walkTop(folder, top string) string {
 		return ""
 	}
 	for dir := folder; ; dir = filepath.Dir(dir) {
-		if realPath(dir) == top {
+		if git.RealPath(dir) == top {
 			return dir
 		}
 		if dir == filepath.Dir(dir) {
 			return ""
 		}
 	}
-}
-
-func realPath(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil {
-		return r
-	}
-	return p
 }
 
 // settings is the part of a PiG settings file read here.
@@ -125,7 +119,7 @@ func trusted(folder string, user settings) bool {
 	if b, err := jsonsettings.ReadFile(filepath.Join(pig.AgentDir(), "trust.json")); err == nil {
 		_ = json.Unmarshal(b, &decisions) // unreadable: no decisions
 	}
-	for dir := realPath(folder); ; dir = filepath.Dir(dir) {
+	for dir := git.RealPath(folder); ; dir = filepath.Dir(dir) {
 		if v, ok := decisions[dir]; ok {
 			return v
 		}
@@ -197,23 +191,15 @@ func (PiG) List(_ context.Context, folder string) (model.Skills, error) {
 	return out, nil
 }
 
-// Shared returns the shared skills PiG loads in folder (or would, once
-// trusted).
-func (p PiG) Shared(ctx context.Context, folder string) []model.Skill {
-	l, _ := p.List(ctx, folder)
-	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
-}
-
 // SetSkillOn turns a skill off with a "-<folder>" entry in its scope's
 // settings file, or on by dropping it. Refused for a project's skill PiG
 // doesn't load (the folder isn't trusted), and where a "!" entry decides.
 func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
 	l, _ := p.List(ctx, folder)
-	i := slices.IndexFunc(l.Skills, func(s model.Skill) bool { return s.Source == source && s.Name == name })
-	if i < 0 {
+	s, ok := l.Find(source, name)
+	if !ok {
 		return fmt.Errorf("PiG has no %s skill %q here", source, name)
 	}
-	s := l.Skills[i]
 	switch {
 	case s.State == "untrusted":
 		return errors.New("PiG loads this folder's skills only once you trust it (/trust in pig)")

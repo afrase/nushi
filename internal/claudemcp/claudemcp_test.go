@@ -148,3 +148,46 @@ func TestSetOnRefusesSymlinks(t *testing.T) {
 		}
 	}
 }
+
+// In a worktree Claude reads the main checkout's local settings, then the
+// worktree's own local settings and settings.json, then yours; not the
+// main checkout's settings.json (docs/facts/claude.md). A real worktree.
+func TestSettingsFilesInAWorktree(t *testing.T) {
+	cfg := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
+	base, _ := filepath.EvalSymlinks(t.TempDir())
+	main, wt := filepath.Join(base, "main"), filepath.Join(base, "wt")
+	testcheck.Write(t, filepath.Join(main, ".mcp.json"), `{"mcpServers":{"a":{"command":"a"},"b":{"command":"b"},"c":{"command":"c"},"d":{"command":"d"}}}`)
+	testcheck.Git(t, main, "init", "-q")
+	testcheck.Git(t, main, "add", ".mcp.json")
+	testcheck.Git(t, main, "commit", "-qm", "servers")
+	testcheck.Git(t, main, "worktree", "add", "-q", wt)
+	if got := Project(wt); got != main {
+		t.Fatalf("a worktree's project is %s, want the main checkout %s", got, main)
+	}
+	want := []string{filepath.Join(main, ".claude", "settings.local.json"), filepath.Join(wt, ".claude", "settings.local.json"),
+		filepath.Join(wt, ".claude", "settings.json"), filepath.Join(cfg, "settings.json")}
+	if got := SettingsFiles(wt, main); strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("a worktree's settings files:\n%q\nwant\n%q", got, want)
+	}
+	if got := SettingsFiles(main, main); len(got) != 3 {
+		t.Errorf("the main checkout's settings files: %q", got)
+	}
+
+	testcheck.Write(t, filepath.Join(main, ".claude", "settings.local.json"), `{"disabledMcpjsonServers":["a"]}`)
+	testcheck.Write(t, filepath.Join(main, ".claude", "settings.json"), `{"disabledMcpjsonServers":["b"]}`) // not read in the worktree
+	testcheck.Write(t, filepath.Join(wt, ".claude", "settings.local.json"), `{"disabledMcpjsonServers":["c"]}`)
+	testcheck.Write(t, filepath.Join(wt, ".claude", "settings.json"), `{"disabledMcpjsonServers":["d"]}`)
+	servers, err := Claude{}.Servers(wt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, s := range servers {
+		got = append(got, s.Name+" "+map[bool]string{true: "off", false: "on"}[s.Off]+" "+s.OffBy)
+	}
+	want = []string{"a off ", "b on ", "c off " + filepath.Join(wt, ".claude", "settings.local.json"), "d off " + filepath.Join(wt, ".claude", "settings.json")}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("the worktree's servers:\n%q\nwant\n%q", got, want)
+	}
+}

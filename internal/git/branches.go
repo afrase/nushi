@@ -53,9 +53,9 @@ func (Worktrees) List(ctx context.Context, folder string) ([]model.WorktreeEntry
 // deepest that holds it (a worktree inside the repository's folder is
 // its own checkout), or -1.
 func checkout(list []model.WorktreeEntry, folder string) int {
-	here, at := realPath(folder), -1
+	here, at := RealPath(folder), -1
 	for i, e := range list {
-		if within(here, realPath(e.Path)) && (at < 0 || len(e.Path) > len(list[at].Path)) {
+		if within(here, RealPath(e.Path)) && (at < 0 || len(e.Path) > len(list[at].Path)) {
 			at = i
 		}
 	}
@@ -89,7 +89,7 @@ func (w Worktrees) Found(ctx context.Context, folder string) *model.Worktree {
 	}
 	e := list[i]
 	path := e.Path // git's, links resolved; the folder's spelling if it has the same end
-	if rel, err := filepath.Rel(e.Path, realPath(folder)); err == nil {
+	if rel, err := filepath.Rel(e.Path, RealPath(folder)); err == nil {
 		top := filepath.Clean(folder)
 		if rel == "." {
 			path = top

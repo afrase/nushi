@@ -180,13 +180,13 @@ func (Worktrees) BranchUse(ctx context.Context, wt model.Worktree) (model.Branch
 	if err != nil {
 		return u, err
 	}
-	here := realPath(wt.Path)
+	here := RealPath(wt.Path)
 	var path string
 	for _, field := range split(out) { // entries end with an empty field
 		if p, ok := strings.CutPrefix(field, "worktree "); ok {
 			path = p
 		} else if field == "branch refs/heads/"+wt.Branch {
-			on := realPath(path) == here
+			on := RealPath(path) == here
 			u.OnIt, u.Elsewhere = u.OnIt || on, u.Elsewhere || !on
 		}
 	}
@@ -209,15 +209,6 @@ func remoteHas(ctx context.Context, repo, branch string) (bool, error) {
 		}
 	}
 	return false, err
-}
-
-// realPath is path with its links resolved, as git reports worktrees; path
-// itself when it can't be (a folder that's gone).
-func realPath(path string) string {
-	if p, err := filepath.EvalSymlinks(path); err == nil {
-		return p
-	}
-	return filepath.Clean(path)
 }
 
 // RenameBranch gives a worktree's branch the name to (git branch -m), which

@@ -15,25 +15,31 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 )
 
 // Reader is one agent's skills.
 type Reader interface {
 	// List is the agent's skills in folder, the shared ones it loads
-	// among them (Source "shared").
+	// among them (Source "shared"; or would load once the folder is
+	// trusted: State "untrusted"), each with its state for the agent.
 	List(ctx context.Context, folder string) (model.Skills, error)
-	// Shared is the shared skills the agent loads in folder (or would,
-	// once the folder is trusted: State "untrusted"), each with its state
-	// for the agent. One it loads through a link of its own (Claude's
-	// .claude/skills/<name>) names the link as its one Agents entry's Via.
-	Shared(ctx context.Context, folder string) []model.Skill
 	// SetSkillOn turns one of its skills on or off, found by its source
 	// and name among those it lists for folder.
 	SetSkillOn(ctx context.Context, folder, source, name string, on bool) error
 	// Trash moves one of its own skills' folders to the Trash (shared
 	// ones go through Service.Trash).
 	Trash(ctx context.Context, folder, path string) error
+}
+
+// SharedReader is an agent that loads shared skills it doesn't list as
+// shared (Claude, through links of its own until it reads .agents/skills).
+// Shared is those skills in folder, each with its state for the agent and
+// the link as its one Agents entry's Via. For any other agent the shared
+// skills are those its List gives.
+type SharedReader interface {
+	Shared(ctx context.Context, folder string) []model.Skill
 }
 
 // Plugins is an agent's plugins (Claude's).
@@ -103,7 +109,7 @@ func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills,
 	if err != nil {
 		return out, err
 	}
-	shared := s.shared(ctx, folder)
+	shared := s.shared(ctx, folder, map[string]model.Skills{cmp.Or(agent, "claude"): out})
 	vias := map[string]bool{}
 	for _, sk := range shared {
 		for _, a := range sk.Agents {
@@ -117,12 +123,13 @@ func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills,
 
 // shared is every shared skill some agent loads in folder, by path (its
 // root's links resolved: agents spell the folder differently), with the
-// agents that load it, in the agents' order.
-func (s *Service) shared(ctx context.Context, folder string) []model.Skill {
+// agents that load it, in the agents' order. lists are agents' lists
+// already read.
+func (s *Service) shared(ctx context.Context, folder string, lists map[string]model.Skills) []model.Skill {
 	var out []model.Skill
 	for _, name := range s.order {
-		for _, sk := range s.readers[name].Shared(ctx, folder) {
-			sk.Path = filepath.Join(realPath(filepath.Dir(sk.Path)), filepath.Base(sk.Path))
+		for _, sk := range s.sharedOf(ctx, name, folder, lists) {
+			sk.Path = filepath.Join(git.RealPath(filepath.Dir(sk.Path)), filepath.Base(sk.Path))
 			i := slices.IndexFunc(out, func(o model.Skill) bool { return o.Path == sk.Path })
 			if i < 0 {
 				i = len(out)
@@ -147,11 +154,25 @@ func (s *Service) shared(ctx context.Context, folder string) []model.Skill {
 	return out
 }
 
-func realPath(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil {
-		return r
+// sharedOf is the shared skills agent name loads in folder: its
+// SharedReader's, else the shared ones its list has (from lists when read
+// already; what a list that fails gives still counts).
+func (s *Service) sharedOf(ctx context.Context, name, folder string, lists map[string]model.Skills) []model.Skill {
+	r := s.readers[name]
+	if sr, ok := r.(SharedReader); ok {
+		return sr.Shared(ctx, folder)
 	}
-	return p
+	l, ok := lists[name]
+	if !ok {
+		l, _ = r.List(ctx, folder)
+	}
+	var out []model.Skill
+	for _, sk := range l.Skills {
+		if sk.Source == "shared" {
+			out = append(out, sk)
+		}
+	}
+	return out
 }
 
 // The changes run to the end once begun, even if the app goes: a CLI
@@ -233,7 +254,7 @@ func (s *Service) Trash(ctx context.Context, agent, folder, path string) error {
 	if err := absolute(folder); err != nil {
 		return err
 	}
-	shared := s.shared(ctx, folder)
+	shared := s.shared(ctx, folder, nil)
 	i := slices.IndexFunc(shared, func(sk model.Skill) bool { return sk.Path == path })
 	if i < 0 {
 		r, err := s.reader(agent)
@@ -270,7 +291,7 @@ func (s *Service) Link(ctx context.Context, agent, folder, path string) error {
 	if !ok {
 		return fmt.Errorf("Nushi doesn't link skills for %s", agent)
 	}
-	if !slices.ContainsFunc(s.shared(ctx, folder), func(sk model.Skill) bool { return sk.Path == path }) {
+	if !slices.ContainsFunc(s.shared(ctx, folder, nil), func(sk model.Skill) bool { return sk.Path == path }) {
 		return fmt.Errorf("%s isn't a shared skill here", path)
 	}
 	return l.Link(ctx, folder, path)

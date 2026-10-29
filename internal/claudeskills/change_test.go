@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/skillfile"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -134,7 +135,7 @@ func TestPluginsThroughTheCLI(t *testing.T) {
 		{"id":"other@mk","scope":"local","enabled":true,"projectPath":"/elsewhere","installPath":"`+plugin+`"}]`)
 	ctx := context.Background()
 	testcheck.Write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"enabledPlugins":{"team@mk":true}}`)
-	got, err := listPlugins(ctx, top)
+	got, err := listPlugins(ctx, top, claudemcp.Project(top))
 	if err != nil || len(got) != 2 || got[0].ID != "demo@mk" || !got[0].Enabled || got[1].ID != "team@mk" || !got[1].Enabled {
 		t.Fatalf("listed %+v, %v", got, err)
 	}
@@ -171,7 +172,7 @@ func TestPluginsThroughTheCLI(t *testing.T) {
 		}
 	}
 	t.Setenv("FAKE_EXIT", "1")
-	if _, err := listPlugins(ctx, top); err == nil {
+	if _, err := listPlugins(ctx, top, claudemcp.Project(top)); err == nil {
 		t.Error("a failed list: no error")
 	}
 }

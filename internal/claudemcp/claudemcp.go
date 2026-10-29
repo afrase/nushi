@@ -4,7 +4,7 @@
 //   - user scope: "mcpServers" in ~/.claude.json ($CLAUDE_CONFIG_DIR/.claude.json);
 //   - local scope: "projects"[<project>]."mcpServers" in the same file, where
 //     the project is the folder's repository (its main checkout, for a
-//     worktree), or the folder itself outside git;
+//     worktree), or the folder itself outside git (Project);
 //   - project scope: .mcp.json in the folder or any folder above it, the
 //     nearest winning; one that can't be read is left out, as Claude does;
 //   - plugins' servers and claude.ai connectors: only what `claude mcp list`
@@ -21,9 +21,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
 	"time"
 
+	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
@@ -32,34 +33,15 @@ import (
 // Claude reads Claude Code's MCP config.
 type Claude struct{}
 
-// ConfigFile is Claude's own config file, which holds user and local
-// servers.
-func ConfigFile() string {
-	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
-		return filepath.Join(dir, ".claude.json")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".claude.json")
-}
-
-// project is the folder Claude files a folder's local servers under: its
-// repository's main checkout, or the folder outside git (real paths).
-// git gets 5 s.
+// Project is the folder Claude files folder's local servers and settings
+// under, and keys its trust on: its repository's main checkout, or the
+// folder itself outside git (a real path; git.TrustRoot, as the trust
+// card has it). Work it out once a call: it reads the repository's files.
 //
-//nolint:contextcheck // a quick git rev-parse, also for callers with no request (the MCP list's scopes)
-func project(folder string) string {
-	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = resolved
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir") //nolint:gosec // git rev-parse in the folder asked about
-	procgroup.Bound(cmd)
-	out, err := cmd.Output()
-	if common := strings.TrimSpace(string(out)); err == nil && filepath.Base(common) == ".git" {
-		return filepath.Dir(common)
-	}
-	return folder
+//nolint:contextcheck // TrustRoot's one quick git config, bounded by its own 5 s; also for callers with no request (the MCP list's scopes)
+func Project(folder string) string {
+	_, key := git.TrustRoot(git.RealPath(folder))
+	return key
 }
 
 type servers map[string]json.RawMessage
@@ -91,17 +73,17 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 			TurnedOff  names   `json:"disabledMcpServers"` // by /mcp (or Toggle)
 		} `json:"projects"`
 	}
-	file := ConfigFile()
+	file := claude.ConfigFile()
 	if err := readJSON(file, &cfg); err != nil {
 		return nil, nil, err
 	}
 	out = add(nil, cfg.MCPServers, "user", file)
-	key := project(folder)
+	key := Project(folder)
 	out = add(out, cfg.Projects[key].MCPServers, "local", key)
 	for i := range out {
 		out[i].Off = slices.Contains(cfg.Projects[key].TurnedOff, out[i].Name)
 	}
-	off, approved := rejected(folder, cfg.Projects[key].Disabled)
+	off, approved := rejected(folder, key, cfg.Projects[key].Disabled)
 	seen := map[string]bool{}
 	for dir := folder; ; dir = filepath.Dir(dir) {
 		path := filepath.Join(dir, ".mcp.json")
@@ -120,7 +102,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 		start := len(out)
 		out = add(out, mcp.MCPServers, "project", path)
 		for i := start; i < len(out); i++ {
-			out[i].Off, out[i].OffBy = offBy(off[out[i].Name], localSettings(folder))
+			out[i].Off, out[i].OffBy = offBy(off[out[i].Name], localSettings(key))
 			out[i].Approved = slices.Contains(approved, out[i].Name)
 		}
 		if dir == filepath.Dir(dir) {

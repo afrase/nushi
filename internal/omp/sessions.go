@@ -12,13 +12,18 @@ import (
 	"github.com/afrase/nushi/internal/filelock"
 )
 
+// AgentDir is omp's agent folder (config, skills, sessions):
+// $PI_CODING_AGENT_DIR, else ~/.omp/agent.
+func AgentDir() string {
+	home, _ := os.UserHomeDir()
+	return cmp.Or(os.Getenv("PI_CODING_AGENT_DIR"), filepath.Join(home, ".omp", "agent"))
+}
+
 // Forked says which of sessions ids are forks of another session: the
 // session record near a session file's start names parentSession. Files
-// are <agent dir>/sessions/<folder>/<time>_<id>.jsonl, the agent dir being
-// $PI_CODING_AGENT_DIR or ~/.omp/agent.
+// are <agent dir>/sessions/<folder>/<time>_<id>.jsonl (AgentDir).
 func Forked(ids []string) map[string]bool {
-	home, _ := os.UserHomeDir()
-	return forked(filepath.Join(cmp.Or(os.Getenv("PI_CODING_AGENT_DIR"), filepath.Join(home, ".omp", "agent")), "sessions"), ids)
+	return forked(filepath.Join(AgentDir(), "sessions"), ids)
 }
 
 func forked(sessions string, ids []string) map[string]bool {

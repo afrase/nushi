@@ -145,22 +145,16 @@ func (Ante) List(_ context.Context, folder string) (model.Skills, error) {
 	return out, nil
 }
 
-// Shared returns the shared skills Ante loads in folder.
-func (a Ante) Shared(ctx context.Context, folder string) []model.Skill {
-	l, _ := a.List(ctx, folder)
-	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
-}
-
 // SetSkillOn turns a skill off by its name in your settings'
 // exclude_skills (every skill of the name, everywhere), or on by taking
 // it out; refused where a project's file or skills: false decides.
 func (a Ante) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
 	l, _ := a.List(ctx, folder)
-	i := slices.IndexFunc(l.Skills, func(s model.Skill) bool { return s.Source == source && s.Name == name })
-	if i < 0 {
+	s, ok := l.Find(source, name)
+	if !ok {
 		return fmt.Errorf("Ante has no %s skill %q here", source, name)
 	}
-	if set := l.Skills[i].SetIn; set != "" {
+	if set := s.SetIn; set != "" {
 		return fmt.Errorf("it's off in %s; change it there", set)
 	}
 	return ante.EditSettings(func(m map[string]json.RawMessage) error {

@@ -7,7 +7,6 @@ package claudehistory
 
 import (
 	"bytes"
-	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -19,16 +18,16 @@ import (
 	"unicode/utf16"
 
 	"github.com/afrase/nushi/internal/atomicfile"
+	"github.com/afrase/nushi/internal/claude"
 )
 
-// Projects returns Claude's projects folder: $CLAUDE_CONFIG_DIR/projects,
-// or ~/.claude/projects.
+// Projects returns Claude's projects folder, in its config folder
+// (claude.ConfigDir); an error when there's no home folder.
 func Projects() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	if _, err := os.UserHomeDir(); err != nil {
 		return "", err
 	}
-	return filepath.Join(cmp.Or(os.Getenv("CLAUDE_CONFIG_DIR"), filepath.Join(home, ".claude")), "projects"), nil
+	return filepath.Join(claude.ConfigDir(), "projects"), nil
 }
 
 // Copy copies session id's transcript (<id>.jsonl) from folder from's

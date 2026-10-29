@@ -13,6 +13,13 @@ import (
 	"github.com/afrase/nushi/internal/filelock"
 )
 
+// Home is Codex's own folder (config, login, sessions): $CODEX_HOME, else
+// ~/.codex.
+func Home() string {
+	home, _ := os.UserHomeDir()
+	return cmp.Or(os.Getenv("CODEX_HOME"), filepath.Join(home, ".codex"))
+}
+
 // OpenElsewhere says which of sessions ids a Codex holds open: Codex lets
 // one app at a time write to a thread, holding a lock on
 // $CODEX_HOME/thread-writer-locks/<id>.lock while it has the thread; a
@@ -20,8 +27,7 @@ import (
 // session/load: "in use by another Codex client"). The lock is looked at
 // (F_GETLK), never taken.
 func OpenElsewhere(ids []string) map[string]string {
-	home, _ := os.UserHomeDir()
-	return held(filepath.Join(cmp.Or(os.Getenv("CODEX_HOME"), filepath.Join(home, ".codex")), "thread-writer-locks"), ids)
+	return held(filepath.Join(Home(), "thread-writer-locks"), ids)
 }
 
 var threadID = regexp.MustCompile(`^[0-9A-Za-z-]+$`)
@@ -40,8 +46,7 @@ func held(dir string, ids []string) map[string]string {
 // rollout's first record (session_meta) names forked_from_id. Rollouts are
 // $CODEX_HOME/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl.
 func Forked(ids []string) map[string]bool {
-	home, _ := os.UserHomeDir()
-	return forked(filepath.Join(cmp.Or(os.Getenv("CODEX_HOME"), filepath.Join(home, ".codex")), "sessions"), ids)
+	return forked(filepath.Join(Home(), "sessions"), ids)
 }
 
 func forked(sessions string, ids []string) map[string]bool {
@@ -50,7 +55,7 @@ func forked(sessions string, ids []string) map[string]bool {
 		want[id] = true
 	}
 	out := map[string]bool{}
-	_ = filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error { //nolint:gosec // Codex's own sessions folder
+	_ = filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error {
 		if err != nil { // d is nil when sessions can't be read
 			return nil //nolint:nilerr // what can't be read is skipped; the walk goes on
 		}

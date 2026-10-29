@@ -17,6 +17,7 @@ import (
 
 	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/jsonsettings"
+	"github.com/afrase/nushi/internal/omp"
 )
 
 // omp's settings are YAML: your <agent dir>/config.yml, and the
@@ -25,7 +26,7 @@ import (
 // as it read it (comments and layout included): anything else is refused
 // with "change it in config.yml".
 
-func userConfig() string { return filepath.Join(agentDir(), "config.yml") }
+func userConfig() string { return filepath.Join(omp.AgentDir(), "config.yml") }
 
 // config is your settings and the project's.
 type config struct {

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/skillfile"
 )
@@ -32,8 +33,13 @@ func sharedRoots(folder string) (project []string, yours string) {
 // folder of yours or the project's links to, each named as the link is,
 // on or off as that skill is, the link as its one agent's Via.
 func (c Claude) Shared(ctx context.Context, folder string) []model.Skill {
+	return c.shared(ctx, folder, claudemcp.Project(folder))
+}
+
+// shared is Shared, for folder whose project is key.
+func (c Claude) shared(ctx context.Context, folder, key string) []model.Skill {
 	project, yours := sharedRoots(folder)
-	l, err := c.list(ctx, folder, false)
+	l, err := c.list(ctx, folder, key, false)
 	if err != nil {
 		return nil
 	}

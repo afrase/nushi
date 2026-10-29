@@ -29,6 +29,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
@@ -58,7 +59,7 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 			Accepted bool `json:"hasTrustDialogAccepted"`
 		} `json:"projects"`
 	}
-	b, err := jsonsettings.ReadFile(claudemcp.ConfigFile())
+	b, err := jsonsettings.ReadFile(claude.ConfigFile())
 	if err == nil {
 		err = json.Unmarshal(b, &cfg)
 	}

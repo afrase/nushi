@@ -71,7 +71,12 @@ func TestListReadsEachSource(t *testing.T) {
 	testcheck.Write(t, filepath.Join(top, ".claude", "skills", "empty", "README.md"), "no SKILL.md")
 	testcheck.Write(t, filepath.Join(cfg, "settings.json"), `{"skillOverrides":{"quiet":"off","projskill":"on","noname":"off"},"other":1}`)
 	testcheck.Write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"skillOverrides":{"projskill":"off","quiet":"name-only"}}`)
-	testcheck.Write(t, filepath.Join(top, ".claude", "settings.json"), `{"skillOverrides":"not a map","disableBundledSkills":true}`)
+	// In a subfolder Claude reads its own settings files, and the
+	// repository's local ones, not the repository's settings.json
+	// (docs/facts/claude.md).
+	testcheck.Write(t, filepath.Join(deeper, ".claude", "settings.json"), `{"skillOverrides":"not a map","disableBundledSkills":true}`)
+	testcheck.Write(t, filepath.Join(deeper, ".claude", "settings.local.json"), `{"skillOverrides":{"dup":"name-only"}}`)
+	testcheck.Write(t, filepath.Join(top, ".claude", "settings.json"), `{"skillOverrides":{"mine":"off"},"disableBundledSkills":false}`)
 
 	plugin := t.TempDir()
 	skill(t, filepath.Join(plugin, "skills"), "hello", "---\ndescription: Says hello when the user greets. Use for greetings.\n---\n")
@@ -90,7 +95,7 @@ func TestListReadsEachSource(t *testing.T) {
 	}
 	want := []string{
 		"user mine on 18", "user quiet name-only 5",
-		"project dup on 2", "project manual user-invocable-only 6", "project noname off 9", "project projskill off 13",
+		"project dup name-only 2", "project manual user-invocable-only 6", "project noname off 9", "project projskill off 13",
 		"plugin demo:hello off 20", "plugin demo:more off 11",
 	}
 	if g := names(got.Skills); strings.Join(g, "|") != strings.Join(want, "|") {
@@ -119,7 +124,7 @@ func TestListReadsEachSource(t *testing.T) {
 		Scope: "user", Path: plugin, Skills: 2, Commands: 1, Agents: 2, MCPServers: 1}) {
 		t.Errorf("plugins: %+v", got.Plugins)
 	}
-	if !got.BuiltInOff || got.BuiltInSetIn != filepath.Join(top, ".claude", "settings.json") {
+	if !got.BuiltInOff || got.BuiltInSetIn != filepath.Join(deeper, ".claude", "settings.json") {
 		t.Errorf("built in: %v %q", got.BuiltInOff, got.BuiltInSetIn)
 	}
 }

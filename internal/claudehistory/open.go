@@ -1,7 +1,6 @@
 package claudehistory
 
 import (
-	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/afrase/nushi/internal/claude"
 )
 
 // Open returns the sessions a running Claude Code holds open (any, not
@@ -24,11 +25,10 @@ import (
 // says, so a pid used again doesn't count; a record without a start time
 // counts for a day.
 func Open(_ []string) map[string]string {
-	home, err := os.UserHomeDir()
-	if err != nil {
+	if _, err := os.UserHomeDir(); err != nil {
 		return nil
 	}
-	return open(filepath.Join(cmp.Or(os.Getenv("CLAUDE_CONFIG_DIR"), filepath.Join(home, ".claude")), "sessions"), started)
+	return open(filepath.Join(claude.ConfigDir(), "sessions"), started)
 }
 
 var record = regexp.MustCompile(`^(\d+)\.json$`)

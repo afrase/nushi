@@ -26,20 +26,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // OMP reads and changes omp's skills.
 type OMP struct{}
-
-// agentDir is omp's agent folder.
-func agentDir() string {
-	home, _ := os.UserHomeDir()
-	return cmp.Or(os.Getenv("PI_CODING_AGENT_DIR"), filepath.Join(home, ".omp", "agent"))
-}
 
 type root struct {
 	path, source string
@@ -74,7 +69,7 @@ func roots(folder string, cfg config) []root {
 		}
 	}
 	project(".omp/skills", "project", true, dirs)
-	out = append(out, root{path: filepath.Join(agentDir(), "skills"), source: "user", described: true})
+	out = append(out, root{path: filepath.Join(omp.AgentDir(), "skills"), source: "user", described: true})
 	if cfg.on("enableClaudeProject", true) {
 		project(".claude/skills", "project", false, dirs)
 	}
@@ -104,7 +99,7 @@ func roots(folder string, cfg config) []root {
 // List returns omp's skills in folder, the shared ones among them.
 func (OMP) List(_ context.Context, folder string) (model.Skills, error) {
 	out := model.Skills{ReadsShared: true}
-	folder = realPath(folder)
+	folder = git.RealPath(folder)
 	cfg, err := readConfig(folder)
 	if err != nil {
 		out.NoSwitch = err.Error()
@@ -128,29 +123,16 @@ func (OMP) List(_ context.Context, folder string) (model.Skills, error) {
 	return out, nil
 }
 
-func realPath(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil {
-		return r
-	}
-	return p
-}
-
-// Shared returns the shared skills omp loads in folder.
-func (o OMP) Shared(ctx context.Context, folder string) []model.Skill {
-	l, _ := o.List(ctx, folder)
-	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
-}
-
 // SetSkillOn turns a skill off by its name in your config.yml's
 // disabledExtensions (every skill of the name, everywhere), or on by
 // taking it out; refused where a pattern or the project's config decides.
 func (o OMP) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
 	l, _ := o.List(ctx, folder)
-	i := slices.IndexFunc(l.Skills, func(s model.Skill) bool { return s.Source == source && s.Name == name })
-	if i < 0 {
+	s, ok := l.Find(source, name)
+	if !ok {
 		return fmt.Errorf("omp has no %s skill %q here", source, name)
 	}
-	if set := l.Skills[i].SetIn; set != "" {
+	if set := s.SetIn; set != "" {
 		return fmt.Errorf("it's off in %s; change it there", set)
 	}
 	return setDisabled(userConfig(), "skill:"+name, !on)
@@ -160,10 +142,10 @@ func (o OMP) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 // skills folder or a .omp/skills omp reads here.
 func (OMP) Trash(ctx context.Context, folder, path string) error {
 	var project []string
-	for _, d := range walk(realPath(folder)) {
+	for _, d := range walk(git.RealPath(folder)) {
 		if !skillfile.Linked(d, ".omp/skills") {
 			project = append(project, filepath.Join(d, ".omp", "skills"))
 		}
 	}
-	return skillfile.Trash(ctx, project, []string{filepath.Join(agentDir(), "skills")}, path)
+	return skillfile.Trash(ctx, project, []string{filepath.Join(omp.AgentDir(), "skills")}, path)
 }

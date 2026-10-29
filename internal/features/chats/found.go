@@ -8,11 +8,12 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"path/filepath"
 	"slices"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/git"
 )
 
 // Found is one of an agent's sessions that isn't a chat: started in a
@@ -78,7 +79,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	if err != nil {
 		return FoundPage{}, err
 	}
-	resolved := realPath(folder)
+	resolved := git.RealPath(folder)
 	paths := map[string]string{} // a cwd's real path, once looked up
 	page := FoundPage{CanList: true, SeesOpen: k.OpenElsewhere != nil, OneWriter: k.OneWriter}
 	for calls := 1; ; calls++ {
@@ -89,7 +90,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 		for _, info := range resp.Sessions {
 			id := string(info.SessionID)
 			if _, ok := paths[info.Cwd]; !ok {
-				paths[info.Cwd] = realPath(info.Cwd)
+				paths[info.Cwd] = git.RealPath(info.Cwd)
 			}
 			if ours[id] || id == "" || folder != "" && paths[info.Cwd] != resolved {
 				continue
@@ -171,18 +172,6 @@ func (s *Service) ownSessions() (map[string]bool, error) {
 		c.mu.Unlock()
 	}
 	return own, nil
-}
-
-// realPath is path with its links resolved (macOS's /tmp is /private/tmp),
-// as agents keep a session's cwd; path itself when it can't be resolved.
-func realPath(path string) string {
-	if path == "" {
-		return ""
-	}
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		return resolved
-	}
-	return filepath.Clean(path)
 }
 
 // quiet answers an agent that has no session open: there's nothing to ask

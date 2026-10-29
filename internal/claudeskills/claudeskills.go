@@ -11,8 +11,9 @@
 //     each is on here, then each plugin's skills/, commands/ and agents/
 //     folders;
 //   - whether a skill is listed: "skillOverrides" in the settings files
-//     (local over project over user), else the skill's own
-//     disable-model-invocation.
+//     (claudemcp.SettingsFiles: the project's local settings, the
+//     folder's own local and project settings, yours, the first
+//     winning), else the skill's own disable-model-invocation.
 //
 // A skill's name is its folder's name, as Claude lists it; its description
 // is its front matter's, else its first line. Nothing here runs Claude in
@@ -24,83 +25,49 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
+	"slices"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudemcp"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // Claude reads and changes Claude Code's skills and plugins.
 type Claude struct{}
 
-// configDir is Claude's config folder.
-func configDir() string {
-	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
-		return dir
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".claude")
-}
-
 // userRoot is the folder of your skills.
-func userRoot() string { return filepath.Join(configDir(), "skills") }
+func userRoot() string { return filepath.Join(claude.ConfigDir(), "skills") }
 
 // projectRoots are the .claude/skills folders Claude reads for folder,
 // nearest first: the folder's and those above it up to its repository's
-// top, or to / outside git. Your home folder's .claude is never the
-// project's.
-func projectRoots(ctx context.Context, folder string) []string {
-	top := "/"
-	cmd := exec.CommandContext(ctx, "git", "-C", folder, "rev-parse", "--show-toplevel") //nolint:gosec // git in the folder asked about
-	procgroup.Bound(cmd)
-	if out, err := cmd.Output(); err == nil {
-		top = strings.TrimSpace(string(out))
-	}
-	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = resolved
-	}
+// top (the nearest .git), or to / outside git. One whose .claude or
+// .claude/skills is a symlink (or can't be looked at) is left out
+// (skillfile.Roots): a repository's link could point the listing, and
+// Trash, anywhere. Your home folder's .claude is never the project's.
+func projectRoots(folder string) []string {
+	folder = git.RealPath(folder)
 	home, _ := os.UserHomeDir()
-	var roots []string
-	for dir := folder; ; dir = filepath.Dir(dir) {
-		if dir != home && !linked(dir) {
-			roots = append(roots, filepath.Join(dir, ".claude", "skills"))
-		}
-		if dir == top || dir == filepath.Dir(dir) {
-			return roots
-		}
-	}
-}
-
-// linked says dir's .claude or .claude/skills is a symlink (or can't be
-// looked at): a repository's link could point the listing, and Trash,
-// anywhere, so Nushi leaves such a folder out.
-func linked(dir string) bool {
-	for _, p := range []string{filepath.Join(dir, ".claude"), filepath.Join(dir, ".claude", "skills")} {
-		fi, err := os.Lstat(p)
-		if err == nil && fi.Mode()&os.ModeSymlink != 0 || err != nil && !os.IsNotExist(err) {
-			return true
-		}
-	}
-	return false
+	return slices.DeleteFunc(skillfile.Roots(folder, skillfile.Top(folder), ".claude/skills"), func(root string) bool {
+		return root == filepath.Join(home, ".claude", "skills")
+	})
 }
 
 // List returns folder's skills and plugins.
 func (c Claude) List(ctx context.Context, folder string) (model.Skills, error) {
-	return c.list(ctx, folder, true)
+	return c.list(ctx, folder, claudemcp.Project(folder), true)
 }
 
-// list returns folder's skills, and with plugins its plugins (`claude
-// plugin list`) and theirs.
-func (Claude) list(ctx context.Context, folder string, plugins bool) (model.Skills, error) {
+// list returns folder's skills, whose project is key, and with plugins
+// its plugins (`claude plugin list`) and theirs.
+func (Claude) list(ctx context.Context, folder, key string, plugins bool) (model.Skills, error) {
 	var out model.Skills
 	out.Skills = read(userRoot(), "user")
 	seen := map[string]bool{}
-	for _, root := range projectRoots(ctx, folder) {
+	for _, root := range projectRoots(folder) {
 		for _, s := range read(root, "project") {
 			if !seen[s.Name] { // a nearer folder's has the name
 				seen[s.Name] = true
@@ -108,14 +75,14 @@ func (Claude) list(ctx context.Context, folder string, plugins bool) (model.Skil
 			}
 		}
 	}
-	files := settingsFiles(folder)
+	files := settingsFiles(folder, key)
 	for i, s := range out.Skills {
 		out.Skills[i].State, out.Skills[i].SetIn = state(files, s)
 	}
 	if !plugins {
 		return out, nil
 	}
-	installed, err := listPlugins(ctx, folder)
+	installed, err := listPlugins(ctx, folder, key)
 	if err != nil {
 		out.PluginsError = err.Error()
 	}
@@ -154,16 +121,13 @@ type settings struct {
 	EnabledPlugins map[string]any    `json:"enabledPlugins"`
 }
 
-// settingsFiles are folder's settings files, the one that wins first:
-// the project's local settings, its shared settings, yours. One that can't
-// be read counts as empty.
-func settingsFiles(folder string) []settings {
+// settingsFiles are the settings files Claude reads in folder, whose
+// project is key, the one that wins first (claudemcp.SettingsFiles): the
+// project's local settings first, yours last. One that can't be read
+// counts as empty.
+func settingsFiles(folder, key string) []settings {
 	var out []settings
-	for _, path := range []string{
-		claudemcp.LocalSettings(folder),
-		filepath.Join(claudemcp.Claude{}.Project(folder), ".claude", "settings.json"),
-		claudemcp.UserSettings(),
-	} {
+	for _, path := range claudemcp.SettingsFiles(folder, key) {
 		s := settings{path: path}
 		if b, err := jsonsettings.ReadFile(path); err == nil {
 			_ = json.Unmarshal(b, &s) // a key of another shape counts as unset
@@ -173,14 +137,14 @@ func settingsFiles(folder string) []settings {
 	return out
 }
 
-// target is the settings file Nushi changes for a skill of source: the
-// project's local settings for a project skill, yours for yours (as
-// Claude's own advice has it).
-func target(source string) int {
+// target is the settings file Nushi changes for a skill of source, of
+// files: the project's local settings for a project skill, yours for
+// yours (as Claude's own advice has it).
+func target(files []settings, source string) int {
 	if source == "project" {
 		return 0
 	}
-	return 2
+	return len(files) - 1
 }
 
 // state is a skill's state from the settings files, and the file that
@@ -188,7 +152,7 @@ func target(source string) int {
 func state(files []settings, s model.Skill) (state, setIn string) {
 	for i, f := range files {
 		if v, ok := f.SkillOverrides[s.Name]; ok {
-			if i < target(s.Source) {
+			if i < target(files, s.Source) {
 				setIn = f.path
 			}
 			return v, setIn
@@ -202,7 +166,7 @@ func state(files []settings, s model.Skill) (state, setIn string) {
 func builtInOff(files []settings) (off bool, setIn string) {
 	for i, f := range files {
 		if f.NoBuiltIn != nil {
-			if i < target("user") {
+			if i < target(files, "user") {
 				setIn = f.path
 			}
 			return *f.NoBuiltIn, setIn

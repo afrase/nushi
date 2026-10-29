@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 )
@@ -21,23 +22,25 @@ import (
 // changes only those two lists, and only in that file (ADR 0021): unlike
 // ~/.claude.json, Claude writes it only when you pick "don't ask again".
 
-// LocalSettings is localSettings, for other packages.
-func LocalSettings(folder string) string { return localSettings(folder) }
-
-// localSettings is the settings file Claude keeps per project for you:
-// .claude/settings.local.json at the repository's root (its main
-// checkout), or in the folder outside git.
-func localSettings(folder string) string {
-	return filepath.Join(project(folder), ".claude", "settings.local.json")
+// localSettings is the settings file Claude keeps per project for you,
+// the one Nushi changes: .claude/settings.local.json in the project (key,
+// Project), its repository's main checkout or the folder outside git.
+func localSettings(key string) string {
+	return filepath.Join(key, ".claude", "settings.local.json")
 }
 
-// UserSettings is Claude's user settings file.
-func UserSettings() string {
-	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
-		return filepath.Join(dir, "settings.json")
+// SettingsFiles are the settings files Claude reads in folder, whose
+// project is key (Project), the one that wins first (docs/facts/claude.md,
+// seen with Claude Code 2.1.312): the project's local settings, the
+// folder's own local settings (another file in a worktree or a subfolder),
+// the folder's .claude/settings.json (not the repository root's or the
+// main checkout's), yours.
+func SettingsFiles(folder, key string) []string {
+	files := []string{localSettings(key)}
+	if git.RealPath(folder) != key {
+		files = append(files, filepath.Join(folder, ".claude", "settings.local.json"))
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".claude", "settings.json")
+	return append(files, filepath.Join(folder, ".claude", "settings.json"), claude.UserSettings())
 }
 
 type lists struct {
@@ -59,11 +62,12 @@ func (n *names) UnmarshalJSON(b []byte) error {
 }
 
 // rejected returns, by name, the files that reject a .mcp.json server in
-// folder (the settings files, and ~/.claude.json's entry for the project),
-// and the servers the project's local settings approve.
-func rejected(folder string, terminal []string) (out map[string][]string, approved []string) {
+// folder, whose project is key (the settings files, and ~/.claude.json's
+// entry for the project), and the servers the project's local settings
+// approve.
+func rejected(folder, key string, terminal []string) (out map[string][]string, approved []string) {
 	out = map[string][]string{}
-	for i, path := range []string{localSettings(folder), filepath.Join(folder, ".claude", "settings.json"), UserSettings()} {
+	for i, path := range SettingsFiles(folder, key) {
 		var l lists
 		_ = readJSON(path, &l) // an unreadable settings file rejects nothing here
 		for _, name := range l.Disabled {
@@ -74,7 +78,7 @@ func rejected(folder string, terminal []string) (out map[string][]string, approv
 		}
 	}
 	for _, name := range terminal {
-		out[name] = append(out[name], ConfigFile())
+		out[name] = append(out[name], claude.ConfigFile())
 	}
 	return out, approved
 }
@@ -92,7 +96,7 @@ func (c Claude) SetOn(ctx context.Context, folder, scope, name string, on bool) 
 // approve approves (on) or rejects a .mcp.json server for folder's
 // project, in its .claude/settings.local.json.
 func approve(ctx context.Context, folder, name string, on bool) error {
-	return EditLocal(ctx, folder, func(settings map[string]json.RawMessage) error {
+	return EditLocal(ctx, Project(folder), func(settings map[string]json.RawMessage) error {
 		add, drop := "enabledMcpjsonServers", "disabledMcpjsonServers"
 		if !on {
 			add, drop = drop, add
@@ -115,14 +119,14 @@ func approve(ctx context.Context, folder, name string, on bool) error {
 	})
 }
 
-// EditLocal changes folder's project's .claude/settings.local.json, the
-// settings Claude keeps per project for you, through change, which gets
-// the file's settings by key (none for a new file). Other settings stay;
-// the file is replaced at once, keeping its mode; a new one is kept out of
-// git through the repository's info/exclude, as Claude keeps it out
-// through your global excludes.
-func EditLocal(ctx context.Context, folder string, change func(settings map[string]json.RawMessage) error) error {
-	path := localSettings(folder)
+// EditLocal changes a project's .claude/settings.local.json (key, a
+// folder's Project), the settings Claude keeps per project for you,
+// through change, which gets the file's settings by key (none for a new
+// file). Other settings stay; the file is replaced at once, keeping its
+// mode; a new one is kept out of git through the repository's
+// info/exclude, as Claude keeps it out through your global excludes.
+func EditLocal(ctx context.Context, key string, change func(settings map[string]json.RawMessage) error) error {
+	path := localSettings(key)
 	// The repository decides what's in .claude/: refuse symlinks there, so
 	// a cloned repo can't point the write at a file elsewhere.
 	for _, p := range []string{filepath.Dir(path), path} {
@@ -130,13 +134,12 @@ func EditLocal(ctx context.Context, folder string, change func(settings map[stri
 			return fmt.Errorf("%s is a symlink; not changing it", p)
 		}
 	}
-	created, err := jsonsettings.EditIn(project(folder), filepath.Join(".claude", "settings.local.json"), change) // a link swapped in meanwhile can't lead out
+	created, err := jsonsettings.EditIn(key, filepath.Join(".claude", "settings.local.json"), change) // a link swapped in meanwhile can't lead out
 	if err != nil {
 		return err
 	}
-	root := project(folder)
-	if created && !git.Ignored(ctx, root, ".claude/settings.local.json") {
-		_ = git.Exclude(ctx, root, "/.claude/settings.local.json") // outside git there is nothing to keep it out of
+	if created && !git.Ignored(ctx, key, ".claude/settings.local.json") {
+		_ = git.Exclude(ctx, key, "/.claude/settings.local.json") // outside git there is nothing to keep it out of
 	}
 	return nil
 }
@@ -145,6 +148,6 @@ func EditLocal(ctx context.Context, folder string, change func(settings map[stri
 // as EditLocal does; a link there (your dotfiles') is followed, to change
 // the file it points at.
 func EditUser(change func(settings map[string]json.RawMessage) error) error {
-	_, err := jsonsettings.Edit(UserSettings(), change)
+	_, err := jsonsettings.Edit(claude.UserSettings(), change)
 	return err
 }
