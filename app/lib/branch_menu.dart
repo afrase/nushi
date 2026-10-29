@@ -11,7 +11,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
-/// The Environment card's Branch row, a menu (ADR 0016's amendment of
+/// The Environment widget's Branch row, a menu (ADR 0016's amendment of
 /// steps 392–393).
 /// In a repository's own folder: its local branches, the newest commit
 /// first (a filter past ten), the current one checked, and "New branch…";
@@ -272,7 +272,7 @@ Future<void> openWorktree(
   await tryOrShow(context, () => daemon.moveChat(chat, w.path));
 }
 
-/// The Environment card's Worktree row for a chat outside a worktree: its
+/// The Environment widget's Worktree row for a chat outside a worktree: its
 /// value "None", and a menu of [onNew] ("New worktree…", when given), a
 /// divider, then the repository's other worktrees by branch; picking one
 /// moves the chat there. Mid-turn, as the Branch row: the value shows and

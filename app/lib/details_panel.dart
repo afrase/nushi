@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import 'package:nushi/agents_card.dart';
-import 'package:nushi/artifacts_card.dart';
+import 'package:nushi/artifacts_widget.dart';
+import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
@@ -11,16 +10,16 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/mcp_card.dart';
-import 'package:nushi/panel_cards.dart';
-import 'package:nushi/pull_card.dart';
+import 'package:nushi/mcp_widget.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_widget.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
-/// The panel beside a chat: cards for its environment (folder or
+/// The panel beside a chat: widgets for its environment (folder or
 /// repository, branch, worktree), its context and cost, and its folder's
 /// changes (uncommitted, or the branch's for a worktree chat), as the
 /// Changes view shows them, its background tasks, MCP servers and artifacts.
@@ -77,13 +76,13 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       askedContext(chat.id, r);
       if (mounted) setState(() => _context = r);
     } on Object {
-      // The card keeps what it had; it asks again after the next turn.
+      // The widget keeps what it had; it asks again after the next turn.
     } finally {
       if (mounted) setState(() => _asking = false);
     }
   }
 
-  /// Asks on its own whenever the chat is idle, the Context card open or
+  /// Asks on its own whenever the chat is idle, the Context widget open or
   /// not (so it's there when opened): a moment after a turn ends or the
   /// chat becomes askable (woken, its commands listed), at most once a
   /// minute.
@@ -189,8 +188,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
               ],
             ),
           );
-    return PanelCards([
-      PanelCard(
+    return PanelWidgets([
+      PanelWidget(
         title: 'Environment',
         summary: Text(
           folderParts(chat.home, scratch: chat.scratch).$1,
@@ -226,7 +225,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             ),
         ],
       ),
-      PanelCard(
+      PanelWidget(
         title: 'Context',
         // Nothing to show yet: one line.
         note:
@@ -292,7 +291,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             ('Cost', Text(cost(u), style: theme.ui(t.text, size: 12))),
         ],
       ),
-      PanelCard(
+      PanelWidget(
         title: 'Changes',
         note: _error == null && status != null && !status.git
             ? (status.gone ? 'The folder is gone' : 'Not a git repository')
@@ -318,10 +317,10 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           ],
         ],
       ),
-      ?pullCard(_pull, onShow: widget.onPull),
-      ?agentsCard(chat, daemon),
-      mcpCard(chat, daemon),
-      ?artifactsCard(chat),
+      ?pullWidget(_pull, onShow: widget.onPull),
+      ?backgroundTasksWidget(chat, daemon),
+      mcpWidget(chat, daemon),
+      ?artifactsWidget(chat),
     ]);
   }
 }

@@ -9,7 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_cache.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
@@ -47,7 +47,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     shellEnvironment.value = null;
     remoteState.value = null;
     githubFolders.value = {};
-    revealCard.value = null;
+    revealWidget.value = null;
   });
   tearDownAll(() {
     final dir = Directory(dataDir);

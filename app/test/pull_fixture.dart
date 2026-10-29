@@ -270,8 +270,8 @@ Future<(Daemon, FakeDaemon)> openPullTab(
 }) async {
   viewport(tester, size, brightness: brightness);
   showDetails.value = details;
-  collapsedCards.value = {};
-  cardOrder.value = ['Pull request'];
+  collapsedWidgets.value = {};
+  widgetOrder.value = ['Pull request'];
   pullSeen.value = {};
   final c = chat(
     'c',

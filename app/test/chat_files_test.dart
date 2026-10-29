@@ -199,11 +199,11 @@ void main() {
   }
 
   testWidgets('no Artifacts in the header; the palette’s Artifacts… shows '
-      'the panel, from Changes too, and opens its card in view', (
+      'the panel, from Changes too, and opens its widget in view', (
     tester,
   ) async {
     final d = await _app(tester); // the panel hidden
-    collapsedCards.value = {'Artifacts'};
+    collapsedWidgets.value = {'Artifacts'};
     expect(find.textContaining('Artifacts'), findsNothing);
     await tester.tap(find.text('Changes'));
     await tester.pumpAndSettle();
@@ -212,7 +212,7 @@ void main() {
     expect(d.chats['c']!.shownTab, ChatTab.chat);
     final panel = find.byType(DetailsPanel);
     expect(panel, findsOneWidget);
-    expect(collapsedCards.value, isEmpty); // the card opened
+    expect(collapsedWidgets.value, isEmpty); // the widget opened
     final row = find.descendant(of: panel, matching: find.text('sub.md'));
     expect(row, findsOneWidget);
     final view = tester.getRect(panel);

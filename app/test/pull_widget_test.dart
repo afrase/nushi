@@ -9,7 +9,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/pull_widget_parts.dart';
@@ -41,8 +41,8 @@ Future<(Daemon, FakeDaemon)> _app(
 }) async {
   viewport(tester, size);
   showDetails.value = details;
-  collapsedCards.value = {};
-  cardOrder.value = ['Pull request'];
+  collapsedWidgets.value = {};
+  widgetOrder.value = ['Pull request'];
   pullSeen.value = {};
   final c = chat('c', 'claude', 'Add Sub and Neg');
   final fake = FakeDaemon([c])
@@ -65,12 +65,12 @@ Future<(Daemon, FakeDaemon)> _app(
   return (d, fake);
 }
 
-Finder get _card => find.ancestor(
+Finder get _pull => find.ancestor(
   of: find.text('Pull request'),
-  matching: find.byType(PanelCard),
+  matching: find.byType(PanelWidget),
 );
 
-Finder _inCard(Finder f) => find.descendant(of: _card, matching: f);
+Finder _inPull(Finder f) => find.descendant(of: _pull, matching: f);
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -110,14 +110,14 @@ void main() {
   setUpAll(loadFonts);
   setUp(() => clock = () => _now);
 
-  // The owner's report: a chat whose card said "No pull request for x"
-  // didn't link the one opened since; only the details panel's card
+  // The owner's report: a chat whose widget said "No pull request for x"
+  // didn't link the one opened since; only the details panel's widget
   // asked each minute, so with the panel hidden (or another tab) nothing
   // asked again.
   testWidgets('the details panel hidden: asked each minute all the same, '
       'and one opened since is linked', (tester) async {
     final (d, fake) = await _app(tester, details: false);
-    expect(find.byType(PanelCard), findsNothing);
+    expect(find.byType(PanelWidget), findsNothing);
     expect(_tab, findsNothing);
     final asked = _asks(fake);
     expect(asked, 1);
@@ -132,17 +132,17 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('the card collapsed: linked within a minute; its tooltip says '
+  testWidgets('the widget collapsed: linked within a minute; its tooltip says '
       'when it last looked and how often', (tester) async {
     final (d, fake) = await _app(tester);
-    collapsedCards.value = {'Pull request'};
+    collapsedWidgets.value = {'Pull request'};
     await tester.pumpAndSettle();
-    expect(_inCard(find.text('None')), findsOneWidget);
+    expect(_inPull(find.text('None')), findsOneWidget);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     addTearDown(mouse.removePointer);
     await _later(tester, const Duration(seconds: 20));
-    final title = _inCard(find.text('Pull request'));
+    final title = _inPull(find.text('Pull request'));
     await mouse.moveTo(tester.getCenter(title));
     await tester.pump();
     expect(find.byTooltip('Checked 20 s ago · every minute'), findsOneWidget);
@@ -150,7 +150,7 @@ void main() {
     _opened(fake);
     await _later(tester, const Duration(seconds: 40));
     await tester.pumpAndSettle();
-    expect(_inCard(find.text('#1')), findsOneWidget);
+    expect(_inPull(find.text('#1')), findsOneWidget);
     await _later(tester, const Duration(seconds: 5));
     await mouse.moveTo(tester.getCenter(title));
     await tester.pump();
@@ -209,7 +209,7 @@ void main() {
   test('the tooltip: when last checked and how often', () {
     final at = DateTime(2026, 10, 29, 12);
     expect(
-      checkedWords(at, pullCardPoll, at.add(const Duration(seconds: 20))),
+      checkedWords(at, pullWidgetPoll, at.add(const Duration(seconds: 20))),
       'Checked 20 s ago · every minute',
     );
     expect(
@@ -217,7 +217,7 @@ void main() {
       'Checked 3 min ago · every 15 minutes',
     );
     expect(
-      checkedWords(null, pullCardPoll, at),
+      checkedWords(null, pullWidgetPoll, at),
       'Not checked yet · every minute',
     );
   });
@@ -225,20 +225,20 @@ void main() {
   testWidgets('no pull request yet: the branch, and Link…', (tester) async {
     final (d, fake) = await _app(tester);
     expect(
-      _inCard(find.text('No pull request for subtract', findRichText: true)),
+      _inPull(find.text('No pull request for subtract', findRichText: true)),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Link…')), findsOneWidget);
+    expect(_inPull(find.text('Link…')), findsOneWidget);
     expect(fake.calls.whereType<FindChatPullRequest>(), isNotEmpty);
     expect(fake.calls.whereType<GetGitHubPullRequest>(), isEmpty);
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('not a GitHub repository, or its default branch: no card', (
+  testWidgets('not a GitHub repository, or its default branch: no widget', (
     tester,
   ) async {
     var (d, _) = await _app(tester, found: FindChatPullResponse());
-    expect(_card, findsNothing);
+    expect(_pull, findsNothing);
     d.dispose();
     (d, _) = await _app(
       tester,
@@ -249,7 +249,7 @@ void main() {
         defaultBranch: true,
       ),
     );
-    expect(_card, findsNothing);
+    expect(_pull, findsNothing);
     d.dispose();
   }, variant: _mac);
 
@@ -260,10 +260,10 @@ void main() {
         ..item = item(1, 'Add Sub and Neg', draft: true)
         ..checks.clear(),
     );
-    expect(_inCard(find.text('Draft')), findsOneWidget);
-    expect(_inCard(find.text('Ready for review')), findsOneWidget);
-    expect(_inCard(find.text('Merge blocked')), findsNothing);
-    expect(_inCard(find.byType(ChecksBar)), findsNothing);
+    expect(_inPull(find.text('Draft')), findsOneWidget);
+    expect(_inPull(find.text('Ready for review')), findsOneWidget);
+    expect(_inPull(find.text('Merge blocked')), findsNothing);
+    expect(_inPull(find.byType(ChecksBar)), findsNothing);
     d.dispose();
   }, variant: _mac);
 
@@ -272,30 +272,30 @@ void main() {
     tester,
   ) async {
     final (d, _) = await _app(tester, whole: pull());
-    expect(_inCard(find.text('Add Sub and Neg')), findsOneWidget);
-    expect(_inCard(find.text('Open')), findsOneWidget);
-    expect(_inCard(find.byType(ChecksBar)), findsOneWidget);
+    expect(_inPull(find.text('Add Sub and Neg')), findsOneWidget);
+    expect(_inPull(find.text('Open')), findsOneWidget);
+    expect(_inPull(find.byType(ChecksBar)), findsOneWidget);
     expect(
-      _inCard(find.textContaining('1 failed', findRichText: true)),
+      _inPull(find.textContaining('1 failed', findRichText: true)),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Fix checks')), findsOneWidget);
-    expect(_inCard(find.text('octo')), findsOneWidget);
-    expect(_inCard(find.text('Approved')), findsOneWidget);
-    expect(_inCard(find.text('@core-team')), findsOneWidget);
-    expect(_inCard(find.text('waiting')), findsOneWidget);
-    expect(_inCard(find.text('2 open threads')), findsOneWidget);
-    expect(_inCard(find.text('Address')), findsOneWidget);
-    expect(_inCard(find.text('Merge blocked')), findsOneWidget);
-    expect(_inCard(find.text('checks, review, threads')), findsOneWidget);
-    expect(_inCard(find.text('5 comments')), findsOneWidget);
+    expect(_inPull(find.text('Fix checks')), findsOneWidget);
+    expect(_inPull(find.text('octo')), findsOneWidget);
+    expect(_inPull(find.text('Approved')), findsOneWidget);
+    expect(_inPull(find.text('@core-team')), findsOneWidget);
+    expect(_inPull(find.text('waiting')), findsOneWidget);
+    expect(_inPull(find.text('2 open threads')), findsOneWidget);
+    expect(_inPull(find.text('Address')), findsOneWidget);
+    expect(_inPull(find.text('Merge blocked')), findsOneWidget);
+    expect(_inPull(find.text('checks, review, threads')), findsOneWidget);
+    expect(_inPull(find.text('5 comments')), findsOneWidget);
     // Collapsed: its number, the failing count, the threads.
-    await tester.tap(_inCard(find.text('Pull request')));
+    await tester.tap(_inPull(find.text('Pull request')));
     await tester.pumpAndSettle();
-    expect(_inCard(find.text('#1')), findsOneWidget);
-    expect(_inCard(find.byIcon(Icons.cancel_outlined)), findsOneWidget);
-    expect(_inCard(find.byIcon(Icons.forum_outlined)), findsOneWidget);
-    expect(_inCard(find.text('2')), findsOneWidget);
+    expect(_inPull(find.text('#1')), findsOneWidget);
+    expect(_inPull(find.byIcon(Icons.cancel_outlined)), findsOneWidget);
+    expect(_inPull(find.byIcon(Icons.forum_outlined)), findsOneWidget);
+    expect(_inPull(find.text('2')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
@@ -303,18 +303,18 @@ void main() {
       'while open', (tester) async {
     final p = pull()..item = item(1, 'Add Sub and Neg', state: 'merged');
     final (d, _) = await _app(tester, whole: p);
-    expect(_inCard(find.text('Merged')), findsOneWidget);
+    expect(_inPull(find.text('Merged')), findsOneWidget);
     expect(
-      _inCard(find.text('Merged into main.', findRichText: true)),
+      _inPull(find.text('Merged into main.', findRichText: true)),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Merge blocked')), findsNothing);
-    expect(_inCard(find.text('Fix checks')), findsNothing);
+    expect(_inPull(find.text('Merge blocked')), findsNothing);
+    expect(_inPull(find.text('Fix checks')), findsNothing);
     final q = pull();
     final (e, _) = await _app(tester, whole: q);
     pullSeen.value = {'c': pullSeen.value['c']! - 1};
     await tester.pump();
-    expect(_inCard(find.text('1 new')), findsOneWidget);
+    expect(_inPull(find.text('1 new')), findsOneWidget);
     d.dispose();
     e.dispose();
   }, variant: _mac);
@@ -346,12 +346,12 @@ void main() {
     // A comment came since the chat first saw it.
     pullSeen.value = {'c': pullSeen.value['c']! - 1};
     await tester.pump();
-    expect(find.text('Pull request'), findsNWidgets(2)); // the switch, the card
+    expect(find.text('Pull request'), findsNWidgets(2)); // switch, widget
     await tester.tap(find.text('1 new'));
     await tester.pumpAndSettle();
     expect(find.byType(GitHubPullPane), findsOneWidget);
     expect(
-      find.byType(PanelCard),
+      find.byType(PanelWidget),
       findsNothing,
     ); // the panel goes, as for Changes
     expect(find.text('Add Sub and Neg', findRichText: true), findsWidgets);
@@ -418,7 +418,7 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('golden: the card, open with a failing check, dark', (
+  testWidgets('golden: the widget, open with a failing check, dark', (
     tester,
   ) async {
     final (d, _) = await _app(
@@ -433,7 +433,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(NushiApp),
-      matchesGoldenFile('goldens/pull_card_dark.png'),
+      matchesGoldenFile('goldens/pull_widget_dark.png'),
     );
     d.dispose();
   }, variant: _mac);

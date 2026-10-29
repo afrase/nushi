@@ -4,18 +4,18 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/shells.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The panel's Background tasks card: the chat's running subagents, each
+/// The panel's Background tasks widget: the chat's running subagents, each
 /// with its state and current step, and its running background commands;
 /// then a quiet "n finished" line that opens the others. Under the pointer,
-/// a running one shows its Stop. Null (no card) while none runs: those
+/// a running one shows its Stop. Null (no widget) while none runs: those
 /// that ended are in the transcript.
-PanelCard? agentsCard(ChatState chat, Daemon daemon) {
+PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
   final subs = subagentsOf(chat.items);
   final shells = shellsOf(chat.items);
   final running = [
@@ -32,7 +32,7 @@ PanelCard? agentsCard(ChatState chat, Daemon daemon) {
   // A command whose end isn't known didn't finish, as far as Nushi knows.
   final unknown = shells.any((it) => it.backgroundCommand.state == 'started');
   final more = '${rest.length} ${unknown ? 'earlier' : 'finished'}';
-  return PanelCard(
+  return PanelWidget(
     title: 'Background tasks',
     summary: Builder(
       builder: (context) {

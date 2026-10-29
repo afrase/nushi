@@ -8,7 +8,7 @@ import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// What last filled each chat's context (its /context categories) and when
-/// it was asked, in `context.json` in the data folder, so the Context card
+/// it was asked, in `context.json` in the data folder, so the Context widget
 /// has it at once after the app restarts or while a turn runs. Only the
 /// categories' names and counts are kept, never the agent's markdown; the
 /// [_keep] most recent chats.

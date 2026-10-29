@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/card_list.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_filters.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/panel_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';

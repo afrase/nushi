@@ -5,7 +5,7 @@ import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -32,12 +32,12 @@ GetCleanUpResponse _clean({int changed = 0, int commits = 1}) =>
       ],
     );
 
-Finder get _card => find.ancestor(
+Finder get _pull => find.ancestor(
   of: find.text('Pull request').last,
-  matching: find.byType(PanelCard),
+  matching: find.byType(PanelWidget),
 );
 
-Finder _inCard(Finder f) => find.descendant(of: _card, matching: f);
+Finder _inPull(Finder f) => find.descendant(of: _pull, matching: f);
 
 /// The app on the chat of [pull] in its worktree, the details panel shown;
 /// GetCleanUp answers [u]; the calls are in the fake's.
@@ -97,7 +97,7 @@ void main() {
   ) async {
     final (d, _) = await _open(tester);
     expect(
-      _inCard(
+      _inPull(
         find.textContaining(
           "This chat's worktree and branch aren't needed any more.",
           findRichText: true,
@@ -105,11 +105,11 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tester.tap(_inCard(find.text('Not now')));
+    await tester.tap(_inPull(find.text('Not now')));
     await tester.pumpAndSettle();
     expect(cleanUpLater.value, {'c'});
-    expect(_inCard(find.text('Clean up…')), findsNothing);
-    await tester.tap(_inCard(find.byTooltip('Pull request')));
+    expect(_inPull(find.text('Clean up…')), findsNothing);
+    await tester.tap(_inPull(find.byTooltip('Pull request')));
     await tester.pumpAndSettle();
     expect(find.text('Clean up…'), findsOneWidget); // the menu's
     d.dispose();
@@ -119,7 +119,7 @@ void main() {
     tester,
   ) async {
     final (d, fake) = await _open(tester);
-    await tester.tap(_inCard(find.text('Clean up…')));
+    await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
     expect(find.text('Clean up after #412'), findsOneWidget);
     expect(find.text('.worktrees/filters-malformed-q · clean'), findsOneWidget);
@@ -159,19 +159,19 @@ void main() {
       fake.calls.whereType<DeleteGitHubBranchRequest>().single.ref.number,
       412,
     );
-    expect(_inCard(find.text('Branch deleted on GitHub')), findsOneWidget);
-    expect(_inCard(find.text('Worktree deleted')), findsOneWidget);
-    await tester.tap(_inCard(find.text('Restore branch')));
+    expect(_inPull(find.text('Branch deleted on GitHub')), findsOneWidget);
+    expect(_inPull(find.text('Worktree deleted')), findsOneWidget);
+    await tester.tap(_inPull(find.text('Restore branch')));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<RestoreGitHubBranchRequest>(), hasLength(1));
-    expect(_inCard(find.text('Branch restored on GitHub')), findsOneWidget);
+    expect(_inPull(find.text('Branch restored on GitHub')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
   testWidgets('a dirty worktree starts unticked; ticking it names the loss '
       'and forces; the branch waits for its worktree', (tester) async {
     final (d, fake) = await _open(tester, u: _clean(changed: 2));
-    await tester.tap(_inCard(find.text('Clean up…')));
+    await tester.tap(_inPull(find.text('Clean up…')));
     await tester.pumpAndSettle();
     expect(find.text('2 uncommitted files would be lost.'), findsOneWidget);
     expect(find.text('M app/notebooks/page_spec.rb'), findsOneWidget);
@@ -200,12 +200,12 @@ void main() {
     tester,
   ) async {
     final (d, fake) = await _open(tester, busy: true);
-    await tester.tap(_inCard(find.text('Clean up…')));
+    await tester.tap(_inPull(find.text('Clean up…')));
     await _pump(tester);
     expect(find.text('Claude is mid-turn here.'), findsOneWidget);
     await tester.tap(find.text('Clean up when done'));
     await _pump(tester);
-    expect(_inCard(find.text('Waiting for the turn to end…')), findsOneWidget);
+    expect(_inPull(find.text('Waiting for the turn to end…')), findsOneWidget);
     expect(fake.calls.whereType<ArchiveChatRequest>(), isEmpty);
     // Another asked for meanwhile (the ⋯ menu, say) does nothing.
     final job = CleanUpJob.of(d.chats['c']!);
@@ -224,7 +224,7 @@ void main() {
     );
     await _pump(tester);
     expect(fake.calls.whereType<ArchiveChatRequest>(), hasLength(1));
-    expect(_inCard(find.text('Chat archived')), findsOneWidget);
+    expect(_inPull(find.text('Chat archived')), findsOneWidget);
     expect(job.finished, isTrue);
     d.dispose();
   }, variant: _mac);
@@ -239,7 +239,7 @@ void main() {
           ? throw Exception('no such turn ${++stops}')
           : null,
     );
-    await tester.tap(_inCard(find.text('Clean up…')));
+    await tester.tap(_inPull(find.text('Clean up…')));
     await _pump(tester);
     await tester.tap(find.text('Stop the turn, clean up now'));
     await _pump(tester);
@@ -247,10 +247,10 @@ void main() {
     await _pump(tester);
     expect(stops, 1);
     expect(
-      _inCard(find.textContaining("The turn didn't stop")),
+      _inPull(find.textContaining("The turn didn't stop")),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Waiting for the turn to end…')), findsNothing);
+    expect(_inPull(find.text('Waiting for the turn to end…')), findsNothing);
     final job = CleanUpJob.of(d.chats['c']!);
     expect((job.running, job.finished), (false, true));
     expect(fake.calls.whereType<ArchiveChatRequest>(), isEmpty);
@@ -280,7 +280,7 @@ void main() {
           busy: busy,
           brightness: brightness,
         );
-        await tester.tap(_inCard(find.text('Clean up…')));
+        await tester.tap(_inPull(find.text('Clean up…')));
         await _pump(tester);
         await expectLater(
           find.byType(NushiApp),
@@ -292,7 +292,7 @@ void main() {
 
     testWidgets('golden: the widget once cleaned up, $name', (tester) async {
       final (d, fake) = await _open(tester, brightness: brightness);
-      await tester.tap(_inCard(find.text('Clean up…')));
+      await tester.tap(_inPull(find.text('Clean up…')));
       await tester.pumpAndSettle();
       // Keep the worktree and its branch.
       await tester.tap(find.byType(Checkbox).first);
@@ -311,7 +311,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await expectLater(
-        _card,
+        _pull,
         matchesGoldenFile('goldens/cleanup_done_$name.png'),
       );
       d.dispose();

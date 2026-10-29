@@ -18,11 +18,11 @@ const chatPullApi = 81;
 /// How often a chat's pull request is asked for while the chat is open:
 /// an open one, or a branch without one yet, each minute; one merged or
 /// closed every 15 minutes (as Orca does).
-const pullCardPoll = Duration(minutes: 1);
+const pullWidgetPoll = Duration(minutes: 1);
 const pullDonePoll = Duration(minutes: 15);
 
 /// When the chat's pull request was last looked for and how often it is,
-/// as the card's tooltip says it: "Checked 20 s ago · every minute".
+/// as the widget's tooltip says it: "Checked 20 s ago · every minute".
 String checkedWords(DateTime? checked, Duration every, DateTime now) {
   final m = every.inMinutes;
   final often = m == 1 ? 'every minute' : 'every $m minutes';
@@ -58,7 +58,7 @@ Iterable<int> commentTimes(GitHubPull p) => [
 ];
 
 /// The comments of [chat]'s pull request newer than those seen (when its
-/// tab last showed, or when the card first saw it).
+/// tab last showed, or when the widget first saw it).
 int unreadComments(String chat, GitHubPull p) {
   final times = commentTimes(p);
   final seen = pullSeen.value[chat];
@@ -72,10 +72,10 @@ void markPullSeen(String chat, GitHubPull p) {
   pullSeen.value = {...pullSeen.value, chat: newest};
 }
 
-/// A chat's pull request, as its card and the header's tab show it: what
+/// A chat's pull request, as its widget and the header's tab show it: what
 /// the daemon found of its folder (repository, branch) and the pull
 /// request whole. It asks while the chat is open ([follow]), whether the
-/// details panel shows or not: at once, then on [pullCardPoll] (quietly),
+/// details panel shows or not: at once, then on [pullWidgetPoll] (quietly),
 /// 3 s after a tool call pushed or opened one and after a turn ends, and
 /// when the window comes to the front. Each ask that finds one links it
 /// (the daemon's FindChatPull); only Unlink keeps that one off.
@@ -131,7 +131,7 @@ class ChatPull extends ChangeNotifier {
   /// The chat's link: the daemon's last word, else the chat's.
   GitHubLink? get link => chat.pull;
 
-  /// When it was last looked for and how often, as the card's tooltip
+  /// When it was last looked for and how often, as the widget's tooltip
   /// says it: "Checked 20 s ago · every minute".
   String get checkedText => checkedWords(_asked, every, clock());
 
@@ -139,10 +139,12 @@ class ChatPull extends ChangeNotifier {
   /// pull request merged or closed.
   Duration get every {
     final state = pull?.item.state;
-    return state == 'merged' || state == 'closed' ? pullDonePoll : pullCardPoll;
+    return state == 'merged' || state == 'closed'
+        ? pullDonePoll
+        : pullWidgetPoll;
   }
 
-  /// Follows the chat (its pane shows): asks now, on [pullCardPoll], after
+  /// Follows the chat (its pane shows): asks now, on [pullWidgetPoll], after
   /// a tool call that pushed or opened a pull request, when a turn ends
   /// and when the window comes to the front.
   void follow() {

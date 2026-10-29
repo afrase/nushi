@@ -73,8 +73,8 @@ final _saved = <String, Object?>{
 /// Every pref, so each is read (made) before a save.
 List<ValueNotifier<Object?>> get _all => [
   showDetails,
-  collapsedCards,
-  cardOrder,
+  collapsedWidgets,
+  widgetOrder,
   changeScopes,
   changesFlat,
   terminalChats,

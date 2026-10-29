@@ -32,8 +32,8 @@ void main() {
 
   test('a key of the wrong type reads as the default, never an error', () {
     expect(showDetails.value, isTrue);
-    expect(collapsedCards.value, isEmpty);
-    expect(cardOrder.value, isEmpty);
+    expect(collapsedWidgets.value, isEmpty);
+    expect(widgetOrder.value, isEmpty);
     expect(changeScopes.value, isEmpty);
     expect(changesFlat.value, isFalse);
     expect(terminalChats.value, isEmpty);

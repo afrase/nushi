@@ -10,9 +10,9 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 void main() {
-  testWidgets('what fills the context is asked, the card collapsed or not, '
+  testWidgets('what fills the context is asked, the widget collapsed or not, '
       'once the chat can be asked', (tester) async {
-    collapsedCards.value = {'Context'};
+    collapsedWidgets.value = {'Context'};
     final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')]);
     final d = await fake.connect(tester);
     final chat = ChatState('c', '/x')
@@ -31,7 +31,7 @@ void main() {
     int asked() => fake.calls.whereType<GetContextUsageRequest>().length;
     expect(asked(), 0, reason: 'busy: not yet');
 
-    // The turn ends: asked a moment later, though the card is collapsed.
+    // The turn ends: asked a moment later, though the widget is collapsed.
     chat.apply(EventsResponse(status: ChatStatus(canAskContext: true)));
     await tester.pump(const Duration(seconds: 2));
     expect(asked(), 1);
