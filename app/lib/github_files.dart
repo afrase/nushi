@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart' show clock;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';

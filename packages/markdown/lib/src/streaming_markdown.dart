@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -277,6 +279,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         tableHead: const TextStyle(fontWeight: FontWeight.w600),
         tableBody: body,
         tableBorder: TableBorder.all(color: s.border),
+        tableColumnWidth: const ContentFlexColumnWidth(),
         tableCellsPadding: const EdgeInsets.symmetric(
           horizontal: 8,
           vertical: 4,
@@ -295,6 +298,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
 /// its lines, as written: the default makes it a bare text node, which
 /// draws nothing.
 class _HtmlAsText extends md.HtmlBlockSyntax {
+  /// The one way it sizes columns.
   const new();
 
   @override
@@ -311,5 +315,32 @@ class _HtmlAsText extends md.HtmlBlockSyntax {
         md.Text(line),
       ],
     ]);
+  }
+}
+
+/// A table's column given a share of the table's room by its content:
+/// its flex is its widest cell's natural width (48 to 480 points), so a
+/// table fits the width it has, a column of short cells stays narrow and
+/// long cells wrap (CSS's fixed layout, by content) instead of pushing
+/// the table wider than its room.
+class ContentFlexColumnWidth extends TableColumnWidth {
+  /// The one way it sizes columns.
+  const new();
+
+  @override
+  double minIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) =>
+      0;
+
+  @override
+  double maxIntrinsicWidth(Iterable<RenderBox> cells, double containerWidth) =>
+      0;
+
+  @override
+  double flex(Iterable<RenderBox> cells) {
+    var widest = 0.0;
+    for (final c in cells) {
+      widest = max(widest, c.getMaxIntrinsicWidth(double.infinity));
+    }
+    return widest.clamp(48, 480);
   }
 }

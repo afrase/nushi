@@ -8,12 +8,10 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_checks.dart';
+import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
-import 'package:nushi/github_settings.dart';
-import 'package:nushi/markdown.dart';
-import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -100,57 +98,76 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       );
     }
     final failed = p.checks.where((c) => c.failed).length;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _Header(
-          daemon: widget.daemon,
-          inChat: widget.inChat,
-          pull: p,
-          now: widget.now ?? clock(),
-          error: _error,
-          onReview: () =>
-              submitReview(context, widget.daemon, p, onDone: _load),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 6),
-          child: Row(
-            children: [
-              Segmented(
-                value: _tab,
-                segments: [
-                  (_Tab.conversation, 'Conversation ${p.conversation.length}'),
-                  (
-                    _Tab.checks,
-                    failed > 0
-                        ? 'Checks · $failed failed'
-                        : 'Checks ${p.checks.length}',
-                  ),
-                  (_Tab.files, 'Files ${p.changedFiles}'),
-                ],
-                onChanged: (v) => setState(() => _tab = v),
+    final now = widget.now ?? clock();
+    // The text reads in a column of [readableWidth] at most, centred; the
+    // files' diff takes the whole width.
+    return LayoutBuilder(
+      builder: (context, box) {
+        final pad = readablePad(box.maxWidth);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: pad - 20),
+              child: _Header(
+                daemon: widget.daemon,
+                inChat: widget.inChat,
+                pull: p,
+                now: now,
+                error: _error,
+                onReview: () =>
+                    submitReview(context, widget.daemon, p, onDone: _load),
               ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: switch (_tab) {
-            _Tab.conversation => _Conversation(
-              daemon: widget.daemon,
-              pull: p,
-              now: widget.now ?? clock(),
-              onPosted: _load,
             ),
-            _Tab.checks => GitHubChecks(daemon: widget.daemon, pull: p),
-            _Tab.files => GitHubFiles(
-              daemon: widget.daemon,
-              pull: p,
-              now: widget.now,
-              onChanged: _load,
+            Padding(
+              padding: EdgeInsets.fromLTRB(pad, 10, pad, 6),
+              child: Row(
+                children: [
+                  Segmented(
+                    value: _tab,
+                    segments: [
+                      (
+                        _Tab.conversation,
+                        'Conversation ${p.conversation.length}',
+                      ),
+                      (
+                        _Tab.checks,
+                        failed > 0
+                            ? 'Checks · $failed failed'
+                            : 'Checks ${p.checks.length}',
+                      ),
+                      (_Tab.files, 'Files ${p.changedFiles}'),
+                    ],
+                    onChanged: (v) => setState(() => _tab = v),
+                  ),
+                ],
+              ),
             ),
-          },
-        ),
-      ],
+            Expanded(
+              child: switch (_tab) {
+                _Tab.conversation => _Conversation(
+                  daemon: widget.daemon,
+                  pull: p,
+                  now: now,
+                  pad: pad,
+                  onPosted: _load,
+                ),
+                _Tab.checks => GitHubChecks(
+                  daemon: widget.daemon,
+                  pull: p,
+                  pad: pad - 8,
+                ),
+                _Tab.files => GitHubFiles(
+                  daemon: widget.daemon,
+                  pull: p,
+                  now: widget.now,
+                  onChanged: _load,
+                ),
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -425,81 +442,6 @@ class _Pill extends StatelessWidget {
   }
 }
 
-/// A comment or a review in the conversation: its author (marked when
-/// outside the repository, or a bot), when, a review's state, its text.
-///
-/// In a chat's tab it can be sent to the agent ([SendToAgent]), unless
-/// it's part of a thread ([sendable] false: the thread is sent whole).
-class CommentEntry extends StatelessWidget {
-  const new(this.comment, {required this.now, super.key, this.sendable = true});
-
-  final GitHubComment comment;
-  final DateTime now;
-  final bool sendable;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final c = comment;
-    final review = switch (c.review) {
-      'approved' => ('approved', t.done),
-      'changes_requested' => ('requested changes', t.crashed),
-      'commented' => ('reviewed', t.textSecondary),
-      'dismissed' => ('review dismissed', t.textMuted),
-      _ => null,
-    };
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                c.author,
-                style: theme.ui(t.text, size: 12.5, weight: FontWeight.w600),
-              ),
-              if (c.bot)
-                Text('  bot', style: theme.ui(t.textMuted, size: 11.5)),
-              if (c.outside)
-                Tooltip(
-                  message:
-                      "Not the repository's owner, a member or a collaborator",
-                  child: Text(
-                    '  outside',
-                    style: theme.ui(t.needs, size: 11.5),
-                  ),
-                ),
-              if (review != null)
-                Text('  ${review.$1}', style: theme.ui(review.$2, size: 11.5)),
-              Text(
-                '  ${githubAgo(c.createdMs.toInt(), now)}',
-                style: theme.ui(t.textMuted, size: 11.5),
-              ),
-              const Spacer(),
-              if (sendable && c.body.isNotEmpty)
-                SendIcon(() async => commentReply(c)),
-              if (c.url.isNotEmpty)
-                IconTap(
-                  Icons.open_in_new,
-                  size: 13,
-                  tooltip: 'Open on GitHub',
-                  onTap: () => openWeb(c.url),
-                ),
-            ],
-          ),
-          if (c.body.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: AgentMarkdown(c.body, images: githubImage),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// The description, then the comments and reviews, oldest first, and a
 /// box for a comment (Markdown; ⌘⏎ posts it).
 class _Conversation extends StatelessWidget {
@@ -507,12 +449,16 @@ class _Conversation extends StatelessWidget {
     required this.daemon,
     required this.pull,
     required this.now,
+    required this.pad,
     required this.onPosted,
   });
 
   final Daemon daemon;
   final GitHubPull pull;
   final DateTime now;
+
+  /// Its sides' padding, which centres it.
+  final double pad;
   final Future<void> Function() onPosted;
 
   @override
@@ -522,7 +468,7 @@ class _Conversation extends StatelessWidget {
     final p = pull;
     return SelectionArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+        padding: EdgeInsets.fromLTRB(pad, 4, pad, 20),
         children: [
           CommentEntry(
             GitHubComment(
