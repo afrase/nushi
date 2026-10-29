@@ -112,7 +112,7 @@ func (s *session) sendLocked(t *tool, r report) {
 		return nil
 	}
 	if first {
-		s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
+		s.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 			ToolCallID: acp.ToolCallID(t.id), Name: t.name, Status: orPending(r.status), Title: r.title, Kind: r.kind,
 			Content: r.content, Locations: r.locations, RawInput: r.rawInput, RawOutput: r.rawOutput, Meta: meta,
 		}})
@@ -135,7 +135,7 @@ func (s *session) sendLocked(t *tool, r report) {
 	if has("locations") {
 		u.Locations = r.locations
 	}
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: u})
+	s.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: u})
 }
 
 func orPending(st acp.ToolCallStatus) acp.ToolCallStatus {
@@ -259,6 +259,7 @@ func (s *session) toolResult(b claudeagent.Block) {
 		r.content = content
 	}
 	s.sendLocked(t, r)
+	s.release(t.id) // its work, if it started a subagent claude never named
 }
 
 // toolProgress is a tool still running.

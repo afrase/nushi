@@ -24,6 +24,7 @@ const (
 // canUseTool asks the user whether a tool may run. What the work a
 // cancel stopped still asks, a question too, is denied at once.
 func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
+	s.caughtUp(ctx)
 	s.mu.Lock()
 	stopped := s.dropTop && r.AgentID == "" // a subagent's work goes on
 	s.mu.Unlock()
@@ -73,8 +74,10 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 	}
 	if ts.byID[r.ToolUseID] == nil && r.AgentID != "" {
 		// A subagent's call its stream hasn't shown: not one the turn
-		// leaves open when it ends.
-		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID}
+		// leaves open when it ends, and of the stream of the call that
+		// started the subagent, if claude has said which.
+		parent = s.callOf(r.AgentID)
+		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID, parent: parent}
 	}
 	t := s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
 	v := toolView(t.name, input, ts.cwd)

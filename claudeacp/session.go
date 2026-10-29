@@ -37,7 +37,9 @@ type session struct {
 	lastAsk  int
 	closed   bool // closed or gone: no more prompts
 
-	tools tools // the tool calls shown
+	tools    tools     // the tool calls shown
+	kids     subagents // its subagents
+	children bool      // the client takes subagents as sessions of their own
 
 	cwd     string
 	cfg     config     // its modes and options
@@ -48,6 +50,10 @@ type session struct {
 
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
+
+	hmu     sync.Mutex
+	handled uint64        // claude's messages the reader has handled
+	tick    chan struct{} // closed, and made anew, at each
 }
 
 func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*acp.NewSessionResponse, error) {
@@ -69,8 +75,10 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 // start runs claude for session id and opens the session once claude has
 // answered initialize.
 func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*session, error) {
-	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), open: map[int]context.CancelFunc{}}
+	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), tick: make(chan struct{}), open: map[int]context.CancelFunc{},
+		children: a.clientCaps().subagents}
 	s.st.init()
+	s.kids.init()
 	s.tools.init(o.Cwd)
 	s.plan.init()
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
@@ -99,10 +107,16 @@ func (s *session) reader() {
 	defer close(s.read)
 	for m := range s.cs.Messages() {
 		s.handle(m)
+		s.hmu.Lock()
+		s.handled++
+		close(s.tick)
+		s.tick = make(chan struct{})
+		s.hmu.Unlock()
 	}
 	err := s.cs.Wait()
 	_ = s.cs.Close()
 	s.endTools(endedExit)
+	s.subagentsGone()
 	s.mu.Lock()
 	gone := !s.closed
 	s.closed = true
@@ -117,6 +131,30 @@ func (s *session) reader() {
 	if gone {
 		s.log.Warn("claude exited", "err", err)
 		s.a.forget(s)
+	}
+}
+
+// caughtUp waits until the reader has handled the messages claude wrote
+// before the request ctx is for, as claude handles requests beside its
+// messages: so the request finds what they said, such as the start of
+// the subagent it comes from. It waits no more once claude is gone or
+// ctx ends.
+func (s *session) caughtUp(ctx context.Context) {
+	n, ok := claudeagent.MessagesBefore(ctx)
+	for ok {
+		s.hmu.Lock()
+		done, tick := s.handled >= n, s.tick
+		s.hmu.Unlock()
+		if done {
+			return
+		}
+		select {
+		case <-tick:
+		case <-ctx.Done():
+			return
+		case <-s.read:
+			return
+		}
 	}
 }
 
