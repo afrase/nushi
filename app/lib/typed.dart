@@ -5,21 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
-/// Whether what's built under it comes as the user watches: a transcript's
-/// entry that rose in, or one built again as the agent works (a call
-/// joining a run). Not what a chat opened or loaded with.
-class Arriving extends InheritedWidget {
-  const new({required this.play, required super.child, super.key});
-
-  final bool play;
-
-  static bool of(BuildContext context) =>
-      context.getInheritedWidgetOfExactType<Arriving>()?.play ?? false;
-
-  @override
-  bool updateShouldNotify(Arriving old) => false; // read once, as it comes
-}
-
 /// A tool call's title typing out as it arrives ([Arriving]): [span] is
 /// laid out whole, so nothing reflows, and its characters after the first
 /// [keep] (a verb that stays, as "Read ") show left to right, the rest
