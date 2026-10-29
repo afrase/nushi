@@ -19,12 +19,12 @@ class Typed extends StatefulWidget {
   final int keep;
   final bool shine;
 
-  /// Characters a second, as fast as reading the verb.
-  static const rate = 120.0;
+  /// Characters a second: quick, but each word can be read.
+  static const rate = 90.0;
 
   /// The longest a title takes, and a changed one typed again.
-  static const most = Duration(milliseconds: 180);
-  static const again = Duration(milliseconds: 120);
+  static const most = Duration(milliseconds: 260);
+  static const again = Duration(milliseconds: 180);
 
   /// The caret fading once the title is all there.
   static const fade = Duration(milliseconds: 120);
@@ -78,6 +78,117 @@ class _TypedState extends State<Typed> with ClockRun {
     final caret = 1 - part(ms, _typeMs, Typed.fade.inMilliseconds.toDouble());
     return text(
       typedSpan(widget.span, shown, NushiTheme.of(context).t.toolAccent, caret),
+    );
+  }
+}
+
+/// A run's line ("Read 4 files, running make test"): what its calls did
+/// ([done]), then what the running one is doing ([now], shining). The
+/// line never types again: [done] changes in place, and only a new [now]
+/// types in (what was added, when it grows), as [Typed] does, when the
+/// run first shows ([Arriving]) and as calls follow. What [now] starts
+/// typing is held until typed, [hold] at least; what comes meanwhile
+/// waits, and only the latest shows then, those between skipped. With
+/// Reduce Motion each shows whole as it comes.
+class RunLine extends StatefulWidget {
+  const new(this.done, this.now, {required this.style, super.key});
+
+  final String done;
+  final String? now;
+  final TextStyle style;
+
+  /// The least a running call's words show before the next replace them.
+  static const hold = Duration(milliseconds: 250);
+
+  @override
+  State<RunLine> createState() => _RunLineState();
+}
+
+class _RunLineState extends State<RunLine> with ClockRun {
+  late String _done = widget.done;
+  String? _now;
+  (String, String?)? _next; // what waits for the hold
+  int _from = 0;
+  double _typeMs = 0;
+  double _holdMs = 0;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _show(widget.done, widget.now, type: Arriving.of(context));
+  }
+
+  @override
+  void didUpdateWidget(RunLine old) {
+    super.didUpdateWidget(old);
+    final next = (widget.done, widget.now);
+    if (next == (_done, _now)) {
+      _next = null;
+    } else if (running && ranMs < _holdMs) {
+      _next = next;
+    } else {
+      _show(next.$1, next.$2);
+    }
+  }
+
+  @override
+  void ticked() {
+    if (_next case (final done, final now)? when ranMs >= _holdMs) {
+      _next = null;
+      _show(done, now);
+    }
+  }
+
+  void _show(String done, String? now, {bool type = true}) {
+    final was = _now;
+    _done = done;
+    _now = now;
+    if (now == null || now == was || !type || reduceMotion(context)) return;
+    final from = was != null && now.startsWith(was) ? was.length : 0;
+    final n = now.length - from;
+    if (n <= 0) return;
+    _from = from;
+    _typeMs = min(n / Typed.rate * 1000, Typed.most.inMilliseconds.toDouble());
+    _holdMs = max(_typeMs, RunLine.hold.inMilliseconds.toDouble());
+    runFor(
+      Duration(
+        microseconds: (max(_typeMs + Typed.fade.inMilliseconds, _holdMs) * 1000)
+            .round(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget text(InlineSpan span) =>
+        Text.rich(span, maxLines: 1, overflow: TextOverflow.ellipsis);
+    final style = widget.style;
+    final now = _now;
+    if (now == null) return text(TextSpan(text: _done, style: style));
+    final span = TextSpan(text: now, style: style);
+    final Widget doing;
+    if (running && ranMs < _typeMs + Typed.fade.inMilliseconds) {
+      final ms = ranMs;
+      final shown =
+          _from + ((now.length - _from) * part(ms, 0, _typeMs)).floor();
+      final caret = 1 - part(ms, _typeMs, Typed.fade.inMilliseconds.toDouble());
+      doing = text(
+        typedSpan(span, shown, NushiTheme.of(context).t.toolAccent, caret),
+      );
+    } else {
+      doing = Shine(child: text(span));
+    }
+    return Row(
+      children: [
+        if (_done.isNotEmpty)
+          Flexible(
+            child: text(TextSpan(text: '$_done, ', style: style)),
+          ),
+        Flexible(child: doing),
+      ],
     );
   }
 }

@@ -346,26 +346,12 @@ class ToolGroupView extends StatelessWidget {
 
 /// A run's line: what it did, and what its running call is doing, shining.
 Widget _groupTitle(NushiTheme theme, List<Item> calls, {required bool still}) {
-  final style = theme.ui(theme.t.textSecondary);
-  Widget text(String s) =>
-      Text(s, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
   final running = still ? null : calls.where(_running).firstOrNull;
-  if (running == null) return text(groupLabel(calls));
-  final done = calls.where((c) => !_running(c)).toList();
-  final now = doingOf(running);
-  return Row(
-    children: [
-      if (done.isNotEmpty) Flexible(child: text('${groupLabel(done)}, ')),
-      // What it's doing now types out as it starts, then shines.
-      Flexible(
-        child: Typed(
-          TextSpan(
-            text: done.isEmpty ? now : now[0].toLowerCase() + now.substring(1),
-            style: style,
-          ),
-          shine: true,
-        ),
-      ),
-    ],
+  final done = calls.where((c) => running == null || !_running(c)).toList();
+  final now = running == null ? null : doingOf(running);
+  return RunLine(
+    done.isEmpty ? '' : groupLabel(done),
+    now == null || done.isEmpty ? now : now[0].toLowerCase() + now.substring(1),
+    style: theme.ui(theme.t.textSecondary),
   );
 }
