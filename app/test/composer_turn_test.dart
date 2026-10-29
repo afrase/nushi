@@ -10,7 +10,7 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 
 // UX review, finding 16: while a turn runs, the Mac's box has Queue and
-// Steer as buttons too (they were ⏎ and ⌘⏎ only), and a queued message
+// Stop and send as buttons too (they were ⏎ and ⌘⏎ only), and a queued message
 // can be sent now.
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -63,35 +63,37 @@ Future<(FakeDaemon, Daemon, ChatState)> _box(WidgetTester tester) async {
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('written while a turn runs: Queue and Steer beside Stop', (
-    tester,
-  ) async {
-    final (fake, d, _) = await _box(tester);
-    expect(find.byTooltip('Queue (⏎)'), findsNothing); // nothing written
-    await tester.enterText(find.byType(TextField), 'Also the README');
-    await tester.pump();
-    expect(find.byTooltip('Queue (⏎)'), findsOne);
-    expect(find.byTooltip('Steer: stop and send now (⌘⏎)'), findsOne);
-    expect(find.byTooltip('Stop (esc)'), findsOne);
-    await expectLater(
-      find.byKey(const Key('box')),
-      matchesGoldenFile('goldens/composer_turn_dark.png'),
-    );
-    await tester.tap(find.byTooltip('Steer: stop and send now (⌘⏎)'));
-    await tester.pump();
-    final sent = fake.calls.whereType<SendPromptRequest>().single;
-    expect((sent.text, sent.now), ('Also the README', true));
-    await tester.enterText(find.byType(TextField), 'And the tests');
-    await tester.pump();
-    await tester.tap(find.byTooltip('Queue (⏎)'));
-    await tester.pump();
-    final queued = fake.calls.whereType<SendPromptRequest>().last;
-    expect(
-      (queued.text, queued.queue, queued.now),
-      ('And the tests', true, false),
-    );
-    d.dispose();
-  }, variant: _mac);
+  testWidgets(
+    'written while a turn runs: Queue and Stop and send beside Stop',
+    (tester) async {
+      final (fake, d, _) = await _box(tester);
+      expect(find.byTooltip('Queue (⏎)'), findsNothing); // nothing written
+      await tester.enterText(find.byType(TextField), 'Also the README');
+      await tester.pump();
+      expect(find.byTooltip('Queue (⏎)'), findsOne);
+      expect(find.byTooltip('Stop and send (⌘⏎)'), findsOne);
+      expect(find.byTooltip('Stop (esc)'), findsOne);
+      await expectLater(
+        find.byKey(const Key('box')),
+        matchesGoldenFile('goldens/composer_turn_dark.png'),
+      );
+      await tester.tap(find.byTooltip('Stop and send (⌘⏎)'));
+      await tester.pump();
+      final sent = fake.calls.whereType<SendPromptRequest>().single;
+      expect((sent.text, sent.now), ('Also the README', true));
+      await tester.enterText(find.byType(TextField), 'And the tests');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Queue (⏎)'));
+      await tester.pump();
+      final queued = fake.calls.whereType<SendPromptRequest>().last;
+      expect(
+        (queued.text, queued.queue, queued.now),
+        ('And the tests', true, false),
+      );
+      d.dispose();
+    },
+    variant: _mac,
+  );
 
   testWidgets('a queued message sent now: out of the queue, then in place '
       'of the turn', (tester) async {

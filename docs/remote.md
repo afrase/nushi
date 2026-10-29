@@ -18,7 +18,7 @@ Settings › Remote access connects the daemon to a relay you name (`wss://…`)
 The phone is Nushi's web app, added to the Home Screen ([ADR 0054](adr/0054-the-phone-is-a-web-app-with-web-push.md)). It has:
 
 - the chats with what each is doing: those that need you first, as a group at the top, then the pinned (Pin and Unpin in a chat's ⋯);
-- a chat's transcript and composer: send, Queue and Steer while a turn runs, Stop;
+- a chat's transcript and composer: send, Queue and Stop and send while a turn runs, Stop;
 - its prompts and questions, answered with a tap;
 - a file the agent wrote, previewed full screen (its tool row's Preview, or Artifacts in the chat's bar). An HTML page or a Mermaid diagram shows in a sandboxed frame, a page without the files beside it; a PDF only on the Mac;
 - New chat, and Settings.
