@@ -104,12 +104,18 @@ func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
 	wait, grace := throwAwayWait, stopGrace
 	t.Cleanup(func() { throwAwayWait, stopGrace = wait, grace })
 	throwAwayWait, stopGrace = 10*time.Millisecond, 10*time.Millisecond
-	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	side, err := svc.Fork(context.Background(), c.id)
+	agent := &fakeAgent{}
+	dialect := claudeDialect
+	dialect.Redelete = 20 * time.Millisecond // the second delete, done before Cleanup puts the tunables back
+	svc := New([]Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	t.Cleanup(svc.Close)
+	ctx := context.Background()
+	id, _ := svc.Start(ctx, "", t.TempDir(), false)
+	side, err := svc.Fork(ctx, id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	agent.deleteGate = make(chan struct{}) // never answers
+	agent.deleteGate = make(chan struct{}) // doesn't answer the first delete
 	closed := make(chan error)
 	go func() { closed <- svc.CloseSide(side) }()
 	select {
@@ -120,4 +126,7 @@ func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("CloseSide waits on the agent's delete")
 	}
+	close(agent.deleteGate) // the second goes through
+	c := svc.chats[id]
+	eventually(t, c, func() bool { return !slices.Contains(c.session.Throwaway, side) })
 }
