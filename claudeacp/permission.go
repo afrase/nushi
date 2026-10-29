@@ -3,6 +3,7 @@ package claudeacp
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -79,7 +80,13 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 		parent = s.callOf(r.AgentID)
 		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID, parent: parent}
 	}
-	t := s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
+	// A call the stream showed whole keeps the input it showed, as with
+	// claude-agent-acp: the request's is claude's parse of it, the same
+	// but for its keys' order.
+	t := ts.byID[r.ToolUseID]
+	if t == nil || !t.whole {
+		t = s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
+	}
 	v := toolView(t.name, input, ts.cwd)
 	cc := map[string]any{"toolName": t.name}
 	if t.parent != "" {
@@ -99,7 +106,7 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 // No first.
 func permissionOptions(r claudeagent.PermissionRequest) []acp.PermissionOption {
 	opts := []acp.PermissionOption{{OptionID: optAllowOnce, Name: "Yes", Kind: acp.PermissionOptionKindAllowOnce}}
-	if len(r.Suggestions) > 0 && !r.MatchedAskRule && !r.SuppressAlwaysAllowRule {
+	if len(r.Suggestions) > 0 && !r.MatchedAskRule && !r.SuppressAlwaysAllowRule && sayable(r) {
 		opts = append(opts, acp.PermissionOption{OptionID: optAllowAlways, Name: "Yes, and don't ask again", Kind: acp.PermissionOptionKindAllowAlways})
 	}
 	no := acp.PermissionOption{OptionID: optReject, Name: "No", Kind: acp.PermissionOptionKindRejectOnce}
@@ -107,6 +114,32 @@ func permissionOptions(r claudeagent.PermissionRequest) []acp.PermissionOption {
 		return append([]acp.PermissionOption{no}, opts...)
 	}
 	return append(opts, no)
+}
+
+// sayable says whether "don't ask again" says what claude's rules for a
+// command would do: allow it, or more of its kind, and reach folders for
+// the session, but not change the session's mode, as claude 2.1.312
+// suggests (acceptEdits) for a command writing outside the session's
+// folder (docs/facts/claude.md). claude-agent-acp offers no "don't ask
+// again" then, as here.
+func sayable(r claudeagent.PermissionRequest) bool {
+	if r.ToolName != "Bash" && r.ToolName != "PowerShell" {
+		return true
+	}
+	for _, u := range r.Suggestions {
+		switch {
+		case u.Type == "addDirectories" && u.Destination == "session":
+		case u.Type == "addRules" && u.Behavior == "allow":
+			for _, rule := range u.Rules {
+				if rule.ToolName != r.ToolName && rule.ToolName != "Read" || strings.TrimSpace(rule.RuleContent) == "" {
+					return false
+				}
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // permissionResult is the user's pick as claude's answer. No answer (the
