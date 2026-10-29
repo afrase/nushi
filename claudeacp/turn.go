@@ -87,13 +87,17 @@ func (s *session) ownerLocked(id string) *turn {
 
 // activateLocked makes t the running turn. The turns queued before it
 // end: claude has moved past them (folded them into the last turn, or
-// ran them with no result of their own).
+// ran them with no result of their own). One whose result came while a
+// steer was unnamed ends with that result's answer.
 func (s *session) activateLocked(t *turn) {
 	for len(s.turns) > 0 && s.turns[0] != t {
 		before := s.turns[0]
-		if before.cancelled {
+		switch {
+		case before.held != nil:
+			s.settleLocked(before, *before.held)
+		case before.cancelled:
 			s.settleLocked(before, cancelled(before))
-		} else {
+		default:
 			s.settleLocked(before, before.answer(acp.StopReasonEndTurn))
 		}
 	}
