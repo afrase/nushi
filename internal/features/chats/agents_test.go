@@ -60,7 +60,7 @@ func TestStartFailureExplained(t *testing.T) {
 	explain := func(err error) error { return fmt.Errorf("%w (tested with 1.0)", err) }
 	svc := New([]Kind{{Name: "a", Title: "A", Launch: launch, Explain: explain}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
 	_, err := svc.Start(context.Background(), "", t.TempDir(), false)
-	if err == nil || err.Error() != "couldn't start A: start agent: it quit (tested with 1.0)" {
+	if err == nil || err.Error() != "couldn't start A: start agent: it quit (tested with 1.0)" || !errors.Is(err, ErrStart) {
 		t.Errorf("%v", err)
 	}
 }

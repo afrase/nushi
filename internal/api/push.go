@@ -44,10 +44,7 @@ func (s *server) SetPushSubscription(ctx context.Context, req *connect.Request[n
 	if m := req.Msg; m.Endpoint != "" {
 		sub = &webpush.Subscription{Endpoint: m.Endpoint, P256DH: m.P256Dh, Auth: m.Auth}
 	}
-	if err := s.remote.SetPush(device, sub); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-	return connect.NewResponse(&nushiv1.SetPushSubscriptionResponse{}), nil
+	return done[nushiv1.SetPushSubscriptionResponse](s.remote.SetPush(device, sub), invalid)
 }
 
 // SetDeviceView keeps the chat a client shows: a device's, or on the
@@ -63,10 +60,7 @@ func (s *server) SetDeviceView(ctx context.Context, req *connect.Request[nushiv1
 }
 
 func (s *server) SendTestPush(ctx context.Context, req *connect.Request[nushiv1.SendTestPushRequest]) (*connect.Response[nushiv1.SendTestPushResponse], error) {
-	if err := s.remote.TestPush(ctx, req.Msg.DeviceId); err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	return connect.NewResponse(&nushiv1.SendTestPushResponse{}), nil
+	return done[nushiv1.SendTestPushResponse](s.remote.TestPush(ctx, req.Msg.DeviceId), refused)
 }
 
 func (s *server) UnpairThisDevice(ctx context.Context, _ *connect.Request[nushiv1.UnpairThisDeviceRequest]) (*connect.Response[nushiv1.UnpairThisDeviceResponse], error) {
@@ -74,8 +68,5 @@ func (s *server) UnpairThisDevice(ctx context.Context, _ *connect.Request[nushiv
 	if err != nil {
 		return nil, err
 	}
-	if err := s.remote.Revoke(device); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
-	}
-	return connect.NewResponse(&nushiv1.UnpairThisDeviceResponse{}), nil
+	return done[nushiv1.UnpairThisDeviceResponse](s.remote.Revoke(device), notFound)
 }

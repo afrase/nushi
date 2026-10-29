@@ -12,7 +12,7 @@ func (s *server) ListSkills(ctx context.Context, req *connect.Request[nushiv1.Li
 	m := req.Msg
 	list, err := s.skills.List(ctx, m.Agent, m.Folder)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	resp := &nushiv1.ListSkillsResponse{PluginsError: list.PluginsError, BuiltInOff: list.BuiltInOff, BuiltInSetIn: list.BuiltInSetIn,
 		NoSkills: list.NoSkills, NoSwitch: list.NoSwitch, ReadsShared: list.ReadsShared}
@@ -34,25 +34,25 @@ func (s *server) ListSkills(ctx context.Context, req *connect.Request[nushiv1.Li
 
 func (s *server) SetSkillOn(ctx context.Context, req *connect.Request[nushiv1.SetSkillOnRequest]) (*connect.Response[nushiv1.SetSkillOnResponse], error) {
 	m := req.Msg
-	return changed(s.skills.SetSkillOn(ctx, m.Agent, m.Folder, m.Source, m.Name, m.On), &nushiv1.SetSkillOnResponse{})
+	return done[nushiv1.SetSkillOnResponse](s.skills.SetSkillOn(ctx, m.Agent, m.Folder, m.Source, m.Name, m.On), refused)
 }
 
 func (s *server) SetPluginOn(ctx context.Context, req *connect.Request[nushiv1.SetPluginOnRequest]) (*connect.Response[nushiv1.SetPluginOnResponse], error) {
 	m := req.Msg
-	return changed(s.skills.SetPluginOn(ctx, m.Agent, m.Folder, m.Id, m.On), &nushiv1.SetPluginOnResponse{})
+	return done[nushiv1.SetPluginOnResponse](s.skills.SetPluginOn(ctx, m.Agent, m.Folder, m.Id, m.On), refused)
 }
 
 func (s *server) UninstallPlugin(ctx context.Context, req *connect.Request[nushiv1.UninstallPluginRequest]) (*connect.Response[nushiv1.UninstallPluginResponse], error) {
 	m := req.Msg
-	return changed(s.skills.Uninstall(ctx, m.Agent, m.Folder, m.Id), &nushiv1.UninstallPluginResponse{})
+	return done[nushiv1.UninstallPluginResponse](s.skills.Uninstall(ctx, m.Agent, m.Folder, m.Id), refused)
 }
 
 func (s *server) TrashSkill(ctx context.Context, req *connect.Request[nushiv1.TrashSkillRequest]) (*connect.Response[nushiv1.TrashSkillResponse], error) {
 	m := req.Msg
-	return changed(s.skills.Trash(ctx, m.Agent, m.Folder, m.Path), &nushiv1.TrashSkillResponse{})
+	return done[nushiv1.TrashSkillResponse](s.skills.Trash(ctx, m.Agent, m.Folder, m.Path), refused)
 }
 
 func (s *server) LinkSkill(ctx context.Context, req *connect.Request[nushiv1.LinkSkillRequest]) (*connect.Response[nushiv1.LinkSkillResponse], error) {
 	m := req.Msg
-	return changed(s.skills.Link(ctx, m.Agent, m.Folder, m.Path), &nushiv1.LinkSkillResponse{})
+	return done[nushiv1.LinkSkillResponse](s.skills.Link(ctx, m.Agent, m.Folder, m.Path), refused)
 }

@@ -30,7 +30,7 @@ func (s *server) ListFiles(ctx context.Context, req *connect.Request[nushiv1.Lis
 	}
 	paths, err := git.Files(ctx, req.Msg.Folder, 20000)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	return connect.NewResponse(&nushiv1.ListFilesResponse{Paths: paths}), nil
 }
@@ -41,7 +41,7 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	}
 	changes, err := git.Changes(ctx, req.Msg.Folder, git.Span{Base: req.Msg.Base, Commit: req.Msg.Commit, Since: req.Msg.Since})
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	resp := &nushiv1.GetDiffResponse{}
 	for _, c := range changes {
@@ -56,7 +56,7 @@ func (s *server) GetFile(_ context.Context, req *connect.Request[nushiv1.GetFile
 	}
 	c, err := git.File(req.Msg.Folder, req.Msg.Path)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	return connect.NewResponse(&nushiv1.GetFileResponse{File: fileChangeProto(c)}), nil
 }
@@ -75,7 +75,7 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 		return connect.NewResponse(&nushiv1.GetFolderStatusResponse{Gone: errors.Is(err, git.ErrGone)}), nil
 	}
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	resp := &nushiv1.GetFolderStatusResponse{Git: true, Branch: st.Branch,
 		Files: int32(st.Files), Added: int32(st.Added), Removed: int32(st.Removed),
@@ -83,7 +83,7 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 	if base := cmp.Or(req.Msg.Base, resp.DefaultBase); base != "" {
 		ahead, err := git.Ahead(ctx, req.Msg.Folder, base)
 		if err != nil {
-			return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+			return nil, refused(err)
 		}
 		resp.Ahead = int32(ahead)
 	}
@@ -100,7 +100,7 @@ func (s *server) ListCommits(ctx context.Context, req *connect.Request[nushiv1.L
 	}
 	commits, err := git.Commits(ctx, req.Msg.Folder, req.Msg.Base, limit)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	resp := &nushiv1.ListCommitsResponse{}
 	for _, c := range commits {
@@ -116,11 +116,11 @@ func (s *server) ListBranches(ctx context.Context, req *connect.Request[nushiv1.
 	}
 	branches, err := git.Branches(ctx, req.Msg.Folder, 500)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	wts, err := git.Worktrees{}.List(ctx, req.Msg.Folder)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	resp := &nushiv1.ListBranchesResponse{}
 	for _, b := range branches {

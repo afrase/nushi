@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +11,9 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/remote"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
@@ -148,3 +152,47 @@ func TestPageStart(t *testing.T) {
 		}
 	}
 }
+
+// A new chat whose agent didn't start says so in its reason, for the app
+// to mark the agent; another refusal carries none.
+func TestStartFailureReason(t *testing.T) {
+	launch := func(acp.Client, *slog.Logger) (chats.Agent, error) { return nil, errors.New("it quit") }
+	st := store.New(t.TempDir())
+	svc := chats.New([]chats.Kind{{Name: "a", Title: "A", Launch: launch}}, st, st, nil, t.TempDir(), func(model.Event) {})
+	srv := httptest.NewServer(New(Services{Chats: svc}))
+	defer srv.Close()
+	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	for _, tc := range []struct{ folder, reason, says string }{
+		{"", ReasonAgentStart, "couldn't start A: start agent: it quit"},
+		{"relative", "", "is not an absolute path"},
+	} {
+		_, err := c.StartChat(context.Background(), connect.NewRequest(&nushiv1.StartChatRequest{Folder: tc.folder}))
+		var ce *connect.Error
+		if !errors.As(err, &ce) || ce.Code() != connect.CodeFailedPrecondition || !strings.Contains(ce.Message(), tc.says) ||
+			ce.Meta().Get(ReasonHeader) != tc.reason {
+			t.Errorf("start in %q: %v (reason %q), want %q", tc.folder, err, ce.Meta().Get(ReasonHeader), tc.reason)
+		}
+	}
+}
+
+// A device can't make a streaming call of the Mac's either.
+func TestDeviceGuardStreams(t *testing.T) {
+	for proc, want := range map[string]bool{nushiv1connect.NushiServiceStartPairingProcedure: false, nushiv1connect.NushiServiceEventsProcedure: true} {
+		ran := false
+		err := deviceGuard{}.WrapStreamingHandler(func(context.Context, connect.StreamingHandlerConn) error {
+			ran = true
+			return nil
+		})(context.Background(), specConn{spec: connect.Spec{Procedure: proc}})
+		if ran != want || (err == nil) != want {
+			t.Errorf("%s: ran %v, err %v", proc, ran, err)
+		}
+	}
+}
+
+// specConn is a stream that only says what call it is.
+type specConn struct {
+	connect.StreamingHandlerConn
+	spec connect.Spec
+}
+
+func (c specConn) Spec() connect.Spec { return c.spec }

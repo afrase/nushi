@@ -17,9 +17,9 @@ import (
 // rate limit, GitHub's own message).
 func githubErr(err error) error {
 	if errors.Is(err, githubapi.ErrNotFound) {
-		return connect.NewError(connect.CodeNotFound, err)
+		return notFound(err)
 	}
-	return connect.NewError(connect.CodeFailedPrecondition, err)
+	return refused(err)
 }
 
 func (s *server) ListGitHubHosts(ctx context.Context, _ *connect.Request[nushiv1.ListGitHubHostsRequest]) (*connect.Response[nushiv1.ListGitHubHostsResponse], error) {
@@ -48,17 +48,11 @@ func (s *server) AddGitHubToken(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) RemoveGitHubToken(_ context.Context, req *connect.Request[nushiv1.RemoveGitHubTokenRequest]) (*connect.Response[nushiv1.RemoveGitHubTokenResponse], error) {
-	if err := s.github.RemoveToken(req.Msg.Host); err != nil {
-		return nil, githubErr(err)
-	}
-	return connect.NewResponse(&nushiv1.RemoveGitHubTokenResponse{}), nil
+	return done[nushiv1.RemoveGitHubTokenResponse](s.github.RemoveToken(req.Msg.Host), githubErr)
 }
 
 func (s *server) AllowGitHubToken(ctx context.Context, req *connect.Request[nushiv1.AllowGitHubTokenRequest]) (*connect.Response[nushiv1.AllowGitHubTokenResponse], error) {
-	if err := s.github.AllowToken(ctx, req.Msg.Host); err != nil {
-		return nil, githubErr(err)
-	}
-	return connect.NewResponse(&nushiv1.AllowGitHubTokenResponse{}), nil
+	return done[nushiv1.AllowGitHubTokenResponse](s.github.AllowToken(ctx, req.Msg.Host), githubErr)
 }
 
 func (s *server) ListGitHubRepos(ctx context.Context, req *connect.Request[nushiv1.ListGitHubReposRequest]) (*connect.Response[nushiv1.ListGitHubReposResponse], error) {
@@ -85,7 +79,7 @@ func (s *server) ListGitHubInbox(ctx context.Context, req *connect.Request[nushi
 	f := githubapi.InboxFilter{Repos: req.Msg.Repos, Teams: req.Msg.Teams, Days: int(req.Msg.UpdatedDays),
 		Wide: req.Msg.Wide, Hide: req.Msg.Hide, Owners: req.Msg.Owners}
 	if err := f.Check(); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, invalid(err)
 	}
 	var in github.Inbox
 	var err error
@@ -186,10 +180,7 @@ func (s *server) ReplyGitHubThread(ctx context.Context, req *connect.Request[nus
 }
 
 func (s *server) ResolveGitHubThread(ctx context.Context, req *connect.Request[nushiv1.ResolveGitHubThreadRequest]) (*connect.Response[nushiv1.ResolveGitHubThreadResponse], error) {
-	if err := s.github.Resolve(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Resolve); err != nil {
-		return nil, githubErr(err)
-	}
-	return connect.NewResponse(&nushiv1.ResolveGitHubThreadResponse{}), nil
+	return done[nushiv1.ResolveGitHubThreadResponse](s.github.Resolve(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Resolve), githubErr)
 }
 
 func (s *server) RerunGitHubChecks(ctx context.Context, req *connect.Request[nushiv1.RerunGitHubChecksRequest]) (*connect.Response[nushiv1.RerunGitHubChecksResponse], error) {
@@ -214,10 +205,7 @@ func (s *server) SubmitGitHubReview(ctx context.Context, req *connect.Request[nu
 	for _, d := range m.Drafts {
 		r.Drafts = append(r.Drafts, githubapi.Draft{Path: d.Path, Side: d.Side, Line: int(d.Line), StartLine: int(d.StartLine), Body: d.Body})
 	}
-	if err := s.github.Review(ctx, m.Host, r); err != nil {
-		return nil, githubErr(err)
-	}
-	return connect.NewResponse(&nushiv1.SubmitGitHubReviewResponse{}), nil
+	return done[nushiv1.SubmitGitHubReviewResponse](s.github.Review(ctx, m.Host, r), githubErr)
 }
 
 func ghItemProto(it model.GitHubItem) *nushiv1.GitHubItem {

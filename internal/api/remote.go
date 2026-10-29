@@ -14,32 +14,23 @@ func (s *server) GetRemote(context.Context, *connect.Request[nushiv1.GetRemoteRe
 }
 
 func (s *server) SetRemote(_ context.Context, req *connect.Request[nushiv1.SetRemoteRequest]) (*connect.Response[nushiv1.SetRemoteResponse], error) {
-	if err := s.remote.Set(req.Msg.On, req.Msg.Relay); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-	return connect.NewResponse(&nushiv1.SetRemoteResponse{}), nil
+	return done[nushiv1.SetRemoteResponse](s.remote.Set(req.Msg.On, req.Msg.Relay), invalid)
 }
 
 func (s *server) StartPairing(context.Context, *connect.Request[nushiv1.StartPairingRequest]) (*connect.Response[nushiv1.StartPairingResponse], error) {
 	qr, expires, err := s.remote.StartPairing()
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	return connect.NewResponse(&nushiv1.StartPairingResponse{Qr: qr, Expires: expires.UnixMilli()}), nil
 }
 
 func (s *server) ConfirmPairing(_ context.Context, req *connect.Request[nushiv1.ConfirmPairingRequest]) (*connect.Response[nushiv1.ConfirmPairingResponse], error) {
-	if err := s.remote.ConfirmPairing(req.Msg.Code, req.Msg.Allow); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
-	}
-	return connect.NewResponse(&nushiv1.ConfirmPairingResponse{}), nil
+	return done[nushiv1.ConfirmPairingResponse](s.remote.ConfirmPairing(req.Msg.Code, req.Msg.Allow), notFound)
 }
 
 func (s *server) RevokeDevice(_ context.Context, req *connect.Request[nushiv1.RevokeDeviceRequest]) (*connect.Response[nushiv1.RevokeDeviceResponse], error) {
-	if err := s.remote.Revoke(req.Msg.Id); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
-	}
-	return connect.NewResponse(&nushiv1.RevokeDeviceResponse{}), nil
+	return done[nushiv1.RevokeDeviceResponse](s.remote.Revoke(req.Msg.Id), notFound)
 }
 
 func remoteProto(r model.Remote) *nushiv1.Remote {

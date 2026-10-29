@@ -23,7 +23,7 @@ func linkProto(g *model.ChatGitHub) *nushiv1.GitHubLink {
 func (s *server) FindChatPull(ctx context.Context, req *connect.Request[nushiv1.FindChatPullRequest]) (*connect.Response[nushiv1.FindChatPullResponse], error) {
 	sess, err := s.chats.Session(req.Msg.ChatId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
+		return nil, notFound(err)
 	}
 	if sess.Scratch {
 		return connect.NewResponse(&nushiv1.FindChatPullResponse{Pull: linkProto(sess.PullLink())}), nil
@@ -43,7 +43,7 @@ func (s *server) FindChatPull(ctx context.Context, req *connect.Request[nushiv1.
 			sess, err = s.chats.Session(req.Msg.ChatId)
 		}
 		if err != nil {
-			return nil, connect.NewError(connect.CodeNotFound, err)
+			return nil, notFound(err)
 		}
 	}
 	out.Pull = linkProto(sess.PullLink())
@@ -60,12 +60,9 @@ func (s *server) LinkChatPull(_ context.Context, req *connect.Request[nushiv1.Li
 		}
 		link, err := s.github.Link(model.ChatGitHub{Host: l.Host, Repo: l.Repo, Number: int(l.Number), Pull: true, ID: l.Id})
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+			return nil, invalid(err)
 		}
 		pull = &link
 	}
-	if err := s.chats.LinkPull(req.Msg.ChatId, pull); err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
-	}
-	return connect.NewResponse(&nushiv1.LinkChatPullResponse{}), nil
+	return done[nushiv1.LinkChatPullResponse](s.chats.LinkPull(req.Msg.ChatId, pull), notFound)
 }
