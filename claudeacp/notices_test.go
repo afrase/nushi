@@ -89,6 +89,31 @@ func TestCompaction(t *testing.T) {
 	}
 }
 
+// Claude's word that a compaction succeeded may come before its boundary,
+// and twice: the boundary then adds its facts to the same call, and the
+// second word is ignored.
+func TestCompactionOutcomeFirst(t *testing.T) {
+	success := sendf(`{"type":"system","subtype":"status","status":null,"compact_result":"success"}`)
+	f := fake(user("id2"),
+		sendf(`{"type":"system","subtype":"status","status":"compacting","uuid":"c1"}`),
+		success,
+		sendf(`{"type":"system","subtype":"compact_boundary","uuid":"b1","compact_metadata":{"trigger":"auto","pre_tokens":900,"post_tokens":80,"duration_ms":1200}}`),
+		success,
+		result(""), claudetest.Send(idle))
+	p := start(t, nil, f)
+	if got := stopReason(p.prompt(t, p.open(t), "/compact")); got != "end_turn" {
+		t.Fatal(got)
+	}
+	want := []string{
+		`tool_call {"toolCallId":"c1","title":"Compact conversation","name":"compact","kind":"think","status":"in_progress","_meta":{"claudeCode":{"toolName":"compact"}}}`,
+		`tool_call_update {"toolCallId":"c1","status":"completed","_meta":{"claudeCode":{"toolName":"compact"}}}`,
+		`tool_call_update {"toolCallId":"c1","rawOutput":{"trigger":"auto","preTokens":900,"postTokens":80,"durationMs":1200},"_meta":{"claudeCode":{"toolName":"compact"}}}`,
+	}
+	if got := p.toolUpdates(); !slices.Equal(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
 // /context's output comes twice, as claude's printed output and as its
 // result's text: clients read the last.
 func TestLocalCommand(t *testing.T) {

@@ -62,7 +62,9 @@ func (s *session) modelFallback(m *claudeagent.ModelRefusalFallback) {
 
 // compacting starts a compaction, shown as a tool call of its own
 // ("compact", which Nushi keys on), since ACP's compaction updates go
-// only to a client that declares them.
+// only to a client that declares them. One that has ended is kept until
+// the turn's result, so its boundary and claude's word on its outcome
+// end the same call in either order; a start after it is a new one.
 func (s *session) compacting(id string) {
 	ts := &s.tools
 	ts.mu.Lock()
@@ -72,7 +74,7 @@ func (s *session) compacting(id string) {
 
 func (s *session) compactingLocked(id string) *tool {
 	ts := &s.tools
-	if ts.compact != nil {
+	if ts.compact != nil && !ts.compact.ended {
 		return ts.compact
 	}
 	if id == "" {
@@ -84,13 +86,21 @@ func (s *session) compactingLocked(id string) *tool {
 	return t
 }
 
-// compacted ends the compaction at its boundary, with its facts.
+// compacted ends the compaction at its boundary, with its facts; one
+// claude has already said the outcome of gets only the facts.
 func (s *session) compacted(m *claudeagent.CompactBoundary) {
 	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	t := s.compactingLocked(m.UUID) // an automatic one may come without its start
-	ts.compact = nil
+	t := ts.compact
+	if t == nil {
+		t = s.compactingLocked(m.UUID) // an automatic one may come without its start
+	}
+	r := report{status: acp.ToolCallStatusCompleted}
+	if t.ended {
+		r.status = ""
+	}
+	t.ended = true
 	c := m.CompactMetadata
 	out, _ := json.Marshal(struct {
 		Trigger    string `json:"trigger"`
@@ -98,20 +108,22 @@ func (s *session) compacted(m *claudeagent.CompactBoundary) {
 		PostTokens int    `json:"postTokens"`
 		DurationMS int64  `json:"durationMs"`
 	}{c.Trigger, c.PreTokens, c.PostTokens, c.DurationMS})
-	s.sendLocked(t, report{status: acp.ToolCallStatusCompleted, rawOutput: out})
+	r.rawOutput = out
+	s.sendLocked(t, r)
 }
 
 // compactEnded is a compaction's outcome when claude says it: a failed
-// one fails, saying why; a success ends one its boundary hasn't.
+// one fails, saying why; a success ends one its boundary hasn't. Claude
+// may say it twice: the second is ignored.
 func (s *session) compactEnded(result, why string) {
 	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	t := ts.compact
-	if t == nil {
+	if t == nil || t.ended {
 		return
 	}
-	ts.compact = nil
+	t.ended = true
 	if result != "failed" {
 		s.sendLocked(t, report{status: acp.ToolCallStatusCompleted})
 		return

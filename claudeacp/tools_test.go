@@ -3,6 +3,7 @@ package claudeacp
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -174,5 +175,28 @@ func TestUnfinishedTools(t *testing.T) {
 				t.Errorf("%+v", last)
 			}
 		})
+	}
+}
+
+// When claude exits every call still open ends saying so, a subagent's
+// and a compaction's too: nothing else can end them now.
+func TestExitEndsCalls(t *testing.T) {
+	f := fake(user("id2"), echo("id2"),
+		assistant(`{"type":"tool_use","id":"toolu_p","name":"Agent","input":{"prompt":"look"}}`),
+		claudetest.Send(`{"type":"assistant","parent_tool_use_id":"toolu_p","message":{"id":"msg_2","content":[{"type":"tool_use","id":"toolu_s","name":"Bash","input":{"command":"ls"}}]}}`),
+		sendf(`{"type":"system","subtype":"status","status":"compacting","uuid":"c1"}`),
+		claudetest.Exit(1, ""))
+	p := start(t, nil, f)
+	if got := stopReason(p.prompt(t, p.open(t), "go")); !strings.Contains(got, "exited") {
+		t.Error(got)
+	}
+	ended := map[string]string{}
+	for _, u := range p.of("tool_call_update") {
+		if c := u.ToolCallUpdate; c.Status == acp.ToolCallStatusFailed {
+			ended[string(c.ToolCallID)] = c.Content[0].Content.Content.Text.Text
+		}
+	}
+	if want := map[string]string{"toolu_p": exitedText, "toolu_s": exitedText, "c1": exitedText}; !maps.Equal(ended, want) {
+		t.Errorf("%q", ended)
 	}
 }
