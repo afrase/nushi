@@ -256,14 +256,8 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 				s.chunk("agent_thought_chunk", key, id, acp.ContentBlock{Text: &acp.TextContent{Text: rest}})
 			}
 		case "image":
-			var src struct {
-				Data      string `json:"data"`
-				URL       string `json:"url"`
-				MediaType string `json:"media_type"`
-			}
-			_ = json.Unmarshal(b.Source, &src)
-			if img := (acp.ImageContent{Data: src.Data, MimeType: src.MediaType, URI: src.URL}); img.Data != "" || img.URI != "" {
-				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Image: &img})
+			if img, ok := imageOf(b); ok {
+				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Image: img})
 			}
 		default:
 			switch {
@@ -274,6 +268,19 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 			}
 		}
 	}
+}
+
+// imageOf is an image block as ACP's image, from its data or its URL;
+// false for one with neither.
+func imageOf(b claudeagent.Block) (*acp.ImageContent, bool) {
+	var src struct {
+		Data      string `json:"data"`
+		URL       string `json:"url"`
+		MediaType string `json:"media_type"`
+	}
+	_ = json.Unmarshal(b.Source, &src)
+	img := &acp.ImageContent{Data: src.Data, MimeType: src.MediaType, URI: src.URL}
+	return img, img.Data != "" || img.URI != ""
 }
 
 // chunk sends a message or thought chunk. One of a subagent's says whose

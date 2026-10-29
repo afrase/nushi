@@ -30,7 +30,7 @@ func TestInitialize(t *testing.T) {
 	}
 	queueing, _ := c.Meta["claudeCode"].(map[string]any)["promptQueueing"].(bool)
 	if !c.PromptCapabilities.Image || !c.PromptCapabilities.EmbeddedContext || !c.MCPCapabilities.HTTP || !c.MCPCapabilities.SSE ||
-		c.SessionCapabilities.Close == nil || !queueing {
+		c.SessionCapabilities.Close == nil || !queueing || !c.LoadSession || c.SessionCapabilities.Resume == nil {
 		t.Errorf("%+v", c)
 	}
 }
