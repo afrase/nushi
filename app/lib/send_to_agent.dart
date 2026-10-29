@@ -109,7 +109,7 @@ Reply commentReply(GitHubComment c) => (
 );
 
 /// A review that requested changes, its text whole, for the agent.
-Reply reviewReply(GitHubComment c) {
+Reply changesRequestedReply(GitHubComment c) {
   final who = c.outside ? '${c.author} (outside the repository)' : c.author;
   return (
     quote: _cut(

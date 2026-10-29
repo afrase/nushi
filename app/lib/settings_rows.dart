@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 // Settings' parts, as macOS System Settings lays them out: a section's
 // title, then rounded groups of rows, each row its label (and a muted
@@ -107,34 +108,53 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-/// A group of rows in a rounded box, an optional [title] over it and a
-/// [footer] under it; a hairline between rows.
+/// A group of rows in a rounded box, an optional [title] over it (and
+/// [about], what the group holds, under the title) and a [footer] under it;
+/// a hairline between rows, and [empty] ("None") in the box without any.
 class SettingsGroup extends StatelessWidget {
-  const new({required this.children, super.key, this.title, this.footer});
+  const new({
+    required this.children,
+    super.key,
+    this.title,
+    this.about,
+    this.footer,
+    this.empty,
+  });
 
   final String? title;
+  final String? about;
   final Widget? footer;
+  final String? empty;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final muted = theme.ui(t.textMuted, size: 12);
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (title case final title?)
+          if (title != null || about != null)
             Padding(
               padding: const EdgeInsets.only(left: 2, bottom: 7),
-              child: Text(
-                title,
-                style: theme.ui(
-                  t.textSecondary,
-                  size: 12,
-                  weight: FontWeight.w600,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (title case final title?)
+                    Text(
+                      title,
+                      style: theme.ui(
+                        t.textSecondary,
+                        size: 12,
+                        weight: FontWeight.w600,
+                      ),
+                    ),
+                  if (about case final about?) Text(about, style: muted),
+                ],
               ),
             ),
           framed(
@@ -144,6 +164,11 @@ class SettingsGroup extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (children.isEmpty && empty != null)
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Text(empty!, style: muted),
+                  ),
                 for (final (i, c) in children.indexed) ...[
                   if (i > 0) Container(height: 1, color: t.borderSubtle),
                   c,
@@ -154,10 +179,7 @@ class SettingsGroup extends StatelessWidget {
           if (footer case final f?)
             Padding(
               padding: const EdgeInsets.only(left: 2, top: 7),
-              child: DefaultTextStyle(
-                style: theme.ui(t.textMuted, size: 12),
-                child: f,
-              ),
+              child: DefaultTextStyle(style: muted, child: f),
             ),
         ],
       ),
@@ -219,18 +241,44 @@ class SettingsRow extends StatelessWidget {
   }
 }
 
-/// A switch, Settings' size everywhere.
-class SettingsSwitch extends StatelessWidget {
-  const new({required this.value, required this.onChanged, super.key});
+/// A switch, Settings' size everywhere. [onChanged] takes a change; or
+/// [run] makes it as a call, the switch off while it runs (a double click
+/// sends once) and its error shown, as a [RunButton]. Off with neither.
+class SettingsSwitch extends StatefulWidget {
+  const new({required this.value, super.key, this.onChanged, this.run});
 
   final bool value;
   final ValueChanged<bool>? onChanged;
+  final Future<void> Function({required bool on})? run;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 20,
-    child: FittedBox(
-      child: Switch(value: value, onChanged: onChanged),
+  State<SettingsSwitch> createState() => _SettingsSwitchState();
+}
+
+class _SettingsSwitchState extends State<SettingsSwitch> {
+  final _runner = Runner();
+
+  @override
+  void dispose() {
+    _runner.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: _runner,
+    builder: (context, running, _) => SizedBox(
+      height: 20,
+      child: FittedBox(
+        child: Switch(
+          value: widget.value,
+          onChanged: switch (widget.run) {
+            null => widget.onChanged,
+            _ when running => null,
+            final run => (on) => _runner.run(context, () => run(on: on)),
+          },
+        ),
+      ),
     ),
   );
 }

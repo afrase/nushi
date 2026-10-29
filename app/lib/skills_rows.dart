@@ -3,72 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A group's heading, the line under it and its rows in a box, as the MCP
-/// view's scopes.
-class SkillsBox extends StatelessWidget {
-  const new(this.title, this.about, this.rows, {super.key});
-
-  final String title;
-  final String about;
-  final List<Widget> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final muted = theme.ui(t.textMuted, size: 12);
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
-          ),
-          Text(about, style: muted),
-          const SizedBox(height: 6),
-          DecoratedBox(
-            decoration: box(t.borderSubtle),
-            child: Column(
-              children: [
-                if (rows.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text('None', style: muted),
-                    ),
-                  ),
-                for (final (i, r) in rows.indexed)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      border: i == 0
-                          ? null
-                          : Border(top: BorderSide(color: t.borderSubtle)),
-                    ),
-                    child: r,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+/// [row] inset in its group's box, as the MCP view's servers.
+Widget skillRow(Widget row) => Padding(
+  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+  child: row,
+);
 
 /// A switch for where it acts ([where]: "everywhere", "in this project"),
 /// disabled with [why] when it can't act; [onChanged] runs the change.
-class SkillSwitch extends StatefulWidget {
+class SkillSwitch extends StatelessWidget {
   const new({
     required this.on,
     required this.where,
@@ -83,45 +31,21 @@ class SkillSwitch extends StatefulWidget {
   final Future<void> Function({required bool on}) onChanged;
 
   @override
-  State<SkillSwitch> createState() => _SkillSwitchState();
-}
-
-class _SkillSwitchState extends State<SkillSwitch> {
-  bool _working = false;
-
-  Future<void> _set(bool on) async {
-    setState(() => _working = true);
-    await tryOrShow(context, () => widget.onChanged(on: on));
-    if (mounted) setState(() => _working = false);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     return Tooltip(
-      message: widget.why.isNotEmpty
-          ? widget.why
-          : '${widget.on ? 'On' : 'Off'} ${widget.where}. Chats pick up a '
+      message: why.isNotEmpty
+          ? why
+          : '${on ? 'On' : 'Off'} $where. Chats pick up a '
                 'change when they restart.',
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 6, right: 2),
-            child: Text(
-              widget.where,
-              style: theme.ui(theme.t.textMuted, size: 11),
-            ),
+            child: Text(where, style: theme.ui(theme.t.textMuted, size: 11)),
           ),
-          SizedBox(
-            height: 20,
-            child: FittedBox(
-              child: Switch(
-                value: widget.on,
-                onChanged: _working || widget.why.isNotEmpty ? null : _set,
-              ),
-            ),
-          ),
+          SettingsSwitch(value: on, run: why.isNotEmpty ? null : onChanged),
         ],
       ),
     );
@@ -193,8 +117,12 @@ class SkillGroup extends StatelessWidget {
   final List<Skill> skills;
 
   @override
-  Widget build(BuildContext context) =>
-      SkillsBox(title, about, [for (final s in skills) _SkillRow(list, s)]);
+  Widget build(BuildContext context) => SettingsGroup(
+    title: title,
+    about: about,
+    empty: 'None',
+    children: [for (final s in skills) skillRow(_SkillRow(list, s))],
+  );
 }
 
 class _SkillRow extends StatelessWidget {
@@ -295,41 +223,43 @@ class BuiltInGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = list.list;
-    return SkillsBox(
-      'Built in',
-      'Claude Code’s own skills, which it doesn’t '
-          'list for Nushi.',
-      [
-        Row(
-          children: [
-            Expanded(
-              child: skillNamed(
-                context,
-                'Built-in skills',
-                'All of them together (disableBundledSkills); built-in '
-                    'commands stay.',
-                off: r.builtInOff,
+    return SettingsGroup(
+      title: 'Built in',
+      about: 'Claude Code’s own skills, which it doesn’t list for Nushi.',
+      empty: 'None',
+      children: [
+        skillRow(
+          Row(
+            children: [
+              Expanded(
+                child: skillNamed(
+                  context,
+                  'Built-in skills',
+                  'All of them together (disableBundledSkills); built-in '
+                      'commands stay.',
+                  off: r.builtInOff,
+                ),
               ),
-            ),
-            SkillSwitch(
-              on: !r.builtInOff,
-              where: 'everywhere',
-              why: r.builtInSetIn.isEmpty
-                  ? ''
-                  : 'Set in ${tildePath(r.builtInSetIn)}; change it there.',
-              onChanged: ({required on}) async {
-                await list.daemon.client.setSkillOn(
-                  SetSkillOnRequest(
-                    folder: list.folder,
-                    source: 'builtin',
-                    on: on,
-                    agent: list.agent,
-                  ),
-                );
-                await list.changed();
-              },
-            ),
-          ],
+              SkillSwitch(
+                on: !r.builtInOff,
+                where: 'everywhere',
+                why: r.builtInSetIn.isEmpty
+                    ? ''
+                    : 'Set in ${tildePath(r.builtInSetIn)}; change it there.',
+                onChanged: ({required on}) async {
+                  await list.daemon.client.setSkillOn(
+                    SetSkillOnRequest(
+                      folder: list.folder,
+                      source: 'builtin',
+                      on: on,
+                      agent: list.agent,
+                    ),
+                  );
+                  await list.changed();
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -346,12 +276,13 @@ class PluginsGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final error = list.list.pluginsError;
-    return SkillsBox(
-      'Plugins',
-      error.isNotEmpty
+    return SettingsGroup(
+      title: 'Plugins',
+      about: error.isNotEmpty
           ? 'Claude didn’t list them: $error'
           : 'Installed plugins. Add them with /plugin in Claude Code.',
-      [for (final p in plugins) _PluginRow(list, p)],
+      empty: 'None',
+      children: [for (final p in plugins) skillRow(_PluginRow(list, p))],
     );
   }
 }

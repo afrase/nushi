@@ -4,6 +4,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/skills_rows.dart';
 import 'package:nushi/theme/theme.dart';
@@ -26,11 +27,13 @@ class SharedGroup extends StatelessWidget {
         ? ''
         : ' $title doesn’t read .agents/skills yet: link a skill to give it '
               'to $title.';
-    return SkillsBox(
-      'Shared',
-      'In .agents/skills, which several agents read: the project’s, and '
+    return SettingsGroup(
+      title: 'Shared',
+      about:
+          'In .agents/skills, which several agents read: the project’s, and '
           'yours in ~/.agents/skills.$link',
-      [for (final s in skills) _SharedRow(list, s)],
+      empty: 'None',
+      children: [for (final s in skills) skillRow(_SharedRow(list, s))],
     );
   }
 }

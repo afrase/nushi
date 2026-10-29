@@ -10,26 +10,10 @@ import 'package:nushi/widgets.dart';
 /// Settings › Agents' last line: agents start with the login shell's
 /// environment, read when, or why it couldn't be read; Reload reads it
 /// again (ADR 0048). Nothing of the environment itself comes to the app.
-class ShellEnvLine extends StatefulWidget {
+class ShellEnvLine extends StatelessWidget {
   const new(this.client, {super.key});
 
   final NushiServiceClient client;
-
-  @override
-  State<ShellEnvLine> createState() => _ShellEnvLineState();
-}
-
-class _ShellEnvLineState extends State<ShellEnvLine> {
-  bool _reloading = false;
-
-  Future<void> _reload() async {
-    setState(() => _reloading = true);
-    await tryOrShow(
-      context,
-      () => listAgents(widget.client, reloadEnvironment: true),
-    );
-    if (mounted) setState(() => _reloading = false);
-  }
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
@@ -49,10 +33,11 @@ class _ShellEnvLineState extends State<ShellEnvLine> {
             'Shell environment',
             description: text,
             descriptionColor: env.problem.isEmpty ? null : t.needs,
-            control: Button(
-              label: _reloading ? 'Reloading…' : 'Reload',
+            control: RunButton(
+              label: 'Reload',
+              running: 'Reloading…',
               tooltip: "Read your login shell's environment again",
-              onPressed: _reloading ? null : _reload,
+              run: () => listAgents(client, reloadEnvironment: true),
             ),
           ),
         ],

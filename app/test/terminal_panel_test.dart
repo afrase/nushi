@@ -133,6 +133,29 @@ void main() {
     expect(hidden, isTrue);
   });
 
+  testWidgets('⌘F in a terminal starts at the latest match; ⏎ goes down '
+      '(round to the first), ⇧⏎ up', (tester) async {
+    final daemon = _Daemon()..replay = 'one x\r\ntwo x\r\nthree x\r\n\$ ';
+    final terms = Terminals(NushiServiceClient(daemon));
+    await _panel(tester, terms);
+    await _meta(tester, LogicalKeyboardKey.keyF);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'x');
+    await tester.pump();
+    expect(find.text('3/3'), findsOne);
+    await tester.testTextInput.receiveAction(TextInputAction.done); // ⏎
+    await tester.pump();
+    expect(find.text('1/3'), findsOne);
+    await tester.testTextInput.receiveAction(TextInputAction.done); // ⏎
+    await tester.pump();
+    expect(find.text('2/3'), findsOne);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
+    expect(find.text('1/3'), findsOne);
+  });
+
   // fish waits 10 seconds for an answer to the query it starts with.
   testWidgets('only a shell opened here gets answers to its replayed queries', (
     tester,

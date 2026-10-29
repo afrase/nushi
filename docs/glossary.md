@@ -84,7 +84,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |
-| **Find** | ⌘F: in the chat, in Changes' files, or in a terminal's scrollback. | `TranscriptFind`, `FindBar` | |
+| **Find** | ⌘F: in the chat, in Changes' files, or in a terminal's scrollback. | `TranscriptFind`, `FindBar`, `TerminalFindBar` | |
 | **Settings** | A view in the chat's place (⌘,), a nav of sections. | `settings_view.dart`, `SettingsSection` | 0053 |
 | **View in the chat's place** | Settings, Jira and GitHub: they take the chat's place beside the sidebar; Esc goes back. | | 0053 |
 | **Toast** | A small card in the bottom right corner: the newer release's. | `UpdateToast` | 0061 |

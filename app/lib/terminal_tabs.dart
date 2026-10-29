@@ -102,7 +102,6 @@ class _Tab extends StatefulWidget {
 }
 
 class _TabState extends State<_Tab> {
-  bool _hover = false;
   bool _renaming = false;
   final _double = DoubleClick();
 
@@ -152,10 +151,8 @@ class _TabState extends State<_Tab> {
               style: theme.ui(color, size: 12),
             ),
           );
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Padding(
+    return Hover(
+      builder: (context, {required hover}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 1),
         child: Tap(
           selected: widget.active,
@@ -187,7 +184,7 @@ class _TabState extends State<_Tab> {
                 ),
               ],
               Opacity(
-                opacity: _hover || widget.active ? 1 : 0,
+                opacity: hover || widget.active ? 1 : 0,
                 child: IconTap(
                   Icons.close,
                   size: 12,

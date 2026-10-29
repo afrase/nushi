@@ -5,6 +5,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -162,36 +163,23 @@ const switchable = {'project', 'user', 'local'};
 /// project" beside it ([label]), for the scopes Nushi can; otherwise a
 /// note that only /mcp in a terminal does; nothing for Ante's, which
 /// can't be turned off. A change reaches a chat when it restarts.
-class McpSwitch extends StatefulWidget {
+class McpSwitch extends StatelessWidget {
   const new(this.list, this.server, {super.key, this.label = true});
 
   final McpServers list;
   final McpServer server;
   final bool label;
 
-  @override
-  State<McpSwitch> createState() => _McpSwitchState();
-}
-
-class _McpSwitchState extends State<McpSwitch> {
-  bool _working = false;
-
-  McpServer get server => widget.server;
-
-  Future<void> _set(bool on) async {
-    setState(() => _working = true);
-    await tryOrShow(context, () async {
-      await setServerOn(widget.list, server, on: on);
-      widget.list.changed();
-    });
-    if (mounted) setState(() => _working = false);
+  Future<void> _set({required bool on}) async {
+    await setServerOn(list, server, on: on);
+    list.changed();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
-    if (widget.list.ante) return const SizedBox.shrink(); // no off switch
+    if (list.ante) return const SizedBox.shrink(); // no off switch
     if (!switchable.contains(server.scope)) {
       return Tooltip(
         message:
@@ -200,7 +188,7 @@ class _McpSwitchState extends State<McpSwitch> {
         child: Padding(
           padding: const EdgeInsets.only(left: 6),
           child: Text(
-            widget.label ? 'Off only with /mcp in a terminal' : '/mcp only',
+            label ? 'Off only with /mcp in a terminal' : '/mcp only',
             style: muted,
           ),
         ),
@@ -219,20 +207,12 @@ class _McpSwitchState extends State<McpSwitch> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.label)
+          if (label)
             Padding(
               padding: const EdgeInsets.only(left: 6, right: 2),
               child: Text('in this project', style: muted),
             ),
-          SizedBox(
-            height: 20,
-            child: FittedBox(
-              child: Switch(
-                value: !server.off,
-                onChanged: _working || elsewhere ? null : _set,
-              ),
-            ),
-          ),
+          SettingsSwitch(value: !server.off, run: elsewhere ? null : _set),
         ],
       ),
     );

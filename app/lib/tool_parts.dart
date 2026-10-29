@@ -139,11 +139,13 @@ class _RawTextState extends State<RawText> {
       ),
       child: LayoutBuilder(
         builder: (context, box) {
-          final folds = (TextPainter(
+          final painter = TextPainter(
             text: TextSpan(text: widget.text, style: style),
             maxLines: widget.folded,
             textDirection: TextDirection.ltr,
-          )..layout(maxWidth: box.maxWidth)).didExceedMaxLines;
+          )..layout(maxWidth: box.maxWidth);
+          final folds = painter.didExceedMaxLines;
+          painter.dispose();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

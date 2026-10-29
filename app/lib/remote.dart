@@ -7,6 +7,7 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart' show ago;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:qr/qr.dart';
@@ -76,12 +77,7 @@ class _RemoteSectionState extends State<RemoteSection> {
                   style: theme.ui(t.text, weight: FontWeight.w600),
                 ),
                 const Spacer(),
-                SizedBox(
-                  height: 20,
-                  child: FittedBox(
-                    child: Switch(value: r.on, onChanged: _set),
-                  ),
-                ),
+                SettingsSwitch(value: r.on, onChanged: _set),
               ],
             ),
             const SizedBox(height: 6),

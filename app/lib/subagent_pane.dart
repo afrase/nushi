@@ -6,7 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/settings.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -34,22 +34,15 @@ class SubagentPane extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return ListenableBuilder(
-      listenable: Listenable.merge([chat, subagentWide]),
+      listenable: chat,
       builder: (context, _) {
         final s = subagentsOf(chat.items)
             .where((s) => s.call.id == id)
             .firstOrNull;
-        final wide = subagentWide.value;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              height: 34,
-              padding: const EdgeInsets.only(left: 14, right: 4),
-              decoration: BoxDecoration(
-                color: t.raised,
-                border: Border(bottom: BorderSide(color: t.borderSubtle)),
-              ),
+            PaneHeader(
               child: Row(
                 children: [
                   const SizedBox(width: 4),
@@ -60,12 +53,7 @@ class SubagentPane extends StatelessWidget {
                   ),
                   if (s != null && subagentStoppable(s))
                     stopButton(context, daemon, chat, id),
-                  IconTap(
-                    wide ? Icons.close_fullscreen : Icons.open_in_full,
-                    tooltip: wide ? 'Narrower' : 'Wider',
-                    size: 13,
-                    onTap: () => subagentWide.value = !wide,
-                  ),
+                  const WideToggle(),
                   IconTap(
                     Icons.close,
                     tooltip: 'Close',
@@ -171,11 +159,13 @@ class _HeadState extends State<_Head> {
               child: LayoutBuilder(
                 builder: (context, box) {
                   final style = theme.ui(t.text, size: 12.5);
-                  final folds = (TextPainter(
+                  final painter = TextPainter(
                     text: TextSpan(text: call.prompt, style: style),
                     maxLines: _folded,
                     textDirection: TextDirection.ltr,
-                  )..layout(maxWidth: box.maxWidth)).didExceedMaxLines;
+                  )..layout(maxWidth: box.maxWidth);
+                  final folds = painter.didExceedMaxLines;
+                  painter.dispose();
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

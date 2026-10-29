@@ -87,6 +87,8 @@ class RunButton extends StatefulWidget {
     this.kind = ButtonKind.secondary,
     this.icon,
     this.hint,
+    this.tooltip = '',
+    this.running,
     this.wrap = false,
   });
 
@@ -96,6 +98,10 @@ class RunButton extends StatefulWidget {
   final ButtonKind kind;
   final IconData? icon;
   final String? hint;
+  final String tooltip;
+
+  /// Its label while the call runs ("Reloading…"); [label] if none.
+  final String? running;
   final bool wrap; // Button.wrap
 
   @override
@@ -117,10 +123,11 @@ class _RunButtonState extends State<RunButton> {
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: _runner,
     builder: (context, running, _) => Button(
-      label: widget.label,
+      label: running ? widget.running ?? widget.label : widget.label,
       kind: widget.kind,
       icon: widget.icon,
       hint: widget.hint,
+      tooltip: widget.tooltip,
       wrap: widget.wrap,
       onPressed: switch (widget.run) {
         final run? when !running => () => _runner.run(context, run),
@@ -231,6 +238,28 @@ class _TapState extends State<Tap> {
         ? tap
         : Tooltip(message: widget.tooltip, child: tap);
   }
+}
+
+/// What [builder] makes, built knowing whether the pointer is over it: for
+/// what shows only under the pointer (a row's Stop, a card's Remove).
+class Hover extends StatefulWidget {
+  const new({required this.builder, super.key});
+
+  final Widget Function(BuildContext context, {required bool hover}) builder;
+
+  @override
+  State<Hover> createState() => _HoverState();
+}
+
+class _HoverState extends State<Hover> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hover = true),
+    onExit: (_) => setState(() => _hover = false),
+    child: widget.builder(context, hover: _hover),
+  );
 }
 
 /// A dialog: [title], [content] 460 wide, and its [actions].

@@ -177,8 +177,11 @@ void main() {
     expect(todo(merged, findings: _setup).items, isEmpty);
     // The review's card is the whole review, with whose it is.
     final review = items[3].review!;
-    expect(reviewReply(review).from, 'Changes requested by @mona');
-    expect(reviewReply(review).quote, startsWith('mona requested changes:'));
+    expect(changesRequestedReply(review).from, 'Changes requested by @mona');
+    expect(
+      changesRequestedReply(review).quote,
+      startsWith('mona requested changes:'),
+    );
     // The thread's card carries the bot's voice too.
     final r = threadReply(items[5].thread!, also: items[5].also);
     expect(r.from, 'Review comments from @mona, @github-actions');

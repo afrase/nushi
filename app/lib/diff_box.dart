@@ -339,7 +339,7 @@ class _DiffBoxState extends State<DiffBox> {
     if (spec.id.isEmpty) {
       final d = _draft!;
       final s = d.span;
-      return CommentBox(
+      return ReviewCommentBox(
         key: ValueKey(_editing?.id ?? 'new'),
         lines: s.length == 1
             ? 'Line ${s.start + 1}'
