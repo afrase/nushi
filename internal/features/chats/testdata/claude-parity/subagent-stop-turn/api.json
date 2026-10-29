@@ -1,0 +1,11 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "start a helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Wait", "subagent_type": "general-purpose", "prompt": "Wait for a signal that never comes."}}]},
+    {"match": {"lastUserText": "after the stop"}, "content": [{"type": "text", "text": "Here."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "Wait for a signal that never comes."}, "hang": true, "content": [{"type": "text", "text": "Waiting."}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

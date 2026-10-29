@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1"},
+    {"prompt": "tell me a story", "session": "s1"}
+  ]
+}

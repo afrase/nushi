@@ -15,6 +15,44 @@ and the recordings `make claude-record` writes from them (never edit them by han
 
 A scenario without `cli.jsonl` is skipped by the test until it is recorded. `hello` is still the hand-written recording from before the tools existed; the first `make claude-record` replaces it.
 
+## The scenarios
+
+The scripts are written from what the research and Nushi's facts say claude 2.1.312 and the adapter do; none has run on the real `claude` yet, so the first recording may need a `match` loosened or a `side` turn added (a failed run says which request missed). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
+
+| Scenario | What it does | Also settles |
+|---|---|---|
+| `hello` | a new session, one prompt | `generate_session_title` |
+| `load` | thinking, text and a command; `session/close`; `session/load` (the replay); a prompt after | `tool_use_result` against the hook's `tool_response` |
+| `fork` | a fork of the whole session, a prompt on it | |
+| `fork-at` | two prompts, a fork at the first answer (`_meta.jetbrains.air.fork`, a rewind), a prompt on it, the old session closed | |
+| `list` | `session/list` with a session written and one not | |
+| `delete` | `session/delete` of an open session, a list, the delete again 3 s later | the stub claude writes back |
+| `permission` | Yes, No, and "don't ask again" on commands, then a command not asked about | |
+| `question` | AskUserQuestion with two questions, the second answered with Other | |
+| `steering` | a steer while the model answers a command's result | |
+| `cancel` | a cancel during a command, then the next prompt (Nushi's own queue) | |
+| `cancel-queued` | a prompt queued at the agent while one runs a command, then a cancel | |
+| `eof-mid-tool` | the client goes while a command runs | stdin's end during a tool |
+| `bash-background` | a background command that ends; claude's turn on its own after | |
+| `bash-background-killed` | a background command whose process group Nushi stops (`kill`) | |
+| `bash-background-taskstop` | a background command stopped by Claude's `TaskStop` | |
+| `subagent-foreground` | a foreground subagent | |
+| `subagent-background` | a background subagent that ends; the held turn | `session_state_changed` with background subagents |
+| `subagent-stop-taskstop` | a background subagent stopped by `TaskStop` | |
+| `subagent-stop-cancel` | a background subagent stopped by `session/cancel` on its session (Nushi's Stop) | |
+| `subagent-stop-turn` | a foreground subagent stopped with the turn | |
+| `sendmessage` | a message to a finished background subagent, which runs again | |
+| `compaction` | `/compact`, then a prompt | |
+| `context` | `/context` in a throwaway fork, deleted after, as Nushi asks it | |
+| `safeguards` | a refusal: the notice, then claude's retry | |
+| `refusal` | a refusal of the retry too: the turn ends `refusal` | |
+| `findings` | a `ReportFindings` call | |
+| `ultracode` | ultracode on, then an effort change | |
+| `models` | `availableModels` in the session's settings | whether `initialize`'s models are filtered |
+| `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
+
+`stop_task` on a background command isn't among them: the adapter never sends it, so a recording through it can't show it.
+
 ## Recording
 
 ```
@@ -100,5 +138,6 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"await": "p1"}` | waits for an `async` request's answer |
 | `{"kill": "sleep 37"}` | stops the process group below the agent whose command line has the text, as Nushi stops a background command (SIGTERM, then SIGKILL; ADR 0065), once one runs |
 | `{"pause": "500ms"}` | waits that long; prefer `waitFor` |
+| `{"end": {}}` | ends the script there: the client goes at once (stdin's end), waiting for no answer it hasn't had |
 
 Every request the agent makes must be answered by a step, or the recording fails.

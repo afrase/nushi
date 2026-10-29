@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "TaskStop", "SendMessage"]}}}}}},
+    {"prompt": "ask a helper to say hi", "session": "s1"}
+  ]
+}

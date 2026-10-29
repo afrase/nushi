@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "mcpServers": [{"name": "echo", "command": "$mcp-echo", "args": [], "env": []}]},
+    {"prompt": "echo hi", "session": "s1", "async": "p1"},
+    {"answer": "session/request_permission", "option": "allow_once"},
+    {"await": "p1"}
+  ]
+}

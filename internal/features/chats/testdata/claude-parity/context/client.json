@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1"},
+    {"prompt": "hello", "session": "s1"},
+    {"fork": "s1", "as": "probe"},
+    {"prompt": "/context", "session": "probe"},
+    {"delete": "probe"},
+    {"pause": "3s"},
+    {"delete": "probe"}
+  ]
+}

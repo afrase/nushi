@@ -1,0 +1,5 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "hello"}, "content": [{"type": "text", "text": "Hello!"}]}
+  ]
+}

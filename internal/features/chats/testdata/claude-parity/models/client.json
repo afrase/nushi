@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"availableModels": ["sonnet"]}}}}},
+    {"prompt": "hello", "session": "s1"}
+  ]
+}

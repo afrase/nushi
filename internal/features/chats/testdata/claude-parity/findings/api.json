@@ -1,0 +1,6 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "review"}, "content": [{"type": "tool_use", "name": "ReportFindings", "input": {"level": "medium", "findings": [{"file": "main.go", "line": 3, "summary": "The loop never ends.", "short_summary": "Endless loop", "failure_scenario": "Any run of main hangs.", "category": "correctness"}]}}]},
+    {"match": {"toolResult": "ReportFindings"}, "content": [{"type": "text", "text": "One finding: the loop in main.go never ends."}]}
+  ]
+}

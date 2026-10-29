@@ -1,0 +1,7 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["ReportFindings"]}}}}}},
+    {"prompt": "review the code", "session": "s1"}
+  ]
+}
