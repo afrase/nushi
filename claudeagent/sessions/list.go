@@ -66,7 +66,7 @@ func List(configDir, cwd string, limit, offset int) ([]Info, error) {
 		infos = listProject(projects, canonical(cwd))
 	}
 	slices.SortStableFunc(infos, func(a, b Info) int { return b.LastModified.Compare(a.LastModified) })
-	infos = infos[min(offset, len(infos)):]
+	infos = infos[min(max(offset, 0), len(infos)):]
 	if limit > 0 && limit < len(infos) {
 		infos = infos[:limit]
 	}
