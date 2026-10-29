@@ -109,6 +109,11 @@ func unsupported(subtype string) error {
 // handle answers one request from claude.
 func (s *Session) handle(ctx context.Context, subtype string, req json.RawMessage) (any, error) {
 	switch subtype {
+	case "can_use_tool":
+		if s.o.CanUseTool == nil {
+			return nil, errors.New("claudeagent: no CanUseTool to ask")
+		}
+		return s.canUseTool(ctx, req)
 	case "hook_callback":
 		var r struct {
 			CallbackID string `json:"callback_id"`

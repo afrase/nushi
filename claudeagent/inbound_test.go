@@ -40,6 +40,9 @@ func TestInbound(t *testing.T) {
 		}
 		return map[string]string{"token": "secret"}, nil // what no credential request may reach
 	}
+	allow := func(context.Context, claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
+		return claudeagent.Allow{}, nil
+	}
 	for _, tc := range []struct {
 		name       string
 		o          claudeagent.Options
@@ -57,6 +60,9 @@ func TestInbound(t *testing.T) {
 		{"oauth", claudeagent.Options{OnControl: onControl}, `{"subtype":"oauth_token_refresh"}`, "", "Unsupported control request subtype: oauth_token_refresh"},
 		{"host auth", claudeagent.Options{OnControl: onControl}, `{"subtype":"host_auth_token_refresh"}`, "", "Unsupported control request subtype: host_auth_token_refresh"},
 		{"remote control", claudeagent.Options{OnControl: onControl}, `{"subtype":"remote_control_work_secret"}`, "", "Unsupported control request subtype: remote_control_work_secret"},
+		{"can_use_tool unasked", claudeagent.Options{}, `{"subtype":"can_use_tool","tool_name":"Bash","input":{},"tool_use_id":"t1"}`, "", "claudeagent: no CanUseTool to ask"},
+		{"can_use_tool", claudeagent.Options{CanUseTool: allow}, `{"subtype":"can_use_tool","tool_name":"Bash","input":{"command":"ls"},"tool_use_id":"t1"}`,
+			`{"behavior":"allow","updatedInput":{"command":"ls"},"toolUseID":"t1"}`, ""},
 		{"hook_callback", claudeagent.Options{}, `{"subtype":"hook_callback","callback_id":"hook_9"}`, "", `claudeagent: no hook "hook_9"`},
 		{"elicitation", claudeagent.Options{}, `{"subtype":"elicitation","mcp_server_name":"s","message":"m"}`, `{"action":"decline"}`, ""},
 	} {
