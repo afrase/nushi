@@ -16,7 +16,7 @@
 //     winning (config.go).
 //
 // Codex follows a linked .agents or skills folder; Nushi leaves a
-// project's out (the step-300 rule: a repository's link could point the
+// project's out (ADR 0052's rule: a repository's link could point the
 // listing, and Delete, anywhere). Plugins' skills aren't listed. Nothing
 // here runs Codex.
 package codexskills

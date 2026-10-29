@@ -2,7 +2,7 @@
 
 Where each agent's mark comes from, and its terms.
 
-## Agent marks (step 124)
+## Agent marks (2026-10-25)
 
 One mark per agent wherever a chat's agent shows (`app/lib/agent_mark.dart`), drawn in one color from paths bundled in the source; nothing is fetched. An agent without one gets its initial on a rounded square.
 

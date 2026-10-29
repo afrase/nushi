@@ -1,6 +1,6 @@
 # Development
 
-How to build, run and test Nushi from source. The rules for working in this repository (steps, size limits, words, docs) are in [AGENTS.md](../AGENTS.md); the decisions are in [`docs/adr/`](adr/README.md).
+How to build, run and test Nushi from source. The rules for working in this repository (commits, size limits, words, docs) are in [AGENTS.md](../AGENTS.md); the decisions are in [`docs/adr/`](adr/README.md).
 
 ## What you need
 

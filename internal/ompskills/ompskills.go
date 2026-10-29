@@ -15,7 +15,7 @@
 //     skills.ignoredSkills glob, in your config.yml (everywhere) or the
 //     project's nearest .omp/config.yml (config.go).
 //
-// omp follows linked roots; Nushi leaves a project's out (the step-300
+// omp follows linked roots; Nushi leaves a project's out (ADR 0052's
 // rule). Plugins' and skillshare's skills aren't listed. Nothing here runs
 // omp.
 package ompskills

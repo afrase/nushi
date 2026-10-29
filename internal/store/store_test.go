@@ -49,7 +49,7 @@ func TestStateSurvivesANewStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(got) != 2 || got[1].ID != "a" || got[1].Title != "Fix the build" || !got[1].Created.Equal(created) || got[0].ID != "../b" ||
-		got[1].SessionID != "a" || got[0].SessionID != "s2" { // a chat from before step 22 has one id for both
+		got[1].SessionID != "a" || got[0].SessionID != "s2" { // an older chat has one id for both
 		t.Errorf("sessions = %+v", got)
 	}
 }

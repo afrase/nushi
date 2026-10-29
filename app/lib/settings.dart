@@ -303,7 +303,7 @@ Map<String, Object?> readSaved() {
 }
 
 /// Keys an older app saved that mean nothing now, dropped by the next
-/// save: `worktrees` (new chats no longer remember one, step 337).
+/// save: `worktrees` (new chats no longer remember one).
 const _dropped = {'worktrees'};
 
 var _saveDue = false;

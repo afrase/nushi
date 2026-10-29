@@ -14,7 +14,7 @@ The owner couldn't tell what was clickable: Settings › General's terminal font
 - **⌘ keys**: ⌘1–⌘9, ⌘[ and ⌘] switch chats everywhere (holding ⌘ numbers them in the sidebar); a terminal's tabs and the Jira view's lists, which had ⌘1–9, take ⌥⌘1–9.
 
 ## Consequences
-- Rows of lists carry outlined buttons ("Start work ▾" on every Jira and GitHub row): busier than link text, but they read as buttons. Amended (step 292): five of them in a column dominated the GitHub inbox, so its rows show Start work as an icon button only on hover and on the selected row (⌘⏎ and the right-click menu as before). Amended again (step 333): Jira's rows had the same column of buttons (the owner's Sprint list at work), so they do as GitHub's, with Start work in a new right-click menu; their status menu is a pill with no border at rest, its border under the pointer.
+- Rows of lists carry outlined buttons ("Start work ▾" on every Jira and GitHub row): busier than link text, but they read as buttons. Amended (2026-10-26): five of them in a column dominated the GitHub inbox, so its rows show Start work as an icon button only on hover and on the selected row (⌘⏎ and the right-click menu as before). Amended again (2026-10-27): Jira's rows had the same column of buttons (the owner's Sprint list at work), so they do as GitHub's, with Start work in a new right-click menu; their status menu is a pill with no border at rest, its border under the pointer.
 - A new screen picks from these: a `Menu` takes what opens it from its caller, and a `Tap` around bare text stands out in review.
 - Muscle memory for ⌘1–9 in a terminal or the Jira view changes.
 

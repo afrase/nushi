@@ -18,7 +18,7 @@
 //
 // PiG also follows linked roots and searches skill folders' subfolders,
 // and reads skills named in settings and packages; Nushi lists one level
-// of real roots (the step-300 rule) and no settings' or packages' skills.
+// of real roots (ADR 0052's rule) and no settings' or packages' skills.
 // Nothing here runs PiG.
 package pigskills
 

@@ -13,8 +13,8 @@ Nushi keeps little on disk: a JSON file per chat (ADR 0010), each agent's rememb
 - A daemon restart loses queues, usage, running turns and pending prompts, side chats and terminals; quitting the app loses drafts.
 - Storing any of these needs a reason and a new place on disk.
 
-## Amendment (steps 272–280)
+## Amendment (2026-10-26)
 Each chat's transcript is also copied to disk as it settles, in the data folder, unless turned off ([ADR 0047](0047-nushis-copy-of-transcripts.md)): after a restart a chat shows its copy until the agent has replayed it, and an archived chat shows it too.
 
-## Amendment (step 451)
-The app also keeps on disk, in the data folder, `context.json` (each chat's last context breakdown, categories only) and `pulls/` (the pull requests read last, step 440), beside `app.json`, `reviews.json` and `drafts.json` (ADR 0062): each written whole, 0600.
+## Amendment (2026-10-29)
+The app also keeps on disk, in the data folder, `context.json` (each chat's last context breakdown, categories only) and `pulls/` (the pull requests read last), beside `app.json`, `reviews.json` and `drafts.json` (ADR 0062): each written whole, 0600.

@@ -1,5 +1,7 @@
 # Demos
 
+**Frozen archive** (2026-10-29): step numbers are retired and nothing more is added here; the history since is the commit log.
+
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
 ## Demo (the pull request redesign, steps 428, 430–436)

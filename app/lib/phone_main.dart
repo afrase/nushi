@@ -17,7 +17,7 @@ void main() {
   setUrlStrategy(null);
   // A streaming reply shows as it comes, not paced: in Chrome a step of it
   // took 17 ms at the median and 29 at p90 (debug), too near a frame for
-  // a phone (step 413).
+  // a phone.
   Paced.paces = false;
   WidgetsFlutterBinding.ensureInitialized();
   final platform = PhonePlatform();

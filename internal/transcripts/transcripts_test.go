@@ -131,7 +131,7 @@ func TestOrderWrittenAgainWhileWaiting(t *testing.T) {
 	}
 }
 
-// A copy written anew while an item was there twice (before step 443)
+// A copy written anew while an item was there twice (as an older daemon wrote one)
 // reads with the item once, as written last.
 func TestReadDuplicates(t *testing.T) {
 	s, dir := open(t)
@@ -182,7 +182,7 @@ func TestCrashMidWrite(t *testing.T) {
 		t.Fatalf("written after the crash: %s", got)
 	}
 	// A crash while an image was written leaves only its temporary file,
-	// which the next start removes; the names before step 443 too.
+	// which the next start removes; an older daemon's names too.
 	tmp := filepath.Join(dir, "C", imagesDir, ".nushi-XXXX")
 	half := filepath.Join(dir, "C", ".nushi-YYYY") // a copy being written anew
 	oldTmp := filepath.Join(dir, "C", imagesDir, strings.Repeat("0", 64)+".tmpXXXX")

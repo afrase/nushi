@@ -24,7 +24,7 @@ ChatState _fresh(String id) =>
 void main() {
   setUpAll(() async {
     await loadFonts();
-    // An app.json from before step 337, which remembered the repositories
+    // An older app's app.json, which remembered the repositories
     // whose new chats got a worktree; read before anything else is.
     Directory(dataDir).createSync(recursive: true); // the tests' own
     _appJson.writeAsStringSync(

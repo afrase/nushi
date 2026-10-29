@@ -13,7 +13,7 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// The sidebar's drags slide (step 458): the other rows or projects move
+// The sidebar's drags slide: the other rows or projects move
 // apart to open the gap where the dragged one would land, and settle on
 // the drop; a list that refuses the drag doesn't move.
 

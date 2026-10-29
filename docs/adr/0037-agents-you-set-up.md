@@ -1,6 +1,6 @@
 # 0037. Agents are found, not fetched: adapters set up on request from our own lockfile, run with the user's own CLIs; no npx
 
-Supersedes [0003](0003-acp-v1-own-client.md)'s "npx runs the Claude adapter" and every earlier note of starting agents through npx (milestones S and T, step 101).
+Supersedes [0003](0003-acp-v1-own-client.md)'s "npx runs the Claude adapter" and every earlier note of starting agents through npx (milestones S and T, and the memory and speed measurements of 2026-10-24).
 
 ## Context
 A chat's first start ran `npx --yes -p <pinned package>`: it downloaded and ran code from npm with no question asked. Only the top-level package was pinned; npx resolved the rest at whatever versions npm had that day, into the user's npx cache (about 330 MB per adapter). Claude's adapter ran the Agent SDK's own Claude Code (2.1.303), not the user's (2.1.310), Codex's adapter its own Codex, and oh-my-pi came with a Bun of its own, though the user had never installed omp. The owner wants the opposite: no side effects unless asked, and their own agent CLIs, never a copy Nushi brought.

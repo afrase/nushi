@@ -1,6 +1,6 @@
 # 0063. Clean up after a pull request: each part asked for, guarded twice, the GitHub branch only at the pull request's head
 
-Status: accepted, 2026-10-29 (the PR redesign's clean-up step). Amends [0016](0016-a-worktree-per-chat.md) (a found worktree may go, when asked) and [0059](0059-a-chats-pull-request.md).
+Status: accepted, 2026-10-29 (the PR redesign's clean-up). Amends [0016](0016-a-worktree-per-chat.md) (a found worktree may go, when asked) and [0059](0059-a-chats-pull-request.md).
 
 ## Context
 A chat's pull request merges (or closes) and leaves its worktree, its local branch, the branch on GitHub and the chat itself behind. Removing them by hand is four places; doing it for the user risks losing what isn't anywhere else: uncommitted files, commits a squash merge didn't keep, a branch someone pushed to after the merge, another chat's folder.

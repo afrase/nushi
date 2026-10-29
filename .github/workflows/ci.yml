@@ -1,4 +1,4 @@
-# What make check runs, as parallel jobs (step 344; one job of 12 minutes before). macOS for what needs it, in four
+# What make check runs, as parallel jobs (one job of 12 minutes before, until 2026-10-27). macOS for what needs it, in four
 # jobs (the account runs five macOS jobs at once, and a release or another repository's CI needs one too): the
 # daemon (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests; the web app's end-to-end test
 # (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
@@ -6,7 +6,7 @@
 # protos' and Dart's lint, the Dart packages' tests, and the packages that also run elsewhere (the relay, the Noise
 # channel). The ACP library, github.com/afrase/acp-go, has its own CI. Actions are pinned by commit.
 #
-# Each job's timeout is two to three times its longest recent run with warm caches (step 445: Go 4.4 minutes, the
+# Each job's timeout is two to three times its longest recent run with warm caches (2026-10-29: Go 4.4 minutes, the
 # app's shards 6.2, the web 7.1, Linux's 2 at most), room for a cold cache's downloads and builds: a hung test ends
 # there, not at GitHub's six hours on a scarce macOS runner.
 name: CI

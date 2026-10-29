@@ -40,7 +40,7 @@ type Store struct {
 
 // Open opens the store in dir, made 0700 if it isn't there, and removes
 // what a crash left half-written (the temporary file of an image or of a
-// copy written anew: atomicfile's, or one named as before step 443).
+// copy written anew: atomicfile's, or one an older daemon named).
 func Open(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err

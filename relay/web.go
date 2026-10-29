@@ -224,8 +224,8 @@ func csp(origin string) string {
 // (`app/web/frame.html`, `page_frame.dart`): the app sends the page's text
 // and the frame writes it. Sandboxed, it has an origin of its own (no
 // storage of the app's, nothing of the app's page), so its CSP can let the
-// page's scripts and the network run as in a browser (the owner's call,
-// step 376). A srcdoc or blob: frame would take the app's CSP instead.
+// page's scripts and the network run as in a browser (the owner's call).
+// A srcdoc or blob: frame would take the app's CSP instead.
 const framePage = "frame.html"
 
 // mermaidScript is mermaid.js in the web app's assets: the frame draws a

@@ -112,7 +112,7 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 		}
 		k = model.RemoteKey{Private: key.Private, Public: key.Public}
 	}
-	if len(k.Listen) != ed25519.PrivateKeySize { // new, or from before step 116: its phones pair again
+	if len(k.Listen) != ed25519.PrivateKeySize { // new, or from before the listen key: its phones pair again
 		k.Listen = newListenKey()
 		if err := st.SaveRemoteKey(k); err != nil {
 			return nil, err

@@ -51,7 +51,7 @@ Widget stopIcon(Color color) => Container(
 /// line. Nushi writes that line itself ([startLine]) and keeps the key from
 /// the field, so there is one way for all and never two lines: left to
 /// macOS's text input, a Flutter field starts one for ⇧ and ⌥ but types a
-/// space for ⌃ (a release build, step 346). A phone's Return is Enter
+/// space for ⌃ (seen in a release build). A phone's Return is Enter
 /// without them (the browser's keydown): it sends there too.
 bool isSendKey(KeyEvent e) => _isEnter(e) && !_lineModifier;
 

@@ -1,6 +1,6 @@
 # 0061. The daemon checks GitHub for a newer release; the app says so in a toast
 
-Status: accepted, 2026-10-29 (step 424). Builds on [0055](0055-releases-and-the-homebrew-cask.md) (releases) and [0056](0056-the-daemon-restarts-itself-when-idle.md) (the restart after an upgrade).
+Status: accepted, 2026-10-29. Builds on [0055](0055-releases-and-the-homebrew-cask.md) (releases) and [0056](0056-the-daemon-restarts-itself-when-idle.md) (the restart after an upgrade).
 
 ## Context
 The owner: "An update checker that shows a toast or something when a new version is released. Have it check every 2 hours, since we release often and only I and maybe a coworker use it. Auto-update is a later thing."

@@ -9,7 +9,7 @@ import 'package:nushi/phone/page_frame_stub.dart'
 /// device's key) and served with a CSP of its own, so its scripts and the
 /// network work there; the page's text goes in by postMessage. A
 /// `srcdoc` or `blob:` frame would take the app's CSP, which runs no
-/// inline script (WebKit, step 376). Its files beside it don't load.
+/// inline script (seen in WebKit). Its files beside it don't load.
 class PageFrame extends StatelessWidget {
   const new(this.html, {super.key});
 
