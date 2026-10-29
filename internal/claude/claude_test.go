@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"strings"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -124,16 +125,27 @@ func TestReportFindings(t *testing.T) {
 	}
 }
 
-// Claude is asked to stop a task by its id, with what it is in the words;
-// the prompt reads back, and TaskStop's call says which it stopped (its
-// error too, when the task had already ended).
+// Claude is asked to stop a task by its id alone; the prompt reads back,
+// and so does the longer one Nushi sent before (with what the task is), and
+// TaskStop's call says which it stopped (its error too, when the task had
+// already ended).
 func TestStopTask(t *testing.T) {
-	p := StopTask("sleep 600 (or (so)); echo slept\nand more", "bgu2i75cc")
-	if what, id, ok := StopRelayed(p); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
+	p := StopTask("bgu2i75cc")
+	if what, id, ok := StopRelayed(p); !ok || what != "" || id != "bgu2i75cc" {
 		t.Errorf("StopRelayed(%q) = %q %q %v", p, what, id, ok)
 	}
-	if _, _, ok := StopRelayed(Relay("Explore", "ab59", "stop")); ok {
-		t.Error("read a relay as a stop")
+	if len(p) > 120 {
+		t.Errorf("a long prompt: %q", p)
+	}
+	old := "Stop your background task bgu2i75cc (sleep 600 (or (so)); echo slept) now with your TaskStop tool (task_id: bgu2i75cc). " +
+		"Do nothing else, and say only whether it stopped."
+	if what, id, ok := StopRelayed(old); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
+		t.Errorf("StopRelayed(the old prompt) = %q %q %v", what, id, ok)
+	}
+	for _, p := range []string{Relay("Explore", "ab59", "stop"), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
+		if _, _, ok := StopRelayed(p); ok {
+			t.Errorf("read %q as a stop", p)
+		}
 	}
 	it := model.Item{Tool: "TaskStop"}
 	ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "TaskStop"}}, []byte(`{"task_id":"adddce0a14433f6d6"}`))

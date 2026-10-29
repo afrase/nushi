@@ -168,10 +168,12 @@ func (c *chat) childOfLocked(ch *child, sid string) string {
 
 // StopTask stops one of the agent's background tasks: the subagent or the
 // background command tool call callID started. A subagent the agent shows
-// as a session of its own stops when that session is cancelled; any other
-// is stopped by asking the agent (Dialect.StopTask), as a message of the
-// user's that waits for the agent's next chance. Either way it shows as
-// stopped only once the agent says so.
+// as a session of its own stops when that session is cancelled; a command
+// Nushi can find among the agent's processes, by its process group
+// (stopShell); any other is stopped by asking the agent
+// (Dialect.StopTask), as a message of the user's that waits for the
+// agent's next chance. Either way it shows as stopped only once the agent
+// says so.
 func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 	c, err := s.chat(chatID)
 	if err != nil {
@@ -193,7 +195,15 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 		c.mu.Unlock()
 		return cancelTurn(agent, &acp.CancelNotification{SessionID: acp.SessionID(sid)})
 	}
+	shell := call.Shell != nil
+	if shell && call.Shell.Killed {
+		c.mu.Unlock()
+		return nil // being stopped: its group was signalled
+	}
 	c.mu.Unlock()
+	if shell && s.stopShell(c, callID) {
+		return nil
+	}
 	return s.Prompt(ctx, chatID, model.Message{To: callID, Relay: &model.Relay{Stop: true}}, SendQueue)
 }
 

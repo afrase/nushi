@@ -77,7 +77,7 @@ func All(projects string) []Agent {
 					Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 					Shell: claude.Shell, ReadShell: claude.ReadShell,
 					SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
-					Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped,
+					Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped, RunsShell: claude.RunsShell,
 					Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 					ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete, NamesSessions: true}},
 			Local: func(k *chats.Kind) {

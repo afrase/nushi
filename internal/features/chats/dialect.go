@@ -70,13 +70,19 @@ type Dialect struct {
 	// says when each ends, and stops one when its session is cancelled.
 	Subagents bool
 	// StopTask asks the agent to stop one of its background tasks (a
-	// subagent, or a command it left running), named label, by the
-	// agent's id for it, when Nushi can't stop it itself; StopRelayed
-	// reads such a prompt back. Stopped says a tool call stopped one of
-	// the agent's tasks, or found it already ended: the task's id.
-	StopTask    func(label, taskID string) string
+	// subagent, or a command it left running), by the agent's id for it,
+	// when Nushi can't stop it itself; StopRelayed reads such a prompt
+	// back (label is what it names the task, "" when only its id). Stopped
+	// says a tool call stopped one of the agent's tasks, or found it
+	// already ended: the task's id.
+	StopTask    func(taskID string) string
 	StopRelayed func(prompt string) (label, taskID string, ok bool)
 	Stopped     func(call model.Item) string
+	// RunsShell says a process the agent runs (its command line) is the
+	// shell running the command of call, a tool call that left it running
+	// in the background (see Shell): Nushi then stops the command itself,
+	// by its process group, without a turn (children.go).
+	RunsShell func(call model.Item, args []string) bool
 	// Other says a form field is the free-text "Other" answer of the field
 	// before it.
 	Other func(field, before model.Field) bool

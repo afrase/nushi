@@ -41,6 +41,7 @@ import (
 	"github.com/afrase/nushi/internal/mcpserver"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pig"
+	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
@@ -140,7 +141,7 @@ func run() error {
 	kinds := chatKinds(dir, known, agentSvc)
 	chatSvc := chats.New(context.Background(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
 		Scratch: filepath.Join(dir, "scratch"), Publish: hub.Publish, Tools: mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")),
-		Viewers: remoteSvc, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st})
+		Viewers: remoteSvc, Processes: proctree.Tree{}, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st})
 	go chatSvc.EndStalePrompts() // what a daemon that stopped left pending
 	termSvc := terminals.New(startShell, filepath.Base(loginShell()), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)

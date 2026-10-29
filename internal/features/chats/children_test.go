@@ -184,7 +184,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 	}
 	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, sleeping))
 	eventually(t, c, func() bool { return !c.busy })
-	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claude.StopTask("sleep 600; echo slept", "bgu2i75cc") {
+	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claude.StopTask("bgu2i75cc") {
 		t.Errorf("asked %q", prompts)
 	}
 	c.mu.Lock()

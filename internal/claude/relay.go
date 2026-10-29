@@ -55,30 +55,33 @@ func Relaying(it model.Item) string {
 	return ""
 }
 
-// StopTask asks Claude to stop one of its background tasks, a subagent or a
-// command (what names it), with its TaskStop tool, by the task's id: a
-// subagent's agentId, a command's background task id. A client that
-// isn't JetBrains AIR has no way to stop one itself
-// (_session/async_task/stop answers {stopped: false}).
-func StopTask(what, taskID string) string {
-	what, _, _ = strings.Cut(what, "\n")
-	if r := []rune(what); len(r) > 80 {
-		what = string(r[:79]) + "…"
-	}
-	return fmt.Sprintf("Stop your background task %s (%s) now with your TaskStop tool (task_id: %s). "+
-		"Do nothing else, and say only whether it stopped.", taskID, what, taskID)
+// StopTask asks Claude to stop one of its background tasks with its
+// TaskStop tool, by the task's id: a subagent's agentId, or a background
+// command's task id when Nushi couldn't stop the command itself. A client
+// that isn't JetBrains AIR has no way to stop a subagent itself
+// (_session/async_task/stop answers {stopped: false}). The prompt is as
+// short as Claude reads reliably: the id and the one reply wanted; what
+// the task is shows from the call it names.
+func StopTask(taskID string) string {
+	return fmt.Sprintf(`Stop background task %s: call TaskStop with task_id "%s", then reply only "stopped" or "not running".`, taskID, taskID)
 }
 
-var stopRelayed = regexp.MustCompile(`^Stop your background task ([0-9a-z]+) \((.*)\) now with your TaskStop tool \(task_id: ([0-9a-z]+)\)\. Do nothing else, and say only whether it stopped\.$`)
+var (
+	stopRelayed    = regexp.MustCompile(`^Stop background task ([0-9a-z]+): call TaskStop with task_id "([0-9a-z]+)", then reply only "stopped" or "not running"\.$`)
+	oldStopRelayed = regexp.MustCompile(`^Stop your background task ([0-9a-z]+) \((.*)\) now with your TaskStop tool \(task_id: ([0-9a-z]+)\)\. Do nothing else, and say only whether it stopped\.$`)
+)
 
-// StopRelayed reads a prompt StopTask made: what it names, and the task's
-// id.
+// StopRelayed reads a prompt StopTask made: the task's id, and what the
+// prompt names it ("" for today's, which names it by its id only; before,
+// a label of 80 characters at most).
 func StopRelayed(prompt string) (what, taskID string, ok bool) {
-	m := stopRelayed.FindStringSubmatch(prompt)
-	if len(m) != 4 || m[1] != m[3] {
-		return "", "", false
+	if m := stopRelayed.FindStringSubmatch(prompt); len(m) == 3 && m[1] == m[2] {
+		return "", m[1], true
 	}
-	return m[2], m[1], true
+	if m := oldStopRelayed.FindStringSubmatch(prompt); len(m) == 4 && m[1] == m[3] {
+		return m[2], m[1], true
+	}
+	return "", "", false
 }
 
 // Stopped says a tool call is Claude's TaskStop having stopped a task, or

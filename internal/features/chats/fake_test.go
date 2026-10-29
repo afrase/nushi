@@ -26,7 +26,7 @@ var testDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.Session
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 	Shell: claude.Shell, ReadShell: claude.ReadShell,
 	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
-	Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped,
+	Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped, RunsShell: claude.RunsShell,
 	Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
 
@@ -61,6 +61,7 @@ type fakeAgent struct {
 	deletes   bool
 	deleteErr error
 	noLoad    bool // it can't reopen sessions
+	pid       int  // its process, for the processes below it (fakeProcesses); 0: unknown
 	// lists makes it able to list sessions: listed, listPage at a time
 	// (all at once for 0), the cursor being the next one's index.
 	lists    bool
@@ -271,7 +272,7 @@ func (f *fakeAgent) Stop(time.Duration) error {
 
 func (f *fakeAgent) Done() <-chan struct{} { return nil } // used without launch: it never ends
 
-func (f *fakeAgent) Pid() int { return 0 }
+func (f *fakeAgent) Pid() int { return f.pid }
 
 func (f *fakeAgent) Cancel(_ context.Context, n *acp.CancelNotification) error {
 	f.mu.Lock()

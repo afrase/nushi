@@ -212,7 +212,7 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	text := m.Text
 	switch r := m.Relay; {
 	case r != nil && r.Stop:
-		text = c.dialect.StopTask(r.Agent, r.AgentID)
+		text = c.dialect.StopTask(r.AgentID)
 	case r != nil:
 		text = c.dialect.Relay(r.Agent, r.AgentID, text)
 	}
