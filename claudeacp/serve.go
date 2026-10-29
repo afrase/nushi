@@ -187,6 +187,8 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 func (a *agent) Cancel(_ context.Context, n *acp.CancelNotification) error {
 	if s, err := a.session(n.SessionID); err == nil {
 		s.cancel()
+	} else if s := a.child(string(n.SessionID)); s != nil {
+		s.stopSubagent(string(n.SessionID)) // a subagent's session: that subagent alone
 	}
 	return nil
 }

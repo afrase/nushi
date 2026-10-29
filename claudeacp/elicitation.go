@@ -38,7 +38,7 @@ func (s *session) elicit(ctx context.Context, r claudeagent.ElicitationRequest) 
 		}
 		req.Form = &acp.ElicitationFormMode{SessionID: acp.SessionID(s.id), RequestedSchema: schema}
 	}
-	ctx, done := s.opened(ctx)
+	ctx, done := s.opened(ctx, "")
 	defer done()
 	resp, err := s.a.client.CreateElicitation(ctx, req)
 	switch {

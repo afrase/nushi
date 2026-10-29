@@ -37,9 +37,9 @@ func (s *session) cancel() {
 		}
 	}
 	s.dropTop = true
-	for _, withdraw := range s.open { // what it asks the user is moot now
-		withdraw()
-	}
+	// What it asks the user is moot now; a background subagent's isn't,
+	// as the cancel spares it.
+	s.withdrawLocked(func(a *ask) bool { return a.agent == "" || !s.inBackground(a.agent) })
 	s.mu.Unlock()
 	for _, id := range drop {
 		go func() {

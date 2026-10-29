@@ -33,6 +33,7 @@ type subagent struct {
 	on         string // the session it was announced on
 	background bool   // a parent's cancel spares it
 	shown      bool   // announced to the client
+	asks       int    // its permission and question requests open
 	ended      bool
 }
 
@@ -121,6 +122,28 @@ func (s *session) callOf(agent string) string {
 		return sa.call
 	}
 	return ""
+}
+
+// sessionOf is the session a request of the subagent agent goes to: its
+// child once announced, else this one.
+func (s *session) sessionOf(agent string) string {
+	k := &s.kids
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if sa := k.byID[agent]; sa != nil && sa.shown {
+		return sa.id
+	}
+	return s.id
+}
+
+// inBackground says the subagent agent runs in the background, where a
+// cancel of the session's turn doesn't reach.
+func (s *session) inBackground(agent string) bool {
+	k := &s.kids
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	sa := k.byID[agent]
+	return sa != nil && sa.background && !sa.ended
 }
 
 // launch is what the call that starts a subagent says of it.
