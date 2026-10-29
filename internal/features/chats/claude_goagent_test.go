@@ -113,14 +113,16 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		sc.Buffer(nil, 64<<20)
 		for sc.Scan() {
 			var m rpc
-			if json.Unmarshal(sc.Bytes(), &m) == nil {
+			if json.Unmarshal(sc.Bytes(), &m) == nil && json.Unmarshal(sc.Bytes(), &m.whole) == nil {
 				msgs <- m
 			}
 		}
 	}()
 	var events []event
 	var marks []string // each kept update's mark, in order
+	var whole []any    // every message of the Go agent's, whole, for waitLast
 	keep := func(m rpc) bool {
+		whole = append(whole, m.whole)
 		if m.Method != sessionUpdate {
 			return false
 		}
@@ -186,7 +188,34 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 	agentReqs := map[string]agentReq{} // the agent's requests, by the recorded id
 	asked := map[string]event{}        // the marked requests, by recorded id
 	reads := 0                         // the requests that read claude's history so far
+	// waitLast waits for what the recording's client waited for before it
+	// went (a turn claude ran on its own after a background command
+	// ended): the Go agent must send it, in the same order, before the
+	// recording's end, as the adapter did.
+	waitLast := func() {
+		looked := 0
+		for _, want := range trailingWaits(t, dir) {
+			found := func() int { return slices.IndexFunc(whole[looked:], func(m any) bool { return like(want, m) }) }
+			for found() < 0 {
+				select {
+				case m, ok := <-msgs:
+					if !ok {
+						t.Fatalf("the Go agent ended before what the recording's client waited for (claude's script: %v)", fake.Err())
+					}
+					if !keep(m) {
+						t.Errorf("the Go agent sent %s %s after the recording ended", m.Method, m.ID)
+					}
+				case <-time.After(5 * time.Second): // bounds a hang, orders nothing
+					t.Fatalf("the Go agent never sent what the recording's client waited for: %v", want)
+				}
+			}
+			looked += found() + 1
+		}
+	}
 	for i, l := range append(slices.Clone(rec), more...) {
+		if i == len(rec) {
+			waitLast()
+		}
 		var m rpc
 		testcheck.NoErr(t, json.Unmarshal(l.Msg, &m))
 		switch {
@@ -249,6 +278,9 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 				events = append(events, e)
 			}
 		}
+	}
+	if len(more) == 0 {
+		waitLast()
 	}
 	_ = toAgentW.Close() // the client goes: the agent closes its sessions, and claude ends
 	for m := range msgs {

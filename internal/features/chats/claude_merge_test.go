@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -25,6 +26,11 @@ import (
 // first session after the recording, from that history, and is merged
 // with the whole run's chat.
 func TestClaudeMerge(t *testing.T) {
+	// A copy whose client went mid-turn (eof-mid-tool) keeps a turn no
+	// answer ends, and closing its chat would wait out the agent's grace.
+	grace := stopGrace
+	t.Cleanup(func() { stopGrace = grace })
+	stopGrace = 10 * time.Millisecond
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
