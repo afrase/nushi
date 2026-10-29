@@ -123,18 +123,19 @@ func (s *session) reader() {
 	s.subagentsGone()
 	s.mu.Lock()
 	gone := !s.closed
-	s.closed = true
+	s.closed = true // no more turns join
+	s.mu.Unlock()
 	if gone {
-		// claude died under the session: its turns fail, and the
-		// session goes, so later prompts are told so.
+		// claude died under the session: the session goes, then its
+		// turns fail, so a prompt sent once they have is told there is
+		// no session rather than, now and then, that it has ended.
+		s.log.Warn("claude exited", "err", err)
+		s.a.forget(s)
+		s.mu.Lock()
 		for _, t := range slices.Clone(s.turns) {
 			s.settleLocked(t, outcome{err: died})
 		}
-	}
-	s.mu.Unlock()
-	if gone {
-		s.log.Warn("claude exited", "err", err)
-		s.a.forget(s)
+		s.mu.Unlock()
 	}
 }
 
