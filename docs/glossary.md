@@ -19,7 +19,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Prompt** | ACP's word for a message to the agent. The UI says message, and prompt only in "permission prompt". | `SendPrompt` | |
 | **Item** | One entry of the transcript: a message, thought, tool call, permission prompt, question, plan or notice. Code only; prose says entry or names the kind. | `model.Item`, `ItemKind` | 0026 |
 | **Tool call** | The agent's use of a tool (read, edit, run…), shown as a **tool row**. | `ToolCall` item, `ToolCallView` | |
-| **Run** | Tool rows in a row, folded into one line: "Read 4 files, running make test". | `ToolGroupView`, `RunLine` | |
+| **Run** | Tool rows in a row, folded into one line: "Read 4 files, running make test". | `RunView`, `RunLine` | |
 | **Thought** | The agent's thinking: "Thinking…", then "Thought for 12s". | `Thought`, `ThoughtLine` | |
 | **Plan** | The agent's checklist, updated in place: "Plan · 2 of 5 done". | `Plan`, `PlanEntry` | |
 | **Notice** | A quiet line in the transcript: how a turn ended when it didn't end well, or a note of the agent's own ("Stopped by safeguards", "Compacted here"). | `Notice`, `AgentNotice` | |
@@ -27,11 +27,11 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Question** | A form the agent asks you to fill in (Claude's AskUserQuestion), as a question card. | `Question` item, `Field`, `QuestionCard`, `AnswerQuestion` | 0009 |
 | **Needs you** | The chat waits on you: a permission prompt or a question. Amber dot, Dock badge, "Needs you ↓". | `waiting` (`ChatStatus`, `ChatPhase`), `WaitingCard` | |
 | **Chat states** | A chat's dot and word: needs you, working, in background, done, asleep, idle, new, expired, couldn't start, archived. | `ChatPhase`, `phaseWord` | |
-| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, proto `Chat.done`, `ChatPhase.unseen` | |
+| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, proto `Chat.done`, `ChatState.done`, `ChatPhase.done` | |
 | **Subagent** | A helper the agent starts for a task ("Explore: find the scroll handling"). Its steps show in its row and its pane; it can be stopped alone. | `Subagent`, `Item.Agent`, `SubagentPane` | 0044 |
-| **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `model.ToSubagent`, `Item.ToSubagentName`, `claude/subagents.go`, `to_subagent.go`, proto `to_subagent`, `to_subagent_name` | |
+| **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `model.ToSubagent`, `Item.ToSubagentName`, `claude/subagents.go`, `to_subagent.go`, proto `to_subagent`, `to_subagent_name`, `Draft.toSubagent` | |
 | **Background task** | A subagent or command still running after the turn that started it ended. The Background tasks widget lists them; each has a Stop. | `ChatStatus.background`, `StopTask` | 0044 |
-| **Background command** | A command the agent left running in the background, its output in a pane. | `BackgroundCommand` (Go and proto), `ShellPane`, `Item.TaskID`, `background.go` | |
+| **Background command** | A command the agent left running in the background, its output in a pane. | `BackgroundCommand` (Go and proto), `background_commands.dart`, `BackgroundCommandPane`, `Item.TaskID`, `background.go` | |
 | **Queue** | Messages sent while a turn runs (⏎, Queue). Each goes at the agent's next chance: into the running turn when the agent takes steering, else as the next message. Shown as pills over the box. | `QueuedMessage`, `ChatQueue`, `SendPrompt.queue`, `Unqueue`, `QueuePills` | |
 | **Steer** | "Steer: stop and send now" (⌘⏎): stops the running turn and sends at once. Not the agent's steering (Synonyms). | `SendPrompt.now` | |
 | **Side chat** | A fork of the chat, beside it, that knows the conversation but doesn't add to it; you can go back and forth in it, as in Claude Code's side chat. It ends when closed (⇧⌘B). | `ForkChat`, `CloseSideChat`, `sides.go`, `side_chat.dart`, `Daemon.openSide` | |
@@ -77,7 +77,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Details panel** | The right column, made of widgets. Show details, Hide details. | `details_panel.dart` | |
 | **Widget** | One part of the details panel: Environment, Context, Changes, Pull request, Artifacts, MCP, Background tasks. Each collapses and drags. | `PanelWidget`, `panel_widgets.dart`, `collapsedWidgets`, `widgetOrder` | |
 | **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell`, `CardList` (`card_list.dart`) | 0009 |
-| **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_widget.dart`, `FileRows` | |
+| **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_widget.dart`, `FileRows`, the phone's `ArtifactsScreen` | |
 | **Preview** | An artifact shown in the side pane (or full screen on the phone), kept current as it changes; Preview and Source. | `preview.dart`, `WatchChatFile`, `internal/filewatch` | 0057 |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Read-only toward git. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
@@ -180,8 +180,4 @@ One line each; the word after the arrow wins.
 
 Code that uses an old word, for the clean-up batch. A proto field or message is renamed in place, its number and type kept (ADR 0004's amendment): the old name goes in its comment.
 
-- The app's `Draft.relay`, `_Relayed` and `relay_pane_test.dart` (a message to a subagent) → the `toSubagent` words Go and proto have (`model.ToSubagent`, `Item.to_subagent…`, `passed_on_by`), so relay means the server only. The JSON names on disk and the state "relayed" stay.
-- `ShellPane` and `shells.dart` (a background command) → `BackgroundCommand…`, as Go and proto say; `Shell` is easy to take for a terminal's.
-- The app's `ChatState.unseen`, `ChatPhase.unseen` and `unseenApi` → `done`, as Go's `ChatRecord.Done` (stored as `Unseen`) and proto `Chat.done`.
-- `ToolGroupView` → `RunView` (the UI's run).
 - Steer: the button that stops the turn shares its name with the agent's steering, which is what Queue does (proto `SendPromptRequest.queue`'s comment, `composer.dart`'s "steers"). Either rename the button (Stop and send) or always qualify the agent's ("the agent's steering"). A product call: the owner's.

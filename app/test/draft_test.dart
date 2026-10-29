@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -33,4 +34,17 @@ void main() {
     daemon.dispose(); // its ping timer
     await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
   });
+
+  test(
+    "a message to a subagent is kept under the draft's older key, relay",
+    () {
+      final saved = (Draft()..toSubagent.value = ('call1', 'Explore')).toJson();
+      expect(saved['relay'], ['call1', 'Explore']);
+      final back = Draft()
+        ..restore({
+          'relay': ['call1', 'Explore'],
+        });
+      expect(back.toSubagent.value, ('call1', 'Explore'));
+    },
+  );
 }

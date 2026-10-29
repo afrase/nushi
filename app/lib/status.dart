@@ -171,7 +171,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     final chat = widget.chat;
     final phase = chat.phase;
     // An unseen end shows through sleep: the user hasn't seen it yet.
-    final unseen = phase == .unseen;
+    final isDone = phase == .done;
     final still = reduceMotion(context);
     switch (phase) {
       case .asleep:
@@ -193,10 +193,10 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
             painter: _Ring(t.running, pulsing: !still),
           ),
         );
-      case .archived || .waiting || .unseen || .fresh || .idle:
+      case .archived || .waiting || .done || .fresh || .idle:
         break;
     }
-    final done = Padding(
+    final doneDot = Padding(
       padding: const EdgeInsets.all(size * 0.3),
       child: DecoratedBox(
         decoration: BoxDecoration(color: t.done, shape: BoxShape.circle),
@@ -226,17 +226,17 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
             ),
           );
           // Unseen, the check settles into the green dot as it fades.
-          if (!unseen) return mark;
+          if (!isDone) return mark;
           return Stack(
             children: [
-              Opacity(opacity: out, child: done),
+              Opacity(opacity: out, child: doneDot),
               mark,
             ],
           );
         },
       );
     }
-    if (unseen) return done;
+    if (isDone) return doneDot;
     final dot = chat.waiting
         ? _waitingDot(t)
         : Padding(
@@ -290,7 +290,7 @@ bool turnFailed(List<Item> items) => items.reversed
 /// waiting on the user, then working, then working in the background,
 /// then a turn's end unseen; null when none is (all idle, asleep, new…).
 ChatPhase? groupPhase(Iterable<ChatState> chats) {
-  const order = <ChatPhase>[.waiting, .working, .background, .unseen];
+  const order = <ChatPhase>[.waiting, .working, .background, .done];
   ChatPhase? most;
   for (final c in chats) {
     final i = order.indexOf(c.phase);
@@ -346,7 +346,7 @@ class PhaseDot extends StatelessWidget {
   .background => ('in background', t.running),
   .expired => ('expired', t.idle),
   .failed => ("couldn't start", t.crashed),
-  .unseen => ('done', t.done),
+  .done => ('done', t.done),
   .asleep => ('asleep', t.idle),
   .fresh => ('new', t.idle),
   .idle => ('idle', t.idle),

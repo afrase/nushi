@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-
+import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/panel_widgets.dart';
-import 'package:nushi/shells.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -17,20 +16,21 @@ import 'package:nushi/widgets.dart';
 /// that ended are in the transcript.
 PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
   final subs = subagentsOf(chat.items);
-  final shells = shellsOf(chat.items);
+  final commands = backgroundCommandsOf(chat.items);
   final running = [
     for (final s in subs.where(subagentRunning)) _AgentRow(chat, daemon, s),
-    for (final it in shells.where(shellRunning)) _ShellRow(chat, daemon, it),
+    for (final it in commands.where(commandRunning))
+      _CommandRow(chat, daemon, it),
   ];
   if (running.isEmpty) return null;
   final rest = [
     for (final s in subs.where((s) => !subagentRunning(s)))
       _AgentRow(chat, daemon, s),
-    for (final it in shells.where((it) => !shellRunning(it)))
-      _ShellRow(chat, daemon, it),
+    for (final it in commands.where((it) => !commandRunning(it)))
+      _CommandRow(chat, daemon, it),
   ];
   // A command whose end isn't known didn't finish, as far as Nushi knows.
-  final unknown = shells.any((it) => it.backgroundCommand.state == 'started');
+  final unknown = commands.any((it) => it.backgroundCommand.state == 'started');
   final more = '${rest.length} ${unknown ? 'earlier' : 'finished'}';
   return PanelWidget(
     title: 'Background tasks',
@@ -61,7 +61,7 @@ Widget _line(Widget first, Widget? stop) => Row(
 
 /// A background command: the command, its state, and the last line it
 /// wrote; a click opens its pane.
-class _ShellRow extends StatelessWidget {
+class _CommandRow extends StatelessWidget {
   const new(this.chat, this.daemon, this.it);
 
   final ChatState chat;
@@ -88,14 +88,14 @@ class _ShellRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.code(t.text, size: 11.5),
               ),
-              hover && shellRunning(it)
+              hover && commandRunning(it)
                   ? stopButton(context, daemon, chat, it.id, size: 12)
                   : null,
             ),
-            shellStateText(context, it, theme.ui(t.textMuted, size: 11.5)),
+            commandStateText(context, it, theme.ui(t.textMuted, size: 11.5)),
             if (last.isNotEmpty)
               Shine(
-                on: shellRunning(it),
+                on: commandRunning(it),
                 child: Text(
                   last,
                   maxLines: 1,

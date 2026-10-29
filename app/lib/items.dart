@@ -67,7 +67,7 @@ class ItemView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 6,
               children: [
-                if (item.toSubagentName.isNotEmpty) _Relayed(item, chat),
+                if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
                 if (item.images.isNotEmpty) Thumbnails(item.images),
                 if (item.text.isNotEmpty) UserMessageText(item.text),
               ],
@@ -216,7 +216,7 @@ class ItemView extends StatelessWidget {
 /// to stop it or a background command), and how that went: the band's
 /// marker, in the chat's transcript and in the subagent's pane, where it
 /// shows among the subagent's steps. A click opens the subagent's pane.
-class _Relayed extends StatelessWidget {
+class _ToSubagentMark extends StatelessWidget {
   const new(this.item, this.chat);
 
   final Item item;

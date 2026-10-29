@@ -7,9 +7,9 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/phone/artifacts_screen.dart';
 import 'package:nushi/phone/chat_sheet.dart';
 import 'package:nushi/phone/connection_bar.dart';
-import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/new_chat_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/preview_screen.dart';
@@ -50,9 +50,9 @@ class ChatScreen extends StatelessWidget {
           if (daemon.daemonApi >= previewApi && chatFilesOf(chat).isNotEmpty)
             ListenableBuilder(
               listenable: chat.opened,
-              builder: (context, _) => FilesAction(
+              builder: (context, _) => ArtifactsAction(
                 chatArtifacts(chat, pins: false).recent.length,
-                onTap: () => FilesScreen.open(context, daemon, chat),
+                onTap: () => ArtifactsScreen.open(context, daemon, chat),
               ),
             ),
           PhoneIcon(

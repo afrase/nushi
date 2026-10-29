@@ -83,7 +83,7 @@ class SubagentPane extends StatelessWidget {
                     ),
             ),
             if (s != null && s.call.agentId.isNotEmpty && !chat.archived)
-              _Relay(
+              _ToSubagentBox(
                 key: ValueKey(s.call.id),
                 chat: chat,
                 daemon: daemon,
@@ -233,7 +233,7 @@ class _HeadState extends State<_Head> {
 /// A box for a message to the subagent. The agent passes it on (Claude's
 /// SendMessage), which runs a finished subagent again: as any message,
 /// it goes into a running turn, or starts one.
-class _Relay extends StatefulWidget {
+class _ToSubagentBox extends StatefulWidget {
   const new({
     required this.chat,
     required this.daemon,
@@ -246,10 +246,10 @@ class _Relay extends StatefulWidget {
   final SubagentRun s;
 
   @override
-  State<_Relay> createState() => _RelayState();
+  State<_ToSubagentBox> createState() => _ToSubagentBoxState();
 }
 
-class _RelayState extends State<_Relay> {
+class _ToSubagentBoxState extends State<_ToSubagentBox> {
   // On the chat's draft: kept when the pane closes, and on disk.
   late final TextEditingController _text = widget.chat.draft.subagentBox(
     widget.s.call.id,

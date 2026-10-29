@@ -1,7 +1,7 @@
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/composer.dart';
@@ -17,7 +17,6 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/shells.dart';
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/theme/theme.dart';
@@ -239,7 +238,7 @@ class _ChatViewState extends State<ChatView> {
     void onClose() => chat.pane.value = null;
     // Keyed: another subagent's pane is its own, its unsent text too.
     return chat.items.any((it) => it.id == id && it.hasBackgroundCommand())
-        ? ShellPane(
+        ? BackgroundCommandPane(
             key: ValueKey(id),
             chat: chat,
             daemon: widget.daemon,

@@ -11,7 +11,7 @@ import 'package:nushi/replies.dart';
 /// lose it; `Drafts` keeps it on disk too. It notifies on any change.
 class Draft extends ChangeNotifier {
   new() {
-    for (final l in <Listenable>[text, replies, images, quote, relay]) {
+    for (final l in <Listenable>[text, replies, images, quote, toSubagent]) {
       l.addListener(notifyListeners);
     }
   }
@@ -35,7 +35,7 @@ class Draft extends ChangeNotifier {
 
   /// The subagent a message taken back was for: its call and type. The
   /// message goes there again.
-  final relay = ValueNotifier<(String call, String agent)?>(null);
+  final toSubagent = ValueNotifier<(String call, String agent)?>(null);
 
   /// The box for a message to the subagent of call [call] (its pane's).
   TextEditingController subagentBox(String call) =>
@@ -80,7 +80,9 @@ class Draft extends ChangeNotifier {
         if (mentions.isNotEmpty) 'mentions': [...mentions],
         if (images.isNotEmpty) 'images': images,
         'quote': ?quote.value,
-        if (relay.value case (final call, final agent)?) 'relay': [call, agent],
+        // Under `relay`, its older name, so drafts on disk still load.
+        if (toSubagent.value case (final call, final agent)?)
+          'relay': [call, agent],
       },
     };
   }
@@ -119,7 +121,7 @@ class Draft extends ChangeNotifier {
     }
     if (j['quote'] case final String q) quote.value = q;
     if (j['relay'] case [final String call, final String agent]) {
-      relay.value = (call, agent);
+      toSubagent.value = (call, agent);
     }
     if (j['subagents'] case final Map<String, Object?> s) {
       for (final MapEntry(:key, :value) in s.entries) {

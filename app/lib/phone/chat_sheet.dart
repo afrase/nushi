@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/chat_pins.dart';
@@ -8,7 +9,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/ui.dart';
-import 'package:nushi/shells.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -62,8 +62,8 @@ class _ChatSheetState extends State<ChatSheet> {
   List<String> get _running => [
     for (final s in subagentsOf(widget.chat.items))
       if (subagentStoppable(s)) s.call.id,
-    for (final it in shellsOf(widget.chat.items))
-      if (shellRunning(it)) it.id,
+    for (final it in backgroundCommandsOf(widget.chat.items))
+      if (commandRunning(it)) it.id,
   ];
 
   Future<void> _rename() async {
