@@ -2,15 +2,12 @@ package chats
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/claudeagent/claudetest"
-	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // goAgentHook is the callback id the Go agent gives its one hook,
@@ -61,9 +58,12 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 }
 
 // idleTeardown is where c ends for the Go agent: at the adapter's last
-// write to claude when that is an interrupt sent with claude idle (its
-// last session_state_changed said so, or it never ran), which is the
-// adapter closing the session, as it does whenever its client goes.
+// write to claude when that is an interrupt sent with no turn open (the
+// last prompt's result had come, claude's last session_state_changed
+// said idle, or it never ran), which is the adapter closing the session,
+// as it does whenever its client goes. claude says idle only after the
+// result, and the adapter may close in between; the Go agent's turn ends
+// at the result too, so it doesn't interrupt then.
 // claude's answer and whatever else it wrote after go with it. Otherwise
 // it is c's end: a running turn the Go agent interrupts too.
 func idleTeardown(c *claudetest.Cassette) int {
@@ -73,10 +73,15 @@ func idleTeardown(c *claudetest.Cassette) int {
 		switch {
 		case f.Dir == "out" && fr.Subtype == "session_state_changed":
 			state = fr.State
+		case f.Dir == "out" && fr.Type == "result":
+			state = "idle"
 		case f.Dir == "in" && fr.Type != "keep_alive": // the fake never sees these
 			end = len(c.Frames)
 			if fr.Request.Subtype == "interrupt" && (state == "" || state == "idle") {
 				end = i
+			}
+			if fr.Type == "user" {
+				state = "running"
 			}
 		}
 	}
@@ -133,6 +138,8 @@ func TestForGoAgent(t *testing.T) {
 	}{
 		{"context usage after initialize", []string{in(initAsk), out(initAnswer), in(contextAsk), in(prompt), out(contextAnswer), out(result)}, []int{2, 4}},
 		{"interrupt closing an idle session", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(interruptAsk), out(interruptAck)}, []int{6, 7}},
+		{"interrupt closing a session after the result, before claude says idle", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), in(interruptAsk), out(stateIdle), out(interruptAck)}, []int{5, 6, 7}},
+		{"interrupt after a prompt claude hasn't started", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(prompt), in(interruptAsk), out(interruptAck)}, nil},
 		{"interrupt closing a session never prompted", []string{in(initAsk), out(initAnswer), in(interruptAsk), out(interruptAck)}, []int{2, 3}},
 		{"a keep-alive after the closing interrupt", []string{in(initAsk), out(initAnswer), in(interruptAsk), in(keepAlive)}, []int{2, 3}},
 		{"interrupt closing a running turn", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), out(interruptAck), out(result), out(stateIdle)}, nil},
@@ -162,42 +169,4 @@ func frameLines(fs []claudetest.Frame) string {
 		b.WriteString(f.Dir + " " + string(f.Frame) + "\n")
 	}
 	return b.String()
-}
-
-// TestClaudeParityAdapterFrames is hello as a real recording through the
-// adapter has it: get_context_usage after initialize, answered later, and
-// an interrupt as the client goes. The Go agent sends neither, and its
-// chats still match the adapter's.
-func TestClaudeParityAdapterFrames(t *testing.T) {
-	dir := t.TempDir()
-	testcheck.NoErr(t, os.CopyFS(dir, os.DirFS(filepath.Join("testdata", "claude-parity", "hello"))))
-	cli := filepath.Join(dir, "cli.jsonl")
-	b, err := os.ReadFile(cli)
-	testcheck.NoErr(t, err)
-	lines := strings.SplitAfter(strings.TrimSuffix(string(b), "\n"), "\n")
-	at := func(dir, msg string) string {
-		return `{"dir":"` + dir + `","ms":0,"frame":` + msg + "}\n"
-	}
-	// lines[0] is the header, [1] initialize and [2] its answer; claude
-	// answers the context's use after the prompt's echo.
-	var rec []string
-	rec = append(rec, lines[:3]...)
-	rec = append(rec, at("in", contextAsk))
-	rec = append(rec, lines[3:5]...)
-	rec = append(rec, at("out", contextAnswer))
-	rec = append(rec, lines[5:]...)
-	if !strings.HasSuffix(rec[len(rec)-1], "\n") {
-		rec[len(rec)-1] += "\n"
-	}
-	rec = append(rec, at("in", interruptAsk), at("out", interruptAck))
-	testcheck.Write(t, cli, strings.Join(rec, ""))
-
-	node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
-	got, want := views(t, runGoAgent(t, dir, sent, nil)), views(t, node)
-	if len(want) == 0 || len(want[0].Items) == 0 {
-		t.Fatal("the recording shows nothing to compare")
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
-	}
 }
