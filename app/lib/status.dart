@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
@@ -10,8 +9,8 @@ import 'package:nushi/tool_calls.dart';
 
 /// A dot of [color]; [ringing], a soft ring grows out of it and fades,
 /// again every 1.6 seconds, from the shared clock.
-class _Mark extends CustomPainter {
-  new(this.color, {required this.ringing})
+class StatusMark extends CustomPainter {
+  new(this.color, {this.ringing = false})
     : super(repaint: ringing ? loopClock : null);
 
   final Color color;
@@ -38,7 +37,8 @@ class _Mark extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_Mark old) => old.color != color || old.ringing != ringing;
+  bool shouldRepaint(StatusMark old) =>
+      old.color != color || old.ringing != ringing;
 }
 
 /// A ring of [color], its line fading in and out slowly ([pulsing]) every
@@ -71,37 +71,6 @@ class _Ring extends CustomPainter {
   bool shouldRepaint(_Ring old) => old.color != color || old.pulsing != pulsing;
 }
 
-/// A check drawn [drawn] of the way, at [opacity].
-class _Check extends CustomPainter {
-  new(this.color, this.drawn, this.opacity);
-
-  final Color color;
-  final double drawn;
-  final double opacity;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.shortestSide / 10;
-    final path = Path()
-      ..moveTo(1.5 * s, 5.2 * s)
-      ..lineTo(4 * s, 7.5 * s)
-      ..lineTo(8.5 * s, 2.5 * s);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..color = color.withValues(alpha: opacity);
-    for (final m in path.computeMetrics()) {
-      canvas.drawPath(m.extractPath(0, m.length * drawn), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Check old) =>
-      old.color != color || old.drawn != drawn || old.opacity != opacity;
-}
-
 /// A chat's status dot: amber, a size up, with a soft ring while it waits
 /// on the user (it hops once when that starts), a ring growing out of it
 /// while the agent works, a ring when idle (a check draws itself there for
@@ -110,12 +79,15 @@ class _Check extends CustomPainter {
 /// or commands run in the background after the turn; a moon asleep, a
 /// quiet clock when its agent deleted its session, an error mark when it
 /// couldn't start.
+/// With [sparks], a turn you watched end (after [Sparks.after] or more,
+/// Nushi in front) sends sparks out of its check.
 class ChatDot extends StatefulWidget {
-  const new({required this.chat, super.key});
+  const new({required this.chat, super.key, this.sparks = false});
 
   static const size = 7.0;
 
   final ChatState chat;
+  final bool sparks;
 
   @override
   State<ChatDot> createState() => _ChatDotState();
@@ -128,6 +100,8 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   late ChatPhase _phase = widget.chat.phase;
   AnimationController? _hop; // once, as the chat starts waiting
   AnimationController? _check; // drawn, held, then the ring again
+  DateTime? _since; // when the running turn started, as last known
+  bool _sparks = false; // the check's sparks fly
 
   static const _hopFor = Duration(milliseconds: 1200);
   static const _checkFor = Duration(milliseconds: 2700);
@@ -188,13 +162,17 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       _stopped = false;
       _check?.value = 1; // a new turn: the check goes
     }
+    if (c.busy) _since = c.started ?? _since ?? DateTime.now();
     if (c.stopping) _stopped = true;
     if (c.waiting && !_waiting && !reduceMotion(context)) {
       (_hop ??= _once(_hopFor)).forward(from: 0).ignore();
     }
     if (_busy && !c.busy && !c.waiting && !_stopped) {
+      final lasted = DateTime.now().difference(_since ?? DateTime.now());
+      _sparks = widget.sparks && !turnFailed(c.items) && sparksFor(lasted);
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
+    if (!c.busy) _since = null;
     // Every streamed chunk notifies: only a change of state rebuilds.
     if (c.busy == _busy && c.waiting == _waiting && c.phase == _phase) {
       return;
@@ -224,7 +202,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       case .working:
         return CustomPaint(
           size: const Size.square(size * 1.6),
-          painter: _Mark(t.running, ringing: !still),
+          painter: StatusMark(t.running, ringing: !still),
         );
       case .background:
         return Tooltip(
@@ -252,10 +230,18 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
           final out = still ? 0.0 : ((ms - 2400) / 300).clamp(0.0, 1.0);
           final mark = CustomPaint(
             size: const Size.square(size * 1.6),
-            painter: _Check(
+            painter: CheckPainter(
               t.done,
               still ? 1 : Curves.easeOut.transform((ms / 350).clamp(0, 1)),
               1 - out,
+              sparks: _sparks && !still
+                  ? Sparks(
+                      ms,
+                      color: t.done,
+                      band: t.shineBand,
+                      seed: chat.id.hashCode,
+                    )
+                  : null,
             ),
           );
           // Unseen, the check settles into the green dot as it fades.
@@ -314,6 +300,11 @@ Widget _waitingDot(Tokens t) => Padding(
   ),
 );
 
+/// Whether the turn that just ended failed: an error notice in it.
+bool turnFailed(List<Item> items) => items.reversed
+    .takeWhile((it) => it.kind != ItemKind.ITEM_KIND_USER_MESSAGE)
+    .any((it) => it.kind == ItemKind.ITEM_KIND_NOTICE && it.status == 'error');
+
 /// The most urgent state among [chats], as a collapsed group shows it:
 /// waiting on the user, then working, then working in the background,
 /// then a turn's end unseen; null when none is (all idle, asleep, new…).
@@ -344,7 +335,7 @@ class PhaseDot extends StatelessWidget {
       child: switch (phase) {
         .working => CustomPaint(
           size: const Size.square(size * 1.6),
-          painter: _Mark(color, ringing: !reduceMotion(context)),
+          painter: StatusMark(color, ringing: !reduceMotion(context)),
         ),
         .background => CustomPaint(
           size: const Size.square(size * 1.6),
@@ -392,78 +383,6 @@ class ChatStatusWord extends StatelessWidget {
   Widget build(BuildContext context) {
     final (word, color) = phaseWord(chat.phase, NushiTheme.of(context).t);
     return Text(word, style: style.copyWith(color: color));
-  }
-}
-
-/// Under the transcript while a turn runs, as in Claude Code: a mark, what
-/// the agent is doing ([doing]), shining, and for how long; "Waiting for
-/// you" while a permission prompt or question waits. [what] overrides it.
-class TurnStatus extends StatefulWidget {
-  const new(this.chat, {super.key, this.what});
-
-  final ChatState chat;
-  final String? what;
-
-  @override
-  State<TurnStatus> createState() => _TurnStatusState();
-}
-
-class _TurnStatusState extends State<TurnStatus> {
-  late final Timer _tick;
-
-  @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (widget.chat.started != null) setState(() {});
-    });
-  }
-
-  @override
-  void dispose() {
-    _tick.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final chat = widget.chat;
-    final waiting = chat.waiting && widget.what == null;
-    final started = chat.started;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 4, 20, 2),
-      child: Row(
-        spacing: 8,
-        children: [
-          CustomPaint(
-            size: const Size.square(12),
-            painter: _Mark(waiting ? t.needs : t.accent, ringing: false),
-          ),
-          Flexible(
-            child: Shine(
-              on: !waiting,
-              child: Text(
-                widget.what ??
-                    (waiting ? 'Waiting for you' : doing(chat.items)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.ui(
-                  waiting ? t.needs : t.textSecondary,
-                  size: 12.5,
-                ),
-              ),
-            ),
-          ),
-          if (started != null && !waiting)
-            Text(
-              elapsed(DateTime.now().difference(started)),
-              style: theme.ui(t.textMuted, size: 12),
-            ),
-        ],
-      ),
-    );
   }
 }
 

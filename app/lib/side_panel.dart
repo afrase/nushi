@@ -6,9 +6,9 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
+import 'package:nushi/turn_status.dart';
 import 'package:nushi/widgets.dart';
 
 /// A side question: a forked session beside the chat, which knows the
@@ -79,7 +79,7 @@ class SidePanel extends StatelessWidget {
                     side.draft.replies.value = [...side.draft.replies.value, r],
               ),
             ),
-            if (side.busy) TurnStatus(side),
+            TurnStatus(side),
             Composer(chat: side, daemon: daemon, hint: 'Ask on the side'),
           ],
         ),

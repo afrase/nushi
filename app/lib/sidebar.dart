@@ -289,7 +289,7 @@ class _ChatRowState extends State<_ChatRow> {
                 // row leaves to the dot so the title keeps its width.
                 Tooltip(
                   message: phaseWord(chat.phase, t).$1,
-                  child: ChatDot(chat: chat),
+                  child: ChatDot(chat: chat, sparks: true),
                 ),
                 const SizedBox(width: 6),
                 Tooltip(

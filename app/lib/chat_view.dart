@@ -18,10 +18,10 @@ import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/shells.dart';
 import 'package:nushi/side_panel.dart';
-import 'package:nushi/status.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
+import 'package:nushi/turn_status.dart';
 import 'package:nushi/widgets.dart';
 
 /// A chat's transcript with the composer under it, and beside them its
@@ -118,11 +118,10 @@ class _ChatViewState extends State<ChatView> {
                     onSide: chat.archived || chat.sessionGone ? null : _ask,
                   ),
                 ),
-                if (chat.busy || _forking)
-                  TurnStatus(
-                    chat,
-                    what: _forking ? 'Starting a side chat' : null,
-                  ),
+                TurnStatus(
+                  chat,
+                  what: _forking ? 'Starting a side chat' : null,
+                ),
                 if (chat.mcpChanged && !chat.archived)
                   _McpChanged(chat, widget.daemon),
                 if (chat.archived)
