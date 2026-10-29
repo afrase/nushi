@@ -9,7 +9,11 @@
 // and stderr through, and writes a header (the arguments, the
 // environment's names and claude's version) and then each line of stdin
 // and stdout as {"dir":"in"|"out","ms":…,"frame":…}. It never writes an
-// environment variable's value, which may be a secret. A line that isn't
+// environment variable's value, which may be a secret, nor the values of
+// an "env" or "headers" object in an argument or frame (an MCP server's
+// tokens, the settings' env), only their names (redact.go). Other
+// secrets a client puts in claude's arguments or prompts are recorded
+// as they are: read a cassette before you share it. A line that isn't
 // JSON is kept as a JSON string. Claude's exit code is its own, and a
 // signal it gets goes on to claude; a signal that ends claude ends it too.
 //
@@ -197,7 +201,7 @@ func (c *cassette) header(args, env []string, cli string) error {
 	if args == nil {
 		args = []string{}
 	}
-	b, _ := json.Marshal(claudetest.Header{Argv: args, EnvKeys: slices.Compact(keys), CLI: cli})
+	b, _ := json.Marshal(claudetest.Header{Argv: redactArgs(args), EnvKeys: slices.Compact(keys), CLI: cli})
 	_, err := c.w.Write(append(b, '\n'))
 	return err
 }
@@ -234,7 +238,9 @@ func (c *cassette) record(dir string, line []byte) {
 		return
 	}
 	frame := json.RawMessage(text)
-	if !json.Valid(frame) {
+	if r, ok := redactJSON(frame); ok {
+		frame = r
+	} else if !json.Valid(frame) {
 		frame, _ = json.Marshal(text)
 	}
 	b, err := json.Marshal(claudetest.Frame{Dir: dir, MS: time.Since(c.start).Milliseconds(), Frame: frame})
