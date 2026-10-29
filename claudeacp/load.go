@@ -174,11 +174,18 @@ func forkAt(meta map[string]any) string {
 
 // findHistory is session id's messages and the folder they were found
 // for: cwd's, else "" (any project's); resourceNotFound when claude has
-// no transcript of it.
+// no transcript of it, and an internal error when its transcript can't be
+// read, so a client keeps a session it may yet get back.
 func (a *agent) findHistory(id, cwd string) ([]sessions.Message, string, error) {
 	for _, dir := range []string{cwd, ""} {
-		if ms, err := sessions.Messages(a.cfg.ConfigDir, id, dir); err == nil {
+		ms, err := sessions.Messages(a.cfg.ConfigDir, id, dir)
+		switch {
+		case err == nil:
 			return ms, dir, nil
+		case errors.Is(err, sessions.ErrInvalidID):
+			return nil, "", notFound(id)
+		case !errors.Is(err, fs.ErrNotExist):
+			return nil, "", &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Reading the session's history: %v", err)}
 		}
 		if dir == "" {
 			break

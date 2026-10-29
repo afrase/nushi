@@ -112,6 +112,28 @@ func TestLoadMissing(t *testing.T) {
 	}
 }
 
+// A transcript claude has but that can't be read is an internal error,
+// not resourceNotFound: the session isn't gone, so a client keeps it.
+func TestLoadUnreadable(t *testing.T) {
+	p := start(t, nil)
+	cwd, sid := t.TempDir(), uuid(1)
+	p.writeHistory(t, cwd, sid, userRec("u1", "Fix the bug"))
+	path := filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl")
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+	if f, err := os.Open(path); err == nil { // root reads it anyway
+		_ = f.Close()
+		t.Skip("the transcript is readable")
+	}
+	_, err := p.load(sid, cwd)
+	var e *acp.Error
+	if !errors.As(err, &e) || e.Code != acp.ErrorCodeInternalError || !strings.Contains(e.Message, "history") {
+		t.Errorf("%v", err)
+	}
+}
+
 // A claude that quits on a resume before it answers leaves the session
 // not found only when its transcript has gone meanwhile; else it is an
 // internal error with what claude said, and the client keeps the session.

@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -37,13 +38,17 @@ import (
 // cut there and given a hash of the path.
 const maxName = 200
 
+// ErrInvalidID is the error for an id that isn't a session's: the CLI
+// names sessions by UUID, so no session has it.
+var ErrInvalidID = errors.New("not a session id")
+
 var idRE = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 // checkID refuses anything but a UUID, which is what the CLI names
 // sessions; it also keeps a path out of a file name.
 func checkID(id string) error {
 	if !idRE.MatchString(id) {
-		return fmt.Errorf("%q is not a session id", id)
+		return fmt.Errorf("%q: %w", id, ErrInvalidID)
 	}
 	return nil
 }
