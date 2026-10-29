@@ -11,6 +11,7 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/pull_tab.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -288,6 +289,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _toolbar(),
+        _cardsWaiting(),
         Expanded(
           child: Dimmed(
             on: _stale,
@@ -376,7 +378,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                                   // Comments go with changes, not with a
                                   // file shown as it is.
                                   review: _plain == null
-                                      ? (chat: chat.id, where: _where)
+                                      ? (
+                                          chat: chat.id,
+                                          where: _where,
+                                          agent: chat.agentName,
+                                        )
                                       : null,
                                 ),
                               ),
@@ -396,6 +402,18 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   }
 
   /// The scope, what the files add up to, and the list's controls.
+  /// The reply cards waiting in the chat's box (the review's, sent from
+  /// here), with the way to the chat.
+  Widget _cardsWaiting() => ValueListenableBuilder(
+    valueListenable: widget.chat.draft.replies,
+    builder: (context, replies, _) => replies.isEmpty
+        ? const SizedBox.shrink()
+        : RepliesWaiting(
+            replies.length,
+            onChat: () => widget.chat.tab.value = ChatTab.chat,
+          ),
+  );
+
   Widget _toolbar() {
     final theme = NushiTheme.of(context);
     final t = theme.t;
@@ -445,15 +463,20 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
           ListenableBuilder(
             listenable: Listenable.merge([reviews, chat]),
             builder: (context, _) {
-              final n = commentsOf(chat.id).where((c) => !c.sent).length;
+              final n = unsentComments(chat.id).length;
               if (n == 0) return const SizedBox.shrink();
+              // As the Pull request tab's Send to agent: reply cards in
+              // the chat's box, to go with the next message.
               return Button(
-                label: 'Send review ($n)',
-                icon: Icons.rate_review_outlined,
+                label: 'Send to agent ($n)',
+                icon: Icons.subdirectory_arrow_right,
                 kind: ButtonKind.primary,
-                onPressed: chat.archived
+                tooltip:
+                    "Each comment as a reply card in the chat's box, to "
+                    'send with your next message',
+                onPressed: chat.archived || chat.sessionGone
                     ? null
-                    : () => sendReview(context, daemon, chat.id),
+                    : () => reviewToBox(chat),
               );
             },
           ),

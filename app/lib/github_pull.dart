@@ -325,24 +325,33 @@ class _Header extends StatelessWidget {
                 Button(
                   label: 'Fix checks',
                   icon: Icons.build_outlined,
-                  onPressed: () =>
-                      toAgent(context, daemon, it, kind: 'fix_checks'),
+                  tooltip:
+                      "Each failed check as a reply card in the chat's box, "
+                      'to send',
+                  onPressed: () => toAgent(
+                    context,
+                    daemon,
+                    it,
+                    replies: () => checkReplies(daemon, it.ref, p),
+                  ),
                 ),
               if (unresolved > 0)
                 Button(
                   label: 'Address comments',
                   icon: Icons.forum_outlined,
+                  tooltip:
+                      "Each thread as a reply card in the chat's box, to send",
                   onPressed: () async {
                     final picked = unresolved == 1
-                        ? const <String>[]
+                        ? null
                         : await pickThreads(context, p);
-                    if (picked == null || !context.mounted) return;
+                    if (unresolved > 1 && picked == null) return;
+                    if (!context.mounted) return;
                     await toAgent(
                       context,
                       daemon,
                       it,
-                      kind: 'address_comments',
-                      threads: picked,
+                      replies: () async => threadReplies(p, picked),
                     );
                   },
                 ),

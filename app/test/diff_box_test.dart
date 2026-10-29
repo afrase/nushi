@@ -69,7 +69,7 @@ void main() {
           change,
           key: const ValueKey('f.txt'),
           fit: false,
-          review: (chat: 'c', where: where),
+          review: (chat: 'c', where: where, agent: 'Claude'),
         ),
       ),
     );

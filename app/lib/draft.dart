@@ -13,6 +13,14 @@ class Draft {
   final Replies replies = ValueNotifier(const []);
   final images = Attachments();
 
+  /// Adds [r] as a card, unless it's there already (the same comment,
+  /// thread or check sent twice).
+  void addReply(Reply r) {
+    final now = replies.value;
+    if (now.contains(r)) return;
+    replies.value = [...now, r];
+  }
+
   /// Text to quote in the box (a side question's start), taken by the box.
   final quote = ValueNotifier<String?>(null);
 

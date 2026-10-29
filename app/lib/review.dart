@@ -6,12 +6,10 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/replies.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/syntax.dart';
-import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
 /// new side, in the Changes view it was made in ([where]: the scope, and
@@ -196,189 +194,80 @@ int _hash(String s) {
   return h;
 }
 
-/// The message a review sends: each comment's file, lines, the quoted
-/// lines in a fence and the comment, then [note].
-String reviewMessage(List<ReviewComment> comments, String note) {
-  final out = StringBuffer('Review comments:\n');
-  for (final (i, c) in comments.indexed) {
-    final side = [
-      if (c.old) ' (the old version, before the change)',
-      if (c.outdated) ' (they have changed since; they were)',
-    ].join();
-    var ticks = 3;
-    while (c.quote.contains('`' * ticks)) {
-      ticks++;
-    }
-    final fence = '`' * ticks;
-    out
-      ..write('\n${i + 1}. `${c.path}`, ${c.lines.toLowerCase()}$side:\n')
-      ..write('$fence${languageOf(c.path) ?? ''}\n${c.quote}\n$fence\n')
-      ..write('${c.text}\n');
+/// A review comment as a reply card in the chat's box (the reply-card
+/// model the Pull request tab's Send to agent uses): the quote is the
+/// file, the lines and their text in a fence, the reply the comment.
+Reply reviewReply(ReviewComment c) {
+  final side = [
+    if (c.old) ' (the old version, before the change)',
+    if (c.outdated) ' (they have changed since; they were)',
+  ].join();
+  var ticks = 3;
+  while (c.quote.contains('`' * ticks)) {
+    ticks++;
   }
-  if (note.trim().isNotEmpty) out.write('\n${note.trim()}\n');
-  return out.toString();
+  final fence = '`' * ticks;
+  return (
+    quote:
+        '`${c.path}`, ${c.lines.toLowerCase()}$side:\n'
+        '$fence${languageOf(c.path) ?? ''}\n${c.quote}\n$fence',
+    text: c.text,
+  );
 }
 
-List<ReviewComment> _unsent(String chat) =>
+/// [chat]'s comments not yet in a message.
+List<ReviewComment> unsentComments(String chat) =>
     commentsOf(chat).where((c) => !c.sent).toList();
 
-/// Asks for an overall note, then sends [chat]'s unsent comments to its
-/// agent as one message and marks them sent.
-Future<void> sendReview(
-  BuildContext context,
-  Daemon daemon,
-  String chat,
-) async {
-  final note = await showDialog<String>(
-    context: context,
-    builder: (context) => _SendDialog(
-      chat: chat,
-      agent: daemon.chats[chat]?.agentName ?? 'the agent',
-    ),
-  );
-  final unsent = _unsent(chat);
-  if (note == null || unsent.isEmpty || !context.mounted) return;
-  await tryOrShow(context, () async {
-    final text = reviewMessage(unsent, note);
-    await daemon.sendPrompt(
-      SendPromptRequest(chatId: chat, text: text, queue: true),
-    );
-    for (final c in unsent) {
-      c.sent = true;
-    }
-    setComments(chat, [...commentsOf(chat)]);
-    if (daemon.chats[chat] case final state?) _untilSent(state, text, unsent);
-  });
+/// Puts [chat]'s unsent comments in its box as reply cards, to go with
+/// the next message, and marks them sent; one taken out of the box
+/// without being sent is unsent again ([_untilSent]).
+void reviewToBox(ChatState chat) {
+  final unsent = unsentComments(chat.id);
+  if (unsent.isEmpty) return;
+  final cards = {for (final c in unsent) c: reviewReply(c)};
+  cards.values.forEach(chat.draft.addReply);
+  for (final c in unsent) {
+    c.sent = true;
+  }
+  setComments(chat.id, [...commentsOf(chat.id)]);
+  _untilSent(chat, cards);
 }
 
-/// Marks [comments] unsent again when the review they went in leaves the
-/// chat's queue without reaching its transcript (Stop, Archive, or taken
-/// out of the queue): the agent never got them.
-void _untilSent(ChatState chat, String text, List<ReviewComment> comments) {
-  var queued = false;
-  bool sent() => chat.items.any(
-    (i) => i.kind == ItemKind.ITEM_KIND_USER_MESSAGE && i.text == text,
-  );
+/// Whether a message with [r] (its quote: its text may be edited) is in
+/// [chat]'s transcript or queue.
+bool _gone(ChatState chat, Reply r) => [
+  for (final i in chat.items)
+    if (i.kind == ItemKind.ITEM_KIND_USER_MESSAGE) i.text,
+  for (final m in chat.queue) m.text,
+].any((text) => splitReplies(text).$1.any((x) => x.quote == r.quote.trim()));
+
+/// Marks a comment unsent again when its card leaves the box without a
+/// message taking it (removed, or the box cleared): the agent never got
+/// it. Stops following once each card went or came back.
+void _untilSent(ChatState chat, Map<ReviewComment, Reply> cards) {
+  final open = {...cards};
   void check() {
-    if (!chat.loaded || sent()) {
-      if (sent()) chat.removeListener(check);
-      return;
-    }
-    if (chat.queue.any((m) => m.text == text)) {
-      queued = true;
-    } else if (queued) {
-      // Out of the queue: into the transcript, a moment later, or gone.
-      Timer(const Duration(seconds: 2), () {
-        if (sent() || chat.queue.any((m) => m.text == text)) return;
-        chat.removeListener(check);
-        for (final c in comments) {
+    bool inBox(Reply r) =>
+        chat.draft.replies.value.any((x) => x.quote == r.quote);
+    open.removeWhere((c, r) {
+      if (inBox(r)) return false;
+      if (!_gone(chat, r)) {
+        // Sending moves it from the box into a message a moment later.
+        Timer(const Duration(seconds: 2), () {
+          if (_gone(chat, r) || inBox(r)) return;
           c.sent = false;
-        }
-        setComments(chat.id, [...commentsOf(chat.id)]);
-      });
+          setComments(chat.id, [...commentsOf(chat.id)]);
+        });
+      }
+      return true;
+    });
+    if (open.isEmpty) {
+      chat.draft.replies.removeListener(check);
+      chat.removeListener(check);
     }
   }
 
+  chat.draft.replies.addListener(check);
   chat.addListener(check);
-  check();
-}
-
-/// "Send review": what goes, and a box for an overall note; pops the note
-/// ('' for none) or null when cancelled.
-class _SendDialog extends StatefulWidget {
-  const new({required this.chat, required this.agent});
-
-  final String chat;
-  final String agent;
-
-  @override
-  State<_SendDialog> createState() => _SendDialogState();
-}
-
-class _SendDialogState extends State<_SendDialog> {
-  final _note = TextEditingController();
-
-  @override
-  void dispose() {
-    _note.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: reviews,
-    builder: (context, _, _) => _build(context, _unsent(widget.chat)),
-  );
-
-  Widget _build(BuildContext context, List<ReviewComment> unsent) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final n = unsent.length;
-    return nushiDialog(
-      'Send review',
-      Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 10,
-        children: [
-          Text(
-            '$n comment${n == 1 ? '' : 's'} go to ${widget.agent} as one '
-            'message:',
-          ),
-          // Every one, those on files the view no longer shows too.
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 200),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final c in unsent)
-                    Row(
-                      spacing: 6,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${c.path}, ${c.lines.toLowerCase()}: '
-                            '${c.text.split('\n').first}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.ui(t.textSecondary, size: 12),
-                          ),
-                        ),
-                        IconTap(
-                          Icons.close,
-                          tooltip: 'Remove',
-                          size: 13,
-                          onTap: () => setComments(widget.chat, [
-                            for (final m in commentsOf(widget.chat))
-                              if (m != c) m,
-                          ]),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-          TextField(
-            controller: _note,
-            autofocus: true,
-            minLines: 2,
-            maxLines: 6,
-            decoration: const InputDecoration(
-              hintText: 'Anything else to say (optional)',
-            ),
-          ),
-        ],
-      ),
-      [
-        Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
-        Button(
-          label: 'Send',
-          kind: ButtonKind.primary,
-          onPressed: n == 0 ? null : () => Navigator.pop(context, _note.text),
-        ),
-      ],
-    );
-  }
 }
