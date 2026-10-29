@@ -189,6 +189,13 @@ func resultParts(raw json.RawMessage) (string, []acp.ImageContent) {
 		switch b.Type {
 		case "text":
 			parts = append(parts, b.Text)
+		case "tool_reference": // a tool ToolSearch loaded, shown as the adapter shows it
+			var ref struct {
+				ToolName string `json:"tool_name"`
+			}
+			if json.Unmarshal(b.Raw, &ref) == nil && ref.ToolName != "" {
+				parts = append(parts, "Tool: "+ref.ToolName)
+			}
 		case "image":
 			var src struct {
 				Data      string `json:"data"`
