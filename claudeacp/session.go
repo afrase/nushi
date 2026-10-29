@@ -40,6 +40,7 @@ type session struct {
 	tools tools // the tool calls shown
 
 	cwd   string
+	cfg   config // its modes and options
 	cmds  commands
 	title titles
 
@@ -58,7 +59,9 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 		return nil, err
 	}
 	a.out.after(s.id, s.sendCommands)
-	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id)}, nil
+	s.cfg.mu.Lock()
+	defer s.cfg.mu.Unlock()
+	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
 }
 
 // start runs claude for session id and opens the session once claude has
@@ -76,6 +79,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}
 	}
 	s.cs = cs
+	s.cfg.init(o, cs.Init(), a.clientCaps().booleans)
 	if ir := cs.Init(); ir != nil {
 		s.cmds.list = ir.Commands
 	}
