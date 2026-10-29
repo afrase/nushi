@@ -19,11 +19,20 @@ A scenario without `cli.jsonl` is skipped by the test, by name, until it is reco
 
 `hello`, `permission` and `question` have recordings written by hand, so the tests have more than one scenario before the first real run; the first `make claude-record` replaces them. They follow claude 2.1.312's shapes (its schemas, `claudeacp`'s fixtures) and the adapter's as the research read its source, and assume where nothing was seen:
 
-- like the Go agent, the adapter here sends claude no `get_context_usage` after `initialize` and no `interrupt` as its client goes, though a run through it with a fake claude showed both: the replay is strict, so a real recording fails on them until the Go agent sends them too or the test lets them pass;
+- the adapter here sends claude no `get_context_usage` after `initialize` and no `interrupt` as its client goes, though a run through it with a fake claude showed both; the Go agent sends neither, and the test drops both from a recording (below);
 - the adapter's hooks are `hook_0` (PostToolUse) to `hook_4`, and claude calls only PostToolUse here; the test drops calls of hooks the Go agent doesn't register and gives PostToolUse the Go agent's id;
 - `permission`: claude suggests a `mkdir:*` rule each time, so the adapter offers Yes, "Yes, and don't ask again for mkdir commands" and No (`allow-once`, `allow-with-updates`, `reject`); a refused command's result is shown fenced as `console`, as one that ran (how the adapter's reporter shows an error without the command's output wasn't established); the PostToolUse update comes before the result's, as Nushi saw it for MCP calls;
 - `question`: the adapter's form, each question's text as its field's description since there are two;
 - each has `history/end/`: claude's transcript of the run, written by hand.
+
+## What the replay leaves out
+
+The replay to the Go agent is strict and in order, so what the adapter wrote claude that the Go agent doesn't (or not at a fixed point) goes from the cassette, with claude's answers (`forGoAgent` in `../../claude_replay_test.go`):
+
+- `generate_session_title`: the Go agent asks on a goroutine of its own, answered whenever it comes;
+- calls of the hooks the Go agent doesn't register (PostCompact, TaskCreated…); a PostToolUse call takes the Go agent's id;
+- `get_context_usage`: the adapter asks it in the background after `initialize` and a model change, for the window of a model whose id doesn't say. The Go agent takes the window from each result instead, so the two may differ before a session's first result, and the compared chats' usage shows it if they do;
+- the `interrupt` the adapter sends as it closes a session with claude idle (when its client goes), and what claude wrote after it: the Go agent interrupts only a running turn, else it just ends claude's stdin. An interrupt with a turn running, or one followed by more writes to claude (a cancel), stays.
 
 ## The scenarios
 
