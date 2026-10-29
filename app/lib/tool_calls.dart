@@ -6,6 +6,7 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart';
@@ -232,9 +233,12 @@ class ToolCallView extends StatelessWidget {
             ],
             // The call ends at once; the command runs on (see shells.dart).
             if (it.hasShell())
-              Text(
-                'in the background: ${it.shell.state}',
-                style: theme.ui(t.textMuted, size: 11.5),
+              Shine(
+                on: it.shell.state == 'running' && !still,
+                child: Text(
+                  'in the background: ${it.shell.state}',
+                  style: theme.ui(t.textMuted, size: 11.5),
+                ),
               ),
             const SizedBox(width: 8),
             _failed(theme, failed ? 'failed' : ''),

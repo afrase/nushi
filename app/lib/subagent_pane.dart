@@ -213,8 +213,10 @@ class _HeadState extends State<_Head> {
             child: Row(
               spacing: 6,
               children: [
-                Flexible(child: SubagentState(s, style: small)),
-                subagentMark(context, s),
+                Flexible(
+                  child: subagentShine(s, SubagentState(s, style: small)),
+                ),
+                subagentMark(s),
               ],
             ),
           ),
