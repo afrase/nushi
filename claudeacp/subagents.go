@@ -35,6 +35,7 @@ type subagent struct {
 	shown      bool   // announced to the client
 	asks       int    // its permission and question requests open
 	ended      bool
+	endedRuns  map[string]bool // the calls whose run of it has ended
 }
 
 // subagents are a session's subagents. What goes to their children goes
@@ -220,10 +221,14 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 // againLocked is the subagent sa running again for call (a SendMessage's,
 // or a new start of it) with prompt: it runs, and call delegated to it,
 // unless it had already (claude may say so twice: the SendMessage's
-// result, then the task's start).
+// result, then the task's start). The result can come after the run it
+// started has ended, and then runs nothing.
 func (s *session) againLocked(sa *subagent, call, prompt string) {
 	k := &s.kids
 	fresh := call != "" && k.byCall[call] != sa
+	if call != "" && !fresh && sa.endedRuns[call] {
+		return
+	}
 	if fresh {
 		sa.call = call
 		k.byCall[call] = sa

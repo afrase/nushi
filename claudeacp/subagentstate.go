@@ -58,6 +58,12 @@ func (s *session) taskEnded(id, run, call, status, text string) {
 		return
 	}
 	sa.ended = true
+	if sa.call != "" {
+		if sa.endedRuns == nil {
+			sa.endedRuns = map[string]bool{}
+		}
+		sa.endedRuns[sa.call] = true
+	}
 	if sa.shown {
 		s.childStateLocked(sa, end)
 	}
