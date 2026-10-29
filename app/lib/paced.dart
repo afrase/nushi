@@ -29,10 +29,14 @@ class PacingHold extends InheritedNotifier<ValueNotifier<bool>> {
 /// whole words at max(45 ch/s, backlog ÷ 0.22 s): never slower than the
 /// stream and never more than about 220 ms behind it (a backlog over 1,200
 /// characters jumps to within 200). Once [live] ends the rest shows within
-/// 250 ms. [builder] gets what shows ([Shown]), or null when nothing is
-/// paced: Reduce Motion, a chat opened with the text there (only what
-/// comes after paces), the phone's web build ([paces]), a selection
-/// ([PacingHold]), or once all of it shows and the caret has faded.
+/// 250 ms. A fenced code block isn't paced: it shows as fast as it comes.
+/// It cuts only between grapheme clusters (never in an emoji, a flag or
+/// a letter and its marks) and, while [live], holds back a last cluster
+/// that more may join (a skin tone, a ZWJ, a flag's second half).
+/// [builder] gets what shows ([Shown]), or null when nothing is paced:
+/// Reduce Motion, a chat opened with the text there (only what comes after
+/// paces), the phone's web build ([paces]), a selection ([PacingHold]), or
+/// once all of it shows and the caret has faded.
 class Paced extends StatefulWidget {
   const new(this.text, {required this.live, required this.builder, super.key});
 
@@ -63,6 +67,7 @@ class _PacedState extends State<Paced> {
   bool _listening = false;
   bool _started = false;
   Duration _drawn = Duration.zero; // when it last rebuilt
+  var _code = CodeLines(); // where the text's fenced code blocks are
 
   bool get _off =>
       !Paced.paces || reduceMotion(context) || PacingHold.of(context);
@@ -89,6 +94,16 @@ class _PacedState extends State<Paced> {
       _end = text.length;
       _shown = _end.toDouble();
       _steps.clear();
+      _code = CodeLines();
+    }
+    // In a code block: what came shows now, not on the next tick.
+    final code = _off ? null : _code.fenceEnd(text, _end);
+    if (code != null) {
+      final end = _cut(text, code, live: widget.live);
+      if (end > _end) {
+        _end = end;
+        _shown = max(_shown, end.toDouble());
+      }
     }
     if (_end < text.length || widget.live != old.live) _listen();
   }
@@ -123,7 +138,7 @@ class _PacedState extends State<Paced> {
         : min(0.25, (now - _last!).inMicroseconds / 1e6);
     _last = now;
     final text = widget.text;
-    final received = text.length;
+    final received = _cut(text, text.length, live: widget.live);
     if (_off) {
       _shown = received.toDouble();
     } else {
@@ -141,7 +156,14 @@ class _PacedState extends State<Paced> {
       }
       _shown = min(received.toDouble(), _shown + rate * dt);
     }
-    final end = _wholeWords(text, _shown.floor(), done: !widget.live);
+    var end = _wholeWords(text, _shown.floor(), done: !widget.live);
+    // A code block shows as fast as it comes, from its opening fence.
+    final code = _off ? null : _code.fenceEnd(text, max(end, _end));
+    if (code != null) {
+      end = max(end, code);
+      _shown = max(_shown, code.toDouble());
+    }
+    end = _cut(text, end, live: widget.live);
     if (end > _end) {
       _steps.add((_end, end, now));
       _end = end;
@@ -171,13 +193,14 @@ class _PacedState extends State<Paced> {
     if (!widget.live && _end >= text.length && !_listening) {
       return widget.builder(context, null);
     }
-    final shown = text.substring(0, min(_end, text.length));
+    // A cut may fall in a cluster that more text joined: back to its start.
+    final shown = text.substring(0, _cut(text, _end, live: false));
     final fresh = [
       for (final (from, to, at) in _steps)
         if (to <= shown.length)
           (
-            start: from,
-            end: to,
+            start: _cut(text, from, live: false),
+            end: _cut(text, to, live: false),
             opacity:
                 0.2 +
                 0.8 *
@@ -190,6 +213,18 @@ class _PacedState extends State<Paced> {
         : 1 - part((now - ended).inMicroseconds / 1000, 0, 300);
     return widget.builder(context, (text: shown, fresh: fresh, caret: caret));
   }
+}
+
+/// [at] in [text] moved back to a grapheme cluster's start. While [live],
+/// the end of [text] counts only after an ASCII character: more may come
+/// that joins a last cluster that isn't (a skin tone, a ZWJ and another
+/// emoji, a flag's second half, a combining mark).
+int _cut(String text, int at, {required bool live}) {
+  if (at < text.length) return CharacterRange.at(text, at).stringBeforeLength;
+  if (!live || text.isEmpty || text.codeUnitAt(text.length - 1) < 0x80) {
+    return text.length;
+  }
+  return CharacterRange.at(text, text.length - 1).stringBeforeLength;
 }
 
 /// Where whole words end at [at] in [text]: the end of the word [at]

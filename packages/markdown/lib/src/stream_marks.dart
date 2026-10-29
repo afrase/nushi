@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:markdown_view/src/blocks.dart';
 
 /// Text just revealed, from `start` to `end` of the whole message, drawn
 /// at `opacity` as it fades in.
@@ -13,12 +14,14 @@ const _caret = '\u{E001}';
 const _open = '\u{E002}';
 const _close = '\u{E003}';
 
-/// [tail] (the text from [at] on, raw) with [fresh] runs marked where it's
-/// safe to draw them faded: within one line of prose, after something on
-/// that line, outside code, links and any Markdown's syntax. Elsewhere a
-/// run just shows.
+/// [tail] (the text from [at] on, raw, starting a block) with [fresh] runs
+/// marked where it's safe to draw them faded: within one line of prose,
+/// after something on that line, outside code (a code block's lines too:
+/// no inline syntax is read there, so a mark would show), links and any
+/// Markdown's syntax. Elsewhere a run just shows.
 String markFresh(String tail, int at, List<FreshRun> fresh) {
   if (fresh.isEmpty) return tail;
+  final code = CodeLines();
   final out = StringBuffer();
   var from = 0; // in tail
   for (final r in fresh) {
@@ -32,7 +35,8 @@ String markFresh(String tail, int at, List<FreshRun> fresh) {
     final lineStart = nl + 1;
     final before = tail.substring(lineStart, start);
     final run = tail.substring(start, end);
-    if (run.trim().isEmpty ||
+    if (code.inCode(tail, lineStart) ||
+        run.trim().isEmpty ||
         before.trim().isEmpty ||
         _syntax.hasMatch(run) ||
         '`'.allMatches(before).length.isOdd ||
@@ -51,7 +55,8 @@ String markFresh(String tail, int at, List<FreshRun> fresh) {
 }
 
 /// Whether [healed] (the tail, healed) can take the caret at its end: not
-/// in a fence still open ([openMark] in it), not after a line break, a
+/// in a fence still open ([openMark] in it) or any code's line (after a
+/// closing fence the mark would make it code), not after a line break, a
 /// table's row or what may yet be a rule or a heading's underline.
 bool caretFits(String healed, String openMark) {
   if (healed.isEmpty || healed.endsWith('\n') || healed.contains(openMark)) {
@@ -60,8 +65,16 @@ bool caretFits(String healed, String openMark) {
   final last = healed.substring(healed.lastIndexOf('\n') + 1).trim();
   return last.isNotEmpty &&
       !last.startsWith('|') &&
-      !RegExp(r'^[-=*_ ]+$').hasMatch(last);
+      !RegExp(r'^[-=*_ ]+$').hasMatch(last) &&
+      !CodeLines().inCode(healed, healed.length);
 }
+
+/// [code] without the stream's marks: where no inline syntax is read (a
+/// code block in a quote, say) a mark that got in would show.
+String unmarked(String code) =>
+    code.contains(_anyMark) ? code.replaceAll(_anyMark, '') : code;
+
+final _anyMark = RegExp('$_open\\d?|[$_close$_caret]');
 
 /// [healed] with the caret's mark at its end.
 String withCaret(String healed) => '$healed$_caret';
