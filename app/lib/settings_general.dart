@@ -29,9 +29,9 @@ const _sleepAfter = {
 
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
-/// Settings › General: when idle chats sleep, the Mac's notifications,
-/// and whether the daemon starts at login (the packaged app's, for the
-/// usual data folder).
+/// Settings › General: the appearance, when idle chats sleep, the Mac's
+/// notifications, and whether the daemon starts at login (the packaged
+/// app's, for the usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
   const new({required this.settings, required this.onChange, super.key});
@@ -43,6 +43,7 @@ class GeneralSection extends StatelessWidget {
   Widget build(BuildContext context) => SettingsPage(
     title: 'General',
     children: [
+      const _Appearance(),
       if (settings?.sleepAfterMinutes case final sleep?)
         SettingsGroup(
           title: 'Chats',
@@ -78,6 +79,41 @@ class GeneralSection extends StatelessWidget {
       if (bundledDaemon != null && Platform.environment['NUSHI_DATA'] == null)
         const StartAtLogin(),
     ],
+  );
+}
+
+/// The appearance: Light, Dark, or as the system is; remembered (the View
+/// menu's items set it too).
+class _Appearance extends StatelessWidget {
+  const new();
+
+  static const Map<ThemeMode, String> _names = {
+    ThemeMode.system: 'As the system',
+    ThemeMode.light: 'Light',
+    ThemeMode.dark: 'Dark',
+  };
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: appearance,
+    builder: (context, mode, _) => SettingsGroup(
+      children: [
+        SettingsRow(
+          'Appearance',
+          control: MenuField(
+            entries: [
+              for (final MapEntry(:key, :value) in _names.entries)
+                MenuEntry(
+                  value,
+                  checked: key == mode,
+                  onPick: () => appearance.value = key,
+                ),
+            ],
+            label: Text(_names[mode]!),
+          ),
+        ),
+      ],
+    ),
   );
 }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ThemeMode;
 
 import 'package:nushi/daemon.dart';
 
@@ -13,7 +14,7 @@ import 'package:nushi/daemon.dart';
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
 /// collapsed, the models picked last, each chat's pinned artifacts, and
-/// the Mac's notifications and Dock badge.
+/// the Mac's notifications and Dock badge, and the appearance.
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
@@ -143,6 +144,12 @@ final terminalFontSize = ValueNotifier<double>(
   (_saved['termSize'] as num?)?.toDouble() ?? 12.5,
 )..addListener(_save);
 
+/// The app's appearance (Settings › General, and View's items): light,
+/// dark or as the system is.
+final appearance = ValueNotifier<ThemeMode>(
+  ThemeMode.values.asNameMap()[_saved['appearance']] ?? ThemeMode.system,
+)..addListener(_save);
+
 /// The Mac's notifications (`alerts.dart`), each kind on or off: a chat
 /// needs you (a permission prompt or a question), a turn ends, a turn
 /// fails; whether they play a sound; and the Dock badge counting the
@@ -225,6 +232,7 @@ void _save() {
         'alertFailed': alertFailed.value,
         'alertSound': alertSound.value,
         'dockBadge': dockBadge.value,
+        'appearance': appearance.value.name,
       }),
     );
   } on Object {

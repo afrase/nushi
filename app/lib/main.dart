@@ -50,7 +50,6 @@ class NushiApp extends StatefulWidget {
 }
 
 class _NushiAppState extends State<NushiApp> {
-  ThemeMode _mode = ThemeMode.system;
   final _navigator = GlobalKey<NavigatorState>();
   late final AppLifecycleListener _lifecycle;
   late final MacAlerts _alerts;
@@ -81,10 +80,7 @@ class _NushiAppState extends State<NushiApp> {
   }
 
   PlatformMenuItem _appearance(String label, ThemeMode mode) =>
-      PlatformMenuItem(
-        label: label,
-        onSelected: () => setState(() => _mode = mode),
-      );
+      PlatformMenuItem(label: label, onSelected: () => appearance.value = mode);
 
   /// [act]'s item in the menu bar: its label and key; it runs as from
   /// the palette.
@@ -163,55 +159,58 @@ class _NushiAppState extends State<NushiApp> {
       // The shown chat's actions, as its ⋯ menu has them.
       PlatformMenu(label: 'Chat', menus: _items(ActMenu.chat)),
     ],
-    child: MaterialApp(
-      navigatorKey: _navigator,
-      title: 'Nushi',
-      debugShowCheckedModeBanner: false,
-      theme: const NushiTheme(Tokens.light).toThemeData(),
-      darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
-      themeMode: _mode,
-      scrollBehavior: const NativeScroll(),
-      // The menu's keys don't reach the menu while Flutter has the keys:
-      // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
-      // passes them on as the same intents.
-      home: Builder(
-        builder: (context) => Actions(
-          actions: {
-            RunActIntent: CallbackAction<RunActIntent>(
-              onInvoke: (i) => runAct(context, widget.daemon, i.act),
-            ),
-            OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
-              onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
-            ),
-            OpenChatIntent: CallbackAction<OpenChatIntent>(
-              onInvoke: (i) => openNthChat(widget.daemon, i.n),
-            ),
-            StepChatIntent: CallbackAction<StepChatIntent>(
-              onInvoke: (i) => stepChat(widget.daemon, i.step),
-            ),
-            StepTabIntent: CallbackAction<StepTabIntent>(
-              onInvoke: (i) {
-                if (chatShown(widget.daemon)) {
-                  stepTab(widget.daemon.selected!, i.step);
-                }
-                return null;
-              },
-            ),
-          },
-          // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
-          // wherever the focus is.
-          child: Shortcuts(
-            shortcuts: {
-              ...actKeys,
-              paletteKey: const OpenPaletteIntent(),
-              paletteKeyToo: const OpenPaletteIntent(),
-              ...chatKeys,
+    child: ValueListenableBuilder(
+      valueListenable: appearance,
+      builder: (context, mode, home) => MaterialApp(
+        navigatorKey: _navigator,
+        title: 'Nushi',
+        debugShowCheckedModeBanner: false,
+        theme: const NushiTheme(Tokens.light).toThemeData(),
+        darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
+        themeMode: mode,
+        scrollBehavior: const NativeScroll(),
+        // The menu's keys don't reach the menu while Flutter has the keys:
+        // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
+        // passes them on as the same intents.
+        home: Builder(
+          builder: (context) => Actions(
+            actions: {
+              RunActIntent: CallbackAction<RunActIntent>(
+                onInvoke: (i) => runAct(context, widget.daemon, i.act),
+              ),
+              OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
+                onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
+              ),
+              OpenChatIntent: CallbackAction<OpenChatIntent>(
+                onInvoke: (i) => openNthChat(widget.daemon, i.n),
+              ),
+              StepChatIntent: CallbackAction<StepChatIntent>(
+                onInvoke: (i) => stepChat(widget.daemon, i.step),
+              ),
+              StepTabIntent: CallbackAction<StepTabIntent>(
+                onInvoke: (i) {
+                  if (chatShown(widget.daemon)) {
+                    stepTab(widget.daemon.selected!, i.step);
+                  }
+                  return null;
+                },
+              ),
             },
-            // Focused when nothing in the window is, so the keys still
-            // come here (an empty pane, after a click on the sidebar).
-            child: Focus(
-              autofocus: true,
-              child: Scaffold(body: _Shell(widget.daemon)),
+            // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
+            // wherever the focus is.
+            child: Shortcuts(
+              shortcuts: {
+                ...actKeys,
+                paletteKey: const OpenPaletteIntent(),
+                paletteKeyToo: const OpenPaletteIntent(),
+                ...chatKeys,
+              },
+              // Focused when nothing in the window is, so the keys still
+              // come here (an empty pane, after a click on the sidebar).
+              child: Focus(
+                autofocus: true,
+                child: Scaffold(body: _Shell(widget.daemon)),
+              ),
             ),
           ),
         ),
@@ -315,7 +314,9 @@ class _ChatPaneState extends State<_ChatPane> {
   @override
   void initState() {
     super.initState();
-    _tab.value = ChatTab.chat; // a chat opens on its transcript
+    // A chat opens on the tab it was left on (ChatState.tab), but on its
+    // transcript when it needs you: what it asks is there.
+    if (widget.chat.phase == ChatPhase.waiting) _tab.value = ChatTab.chat;
     widget.chat.addListener(_showFile);
     widget.chat.preview.addListener(_showPreview);
     _pull = ChatPull.of(widget.daemon, widget.chat)..follow();
