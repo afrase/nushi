@@ -21,16 +21,17 @@ const (
 	optReject      = "reject"
 )
 
-// canUseTool asks the user whether a tool may run.
+// canUseTool asks the user whether a tool may run. What the work a
+// cancel stopped still asks, a question too, is denied at once.
 func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
-	if r.ToolName == "AskUserQuestion" {
-		return s.askUser(ctx, r)
-	}
 	s.mu.Lock()
-	stopped := s.dropTop && r.AgentID == "" // work the user cancelled, still asking
+	stopped := s.dropTop && r.AgentID == "" // a subagent's work goes on
 	s.mu.Unlock()
 	if stopped {
 		return claudeagent.Deny{Message: "The user cancelled this prompt.", Interrupt: true}, nil
+	}
+	if r.ToolName == "AskUserQuestion" {
+		return s.askUser(ctx, r)
 	}
 	call := s.shown(r)
 	if r.BlockedPath != "" {

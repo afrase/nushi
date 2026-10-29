@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/afrase/acp-go/steering"
@@ -137,6 +138,53 @@ func TestPermissionWithdrawn(t *testing.T) {
 	}
 	if got := stopReason(w); got != "cancelled" {
 		t.Error(got)
+	}
+}
+
+// What the work a cancel stopped still asks, a question too, is denied
+// at once: the client isn't asked.
+func TestStoppedWorkAsks(t *testing.T) {
+	for _, tc := range []struct{ tool, input string }{
+		{"Bash", `{"command":"ls"}`},
+		{"AskUserQuestion", `{"questions":[{"question":"Which?","options":[{"label":"A"}]}]}`},
+	} {
+		t.Run(tc.tool, func(t *testing.T) {
+			taken, release := make(chan struct{}), make(chan struct{})
+			f := fake(user("id2"), echo("id2"), signal(taken), claudetest.Until(release),
+				canUseTool("toolu_1", tc.tool, tc.input, ""),
+				answers("toolu_1", `{"behavior":"deny","message":"The user cancelled this prompt.","interrupt":true}`),
+				claudetest.Send(idle))
+			p := start(t, &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}}, f)
+			var asked atomic.Bool
+			p.permit = func(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+				asked.Store(true)
+				return pick(optAllowOnce)(ctx, req)
+			}
+			p.elicit = func(context.Context, *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+				asked.Store(true)
+				return &acp.CreateElicitationResponse{Decline: true}, nil
+			}
+			sid := p.open(t)
+			w := p.prompt(t, sid, "go")
+			wait(t, taken, "the prompt taken")
+			eventually(t, "the prompt running", func() bool { _, a := p.queue(t, sid); return a == "id2" })
+			if err := p.Cancel(t.Context(), &acp.CancelNotification{SessionID: sid}); err != nil {
+				t.Fatal(err)
+			}
+			s, _ := p.agent.session(sid)
+			eventually(t, "the cancel taken", func() bool {
+				s.mu.Lock()
+				defer s.mu.Unlock()
+				return s.dropTop
+			})
+			close(release)
+			if got := stopReason(w); got != "cancelled" {
+				t.Error(got)
+			}
+			if asked.Load() {
+				t.Error("the client was asked")
+			}
+		})
 	}
 }
 
