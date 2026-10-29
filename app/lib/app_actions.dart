@@ -38,6 +38,10 @@ import 'package:nushi/widgets.dart';
 /// too.
 enum ActMenu { nushi, file, view, chat }
 
+/// ⌘F: find in the chat's transcript, or its changed files. A focused
+/// terminal keeps it for its own find.
+const findKey = SingleActivator(LogicalKeyboardKey.keyF, meta: true);
+
 /// ⇧⌘B: a side question (Claude Code's /btw, "by the way").
 const sideQuestionKey = SingleActivator(
   LogicalKeyboardKey.keyB,
@@ -50,6 +54,7 @@ enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
   openFile(key: openFileKey, menu: ActMenu.file, menuLabel: 'Open File…'),
   artifacts,
+  find(key: findKey, menu: ActMenu.view, menuLabel: 'Find…'),
   chat(key: chatTabKey, menu: ActMenu.view, menuLabel: 'Chat'),
   changes(key: changesTabKey, menu: ActMenu.view, menuLabel: 'Changes'),
   pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
@@ -174,6 +179,18 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
           d.daemonApi >= previewApi &&
           chatFiles(shown.items).isNotEmpty,
       run: () => revealArtifacts(context, shown!),
+    ),
+    AppAction(
+      .find,
+      shown?.shownTab == ChatTab.changes
+          ? 'Find in changes'
+          : 'Find in the chat',
+      enabled:
+          shown != null &&
+          (shown.shownTab == ChatTab.chat || shown.shownTab == ChatTab.changes),
+      run: () => shown!.shownTab == ChatTab.changes
+          ? shown.filesFilter.value ??= ''
+          : shown.find.open(),
     ),
     AppAction(
       .chat,

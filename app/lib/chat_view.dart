@@ -22,6 +22,7 @@ import 'package:nushi/side_panel.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:nushi/turn_status.dart';
 import 'package:nushi/widgets.dart';
 
@@ -97,13 +98,39 @@ class _ChatViewState extends State<ChatView> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(
-                  child: Transcript(
-                    chat: chat,
-                    daemon: widget.daemon,
-                    onReply: chat.archived || chat.sessionGone
-                        ? null
-                        : (r) => replies.value = [...replies.value, r],
-                    onSide: chat.archived || chat.sessionGone ? null : _ask,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: Transcript(
+                          chat: chat,
+                          daemon: widget.daemon,
+                          onReply: chat.archived || chat.sessionGone
+                              ? null
+                              : (r) => replies.value = [...replies.value, r],
+                          onSide: chat.archived || chat.sessionGone
+                              ? null
+                              : _ask,
+                        ),
+                      ),
+                      // ⌘F: the find bar, over the transcript's top right.
+                      ListenableBuilder(
+                        listenable: chat.find,
+                        builder: (context, _) => chat.find.query == null
+                            ? const SizedBox.shrink()
+                            : Align(
+                                alignment: Alignment.topRight,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    8,
+                                    16,
+                                    0,
+                                  ),
+                                  child: FindBar(chat.find),
+                                ),
+                              ),
+                      ),
+                    ],
                   ),
                 ),
                 TurnStatus(
