@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -216,6 +217,35 @@ void main() {
     expect(fake.started.last.agent, 'codex');
     await _open(tester);
     expect(find.text('the app-server quit'), findsNothing);
+    d.dispose();
+  });
+
+  testWidgets("a start that failed marks the agent by the daemon's reason, "
+      "or an older daemon's words", (tester) async {
+    final fake = FakeDaemon([]);
+    final d = await fake.connect(tester);
+    Future<String?> start(String message, [String? reason]) async {
+      d.cantStart.clear();
+      fake.answer = (input) => input is StartChatRequest
+          ? throw ConnectException(
+              Code.failedPrecondition,
+              message,
+              metadata: reason == null
+                  ? null
+                  : (Headers()..add('nushi-reason', reason)),
+            )
+          : null;
+      await expectLater(
+        d.startChat('', 'codex'),
+        throwsA(isA<ConnectException>()),
+      );
+      return d.cantStart['codex'];
+    }
+
+    expect(await start('it quit', 'agent_start'), 'it quit');
+    expect(await start("couldn't start Codex: it quit"), isNotNull);
+    expect(await start('"x" is not an absolute path to a folder'), isNull);
+    expect(await start("couldn't start Codex: it quit", 'other'), isNull);
     d.dispose();
   });
 

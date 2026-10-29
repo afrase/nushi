@@ -11,11 +11,9 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
-// mcpOf is the MCP servers of agent ("claude" when empty).
+// mcpOf is the MCP servers of agent (the default when empty).
 func (s *server) mcpOf(agent string) (*mcp.Service, error) {
-	if agent == "" {
-		agent = "claude"
-	}
+	agent = s.agent(agent)
 	if m, ok := s.mcp[agent]; ok {
 		return m, nil
 	}
@@ -32,7 +30,7 @@ func (s *server) ListMcpServers(ctx context.Context, req *connect.Request[nushiv
 	}
 	servers, checkErr, err := m.List(ctx, req.Msg.Folder, req.Msg.CheckHealth)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
+		return nil, refused(err)
 	}
 	resp := &nushiv1.ListMcpServersResponse{}
 	if checkErr != nil {
@@ -51,7 +49,7 @@ func (s *server) AddMcpServer(ctx context.Context, req *connect.Request[nushiv1.
 	if err != nil {
 		return nil, err
 	}
-	return changed(svc.Add(ctx, m.Folder, m.Scope, m.Name, m.ConfigJson), &nushiv1.AddMcpServerResponse{})
+	return done[nushiv1.AddMcpServerResponse](svc.Add(ctx, m.Folder, m.Scope, m.Name, m.ConfigJson), refused)
 }
 
 func (s *server) EditMcpServer(ctx context.Context, req *connect.Request[nushiv1.EditMcpServerRequest]) (*connect.Response[nushiv1.EditMcpServerResponse], error) {
@@ -60,7 +58,7 @@ func (s *server) EditMcpServer(ctx context.Context, req *connect.Request[nushiv1
 	if err != nil {
 		return nil, err
 	}
-	return changed(svc.Edit(ctx, m.Folder, m.Scope, m.Name, m.ConfigJson), &nushiv1.EditMcpServerResponse{})
+	return done[nushiv1.EditMcpServerResponse](svc.Edit(ctx, m.Folder, m.Scope, m.Name, m.ConfigJson), refused)
 }
 
 func (s *server) RemoveMcpServer(ctx context.Context, req *connect.Request[nushiv1.RemoveMcpServerRequest]) (*connect.Response[nushiv1.RemoveMcpServerResponse], error) {
@@ -69,7 +67,7 @@ func (s *server) RemoveMcpServer(ctx context.Context, req *connect.Request[nushi
 	if err != nil {
 		return nil, err
 	}
-	return changed(svc.Remove(ctx, m.Folder, m.Scope, m.Name), &nushiv1.RemoveMcpServerResponse{})
+	return done[nushiv1.RemoveMcpServerResponse](svc.Remove(ctx, m.Folder, m.Scope, m.Name), refused)
 }
 
 func (s *server) SetMcpServerOn(ctx context.Context, req *connect.Request[nushiv1.SetMcpServerOnRequest]) (*connect.Response[nushiv1.SetMcpServerOnResponse], error) {
@@ -78,7 +76,7 @@ func (s *server) SetMcpServerOn(ctx context.Context, req *connect.Request[nushiv
 	if err != nil {
 		return nil, err
 	}
-	return changed(svc.SetOn(ctx, m.Folder, m.Scope, m.Name, m.On), &nushiv1.SetMcpServerOnResponse{})
+	return done[nushiv1.SetMcpServerOnResponse](svc.SetOn(ctx, m.Folder, m.Scope, m.Name, m.On), refused)
 }
 
 func (s *server) LoginMcpServer(ctx context.Context, req *connect.Request[nushiv1.LoginMcpServerRequest]) (*connect.Response[nushiv1.LoginMcpServerResponse], error) {
@@ -86,7 +84,7 @@ func (s *server) LoginMcpServer(ctx context.Context, req *connect.Request[nushiv
 	if err != nil {
 		return nil, err
 	}
-	return changed(svc.Login(ctx, req.Msg.Folder, req.Msg.Name), &nushiv1.LoginMcpServerResponse{})
+	return done[nushiv1.LoginMcpServerResponse](svc.Login(ctx, req.Msg.Folder, req.Msg.Name), refused)
 }
 
 func (s *server) LogoutMcpServer(ctx context.Context, req *connect.Request[nushiv1.LogoutMcpServerRequest]) (*connect.Response[nushiv1.LogoutMcpServerResponse], error) {
@@ -94,20 +92,9 @@ func (s *server) LogoutMcpServer(ctx context.Context, req *connect.Request[nushi
 	if err != nil {
 		return nil, err
 	}
-	return changed(svc.Logout(ctx, req.Msg.Folder, req.Msg.Name), &nushiv1.LogoutMcpServerResponse{})
-}
-
-// changed answers a change: resp, or err as refused.
-func changed[T any](err error, resp *T) (*connect.Response[T], error) {
-	if err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	return connect.NewResponse(resp), nil
+	return done[nushiv1.LogoutMcpServerResponse](svc.Logout(ctx, req.Msg.Folder, req.Msg.Name), refused)
 }
 
 func (s *server) ReloadChat(_ context.Context, req *connect.Request[nushiv1.ReloadChatRequest]) (*connect.Response[nushiv1.ReloadChatResponse], error) {
-	if err := s.chats.Reload(req.Msg.ChatId); err != nil {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, err)
-	}
-	return connect.NewResponse(&nushiv1.ReloadChatResponse{}), nil
+	return done[nushiv1.ReloadChatResponse](s.chats.Reload(req.Msg.ChatId), refused)
 }

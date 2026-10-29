@@ -85,7 +85,13 @@ class FakeDaemon implements Transport {
     if (input is PinChatsRequest) _pin(input.chatIds);
     if (input is StartChatRequest) {
       started.add(input);
-      if (startError case final e?) throw ConnectException(Code.unknown, e);
+      if (startError case final e?) {
+        throw ConnectException(
+          Code.failedPrecondition,
+          e,
+          metadata: Headers()..add('nushi-reason', 'agent_start'),
+        );
+      }
     }
     var other = answer?.call(input);
     if (other is Future) other = await other;

@@ -23,7 +23,7 @@ import 'package:nushi/settings_nav.dart';
 import 'package:nushi/side_panel.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/trust_card.dart';
-import 'package:nushi/widgets.dart' show errorText;
+import 'package:nushi/widgets.dart' show errorText, refusedFor;
 import 'package:uds_transport/uds_transport.dart';
 
 final support = '${Platform.environment['HOME']}/Library/Application Support';
@@ -890,7 +890,11 @@ class Daemon extends ChangeNotifier {
           ),
         );
       } on connect.ConnectException catch (e) {
-        if (e.message.startsWith("couldn't start ")) {
+        if (refusedFor(
+          e,
+          'agent_start',
+          (m) => m.startsWith("couldn't start "),
+        )) {
           cantStart[agent] = e.message;
         }
         rethrow;

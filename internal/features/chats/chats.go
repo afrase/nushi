@@ -4,6 +4,7 @@ package chats
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -260,6 +261,10 @@ type StartOptions struct {
 	GitHub       *model.ChatGitHub
 }
 
+// ErrStart is a new chat whose agent didn't start: "couldn't start Codex:
+// " and why.
+var ErrStart = errors.New("couldn't start")
+
 // StartOn is Start with options.
 func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartOptions) (string, error) {
 	k, err := s.kindOf(agent)
@@ -288,7 +293,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	}
 	o, err := c.openSession(ctx, "", folder, false)
 	if err != nil {
-		err = fmt.Errorf("couldn't start %s: %w", k.Title, err)
+		err = fmt.Errorf("%w %s: %w", ErrStart, k.Title, err)
 		if scratch {
 			_ = os.Remove(folder) // a scratch folder: empty, or left for the user
 		}

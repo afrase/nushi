@@ -378,9 +378,10 @@ type Relay struct {
 	Stop           bool
 }
 
-// Event is a change to one chat. Exactly one of Item, Status, Config,
-// Session, Commands, Removed, Usage, Queue, Cut, Terminals and Remote is
-// set.
+// Event is a change to one chat, or, with ChatID "", to remote access, the
+// chats removed or the update check. Exactly one of Session, Item, Status,
+// Config, Commands, Removed, Usage, Queue, Cut, Dropped, Terminals, Remote,
+// RemovedChats and Update is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which

@@ -182,12 +182,28 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 func chatProto(s model.Session) *nushiv1.Chat {
 	out := &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
 		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch, Unseen: s.Unseen, Pin: int32(s.Pin)}
-	if wt := s.Worktree; wt != nil {
-		out.Worktree = &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit, Found: wt.Found}
-	}
+	out.Worktree = worktreeProto(s.Worktree)
 	if is := s.Issue; is != nil {
 		out.JiraSite, out.JiraKey = is.Site, is.Key
 	}
 	out.Github, out.Pull = linkProto(s.GitHub), linkProto(s.PullLink())
+	return out
+}
+
+// worktreeProto is wt, nil for none.
+func worktreeProto(wt *model.Worktree) *nushiv1.Worktree {
+	if wt == nil {
+		return nil
+	}
+	return &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit, Found: wt.Found}
+}
+
+// worktreeStateProto is what removing a worktree would lose, or why that
+// can't be told (err).
+func worktreeStateProto(st model.WorktreeState, err error) *nushiv1.WorktreeState {
+	out := &nushiv1.WorktreeState{Gone: st.Gone, Changed: int32(st.Changed), Ignored: int32(st.Ignored), Commits: int32(st.Commits), BranchGone: st.BranchGone}
+	if err != nil {
+		out.Error = err.Error()
+	}
 	return out
 }

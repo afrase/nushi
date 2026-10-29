@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
+	"github.com/afrase/nushi/internal/api"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
@@ -46,8 +48,10 @@ func TestRestartWaitsForTheTurn(t *testing.T) {
 		t.Fatal("no restart after the turn ended")
 	}
 	_, err := a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"}))
-	if connect.CodeOf(err) != connect.CodeUnavailable || !strings.Contains(err.Error(), "restarting") {
-		t.Errorf("a prompt after the restart was due: %v, want Unavailable", err)
+	var ce *connect.Error
+	if !errors.As(err, &ce) || ce.Code() != connect.CodeUnavailable || !strings.Contains(ce.Message(), "restarting") ||
+		ce.Meta().Get(api.ReasonHeader) != api.ReasonRestarting {
+		t.Errorf("a prompt after the restart was due: %v, want Unavailable, its reason restarting", err)
 	}
 }
 

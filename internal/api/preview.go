@@ -17,7 +17,7 @@ import (
 func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1.WatchChatFileRequest], stream *connect.ServerStream[nushiv1.WatchChatFileResponse]) error {
 	roots, err := s.chats.Roots(req.Msg.ChatId)
 	if err != nil {
-		return connect.NewError(connect.CodeNotFound, err)
+		return notFound(err)
 	}
 	root, rel, err := s.chatFile(req.Msg.ChatId, roots, req.Msg.Path)
 	if err != nil {
@@ -33,7 +33,7 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 		return err
 	}
 	// A link out of the folder, or a read that failed.
-	return connect.NewError(connect.CodeFailedPrecondition, err)
+	return refused(err)
 }
 
 // chatFile is where the preview may read path from: inside one of the
@@ -62,7 +62,7 @@ func (s *server) FindChatFiles(_ context.Context, req *connect.Request[nushiv1.F
 	}
 	roots, err := s.chats.Roots(req.Msg.ChatId)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, err)
+		return nil, notFound(err)
 	}
 	found := []string{}
 	for _, p := range req.Msg.Paths {
