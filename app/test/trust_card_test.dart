@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -92,6 +94,52 @@ void main() {
         TrustAsk('/Users/me/site', action, [], 'codex').left,
         "$said: its code wasn't approved.",
       );
+    }
+  });
+
+  testWidgets("the trust card covers the chat: the Mac doesn't view it", (
+    tester,
+  ) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Other')])
+      ..answer = (input) => input is CheckFolderRequest
+          ? CheckFolderResponse(
+              runs: [FolderRun(file: '/Users/me/site/.mcp.json', what: 'x')],
+            )
+          : null;
+    final d = await fake.connect(tester);
+    d.select('a');
+    expect((d.chatShows, d.macView.showing), (true, 'a'));
+    final start = d.startChat('/Users/me/site', 'claude');
+    await tester.pump();
+    await tester.pump();
+    expect(d.trustAsk, isNotNull);
+    expect((d.chatShows, d.macView.showing), (false, ''));
+    d.trustAsk!.decide(start: false);
+    await start;
+    expect((d.chatShows, d.macView.showing), (true, 'a'));
+    d.dispose();
+  });
+
+  testWidgets('a chat that starts once the user went to Jira or GitHub '
+      "doesn't take them out of it", (tester) async {
+    for (final open in ['jira', 'github']) {
+      final answer = Completer<StartChatResponse>();
+      final fake = FakeDaemon([chat('a', 'claude', 'Other')])
+        ..answer = (input) => input is StartChatRequest ? answer.future : null;
+      final d = await fake.connect(tester);
+      d.select('a');
+      final start = d.startChat('/Users/me/site', 'claude');
+      await tester.pump();
+      if (open == 'jira') {
+        d.showJira(open: true);
+      } else {
+        d.showGitHub(open: true);
+      }
+      answer.complete(StartChatResponse(chatId: 'a2'));
+      await start;
+      expect((d.jiraOpen, d.githubOpen), (open == 'jira', open == 'github'));
+      expect(d.selectedId, 'a');
+      d.dispose();
     }
   });
 }

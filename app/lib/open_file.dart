@@ -19,12 +19,7 @@ const openFileKey = SingleActivator(LogicalKeyboardKey.keyP, meta: true);
 /// or its daemon has no preview.
 Future<void> openFile(BuildContext context, Daemon daemon) async {
   final chat = daemon.selected;
-  if (chat == null ||
-      daemon.daemonApi < previewApi ||
-      daemon.trustAsk != null ||
-      daemon.jiraOpen ||
-      daemon.githubOpen ||
-      daemon.settings != null) {
+  if (chat == null || !daemon.chatShows || daemon.daemonApi < previewApi) {
     return;
   }
   final path = await showDialog<String>(
@@ -60,7 +55,9 @@ class OpenFileBox extends StatefulWidget {
 
 class _OpenFileBoxState extends State<OpenFileBox> {
   final _text = TextEditingController();
-  List<String> _folder = const [];
+  // The chat's files, then the folder's once listed: once each.
+  late List<String> _all = widget.chat.toSet().toList();
+  List<String> _shown = const []; // as last built: what the keys move in
   bool _listed = false; // the daemon answered
   String _error = '';
   int _at = 0;
@@ -76,10 +73,11 @@ class _OpenFileBoxState extends State<OpenFileBox> {
       final r = await widget.daemon.client.listFiles(
         ListFilesRequest(folder: widget.folder),
       );
-      _folder = [
+      _all = {
+        ...widget.chat,
         for (final p in r.paths)
           if (previewKind(p) != null) p,
-      ];
+      }.toList();
     } on Object catch (e) {
       _error = errorText(e);
     }
@@ -92,10 +90,10 @@ class _OpenFileBoxState extends State<OpenFileBox> {
     super.dispose();
   }
 
-  List<String> get _shown {
+  /// What shows for what's typed: ranked once a build.
+  List<String> _rank() {
     final q = _text.text.trim();
-    final all = {...widget.chat, ..._folder};
-    return q.isEmpty ? all.take(8).toList() : rankChoices(all, q);
+    return q.isEmpty ? _all.take(8).toList() : rankChoices(_all, q);
   }
 
   void _pick(String path) => Navigator.pop(context, path);
@@ -121,7 +119,7 @@ class _OpenFileBoxState extends State<OpenFileBox> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final shown = _shown;
+    final shown = _shown = _rank();
     _at = _at.clamp(0, shown.isEmpty ? 0 : shown.length - 1);
     return Dialog(
       alignment: const Alignment(0, -0.6),

@@ -34,7 +34,8 @@ final _endLine = RegExp('^$_end\$', multiLine: true);
 String withReplies(List<Reply> replies, String text) => [
   for (final (i, r) in replies.indexed) ...[
     if (r.from.isNotEmpty && (i == 0 || replies[i - 1].from != r.from))
-      '<!-- from -->\n${r.from.trim()}',
+      // One line, whatever it holds: a lead over two isn't read back.
+      '<!-- from -->\n${r.from.replaceAll(RegExp(r'\s+'), ' ').trim()}',
     [
       '<!-- reply ${i + 1} -->\n',
       [

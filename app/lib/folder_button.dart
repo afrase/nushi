@@ -22,12 +22,15 @@ String tildePath(String path) {
       : path;
 }
 
-/// A folder's name and its parent's path ("~" for the home folder), or "No
-/// folder" and '' for a [scratch] folder.
+/// A folder's name and its parent's path ("~" for the home folder, "/" for
+/// the root), or "No folder" and '' for a [scratch] folder. A name with no
+/// slash ("~", a parent's parent) has no parent: ''.
 (String, String) folderParts(String folder, {bool scratch = false}) {
   if (scratch) return ('No folder', '');
   final slash = folder.lastIndexOf('/');
-  return (folder.substring(slash + 1), tildePath(folder.substring(0, slash)));
+  if (slash < 0) return (folder, '');
+  final parent = slash == 0 ? '/' : tildePath(folder.substring(0, slash));
+  return (folder.substring(slash + 1), parent);
 }
 
 /// The recent folders as menu entries ([skip] left out, [checked] ticked),

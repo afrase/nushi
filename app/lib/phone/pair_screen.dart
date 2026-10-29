@@ -7,6 +7,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/scan_screen.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:remote_transport/remote_transport.dart' show PairingRefused;
 
 /// Pairing with a Mac (ADR 0054): Scan its QR code with the camera, or
 /// paste the link its Pair dialog copies; then the code both screens show.
@@ -78,10 +79,12 @@ class _PairScreenState extends State<PairScreen> {
       _error = e.message.startsWith('This link is for')
           ? '${e.message}.'
           : "That isn't a Nushi pairing link: copy it again on the Mac.";
+    } on PairingRefused {
+      _error = 'The Mac refused this device, or no one answered in time.';
     } on Object catch (e) {
-      _error = e.toString().contains('refused')
-          ? 'The Mac refused this device, or no one answered in time.'
-          : "Couldn't pair: $e";
+      // A relay that can't be reached says so ("Connection refused"), not
+      // that the Mac refused.
+      _error = "Couldn't pair: $e";
     } finally {
       if (mounted) setState(() => _pairing = false);
     }

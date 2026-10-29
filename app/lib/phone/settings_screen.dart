@@ -93,9 +93,11 @@ class SettingsScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
                 child: PhoneButton(
-                  'Forget this Mac',
+                  phone.forgetting ? 'Forgetting…' : 'Forget this Mac',
                   destructive: true,
-                  onTap: () => unawaited(_forget(context)),
+                  onTap: phone.forgetting
+                      ? null
+                      : () => unawaited(_forget(context)),
                 ),
               ),
             ],

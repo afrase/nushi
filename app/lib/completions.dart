@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -134,21 +135,24 @@ class Completions extends ChangeNotifier {
 /// A completion offered while typing: a slash command or a file.
 typedef Choice = ({String label, String detail, String insert});
 
-/// The names holding [q], those whose last part starts with it first,
-/// then the shortest.
+/// The first 8 names holding [q]: those whose last part (after the last
+/// `/` or `:`) starts with it first, then the shortest, then in [names]'
+/// order. Each name is scored once: a bare `@` ranks every file listed
+/// (20,000 at most) at every key.
 List<String> rankChoices(Iterable<String> names, String q) {
   final lower = q.toLowerCase();
-  final hits = [
-    for (final n in names)
-      if (n.toLowerCase().contains(lower)) n,
-  ];
-  int score(String n) =>
-      (n.split(RegExp('[/:]')).last.toLowerCase().startsWith(lower)
-          ? 0
-          : 1000) +
-      n.length;
-  hits.sort((a, b) => score(a) - score(b));
-  return hits.take(8).toList();
+  final hits = <(int, int, String)>[];
+  var i = 0;
+  for (final n in names) {
+    final l = n.toLowerCase();
+    if (l.contains(lower)) {
+      final last = max(l.lastIndexOf('/'), l.lastIndexOf(':')) + 1;
+      hits.add(((l.startsWith(lower, last) ? 0 : 1000) + n.length, i, n));
+    }
+    i++;
+  }
+  hits.sort((a, b) => a.$1 != b.$1 ? a.$1 - b.$1 : a.$2 - b.$2);
+  return [for (final (_, _, n) in hits.take(8)) n];
 }
 
 /// The completions over the prompt box, the picked one highlighted.

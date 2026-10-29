@@ -216,7 +216,7 @@ class _NushiAppState extends State<NushiApp> {
               ),
               StepTabIntent: CallbackAction<StepTabIntent>(
                 onInvoke: (i) {
-                  if (chatShown(widget.daemon)) {
+                  if (widget.daemon.chatShows) {
                     stepTab(widget.daemon.selected!, i.step);
                   }
                   return null;

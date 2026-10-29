@@ -28,15 +28,15 @@ import 'package:uds_transport/uds_transport.dart';
 
 final support = '${Platform.environment['HOME']}/Library/Application Support';
 
-/// The daemon's data folder; `NUSHI_DATA` picks another one (development),
-/// and tests get one in the temporary folder, never the user's.
-final String dataDir =
-    Platform.environment['NUSHI_DATA'] ??
-    (Platform.environment.containsKey('FLUTTER_TEST')
-        // One per test process: test files run side by side, and a shared
-        // app.json would let one file's settings overwrite another's.
-        ? '${Directory.systemTemp.path}/nushi-test-$pid'
-        : '$support/Nushi');
+/// The daemon's data folder; `NUSHI_DATA` picks another one (development).
+/// Tests get a new one in the temporary folder, never the user's, even
+/// with `NUSHI_DATA` exported (a restart there would stop its daemon):
+/// one per test process, as test files run side by side and a shared
+/// app.json would let one file's settings overwrite another's; new, so a
+/// reused pid starts from no one's prefs. flutter_test_config deletes it.
+final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
+    ? Directory.systemTemp.createTempSync('nushi-test-').path
+    : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
 const apiVersion = 91;
@@ -209,6 +209,16 @@ class Daemon extends ChangeNotifier {
   String? selectedId;
   ChatState? get selected => chats[selectedId];
 
+  /// Whether the selected chat shows in the window: nothing (the trust
+  /// card, Settings, Jira, GitHub) is in its place. What the daemon is
+  /// told the Mac views, and what a chat's tabs and actions need.
+  bool get chatShows =>
+      selected != null &&
+      trustAsk == null &&
+      settings == null &&
+      !jiraOpen &&
+      !githubOpen;
+
   connect.AnyFn<I, O> _auth<I extends Object, O extends Object>(
     connect.AnyFn<I, O> next,
   ) => (req) async {
@@ -367,8 +377,15 @@ class Daemon extends ChangeNotifier {
   /// Asks the daemon whether it's there (every few seconds, and when the
   /// phone comes back to the front).
   /// Whether it answered; a phone's link gives a longer [wait] when the
-  /// call has to dial the relay first.
-  Future<bool> ping({Duration wait = const Duration(seconds: 3)}) async {
+  /// call has to dial the relay first. One at a time: a ping asked while
+  /// one is out gets its answer (every 2 s against a 3 s wait, a late
+  /// failure would turn the link off after a newer ping turned it on).
+  Future<bool> ping({Duration wait = const Duration(seconds: 3)}) =>
+      _pinging ??= _ping(wait).whenComplete(() => _pinging = null);
+
+  Future<bool>? _pinging;
+
+  Future<bool> _ping(Duration wait) async {
     var api = 0;
     var build = '';
     var version = '';
@@ -444,8 +461,25 @@ class Daemon extends ChangeNotifier {
   }
 
   /// Stops the running daemon (it stops its agents) and starts the bundled
-  /// one; chats reopen through session/load as they are opened.
-  Future<void> restartDaemon() async {
+  /// one; chats reopen through session/load as they are opened. One at a
+  /// time: asked again while one runs, it waits for that one (a second
+  /// stop would stop the new daemon).
+  Future<void> restartDaemon() {
+    if (_restarting case final run?) return run;
+    final run = _restarting = _restart().whenComplete(() {
+      _restarting = null;
+      notifyListeners();
+    });
+    notifyListeners();
+    return run;
+  }
+
+  Future<void>? _restarting;
+
+  /// Whether [restartDaemon] runs.
+  bool get restarting => _restarting != null;
+
+  Future<void> _restart() async {
     await appLog.write(
       'info',
       'restarting the daemon',
@@ -804,6 +838,11 @@ class Daemon extends ChangeNotifier {
         .then((_) {}, onError: (Object _) {}),
   );
 
+  /// Where the user is: a start that ends elsewhere doesn't take them
+  /// to its chat.
+  (String?, SettingsSection?, bool, bool) get _place =>
+      (selectedId, settings, jiraOpen, githubOpen);
+
   /// The folder a chat is starting in ('' for none), while one is.
   String? starting;
 
@@ -826,7 +865,7 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
     try {
       if (!await _mayRun(folder, 'Start a chat', agent)) return;
-      final before = (selectedId, settings);
+      final before = _place;
       final StartChatResponse resp;
       try {
         resp = await client.startChat(
@@ -856,7 +895,7 @@ class Daemon extends ChangeNotifier {
       chats[resp.chatId] ??= ChatState(resp.chatId, folder);
       // Not if the user went elsewhere meanwhile: a trust card or another
       // chat they're on stays.
-      if ((selectedId, settings) == before && trustAsk == null) {
+      if (_place == before && trustAsk == null) {
         select(resp.chatId);
       }
     } finally {
@@ -877,7 +916,7 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
     try {
       if (!await _mayRun(folder, 'Open the session', agent)) return;
-      final before = (selectedId, settings);
+      final before = _place;
       final resp = await client.openAgentSession(
         OpenAgentSessionRequest(
           agent: agent,
@@ -887,7 +926,7 @@ class Daemon extends ChangeNotifier {
         ),
       );
       chats[resp.chatId] ??= ChatState(resp.chatId, folder);
-      if ((selectedId, settings) == before && trustAsk == null) {
+      if (_place == before && trustAsk == null) {
         select(resp.chatId);
       }
     } finally {

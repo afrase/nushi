@@ -264,7 +264,8 @@ void main() {
     );
     await tester.tap(find.text('Send').at(1));
     await tester.pumpAndSettle();
-    expect(box.value.single.from, startsWith('Failed check CI / rubocop'));
+    expect(box.value.single.from, startsWith('Failed checks on PR'));
+    expect(box.value.single.quote, startsWith('Check CI / rubocop:'));
     expect(
       box.value.single.from,
       endsWith('on PR octo/notes#412 (GitHub), my pull request:'),

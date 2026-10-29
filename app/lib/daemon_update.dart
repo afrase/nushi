@@ -31,17 +31,10 @@ extension SendPrompt on Daemon {
 /// restarts into it by itself once nothing runs (Daemon.updatesWhenIdle),
 /// with a way to restart now. A daemon too old for that gets
 /// [OutdatedScreen].
-class DaemonUpdateBar extends StatefulWidget {
+class DaemonUpdateBar extends StatelessWidget {
   const new(this.daemon, {super.key});
 
   final Daemon daemon;
-
-  @override
-  State<DaemonUpdateBar> createState() => _DaemonUpdateBarState();
-}
-
-class _DaemonUpdateBarState extends State<DaemonUpdateBar> {
-  bool _restarting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -55,20 +48,19 @@ class _DaemonUpdateBarState extends State<DaemonUpdateBar> {
         children: [
           Expanded(
             child: ListenableBuilder(
-              listenable: widget.daemon,
-              builder: (context, _) => _Waiting(widget.daemon),
+              listenable: daemon,
+              builder: (context, _) => _Waiting(daemon),
             ),
           ),
-          Button(
-            label: _restarting ? 'Restarting…' : 'Restart now',
-            onPressed: _restarting
-                ? null
-                : () async {
-                    setState(() => _restarting = true);
-                    // What it stops is asked first.
-                    await restartDaemonAsking(context, widget.daemon);
-                    if (mounted) setState(() => _restarting = false);
-                  },
+          ListenableBuilder(
+            listenable: daemon,
+            builder: (context, _) => Button(
+              label: daemon.restarting ? 'Restarting…' : 'Restart now',
+              // What it stops is asked first.
+              onPressed: daemon.restarting
+                  ? null
+                  : () => restartDaemonAsking(context, daemon),
+            ),
           ),
         ],
       ),
@@ -128,23 +120,10 @@ class _Waiting extends StatelessWidget {
 
 /// Says the daemon is older than the app and doesn't restart by itself,
 /// with a way to restart it: the app shows nothing else until it has.
-class OutdatedScreen extends StatefulWidget {
+class OutdatedScreen extends StatelessWidget {
   const new(this.daemon, {super.key});
 
   final Daemon daemon;
-
-  @override
-  State<OutdatedScreen> createState() => _OutdatedScreenState();
-}
-
-class _OutdatedScreenState extends State<OutdatedScreen> {
-  bool _restarting = false;
-
-  Future<void> _restart() async {
-    setState(() => _restarting = true);
-    await tryOrShow(context, widget.daemon.restartDaemon);
-    if (mounted) setState(() => _restarting = false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -164,11 +143,16 @@ class _OutdatedScreenState extends State<OutdatedScreen> {
               style: theme.ui(t.textSecondary),
             ),
             const SizedBox(height: 14),
-            if (widget.daemon.bundled != null)
-              Button(
-                label: _restarting ? 'Restarting…' : 'Restart daemon',
-                kind: ButtonKind.primary,
-                onPressed: _restarting ? null : _restart,
+            if (daemon.bundled != null)
+              ListenableBuilder(
+                listenable: daemon,
+                builder: (context, _) => Button(
+                  label: daemon.restarting ? 'Restarting…' : 'Restart daemon',
+                  kind: ButtonKind.primary,
+                  onPressed: daemon.restarting
+                      ? null
+                      : () => tryOrShow(context, daemon.restartDaemon),
+                ),
               )
             else
               Text('make stop daemon', style: theme.code(t.textMuted)),

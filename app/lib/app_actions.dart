@@ -154,20 +154,11 @@ final Map<ShortcutActivator, Intent> actKeys = {
   for (final a in Act.values) ?a.key: RunActIntent(a),
 };
 
-/// Whether a chat shows in the window (not Jira, GitHub, Settings or the
-/// trust card in its place): what its tabs and actions need.
-bool chatShown(Daemon d) =>
-    d.selected != null &&
-    d.trustAsk == null &&
-    !d.jiraOpen &&
-    !d.githubOpen &&
-    d.settings == null;
-
 /// Every action, each as it is now (its title, whether it applies).
 /// [context] is where its dialogs open.
 List<AppAction> appActions(BuildContext context, Daemon d) {
   final chat = d.selected;
-  final shown = chatShown(d) ? chat : null;
+  final shown = d.chatShows ? chat : null;
   void tab(ChatTab t) => shown?.tab.value = t;
   final details = showDetails.value;
   final terminal = shown != null && terminalChats.value.contains(shown.id);

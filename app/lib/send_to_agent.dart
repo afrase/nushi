@@ -232,7 +232,7 @@ Future<Reply> checkReply(Daemon daemon, GitHubRef ref, GitHubCheck c) async {
         'Find why this check fails and fix the cause here; run the failing '
         "command locally if you can. Don't commit, push or re-run checks. "
         '$_asData',
-    from: 'Failed check $name',
+    from: 'Failed checks',
   );
 }
 

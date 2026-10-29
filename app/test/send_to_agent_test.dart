@@ -150,7 +150,7 @@ void main() {
     final check = box.value.last.quote;
     expect(
       box.value.last.from,
-      'Failed check checks / on-demand on PR $_repo#1 (GitHub), my pull '
+      'Failed checks on PR $_repo#1 (GitHub), my pull '
       'request:',
     );
     expect(check, startsWith('Check checks / on-demand: failure'));

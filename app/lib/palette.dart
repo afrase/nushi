@@ -47,7 +47,7 @@ final recentRows = <String>[];
 /// among them), then the archived chats; what's picked runs once it
 /// closes.
 Future<void> showPalette(BuildContext context, Daemon d) async {
-  final shown = chatShown(d) ? d.selected : null;
+  final shown = d.chatShows ? d.selected : null;
   // The chats the last opened first, then the newest; whatever the project.
   int opened(ChatState c) =>
       chatOpened.value[c.id] ?? c.created.millisecondsSinceEpoch;

@@ -2,8 +2,12 @@ part of 'streaming_markdown.dart';
 
 /// Highlighted code blocks, by language, code and colors: a message is
 /// built again for every chunk that streams in, and only its open block
-/// changes.
+/// changes. Kept while their code is [_spansBudget] characters at most in
+/// all ([_spansChars]), the oldest going first: by count, a few long blocks
+/// would hold far more.
 final _spans = <(String, String, TextStyle, Object), TextSpan>{};
+var _spansChars = 0;
+const _spansBudget = 2000000;
 
 /// Code blocks still streaming in, the last few: each one's whole lines
 /// highlighted so far, kept as more come.
@@ -92,7 +96,11 @@ class CodeBlockView extends StatelessWidget {
     final span =
         style.highlight(language, code, codeStyle) ??
         TextSpan(text: code, style: codeStyle);
-    if (_spans.length >= 200) _spans.remove(_spans.keys.first);
+    while (_spans.isNotEmpty && _spansChars + code.length > _spansBudget) {
+      _spansChars -= _spans.keys.first.$2.length;
+      _spans.remove(_spans.keys.first);
+    }
+    _spansChars += code.length;
     return _spans[key] = span;
   }
 

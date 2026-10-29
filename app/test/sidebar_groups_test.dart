@@ -310,6 +310,15 @@ void main() {
       '/a/x/app': '/a/x',
       '/b/x/app': '/b/x',
     });
+    // A project in the home folder: its parent "~" has no parent of its
+    // own (this threw in the sidebar's build).
+    final home = Platform.environment['HOME']!;
+    expect(twinParents(['$home/app', '$home/x/app']), {
+      '$home/app': '~',
+      '$home/x/app': 'x',
+    });
+    // And one under the root.
+    expect(twinParents(['/app', '/x/app']), {'/app': '/', '/x/app': 'x'});
     d.dispose();
   });
 
