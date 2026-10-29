@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panel_cards.dart';
-import 'package:nushi/pull_card.dart';
+import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';

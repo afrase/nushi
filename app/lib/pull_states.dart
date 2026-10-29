@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// An item's state's color: open green (gray when a draft), merged
@@ -241,9 +242,13 @@ class ChecksMark extends CustomPainter {
       old.color != color || old.ringing != ringing || old.scale != scale;
 }
 
-/// A chat's pull request on the phone, in its bar: its number in its
-/// state's color and its checks' icon; a tap opens it on GitHub. It asks
-/// while it shows.
+/// A chat's pull request on the phone, in its bar: the PR widget's
+/// one-line summary (`pullSummary`: its number in its state's color, then
+/// failing or running checks, changes requested or a reviewer waited on,
+/// open threads; or Ready, Draft, Merged, Closed), from the pull request
+/// whole, asked at once and each minute (quietly) while it shows; until
+/// then its number and checks' icon from the chats' states. A tap opens
+/// it on GitHub.
 class PullChip extends StatefulWidget {
   const new(this.daemon, this.chat, {required this.onOpen, super.key});
 
@@ -259,17 +264,47 @@ class PullChip extends StatefulWidget {
 
 class _PullChipState extends State<PullChip> {
   late final PullStates _states;
+  GitHubPull? _pull;
+  String? _asked; // the link last asked for
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _states = PullStates.of(widget.daemon)..watch();
+    _timer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => unawaited(_ask(quiet: true)),
+    );
+    unawaited(_ask());
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _states.unwatch();
     super.dispose();
+  }
+
+  /// Asks for the linked pull request whole.
+  Future<void> _ask({bool quiet = false}) async {
+    final l = widget.chat.pull;
+    if (l == null) return;
+    _asked = l.id;
+    try {
+      final r = await widget.daemon.client.getGitHubPull(
+        GetGitHubPullRequest(
+          ref: GitHubRef(host: l.host, repo: l.repo, number: l.number),
+          quiet: quiet,
+        ),
+      );
+      if (mounted && widget.chat.pull?.id == l.id) {
+        setState(() => _pull = r.pull);
+        _states.put(r.pull.item);
+      }
+    } on Object {
+      // What shows stays: the states' summary.
+    }
   }
 
   @override
@@ -280,17 +315,24 @@ class _PullChipState extends State<PullChip> {
       final t = theme.t;
       final l = widget.chat.pull;
       if (l == null) return const SizedBox.shrink();
-      final it = _states.item(l);
+      if (_asked != l.id) {
+        _pull = null;
+        unawaited(_ask());
+      }
+      final p = _pull?.item.id == l.id ? _pull : null;
+      final it = p?.item ?? _states.item(l);
       final checks = switch (it?.checks) {
         'success' => (Icons.check, t.done, 'checks passed'),
         'failure' || 'error' => (Icons.close, t.crashed, 'checks failing'),
         'pending' => (Icons.schedule, t.needs, 'checks running'),
         _ => null,
       };
+      final open = p?.threads.where((x) => !x.resolved).length ?? 0;
       final words = [
         'Pull request #${l.number}',
         if (it != null) itemState(it),
         ?checks?.$3,
+        if (open > 0) '$open open thread${open == 1 ? '' : 's'}',
       ].join(', ');
       return Semantics(
         button: true,
@@ -305,21 +347,31 @@ class _PullChipState extends State<PullChip> {
             height: 44,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 3,
-                children: [
-                  Text(
-                    '#${l.number}',
-                    style: theme.code(
-                      it == null ? t.link : itemColor(t, it),
-                      size: 14,
+              child: p != null
+                  ? Center(
+                      widthFactor: 1,
+                      child: pullSummary(
+                        theme,
+                        number: l.number,
+                        pull: p,
+                        size: 13,
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: 3,
+                      children: [
+                        Text(
+                          '#${l.number}',
+                          style: theme.code(
+                            it == null ? t.link : itemColor(t, it),
+                            size: 14,
+                          ),
+                        ),
+                        if (checks != null)
+                          Icon(checks.$1, size: 15, color: checks.$2),
+                      ],
                     ),
-                  ),
-                  if (checks != null)
-                    Icon(checks.$1, size: 15, color: checks.$2),
-                ],
-              ),
             ),
           ),
         ),

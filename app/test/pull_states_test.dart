@@ -12,7 +12,7 @@ import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show item;
+import 'github_view_test.dart' show item, pull;
 
 GitHubLink _link(int n) => GitHubLink(
   host: 'github.com',
@@ -113,6 +113,64 @@ void main() {
         tester.getTopRight(chip).dx,
         lessThanOrEqualTo(size.width),
         reason: 'inside the bar',
+      );
+      await phone.close();
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    });
+  }
+
+  for (final (name, brightness) in [
+    ('dark', Brightness.dark),
+    ('light', Brightness.light),
+  ]) {
+    testWidgets("the phone's bar: the PR widget's one-line summary, $name", (
+      tester,
+    ) async {
+      tester.view
+        ..devicePixelRatio = 2
+        ..physicalSize = const Size(390, 844) * 2;
+      tester.platformDispatcher.platformBrightnessTestValue = brightness;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearAllTestValues);
+      final fake = FakeDaemon(_chats())
+        ..answer = (input) => switch (input) {
+          GetChatRequest() => GetChatResponse(chat: _chats().first),
+          GetGitHubPullRequest() => GetGitHubPullResponse(
+            pull: pull()..item.id = 'PR_1',
+          ),
+          _ => _states(input),
+        };
+      final platform = PhonePlatform()
+        ..saved = {
+          'key': Uint8List(32)..[0] = 7,
+          'name': 'iPhone',
+          'relay': 'wss://nushi.aaronfrase.com',
+          'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
+          'daemonKey': Uint8List(32)..[0] = 9,
+        };
+      final phone = Phone(
+        platform,
+        connectTo: (_) => Daemon(transport: fake, remote: true),
+      );
+      await tester.pumpWidget(PhoneApp(phone));
+      await phone.start();
+      for (var i = 0; i < 8; i++) {
+        await tester.pump();
+      }
+      await tester.tap(find.text('Add Sub'));
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel(
+          'Pull request #1, Open, checks failing, 2 open threads',
+        ),
+        findsOneWidget,
+      );
+      final chip = find.byType(PullChip);
+      expect(tester.getTopRight(chip).dx, lessThanOrEqualTo(390));
+      await expectLater(
+        find.byType(PhoneApp),
+        matchesGoldenFile('goldens/pull_phone_bar_$name.png'),
       );
       await phone.close();
       await tester.pumpWidget(const SizedBox());
