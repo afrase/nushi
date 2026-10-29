@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 	"slices"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func TestForkWakes(t *testing.T) {
 // An agent that can't reopen sessions never sleeps.
 func TestNoSleepWithoutLoad(t *testing.T) {
 	agent := &fakeAgent{noLoad: true}
-	svc := New([]Kind{{Name: "fake", Launch: agent.launch}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch}}, Options{})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -81,8 +82,13 @@ func TestAutoSleep(t *testing.T) {
 	defer func(d time.Duration) { sleepCheck = d }(sleepCheck)
 	sleepCheck = 5 * time.Millisecond
 	const after = 30 * time.Millisecond
-	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	svc := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sleep: &memPrefs{after: after}})
 	defer svc.Close()
+	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
 	turn(t, svc, c, "one")
 	blockers := map[string]func(c *chat) (undo func()){
 		"a turn":               func(c *chat) func() { c.started = time.Now(); return func() { c.started = time.Time{} } },
@@ -110,7 +116,6 @@ func TestAutoSleep(t *testing.T) {
 		},
 		"a side chat": func(c *chat) func() { c.sides["x"] = &chat{}; return func() { delete(c.sides, "x") } },
 	}
-	svc.AutoSleep(&memPrefs{after: after})
 	for name, block := range blockers {
 		c.mu.Lock()
 		undo := block(c)

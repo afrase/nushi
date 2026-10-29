@@ -46,8 +46,11 @@ func TestAPiGChat(t *testing.T) {
 		Answers: []*nushiv1.FieldAnswer{{FieldId: q.Fields[0].Id, Values: []string{"Blue"}}}})))
 	a.waitFor("the answer", idle)
 	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	if st := snap.Status; !st.CanFork || !st.CanRewind || st.CanAskContext {
-		t.Errorf("status = %v, want fork and rewind", st)
+	if st := snap.Status; !st.CanFork || !st.CanRewind || !st.CanAskContext {
+		t.Errorf("status = %v, want fork, rewind and the context", st)
+	}
+	if use := must(a.c.GetContextUsage(ctx, connect.NewRequest(&nushiv1.GetContextUsageRequest{ChatId: id}))); !strings.Contains(use.Markdown, "Messages: ") {
+		t.Errorf("context = %q", use.Markdown)
 	}
 	before := transcript(snap.Items)
 	for _, want := range []string{"AGENT_MESSAGE:You said: hello", "TOOL_CALL:```\na.txt\n```:completed", "AGENT_MESSAGE:Chose Blue"} {

@@ -33,7 +33,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
+	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Publish: publish})
 
 	folder := t.TempDir()
 	id, err := svc.Start(context.Background(), "", folder, false)
@@ -271,7 +271,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
 		usage:   &acp.Usage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: new(uint64(5)), TotalTokens: 12},
 	}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, "", publish)
+	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Publish: publish})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -306,7 +306,7 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 }
 
 func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
-	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", dialect: testDialect, publish: func(model.Event) {}, session: model.Session{Folder: "/w"}}
 	under := func(parent string) map[string]any {
 		return map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
 	}
@@ -380,7 +380,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	var counts []int // how many run in the background, as each status said (under c.mu)
-	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, agent: &fakeAgent{}, session: model.Session{Folder: "/w"},
+	c := &chat{id: "s1", sid: "s1", dialect: testDialect, agent: &fakeAgent{}, ctx: t.Context(), session: model.Session{Folder: "/w"},
 		publish: func(e model.Event) {
 			if e.Status != nil {
 				counts = append(counts, e.Status.Background)
@@ -450,7 +450,7 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 	shellPoll = time.Millisecond
 	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
 	var states []string
-	dialect := claudeDialect
+	dialect := testDialect
 	dialect.ReadShell = func(string, string) (string, string, error) {
 		r := reads[min(len(states), len(reads)-1)]
 		return r[0], r[1], nil
@@ -459,7 +459,7 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 		if e.Item != nil && e.Item.Shell != nil {
 			states = append(states, e.Item.Shell.State)
 		}
-	}, agent: &fakeAgent{}, items: []model.Item{{ID: "t1", Shell: &model.Shell{State: "running"}}}}
+	}, agent: &fakeAgent{}, ctx: t.Context(), items: []model.Item{{ID: "t1", Shell: &model.Shell{State: "running"}}}}
 	c.followShell("t1", "b1", "f", c.agent)
 	if c.items[0].Shell.State != "done" || slices.Contains(states, "stopped") {
 		t.Errorf("states %q, the end %+v", states, c.items[0].Shell)
@@ -470,16 +470,15 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 // its issue; a chat without one, what the tools give it.
 func TestToolsForAChatOnAnIssue(t *testing.T) {
 	agent := &fakeAgent{}
-	svc := New([]Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: claudeDialect}},
-		&memModes{}, &memSessions{}, nil, "", func(model.Event) {})
 	var asked []string
-	svc.UseTools(func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer {
+	tools := func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer {
 		if issue == nil {
 			return nil
 		}
 		asked = append(asked, chat+" "+agent+" "+issue.Key)
 		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: "/bin/true"}}}
-	})
+	}
+	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Tools: tools})
 	if _, err := svc.Start(t.Context(), "", t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -501,7 +500,7 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 // A file a chat's tool call worked on counts as the chat's, inside its
 // folder or not (an agent's notes in its own folder); others don't.
 func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
-	svc := New(nil, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	svc := newService(t, nil, Options{})
 	svc.chats = map[string]*chat{"c": {id: "c", session: model.Session{ID: "c", Folder: "/work/app"}, items: []model.Item{
 		{ID: "w", Kind: model.ToolCall, Paths: []string{"docs/report.md"}},
 		{ID: "m", Kind: model.ToolCall, Parent: "a1", Diffs: []model.FileChange{{Path: "/home/me/.claude/memory/MEMORY.md"}}},

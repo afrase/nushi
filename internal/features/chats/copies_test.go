@@ -30,8 +30,7 @@ func newCopyingChat(t *testing.T) (*Service, *fakeAgent, *chat, *transcripts.Sto
 	testcheck.NoErr(t, err)
 	on := &atomic.Bool{}
 	on.Store(true)
-	svc := New([]Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, t.TempDir(), func(model.Event) {})
-	svc.UseCopies(store, on.Load)
+	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
@@ -164,10 +163,9 @@ func TestCopiesOff(t *testing.T) {
 // read-only, its transcript the copy, the notice last. Clearing the copy
 // lets it go as any such chat.
 func TestExpiredChatKeptForItsCopy(t *testing.T) {
-	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"})
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
 	testcheck.NoErr(t, err)
-	svc.UseCopies(store, func() bool { return true })
+	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"}, Options{Copies: store})
 	testcheck.NoErr(t, store.Append("c", []model.Item{{ID: "item-1", Kind: model.UserMessage, Text: "one"}, {ID: "m1", Kind: model.AgentMessage, Text: "a"}}, []string{"", "item-1"}))
 
 	_, _ = svc.Get("c")
@@ -237,8 +235,7 @@ func TestListCopiesAtScale(t *testing.T) {
 	}
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
 	testcheck.NoErr(t, err)
-	svc := New(nil, &memModes{}, &memSessions{}, nil, t.TempDir(), func(model.Event) {})
-	svc.UseCopies(store, func() bool { return true })
+	svc := newService(t, nil, Options{Scratch: t.TempDir(), Copies: store})
 	const n = 5000
 	var sessions []model.Session
 	for i := range n {

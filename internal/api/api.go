@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -39,8 +40,10 @@ const Version = 91
 // (PingResponse.version).
 var Release string
 
-// Build is the daemon's executable as it started (PingResponse.build).
-var Build = func() string {
+// Build is the daemon's executable as it started (PingResponse.build):
+// looked at once, when first asked (main's start line), not by every run of
+// the executable (a bridge, a chat's tools).
+var Build = sync.OnceValue(func() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return ""
@@ -50,7 +53,7 @@ var Build = func() string {
 		return ""
 	}
 	return fmt.Sprintf("%d-%d", fi.Size(), fi.ModTime().UnixMilli())
-}()
+})
 
 type server struct {
 	chats    *chats.Service
@@ -190,7 +193,7 @@ func WithToken(token string, h http.Handler) http.Handler {
 }
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
-	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build, Version: Release, Update: s.update()}), nil
+	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build(), Version: Release, Update: s.update()}), nil
 }
 
 func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.RestartWhenIdleRequest]) (*connect.Response[nushiv1.RestartWhenIdleResponse], error) {

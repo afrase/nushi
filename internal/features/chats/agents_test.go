@@ -9,8 +9,6 @@ import (
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
-
-	"github.com/afrase/nushi/internal/model"
 )
 
 // Each chat runs the agent it started with, remembers the mode per agent,
@@ -23,7 +21,7 @@ func TestChatsKeepTheirAgent(t *testing.T) {
 		}
 	}
 	modes := &memModes{}
-	svc := New([]Kind{{Name: "a", Launch: a.launch, MCP: true}, {Name: "b", Launch: b.launch}}, modes, &memSessions{}, nil, "", func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "a", Launch: a.launch, MCP: true}, {Name: "b", Launch: b.launch}}, Options{Remembered: modes})
 	ctx := context.Background()
 	first, err := svc.Start(ctx, "", t.TempDir(), false)
 	if err != nil {
@@ -58,7 +56,7 @@ func TestChatsKeepTheirAgent(t *testing.T) {
 func TestStartFailureExplained(t *testing.T) {
 	launch := func(acp.Client, *slog.Logger) (Agent, error) { return nil, errors.New("it quit") }
 	explain := func(err error) error { return fmt.Errorf("%w (tested with 1.0)", err) }
-	svc := New([]Kind{{Name: "a", Title: "A", Launch: launch, Explain: explain}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "a", Title: "A", Launch: launch, Explain: explain}}, Options{})
 	_, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err == nil || err.Error() != "couldn't start A: start agent: it quit (tested with 1.0)" || !errors.Is(err, ErrStart) {
 		t.Errorf("%v", err)

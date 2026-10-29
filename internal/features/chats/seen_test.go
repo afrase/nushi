@@ -36,8 +36,7 @@ func newSeenChat(t *testing.T, st Sessions, v Viewers) (*Service, *fakeAgent, *c
 	if err := json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session); err != nil {
 		t.Fatal(err)
 	}
-	svc := New([]Kind{{Name: "claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, st, nil, "", func(model.Event) {})
-	svc.UseViewers(v)
+	svc := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: st, Viewers: v})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	return svc, agent, svc.chats[id]
@@ -98,8 +97,7 @@ func TestUnseenSurvivesARestart(t *testing.T) {
 	v := &viewers{shown: map[string]bool{}}
 	svc, agent, c := newSeenChat(t, st, v)
 	turn(t, svc, c, "one")
-	again := New([]Kind{{Name: "claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, st, nil, "", func(model.Event) {})
-	again.UseViewers(v)
+	again := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: st, Viewers: v})
 	list, err := again.List()
 	testcheck.NoErr(t, err)
 	if len(list) != 1 || !list[0].Unseen {

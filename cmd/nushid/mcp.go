@@ -1,26 +1,22 @@
 package main
 
 import (
-	"github.com/afrase/nushi/internal/ante"
-	"github.com/afrase/nushi/internal/antemcp"
-	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/mcp"
+	"github.com/afrase/nushi/internal/knownagents"
 )
 
-// newMCP is the MCP servers of each agent whose config Nushi knows: Claude's
-// through `claude mcp`, Ante's in its settings (checked by a throwaway
-// `ante serve`, run as a chat's would be).
-func newMCP(agentSvc *agents.Service, changed mcp.Changed) map[string]*mcp.Service {
-	spawn := func() (ante.Spawn, error) {
-		r, err := agentSvc.Run("ante")
-		if err != nil {
-			return nil, err
+// newMCP is the MCP servers of each agent whose config Nushi knows
+// (knownagents.Agent.MCP), each checked by running the agent as a chat's
+// would be.
+func newMCP(known []knownagents.Agent, agentSvc *agents.Service, changed mcp.Changed) map[string]*mcp.Service {
+	services := map[string]*mcp.Service{}
+	for _, a := range known {
+		if a.MCP == nil {
+			continue
 		}
-		return ante.Server(r.CLI, r.Env, nil), nil
+		name := a.Agent.Name
+		services[name] = mcp.New(name, a.MCP(func() (agents.Run, error) { return agentSvc.Run(name) }), changed)
 	}
-	return map[string]*mcp.Service{
-		"claude": mcp.New("claude", claudemcp.Claude{}, changed),
-		"ante":   mcp.New("ante", antemcp.Ante{Spawn: spawn}, changed),
-	}
+	return services
 }

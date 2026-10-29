@@ -25,36 +25,22 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	acp "github.com/afrase/acp-go/unstable"
-
-	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/ante"
-	"github.com/afrase/nushi/internal/antetrust"
 	"github.com/afrase/nushi/internal/api"
-	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
-	"github.com/afrase/nushi/internal/claudetrust"
-	"github.com/afrase/nushi/internal/codex"
-	"github.com/afrase/nushi/internal/codextrust"
 	"github.com/afrase/nushi/internal/events"
-	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/restart"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/tools"
-	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/mcpserver"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/npm"
-	"github.com/afrase/nushi/internal/omp"
-	"github.com/afrase/nushi/internal/omptrust"
 	"github.com/afrase/nushi/internal/pig"
-	"github.com/afrase/nushi/internal/readonly"
-	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
@@ -131,82 +117,32 @@ func run() error {
 		return err
 	}
 	logs.Mask(token)
-	slog.Info("nushid started", "version", version(), "build", api.Build, "api", api.Version, "data", dir, "pid", os.Getpid(),
+	slog.Info("nushid started", "version", version(), "build", api.Build(), "api", api.Version, "data", dir, "pid", os.Getpid(),
 		"log_level", logs.Level.Level())
 
 	hub := &events.Hub{}
-	agentSvc := newAgents(dir)
-	// The agents found on PATH, and their adapters (ADR 0037). A chat
-	// starts its agent through Run, says more through Explain, and asks
-	// Run whether it could start (Ready).
-	launch := func(name string, start func(agents.Run, acp.Client, *slog.Logger) (*agentproc.Agent, error)) chats.Launch {
-		return func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
-			run, err := agentSvc.Run(name)
-			if err != nil {
-				return nil, err
-			}
-			a, err := start(run, h, log)
-			if err != nil {
-				return nil, err // not a nil *agentproc.Agent in a chats.Agent
-			}
-			return a, nil
-		}
-	}
-	ready := func(name string) func() error {
-		return func() error { _, err := agentSvc.Run(name); return err }
-	}
-	// What each agent does beyond ACP is in its own packages: internal/claude*,
-	// internal/codex*, internal/ante* (Ante's bridge too, ADR 0030),
-	// internal/omp* and internal/pig (PiG's bridge, ADR 0039).
-	claudeKind := chats.Kind{Name: "claude", Title: "Claude", Resume: "claude --resume", MCP: true,
-		Explain: agentSvc.Explain("claude"), Ready: ready("claude"), Launch: launch("claude", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return claude.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
-		}),
-		Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
-			Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-			Shell: claude.Shell, ReadShell: claude.ReadShell,
-			SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
-			Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped,
-			Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
-			ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete, NamesSessions: true},
-		History:       func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) },
-		OpenElsewhere: claudehistory.Open, Forked: func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) },
-		Gone: chats.NotFound, HistoryGone: func(sid, folder string) bool { return claudehistory.Gone(projects, sid, folder) },
-		Expires: "Claude Code deletes sessions after 30 days by default"}
-	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives, Gone: codex.Gone,
-		OpenElsewhere: codex.OpenElsewhere, Forked: codex.Forked, OneWriter: true,
-		Explain: agentSvc.Explain("codex"), Ready: ready("codex"), Launch: launch("codex", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return codex.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
-		}),
-		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
-	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume, OpenElsewhere: ante.OpenElsewhere, MCP: true,
-		Explain: agentSvc.Explain("ante"), Ready: ready("ante"), Launch: launch("ante", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return ante.Start(dir, r.Env, h, log)
-		}),
-		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
-	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Forked: omp.Forked, OpenElsewhere: omp.OpenElsewhere, OneWriter: true,
-		Explain: agentSvc.Explain("omp"), Ready: ready("omp"), Launch: launch("omp", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return omp.Start(dir, r.CLI, r.Env, h, log)
-		}),
-		Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
-	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume, Gone: chats.NotFound,
-		Explain: agentSvc.Explain("pig"), Ready: ready("pig"), Launch: launch("pig", func(r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return pig.Start(dir, r.Env, h, log)
-		}),
-		Dialect: chats.Dialect{ForkAt: pig.ForkAt, Context: pig.Context}}
+	known := knownagents.All(projects)
+	agentSvc := newAgents(dir, known)
 	st := store.New(dir)
 	st.HadMessages = func(s model.Session) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
-	kinds := []chats.Kind{claudeKind, codexKind, anteKind, ompKind, pigKind}
-	chatSvc := chats.New(kinds, st, st, git.Worktrees{}, filepath.Join(dir, "scratch"), hub.Publish)
-	chatSvc.AutoSleep(st)
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
 		return err
 	}
-	chatSvc.UseCopies(copies, st.KeepTranscripts)
-	chatSvc.AutoClearCopies(st.TranscriptDays)
+	dev := os.Getenv("NUSHI_DATA") != ""
+	jiraSvc := newJira(st, dev)
+	toolSvc := tools.New(jiraSvc.Tools())
+	channels := newChannels()
+	remoteSvc, err := remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish)
+	if err != nil {
+		return err
+	}
+	kinds := chatKinds(dir, known, agentSvc)
+	chatSvc := chats.New(context.Background(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
+		Scratch: filepath.Join(dir, "scratch"), Publish: hub.Publish, Tools: mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")),
+		Viewers: remoteSvc, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st})
 	go chatSvc.EndStalePrompts() // what a daemon that stopped left pending
-	termSvc := terminals.New(startShell, filepath.Base(loginShell), chatSvc, hub.Publish)
+	termSvc := terminals.New(startShell, filepath.Base(loginShell()), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go follow(hub, termSvc.Follow)
 	agentSvc.UseChats(chatSvc)
@@ -214,19 +150,10 @@ func run() error {
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
 	restarts := restart.New(chatSvc, termSvc)
-	sv := api.Services{Log: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(agentSvc, chatSvc.MCPChanged), Skills: newSkills(), Terms: termSvc,
-		Trust: trust.New(map[string]trust.Agent{"claude": claudetrust.Trust{}, "codex": codextrust.Trust{}, "ante": antetrust.Trust{}, "omp": omptrust.Trust{}, "pig": pig.Trust{}}, st),
-		Hub:   hub, Memory: memory.New(chatSvc), Restart: restarts}
-	sv.Jira = newJira(st, os.Getenv("NUSHI_DATA") != "")
-	sv.GitHub = newGitHub(st, os.Getenv("NUSHI_DATA") != "")
+	sv := api.Services{Log: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged), Skills: newSkills(known), Terms: termSvc,
+		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc}
+	sv.GitHub = newGitHub(st, dev)
 	sv.Updates = startUpdates(st, hub.Publish)
-	toolSvc := tools.New(sv.Jira.Tools())
-	chatSvc.UseTools(mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")))
-	channels := newChannels()
-	if sv.Remote, err = remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish); err != nil {
-		return err
-	}
-	chatSvc.UseViewers(sv.Remote)
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err
 	}
@@ -297,35 +224,6 @@ func serve(srv *http.Server, ln net.Listener, restartDue <-chan struct{}, closeC
 	}
 }
 
-// newAgents is the agents feature: the agents Nushi knows, found on the
-// PATH of the environment they start with (ADR 0048), their adapters set
-// up in dir/agents.
-func newAgents(dir string) *agents.Service {
-	// Agents start with the login shell's environment, read now and when
-	// Settings › Agents asks, whatever started the daemon (ADR 0048).
-	// NUSHI_SHELL_ENV=off keeps the daemon's own (tests set PATH to their
-	// fake agents; the shell's would replace it).
-	shellEnv := shellenv.New(knownShell(loginShell), os.Environ())
-	if os.Getenv("NUSHI_SHELL_ENV") == "off" {
-		shellEnv = shellenv.Off(os.Environ())
-	}
-	shellEnv.Start()
-	probe := func(ctx context.Context, path string, args ...string) ([]byte, error) {
-		return readonly.Output(ctx, shellEnv.Environ(), path, args...)
-	}
-	svc := agents.New([]agents.Agent{
-		{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
-			Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
-		{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
-			Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
-		{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
-		{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
-		{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
-	}, probe, filepath.Join(dir, "agents"), npm.Installer{Environ: shellEnv.Environ})
-	svc.UseEnv(shellEnv)
-	return svc
-}
-
 // version is the release the daemon was packaged as ("dev" when it
 // wasn't), the commit it was built from ("-dirty" with changes not
 // committed) and the Go it was built with.
@@ -382,7 +280,9 @@ func listen(path string) (net.Listener, error) {
 
 // loginShell is the user's shell from the user database, as Terminal picks
 // it, else $SHELL, else zsh. The daemon's own $SHELL is whatever started it.
-var loginShell = func() string {
+// It is asked once, when first needed: not by the subcommands (a bridge, a
+// chat's tools), which run this executable too.
+var loginShell = sync.OnceValue(func() string {
 	// id -P prints the user's passwd entry; the shell is its last field.
 	out, _ := exec.Command("/usr/bin/id", "-P").Output()
 	shell := strings.TrimSpace(string(out[bytes.LastIndexByte(out, ':')+1:]))
@@ -390,12 +290,12 @@ var loginShell = func() string {
 		return shell
 	}
 	return cmp.Or(os.Getenv("SHELL"), "/bin/zsh")
-}()
+})
 
 // startShell starts the user's login shell in a terminal, with the daemon's
 // environment and $SHELL naming that shell.
 func startShell(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
 	env := slices.DeleteFunc(os.Environ(), func(v string) bool { return strings.HasPrefix(v, "SHELL=") })
-	env = append(env, "SHELL="+loginShell, "TERM=xterm-256color", "COLORTERM=truecolor")
-	return terminal.Start([]string{loginShell, "-l"}, folder, env, cols, rows, changed)
+	env = append(env, "SHELL="+loginShell(), "TERM=xterm-256color", "COLORTERM=truecolor")
+	return terminal.Start([]string{loginShell(), "-l"}, folder, env, cols, rows, changed)
 }

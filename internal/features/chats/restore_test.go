@@ -18,8 +18,7 @@ func restarted(t *testing.T, agent *fakeAgent, c *chat, store *transcripts.Store
 	c.mu.Lock()
 	sess := c.session
 	c.mu.Unlock()
-	svc := New([]Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: []model.Session{sess}}, nil, t.TempDir(), func(model.Event) {})
-	svc.UseCopies(store, func() bool { return true })
+	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.Session{sess}}, Scratch: t.TempDir(), Copies: store})
 	return svc
 }
 
@@ -163,8 +162,7 @@ func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 	testcheck.NoErr(t, store.Append("slow", []model.Item{{ID: "m1", Kind: model.AgentMessage, Text: "kept"}}, []string{""}))
 	copies := &slowCopies{Copies: store, chat: "slow", reading: make(chan struct{}), held: make(chan struct{})}
 	stored := []model.Session{{ID: "slow", Agent: "claude", Archived: true}, {ID: "fast", Agent: "claude", Archived: true}}
-	svc := New([]Kind{{Name: "claude", Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: stored}, nil, t.TempDir(), func(model.Event) {})
-	svc.UseCopies(copies, func() bool { return true })
+	svc := newService(t, []Kind{{Name: "claude", Dialect: testDialect}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir(), Copies: copies})
 	first := make(chan *chat)
 	go func() {
 		c, _ := svc.lookup("slow")
@@ -201,7 +199,7 @@ func TestRecordOpensNothing(t *testing.T) {
 	folder := t.TempDir()
 	wt := &model.Worktree{Repo: folder, Path: folder, Branch: "nushi/a"} // stored before Told
 	stored := []model.Session{{ID: "c1", SessionID: "s1", Agent: "claude", Folder: folder, Worktree: wt}, {ID: "c2", Agent: "claude", Archived: true}}
-	svc := New([]Kind{{Name: "claude", Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: stored}, nil, t.TempDir(), func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "claude", Dialect: testDialect}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir()})
 	sess, err := svc.Session("c1")
 	testcheck.NoErr(t, err)
 	if sess.Worktree.Told != "nushi/a" || sess.SessionID != "s1" {

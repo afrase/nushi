@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -17,14 +18,30 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// claudeDialect is Claude's, as main fills it.
-var claudeDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
+// testDialect is Claude's hooks, as main fills them, but for NamesSessions,
+// left off on purpose: the fake never titles a session, so a worktree's
+// branch is named after the first turn instead of waiting one more for a
+// title (branch.go). A test of another agent's shape sets its own.
+var testDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 	Shell: claude.Shell, ReadShell: claude.ReadShell,
 	SubagentID: claude.SubagentID, Relay: claude.Relay, Relayed: claude.Relayed, Relaying: claude.Relaying,
 	Subagents: claude.Subagents, StopTask: claude.StopTask, StopRelayed: claude.StopRelayed, Stopped: claude.Stopped,
 	Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
 	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
+
+// newService is New for a test: nothing remembered and no stored chats
+// unless o says, and what it starts on its own ends with the test.
+func newService(t *testing.T, kinds []Kind, o Options) *Service {
+	t.Helper()
+	if o.Remembered == nil {
+		o.Remembered = &memModes{}
+	}
+	if o.Sessions == nil {
+		o.Sessions = &memSessions{}
+	}
+	return New(t.Context(), kinds, o)
+}
 
 // fakeAgent replies to each prompt with the given updates. Like Claude, it
 // keeps each prompt and what it answered, which session/load replays, and

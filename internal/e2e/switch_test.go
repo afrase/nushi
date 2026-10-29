@@ -12,6 +12,7 @@ import (
 
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A chat in a repository's own folder switches its branch from the
@@ -27,11 +28,11 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "a.txt"), []byte("a\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	gitIn(t, repo, "add", ".")
-	gitIn(t, repo, "commit", "-q", "-m", "a")
-	gitIn(t, repo, "branch", "other")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "a")
+	testcheck.Git(t, repo, "branch", "other")
 	try := filepath.Join(repo, ".worktrees", "cappy", "try-sqrly")
-	gitIn(t, repo, "worktree", "add", "-q", "-b", "try-sqrly", try)
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "try-sqrly", try)
 	d := startDaemon(t, t.TempDir(), history, nil)
 	a := open(t, d)
 	get := func(id string) *nushiv1.GetChatResponse {
@@ -89,7 +90,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	if r, err := switchTo(one, "other", true); err != nil || r.Switched || r.Changed != 1 || on() != "main" {
 		t.Errorf("with a change: %v, %v, on %s", r, err, on())
 	}
-	gitIn(t, repo, "checkout", "--", "a.txt")
+	testcheck.Git(t, repo, "checkout", "--", "a.txt")
 	// The folder's other chat mid-turn: refused, naming it.
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: two, Text: "wait"})))
 	if _, err := switchTo(one, "other", true); err == nil || !strings.Contains(err.Error(), "“Two” is working") {

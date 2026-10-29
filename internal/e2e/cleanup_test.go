@@ -14,6 +14,7 @@ import (
 
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // Cleaning up after a pull request, on a temporary repository: a clean
@@ -91,7 +92,7 @@ func TestCleanUp(t *testing.T) {
 
 	// A commit on the branch, then the worktree forced away, changes and
 	// all; the branch then goes only with force (a squash merge's).
-	gitIn(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
+	testcheck.Git(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
 	if err := remove(id, true); err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func TestCleanUp(t *testing.T) {
 	if err := remove(id3, false); err != nil {
 		t.Fatal(err)
 	}
-	gitIn(t, repo, "worktree", "add", "-q", filepath.Join(t.TempDir(), "elsewhere"), wt3.Branch)
+	testcheck.Git(t, repo, "worktree", "add", "-q", filepath.Join(t.TempDir(), "elsewhere"), wt3.Branch)
 	if u := cleanUp(id3); !u.BranchElsewhere {
 		t.Fatalf("elsewhere: %v", u)
 	}

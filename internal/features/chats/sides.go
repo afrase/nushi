@@ -176,7 +176,8 @@ var SidesGrace = 2 * time.Minute
 
 // Following counts an app following the events (by +1, then -1), on the
 // Mac's socket and devices' channels alike. Side chats live only in the
-// apps (ADR 0027): once none has followed for SidesGrace, they're closed.
+// apps (ADR 0027): once none has followed for SidesGrace, they're closed
+// (unless the service closed first: Close stops the timer).
 func (s *Service) Following(n int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -184,7 +185,7 @@ func (s *Service) Following(n int) {
 	if s.idle != nil {
 		s.idle.Stop()
 	}
-	if s.following == 0 {
+	if s.following == 0 && !s.closing {
 		s.idle = time.AfterFunc(SidesGrace, s.CloseSides)
 	}
 }
@@ -245,5 +246,11 @@ func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 		return
 	}
 	_ = del() // logged; last tries again
-	time.AfterFunc(c.dialect.Redelete, last)
+	go func() {
+		select {
+		case <-time.After(c.dialect.Redelete):
+			last()
+		case <-s.ctx.Done(): // the chat keeps it (Close's doc)
+		}
+	}()
 }

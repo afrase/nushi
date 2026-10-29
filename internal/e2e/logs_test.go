@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"connectrpc.com/connect"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
@@ -67,10 +67,8 @@ func TestNothingPrivateLogged(t *testing.T) {
 	t.Setenv("NUSHI_TEST_SECRET", "MARKER-ENV-5d1c")
 
 	data, repo := t.TempDir(), t.TempDir()
-	check(t, os.WriteFile(filepath.Join(repo, "notes.txt"), []byte("MARKER-FILE-c41a\n"), 0o600))
-	if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
-		t.Fatalf("git init: %v %s", err, out)
-	}
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(repo, "notes.txt"), []byte("MARKER-FILE-c41a\n"), 0o600))
+	testcheck.Git(t, repo, "init", "-q")
 	launch := func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
 		cmd := exec.Command(bin)
 		cmd.Env = append(os.Environ(), "FAKE_KEY="+token)
@@ -81,12 +79,12 @@ func TestNothingPrivateLogged(t *testing.T) {
 		return a, nil
 	}
 	hub, st := &events.Hub{}, store.New(data)
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: launch}}, st, st, git.Worktrees{}, filepath.Join(data, "scratch"), hub.Publish)
+	copies, err := transcripts.Open(filepath.Join(data, "transcripts"))
+	testcheck.NoErr(t, err)
+	svc := chats.New(t.Context(), []chats.Kind{{Name: "fake", Launch: launch}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
+		Scratch: filepath.Join(data, "scratch"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts})
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
-	copies, err := transcripts.Open(filepath.Join(data, "transcripts"))
-	check(t, err)
-	svc.UseCopies(copies, st.KeepTranscripts)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub,
 		Memory: memory.New(svc), Log: st, Transcripts: st})))
 	go func() {
@@ -137,13 +135,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 
 func waitLog(t *testing.T, log *syncBuffer, want string) {
 	t.Helper()
-	for range 500 {
-		if strings.Contains(log.String(), want) {
-			return
-		}
-		sleep10ms()
+	if !testcheck.Eventually(func() bool { return strings.Contains(log.String(), want) }) {
+		t.Fatalf("no %s in the log:\n%s", want, log)
 	}
-	t.Fatalf("no %s in the log:\n%s", want, log)
 }
-
-func sleep10ms() { time.Sleep(10 * time.Millisecond) }

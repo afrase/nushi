@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/afrase/nushi/internal/model"
@@ -82,12 +83,50 @@ func (k *kind) ready() error {
 	return k.Ready()
 }
 
-// New makes the service for agents, the first of them the default.
-func New(agents []Kind, remembered Remembered, sessions Sessions, worktrees Worktrees, scratch string, publish func(model.Event)) *Service {
-	s := &Service{remembered: remembered, sessions: sessions, worktrees: worktrees,
-		scratch: scratch, publish: publish, chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
+// Options are what the service works with besides its agents, all known
+// at startup. Remembered and Sessions are needed; any other left zero is
+// off.
+type Options struct {
+	Remembered Remembered
+	Sessions   Sessions
+	Worktrees  Worktrees         // nil: no chat in a new worktree
+	Scratch    string            // the folder that holds chats' scratch folders
+	Publish    func(model.Event) // nil: events go nowhere
+	Tools      Tools             // Nushi's own tools for chats' sessions
+	Viewers    Viewers           // who shows chats, for unseen turns' ends (seen.go)
+	// Copies keeps copies of chats' transcripts while CopiesOn says so
+	// (nil: always); CopyDays says after how many days unwritten one is
+	// deleted (0: never), looked at now and each hour (copies.go).
+	Copies   Copies
+	CopiesOn func() bool
+	CopyDays func() int
+	// Sleep says how long a chat idles before its agent sleeps; nil: chats
+	// sleep only when asked (sleep.go).
+	Sleep SleepPrefs
+}
+
+// New makes the service for agents, the first of them the default. What
+// it starts on its own (chats sleeping, old copies cleared, background
+// commands followed) runs until Close or until ctx ends.
+func New(ctx context.Context, agents []Kind, o Options) *Service {
+	s := &Service{remembered: o.Remembered, sessions: o.Sessions, worktrees: o.Worktrees,
+		scratch: o.Scratch, publish: o.Publish, viewers: o.Viewers, prefs: o.Sleep, copies: o.Copies, copiesOn: o.CopiesOn,
+		chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
+	s.ctx, s.cancel = context.WithCancel(ctx)
+	if s.publish == nil {
+		s.publish = func(model.Event) {}
+	}
+	if s.copiesOn == nil {
+		s.copiesOn = func() bool { return true }
+	}
 	for _, k := range agents {
-		s.kinds = append(s.kinds, &kind{Kind: k, launch: s.started(k.Launch)})
+		s.kinds = append(s.kinds, &kind{Kind: k, launch: s.started(k.Launch), tools: o.Tools})
+	}
+	if o.Sleep != nil {
+		go s.autoSleep()
+	}
+	if o.Copies != nil && o.CopyDays != nil {
+		go s.autoClearCopies(o.CopyDays)
 	}
 	return s
 }

@@ -7,14 +7,11 @@ import (
 )
 
 // Viewers say which chats a client shows now: the Mac's window or a
-// phone's screen (internal/features/remote's views).
+// phone's screen (internal/features/remote's views). Without them
+// (Options.Viewers) no turn's end is marked unseen.
 type Viewers interface {
 	Shown(chatID string) bool
 }
-
-// UseViewers tells the chats who shows them, for marking a turn's end
-// unseen; without them nothing is marked. Set once at startup.
-func (s *Service) UseViewers(v Viewers) { s.viewers = v }
 
 // Seen says a client shows chatID: a turn's end it hadn't seen is seen. A
 // chat not opened since the daemon started is looked up only when it's
