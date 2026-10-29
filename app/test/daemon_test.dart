@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -19,12 +20,16 @@ class _Fake implements Transport {
   Completer<ListChatsResponse>? list;
   Completer<StartChatResponse>? start;
 
+  /// Every call's request, in order.
+  final asked = <Object>[];
+
   @override
   Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
     Spec<I, O> spec,
     I input, [
     CallOptions? options,
   ]) async {
+    asked.add(input);
     final out = switch (input) {
       PingRequest() => PingResponse(apiVersion: apiVersion),
       ListChatsRequest() =>
@@ -77,7 +82,8 @@ void main() {
     );
     expect(d.chats['a']!.items.single.text, 'hi');
 
-    final side = d.chats['a']!.side = await d.forkChat(d.chats['a']!);
+    await d.openSide(d.chats['a']!);
+    final side = d.chats['a']!.side.value!;
     await pumpEventQueue();
     await send(
       EventsResponse(
@@ -115,6 +121,54 @@ void main() {
     expect(d.selectedId, isNull);
     expect(changeScopes.value, isEmpty);
     expect(chatsKept(), isEmpty);
+  });
+
+  test('places: Settings goes back to the view it came from, Jira and '
+      'GitHub to the chat', () {
+    final d = Daemon(transport: _Fake());
+    addTearDown(d.dispose);
+    d
+      ..go(const JiraPlace())
+      ..openSettings(section: SettingsSection.mcp, folder: '/x')
+      ..openSettings(section: SettingsSection.skills); // still from Jira
+    expect(d.place, const SettingsPlace(SettingsSection.skills));
+    expect(d.mcpFolder, '/x');
+    d.back();
+    expect(d.place, const JiraPlace());
+    d.toggle(const JiraPlace());
+    expect(d.place, const ChatPlace());
+    d.toggle(const GitHubPlace());
+    expect(d.place, const GitHubPlace());
+    d.openSettings(); // the section shown last
+    expect(d.place, const SettingsPlace(SettingsSection.skills));
+    d.back();
+    expect(d.place, const GitHubPlace());
+    d.back();
+    expect(d.place, const ChatPlace());
+  });
+
+  test('a side chat: one fork at a time; closing it tells the daemon and '
+      'the chat', () async {
+    final fake = _Fake();
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    final chat = ChatState('a', '/x')..agent = 'claude';
+    // The second while the first forks: no second fork.
+    await Future.wait([d.openSide(chat), d.openSide(chat)]);
+    expect(fake.asked.whereType<ForkChatRequest>(), hasLength(1));
+    final side = chat.side.value!;
+    expect((side.id, side.agent), ('side', 'claude'));
+    expect(d.sides.keys, ['side']);
+    await d.openSide(chat); // it has one
+    expect(fake.asked.whereType<ForkChatRequest>(), hasLength(1));
+
+    var told = 0;
+    chat.side.addListener(() => told++);
+    d.closeSide(chat);
+    expect((chat.side.value, told), (null, 1));
+    expect(d.sides, isEmpty);
+    await pumpEventQueue();
+    expect(fake.asked.whereType<CloseSideChatRequest>().single.chatId, 'side');
   });
 
   test('a chat deleted while the app was away: what was kept goes', () async {

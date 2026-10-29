@@ -148,17 +148,13 @@ class MacAlerts {
     if (kind == AlertKind.permission || kind == AlertKind.question) {
       _needs[id] = chat.waiting;
     }
-    unawaited(
-      channel
-          .invokeMethod<Object?>('post', {
-            'id': '$id/${kind.name}',
-            'chat': id,
-            'title': '${chat.agentName}${kind.words}',
-            'body': chat.title.isEmpty ? 'New chat' : chat.title,
-            'sound': alertSound.value,
-          })
-          .then((_) {}, onError: (Object _) {}),
-    );
+    channel.invokeMethod<Object?>('post', {
+      'id': '$id/${kind.name}',
+      'chat': id,
+      'title': '${chat.agentName}${kind.words}',
+      'body': chat.shownTitle,
+      'sound': alertSound.value,
+    }).ignore();
   }
 
   /// The daemon changed (a chat picked, listed, gone): the badge, and the
@@ -173,11 +169,7 @@ class MacAlerts {
   void _clearShown() {
     final id = daemon.macView.showing;
     if (!_focused || !_posted.remove(id)) return;
-    unawaited(
-      channel
-          .invokeMethod<Object?>('clear', id)
-          .then((_) {}, onError: (Object _) {}),
-    );
+    channel.invokeMethod<Object?>('clear', id).ignore();
   }
 
   /// The Dock badge: the chats that need you, or none. A chat that no
@@ -193,14 +185,10 @@ class MacAlerts {
         _needs[id] = true;
       } else if (seen || !daemon.chats.containsKey(id)) {
         _needs.remove(id);
-        unawaited(
-          channel
-              .invokeMethod<Object?>('withdraw', [
-                '$id/${AlertKind.permission.name}',
-                '$id/${AlertKind.question.name}',
-              ])
-              .then((_) {}, onError: (Object _) {}),
-        );
+        channel.invokeMethod<Object?>('withdraw', [
+          '$id/${AlertKind.permission.name}',
+          '$id/${AlertKind.question.name}',
+        ]).ignore();
       }
     }
     final label = dockBadge.value && n > 0 ? '$n' : '';

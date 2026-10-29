@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/logs_section.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';

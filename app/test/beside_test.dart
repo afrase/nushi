@@ -7,7 +7,7 @@ import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/side_panel.dart';
+import 'package:nushi/side_chat.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/transcript.dart';
@@ -179,13 +179,13 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('a side question goes left of the pane and the details', (
+  testWidgets('a side chat goes left of the pane and the details', (
     tester,
   ) async {
     final d = await _app(tester, width: 1800);
-    d.chats['c']!.side = ChatState('s', '/Users/me')..title = 'Side';
+    d.chats['c']!.side.value = ChatState('s', '/Users/me')..title = 'Side';
     await _openPane(tester);
-    final side = tester.getRect(find.byType(SidePanel));
+    final side = tester.getRect(find.byType(SideChat));
     final pane = tester.getRect(_pane);
     expect(side.right, pane.left);
     expect(pane.right, tester.getRect(_details).left);

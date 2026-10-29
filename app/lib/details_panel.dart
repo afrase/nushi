@@ -13,7 +13,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/mcp_card.dart';
 import 'package:nushi/panel_cards.dart';
-import 'package:nushi/preview.dart';
 import 'package:nushi/pull_card.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/theme/theme.dart';
@@ -118,21 +117,6 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     _couldAsk = _canAsk;
     chat.addListener(_onChat);
     _pull = ChatPull.of(daemon, chat)..follow();
-  }
-
-  @override
-  void didUpdateWidget(DetailsPanel old) {
-    super.didUpdateWidget(old);
-    if (old.chat == widget.chat) return;
-    // Another chat: follow it, with what was asked of it.
-    old.chat.removeListener(_onChat);
-    widget.chat.addListener(_onChat);
-    _pull.unfollow();
-    _pull = ChatPull.of(daemon, chat)..follow();
-    _timer?.cancel();
-    _context = lastContext(chat.id)?.$2;
-    _couldAsk = _canAsk;
-    _schedule();
   }
 
   @override
@@ -337,7 +321,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       ?pullCard(_pull, onShow: widget.onPull),
       ?agentsCard(chat, daemon),
       mcpCard(chat, daemon),
-      if (daemon.daemonApi >= previewApi) ?artifactsCard(chat),
+      ?artifactsCard(chat),
     ]);
   }
 }

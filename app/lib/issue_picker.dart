@@ -7,7 +7,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 

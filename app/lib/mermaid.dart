@@ -11,15 +11,24 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// A Mermaid diagram as the Mac drew it: a PNG of [width] by [height]
-/// points, or the [error] that stopped it.
+/// points, or the [error] that stopped it; with [retry] when that was the
+/// drawing's, not the diagram's (its web view stopped, the snapshot or the
+/// channel failed), so it's drawn again next time it's asked for.
 @immutable
 class DrawnDiagram {
-  const new({this.png, this.width = 0, this.height = 0, this.error = ''});
+  const new({
+    this.png,
+    this.width = 0,
+    this.height = 0,
+    this.error = '',
+    this.retry = false,
+  });
 
   final Uint8List? png;
   final double width;
   final double height;
   final String error;
+  final bool retry;
 }
 
 /// Draws a diagram as a picture: on the Mac, mermaid.js in one hidden web
@@ -58,9 +67,15 @@ Future<DrawnDiagram> _drawOnMac(
         height: (r['height']! as num).toDouble(),
       );
     }
-    return DrawnDiagram(error: '${r?['error'] ?? 'Not drawn'}');
+    return DrawnDiagram(
+      error: '${r?['error'] ?? 'Not drawn'}',
+      retry: r?['retry'] == true,
+    );
   } on Object catch (e) {
-    return DrawnDiagram(error: e is PlatformException ? '${e.message}' : '$e');
+    return DrawnDiagram(
+      error: e is PlatformException ? '${e.message}' : '$e',
+      retry: true,
+    );
   }
 }
 
@@ -74,7 +89,8 @@ String cssColor(Color c) =>
     '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
 
 /// Diagrams drawn, by their text and colors: each once, at the width of
-/// the block that asked first (narrower blocks scale it down).
+/// the block that asked first (narrower blocks scale it down); one whose
+/// drawing failed for a passing reason ([DrawnDiagram.retry]) is let go.
 final _drawn = <(String, bool, Color), Future<DrawnDiagram>>{};
 
 Future<DrawnDiagram> _drawnOnce(
@@ -95,6 +111,9 @@ Future<DrawnDiagram> _drawnOnce(
     foreground: foreground,
   );
   _drawn[key] = drawn;
+  drawn.then((d) {
+    if (d.retry && _drawn[key] == drawn) unawaited(_drawn.remove(key));
+  }).ignore();
   return drawn;
 }
 

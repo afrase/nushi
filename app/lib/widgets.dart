@@ -1,31 +1,13 @@
-import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/errors.dart';
 
 import 'package:nushi/theme/theme.dart';
 
 export 'package:nushi/controls.dart';
-
-/// What a failed call says, to show: a daemon's error is its message
-/// (a `ConnectException`'s own text starts with its code: `[unknown] `).
-String errorText(Object e) => switch (e) {
-  ConnectException(:final message) => message,
-  _ => '$e',
-};
-
-/// Whether the daemon refused a call for [reason], as its Nushi-Reason
-/// says ('restarting', 'agent_start'); a daemon older than reasons sends
-/// none, and [said] reads its message instead.
-bool refusedFor(
-  ConnectException e,
-  String reason,
-  bool Function(String message) said,
-) => switch (e.metadata['nushi-reason']) {
-  final r? => r == reason,
-  null => said(e.message),
-};
+export 'package:nushi/errors.dart';
 
 /// Shows [message] in a snack bar.
 void showError(BuildContext context, Object message) =>

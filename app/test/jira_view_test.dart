@@ -265,8 +265,8 @@ void main() {
     await tester.tap(find.byTooltip('Open its newest chat (it has 2)'));
     await tester.pumpAndSettle();
     expect(d.selectedId, 'c2');
-    expect(d.jiraOpen, isFalse);
-    d.showJira(open: true);
+    expect(d.place, const ChatPlace());
+    d.go(const JiraPlace());
     await tester.pumpAndSettle();
     // Its status, from the row.
     await tester.tap(find.text('In Progress'));

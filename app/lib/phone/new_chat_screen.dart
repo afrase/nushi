@@ -45,7 +45,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     ...recentFolders(_daemon.chats.values),
   }.toList();
   late String _folder = widget.folder ?? _recent.firstOrNull ?? '';
-  late String _agent = lastAgent(_daemon.chats.values);
+  late String _agent = defaultAgent(_daemon, knownAgents.keys.toList());
   final _typed = TextEditingController();
   bool _starting = false;
   TrustAsk? _asked; // the trust question shown, until answered

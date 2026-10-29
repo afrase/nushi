@@ -36,4 +36,28 @@ void main() {
     final line = tester.getRect(find.byType(SubagentLine));
     expect(chevron.right, greaterThan(line.right - 20));
   });
+
+  testWidgets('a live line ticks each second; one done no longer does', (
+    tester,
+  ) async {
+    var built = 0;
+    Widget line({required bool live}) => Directionality(
+      textDirection: TextDirection.ltr,
+      child: LiveText(() => '${++built}', live: live, style: const TextStyle()),
+    );
+    await tester.pumpWidget(line(live: true));
+    for (var i = 0; i < 2; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(built, 3);
+    await tester.pumpWidget(line(live: false));
+    final done = built;
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(seconds: 1));
+    }
+    expect(built, done);
+    await tester.pumpWidget(line(live: true)); // live again: ticks again
+    await tester.pump(const Duration(seconds: 1));
+    expect(built, done + 2);
+  });
 }

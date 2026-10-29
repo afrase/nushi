@@ -15,19 +15,16 @@ import 'package:nushi/widgets.dart';
 const openFileKey = SingleActivator(LogicalKeyboardKey.keyP, meta: true);
 
 /// Opens a file of the chat shown in its preview, picked in a small box
-/// that matches as you type ([OpenFileBox]); nothing when no chat shows
-/// or its daemon has no preview.
+/// that matches as you type ([OpenFileBox]); nothing when no chat shows.
 Future<void> openFile(BuildContext context, Daemon daemon) async {
   final chat = daemon.selected;
-  if (chat == null || !daemon.chatShows || daemon.daemonApi < previewApi) {
-    return;
-  }
+  if (chat == null || !daemon.chatShows) return;
   final path = await showDialog<String>(
     context: context,
     builder: (_) => OpenFileBox(
       daemon: daemon,
       folder: chat.folder,
-      chat: chatFiles(chat.items),
+      chat: chatFilesOf(chat),
     ),
   );
   if (path != null) chat.openPreview(path);

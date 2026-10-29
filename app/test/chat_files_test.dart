@@ -153,6 +153,33 @@ void main() {
     expect(folderOf('report.md'), '');
   });
 
+  test("a chat's files are worked out again when its items change, not as "
+      'text streams into one', () {
+    final chat = ChatState('c', '/x')
+      ..load(GetChatResponse(items: _items, seq: Int64(1)));
+    final files = chatFilesOf(chat);
+    expect(files, chatFiles(_items));
+    var seq = 2;
+    void event(ItemEvent e) =>
+        chat.apply(EventsResponse(chatId: 'c', seq: Int64(seq++), item: e));
+    event(
+      ItemEvent(
+        item: Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE),
+      ),
+    );
+    final now = chatFilesOf(chat);
+    event(
+      ItemEvent(
+        append: true,
+        item: Item(id: 'm', text: 'Done'),
+      ),
+    );
+    expect(identical(chatFilesOf(chat), now), isTrue);
+    event(ItemEvent(item: _call('w9', 'docs/more.md')));
+    expect(chatFilesOf(chat).first, 'docs/more.md');
+    expect(chatArtifacts(chat).recent, contains('docs/more.md'));
+  });
+
   /// ⌘K, then Artifacts… picked by typing.
   Future<void> paletteArtifacts(WidgetTester tester) async {
     await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);

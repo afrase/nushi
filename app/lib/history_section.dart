@@ -55,6 +55,18 @@ class _HistorySectionState extends State<HistorySection> {
   String? _anchor; // where a ⇧-click's range starts
   List<HistoryRow> _view = []; // as shown, in order
 
+  // The rows, their counts and the view as last made, and from what: a
+  // click (picking rows) builds again without making and sorting 5,000
+  // rows anew. The rows read the daemon's chats, so they're made again
+  // once it changed.
+  List<HistoryRow> _rows = [];
+  Map<HistoryFilter, int> _counts = {};
+  ListTranscriptsResponse? _rowsOf;
+  bool _chatsChanged = false;
+  Object? _viewOf;
+
+  void _daemonChanged() => _chatsChanged = true;
+
   @override
   void initState() {
     super.initState();
@@ -63,10 +75,12 @@ class _HistorySectionState extends State<HistorySection> {
     });
     unawaited(_load());
     _search.addListener(() => setState(() {}));
+    widget.daemon.addListener(_daemonChanged);
   }
 
   @override
   void dispose() {
+    widget.daemon.removeListener(_daemonChanged);
     _slowTimer.cancel();
     _search.dispose();
     super.dispose();
@@ -204,25 +218,35 @@ class _HistorySectionState extends State<HistorySection> {
     final t = theme.t;
     final set = widget.settings;
     final list = _list;
-    final rows = [
-      for (final c in list?.copies ?? const <TranscriptCopy>[])
-        HistoryRow(c, widget.daemon.chats[c.chatId]),
-    ];
-    final counts = {
-      HistoryFilter.all: rows.length,
-      HistoryFilter.archived: rows.where((r) => r.archived).length,
-      HistoryFilter.gone: rows.where((r) => r.gone).length,
-      HistoryFilter.leftover: rows.where((r) => r.leftover).length,
-    };
+    if (!identical(list, _rowsOf) || _chatsChanged) {
+      _rowsOf = list;
+      _chatsChanged = false;
+      final rows = _rows = [
+        for (final c in list?.copies ?? const <TranscriptCopy>[])
+          HistoryRow(c, widget.daemon.chats[c.chatId]),
+      ];
+      _counts = {
+        HistoryFilter.all: rows.length,
+        HistoryFilter.archived: rows.where((r) => r.archived).length,
+        HistoryFilter.gone: rows.where((r) => r.gone).length,
+        HistoryFilter.leftover: rows.where((r) => r.leftover).length,
+      };
+    }
+    final (rows, counts) = (_rows, _counts);
     // A filter left with nothing to show (its rows cleared) goes.
     final filter = counts[_filter] == 0 ? HistoryFilter.all : _filter;
-    final view = _view = historyView(
-      rows,
-      filter: filter,
-      query: _search.text,
-      sort: _sort,
-      up: _up,
-    );
+    final viewOf = (rows, filter, _search.text, _sort, _up);
+    if (viewOf != _viewOf) {
+      _viewOf = viewOf;
+      _view = historyView(
+        rows,
+        filter: filter,
+        query: _search.text,
+        sort: _sort,
+        up: _up,
+      );
+    }
+    final view = _view;
     final picked = [
       for (final r in view)
         if (_selected.contains(r.id)) r,

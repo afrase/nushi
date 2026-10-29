@@ -14,7 +14,6 @@ import 'package:nushi/marks.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';

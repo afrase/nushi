@@ -46,7 +46,7 @@ List<Object> _entries(List<Item> items) {
 /// A chat's items, built as they scroll into view. It opens at the bottom
 /// and follows it while the agent writes; scrolled up, it stays put and
 /// offers a way back to the latest. Selected text gets a toolbar above it
-/// to ask a side question about it, or to reply to it; selected by touch, the
+/// to ask a side chat about it, or to reply to it; selected by touch, the
 /// selection's own menu has those beside Copy. Given [items] (a
 /// subagent's steps) it shows those instead, between [header] and
 /// [footer], [live] while more come.
@@ -71,7 +71,7 @@ class Transcript extends StatefulWidget {
   /// action.
   final void Function(Reply reply)? onReply;
 
-  /// Opens a side question about the selection; null hides the action.
+  /// Opens a side chat about the selection; null hides the action.
   final void Function(String selection)? onSide;
 
   final List<Item>? items;
@@ -305,7 +305,7 @@ class _TranscriptState extends State<Transcript> {
   });
 
   /// The selection's menu: as the platform's on a mouse; on touch, one menu
-  /// of Copy, Side question and Reply where the platform draws its own, so
+  /// of Copy, Side chat and Reply where the platform draws its own, so
   /// nothing of Nushi's sits under it (iOS's Copy | Select All hid the
   /// toolbar on the phone).
   Widget _menu(
@@ -329,10 +329,7 @@ class _TranscriptState extends State<Transcript> {
           (b) => b.type == ContextMenuButtonType.copy,
         ),
         if (onSide != null)
-          ContextMenuButtonItem(
-            label: 'Side question',
-            onPressed: then(onSide),
-          ),
+          ContextMenuButtonItem(label: 'Side chat', onPressed: then(onSide)),
         if (onReply != null)
           ContextMenuButtonItem(label: 'Reply', onPressed: then(onReply)),
       ],

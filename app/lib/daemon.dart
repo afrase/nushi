@@ -13,18 +13,19 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/drafts.dart';
+import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mac_view.dart';
+import 'package:nushi/place.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
-import 'package:nushi/side_panel.dart';
 import 'package:nushi/terminals.dart';
-import 'package:nushi/trust_card.dart';
-import 'package:nushi/widgets.dart' show errorText, refusedFor;
+import 'package:nushi/trust_ask.dart';
 import 'package:uds_transport/uds_transport.dart';
+
+export 'package:nushi/place.dart';
 
 final support = '${Platform.environment['HOME']}/Library/Application Support';
 
@@ -198,11 +199,7 @@ class Daemon extends ChangeNotifier {
     final ids = [for (final r in removedChats) r.id];
     removedChats = [];
     notifyListeners();
-    unawaited(
-      client
-          .dismissRemovedChats(DismissRemovedChatsRequest(ids: ids))
-          .then((_) {}, onError: (Object _) {}),
-    );
+    client.dismissRemovedChats(DismissRemovedChatsRequest(ids: ids)).ignore();
   }
 
   /// What the Mac's window shows, told to the daemon (not the phone's).
@@ -217,11 +214,7 @@ class Daemon extends ChangeNotifier {
   /// card, Settings, Jira, GitHub) is in its place. What the daemon is
   /// told the Mac views, and what a chat's tabs and actions need.
   bool get chatShows =>
-      selected != null &&
-      trustAsk == null &&
-      settings == null &&
-      !jiraOpen &&
-      !githubOpen;
+      selected != null && trustAsk == null && place is ChatPlace;
 
   connect.AnyFn<I, O> _auth<I extends Object, O extends Object>(
     connect.AnyFn<I, O> next,
@@ -232,42 +225,60 @@ class Daemon extends ChangeNotifier {
     return await next(req);
   };
 
-  /// Settings, in place of the chat: the section it shows, if it shows.
-  SettingsSection? settings;
+  /// What shows in the chat's place: the chat, Settings, Jira or GitHub.
+  Place place = const ChatPlace();
+
+  /// What Settings closes back to: the Jira or GitHub view it opened
+  /// from, else the chat.
+  Place _beforeSettings = const ChatPlace();
 
   /// The section Settings opens on: the last one shown while the app runs.
   SettingsSection lastSettings = SettingsSection.general;
 
-  /// The agent whose row Settings › Agents marks (a chat that couldn't
-  /// start it sent you there).
-  String? markedAgent;
+  /// What the GitHub view is to show when it opens next (a chat's pull
+  /// request or issue), taken by the view.
+  GitHubPick? githubShow;
 
-  /// What Settings closes back to: the Jira or GitHub view it opened from.
-  (bool, bool) _beforeSettings = (false, false);
-
-  /// Shows Settings at [section] (the last one shown when null); a
-  /// [folder] for MCP servers or Skills, an [agent] for Skills (whose
-  /// skills) or Agents (the row marked).
-  void openSettings({SettingsSection? section, String? folder, String? agent}) {
+  /// Shows [to] in the chat's place (picking a chat goes there too), and
+  /// on GitHub, [github]'s details. A trust card asking is left: that's a
+  /// no.
+  void go(Place to, {GitHubPick? github}) {
     _leaveTrust();
-    final s = section ?? settings ?? lastSettings;
-    if (folder != null && s == SettingsSection.mcp) mcpFolder = folder;
-    if (folder != null && s == SettingsSection.skills) skillsFolder = folder;
-    if (agent != null && s == SettingsSection.skills) skillsAgent = agent;
-    markedAgent = s == SettingsSection.agents ? agent : null;
-    if (settings == null) _beforeSettings = (jiraOpen, githubOpen);
-    settings = lastSettings = s;
-    jiraOpen = githubOpen = false;
+    if (to is SettingsPlace) {
+      if (place is! SettingsPlace) _beforeSettings = place;
+      lastSettings = to.section;
+    }
+    place = to;
+    githubShow = github;
     notifyListeners();
   }
 
-  /// Leaves Settings for what showed before it.
-  void closeSettings() {
-    if (settings == null) return;
-    settings = null;
-    jiraOpen = _beforeSettings.$1;
-    githubOpen = _beforeSettings.$2;
-    notifyListeners();
+  /// Leaves what's in the chat's place: Settings for what showed before
+  /// it, Jira and GitHub for the chat.
+  void back() {
+    if (place is ChatPlace) return;
+    go(place is SettingsPlace ? _beforeSettings : const ChatPlace());
+  }
+
+  /// Opens [to] in the chat's place, or leaves it when it shows (the
+  /// sidebar's rows, the palette's Jira and GitHub).
+  void toggle(Place to) =>
+      place.runtimeType == to.runtimeType ? back() : go(to);
+
+  /// Shows Settings at [section] (the one showing, else the last one shown,
+  /// when null); a [folder] for MCP servers or Skills, an [agent] for
+  /// Skills (whose skills) or Agents (the row marked).
+  void openSettings({SettingsSection? section, String? folder, String? agent}) {
+    final s =
+        section ??
+        switch (place) {
+          SettingsPlace(:final section) => section,
+          _ => lastSettings,
+        };
+    if (folder != null && s == SettingsSection.mcp) mcpFolder = folder;
+    if (folder != null && s == SettingsSection.skills) skillsFolder = folder;
+    if (agent != null && s == SettingsSection.skills) skillsAgent = agent;
+    go(SettingsPlace(s, agent: s == SettingsSection.agents ? agent : null));
   }
 
   /// The folder whose MCP servers Settings › MCP servers shows: the one
@@ -289,37 +300,6 @@ class Daemon extends ChangeNotifier {
     folder: folder,
     agent: agent,
   );
-
-  /// Whether Jira shows in place of the chat.
-  bool jiraOpen = false;
-
-  void showJira({required bool open}) {
-    _leaveTrust();
-    jiraOpen = open;
-    if (open) {
-      settings = null;
-      githubOpen = false;
-    }
-    notifyListeners();
-  }
-
-  /// Whether GitHub shows in place of the chat.
-  bool githubOpen = false;
-
-  /// What the GitHub view is to show when it opens next (a chat's pull
-  /// request or issue), taken by the view.
-  GitHubPick? githubShow;
-
-  void showGitHub({required bool open, GitHubPick? item}) {
-    _leaveTrust();
-    githubOpen = open;
-    githubShow = item;
-    if (open) {
-      settings = null;
-      jiraOpen = false;
-    }
-    notifyListeners();
-  }
 
   /// The chats' terminals.
   late final terminals = Terminals(client);
@@ -625,11 +605,11 @@ class Daemon extends ChangeNotifier {
     }
     if (!chats.containsKey(selectedId)) selectedId = null;
     for (final chat in [...chats.values]) {
-      if (chat.side case final side?) {
+      if (chat.side.value case final side?) {
         try {
           side.load(await client.getChat(GetChatRequest(chatId: side.id)));
         } on Object {
-          chat.side = null;
+          chat.side.value = null;
           sides.remove(side.id);
         }
       }
@@ -807,8 +787,7 @@ class Daemon extends ChangeNotifier {
       ...chatOpened.value,
       chatId: DateTime.now().millisecondsSinceEpoch,
     };
-    settings = null;
-    jiraOpen = githubOpen = false;
+    place = const ChatPlace();
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
     shown();
@@ -824,16 +803,12 @@ class Daemon extends ChangeNotifier {
   }
 
   /// ReopenChat for [chat] (Try again); how it goes shows in the chat.
-  void reopen(ChatState chat) => unawaited(
-    client
-        .reopenChat(ReopenChatRequest(chatId: chat.id))
-        .then((_) {}, onError: (Object _) {}),
-  );
+  void reopen(ChatState chat) =>
+      client.reopenChat(ReopenChatRequest(chatId: chat.id)).ignore();
 
   /// Where the user is: a start that ends elsewhere doesn't take them
   /// to its chat.
-  (String?, SettingsSection?, bool, bool) get _place =>
-      (selectedId, settings, jiraOpen, githubOpen);
+  (String?, Place) get _place => (selectedId, place);
 
   /// The folder a chat is starting in ('' for none), while one is.
   String? starting;
@@ -945,13 +920,29 @@ class Daemon extends ChangeNotifier {
     return true;
   }
 
-  /// Opens a side chat of [chat] (see ForkChat).
-  Future<ChatState> forkChat(ChatState chat) async {
-    final resp = await client.forkChat(ForkChatRequest(chatId: chat.id));
-    final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder)
-      ..agent = chat.agent;
-    unawaited(_load(side));
-    return side;
+  /// Opens [chat]'s side chat (a fork of it, ForkChat; one at a time),
+  /// unless it has one or one is on its way.
+  Future<void> openSide(ChatState chat) async {
+    if (chat.side.value != null || chat.forking.value) return;
+    chat.forking.value = true;
+    try {
+      final resp = await client.forkChat(ForkChatRequest(chatId: chat.id));
+      final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder)
+        ..agent = chat.agent;
+      unawaited(_load(side));
+      chat.side.value = side;
+    } finally {
+      chat.forking.value = false;
+    }
+  }
+
+  /// Ends [chat]'s side chat, if it has one.
+  void closeSide(ChatState chat) {
+    final side = chat.side.value;
+    if (side == null) return;
+    chat.side.value = null;
+    sides.remove(side.id);
+    client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
 
   /// A side chat the daemon ended (its chat reloaded, moved or archived,
@@ -959,7 +950,7 @@ class Daemon extends ChangeNotifier {
   void _sideGone(ChatState side) {
     sides.remove(side.id);
     for (final chat in chats.values) {
-      if (chat.side == side) chat.side = null;
+      if (chat.side.value == side) chat.side.value = null;
     }
     notifyListeners();
   }

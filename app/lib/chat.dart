@@ -89,6 +89,9 @@ class ChatState extends ChangeNotifier {
   String title = '';
   bool archived = false; // no agent runs; read-only until unarchived
 
+  /// Its title to show: "New chat" until it has one.
+  String get shownTitle => title.isEmpty ? 'New chat' : title;
+
   /// A turn ended while no client showed the chat, until one does (the
   /// daemon keeps it); null from a daemon older than API 76.
   bool? get unseen => _unseen;
@@ -111,7 +114,18 @@ class ChatState extends ChangeNotifier {
 
   DateTime created = DateTime.now();
   final List<Item> items = [];
+
+  /// Goes up whenever [items] change but by text streaming into one: what
+  /// is worked out from the items but their text (the artifacts,
+  /// `chatFilesOf`) is worked out again only then, not per chunk.
+  int revision = 0;
   List<ConfigOption> config = [];
+
+  /// Its config option of [category] ('model', 'mode', 'thought_level'),
+  /// if the agent has one.
+  ConfigOption? option(String category) =>
+      config.where((o) => o.category == category).firstOrNull;
+
   List<Command> commands = []; // the agent's slash commands
   Usage usage = Usage(); // what the agent last reported
   List<QueuedMessage> queue = []; // waiting for the agent's next chance
@@ -160,8 +174,8 @@ class ChatState extends ChangeNotifier {
   /// sent.
   final answers = <String, QuestionDraft>{};
 
-  /// Its open side question, if any (see SidePanel).
-  ChatState? side;
+  /// Its open side chat, if any (see SideChat).
+  final side = ValueNotifier<ChatState?>(null);
 
   /// ⌘F in its transcript (the Mac's).
   final find = TranscriptFind();
@@ -169,7 +183,7 @@ class ChatState extends ChangeNotifier {
   /// ⌘F in its Changes view: the files' filter, null while closed.
   final filesFilter = ValueNotifier<String?>(null);
 
-  /// A side question is starting (its fork is on its way).
+  /// A side chat is starting (its fork is on its way).
   final forking = ValueNotifier<bool>(false);
 
   /// The header's title is a field to rename it (Rename from the palette
@@ -264,6 +278,7 @@ class ChatState extends ChangeNotifier {
     items
       ..clear()
       ..addAll(s.items);
+    revision++;
     older = s.older;
     config = s.config;
     commands = s.commands;
@@ -292,6 +307,7 @@ class ChatState extends ChangeNotifier {
     items
       ..removeWhere((it) => ids.contains(it.id))
       ..insertAll(0, [for (final it in page) late[it.id] ?? it]);
+    revision++;
     older = olderNow;
     notifyListeners();
   }
@@ -366,6 +382,7 @@ class ChatState extends ChangeNotifier {
       case EventsResponse_Kind.queue:
         queue = e.queue.messages;
       case EventsResponse_Kind.cut:
+        revision++;
         final i = items.indexWhere((it) => it.id == e.cut);
         if (i > 0 || i == 0 && older == 0) {
           items.removeRange(i, items.length);
@@ -377,6 +394,7 @@ class ChatState extends ChangeNotifier {
         }
       case EventsResponse_Kind.dropped:
         items.removeWhere((it) => it.id == e.dropped);
+        revision++;
       case EventsResponse_Kind.status:
         status(e.status);
       case EventsResponse_Kind.chat ||
@@ -394,12 +412,14 @@ class ChatState extends ChangeNotifier {
     final i = items.indexWhere((it) => it.id == e.item.id);
     if (i < 0 && older > 0 && (e.append || e.index < older)) {
       return; // an item before the recent part: its page will have it
+    } else if (i >= 0 && e.append) {
+      items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;
+      return;
     } else if (i < 0) {
       items.add(e.item);
-    } else if (e.append) {
-      items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;
     } else {
       items[i] = e.item;
     }
+    revision++;
   }
 }

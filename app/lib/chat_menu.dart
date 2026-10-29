@@ -225,7 +225,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
           final p = snap.data;
           if (p == null) {
             return line(
-              snap.hasError ? '${snap.error}' : 'Checking what goes…',
+              snap.hasError ? errorText(snap.error!) : 'Checking what goes…',
             );
           }
           final archived = p.sessions.length == 1

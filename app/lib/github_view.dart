@@ -16,7 +16,6 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘G shows GitHub in place of the chat, and back.
@@ -356,7 +355,7 @@ class _GitHubViewState extends State<GitHubView> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
-            details != null ? _back() : widget.daemon.showGitHub(open: false),
+            details != null ? _back() : widget.daemon.back(),
       },
       child: Focus(
         focusNode: _viewFocus,
@@ -392,7 +391,7 @@ class _GitHubViewState extends State<GitHubView> {
                 unawaited(_load());
               },
               onRefresh: _load,
-              onClose: () => widget.daemon.showGitHub(open: false),
+              onClose: widget.daemon.back,
             ),
             Expanded(
               child: hosts == null

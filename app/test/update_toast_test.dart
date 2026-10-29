@@ -10,7 +10,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/update_toast.dart';

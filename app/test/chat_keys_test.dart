@@ -97,11 +97,11 @@ void main() {
     tester,
   ) async {
     final d = await _app(tester);
-    d.showJira(open: true);
+    d.go(const JiraPlace());
     await tester.pumpAndSettle();
     await _press(tester, LogicalKeyboardKey.digit3);
     expect(d.selectedId, 'c');
-    expect(d.jiraOpen, isFalse);
+    expect(d.place, const ChatPlace());
     d.dispose();
   }, variant: macOS);
 }

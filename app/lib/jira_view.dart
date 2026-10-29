@@ -52,7 +52,7 @@ void showIssue(Daemon daemon, String site, String key) {
   _all = false;
   _key = key;
   _details = (site: site, key: key);
-  daemon.showJira(open: true);
+  daemon.go(const JiraPlace());
 }
 
 /// Jira in the app, in the chat's place as the MCP view is (the sidebar of
@@ -432,7 +432,7 @@ class _JiraViewState extends State<JiraView> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
-            details != null ? _back() : widget.daemon.showJira(open: false),
+            details != null ? _back() : widget.daemon.back(),
         // ⌥⌘: ⌘1–9 switch chats.
         for (var i = 0; i < lists.length && i < 9; i++)
           SingleActivator(
@@ -462,7 +462,7 @@ class _JiraViewState extends State<JiraView> {
                 unawaited(_load());
               },
               onRefresh: _load,
-              onClose: () => widget.daemon.showJira(open: false),
+              onClose: widget.daemon.back,
             ),
             Expanded(
               child: sites == null

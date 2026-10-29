@@ -8,7 +8,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/open_session.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -132,7 +131,14 @@ void main() {
     await _key(tester, LogicalKeyboardKey.digit1); // Claude
     expect(fake.started, isEmpty);
     // Settings › Agents, in the window's main area.
-    expect(d.settings, SettingsSection.agents);
+    expect(
+      d.place,
+      isA<SettingsPlace>().having(
+        (p) => p.section,
+        'section',
+        SettingsSection.agents,
+      ),
+    );
     d.dispose();
   });
 

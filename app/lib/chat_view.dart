@@ -18,7 +18,7 @@ import 'package:nushi/preview_pane.dart';
 import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/shells.dart';
-import 'package:nushi/side_panel.dart';
+import 'package:nushi/side_chat.dart';
 import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
@@ -27,8 +27,8 @@ import 'package:nushi/turn_status.dart';
 import 'package:nushi/widgets.dart';
 
 /// A chat's transcript with the composer under it, and beside them its
-/// side question, a subagent's pane and [details], each when open. Escape
-/// stops a running turn. What's being written, and the side question,
+/// side chat, a subagent's pane and [details], each when open. Escape
+/// stops a running turn. What's being written, and the side chat,
 /// belong to the chat (its draft and side), so they outlive the view.
 class ChatView extends StatefulWidget {
   const new({
@@ -135,7 +135,7 @@ class _ChatViewState extends State<ChatView> {
                 ),
                 TurnStatus(
                   chat,
-                  what: chat.forking.value ? 'Starting a side question' : null,
+                  what: chat.forking.value ? 'Starting a side chat' : null,
                 ),
                 if (chat.mcpChanged && !chat.archived)
                   _McpChanged(chat, widget.daemon),
@@ -153,13 +153,13 @@ class _ChatViewState extends State<ChatView> {
       ),
     );
     return Previews(
-      open: widget.daemon.daemonApi >= previewApi ? chat.openPreview : null,
+      open: chat.openPreview,
       current: chat.preview,
       child: ListenableBuilder(
         listenable: Listenable.merge([
           chat.pane,
           chat.preview,
-          chat.forking, // a side question opened
+          chat.side,
           subagentWide,
         ]),
         builder: (context, _) => _beside(transcript),
@@ -167,13 +167,13 @@ class _ChatViewState extends State<ChatView> {
     );
   }
 
-  /// The transcript, and beside it, left to right: the side question, a
+  /// The transcript, and beside it, left to right: the side chat, a
   /// subagent's or background command's pane (or a file's preview in its
   /// place; either slides in as it opens), and [ChatView.details], each
   /// when open, at its own remembered width, each closed on its own.
   Widget _beside(Widget transcript) {
     final chat = widget.chat;
-    final side = chat.archived ? null : chat.side;
+    final side = chat.archived ? null : chat.side.value;
     final id = chat.pane.value;
     final preview = id == null ? chat.preview.value : null;
     final wide = id != null && subagentWide.value || preview != null;
@@ -188,11 +188,11 @@ class _ChatViewState extends State<ChatView> {
             initial: 380,
             min: 300,
             cap: 640,
-            child: SidePanel(
+            child: SideChat(
               key: ValueKey(side.id),
               side: side,
               daemon: widget.daemon,
-              onClose: () => setState(() => widget.daemon.closeSide(chat)),
+              onClose: () => widget.daemon.closeSide(chat),
             ),
           ),
         if (id != null)

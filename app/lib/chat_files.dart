@@ -38,6 +38,31 @@ List<String> chatFiles(Iterable<Item> items) {
   return files.toList().reversed.toList();
 }
 
+/// [chatFiles] of a chat's items, all of them and those of its last turn
+/// (from the last message of the user's on), as of its items' revision.
+typedef _Written = ({int revision, List<String> all, Set<String> last});
+
+final _written = Expando<_Written>();
+
+_Written _writtenBy(ChatState chat) {
+  final had = _written[chat];
+  if (had != null && had.revision == chat.revision) return had;
+  final items = chat.items;
+  final turn = items.lastIndexWhere(
+    (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE && it.parent.isEmpty,
+  );
+  return _written[chat] = (
+    revision: chat.revision,
+    all: chatFiles(items),
+    last: chatFiles(items.skip(turn + 1)).toSet(),
+  );
+}
+
+/// [chatFiles] of [chat]'s items, worked out again only when they changed
+/// but by text streaming in ([ChatState.revision]): every chunk builds the
+/// details panel, which asks a few times.
+List<String> chatFilesOf(ChatState chat) => _writtenBy(chat).all;
+
 /// A chat's artifacts ([chatFiles]) in the order the owner cares about
 /// them: the pinned (in the order pinned), then the recent (newest
 /// first), and the rest, the older (newest first), folded away. The
@@ -55,23 +80,19 @@ const openedRecent = Duration(hours: 1);
 /// of the newest show as recent.
 const recentAtLeast = 3;
 
-/// [items]' artifacts sorted: [pins] first, then the recent: those the
-/// agent wrote in the last turn (from the last message of the user's on),
-/// [open] (the file the preview shows), and those [opened] within
-/// [openedRecent] of [now]; the others older. With nothing pinned or
-/// recent, the [recentAtLeast] newest are the recent.
+/// A chat's artifacts, [files] ([chatFiles]), sorted: [pins] first, then
+/// the recent: those the agent wrote in the last turn ([last]), [open] (the
+/// file the preview shows), and those [opened] within [openedRecent] of
+/// [now]; the others older. With nothing pinned or recent, the
+/// [recentAtLeast] newest are the recent.
 Artifacts sortArtifacts(
-  List<Item> items, {
+  List<String> files, {
+  required Set<String> last,
   required DateTime now,
   List<String> pins = const [],
   String? open,
   Map<String, DateTime> opened = const {},
 }) {
-  final files = chatFiles(items);
-  final turn = items.lastIndexWhere(
-    (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE && it.parent.isEmpty,
-  );
-  final last = chatFiles(items.skip(turn + 1)).toSet();
   final pinned = [
     for (final p in pins)
       if (files.contains(p)) p,
@@ -99,13 +120,17 @@ Artifacts sortArtifacts(
 
 /// [chat]'s artifacts sorted ([sortArtifacts]) now, with its pins unless
 /// not [pins] (the phone: they're kept in the Mac's `app.json`).
-Artifacts chatArtifacts(ChatState chat, {bool pins = true}) => sortArtifacts(
-  chat.items,
-  now: clock(),
-  pins: pins ? pinnedFiles.value[chat.id] ?? const [] : const [],
-  open: chat.preview.value,
-  opened: chat.opened.value,
-);
+Artifacts chatArtifacts(ChatState chat, {bool pins = true}) {
+  final written = _writtenBy(chat);
+  return sortArtifacts(
+    written.all,
+    last: written.last,
+    now: clock(),
+    pins: pins ? pinnedFiles.value[chat.id] ?? const [] : const [],
+    open: chat.preview.value,
+    opened: chat.opened.value,
+  );
+}
 
 /// What [chatArtifacts] reads, to build again when it changes.
 Listenable artifactsOf(ChatState chat) =>

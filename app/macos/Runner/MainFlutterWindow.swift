@@ -248,7 +248,7 @@ final class Diagrams: NSObject, WKNavigationDelegate {
           web.takeSnapshot(with: config) { image, error in
             guard let image, let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
               let png = NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:])
-            else { return self.finish(job.done, ["error": error?.localizedDescription ?? "No snapshot"]) }
+            else { return self.finish(job.done, ["error": error?.localizedDescription ?? "No snapshot", "retry": true]) }
             self.finish(job.done, ["png": FlutterStandardTypedData(bytes: png), "width": w, "height": h])
           }
         }
@@ -310,6 +310,7 @@ final class Diagrams: NSObject, WKNavigationDelegate {
     window = nil
     loaded = false
     busy = false
-    for job in pending { job.done(["error": error?.localizedDescription ?? "The diagram's web view stopped"]) }
+    // Not the diagrams' fault: the app asks for them again (retry).
+    for job in pending { job.done(["error": error?.localizedDescription ?? "The diagram's web view stopped", "retry": true]) }
   }
 }
