@@ -7,6 +7,7 @@ import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/pull_activity_parts.dart';
+import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -307,8 +308,13 @@ class _EntryState extends State<_Entry> {
                       tooltip:
                           "Send to the agent: a reply card in the chat's "
                           'box, to send',
-                      onPressed: () =>
-                          SendToAgent.maybeOf(context)?.onSend(commentReply(c)),
+                      onPressed: () => SendToAgent.maybeOf(context)?.send(
+                        commentReply(c),
+                        widget.what.isNotEmpty
+                            ? 'the ${widget.what}'
+                            : "${possessive('@${c.author}')} "
+                                  "${c.review.isEmpty ? 'comment' : 'review'}",
+                      ),
                     ),
                   if (c.url.isNotEmpty)
                     IconTap(

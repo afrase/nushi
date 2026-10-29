@@ -73,6 +73,7 @@ class TodoRow extends StatefulWidget {
     required this.onSend,
     required this.onChanged,
     super.key,
+    this.inBox = false,
   });
 
   final TodoItem item;
@@ -81,6 +82,10 @@ class TodoRow extends StatefulWidget {
   final DateTime now;
   final bool picked;
   final ValueChanged<bool> onPick;
+
+  /// Its card waits in the chat's box: Send is "In the box ✓", off, until
+  /// the card is taken out or sent.
+  final bool inBox;
   final VoidCallback onSend;
   final Future<void> Function() onChanged;
 
@@ -274,11 +279,12 @@ class _TodoRowState extends State<TodoRow> {
                     GhostButton('Resolve', onTap: _busy ? null : _resolve),
                   const SizedBox(width: 4),
                   SendButton(
-                    label: 'Send',
-                    tooltip:
-                        "Its reply card in the chat's box, to send with your "
-                        'message',
-                    onPressed: widget.onSend,
+                    label: widget.inBox ? 'In the box ✓' : 'Send',
+                    tooltip: widget.inBox
+                        ? "Its card waits in the chat's box"
+                        : "Its reply card in the chat's box, to send with "
+                              'your message',
+                    onPressed: widget.inBox ? null : widget.onSend,
                   ),
                 ],
               ),

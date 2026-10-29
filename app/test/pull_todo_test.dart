@@ -245,9 +245,12 @@ void main() {
   });
 
   testWidgets('Send, Send picked and Send all put reply cards in the box, '
-      'each saying whose', (tester) async {
+      'each saying whose; a toast says what went, the row "In the box ✓" '
+      'until the card goes; the bar counts them', (tester) async {
     final (d, _) = await openPullTab(tester, fixturePull());
     final box = d.chats['c']!.draft.replies;
+    Finder toast(String s) =>
+        find.descendant(of: find.byType(SnackBar), matching: find.text(s));
     expect(find.text('To do'), findsOneWidget);
     expect(
       find.textContaining(
@@ -256,26 +259,57 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tester.tap(find.text('Send').first);
+    await tester.tap(find.text('Send').at(1));
     await tester.pumpAndSettle();
-    expect(box.value.single.from, startsWith('Failed check CI / rspec'));
+    expect(box.value.single.from, startsWith('Failed check CI / rubocop'));
     expect(
       box.value.single.from,
       endsWith('on PR octo/notes#412 (GitHub), my pull request:'),
     );
-    expect(box.value.single.quote, contains('exit code 1'));
-    // Two picked: rubocop and mona's review.
-    await tester.tap(find.byType(Checkbox).at(1));
+    expect(toast("Added to the chat's box: CI / rubocop"), findsOneWidget);
+    expect(toast('Go to chat'), findsOneWidget);
+    expect(find.text('In the box ✓'), findsOneWidget);
+    expect(find.text('Send'), findsNWidgets(5));
+    // The bar, at the tab's foot.
+    final bar = find.text(
+      "1 waiting in the chat's box. They go with your next message.",
+      findRichText: true,
+    );
+    expect(bar, findsOneWidget);
+    expect(tester.getRect(bar).top, greaterThan(800));
+    // Two picked: rspec and mona's review.
+    await tester.tap(find.byType(Checkbox).at(0));
     await tester.tap(find.byType(Checkbox).at(3));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Send 2 picked'));
     await tester.pumpAndSettle();
     expect(box.value.length, 3);
     expect(box.value.last.from, startsWith('Changes requested by @mona'));
+    expect(toast("Added 2 to the chat's box"), findsOneWidget);
     expect(find.text('Send 2 picked'), findsNothing); // unpicked once sent
+    expect(find.text('In the box ✓'), findsNWidgets(3));
     await tester.tap(find.text('Send all 6 to agent'));
     await tester.pumpAndSettle();
     expect(box.value.length, 6); // the same card once
+    expect(
+      toast("Added 3 to the chat's box; 3 were there already"),
+      findsOneWidget,
+    );
+    expect(find.text('Send'), findsNothing);
+    // A card taken out: its row can send again; all sent: every row can.
+    box.value = box.value.sublist(1);
+    await tester.pumpAndSettle();
+    expect(find.text('Send'), findsOneWidget);
+    box.value = const [];
+    await tester.pumpAndSettle();
+    expect(find.text('In the box ✓'), findsNothing);
+    expect(bar, findsNothing);
+    // Go to chat, from the toast.
+    await tester.tap(find.text('Send').first);
+    await tester.pumpAndSettle();
+    await tester.tap(toast('Go to chat'));
+    await tester.pumpAndSettle();
+    expect(d.chats['c']!.tab.value.name, 'chat');
     d.dispose();
   }, variant: _mac);
 

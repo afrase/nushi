@@ -134,7 +134,12 @@ class _CheckRowState extends State<CheckRow> {
                 child: Text(c.state, style: theme.ui(color, size: 11.5)),
               ),
               if (c.failed)
-                SendIcon(() => checkReply(widget.daemon, widget.ref, c)),
+                SendIcon(
+                  () => checkReply(widget.daemon, widget.ref, c),
+                  what: c.workflow.isEmpty
+                      ? c.name
+                      : '${c.workflow} / ${c.name}',
+                ),
               IconTap(
                 Icons.open_in_new,
                 size: 13,

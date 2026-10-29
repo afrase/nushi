@@ -6,6 +6,8 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/pull_todo_row.dart';
+import 'package:nushi/replies.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -53,15 +55,40 @@ class _PullTodoState extends State<PullTodo> {
       context,
       widget.daemon,
       p.item,
-      replies: () => Future.wait([
-        for (final i in items) i.reply(widget.daemon, p.item.ref),
-      ]),
+      what: items.length == 1 ? items.single.what : '',
+      replies: () async {
+        final rs = await Future.wait([
+          for (final i in items) i.reply(widget.daemon, p.item.ref),
+        ]);
+        for (final (n, i) in items.indexed) {
+          _sent[_key(i)] = rs[n];
+        }
+        return rs;
+      },
     );
     if (mounted) setState(() => _picked.removeAll(items.map((i) => i.id)));
   }
 
+  String _key(TodoItem i) => '${widget.pull.item.id} ${i.id}';
+
+  /// Whether [i]'s card waits in the chat's [box] (it was sent from here
+  /// and is still there).
+  bool _inBox(List<Reply> box, TodoItem i) {
+    final r = _sent[_key(i)];
+    return r != null && inBox(box, r);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final box = SendToAgent.maybeOf(context)?.box;
+    if (box == null) return _build(context, const []);
+    return ValueListenableBuilder(
+      valueListenable: box,
+      builder: (context, cards, _) => _build(context, cards),
+    );
+  }
+
+  Widget _build(BuildContext context, List<Reply> box) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final items = widget.items;
@@ -96,6 +123,7 @@ class _PullTodoState extends State<PullTodo> {
       pull: widget.pull,
       now: widget.now,
       picked: _picked.contains(i.id),
+      inBox: _inBox(box, i),
       onPick: (v) =>
           setState(() => v ? _picked.add(i.id) : _picked.remove(i.id)),
       onSend: () => _send([i]),
@@ -225,6 +253,10 @@ class _OlderGroup extends StatelessWidget {
     );
   }
 }
+
+/// The cards To do put in a chat's box, by pull request and item: a row
+/// whose card is still there says so.
+final _sent = <String, Reply>{};
 
 class _Count extends StatelessWidget {
   const new(this.n);

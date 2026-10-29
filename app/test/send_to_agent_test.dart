@@ -130,7 +130,10 @@ void main() {
       'A comment from @drive-by on PR $_repo#1 (GitHub), my pull request:',
     );
     expect(
-      find.text("1 reply waits in the chat's box, to send to the agent"),
+      find.text(
+        "1 waiting in the chat's box. They go with your next message.",
+        findRichText: true,
+      ),
       findsOneWidget,
     );
     // Sent again: still one.
@@ -164,7 +167,7 @@ void main() {
       8,
     );
 
-    await tester.tap(find.text('Show the chat'));
+    await tester.tap(find.text('Go to chat').last);
     await tester.pumpAndSettle();
     expect(find.byType(ReplyCards), findsOneWidget);
     d.dispose();
@@ -185,7 +188,9 @@ void main() {
       return MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: tab ? SendToAgent(onSend: sent.add, child: thread) : thread,
+          body: tab
+              ? SendToAgent(onSend: (r, _) => sent.addAll(r), child: thread)
+              : thread,
         ),
       );
     }

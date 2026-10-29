@@ -33,31 +33,51 @@ class PullTab extends StatelessWidget {
     final l = chat.pull;
     if (l == null) return const SizedBox.shrink();
     final ref = GitHubRef(host: l.host, repo: l.repo, number: l.number);
-    // Each card says what it is, on which pull request, and whose that is.
-    Future<void> send(Reply r) async {
+    // Each card says what it is, on which pull request, and whose that is;
+    // a toast says what went in.
+    Future<void> send(
+      ScaffoldMessengerState? toast,
+      double side,
+      List<Reply> replies,
+      String what,
+    ) async {
       final me = await githubLogin(daemon, l.host);
-      chat.draft.addReply(
-        onPull(
+      var added = 0;
+      for (final r in replies) {
+        final card = onPull(
           r,
           repo: l.repo,
           number: l.number,
           author: _authors[chat.id] ?? '',
           me: me,
-        ),
-      );
+        );
+        if (chat.draft.addReply(card)) added++;
+      }
+      if (replies.isEmpty) return;
+      toast
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            // 520 wide at most, centred, above the bar that counts the
+            // cards.
+            margin: EdgeInsets.fromLTRB(side, 0, side, 64),
+            content: Text(sentWords(replies.length, added, what)),
+            action: SnackBarAction(label: 'Go to chat', onPressed: onChat),
+          ),
+        );
     }
 
+    final side = ((MediaQuery.sizeOf(context).width - 520) / 2).clamp(
+      16.0,
+      double.infinity,
+    );
     return SendToAgent(
-      onSend: (r) => send(r).ignore(),
+      box: chat.draft.replies,
+      onSend: (r, what) =>
+          send(ScaffoldMessenger.maybeOf(context), side, r, what).ignore(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ValueListenableBuilder(
-            valueListenable: chat.draft.replies,
-            builder: (context, replies, _) => replies.isEmpty
-                ? const SizedBox.shrink()
-                : RepliesWaiting(replies.length, onChat: onChat),
-          ),
           Expanded(
             child: GitHubPullPane(
               key: ValueKey('${chat.id} ${l.id}'),
@@ -70,17 +90,41 @@ class PullTab extends StatelessWidget {
               },
             ),
           ),
+          ValueListenableBuilder(
+            valueListenable: chat.draft.replies,
+            builder: (context, replies, _) => replies.isEmpty
+                ? const SizedBox.shrink()
+                : RepliesWaiting(replies.length, onChat: onChat),
+          ),
         ],
       ),
     );
   }
 }
 
+/// What a toast says of [sent] cards put in the chat's box, [added] of
+/// them new there: "Added to the chat's box: CI / rubocop", "Added 6 to
+/// the chat's box", "Added 4 to the chat's box; 2 were there already",
+/// "Already in the chat's box: CI / rubocop".
+String sentWords(int sent, int added, String what) {
+  final there = sent - added;
+  if (sent == 1 || (added == 0 && what.isNotEmpty)) {
+    return added > 0
+        ? "Added to the chat's box: $what"
+        : "Already in the chat's box: $what";
+  }
+  if (added == 0) return "All $sent are in the chat's box already";
+  final also = there == 0
+      ? ''
+      : '; $there ${there == 1 ? 'was' : 'were'} there already';
+  return "Added $added to the chat's box$also";
+}
+
 /// Each chat's pull request's author, as its tab last loaded it.
 final _authors = <String, String>{};
 
-/// "2 replies wait in the chat's box", and Show the chat: over the Pull
-/// request tab and the Changes view while cards they sent wait there.
+/// "2 waiting in the chat's box", and Go to chat: under the Pull request
+/// tab and over the Changes view while cards they sent wait there.
 class RepliesWaiting extends StatelessWidget {
   const new(this.n, {required this.onChat, super.key});
 
@@ -93,20 +137,37 @@ class RepliesWaiting extends StatelessWidget {
     final t = theme.t;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
-      color: t.accentSoft,
+      decoration: BoxDecoration(
+        color: t.accentSoft,
+        border: Border(top: BorderSide(color: t.borderSubtle)),
+      ),
       child: Row(
         children: [
           Icon(Icons.subdirectory_arrow_right, size: 14, color: t.text),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              n == 1
-                  ? "1 reply waits in the chat's box, to send to the agent"
-                  : "$n replies wait in the chat's box, to send to the agent",
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$n',
+                    style: theme.ui(
+                      t.text,
+                      size: 12.5,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  const TextSpan(
+                    text:
+                        " waiting in the chat's box. They go with your next "
+                        'message.',
+                  ),
+                ],
+              ),
               style: theme.ui(t.text, size: 12.5),
             ),
           ),
-          Button(label: 'Show the chat', onPressed: onChat),
+          Button(label: 'Go to chat', onPressed: onChat),
         ],
       ),
     );
