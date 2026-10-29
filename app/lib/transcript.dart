@@ -10,6 +10,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/paced.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
@@ -99,6 +100,8 @@ class _TranscriptState extends State<Transcript> {
     });
   String _selected = '';
   bool _down = false; // a pointer is down on the transcript
+  // Pacing holds while a pointer is down or text is selected.
+  final _hold = ValueNotifier<bool>(false);
   bool _touch = false; // the last pointer down was a finger (or a pen)
   Rect? _at; // the selection's top and bottom middle, where the toolbar shows
   String? _replyTo; // the selection a reply is being written to
@@ -249,6 +252,7 @@ class _TranscriptState extends State<Transcript> {
 
   @override
   void dispose() {
+    _hold.dispose();
     _follower.dispose();
     _areaFocus.dispose();
     super.dispose();
@@ -346,12 +350,13 @@ class _TranscriptState extends State<Transcript> {
             // shows where the pointer went up.
             child: Listener(
               onPointerDown: (e) => setState(() {
-                _down = true;
+                _down = _hold.value = true;
                 _touch = e.kind != PointerDeviceKind.mouse;
                 _at = _replyTo = null;
               }),
               onPointerUp: (_) {
                 _down = false;
+                _hold.value = _selected.isNotEmpty;
                 _offer();
               },
               child: SelectionArea(
@@ -361,32 +366,40 @@ class _TranscriptState extends State<Transcript> {
                     _menu(region, onSide: side, onReply: reply),
                 onSelectionChanged: (c) {
                   _selected = c?.plainText ?? '';
+                  _hold.value = _down || _selected.isNotEmpty;
                   _offer();
                 },
                 // Every item is laid out, so the list knows its exact
                 // height: the scrollbar keeps its size and nothing shifts
                 // as items come into view. Unchanged items keep their
                 // widget, so a streamed chunk rebuilds only its message.
-                child: SingleChildScrollView(
-                  controller: _follower.scroll,
-                  padding: const EdgeInsets.only(top: 2, bottom: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (widget.header case final h?)
-                        Padding(padding: _sides, child: h),
-                      for (final (i, e) in entries.indexed)
-                        _entry(
-                          before,
-                          e,
-                          live: live && i == entries.length - 1,
-                          still: chat.waiting,
-                          top: _gap(entries, i, header: widget.header != null),
-                          rise: arrived.contains(_keyOf(e)),
-                        ),
-                      if (widget.footer case final f?)
-                        Padding(padding: _sides, child: f),
-                    ],
+                child: PacingHold(
+                  notifier: _hold,
+                  child: SingleChildScrollView(
+                    controller: _follower.scroll,
+                    padding: const EdgeInsets.only(top: 2, bottom: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (widget.header case final h?)
+                          Padding(padding: _sides, child: h),
+                        for (final (i, e) in entries.indexed)
+                          _entry(
+                            before,
+                            e,
+                            live: live && i == entries.length - 1,
+                            still: chat.waiting,
+                            top: _gap(
+                              entries,
+                              i,
+                              header: widget.header != null,
+                            ),
+                            rise: arrived.contains(_keyOf(e)),
+                          ),
+                        if (widget.footer case final f?)
+                          Padding(padding: _sides, child: f),
+                      ],
+                    ),
                   ),
                 ),
               ),

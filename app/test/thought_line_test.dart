@@ -48,16 +48,18 @@ void main() {
     expect(find.text('Thinking…'), findsOneWidget);
     expect(find.text('The CI job takes 13 minutes.'), findsOneWidget);
 
+    // Its words come paced (a word whole, once the space after it came).
     await tester.pumpWidget(
-      _app('The CI job takes 13 minutes. Splitting by file', live: true),
+      _app('The CI job takes 13 minutes. Splitting by file ', live: true),
     );
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 60));
     // Both, as one slides out and the other in.
     expect(find.text('The CI job takes 13 minutes.'), findsOneWidget);
-    expect(find.text('Splitting by file'), findsOneWidget);
+    expect(find.textContaining(RegExp('^Splitting')), findsOneWidget);
     await tester.pumpAndSettle();
     expect(find.text('The CI job takes 13 minutes.'), findsNothing);
+    expect(find.text('Splitting by file'), findsOneWidget);
 
     await tester.pumpWidget(
       _app('The CI job takes 13 minutes. Splitting by file.', live: false),

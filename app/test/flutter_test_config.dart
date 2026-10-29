@@ -9,7 +9,9 @@ import 'package:nushi/motion.dart';
 /// Mac), a golden may differ in up to 1% of its pixels (a card dense with
 /// text, as a review's findings, reaches 0.56% from anti-aliasing alone);
 /// here it must match. Every shine stands still, its band before the text,
-/// so goldens are one frame and pumpAndSettle settles while a call runs.
+/// and so does every loop on the shared clock that reads `loopPhase` (a
+/// pull request's running ring, a streaming reply's caret), so goldens are
+/// one frame and pumpAndSettle settles while a call runs.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
   final local = goldenFileComparator;

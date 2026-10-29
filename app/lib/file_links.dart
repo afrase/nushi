@@ -5,6 +5,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/paced.dart';
 import 'package:nushi/preview.dart';
 
 /// The first daemon that says which files are there (FindChatFiles).
@@ -143,7 +144,15 @@ class _LinkedMarkdownState extends State<LinkedMarkdown> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Paced(
+    widget.text,
+    live: widget.live,
+    builder: (context, shown) => shown != null
+        ? AgentMarkdown(widget.text, live: true, shown: shown)
+        : _linked(context),
+  );
+
+  Widget _linked(BuildContext context) {
     final open = Previews.of(context)?.open;
     if (open == null || _named.isEmpty) {
       return AgentMarkdown(widget.text, live: widget.live);
