@@ -30,7 +30,9 @@ type session struct {
 	mu       sync.Mutex
 	turns    []*turn // unsettled prompts, in the order written
 	active   *turn   // the one claude runs, from its echo; nil between turns
+	dropTop  bool    // after a cancel, until a turn starts: the stopped work's top-level text goes
 	owedIdle int     // idles still to come after results that ended a turn
+	asks     int     // permission and question requests open
 	closed   bool    // closed or gone: no more prompts
 
 	st   stream        // the reader's own
