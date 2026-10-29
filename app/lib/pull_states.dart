@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// An item's state's color: open green (gray when a draft), merged
@@ -99,37 +100,145 @@ class PullStates extends ChangeNotifier {
   }
 }
 
-/// A chat's pull request's checks as a dot, in the chat's row: red while
-/// one fails, amber while some run; nothing otherwise.
-class PullDot extends StatelessWidget {
+/// A chat's pull request's checks as a dot, in the chat's row: amber with
+/// the working ring growing out of it while they run (the ring and the dot
+/// drawn from one centre), red while one fails; nothing otherwise. Seen
+/// to change: passing, it turns green, pops and stays 4 s before fading,
+/// so success is seen rather than just gone; failing, it pops red and hops
+/// once. With Reduce Motion only the colors change (green still goes after
+/// 4 s).
+class PullDot extends StatefulWidget {
   const new(this.chat, this.states, {super.key});
 
   final ChatState chat;
   final PullStates states;
 
+  /// The dot's width, as the row lays it out (the ring paints past it).
+  static const size = 6.0;
+
+  static const passedFor = Duration(milliseconds: 4300);
+  static const failedFor = Duration(milliseconds: 1600);
+
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: states,
-    builder: (context, _) {
-      final t = NushiTheme.of(context).t;
-      final it = states.item(chat.pull);
-      final (color, words) = switch (it?.checks) {
-        'failure' || 'error' => (t.crashed, 'failing'),
-        'pending' => (t.needs, 'running'),
-        _ => (null, ''),
-      };
-      if (it == null || color == null) return const SizedBox.shrink();
-      return Tooltip(
-        message: '#${it.ref.number}: checks $words',
-        child: Container(
-          width: 6,
-          height: 6,
-          margin: const EdgeInsets.only(left: 6),
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  State<PullDot> createState() => _PullDotState();
+}
+
+class _PullDotState extends State<PullDot> with ClockRun {
+  String? _checks; // as last shown
+
+  @override
+  void initState() {
+    super.initState();
+    widget.states.addListener(_changed);
+    _checks = widget.states.item(widget.chat.pull)?.checks;
+  }
+
+  @override
+  void dispose() {
+    widget.states.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() {
+    final now = widget.states.item(widget.chat.pull)?.checks;
+    if (now == _checks) return;
+    final was = _checks;
+    _checks = now;
+    final failing = now == 'failure' || now == 'error';
+    if (now == 'success' && was != null) {
+      // Green, seen: with Reduce Motion too, without the pop.
+      runFor(PullDot.passedFor);
+    } else if (failing && was != 'failure' && was != 'error') {
+      if (reduceMotion(context)) {
+        stopRun();
+      } else {
+        runFor(PullDot.failedFor);
+      }
+    } else {
+      stopRun();
+    }
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    final it = widget.states.item(widget.chat.pull);
+    final passed = it?.checks == 'success' && running;
+    final (color, words) = switch (it?.checks) {
+      'failure' || 'error' => (t.crashed, 'failing'),
+      'pending' => (t.needs, 'running'),
+      'success' when passed => (t.done, 'passed'),
+      _ => (null, ''),
+    };
+    if (it == null || color == null) return const SizedBox.shrink();
+    final still = reduceMotion(context);
+    final ms = running ? ranMs : double.infinity;
+    // Scale 1 → 1.6 (at 30%) → 1 over 400 ms; then, failing, a hop.
+    final pop = still || ms > 400
+        ? 1.0
+        : ms < 120
+        ? 1 + 0.6 * Curves.easeOut.transform(ms / 120)
+        : 1 + 0.6 * (1 - Curves.easeOut.transform((ms - 120) / 280));
+    final hop = still || !running || passed
+        ? 0.0
+        : hopHeight((ms - 400) / 1200);
+    final fade = passed ? 1 - part(ms, 4000, 300) : 1.0;
+    return Tooltip(
+      message: '#${it.ref.number}: checks $words',
+      child: Padding(
+        padding: const EdgeInsets.only(left: 6),
+        child: Transform.translate(
+          offset: Offset(0, -hop),
+          child: CustomPaint(
+            size: const Size.square(PullDot.size),
+            painter: ChecksMark(
+              color.withValues(alpha: color.a * fade),
+              ringing: it.checks == 'pending' && !still,
+              scale: pop,
+            ),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// A PR's checks' dot of [color], [scale]d; [ringing], the working ring
+/// grows out of it and fades every 1.6 s on the shared clock
+/// ([loopPhase]). The dot and the ring are drawn from the same centre, the
+/// box's.
+class ChecksMark extends CustomPainter {
+  new(this.color, {required this.ringing, this.scale = 1})
+    : super(repaint: ringing ? loopRepaint : null);
+
+  final Color color;
+  final bool ringing;
+  final double scale;
+
+  static const period = Duration(milliseconds: 1600);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    if (ringing) {
+      final v = Curves.easeOut.transform(loopPhase(period));
+      canvas.drawCircle(
+        c,
+        r * (1 + 1.6 * v),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = color.withValues(alpha: 0.7 * (1 - v)),
       );
-    },
-  );
+    }
+    canvas.drawCircle(c, r * scale, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(ChecksMark old) =>
+      old.color != color || old.ringing != ringing || old.scale != scale;
 }
 
 /// A chat's pull request on the phone, in its bar: its number in its
