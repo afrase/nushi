@@ -115,6 +115,9 @@ func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.
 			SessionCapabilities: &acp.SessionCapabilities{
 				Close:                 &acp.SessionCloseCapabilities{},
 				Resume:                &acp.SessionResumeCapabilities{},
+				Fork:                  &acp.SessionForkCapabilities{},
+				List:                  &acp.SessionListCapabilities{},
+				Delete:                &acp.SessionDeleteCapabilities{},
 				AdditionalDirectories: &acp.SessionAdditionalDirectoriesCapabilities{},
 				SystemPrompt: &acp.SessionSystemPromptCapabilities{
 					Mode: &acp.SessionSystemPromptModeCapabilities{Override: &acp.SessionSystemPromptOverrideCapabilities{}},

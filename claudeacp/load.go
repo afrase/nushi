@@ -14,7 +14,7 @@ import (
 )
 
 // Sessions claude kept: load (claude resumes the session and the history
-// is replayed) and resume (without the history).
+// is replayed), resume (without the history), and fork (a copy, resumed).
 // A session claude has no transcript of is resourceNotFound, as is one
 // claude quits on before it answers (it says "No conversation found"):
 // clients start a new session then. An open session is answered as it
@@ -87,6 +87,55 @@ func (a *agent) reopen(ctx context.Context, id string, su setup, replay bool) (*
 	}
 	s.sendCommands()
 	return s, nil
+}
+
+func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
+	o, err := a.options(setup{cwd: req.Cwd, dirs: req.AdditionalDirectories, mcpServers: req.MCPServers,
+		systemPrompt: req.SystemPrompt, meta: req.Meta})
+	if err != nil {
+		return nil, err
+	}
+	id := string(req.SessionID)
+	var from string // the folder whose history has the session: the open one's, else any
+	if s, err := a.session(req.SessionID); err == nil {
+		from = s.cwd
+	}
+	if _, from, err = a.findHistory(id, from); err != nil {
+		return nil, err
+	}
+	var upTo string
+	if at := forkAt(req.Meta); at != "" {
+		if upTo, err = sessions.LastRecord(a.cfg.ConfigDir, id, from, at); err != nil {
+			return nil, invalidParams("no message %q in session %s to fork at", at, id)
+		}
+	}
+	fork, err := sessions.Fork(a.cfg.ConfigDir, id, from, sessions.ForkOptions{UpTo: upTo, Cwd: req.Cwd})
+	if err != nil {
+		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Forking the session: %v", err)}
+	}
+	o.Resume = fork
+	s, err := a.start(ctx, fork, o)
+	if err != nil {
+		return nil, err
+	}
+	a.out.after(s.id, s.sendCommands)
+	s.cfg.mu.Lock()
+	defer s.cfg.mu.Unlock()
+	return &acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
+}
+
+// forkAt is the message a fork is cut after, from
+// _meta.jetbrains.air.fork {version: 1, messageId} (claude-agent-acp's,
+// which any client may send): an API message id or a user message's
+// uuid, with any ":segment:N" claude-agent-acp's clients add taken off.
+// "" keeps the whole conversation.
+func forkAt(meta map[string]any) string {
+	jb, _ := meta["jetbrains"].(map[string]any)
+	air, _ := jb["air"].(map[string]any)
+	fork, _ := air["fork"].(map[string]any)
+	id, _ := fork["messageId"].(string)
+	id, _, _ = strings.Cut(id, ":segment:")
+	return id
 }
 
 // findHistory is session id's messages and the folder they were found
