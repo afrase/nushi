@@ -2,6 +2,8 @@ package claudeagent_test
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -117,6 +119,54 @@ func TestInitializeFirst(t *testing.T) {
 		t.Fatal(err)
 	}
 	finish(t, s, f)
+}
+
+// Close ends callbacks' contexts and fails requests waiting for an answer
+// at once, not when claude exits: after its stdin closes claude may take
+// seconds more to finish its turn.
+func TestCloseBeforeExit(t *testing.T) {
+	asked, returned := make(chan struct{}), make(chan struct{})
+	wait := func(ctx context.Context, _ string, _ json.RawMessage) (any, error) {
+		close(asked)
+		<-ctx.Done()
+		close(returned)
+		return nil, ctx.Err()
+	}
+	release := make(chan struct{})
+	s, f := start(t, claudeagent.Options{OnControl: wait},
+		sendRequest(`{"subtype":"x"}`),
+		claudetest.Expect(`{"type":"control_request","request":{"subtype":"get_settings"}}`),
+		claudetest.Send(`{"type":"system","subtype":"status","status":"requesting"}`),
+		claudetest.ExpectEOF(),
+		claudetest.Until(release),
+	)
+	<-asked
+	answer := make(chan error, 1)
+	go func() { answer <- s.Request(context.Background(), "get_settings", nil, nil) }()
+	next(t, s) // the request is written, and waits
+	closed := make(chan struct{})
+	go func() {
+		_ = s.Close()
+		close(closed)
+	}()
+	select {
+	case <-returned:
+	case <-time.After(5 * time.Second): // a guard, not an order
+		t.Fatal("the callback's context didn't end")
+	}
+	if err := <-answer; !errors.Is(err, claudeagent.ErrClosed) {
+		t.Errorf("the request: %v", err)
+	}
+	select {
+	case <-f.Exited():
+		t.Error("ended only once claude exited")
+	default:
+	}
+	close(release)
+	<-closed
+	if err := s.Wait(); err != nil || f.Err() != nil {
+		t.Errorf("%v %v", err, f.Err())
+	}
 }
 
 // A claude that ends before it answers initialize fails the start with

@@ -280,6 +280,19 @@ func ExpectEOF() Step {
 	}}
 }
 
+// Until waits for release to be closed, as a claude busy with a turn
+// keeps running a while after its stdin closes. A signal that ends the
+// fake ends the wait.
+func Until(release <-chan struct{}) Step {
+	return Step{"until released", func(r *run) error {
+		select {
+		case <-release:
+		case <-r.f.exited:
+		}
+		return nil
+	}}
+}
+
 // Exit ends the fake with code, after writing stderr on its stderr.
 func Exit(code int, stderr string) Step {
 	return Step{fmt.Sprintf("exit %d", code), func(r *run) error {

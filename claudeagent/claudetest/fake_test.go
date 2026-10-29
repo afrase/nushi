@@ -154,6 +154,37 @@ func TestExit(t *testing.T) {
 	}
 }
 
+// Until holds the fake after stdin closes, until it is released or
+// killed.
+func TestUntil(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		kill bool
+	}{{"released", false}, {"killed", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			release := make(chan struct{})
+			f := New(ExpectEOF(), Until(release))
+			s := start(t, f)
+			_ = s.Stdin.Close()
+			select {
+			case <-f.Exited():
+				t.Fatal("exited while held")
+			case <-f.Played():
+				t.Fatal("played while held")
+			default:
+			}
+			if tc.kill {
+				_ = s.Signal(os.Kill)
+			} else {
+				close(release)
+			}
+			if err := s.Wait(); tc.kill != (err != nil) || f.Err() != nil {
+				t.Errorf("%v %v", err, f.Err())
+			}
+		})
+	}
+}
+
 // SIGTERM ends the fake, unless it ignores SIGTERM; SIGKILL always does.
 // Other signals are only noted.
 func TestSignals(t *testing.T) {
