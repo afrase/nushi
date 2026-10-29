@@ -59,9 +59,13 @@ func TrustRoot(folder string) (top, key string) {
 		gitdir = filepath.Join(top, gitdir)
 	}
 	gitdir = RealPath(gitdir)
-	back, _ := os.ReadFile(filepath.Join(gitdir, "gitdir"))
+	b, _ = os.ReadFile(filepath.Join(gitdir, "gitdir"))
+	back := strings.TrimSpace(string(b))
+	if back != "" && !filepath.IsAbs(back) { // worktree.useRelativePaths (git 2.48): relative to the record
+		back = filepath.Join(gitdir, back)
+	}
 	common := filepath.Dir(filepath.Dir(gitdir)) // <common>/worktrees/<name>
-	if RealPath(strings.TrimSpace(string(back))) != RealPath(dotgit) || filepath.Base(filepath.Dir(gitdir)) != "worktrees" ||
+	if RealPath(back) != RealPath(dotgit) || filepath.Base(filepath.Dir(gitdir)) != "worktrees" ||
 		filepath.Base(common) != ".git" || worktreeSet(filepath.Join(common, "config")) {
 		return top, folder
 	}
