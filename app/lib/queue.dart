@@ -7,18 +7,21 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The messages waiting for the agent, as pills over the composer: a click
-/// takes one back to edit ([onEdit]), × drops it ([onRemove]).
+/// takes one back to edit ([onEdit]), ⏩ sends it now, in place of the
+/// running turn ([onSendNow]; a turn runs), × drops it ([onRemove]).
 class QueuePills extends StatelessWidget {
   const new(
     this.chat, {
     required this.onEdit,
     required this.onRemove,
+    this.onSendNow,
     super.key,
   });
 
   final ChatState chat;
   final void Function(QueuedMessage) onEdit;
   final void Function(QueuedMessage) onRemove;
+  final void Function(QueuedMessage)? onSendNow;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +66,14 @@ class QueuePills extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (onSendNow case final now?
+                      when chat.started != null && !m.relayStop)
+                    IconTap(
+                      Icons.fast_forward,
+                      size: 13,
+                      tooltip: 'Send now: stop the turn and send it',
+                      onTap: () => now(m),
+                    ),
                   IconTap(
                     Icons.close,
                     size: 13,
