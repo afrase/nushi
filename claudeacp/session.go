@@ -87,7 +87,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	o.CanUseTool, o.OnElicitation = s.canUseTool, s.elicit
 	cs, err := claudeagent.Start(ctx, o)
 	if err != nil {
-		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}
+		return nil, startError(o.Resume, err)
 	}
 	s.cs = cs
 	s.cfg.init(o, cs.Init(), a.clientCaps().booleans)

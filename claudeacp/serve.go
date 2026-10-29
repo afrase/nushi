@@ -109,10 +109,12 @@ func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.
 		ProtocolVersion: acp.LatestProtocolVersion,
 		AgentInfo:       &acp.Implementation{Name: Name, Title: "Claude (Go)", Version: Version},
 		AgentCapabilities: &acp.AgentCapabilities{
+			LoadSession:        true,
 			PromptCapabilities: &acp.PromptCapabilities{Image: true, EmbeddedContext: true},
 			MCPCapabilities:    &acp.MCPCapabilities{HTTP: true, SSE: true},
 			SessionCapabilities: &acp.SessionCapabilities{
 				Close:                 &acp.SessionCloseCapabilities{},
+				Resume:                &acp.SessionResumeCapabilities{},
 				AdditionalDirectories: &acp.SessionAdditionalDirectoriesCapabilities{},
 				SystemPrompt: &acp.SessionSystemPromptCapabilities{
 					Mode: &acp.SessionSystemPromptModeCapabilities{Override: &acp.SessionSystemPromptOverrideCapabilities{}},
