@@ -14,6 +14,11 @@ service NushiService {
   // that quit leaves the daemon running), and starts the new one once
   // this one has gone. Not on a device's channel. API 77.
   rpc RestartWhenIdle(RestartWhenIdleRequest) returns (RestartWhenIdleResponse);
+  // Asks GitHub for Nushi's latest release now, whatever the setting
+  // (the daemon also asks at start and every 2 hours while
+  // Settings.check_updates is on), and says what it found. Not on a
+  // device's channel. API 86.
+  rpc CheckForUpdates(CheckForUpdatesRequest) returns (CheckForUpdatesResponse);
   // Lists every stored chat.
   rpc ListChats(ListChatsRequest) returns (ListChatsResponse);
   // Returns everything a chat's events have built so far, to pick it up
@@ -384,6 +389,30 @@ message PingResponse {
   // The release it was packaged as ("1.2.0"), "" for a build that wasn't
   // (API 74).
   string version = 3;
+  // What its check for a newer release found (API 86).
+  UpdateCheck update = 4;
+}
+
+// What the daemon's check for a newer release of Nushi found: GitHub's
+// latest release (not a draft or a pre-release), compared with the
+// daemon's own version. A build that isn't a release never has a newer
+// one; nor does any while Settings.check_updates is off.
+message UpdateCheck {
+  // The newer release, when there is one: its version ("0.1.17"), its
+  // page on GitHub, and when it was published.
+  string version = 1;
+  string url = 2;
+  int64 published_ms = 3;
+  // The latest release, newer or not; "" until GitHub has answered.
+  string latest = 4;
+  // When GitHub last answered; 0: not yet.
+  int64 checked_ms = 5;
+}
+
+message CheckForUpdatesRequest {}
+
+message CheckForUpdatesResponse {
+  UpdateCheck update = 1;
 }
 
 message RestartWhenIdleRequest {}
@@ -941,6 +970,10 @@ message Settings {
   // A copy goes this many days after it was last written; 0: never.
   // SetSettings leaves it as it is when not given.
   optional int32 transcript_days = 4;
+  // The daemon asks GitHub for a newer release of Nushi at start and every
+  // 2 hours; on by default. SetSettings leaves it as it is when not given
+  // (API 86).
+  optional bool check_updates = 5;
 }
 
 message ListTranscriptsRequest {}
@@ -1541,6 +1574,9 @@ message EventsResponse {
     // The chats removed because their agent no longer has their sessions,
     // all of them (ListChatsResponse.removed); chat_id is empty.
     RemovedChats removed_chats = 15;
+    // What the check for a newer release found, when that changed
+    // (chat_id is empty; API 86).
+    UpdateCheck update = 16;
   }
 }
 

@@ -211,6 +211,7 @@ type settings struct {
 	DebugLog          bool  `json:"debugLog,omitempty"`
 	KeepTranscripts   *bool `json:"keepTranscripts,omitempty"`
 	TranscriptDays    int   `json:"transcriptDays,omitempty"`
+	CheckUpdates      *bool `json:"checkUpdates,omitempty"`
 }
 
 // defaultSleepAfter is how long chats idle before they sleep, until the
@@ -294,4 +295,18 @@ func (s *Store) TranscriptDays() int {
 // SetTranscriptDays remembers how many days copies are kept; 0: for good.
 func (s *Store) SetTranscriptDays(days int) error {
 	return s.changeSettings(func(set *settings) { set.TranscriptDays = days })
+}
+
+// CheckUpdates says whether the daemon asks GitHub for a newer release;
+// on until turned off.
+func (s *Store) CheckUpdates() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	on := s.settingsLocked().CheckUpdates
+	return on == nil || *on
+}
+
+// SetCheckUpdates remembers whether the daemon checks for a newer release.
+func (s *Store) SetCheckUpdates(on bool) error {
+	return s.changeSettings(func(set *settings) { set.CheckUpdates = &on })
 }

@@ -33,6 +33,7 @@ import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_card.dart';
+import 'package:nushi/update_toast.dart';
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -286,7 +287,19 @@ class _Shell extends StatelessWidget {
           if (daemon.connected && daemon.removedChats.isNotEmpty)
             RemovedChatsBar(daemon),
           if (daemon.notice != null) NoticeBar(daemon),
-          Expanded(child: app),
+          // A newer release's toast, in the bottom right corner.
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(child: app),
+                Positioned(
+                  right: UpdateToast.inset,
+                  bottom: UpdateToast.inset,
+                  child: UpdateToast(daemon),
+                ),
+              ],
+            ),
+          ),
           StatusBar(daemon),
         ],
       );

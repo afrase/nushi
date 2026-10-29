@@ -412,6 +412,9 @@ type Event struct {
 	// RemovedChats, when not nil, are all the chats removed because their
 	// agent no longer has their sessions; ChatID is "".
 	RemovedChats *[]RemovedChat
+	// Update, when not nil, is what the check for a newer release found,
+	// as it stands; ChatID is "".
+	Update *Update
 }
 
 // Terminal is a shell the user runs beside a chat, in the daemon.

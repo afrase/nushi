@@ -4,6 +4,7 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 
 abstract final class NushiService {
@@ -29,6 +30,17 @@ abstract final class NushiService {
     connect.StreamType.unary,
     nushiv1nushi.RestartWhenIdleRequest.new,
     nushiv1nushi.RestartWhenIdleResponse.new,
+  );
+
+  /// Asks GitHub for Nushi's latest release now, whatever the setting
+  /// (the daemon also asks at start and every 2 hours while
+  /// Settings.check_updates is on), and says what it found. Not on a
+  /// device's channel. API 86.
+  static const checkForUpdates = connect.Spec(
+    '/$name/CheckForUpdates',
+    connect.StreamType.unary,
+    nushiv1nushi.CheckForUpdatesRequest.new,
+    nushiv1nushi.CheckForUpdatesResponse.new,
   );
 
   /// Lists every stored chat.

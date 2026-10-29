@@ -85,16 +85,22 @@ FakeDaemon settingsFake({List<TranscriptCopy>? copies}) {
       Device(id: 'p1', name: 'Aaron’s iPhone', lastSeen: Int64(now - 3600000)),
     ],
   );
+  final checked = now - 12 * 60000; // "Last checked 12m ago"
   final fake = FakeDaemon(settingsChats)
     ..settings = Settings(
       sleepAfterMinutes: 30,
       debugLog: false,
       keepTranscripts: true,
       transcriptDays: 90,
+      checkUpdates: true,
     )
     ..answer = (input) => switch (input) {
       // A packaged daemon's, as Logs & advanced shows it.
-      PingRequest() => PingResponse(apiVersion: apiVersion, version: '1.2.0'),
+      PingRequest() => PingResponse(
+        apiVersion: apiVersion,
+        version: '1.2.0',
+        update: UpdateCheck(latest: '1.2.0', checkedMs: Int64(checked)),
+      ),
       ListTranscriptsRequest() => ListTranscriptsResponse(
         totalBytes: Int64(list.fold(0, (n, c) => n + c.bytes.toInt())),
         copies: list,

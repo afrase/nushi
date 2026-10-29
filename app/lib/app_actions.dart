@@ -28,6 +28,7 @@ import 'package:nushi/settings_view.dart';
 import 'package:nushi/side_panel.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/update_toast.dart';
 import 'package:nushi/widgets.dart';
 
 // The app's actions in one place: each is a row of the ⌘K palette, its
@@ -80,7 +81,8 @@ enum Act {
   settings(key: settingsKey, menu: ActMenu.nushi, menuLabel: 'Settings…'),
   jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
   github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
-  restart;
+  restart,
+  checkUpdates(menu: ActMenu.nushi, menuLabel: 'Check for Updates…');
 
   new({this.key, this.keyText, this.menu, this.menuLabel});
 
@@ -245,6 +247,12 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       'Restart daemon',
       enabled: bundledDaemon != null,
       run: () => unawaited(restartDaemonAsking(context, d)),
+    ),
+    AppAction(
+      .checkUpdates,
+      'Check for updates',
+      enabled: d.connected && d.daemonApi >= updatesApi,
+      run: () => unawaited(checkForUpdates(context, d)),
     ),
   ];
 }

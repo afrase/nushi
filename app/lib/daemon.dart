@@ -38,7 +38,11 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 85;
+const apiVersion = 86;
+
+/// The API from which the daemon checks for a newer release of Nushi
+/// (Ping's update, CheckForUpdates, Settings.check_updates).
+const updatesApi = 86;
 
 /// The API from which a daemon restarts itself once nothing runs, when
 /// asked (RestartWhenIdle).
@@ -136,6 +140,23 @@ class Daemon extends ChangeNotifier {
   static bool _sameHolds(List<RestartHold> a, List<RestartHold> b) =>
       a.length == b.length &&
       [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
+
+  /// What the daemon's check for a newer release found, from its pings and
+  /// events (API 86); empty until it said.
+  UpdateCheck update = UpdateCheck();
+
+  void _sawUpdate(UpdateCheck u) {
+    if (u == update) return;
+    update = u;
+    notifyListeners();
+  }
+
+  /// Asks the daemon to check for a newer release now.
+  Future<UpdateCheck> checkForUpdates() async {
+    final r = await client.checkForUpdates(CheckForUpdatesRequest());
+    _sawUpdate(r.update);
+    return r.update;
+  }
 
   /// Whether the daemon last answered [updatesWhenIdle]: when it's gone,
   /// it's restarting.
@@ -339,10 +360,12 @@ class Daemon extends ChangeNotifier {
     var api = 0;
     var build = '';
     var version = '';
+    var found = UpdateCheck();
     try {
       // A daemon that hangs counts as gone, rather than stalling the pings.
       final r = await client.ping(PingRequest()).timeout(wait);
       (api, build, version) = (r.apiVersion, r.build, r.version);
+      found = r.update;
       pingError = null;
     } on Object catch (e) {
       pingError = e;
@@ -352,6 +375,7 @@ class Daemon extends ChangeNotifier {
     }
     final ok = api > 0;
     if (ok) _launcher.launches = 0;
+    if (ok && !remote) _sawUpdate(found);
     if (ok && _events == null) _subscribe();
     if (ok && (!connected || build != _build)) macView.forget();
     if (ok != connected || ok && (api != daemonApi || build != _build)) {
@@ -482,6 +506,8 @@ class Daemon extends ChangeNotifier {
     onEvent?.call(e);
     if (e.hasRemote()) {
       remoteState.value = e.remote;
+    } else if (e.hasUpdate()) {
+      if (!remote) _sawUpdate(e.update);
     } else if (e.hasRemovedChats()) {
       removedChats = e.removedChats.chats;
       notifyListeners();

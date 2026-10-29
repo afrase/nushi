@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 85
+const Version = 86
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -66,6 +66,7 @@ type server struct {
 	github   *github.Service
 	logPrefs LogPrefs
 	restart  Restart
+	updates  Updates
 
 	transcripts TranscriptPrefs
 }
@@ -88,6 +89,8 @@ type Services struct {
 	Transcripts TranscriptPrefs
 	// Restart stops the daemon for a newer build; nil: it isn't offered.
 	Restart Restart
+	// Updates checks for a newer release; nil: it doesn't.
+	Updates Updates
 }
 
 // Restart stops the daemon for a newer build once nothing would be lost
@@ -104,7 +107,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
 		connect.WithCompressMinBytes(1024)))
@@ -121,6 +124,8 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceSendTestPushProcedure:   true,
 	// The Mac's app starts the new daemon.
 	nushiv1connect.NushiServiceRestartWhenIdleProcedure: true,
+	// The phone shows nothing of updates.
+	nushiv1connect.NushiServiceCheckForUpdatesProcedure: true,
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,
@@ -154,7 +159,7 @@ func WithToken(token string, h http.Handler) http.Handler {
 }
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
-	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build, Version: Release}), nil
+	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build, Version: Release, Update: s.update()}), nil
 }
 
 func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.RestartWhenIdleRequest]) (*connect.Response[nushiv1.RestartWhenIdleResponse], error) {
@@ -505,6 +510,10 @@ func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettin
 		keep, days := s.transcripts.KeepTranscripts(), int32(s.transcripts.TranscriptDays())
 		set.KeepTranscripts, set.TranscriptDays = &keep, &days
 	}
+	if s.updates != nil {
+		on := s.updates.On()
+		set.CheckUpdates = &on
+	}
 	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: set}), nil
 }
 
@@ -521,6 +530,9 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 	}
 	if err := s.setTranscripts(req.Msg.GetSettings()); err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err := s.setCheckUpdates(req.Msg.GetSettings()); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&nushiv1.SetSettingsResponse{}), nil
 }

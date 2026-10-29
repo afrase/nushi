@@ -77,6 +77,7 @@ class _SettingsViewState extends State<SettingsView> {
 
   Widget _page(SettingsSection s) => switch (s) {
     SettingsSection.general => GeneralSection(
+      daemon: daemon,
       settings: _set,
       onChange: _change,
     ),

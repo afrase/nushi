@@ -4,10 +4,11 @@
 //
 
 import "package:connectrpc/connect.dart" as connect;
+
 import "nushi.pb.dart" as nushiv1nushi;
 import "nushi.connect.spec.dart" as specs;
 
-extension type NushiServiceClient (connect.Transport _transport) {
+extension type NushiServiceClient(connect.Transport _transport) {
   Future<nushiv1nushi.PingResponse> ping(
     nushiv1nushi.PingRequest input, {
     connect.Headers? headers,
@@ -41,6 +42,27 @@ extension type NushiServiceClient (connect.Transport _transport) {
   }) {
     return connect.Client(_transport).unary(
       specs.NushiService.restartWhenIdle,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Asks GitHub for Nushi's latest release now, whatever the setting
+  /// (the daemon also asks at start and every 2 hours while
+  /// Settings.check_updates is on), and says what it found. Not on a
+  /// device's channel. API 86.
+  Future<nushiv1nushi.CheckForUpdatesResponse> checkForUpdates(
+    nushiv1nushi.CheckForUpdatesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.checkForUpdates,
       input,
       signal: signal,
       headers: headers,
