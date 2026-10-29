@@ -37,6 +37,8 @@ type Session struct {
 	closing   chan struct{}
 	closeOnce sync.Once
 
+	queued uint64 // messages joined the queue so far; read's own
+
 	qmu   sync.Mutex
 	queue []Message
 	qdone bool          // stdout has ended: nothing more joins the queue
@@ -152,6 +154,7 @@ func (s *Session) read() {
 		if si, ok := m.(*SystemInit); ok {
 			s.addCapabilities(si.Capabilities) // before the message is seen, so Has agrees with it
 		}
+		s.queued++
 		s.qmu.Lock()
 		s.queue = append(s.queue, m)
 		s.qmu.Unlock()
