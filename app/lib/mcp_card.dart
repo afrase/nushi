@@ -20,9 +20,8 @@ PanelCard mcpCard(ChatState chat, Daemon daemon) {
   if (knownAgents[chat.agent]?.mcp == false) {
     return PanelCard(
       title: 'MCP',
-      rows: [
-        (null, '${chat.agentName} uses the MCP servers in its own config.'),
-      ],
+      rows: const [],
+      note: "In ${chat.agentName}'s own config",
     );
   }
   final list = McpServers.of(

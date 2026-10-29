@@ -97,9 +97,11 @@ class CardShell extends StatefulWidget {
     super.key,
     this.trailing,
     this.index = 0,
+    this.chevron = true,
   });
 
   final Widget title;
+  final bool chevron; // false: a one-line card, nothing to open
   final bool open;
   final VoidCallback onToggle;
   final Widget body;
@@ -146,7 +148,7 @@ class _CardShellState extends State<CardShell> {
                   children: [
                     widget.title,
                     const SizedBox(width: 2),
-                    Chevron(open: widget.open, size: 15),
+                    if (widget.chevron) Chevron(open: widget.open, size: 15),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Align(
@@ -193,6 +195,8 @@ class PanelCard extends StatelessWidget {
     this.onTap,
     this.action,
     this.index = 0,
+    this.note,
+    this.tooltip,
   });
 
   /// This card as the [i]th of the list, which its title row drags in.
@@ -204,7 +208,17 @@ class PanelCard extends StatelessWidget {
     onTap: onTap,
     action: action,
     index: i,
+    note: note,
+    tooltip: tooltip,
   );
+
+  /// The title's tooltip, worded as it's hovered (a time in it is
+  /// current).
+  final String Function()? tooltip;
+
+  /// What the card says when it has nothing to offer ("Not a git
+  /// repository"): one line, its title and this, nothing to open.
+  final String? note;
 
   final String title;
   final List<(String?, Object)> rows;
@@ -236,6 +250,30 @@ class PanelCard extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final muted = theme.ui(t.textMuted, size: 12);
+    Widget titleText = Text(
+      title,
+      style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
+    );
+    if (tooltip case final words?) titleText = _HoverTip(words, titleText);
+    if (note case final n?) {
+      return CardShell(
+        index: index,
+        open: false,
+        chevron: false,
+        onToggle: () {},
+        title: titleText,
+        trailing: Tooltip(
+          message: n,
+          child: Text(
+            n,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: muted,
+          ),
+        ),
+        body: const SizedBox.shrink(),
+      );
+    }
     return ListenableBuilder(
       listenable: Listenable.merge([collapsedCards, revealCard]),
       builder: (context, _) {
@@ -248,10 +286,7 @@ class PanelCard extends StatelessWidget {
           onToggle: () => collapsedCards.value = open
               ? {...collapsed, title}
               : ({...collapsed}..remove(title)),
-          title: Text(
-            title,
-            style: theme.ui(t.textSecondary, size: 12, weight: FontWeight.w600),
-          ),
+          title: titleText,
           trailing: open ? action : summary,
           body: Tap(
             onTap: onTap,
@@ -294,6 +329,25 @@ class PanelCard extends StatelessWidget {
       },
     );
   }
+}
+
+/// A tooltip worded again each time the pointer comes in.
+class _HoverTip extends StatefulWidget {
+  const new(this.words, this.child);
+
+  final String Function() words;
+  final Widget child;
+
+  @override
+  State<_HoverTip> createState() => _HoverTipState();
+}
+
+class _HoverTipState extends State<_HoverTip> {
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() {}),
+    child: Tooltip(message: widget.words(), child: widget.child),
+  );
 }
 
 /// The saved card order once the card [from] of those [shown] moved to

@@ -254,6 +254,15 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       ),
       PanelCard(
         title: 'Context',
+        // Nothing to show yet: one line.
+        note:
+            u.contextSize == 0 &&
+                cost(u).isEmpty &&
+                lastTurn(u).isEmpty &&
+                _context == null &&
+                !_asking
+            ? 'Not reported yet'
+            : null,
         summary: ContextMeter(u, breakdown: _context),
         rows: [
           if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
@@ -311,6 +320,9 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       ),
       PanelCard(
         title: 'Changes',
+        note: _error == null && status != null && !status.git
+            ? (status.gone ? 'The folder is gone' : 'Not a git repository')
+            : null,
         summary: lines,
         onTap: status != null && status.git ? widget.onChanges : null,
         rows: [
