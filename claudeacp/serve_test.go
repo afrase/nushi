@@ -183,6 +183,24 @@ func TestClose(t *testing.T) {
 	}
 }
 
+// A client that goes mid-turn has claude interrupted once: closing the
+// session interrupts the turn, and the prompt's request ending with the
+// connection isn't a cancel of its own, which would race the close with a
+// second interrupt (the parity scenario eof-mid-tool).
+func TestClientGoesMidTurn(t *testing.T) {
+	taken := make(chan struct{})
+	f := fake(user("id2"), echo("id2"), signal(taken))
+	p := start(t, nil, f)
+	sid := p.open(t)
+	p.prompt(t, sid, "hi")
+	wait(t, taken, "the prompt taken")
+	_ = p.Close()
+	<-f.Exited()
+	if f.Err() != nil || len(asked(f)) != 1 || !strings.Contains(asked(f)[0], "interrupt") {
+		t.Errorf("%v %q", f.Err(), asked(f))
+	}
+}
+
 // claude dying fails the turns, and the session goes.
 func TestDeath(t *testing.T) {
 	first := make(chan struct{})
