@@ -1,8 +1,10 @@
 package claudeacp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"reflect"
 	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -81,10 +83,11 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID, parent: parent}
 	}
 	// A call the stream showed whole keeps the input it showed, as with
-	// claude-agent-acp: the request's is claude's parse of it, the same
-	// but for its keys' order.
+	// claude-agent-acp, when the request's is claude's parse of it, the
+	// same but for its keys' order. Input a hook changed is shown again,
+	// so the call reads as what the user is asked to allow.
 	t := ts.byID[r.ToolUseID]
-	if t == nil || !t.whole {
+	if t == nil || !t.whole || !sameJSON(t.sent["rawInput"], input) {
 		t = s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
 	}
 	v := toolView(t.name, input, ts.cwd)
@@ -208,4 +211,14 @@ func (s *session) withdrawLocked(which func(*ask) bool) {
 			a.cancel()
 		}
 	}
+}
+
+// sameJSON says whether a and b are the same JSON value, whatever their
+// keys' order and spacing.
+func sameJSON(a string, b json.RawMessage) bool {
+	var x, y any
+	da, db := json.NewDecoder(strings.NewReader(a)), json.NewDecoder(bytes.NewReader(b))
+	da.UseNumber()
+	db.UseNumber()
+	return da.Decode(&x) == nil && db.Decode(&y) == nil && reflect.DeepEqual(x, y)
 }

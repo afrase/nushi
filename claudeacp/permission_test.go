@@ -115,6 +115,28 @@ func TestRequestKeepsStreamedInput(t *testing.T) {
 	}
 }
 
+// A request whose input differs from the streamed call's (a PreToolUse
+// hook changed it) shows the call again with the request's input, so the
+// chat reads as what the user allows.
+func TestRequestShowsChangedInput(t *testing.T) {
+	f := fake(user("id2"), echo("id2"), assistant(`{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"ls"}}`),
+		canUseTool("toolu_1", "Bash", `{"command":"rm -rf x"}`, ""),
+		answers("toolu_1", `{"behavior":"allow","updatedInput":{"command":"rm -rf x"},"toolUseID":"toolu_1","decisionClassification":"user_temporary"}`),
+		result(names("id2")), claudetest.Send(idle))
+	p := start(t, &acp.ClientCapabilities{}, f)
+	p.permit = pick(optAllowOnce)
+	stopReason(p.prompt(t, p.open(t), "go"))
+	var shown []string
+	for _, u := range p.toolUpdates() {
+		if strings.Contains(u, `"rawInput":{"command"`) {
+			shown = append(shown, u)
+		}
+	}
+	if len(shown) != 2 || !strings.Contains(shown[1], `rm -rf x`) {
+		t.Errorf("%q", shown)
+	}
+}
+
 // "Don't ask again" is offered only with claude's rules for it, and not
 // when a rule of the user's asks each time; default-to-no puts No first.
 func TestPermissionOptions(t *testing.T) {
