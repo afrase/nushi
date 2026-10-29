@@ -29,7 +29,7 @@ const maxKeyLines = 200
 // keyBegin is a private or secret key's BEGIN line: PEM's ("RSA PRIVATE
 // KEY", "OPENSSH PRIVATE KEY", "ENCRYPTED PRIVATE KEY") and PGP's
 // ("PGP PRIVATE KEY BLOCK", "PGP SECRET KEY BLOCK").
-var keyBegin = regexp.MustCompile(`-----BEGIN [A-Z0-9 ]*(PRIVATE|SECRET) KEY`)
+var keyBegin = regexp.MustCompile(`-{5}BEGIN [A-Z0-9 ]*(PRIVATE|SECRET) KEY`)
 
 // stderrLines makes a log record (source=agent) of each line the agent
 // writes to its stderr, within the caps above; the lines dropped are
