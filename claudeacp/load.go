@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -67,6 +68,8 @@ func (a *agent) reopen(ctx context.Context, id string, su setup, replay bool) (*
 	if err != nil {
 		return nil, err
 	}
+	unlock := a.opening(id)
+	defer unlock()
 	s, err := a.session(acp.SessionID(id))
 	open := err == nil
 	var ms []sessions.Message
@@ -87,6 +90,23 @@ func (a *agent) reopen(ctx context.Context, id string, su setup, replay bool) (*
 	}
 	s.sendCommands()
 	return s, nil
+}
+
+// opening has the caller reopen session id alone, so two loads of a
+// session at once run one claude, not two; it returns the unlock.
+func (a *agent) opening(id string) (unlock func()) {
+	a.mu.Lock()
+	if a.reopening == nil {
+		a.reopening = map[string]*sync.Mutex{}
+	}
+	m := a.reopening[id]
+	if m == nil {
+		m = new(sync.Mutex)
+		a.reopening[id] = m
+	}
+	a.mu.Unlock()
+	m.Lock()
+	return m.Unlock
 }
 
 func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {

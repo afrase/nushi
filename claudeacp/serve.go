@@ -41,9 +41,10 @@ type agent struct {
 	after  func(time.Duration) <-chan time.Time // the clock; tests give a fake one
 	newID  func() string                        // session and message ids; tests give counted ones
 
-	mu       sync.Mutex
-	caps     clientCaps
-	sessions map[string]*session
+	mu        sync.Mutex
+	caps      clientCaps
+	sessions  map[string]*session
+	reopening map[string]*sync.Mutex // by session id: one load or resume of each at a time
 }
 
 // clientCaps is what the client said it handles, of what changes how a

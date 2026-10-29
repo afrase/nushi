@@ -70,6 +70,26 @@ func TestLoadReplaysHistory(t *testing.T) {
 	}
 }
 
+// Two loads of a session at once run one claude: the second finds the
+// session the first opened.
+func TestLoadTwiceAtOnce(t *testing.T) {
+	p := start(t, nil, fake()) // one claude: a second start would fail
+	cwd, sid := t.TempDir(), uuid(1)
+	p.writeHistory(t, cwd, sid, userRec("u1", "hello"))
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() {
+			_, err := p.load(sid, cwd)
+			errs <- err
+		}()
+	}
+	for range 2 {
+		if err := <-errs; err != nil {
+			t.Error(err)
+		}
+	}
+}
+
 // A session claude has no transcript of, or quits on before answering
 // (it says "No conversation found"), is resourceNotFound, naming it.
 func TestLoadMissing(t *testing.T) {
