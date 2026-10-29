@@ -14,7 +14,8 @@ import 'package:nushi/daemon.dart';
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
 /// collapsed, the models picked last, each chat's pinned artifacts, and
-/// the Mac's notifications and Dock badge, and the appearance.
+/// the Mac's notifications and Dock badge, the appearance, and the newer
+/// release whose toast was dismissed.
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
 final showDetails = ValueNotifier<bool>(_saved['details'] != false)
@@ -165,6 +166,15 @@ final alertSound = ValueNotifier<bool>(_saved['alertSound'] == true)
 final dockBadge = ValueNotifier<bool>(_saved['dockBadge'] != false)
   ..addListener(_save);
 
+/// The newer release whose toast was dismissed ("0.1.17"): it shows again
+/// only for a newer one.
+final dismissedUpdate = ValueNotifier<String?>(
+  switch (_saved['dismissedUpdate']) {
+    final String v => v,
+    _ => null,
+  },
+)..addListener(_save);
+
 File get _settings => File('$dataDir/app.json');
 
 final Map<String, Object?> _saved = readSaved();
@@ -233,6 +243,7 @@ void _save() {
         'alertSound': alertSound.value,
         'dockBadge': dockBadge.value,
         'appearance': appearance.value.name,
+        'dismissedUpdate': dismissedUpdate.value,
       }),
     );
   } on Object {

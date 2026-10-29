@@ -68,11 +68,13 @@ class PingResponse extends $pb.GeneratedMessage {
     $core.int? apiVersion,
     $core.String? build,
     $core.String? version,
+    UpdateCheck? update,
   }) {
     final result = PingResponse._();
     if (apiVersion != null) result.apiVersion = apiVersion;
     if (build != null) result.build = build;
     if (version != null) result.version = version;
+    if (update != null) result.update = update;
     return result;
   }
 
@@ -92,6 +94,8 @@ class PingResponse extends $pb.GeneratedMessage {
     ..aI(1, _omitFieldNames ? '' : 'apiVersion')
     ..aOS(2, _omitFieldNames ? '' : 'build')
     ..aOS(3, _omitFieldNames ? '' : 'version')
+    ..aOM<UpdateCheck>(4, _omitFieldNames ? '' : 'update',
+        subBuilder: UpdateCheck.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -148,6 +152,236 @@ class PingResponse extends $pb.GeneratedMessage {
   $core.bool hasVersion() => $_has(2);
   @$pb.TagNumber(3)
   void clearVersion() => $_clearField(3);
+
+  /// What its check for a newer release found (API 86).
+  @$pb.TagNumber(4)
+  UpdateCheck get update => $_getN(3);
+  @$pb.TagNumber(4)
+  set update(UpdateCheck value) => $_setField(4, value);
+  @$pb.TagNumber(4)
+  $core.bool hasUpdate() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearUpdate() => $_clearField(4);
+  @$pb.TagNumber(4)
+  UpdateCheck ensureUpdate() => $_ensure(3);
+}
+
+/// What the daemon's check for a newer release of Nushi found: GitHub's
+/// latest release (not a draft or a pre-release), compared with the
+/// daemon's own version. A build that isn't a release never has a newer
+/// one; nor does any while Settings.check_updates is off.
+class UpdateCheck extends $pb.GeneratedMessage {
+  factory UpdateCheck({
+    $core.String? version,
+    $core.String? url,
+    $fixnum.Int64? publishedMs,
+    $core.String? latest,
+    $fixnum.Int64? checkedMs,
+  }) {
+    final result = UpdateCheck._();
+    if (version != null) result.version = version;
+    if (url != null) result.url = url;
+    if (publishedMs != null) result.publishedMs = publishedMs;
+    if (latest != null) result.latest = latest;
+    if (checkedMs != null) result.checkedMs = checkedMs;
+    return result;
+  }
+
+  UpdateCheck._();
+
+  factory UpdateCheck.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateCheck()..mergeFromBuffer(data, registry);
+  factory UpdateCheck.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateCheck()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateCheck',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: UpdateCheck.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'version')
+    ..aOS(2, _omitFieldNames ? '' : 'url')
+    ..aInt64(3, _omitFieldNames ? '' : 'publishedMs')
+    ..aOS(4, _omitFieldNames ? '' : 'latest')
+    ..aInt64(5, _omitFieldNames ? '' : 'checkedMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateCheck clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateCheck copyWith(void Function(UpdateCheck) updates) =>
+      super.copyWith((message) => updates(message as UpdateCheck))
+          as UpdateCheck;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use UpdateCheck() / UpdateCheck.new instead')
+  static UpdateCheck create() => UpdateCheck._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateCheck._();
+  @$core.override
+  UpdateCheck createEmptyInstance() => UpdateCheck._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateCheck getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<UpdateCheck>(
+          UpdateCheck.$_createMessage);
+  static UpdateCheck? _defaultInstance;
+
+  /// The newer release, when there is one: its version ("0.1.17"), its
+  /// page on GitHub, and when it was published.
+  @$pb.TagNumber(1)
+  $core.String get version => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set version($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasVersion() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearVersion() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get url => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set url($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasUrl() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearUrl() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get publishedMs => $_getI64(2);
+  @$pb.TagNumber(3)
+  set publishedMs($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPublishedMs() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPublishedMs() => $_clearField(3);
+
+  /// The latest release, newer or not; "" until GitHub has answered.
+  @$pb.TagNumber(4)
+  $core.String get latest => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set latest($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLatest() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLatest() => $_clearField(4);
+
+  /// When GitHub last answered; 0: not yet.
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get checkedMs => $_getI64(4);
+  @$pb.TagNumber(5)
+  set checkedMs($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCheckedMs() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCheckedMs() => $_clearField(5);
+}
+
+class CheckForUpdatesRequest extends $pb.GeneratedMessage {
+  factory CheckForUpdatesRequest() => CheckForUpdatesRequest._();
+
+  CheckForUpdatesRequest._();
+
+  factory CheckForUpdatesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckForUpdatesRequest()..mergeFromBuffer(data, registry);
+  factory CheckForUpdatesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckForUpdatesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CheckForUpdatesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CheckForUpdatesRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckForUpdatesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckForUpdatesRequest copyWith(
+          void Function(CheckForUpdatesRequest) updates) =>
+      super.copyWith((message) => updates(message as CheckForUpdatesRequest))
+          as CheckForUpdatesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CheckForUpdatesRequest() / CheckForUpdatesRequest.new instead')
+  static CheckForUpdatesRequest create() => CheckForUpdatesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CheckForUpdatesRequest._();
+  @$core.override
+  CheckForUpdatesRequest createEmptyInstance() => CheckForUpdatesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CheckForUpdatesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CheckForUpdatesRequest>(
+          CheckForUpdatesRequest.$_createMessage);
+  static CheckForUpdatesRequest? _defaultInstance;
+}
+
+class CheckForUpdatesResponse extends $pb.GeneratedMessage {
+  factory CheckForUpdatesResponse({
+    UpdateCheck? update,
+  }) {
+    final result = CheckForUpdatesResponse._();
+    if (update != null) result.update = update;
+    return result;
+  }
+
+  CheckForUpdatesResponse._();
+
+  factory CheckForUpdatesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckForUpdatesResponse()..mergeFromBuffer(data, registry);
+  factory CheckForUpdatesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CheckForUpdatesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CheckForUpdatesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CheckForUpdatesResponse.$_createMessage)
+    ..aOM<UpdateCheck>(1, _omitFieldNames ? '' : 'update',
+        subBuilder: UpdateCheck.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckForUpdatesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CheckForUpdatesResponse copyWith(
+          void Function(CheckForUpdatesResponse) updates) =>
+      super.copyWith((message) => updates(message as CheckForUpdatesResponse))
+          as CheckForUpdatesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CheckForUpdatesResponse() / CheckForUpdatesResponse.new instead')
+  static CheckForUpdatesResponse create() => CheckForUpdatesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CheckForUpdatesResponse._();
+  @$core.override
+  CheckForUpdatesResponse createEmptyInstance() => CheckForUpdatesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CheckForUpdatesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CheckForUpdatesResponse>(
+          CheckForUpdatesResponse.$_createMessage);
+  static CheckForUpdatesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  UpdateCheck get update => $_getN(0);
+  @$pb.TagNumber(1)
+  set update(UpdateCheck value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUpdate() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUpdate() => $_clearField(1);
+  @$pb.TagNumber(1)
+  UpdateCheck ensureUpdate() => $_ensure(0);
 }
 
 class RestartWhenIdleRequest extends $pb.GeneratedMessage {
@@ -5510,12 +5744,14 @@ class Settings extends $pb.GeneratedMessage {
     $core.bool? debugLog,
     $core.bool? keepTranscripts,
     $core.int? transcriptDays,
+    $core.bool? checkUpdates,
   }) {
     final result = Settings._();
     if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
     if (debugLog != null) result.debugLog = debugLog;
     if (keepTranscripts != null) result.keepTranscripts = keepTranscripts;
     if (transcriptDays != null) result.transcriptDays = transcriptDays;
+    if (checkUpdates != null) result.checkUpdates = checkUpdates;
     return result;
   }
 
@@ -5536,6 +5772,7 @@ class Settings extends $pb.GeneratedMessage {
     ..aOB(2, _omitFieldNames ? '' : 'debugLog')
     ..aOB(3, _omitFieldNames ? '' : 'keepTranscripts')
     ..aI(4, _omitFieldNames ? '' : 'transcriptDays')
+    ..aOB(5, _omitFieldNames ? '' : 'checkUpdates')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5601,6 +5838,18 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasTranscriptDays() => $_has(3);
   @$pb.TagNumber(4)
   void clearTranscriptDays() => $_clearField(4);
+
+  /// The daemon asks GitHub for a newer release of Nushi at start and every
+  /// 2 hours; on by default. SetSettings leaves it as it is when not given
+  /// (API 86).
+  @$pb.TagNumber(5)
+  $core.bool get checkUpdates => $_getBF(4);
+  @$pb.TagNumber(5)
+  set checkUpdates($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCheckUpdates() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCheckUpdates() => $_clearField(5);
 }
 
 class ListTranscriptsRequest extends $pb.GeneratedMessage {
@@ -11623,6 +11872,7 @@ enum EventsResponse_Kind {
   dropped,
   remote,
   removedChats,
+  update,
   notSet
 }
 
@@ -11643,6 +11893,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     $core.String? dropped,
     Remote? remote,
     RemovedChats? removedChats,
+    UpdateCheck? update,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -11660,6 +11911,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (dropped != null) result.dropped = dropped;
     if (remote != null) result.remote = remote;
     if (removedChats != null) result.removedChats = removedChats;
+    if (update != null) result.update = update;
     return result;
   }
 
@@ -11687,13 +11939,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     13: EventsResponse_Kind.dropped,
     14: EventsResponse_Kind.remote,
     15: EventsResponse_Kind.removedChats,
+    16: EventsResponse_Kind.update,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -11719,6 +11972,8 @@ class EventsResponse extends $pb.GeneratedMessage {
         subBuilder: Remote.$_createMessage)
     ..aOM<RemovedChats>(15, _omitFieldNames ? '' : 'removedChats',
         subBuilder: RemovedChats.$_createMessage)
+    ..aOM<UpdateCheck>(16, _omitFieldNames ? '' : 'update',
+        subBuilder: UpdateCheck.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11756,6 +12011,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(13)
   @$pb.TagNumber(14)
   @$pb.TagNumber(15)
+  @$pb.TagNumber(16)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -11771,6 +12027,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(13)
   @$pb.TagNumber(14)
   @$pb.TagNumber(15)
+  @$pb.TagNumber(16)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -11941,6 +12198,19 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearRemovedChats() => $_clearField(15);
   @$pb.TagNumber(15)
   RemovedChats ensureRemovedChats() => $_ensure(14);
+
+  /// What the check for a newer release found, when that changed
+  /// (chat_id is empty; API 86).
+  @$pb.TagNumber(16)
+  UpdateCheck get update => $_getN(15);
+  @$pb.TagNumber(16)
+  set update(UpdateCheck value) => $_setField(16, value);
+  @$pb.TagNumber(16)
+  $core.bool hasUpdate() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearUpdate() => $_clearField(16);
+  @$pb.TagNumber(16)
+  UpdateCheck ensureUpdate() => $_ensure(15);
 }
 
 /// A chat's config options, all of them.
@@ -25419,6 +25689,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RestartWhenIdleRequest request) =>
       _client.invoke<RestartWhenIdleResponse>(ctx, 'NushiService',
           'RestartWhenIdle', request, RestartWhenIdleResponse());
+
+  /// Asks GitHub for Nushi's latest release now, whatever the setting
+  /// (the daemon also asks at start and every 2 hours while
+  /// Settings.check_updates is on), and says what it found. Not on a
+  /// device's channel. API 86.
+  $async.Future<CheckForUpdatesResponse> checkForUpdates(
+          $pb.ClientContext? ctx, CheckForUpdatesRequest request) =>
+      _client.invoke<CheckForUpdatesResponse>(ctx, 'NushiService',
+          'CheckForUpdates', request, CheckForUpdatesResponse());
 
   /// Lists every stored chat.
   $async.Future<ListChatsResponse> listChats(

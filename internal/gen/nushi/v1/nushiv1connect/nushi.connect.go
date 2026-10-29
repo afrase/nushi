@@ -38,6 +38,9 @@ const (
 	// NushiServiceRestartWhenIdleProcedure is the fully-qualified name of the NushiService's
 	// RestartWhenIdle RPC.
 	NushiServiceRestartWhenIdleProcedure = "/nushi.v1.NushiService/RestartWhenIdle"
+	// NushiServiceCheckForUpdatesProcedure is the fully-qualified name of the NushiService's
+	// CheckForUpdates RPC.
+	NushiServiceCheckForUpdatesProcedure = "/nushi.v1.NushiService/CheckForUpdates"
 	// NushiServiceListChatsProcedure is the fully-qualified name of the NushiService's ListChats RPC.
 	NushiServiceListChatsProcedure = "/nushi.v1.NushiService/ListChats"
 	// NushiServiceGetChatProcedure is the fully-qualified name of the NushiService's GetChat RPC.
@@ -365,6 +368,11 @@ type NushiServiceClient interface {
 	// that quit leaves the daemon running), and starts the new one once
 	// this one has gone. Not on a device's channel. API 77.
 	RestartWhenIdle(context.Context, *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error)
+	// Asks GitHub for Nushi's latest release now, whatever the setting
+	// (the daemon also asks at start and every 2 hours while
+	// Settings.check_updates is on), and says what it found. Not on a
+	// device's channel. API 86.
+	CheckForUpdates(context.Context, *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error)
 	// Lists every stored chat.
 	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Returns everything a chat's events have built so far, to pick it up
@@ -744,6 +752,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceRestartWhenIdleProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("RestartWhenIdle")),
+			connect.WithClientOptions(opts...),
+		),
+		checkForUpdates: connect.NewClient[v1.CheckForUpdatesRequest, v1.CheckForUpdatesResponse](
+			httpClient,
+			baseURL+NushiServiceCheckForUpdatesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CheckForUpdates")),
 			connect.WithClientOptions(opts...),
 		),
 		listChats: connect.NewClient[v1.ListChatsRequest, v1.ListChatsResponse](
@@ -1443,6 +1457,7 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 type nushiServiceClient struct {
 	ping                *connect.Client[v1.PingRequest, v1.PingResponse]
 	restartWhenIdle     *connect.Client[v1.RestartWhenIdleRequest, v1.RestartWhenIdleResponse]
+	checkForUpdates     *connect.Client[v1.CheckForUpdatesRequest, v1.CheckForUpdatesResponse]
 	listChats           *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	getChat             *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	getChatItems        *connect.Client[v1.GetChatItemsRequest, v1.GetChatItemsResponse]
@@ -1568,6 +1583,11 @@ func (c *nushiServiceClient) Ping(ctx context.Context, req *connect.Request[v1.P
 // RestartWhenIdle calls nushi.v1.NushiService.RestartWhenIdle.
 func (c *nushiServiceClient) RestartWhenIdle(ctx context.Context, req *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error) {
 	return c.restartWhenIdle.CallUnary(ctx, req)
+}
+
+// CheckForUpdates calls nushi.v1.NushiService.CheckForUpdates.
+func (c *nushiServiceClient) CheckForUpdates(ctx context.Context, req *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error) {
+	return c.checkForUpdates.CallUnary(ctx, req)
 }
 
 // ListChats calls nushi.v1.NushiService.ListChats.
@@ -2156,6 +2176,11 @@ type NushiServiceHandler interface {
 	// that quit leaves the daemon running), and starts the new one once
 	// this one has gone. Not on a device's channel. API 77.
 	RestartWhenIdle(context.Context, *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error)
+	// Asks GitHub for Nushi's latest release now, whatever the setting
+	// (the daemon also asks at start and every 2 hours while
+	// Settings.check_updates is on), and says what it found. Not on a
+	// device's channel. API 86.
+	CheckForUpdates(context.Context, *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error)
 	// Lists every stored chat.
 	ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error)
 	// Returns everything a chat's events have built so far, to pick it up
@@ -2531,6 +2556,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceRestartWhenIdleProcedure,
 		svc.RestartWhenIdle,
 		connect.WithSchema(nushiServiceMethods.ByName("RestartWhenIdle")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceCheckForUpdatesHandler := connect.NewUnaryHandler(
+		NushiServiceCheckForUpdatesProcedure,
+		svc.CheckForUpdates,
+		connect.WithSchema(nushiServiceMethods.ByName("CheckForUpdates")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListChatsHandler := connect.NewUnaryHandler(
@@ -3229,6 +3260,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServicePingHandler.ServeHTTP(w, r)
 		case NushiServiceRestartWhenIdleProcedure:
 			nushiServiceRestartWhenIdleHandler.ServeHTTP(w, r)
+		case NushiServiceCheckForUpdatesProcedure:
+			nushiServiceCheckForUpdatesHandler.ServeHTTP(w, r)
 		case NushiServiceListChatsProcedure:
 			nushiServiceListChatsHandler.ServeHTTP(w, r)
 		case NushiServiceGetChatProcedure:
@@ -3474,6 +3507,10 @@ func (UnimplementedNushiServiceHandler) Ping(context.Context, *connect.Request[v
 
 func (UnimplementedNushiServiceHandler) RestartWhenIdle(context.Context, *connect.Request[v1.RestartWhenIdleRequest]) (*connect.Response[v1.RestartWhenIdleResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RestartWhenIdle is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CheckForUpdates(context.Context, *connect.Request[v1.CheckForUpdatesRequest]) (*connect.Response[v1.CheckForUpdatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CheckForUpdates is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListChats(context.Context, *connect.Request[v1.ListChatsRequest]) (*connect.Response[v1.ListChatsResponse], error) {

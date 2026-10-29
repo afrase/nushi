@@ -5,11 +5,13 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/alerts_settings.dart';
 import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
+import 'package:nushi/settings_updates.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
@@ -30,12 +32,18 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 /// Settings › General: the appearance, when idle chats sleep, the Mac's
-/// notifications, and whether the daemon starts at login (the packaged
-/// app's, for the usual data folder).
+/// notifications, whether the daemon checks for updates, and whether it
+/// starts at login (the packaged app's, for the usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
-  const new({required this.settings, required this.onChange, super.key});
+  const new({
+    required this.daemon,
+    required this.settings,
+    required this.onChange,
+    super.key,
+  });
 
+  final Daemon daemon;
   final Settings? settings;
   final SettingsChange onChange;
 
@@ -75,6 +83,8 @@ class GeneralSection extends StatelessWidget {
           ],
         ),
       const NotificationsGroup(),
+      if (settings case final s? when s.hasCheckUpdates())
+        UpdatesGroup(daemon: daemon, settings: s, onChange: onChange),
       // The launch agent starts the usual data folder's daemon.
       if (bundledDaemon != null && Platform.environment['NUSHI_DATA'] == null)
         const StartAtLogin(),

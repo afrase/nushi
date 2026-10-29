@@ -368,6 +368,7 @@ class ChatState extends ChangeNotifier {
           EventsResponse_Kind.terminals ||
           EventsResponse_Kind.remote ||
           EventsResponse_Kind.removedChats ||
+          EventsResponse_Kind.update ||
           EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }
