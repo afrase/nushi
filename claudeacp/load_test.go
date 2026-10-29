@@ -3,6 +3,8 @@ package claudeacp
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -10,6 +12,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/claudeagent/claudetest"
+	"github.com/afrase/nushi/claudeagent/sessions"
 )
 
 // load asks to load session sid in cwd.
@@ -90,14 +93,11 @@ func TestLoadTwiceAtOnce(t *testing.T) {
 	}
 }
 
-// A session claude has no transcript of, or quits on before answering
-// (it says "No conversation found"), is resourceNotFound, naming it.
+// A session claude has no transcript of is resourceNotFound, naming it.
 func TestLoadMissing(t *testing.T) {
-	gone := claudetest.New(claudetest.Expect(initRequest), claudetest.Exit(1, "No conversation found with session ID: x\n"))
-	p := start(t, nil, gone)
+	p := start(t, nil)
 	cwd := t.TempDir()
-	p.writeHistory(t, cwd, uuid(2), userRec("u1", "hello"))
-	for _, sid := range []string{uuid(1), uuid(2), "../../etc"} {
+	for _, sid := range []string{uuid(1), "../../etc"} {
 		_, err := p.load(sid, cwd)
 		var e *acp.Error
 		if !errors.As(err, &e) || e.Code != acp.ErrorCodeResourceNotFound || string(e.Data) != `{"uri":"`+sid+`"}` {
@@ -109,6 +109,43 @@ func TestLoadMissing(t *testing.T) {
 	}
 	if len(p.notes()) != 0 {
 		t.Errorf("sent %q", p.replayed())
+	}
+}
+
+// A claude that quits on a resume before it answers leaves the session
+// not found only when its transcript has gone meanwhile; else it is an
+// internal error with what claude said, and the client keeps the session.
+func TestResumeClaudeQuits(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		gone bool // the transcript is removed while claude starts
+		want acp.ErrorCode
+	}{
+		{"transcript there", false, acp.ErrorCodeInternalError},
+		{"transcript gone", true, acp.ErrorCodeResourceNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cwd, sid := t.TempDir(), uuid(1)
+			var path string
+			quits := claudetest.New(claudetest.Expect(initRequest),
+				claudetest.Do(func() {
+					if tc.gone {
+						_ = os.Remove(path)
+					}
+				}),
+				claudetest.Exit(1, "Error: settings.json: unexpected token\n"))
+			p := start(t, nil, quits)
+			p.writeHistory(t, cwd, sid, userRec("u1", "hello"))
+			path = filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl")
+			_, err := p.ResumeSession(context.Background(), &acp.ResumeSessionRequest{SessionID: acp.SessionID(sid), Cwd: cwd})
+			var e *acp.Error
+			if !errors.As(err, &e) || e.Code != tc.want {
+				t.Fatalf("%v", err)
+			}
+			if !tc.gone && !strings.Contains(e.Message, "settings.json: unexpected token") {
+				t.Errorf("claude's stderr isn't in %q", e.Message)
+			}
+		})
 	}
 }
 
