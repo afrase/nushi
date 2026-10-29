@@ -140,7 +140,7 @@ The phone is Nushi's web app, added to the Home Screen ([ADR 0054](docs/adr/0054
 
 Forget this Mac (Settings) forgets the pairing and the device's key on the phone; revoke the device on the Mac too. The web app works in a desktop browser the same way (Chrome on a Mac gets notifications too).
 
-When the Mac can't be reached the app says so quietly ("Reconnecting…") and keeps trying; after a couple of tries it says why ("it's asleep or offline, or its remote access is off") and when it last answered, with Try again. A long chat opens with its latest part; older parts come as you scroll up. After the first visit the app starts from its own cache; a new version shows "Nushi was updated" with Reload.
+When the Mac can't be reached the app says so quietly ("Reconnecting…") and keeps trying; after a couple of tries it says why ("it's asleep or offline, or its remote access is off") and when it last answered, with Try again. A long chat opens with its latest part; older parts come as you scroll up. The chats that need you are a group at the top of the list. A chat's ⋯ shows its folder, branch and model, with Rename, Sleep, Archive and Stop for what runs in the background; an expired chat is read-only, with New chat here. After the first visit the app starts from its own cache; a new version shows "Nushi was updated" with Reload.
 
 ## The relay
 
