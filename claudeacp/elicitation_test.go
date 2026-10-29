@@ -2,7 +2,9 @@ package claudeacp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -72,6 +74,62 @@ func TestMCPElicitation(t *testing.T) {
 				defer p.mu.Unlock()
 				return !done || slices.Equal(p.completed, []acp.ElicitationID{"el1"})
 			})
+		})
+	}
+}
+
+// A server's page reaches the client only when it is a web page: https,
+// or http on this machine. Anything else is declined without asking. The
+// client is told which server asks.
+func TestMCPElicitationPages(t *testing.T) {
+	pages := &acp.ElicitationCapabilities{URL: &acp.ElicitationURLCapabilities{}}
+	for _, tc := range []struct {
+		url   string
+		shown bool
+	}{
+		{"https://ok.example/sign-in?x=1", true},
+		{"http://127.0.0.1:8080/callback", true},
+		{"http://127.1.2.3/", true},
+		{"http://localhost:3000/", true},
+		{"http://[::1]:9000/", true},
+		{"HTTPS://OK.example", true},
+		{"http://example.com/", false},
+		{"http://localhost.example.com/", false},
+		{"javascript:alert(1)", false},
+		{"file:///etc/passwd", false},
+		{"data:text/html,<b>hi</b>", false},
+		{"https:///no-host", false},
+		{"https://:443/", false},
+		{"https://user@ok.example/", false},
+		{"/relative", false},
+		{"https://bad host/", false},
+		{"", false},
+	} {
+		t.Run(tc.url, func(t *testing.T) {
+			b, _ := json.Marshal(tc.url)
+			answer := `{"action":"decline"}`
+			if tc.shown {
+				answer = `{"action":"accept"}`
+			}
+			f := fake(claudetest.Send(fmt.Sprintf(`{"type":"control_request","request_id":"e1","request":{"subtype":"elicitation","mcp_server_name":"jira","message":"Sign in","mode":"url","url":%s,"elicitation_id":"el1"}}`, b)),
+				claudetest.Expect(`{"type":"control_response","response":{"subtype":"success","request_id":"e1","response":`+answer+`}}`))
+			p := start(t, &acp.ClientCapabilities{Elicitation: pages}, f)
+			var asked *acp.CreateElicitationRequest
+			p.elicit = func(_ context.Context, req *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+				asked = req
+				return &acp.CreateElicitationResponse{Accept: &acp.ElicitationAcceptAction{}}, nil
+			}
+			p.open(t)
+			<-f.Played()
+			if (asked != nil) != tc.shown {
+				t.Fatalf("shown %v, want %v", asked != nil, tc.shown)
+			}
+			if asked == nil {
+				return
+			}
+			if got, _ := json.Marshal(asked.Meta); string(got) != `{"mcpServer":{"name":"jira"}}` {
+				t.Errorf("_meta %s", got)
+			}
 		})
 	}
 }
