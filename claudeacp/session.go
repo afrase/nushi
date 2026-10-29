@@ -35,6 +35,8 @@ type session struct {
 	asks     int     // permission and question requests open
 	closed   bool    // closed or gone: no more prompts
 
+	tools tools // the tool calls shown
+
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
 }
@@ -57,6 +59,10 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*session, error) {
 	s := &session{a: a, id: id, log: a.log.With("session", id), read: make(chan struct{})}
 	s.st.init()
+	s.tools.init(o.Cwd)
+	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
+		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
+	}
 	cs, err := claudeagent.Start(ctx, o)
 	if err != nil {
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}
@@ -78,6 +84,7 @@ func (s *session) reader() {
 	}
 	err := s.cs.Wait()
 	_ = s.cs.Close()
+	s.endTools(endedExit)
 	s.mu.Lock()
 	gone := !s.closed
 	s.closed = true

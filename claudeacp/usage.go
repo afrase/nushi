@@ -64,7 +64,13 @@ func (s *session) result(r *claudeagent.Result) {
 	user := s.userLaneLocked(r)
 	t := s.targetLocked(s.namedLocked(resultIDs(r)))
 	fallback := user && t != nil && !t.textSent && !s.dropTop && r.Subtype == "success" && !r.IsError && r.Result != ""
+	why := endedTurn
+	if s.dropTop || t != nil && t.cancelled {
+		why = endedCancel
+	}
 	s.mu.Unlock()
+	// claude's turn is over: what it left open won't end now.
+	incomplete := s.endTools(why)
 	meta := map[string]any{}
 	switch {
 	case r.Origin != nil:
@@ -77,6 +83,6 @@ func (s *session) result(r *claudeagent.Result) {
 		s.chunk("agent_message_chunk", "", r.UUID, acp.ContentBlock{Text: &acp.TextContent{Text: r.Result}})
 	}
 	s.mu.Lock()
-	s.resultLocked(r, s.st.errorKind)
+	s.resultLocked(r, ending{errorKind: s.st.errorKind, incomplete: incomplete})
 	s.mu.Unlock()
 }

@@ -40,12 +40,31 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.Assistant:
 		s.assistant(m)
 	case *claudeagent.User:
+		for _, b := range m.Message.Content {
+			if b.Type == "tool_result" {
+				s.toolResult(b)
+			}
+		}
 		if m.UUID != "" {
 			s.echo(m.UUID)
 		}
+	case *claudeagent.ToolProgress:
+		s.toolProgress(m.ToolUseID)
+	case *claudeagent.PermissionDenied:
+		s.toolDenied(m)
 	case *claudeagent.Result:
 		s.result(m)
 	case *claudeagent.SessionState:
+		s.mu.Lock()
+		ends := m.State == "idle" && s.owedIdle == 0 && s.active != nil // a turn ends with no result
+		why := endedTurn
+		if ends && s.active.cancelled {
+			why = endedCancel
+		}
+		s.mu.Unlock()
+		if ends {
+			s.endTools(why)
+		}
 		s.mu.Lock()
 		s.stateLocked(m.State)
 		s.mu.Unlock()
@@ -73,12 +92,17 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 			return
 		}
 		s.st.msgs[key] = &streamed{id: ev.Message.ID, blocks: map[int]*strings.Builder{}}
+		s.newMessage(key)
 		if key == "" {
 			s.st.model = ev.Message.Model
 			if ev.Message.Usage != nil {
 				s.st.usage = *ev.Message.Usage
 				s.contextUsed()
 			}
+		}
+	case "content_block_start":
+		if b := ev.ContentBlock; b != nil && isToolUse(b.Type) {
+			s.toolStart(key, ev.Index, b)
 		}
 	case "content_block_delta":
 		msg := s.st.msgs[key]
@@ -91,6 +115,9 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 			kind, text = "agent_message_chunk", ev.Delta.Text
 		case "thinking_delta":
 			kind, text = "agent_thought_chunk", ev.Delta.Thinking
+		case "input_json_delta":
+			s.toolDelta(key, ev.Index, ev.Delta.PartialJSON)
+			return
 		default:
 			return
 		}
@@ -162,6 +189,13 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 			_ = json.Unmarshal(b.Source, &src)
 			if img := (acp.ImageContent{Data: src.Data, MimeType: src.MediaType, URI: src.URL}); img.Data != "" || img.URI != "" {
 				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Image: &img})
+			}
+		default:
+			switch {
+			case isToolUse(b.Type):
+				s.toolInput(key, b)
+			case strings.HasSuffix(b.Type, "_tool_result"): // a server tool's, which the API ran
+				s.toolResult(b)
 			}
 		}
 	}

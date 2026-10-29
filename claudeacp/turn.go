@@ -165,11 +165,17 @@ func (s *session) targetLocked(named []*turn, orphan bool) *turn {
 	return nil
 }
 
+// ending is what claude's stream said of a turn before its result.
+type ending struct {
+	errorKind  string // the API error its last top-level message named
+	incomplete bool   // a tool it ran gave no result
+}
+
 // resultLocked ends the turn r ends, with r's stop reason; the prompts
 // r names that claude folded into it end with it. While a steer that
 // joined the turn is unnamed, the turn waits for a result that names it,
 // or the idle after this one.
-func (s *session) resultLocked(r *claudeagent.Result, errorKind string) {
+func (s *session) resultLocked(r *claudeagent.Result, end ending) {
 	ids := resultIDs(r)
 	named, orphan := s.namedLocked(ids)
 	t := s.targetLocked(named, orphan)
@@ -185,7 +191,11 @@ func (s *session) resultLocked(r *claudeagent.Result, errorKind string) {
 	for _, id := range ids {
 		delete(t.steers, id)
 	}
-	o := stop(r, t, errorKind)
+	o := stop(r, t, end.errorKind)
+	if end.incomplete && !t.cancelled && o.err == nil {
+		o = outcome{err: &acp.Error{Code: acp.ErrorCodeInternalError,
+			Message: "Claude ended the turn without a tool's result.", Data: []byte(`{"errorKind":"incomplete_tool_call"}`)}}
+	}
 	if len(t.steers) > 0 && !t.cancelled {
 		t.held = &o
 		return
