@@ -22,13 +22,17 @@ type reply struct {
 	stop   string
 }
 
-// newReply makes t's reply to a request of body's bytes; next numbers the
-// ids it makes.
-func newReply(t *Turn, model string, body int, next func(prefix string) string) *reply {
-	r := &reply{turn: t, id: next("msg_fake_"), model: model, blocks: slices.Clone(t.Content), stop: t.StopReason}
+// newReply makes t's reply to a request of body's bytes, with vals for
+// "${name}" in its blocks; next numbers the ids it makes.
+func newReply(t *Turn, model string, body int, next func(prefix string) string, vals map[string]string) *reply {
+	r := &reply{turn: t, id: t.ID, model: model, blocks: slices.Clone(t.Content), stop: t.StopReason}
+	if r.id == "" {
+		r.id = next("msg_fake_")
+	}
 	words := 0
 	for i := range r.blocks {
 		b := &r.blocks[i]
+		fill(b, vals)
 		if b.Type == "tool_use" {
 			if b.ID == "" {
 				b.ID = next("toolu_fake_")
@@ -54,6 +58,37 @@ func newReply(t *Turn, model string, body int, next func(prefix string) string) 
 		r.usage = Usage{InputTokens: max(1, body/4), OutputTokens: max(1, words)}
 	}
 	return r
+}
+
+// fill puts vals for "${name}" in b's text, thinking, input and deltas;
+// in the input as JSON string content, so a value can't break it.
+func fill(b *Block, vals map[string]string) {
+	if len(vals) == 0 {
+		return
+	}
+	plain := make([]string, 0, 2*len(vals))
+	quoted := make([]string, 0, 2*len(vals))
+	for name, v := range vals {
+		q, _ := json.Marshal(v)
+		plain = append(plain, "${"+name+"}", v)
+		quoted = append(quoted, "${"+name+"}", string(q[1:len(q)-1]))
+	}
+	p, q := strings.NewReplacer(plain...), strings.NewReplacer(quoted...)
+	b.Text, b.Thinking = p.Replace(b.Text), p.Replace(b.Thinking)
+	if len(b.Input) > 0 {
+		b.Input = json.RawMessage(q.Replace(string(b.Input)))
+	}
+	if b.Deltas != nil {
+		ds := make([]string, len(b.Deltas))
+		for i, d := range b.Deltas {
+			if b.Type == "tool_use" {
+				ds[i] = q.Replace(d)
+			} else {
+				ds[i] = p.Replace(d)
+			}
+		}
+		b.Deltas = ds
+	}
 }
 
 // message is the whole reply as an API message, as a request without

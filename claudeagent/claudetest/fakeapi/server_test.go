@@ -288,6 +288,66 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+// A turn can take an id only claude knows from the conversation, a task's
+// say, into its reply; it doesn't match until the id is there. A turn's
+// own message id stands for a numbered one.
+func TestCapture(t *testing.T) {
+	stop := &Turn{
+		ID:    "msg_stop",
+		Match: &Match{Capture: map[string]string{"task": `with ID: (\w+)`}},
+		Content: []Block{
+			{Type: "text", Text: "Stopping ${task}."},
+			{Type: "tool_use", Name: "TaskStop", Input: json.RawMessage(`{"task_id":"${task}"}`), Deltas: []string{`{"task_id":`, `"${task}"}`}},
+		},
+	}
+	f := New(&Script{Turns: []Turn{*stop}}, nil)
+	srv := httptest.NewServer(f)
+	defer srv.Close()
+	ask := func(body string) map[string]any {
+		resp := post(context.Background(), t, srv.URL, "", body)
+		defer resp.Body.Close() //nolint:errcheck // a test's response
+		var msg map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&msg); err != nil {
+			t.Fatal(err)
+		}
+		return msg
+	}
+	ask(`{"model":"m","tools":[{"name":"Bash"}],"messages":[{"role":"user","content":"stop it"}]}`)
+	if f.Left() != 1 {
+		t.Fatal("a turn whose capture finds nothing matched")
+	}
+	msg := ask(`{"model":"m","tools":[{"name":"Bash"}],"messages":[{"role":"user","content":"go"},` +
+		`{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{}}]},` +
+		`{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":[{"type":"text","text":"Running with ID: b1."}]}]},` +
+		`{"role":"user","content":[{"type":"tool_result","tool_use_id":"t2","content":"Running with ID: b2."}]}]}`)
+	content, _ := msg["content"].([]any)
+	if len(content) != 2 || msg["id"] != "msg_stop" || content[0].(map[string]any)["text"] != "Stopping b2." ||
+		!reflect.DeepEqual(content[1].(map[string]any)["input"], map[string]any{"task_id": "b2"}) {
+		t.Errorf("got %v", msg)
+	}
+	rep := newReply(stop, "m", 1, f.newID, map[string]string{"task": `a"b`})
+	body, _ := rep.events()
+	var input strings.Builder
+	for _, ev := range body {
+		if d, ok := ev.data.(map[string]any)["delta"].(map[string]any); ok && d["type"] == "input_json_delta" {
+			input.WriteString(d["partial_json"].(string))
+		}
+	}
+	if input.String() != `{"task_id":"a\"b"}` {
+		t.Errorf("the input streamed as %s", input.String())
+	}
+	if stop.Content[0].Text != "Stopping ${task}." {
+		t.Error("the script changed")
+	}
+	p := filepath.Join(t.TempDir(), "api.json")
+	if err := os.WriteFile(p, []byte(`{"turns":[{"match":{"capture":{"x":"no group"}}}]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(p); err == nil {
+		t.Error("a capture without a group loaded")
+	}
+}
+
 func TestStartCancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
