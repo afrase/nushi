@@ -14,20 +14,19 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"unicode"
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // File is what a SKILL.md says of its skill.
@@ -76,7 +75,7 @@ func List(root string) []Folder {
 			continue // a name with control or invisible characters could pose as another in a confirmation
 		}
 		dir := filepath.Join(root, e.Name())
-		b, err := ReadFile(filepath.Join(dir, "SKILL.md"))
+		b, err := regularfile.Read(filepath.Join(dir, "SKILL.md"), maxFile) // a fifo or device fails at once
 		if err != nil {
 			continue
 		}
@@ -95,24 +94,6 @@ func List(root string) []Folder {
 
 // maxFile is the largest SKILL.md read.
 const maxFile = 4 << 20
-
-// ReadFile reads a regular file of at most 4 MiB (a link to one
-// followed); a fifo or device fails at once rather than waiting.
-func ReadFile(path string) ([]byte, error) {
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // a skill's file, read as text
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close() //nolint:errcheck // read-only
-	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() || fi.Size() > maxFile {
-		return nil, fmt.Errorf("%s isn't a regular file of at most 4 MiB", path)
-	}
-	b, err := io.ReadAll(io.LimitReader(f, maxFile+1))
-	if err == nil && len(b) > maxFile {
-		err = fmt.Errorf("%s grew past 4 MiB", path)
-	}
-	return b, err
-}
 
 // maxDescription is the most of a description kept.
 const maxDescription = 4000

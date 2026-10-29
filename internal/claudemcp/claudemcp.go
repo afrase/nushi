@@ -130,8 +130,11 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 }
 
 // readJSON reads a JSON file into v; a missing file leaves v as it is.
+// Only a regular file is read, as Claude reads it (a link followed), of up
+// to 64 MiB: a repository could bring a link to /dev/zero, or a fifo, in
+// the place of one.
 func readJSON(path string, v any) error {
-	b, err := ReadFile(path)
+	b, err := jsonsettings.ReadFile(path)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -143,11 +146,6 @@ func readJSON(path string, v any) error {
 	}
 	return nil
 }
-
-// ReadFile reads one of Claude's files as Claude would: only a regular file
-// (a link is followed), of up to 64 MiB. A repository could bring a link to
-// /dev/zero, or a fifo, in the place of one.
-func ReadFile(path string) ([]byte, error) { return jsonsettings.ReadFile(path) }
 
 func add(out []model.MCPServer, s servers, scope, source string) []model.MCPServer {
 	start := len(out)

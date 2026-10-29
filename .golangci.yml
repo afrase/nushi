@@ -162,8 +162,9 @@ linters:
       # gosec, where a whole package is about what it reports (each other
       # report is fixed or marked on its line):
       # tests read and write files in their own t.TempDir(), run the fakes
-      # and git they set up, and use fake secrets as markers;
-      - path: _test\.go$
+      # and git they set up (testcheck.Git too), and use fake secrets as
+      # markers;
+      - path: (_test\.go$|^internal/testcheck/)
         linters: [gosec]
         text: "^G(101|204|301|302|304|306|702|703|704):"
       # the tools run by hand write the repository's own files;
@@ -201,8 +202,8 @@ linters:
       - path: (_test\.go$|^internal/acptest/|^internal/ante/antetest/|^internal/pig/pigtest/)
         linters: [forcetypeassert, errchkjson]
       # Tests start short commands, and processes and listeners they end
-      # themselves; a context would add nothing.
-      - path: _test\.go$
+      # themselves (testcheck.Git too); a context would add nothing.
+      - path: (_test\.go$|^internal/testcheck/)
         linters: [noctx]
       # Tests hold what each iteration opens until the test ends.
       - path: _test\.go$

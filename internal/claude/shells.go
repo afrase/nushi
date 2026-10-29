@@ -3,12 +3,12 @@ package claude
 import (
 	"errors"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // shellFile is where Claude says a background command's output goes, in
@@ -50,18 +50,11 @@ func ReadShell(id, file string) (output, end string, err error) {
 	if filepath.Base(file) != id+".output" {
 		return "", "", errors.New("not the task's output file")
 	}
-	if st, err := os.Lstat(file); err != nil || !st.Mode().IsRegular() {
-		return "", "", errors.New("not a regular file")
-	}
-	f, err := os.Open(file) //nolint:gosec // a background shell's output file, checked regular above
+	f, st, err := regularfile.Open(file, false)
 	if err != nil {
 		return "", "", err
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	st, err := f.Stat()
-	if err != nil {
-		return "", "", err
-	}
 	if st.Size() > shellTail {
 		if _, err := f.Seek(st.Size()-shellTail, io.SeekStart); err != nil {
 			return "", "", err

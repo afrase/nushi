@@ -8,6 +8,8 @@ import (
 	"os"
 	"reflect"
 	"slices"
+
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // SetKeyIn changes one top-level key of the JSON settings file name (a
@@ -30,7 +32,7 @@ func SetKeyIn(base, name, key string, change func(old json.RawMessage) (json.Raw
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	b, err := readIn(root, name)
+	b, err := regularfile.ReadIn(root, name, maxFile)
 	created := errors.Is(err, os.ErrNotExist)
 	if err != nil && !created {
 		return err
