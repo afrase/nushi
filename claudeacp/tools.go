@@ -308,13 +308,13 @@ func (s *session) endTools(why int) (incomplete bool) {
 		var text string
 		switch {
 		case why == endedCancel:
-			text = "The turn was cancelled before this tool call returned a result."
+			text = "The turn was cancelled before this call had a result."
 		case why == endedExit:
-			text = "Claude exited before this tool call returned a result."
+			text = "Claude exited before this call had a result."
 		case !t.whole:
-			text = "Claude stopped this tool call before it ran."
+			text = "The model stopped before finishing this call; it never ran."
 		default:
-			text = "Claude ended the turn without returning a result for this tool."
+			text = "The turn ended with no result for this call."
 			incomplete = true
 		}
 		s.sendLocked(t, report{status: acp.ToolCallStatusFailed, content: texts(text)})
