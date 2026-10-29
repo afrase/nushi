@@ -16,19 +16,18 @@ const rawCap = 8 << 10
 // input (rawInput) as indented JSON unless the call has diffs, and its result (rawOutput) as text or
 // indented JSON, but only while the content shows nothing (no text, diff or
 // image) and the call isn't a command (whose output comes in the dialect's
-// _meta). An update without them leaves them as they were.
+// _meta). An update without them leaves them as they were. Neither is
+// masked or indented only to be dropped.
 func keepRaw(it *model.Item, input, output json.RawMessage) {
-	if s := inputText(input); s != "" {
+	if len(it.Diffs) > 0 { // an edit's input is the file's text again
+		it.Input = ""
+	} else if s := inputText(input); s != "" {
 		it.Input = s
-	}
-	if s := outputText(output); s != "" {
-		it.RawOutput = s
 	}
 	if strings.TrimSpace(it.Text) != "" || len(it.Diffs) > 0 || len(it.Images) > 0 || it.ToolKind == "execute" {
 		it.RawOutput = ""
-	}
-	if len(it.Diffs) > 0 { // an edit's input is the file's text again
-		it.Input = ""
+	} else if s := outputText(output); s != "" {
+		it.RawOutput = s
 	}
 }
 

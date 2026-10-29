@@ -183,7 +183,7 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 	case call == nil:
 		c.mu.Unlock()
 		return errors.New("that task is no longer in the chat")
-	case !runs(*call):
+	case !running(*call):
 		c.mu.Unlock()
 		return errors.New("that task isn't running")
 	}
@@ -195,11 +195,6 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 	}
 	c.mu.Unlock()
 	return s.Prompt(ctx, chatID, model.Message{To: callID, Relay: &model.Relay{Stop: true}}, SendQueue)
-}
-
-// runs says the subagent or background command a tool call started runs.
-func runs(call model.Item) bool {
-	return call.Subagent != nil && call.Subagent.State == "running" || call.Shell != nil && call.Shell.State == "running"
 }
 
 // stopRelayLocked finds what a message asking the agent to stop the task

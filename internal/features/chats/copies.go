@@ -58,7 +58,7 @@ func shownOnly(it model.Item) bool {
 // tell: a message once another item follows it (last says none does), a
 // tool call once it ended, a prompt or question once answered; a plan
 // changes until the turn ends.
-func settled(it model.Item, last bool) bool {
+func settled(it *model.Item, last bool) bool {
 	switch it.Kind {
 	case model.AgentMessage, model.Thought:
 		return !last
@@ -87,14 +87,15 @@ func (c *chat) copyLocked(all bool) {
 	var items []model.Item
 	var after []string
 	prev := ""
-	for i, it := range c.items {
-		if shownOnly(it) {
+	for i := range c.items {
+		it := &c.items[i]
+		if shownOnly(*it) {
 			delete(c.unsaved, it.ID)
 			continue
 		}
 		if c.unsaved[it.ID] && (all || settled(it, i == len(c.items)-1)) {
 			delete(c.unsaved, it.ID)
-			items, after = append(items, it), append(after, prev)
+			items, after = append(items, *it), append(after, prev)
 		}
 		prev = it.ID
 	}

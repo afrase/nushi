@@ -128,6 +128,10 @@ func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t3", Status: "completed", RawOutput: json.RawMessage(`[{"type":"text","text":"plain"},{"type":"text","text":"text"}]`)}},
 		// A long input is cut.
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t4", Title: "long", RawInput: json.RawMessage(long), RawOutput: json.RawMessage(`"done"`)}},
+		// An edit's diff is its input and its result.
+		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t5", Title: "edit", RawInput: json.RawMessage(`{"file_path":"/w/a.go","content":"x"}`)}},
+		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t5", Status: "completed", RawOutput: json.RawMessage(`"written"`),
+			Content: []acp.ToolCallContent{{Type: "diff", Diff: &acp.Diff{Path: "/w/a.go", NewText: "x"}}}}},
 	} {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
@@ -139,6 +143,7 @@ func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
 		"t1": {"{\n  \"tool\": \"jira_search\",\n  \"arguments\": {\n    \"jql\": \"project = ABC\"\n  }\n}", ""},
 		"t2": {"", "{\n  \"issues\": [\n    {\n      \"key\": \"ABC-1\"\n    }\n  ]\n}"},
 		"t3": {"", "plain\n\ntext"},
+		"t5": {"", ""},
 	}
 	for id, w := range want {
 		if got[id] != w {

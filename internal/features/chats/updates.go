@@ -290,8 +290,8 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 		call.AgentID = c.dialect.SubagentID(call.Text)
 	}
 	r, last, said := -1, -1, -1 // its last report, its last item, and its last message
-	for i, it := range c.items {
-		if it.Parent == call.ID {
+	for i := range c.items {
+		if it := &c.items[i]; it.Parent == call.ID {
 			last = i
 			if it.Report {
 				r = i
