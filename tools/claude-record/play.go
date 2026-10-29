@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,15 +25,21 @@ type player struct {
 	waited  int                   // where the next waitFor looks from
 }
 
-func (p *player) play(steps []step) error {
+// play plays steps, and stops at the first that fails or when ctx is
+// done (the recorder interrupted), so a run cut short never passes.
+func (p *player) play(ctx context.Context, steps []step) error {
 	for i := range steps {
 		s := &steps[i]
-		if err := p.step(s); err != nil {
+		err := ctx.Err()
+		if err == nil {
+			err = p.step(ctx, s)
+		}
+		if err != nil {
 			return fmt.Errorf("step %d (%s): %w", i+1, s.verb(), err)
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(p.async)) { // what the script didn't await
-		if _, err := p.c.await(name, p.async[name], p.timeout); err != nil {
+		if _, err := p.c.await(ctx, name, p.async[name], p.timeout); err != nil {
 			return err
 		}
 	}
@@ -42,19 +49,25 @@ func (p *player) play(steps []step) error {
 	return nil
 }
 
-func (p *player) step(s *step) error {
+func (p *player) step(ctx context.Context, s *step) error {
 	switch s.verb() {
 	case "pause":
 		d, _ := time.ParseDuration(s.Pause)
-		time.Sleep(d)
-		return nil
+		t := time.NewTimer(d)
+		defer t.Stop()
+		select {
+		case <-t.C:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	case "await":
 		ch := p.async[s.Await]
 		if ch == nil {
 			return fmt.Errorf("no request named %q", s.Await)
 		}
 		delete(p.async, s.Await)
-		m, err := p.c.await(s.Await, ch, p.timeout)
+		m, err := p.c.await(ctx, s.Await, ch, p.timeout)
 		if err == nil {
 			err = answerErr(s, m)
 		}
@@ -64,14 +77,14 @@ func (p *player) step(s *step) error {
 		if err := json.Unmarshal(s.WaitFor, &want); err != nil {
 			return err
 		}
-		i, _, err := p.c.first(string(s.WaitFor), p.waited, func(_ int, m msg) bool {
+		i, _, err := p.c.first(ctx, string(s.WaitFor), p.waited, func(_ int, m msg) bool {
 			var got any
 			return json.Unmarshal(m.raw, &got) == nil && matches(want, got)
 		}, p.timeout)
 		p.waited = i + 1
 		return err
 	case "answer":
-		return p.answer(s)
+		return p.answer(ctx, s)
 	case "cancel":
 		return p.c.notify("session/cancel", acp.CancelNotification{SessionID: acp.SessionID(p.ids[s.Cancel])})
 	case "notify":
@@ -93,7 +106,7 @@ func (p *player) step(s *step) error {
 		p.async[s.Async] = ch
 		return nil
 	}
-	m, err := p.c.await(method, ch, p.timeout)
+	m, err := p.c.await(ctx, method, ch, p.timeout)
 	if err != nil {
 		return err
 	}
@@ -260,8 +273,8 @@ func (p *player) params(raw json.RawMessage) (any, error) {
 }
 
 // answer answers the agent's next request of the step's method.
-func (p *player) answer(s *step) error {
-	m, err := p.c.request(s.Answer, p.timeout)
+func (p *player) answer(ctx context.Context, s *step) error {
+	m, err := p.c.request(ctx, s.Answer, p.timeout)
 	if err != nil {
 		return err
 	}

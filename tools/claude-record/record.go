@@ -105,7 +105,7 @@ func (r *recorder) run(ctx context.Context, scratch string, script *fakeapi.Scri
 	}
 	c := newConn(stdin, stdout, acpRec)
 	p := &player{c: c, cwd: dirs["work"], timeout: timeout, ids: map[string]string{}, async: map[string]<-chan msg{}}
-	played := p.play(client.Steps)
+	played := p.play(ctx, client.Steps)
 	_ = stdin.Close() // the client goes, as Nushi's daemon does at Sleep
 	stopped := r.stop(ctx, c, cmd)
 	var problems []string
@@ -148,13 +148,16 @@ func (r *recorder) environ(dirs map[string]string, url string) []string {
 
 // stop waits for the agent to end after its stdin closed, as it should,
 // then ends its process group, so no claude outlives the run; it says
-// whether the agent had to be stopped.
+// whether the agent had to be stopped. When ctx is done (the recorder
+// interrupted) it doesn't wait, and the run fails: its recordings are
+// cut short.
 func (r *recorder) stop(ctx context.Context, c *conn, cmd *exec.Cmd) error {
 	pgid := cmd.Process.Pid
 	var err error
 	select {
 	case <-c.done:
 	case <-ctx.Done():
+		err = ctx.Err()
 	case <-time.After(10 * time.Second):
 		err = errors.New("the agent didn't end when its stdin closed")
 	}

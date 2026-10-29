@@ -48,8 +48,12 @@ func main() {
 		log.Error("claude-record needs -tee and -claude (or CLAUDE_TEE_REAL)")
 		os.Exit(2)
 	}
+	// The first Ctrl-C or SIGTERM stops the run and keeps no recording;
+	// a second ends the recorder at once, as signals do by default (the
+	// agent, in a process group of its own, goes on its stdin's end).
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	context.AfterFunc(ctx, cancel)
 	if err := run(ctx, log, *scenarios, *only, *tee, *claudePath, *adapterDir, *acpName, flag.Args()); err != nil {
 		log.Error("claude-record", "err", err)
 		cancel()
@@ -82,6 +86,9 @@ func run(ctx context.Context, log *slog.Logger, scenarios, only, tee, claudePath
 	r := &recorder{tee: tee, claude: claudePath, agent: agent, acp: acpName, log: log}
 	var failed []string
 	for _, dir := range dirs {
+		if err := ctx.Err(); err != nil { // interrupted: the rest stay as they are
+			return fmt.Errorf("stopped before %s: %w", filepath.Base(dir), err)
+		}
 		name := filepath.Base(dir)
 		if err := r.record(ctx, dir); err != nil {
 			log.Error("not recorded", "scenario", name, "err", err)

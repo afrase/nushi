@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -140,30 +141,34 @@ func (c *conn) notify(method string, params any) error {
 	return c.send(map[string]any{"method": method, "params": params})
 }
 
-// await waits for an answer to a call, up to timeout.
-func (c *conn) await(what string, ch <-chan msg, timeout time.Duration) (msg, error) {
+// await waits for an answer to a call, up to timeout, until the agent's
+// output ends or ctx is done.
+func (c *conn) await(ctx context.Context, what string, ch <-chan msg, timeout time.Duration) (msg, error) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
-	for {
-		c.mu.Lock()
-		changed, gone := c.changed, c.gone
-		c.mu.Unlock()
-		select {
+	select {
+	case m := <-ch:
+		return m, nil
+	case <-c.done:
+		select { // an answer is filed before the output is said to end
 		case m := <-ch:
 			return m, nil
-		case <-changed:
-			if gone != nil {
-				return msg{}, fmt.Errorf("%s: %w", what, gone)
-			}
-		case <-t.C:
-			return msg{}, fmt.Errorf("%s: no answer in %s", what, timeout)
+		default:
 		}
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		return msg{}, fmt.Errorf("%s: %w", what, c.gone)
+	case <-ctx.Done():
+		return msg{}, fmt.Errorf("%s: %w", what, ctx.Err())
+	case <-t.C:
+		return msg{}, fmt.Errorf("%s: no answer in %s", what, timeout)
 	}
 }
 
 // first waits for the first message the agent sent from index from on
-// that ok takes, up to timeout, and returns its index.
-func (c *conn) first(what string, from int, ok func(i int, m msg) bool, timeout time.Duration) (int, msg, error) {
+// that ok takes, up to timeout, until the agent's output ends or ctx is
+// done, and returns its index.
+func (c *conn) first(ctx context.Context, what string, from int, ok func(i int, m msg) bool, timeout time.Duration) (int, msg, error) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	for {
@@ -182,6 +187,8 @@ func (c *conn) first(what string, from int, ok func(i int, m msg) bool, timeout 
 		}
 		select {
 		case <-changed:
+		case <-ctx.Done():
+			return 0, msg{}, fmt.Errorf("waiting for %s: %w", what, ctx.Err())
 		case <-t.C:
 			return 0, msg{}, fmt.Errorf("waiting for %s: nothing in %s", what, timeout)
 		}
@@ -190,8 +197,8 @@ func (c *conn) first(what string, from int, ok func(i int, m msg) bool, timeout 
 
 // request waits for the agent's first unanswered request of method, and
 // marks it answered.
-func (c *conn) request(method string, timeout time.Duration) (msg, error) {
-	i, m, err := c.first("a "+method+" request", 0, func(i int, m msg) bool {
+func (c *conn) request(ctx context.Context, method string, timeout time.Duration) (msg, error) {
+	i, m, err := c.first(ctx, "a "+method+" request", 0, func(i int, m msg) bool {
 		return m.Method == method && m.ID != nil && !c.answered[i]
 	}, timeout)
 	if err == nil {

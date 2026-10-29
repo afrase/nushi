@@ -26,6 +26,8 @@ func TestMain(m *testing.M) {
 		os.Exit(fakeClaude(os.Args[1:]))
 	case os.Getenv("RECORD_TEST_AGENT") == "1":
 		claudeacp.Main()
+	case os.Getenv("RECORD_TEST_AGENT") == "hang":
+		hangingAgent()
 	default:
 		m.Run()
 	}
