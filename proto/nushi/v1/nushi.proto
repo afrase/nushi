@@ -84,6 +84,11 @@ service NushiService {
   // Sets the chat's title; it wins over the agent's. An empty title goes
   // back to the agent's.
   rpc RenameChat(RenameChatRequest) returns (RenameChatResponse);
+  // Sets the pinned chats, in their order: each one listed is pinned at its
+  // place (Chat.pin), every other unpinned. An archived chat or one not
+  // known is left out; archiving unpins. A changed chat comes as an event.
+  // (API 90)
+  rpc PinChats(PinChatsRequest) returns (PinChatsResponse);
   // Renames the branch of a chat's worktree (git branch -m; its folder
   // stays), for good: the chat's title no longer names it. Refused during a
   // turn, for a name git doesn't take or that's taken, and when the branch
@@ -517,6 +522,9 @@ message Chat {
   // The chat's pull request: the one it was started from (github), else the
   // one whose head is its branch, found or linked by hand. API 81.
   GitHubLink pull = 16;
+  // Its place among the pinned chats, from 1 (the top); 0 when it isn't
+  // pinned (PinChats). API 90.
+  int32 pin = 17;
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -936,6 +944,13 @@ message SwitchBranchResponse {
   // The other chats in the folder's checkout (titles), to confirm.
   repeated string others = 4;
 }
+
+message PinChatsRequest {
+  // The chats pinned, top first.
+  repeated string chat_ids = 1;
+}
+
+message PinChatsResponse {}
 
 message ArchiveChatRequest {
   string chat_id = 1;

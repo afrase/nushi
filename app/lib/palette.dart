@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,6 +9,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/panel_cards.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -21,6 +24,7 @@ class PaletteRow {
     this.detail = '',
     this.agent,
     this.icon = Icons.bolt,
+    this.pinned = false,
   });
 
   final String id; // 'chat:<id>', 'act:<name>': what [recentRows] keeps
@@ -29,15 +33,19 @@ class PaletteRow {
   final String? agent; // a chat's: its mark in place of [icon]
   final IconData icon;
   final VoidCallback run;
+
+  /// A pinned chat's: first, in Pinned's order, while nothing is typed.
+  final bool pinned;
 }
 
 /// What was picked in the palette lately, the newest first, while the app
 /// runs: first in it when nothing is typed.
 final recentRows = <String>[];
 
-/// ⌘K: the palette. The chats (the last opened first), the actions
-/// that apply now ([appActions], the shown chat's among them), then the
-/// archived chats; what's picked runs once it closes.
+/// ⌘K: the palette. The chats (the pinned first, then the last opened
+/// first), the actions that apply now ([appActions], the shown chat's
+/// among them), then the archived chats; what's picked runs once it
+/// closes.
 Future<void> showPalette(BuildContext context, Daemon d) async {
   final shown = chatShown(d) ? d.selected : null;
   // The chats the last opened first, then the newest; whatever the project.
@@ -46,7 +54,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
   final live = [for (final group in chatGroups(d).values) ...group]
     ..sort((a, b) => opened(b).compareTo(opened(a)));
   final rows = [
-    for (final chat in live)
+    for (final chat in [...pinnedChats(d), ...live])
       if (chat != shown)
         PaletteRow(
           'chat:${chat.id}',
@@ -54,6 +62,7 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
           () => d.select(chat.id),
           detail: chat.scratch ? '' : baseName(chat.home),
           agent: chat.agent,
+          pinned: chat.pin > 0,
         ),
     for (final a in appActions(context, d))
       if (a.enabled)
@@ -116,12 +125,27 @@ Future<void> showArtifacts(BuildContext context, ChatState chat) async {
   picked?.run();
 }
 
+/// Artifacts…: the details panel shown on Chat, its Artifacts card opened
+/// and scrolled to; where the window has no room for the panel, the
+/// palette lists them instead.
+void revealArtifacts(BuildContext context, ChatState chat) {
+  if (!chat.panelFits) {
+    unawaited(showArtifacts(context, chat));
+    return;
+  }
+  chat.tab.value = ChatTab.chat;
+  showDetails.value = true;
+  revealCard.value = 'Artifacts';
+}
+
 /// [rows] that match [query] (each of its words in a row's title or
 /// detail), the best first: a title starting with it, then a word of it,
 /// then the rest; the recent before the others among equals. With no
-/// query, the recent first, then the rest as they are.
+/// query, the pinned chats first, then the recent, then the rest as they
+/// are.
 List<PaletteRow> matchRows(List<PaletteRow> rows, String query) {
   int recent(PaletteRow r) {
+    if (r.pinned && query.trim().isEmpty) return -1; // above the recent
     final i = recentRows.indexOf(r.id);
     return i < 0 ? recentRows.length : i;
   }

@@ -404,6 +404,7 @@ void main() {
     expect(find.text('relay-fix'), findsOne);
     expect(find.text('Opus 5.5'), findsWidgets); // the box's picker too
     expect(find.text('nushi  /Users/me'), findsOne);
+    expect(find.text('Pin'), findsOne); // the daemon keeps pins (API 90)
     await expectLater(
       find.byType(PhoneApp),
       matchesGoldenFile('goldens/phone_chat_sheet_390.png'),

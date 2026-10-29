@@ -216,6 +216,17 @@ abstract final class NushiService {
     nushiv1nushi.RenameChatResponse.new,
   );
 
+  /// Sets the pinned chats, in their order: each one listed is pinned at its
+  /// place (Chat.pin), every other unpinned. An archived chat or one not
+  /// known is left out; archiving unpins. A changed chat comes as an event.
+  /// (API 90)
+  static const pinChats = connect.Spec(
+    '/$name/PinChats',
+    connect.StreamType.unary,
+    nushiv1nushi.PinChatsRequest.new,
+    nushiv1nushi.PinChatsResponse.new,
+  );
+
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a
   /// turn, for a name git doesn't take or that's taken, and when the branch

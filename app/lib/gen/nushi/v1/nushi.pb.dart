@@ -953,6 +953,7 @@ class Chat extends $pb.GeneratedMessage {
     GitHubLink? github,
     $core.bool? unseen,
     GitHubLink? pull,
+    $core.int? pin,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -971,6 +972,7 @@ class Chat extends $pb.GeneratedMessage {
     if (github != null) result.github = github;
     if (unseen != null) result.unseen = unseen;
     if (pull != null) result.pull = pull;
+    if (pin != null) result.pin = pin;
     return result;
   }
 
@@ -1007,6 +1009,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aOB(15, _omitFieldNames ? '' : 'unseen')
     ..aOM<GitHubLink>(16, _omitFieldNames ? '' : 'pull',
         subBuilder: GitHubLink.$_createMessage)
+    ..aI(17, _omitFieldNames ? '' : 'pin')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1196,6 +1199,17 @@ class Chat extends $pb.GeneratedMessage {
   void clearPull() => $_clearField(16);
   @$pb.TagNumber(16)
   GitHubLink ensurePull() => $_ensure(15);
+
+  /// Its place among the pinned chats, from 1 (the top); 0 when it isn't
+  /// pinned (PinChats). API 90.
+  @$pb.TagNumber(17)
+  $core.int get pin => $_getIZ(16);
+  @$pb.TagNumber(17)
+  set pin($core.int value) => $_setSignedInt32(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasPin() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearPin() => $_clearField(17);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -5233,6 +5247,99 @@ class SwitchBranchResponse extends $pb.GeneratedMessage {
   /// The other chats in the folder's checkout (titles), to confirm.
   @$pb.TagNumber(4)
   $pb.PbList<$core.String> get others => $_getList(3);
+}
+
+class PinChatsRequest extends $pb.GeneratedMessage {
+  factory PinChatsRequest({
+    $core.Iterable<$core.String>? chatIds,
+  }) {
+    final result = PinChatsRequest._();
+    if (chatIds != null) result.chatIds.addAll(chatIds);
+    return result;
+  }
+
+  PinChatsRequest._();
+
+  factory PinChatsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinChatsRequest()..mergeFromBuffer(data, registry);
+  factory PinChatsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinChatsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PinChatsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PinChatsRequest.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'chatIds')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinChatsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinChatsRequest copyWith(void Function(PinChatsRequest) updates) =>
+      super.copyWith((message) => updates(message as PinChatsRequest))
+          as PinChatsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PinChatsRequest() / PinChatsRequest.new instead')
+  static PinChatsRequest create() => PinChatsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => PinChatsRequest._();
+  @$core.override
+  PinChatsRequest createEmptyInstance() => PinChatsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static PinChatsRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PinChatsRequest>(
+          PinChatsRequest.$_createMessage);
+  static PinChatsRequest? _defaultInstance;
+
+  /// The chats pinned, top first.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get chatIds => $_getList(0);
+}
+
+class PinChatsResponse extends $pb.GeneratedMessage {
+  factory PinChatsResponse() => PinChatsResponse._();
+
+  PinChatsResponse._();
+
+  factory PinChatsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinChatsResponse()..mergeFromBuffer(data, registry);
+  factory PinChatsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinChatsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PinChatsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PinChatsResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinChatsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinChatsResponse copyWith(void Function(PinChatsResponse) updates) =>
+      super.copyWith((message) => updates(message as PinChatsResponse))
+          as PinChatsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PinChatsResponse() / PinChatsResponse.new instead')
+  static PinChatsResponse create() => PinChatsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => PinChatsResponse._();
+  @$core.override
+  PinChatsResponse createEmptyInstance() => PinChatsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static PinChatsResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PinChatsResponse>(
+          PinChatsResponse.$_createMessage);
+  static PinChatsResponse? _defaultInstance;
 }
 
 class ArchiveChatRequest extends $pb.GeneratedMessage {
@@ -26628,6 +26735,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RenameChatRequest request) =>
       _client.invoke<RenameChatResponse>(
           ctx, 'NushiService', 'RenameChat', request, RenameChatResponse());
+
+  /// Sets the pinned chats, in their order: each one listed is pinned at its
+  /// place (Chat.pin), every other unpinned. An archived chat or one not
+  /// known is left out; archiving unpins. A changed chat comes as an event.
+  /// (API 90)
+  $async.Future<PinChatsResponse> pinChats(
+          $pb.ClientContext? ctx, PinChatsRequest request) =>
+      _client.invoke<PinChatsResponse>(
+          ctx, 'NushiService', 'PinChats', request, PinChatsResponse());
 
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a

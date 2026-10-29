@@ -13,7 +13,8 @@ import 'package:nushi/daemon.dart';
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
-/// collapsed, the models picked last, each chat's pinned artifacts, and
+/// collapsed, each project's chats' order, whether Pinned is collapsed,
+/// the models picked last, each chat's pinned artifacts, and
 /// the Mac's notifications and Dock badge, the appearance, and the newer
 /// release whose toast was dismissed.
 /// Not whether new chats get a worktree: an older `worktrees` key is
@@ -102,6 +103,17 @@ final sidebarOrder = ValueNotifier<List<String>>([..._strings('sidebarOrder')])
 final sidebarCollapsed = ValueNotifier<Set<String>>(
   _strings('sidebarCollapsed'),
 )..addListener(_save);
+
+/// The order each project's chats were dragged into, by folder path
+/// ('' for no folder): chat ids, those it doesn't name (new chats) going
+/// first. A pinned chat keeps its place here while it's out of the list.
+final sidebarChats = ValueNotifier<Map<String, List<String>>>(
+  _byPlace('sidebarChats'),
+)..addListener(_save);
+
+/// Whether the sidebar's Pinned section is collapsed.
+final pinnedCollapsed = ValueNotifier<bool>(_saved['pinnedCollapsed'] == true)
+  ..addListener(_save);
 
 /// The models picked from the model menu, by value, the last first: the
 /// menu's first four are the ones used last.
@@ -247,6 +259,8 @@ void _save() {
         'githubOwners': githubOwners.value,
         'sidebarOrder': sidebarOrder.value,
         'sidebarCollapsed': sidebarCollapsed.value.toList(),
+        'sidebarChats': sidebarChats.value,
+        'pinnedCollapsed': pinnedCollapsed.value,
         'models': recentModels.value,
         'opened': chatOpened.value,
         'pins': pinnedFiles.value,

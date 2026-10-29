@@ -8,6 +8,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
+import 'package:nushi/chat_pins.dart';
 import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/composer_parts.dart';
@@ -17,7 +18,6 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
-import 'package:nushi/panel_cards.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
@@ -51,6 +51,9 @@ const sideQuestionKey = SingleActivator(
   shift: true,
 );
 
+/// ⌘D: pin the chat, or unpin it (Arc's key for pinning a tab).
+const pinKey = SingleActivator(LogicalKeyboardKey.keyD, meta: true);
+
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
@@ -71,6 +74,7 @@ enum Act {
   sendComments(menu: ActMenu.chat, menuLabel: 'Send Review Comments to Agent'),
   stop(keyText: 'Esc', menu: ActMenu.chat, menuLabel: 'Stop'), // the chat's
   rename(menu: ActMenu.chat, menuLabel: 'Rename'),
+  pin(key: pinKey, menu: ActMenu.chat, menuLabel: 'Pin Chat'),
   sleep(menu: ActMenu.chat, menuLabel: 'Sleep'),
   reload(menu: ActMenu.chat, menuLabel: 'Reload'),
   linkPull(menu: ActMenu.chat, menuLabel: 'Link Pull Request…'),
@@ -301,6 +305,13 @@ List<AppAction> chatActions(
       run: onRename ?? () => chat!.renaming.value = true,
     ),
     AppAction(
+      .pin,
+      (chat?.pin ?? 0) > 0 ? 'Unpin chat' : 'Pin chat',
+      short: (chat?.pin ?? 0) > 0 ? 'Unpin' : 'Pin',
+      enabled: canPinChat(d, chat),
+      run: () => tryOrShow(context, () => toggleChatPin(d, chat!)),
+    ),
+    AppAction(
       .sleep,
       'Sleep chat',
       short: 'Sleep',
@@ -369,19 +380,6 @@ List<AppAction> chatActions(
       run: () => unawaited(showDeleteChat(context, chat!, d)),
     ),
   ];
-}
-
-/// Artifacts…: the details panel shown on Chat, its Artifacts card opened
-/// and scrolled to; where the window has no room for the panel, the
-/// palette lists them instead.
-void revealArtifacts(BuildContext context, ChatState chat) {
-  if (!chat.panelFits) {
-    unawaited(showArtifacts(context, chat));
-    return;
-  }
-  chat.tab.value = ChatTab.chat;
-  showDetails.value = true;
-  revealCard.value = 'Artifacts';
 }
 
 /// Runs [act] as it is now, if it applies.

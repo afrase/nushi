@@ -12,15 +12,17 @@ import 'package:nushi/new_chat.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_groups.dart';
+import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The chats, grouped by folder (a chat in a worktree under its
-/// repository; [SidebarGroups]): the groups in the order they were
-/// dragged into, a new folder's first, and in each the newest chat first.
-/// Archived chats are in a collapsed group at the bottom. While ⌘ is held
+/// The chats: the pinned ones first ([PinnedSection]), then grouped by
+/// folder (a chat in a worktree under its repository; [SidebarGroups]):
+/// the groups in the order they were dragged into, a new folder's first,
+/// and in each the chats as they were dragged, a new one first. Archived
+/// chats are in a collapsed group at the bottom. While ⌘ is held
 /// alone, the first nine chats shown (archived left out) show the number
 /// ⌘ opens them with.
 class Sidebar extends StatefulWidget {
@@ -94,6 +96,8 @@ class _SidebarState extends State<Sidebar> {
                 _hold,
                 sidebarOrder,
                 sidebarCollapsed,
+                sidebarChats,
+                pinnedCollapsed,
               ]),
               builder: (context, _) {
                 final held = _hold.value;
@@ -101,21 +105,32 @@ class _SidebarState extends State<Sidebar> {
                   for (final (i, c) in chatOrder(daemon).take(9).indexed)
                     c.id: i + 1,
                 };
+                Widget row(
+                  ChatState c,
+                  Movable movable, {
+                  bool pinned = false,
+                }) => _ChatRow(
+                  c,
+                  key: ValueKey(c.id),
+                  daemon: daemon,
+                  number: held ? numbers[c.id] : null,
+                  movable: movable,
+                  project: pinned,
+                );
                 return ListView(
                   padding: const EdgeInsets.only(bottom: 10),
                   children: [
+                    PinnedSection(
+                      daemon,
+                      row: (c, movable) => row(c, movable, pinned: true),
+                    ),
                     SidebarGroups(
                       groups: sidebarGroups(daemon, starting: starting),
                       selectedId: daemon.selectedId,
                       starting: starting,
                       onNew: starting == null ? _new : null,
                       onTerminal: _terminal,
-                      row: (c) => _ChatRow(
-                        c,
-                        key: ValueKey(c.id),
-                        daemon: daemon,
-                        number: held ? numbers[c.id] : null,
-                      ),
+                      row: row,
                     ),
                     if (archived.isNotEmpty) ...[
                       Padding(
@@ -218,13 +233,24 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// A chat in the list: click opens it, double-click renames it, and a
-/// right-click opens its menu.
+/// A chat in the list: click opens it, double-click renames it, a
+/// right-click opens its menu, and dragged ([movable]) it moves within
+/// its list. A pinned chat's ([project]) says its project after its title,
+/// muted, in the place of its branch or Jira key.
 class _ChatRow extends StatefulWidget {
-  const new(this.chat, {required this.daemon, super.key, this.number});
+  const new(
+    this.chat, {
+    required this.daemon,
+    super.key,
+    this.number,
+    this.movable,
+    this.project = false,
+  });
 
   final ChatState chat;
   final Daemon daemon;
+  final Movable? movable;
+  final bool project;
 
   /// The number ⌘ opens it with, shown while ⌘ is held.
   final int? number;
@@ -248,99 +274,112 @@ class _ChatRowState extends State<_ChatRow> {
     final t = theme.t;
     final chat = widget.chat;
     final daemon = widget.daemon;
+    final movable =
+        widget.movable ?? (Widget child, {required bool enabled}) => child;
     return ListenableBuilder(
       listenable: chat,
-      builder: (context, _) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        child: Menu(
-          entries: chatMenu(
-            context,
-            chat,
-            daemon,
-            onRename: () => setState(() => _renaming = true),
-          ),
-          builder: (context, open) => Tap(
-            onTap: _tap,
-            onSecondaryTapUp: (d) => open(d.localPosition),
-            selected: daemon.selectedId == chat.id,
-            padding: EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: _renaming ? 1 : 5,
+      builder: (context, _) => movable(
+        enabled: !_renaming,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+          child: Menu(
+            entries: chatMenu(
+              context,
+              chat,
+              daemon,
+              onRename: () => setState(() => _renaming = true),
             ),
-            child: Row(
-              children: [
-                // Its state in a word on hover ("needs you"), which the
-                // row leaves to the dot so the title keeps its width.
-                Tooltip(
-                  message: phaseWord(chat.phase, t).$1,
-                  child: ChatDot(chat: chat, sparks: true),
-                ),
-                const SizedBox(width: 6),
-                Tooltip(
-                  message: chat.agentName,
-                  child: AgentMark(
-                    chat.agent,
-                    color: chat.archived ? t.textMuted : t.textSecondary,
+            builder: (context, open) => Tap(
+              onTap: _tap,
+              onSecondaryTapUp: (d) => open(d.localPosition),
+              selected: daemon.selectedId == chat.id,
+              padding: EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: _renaming ? 1 : 5,
+              ),
+              child: Row(
+                children: [
+                  // Its state in a word on hover ("needs you"), which the
+                  // row leaves to the dot so the title keeps its width.
+                  Tooltip(
+                    message: phaseWord(chat.phase, t).$1,
+                    child: ChatDot(chat: chat, sparks: true),
                   ),
-                ),
-                const SizedBox(width: 7),
-                Expanded(
-                  child: _renaming
-                      ? RenameField(
-                          chat: chat,
-                          daemon: daemon,
-                          onDone: () => setState(() => _renaming = false),
-                        )
-                      : Text(
-                          chat.title.isEmpty ? 'New chat' : chat.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.ui(
-                            chat.archived ? t.textSecondary : t.text,
-                          ),
-                        ),
-                ),
-                if (chat.jiraKey.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Text(
-                      chat.jiraKey,
-                      style: theme.code(t.textMuted, size: 10.5),
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: chat.agentName,
+                    child: AgentMark(
+                      chat.agent,
+                      color: chat.archived ? t.textMuted : t.textSecondary,
                     ),
-                  )
-                else if (chat.worktree case final wt?)
-                  Flexible(
-                    child: Padding(
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: _renaming
+                        ? RenameField(
+                            chat: chat,
+                            daemon: daemon,
+                            onDone: () => setState(() => _renaming = false),
+                          )
+                        : Text(
+                            chat.title.isEmpty ? 'New chat' : chat.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.ui(
+                              chat.archived ? t.textSecondary : t.text,
+                            ),
+                          ),
+                  ),
+                  if (widget.project)
+                    Padding(
                       padding: const EdgeInsets.only(left: 6),
                       child: Text(
-                        wt.branch.replaceFirst('nushi/', ''),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        chat.scratch ? '' : folderParts(chat.home).$1,
+                        style: theme.ui(t.textMuted, size: 11.5),
+                      ),
+                    )
+                  else if (chat.jiraKey.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: Text(
+                        chat.jiraKey,
                         style: theme.code(t.textMuted, size: 10.5),
                       ),
+                    )
+                  else if (chat.worktree case final wt?)
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          wt.branch.replaceFirst('nushi/', ''),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.code(t.textMuted, size: 10.5),
+                        ),
+                      ),
                     ),
-                  ),
-                if (chat.pull != null) PullDot(chat, PullStates.of(daemon)),
-                if (chat.archived && !chat.scratch)
-                  Text(
-                    folderParts(chat.home).$1,
-                    style: theme.ui(t.textMuted, size: 11.5),
-                  ),
-                if (widget.number case final n?)
-                  Container(
-                    margin: const EdgeInsets.only(left: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: box(
-                      t.fieldBorder,
-                      fill: t.fieldFill,
-                      radius: NushiTheme.control,
+                  if (chat.pull != null) PullDot(chat, PullStates.of(daemon)),
+                  if (chat.archived && !chat.scratch)
+                    Text(
+                      folderParts(chat.home).$1,
+                      style: theme.ui(t.textMuted, size: 11.5),
                     ),
-                    child: Text(
-                      '⌘$n',
-                      style: theme.code(t.textSecondary, size: 11),
+                  if (widget.number case final n?)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: box(
+                        t.fieldBorder,
+                        fill: t.fieldFill,
+                        radius: NushiTheme.control,
+                      ),
+                      child: Text(
+                        '⌘$n',
+                        style: theme.code(t.textSecondary, size: 11),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

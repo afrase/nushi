@@ -82,6 +82,7 @@ class FakeDaemon implements Transport {
     if (input is SetUpAgentRequest) setUp.add(input.agent);
     if (input is RemoveAgentRequest) removed.add(input.agent);
     if (input is SetSettingsRequest) setSettings.add(settings = input.settings);
+    if (input is PinChatsRequest) _pin(input.chatIds);
     if (input is StartChatRequest) {
       started.add(input);
       if (startError case final e?) throw ConnectException(Code.unknown, e);
@@ -115,6 +116,20 @@ class FakeDaemon implements Transport {
           _ => spec.outputFactory(),
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());
+  }
+
+  /// Pins [ids] as the daemon does: each at its place, every other chat
+  /// unpinned, an archived one never; a chat whose pin changed comes as
+  /// an event.
+  void _pin(List<String> ids) {
+    final live = [
+      for (final id in ids)
+        if (chats.any((c) => c.id == id && !c.archived)) id,
+    ];
+    for (final c in chats) {
+      final pin = live.indexOf(c.id) + 1;
+      if (c.pin != pin) emit(EventsResponse(chatId: c.id, chat: c..pin = pin));
+    }
   }
 
   /// Answers a stream call (its request): its messages, or null for the
