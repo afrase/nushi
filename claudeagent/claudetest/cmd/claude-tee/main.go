@@ -17,6 +17,9 @@
 // extension, so a client that runs claude several times leaves a cassette
 // a run. Only runs on the stream-JSON protocol are recorded: claude run as
 // a command (--version, auth status) just runs.
+//
+// With -schema-diff it compares recorded frames with claude's schemas
+// instead (schemadiff.go).
 package main
 
 import (
@@ -41,6 +44,9 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "-schema-diff" {
+		os.Exit(schemaDiff(os.Args[2:], os.Stdout, os.Stderr))
+	}
 	os.Exit(tee(os.Args[1:]))
 }
 
