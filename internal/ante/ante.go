@@ -11,20 +11,19 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Command is the nushid subcommand that runs the bridge.
@@ -74,7 +73,7 @@ func Main() {
 		cfg.Version, err = version(bin)
 	}
 	cfg.Problem = err
-	cfg.Spawn = func(cwd string) (io.WriteCloser, io.Reader, func(), error) { return serve(bin, cwd) }
+	cfg.Spawn = Server(bin, nil, os.Stderr)
 	cfg.Catalog = func() ([]provider, error) { return catalog(bin) }
 	Serve(os.Stdin, os.Stdout, cfg)
 }
@@ -105,7 +104,9 @@ func binary() (string, error) {
 func version(bin string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "--version").Output()
+	cmd := exec.CommandContext(ctx, bin, "--version")
+	procgroup.Bound(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("couldn't run %s --version: %w", bin, err)
 	}
@@ -135,37 +136,13 @@ func numbers(v string) []int {
 	return out
 }
 
-// serve starts `ante serve --stdio` in cwd, in a process group of its
-// own, its stderr to the bridge's.
-func serve(bin, cwd string) (io.WriteCloser, io.Reader, func(), error) {
-	cmd := exec.Command(bin, "serve", "--stdio") //nolint:noctx // lives until the session ends, not a context
-	cmd.Dir = cwd
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	in, err := cmd.StdinPipe()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, nil, nil, err
-	}
-	exited := make(chan struct{})
-	go func() { _ = cmd.Wait(); close(exited) }() // its end is all that matters here
-	kill := func() {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the group may be gone already
-		<-exited
-	}
-	return in, out, kill, nil
-}
-
 // catalog reads Ante's providers and their models (`ante catalog`).
 func catalog(bin string) ([]provider, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "catalog").Output()
+	cmd := exec.CommandContext(ctx, bin, "catalog")
+	procgroup.Bound(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}

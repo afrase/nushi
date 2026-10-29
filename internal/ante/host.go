@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/internal/agentproc"
 )
 
 // Spawn starts an Ante host (`ante serve --stdio`) in cwd: its stdin, its
@@ -45,23 +47,26 @@ func startHost(spawn Spawn, cwd string) (*host, error) {
 	return h, nil
 }
 
+// read reads the host's output until it ends, or the host sends a line
+// over agentproc.MaxRead (then it is killed).
 func (h *host) read(out io.Reader) {
 	defer close(h.exited)
 	defer close(h.events)
-	r := bufio.NewReader(out)
-	for {
-		line, err := r.ReadBytes('\n')
+	r := bufio.NewScanner(out)
+	r.Buffer(nil, agentproc.MaxRead)
+	for r.Scan() {
 		var msg struct {
 			Event  json.RawMessage `json:"event"`
 			Parent string          `json:"parent"`
 		}
-		if json.Unmarshal(line, &msg) == nil && msg.Event != nil {
+		if json.Unmarshal(r.Bytes(), &msg) == nil && msg.Event != nil { // Unmarshal copies what it keeps
 			name, payload := variant(msg.Event)
 			h.events <- event{Name: name, Payload: payload, Parent: msg.Parent}
 		}
-		if err != nil {
-			return
-		}
+	}
+	if err := r.Err(); err != nil {
+		warnf("stopped reading Ante's host: %v", err) // bufio.Scanner: token too long
+		h.kill()
 	}
 }
 

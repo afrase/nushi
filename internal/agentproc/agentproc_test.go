@@ -12,6 +12,8 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/logs"
 )
 
 // logBuffer is a log to look into.
@@ -78,6 +80,47 @@ func TestProcessLines(t *testing.T) {
 	waitLog(t, b, `msg="agent exited"`)
 	if got := b.String(); !strings.Contains(got, "signal=SIGKILL") || !strings.Contains(got, "stopped=true") {
 		t.Errorf("got\n%s", got)
+	}
+}
+
+// An agent that sends a line over MaxRead is ended, and the log says why.
+func TestReadLimit(t *testing.T) {
+	MaxRead = 1000
+	defer func() { MaxRead = 256 << 20 }()
+	log, b := newLog(slog.LevelInfo)
+	a, err := Start(exec.Command("sh", "-c", "head -c 5000 /dev/zero | tr '\\0' x; echo; sleep 30"), quiet{}, log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-a.Done():
+	case <-time.After(5 * time.Second):
+		t.Fatal("the agent wasn't ended")
+	}
+	waitLog(t, b, `msg="agent ended: it sent a message over the read limit"`)
+	if got := b.String(); !strings.Contains(got, "limit=1000") || !strings.Contains(got, "signal=SIGKILL") {
+		t.Errorf("got\n%s", got)
+	}
+}
+
+// A private key on stderr leaves no line of its body in the log, and
+// lines after its END line are logged again.
+func TestStderrPrivateKey(t *testing.T) {
+	var b logBuffer
+	s := &stderrLines{log: slog.New(logs.Handler(&b))}
+	if _, err := io.WriteString(s, "loading\n-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmU\nAAAAAAAAAAAAAAAAAAAAAAAA\n-----END OPENSSH PRIVATE KEY-----\nloaded\n"); err != nil {
+		t.Fatal(err)
+	}
+	got := b.String()
+	for _, body := range []string{"b3Blbn", "AAAAAAAA", "-----END"} {
+		if strings.Contains(got, body) {
+			t.Errorf("%q in the log:\n%s", body, got)
+		}
+	}
+	for _, want := range []string{"msg=loading", `msg="-----BEGIN OPENSSH PRIVATE KEY-----[redacted]"`, "msg=loaded"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in the log:\n%s", want, got)
+		}
 	}
 }
 

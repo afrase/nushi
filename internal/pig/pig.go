@@ -31,6 +31,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Command is the nushid subcommand that runs the bridge.
@@ -99,7 +100,9 @@ func Main() {
 func version(bin string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, bin, "--version").Output()
+	cmd := exec.CommandContext(ctx, bin, "--version")
+	procgroup.Bound(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("couldn't run %s --version: %w", bin, err)
 	}

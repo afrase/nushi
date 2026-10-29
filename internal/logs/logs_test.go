@@ -39,7 +39,7 @@ func TestRedact(t *testing.T) {
 		"fw_3ZabcdefghijklmnopqrstUV":                       "[redacted]",
 		"token ghp_abcdefghijklmnopqrstuvwxyz0123456789":    "token [redacted]",
 		"Authorization: Bearer abc.def-ghi_jkl":             "Authorization: Bearer [redacted]",
-		"https://me:hunter22@example.com/x":                 "https://me:[redacted]example.com/x",
+		"https://me:hunter22@example.com/x":                 "https://me:[redacted]@example.com/x",
 		"FIREWORKS_API_KEY=abcd1234 next":                   "FIREWORKS_API_KEY=[redacted] next",
 		`{"apiKey": "abcd1234", "x": 1}`:                    `{"apiKey": "[redacted]", "x": 1}`,
 		"jwt eyJhbGciOiJI.eyJzdWIiOiIx.SflKxwRJSMeKKF2QT4f": "jwt [redacted]",

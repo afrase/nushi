@@ -7,6 +7,8 @@ import (
 	"io"
 	"regexp"
 	"strings"
+
+	"github.com/afrase/nushi/internal/secrets"
 )
 
 // secretMask stands in for a secret in a tool call's input, as the MCP
@@ -19,20 +21,11 @@ var (
 	// countKey is a key about how many tokens (a model's max_tokens, a
 	// usage's input_tokens), not a token: its value shows.
 	countKey = regexp.MustCompile(`(?i)(max|min|input|output|total|cached|reasoning|thinking)[_-]?tokens?|tokens?[_-]?(count|limit|budget|used|usage)`)
-	// secretShape is what a key or token looks like in any string: vendors'
-	// prefixes, AWS key ids, JWTs, PEM blocks, and the values of bearer
-	// and basic credentials (as internal/logs redacts a log's lines).
-	secretShape = regexp.MustCompile(strings.Join([]string{
-		`()\bsk-[A-Za-z0-9_-]{16,}`,                                          // Anthropic (sk-ant-…), OpenAI (sk-proj-…)
-		`()\b(?:gh[pousr]_|github_pat_)\w{20,}`,                              // GitHub
-		`()\bxox[abposr]-[A-Za-z0-9-]{10,}`,                                  // Slack
-		`()\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`,                                    // AWS key ids
-		`()\beyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}`,                             // JWTs
-		`()-----BEGIN [A-Z0-9 ]+-----[\s\S]*?(?:-----END [A-Z0-9 ]+-----|$)`, // PEM, to its end or the cut
-		`((?i)\b(?:bearer|basic)\s+)[\w.~+/=-]{8,}`,
-		`(://[^/\s:@]+:)[^/\s@]+@`, // a password in a URL
-		`((?i)\b[A-Za-z_][\w.-]*(?:token|secret|passw(?:or)?d|api[_-]?key|credential)[\w.-]*=)[^\s"',;&|]{4,}`, // NAME=value
-	}, "|"))
+	// secretName is a NAME=value pair whose name says secret, masked after
+	// the shapes every secret mask knows (internal/secrets). Narrower than
+	// the log's rule: a tool call's input holds code ("key: value" in it is
+	// rarely a secret).
+	secretName = regexp.MustCompile(`((?i)\b[A-Za-z_][\w.-]*(?:token|secret|passw(?:or)?d|api[_-]?key|credential)[\w.-]*=)[^\s"',;&|]{4,}`)
 )
 
 // maskSecrets masks what looks secret in a tool call's input, as JSON
@@ -48,18 +41,7 @@ func maskSecrets(input string) string {
 
 // maskShapes masks the secret shapes in s, keeping what names them (the
 // "Bearer ", a URL's user).
-func maskShapes(s string) string {
-	return secretShape.ReplaceAllStringFunc(s, func(m string) string {
-		for _, g := range secretShape.FindStringSubmatch(m)[1:] {
-			if g != "" && strings.HasPrefix(g, "://") { // a URL's user:password@
-				return g + secretMask + "@"
-			} else if g != "" {
-				return g + secretMask
-			}
-		}
-		return secretMask
-	})
-}
+func maskShapes(s string) string { return secrets.Mask(s, secretMask, secretName) }
 
 // maskJSON masks a JSON document token by token, so its keys keep their
 // order, and indents it again.

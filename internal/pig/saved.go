@@ -19,6 +19,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -90,7 +91,9 @@ func (d Dirs) remove(ctx context.Context, id string) error {
 		return nil //nolint:nilerr // not found: gone already
 	}
 	if d.Trash != "" {
-		_ = exec.CommandContext(ctx, d.Trash, file).Run() //nolint:gosec // trash, on a session file PiG keeps; file is absolute; whether it went is checked next
+		cmd := exec.CommandContext(ctx, d.Trash, file) //nolint:gosec // trash, on a session file PiG keeps; file is absolute
+		procgroup.Bound(cmd)
+		_ = cmd.Run() // whether it went is checked next
 		if _, err := os.Lstat(file); errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}

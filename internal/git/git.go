@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 const (
@@ -352,7 +353,7 @@ func runTo(ctx context.Context, dir string, blank []string, out io.Writer, args 
 }
 
 // command is git in dir as run runs it, with the settings named in blank
-// set empty.
+// set empty, killed with what it started when ctx ends.
 func command(ctx context.Context, dir string, blank []string, args ...string) *exec.Cmd {
 	global := []string{"-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-c", "log.showSignature=false", "-C", dir}
 	cmd := exec.CommandContext(ctx, "git", append(global, args...)...)
@@ -360,6 +361,7 @@ func command(ctx context.Context, dir string, blank []string, args ...string) *e
 	for i, name := range blank {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", i, name), fmt.Sprintf("GIT_CONFIG_VALUE_%d=", i))
 	}
+	procgroup.Bound(cmd)
 	return cmd
 }
 
@@ -372,6 +374,7 @@ func noFilters(ctx context.Context, dir string) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "git", "-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null", "-C", dir,
 		"config", "--show-scope", "--name-only", "--get-regexp", `^filter\.`)
 	cmd.Env = append(os.Environ(), "GIT_NO_LAZY_FETCH=1")
+	procgroup.Bound(cmd)
 	out, err := cmd.Output()
 	var exit *exec.ExitError
 	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(exit.Stderr) == 0 {

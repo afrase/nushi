@@ -27,6 +27,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Timeout bounds each outside step: scutil, fetching a PAC file,
@@ -78,7 +80,9 @@ func For(u *url.URL) ([]*url.URL, error) {
 var lookup = func(u *url.URL, secure bool) ([]*url.URL, time.Duration) {
 	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "/usr/sbin/scutil", "--proxy").Output()
+	cmd := exec.CommandContext(ctx, "/usr/sbin/scutil", "--proxy")
+	procgroup.Bound(cmd)
+	out, err := cmd.Output()
 	if err != nil {
 		return []*url.URL{nil}, 30 * time.Second
 	}
@@ -237,6 +241,7 @@ func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
 	asked := url.URL{Scheme: map[string]string{"wss": "https", "ws": "http", "https": "https", "http": "http"}[u.Scheme], Host: u.Host, Path: "/"}
 	cmd := exec.CommandContext(ctx, "/usr/bin/osascript", "-l", "JavaScript", "-e", pacScript, asked.String()) //nolint:gosec // osascript with our own script
 	cmd.Stdin = bytes.NewReader(script)
+	procgroup.Bound(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("evaluating the PAC file: %w", err)
@@ -265,6 +270,10 @@ func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
 	return proxies, nil
 }
 
+// pacTransport fetches PAC files, directly; a connection isn't kept for
+// the next fetch, minutes away.
+var pacTransport = &http.Transport{Proxy: nil, DisableKeepAlives: true}
+
 // fetch reads a PAC file: http(s), directly, or file://; 1 MB at most.
 func fetch(ctx context.Context, raw string) ([]byte, error) {
 	u, err := url.Parse(raw)
@@ -281,7 +290,7 @@ func fetch(ctx context.Context, raw string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		resp, err := (&http.Transport{Proxy: nil}).RoundTrip(req)
+		resp, err := pacTransport.RoundTrip(req)
 		if err != nil {
 			return nil, err
 		}

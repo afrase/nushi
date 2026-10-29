@@ -7,6 +7,9 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // RealPath returns path with its symlinks resolved, or as it is when that
@@ -61,9 +64,12 @@ func TrustRoot(folder string) (top, key string) {
 }
 
 // worktreeSet says whether a repository's config file sets core.worktree
-// (includes followed); git's own environment is left out.
+// (includes followed); git's own environment is left out. git gets 5 s.
 func worktreeSet(config string) bool {
-	cmd := exec.CommandContext(context.Background(), "git", "config", "--file", config, "--includes", "--get", "core.worktree")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "config", "--file", config, "--includes", "--get", "core.worktree")
 	cmd.Env = slices.DeleteFunc(os.Environ(), func(e string) bool { return strings.HasPrefix(e, "GIT_") })
+	procgroup.Bound(cmd)
 	return cmd.Run() == nil
 }

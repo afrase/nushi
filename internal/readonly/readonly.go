@@ -8,8 +8,9 @@ package readonly
 import (
 	"context"
 	"os/exec"
-	"syscall"
 	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 const profile = `(version 1)(allow default)(deny network*)(deny file-write* (require-not (literal "/dev/null")))`
@@ -25,8 +26,6 @@ func Output(ctx context.Context, env []string, path string, args ...string) ([]b
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", append([]string{"-p", profile, path}, args...)...) //nolint:gosec // a found CLI's --version, under the sandbox
 	cmd.Env = env
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
-	cmd.WaitDelay = time.Second
+	procgroup.Bound(cmd)
 	return cmd.Output()
 }

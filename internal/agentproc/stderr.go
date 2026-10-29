@@ -21,9 +21,14 @@ const (
 	perSecond = 10
 )
 
+// maxKeyLines bounds a private key's lines left out of the log after its
+// BEGIN line, should its END line not come (an 8192-bit RSA key has 100).
+const maxKeyLines = 200
+
 // stderrLines makes a log record (source=agent) of each line the agent
 // writes to its stderr, within the caps above; the lines dropped are
-// counted on the next one that goes.
+// counted on the next one that goes. A private key's lines are left out
+// to its END line: its BEGIN line is logged, which the log masks.
 type stderrLines struct {
 	log *slog.Logger
 
@@ -33,6 +38,7 @@ type stderrLines struct {
 	tokens  float64
 	last    time.Time
 	dropped int
+	inKey   int // a private key's lines still to leave out
 }
 
 // setLog has the lines logged to log from now on.
@@ -65,6 +71,16 @@ func (s *stderrLines) emit() {
 	s.buf, s.cut = s.buf[:0], false
 	if strings.TrimSpace(line) == "" {
 		return
+	}
+	if s.inKey > 0 {
+		s.inKey--
+		if strings.Contains(line, "-----END ") {
+			s.inKey = 0
+		}
+		return
+	}
+	if strings.Contains(line, "-----BEGIN ") && strings.Contains(line, "PRIVATE KEY-----") && !strings.Contains(line, "-----END ") {
+		s.inKey = maxKeyLines
 	}
 	level := slog.LevelInfo
 	if rest, ok := strings.CutPrefix(line, DebugPrefix); ok { // a bridge of Nushi's own (internal/pig)

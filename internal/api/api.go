@@ -110,9 +110,15 @@ func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Ha
 		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
-		connect.WithCompressMinBytes(1024)))
+		connect.WithCompressMinBytes(1024),
+		connect.WithReadMaxBytes(MaxRequest)))
 	return mux
 }
+
+// MaxRequest is the largest request read, unzipped: a prompt as large as
+// an agent takes (agentproc.MaxMessage, its images too) fits; a larger one
+// is refused with ResourceExhausted before it is decoded.
+const MaxRequest = 32 << 20
 
 // macOnly are the calls that pair, revoke or move remote access: only the
 // Mac makes them, never a device's channel (ADR 0034).

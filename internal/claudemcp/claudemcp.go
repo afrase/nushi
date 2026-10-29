@@ -26,6 +26,7 @@ import (
 
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Claude reads Claude Code's MCP config.
@@ -43,13 +44,18 @@ func ConfigFile() string {
 
 // project is the folder Claude files a folder's local servers under: its
 // repository's main checkout, or the folder outside git (real paths).
+// git gets 5 s.
 //
 //nolint:contextcheck // a quick git rev-parse, also for callers with no request (the MCP list's scopes)
 func project(folder string) string {
 	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
 		folder = resolved
 	}
-	out, err := exec.CommandContext(context.Background(), "git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir").Output() //nolint:gosec // git rev-parse in the folder asked about
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "-C", folder, "rev-parse", "--path-format=absolute", "--git-common-dir") //nolint:gosec // git rev-parse in the folder asked about
+	procgroup.Bound(cmd)
+	out, err := cmd.Output()
 	if common := strings.TrimSpace(string(out)); err == nil && filepath.Base(common) == ".git" {
 		return filepath.Dir(common)
 	}
@@ -161,6 +167,7 @@ func (Claude) Check(ctx context.Context, folder string) ([]model.MCPServer, erro
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "claude", "mcp", "list")
 	cmd.Dir = folder
+	procgroup.Bound(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("claude mcp list: %w", err)

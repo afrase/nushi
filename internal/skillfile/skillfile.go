@@ -26,6 +26,8 @@ import (
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // File is what a SKILL.md says of its skill.
@@ -282,7 +284,9 @@ func Trash(ctx context.Context, project, yours []string, path string) error {
 
 // trash runs the Trash on path (a link itself goes, not its target).
 func trash(ctx context.Context, path string) error {
-	if out, err := exec.CommandContext(ctx, TrashProgram, path).CombinedOutput(); err != nil { //nolint:gosec // an absolute path checked by the caller
+	cmd := exec.CommandContext(ctx, TrashProgram, path) //nolint:gosec // an absolute path checked by the caller
+	procgroup.Bound(cmd)
+	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("moving %s to the Trash: %s", path, strings.TrimSpace(string(out)))
 	}
 	if _, err := os.Lstat(path); err == nil {

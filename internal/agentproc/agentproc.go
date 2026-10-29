@@ -6,6 +6,7 @@ package agentproc
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os/exec"
 	"strings"
@@ -40,7 +41,7 @@ func Start(cmd *exec.Cmd, client acp.Client, log *slog.Logger) (*Agent, error) {
 	calls := &callLog{}
 	calls.inner.Store(handlerOf(log))
 	started := time.Now()
-	conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return client }, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(MaxMessage))
+	conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return client }, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(MaxMessage), acp.WithReadLimit(MaxRead))
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +71,11 @@ func Connect(conn *acp.AgentConn, log *slog.Logger) *Agent {
 // agents read in one line (claude-agent-acp's SDK: 32 MiB, past which it
 // ends the connection).
 const MaxMessage = 30 << 20
+
+// MaxRead is the largest message read from an agent, generous: a longer
+// line ends the connection and the agent with it (its chat sees it die),
+// rather than the daemon growing until it does. A var for tests.
+var MaxRead = 256 << 20
 
 func handlerOf(l *slog.Logger) *handler { return &handler{l.Handler()} }
 
@@ -196,9 +202,12 @@ func (a *Agent) exited(ran time.Duration) {
 	} else {
 		args = append(args, "code", a.cmd.ProcessState.ExitCode())
 	}
-	if a.stopped.Load() {
+	switch {
+	case errors.Is(a.Err(), acp.ErrTooLarge):
+		a.log.Warn("agent ended: it sent a message over the read limit", append(args, "limit", MaxRead)...)
+	case a.stopped.Load():
 		a.log.Info("agent exited", append(args, "stopped", true)...)
-	} else {
+	default:
 		a.log.Warn("agent died", args...)
 	}
 }

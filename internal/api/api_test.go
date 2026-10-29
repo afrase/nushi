@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -16,6 +17,20 @@ import (
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/relay"
 )
+
+// A request over MaxRequest is refused before it is decoded, zipped or not.
+func TestRequestTooLarge(t *testing.T) {
+	srv := httptest.NewServer(New(Services{}))
+	defer srv.Close()
+	text := strings.Repeat("x", MaxRequest+1<<20)
+	for _, opts := range [][]connect.ClientOption{nil, {connect.WithSendGzip()}} {
+		c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL, opts...)
+		_, err := c.SendPrompt(context.Background(), connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: "c", Text: text}))
+		if connect.CodeOf(err) != connect.CodeResourceExhausted {
+			t.Errorf("a %d MB prompt (%d options): %v", len(text)>>20, len(opts), err)
+		}
+	}
+}
 
 func TestPingNeedsToken(t *testing.T) {
 	srv := httptest.NewServer(WithToken("secret", New(Services{})))

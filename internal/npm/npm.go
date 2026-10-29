@@ -20,6 +20,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Installer installs with npm in Environ's environment (the agents';
@@ -69,6 +71,7 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 		env = in.Environ()
 	}
 	cmd.Env = slices.Concat(env, in.Env)
+	procgroup.Bound(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("npm ci: %w: %s", err, tail(string(out), 6))
 	}
