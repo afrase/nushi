@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -284,5 +285,13 @@ func TestLoad(t *testing.T) {
 		if _, err := Load(write("bad.json", bad)); err == nil {
 			t.Errorf("%s loaded", bad)
 		}
+	}
+}
+
+func TestStartCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, _, err := New(&Script{}, nil).Start(ctx, "127.0.0.1:0"); !errors.Is(err, context.Canceled) {
+		t.Errorf("started on a cancelled context: %v", err)
 	}
 }
