@@ -292,6 +292,32 @@ void main() {
     d.dispose();
   }, variant: macOS);
 
+  testWidgets("a read-only chat's Clear asks first: the chat goes with its "
+      'copy', (tester) async {
+    final fake = _fake(30);
+    final d = await open(tester, fake);
+    await tester.tap(find.text('Read-only  1'));
+    await tester.pumpAndSettle();
+    final gone = _rows(tester).single.row;
+    expect(gone.gone, isTrue);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(
+      tester.getCenter(find.byKey(ValueKey('history-${gone.id}'))),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(Button, 'Clear'));
+    await tester.pumpAndSettle();
+    expect(find.text('Clear 1 copy?'), findsOneWidget);
+    expect(find.textContaining("1 chat's transcripts"), findsOneWidget);
+    expect(_calls<ClearTranscriptsRequest>(fake), isEmpty);
+    await tester.tap(find.widgetWithText(Button, 'Clear').last);
+    await tester.pumpAndSettle();
+    expect(_calls<ClearTranscriptsRequest>(fake).single.chatIds, [gone.id]);
+    d.dispose();
+  }, variant: macOS);
+
   testWidgets('5,000 copies: only the rows that show are built', (
     tester,
   ) async {

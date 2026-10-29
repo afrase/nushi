@@ -10,6 +10,7 @@ import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/trust_card.dart';
 import 'package:nushi/widgets.dart';
 
 /// Opens the New chat screen, on [folder] if given ('' for none); a chat
@@ -47,6 +48,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
   late String _agent = lastAgent(_daemon.chats.values);
   final _typed = TextEditingController();
   bool _starting = false;
+  TrustAsk? _asked; // the trust question shown, until answered
 
   @override
   void initState() {
@@ -57,22 +59,39 @@ class _NewChatScreenState extends State<NewChatScreen> {
   @override
   void dispose() {
     _daemon.removeListener(_trust);
+    // Backing out is a no: the start doesn't wait on a question gone.
+    _asked?.decide(start: false);
+    _daemon.trustAsk?.decide(start: false);
     _typed.dispose();
     super.dispose();
   }
 
-  /// A folder that brings code of its own asks first, as on the Mac.
+  /// A folder that brings code of its own asks first, as on the Mac, with
+  /// each thing it runs, exactly: "Start anyway" approves them.
   void _trust() {
     final ask = _daemon.trustAsk;
     if (ask == null || !mounted) return;
     _daemon.trustAsk = null;
+    _asked = ask;
     unawaited(
-      confirm(
-        context,
-        'Start ${agentTitle(ask.agent)} here?',
-        'This folder brings code for it to run:\n${_runs(ask.runs)}',
-        'Start anyway',
-      ).then((start) => ask.decide(start: start)),
+      showDialog<bool>(
+        context: context,
+        builder: (context) => nushiDialog(
+          'Start ${agentTitle(ask.agent)} here?',
+          _TrustRuns(ask),
+          [
+            Button(
+              label: 'Cancel',
+              onPressed: () => Navigator.pop(context, false),
+            ),
+            Button(
+              label: 'Start anyway',
+              kind: ButtonKind.primary,
+              onPressed: () => Navigator.pop(context, true),
+            ),
+          ],
+        ),
+      ).then((start) => ask.decide(start: start ?? false)),
     );
   }
 
@@ -151,8 +170,53 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 }
 
-String _runs(List<FolderRun> runs) =>
-    [for (final r in runs) '• ${r.what} (${r.file})'].join('\n');
+/// What a folder's code runs: each thing, its file (from the folder), and
+/// its command, a line of its own, as the Mac's trust card shows it.
+class _TrustRuns extends StatelessWidget {
+  const new(this.ask);
+
+  final TrustAsk ask;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    String shown(String file) => file.startsWith('${ask.folder}/')
+        ? file.substring(ask.folder.length + 1)
+        : tildePath(file);
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          Text(
+            'This folder brings code for it to run:',
+            style: phoneText(context, size: 15),
+          ),
+          for (final FolderRun r in ask.runs)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 2,
+              children: [
+                Text(
+                  '${r.what} (${shown(r.file)})',
+                  style: phoneText(context, size: 15),
+                ),
+                if (r.command.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      r.command,
+                      style: theme.code(t.textSecondary, size: 12.5),
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 class _Choice extends StatelessWidget {
   const new(

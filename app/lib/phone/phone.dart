@@ -347,8 +347,24 @@ class Phone extends ChangeNotifier {
   }
 
   /// Forgets the Mac: notifications off, the pairing and the key gone. The
-  /// Mac still lists this device until it's revoked there.
-  Future<void> forget() async {
+  /// Mac still lists this device until it's revoked there. Once at a time:
+  /// asked again meanwhile, it's the same forget.
+  Future<void> forget() {
+    if (_forgetRun case final run?) return run;
+    final run = _forgetRun = _forget().whenComplete(() {
+      _forgetRun = null;
+      notifyListeners();
+    });
+    notifyListeners();
+    return run;
+  }
+
+  Future<void>? _forgetRun;
+
+  /// Whether [forget] runs.
+  bool get forgetting => _forgetRun != null;
+
+  Future<void> _forget() async {
     // Nothing may write the pairing back meanwhile (a ping answering would
     // keep the last-seen time, and with it the key).
     // A failure on the way (the storage) leaves it as it was: kept again.
@@ -356,7 +372,12 @@ class Phone extends ChangeNotifier {
     try {
       link?.dispose();
       link = null;
-      if (push == PushState.on) await setPush(on: false);
+      // The link is gone: a Mac that doesn't answer doesn't hold it up
+      // (unpairing drops the subscription too).
+      if (push == PushState.on) {
+        await setPush(on: false)
+            .timeout(const Duration(seconds: 5), onTimeout: () => null);
+      }
       // The Mac forgets this device too, if it can be reached (else it
       // still lists it until it's revoked there).
       try {

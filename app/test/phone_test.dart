@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:fixnum/fixnum.dart';
@@ -373,6 +374,47 @@ void main() {
     await _end(tester, phone);
   });
 
+  testWidgets("a folder's code: the trust question shows each command, and "
+      'backing out is a no', (tester) async {
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) => input is CheckFolderRequest
+          ? CheckFolderResponse(
+              key: 'k',
+              runs: [
+                FolderRun(
+                  file: '/Users/me/notes/.mcp.json',
+                  what: 'MCP server github',
+                  command: 'npx -y @modelcontextprotocol/server-github',
+                ),
+                FolderRun(
+                  file: '/Users/me/notes/.claude/settings.json',
+                  what: 'Hook on SessionStart',
+                  command: 'echo one\necho two',
+                ),
+              ],
+            )
+          : null;
+    final (phone, platform) = await _app(tester, fake);
+    await tester.tap(find.bySemanticsLabel('New chat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('notes', findRichText: true).first);
+    await tester.pump();
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start Claude here?'), findsOne);
+    expect(find.text('MCP server github (.mcp.json)'), findsOne);
+    expect(find.text('npx -y @modelcontextprotocol/server-github'), findsOne);
+    expect(find.text('echo one\necho two'), findsOne);
+    // Back, from the question: no approval, no chat.
+    expect(platform.back(), isTrue);
+    await tester.pumpAndSettle();
+    expect(find.text('Start Claude here?'), findsNothing);
+    expect(fake.calls.whereType<TrustFolderRequest>(), isEmpty);
+    expect(fake.started, isEmpty);
+    expect(phone.daemon!.starting, isNull);
+    await _end(tester, phone);
+  });
+
   // UX review, finding 19.
   testWidgets("the chat's ⋯: its folder, branch and model; Rename and "
       'Archive', (tester) async {
@@ -562,6 +604,27 @@ void main() {
       await tester.pump();
     }
     expect(platform.saved?['daemon'], 'moved');
+    await _end(tester, phone);
+  });
+
+  testWidgets('Forget this Mac runs once, and a Mac that never answers '
+      'turning notifications off holds it 5 s', (tester) async {
+    final never = Completer<SetPushSubscriptionResponse>();
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) =>
+          input is SetPushSubscriptionRequest ? never.future : null;
+    final (phone, platform) = await _app(tester, fake);
+    platform.push = phone.push = PushState.on;
+    final first = phone.forget();
+    expect(phone.forget(), same(first));
+    expect(phone.forgetting, isTrue);
+    var done = false;
+    unawaited(first.then((_) => done = true));
+    await tester.pump(const Duration(seconds: 4));
+    expect(done, isFalse);
+    await tester.pump(const Duration(seconds: 2));
+    expect(done, isTrue);
+    expect((phone.forgetting, platform.saved), (false, null));
     await _end(tester, phone);
   });
 

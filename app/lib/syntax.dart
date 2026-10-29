@@ -73,8 +73,9 @@ final List<String> syntaxCaptures = [for (final c in Capture.values) c.name];
 }
 
 /// Highlights a code block in a language over its style, in [t]'s colors
-/// (a diff's), or gives null for a language highlight.js doesn't know. The
-/// same function for the same [t], since code blocks are kept by it.
+/// (a diff's), or gives null for a language highlight.js doesn't know, or
+/// a block over [maxBlock] characters. The same function for the same [t],
+/// since code blocks are kept by it.
 TextSpan? Function(String language, String code, TextStyle style)
 codeHighlighter(Tokens t) =>
     _highlighters[t] ??= (language, code, style) =>
@@ -88,7 +89,9 @@ TextSpan? _highlightCode(
   String code,
   TextStyle style,
 ) {
-  if (_highlight.getLanguage(language) == null) return null;
+  if (code.length > maxBlock || _highlight.getLanguage(language) == null) {
+    return null;
+  }
   final spans = _Spans();
   _highlight.highlight(code: code, language: language).render(spans);
   final s = spans.out;
@@ -115,6 +118,11 @@ TextSpan? _highlightCode(
 
 /// Past this many characters a side isn't highlighted.
 const _maxText = 200000;
+
+/// Past this many characters a message's code block shows plain: it's
+/// highlighted on the UI thread (20,000 took about 55 ms in a debug test,
+/// ```console a little more, 200,000 1.5 s).
+const maxBlock = 20000;
 
 final _highlight = Highlight()..registerLanguages(builtinAllLanguages);
 

@@ -174,4 +174,15 @@ export class Ledger extends Base {
       ],
     );
   });
+
+  test('a long code block shows plain: no highlighting on the UI thread', () {
+    const base = TextStyle(fontSize: 12);
+    final highlight = codeHighlighter(Tokens.dark);
+    final line = List.filled(5000, 'final x = "a"; // a line').join('\n');
+    expect(line.length, greaterThan(maxBlock));
+    expect(highlight('dart', line, base), isNull);
+    final console = List.filled(5000, r'$ make test').join('\n');
+    expect(highlight('console', console, base), isNull);
+    expect(highlight('dart', line.substring(0, maxBlock), base), isNotNull);
+  });
 }

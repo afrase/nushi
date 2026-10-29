@@ -90,4 +90,25 @@ void main() {
     // Sent again as parsed, the leads are the same.
     expect(withReplies(got, 'Thanks.'), message);
   });
+
+  test('a lead with a newline in it (a name from GitHub) stays one line, '
+      'and the replies come back', () {
+    const replies = [
+      (
+        quote: 'Check CI / lint\nfast: failure',
+        text: 'Fix it.',
+        from: 'Failed checks on PR a/b#1\n(GitHub):',
+      ),
+    ];
+    final message = withReplies(replies, 'Thanks.');
+    expect(
+      message,
+      startsWith('<!-- from -->\nFailed checks on PR a/b#1 (GitHub):\n\n'),
+    );
+    final (got, rest) = splitReplies(message);
+    expect(rest, 'Thanks.');
+    expect(got.single.from, 'Failed checks on PR a/b#1 (GitHub):');
+    expect(got.single.quote, 'Check CI / lint\nfast: failure');
+    expect(got.single.text, 'Fix it.');
+  });
 }

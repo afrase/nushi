@@ -65,7 +65,8 @@ void main() {
     await tester.tap(_inCard(find.text('Fix checks')));
     await tester.pumpAndSettle();
     expect(box.value, hasLength(3));
-    expect(box.value.first.from, startsWith('Failed check CI / rspec'));
+    expect(box.value.first.from, startsWith('Failed checks on PR'));
+    expect(box.value.first.quote, startsWith('Check CI / rspec'));
     expect(
       box.value.first.from,
       endsWith('on PR octo/notes#412 (GitHub), my pull request:'),

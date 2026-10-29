@@ -50,6 +50,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   // A file asked for that isn't among the changes (a review's finding):
   // its text as it is, shown until another file is picked.
   FileChange? _plain;
+  // The last file asked for as it is: an older answer, or one asked for
+  // before another file was picked, is dropped.
+  int _plainAsked = 0;
   // The last reload's or pick's number: an older answer is dropped.
   int _asked = 0;
   bool _reloading = false;
@@ -181,14 +184,14 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     _files = files;
     if (_plain case final p? when files.any((f) => f.path == p.path)) {
       _path = p.path;
-      _plain = null;
+      _noPlain();
     }
     if (_opening case final open?) {
       _line = _openingLine;
       _jumps++;
       if (_files.any((f) => f.path == open)) {
         _path = open;
-        _plain = null;
+        _noPlain();
       } else {
         unawaited(_showPlain(open));
       }
@@ -202,8 +205,15 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     }
   }
 
+  /// Shows no file as it is, nor one still coming; call in setState.
+  void _noPlain() {
+    _plain = null;
+    _plainAsked++;
+  }
+
   /// Shows [path], which isn't among the changes, as it is now.
   Future<void> _showPlain(String path) async {
+    final asked = ++_plainAsked;
     FileChange file;
     try {
       file = (await daemon.client.getFile(
@@ -212,7 +222,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     } on Object {
       file = FileChange(path: path, skipped: 'unreadable');
     }
-    if (mounted) setState(() => _plain = file);
+    if (mounted && asked == _plainAsked) setState(() => _plain = file);
   }
 
   /// Reads the files of the commits picked.
@@ -355,7 +365,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                                   selected: _plain == null ? _path : null,
                                   onSelect: (p) => setState(() {
                                     _path = p;
-                                    _plain = null;
+                                    _noPlain();
                                   }),
                                   marks: _marks(),
                                 ),

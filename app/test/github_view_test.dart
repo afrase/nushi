@@ -428,7 +428,7 @@ void main() {
     // What it is, on which pull request, and whose (the user's: afrase).
     expect(
       cards.single.from,
-      'Failed check checks / on-demand on PR $_repo#1 (GitHub), my pull '
+      'Failed checks on PR $_repo#1 (GitHub), my pull '
       'request:',
     );
     expect(cards.single.quote, contains('Process completed with exit code 1'));

@@ -9,7 +9,8 @@ const unseenApi = 76;
 
 /// Tells the daemon which chat the Mac's window shows, as the phone does
 /// (the daemon's ViewLease): the selected chat while the window is focused
-/// or visible and nothing (Settings, Jira, GitHub) is in its place. Said
+/// or visible and nothing (the trust card, Settings, Jira, GitHub) is in
+/// its place ([Daemon.chatShows]). Said
 /// when it changes and again every [again] while it shows, so a turn
 /// ending there is seen.
 class MacView {
@@ -32,11 +33,8 @@ class MacView {
   }
 
   /// The chat the window shows, or ''.
-  String get showing {
-    final d = daemon;
-    final shows = _window && d.settings == null && !d.jiraOpen && !d.githubOpen;
-    return shows ? d.selectedId ?? '' : '';
-  }
+  String get showing =>
+      _window && daemon.chatShows ? daemon.selectedId ?? '' : '';
 
   /// The daemon (re)started: it knows nothing yet.
   void forget() => _told = null;

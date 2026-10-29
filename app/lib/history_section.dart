@@ -136,10 +136,11 @@ class _HistorySectionState extends State<HistorySection> {
   Future<void> _clearMany(List<HistoryRow> rows, {bool all = false}) async {
     final bytes = rows.fold(0, (n, r) => n + r.bytes);
     final n = rows.length;
+    final whose = n == 1 ? "chat's" : "chats'";
     if (!await confirm(
       context,
       all ? 'Clear every copy?' : 'Clear $n ${n == 1 ? 'copy' : 'copies'}?',
-      "Deletes Nushi's copies of $n ${_chats(n)}' transcripts "
+      "Deletes Nushi's copies of $n $whose transcripts "
       '(${diskSize(bytes)}). Chats go on, their history from their '
       'agents alone; a chat whose session its agent deleted goes with '
       'its copy.',
@@ -153,7 +154,13 @@ class _HistorySectionState extends State<HistorySection> {
           ? ClearTranscriptsRequest(all: true)
           : ClearTranscriptsRequest(chatIds: [for (final r in rows) r.id]),
     );
-    if (mounted) setState(_selected.clear);
+    if (mounted) {
+      setState(
+        () => all
+            ? _selected.clear()
+            : _selected.removeAll([for (final r in rows) r.id]),
+      );
+    }
   }
 
   /// A click on a row: it alone, ⌘ adds or takes it away, ⇧ the range
@@ -289,10 +296,15 @@ class _HistorySectionState extends State<HistorySection> {
                         onOpen: r.chat == null
                             ? null
                             : () => widget.daemon.select(r.id),
+                        // At once, unless the copy is all there is: then
+                        // the chat goes with it, which is asked first.
                         onClear: () => tryOrShow(
                           context,
-                          () =>
-                              _clear(ClearTranscriptsRequest(chatIds: [r.id])),
+                          () => r.gone
+                              ? _clearMany([r])
+                              : _clear(
+                                  ClearTranscriptsRequest(chatIds: [r.id]),
+                                ),
                         ),
                       );
                       return row;
