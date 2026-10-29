@@ -80,9 +80,22 @@ var (
 	stampRE = regexp.MustCompile(`^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?`)
 )
 
+// errorMark marks an error's line in a job's log. The last one is where
+// the failed step ended ("Process completed with exit code 1."); what
+// follows is the job's clean-up, where stopping a service container
+// prints that container's own log, which filled the whole tail with
+// Elasticsearch's lines.
+const errorMark = "##[error]"
+
 // Tail is a log's end as Nushi shows it: no colours, no timestamps, the
-// last size bytes in whole lines; a first line cut short is dropped.
+// last size bytes in whole lines up to its last error's line; a first
+// line cut short is dropped.
 func Tail(log string, size int) string {
+	if i := strings.LastIndex(log, errorMark); i >= 0 {
+		if j := strings.IndexByte(log[i:], '\n'); j >= 0 {
+			log = log[:i+j]
+		}
+	}
 	cut := len(log) > size
 	if cut {
 		log = log[len(log)-size:]
@@ -98,4 +111,44 @@ func Tail(log string, size int) string {
 		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+// libraryFrame is a backtrace's line in someone else's code: vendored
+// gems, node_modules, Python's packages, Go's module cache.
+var libraryFrame = regexp.MustCompile(`/vendor/bundle/|/gems/|node_modules/|site-packages/|/go/pkg/mod/|<internal:`)
+
+// Brief caps an annotation's message: a run of library frames becomes one
+// "… N library frames" line, and at most 30 lines and 3000 bytes are
+// kept. RSpec's annotation carries the failure's whole backtrace, about 30
+// lines of gems, and went whole to the agent.
+func Brief(msg string) string {
+	const maxLines, maxBytes = 30, 3000
+	lines := strings.Split(msg, "\n")
+	out := make([]string, 0, len(lines))
+	for i := 0; i < len(lines); {
+		j := i
+		for j < len(lines) && libraryFrame.MatchString(lines[j]) {
+			j++
+		}
+		switch {
+		case j == i:
+			out = append(out, lines[i])
+			i++
+			continue
+		case j-i == 1:
+			out = append(out, lines[i])
+		default:
+			indent := lines[i][:len(lines[i])-len(strings.TrimLeft(lines[i], " \t"))]
+			out = append(out, fmt.Sprintf("%s… %d library frames", indent, j-i))
+		}
+		i = j
+	}
+	if len(out) > maxLines {
+		out = append(out[:maxLines], fmt.Sprintf("… %d more lines", len(out)-maxLines))
+	}
+	s := strings.Join(out, "\n")
+	if len(s) > maxBytes {
+		s = strings.ToValidUTF8(s[:maxBytes], "") + "…"
+	}
+	return s
 }

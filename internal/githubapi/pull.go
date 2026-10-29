@@ -180,7 +180,7 @@ func (n checkNode) check() model.GitHubCheck {
 	}
 	for _, a := range n.Annotations.Nodes {
 		c.Annotations = append(c.Annotations, model.GitHubAnnotation{Path: a.Path, Level: strings.ToLower(a.AnnotationLevel),
-			Title: a.Title, Message: a.Message, Line: a.Location.Start.Line, EndLine: a.Location.End.Line})
+			Title: a.Title, Message: Brief(a.Message), Line: a.Location.Start.Line, EndLine: a.Location.End.Line})
 	}
 	return c
 }
