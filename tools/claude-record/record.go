@@ -177,29 +177,66 @@ func (r *recorder) environ(dirs map[string]string, url string) []string {
 }
 
 // stop waits for the agent to end after its stdin closed, as it should,
-// then ends its process group, so no claude outlives the run; it says
-// whether the agent had to be stopped. When ctx is done (the recorder
-// interrupted) it doesn't wait, and the run fails: its recordings are
-// cut short.
+// and then for the rest of its process group (claude, which may still be
+// writing its transcript as it exits), so the run's history is complete
+// and no claude outlives the run. Whatever of the group is left after
+// groupGrace is ended (SIGTERM, then SIGKILL). It says whether the agent
+// had to be stopped. When ctx is done (the recorder interrupted) it
+// doesn't wait, and the run fails: its recordings are cut short.
 func (r *recorder) stop(ctx context.Context, c *conn, cmd *exec.Cmd) error {
 	pgid := cmd.Process.Pid
+	exited := make(chan struct{}) // the agent is reaped: its group holds only the rest
+	go func() {
+		<-c.done
+		_ = cmd.Wait() // its exit after a SIGTERM isn't the scenario's business
+		close(exited)
+	}()
 	var err error
 	select {
-	case <-c.done:
+	case <-exited:
 	case <-ctx.Done():
 		err = ctx.Err()
 	case <-time.After(10 * time.Second):
 		err = errors.New("the agent didn't end when its stdin closed")
 	}
-	_ = syscall.Kill(-pgid, syscall.SIGTERM) // what is left of its group: claude, if the agent left it
-	select {
-	case <-c.done:
-	case <-time.After(5 * time.Second):
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
-		<-c.done
+	if err == nil && groupGone(ctx, pgid, groupGrace) {
+		return nil
 	}
-	_ = cmd.Wait() // its exit after a SIGTERM isn't the scenario's business
+	ending := context.WithoutCancel(ctx)     // the group is ended even when interrupted; each wait is bounded
+	_ = syscall.Kill(-pgid, syscall.SIGTERM) // what is left of its group: claude, if the agent left it
+	if !groupGone(ending, pgid, 5*time.Second) {
+		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+	}
+	<-exited
+	if !groupGone(ending, pgid, 5*time.Second) {
+		err = errors.Join(err, errors.New("a process of the agent's group outlived SIGKILL"))
+	}
 	return err
+}
+
+// groupGrace is how long the agent's group has to end by itself after
+// the agent did: claude ends on its stdin's end, its transcript written.
+const groupGrace = 15 * time.Second
+
+// groupGone waits up to d, or until ctx is done, for process group pgid
+// to have no process left, and says whether it has none.
+func groupGone(ctx context.Context, pgid int, d time.Duration) bool {
+	deadline := time.Now().Add(d)
+	for {
+		if err := syscall.Kill(-pgid, 0); errors.Is(err, syscall.ESRCH) {
+			return true
+		}
+		if time.Now().After(deadline) {
+			return false
+		}
+		t := time.NewTimer(50 * time.Millisecond) // a process's exit: nothing says when, in another's group
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			t.Stop()
+			return false
+		}
+	}
 }
 
 // stopBelow stops the process group below the agent (pid root) whose

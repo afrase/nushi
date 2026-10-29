@@ -28,6 +28,10 @@ func TestMain(m *testing.M) {
 		claudeacp.Main()
 	case os.Getenv("RECORD_TEST_AGENT") == "hang":
 		hangingAgent()
+	case os.Getenv("RECORD_TEST_AGENT") == "linger":
+		lingeringAgent()
+	case os.Getenv("RECORD_TEST_AGENT") == "late-writer":
+		lateWriter()
 	default:
 		m.Run()
 	}
