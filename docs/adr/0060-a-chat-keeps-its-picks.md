@@ -11,7 +11,7 @@
 
 ## Consequences
 - Side chats get nothing set: they have no options of their own.
-- Chats from before this step have no picks: they come back on the agent's defaults once, until something is picked.
+- Chats from before this ADR have no picks: they come back on the agent's defaults once, until something is picked.
 
 ## Alternatives considered
 - Restoring the whole set of options from before (what sleep did): it kept agent defaults as if picked, and lived only in memory.

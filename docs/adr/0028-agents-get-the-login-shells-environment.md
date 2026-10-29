@@ -7,7 +7,7 @@ Codex reads its provider's key from the environment (`env_key = "FIREWORKS_API_K
 
 ## Decision
 - An agent gets the daemon's environment as it is: launched by the app, the login shell's (checked: a variable set in fish's config reaches a daemon started from Finder). Nushi doesn't read, filter, add to or log it.
-- The daemon doesn't read the login shell's environment a second time ("the step 70 lookup"): the launch already gives it.
+- The daemon doesn't read the login shell's environment a second time: the launch already gives it.
 
 ## Consequences
 - Every variable the shell's config exports, secrets included, reaches every agent and every terminal, as in a terminal.

@@ -5,7 +5,7 @@ name: Release
 # in afrase/homebrew-tap (ADR 0055). A draft triggers nothing until it is published. Run it by hand to rebuild an
 # existing release's files. The app (macOS), the relays and the web app (Linux) build in parallel jobs, beside the
 # check; publish attaches them once all are built and the commit is checked. Actions are pinned by commit, as in CI.
-# Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (step 445), room
+# Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (2026-10-29), room
 # for a cold cache.
 on:
   release:

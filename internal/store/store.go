@@ -246,12 +246,12 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
 			continue
 		}
 		sess := file.ChatRecord
-		if sess.SessionID == "" { // stored before step 22, when the ids were one
+		if sess.SessionID == "" { // stored when the chat's and its session's ids were one
 			sess.SessionID = sess.ID
 		}
 		if file.HasMessages != nil {
 			sess.HasMessages = *file.HasMessages
-		} else { // stored before step 59
+		} else { // stored before HasMessages was kept
 			sess.HasMessages = sess.Title != "" || s.HadMessages != nil && s.HadMessages(sess)
 		}
 		read[e.Name()] = sess

@@ -31,7 +31,7 @@ import (
 //   - restart_load: session/load of that chat after the daemon was killed
 //     with the last still running;
 //   - taskstop: the first, without the subagents capability, as Nushi read
-//     it before step 338 (no end but TaskStop's result).
+//     it before declaring the capability (no end but TaskStop's result).
 
 // recorded reads a recording of testdata/subagents.
 func recorded(t *testing.T, name string) []acp.SessionNotification {

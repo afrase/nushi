@@ -1,5 +1,7 @@
 # Milestone summaries
 
+**Frozen archive** (2026-10-29): step numbers are retired and nothing more is added here; the history since is the commit log.
+
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `AGENTS.md`, `NOTES.md`, `docs/adr/` and the code.
 
 ## Summary of the pull request redesign, direction B (steps 428, 430–436)

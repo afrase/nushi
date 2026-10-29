@@ -5,7 +5,7 @@ import 'package:nushi/motion.dart';
 
 // Lists whose items move by dragging, the others sliding apart to open
 // the gap where the dragged one would land and settling on the drop, as
-// the details panel's widgets do (step 458). The sidebar's lists sit in
+// the details panel's widgets do. The sidebar's lists sit in
 // one scroll, a project's chats inside the projects' list, which nested
 // ReorderableListViews can't be: these are Columns that slide their items
 // by a transform, and work out where a drop lands from the items' places

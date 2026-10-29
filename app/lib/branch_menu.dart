@@ -12,7 +12,7 @@ import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
 /// The Environment widget's Branch row, a menu (ADR 0016's amendment of
-/// steps 392–393).
+/// 2026-10-28).
 /// In a repository's own folder: its local branches, the newest commit
 /// first (a filter past ten), the current one checked, and "New branch…";
 /// picking one switches the folder to it (SwitchBranch), saying plainly

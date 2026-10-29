@@ -12,7 +12,7 @@
 //     that name; skills: false turns them all off.
 //
 // No trust: a folder's skills load at once. Nushi leaves a linked project
-// root out (the step-300 rule; Ante follows it). Nothing here runs Ante:
+// root out (ADR 0052's rule; Ante follows it). Nothing here runs Ante:
 // its own list comes only from a session in the folder.
 package anteskills
 

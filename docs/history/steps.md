@@ -1,5 +1,7 @@
 # Steps and line counts
 
+**Frozen archive** (2026-10-29): step numbers are retired and nothing more is added here; the history since is the commit log.
+
 Every step with `make lines` after it. A new step adds its row at the bottom, and a step over the ~500-line tripwire joins the list under the table.
 
 ## Line counts

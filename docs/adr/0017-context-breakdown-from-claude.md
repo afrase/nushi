@@ -27,6 +27,6 @@ Claude keeps `/context`'s answer in a conversation (5–7k tokens each time),
 so it runs in a throwaway fork of the session (deleted right after), which
 leaves the chat's conversation alone; the card asks on its own after a
 turn, at most once a minute, while it is open. Agents that can't fork
-aren't asked (step 64 dropped the run in the chat's own session that
-step 50 kept for them). Codex has no such command: its card shows the
+aren't asked (a run in the chat's own session, which they once had,
+went on 2026-10-24). Codex has no such command: its card shows the
 context used and its size only.

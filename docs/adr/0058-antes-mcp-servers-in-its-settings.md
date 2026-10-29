@@ -1,6 +1,6 @@
 # 0058. Ante's MCP servers: written in its settings, under its lock
 
-Status: accepted, 2026-10-28 (step 380). Amends 0021.
+Status: accepted, 2026-10-28. Amends 0021.
 
 ## Context
 The owner asked to edit Ante's MCP servers as Claude's are. ADR 0021 changes Claude's only through `claude mcp`, never writing its config. Ante 0.2.14 has no such CLI: its servers are `mcp_servers` in `$ANTE_HOME/settings.json`, which Ante reads at each session's start and rewrites whole (its own struct, unknown keys dropped) when its TUI or an "always allow" changes it, taking `settings.json.lock` with `flock` first (docs/facts/ante.md).

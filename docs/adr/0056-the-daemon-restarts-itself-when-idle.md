@@ -1,6 +1,6 @@
 # 0056. An older daemon restarts itself into the bundled one once nothing runs
 
-Status: accepted, 2026-10-28 (step 371). Amends [0004](0004-connect-over-unix-socket.md) (the blocking screen), [0013](0013-app-starts-its-daemon.md) (the app never restarts a daemon by itself) and [0055](0055-releases-and-the-homebrew-cask.md) (upgrades offer Restart daemon).
+Status: accepted, 2026-10-28. Amends [0004](0004-connect-over-unix-socket.md) (the blocking screen), [0013](0013-app-starts-its-daemon.md) (the app never restarts a daemon by itself) and [0055](0055-releases-and-the-homebrew-cask.md) (upgrades offer Restart daemon).
 
 ## Context
 An upgrade (Homebrew's, or `make install`) leaves the running daemon and its chats alone (0055), and the app then asked the owner to click "Restart daemon" after every one: "Why is a daemon reset always required?" A restart stops agents mid-turn and ends terminals, so doing it blindly loses work; doing it when nothing runs loses nothing that a sleep wouldn't (chats reopen through `session/load` on their next message).

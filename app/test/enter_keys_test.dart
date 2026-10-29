@@ -19,7 +19,7 @@ import 'harness.dart';
 // ⌘ too) start a line, which Nushi writes itself at the selection. Real key
 // events, the modifiers held down; a widget test has no platform text
 // input, so a line here is Nushi's own (left to macOS, a release build's
-// field got none for ⌘⏎ and a space for ⌃⏎, step 346).
+// field got none for ⌘⏎ and a space for ⌃⏎).
 
 const _lineKeys = <String, List<LogicalKeyboardKey>>{
   '⇧⏎': [LogicalKeyboardKey.shiftLeft],

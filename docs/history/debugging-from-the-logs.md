@@ -1,5 +1,7 @@
 # Debugging from the logs
 
+**Frozen archive** (2026-10-29): step numbers are retired and nothing more is added here; the history since is the commit log.
+
 Milestone AA's crash test: what the log said for each kind of failure. The short how-to is in `NOTES.md`; what is logged is ADR 0038.
 
 ## Debugging from the logs (milestone AA)

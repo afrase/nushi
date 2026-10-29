@@ -37,7 +37,7 @@ Future<void> Function(Uri url) openInBrowser = (url) async {
   }
 };
 
-/// A WKWebView with only its free defaults (the owner's call, step 376):
+/// A WKWebView with only its free defaults (the owner's call):
 /// no script message handlers (nothing from the page reaches Nushi), file
 /// reads inside the root it's given, the network on, and a link that
 /// leaves the page opened in the default browser instead.
