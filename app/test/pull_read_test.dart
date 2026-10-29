@@ -1,7 +1,12 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_pull.dart';
+import 'package:nushi/pull_link.dart';
+import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
 import 'pull_fixture.dart';
@@ -74,6 +79,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Show less'), findsOneWidget);
     expect(tester.takeException(), isNull);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets("the tab shows the chat's pull request as the chat asks for "
+      'it: one GetGitHubPullRequest a minute, and a comment that comes '
+      'while it shows is seen', (tester) async {
+    final whole = fixturePull();
+    final (d, fake) = await openPullTab(tester, whole);
+    expect(find.text('Activity 4'), findsOneWidget);
+    fake.calls.clear();
+    whole.conversation.add(said('mona', 'One more thing.', age: Duration.zero));
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<GetGitHubPullRequest>(), hasLength(1));
+    expect(find.text('Activity 5'), findsOneWidget);
+    expect(pullSeen.value['c'], commentTimes(whole).reduce(max));
     d.dispose();
   }, variant: _mac);
 

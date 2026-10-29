@@ -6,46 +6,73 @@ import 'package:nushi/send_to_agent.dart';
 
 /// One thing that blocks the merge, in the To do list: a failing check, a
 /// review that requested changes, a review thread not resolved (with a
-/// review bot's findings on its lines, [also]: one item, two voices), or a
+/// review bot's findings on its lines: one item, two voices), or a
 /// finding a review bot asked to address. [id] is the same across polls.
-class TodoItem {
-  const new({
-    required this.id,
-    this.check,
-    this.review,
-    this.thread,
-    this.finding,
-    this.also = const [],
-  });
+sealed class TodoItem {
+  const new(this.id);
 
   final String id;
-  final GitHubCheck? check;
-  final GitHubComment? review;
-  final GitHubThread? thread;
-  final ReviewFinding? finding;
-  final List<ReviewFinding> also;
 
   /// Its reply card for the agent (a check's with its log's failing part).
-  Future<Reply> reply(Daemon daemon, GitHubRef ref) {
-    if (check case final c?) return checkReply(daemon, ref, c);
-    if (review case final r?) return Future.value(changesRequestedReply(r));
-    if (thread case final x?) return Future.value(threadReply(x, also: also));
-    return Future.value(findingReply(finding!));
-  }
+  Future<Reply> reply(Daemon daemon, GitHubRef ref) => switch (this) {
+    CheckTodo(:final check) => checkReply(daemon, ref, check),
+    ReviewTodo(:final review) => Future.value(changesRequestedReply(review)),
+    ThreadTodo(:final thread, :final also) => Future.value(
+      threadReply(thread, also: also),
+    ),
+    FindingTodo(:final finding) => Future.value(findingReply(finding)),
+  };
 
   /// What it is, in a few words, as the toast names it: "CI / rubocop",
   /// "@mona's review", "the thread on a.rb:12", "a finding on a.rb:3".
-  String get what {
-    if (check case final c?) {
-      return c.workflow.isEmpty ? c.name : '${c.workflow} / ${c.name}';
-    }
-    if (review case final r?) return "${possessive('@${r.author}')} review";
-    if (thread case final x?) return 'the thread on ${threadPlace(x)}';
-    final where = findingPlace(finding!);
-    return where.isEmpty
-        ? 'a finding from ${possessive(finding!.from.author)} review'
-        : 'a finding on $where';
-  }
+  String get what => switch (this) {
+    CheckTodo(check: final c) =>
+      c.workflow.isEmpty ? c.name : '${c.workflow} / ${c.name}',
+    ReviewTodo(review: final r) => "${possessive('@${r.author}')} review",
+    ThreadTodo(thread: final x) => 'the thread on ${threadPlace(x)}',
+    FindingTodo(finding: final f) => switch (findingPlace(f)) {
+      '' => 'a finding from ${possessive(f.from.author)} review',
+      final where => 'a finding on $where',
+    },
+  };
+
+  /// The review bots' findings it carries: a finding's own, or those on a
+  /// thread's lines.
+  List<ReviewFinding> get findings => switch (this) {
+    ThreadTodo(:final also) => also,
+    FindingTodo(:final finding) => [finding],
+    _ => const [],
+  };
+}
+
+/// A failing check.
+final class CheckTodo extends TodoItem {
+  const new(super.id, this.check);
+
+  final GitHubCheck check;
+}
+
+/// A review whose reviewer still requests changes.
+final class ReviewTodo extends TodoItem {
+  const new(super.id, this.review);
+
+  final GitHubComment review;
+}
+
+/// A review thread not resolved, and the bots' findings on its lines
+/// ([also]).
+final class ThreadTodo extends TodoItem {
+  const new(super.id, this.thread, {this.also = const []});
+
+  final GitHubThread thread;
+  final List<ReviewFinding> also;
+}
+
+/// A finding a review bot asked to address, on no thread's lines.
+final class FindingTodo extends TodoItem {
+  const new(super.id, this.finding);
+
+  final ReviewFinding finding;
 }
 
 /// Where thread [x] is: `path:12`, `path:10–12`, or the file's path.
@@ -97,17 +124,13 @@ Todo todo(GitHubPull p, {FindingsSetup? findings}) {
       for (final c in checks)
         // By its id: a push and a pull request run share a name. A
         // commit status has none, and is one per name.
-        TodoItem(
-          id: c.id.isZero ? 'status ${c.name}' : 'check ${c.id}',
-          check: c,
-        ),
-      for (final r in changesRequested(p))
-        TodoItem(id: 'review ${r.author}', review: r),
+        CheckTodo(c.id.isZero ? 'status ${c.name}' : 'check ${c.id}', c),
+      for (final r in changesRequested(p)) ReviewTodo('review ${r.author}', r),
       for (final x in p.threads)
         if (!x.resolved)
-          TodoItem(
-            id: 'thread ${x.id}',
-            thread: x,
+          ThreadTodo(
+            'thread ${x.id}',
+            x,
             also: [
               for (final f in found)
                 if (sameSpot(f, x) && used.add(f)) f,
@@ -115,9 +138,9 @@ Todo todo(GitHubPull p, {FindingsSetup? findings}) {
           ),
       for (final f in found)
         if (!used.contains(f))
-          TodoItem(
-            id: 'finding ${f.from.id} ${f.path}:${f.start} ${f.text.hashCode}',
-            finding: f,
+          FindingTodo(
+            'finding ${f.from.id} ${f.path}:${f.start} ${f.text.hashCode}',
+            f,
           ),
     ],
     older: older,
@@ -147,7 +170,7 @@ List<GitHubComment> changesRequested(GitHubPull p) => [
 Map<String, int> findingCounts(List<TodoItem> items) {
   final out = <String, int>{};
   for (final i in items) {
-    for (final f in [?i.finding, ...i.also]) {
+    for (final f in i.findings) {
       out.update(f.from.id, (n) => n + 1, ifAbsent: () => 1);
     }
   }

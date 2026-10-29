@@ -87,6 +87,13 @@ String ago(Duration age, DateTime when) => switch (age) {
   _ => '${when.year}-${_two(when.month)}-${_two(when.day)}',
 };
 
+/// How long ago [when] (ms since the epoch, as GitHub's and the daemon's
+/// times come) was at [now], as [ago] says it.
+String agoAt(int when, DateTime now) {
+  final at = DateTime.fromMillisecondsSinceEpoch(when);
+  return ago(now.difference(at), at);
+}
+
 /// How long ago, in a list's narrow column: [ago]'s steps without "ago"
 /// ("now", "5m", "3h", "12d"), then weeks ("5w", from 30 days), months
 /// ("3mo", from 13 weeks) and years ("1y"); "11mo" is the longest.

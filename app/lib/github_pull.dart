@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:nushi/agent_mark.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -12,7 +11,9 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/pull_activity.dart';
 import 'package:nushi/pull_cache.dart';
+import 'package:nushi/pull_chats.dart';
 import 'package:nushi/pull_header.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_skeleton.dart';
 import 'package:nushi/pull_todo.dart';
 import 'package:nushi/pull_todo_items.dart';
@@ -22,7 +23,8 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// How often an open pull request is asked for again (quietly).
+/// How often an open pull request is asked for again (quietly), in the
+/// GitHub view.
 const pullPoll = Duration(seconds: 30);
 
 /// A pull request's page: its head ([PullHeader]: state, title, branches,
@@ -32,33 +34,38 @@ const pullPoll = Duration(seconds: 30);
 /// [readableWidth] at most, the files' diff the whole width and the
 /// window's height.
 ///
-/// In a chat's Pull request tab ([inChat]) it has no Start work or chats'
-/// links (the chat is the one); [onLoad] gets each answer.
+/// In a chat's Pull request tab it shows the chat's pull request as
+/// [source] has it, asked on its timer (the pane has none of its own),
+/// with no Start work or chats' links (the chat is the one); its comments
+/// are seen while it shows.
 class GitHubPullPane extends StatefulWidget {
   const new({
     required this.daemon,
     required this.ref,
     super.key,
     this.now,
-    this.inChat = false,
-    this.onLoad,
+    this.source,
   });
 
   final Daemon daemon;
   final GitHubRef ref;
   final DateTime? now;
-  final bool inChat;
-  final ValueChanged<GitHubPull>? onLoad;
+
+  /// The chat's pull request, in its Pull request tab.
+  final ChatPull? source;
 
   @override
   State<GitHubPullPane> createState() => _GitHubPullPaneState();
 }
 
 class _GitHubPullPaneState extends State<GitHubPullPane> {
-  /// What shows: the pull request read last (kept from before, from
-  /// [_keptAt], until the first answer), else nothing yet (the skeleton).
+  /// What shows in the GitHub view: the pull request read last (kept from
+  /// before, from [_keptAt], until the first answer), else nothing yet
+  /// (the skeleton). In a chat's tab its [GitHubPullPane.source]'s.
   late GitHubPull? _pull = _kept?.$2;
-  late final (DateTime, GitHubPull)? _kept = cachedPull(widget.ref);
+  late final (DateTime, GitHubPull)? _kept = widget.source == null
+      ? cachedPull(widget.ref)
+      : null;
   late DateTime? _keptAt = _kept?.$1;
   bool _asking = true;
   String? _error;
@@ -74,27 +81,55 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   /// Who the user is on its host ('' until known).
   String _me = '';
 
+  bool get _inChat => widget.source != null;
+
   @override
   void initState() {
     super.initState();
-    unawaited(_load());
+    if (widget.source case final s?) {
+      s.addListener(_sourceChanged);
+      // Asked as the tab opens, unless it was a moment ago.
+      unawaited(s.refresh(again: false));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) s.markSeen();
+      });
+    } else {
+      unawaited(_load());
+      _poll = Timer.periodic(pullPoll, (_) => unawaited(_load(quiet: true)));
+    }
     unawaited(
       githubLogin(widget.daemon, widget.ref.host).then((me) {
         if (mounted) setState(() => _me = me);
       }),
     );
-    _poll = Timer.periodic(pullPoll, (_) => unawaited(_load(quiet: true)));
-    _findingsSetup.addListener(_setupChanged);
+    _redraw.addListener(_changed);
   }
 
-  void _setupChanged() => setState(() {});
+  void _changed() => setState(() {});
+
+  /// The chat's pull request was asked for: its comments are seen.
+  void _sourceChanged() {
+    widget.source?.markSeen();
+    setState(() {});
+  }
 
   @override
   void dispose() {
-    _findingsSetup.removeListener(_setupChanged);
+    widget.source?.removeListener(_sourceChanged);
+    _redraw.removeListener(_changed);
     _poll?.cancel();
     _scroll.dispose();
     super.dispose();
+  }
+
+  /// Asks for the pull request again (it changed here): the chat's, or
+  /// the pane's own. An ask of the chat's under way may have started
+  /// before the change, so another follows it.
+  Future<void> _refresh() async {
+    final s = widget.source;
+    if (s == null) return await _load();
+    if (s.asking) await s.refresh();
+    await s.refresh();
   }
 
   Future<void> _load({bool quiet = false}) async {
@@ -109,7 +144,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
           _keptAt = null;
           _error = null;
         });
-        widget.onLoad?.call(r.pull);
       }
     } on Object catch (e) {
       // A failed poll keeps what shows, and says why.
@@ -157,11 +191,15 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final p = _pull;
+    final (pull, keptAt, asking, error) = switch (widget.source) {
+      final s? => (s.pull, s.keptAt, s.asking, s.error),
+      null => (_pull, _keptAt, _asking, _error),
+    };
+    final p = pull;
     if (p == null) {
-      return _error == null
+      return error == null
           ? const PullSkeleton()
-          : Center(child: Text(_error!, style: theme.ui(t.crashed)));
+          : Center(child: Text(error, style: theme.ui(t.crashed)));
     }
     final failed = p.checks.where((c) => c.failed).length;
     final now = widget.now ?? clock();
@@ -181,10 +219,10 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         return CustomScrollView(
           controller: _scroll,
           slivers: [
-            if (_keptAt case final at?)
+            if (keptAt case final at?)
               column(
                 Text(
-                  updatedLine(at, loading: _asking, now: now)!,
+                  updatedLine(at, loading: asking, now: now)!,
                   key: const ValueKey('pull-kept'),
                   textAlign: TextAlign.right,
                   style: theme.ui(t.textMuted, size: 11.5),
@@ -200,7 +238,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 threadsTo: open ? PullSection.todo : PullSection.activity,
                 actions: _actions(context, p),
               ),
-              top: _keptAt == null ? 14 : 2,
+              top: keptAt == null ? 14 : 2,
             ),
             if (open)
               column(
@@ -212,12 +250,12 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                   older: todo.older,
                   onOlder: _showReview,
                   now: now,
-                  onChanged: _load,
+                  onChanged: _refresh,
                 ),
                 top: 16,
               ),
-            if (!widget.inChat) column(_Chats(widget.daemon, p), top: 10),
-            if (_error case final e?)
+            if (!_inChat) column(PullChats(widget.daemon, p), top: 10),
+            if (error case final e?)
               column(
                 Text('Not current: $e', style: theme.ui(t.needs, size: 12)),
                 top: 6,
@@ -251,7 +289,11 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
             ),
             switch (_tab) {
               PullSection.checks => column(
-                GitHubChecks(daemon: widget.daemon, pull: p, onChanged: _load),
+                GitHubChecks(
+                  daemon: widget.daemon,
+                  pull: p,
+                  onChanged: _refresh,
+                ),
                 bottom: 20,
               ),
               PullSection.files => SliverToBoxAdapter(
@@ -263,7 +305,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                     daemon: widget.daemon,
                     pull: p,
                     now: widget.now,
-                    onChanged: _load,
+                    onChanged: _refresh,
                   ),
                 ),
               ),
@@ -273,7 +315,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                   pull: p,
                   now: now,
                   me: _me,
-                  onPosted: _load,
+                  onPosted: _refresh,
                   onTodo: () => _jump(PullSection.todo),
                   findings: findingCounts(items),
                   shown: _shown,
@@ -295,10 +337,10 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     final daemon = widget.daemon;
     final pending = p.pendingComments + reviewDrafts(it.ref).length;
     return [
-      if (!widget.inChat) StartWork(daemon: daemon, item: it, button: true),
+      if (!_inChat) StartWork(daemon: daemon, item: it, button: true),
       Button(
         label: pending > 0 ? 'Review ($pending)…' : 'Review…',
-        onPressed: () => submitReview(context, daemon, p, onDone: _load),
+        onPressed: () => submitReview(context, daemon, p, onDone: _refresh),
       ),
       Button(
         label: 'Open on GitHub',
@@ -309,11 +351,13 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   }
 }
 
-/// Settings' Findings from review bots, whose changes redraw the list.
-final _findingsSetup = Listenable.merge([
+/// What redraws the pane: Settings' Findings from review bots (the To
+/// do list), and the review's drafts (Review (n)…).
+final _redraw = Listenable.merge([
   githubFindings,
   githubFindingBots,
   githubFindingHeadings,
+  draftsChanged,
 ]);
 
 /// [p]'s To do, with the bots' findings when Settings reads them.
@@ -323,54 +367,3 @@ Todo todoOf(GitHubPull p) => todo(
       ? findingsSetup(githubFindingBots.value, githubFindingHeadings.value)
       : null,
 );
-
-/// The chats on the pull request, in the GitHub view: each a link to it.
-class _Chats extends StatelessWidget {
-  const new(this.daemon, this.pull);
-
-  final Daemon daemon;
-  final GitHubPull pull;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final chats = chatsOnItem(daemon, pull.item.ref);
-    if (chats.isEmpty) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Text('Chats:', style: theme.ui(t.textMuted, size: 12)),
-        for (final c in chats.take(4))
-          Tap(
-            onTap: () => daemon.select(c.id),
-            tooltip: 'Open the chat',
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AgentMark(c.agent, size: 13, color: t.textSecondary),
-                const SizedBox(width: 4),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 180),
-                  child: Text(
-                    c.shownTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.ui(t.link, size: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        if (chats.length > 4)
-          Text(
-            '+${chats.length - 4} chats',
-            style: theme.ui(t.textMuted, size: 12),
-          ),
-      ],
-    );
-  }
-}

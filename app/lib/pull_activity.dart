@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/comment_box.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/pull_activity_parts.dart';
@@ -242,7 +243,7 @@ class _EntryState extends State<_Entry> {
         : c.review.isNotEmpty
         ? 'reviewed · '
         : '';
-    final when = githubAgo(c.createdMs.toInt(), widget.now);
+    final when = agoAt(c.createdMs.toInt(), widget.now);
     final body = AgentMarkdown(
       githubText(clamped ? textStart(text) : text),
       images: githubImage,

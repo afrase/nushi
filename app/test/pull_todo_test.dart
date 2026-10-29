@@ -148,13 +148,13 @@ void main() {
   test('the To do list: failing checks (required first), changes '
       "requested, threads with a bot's finding on their lines, the "
       'findings left (only when Settings reads them)', () {
-    String say(TodoItem i) =>
-        i.check?.name ??
-        (i.review != null
-            ? '@${i.review!.author} review'
-            : i.thread != null
-            ? '${i.thread!.path} +${i.also.length}'
-            : findingPlace(i.finding!));
+    String say(TodoItem i) => switch (i) {
+      CheckTodo(:final check) => check.name,
+      ReviewTodo(:final review) => '@${review.author} review',
+      ThreadTodo(:final thread, :final also) =>
+        '${thread.path} +${also.length}',
+      FindingTodo(:final finding) => findingPlace(finding),
+    };
     const base = [
       'rspec (admin 3/8)',
       'rubocop',
@@ -176,17 +176,18 @@ void main() {
     final merged = fixturePull()..item.state = 'merged';
     expect(todo(merged, findings: _setup).items, isEmpty);
     // The review's card is the whole review, with whose it is.
-    final review = items[3].review!;
+    final review = (items[3] as ReviewTodo).review;
     expect(changesRequestedReply(review).from, 'Changes requested by @mona');
     expect(
       changesRequestedReply(review).quote,
       startsWith('mona requested changes:'),
     );
     // The thread's card carries the bot's voice too.
-    final r = threadReply(items[5].thread!, also: items[5].also);
+    final thread = items[5] as ThreadTodo;
+    final r = threadReply(thread.thread, also: thread.also);
     expect(r.from, 'Review comments from @mona, @github-actions');
     expect(r.quote, contains("github-actions' review: The example says"));
-    final f = findingReply(items[6].finding!);
+    final f = findingReply((items[6] as FindingTodo).finding);
     expect(f.from, "A finding from @github-actions' review");
     expect(
       f.quote,
@@ -206,7 +207,7 @@ void main() {
         check('test', state: 'failure', id: 8),
         check('ci/circleci', state: 'failure'),
       ]);
-    expect(todo(p).items.where((i) => i.check != null).map((i) => i.id), [
+    expect(todo(p).items.whereType<CheckTodo>().map((i) => i.id), [
       'check 7',
       'check 8',
       'status ci/circleci',
@@ -215,10 +216,8 @@ void main() {
 
   test("only each bot's newest message: an older one's findings never "
       "show; one on an older commit's do, marked", () {
-    List<TodoItem> found(GitHubPull p) => todo(
-      p,
-      findings: _setup,
-    ).items.where((i) => i.finding != null).toList();
+    List<FindingTodo> found(GitHubPull p) =>
+        todo(p, findings: _setup).items.whereType<FindingTodo>().toList();
     // The newest says none.
     final none = fixturePull()
       ..conversation.add(
@@ -252,13 +251,13 @@ void main() {
           age: const Duration(seconds: 30),
         ),
       );
-    expect(found(two).map((i) => findingPlace(i.finding!)), ['lib/x.rb:3']);
+    expect(found(two).map((i) => findingPlace(i.finding)), ['lib/x.rb:3']);
     // On an older commit: its findings, the bot marked.
     final old = fixturePull();
     old.conversation[1].commit = 'c0ffee1${'c' * 33}';
     final t = todo(old, findings: _setup);
     expect(
-      t.items.where((i) => i.finding != null),
+      t.items.whereType<FindingTodo>(),
       hasLength(1),
     ); // and one on a thread
     expect(t.older, {'github-actions': 'c0ffee1${'c' * 33}'});

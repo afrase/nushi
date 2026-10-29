@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';

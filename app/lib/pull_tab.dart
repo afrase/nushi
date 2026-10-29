@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/replies.dart';
@@ -33,26 +34,21 @@ class PullTab extends StatelessWidget {
     final l = chat.pull;
     if (l == null) return const SizedBox.shrink();
     final ref = GitHubRef(host: l.host, repo: l.repo, number: l.number);
-    // Each card says what it is, on which pull request, and whose that is;
-    // a toast says what went in.
+    final source = ChatPull.of(daemon, chat);
+    // A toast says what went in.
     Future<void> send(
       ScaffoldMessengerState? toast,
       double side,
       List<Reply> replies,
       String what,
     ) async {
-      final me = await githubLogin(daemon, l.host);
-      var added = 0;
-      for (final r in replies) {
-        final card = onPull(
-          r,
-          repo: l.repo,
-          number: l.number,
-          author: _authors[chat.id] ?? '',
-          me: me,
-        );
-        if (chat.draft.addReply(card)) added++;
-      }
+      final added = await putReplies(
+        daemon,
+        chat,
+        ref,
+        author: source.pull?.item.author ?? '',
+        replies: replies,
+      );
       if (replies.isEmpty) return;
       toast
         ?..hideCurrentSnackBar()
@@ -83,11 +79,7 @@ class PullTab extends StatelessWidget {
               key: ValueKey('${chat.id} ${l.id}'),
               daemon: daemon,
               ref: ref,
-              inChat: true,
-              onLoad: (p) {
-                _authors[chat.id] = p.item.author;
-                markPullSeen(chat.id, p);
-              },
+              source: source,
             ),
           ),
           ValueListenableBuilder(
@@ -119,9 +111,6 @@ String sentWords(int sent, int added, String what) {
       : '; $there ${there == 1 ? 'was' : 'were'} there already';
   return "Added $added to the chat's box$also";
 }
-
-/// Each chat's pull request's author, as its tab last loaded it.
-final _authors = <String, String>{};
 
 /// "2 waiting in the chat's box", and Go to chat: under the Pull request
 /// tab and over the Changes view while cards they sent wait there.

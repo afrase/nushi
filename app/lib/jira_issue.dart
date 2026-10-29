@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/comment_box.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -330,7 +331,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                   ],
                 ),
               ),
-            CommentBox(onPost: _comment),
+            CommentBox(onPost: _comment, primary: true),
           ]),
         ],
       ),
