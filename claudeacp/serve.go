@@ -34,6 +34,7 @@ const readLimit = 64 << 20
 type agent struct {
 	acp.UnimplementedAgent
 	client *acp.ClientConn
+	out    *afterAnswer    // what goes to the client
 	ctx    context.Context //nolint:containedctx // ends with the client's connection
 	cfg    Config
 	log    *slog.Logger
@@ -71,7 +72,8 @@ func (a *agent) serve(r io.Reader, w io.Writer) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	a.ctx = ctx
-	conn := acp.NewClientConn(r, w, func(c *acp.ClientConn) acp.Agent {
+	a.out = &afterAnswer{w: w}
+	conn := acp.NewClientConn(r, a.out, func(c *acp.ClientConn) acp.Agent {
 		a.client = c
 		return a
 	}, acp.WithReadLimit(readLimit), acp.WithLogger(a.log))

@@ -33,17 +33,19 @@ var systemDecoders = map[string]func() Message{
 // commands, and the protocol capabilities claude supports.
 type SystemInit struct {
 	Envelope
-	ClaudeCodeVersion string      `json:"claude_code_version"`
-	Cwd               string      `json:"cwd"`
-	Model             string      `json:"model"`
-	PermissionMode    string      `json:"permissionMode"`
-	FastModeState     string      `json:"fast_mode_state"`
-	Effort            string      `json:"effort"`
-	APIKeySource      string      `json:"apiKeySource"`
-	Tools             []string    `json:"tools"`
-	SlashCommands     []string    `json:"slash_commands"`
-	MCPServers        []MCPStatus `json:"mcp_servers"`
-	Capabilities      []string    `json:"capabilities"`
+	ClaudeCodeVersion string   `json:"claude_code_version"`
+	Cwd               string   `json:"cwd"`
+	Model             string   `json:"model"`
+	PermissionMode    string   `json:"permissionMode"`
+	FastModeState     string   `json:"fast_mode_state"`
+	Effort            string   `json:"effort"`
+	APIKeySource      string   `json:"apiKeySource"`
+	Tools             []string `json:"tools"`
+	SlashCommands     []string `json:"slash_commands"`
+	// TerminalSlashCommands are the commands only claude's terminal runs.
+	TerminalSlashCommands []string    `json:"terminal_slash_commands"`
+	MCPServers            []MCPStatus `json:"mcp_servers"`
+	Capabilities          []string    `json:"capabilities"`
 }
 
 // MCPStatus is an MCP server's state, as claude reports it.
