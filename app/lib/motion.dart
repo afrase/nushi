@@ -26,20 +26,87 @@ class _Clock extends ChangeNotifier {
     _ticker ??= Ticker((t) {
       now = t;
       notifyListeners();
+      // One that ended as it ticked (a run of [ClockRun]) is gone only
+      // now: a notifier keeps who leaves while it notifies until then.
+      _stopUnheard();
     })..start();
   }
 
   @override
   void removeListener(VoidCallback listener) {
     super.removeListener(listener);
-    if (!hasListeners) {
-      _ticker?.dispose();
-      _ticker = null;
-    }
+    _stopUnheard();
+  }
+
+  void _stopUnheard() {
+    if (hasListeners) return;
+    _ticker?.dispose();
+    _ticker = null;
   }
 }
 
 final loopClock = _Clock();
+
+/// A motion that runs once for a while (a call's title typing, a check
+/// drawing, sparks) on [loopClock]: the state rebuilds on each tick until
+/// it has run [runFor]'s length, so no ticker of its own runs, and
+/// nothing at rest.
+mixin ClockRun<T extends StatefulWidget> on State<T> {
+  Duration? _from; // the clock's time at the run's first tick
+  Duration _length = Duration.zero;
+  bool _on = false;
+
+  /// How long the run has gone, to its length once it ended; zero until
+  /// its first tick.
+  Duration get ran => !_on
+      ? _length
+      : _from == null
+      ? Duration.zero
+      : loopClock.now - _from!;
+
+  /// [ran] in milliseconds.
+  double get ranMs => ran.inMicroseconds / 1000;
+
+  /// Whether it runs.
+  bool get running => _on;
+
+  /// Starts (or starts again) a run of [length].
+  void runFor(Duration length) {
+    _length = length;
+    _from = null;
+    if (_on) return;
+    _on = true;
+    loopClock.addListener(_tick);
+  }
+
+  /// Ends the run where it is (as if it had run its length).
+  void stopRun() {
+    if (!_on) return;
+    _on = false;
+    loopClock.removeListener(_tick);
+  }
+
+  void _tick() {
+    final from = _from ??= loopClock.now;
+    if (loopClock.now - from >= _length) stopRun();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    stopRun();
+    super.dispose();
+  }
+}
+
+/// How far [ms] is into a part of a run from [start] lasting [length]
+/// (all in milliseconds), from 0 to 1, through [curve].
+double part(
+  double ms,
+  double start,
+  double length, [
+  Curve curve = Curves.linear,
+]) => curve.transform(((ms - start) / length).clamp(0.0, 1.0));
 
 /// Text that is still going (a running call's title, "Thinking…"): a light
 /// band sweeps across it, left to right, every two seconds, in the

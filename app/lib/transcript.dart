@@ -14,6 +14,7 @@ import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/typed.dart';
 import 'package:nushi/widgets.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
@@ -197,11 +198,16 @@ class _TranscriptState extends State<Transcript> {
                   child: Enter.rise(
                     play: rise,
                     child: RepaintBoundary(
-                      child: _view(
-                        e,
-                        live: live,
-                        still: still,
-                        rewindable: rewindable,
+                      // A call's title types out as it comes, or as it
+                      // joins a run; not what the chat opened with.
+                      child: Arriving(
+                        play: rise || was != null,
+                        child: _view(
+                          e,
+                          live: live,
+                          still: still,
+                          rewindable: rewindable,
+                        ),
                       ),
                     ),
                   ),
