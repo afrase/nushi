@@ -93,7 +93,7 @@ func (s *Service) FixChecks(ctx context.Context, ref model.GitHubRef) (string, e
 // for its own PR's reviewers' and answered as the author.
 func (s *Service) whose(ctx context.Context, ref model.GitHubRef, author string) string {
 	me := ""
-	if h, err := s.host(ref.Host, false); err == nil && s.check(ctx, ref.Host, h) == nil {
+	if h, err := s.host(ctx, ref.Host, false); err == nil && s.check(ctx, ref.Host, h) == nil {
 		s.mu.Lock()
 		me = h.user.Login
 		s.mu.Unlock()

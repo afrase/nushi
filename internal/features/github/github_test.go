@@ -242,8 +242,11 @@ func (s *fakeStore) SaveGitHubTokenHosts(h []string) error { s.hosts = h; return
 
 type world struct {
 	s       *Service
-	asked   []string // the hosts gh was asked a token for
-	ghHosts []string // the hosts gh is signed in to
+	mu      sync.Mutex // asked, read and clients, for the tests that ask at once
+	asked   []string   // the hosts gh was asked a token for
+	ghHosts []string   // the hosts gh is signed in to
+	read    []string   // the hosts in gh's config as it was read last
+	asking  func()     // called as gh is asked for a token, when set
 	fetched []string
 	tokens  *fakeTokens
 	store   *fakeStore
@@ -255,19 +258,37 @@ func newWorld(t *testing.T) *world {
 	t.Helper()
 	w := &world{tokens: &fakeTokens{m: map[string]string{}}, store: &fakeStore{}, clients: map[string]*fakeClient{}, ghHosts: []string{"github.com"},
 		branch: map[string][2]string{}}
+	w.read = w.ghHosts
 	w.s = New(Deps{
 		Gh: Gh{
-			Token: func(host string) (string, string) {
+			Token: func(_ context.Context, host string) (string, string) {
+				w.mu.Lock()
 				w.asked = append(w.asked, host)
+				asking := w.asking
+				w.mu.Unlock()
+				if asking != nil {
+					asking()
+				}
 				if host == "github.com" || host == "git.corp.example" {
 					return "gho_gh", "gh"
 				}
 				return "", ""
 			},
-			Hosts: func() []string { return w.ghHosts },
+			Hosts: func() []string {
+				w.mu.Lock()
+				defer w.mu.Unlock()
+				return slices.Clone(w.read)
+			},
+			Reload: func() {
+				w.mu.Lock()
+				defer w.mu.Unlock()
+				w.read = slices.Clone(w.ghHosts)
+			},
 		},
 		Tokens: w.tokens, Store: w.store,
 		Open: func(_, token string) Client {
+			w.mu.Lock()
+			defer w.mu.Unlock()
 			c := w.clients[token]
 			if c == nil {
 				c = &fakeClient{token: token, states: map[string]model.GitHubItem{}, blobs: map[githubapi.BlobAt]githubapi.Blob{}}
@@ -313,8 +334,8 @@ func TestHostsAndTokens(t *testing.T) {
 	if _, err := w.s.AddToken(ctx, "git.example.com", "bad"); !errors.Is(err, githubapi.ErrUnauthorized) || len(w.tokens.m) != 0 {
 		t.Fatalf("a refused token was kept: %v", err)
 	}
-	if _, err := w.s.AddToken(ctx, "Not A Host", "ghp_x"); err == nil {
-		t.Fatal("a bad host")
+	if _, err := w.s.AddToken(ctx, "Not A Host", "ghp_x"); err == nil || !strings.Contains(err.Error(), `"Not A Host"`) {
+		t.Fatalf("a bad host: %v", err)
 	}
 	if u, err := w.s.AddToken(ctx, "git.example.com", "ghp_ent"); err != nil || u.Login != "octo-ghp_ent" {
 		t.Fatalf("%+v %v", u, err)
@@ -339,7 +360,7 @@ func TestHostsAndTokens(t *testing.T) {
 	if !hosts[0].NeedsOK {
 		t.Fatalf("%+v", hosts)
 	}
-	if err := w2.s.AllowToken("git.example.com"); err != nil {
+	if err := w2.s.AllowToken(t.Context(), "git.example.com"); err != nil {
 		t.Fatal(err)
 	}
 	if hosts, _ = w2.s.Hosts(ctx); hosts[0].NeedsOK || hosts[0].User.Login != "octo-ghp_ent" {
@@ -350,8 +371,59 @@ func TestHostsAndTokens(t *testing.T) {
 func TestNoToken(t *testing.T) {
 	w := newWorld(t)
 	w.ghHosts = append(w.ghHosts, "git.example.com") // gh knows it, but has no token for it
-	if _, err := w.s.Inbox(t.Context(), "git.example.com", githubapi.InboxFilter{}, false); err == nil || !strings.Contains(err.Error(), "gh auth login") {
+	for range 2 {
+		if _, err := w.s.Inbox(t.Context(), "git.example.com", githubapi.InboxFilter{}, false); err == nil || !strings.Contains(err.Error(), "gh auth login") {
+			t.Fatal(err)
+		}
+	}
+	if len(w.asked) != 1 {
+		t.Fatalf("gh asked again within 30 s: %v", w.asked)
+	}
+	w.s.noToken["git.example.com"] = time.Now().Add(-noTokenFor)
+	if _, err := w.s.Inbox(t.Context(), "git.example.com", githubapi.InboxFilter{}, false); err == nil || len(w.asked) != 2 {
+		t.Fatalf("gh not asked after 30 s: %v %v", err, w.asked)
+	}
+}
+
+// A host gh signed in to after the daemon started is known: gh's config
+// is read again when a host isn't in it.
+func TestGhLoginSince(t *testing.T) {
+	w := newWorld(t)
+	if _, err := w.s.client(t.Context(), "git.corp.example"); err == nil {
+		t.Fatal("a host gh doesn't know")
+	}
+	w.ghHosts = append(w.ghHosts, "git.corp.example") // gh auth login, the config written
+	if _, err := w.s.client(t.Context(), "git.corp.example"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Ten asking at once for a host not yet read all get the same client.
+func TestHostAtOnce(t *testing.T) {
+	w := newWorld(t)
+	var mu sync.Mutex
+	n, all := 0, make(chan struct{})
+	w.asking = func() {
+		mu.Lock()
+		if n++; n == 10 {
+			close(all)
+		}
+		mu.Unlock()
+		select {
+		case <-all:
+		case <-time.After(5 * time.Second): // asked fewer times: fine too
+		}
+	}
+	got := make([]*host, 10)
+	var wg sync.WaitGroup
+	for i := range got {
+		wg.Go(func() { got[i], _ = w.s.host(t.Context(), "github.com", false) })
+	}
+	wg.Wait()
+	for _, h := range got {
+		if h == nil || h != got[0] {
+			t.Fatal("two clients of github.com")
+		}
 	}
 }
 
@@ -545,6 +617,15 @@ func TestJobTail(t *testing.T) {
 	if n := slices.Index(w.clients["gho_gh"].asked, "log"); n < 0 || slices.Contains(w.clients["gho_gh"].asked[n+1:], "log") {
 		t.Fatalf("asked twice: %v", w.clients["gho_gh"].asked)
 	}
+	// The same job's number on a host Nushi gives no token to, or in
+	// another repository, isn't the tail kept.
+	if _, err := w.s.JobTail(t.Context(), model.GitHubRef{Host: "evil.example", Repo: "a/b"}, 7); err == nil {
+		t.Fatal("a kept tail for an unknown host")
+	}
+	_, _ = w.s.JobTail(t.Context(), model.GitHubRef{Host: "github.com", Repo: "a/c"}, 7)
+	if logs := slices.DeleteFunc(slices.Clone(w.clients["gho_gh"].asked), func(s string) bool { return s != "log" }); len(logs) != 2 {
+		t.Fatal("another repository's job 7 had a/b's tail")
+	}
 }
 
 func TestParseRemote(t *testing.T) {
@@ -559,7 +640,7 @@ func TestParseRemote(t *testing.T) {
 		"/Users/me/repo.git":                          "",
 		"file:///tmp/x/y":                             "",
 	} {
-		h, r, ok := ParseRemote(in)
+		h, r, ok := parseRemote(in)
 		got := ""
 		if ok {
 			got = h + " " + r
@@ -630,19 +711,6 @@ func TestCheckOut(t *testing.T) {
 	}
 	if _, err := w.s.CheckOut(ctx, "app", model.GitHubRef{Host: "github.com", Repo: "someone/else", Number: 1}); err == nil {
 		t.Fatal("a folder that isn't a clone of it")
-	}
-}
-
-func TestIssueBranch(t *testing.T) {
-	for in, want := range map[string]string{
-		"Add a Mul function":              "2-add-a-mul-function",
-		"":                                "2",
-		"Café: naïve résumé!!":            "2-caf-na-ve-r-sum",
-		"x" + strings.Repeat(" word", 20): "2-x-word-word-word-word-word-word-word",
-	} {
-		if got := IssueBranch(2, in); got != want {
-			t.Errorf("%q: %q", in, got)
-		}
 	}
 }
 

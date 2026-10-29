@@ -50,7 +50,7 @@ func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilte
 	if ok && time.Since(kept.at) < inboxFresh {
 		return Inbox{Inbox: kept.inbox, At: kept.at}, nil
 	}
-	c, err := s.client(name)
+	c, err := s.client(ctx, name)
 	if err != nil {
 		return Inbox{}, err
 	}
@@ -141,7 +141,7 @@ func (s *Service) States(ctx context.Context, items []model.ChatGitHub, poll boo
 		ctx = githubapi.Poll(ctx)
 	}
 	for name, ids := range ask {
-		c, err := s.client(name)
+		c, err := s.client(ctx, name)
 		if err != nil {
 			continue
 		}

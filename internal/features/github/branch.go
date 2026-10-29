@@ -69,11 +69,11 @@ func (s *Service) FindPull(ctx context.Context, folder string, poll bool) (Branc
 	type repo struct{ host, name string }
 	var repos []repo
 	for _, n := range names {
-		h, r, ok := ParseRemote(remotes[n])
+		h, r, ok := parseRemote(remotes[n])
 		if _, _, err := githubapi.SplitRepo(r); !ok || err != nil || slices.Contains(repos, repo{h, r}) {
 			continue
 		}
-		if _, err := s.host(h, false); err != nil {
+		if _, err := s.host(ctx, h, false); err != nil {
 			continue // no sign-in for it, or not a host Nushi gives a token to
 		}
 		repos = append(repos, repo{h, r})
@@ -130,7 +130,7 @@ func (s *Service) heads(ctx context.Context, host, repo, head string, poll bool)
 	if ok && time.Now().Before(kept.until) {
 		return kept.pulls, nil
 	}
-	c, err := s.client(host)
+	c, err := s.client(ctx, host)
 	if err != nil {
 		return nil, err
 	}

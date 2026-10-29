@@ -139,8 +139,8 @@ type InboxFilter struct {
 	Wide   []string
 }
 
-// Sections are the inbox's sections, as InboxFilter.Wide names them.
-var Sections = []string{"review", "mine", "assigned"}
+// sections are the inbox's sections, as InboxFilter.Wide names them.
+var sections = []string{"review", "mine", "assigned"}
 
 // ownerRE is a user's or an organization's name, as GitHub allows them.
 var ownerRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$`)
@@ -168,7 +168,7 @@ func (f InboxFilter) Check() error {
 		return fmt.Errorf("at most %d owners", maxOwners)
 	}
 	for _, w := range f.Wide {
-		if !slices.Contains(Sections, w) {
+		if !slices.Contains(sections, w) {
 			return fmt.Errorf("%q isn't a section of the inbox", w)
 		}
 	}

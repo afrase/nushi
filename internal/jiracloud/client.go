@@ -168,7 +168,10 @@ func (c *Client) send(ctx context.Context, method, path string, args []string, q
 		err = c.failure(resp)
 		_ = resp.Body.Close()
 		var limited *RateLimitedError
-		if !errors.As(err, &limited) || try == retries || limited.After > maxWait {
+		// A write is tried again only after a 429: a 503 (from a proxy,
+		// say) may come after Jira did it, and a comment would go twice.
+		again := method == http.MethodGet || resp.StatusCode == http.StatusTooManyRequests
+		if !errors.As(err, &limited) || !again || try == retries || limited.After > maxWait {
 			if resp.StatusCode >= 500 || limited != nil {
 				c.log.Warn("jira refused", "method", method, "path", path, "status", resp.StatusCode)
 			}

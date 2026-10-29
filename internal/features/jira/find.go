@@ -47,8 +47,8 @@ func (s *Service) Find(ctx context.Context, text, site string) (Finding, error) 
 		return Finding{}, errors.New("no Jira site: add one in Settings › Jira")
 	}
 	text = strings.TrimSpace(text)
-	if origin, path, key, ok := ParseLink(text); ok {
-		matched := MatchSites(sites, origin, path)
+	if origin, path, key, ok := parseLink(text); ok {
+		matched := matchSites(sites, origin, path)
 		if len(matched) == 0 {
 			return Finding{UnknownSite: origin}, nil
 		}
@@ -67,7 +67,7 @@ func (s *Service) Find(ctx context.Context, text, site string) (Finding, error) 
 	}
 	jql := recentJQL
 	if text != "" {
-		jql = TextJQL(text)
+		jql = textJQL(text)
 	}
 	found, err := s.search(ctx, sites, jql, findLimit)
 	return Finding{Issues: found}, err
@@ -108,10 +108,10 @@ func (s *Service) search(ctx context.Context, sites []model.JiraSite, jql string
 	return out, nil
 }
 
-// TextJQL is a search for issues with every word of text, each as the
+// textJQL is a search for issues with every word of text, each as the
 // start of a word in their summary, description or comments. Only letters
 // and digits are kept, so nothing typed reaches JQL as syntax.
-func TextJQL(text string) string {
+func textJQL(text string) string {
 	words := strings.FieldsFunc(text, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 	if len(words) == 0 {
 		return recentJQL
@@ -123,11 +123,11 @@ func TextJQL(text string) string {
 	return strings.Join(clauses, " AND ") + " ORDER BY updated DESC"
 }
 
-// ParseLink reads an issue's link: its site's address (scheme and host),
+// parseLink reads an issue's link: its site's address (scheme and host),
 // its path, and the issue's key, from /browse/KEY or /issues/KEY anywhere
 // in the path (after a path prefix of the site's), or a board's
 // ?selectedIssue=KEY.
-func ParseLink(text string) (origin, path, key string, ok bool) {
+func parseLink(text string) (origin, path, key string, ok bool) {
 	u, err := url.Parse(text)
 	if err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
 		return "", "", "", false
@@ -144,11 +144,11 @@ func ParseLink(text string) (origin, path, key string, ok bool) {
 	if CheckKey(key) != nil {
 		return "", "", "", false
 	}
-	return Origin(u), u.Path, key, true
+	return originOf(u), u.Path, key, true
 }
 
-// Origin is a URL's scheme and host, lowercase, without a default port.
-func Origin(u *url.URL) string {
+// originOf is a URL's scheme and host, lowercase, without a default port.
+func originOf(u *url.URL) string {
 	scheme, host := strings.ToLower(u.Scheme), strings.ToLower(u.Hostname())
 	defaultPort := map[string]string{"https": "443", "http": "80"}[scheme]
 	if p := u.Port(); p != "" && p != defaultPort {
@@ -157,13 +157,13 @@ func Origin(u *url.URL) string {
 	return scheme + "://" + host
 }
 
-// MatchSites are the sites at origin whose own path (a Data Center site
+// matchSites are the sites at origin whose own path (a Data Center site
 // may have one, such as /jira) starts path.
-func MatchSites(sites []model.JiraSite, origin, path string) []model.JiraSite {
+func matchSites(sites []model.JiraSite, origin, path string) []model.JiraSite {
 	var out []model.JiraSite
 	for _, site := range sites {
 		u, err := url.Parse(site.URL)
-		if err != nil || Origin(u) != origin {
+		if err != nil || originOf(u) != origin {
 			continue
 		}
 		prefix := strings.TrimRight(u.Path, "/")

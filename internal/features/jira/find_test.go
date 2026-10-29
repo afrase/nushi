@@ -24,9 +24,9 @@ func TestParseLink(t *testing.T) {
 		{"https://jira.corp.example:8443/jira/browse/OPS-1/", "https://jira.corp.example:8443", "/jira/browse/OPS-1/", "OPS-1"},
 		{"http://jira.local/browse/X_Y-2", "http://jira.local", "/browse/X_Y-2", "X_Y-2"},
 	} {
-		origin, path, key, ok := ParseLink(c.text)
+		origin, path, key, ok := parseLink(c.text)
 		if !ok || origin != c.origin || path != c.path || key != c.key {
-			t.Errorf("ParseLink(%q) = %q, %q, %q, %v", c.text, origin, path, key, ok)
+			t.Errorf("parseLink(%q) = %q, %q, %q, %v", c.text, origin, path, key, ok)
 		}
 	}
 	for _, text := range []string{
@@ -34,8 +34,8 @@ func TestParseLink(t *testing.T) {
 		"https://acme.atlassian.net/jira/software/projects/ABC/boards/1", "ftp://acme.atlassian.net/browse/ABC-1",
 		"https:///browse/ABC-1", "https://acme.atlassian.net/browse/ABC-0", "https://acme.atlassian.net/x?selectedIssue=a b",
 	} {
-		if _, _, key, ok := ParseLink(text); ok {
-			t.Errorf("ParseLink(%q) took %q", text, key)
+		if _, _, key, ok := parseLink(text); ok {
+			t.Errorf("parseLink(%q) took %q", text, key)
 		}
 	}
 }
@@ -69,11 +69,11 @@ func TestMatchSites(t *testing.T) {
 		{"https://jira.corp.example/jira2/browse/OPS-1", []string{"https://jira.corp.example/jira2", "https://jira.corp.example/"}},
 		{"https://jira.corp.example/browse/OPS-1", []string{"https://jira.corp.example/"}},
 	} {
-		origin, path, _, ok := ParseLink(c.link)
+		origin, path, _, ok := parseLink(c.link)
 		if !ok {
 			t.Fatalf("%q isn't a link", c.link)
 		}
-		if got := ids(MatchSites(sites, origin, path)); !slices.Equal(got, c.want) {
+		if got := ids(matchSites(sites, origin, path)); !slices.Equal(got, c.want) {
 			t.Errorf("%s: matched %q, want %q", c.link, got, c.want)
 		}
 	}
@@ -88,8 +88,8 @@ func TestTextJQL(t *testing.T) {
 		"*?~()":                        recentJQL,
 		"a b c d e f g h":              `text ~ "a*" AND text ~ "b*" AND text ~ "c*" AND text ~ "d*" AND text ~ "e*" AND text ~ "f*" ORDER BY updated DESC`,
 	} {
-		if got := TextJQL(text); got != want {
-			t.Errorf("TextJQL(%q) = %s, want %s", text, got, want)
+		if got := textJQL(text); got != want {
+			t.Errorf("textJQL(%q) = %s, want %s", text, got, want)
 		}
 	}
 }

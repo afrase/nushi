@@ -93,7 +93,7 @@ func TestAllowlist(t *testing.T) {
 		"https://[::ffff:127.0.0.1%25x.push.apple.com]/x", // a zone that ends like a push service
 		"https://web.push.apple.com:/x",                   // an empty port
 		"https://web.push.apple.com:443/x",
-		"https://web.push.apple.com/" + strings.Repeat("x", MaxEndpoint),
+		"https://web.push.apple.com/" + strings.Repeat("x", maxEndpoint),
 		"ftp://fcm.googleapis.com/x",
 		"",
 	} {

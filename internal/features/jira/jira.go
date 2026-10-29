@@ -283,8 +283,11 @@ func (s *Service) client(site model.JiraSite, prompt bool) (Client, error) {
 	c = s.sites.Open(site, string(token))
 	clear(token)
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	if kept := s.clients[id]; kept != nil {
+		return kept, nil // another asked at once: its client, for one set of limits
+	}
 	s.clients[id] = c
-	s.mu.Unlock()
 	return c, nil
 }
 

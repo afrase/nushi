@@ -211,6 +211,32 @@ func TestRateLimited(t *testing.T) {
 	}
 }
 
+// A write is tried again after a 429 (Jira didn't do it), not after a
+// 503, which may come after Jira did.
+func TestWriteRetries(t *testing.T) {
+	f := newFake(t)
+	var answers []int
+	tries := 0
+	f.routes["POST /rest/api/3/issue/A-1/comment"] = func(w http.ResponseWriter, _ *http.Request) {
+		tries++
+		if len(answers) > 0 {
+			w.WriteHeader(answers[0])
+			answers = answers[1:]
+			return
+		}
+		_, _ = w.Write([]byte(`{"id":"1","body":{"type":"doc","version":1,"content":[]}}`))
+	}
+	c := f.client()
+	answers = []int{http.StatusServiceUnavailable}
+	if _, err := c.AddComment(t.Context(), "A-1", "hi"); err == nil || tries != 1 {
+		t.Fatalf("a 503 on a write: %v, %v", err, f.calls)
+	}
+	answers = []int{http.StatusTooManyRequests}
+	if _, err := c.AddComment(t.Context(), "A-1", "hi"); err != nil || tries != 3 {
+		t.Fatalf("a 429 on a write: %v, %v", err, f.calls)
+	}
+}
+
 func TestErrors(t *testing.T) {
 	f := newFake(t)
 	f.routes["POST /rest/api/3/search/jql"] = func(w http.ResponseWriter, _ *http.Request) {

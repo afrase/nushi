@@ -333,7 +333,7 @@ func TestInboxSearches(t *testing.T) {
 	if _, left := (InboxFilter{Owners: []string{"a"}, Hide: []string{"a"}}).narrowed(); left {
 		t.Fatal("all hidden")
 	}
-	ok := InboxFilter{Repos: []string{"a-b/c.d_e"}, Hide: []string{"x", "x/y"}, Owners: []string{"My-Org"}, Wide: Sections, Days: 30}
+	ok := InboxFilter{Repos: []string{"a-b/c.d_e"}, Hide: []string{"x", "x/y"}, Owners: []string{"My-Org"}, Wide: sections, Days: 30}
 	if err := ok.Check(); err != nil {
 		t.Fatal(err)
 	}

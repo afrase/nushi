@@ -1,6 +1,7 @@
 package github
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -17,7 +18,7 @@ import (
 
 // Pull is a pull request whole.
 func (s *Service) Pull(ctx context.Context, ref model.GitHubRef, poll bool) (model.GitHubPull, error) {
-	c, err := s.client(ref.Host)
+	c, err := s.client(ctx, ref.Host)
 	if err != nil {
 		return model.GitHubPull{}, err
 	}
@@ -29,7 +30,7 @@ func (s *Service) Pull(ctx context.Context, ref model.GitHubRef, poll bool) (mod
 
 // Issue is an issue whole.
 func (s *Service) Issue(ctx context.Context, ref model.GitHubRef, poll bool) (model.GitHubIssue, error) {
-	c, err := s.client(ref.Host)
+	c, err := s.client(ctx, ref.Host)
 	if err != nil {
 		return model.GitHubIssue{}, err
 	}
@@ -60,17 +61,19 @@ func Outside(association string) bool {
 }
 
 // JobTail is the end of an Actions job's log (16 KB), kept once read: a
-// job that ended doesn't change (a re-run is another job).
+// job that ended doesn't change (a re-run is another job). The host is
+// checked first: a kept tail is its repository's only.
 func (s *Service) JobTail(ctx context.Context, ref model.GitHubRef, job int64) (string, error) {
+	c, err := s.client(ctx, ref.Host)
+	if err != nil {
+		return "", err
+	}
+	key := fmt.Sprint(ref.Host, " ", ref.Repo, " ", job)
 	s.mu.Lock()
-	tail, ok := s.logs[job]
+	tail, ok := s.logs[key]
 	s.mu.Unlock()
 	if ok {
 		return tail, nil
-	}
-	c, err := s.client(ref.Host)
-	if err != nil {
-		return "", err
 	}
 	log, err := c.JobLog(ctx, ref.Repo, job)
 	if err != nil {
@@ -81,7 +84,7 @@ func (s *Service) JobTail(ctx context.Context, ref model.GitHubRef, job int64) (
 	if len(s.logs) > 200 {
 		clear(s.logs)
 	}
-	s.logs[job] = tail
+	s.logs[key] = tail
 	s.mu.Unlock()
 	return tail, nil
 }
@@ -95,7 +98,7 @@ func (s *Service) Files(ctx context.Context, ref model.GitHubRef, base, head str
 	if !oidRE.MatchString(base) || !oidRE.MatchString(head) {
 		return nil, errors.New("base and head are commits' ids")
 	}
-	c, err := s.client(ref.Host)
+	c, err := s.client(ctx, ref.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +117,7 @@ func (s *Service) Files(ctx context.Context, ref model.GitHubRef, base, head str
 	}
 	for i, f := range files {
 		if f.Status != "added" {
-			want[i].old = need(githubapi.BlobAt{Commit: mergeBase, Path: cmpOr(f.OldPath, f.Path)})
+			want[i].old = need(githubapi.BlobAt{Commit: mergeBase, Path: cmp.Or(f.OldPath, f.Path)})
 		}
 		if f.Status != "removed" {
 			want[i].neu = need(githubapi.BlobAt{Commit: head, Path: f.Path})
@@ -151,13 +154,6 @@ func (s *Service) Files(ctx context.Context, ref model.GitHubRef, base, head str
 		out = append(out, fc)
 	}
 	return out, nil
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 // status is GitHub's word for a file's change as the Changes view says it.
@@ -222,7 +218,7 @@ func (s *Service) Reply(ctx context.Context, name, thread, body string) (model.G
 	if strings.TrimSpace(body) == "" {
 		return model.GitHubComment{}, errors.New("an empty reply")
 	}
-	c, err := s.writer(name)
+	c, err := s.writer(ctx, name)
 	if err != nil {
 		return model.GitHubComment{}, err
 	}
@@ -233,7 +229,7 @@ func (s *Service) Reply(ctx context.Context, name, thread, body string) (model.G
 
 // Resolve resolves a review thread, or unresolves it.
 func (s *Service) Resolve(ctx context.Context, name, thread string, resolve bool) error {
-	c, err := s.writer(name)
+	c, err := s.writer(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -245,7 +241,7 @@ func (s *Service) Resolve(ctx context.Context, name, thread string, resolve bool
 // RerunFailed re-runs the failed jobs of the workflow runs jobs (failed
 // checks' ids) belong to, and says how many runs.
 func (s *Service) RerunFailed(ctx context.Context, ref model.GitHubRef, jobs []int64) (int, error) {
-	c, err := s.writer(ref.Host)
+	c, err := s.writer(ctx, ref.Host)
 	if err != nil {
 		return 0, err
 	}
@@ -260,7 +256,7 @@ func (s *Service) Comment(ctx context.Context, name, subject, body string) (mode
 	if strings.TrimSpace(body) == "" {
 		return model.GitHubComment{}, errors.New("an empty comment")
 	}
-	c, err := s.writer(name)
+	c, err := s.writer(ctx, name)
 	if err != nil {
 		return model.GitHubComment{}, err
 	}
@@ -271,7 +267,7 @@ func (s *Service) Comment(ctx context.Context, name, subject, body string) (mode
 
 // Review submits the user's review with its inline comments.
 func (s *Service) Review(ctx context.Context, name string, r githubapi.Review) error {
-	c, err := s.writer(name)
+	c, err := s.writer(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -280,8 +276,8 @@ func (s *Service) Review(ctx context.Context, name string, r githubapi.Review) e
 	return err
 }
 
-func (s *Service) writer(name string) (Client, error) {
-	c, err := s.client(name)
+func (s *Service) writer(ctx context.Context, name string) (Client, error) {
+	c, err := s.client(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("can't write to %s: %w", name, err)
 	}
