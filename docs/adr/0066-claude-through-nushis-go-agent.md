@@ -16,7 +16,7 @@ Claude runs through claude-agent-acp 0.94.0 under the user's Node ([0037](0037-a
 
 ## Consequences
 - Once the default flips, it supersedes 0037's Claude part: Claude needs no Node or Set up. Codex's adapter stays.
-- Nushi depends on claude's control protocol, as both official SDKs do. The Go agent parses leniently, keeps what it doesn't know, and detects features; a protocol change breaks the SDKs too.
+- Nushi depends on claude's control protocol, as both official SDKs do. The Go agent parses leniently, keeps what it doesn't know, and detects features; a protocol change breaks the SDKs too. No CLI version is pinned or gated (Anthropic ships the CLI almost daily): the agent logs `claude --version` at each start, so a break can be matched to the version that brought it.
 - Both agents write the same transcripts under the same session ids, so a chat can switch between them while asleep, if the replay's message ids match the live ones (the merge test gates the flip, [0047](0047-nushis-copy-of-transcripts.md)).
 - [0017](0017-context-breakdown-from-claude.md), 0020, 0044 and [0065](0065-nushi-stops-background-commands-itself.md) stand as they are; their workarounds can go as the Go agent adds extensions, each by an amendment.
 - Until real runs are recorded, the Go agent's behaviour is the adapter's as read in its source (`docs/facts/claude.md`, Go agent).
