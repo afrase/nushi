@@ -23,10 +23,18 @@ import 'package:nushi/widgets.dart';
 /// required, its link; a failed one's annotations, and its log's end
 /// (an Actions job's, asked of GitHub when opened).
 class GitHubChecks extends StatelessWidget {
-  const new({required this.daemon, required this.pull, super.key});
+  const new({
+    required this.daemon,
+    required this.pull,
+    super.key,
+    this.pad = 12,
+  });
 
   final Daemon daemon;
   final GitHubPull pull;
+
+  /// Its sides' padding, which centres it.
+  final double pad;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +50,7 @@ class GitHubChecks extends StatelessWidget {
       return Center(child: Text('No checks.', style: theme.ui(t.textMuted)));
     }
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+      padding: EdgeInsets.fromLTRB(pad, 0, pad, 20),
       children: [
         for (final c in checks)
           _Check(daemon: daemon, ref: pull.item.ref, check: c),
