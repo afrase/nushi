@@ -14,22 +14,28 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// lookup returns a chat, open or stored, without reopening it.
+// lookup returns a chat, open or stored, without reopening it. A stored
+// one's copy is read with only the chat locked: who finds it meanwhile
+// waits for its transcript, the other chats don't.
 func (s *Service) lookup(id string) (*chat, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if c := s.chats[id]; c != nil {
+		s.mu.Unlock()
 		return c, nil
 	}
 	sess, k, err := s.storedSession(id)
 	if err != nil {
+		s.mu.Unlock()
 		return nil, err
 	}
 	c := s.newChat(k)
 	c.id, c.sid, c.session, c.issue = id, sess.SessionID, sess, sess.Issue
 	c.ultracode.Store(sess.Ultracode)
-	c.loadCopy() // its transcript until the agent replays it, or for good when it can't
+	c.mu.Lock() // a new chat's: nobody waits on it
+	defer c.mu.Unlock()
 	s.chats[id] = c
+	s.mu.Unlock()
+	c.loadCopyLocked() // its transcript until the agent replays it, or for good when it can't
 	return c, nil
 }
 
