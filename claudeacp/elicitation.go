@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/url"
 	"slices"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -20,9 +22,20 @@ func (s *session) elicit(ctx context.Context, r claudeagent.ElicitationRequest) 
 	decline := claudeagent.ElicitationResult{Action: claudeagent.ElicitationDecline}
 	caps := s.a.clientCaps()
 	req := &acp.CreateElicitationRequest{Message: r.Message}
+	if r.ServerName != "" {
+		// Which server asks, as a permission request names it, so the
+		// user can tell who sends them where.
+		req.Meta = map[string]any{"mcpServer": map[string]any{"name": r.ServerName}}
+	}
 	switch r.Mode {
 	case "url":
 		if !caps.urls {
+			return decline, nil
+		}
+		if !safePage(r.URL) {
+			// A server's page is opened in the user's browser: only a web
+			// page, never a script, a file or a plain-http host elsewhere.
+			s.log.Warn("an MCP server's page refused", "server", r.ServerName)
 			return decline, nil
 		}
 		req.URL = &acp.ElicitationURLMode{SessionID: acp.SessionID(s.id), URL: r.URL,
@@ -60,6 +73,32 @@ func (s *session) elicit(ctx context.Context, r claudeagent.ElicitationRequest) 
 		return decline, nil
 	}
 	return claudeagent.ElicitationResult{Action: claudeagent.ElicitationCancel}, nil
+}
+
+// safePage says whether a URL elicitation's page may be shown: an https
+// page, or an http one on this machine (a local sign-in's callback).
+func safePage(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.Hostname() == "" || u.User != nil {
+		return false
+	}
+	switch u.Scheme {
+	case "https":
+		return true
+	case "http":
+		return loopback(u.Hostname())
+	}
+	return false
+}
+
+// loopback says whether a host is this machine's: localhost or a loopback
+// address.
+func loopback(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // formSchema is a form's schema as ACP's: always an object, its fields in
