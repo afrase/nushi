@@ -190,10 +190,11 @@ func TestCancel(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 	eventually(t, "drops and an interrupt", func() bool { return len(asked(f)) == 3 })
-	all := strings.Join(asked(f), "\n")
-	for _, want := range []string{`"message_uuid":"id3"`, `"message_uuid":"id4"`, `"subtype":"interrupt"`} {
-		if !strings.Contains(all, want) {
-			t.Errorf("no %s in\n%s", want, all)
+	// In this order, as claude-agent-acp writes them: the drops, then the
+	// interrupt.
+	for i, want := range []string{`"message_uuid":"id3"`, `"message_uuid":"id4"`, `"subtype":"interrupt"`} {
+		if got := asked(f)[i]; !strings.Contains(got, want) {
+			t.Errorf("%d: no %s in %s", i, want, got)
 		}
 	}
 	if ids, _ := p.queue(t, sid); len(ids) != 0 {

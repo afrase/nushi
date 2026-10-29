@@ -41,16 +41,28 @@ func (s *session) cancel() {
 	// as the cancel spares it.
 	s.withdrawLocked(func(a *ask) bool { return a.agent == "" || !s.inBackground(a.agent) })
 	s.mu.Unlock()
-	for _, id := range drop {
-		go func() {
-			if err := s.cs.CancelAsyncMessage(s.a.ctx, id); err != nil {
+	// The queued prompts are dropped first, then claude is interrupted,
+	// with no wait between, as claude-agent-acp writes them (the
+	// cancel-queued parity scenario). Claude is interrupted even when no
+	// prompt is known to run: it may have taken one whose echo hasn't come
+	// yet, or be at work of its own.
+	go func() {
+		var waits []func(any) error
+		for _, id := range drop {
+			wait, err := s.cs.Begin(s.a.ctx, "cancel_async_message", map[string]any{"message_uuid": id})
+			if err != nil {
 				s.log.Info("dropping a queued prompt", "err", err)
+				continue
+			}
+			waits = append(waits, wait)
+		}
+		defer func() {
+			for _, wait := range waits {
+				if err := wait(nil); err != nil {
+					s.log.Info("dropping a queued prompt", "err", err)
+				}
 			}
 		}()
-	}
-	// Claude is interrupted even when no prompt is known to run: it may
-	// have taken one whose echo hasn't come yet, or be at work of its own.
-	go func() {
 		r, err := s.cs.Interrupt(s.a.ctx)
 		if err != nil {
 			s.log.Info("interrupting claude", "err", err)

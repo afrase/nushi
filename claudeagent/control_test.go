@@ -61,6 +61,41 @@ func (c clock) after(time.Duration) <-chan time.Time {
 	return fire
 }
 
+// Begun requests reach claude in the order begun, before any is
+// answered, and each wait gets its own answer.
+func TestBegin(t *testing.T) {
+	s, f := start(t, claudeagent.Options{},
+		claudetest.Expect(`{"type":"control_request","request":{"subtype":"cancel_async_message","message_uuid":"u1"}}`),
+		claudetest.Expect(`{"type":"control_request","request":{"subtype":"interrupt"}}`),
+		answer(`{"still_queued":[]}`),
+		claudetest.Expect(`{"type":"control_cancel_request"}`),
+		claudetest.Send(`{"type":"system","subtype":"status","status":"idle"}`),
+	)
+	ctx, cancel := context.WithCancel(context.Background())
+	drop, err := s.Begin(ctx, "cancel_async_message", map[string]any{"message_uuid": "u1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stop, err := s.Begin(context.Background(), "interrupt", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var r struct {
+		StillQueued []string `json:"still_queued"`
+	}
+	if err := stop(&r); err != nil || r.StillQueued == nil {
+		t.Fatalf("%v %+v", err, r)
+	}
+	cancel() // the first is never answered: it gives up, withdrawn
+	if err := drop(nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("%v", err)
+	}
+	if m, ok := next(t, s).(*claudeagent.Status); !ok || m.Status != "idle" {
+		t.Errorf("%+v", m)
+	}
+	finish(t, s, f)
+}
+
 // A request with no answer gives up after its timeout, or when its ctx
 // ends, and is withdrawn; an answer that comes later is dropped, as is
 // one for a request never sent, and keep_alive is no message.
