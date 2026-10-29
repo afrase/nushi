@@ -31,20 +31,19 @@ func TestMain(m *testing.M) {
 		Main()
 		os.Exit(0)
 	case "claude":
-		standInClaude()
-		os.Exit(0)
+		os.Exit(standInClaude())
 	}
-	os.Exit(m.Run())
+	m.Run()
 }
 
 // standInClaude answers initialize and then waits for its stdin to end;
 // with CLAUDEACP_TEST_STUBBORN set it ignores that and SIGTERM, as a
 // claude busy in a tool might, so only SIGKILL ends it. It adds its pid
-// to the file $CLAUDEACP_TEST_PIDS names.
-func standInClaude() {
+// to the file $CLAUDEACP_TEST_PIDS names, and returns its exit code.
+func standInClaude() int {
 	if slices.Contains(os.Args[1:], "--version") {
-		fmt.Println("0.0.0 (stand-in)")
-		return
+		_, _ = fmt.Fprintln(os.Stdout, "0.0.0 (stand-in)")
+		return 0
 	}
 	stubborn := os.Getenv("CLAUDEACP_TEST_STUBBORN") != ""
 	if stubborn {
@@ -52,7 +51,7 @@ func standInClaude() {
 	}
 	f, err := os.OpenFile(os.Getenv("CLAUDEACP_TEST_PIDS"), os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0o600)
 	if err != nil {
-		os.Exit(2)
+		return 2
 	}
 	_, _ = fmt.Fprintln(f, os.Getpid())
 	_ = f.Close()
@@ -64,12 +63,13 @@ func standInClaude() {
 			Request   struct{ Subtype string }
 		}
 		if json.Unmarshal(in.Bytes(), &req) == nil && req.Request.Subtype == "initialize" {
-			fmt.Printf(`{"type":"control_response","response":{"subtype":"success","request_id":%q,"response":{}}}`+"\n", req.RequestID)
+			_, _ = fmt.Fprintf(os.Stdout, `{"type":"control_response","response":{"subtype":"success","request_id":%q,"response":{}}}`+"\n", req.RequestID)
 		}
 	}
 	for stubborn {
 		time.Sleep(time.Hour)
 	}
+	return 0
 }
 
 // quietClient is a client that asks nothing of the agent's requests.
@@ -102,10 +102,10 @@ func TestClaudeEndsWithTheAgent(t *testing.T) {
 			pids := filepath.Join(dir, "pids")
 			claude := filepath.Join(dir, "claude")
 			script := fmt.Sprintf("#!/bin/sh\nCLAUDEACP_TEST_ROLE=claude exec %q \"$@\"\n", self)
-			if err := os.WriteFile(claude, []byte(script), 0o700); err != nil { //nolint:gosec // the stand-in must run
+			if err := os.WriteFile(claude, []byte(script), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			cmd := exec.Command(self) //nolint:gosec,noctx // the test binary as the agent; it lives until the case ends it
+			cmd := exec.Command(self)
 			cmd.Env = append(os.Environ(), "CLAUDEACP_TEST_ROLE=agent", "CLAUDE_CODE_EXECUTABLE="+claude,
 				"CLAUDEACP_TEST_PIDS="+pids, "HOME="+dir, "CLAUDE_CONFIG_DIR="+dir, "CLAUDEAGENT_SKIP_VERSION=1",
 				"GORACE=atexit_sleep_ms=0")
@@ -116,7 +116,7 @@ func TestClaudeEndsWithTheAgent(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer logFile.Close()
+			defer func() { _ = logFile.Close() }()
 			cmd.Stderr = logFile
 			agentLog := func() string { b, _ := os.ReadFile(logFile.Name()); return string(b) }
 			conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return quietClient{} }) // in a group of its own, as Nushi runs it
@@ -151,7 +151,7 @@ func TestClaudeEndsWithTheAgent(t *testing.T) {
 // standInPID is the one stand-in claude's pid, from the file it wrote.
 func standInPID(t *testing.T, path string) int {
 	t.Helper()
-	b, err := os.ReadFile(path) //nolint:gosec // the test's own file
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
