@@ -388,7 +388,22 @@ message PingResponse {
 
 message RestartWhenIdleRequest {}
 
-message RestartWhenIdleResponse {}
+message RestartWhenIdleResponse {
+  // What the restart waits for now (API 85): each chat that runs or waits,
+  // and each terminal running a command; empty when nothing (it goes).
+  repeated RestartHold holds = 1;
+}
+
+// One thing a restart waits for.
+message RestartHold {
+  // The chat it's in (a terminal's chat too).
+  string chat_id = 1;
+  // "working", "waits on you", "a message queued", "in background", or
+  // for a terminal "running <its program>".
+  string why = 2;
+  // A terminal's, not the chat's own.
+  bool terminal = 3;
+}
 
 message ListChatsRequest {}
 

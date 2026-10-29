@@ -518,6 +518,14 @@ type Status struct {
 	Background int
 }
 
+// Hold is one thing a daemon's restart waits for: a chat that runs or
+// waits, or (Terminal) a terminal running a command, in a chat.
+type Hold struct {
+	ChatID   string
+	Why      string // "working", "waits on you", "a message queued", "in background"; a terminal's "running <program>"
+	Terminal bool
+}
+
 // TranscriptCopy is Nushi's copy of a chat's transcript (ADR 0047): its
 // size on disk, images included, and when it was last written.
 type TranscriptCopy struct {

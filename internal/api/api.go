@@ -32,7 +32,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 84
+const Version = 85
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -93,7 +93,7 @@ type Services struct {
 // Restart stops the daemon for a newer build once nothing would be lost
 // (internal/features/restart).
 type Restart interface {
-	WhenIdle()
+	WhenIdle() []model.Hold // what it waits for now
 }
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
@@ -161,8 +161,11 @@ func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.Resta
 	if s.restart == nil {
 		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("this daemon doesn't restart itself"))
 	}
-	s.restart.WhenIdle()
-	return connect.NewResponse(&nushiv1.RestartWhenIdleResponse{}), nil
+	out := &nushiv1.RestartWhenIdleResponse{}
+	for _, h := range s.restart.WhenIdle() {
+		out.Holds = append(out.Holds, &nushiv1.RestartHold{ChatId: h.ChatID, Why: h.Why, Terminal: h.Terminal})
+	}
+	return connect.NewResponse(out), nil
 }
 
 func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
