@@ -12,7 +12,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
-import 'package:nushi/pull_widget.dart';
+import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';

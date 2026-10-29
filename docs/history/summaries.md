@@ -2,6 +2,23 @@
 
 Each milestone's summary as it was written when the milestone ended, newest first. An archive: what is current is in `NOTES.md`, `docs/adr/` and the code.
 
+## Summary of the pull request redesign, direction B (steps 428, 430–436)
+
+Steps 428 and 430–436 (other sessions took 429), one commit each on `main`, pushed after `make check`, from a worktree of their own while other sessions worked on drafts, streaming and a "needs you" fix in the checkout. **API 89** (87: `GitHubPull.commits`, `GitHubReviewer.code_owner`; 88: `RerunGitHubChecks`; 89: `GetCleanUp`, `RemoveChatWorktree`, `DeleteChatBranch`, `DeleteGitHubBranch`, `RestoreGitHubBranch`). The owner's approved mock (`pr-design-b.html`, "To do first") built in its order.
+
+- **Readable** (428): the tab's text in 860 points, centred; a bot's comment one line; a long review its first lines (Show the whole review); Markdown tables share their width by content and wrap, empty columns gone.
+- **The head** (430): state pill, title, head › base, commits and size; "Your move. 6 things block the merge. After them, @team has to approve."; four status lights jumping to their sections; the page one scroll, the files the window's height.
+- **To do** (431): failing checks (Log: the failing part), threads not resolved (Reply, Resolve) and a review bot's must-address findings (parsed from its Markdown, a guess; one on a thread's lines joins it), each Send, Send picked, Send all, through the reply cards with whose they are; "Then waiting on @team…".
+- **Activity, Checks, Files** (432): cards beside avatars pointing at To do; checks counted with Re-run failed and Fix checks, failing first, passed in two columns; files with open threads first.
+- **The PR widget** (433): checks bar and legend, a row per reviewer who counts, open threads with Address, Merge blocked by what, draft, merged and closed states, the one-line summary.
+- **Clean-up** (434, ADR 0063): Clean up… names each part and its cost (a dirty worktree unticked, the button red when ticked), waits for the turn or stops it, runs with progress, Restore branch and Unarchive; the daemon refuses again (mid-turn, another chat there, dirty or unmerged without force, a branch that moved on, the default branch).
+- **The phone** (435): the widget's one-line summary in the chat's bar. **Seams** (436): the new files split under 400 lines.
+- **Size**: the app from 46,491 to  lines of Dart (the daemon to 37653 1550 50639 3311  lines of Go); over the ~500-line tripwire: 428, 430–434 (see the step table).
+
+**Tried for real**: on afrase/nushi-gh-test through a dev daemon of this build: pull request #6 made and squash-merged; its branch refused while open, deleted, restored at its head, deleted again, gone already, refused once a commit moved it on; Re-run failed on #1's failing check (its runs went to attempt 2); the test's file and branch removed after.
+
+**Not tried by hand**: the app itself driven (widget tests and goldens only, as the rules ask); the worktree and local branch parts of the clean-up on a real chat (e2e tests on temporary repositories with the fake agent instead); the findings parser against real review bots beyond the mock's shape.
+
 ## Summary of the phone on a real iPhone: scanning, reconnecting, a slow link (steps 327–332)
 
 Steps 327–332, one commit each on `main`, pushed after `make check`, in the checkout. **API 71** (70: `GetChatRequest.recent`, `GetChatResponse.older`, `GetChatItems`; 71: `ItemEvent.index`). From the owner's first use on an iPhone (iOS 26, the Home Screen app, paired with the work Mac): the QR code did nothing, a chat opened blank with a raw `HTTP/2 error … forcefully terminated (errorCode: 10)` and stayed broken, Try again gave no feedback, and everything was slow. Midway the coordinator moved the owner's relay from Tailscale Funnel to a Cloudflare named tunnel (`nushi.aaronfrase.com`).
