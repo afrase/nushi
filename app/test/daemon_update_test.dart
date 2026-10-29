@@ -2,6 +2,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -66,7 +67,7 @@ void main() {
     // It restarts: gone a moment, then the bundled one answers.
     running = '';
     await tester.pump(const Duration(seconds: 2));
-    await tester.pump();
+    await tester.pump(DaemonBanner.grace); // shown once it's not a blip
     expect(find.text('Starting the new daemon…'), findsOneWidget);
     expect(find.text(_bar), findsNothing);
     running = '7-2000';
