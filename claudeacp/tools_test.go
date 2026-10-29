@@ -37,10 +37,10 @@ func sendf(frame string) claudetest.Step { return claudetest.Send(frame) }
 
 // hookCall is claude running the PostToolUse hook for a tool, and taking
 // its answer.
-func hookCall(id, response string) []claudetest.Step {
+func hookCall(id, name, response string) []claudetest.Step {
 	return []claudetest.Step{
 		sendf(`{"type":"control_request","request_id":"h_` + id + `","request":{"subtype":"hook_callback","callback_id":"hook_0","tool_use_id":"` + id +
-			`","input":{"hook_event_name":"PostToolUse","tool_use_id":"` + id + `","tool_response":` + response + `}}}`),
+			`","input":{"hook_event_name":"PostToolUse","tool_name":"` + name + `","tool_use_id":"` + id + `","tool_response":` + response + `}}}`),
 		claudetest.Expect(`{"type":"control_response","response":{"subtype":"success","request_id":"h_` + id + `"}}`),
 	}
 }
@@ -59,7 +59,7 @@ func TestToolLifecycle(t *testing.T) {
 		delta("0", "input_json_delta", "partial_json", `}`),
 		assistant(`{"type":"tool_use","id":"toolu_1","name":"Agent","input":{"description":"Looks, then","subagent_type":"Explore","prompt":"find {x}"}}`),
 	}
-	steps = append(steps, hookCall("toolu_1", `{"agentId":"a1","resolvedModel":"claude-sonnet-5-5"}`)...)
+	steps = append(steps, hookCall("toolu_1", "Agent", `{"agentId":"a1","resolvedModel":"claude-sonnet-5-5"}`)...)
 	steps = append(steps,
 		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"Found.\n<usage>tokens: 5</usage>"}]}]}}`),
 		result(names("id2")), claudetest.Send(idle))
@@ -91,7 +91,7 @@ func TestToolResults(t *testing.T) {
 	steps := []claudetest.Step{user("id2"), echo("id2"),
 		assistant(`{"type":"tool_use","id":"toolu_e","name":"Edit","input":{"file_path":"/w/a.go","old_string":"x","new_string":"y"}}`),
 	}
-	steps = append(steps, hookCall("toolu_e", `{"filePath":"/w/a.go","structuredPatch":[{"oldStart":1,"lines":[" a","-x","+y"]}]}`)...)
+	steps = append(steps, hookCall("toolu_e", "Edit", `{"filePath":"/w/a.go","structuredPatch":[{"oldStart":1,"lines":[" a","-x","+y"]}]}`)...)
 	steps = append(steps,
 		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_e","content":"ok"}]}}`),
 		claudetest.Send(`{"type":"assistant","parent_tool_use_id":"toolu_p","message":{"id":"msg_2","content":[{"type":"tool_use","id":"toolu_b","name":"Bash","input":{"command":"go test"}}]}}`),

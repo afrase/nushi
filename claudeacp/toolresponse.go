@@ -23,17 +23,20 @@ func (s *session) postToolUse(_ context.Context, in claudeagent.HookInput) (clau
 	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	t := ts.byID[in.ToolUseID]
-	if t == nil {
-		return claudeagent.HookOutput{}, nil
-	}
 	r := report{meta: map[string]any{"toolResponse": resp}}
-	if t.name == "Edit" || t.name == "Write" {
+	if in.ToolName == "Edit" || in.ToolName == "Write" {
 		if path, diffs := patched(in.ToolResponse); len(diffs) > 0 {
 			r.content, r.locations = diffs, at(path, nil)
 		}
 	}
-	s.sendLocked(t, r)
+	// claude ran the tool, so its whole input is on the way if the reader
+	// hasn't taken it yet.
+	switch t := ts.byID[in.ToolUseID]; {
+	case t != nil && t.whole:
+		s.sendLocked(t, r)
+	case len(ts.early) < maxEarly:
+		ts.early[in.ToolUseID] = r
+	}
 	return claudeagent.HookOutput{}, nil
 }
 

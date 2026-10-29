@@ -39,10 +39,18 @@ type tools struct {
 	byID      map[string]*tool
 	streaming map[string]map[int]*tool // by stream (the parent's id; "" at the top) and block index
 	compact   *tool                    // a compaction running
+	// early are hooks' reports that came before the reader had the call's
+	// whole input (claude's requests and its messages are read apart),
+	// by the call's id; each goes once the input has.
+	early map[string]report
 }
 
+// maxEarly bounds early: a call that is never shown (a subagent's, when
+// the client doesn't take their steps) leaves its report there.
+const maxEarly = 64
+
 func (ts *tools) init(cwd string) {
-	ts.cwd, ts.byID, ts.streaming = cwd, map[string]*tool{}, map[string]map[int]*tool{}
+	ts.cwd, ts.byID, ts.streaming, ts.early = cwd, map[string]*tool{}, map[string]map[int]*tool{}, map[string]report{}
 }
 
 // report is what an update says of a tool call; an empty field says
@@ -164,6 +172,9 @@ func (s *session) toolStart(stream string, index int, b *claudeagent.Block) {
 		ts.streaming[stream] = map[int]*tool{}
 	}
 	ts.streaming[stream][index] = t
+	if t.sent != nil {
+		return // a permission request showed it whole already
+	}
 	v := toolView(t.name, nil, ts.cwd)
 	s.sendLocked(t, report{title: v.title, kind: v.kind, rawInput: json.RawMessage(`{}`)})
 }
@@ -215,6 +226,10 @@ func (s *session) wholeLocked(stream, id, name string, input json.RawMessage) *t
 		content = []acp.ToolCallContent{}
 	}
 	s.sendLocked(t, report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input})
+	if r, ok := ts.early[id]; ok {
+		delete(ts.early, id)
+		s.sendLocked(t, r)
+	}
 	return t
 }
 
