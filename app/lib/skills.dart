@@ -184,7 +184,8 @@ class _SkillsViewState extends State<SkillsView> {
                     );
             },
           ),
-          const SizedBox(height: 4),
+          // The groups' own space is under them.
+          const SizedBox(height: 16),
           ..._sections(context, _search.text.trim().toLowerCase()),
         ],
       ),

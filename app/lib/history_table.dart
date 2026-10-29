@@ -200,7 +200,7 @@ class HistoryHeader extends StatelessWidget {
 /// A chat's copy in the table: its title (a link to the chat, when Nushi
 /// has it), folder, agent, size and when it was last written; Clear under
 /// the pointer. A click selects it ([onTap]: ⇧ and ⌘ are the caller's).
-class HistoryRowView extends StatefulWidget {
+class HistoryRowView extends StatelessWidget {
   const new(
     this.row, {
     required this.wide,
@@ -223,17 +223,12 @@ class HistoryRowView extends StatefulWidget {
   final VoidCallback onClear;
 
   @override
-  State<HistoryRowView> createState() => _HistoryRowViewState();
-}
+  Widget build(BuildContext context) => Hover(builder: _build);
 
-class _HistoryRowViewState extends State<HistoryRowView> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _build(BuildContext context, {required bool hover}) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final r = widget.row;
+    final r = row;
     final small = theme.ui(t.textSecondary, size: 12);
     final title = r.leftover
         ? Text(
@@ -244,7 +239,7 @@ class _HistoryRowViewState extends State<HistoryRowView> {
           )
         : _Title(
             r.title.isEmpty ? 'Untitled' : r.title,
-            onTap: widget.onOpen,
+            onTap: onOpen,
             note: r.gone
                 ? 'read-only'
                 : r.archived
@@ -252,7 +247,7 @@ class _HistoryRowViewState extends State<HistoryRowView> {
                 : null,
           );
     final (name, parent) = r.folder.isEmpty ? ('', '') : folderParts(r.folder);
-    final clear = Button(label: 'Clear', onPressed: widget.onClear);
+    final clear = Button(label: 'Clear', onPressed: onClear);
     final cells = historyCells(
       Padding(padding: const EdgeInsets.only(left: 4), child: title),
       [
@@ -285,65 +280,58 @@ class _HistoryRowViewState extends State<HistoryRowView> {
           padding: const EdgeInsets.only(right: 4),
           child: Tooltip(
             message: dateTime(r.last),
-            child: Text(
-              ago(widget.now.difference(r.last), r.last),
-              style: small,
-            ),
+            child: Text(ago(now.difference(r.last), r.last), style: small),
           ),
         ),
       ],
       Align(
         alignment: Alignment.centerRight,
-        child: _hover ? clear : const SizedBox(),
+        child: hover ? clear : const SizedBox(),
       ),
-      wide: widget.wide,
+      wide: wide,
     );
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Container(
-          height: historyRowHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: widget.selected
-                ? t.accentSoft
-                : _hover
-                ? t.hover
-                : null,
-            border: widget.last
-                ? null
-                : Border(bottom: BorderSide(color: t.borderSubtle)),
-            borderRadius: widget.last
-                ? const BorderRadius.vertical(bottom: Radius.circular(7))
-                : null,
-          ),
-          // Narrow, Clear has no room of its own: it shows over the end
-          // of the row.
-          child: widget.wide || !_hover
-              ? cells
-              : Stack(
-                  children: [
-                    cells,
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        padding: const EdgeInsets.only(left: 8),
-                        alignment: Alignment.center,
-                        color: Color.alphaBlend(
-                          widget.selected ? t.accentSoft : t.hover,
-                          t.raised,
-                        ),
-                        child: clear,
-                      ),
-                    ),
-                  ],
-                ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        height: historyRowHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? t.accentSoft
+              : hover
+              ? t.hover
+              : null,
+          border: last
+              ? null
+              : Border(bottom: BorderSide(color: t.borderSubtle)),
+          borderRadius: last
+              ? const BorderRadius.vertical(bottom: Radius.circular(7))
+              : null,
         ),
+        // Narrow, Clear has no room of its own: it shows over the end
+        // of the row.
+        child: wide || !hover
+            ? cells
+            : Stack(
+                children: [
+                  cells,
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.only(left: 8),
+                      alignment: Alignment.center,
+                      color: Color.alphaBlend(
+                        selected ? t.accentSoft : t.hover,
+                        t.raised,
+                      ),
+                      child: clear,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

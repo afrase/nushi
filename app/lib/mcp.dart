@@ -116,11 +116,12 @@ class McpView extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            // The groups' own space is under them.
+            const SizedBox(height: 20),
             for (final list in lists) ...[
               if (lists.length > 1)
                 Padding(
-                  padding: const EdgeInsets.only(top: 20),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Text(
                     agentTitle(list.agent),
                     style: theme.ui(t.text, size: 14, weight: FontWeight.w600),
@@ -128,7 +129,7 @@ class McpView extends StatelessWidget {
                 ),
               if (list.error.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Text(list.error, style: theme.ui(t.crashed, size: 12)),
                 ),
               if (list.ante)
@@ -158,47 +159,16 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final servers = list.servers.where((s) => s.scope == scope).toList();
-    final muted = theme.ui(t.textMuted, size: 12);
     // Plugins' servers and connectors come with the check.
     final later = scope == 'plugin' || scope == 'claudeai' || !list.loaded;
-    return Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: theme.ui(t.text, size: 12, weight: FontWeight.w600),
-          ),
-          Text(about, style: muted),
-          const SizedBox(height: 6),
-          framed(
-            border: t.borderSubtle,
-            fill: t.raised,
-            radius: 8,
-            child: Column(
-              children: [
-                if (servers.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        later && list.checking ? 'Checking…' : 'None',
-                        style: muted,
-                      ),
-                    ),
-                  ),
-                for (final (i, s) in servers.indexed)
-                  _Row(list, s, first: i == 0, shadowedBy: _winner(s)),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return SettingsGroup(
+      title: title,
+      about: about,
+      empty: later && list.checking ? 'Checking…' : 'None',
+      children: [
+        for (final s in list.servers)
+          if (s.scope == scope) _Row(list, s, shadowedBy: _winner(s)),
+      ],
     );
   }
 
@@ -214,11 +184,10 @@ class _Group extends StatelessWidget {
 /// A server: its state, name, transport and command or URL, its masked
 /// env vars and headers, and why it failed.
 class _Row extends StatelessWidget {
-  const new(this.list, this.server, {required this.first, this.shadowedBy});
+  const new(this.list, this.server, {this.shadowedBy});
 
   final McpServers list;
   final McpServer server;
-  final bool first;
   final String? shadowedBy;
 
   @override
@@ -231,11 +200,8 @@ class _Row extends StatelessWidget {
     final off = server.off || server.state == 'disabled';
     final failed = server.state == 'failed' && server.detail.isNotEmpty;
     final (word, color) = stateOf(server, t);
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        border: first ? null : Border(top: BorderSide(color: t.borderSubtle)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

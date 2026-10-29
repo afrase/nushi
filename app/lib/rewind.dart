@@ -51,37 +51,28 @@ Future<void> rewindTo(
 /// A user message with "Rewind to here" on hover (top right) and in its
 /// context menu, when [onRewind] is set; Esc Esc in the box lists them all
 /// (`rewind_picker.dart`).
-class RewindTarget extends StatefulWidget {
+class RewindTarget extends StatelessWidget {
   const new({required this.child, super.key, this.onRewind});
 
   final Widget child;
   final VoidCallback? onRewind;
 
   @override
-  State<RewindTarget> createState() => _RewindTargetState();
-}
-
-class _RewindTargetState extends State<RewindTarget> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
-    final run = widget.onRewind;
-    if (run == null) return widget.child;
+    final run = onRewind;
+    if (run == null) return child;
     return Menu(
       entries: [MenuEntry('Rewind to here', onPick: run)],
-      builder: (context, open) => MouseRegion(
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
+      builder: (context, open) => Hover(
+        builder: (context, {required hover}) => GestureDetector(
           onSecondaryTapUp: (d) => open(d.localPosition),
           // Passthrough: the message keeps its row's width (a band spans
           // the transcript) rather than shrinking to its text.
           child: Stack(
             fit: StackFit.passthrough,
             children: [
-              widget.child,
-              if (_hover)
+              child,
+              if (hover)
                 Positioned(
                   top: 8,
                   right: 8,

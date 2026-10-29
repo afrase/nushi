@@ -367,6 +367,11 @@ class ChatStatusWord extends StatelessWidget {
   }
 }
 
+/// A time the daemon sent in milliseconds since the epoch; null for 0
+/// (it didn't see it).
+DateTime? msTime(int ms) =>
+    ms == 0 ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+
 /// "12s", "1m 04s".
 String elapsed(Duration d) => d.inMinutes == 0
     ? '${d.inSeconds}s'

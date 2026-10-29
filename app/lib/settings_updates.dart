@@ -39,7 +39,7 @@ class UpdatesGroup extends StatefulWidget {
 
 class _UpdatesGroupState extends State<UpdatesGroup> {
   late final Timer _minute; // "12m ago" moves on while the page shows
-  bool _checking = false;
+  final _checking = Runner();
 
   @override
   void initState() {
@@ -53,18 +53,13 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
   @override
   void dispose() {
     _minute.cancel();
+    _checking.dispose();
     super.dispose();
-  }
-
-  Future<void> _check() async {
-    setState(() => _checking = true);
-    await checkForUpdates(context, widget.daemon);
-    if (mounted) setState(() => _checking = false);
   }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: widget.daemon,
+    listenable: Listenable.merge([widget.daemon, _checking]),
     builder: (context, _) => SettingsGroup(
       title: 'Updates',
       footer: Wrap(
@@ -72,9 +67,16 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
         children: [
           Text('${lastChecked(widget.daemon.update.checkedMs, clock())} · '),
           LinkText(
-            _checking ? 'Checking…' : 'Check now',
+            _checking.value ? 'Checking…' : 'Check now',
             size: 12,
-            onTap: _checking ? null : () => unawaited(_check()),
+            onTap: _checking.value
+                ? null
+                : () => unawaited(
+                    _checking.run(
+                      context,
+                      () => checkForUpdates(context, widget.daemon),
+                    ),
+                  ),
           ),
         ],
       ),

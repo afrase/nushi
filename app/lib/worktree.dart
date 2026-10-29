@@ -7,6 +7,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -104,16 +105,9 @@ List<(String?, Widget)> worktreeRows(
     if (offer && chat.fresh) ...[
       (
         'New worktree',
-        SizedBox(
-          height: 20,
-          child: FittedBox(
-            child: Switch(
-              value: wt != null,
-              onChanged: can
-                  ? (on) => _switch(context, chat, daemon, on)
-                  : null,
-            ),
-          ),
+        SettingsSwitch(
+          value: wt != null,
+          onChanged: can ? (on) => _switch(context, chat, daemon, on) : null,
         ),
       ),
       // The switch makes a new one: the row only for those there.

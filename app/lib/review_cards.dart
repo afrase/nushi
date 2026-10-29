@@ -10,7 +10,7 @@ import 'package:nushi/widgets.dart';
 /// A comment under its lines in the diff: its lines and text, Edit and
 /// Remove on hover; dimmed once sent. An outdated one (its lines are gone)
 /// shows above the file with the lines it was on.
-class CommentCard extends StatefulWidget {
+class CommentCard extends StatelessWidget {
   const new(
     this.comment, {
     required this.onEdit,
@@ -23,21 +23,12 @@ class CommentCard extends StatefulWidget {
   final VoidCallback onRemove;
 
   @override
-  State<CommentCard> createState() => _CommentCardState();
-}
-
-class _CommentCardState extends State<CommentCard> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final c = widget.comment;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Opacity(
+    final c = comment;
+    return Hover(
+      builder: (context, {required hover}) => Opacity(
         opacity: c.sent ? 0.55 : 1,
         child: _Inlay(
           child: Column(
@@ -55,19 +46,19 @@ class _CommentCardState extends State<CommentCard> {
                       style: theme.ui(t.textMuted, size: 11.5),
                     ),
                   ),
-                  if (_hover && !c.sent && !c.outdated)
+                  if (hover && !c.sent && !c.outdated)
                     IconTap(
                       Icons.edit_outlined,
                       tooltip: 'Edit',
                       size: 13,
-                      onTap: widget.onEdit,
+                      onTap: onEdit,
                     ),
-                  if (_hover)
+                  if (hover)
                     IconTap(
                       Icons.close,
                       tooltip: 'Remove',
                       size: 13,
-                      onTap: widget.onRemove,
+                      onTap: onRemove,
                     ),
                 ],
               ),
@@ -92,7 +83,7 @@ class _CommentCardState extends State<CommentCard> {
 
 /// The box to write a comment in, under the lines it's on: Enter (or ⌘⏎)
 /// saves it, ⇧⏎ (⌥⏎, ⌃⏎) adds a line ([isSendKey]), Escape drops it.
-class CommentBox extends StatefulWidget {
+class ReviewCommentBox extends StatefulWidget {
   const new({
     required this.lines,
     required this.controller,
@@ -113,10 +104,10 @@ class CommentBox extends StatefulWidget {
   final VoidCallback onCancel;
 
   @override
-  State<CommentBox> createState() => _CommentBoxState();
+  State<ReviewCommentBox> createState() => _ReviewCommentBoxState();
 }
 
-class _CommentBoxState extends State<CommentBox> {
+class _ReviewCommentBoxState extends State<ReviewCommentBox> {
   TextEditingController get _text => widget.controller;
   final _focus = FocusNode();
 

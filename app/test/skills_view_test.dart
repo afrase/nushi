@@ -126,6 +126,8 @@ void main() {
       (set.folder, set.source, set.name, set.on),
       ('$_home/switch', 'user', 'release-notes', false),
     );
+    await tester.ensureVisible(switches.at(6)); // below the window
+    await tester.pumpAndSettle();
     await tester.tap(switches.at(6)); // team, in this project
     await tester.pumpAndSettle();
     final plugin = fake.calls.whereType<SetPluginOnRequest>().single;

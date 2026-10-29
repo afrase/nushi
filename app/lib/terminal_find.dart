@@ -70,17 +70,18 @@ Future<void> openLink(
 
 /// ⌘F over a terminal: finds in its scrollback, highlights every match,
 /// and scrolls to the current one, starting from the latest. Enter goes to
-/// the one before (up), Shift-Enter back down, Escape closes it.
-class FindBar extends StatefulWidget {
+/// the next one down, Shift-Enter up, as every find bar does (round from
+/// the latest to the first); Escape closes it.
+class TerminalFindBar extends StatefulWidget {
   const new({required this.session, super.key});
 
   final TermSession session;
 
   @override
-  State<FindBar> createState() => _FindBarState();
+  State<TerminalFindBar> createState() => _TerminalFindBarState();
 }
 
-class _FindBarState extends State<FindBar> {
+class _TerminalFindBarState extends State<TerminalFindBar> {
   List<TerminalSearchMatch> _matches = [];
   int _current = 0;
 
@@ -136,7 +137,7 @@ class _FindBarState extends State<FindBar> {
         bindings: {
           const SingleActivator(LogicalKeyboardKey.escape): _close,
           const SingleActivator(LogicalKeyboardKey.enter, shift: true): () =>
-              _step(1),
+              _step(-1),
         },
         child: Row(
           children: [
@@ -146,7 +147,7 @@ class _FindBarState extends State<FindBar> {
                 style: theme.ui(t.text, size: 12),
                 decoration: const InputDecoration.collapsed(hintText: 'Find'),
                 onChanged: _find,
-                onSubmitted: (_) => _step(-1),
+                onSubmitted: (_) => _step(1),
                 onEditingComplete: () {}, // Enter keeps the focus here
               ),
             ),

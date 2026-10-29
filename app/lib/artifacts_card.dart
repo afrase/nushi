@@ -122,7 +122,7 @@ class _FileRowsState extends State<FileRows> {
 
 /// A file's row: its name and, muted, its folder and when it changed; its
 /// pin at the right end on hover, or always when pinned.
-class _FileRow extends StatefulWidget {
+class _FileRow extends StatelessWidget {
   const new(this.chat, this.file, {required this.open});
 
   final ChatState chat;
@@ -130,27 +130,15 @@ class _FileRow extends StatefulWidget {
   final bool open;
 
   @override
-  State<_FileRow> createState() => _FileRowState();
-}
-
-class _FileRowState extends State<_FileRow> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final f = widget.file;
-    final detail = fileDetail(
-      f,
-      fileChanged(absoluteIn(widget.chat.folder, f)),
-    );
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Tap(
-        onTap: () => widget.chat.openPreview(f),
-        selected: widget.open,
+    final f = file;
+    final detail = fileDetail(f, fileChanged(absoluteIn(chat.folder, f)));
+    return Hover(
+      builder: (context, {required hover}) => Tap(
+        onTap: () => chat.openPreview(f),
+        selected: open,
         tooltip: f,
         padding: const EdgeInsets.fromLTRB(_inset, 3, 0, 3),
         child: Row(
@@ -175,7 +163,7 @@ class _FileRowState extends State<_FileRow> {
                 ],
               ),
             ),
-            pinMark(widget.chat, f, hover: _hover),
+            pinMark(chat, f, hover: hover),
           ],
         ),
       ),

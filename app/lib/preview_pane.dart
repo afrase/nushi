@@ -5,6 +5,7 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diagram_page.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/skills_list.dart';
@@ -71,13 +72,8 @@ class _PreviewPaneState extends State<PreviewPane> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          height: 34,
-          padding: const EdgeInsets.only(left: 12, right: 4),
-          decoration: BoxDecoration(
-            color: t.raised,
-            border: Border(bottom: BorderSide(color: t.borderSubtle)),
-          ),
+        PaneHeader(
+          inset: 12,
           child: ListenableBuilder(
             listenable: _watch,
             builder: (context, _) => Row(

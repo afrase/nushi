@@ -175,7 +175,7 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: CommentBox(
+          body: ReviewCommentBox(
             lines: 'Line 3',
             controller: text,
             onSave: saved.add,

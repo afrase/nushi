@@ -6,6 +6,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/turn_status.dart';
@@ -39,13 +40,7 @@ class SidePanel extends StatelessWidget {
         builder: (context, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              height: 34,
-              padding: const EdgeInsets.only(left: 14, right: 4),
-              decoration: BoxDecoration(
-                color: t.raised,
-                border: Border(bottom: BorderSide(color: t.borderSubtle)),
-              ),
+            PaneHeader(
               child: Row(
                 children: [
                   Icon(Icons.forum_outlined, size: 14, color: t.textSecondary),

@@ -50,28 +50,6 @@ PanelCard? agentsCard(ChatState chat, Daemon daemon) {
   );
 }
 
-/// A row of the card, built knowing whether it is under the pointer (to
-/// show its Stop).
-class _Hovered extends StatefulWidget {
-  const new({required this.builder});
-
-  final Widget Function(BuildContext context, {required bool hover}) builder;
-
-  @override
-  State<_Hovered> createState() => _HoveredState();
-}
-
-class _HoveredState extends State<_Hovered> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) => MouseRegion(
-    onEnter: (_) => setState(() => _hover = true),
-    onExit: (_) => setState(() => _hover = false),
-    child: widget.builder(context, hover: _hover),
-  );
-}
-
 /// A row's first line, [first], with a Stop at its end when [stop].
 Widget _line(Widget first, Widget? stop) => Row(
   spacing: 6,
@@ -95,7 +73,7 @@ class _ShellRow extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final last = lastLine(it);
-    return _Hovered(
+    return Hover(
       builder: (context, {required hover}) => Tap(
         onTap: () => chat.pane.value = it.id,
         tooltip: 'Open its output',
@@ -146,7 +124,7 @@ class _AgentRow extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final runs = subagentModel(chat, s);
-    return _Hovered(
+    return Hover(
       builder: (context, {required hover}) => Tap(
         onTap: () => chat.pane.value = s.call.id,
         tooltip:

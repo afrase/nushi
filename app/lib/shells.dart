@@ -6,7 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/settings.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
@@ -20,16 +20,13 @@ List<Item> shellsOf(List<Item> items) => [
 
 bool shellRunning(Item it) => it.shell.state == 'running';
 
-DateTime? _time(int ms) =>
-    ms == 0 ? null : DateTime.fromMillisecondsSinceEpoch(ms);
-
 /// A background command's state in a few words: "running · 12s", "done ·
 /// exited with code 0 · 15s", "stopped", or "started" (and how
 /// long ago, when the daemon saw it) when its end can't be known.
 String shellState(Item it) {
   final sh = it.shell;
-  final since = _time(sh.started.toInt());
-  final end = shellRunning(it) ? DateTime.now() : _time(sh.ended.toInt());
+  final since = msTime(sh.started.toInt());
+  final end = shellRunning(it) ? DateTime.now() : msTime(sh.ended.toInt());
   return switch (sh.state) {
     'started' => [
       'started',
@@ -88,22 +85,15 @@ class ShellPane extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return ListenableBuilder(
-      listenable: Listenable.merge([chat, subagentWide]),
+      listenable: chat,
       builder: (context, _) {
         final it = shellsOf(chat.items).where((it) => it.id == id).firstOrNull;
-        final wide = subagentWide.value;
         final small = theme.ui(t.textMuted, size: 12);
         final code = theme.code(t.text, size: 12);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              height: 34,
-              padding: const EdgeInsets.only(left: 14, right: 4),
-              decoration: BoxDecoration(
-                color: t.raised,
-                border: Border(bottom: BorderSide(color: t.borderSubtle)),
-              ),
+            PaneHeader(
               child: Row(
                 children: [
                   const SizedBox(width: 4),
@@ -119,12 +109,7 @@ class ShellPane extends StatelessWidget {
                   ),
                   if (it != null && shellRunning(it))
                     stopButton(context, daemon, chat, id),
-                  IconTap(
-                    wide ? Icons.close_fullscreen : Icons.open_in_full,
-                    tooltip: wide ? 'Narrower' : 'Wider',
-                    size: 13,
-                    onTap: () => subagentWide.value = !wide,
-                  ),
+                  const WideToggle(),
                   IconTap(
                     Icons.close,
                     tooltip: 'Close',

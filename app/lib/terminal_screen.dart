@@ -156,7 +156,7 @@ class TerminalScreen extends StatelessWidget {
                       ? Positioned(
                           top: 6,
                           right: 14,
-                          child: FindBar(session: s),
+                          child: TerminalFindBar(session: s),
                         )
                       : const SizedBox.shrink(),
                 ),

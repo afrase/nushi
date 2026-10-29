@@ -71,9 +71,6 @@ List<Item> subagentSteps(SubagentRun s) => [
     if (!it.report) it,
 ];
 
-DateTime? _time(int ms) =>
-    ms == 0 ? null : DateTime.fromMillisecondsSinceEpoch(ms);
-
 /// A subagent's state in a few words: "Reading notes.md · 6 tool calls ·
 /// 40s" while it works, "done · 6 tool calls · 1m 02s" once done, "failed".
 /// The count shows only when its steps are known (a background subagent's
@@ -85,8 +82,8 @@ String subagentState(SubagentRun s) {
       .where((it) => it.kind == ItemKind.ITEM_KIND_TOOL_CALL)
       .length;
   final running = subagentRunning(s);
-  final since = _time(sa.started.toInt());
-  final end = running ? DateTime.now() : _time(sa.ended.toInt());
+  final since = msTime(sa.started.toInt());
+  final end = running ? DateTime.now() : msTime(sa.ended.toInt());
   return [
     if (running) doing(s.items) else sa.state,
     if (calls > 0) '$calls tool call${calls == 1 ? '' : 's'}',
@@ -196,7 +193,7 @@ Widget subagentShine(SubagentRun s, Widget child, {bool still = false}) =>
 /// A subagent in the transcript, on one line: its type and task ("Explore:
 /// find the scroll handling") and its state, live. A click opens its pane;
 /// under the pointer, a running one's mark becomes its Stop.
-class SubagentLine extends StatefulWidget {
+class SubagentLine extends StatelessWidget {
   const new(this.s, this.chat, {super.key, this.still = false, this.daemon});
 
   final SubagentRun s;
@@ -207,23 +204,13 @@ class SubagentLine extends StatefulWidget {
   final Daemon? daemon;
 
   @override
-  State<SubagentLine> createState() => _SubagentLineState();
-}
-
-class _SubagentLineState extends State<SubagentLine> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final (s, chat, daemon) = (widget.s, widget.chat, widget.daemon);
+    final daemon = this.daemon;
     final failed = s.call.subagent.state == 'failed';
-    final stop = _hover && daemon != null && subagentStoppable(s);
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: ValueListenableBuilder(
+    return Hover(
+      builder: (context, {required hover}) => ValueListenableBuilder(
         valueListenable: chat.pane,
         builder: (context, open, _) => framed(
           border: failed
@@ -251,7 +238,7 @@ class _SubagentLineState extends State<SubagentLine> {
                     child: subagentShine(
                       s,
                       subagentName(context, s),
-                      still: widget.still,
+                      still: still,
                     ),
                   ),
                   // The name takes the room; the state ends the line.
@@ -262,7 +249,7 @@ class _SubagentLineState extends State<SubagentLine> {
                       style: theme.ui(t.textMuted, size: 12),
                     ),
                   ),
-                  if (stop)
+                  if (hover && daemon != null && subagentStoppable(s))
                     stopButton(context, daemon, chat, s.call.id, size: 13)
                   else
                     subagentMark(s),

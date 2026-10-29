@@ -28,7 +28,7 @@ class TodoItem {
   /// Its reply card for the agent (a check's with its log's failing part).
   Future<Reply> reply(Daemon daemon, GitHubRef ref) {
     if (check case final c?) return checkReply(daemon, ref, c);
-    if (review case final r?) return Future.value(reviewReply(r));
+    if (review case final r?) return Future.value(changesRequestedReply(r));
     if (thread case final x?) return Future.value(threadReply(x, also: also));
     return Future.value(findingReply(finding!));
   }

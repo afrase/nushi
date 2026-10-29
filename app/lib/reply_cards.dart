@@ -44,7 +44,7 @@ class ReplyCards extends StatelessWidget {
   );
 }
 
-class _ReplyCard extends StatefulWidget {
+class _ReplyCard extends StatelessWidget {
   const new(this.reply, {required this.onTap, required this.onRemove});
 
   final Reply reply;
@@ -52,21 +52,12 @@ class _ReplyCard extends StatefulWidget {
   final VoidCallback onRemove;
 
   @override
-  State<_ReplyCard> createState() => _ReplyCardState();
-}
-
-class _ReplyCardState extends State<_ReplyCard> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final r = widget.reply;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Stack(
+    final r = reply;
+    return Hover(
+      builder: (context, {required hover}) => Stack(
         clipBehavior: Clip.none,
         children: [
           Container(
@@ -79,7 +70,7 @@ class _ReplyCardState extends State<_ReplyCard> {
               radius: NushiTheme.control,
             ),
             child: Tap(
-              onTap: widget.onTap,
+              onTap: onTap,
               padding: const EdgeInsets.fromLTRB(8, 6, 8, 5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,7 +98,7 @@ class _ReplyCardState extends State<_ReplyCard> {
               ),
             ),
           ),
-          if (_hover) RemoveBadge(widget.onRemove),
+          if (hover) RemoveBadge(onRemove),
         ],
       ),
     );

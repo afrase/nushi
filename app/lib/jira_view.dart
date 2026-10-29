@@ -522,8 +522,11 @@ class _JiraViewState extends State<JiraView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (site.needsOk)
-          NeedsOk(
-            onAllow: () => tryOrShow(context, () async {
+          Notice(
+            'This build of Nushi needs your OK to read the token from the '
+            'keychain; macOS asks for your password.',
+            action: 'Allow…',
+            onAction: () => tryOrShow(context, () async {
               await widget.daemon.client.allowJiraToken(
                 AllowJiraTokenRequest(site: site.id),
               );
