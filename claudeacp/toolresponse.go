@@ -16,6 +16,9 @@ import (
 // command's task id, a subagent's id and model), and an edit's diff as
 // claude made it.
 func (s *session) postToolUse(_ context.Context, in claudeagent.HookInput) (claudeagent.HookOutput, error) {
+	if in.AgentID == "" && in.ToolName == "EnterPlanMode" { // claude is in plan mode now
+		s.modeChanged(string(claudeagent.Plan))
+	}
 	var resp any
 	if json.Unmarshal(in.ToolResponse, &resp) != nil {
 		return claudeagent.HookOutput{}, nil
