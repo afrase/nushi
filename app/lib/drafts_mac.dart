@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:nushi/drafts.dart';
+import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
 
 /// The Mac's drafts: `drafts.json` in [dir] (the data folder), written
@@ -42,7 +41,7 @@ final class DraftFiles implements DraftStore {
     } else {
       final tmp = File('${_json.path}.tmp')
         ..writeAsStringSync(jsonEncode(drafts), flush: true);
-      _private(tmp.path, 0x180); // 0600
+      setMode(tmp.path, 0x180); // 0600
       tmp.renameSync(_json.path);
     }
     // The images no draft has any more (sent, removed, or the chat gone).
@@ -64,13 +63,13 @@ final class DraftFiles implements DraftStore {
     try {
       if (!_images.existsSync()) {
         _images.createSync();
-        _private(_images.path, 0x1c0); // 0700
+        setMode(_images.path, 0x1c0); // 0700
       }
       final ext = image.mimeType.split('/').last;
       final name = '${DateTime.now().microsecondsSinceEpoch}-${_made++}.$ext';
       final f = File('${_images.path}/$name.tmp')
         ..writeAsBytesSync(image.data, flush: true);
-      _private(f.path, 0x180);
+      setMode(f.path, 0x180);
       f.renameSync('${_images.path}/$name');
       return _names[image] = name;
     } on Object {
@@ -95,17 +94,5 @@ final class DraftFiles implements DraftStore {
     } on Object {
       return null;
     }
-  }
-}
-
-/// libc's chmod (Dart's files have none).
-@Native<Int32 Function(Pointer<Uint8>, Uint16)>(symbol: 'chmod', isLeaf: true)
-external int _chmod(Pointer<Uint8> path, int mode);
-
-/// Sets [path]'s permissions to [mode].
-void _private(String path, int mode) {
-  final c = Uint8List.fromList([...utf8.encode(path), 0]);
-  if (_chmod(c.address, mode) != 0) {
-    throw FileSystemException("can't make it private", path);
   }
 }

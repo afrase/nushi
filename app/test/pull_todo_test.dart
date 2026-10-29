@@ -14,7 +14,10 @@ final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 GitHubComment _bot(String body) =>
     said('github-actions', body, bot: true, review: 'commented');
 
-final _setup = findingsSetup('github-actions', findingHeadingsDefault);
+final FindingsSetup _setup = findingsSetup(
+  'github-actions',
+  findingHeadingsDefault,
+);
 
 List<ReviewFinding> _read(String body) {
   final r = readFindings(_bot(body), _setup);
@@ -63,7 +66,7 @@ void main() {
     expect(f.any((f) => f.text.contains('autocomplete')), isFalse);
   });
 
-  test("a sentence spelled out as a list is one finding, its place the "
+  test('a sentence spelled out as a list is one finding, its place the '
       "title; the reviewer's note after it isn't one", () {
     final f = _read(_pinReview);
     expect(f, hasLength(1));

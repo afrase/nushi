@@ -11,7 +11,9 @@ import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/pull_activity.dart';
+import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_header.dart';
+import 'package:nushi/pull_skeleton.dart';
 import 'package:nushi/pull_todo.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/review_findings.dart';
@@ -53,7 +55,12 @@ class GitHubPullPane extends StatefulWidget {
 }
 
 class _GitHubPullPaneState extends State<GitHubPullPane> {
-  GitHubPull? _pull;
+  /// What shows: the pull request read last (kept from before, from
+  /// [_keptAt], until the first answer), else nothing yet (the skeleton).
+  late GitHubPull? _pull = _kept?.$2;
+  late final (DateTime, GitHubPull)? _kept = cachedPull(widget.ref);
+  late DateTime? _keptAt = _kept?.$1;
+  bool _asking = true;
   String? _error;
   Timer? _poll;
   PullSection _tab = PullSection.activity;
@@ -95,9 +102,11 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       final r = await widget.daemon.client.getGitHubPull(
         GetGitHubPullRequest(ref: widget.ref, quiet: quiet),
       );
+      keepPull(widget.ref, r.pull);
       if (mounted) {
         setState(() {
           _pull = r.pull;
+          _keptAt = null;
           _error = null;
         });
         widget.onLoad?.call(r.pull);
@@ -105,6 +114,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     } on Object catch (e) {
       // A failed poll keeps what shows, and says why.
       if (mounted) setState(() => _error = errorText(e));
+    } finally {
+      if (mounted && _asking) setState(() => _asking = false);
     }
   }
 
@@ -148,12 +159,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     final t = theme.t;
     final p = _pull;
     if (p == null) {
-      return Center(
-        child: Text(
-          _error ?? 'Loading…',
-          style: theme.ui(_error == null ? t.textMuted : t.crashed),
-        ),
-      );
+      return _error == null
+          ? const PullSkeleton()
+          : Center(child: Text(_error!, style: theme.ui(t.crashed)));
     }
     final failed = p.checks.where((c) => c.failed).length;
     final now = widget.now ?? clock();
@@ -173,6 +181,16 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
         return CustomScrollView(
           controller: _scroll,
           slivers: [
+            if (_keptAt case final at?)
+              column(
+                Text(
+                  updatedLine(at, loading: _asking, now: now)!,
+                  key: const ValueKey('pull-kept'),
+                  textAlign: TextAlign.right,
+                  style: theme.ui(t.textMuted, size: 11.5),
+                ),
+                top: 8,
+              ),
             column(
               PullHeader(
                 pull: p,
@@ -182,7 +200,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 threadsTo: open ? PullSection.todo : PullSection.activity,
                 actions: _actions(context, p),
               ),
-              top: 14,
+              top: _keptAt == null ? 14 : 2,
             ),
             if (open)
               column(
