@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid screenshots
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid screenshots claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -117,6 +117,19 @@ icons:
 # its lockfile again, and the sizes for its AdapterDownload and AdapterDisk.
 adapters:
 	tools/adapters.sh
+
+# Records the Claude parity scenarios (SCENARIOS=all, or names with commas)
+# into internal/features/chats/testdata/claude-parity (its README): the
+# Node adapter on CLAUDE_TEE_REAL, the claude to record, which runs on a
+# fake Messages API with a throwaway home and config, no login. Then
+# the drift from claude's schemas, a report only.
+SCENARIOS ?= all
+CLAUDE_SCHEMAS := claudeagent/claudetest/cmd/claude-tee/testdata/schemas-2.1.312.jsonl
+claude-record:
+	@test -n "$(CLAUDE_TEE_REAL)" || { echo "set CLAUDE_TEE_REAL to the claude to record"; exit 2; }
+	go build -o bin/claude-tee ./claudeagent/claudetest/cmd/claude-tee
+	go run ./tools/claude-record -tee bin/claude-tee -claude "$(CLAUDE_TEE_REAL)" -only "$(SCENARIOS)"
+	-bin/claude-tee -schema-diff $(CLAUDE_SCHEMAS) internal/features/chats/testdata/claude-parity/*/cli*.jsonl
 
 # The API's code from proto/, committed; CI checks it is what this makes.
 # Go's plugins are go.mod's tools; Dart's are pinned in gen-tools, and
