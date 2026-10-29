@@ -424,6 +424,27 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Sets the pinned chats, in their order: each one listed is pinned at its
+  /// place (Chat.pin), every other unpinned. An archived chat or one not
+  /// known is left out; archiving unpins. A changed chat comes as an event.
+  /// (API 90)
+  Future<nushiv1nushi.PinChatsResponse> pinChats(
+    nushiv1nushi.PinChatsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.pinChats,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a
   /// turn, for a name git doesn't take or that's taken, and when the branch

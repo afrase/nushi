@@ -87,6 +87,8 @@ type Service struct {
 	copies    Copies      // set once at startup, if chats keep copies of their transcripts
 	copiesOn  func() bool // whether they write them now
 
+	pinMu sync.Mutex // Pin's, one order at a time
+
 	mu        sync.Mutex
 	chats     map[string]*chat
 	closing   bool        // Close began: no agent starts any more

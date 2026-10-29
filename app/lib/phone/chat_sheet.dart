@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
+import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -13,9 +14,9 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The phone's chat ⋯: what the chat runs in (its folder, branch and
-/// model) and what can be done to it from a phone: Rename, Sleep, Archive
-/// or Unarchive, and Stop every subagent and background command that
-/// runs. Everything else stays the Mac's.
+/// model) and what can be done to it from a phone: Rename, Pin or Unpin,
+/// Sleep, Archive or Unarchive, and Stop every subagent and background
+/// command that runs. Everything else stays the Mac's.
 Future<void> showChatSheet(
   BuildContext context,
   Daemon daemon,
@@ -123,6 +124,14 @@ class _ChatSheetState extends State<ChatSheet> {
             const SizedBox(height: 12),
             for (final (label, run, destructive) in [
               ('Rename…', _rename, false),
+              if (canPinChat(d, chat))
+                (
+                  chat.pin > 0 ? 'Unpin' : 'Pin',
+                  () => _then(
+                    () => tryOrShow(context, () => toggleChatPin(d, chat)),
+                  ),
+                  false,
+                ),
               if (chat.canSleep && !chat.archived)
                 (
                   'Sleep',

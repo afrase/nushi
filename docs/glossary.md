@@ -62,8 +62,9 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 |---|---|---|---|
 | **Daemon** | `nushid`: runs the agents, terminals and checks, and keeps running when the app quits. In the app as a background-only helper. | `cmd/nushid`, `Nushi Daemon.app` | 0002, 0036 |
 | **Restart daemon** | Start the daemon again; an older daemon does it on its own once nothing runs. | `RestartWhenIdle`, `features/restart` | 0056 |
-| **Sidebar** | The left column: projects and their chats, archived last; Jira, GitHub and Settings at its foot. | `sidebar.dart`, `sidebar_groups.dart` | |
-| **Project** | A group in the sidebar: a folder (a repository with its worktrees) and its chats. Also the "in this project" scope of MCP servers and skills. | `sidebarGroups` | |
+| **Sidebar** | The left column: Pinned, then projects and their chats, archived last; Jira, GitHub and Settings at its foot. | `sidebar.dart`, `sidebar_groups.dart`, `sidebar_rows.dart` | |
+| **Project** | A group in the sidebar: a folder (a repository with its worktrees) and its chats, in the order they were dragged into. Also the "in this project" scope of MCP servers and skills. | `sidebarGroups`, `sidebarChats` | |
+| **Pinned** | The sidebar's section above the projects, shown while a chat is pinned: Pin chat and Unpin chat (⌘D). A pinned chat leaves its project's list; the daemon keeps which and in what order, so the phone has them too. Not an artifact's pin. | `Chat.pin`, `PinChats`, `PinnedSection`, `chat_pins.dart` | 0064 |
 | **Folder** | Where a chat's agent works. A chat with No folder gets a scratch folder of its own. | `Session.Folder`, `Session.Scratch` | |
 | **Worktree** | A git worktree a chat runs in, `.worktrees/<two words>` on `nushi/<two words>`: New worktree, Move. | `Worktree`, `GitWorktree` | 0016 |
 | **Branch** | The branch a chat's folder has out: Rename branch… for a worktree's, the Branch row's menu to switch. | `RenameBranch`, `SwitchBranch`, `GitBranch` | 0016 |
@@ -76,7 +77,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Details panel** | The right column, made of widgets. Show details, Hide details. | `details_panel.dart` | |
 | **Widget** | One part of the details panel: Environment, Context, Changes, Pull request, Artifacts, MCP, Background tasks. Each collapses and drags. | `PanelCard`, `panel_cards.dart` | |
 | **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell` | 0009 |
-| **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat. | `artifacts_card.dart`, `FileRows` | |
+| **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_card.dart`, `FileRows` | |
 | **Preview** | An artifact shown in the side pane (or full screen on the phone), kept current as it changes; Preview and Source. | `preview.dart`, `WatchChatFile`, `internal/filewatch` | 0057 |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Read-only toward git. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |

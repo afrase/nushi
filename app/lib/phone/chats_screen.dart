@@ -18,7 +18,8 @@ import 'package:nushi/theme/theme.dart';
 
 /// The chats, grouped by folder as the Mac's sidebar has them, each with
 /// what it's doing; those that need you in a group of their own at the
-/// top, so one is never at the bottom of a long list.
+/// top, so one is never at the bottom of a long list, then the pinned
+/// ones (the daemon keeps them), as the Mac's Pinned has them.
 class ChatsScreen extends StatelessWidget {
   const new(this.phone, {super.key});
 
@@ -30,6 +31,10 @@ class ChatsScreen extends StatelessWidget {
     return _NeedsYou(
       daemon,
       builder: (context, needs) {
+        final pinned = [
+          for (final c in pinnedChats(daemon))
+            if (!needs.contains(c)) c,
+        ];
         final groups = {
           for (final MapEntry(:key, :value) in chatGroups(daemon).entries)
             if (value.where((c) => !needs.contains(c)).toList() case final rest
@@ -60,7 +65,7 @@ class ChatsScreen extends StatelessWidget {
               ConnectionBar(phone),
               UpdateBar(phone),
               Expanded(
-                child: groups.isEmpty && needs.isEmpty
+                child: groups.isEmpty && needs.isEmpty && pinned.isEmpty
                     ? Center(
                         child: Text(
                           daemon.connected ? 'No chats' : '',
@@ -76,6 +81,14 @@ class ChatsScreen extends StatelessWidget {
                           if (needs.isNotEmpty) ...[
                             const PhoneHeading('Needs you'),
                             for (final c in needs)
+                              ChatRow(
+                                c,
+                                onTap: () => openPhoneChat(context, phone, c),
+                              ),
+                          ],
+                          if (pinned.isNotEmpty) ...[
+                            const PhoneHeading('Pinned'),
+                            for (final c in pinned)
                               ChatRow(
                                 c,
                                 onTap: () => openPhoneChat(context, phone, c),
@@ -158,8 +171,8 @@ class _NeedsYouState extends State<_NeedsYou> {
   }
 
   List<ChatState> _waiting() => [
-    for (final cs in chatGroups(widget.daemon).values)
-      ...cs.where((c) => c.phase == ChatPhase.waiting),
+    for (final c in widget.daemon.chats.values)
+      if (!c.archived && c.phase == ChatPhase.waiting) c,
   ]..sort((a, b) => b.created.compareTo(a.created));
 
   @override

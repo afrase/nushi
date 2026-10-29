@@ -11,13 +11,22 @@ import 'package:nushi/settings.dart';
 // the sidebar's chats, ⌘1–⌘9 opens one, ⌘[ and ⌘] go to the one before
 // and after. And the chat's tabs: ⌃Tab and ⌃⇧Tab go through them.
 
+/// The pinned chats, top first (`Chat.pin`, kept by the daemon); archived
+/// chats are never pinned.
+List<ChatState> pinnedChats(Daemon daemon) =>
+    daemon.chats.values.where((c) => c.pin > 0 && !c.archived).toList()
+      ..sort((a, b) => a.pin.compareTo(b.pin));
+
 /// The sidebar's groups: each folder's chats (a chat in a worktree under
 /// its repository; scratch chats under ''), the folder with the newest
-/// chat first, the newest chat first in each. Archived chats aren't in it.
+/// chat first, the newest chat first in each. Archived chats aren't in
+/// it, nor pinned ones ([pinnedChats]): a folder whose chats are all
+/// pinned has no group until one is unpinned.
 Map<String, List<ChatState>> chatGroups(Daemon daemon) {
   final groups = <String, List<ChatState>>{};
-  final byNewest = daemon.chats.values.where((c) => !c.archived).toList()
-    ..sort((a, b) => b.created.compareTo(a.created));
+  final byNewest =
+      daemon.chats.values.where((c) => !c.archived && c.pin == 0).toList()
+        ..sort((a, b) => b.created.compareTo(a.created));
   for (final c in byNewest) {
     (groups[c.scratch ? '' : c.home] ??= []).add(c);
   }
@@ -27,8 +36,10 @@ Map<String, List<ChatState>> chatGroups(Daemon daemon) {
 /// The Mac sidebar's groups ([chatGroups]) in the order they were dragged
 /// into ([sidebarOrder]); a folder it doesn't name goes first, as one
 /// with the newest chat, and with [starting] (the folder a chat is
-/// starting in) a folder with no chats yet goes first too. The phone
-/// keeps [chatGroups]' order.
+/// starting in) a folder with no chats yet goes first too. In each, the
+/// chats in the order they were dragged into ([sidebarChats]), a chat it
+/// doesn't name (a new one) first, the newest first. The phone keeps
+/// [chatGroups]' order.
 Map<String, List<ChatState>> sidebarGroups(Daemon daemon, {String? starting}) {
   final byFolder = chatGroups(daemon);
   final groups = {
@@ -40,9 +51,23 @@ Map<String, List<ChatState>> sidebarGroups(Daemon daemon, {String? starting}) {
   final placed = saved.toSet();
   return {
     for (final MapEntry(:key, :value) in groups.entries)
-      if (!placed.contains(key)) key: value,
-    for (final k in saved) k: ?groups[k],
+      if (!placed.contains(key)) key: inSavedOrder(key, value),
+    for (final k in saved)
+      if (groups[k] case final chats?) k: inSavedOrder(k, chats),
   };
+}
+
+/// [chats] (the group of [folder], the newest first) in the order they
+/// were dragged into ([sidebarChats]), those it doesn't name first.
+List<ChatState> inSavedOrder(String folder, List<ChatState> chats) {
+  final saved = sidebarChats.value[folder];
+  if (saved == null) return chats;
+  final at = {for (final (i, id) in saved.indexed) id: i};
+  return [
+    ...chats.where((c) => !at.containsKey(c.id)),
+    ...chats.where((c) => at.containsKey(c.id)).toList()
+      ..sort((a, b) => at[a.id]!.compareTo(at[b.id]!)),
+  ];
 }
 
 /// Those of [chats] (the group of [folder]) the sidebar shows: all, or
@@ -56,10 +81,20 @@ Iterable<ChatState> shownChats(
     ? chats.where((c) => c.id == selectedId)
     : chats;
 
-/// The chats as the sidebar shows them, top to bottom, the archived (in
-/// their collapsed group) and those of collapsed groups left out: what
-/// ⌘1–⌘9, ⌘[ and ⌘] go through.
+/// The pinned chats the sidebar shows: all, or with Pinned collapsed
+/// ([pinnedCollapsed]), only the selected one, if it's pinned.
+Iterable<ChatState> shownPinned(Daemon daemon) {
+  final pinned = pinnedChats(daemon);
+  return pinnedCollapsed.value
+      ? pinned.where((c) => c.id == daemon.selectedId)
+      : pinned;
+}
+
+/// The chats as the sidebar shows them, top to bottom, Pinned first, the
+/// archived (in their collapsed group) and those of collapsed groups left
+/// out: what ⌘1–⌘9, ⌘[ and ⌘] go through.
 List<ChatState> chatOrder(Daemon daemon) => [
+  ...shownPinned(daemon),
   for (final MapEntry(key: folder, value: chats) in sidebarGroups(
     daemon,
   ).entries)

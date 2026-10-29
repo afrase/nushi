@@ -119,7 +119,12 @@ func (s *Service) Archive(chatID string, archived bool) error {
 	if !archived && c.session.Archived {
 		c.kept, c.reopenFailed, c.asleep, c.sessionGone = false, false, false, false // it reopens (its replay merged with the copy), and says again
 	}
-	c.saveLocked(func(s *model.Session) { s.Archived, s.Unseen = archived, s.Unseen && !archived })
+	c.saveLocked(func(s *model.Session) {
+		s.Archived, s.Unseen = archived, s.Unseen && !archived
+		if archived {
+			s.Pin = 0
+		}
+	})
 	c.logLocked().Info("chat archived", "archived", archived)
 	c.mu.Unlock()
 	if archived {

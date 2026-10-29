@@ -63,6 +63,7 @@ class _NushiAppState extends State<NushiApp> {
     super.initState();
     watchPairings(_navigator, widget.daemon.client);
     _alerts = MacAlerts(widget.daemon);
+    widget.daemon.addListener(_pinChanged);
     // The app coming to the front shows its chat again; the daemon knows
     // whether the window shows (focused or not) or is hidden, and the
     // notifications whether it's in front. Drafts are saved at once when
@@ -88,8 +89,18 @@ class _NushiAppState extends State<NushiApp> {
     );
   }
 
+  /// Whether the shown chat is pinned: the Chat menu's Pin Chat says
+  /// Unpin Chat then.
+  bool _pinned = false;
+
+  void _pinChanged() {
+    final pinned = (widget.daemon.selected?.pin ?? 0) > 0;
+    if (pinned != _pinned) setState(() => _pinned = pinned);
+  }
+
   @override
   void dispose() {
+    widget.daemon.removeListener(_pinChanged);
     _alerts.dispose();
     _lifecycle.dispose();
     super.dispose();
@@ -101,7 +112,7 @@ class _NushiAppState extends State<NushiApp> {
   /// [act]'s item in the menu bar: its label and key; it runs as from
   /// the palette.
   PlatformMenuItem _item(Act act) => PlatformMenuItem(
-    label: act.menuLabel!,
+    label: act == Act.pin && _pinned ? 'Unpin Chat' : act.menuLabel!,
     shortcut: act.key,
     onSelected: () => runAct(_navigator.currentContext!, widget.daemon, act),
   );

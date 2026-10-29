@@ -63,6 +63,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.CloseSideChatRequest request);
   $async.Future<$0.RenameChatResponse> renameChat(
       $pb.ServerContext ctx, $0.RenameChatRequest request);
+  $async.Future<$0.PinChatsResponse> pinChats(
+      $pb.ServerContext ctx, $0.PinChatsRequest request);
   $async.Future<$0.RenameBranchResponse> renameBranch(
       $pb.ServerContext ctx, $0.RenameBranchRequest request);
   $async.Future<$0.SwitchBranchResponse> switchBranch(
@@ -314,6 +316,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.CloseSideChatRequest();
       case 'RenameChat':
         return $0.RenameChatRequest();
+      case 'PinChats':
+        return $0.PinChatsRequest();
       case 'RenameBranch':
         return $0.RenameBranchRequest();
       case 'SwitchBranch':
@@ -570,6 +574,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return closeSideChat(ctx, request as $0.CloseSideChatRequest);
       case 'RenameChat':
         return renameChat(ctx, request as $0.RenameChatRequest);
+      case 'PinChats':
+        return pinChats(ctx, request as $0.PinChatsRequest);
       case 'RenameBranch':
         return renameBranch(ctx, request as $0.RenameBranchRequest);
       case 'SwitchBranch':

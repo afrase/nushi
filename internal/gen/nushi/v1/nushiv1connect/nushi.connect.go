@@ -82,6 +82,8 @@ const (
 	NushiServiceCloseSideChatProcedure = "/nushi.v1.NushiService/CloseSideChat"
 	// NushiServiceRenameChatProcedure is the fully-qualified name of the NushiService's RenameChat RPC.
 	NushiServiceRenameChatProcedure = "/nushi.v1.NushiService/RenameChat"
+	// NushiServicePinChatsProcedure is the fully-qualified name of the NushiService's PinChats RPC.
+	NushiServicePinChatsProcedure = "/nushi.v1.NushiService/PinChats"
 	// NushiServiceRenameBranchProcedure is the fully-qualified name of the NushiService's RenameBranch
 	// RPC.
 	NushiServiceRenameBranchProcedure = "/nushi.v1.NushiService/RenameBranch"
@@ -455,6 +457,11 @@ type NushiServiceClient interface {
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
+	// Sets the pinned chats, in their order: each one listed is pinned at its
+	// place (Chat.pin), every other unpinned. An archived chat or one not
+	// known is left out; archiving unpins. A changed chat comes as an event.
+	// (API 90)
+	PinChats(context.Context, *connect.Request[v1.PinChatsRequest]) (*connect.Response[v1.PinChatsResponse], error)
 	// Renames the branch of a chat's worktree (git branch -m; its folder
 	// stays), for good: the chat's title no longer names it. Refused during a
 	// turn, for a name git doesn't take or that's taken, and when the branch
@@ -902,6 +909,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceRenameChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("RenameChat")),
+			connect.WithClientOptions(opts...),
+		),
+		pinChats: connect.NewClient[v1.PinChatsRequest, v1.PinChatsResponse](
+			httpClient,
+			baseURL+NushiServicePinChatsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("PinChats")),
 			connect.WithClientOptions(opts...),
 		),
 		renameBranch: connect.NewClient[v1.RenameBranchRequest, v1.RenameBranchResponse](
@@ -1548,6 +1561,7 @@ type nushiServiceClient struct {
 	forkChat            *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
 	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
 	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
+	pinChats            *connect.Client[v1.PinChatsRequest, v1.PinChatsResponse]
 	renameBranch        *connect.Client[v1.RenameBranchRequest, v1.RenameBranchResponse]
 	switchBranch        *connect.Client[v1.SwitchBranchRequest, v1.SwitchBranchResponse]
 	archiveChat         *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
@@ -1756,6 +1770,11 @@ func (c *nushiServiceClient) CloseSideChat(ctx context.Context, req *connect.Req
 // RenameChat calls nushi.v1.NushiService.RenameChat.
 func (c *nushiServiceClient) RenameChat(ctx context.Context, req *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {
 	return c.renameChat.CallUnary(ctx, req)
+}
+
+// PinChats calls nushi.v1.NushiService.PinChats.
+func (c *nushiServiceClient) PinChats(ctx context.Context, req *connect.Request[v1.PinChatsRequest]) (*connect.Response[v1.PinChatsResponse], error) {
+	return c.pinChats.CallUnary(ctx, req)
 }
 
 // RenameBranch calls nushi.v1.NushiService.RenameBranch.
@@ -2354,6 +2373,11 @@ type NushiServiceHandler interface {
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
+	// Sets the pinned chats, in their order: each one listed is pinned at its
+	// place (Chat.pin), every other unpinned. An archived chat or one not
+	// known is left out; archiving unpins. A changed chat comes as an event.
+	// (API 90)
+	PinChats(context.Context, *connect.Request[v1.PinChatsRequest]) (*connect.Response[v1.PinChatsResponse], error)
 	// Renames the branch of a chat's worktree (git branch -m; its folder
 	// stays), for good: the chat's title no longer names it. Refused during a
 	// turn, for a name git doesn't take or that's taken, and when the branch
@@ -2797,6 +2821,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceRenameChatProcedure,
 		svc.RenameChat,
 		connect.WithSchema(nushiServiceMethods.ByName("RenameChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServicePinChatsHandler := connect.NewUnaryHandler(
+		NushiServicePinChatsProcedure,
+		svc.PinChats,
+		connect.WithSchema(nushiServiceMethods.ByName("PinChats")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceRenameBranchHandler := connect.NewUnaryHandler(
@@ -3461,6 +3491,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceCloseSideChatHandler.ServeHTTP(w, r)
 		case NushiServiceRenameChatProcedure:
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
+		case NushiServicePinChatsProcedure:
+			nushiServicePinChatsHandler.ServeHTTP(w, r)
 		case NushiServiceRenameBranchProcedure:
 			nushiServiceRenameBranchHandler.ServeHTTP(w, r)
 		case NushiServiceSwitchBranchProcedure:
@@ -3758,6 +3790,10 @@ func (UnimplementedNushiServiceHandler) CloseSideChat(context.Context, *connect.
 
 func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RenameChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) PinChats(context.Context, *connect.Request[v1.PinChatsRequest]) (*connect.Response[v1.PinChatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.PinChats is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) RenameBranch(context.Context, *connect.Request[v1.RenameBranchRequest]) (*connect.Response[v1.RenameBranchResponse], error) {

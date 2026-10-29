@@ -101,6 +101,16 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Its place among the pinned chats, from 1 (the top); 0 when it isn't
+  /// pinned. The daemon keeps it (API 90).
+  int get pin => _pin;
+  int _pin = 0;
+  set pin(int v) {
+    if (v == _pin) return;
+    _pin = v;
+    notifyListeners();
+  }
+
   DateTime created = DateTime.now();
   final List<Item> items = [];
   List<ConfigOption> config = [];

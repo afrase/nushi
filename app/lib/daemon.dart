@@ -39,7 +39,11 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 89;
+const apiVersion = 90;
+
+/// The API from which the daemon keeps which chats are pinned, in order
+/// (Chat.pin, PinChats).
+const pinApi = 90;
 
 /// The API from which the daemon re-runs a pull request's failed jobs
 /// (RerunGitHubChecks).
@@ -565,6 +569,7 @@ class Daemon extends ChangeNotifier {
           ...reviews.value.keys,
           ...terminalChats.value,
           ...rememberedContexts,
+          for (final ids in sidebarChats.value.values) ...ids,
         ],
         ...?drafts?.ids,
       };
@@ -599,7 +604,8 @@ class Daemon extends ChangeNotifier {
 
   /// Forgets chat [id], gone (deleted here, or while the app was away),
   /// and everything kept for it: its Changes scope, review comments,
-  /// terminals panel, context breakdown, terminals and draft.
+  /// terminals panel, context breakdown, terminals, draft and place in
+  /// its project's order. (Its pin goes with it: the daemon's.)
   void _forget(String id) {
     chats.remove(id);
     drafts?.forget(id);
@@ -612,6 +618,12 @@ class Daemon extends ChangeNotifier {
     }
     if (chatOpened.value.containsKey(id)) {
       chatOpened.value = {...chatOpened.value}..remove(id);
+    }
+    if (sidebarChats.value.values.any((ids) => ids.contains(id))) {
+      sidebarChats.value = {
+        for (final MapEntry(:key, :value) in sidebarChats.value.entries)
+          key: [...value.where((c) => c != id)],
+      };
     }
     if (!remote) forgetContext(id);
     terminals.forget(id);
@@ -752,10 +764,15 @@ class Daemon extends ChangeNotifier {
       ..title = c.title
       ..archived = c.archived
       ..unseen = daemonApi >= unseenApi ? c.unseen : null
+      ..pin = c.pin
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       // Only the list carries a status; a chat event would clear it.
       ..listed(c.hasStatus() ? c.status : null);
   }
+
+  /// The chats' list changed here ahead of the daemon's events (pins):
+  /// whatever shows it builds again.
+  void listChanged() => notifyListeners();
 
   void select(String chatId) {
     _leaveTrust();

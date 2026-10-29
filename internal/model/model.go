@@ -64,6 +64,9 @@ type Session struct {
 	// read; not one the user stopped) while no client showed the chat; a
 	// client showing it clears it, and so does archiving.
 	Unseen bool `json:",omitempty"`
+	// Pin is the chat's place among the pinned chats, from 1 (the top); 0
+	// when it isn't pinned. Archiving unpins.
+	Pin int `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`

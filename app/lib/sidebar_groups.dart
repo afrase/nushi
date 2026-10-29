@@ -6,6 +6,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panel_cards.dart' show reordered;
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -34,7 +35,7 @@ class SidebarGroups extends StatefulWidget {
 
   /// The folder a chat is starting in, while one is.
   final String? starting;
-  final Widget Function(ChatState chat) row;
+  final Widget Function(ChatState chat, Movable movable) row;
 
   /// A new chat in a folder ('' for none); null while one starts.
   final void Function(String folder)? onNew;
@@ -56,7 +57,7 @@ class _Moving {
 class _SidebarGroupsState extends State<SidebarGroups> {
   String? _moving; // the folder whose group is being dragged
   int? _dropAt; // where it would go: before the group at this index
-  EdgeDraggingAutoScroller? _scroller;
+  final _scroll = EdgeScroll();
 
   /// Where the dragged group is now, if it's being dragged.
   int get _from =>
@@ -89,26 +90,13 @@ class _SidebarGroupsState extends State<SidebarGroups> {
   }
 
   void _end() {
-    _scroller?.stopAutoScroll();
-    _scroller = null;
+    _scroll.stop();
     if (mounted) {
       setState(() {
         _moving = null;
         _dropAt = null;
       });
     }
-  }
-
-  /// Scrolls the list while the pointer is near its top or bottom edge.
-  void _dragged(DragUpdateDetails d) {
-    if (_scroller == null) {
-      final scrollable = Scrollable.maybeOf(context);
-      if (scrollable == null) return;
-      _scroller = EdgeDraggingAutoScroller(scrollable, velocityScalar: 50);
-    }
-    _scroller!.startAutoScrollIfNecessary(
-      Rect.fromCenter(center: d.globalPosition, width: 1, height: 40),
-    );
   }
 
   @override
@@ -151,7 +139,7 @@ class _SidebarGroupsState extends State<SidebarGroups> {
                         ? null
                         : () => widget.onTerminal(folder, chats),
                     onDragStarted: () => setState(() => _moving = folder),
-                    onDragUpdate: _dragged,
+                    onDragUpdate: (d) => _scroll.update(context, d),
                     onDragEnd: _end,
                   ),
                   if (widget.starting == folder)
@@ -162,8 +150,17 @@ class _SidebarGroupsState extends State<SidebarGroups> {
                         style: theme.ui(t.textMuted, size: 12),
                       ),
                     ),
-                  for (final c in shownChats(folder, chats, widget.selectedId))
-                    widget.row(c),
+                  MovableRows(
+                    group: folder,
+                    chats: [...shownChats(folder, chats, widget.selectedId)],
+                    row: widget.row,
+                    onMove: (from, to) => moveInProject(
+                      folder,
+                      [...shownChats(folder, chats, widget.selectedId)],
+                      from,
+                      to,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -194,7 +191,6 @@ class _Target extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
     return DragTarget<_Moving>(
       onMove: (d) {
         final box = context.findRenderObject()! as RenderBox;
@@ -202,28 +198,24 @@ class _Target extends StatelessWidget {
       },
       onLeave: (_) => onLeave(),
       onAcceptWithDetails: (_) => onDrop(),
-      builder: (context, _, _) => Stack(
-        children: [
-          child,
-          if (line case final at?)
-            Positioned(
-              key: const Key('drop line'),
-              left: 8,
-              right: 8,
-              top: at == .down ? 0 : null,
-              bottom: at == .up ? 0 : null,
-              height: 2,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: t.accent,
-                  borderRadius: BorderRadius.circular(1),
-                ),
-              ),
-            ),
-        ],
-      ),
+      builder: (context, _, _) => DropLine(line: line, child: child),
     );
   }
+}
+
+/// Moves the chat at [from] of [shown] (the rows of [folder]'s group) to
+/// [to], in [sidebarChats]; a chat it doesn't show (pinned, archived)
+/// keeps its place there.
+void moveInProject(String folder, List<ChatState> shown, int from, int to) {
+  sidebarChats.value = {
+    ...sidebarChats.value,
+    folder: reordered(
+      sidebarChats.value[folder] ?? const [],
+      [for (final c in shown) c.id],
+      from,
+      to,
+    ),
+  };
 }
 
 /// For the folders of [folders] that share their name with another: what
@@ -302,7 +294,7 @@ class _HeaderState extends State<_Header> {
         builder: (context, box) => Draggable<_Moving>(
           data: _Moving(folder),
           dragAnchorStrategy: pointerDragAnchorStrategy,
-          feedback: _Lifted(name, width: box.maxWidth),
+          feedback: Lifted(name, width: box.maxWidth),
           onDragStarted: widget.onDragStarted,
           onDragUpdate: widget.onDragUpdate,
           onDragEnd: (_) => widget.onDragEnd(),
@@ -393,45 +385,6 @@ class _HeaderState extends State<_Header> {
             },
           ),
       ],
-    );
-  }
-}
-
-/// The header under the pointer while it's dragged: the folder's name,
-/// just past the pointer and see-through, so the drop line shows.
-class _Lifted extends StatelessWidget {
-  const new(this.name, {required this.width});
-
-  final String name;
-  final double width; // the header's
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Transform.translate(
-      offset: const Offset(12, 4),
-      child: Opacity(
-        opacity: 0.85,
-        child: Material(
-          type: MaterialType.transparency,
-          child: Container(
-            constraints: BoxConstraints(maxWidth: width * 0.75),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: box(
-              t.borderSubtle,
-              fill: t.raised,
-              radius: NushiTheme.control,
-            ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.ui(t.text, weight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
