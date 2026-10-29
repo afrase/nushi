@@ -261,17 +261,18 @@ func TestRate(t *testing.T) {
 
 func TestIdle(t *testing.T) {
 	lim := Defaults
-	lim.Idle = 300 * time.Millisecond
+	lim.Idle = time.Second
 	url := start(t, lim)
 
-	// Pings keep a connection open.
+	// Pings keep a connection open. The client gives up on a pong after
+	// three pings, so they're far enough apart for a loaded CI runner.
 	old := KeepAlive
-	KeepAlive = 50 * time.Millisecond
+	KeepAlive = 200 * time.Millisecond
 	l, d := pair(t, url, newKey())
 	KeepAlive = old
 	got := make(chan string, 1)
 	go func() { m, _ := l.ReadMessage(); got <- string(m) }() // reading takes the pongs in
-	time.Sleep(time.Second)
+	time.Sleep(5 * lim.Idle / 2)
 	send(t, d, "still here")
 	if m := <-got; m != "still here" {
 		t.Fatalf("read %q", m)
