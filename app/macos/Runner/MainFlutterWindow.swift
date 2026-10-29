@@ -89,8 +89,25 @@ class MainFlutterWindow: NSWindow {
         result(status)
       }
 
+    // A three-finger swipe right, when macOS's "Swipe between pages" is set
+    // to three fingers, goes back (lib/back_swipe.dart): it comes as an
+    // NSEvent swipe, which FlutterViewController drops, so it's taken here
+    // first, with where it was in the view (Flutter's logical pixels).
+    // AppKit's deltaX is positive for the swipe that goes back, as in
+    // Safari and Chromium. Two fingers come as pan/zoom, to Flutter.
+    let swipes = FlutterMethodChannel(name: "nushi/swipe", binaryMessenger: flutterViewController.engine.binaryMessenger)
+    let flutterView = flutterViewController.view
+    swipeMonitor = NSEvent.addLocalMonitorForEvents(matching: .swipe) { [weak self] event in
+      guard event.window === self, event.deltaX > 0 else { return event }
+      let p = flutterView.convert(event.locationInWindow, from: nil)
+      swipes.invokeMethod("back", arguments: [p.x, flutterView.isFlipped ? p.y : flutterView.bounds.height - p.y])
+      return nil
+    }
+
     super.awakeFromNib()
   }
+
+  private var swipeMonitor: Any?
 }
 
 /// The Mac's notifications (macOS shows them; nothing leaves the Mac) and
