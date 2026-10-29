@@ -285,6 +285,7 @@ class _Shell extends StatelessWidget {
             DaemonUpdateBar(daemon),
           if (daemon.connected && daemon.removedChats.isNotEmpty)
             RemovedChatsBar(daemon),
+          if (daemon.notice != null) NoticeBar(daemon),
           Expanded(child: app),
           StatusBar(daemon),
         ],
