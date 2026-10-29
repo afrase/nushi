@@ -168,7 +168,7 @@ Steps 269–270, one commit each on `main`, pushed after `make check`. **API 61*
 
 ## Summary of milestone AF (after step 257: GitHub)
 
-Steps 238–257, one commit each on `main` (249 has a format fix of its own), all pushed; `make check` passed before each push. **API 55** (GitHub's calls, a chat's GitHub link on `StartChat` and `Chat`). Between steps 240 and 241 two out-of-band fixes landed from another session: 8334d08 ("Step 238 (fix)": your message's band spans the transcript; its number clashes with this milestone's step 238, left as is) and 74f8bb5 (a code block's label names its language).
+Steps 238–257, one commit each on `main` (249 has a format fix of its own), all pushed; `make check` passed before each push. **API 55** (GitHub's calls, a chat's GitHub link on `StartChat` and `Chat`). Between steps 240 and 241 two out-of-band fixes landed from another session: 797c3db ("Step 238 (fix)": your message's band spans the transcript; its number clashes with this milestone's step 238, left as is) and eff0728 (a code block's label names its language).
 
 - **Sign-in** (ADR 0045): gh's login first, read in the daemon through go-gh's `auth.TokenForHost` (the environment, gh's config, or `gh auth token`, whose stdout is the token); a pasted token (Settings › GitHub) in the login keychain ("Nushi GitHub") is used for its host instead, until removed. A token is read only for github.com, a host gh is signed in to, or one given a token, and goes only to its own host. Settings › GitHub shows each host, who the token is, where it's from, its kind and scopes, and what's left of the rate limits.
 - **Libraries**: go-gh v2.17.0 for auth only; GitHub's API through a thin client of Nushi's own (`internal/githubapi`): hand-written GraphQL (pull-request-shaped data and the review writes) and REST (who a token is, the limits, a job's log, a comparison). Not go-github (six REST reads; its models follow an API version; ETags need a transport of ours anyway), not genqlient (code generation beyond the API's is against the rebuild's rules, and it can't alias the batched blobs query), not githubv4 (low activity, no dynamic aliases). goldmark (already used) and `golang.org/x/net/html` (made direct) for GitHub's text.
@@ -183,7 +183,7 @@ Steps 238–257, one commit each on `main` (249 has a format fix of its own), al
 
 **Size**: the daemon went from 21,689 to 25,378 lines of Go (the client about 2,000, a third of it the Markdown writer; the feature about 1,150; the API 300; `mdwrite` moved out of `internal/adf`), the app from 20,803 to 24,247 lines of Dart. Over the ~500-line tripwire: 238 (the client's core and gate), 239 (the reads), 246 (the Markdown writer and its corpus), 247 (the API, about 400 lines of proto), 250 (worktrees from a ref, across git, chats and the API), 254 (the whole UI, about 2,300 lines with tests).
 
-**Install check**: `make install` (also copied to your iCloud Downloads); the installed daemon (pid 43400) ran no agent and no Nushi was open, so it was stopped by its PID and the helper opened as the app does: `nushid started version="00dc3f501708 go1.27.3" … api=55`.
+**Install check**: `make install` (also copied to your iCloud Downloads); the installed daemon (pid 43400) ran no agent and no Nushi was open, so it was stopped by its PID and the helper opened as the app does: `nushid started version="ebfdb8599e2e go1.27.3" … api=55`.
 
 **Needs your attention**
 - **API 55**: done: the installed daemon runs the new build. Open Nushi as usual.
@@ -295,7 +295,7 @@ Steps 211–215, one commit each on `main`, all pushed; `make check` passed befo
 
 **Size**: the daemon went from 21,303 to 21,403 lines of Go, the app from 19,935 to 20,017 lines of Dart. No step over the ~500-line tripwire (212 is about 330 with tests and generated code left out).
 
-**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 46453, step 210's) stopped by its PID and the helper opened as the app does: `nushid started version="c0f340f938cf-dirty go1.27.3" … api=54` (dirty: these notes).
+**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 46453, step 210's) stopped by its PID and the helper opened as the app does: `nushid started version="f53c72f1d6cb-dirty go1.27.3" … api=54` (dirty: these notes).
 
 **Left behind by the testing**: nothing: the dev daemon and the fake agents stopped by PID, the temp folder (`/tmp/nro.*`: data, `HOME`, the chats' folders, the builds) removed. No real Claude or Codex ran; nothing outside the temp folder was written.
 
@@ -322,7 +322,7 @@ Steps 204–210, one commit each on `main`, all pushed; `make check` passed befo
 
 **Size**: the daemon went from 21,056 to 21,303 lines of Go (`find.go` and `git.CheckBranch` in, the packet's API out), the app from 19,054 to 19,935 lines of Dart (the picker 250, the issue lines 130, the task list 240, the sources 150 moved out of the view, start work and the moves 130 moved out of the issue view). `jira_view.dart` is 440 lines, over the ~400 tripwire (the list and the details' keys and focus). Over the ~500-line tripwire: step 207 (about 900 with tests and goldens: the dialog's issue, the picker, the packet's removal across daemon and app), 209 (about 750 with tests: the task list, the sources moved, the shared moves and start work).
 
-**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 18274, AE's) stopped by its PID and the helper opened as the app does: `nushid started version="37cdfafc2456-dirty go1.27.3" … api=53` (dirty: these notes). No Nushi was open.
+**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 18274, AE's) stopped by its PID and the helper opened as the app does: `nushid started version="3f8f26ef51a6-dirty go1.27.3" … api=53` (dirty: these notes). No Nushi was open.
 
 **Left behind by the testing**: nothing of the test's. The test chats were deleted (their worktrees and branches with them, Claude's history with Delete), the fake site removed (its keychain item gone; checked), the dev daemon, the debug app and the fake Jira stopped, `/tmp/njn` (the data folder, the Codex home, the clone and its origin) and the scratch builds removed. Claude's project folders for the test paths (one holding a security-review hook's session on the throwaway repository's first commit), three `session-env` folders and two `sessions/<pid>` records with their keys were removed; `~/.claude.json` doesn't name the test folders.
 
@@ -355,7 +355,7 @@ Steps 188–202, one commit each on `main`, all pushed; `make check` passed befo
 
 **Size**: the daemon went from 17,442 to 21,056 lines of Go (adf 840, jiracloud 830, features/jira 780, keychain 190, tools and mcpserver 350, the API and main 375), the app from 16,687 to 19,054 lines of Dart, the packages from 1,924 to 1,929. Over the ~500-line tripwire (code and tests, without generated code, recorded data and goldens): 189 (569: ADF to Markdown and its tests), 190 (631: Markdown to ADF, the safety fixes and fuzzing), 191 (823: the client's core and its fake-server tests), 193 (645: the issue's endpoints and the live test), 194 (1,374: the feature, the API and about 330 lines of proto), 195 (593: the Settings page and its tests), 196 (1,246: the view, JQL completion and their tests), 197 (1,100: the issue view and its tests), 198 (639: issue chats across daemon and app), 199 (1,011: the tools service, the MCP server, the Jira set, the chats' hook, tests). Each is one piece that doesn't work in halves; `jira_view.dart` is 438 lines.
 
-**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 85167) stopped by its PID and the helper opened as the app does: `nushid started version="80dc4598ff6f-dirty go1.27.3" … api=52` (dirty: these notes, uncommitted then).
+**Install check**: `make install` (also copied to your iCloud Downloads), then the installed daemon (pid 85167) stopped by its PID and the helper opened as the app does: `nushid started version="cdff03d048b4-dirty go1.27.3" … api=52` (dirty: these notes, uncommitted then).
 
 **Left behind by the testing**: on this Mac, nothing of the test's: the dev data folder, the temp Codex home, the throwaway repository and its worktree, the debug app and daemon (quit by PID), the CGEvent driver and the probes are removed; the test chats were deleted (Claude's history with them); the test Claude's project folders, `session-env`, `security_warnings_state` files and its `sessions/<pid>` record were removed; the "Nushi Jira (test)" keychain item and the keychain tests' items are deleted (no other keychain item was read or touched). A stale macOS keychain prompt from an early experiment (a test binary asking for its own test item) was dismissed with Deny. The Fireworks key is in no file under the test folders, the scratchpad or the repository (grep, the key on stdin), and nothing holds an Atlassian token's prefix.
 
@@ -370,9 +370,9 @@ Steps 180–187, one commit each on `main`, all pushed; `make check` passed befo
 - **`// ignore:` count: 9** (was 7): `close_sinks` 7 (as before, sinks handed to their owner), `no_default_cases` 1 (a switch on ItemKind, a protobuf enum, keeps its `default` for kinds a newer daemon sends), and one `ignore_for_file: missing_whitespace_between_adjacent_strings` (the marks' SVG path data in adjacent strings).
 - `make lint` takes about 17 s here (was 13: govulncheck twice, and the bigger rule set).
 
-**CI**: green on step 187 (1a84b61): both jobs passed, govulncheck included (180–186's runs were cancelled by the next push, as `concurrency` says).
+**CI**: green on step 187 (76215af): both jobs passed, govulncheck included (180–186's runs were cancelled by the next push, as `concurrency` says).
 
-**Install check**: `make install` (the app and its daemon on go1.27.3, also copied to your iCloud Downloads), then the installed daemon (pid 66788, step 179's, go1.27.1) stopped by its PID from its socket and the helper opened as the app does (`open -n -g … --args -login`), since no Nushi was open: `nushid started version="1a84b61b16af go1.27.3" … api=51`. No API change and no change you'd see in the app.
+**Install check**: `make install` (the app and its daemon on go1.27.3, also copied to your iCloud Downloads), then the installed daemon (pid 66788, step 179's, go1.27.1) stopped by its PID from its socket and the helper opened as the app does (`open -n -g … --args -login`), since no Nushi was open: `nushid started version="76215af7bffa go1.27.3" … api=51`. No API change and no change you'd see in the app.
 
 **Size**: the app went from 16,555 to 16,687 lines of Dart (one declaration a line), the packages from 1,867 to 1,924 (docs); Go unchanged. No step adds more than about 440 lines (185, one import a line).
 
@@ -389,7 +389,7 @@ Steps 176–179, one commit each on `main`. `make check` passed before each comm
 
 **Size**: the daemon went from 16,915 to 17,442 lines of Go (`internal/agentproc` about 380, the bridges' typed methods), `acp` from 1,276 to 0 (the library has about 1,500 hand-written lines and a generator of about 1,550, the rest generated); nothing else changed. Over the ~500-line tripwire: step 177 (about 960 lines added and 1,890 removed, without tests and generated code: `acp/` and everything that used it change together).
 
-**Install check**: `make install` (the app, with step 177's daemon, also copied to your iCloud Downloads), then the installed daemon stopped by its PID; your open Nushi started the new helper at once: `nushid started version="e12c7c661d7f-dirty go1.27.1" … api=51`, then `app connected` and the agents found. No API change (still 51) and no app change: nothing more to do.
+**Install check**: `make install` (the app, with step 177's daemon, also copied to your iCloud Downloads), then the installed daemon stopped by its PID; your open Nushi started the new helper at once: `nushid started version="334ad651851c-dirty go1.27.1" … api=51`, then `app connected` and the agents found. No API change (still 51) and no app change: nothing more to do.
 
 **Left behind by the testing**: nothing. `/tmp/nag` (the dev data folders, the temp homes, the throwaway repository, the PiG download, the scripts) is removed; the dev daemons are stopped and no agent runs. Claude's history of the test chats went with Delete; its project folder for the throwaway repository, three `session-env` folders, a process record with its key and a shell snapshot the test `claude` made were removed; `~/.claude.json` doesn't name the folder. Ante: no session is left (Delete removed it), today's log folder it made was removed, and its `settings.json` is unchanged (its hash). PiG's three session files Delete moved to the Trash were removed from it; `~/.pig` was never created. The key is in no file under the test folders, the scratchpad or either repository (grep, the key on stdin).
 
@@ -412,7 +412,7 @@ A small follow-up to milestones AB and AC, steps 172–175, one commit each on `
 
 **Size**: the daemon went from 16,573 to 16,915 lines of Go; nothing else changed. No step over the tripwire.
 
-**Install check**: `make install`, then the installed daemon stopped by its PID; your open Nushi started the new helper at once: `nushid started version="f10d4b8d3503-dirty … api=51`, then `app connected`. Nothing else to do: no app change.
+**Install check**: `make install`, then the installed daemon stopped by its PID; your open Nushi started the new helper at once: `nushid started version="e32962083cec-dirty … api=51`, then `app connected`. Nothing else to do: no app change.
 
 **Left behind by the testing**: nothing. The dev data folder, PiG's temp home with its sessions, the throwaway repository, the PiG download and the scripts are removed; the debug app and the dev daemon are stopped and no `pig` runs. No chat was deleted, so nothing went to the Trash; `~/.pig` was never created. The key is in no file under the test folders, the scratchpad or the repository (grep, the key on stdin).
 
@@ -439,9 +439,9 @@ Milestone AC, steps 158–171, one commit each on `main`, all pushed. `make chec
 - `protogetter` is off: a nested message read without its getter could still panic in a handler one day (net/http recovers and logs it).
 - CI's goldens: GitHub's macOS image draws text a few pixels differently (0.05–0.37% of a golden's pixels), so on CI (`CI=true`) a golden may differ in up to 0.5% (`app/test/flutter_test_config.dart`, step 170); here they must still match. A change smaller than that passes CI unseen.
 
-**CI**: green on step 171 (73239e5): both jobs passed.
+**CI**: green on step 171 (c540a29): both jobs passed.
 
-**Install check**: `make install`, then the installed daemon stopped by its PID (from its socket); your open Nushi started the new helper at once: `nushid started version="73239e53eeba go1.27.1" … api=51`, then `app connected`. Nothing to do: the app you have open is milestone AB's and the same in use (this milestone changed no UI).
+**Install check**: `make install`, then the installed daemon stopped by its PID (from its socket); your open Nushi started the new helper at once: `nushid started version="c540a2958cf7 go1.27.1" … api=51`, then `app connected`. Nothing to do: the app you have open is milestone AB's and the same in use (this milestone changed no UI).
 
 **Size**: the daemon went from 16,526 to 16,573 lines of Go, `acp` from 1,270 to 1,276, the relay and noise from 1,170 to 1,181, the app from 16,503 to 16,555, the packages from 1,864 to 1,867. Steps over the ~500-line tripwire: 165 (about 620 changed in 47 test files: errcheck in every package's tests, done in parallel by package).
 
@@ -487,7 +487,7 @@ Milestone AB, steps 153–157, one commit each on `main`, all pushed. `make test
 
 **Size**: the daemon went from 14,696 to 16,526 lines of Go (the bridge is about 1,700, `internal/toolcall` took 90 from Ante's), `acp` from 1,231 to 1,270, the app from 16,469 to 16,503. Over the ~500-line tripwire: step 153 (about 1,620 of code and 1,000 of tests and the fake pig: the whole bridge, which couldn't be split without stubbing half of it).
 
-**Install check**: `make install`, then the installed daemon stopped by its socket; your open Nushi started the new helper at once: `nushid started version=bd0f29ed1a87-dirty … api=51`, `app connected`, and `agent found agent=pig … problem="Not installed"` beside the other four.
+**Install check**: `make install`, then the installed daemon stopped by its socket; your open Nushi started the new helper at once: `nushid started version=fe0699fa17bd-dirty … api=51`, `app connected`, and `agent found agent=pig … problem="Not installed"` beside the other four.
 
 **Left behind by the testing**: nothing of the test's. The temp folder (dev data, PiG's temp home with its sessions, the throwaway repositories, the RPC driver) and the PiG download are removed; the dev app and daemon are stopped, and no `pig` runs. Deleting chats moved three PiG session files from the temp home to your Trash (`trash` uses the real one); they were removed from it. `~/.pig` was never created. The key is in no file under the test folders, the scratchpad or the repository (grep, the key on stdin). The installed daemon was restarted only for the install check.
 
@@ -514,7 +514,7 @@ Milestone AA, steps 146–152, one commit each on `main`, all pushed (plus one r
 
 **Size**: the daemon went from 14,117 to 14,696 lines of Go, `acp` from 990 to 1,231, the app from 16,154 to 16,469 lines of Dart; no step over the ~500-line tripwire without generated code (149 came to 440).
 
-**Install check**: `make install`, then the installed daemon stopped by its socket. Your open Nushi (still milestone Z's app in memory) started the new helper at once; the new daemon logged `nushid started version=b7fb3704a56c go1.27.1 … api=51 data="~/Library/Application Support/Nushi"`, then `app connected via=socket` and the four agents found. A second start I made met it and logged `nushid can't run why="a daemon is already listening on …"`, as intended. Quit and reopen Nushi to get the new app (its errors and Settings › Logs).
+**Install check**: `make install`, then the installed daemon stopped by its socket. Your open Nushi (still milestone Z's app in memory) started the new helper at once; the new daemon logged `nushid started version=d9434c61fca4 go1.27.1 … api=51 data="~/Library/Application Support/Nushi"`, then `app connected via=socket` and the four agents found. A second start I made met it and logged `nushid can't run why="a daemon is already listening on …"`, as intended. Quit and reopen Nushi to get the new app (its errors and Settings › Logs).
 
 **Left behind by the testing**: `/tmp/ndaa`, `/tmp/ndab` and the release build's copy are removed. Claude: the test chat's transcript went with Delete; its project folder (`memory/` only), `session-env` folder, `sessions/66861.json` and its key, and its shell snapshot were removed; `~/.claude.json` doesn't name the folder. Found while testing: the release build's products folder still held milestone Z's helper, so the test app started that old daemon on `/tmp/ndab`; it was stopped (the installed daemon wasn't touched).
 
