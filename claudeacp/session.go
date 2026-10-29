@@ -65,7 +65,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
 		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
 	}
-	o.CanUseTool = s.canUseTool
+	o.CanUseTool, o.OnElicitation = s.canUseTool, s.elicit
 	cs, err := claudeagent.Start(ctx, o)
 	if err != nil {
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}
