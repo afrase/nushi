@@ -119,7 +119,7 @@ Steps 291–295, one commit each on `main`, pushed after `make check`. **API 64*
 
 **Tried by hand**: GitHub's search qualifiers with gh's login (reads only: several `user:` are any of them, 120 `-repo:` qualifiers taken, the cost of count-only searches; `docs/facts/github.md`); a live read-only test on `afrase/nushi-gh-test` (`TestLiveInboxFilters`); a dev daemon on a temp folder asked for this Mac's real inbox through the API (curl over its socket): 90 days left out 2 of 3 pull requests (564 and 949 days old) and said so, widening My pull requests brought them back, hiding `boltops-tools` dropped its pull request from the search, `afrase my-org` limited it, a hidden name with a qualifier was refused; no token in its log.
 
-**Not tried by hand**: the view itself in the window (no synthetic input: widget tests and goldens of the cards, a row at rest, hovered and selected, the older line, both menus and the dialog, both themes); dragging a card with a real mouse; the right-click menu's Start work submenu in the window; "Only owners…" with an organization the owner belongs to (my-org); the inbox on the work Mac, where the owner's real review requests are.
+**Not tried by hand**: the view itself in the window (no synthetic input: widget tests and goldens of the cards, a row at rest, hovered and selected, the older line, both menus and the dialog, both themes); dragging a card with a real mouse; the right-click menu's Start work submenu in the window; "Only owners…" with an organization the owner belongs to; the inbox on the work Mac, where the owner's real review requests are.
 
 ## Summary of controls that look like controls (steps 281–290)
 
