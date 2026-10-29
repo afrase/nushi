@@ -42,7 +42,7 @@ func (s *Session) received(raw json.RawMessage) {
 		s.mu.Unlock()
 		return
 	}
-	ctx, cancel := context.WithCancel(s.ctx)
+	ctx, cancel := context.WithCancel(context.WithValue(s.ctx, beforeKey{}, s.queued))
 	s.inbound[f.RequestID] = cancel
 	s.handlers.Add(1)
 	s.mu.Unlock()
@@ -70,6 +70,21 @@ func (s *Session) received(raw json.RawMessage) {
 			s.log.Debug("answering claude", "subtype", head.Subtype, "err", err)
 		}
 	}()
+}
+
+// beforeKey is the context key of the number of messages before a
+// request of claude's.
+type beforeKey struct{}
+
+// MessagesBefore is how many of claude's messages, of those Messages
+// yields, came before the request a callback's ctx is for. Claude's
+// requests are handled beside its messages, not after them: a reader of
+// Messages that has taken this many has seen all claude wrote before it
+// asked, such as the start of the task a subagent's request comes from.
+// ok is false for a ctx that isn't a callback's.
+func MessagesBefore(ctx context.Context) (n uint64, ok bool) {
+	n, ok = ctx.Value(beforeKey{}).(uint64)
+	return n, ok
 }
 
 // wireResponse is r as claude reads it: a success's payload or an

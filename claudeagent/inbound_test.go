@@ -154,3 +154,29 @@ func TestDuplicate(t *testing.T) {
 		t.Errorf("asked %d times", n)
 	}
 }
+
+// A request's callback knows how many of claude's messages came before
+// it: the control protocol's own frames aren't messages.
+func TestMessagesBefore(t *testing.T) {
+	got := make(chan uint64, 1)
+	count := func(ctx context.Context, _ string, _ json.RawMessage) (any, error) {
+		n, _ := claudeagent.MessagesBefore(ctx)
+		got <- n
+		return nil, nil //nolint:nilnil // no payload: the count is what the test reads
+	}
+	s, f := start(t, claudeagent.Options{OnControl: count},
+		claudetest.Send(`{"type":"system","subtype":"status","status":"requesting"}`),
+		claudetest.Send(`{"type":"keep_alive"}`),
+		claudetest.Send(`{"type":"control_cancel_request","request_id":"none"}`),
+		claudetest.Send(`{"type":"assistant","message":{"id":"m1","content":[]}}`),
+		sendRequest(`{"subtype":"x"}`),
+		expectAnswer(`{}`, ""),
+	)
+	if n := <-got; n != 2 {
+		t.Errorf("%d messages before the request", n)
+	}
+	if _, ok := claudeagent.MessagesBefore(context.Background()); ok {
+		t.Error("a count for a context not a callback's")
+	}
+	finish(t, s, f)
+}
