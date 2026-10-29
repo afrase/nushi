@@ -133,13 +133,13 @@ func TestFindLooksInWorktrees(t *testing.T) {
 	id := newUUID()
 	writeLines(t, ProjectDir(config, main), id, `{"type":"user"}`)
 
-	if path, err := find(config, id, other, false); err != nil || filepath.Dir(path) != ProjectDir(config, main) {
+	if path, err := find(config, id, other); err != nil || filepath.Dir(path) != ProjectDir(config, main) {
 		t.Errorf("find from the other worktree = %q, %v", path, err)
 	}
-	if _, err := find(config, newUUID(), other, false); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := find(config, newUUID(), other); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("find of a missing session = %v", err)
 	}
-	if path, err := find(config, id, "", false); err != nil || filepath.Base(path) != id+".jsonl" {
+	if path, err := find(config, id, ""); err != nil || filepath.Base(path) != id+".jsonl" {
 		t.Errorf("find anywhere = %q, %v", path, err)
 	}
 }
@@ -151,11 +151,8 @@ func TestFindSkipsEmptyTranscripts(t *testing.T) {
 	id := newUUID()
 	writeLines(t, ProjectDir(config, a), id)
 	writeLines(t, ProjectDir(config, b), id, `{"type":"user"}`)
-	if path, err := find(config, id, a, false); err != nil || filepath.Dir(path) != ProjectDir(config, b) {
+	if path, err := find(config, id, a); err != nil || filepath.Dir(path) != ProjectDir(config, b) {
 		t.Errorf("find = %q, %v; want the one with records", path, err)
-	}
-	if path, err := find(config, id, a, true); err != nil || filepath.Dir(path) != ProjectDir(config, a) {
-		t.Errorf("find with empty = %q, %v", path, err)
 	}
 }
 

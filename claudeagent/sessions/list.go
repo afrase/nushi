@@ -155,7 +155,7 @@ func readProject(dir, cwd string) []Info {
 // Get returns the details of session id; an error matching fs.ErrNotExist
 // when it isn't there, is a subagent's, or has nothing to name it by.
 func Get(configDir, id, cwd string) (*Info, error) {
-	path, err := find(configDir, id, cwd, false)
+	path, err := find(configDir, id, cwd)
 	if err != nil {
 		return nil, err
 	}

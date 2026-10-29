@@ -222,8 +222,8 @@ func candidates(projects, cwd string) []string {
 
 // find returns the path of session id's transcript, looking where
 // candidates says. Only a file with something in it counts, as the CLI
-// writes an empty one in some folders; empty also takes those.
-func find(configDir, id, cwd string, empty bool) (string, error) {
+// writes an empty one in some folders.
+func find(configDir, id, cwd string) (string, error) {
 	if err := checkID(id); err != nil {
 		return "", err
 	}
@@ -233,7 +233,7 @@ func find(configDir, id, cwd string, empty bool) (string, error) {
 	}
 	for _, dir := range candidates(projects, cwd) {
 		path := filepath.Join(dir, id+".jsonl")
-		if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() && (empty || fi.Size() > 0) {
+		if fi, err := os.Stat(path); err == nil && fi.Mode().IsRegular() && fi.Size() > 0 {
 			return path, nil
 		}
 	}

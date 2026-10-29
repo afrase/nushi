@@ -268,3 +268,30 @@ func TestDelete(t *testing.T) {
 		t.Errorf("Delete with no projects folder = %v", err)
 	}
 }
+
+// An empty transcript in a folder looked in first doesn't keep the real
+// one, whether the folders are a repository's worktrees or every folder.
+func TestDeleteBehindEmptyTranscript(t *testing.T) {
+	config := t.TempDir()
+	main, other := canonical(t.TempDir()), canonical(t.TempDir())
+	stubWorktrees(t, map[string][]string{main: {main, other}})
+	for _, cwd := range []string{main, ""} {
+		id := newUUID()
+		writeLines(t, ProjectDir(config, main), id)
+		transcript(t, ProjectDir(config, other), id, text("user", "u", "", "q"))
+		transcript(t, filepath.Join(ProjectDir(config, other), id, "subagents"), "agent-a", text("user", "u", "", "q"))
+		if err := Delete(config, id, cwd); err != nil {
+			t.Fatalf("Delete(%q) = %v", cwd, err)
+		}
+		for _, dir := range []string{main, other} {
+			for _, gone := range []string{id + ".jsonl", id} {
+				if _, err := os.Lstat(filepath.Join(ProjectDir(config, dir), gone)); !errors.Is(err, fs.ErrNotExist) {
+					t.Errorf("Delete(%q) left %s in %s: %v", cwd, gone, dir, err)
+				}
+			}
+		}
+		if _, err := Get(config, id, cwd); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("Get(%q) after Delete = %v", cwd, err)
+		}
+	}
+}
