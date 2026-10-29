@@ -272,7 +272,7 @@ void main() {
     await tester.tap(inScreen(find.text('Source')));
     await tester.pumpAndSettle();
     expect(inScreen(find.textContaining('| CI on a push |')), findsOneWidget);
-    expect(inScreen(find.text('Open in Finder')), findsNothing);
+    expect(inScreen(find.text('Show in Finder')), findsNothing);
     await tester.tap(find.bySemanticsLabel('Back'));
     await tester.pumpAndSettle();
     expect(screen, findsNothing);
