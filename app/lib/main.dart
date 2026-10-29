@@ -13,6 +13,7 @@ import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/folder_button.dart';
@@ -280,17 +281,7 @@ class _Shell extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (!daemon.connected)
-            Container(
-              color: theme.t.needsSoft,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Text(
-                daemon.updating
-                    ? 'Starting the new daemon…'
-                    : 'Lost the connection to the daemon; reconnecting…',
-                style: theme.ui(theme.t.needs, size: 12),
-              ),
-            ),
+          DaemonBanner(daemon),
           if (daemon.connected && daemon.updatesWhenIdle)
             DaemonUpdateBar(daemon),
           if (daemon.connected && daemon.removedChats.isNotEmpty)

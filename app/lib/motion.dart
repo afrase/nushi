@@ -149,13 +149,14 @@ class Arriving extends InheritedWidget {
 
 /// Text that is still going (a running call's title, "Thinking…"): a light
 /// band sweeps across it, left to right, every two seconds, in the
-/// theme's shine colors. Not [on], or with Reduce Motion, it's [child] as
-/// it is.
+/// theme's shine colors, or [color] with a light of its own (amber text
+/// stays amber). Not [on], or with Reduce Motion, it's [child] as it is.
 class Shine extends StatelessWidget {
-  const new({required this.child, super.key, this.on = true});
+  const new({required this.child, super.key, this.on = true, this.color});
 
   final Widget child;
   final bool on;
+  final Color? color;
 
   /// Where every shine stops, from 0 to 1, for a still frame (a golden).
   @visibleForTesting
@@ -167,12 +168,16 @@ class Shine extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!on || reduceMotion(context)) return child;
     final t = NushiTheme.of(context).t;
+    final base = color ?? t.shine;
+    final band = color == null
+        ? t.shineBand
+        : Color.lerp(color, t.shineBand, 0.6)!;
     Widget mask(double v, Widget child) => ShaderMask(
       blendMode: BlendMode.srcIn,
       // A band 0.72 of the text wide, its middle running from half a width
       // before the text to half a width after it.
-      shaderCallback: (b) =>
-          LinearGradient(colors: [t.shine, t.shineBand, t.shine]).createShader(
+      shaderCallback: (b) => LinearGradient(colors: [base, band, base])
+          .createShader(
             Rect.fromLTWH(
               (-0.5 + 2 * v) * b.width - 0.36 * b.width,
               0,

@@ -57,6 +57,7 @@ class Tokens {
     required this.needs,
     required this.needsSoft,
     required this.done,
+    required this.doneSoft,
     required this.idle,
     required this.crashed,
     required this.crashedSoft,
@@ -134,6 +135,7 @@ class Tokens {
   final Color needs;
   final Color needsSoft;
   final Color done;
+  final Color doneSoft; // behind words that say it went well
   final Color idle;
   final Color crashed;
   final Color crashedSoft;
@@ -216,6 +218,7 @@ class Tokens {
     needs: Color(0xFF8F5200),
     needsSoft: Color(0xFFFBF0DC),
     done: Color(0xFF1B7031),
+    doneSoft: Color(0xFFE3F0E6),
     idle: Color(0xFF5D6170),
     crashed: Color(0xFFB62B39),
     crashedSoft: Color(0xFFFCE8EA),
@@ -299,6 +302,7 @@ class Tokens {
     needs: Color(0xFFE9AC4C),
     needsSoft: Color(0xFF3A3121),
     done: Color(0xFF6CC271),
+    doneSoft: Color(0xFF29362D),
     idle: Color(0xFFA2A6AE),
     crashed: Color(0xFFFA7681),
     crashedSoft: Color(0xFF3F2427),
