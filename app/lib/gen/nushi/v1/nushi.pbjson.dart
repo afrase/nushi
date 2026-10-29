@@ -96,11 +96,38 @@ final $typed_data.Uint8List restartWhenIdleRequestDescriptor =
 @$core.Deprecated('Use restartWhenIdleResponseDescriptor instead')
 const RestartWhenIdleResponse$json = {
   '1': 'RestartWhenIdleResponse',
+  '2': [
+    {
+      '1': 'holds',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.RestartHold',
+      '10': 'holds'
+    },
+  ],
 };
 
 /// Descriptor for `RestartWhenIdleResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List restartWhenIdleResponseDescriptor =
-    $convert.base64Decode('ChdSZXN0YXJ0V2hlbklkbGVSZXNwb25zZQ==');
+    $convert.base64Decode(
+        'ChdSZXN0YXJ0V2hlbklkbGVSZXNwb25zZRIrCgVob2xkcxgBIAMoCzIVLm51c2hpLnYxLlJlc3'
+        'RhcnRIb2xkUgVob2xkcw==');
+
+@$core.Deprecated('Use restartHoldDescriptor instead')
+const RestartHold$json = {
+  '1': 'RestartHold',
+  '2': [
+    {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
+    {'1': 'why', '3': 2, '4': 1, '5': 9, '10': 'why'},
+    {'1': 'terminal', '3': 3, '4': 1, '5': 8, '10': 'terminal'},
+  ],
+};
+
+/// Descriptor for `RestartHold`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List restartHoldDescriptor = $convert.base64Decode(
+    'CgtSZXN0YXJ0SG9sZBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSEAoDd2h5GAIgASgJUgN3aH'
+    'kSGgoIdGVybWluYWwYAyABKAhSCHRlcm1pbmFs');
 
 @$core.Deprecated('Use listChatsRequestDescriptor instead')
 const ListChatsRequest$json = {
@@ -6420,6 +6447,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.PingResponse': PingResponse$json,
   '.nushi.v1.RestartWhenIdleRequest': RestartWhenIdleRequest$json,
   '.nushi.v1.RestartWhenIdleResponse': RestartWhenIdleResponse$json,
+  '.nushi.v1.RestartHold': RestartHold$json,
   '.nushi.v1.ListChatsRequest': ListChatsRequest$json,
   '.nushi.v1.ListChatsResponse': ListChatsResponse$json,
   '.nushi.v1.Chat': Chat$json,

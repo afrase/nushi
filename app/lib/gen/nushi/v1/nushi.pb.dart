@@ -194,7 +194,13 @@ class RestartWhenIdleRequest extends $pb.GeneratedMessage {
 }
 
 class RestartWhenIdleResponse extends $pb.GeneratedMessage {
-  factory RestartWhenIdleResponse() => RestartWhenIdleResponse._();
+  factory RestartWhenIdleResponse({
+    $core.Iterable<RestartHold>? holds,
+  }) {
+    final result = RestartWhenIdleResponse._();
+    if (holds != null) result.holds.addAll(holds);
+    return result;
+  }
 
   RestartWhenIdleResponse._();
 
@@ -209,6 +215,8 @@ class RestartWhenIdleResponse extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'RestartWhenIdleResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: RestartWhenIdleResponse.$_createMessage)
+    ..pPM<RestartHold>(1, _omitFieldNames ? '' : 'holds',
+        subBuilder: RestartHold.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -234,6 +242,97 @@ class RestartWhenIdleResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<RestartWhenIdleResponse>(
           RestartWhenIdleResponse.$_createMessage);
   static RestartWhenIdleResponse? _defaultInstance;
+
+  /// What the restart waits for now (API 85): each chat that runs or waits,
+  /// and each terminal running a command; empty when nothing (it goes).
+  @$pb.TagNumber(1)
+  $pb.PbList<RestartHold> get holds => $_getList(0);
+}
+
+/// One thing a restart waits for.
+class RestartHold extends $pb.GeneratedMessage {
+  factory RestartHold({
+    $core.String? chatId,
+    $core.String? why,
+    $core.bool? terminal,
+  }) {
+    final result = RestartHold._();
+    if (chatId != null) result.chatId = chatId;
+    if (why != null) result.why = why;
+    if (terminal != null) result.terminal = terminal;
+    return result;
+  }
+
+  RestartHold._();
+
+  factory RestartHold.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartHold()..mergeFromBuffer(data, registry);
+  factory RestartHold.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RestartHold()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RestartHold',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RestartHold.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'why')
+    ..aOB(3, _omitFieldNames ? '' : 'terminal')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartHold clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RestartHold copyWith(void Function(RestartHold) updates) =>
+      super.copyWith((message) => updates(message as RestartHold))
+          as RestartHold;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RestartHold() / RestartHold.new instead')
+  static RestartHold create() => RestartHold._();
+  static $pb.GeneratedMessage $_createMessage() => RestartHold._();
+  @$core.override
+  RestartHold createEmptyInstance() => RestartHold._();
+  @$core.pragma('dart2js:noInline')
+  static RestartHold getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RestartHold>(
+          RestartHold.$_createMessage);
+  static RestartHold? _defaultInstance;
+
+  /// The chat it's in (a terminal's chat too).
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// "working", "waits on you", "a message queued", "in background", or
+  /// for a terminal "running <its program>".
+  @$pb.TagNumber(2)
+  $core.String get why => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set why($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasWhy() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearWhy() => $_clearField(2);
+
+  /// A terminal's, not the chat's own.
+  @$pb.TagNumber(3)
+  $core.bool get terminal => $_getBF(2);
+  @$pb.TagNumber(3)
+  set terminal($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTerminal() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTerminal() => $_clearField(3);
 }
 
 class ListChatsRequest extends $pb.GeneratedMessage {

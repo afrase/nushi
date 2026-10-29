@@ -4,6 +4,9 @@ import (
 	"errors"
 	"maps"
 	"slices"
+	"strings"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // ErrRestarting refuses a prompt once the daemon has decided to restart
@@ -42,4 +45,36 @@ func (s *Service) notQuiet() string {
 		}
 	}
 	return ""
+}
+
+// Holding says what keeps each chat that isn't quiet from resting, for
+// the restart's wait to show; it changes nothing.
+func (s *Service) Holding() []model.Hold {
+	s.mu.Lock()
+	open := slices.Collect(maps.Values(s.chats))
+	s.mu.Unlock()
+	var out []model.Hold
+	for _, c := range open {
+		c.mu.Lock()
+		if !c.quietLocked() && c.parent == nil {
+			out = append(out, model.Hold{ChatID: c.id, Why: c.holdLocked()})
+		}
+		c.mu.Unlock()
+	}
+	slices.SortFunc(out, func(a, b model.Hold) int { return strings.Compare(a.ChatID, b.ChatID) })
+	return out
+}
+
+// holdLocked is why a chat that isn't quiet isn't, in a few words.
+func (c *chat) holdLocked() string {
+	switch {
+	case len(c.waiting)+len(c.questions) > 0:
+		return "waits on you"
+	case c.busy || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
+		return "working"
+	case len(c.queue) > 0:
+		return "a message queued"
+	default:
+		return "in background"
+	}
 }

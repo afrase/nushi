@@ -10,11 +10,28 @@ import 'package:nushi/main.dart';
 import 'fake_daemon.dart';
 
 /// A fake daemon whose Ping answers [ping] (null: no daemon answers).
+/// Its restart waits for chat c's turn and a command in chat r's
+/// terminal.
 FakeDaemon _daemon(PingResponse? Function() ping) =>
-    FakeDaemon([chat('c', 'claude', 'Fix the login redirect')])
-      ..answer = (input) => input is PingRequest
-          ? ping() ?? (throw ConnectException(Code.unavailable, 'no daemon'))
-          : null;
+    FakeDaemon([
+        chat('c', 'claude', 'Fix the login redirect'),
+        chat('r', 'codex', 'Release notes', age: 1),
+      ])
+      ..answer = (input) => switch (input) {
+        PingRequest() =>
+          ping() ?? (throw ConnectException(Code.unavailable, 'no daemon')),
+        RestartWhenIdleRequest() => RestartWhenIdleResponse(
+          holds: [
+            RestartHold(chatId: 'c', why: 'working'),
+            RestartHold(
+              chatId: 'r',
+              why: 'running npm run dev',
+              terminal: true,
+            ),
+          ],
+        ),
+        _ => null,
+      };
 
 /// The app on [fake], bundling a daemon built at time 2000.
 Future<Daemon> _open(
@@ -185,4 +202,22 @@ void main() {
     );
     d.dispose();
   });
+
+  // UX review, finding 11: the bar says what it waits for.
+  testWidgets('the bar says what the restart waits for, each a link to its '
+      'chat', (tester) async {
+    final fake = _daemon(
+      () => PingResponse(apiVersion: apiVersion, build: '7-1000'),
+    );
+    final d = await _open(tester, fake, width: 1700);
+    await d.ping();
+    await tester.pumpAndSettle();
+    expect(find.text('Waiting for:'), findsOne);
+    expect(find.text(' (working),'), findsOne);
+    expect(find.text('a terminal running npm run dev in '), findsOne);
+    await tester.tap(find.text('Release notes').last);
+    await tester.pumpAndSettle();
+    expect(d.selectedId, 'r');
+    d.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

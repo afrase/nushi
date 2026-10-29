@@ -33,7 +33,11 @@ func TestRestartWaitsForTheTurn(t *testing.T) {
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask permission"})))
 	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
 
-	must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{})))
+	// It says what it waits for (API 85), for the app's bar.
+	holds := must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{}))).Holds
+	if len(holds) != 1 || holds[0].ChatId != id || holds[0].Why != "waits on you" || holds[0].Terminal {
+		t.Errorf("holds %v, want the chat, waiting on the user", holds)
+	}
 	if d.due(300 * time.Millisecond) {
 		t.Fatal("restarted while a turn waited on the user")
 	}
@@ -105,7 +109,10 @@ func TestRestartWaitsForATerminalsCommand(t *testing.T) {
 		ts := e.GetTerminals().GetTerminals()
 		return len(ts) == 1 && strings.HasPrefix(ts[0].Program, "sleep")
 	})
-	must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{})))
+	holds := must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{}))).Holds
+	if len(holds) != 1 || holds[0].ChatId != id || !strings.HasPrefix(holds[0].Why, "running sleep") || !holds[0].Terminal {
+		t.Errorf("holds %v, want the chat's terminal running sleep", holds)
+	}
 	if d.due(300 * time.Millisecond) {
 		t.Fatal("restarted while a terminal ran a command")
 	}

@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/internal/model"
 )
 
 // Chats are the chats (internal/features/chats).
@@ -15,12 +17,16 @@ type Chats interface {
 	// Rest says whether every chat is quiet, and if so takes no prompts
 	// from then on; otherwise it names a chat that isn't.
 	Rest() (ok bool, holding string)
+	// Holding says what keeps each chat that isn't quiet busy, changing
+	// nothing.
+	Holding() []model.Hold
 }
 
 // Terminals are the terminals beside chats (internal/features/terminals),
 // which end with the daemon.
 type Terminals interface {
-	Busy() bool // one runs a command
+	Busy() bool            // one runs a command
+	Running() []model.Hold // those that run one
 }
 
 // Service waits, once asked, for nothing to run, and then says the daemon
@@ -46,16 +52,17 @@ func New(chats Chats, terms Terminals) *Service {
 }
 
 // WhenIdle asks for the restart, or again: at once if nothing would be
-// lost, else once nothing would.
-func (s *Service) WhenIdle() {
+// lost, else once nothing would. It says what the restart waits for now,
+// for the app's bar.
+func (s *Service) WhenIdle() []model.Hold {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.until = time.Now().Add(s.Lease)
-	if s.waiting {
-		return
+	if !s.waiting {
+		s.waiting = true
+		go s.wait()
 	}
-	s.waiting = true
-	go s.wait()
+	s.mu.Unlock()
+	return append(s.chats.Holding(), s.terms.Running()...)
 }
 
 // Due is closed when the daemon is to stop for its restart: the chats

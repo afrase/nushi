@@ -1,5 +1,6 @@
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter/material.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status_bar.dart';
@@ -53,9 +54,9 @@ class _DaemonUpdateBarState extends State<DaemonUpdateBar> {
         spacing: 12,
         children: [
           Expanded(
-            child: Text(
-              'Nushi will update its daemon when the chats are idle.',
-              style: theme.ui(t.textSecondary, size: 12),
+            child: ListenableBuilder(
+              listenable: widget.daemon,
+              builder: (context, _) => _Waiting(widget.daemon),
             ),
           ),
           Button(
@@ -71,6 +72,56 @@ class _DaemonUpdateBarState extends State<DaemonUpdateBar> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Nushi will update its daemon when the chats are idle.", then what it
+/// waits for, each a link to its chat: "Waiting for: Fix the login
+/// redirect (working), a terminal running npm run dev in Release notes".
+class _Waiting extends StatelessWidget {
+  const new(this.daemon);
+
+  final Daemon daemon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final style = theme.ui(t.textSecondary, size: 12);
+    final holds = [
+      for (final h in daemon.restartHolds)
+        if (daemon.chats[h.chatId] case final c?) (h, c),
+    ];
+    String title(ChatState c) => c.title.isEmpty ? 'New chat' : c.title;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      children: [
+        Text(
+          'Nushi will update its daemon when the chats are idle.',
+          style: style,
+        ),
+        if (holds.isNotEmpty) Text('Waiting for:', style: style),
+        for (final (i, (h, c)) in holds.indexed)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (h.terminal) Text('a terminal ${h.why} in ', style: style),
+              LinkText(
+                title(c),
+                size: 12,
+                tooltip: 'Show the chat',
+                onTap: () => daemon.select(c.id),
+              ),
+              Text(
+                '${h.terminal ? '' : ' (${h.why})'}'
+                '${i < holds.length - 1 ? ',' : ''}',
+                style: style,
+              ),
+            ],
+          ),
+      ],
     );
   }
 }

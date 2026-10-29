@@ -38,7 +38,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 84;
+const apiVersion = 85;
 
 /// The API from which a daemon restarts itself once nothing runs, when
 /// asked (RestartWhenIdle).
@@ -128,6 +128,14 @@ class Daemon extends ChangeNotifier {
       bundled != null &&
       daemonApi >= restartWhenIdleApi &&
       (outdated || replaced);
+
+  /// What the daemon's restart into the bundled one waits for, as it last
+  /// said (API 85): chats that run or wait, terminals running a command.
+  List<RestartHold> restartHolds = const [];
+
+  static bool _sameHolds(List<RestartHold> a, List<RestartHold> b) =>
+      a.length == b.length &&
+      [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
 
   /// Whether the daemon last answered [updatesWhenIdle]: when it's gone,
   /// it's restarting.
@@ -378,9 +386,14 @@ class Daemon extends ChangeNotifier {
     if (ok && !remote) macView.tick(); // said again within the lease
     if (ok && updating) {
       unawaited(
-        client
-            .restartWhenIdle(RestartWhenIdleRequest())
-            .then((_) {}, onError: (Object _) {}),
+        client.restartWhenIdle(RestartWhenIdleRequest()).then((r) {
+          // What it waits for, for the update bar (an older daemon says
+          // nothing).
+          if (!_sameHolds(r.holds, restartHolds)) {
+            restartHolds = r.holds;
+            notifyListeners();
+          }
+        }, onError: (Object _) {}),
       );
     }
     return ok;

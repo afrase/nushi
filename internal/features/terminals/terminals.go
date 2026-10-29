@@ -262,6 +262,20 @@ func (s *Service) Busy() bool {
 	})
 }
 
+// Running says which terminals run a command, for the restart's wait to
+// show: each one's chat and "running <program>".
+func (s *Service) Running() []model.Hold {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []model.Hold
+	for _, t := range s.terms {
+		if exited, _ := t.shell.Exit(); !exited && t.shell.Program() != "" {
+			out = append(out, model.Hold{ChatID: t.ChatID, Why: "running " + t.shell.Program(), Terminal: true})
+		}
+	}
+	return out
+}
+
 // CloseChat ends a chat's terminals.
 func (s *Service) CloseChat(chatID string) {
 	gone := s.unlist(func(t *term) bool { return t.ChatID == chatID })
