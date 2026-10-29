@@ -13,7 +13,17 @@ and the recordings `make claude-record` writes from them (never edit them by han
 - `acp-node.jsonl`: the ACP between the client and the adapter, `{"dir":"in"|"out","msg":…}` a line, `"in"` being to the agent;
 - `history/`: claude's transcripts (its project folder, the folder's own name and `memory/` left out): `history/1/` and on just before each request that reads them (`session/load`, `resume`, `fork`), `history/end/` once the run is over. The Go agent reads transcripts itself, so the test gives it these at the same points.
 
-A scenario without `cli.jsonl` is skipped by the test until it is recorded. `hello` is still the hand-written recording from before the tools existed; the first `make claude-record` replaces it.
+A scenario without `cli.jsonl` is skipped by the test, by name, until it is recorded. The test also merges each load's replay with Nushi's copy of the chat (`TestClaudeMerge`, ADR 0047: no divider); a scenario that doesn't load has the Go agent load its first session after the recording, from `history/end/`.
+
+## Hand-written recordings
+
+`hello`, `permission` and `question` have recordings written by hand, so the tests have more than one scenario before the first real run; the first `make claude-record` replaces them. They follow claude 2.1.312's shapes (its schemas, `claudeacp`'s fixtures) and the adapter's as the research read its source, and assume where nothing was seen:
+
+- like the Go agent, the adapter here sends claude no `get_context_usage` after `initialize` and no `interrupt` as its client goes, though a run through it with a fake claude showed both: the replay is strict, so a real recording fails on them until the Go agent sends them too or the test lets them pass;
+- the adapter's hooks are `hook_0` (PostToolUse) to `hook_4`, and claude calls only PostToolUse here; the test drops calls of hooks the Go agent doesn't register and gives PostToolUse the Go agent's id;
+- `permission`: claude suggests a `mkdir:*` rule each time, so the adapter offers Yes, "Yes, and don't ask again for mkdir commands" and No (`allow-once`, `allow-with-updates`, `reject`); a refused command's result is shown fenced as `console`, as one that ran (how the adapter's reporter shows an error without the command's output wasn't established); the PostToolUse update comes before the result's, as Nushi saw it for MCP calls;
+- `question`: the adapter's form, each question's text as its field's description since there are two;
+- each has `history/end/`: claude's transcript of the run, written by hand.
 
 ## The scenarios
 
