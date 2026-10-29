@@ -49,6 +49,12 @@ func (s *session) handle(m claudeagent.Message) {
 		s.mu.Lock()
 		s.stateLocked(m.State)
 		s.mu.Unlock()
+	case *claudeagent.Status:
+		if m.Status == "requesting" { // new work: what stopped can't ask the API again
+			s.mu.Lock()
+			s.dropTop = false
+			s.mu.Unlock()
+		}
 	case *claudeagent.CompactBoundary:
 		if post := m.CompactMetadata.PostTokens; post > 0 {
 			s.st.used = post
@@ -162,14 +168,18 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 }
 
 // chunk sends a message or thought chunk. One of a subagent's says whose
-// (its Agent call's id).
+// (its Agent call's id); a top-level one of stopped work is dropped.
 func (s *session) chunk(kind, parent, msgID string, c acp.ContentBlock) {
-	if parent == "" && kind == "agent_message_chunk" {
+	if parent == "" {
 		s.mu.Lock()
-		if s.active != nil {
+		drop := s.dropTop
+		if !drop && s.active != nil && kind == "agent_message_chunk" {
 			s.active.textSent = true
 		}
 		s.mu.Unlock()
+		if drop {
+			return
+		}
 	}
 	ch := &acp.ContentChunk{Content: c, MessageID: acp.MessageID(msgID)}
 	if parent != "" {

@@ -25,6 +25,7 @@ type peer struct {
 	*acp.AgentConn
 	*client
 	agent *agent
+	clock *clock
 }
 
 // client records what the agent sends.
@@ -71,6 +72,47 @@ func (c *client) texts() []string {
 	return out
 }
 
+// clock is a fake clock: its timers fire when a test says.
+type clock struct {
+	mu     sync.Mutex
+	timers map[time.Duration][]chan time.Time
+	armed  chan time.Duration
+}
+
+func (c *clock) after(d time.Duration) <-chan time.Time {
+	ch := make(chan time.Time, 1)
+	c.mu.Lock()
+	c.timers[d] = append(c.timers[d], ch)
+	c.mu.Unlock()
+	select {
+	case c.armed <- d:
+	default:
+	}
+	return ch
+}
+
+// fire waits for a timer of d to be set, then fires every one set.
+func (c *clock) fire(t *testing.T, d time.Duration) {
+	t.Helper()
+	for {
+		c.mu.Lock()
+		set := c.timers[d]
+		delete(c.timers, d)
+		c.mu.Unlock()
+		if len(set) > 0 {
+			for _, ch := range set {
+				ch <- time.Time{}
+			}
+			return
+		}
+		select {
+		case <-c.armed:
+		case <-time.After(guard):
+			t.Fatalf("no %v timer", d)
+		}
+	}
+}
+
 // start runs an agent whose sessions start the fakes in turn, and
 // initializes it with caps. Ids it makes are id1, id2 and so on.
 func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake) *peer {
@@ -83,7 +125,9 @@ func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake
 		}
 		return fakes[n].Spawn(ctx, s)
 	}})
+	clk := &clock{timers: map[time.Duration][]chan time.Time{}, armed: make(chan time.Duration, 64)}
 	var ids atomic.Int32
+	a.after = clk.after
 	a.newID = func() string { return fmt.Sprintf("id%d", ids.Add(1)) }
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
@@ -93,7 +137,7 @@ func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake
 		_ = fromAgentW.Close()
 		close(done)
 	}()
-	p := &peer{client: &client{}, agent: a}
+	p := &peer{client: &client{}, agent: a, clock: clk}
 	p.AgentConn = acp.NewAgentConn(fromAgentR, toAgentW, func(*acp.AgentConn) acp.Client { return p.client })
 	t.Cleanup(func() {
 		_ = toAgentW.Close()
@@ -139,6 +183,18 @@ func stopReason(wait func() (*acp.PromptResponse, error)) string {
 		return "error: " + err.Error()
 	}
 	return string(r.StopReason)
+}
+
+// eventually waits for ok, checking each millisecond, for guard at most.
+func eventually(t *testing.T, what string, ok func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(guard)
+	for !ok() {
+		if time.Now().After(deadline) {
+			t.Fatalf("never: %s", what)
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 // The script's parts.

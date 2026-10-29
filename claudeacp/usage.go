@@ -63,7 +63,7 @@ func (s *session) result(r *claudeagent.Result) {
 	s.mu.Lock()
 	user := s.userLaneLocked(r)
 	t := s.targetLocked(s.namedLocked(resultIDs(r)))
-	fallback := user && t != nil && !t.textSent && r.Subtype == "success" && !r.IsError && r.Result != ""
+	fallback := user && t != nil && !t.textSent && !s.dropTop && r.Subtype == "success" && !r.IsError && r.Result != ""
 	s.mu.Unlock()
 	meta := map[string]any{}
 	switch {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"slices"
 	"strings"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -98,6 +99,7 @@ func (s *session) activateLocked(t *turn) {
 	}
 	t.active, t.sawResult = true, false
 	s.active = t
+	s.dropTop = false
 }
 
 // echo is claude taking a user message: the turn it belongs to starts.
@@ -258,3 +260,7 @@ func addUsage(a, b claudeagent.Usage) claudeagent.Usage {
 	a.CacheCreationInputTokens += b.CacheCreationInputTokens
 	return a
 }
+
+// backstop is how long a cancelled turn waits for claude's result or
+// idle before it is answered anyway.
+const backstop = 30 * time.Second

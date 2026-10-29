@@ -2,6 +2,7 @@ package claudeacp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -164,9 +165,16 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	case o := <-t.done:
 		return o.resp, o.err
 	case <-ctx.Done():
-		// The client withdrew the prompt; the turn goes on in claude.
+		s.cancel() // the client withdrew the prompt: a cancel, as it would be in claude's terminal
 		return nil, ctx.Err()
 	}
+}
+
+func (a *agent) Cancel(_ context.Context, n *acp.CancelNotification) error {
+	if s, err := a.session(n.SessionID); err == nil {
+		s.cancel()
+	}
+	return nil
 }
 
 // CloseSession closes a session; one that isn't open is closed already.
@@ -177,4 +185,11 @@ func (a *agent) CloseSession(_ context.Context, req *acp.CloseSessionRequest) (*
 		s.close()
 	}
 	return &acp.CloseSessionResponse{}, nil
+}
+
+func (a *agent) ExtMethod(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	if method == steering.Method {
+		return a.steer(ctx, params)
+	}
+	return nil, &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found: " + method}
 }
