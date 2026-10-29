@@ -15,6 +15,7 @@ import 'package:nushi/phone/platform.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 // The owner: "Save what the user types into the input box. I have a large
 // message, and if the app crashed or reset, it would suck to lose it."
@@ -46,8 +47,7 @@ Future<(FakeDaemon, Daemon, Drafts)> _app(
 }
 
 Future<void> _close(WidgetTester tester, Daemon d) async {
-  await tester.pumpWidget(const SizedBox());
-  d.dispose(); // its ping timer
+  await closeView(tester, d); // its ping timer
   await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
 }
 

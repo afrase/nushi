@@ -14,6 +14,7 @@ import 'package:nushi/history_table.dart';
 import 'package:nushi/settings_nav.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'settings_harness.dart';
 
 const _words = [
@@ -33,7 +34,7 @@ const _agents = ['claude', 'codex', 'ante', 'omp', 'pig'];
 /// agent no longer has it, every 41st a deleted chat's leftover (no chat,
 /// no title). Sizes and ages vary; the first is the newest.
 (List<Chat>, List<TranscriptCopy>) _many(int n) {
-  final now = DateTime.now().millisecondsSinceEpoch;
+  final now = fixtureNow.millisecondsSinceEpoch;
   final chats = <Chat>[];
   final copies = <TranscriptCopy>[];
   for (var i = 0; i < n; i++) {

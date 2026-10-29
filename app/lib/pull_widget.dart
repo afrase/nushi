@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nushi/chat.dart' show clock;
 import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_parts.dart';

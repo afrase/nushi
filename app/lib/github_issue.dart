@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
@@ -73,7 +74,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
         ),
       );
     }
-    final now = widget.now ?? DateTime.now();
+    final now = widget.now ?? clock();
     final it = i.item;
     final chats = chatsOnItem(widget.daemon, it.ref);
     return SelectionArea(

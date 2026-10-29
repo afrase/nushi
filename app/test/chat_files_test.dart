@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -23,6 +24,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/tool_calls.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Item _call(
   String id,
@@ -110,17 +112,14 @@ FakeDaemon _fake() {
 const _minutes = {'report.md': 2, 'chart.png': 15, 'sub.md': 125};
 
 Future<Daemon> _app(WidgetTester tester) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1700, 900);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(1700, 900));
   showDetails.value = false;
   paneWidths.value = {};
   subagentWide.value = false;
   Collapsible.opened.clear();
   final was = fileChanged;
   fileChanged = (p) => switch (_minutes[p.split('/').last]) {
-    final m? => DateTime.now().subtract(Duration(minutes: m, seconds: 5)),
+    final m? => clock().subtract(Duration(minutes: m, seconds: 5)),
     null => null,
   };
   addTearDown(() => fileChanged = was);
@@ -305,21 +304,11 @@ void main() {
   testWidgets('the phone: Artifacts in the bar, then a file full screen', (
     tester,
   ) async {
-    tester.view
-      ..devicePixelRatio = 3
-      ..physicalSize = const Size(390, 844) * 3;
+    viewport(tester, const Size(390, 844), ratio: 3);
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearAllTestValues);
-    final platform = PhonePlatform()
-      ..saved = {
-        'key': Uint8List(32)..[0] = 7,
-        'name': 'iPhone',
-        'relay': 'wss://nushi.aaronfrase.com',
-        'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-        'daemonKey': Uint8List(32)..[0] = 9,
-      };
+    final platform = PhonePlatform()..saved = pairedRecord();
     final fake = _fake();
     final phone = Phone(
       platform,
@@ -352,9 +341,7 @@ void main() {
     await tester.tap(find.text('chart.png'));
     await tester.pumpAndSettle();
     expect(find.byType(PreviewScreen), findsOneWidget);
-    await phone.close();
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(seconds: 5));
+    await endPhone(tester, phone);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('golden: the Artifacts menu of the pane’s name, dark', (

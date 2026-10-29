@@ -4,7 +4,6 @@
 // a long chat scrolled up to its older pages. Nothing sits under the safe
 // areas.
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter/material.dart';
@@ -19,6 +18,7 @@ import 'package:nushi/phone/platform.dart';
 import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final List<Chat> _chats = [
   chat('a', 'claude', 'Fix the flaky relay test'),
@@ -29,14 +29,6 @@ final List<Chat> _chats = [
 const _phones = {
   '390': (Size(390, 844), 47.0, 34.0),
   '430': (Size(430, 932), 59.0, 34.0),
-};
-
-Map<String, Object?> _paired() => {
-  'key': Uint8List(32)..[0] = 7,
-  'name': 'iPhone',
-  'relay': 'wss://nushi.aaronfrase.com',
-  'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-  'daemonKey': Uint8List(32)..[0] = 9,
 };
 
 /// A long chat's item [i]: a step, a tool call, or the agent's message.
@@ -86,7 +78,7 @@ Future<Phone> _app(
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   final p = Phone(
-    platform ?? (PhonePlatform()..saved = _paired()),
+    platform ?? (PhonePlatform()..saved = pairedRecord()),
     connectTo: (_) => Daemon(transport: fake, remote: true),
   );
   await tester.pumpWidget(PhoneApp(p));
@@ -97,11 +89,9 @@ Future<Phone> _app(
   return p;
 }
 
-Future<void> _end(WidgetTester tester, Phone phone) async {
-  await phone.close();
-  await tester.pumpWidget(const SizedBox());
-  await tester.pump(const Duration(seconds: 40));
-}
+/// [endPhone] after links that failed: a retry waits up to 30 s.
+Future<void> _end(WidgetTester tester, Phone phone) =>
+    endPhone(tester, phone, wait: const Duration(seconds: 40));
 
 /// Lets a fling end while a spinner turns.
 Future<void> _settle(WidgetTester tester) async {
@@ -158,8 +148,13 @@ void main() {
 
         await p.link!.check();
         // Today at 10:42 (the golden's time; another day adds the date).
-        final now = DateTime.now();
-        p.link!.seen = DateTime(now.year, now.month, now.day, 10, 42);
+        p.link!.seen = DateTime(
+          fixtureNow.year,
+          fixtureNow.month,
+          fixtureNow.day,
+          10,
+          42,
+        );
         await tester.pump();
         expect(find.text("Can't reach your Mac"), findsOneWidget);
 

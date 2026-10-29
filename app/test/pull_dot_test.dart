@@ -10,6 +10,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show item;
+import 'harness.dart';
 
 Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
     MaterialApp(
@@ -208,8 +209,7 @@ void main() {
         find.byType(FittedBox),
         matchesGoldenFile('goldens/pull_dot_ring_$name.png'),
       );
-      await tester.pumpWidget(const SizedBox());
-      d.dispose();
+      await closeView(tester, d);
     });
   }
 }

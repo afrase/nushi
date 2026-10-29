@@ -8,6 +8,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _summary =
     'This session is being continued from a previous conversation that ran '
@@ -97,12 +98,7 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   Brightness brightness = Brightness.dark,
   bool gone = false,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(900, gone ? 520 : 900);
-  tester.platformDispatcher.platformBrightnessTestValue = brightness;
-  addTearDown(tester.view.reset);
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, Size(900, gone ? 520 : 900), brightness: brightness);
   showDetails.value = false;
   final status = ChatStatus(reopenFailed: gone, sessionGone: gone);
   final c = chat('c', 'claude', 'Move the session store', status: status);
@@ -119,8 +115,7 @@ Future<(FakeDaemon, Future<void> Function())> _open(
   return (
     fake,
     () async {
-      await tester.pumpWidget(const SizedBox()); // its timers end
-      d.dispose();
+      await closeView(tester, d);
     },
   );
 }

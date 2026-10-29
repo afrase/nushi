@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/ui.dart';
@@ -144,7 +145,7 @@ String reason(Unreachable? why) => switch (why) {
 
 /// "last seen 10:42", or with the day when it wasn't today.
 String seenAt(DateTime s, {DateTime? now}) {
-  final n = now ?? DateTime.now();
+  final n = now ?? clock();
   String two(int v) => v.toString().padLeft(2, '0');
   final time = '${two(s.hour)}:${two(s.minute)}';
   if (s.year == n.year && s.month == n.month && s.day == n.day) {

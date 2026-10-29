@@ -6,6 +6,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Two folders' chats and an archived one: the sidebar lists nushi's
 /// (b, then a: the newest first), then site's (c), the archived (z) in
@@ -18,10 +19,7 @@ final List<Chat> _chats = [
 ];
 
 Future<Daemon> _app(WidgetTester tester) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1200, 700);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(1200, 700));
   final d = await FakeDaemon(_chats).connect(tester);
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();

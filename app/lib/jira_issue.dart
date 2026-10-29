@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -144,7 +145,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         ),
       );
     }
-    final now = widget.now ?? DateTime.now();
+    final now = widget.now ?? clock();
     String age(int ms) {
       final when = DateTime.fromMillisecondsSinceEpoch(ms);
       return ago(now.difference(when), when);

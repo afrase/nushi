@@ -9,6 +9,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Widget _app(Widget child, {bool still = false}) => MaterialApp(
   theme: const NushiTheme(Tokens.dark).toThemeData(),
@@ -135,8 +136,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(JumpChip), findsNothing);
 
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   testWidgets('with Reduce Motion the chip turns amber without the hop', (

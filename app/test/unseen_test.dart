@@ -8,6 +8,7 @@ import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// One chat in each state the dot shows.
 List<Chat> _chats() => [
@@ -61,10 +62,7 @@ void main() {
   testWidgets('the sidebar: a dot for each state, unseen green', (
     tester,
   ) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(400, 400);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(400, 400));
     final d = await FakeDaemon(_chats()).connect(tester);
     await tester.pumpWidget(_app(Sidebar(daemon: d)));
     await tester.pump();
@@ -188,10 +186,7 @@ void main() {
 
   // The owner's four states side by side, in the dark theme.
   testWidgets('golden: working, needs you, unseen, idle', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(400, 400);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(400, 400));
     final d = await FakeDaemon(_chats().take(4).toList()).connect(tester);
     await tester.pumpWidget(_app(Sidebar(daemon: d)));
     await tester.pump();

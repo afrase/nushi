@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:fixnum/fixnum.dart';
@@ -13,17 +12,14 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_inbox_test.dart' show inboxForTests;
-import 'github_view_test.dart' show closeView, item, openView, testNow;
+import 'github_view_test.dart' show item, openView, testNow;
+import 'harness.dart';
 
 /// The asks that reach GitHub, not those for what the daemon kept.
 List<ListGitHubInboxRequest> _asks(FakeDaemon fake) => [
   for (final r in fake.calls.whereType<ListGitHubInboxRequest>())
     if (!r.cached) r,
 ];
-
-Map<String, Object?> _appJson() =>
-    jsonDecode(File('$dataDir/app.json').readAsStringSync())
-        as Map<String, Object?>;
 
 /// An inbox as the daemon answers [r]: Review requested and Assigned
 /// issues have older items, unless widened.
@@ -67,7 +63,7 @@ void main() {
     expect(find.text('Last 90 days'), findsOneWidget);
     await _pick(tester, 'Last 90 days', 'Last 30 days');
     expect(_asks(fake).last.updatedDays, 30);
-    expect(_appJson()['githubDays'], 30);
+    expect(readSaved()['githubDays'], 30);
     await _pick(tester, 'Last 30 days', 'Any time');
     expect(_asks(fake).last.updatedDays, 0);
     await closeView(tester, d);
@@ -122,7 +118,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(_asks(fake).last.hide, ['octo/infrastructure-terraform']);
-    expect((_appJson()['githubHidden']! as Map)['github.com'], [
+    expect((readSaved()['githubHidden']! as Map)['github.com'], [
       'octo/infrastructure-terraform',
     ]);
     // The menu says so, and lists it to show it again.

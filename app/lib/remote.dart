@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart' show ago;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -479,5 +480,5 @@ class RemoteMark extends StatelessWidget {
 /// When a device was last seen, [ms] after the epoch, as "5m ago".
 String _seen(int ms) {
   final at = DateTime.fromMillisecondsSinceEpoch(ms);
-  return ago(DateTime.now().difference(at), at);
+  return ago(clock().difference(at), at);
 }

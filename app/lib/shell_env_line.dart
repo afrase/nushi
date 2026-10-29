@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/settings_rows.dart';
@@ -40,7 +41,7 @@ class _ShellEnvLineState extends State<ShellEnvLine> {
       final when = DateTime.fromMillisecondsSinceEpoch(env.readUnixMs.toInt());
       final text = env.problem.isEmpty
           ? "Agents start with $shell's environment, read "
-                '${ago(DateTime.now().difference(when), when)}.'
+                '${ago(clock().difference(when), when)}.'
           : "Couldn't read your shell's environment: ${env.problem}.";
       return SettingsGroup(
         children: [

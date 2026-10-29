@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +22,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/web_page.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _html = '''
 <!doctype html>
@@ -161,10 +161,7 @@ Future<(Daemon, _Host)> _app(
   Map<String, StreamController<WatchChatFileResponse>> streams, {
   List<Uri>? opened,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1700, 900);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(1700, 900));
   showDetails.value = false;
   paneWidths.value = {};
   final host = _Host();
@@ -461,21 +458,11 @@ void main() {
 
   group('the phone', () {
     Future<Phone> phone(WidgetTester tester) async {
-      tester.view
-        ..devicePixelRatio = 3
-        ..physicalSize = const Size(390, 844) * 3;
+      viewport(tester, const Size(390, 844), ratio: 3);
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearAllTestValues);
-      final platform = PhonePlatform()
-        ..saved = {
-          'key': Uint8List(32)..[0] = 7,
-          'name': 'iPhone',
-          'relay': 'wss://nushi.aaronfrase.com',
-          'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
-          'daemonKey': Uint8List(32)..[0] = 9,
-        };
+      final platform = PhonePlatform()..saved = pairedRecord();
       final fake = _fake({});
       final p = Phone(
         platform,
@@ -502,9 +489,7 @@ void main() {
     }
 
     Future<void> end(WidgetTester tester, Phone p) async {
-      await p.close();
-      await tester.pumpWidget(const SizedBox());
-      await tester.pump(const Duration(seconds: 5));
+      await endPhone(tester, p);
     }
 
     final ios = TargetPlatformVariant.only(TargetPlatform.iOS);

@@ -7,6 +7,8 @@ import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
+import 'harness.dart';
+
 void main() {
   Widget box(FileChange c) => MaterialApp(
     theme: const NushiTheme(Tokens.dark).toThemeData(),
@@ -22,11 +24,7 @@ void main() {
     );
     await tester.pumpWidget(box(change));
     expect(find.byType(Center), findsOneWidget); // still computing
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(seconds: 2)),
-    );
-    await tester.pump();
-    expect(find.byType(Center), findsNothing);
+    await untilReal(tester, () => find.byType(Center).evaluate().isEmpty);
   });
 
   testWidgets('a change too long to diff says so', (tester) async {
@@ -83,10 +81,7 @@ void main() {
   });
 
   testWidgets('the diff has a scrollbar the mouse drags', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(600, 400);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(600, 400));
     // Every line changed: none folded away.
     String text(String s) => [for (var i = 0; i < 400; i++) '$s $i'].join('\n');
     await tester.pumpWidget(

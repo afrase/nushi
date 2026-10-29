@@ -6,6 +6,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -20,12 +21,7 @@ void main() {
     testWidgets('the whole window, $width wide: ⋯ at the header’s end', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = Size(width, 600);
-      addTearDown(tester.view.reset);
-      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      viewport(tester, Size(width, 600), brightness: Brightness.dark);
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
             const MethodChannel('nushi/fonts'),

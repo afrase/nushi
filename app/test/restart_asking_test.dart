@@ -5,6 +5,7 @@ import 'package:nushi/status_bar.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   testWidgets('restarting the daemon asks first while a turn runs', (
@@ -37,7 +38,6 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.text('Restart the daemon?'), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 }

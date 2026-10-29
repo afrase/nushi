@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
@@ -16,6 +15,7 @@ import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Four projects, newest chat first: ledger-poc (one chat waiting on you,
 /// one idle), cappy (working), garden (a turn's end unseen), notes (idle).
@@ -46,10 +46,7 @@ Future<Daemon> _sidebar(
   List<Chat>? chats,
   Tokens tokens = Tokens.dark,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(400, 600);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(400, 600));
   final d = await FakeDaemon(chats ?? _chats()).connect(tester);
   await tester.pumpWidget(
     MaterialApp(
@@ -107,10 +104,6 @@ ChatPhase? _dot(WidgetTester tester, String project) {
   return dot.evaluate().isEmpty ? null : tester.widget<PhaseDot>(dot).phase;
 }
 
-Map<String, Object?> _appJson() =>
-    jsonDecode(File('$dataDir/app.json').readAsStringSync())
-        as Map<String, Object?>;
-
 void main() {
   setUpAll(() async {
     await loadFonts();
@@ -142,7 +135,7 @@ void main() {
     expect(_order(tester), order);
     final paths = [for (final p in order) '/Users/me/$p'];
     expect(sidebarOrder.value, paths);
-    expect(_appJson()['sidebarOrder'], paths);
+    expect(readSaved()['sidebarOrder'], paths);
     // ⌘1–⌘9 go through them as they show.
     expect(chatOrder(d).map((c) => c.id), ['e', 'a', 'b', 'c', 'd']);
     d.dispose();
@@ -173,7 +166,7 @@ void main() {
     expect(find.text('Wire the ledger'), findsNothing);
     expect(find.text('Seed data'), findsNothing);
     expect(_dot(tester, 'ledger-poc'), ChatPhase.waiting); // over idle
-    expect(_appJson()['sidebarCollapsed'], ['/Users/me/ledger-poc']);
+    expect(readSaved()['sidebarCollapsed'], ['/Users/me/ledger-poc']);
 
     // The chevron is a button the keyboard presses.
     Focus.of(

@@ -6,6 +6,7 @@ import 'package:nushi/items.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A response Claude's safeguards stopped, as the daemon keeps it: what
 /// streamed of it, marked; Claude Code's notice; the reply it went on with.
@@ -47,10 +48,7 @@ void main() {
     for (final width in [720.0, 1700.0]) {
       testWidgets('a response stopped by safeguards is folded above the '
           'notice (${width.round()}, $name)', (tester) async {
-        tester.view
-          ..devicePixelRatio = 1
-          ..physicalSize = Size(width, 300);
-        addTearDown(tester.view.reset);
+        viewport(tester, Size(width, 300));
         final chat = ChatState('c', '/Users/me/repo')..agent = 'claude';
         final d = await FakeDaemon([]).connect(tester);
         await tester.pumpWidget(

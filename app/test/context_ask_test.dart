@@ -7,6 +7,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   testWidgets('what fills the context is asked, the card collapsed or not, '
@@ -35,7 +36,6 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     expect(asked(), 1);
     expect(find.byIcon(Icons.refresh), findsNothing);
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 }

@@ -9,6 +9,7 @@ import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _acme = 'acme.atlassian.net';
 const _other = 'other.atlassian.net';
@@ -249,10 +250,7 @@ void main() {
     ('light', Tokens.light),
   ]) {
     testWidgets('the dialog with an issue ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(700, 400);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(700, 400));
       final (_, d) = await _sidebar(tester, tokens: tokens);
       await _open(tester);
       await _key(tester, LogicalKeyboardKey.keyI);

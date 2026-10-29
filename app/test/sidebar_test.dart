@@ -8,6 +8,7 @@ import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Chats of all five agents, in each status.
 final List<Chat> _chats = [
@@ -52,10 +53,7 @@ void main() {
     testWidgets('each row shows its agent beside its status ($name)', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(400, 600);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(400, 600));
       final d = await FakeDaemon(_chats).connect(tester);
       await tester.pumpWidget(
         MaterialApp(
@@ -94,10 +92,7 @@ void main() {
     testWidgets('New chat is centred in its button (${width.toInt()} wide)', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = Size(width, 600);
-      addTearDown(tester.view.reset);
+      viewport(tester, Size(width, 600));
       paneWidths.value = {};
       // Idle ones, so pumpAndSettle settles.
       final d = await FakeDaemon([

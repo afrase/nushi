@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -239,7 +240,7 @@ class _SessionListState extends State<SessionList> {
     final why = _why(s);
     final when = DateTime.fromMillisecondsSinceEpoch(s.updatedUnixMs.toInt());
     final details = [
-      if (s.updatedUnixMs != 0) ago(DateTime.now().difference(when), when),
+      if (s.updatedUnixMs != 0) ago(clock().difference(when), when),
       if (s.messages > 0) '${s.messages} messages',
       if (widget.folder.isEmpty && s.folder.isNotEmpty)
         folderParts(s.folder).$1,

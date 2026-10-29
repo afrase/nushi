@@ -6,6 +6,7 @@ import 'package:nushi/tool_calls.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _gateway = 'mcp__rumoju-mcp-gateway__invoke_tool';
 
@@ -131,9 +132,7 @@ void main() {
   testWidgets('golden, input only, raw output only, nothing, dark', (
     tester,
   ) async {
-    tester.view.devicePixelRatio = 2;
-    tester.view.physicalSize = const Size(720, 420) * 2;
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(720, 420), ratio: 2);
     Collapsible.opened.addAll(['1', '2', '3']);
     await tester.pumpWidget(
       _rows([

@@ -6,6 +6,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -13,10 +14,7 @@ void main() {
   // The switch to JSON sits at the left under the fields, Cancel and Add at
   // the right, in the form and in the JSON view.
   testWidgets('the form’s buttons', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(900, 900);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(900, 900));
     final d = await FakeDaemon([]).connect(tester);
     await tester.pumpWidget(
       MaterialApp(

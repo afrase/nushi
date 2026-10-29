@@ -2,8 +2,8 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
@@ -17,6 +17,7 @@ import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show comment, item, pull, testNow;
+import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';
 
@@ -38,10 +39,7 @@ Future<(Daemon, FakeDaemon)> _app(
   Size size = const Size(1700, 900),
   bool details = true,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = size;
-  addTearDown(tester.view.reset);
+  viewport(tester, size);
   showDetails.value = details;
   collapsedCards.value = {};
   cardOrder.value = ['Pull request'];
@@ -111,7 +109,6 @@ Future<void> _later(WidgetTester tester, Duration d) async {
 void main() {
   setUpAll(loadFonts);
   setUp(() => clock = () => _now);
-  tearDown(() => clock = DateTime.now);
 
   // The owner's report: a chat whose card said "No pull request for x"
   // didn't link the one opened since; only the details panel's card
@@ -395,7 +392,6 @@ void main() {
   testWidgets('golden: the Pull request tab, dark', (tester) async {
     // Its comments' ages from the test's day, not the real one.
     clock = () => testNow;
-    addTearDown(() => clock = DateTime.now);
     final (d, _) = await _app(tester, whole: pull());
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);

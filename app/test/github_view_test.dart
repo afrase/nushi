@@ -16,6 +16,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// The time the tests' ages count from.
 final testNow = DateTime(2026, 10, 26, 12);
@@ -286,12 +287,6 @@ Future<(FakeDaemon, Daemon)> openView(
 Finder get _clone => find.byWidgetPredicate(
   (w) => w is RichText && w.text.toPlainText().startsWith('nushi-gh-test'),
 );
-
-/// Ends the view (its polls) and the daemon.
-Future<void> closeView(WidgetTester tester, Daemon d) async {
-  await tester.pumpWidget(const SizedBox());
-  d.dispose();
-}
 
 void main() {
   setUpAll(loadFonts);
@@ -686,8 +681,7 @@ void main() {
       (d.githubOpen, d.githubShow?.ref.number, d.githubShow?.pull),
       (true, 1, true),
     );
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   testWidgets('no host yet', (tester) async {

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_cache.dart';
@@ -11,6 +11,7 @@ import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_skeleton.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'pull_fixture.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -24,7 +25,7 @@ const _title = "Ignore q params that aren't hashes in admin filters";
 void _kept(Duration ago, {GitHubPull? pull}) {
   clock = () => fixtureNow.subtract(ago);
   keepPull(_ref, pull ?? fixturePull());
-  clock = DateTime.now;
+  clock = () => fixtureNow;
 }
 
 void main() {

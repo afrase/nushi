@@ -11,12 +11,13 @@ import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'settings_harness.dart';
 
 List<GitHubBucket> _budget() {
-  // "resets in 42m" whenever it runs: the page reads the clock.
+  // "resets in 42m": the page reads the clock.
   final reset = Int64(
-    DateTime.now()
+    fixtureNow
         .add(const Duration(minutes: 42, seconds: 30))
         .millisecondsSinceEpoch,
   );

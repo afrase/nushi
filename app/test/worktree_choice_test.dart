@@ -11,6 +11,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktree.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _repo = '/Users/me/nushi';
 
@@ -85,7 +86,6 @@ void main() {
       issue: IssueChat(site: 's', key: 'AB-1', summary: 'x', branch: 'AB-1'),
     );
     expect(fake.started.last.worktree, isTrue);
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 }

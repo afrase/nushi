@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_rows.dart';
@@ -148,7 +149,7 @@ class _JiraPageState extends State<JiraPage> {
                 _SiteRow(
                   s,
                   checked: _checked[s.id],
-                  warning: expiryWarning(s, widget.now ?? DateTime.now()),
+                  warning: expiryWarning(s, widget.now ?? clock()),
                   onAllow: () => _allow(s),
                   onRemove: () => _remove(s),
                 ),

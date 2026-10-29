@@ -7,6 +7,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -57,10 +58,7 @@ void main() {
   testWidgets('the chat menu stays at the row’s end however narrow', (
     tester,
   ) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1400, 300);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(1400, 300));
     final d = await FakeDaemon([]).connect(tester);
     const model = 'claude-opus-5-5[1m]';
     for (final pull in [false, true]) {

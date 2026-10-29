@@ -11,6 +11,7 @@ import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'settings_harness.dart';
 
 final _now = DateTime(2026, 10, 25, 12);
@@ -21,9 +22,9 @@ List<JiraSite> _sites() => [
     url: 'https://acme.atlassian.net',
     email: 'me@acme.com',
     name: 'Test User',
-    // "in 5 days" whenever it runs: the dialog reads the clock.
+    // "in 5 days": the dialog reads the clock.
     expires: Int64(
-      DateTime.now()
+      fixtureNow
           .add(const Duration(days: 5) - const Duration(hours: 1))
           .millisecondsSinceEpoch,
     ),

@@ -7,8 +7,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/artifacts_card.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -18,6 +18,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Item _write(String id, String path) => Item(
   id: id,
@@ -73,10 +74,7 @@ const _minutes = {
 /// The app on a chat with [items], the details panel shown, and the fake
 /// daemon behind it.
 Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = const Size(1700, 900);
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(1700, 900));
   showDetails.value = true;
   paneWidths.value = {};
   subagentWide.value = false;
@@ -85,7 +83,7 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
   pinnedFiles.value = {};
   final was = fileChanged;
   fileChanged = (p) => switch (_minutes[p.split('/').last]) {
-    final m? => DateTime.now().subtract(Duration(minutes: m, seconds: 5)),
+    final m? => clock().subtract(Duration(minutes: m, seconds: 5)),
     null => null,
   };
   addTearDown(() => fileChanged = was);
@@ -270,7 +268,6 @@ void main() {
   testWidgets('a file opened stays recent for an hour', (tester) async {
     final start = DateTime(2026, 10, 28, 9);
     clock = () => start;
-    addTearDown(() => clock = DateTime.now);
     final (d, _) = await _app(tester, _turns);
     final c = d.chats['c']!;
     await tester.tap(_inCard(find.text('Older (6)')));

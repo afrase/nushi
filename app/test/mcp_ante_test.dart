@@ -11,6 +11,7 @@ import 'package:nushi/panel_cards.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Claude's servers and Ante's (API 80), by the agent asked about.
 Future<(FakeDaemon, Daemon)> _daemon(WidgetTester tester) async {
@@ -86,8 +87,7 @@ void main() {
       tester.getTopLeft(find.text('Ante')).dy,
       greaterThan(tester.getTopLeft(find.text('github')).dy),
     );
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   testWidgets('an Ante chat’s card shows its servers', (tester) async {
@@ -111,8 +111,7 @@ void main() {
       fake.calls.whereType<ListMcpServersRequest>().map((r) => r.agent).toSet(),
       {'ante'},
     );
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   testWidgets('the form adds Ante’s for you only, without SSE', (tester) async {
@@ -149,8 +148,7 @@ void main() {
     await tester.pumpAndSettle();
     final add = fake.calls.whereType<AddMcpServerRequest>().single;
     expect((add.agent, add.scope, add.name), ('ante', 'user', 'git'));
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   for (final (name, width, tokens) in [
@@ -174,8 +172,7 @@ void main() {
         find.byType(McpView),
         matchesGoldenFile('goldens/mcp_ante_$name.png'),
       );
-      await tester.pumpWidget(const SizedBox());
-      d.dispose();
+      await closeView(tester, d);
     });
   }
 }

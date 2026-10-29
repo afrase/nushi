@@ -1,3 +1,4 @@
+import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/diff_box.dart';
@@ -6,6 +7,7 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _old = '''
 class Ledger < Base
@@ -51,10 +53,7 @@ void main() {
     ('light', Tokens.light),
   ]) {
     testWidgets('syntax colors ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(900, 560);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(900, 560));
       final theme = NushiTheme(tokens);
       await tester.pumpWidget(
         MaterialApp(
@@ -81,8 +80,13 @@ void main() {
         ),
       );
       // The diff's colors come from an isolate.
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 500)),
+      final lines = tester
+          .widget<SideBySideDiff>(find.byType(SideBySideDiff))
+          .controller
+          .lines;
+      await untilReal(
+        tester,
+        () => lines.lineAt(PaneSide.neu, 0)!.syntax.isNotEmpty,
       );
       await tester.pump();
       await expectLater(

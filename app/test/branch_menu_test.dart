@@ -15,6 +15,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktree.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final String _repo = '${Platform.environment['HOME']}/code/cappy';
 final String _try = '$_repo/.worktrees/cappy/try-sqrly';
@@ -80,10 +81,7 @@ Future<Daemon> _panel(
   Tokens tokens = Tokens.dark,
   VoidCallback? onChanges,
 }) async {
-  tester.view
-    ..devicePixelRatio = 2
-    ..physicalSize = const Size(560, 460) * 2;
-  addTearDown(tester.view.reset);
+  viewport(tester, const Size(560, 460), ratio: 2);
   final d = await fake.connect(tester);
   await tester.pumpWidget(
     MaterialApp(
@@ -131,10 +129,7 @@ void main() {
   // right edge.
   for (final width in [1700.0, 1100.0]) {
     testWidgets('the Branch menu in a ${width.round()} window', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = Size(width, 620);
-      addTearDown(tester.view.reset);
+      viewport(tester, Size(width, 620));
       showDetails.value = true;
       final c = Chat(
         id: 'c',
@@ -185,8 +180,7 @@ void main() {
       expect(menu.right, lessThanOrEqualTo(width));
       expect(menu.top, greaterThan(chevron.bottom));
       expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox()); // its timers end
-      d.dispose();
+      await closeView(tester, d);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
 

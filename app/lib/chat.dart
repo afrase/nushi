@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -28,9 +29,6 @@ enum ChatPhase {
 /// What shows in a chat's place on the Mac: its transcript, its changes,
 /// or its pull request.
 enum ChatTab { chat, changes, pull }
-
-/// The time now; tests set their own.
-DateTime Function() clock = DateTime.now;
 
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.

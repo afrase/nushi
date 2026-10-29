@@ -8,6 +8,7 @@ import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Item _call(String status) => Item(
   id: 'x',
@@ -94,17 +95,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(_opacity(tester, 'New'), 1);
 
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   // Enlarged, so the band shows; stopped mid-sweep.
   testWidgets('golden, a running call, still, dark', (tester) async {
     Shine.stopAt = 0.4;
     addTearDown(() => Shine.stopAt = 0);
-    tester.view.devicePixelRatio = 3;
-    tester.view.physicalSize = const Size(360, 52) * 3;
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(360, 52), ratio: 3);
     await tester.pumpWidget(_app(ToolCallView(_call('in_progress'))));
     await expectLater(
       find.byType(ToolCallView),

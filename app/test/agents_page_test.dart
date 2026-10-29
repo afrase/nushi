@@ -8,6 +8,7 @@ import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'settings_harness.dart';
 
 Adapter _adapter(String package, String pinned, String installed) => Adapter(
@@ -156,7 +157,7 @@ void main() {
       environment: ShellEnvironment(
         shell: '/opt/homebrew/bin/fish',
         readUnixMs: Int64(
-          DateTime.now()
+          fixtureNow
               .subtract(const Duration(minutes: 3))
               .millisecondsSinceEpoch,
         ),
@@ -190,7 +191,7 @@ void main() {
         tokens: tokens,
         environment: ShellEnvironment(
           shell: '/opt/homebrew/bin/fish',
-          readUnixMs: Int64(DateTime.now().millisecondsSinceEpoch),
+          readUnixMs: Int64(fixtureNow.millisecondsSinceEpoch),
           problem: 'fish took over 5s',
         ),
       );

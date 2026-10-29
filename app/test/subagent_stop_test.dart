@@ -12,6 +12,7 @@ import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/subagents.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A chat that stopped one background subagent and started another like
 /// it, which still runs, beside a background command.
@@ -105,10 +106,7 @@ final _items = <Item>[
 /// The app at [width] on that chat, the details panel shown, and the fake
 /// daemon that gets its calls.
 Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, double width) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 640);
-  addTearDown(tester.view.reset);
+  viewport(tester, Size(width, 640));
   showDetails.value = true;
   paneWidths.value = {};
   subagentWide.value = false;

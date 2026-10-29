@@ -12,6 +12,7 @@ import 'package:nushi/settings_nav.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A failed reopen's notices, each with what helps.
 final _notices = [
@@ -81,10 +82,7 @@ void main() {
   ]) {
     testWidgets('the header says it couldn’t start, not asleep; each '
         'notice has what helps ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(760, 300);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(760, 300));
       final failed = _chat();
       final d = await _show(
         tester,
@@ -145,10 +143,7 @@ void main() {
   testWidgets('Set up… opens Settings › Agents on the chat’s agent', (
     tester,
   ) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(900, 700);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(900, 700));
     final fake = FakeDaemon([]);
     final chat = _chat();
     final d = await _show(
@@ -251,10 +246,7 @@ void main() {
     testWidgets('a chat whose session is gone says so quietly ($name)', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(760, 200);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(760, 200));
       final chat = _chat()..sessionGone = true;
       final d = await _show(
         tester,

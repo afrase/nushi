@@ -11,6 +11,7 @@ import 'package:nushi/items.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Claude Code's /code-review without ReportFindings, as it came (step
 /// 258): a sentence, then the findings in a fenced block.
@@ -350,13 +351,10 @@ void main() {
       ('twelve', Findings(items: twelve), false, -1),
     ]) {
       testWidgets('golden, $what finding(s), $name', (tester) async {
-        tester.view
-          ..devicePixelRatio = 1
-          ..physicalSize = Size(
-            800,
-            60.0 + 34 * findings.items.length + (open >= 0 ? 60 : 0),
-          );
-        addTearDown(tester.view.reset);
+        viewport(
+          tester,
+          Size(800, 60.0 + 34 * findings.items.length + (open >= 0 ? 60 : 0)),
+        );
         await _pump(
           tester,
           FindingsCard(

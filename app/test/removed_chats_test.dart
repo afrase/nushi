@@ -6,6 +6,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/removed_chats.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 RemovedChat _removed(String id, String title, {String agent = 'claude'}) =>
     RemovedChat(
@@ -60,12 +61,7 @@ void main() {
   ]) {
     testWidgets('the window says once which chats went; OK dismisses '
         'it ($name)', (tester) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(900, 500);
-      addTearDown(tester.view.reset);
-      tester.platformDispatcher.platformBrightnessTestValue = brightness;
-      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      viewport(tester, const Size(900, 500), brightness: brightness);
       final chats = [chat('k', 'claude', 'Still here')];
       final fake = FakeDaemon(chats)
         ..answer = (input) => input is ListChatsRequest

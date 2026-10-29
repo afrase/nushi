@@ -13,6 +13,7 @@ import 'package:nushi/subagents.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A chat whose agent started a subagent, which read a file.
 final _items = [
@@ -50,10 +51,7 @@ Future<Daemon> _app(
   double width = 1400,
   bool details = true,
 }) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 560);
-  addTearDown(tester.view.reset);
+  viewport(tester, Size(width, 560));
   showDetails.value = details;
   paneWidths.value = {};
   subagentWide.value = false;

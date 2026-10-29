@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -11,7 +10,8 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'jira_view_test.dart' show closeView, openView, shown;
+import 'harness.dart';
+import 'jira_view_test.dart' show openView, shown;
 
 const _site = 'acme.atlassian.net';
 
@@ -29,10 +29,6 @@ List<String> _cards(WidgetTester tester) {
       (e.widget as Text).data!.split('  ').first,
   ];
 }
-
-Map<String, Object?> _appJson() =>
-    jsonDecode(File('$dataDir/app.json').readAsStringSync())
-        as Map<String, Object?>;
 
 void main() {
   setUpAll(() async {
@@ -60,7 +56,7 @@ void main() {
     expect(jiraGroupOrder.value, {
       _site: ['Done', 'To Do', 'In Progress'],
     });
-    expect((_appJson()['jiraGroups']! as Map)[_site], [
+    expect((readSaved()['jiraGroups']! as Map)[_site], [
       'Done',
       'To Do',
       'In Progress',
@@ -83,7 +79,7 @@ void main() {
     expect(jiraCollapsed.value, {
       _site: ['In Progress'],
     });
-    expect((_appJson()['jiraCollapsed']! as Map)[_site], ['In Progress']);
+    expect((readSaved()['jiraCollapsed']! as Map)[_site], ['In Progress']);
     // From To Do's row, ↓ goes past In Progress to Done.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);

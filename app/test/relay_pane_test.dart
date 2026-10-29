@@ -6,6 +6,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A subagent that worked in the background, and two messages for it that
 /// Claude was asked to pass on: one it did, one it didn't.
@@ -56,10 +57,7 @@ final _items = [
 void main() {
   testWidgets('a message for a subagent shows in its pane, with how the '
       'relay went', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1400, 700);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(1400, 700));
     showDetails.value = false;
     subagentWide.value = false;
     paneWidths.value = {};
@@ -93,7 +91,6 @@ void main() {
       tester.getRect(inPane('Read auth/redirect.go')).top,
       lessThan(tester.getRect(inPane('Look at auth/session.go too')).top),
     );
-    await tester.pumpWidget(const SizedBox()); // its timers end
-    d.dispose();
+    await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

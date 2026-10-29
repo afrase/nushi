@@ -7,6 +7,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Widget _app(Widget child, {bool still = false}) => MaterialApp(
   theme: const NushiTheme(Tokens.dark).toThemeData(),
@@ -225,8 +226,7 @@ void main() {
         find.byType(FittedBox),
         matchesGoldenFile('goldens/paced_reply_$name.png'),
       );
-      await tester.pumpWidget(const SizedBox());
-      d.dispose();
+      await closeView(tester, d);
     });
   }
 }

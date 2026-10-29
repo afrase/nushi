@@ -13,6 +13,7 @@ import 'package:nushi/subagent_pane.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 // Enter in the boxes that send (isSendKey): ⏎ and ⌘⏎ send; ⇧, ⌥ and ⌃ (with
 // ⌘ too) start a line, which Nushi writes itself at the selection. Real key
@@ -129,10 +130,7 @@ void main() {
 
   testWidgets('the composer: the same keys start a line and send nothing; '
       '⌘⏎ sends', (tester) async {
-    tester.view
-      ..devicePixelRatio = 1
-      ..physicalSize = const Size(1200, 700);
-    addTearDown(tester.view.reset);
+    viewport(tester, const Size(1200, 700));
     showDetails.value = false;
     final fake = FakeDaemon([chat('c', 'claude', 'Keys')]);
     final d = await fake.connect(tester);
@@ -164,8 +162,7 @@ void main() {
     expect(sent.text, 'abcd');
     expect(sent.now, isFalse, reason: 'nothing to stop');
     expect(c.text, isEmpty);
-    await tester.pumpWidget(const SizedBox()); // its timers end
-    d.dispose();
+    await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('a review comment: the same keys; the keypad’s Enter saves, '
@@ -245,7 +242,6 @@ void main() {
     final sent = fake.calls.whereType<SendPromptRequest>().single;
     expect(sent.text, 'abcd');
     expect(sent.toSubagent, 'a');
-    await tester.pumpWidget(const SizedBox()); // its timers end
-    d.dispose();
+    await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

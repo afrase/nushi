@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:fixnum/fixnum.dart';
@@ -16,7 +15,8 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'jira_view_test.dart' show closeView, openView, shown;
+import 'harness.dart';
+import 'jira_view_test.dart' show openView, shown;
 
 final _site = JiraSite(
   id: 'acme.atlassian.net',
@@ -201,10 +201,6 @@ void _expectColumns(WidgetTester tester) {
   }
 }
 
-Map<String, Object?> _appJson() =>
-    jsonDecode(File('$dataDir/app.json').readAsStringSync())
-        as Map<String, Object?>;
-
 void main() {
   setUpAll(() async {
     await loadFonts();
@@ -259,7 +255,7 @@ void main() {
     expect(jiraAssignee.value, {
       '${_site.id} sprint': ['person', 'ann', 'Ann Lee'],
     });
-    expect((_appJson()['jiraAssignee']! as Map)['${_site.id} sprint'], [
+    expect((readSaved()['jiraAssignee']! as Map)['${_site.id} sprint'], [
       'person',
       'ann',
       'Ann Lee',

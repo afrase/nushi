@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';

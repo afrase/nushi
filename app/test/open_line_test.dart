@@ -9,6 +9,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 String _text(String name, int lines) =>
     [for (var i = 1; i <= lines; i++) '// $name line $i'].join('\n');
@@ -25,10 +26,7 @@ void main() {
     testWidgets('a file opens at a line, changed or not ($name)', (
       tester,
     ) async {
-      tester.view
-        ..devicePixelRatio = 1
-        ..physicalSize = const Size(900, 420);
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(900, 420));
       final asked = <GetFileRequest>[];
       final fake = FakeDaemon([])
         ..answer = (input) => switch (input) {
@@ -95,8 +93,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('calc/util.go has no changes here'), findsNothing);
-      await tester.pumpWidget(const SizedBox());
-      daemon.dispose();
+      await closeView(tester, daemon);
     });
   }
 
@@ -156,7 +153,6 @@ void main() {
       tester.widget<DiffBox>(find.byType(DiffBox)).change.path,
       'calc/calc.go',
     );
-    await tester.pumpWidget(const SizedBox());
-    daemon.dispose();
+    await closeView(tester, daemon);
   });
 }

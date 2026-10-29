@@ -7,18 +7,14 @@ import 'package:nushi/main.dart';
 import 'package:nushi/sidebar.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
 /// The app with no chats yet; Claude's sessions were found in two
 /// folders (one gone).
 Future<Daemon> _firstRun(WidgetTester tester, double width) async {
-  tester.view
-    ..devicePixelRatio = 1
-    ..physicalSize = Size(width, 600);
-  addTearDown(tester.view.reset);
-  tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-  addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+  viewport(tester, Size(width, 600), brightness: Brightness.dark);
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMethodCallHandler(
         const MethodChannel('nushi/fonts'),

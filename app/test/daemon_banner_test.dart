@@ -6,6 +6,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Widget _app(Daemon d, {bool still = false, Tokens tokens = Tokens.dark}) =>
     MaterialApp(
@@ -88,8 +89,7 @@ void main() {
     expect(find.text('Reconnected'), findsNothing);
     expect(height(tester), 0);
 
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   testWidgets('with Reduce Motion: the same grace and "Reconnected", without '
@@ -107,8 +107,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1210));
     expect(find.text('Reconnected'), findsNothing);
 
-    await tester.pumpWidget(const SizedBox());
-    d.dispose();
+    await closeView(tester, d);
   });
 
   for (final (name, tokens) in [
@@ -116,9 +115,7 @@ void main() {
     ('light', Tokens.light),
   ]) {
     testWidgets('golden, lost and reconnected, $name', (tester) async {
-      tester.view.physicalSize = const Size(520, 120);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
+      viewport(tester, const Size(520, 120));
       final fake = FakeDaemon([]);
       final d = await fake.connect(tester);
       await tester.pumpWidget(_app(d, tokens: tokens));
@@ -135,8 +132,7 @@ void main() {
         matchesGoldenFile('goldens/daemon_banner_back_$name.png'),
       );
       await tester.pumpAndSettle();
-      await tester.pumpWidget(const SizedBox());
-      d.dispose();
+      await closeView(tester, d);
     });
   }
 }
