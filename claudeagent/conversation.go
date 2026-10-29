@@ -59,7 +59,9 @@ type Result struct {
 	Origin            *Origin               `json:"origin"` // what started the turn
 	UserMessageUUID   string                `json:"user_message_uuid"`
 	UserMessageUUIDs  []string              `json:"user_message_uuids"` // the user messages the turn took
-	FastModeState     string                `json:"fast_mode_state"`
+	FastModeState     string                `json:"fast_mode_state"`    // "on", "off" or "cooldown"
+	// FastModeDisabledReason is why fast mode is off, when claude says.
+	FastModeDisabledReason string `json:"fast_mode_disabled_reason"`
 }
 
 // ModelUsage is one model's use over the session.
