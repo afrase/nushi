@@ -259,9 +259,10 @@ func (t *transport) closeInput() error {
 }
 
 // close ends claude: it closes stdin and waits for claude to exit, sends
-// its group SIGTERM after 2 s, and SIGKILL 5 s after that. It returns once
-// claude has exited; wait says how. What claude writes meanwhile and no
-// one reads is dropped, so a full pipe can't hold it up.
+// it (its group, unless shared) SIGTERM after 2 s, and SIGKILL 5 s after
+// that. It returns once claude has exited; wait says how. What claude
+// writes meanwhile and no one reads is dropped, so a full pipe can't hold
+// it up.
 func (t *transport) close() {
 	t.closeOnce.Do(func() {
 		close(t.closing)

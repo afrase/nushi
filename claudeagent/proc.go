@@ -12,12 +12,14 @@ import (
 )
 
 // Spec is how to start claude: the program, its arguments after its name,
-// its environment and its folder.
+// its environment and its folder, and whether it shares this process's
+// group (Options.SharedGroup).
 type Spec struct {
-	Path string
-	Args []string
-	Env  []string
-	Dir  string
+	Path        string
+	Args        []string
+	Env         []string
+	Dir         string
+	SharedGroup bool
 }
 
 // Proc is a started claude. Stdout and Stderr are read until they end,
@@ -69,11 +71,18 @@ func stderrSuffix(s string) string {
 // Exec starts s as a process in a group of its own, so a signal reaches
 // what claude started too (its tools' processes). Once claude has exited,
 // Wait kills what it left in the group.
+//
+// With s.SharedGroup claude stays in this process's group instead: what
+// kills that group kills claude and its tools too, even when this process
+// is killed first. Signal then reaches claude alone, and what claude
+// leaves running is left to that kill.
 func Exec(ctx context.Context, s Spec) (*Proc, error) {
 	// The process outlives the start, so ctx's end mustn't kill it.
 	cmd := exec.CommandContext(context.WithoutCancel(ctx), s.Path, s.Args...) //nolint:gosec // running the user's claude is the point
 	cmd.Env, cmd.Dir = s.Env, s.Dir
-	ownGroup(cmd)
+	if !s.SharedGroup {
+		ownGroup(cmd)
+	}
 	// Our own pipes, not cmd's: Wait would close those under the readers.
 	var files []*os.File
 	var pipeErr error
@@ -112,12 +121,17 @@ func Exec(ctx context.Context, s Spec) (*Proc, error) {
 		Wait: func() error {
 			err := cmd.Wait()
 			exited.Store(true)
-			_ = killGroup(cmd) // what it left running
+			if !s.SharedGroup {
+				_ = killGroup(cmd) // what it left running
+			}
 			return exitError(err)
 		},
 		Signal: func(sig os.Signal) error {
 			if exited.Load() {
 				return os.ErrProcessDone
+			}
+			if s.SharedGroup {
+				return cmd.Process.Signal(sig) // the group is ours too
 			}
 			return signalGroup(cmd, sig)
 		},

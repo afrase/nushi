@@ -54,7 +54,7 @@ func (a *agent) options(su setup) (claudeagent.Options, error) {
 	}
 	caps := a.clientCaps()
 	o := claudeagent.Options{
-		CLIPath: a.cfg.CLIPath, Cwd: su.cwd, Spawner: a.cfg.Spawn, Log: a.cfg.Log,
+		CLIPath: a.cfg.CLIPath, Cwd: su.cwd, Spawner: a.cfg.Spawn, Log: a.cfg.Log, SharedGroup: a.cfg.SharedGroup,
 		// The user's own settings, CLAUDE.md, hooks, skills and MCP
 		// servers, as in claude's terminal.
 		SettingSources:         []string{"user", "project", "local"},

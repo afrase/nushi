@@ -245,9 +245,10 @@ func (s *Session) write(ctx context.Context, v any) error {
 // Close ends the session: callbacks' contexts end, requests waiting for
 // an answer fail with ErrClosed, and claude's stdin is closed, which
 // tells it to finish and exit. If it hasn't exited 2 s later its process
-// group gets SIGTERM, and SIGKILL 5 s after that. Close returns once
-// claude has exited; Wait says how. It doesn't interrupt a turn under
-// way: claude finishes it first, unless the signals come before.
+// group (claude alone, with SharedGroup) gets SIGTERM, and SIGKILL 5 s
+// after that. Close returns once claude has exited; Wait says how. It
+// doesn't interrupt a turn under way: claude finishes it first, unless
+// the signals come before.
 func (s *Session) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.closing)

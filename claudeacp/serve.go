@@ -23,6 +23,10 @@ type Config struct {
 	ConfigDir string
 	Spawn     claudeagent.Spawner // nil = claudeagent.Exec
 	Log       *slog.Logger        // nil = no log; never a prompt or a token
+	// SharedGroup runs each claude in this process's group
+	// (claudeagent.Options.SharedGroup), so a client that stops the agent
+	// by killing its group stops every claude with it. Main sets it.
+	SharedGroup bool
 }
 
 // readLimit caps a message from the client: a prompt with images can run

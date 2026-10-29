@@ -105,6 +105,11 @@ type Options struct {
 	MaxLine   int          // the longest stdout line read; 0 = 128 MiB
 	Spawner   Spawner      // nil = Exec
 	Log       *slog.Logger // nil = no log
+	// SharedGroup keeps claude in this process's group rather than one of
+	// its own (see Exec), for a program run by a supervisor that stops it
+	// by killing its group, as an ACP client stops its agent: claude can't
+	// outlive it then. Close's signals reach claude alone.
+	SharedGroup bool
 }
 
 // defaultMaxLine is the stdout line cap: a tool result with images can
@@ -281,7 +286,7 @@ func spec(o Options) (Spec, error) {
 			return Spec{}, err
 		}
 	}
-	return Spec{Path: path, Args: a, Env: env, Dir: o.Cwd}, nil
+	return Spec{Path: path, Args: a, Env: env, Dir: o.Cwd, SharedGroup: o.SharedGroup}, nil
 }
 
 // lookPath finds the program name on path, a PATH list: exec.LookPath
