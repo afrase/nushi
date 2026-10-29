@@ -2,15 +2,18 @@ package claudeagent
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -63,12 +66,29 @@ func TestHelperProcess(*testing.T) {
 		out(os.Stderr, "fatal: no login\n")
 		out(os.Stdout, "%s\n", `{"type":"result","subtype":"error_during_execution","is_error":true,"errors":["boom"]}`)
 		code = 3
+	case "trail": // two messages, then more and an error result on a stdin line, and code 1
+		out(os.Stdout, "{\"type\":\"user\",\"n\":1}\n{\"type\":\"user\",\"n\":2}\n") // one write, read whole
+		stdin.Scan()
+		for i := range 30 {
+			out(os.Stdout, "{\"type\":\"user\",\"n\":%d,\"pad\":%q}\n", i+3, strings.Repeat("x", 300))
+		}
+		out(os.Stdout, "%s\n", `{"type":"result","subtype":"success","is_error":true,"result":"late boom"}`)
+		code = 1
+	case "orphan": // leaves a process outside its group holding stdout and stderr
+		sleep := exec.Command("/bin/sleep", "60")
+		sleep.Stdout, sleep.Stderr = os.Stdout, os.Stderr
+		sleep.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		if err := sleep.Start(); err != nil {
+			code = 9
+			break
+		}
+		out(os.Stdout, "{\"type\":\"ready\",\"pid\":%d}\n", sleep.Process.Pid)
 	}
 	os.Exit(code) //nolint:revive // the stand-in's exit, before the test framework writes on its stdout
 }
 
-// clock is a fake shutdown clock: each wait claude's shutdown asks for is
-// a timer the test fires.
+// clock is a fake clock: each wait the transport asks for is a timer the
+// test fires, or not, when time stands still.
 type clock chan timer
 
 type timer struct {
@@ -82,8 +102,9 @@ func (c clock) after(d time.Duration) <-chan time.Time {
 	return t.fire
 }
 
-// helper starts the stand-in claude as mode says.
-func helper(t *testing.T, mode string, o Options) (*transport, clock) {
+// helper starts the stand-in claude as mode says, with fake clocks for
+// its shutdown and for giving up on its pipes.
+func helper(t *testing.T, mode string, o Options) (tr *transport, shutdown, idle clock) {
 	t.Helper()
 	p, err := Exec(context.Background(), Spec{
 		Path: os.Args[0], Args: []string{"-test.run=^TestHelperProcess$"},
@@ -93,20 +114,21 @@ func helper(t *testing.T, mode string, o Options) (*transport, clock) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tr := newTransport(p, o)
-	c := make(clock, 4)
-	tr.after = c.after
+	tr = makeTransport(p, o)
+	shutdown, idle = make(clock, 4), make(clock, 4)
+	tr.after, tr.idle = shutdown.after, idle.after
+	tr.start(o.MaxLine)
 	t.Cleanup(func() {
 		_ = tr.proc.Signal(os.Kill)
 		<-tr.done
 	})
-	return tr, c
+	return tr, shutdown, idle
 }
 
 // Blank lines, lines that aren't JSON and the transport's own frames are
 // skipped; a line over the cap is a warning, and the stream goes on.
 func TestTransportFrames(t *testing.T) {
-	tr, _ := helper(t, "frames", Options{MaxLine: 200})
+	tr, _, _ := helper(t, "frames", Options{MaxLine: 200})
 	var got []Message
 	for m := range tr.messages() {
 		got = append(got, m)
@@ -128,7 +150,7 @@ func TestTransportFrames(t *testing.T) {
 // Each write is one line; closing stdin ends claude, which needs no
 // signal; nothing is written after.
 func TestTransportWriteAndEOF(t *testing.T) {
-	tr, c := helper(t, "echo", Options{})
+	tr, c, _ := helper(t, "echo", Options{})
 	if err := tr.write(map[string]any{"type": "user", "message": map[string]any{"role": "user", "content": "a\nb"}}); err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +175,7 @@ func TestTransportWriteAndEOF(t *testing.T) {
 
 // claude still running 2 s after EOF gets SIGTERM.
 func TestTransportTerm(t *testing.T) {
-	tr, c := helper(t, "linger", Options{})
+	tr, c, _ := helper(t, "linger", Options{})
 	closed := make(chan struct{})
 	go func() {
 		tr.close()
@@ -176,7 +198,7 @@ func TestTransportTerm(t *testing.T) {
 
 // claude that ignores SIGTERM gets SIGKILL 5 s later, its group with it.
 func TestTransportKill(t *testing.T) {
-	tr, c := helper(t, "stubborn", Options{})
+	tr, c, _ := helper(t, "stubborn", Options{})
 	m := <-tr.messages() // SIGTERM is ignored by now
 	var ready struct{ PID int }
 	if err := json.Unmarshal(m.Frame().Raw, &ready); err != nil || ready.PID == 0 {
@@ -211,7 +233,7 @@ func TestTransportKill(t *testing.T) {
 // callback.
 func TestTransportExitError(t *testing.T) {
 	lines := make(chan string, 200)
-	tr, _ := helper(t, "fail", Options{Stderr: func(l string) { lines <- l }})
+	tr, _, _ := helper(t, "fail", Options{Stderr: func(l string) { lines <- l }})
 	for range tr.messages() {
 		continue // the result is noted as it's read
 	}
@@ -231,6 +253,124 @@ func TestTransportExitError(t *testing.T) {
 	if s := (&ExitError{Code: 2, Stderr: "x"}).Error(); s != "claude exited with code 2: x" {
 		t.Error(s)
 	}
+}
+
+// stall lets time pass after claude exits with a pipe's reader behind: it
+// fires each idle timer asked for until one of d is asked for again, which
+// says the transport waited on and didn't give up on the pipe.
+func stall(t *testing.T, idle clock, d time.Duration) {
+	t.Helper()
+	fired := false
+	for {
+		select {
+		case tm := <-idle:
+			if tm.d == d && fired {
+				return
+			}
+			fired = fired || tm.d == d
+			tm.fire <- time.Time{}
+		case <-time.After(5 * time.Second):
+			t.Fatal("gave up on a pipe whose reader was behind")
+		}
+	}
+}
+
+// A consumer that's behind when claude exits still gets every message
+// claude wrote, and the exit error the error result among them.
+func TestTransportSlowConsumer(t *testing.T) {
+	tr, _, idle := helper(t, "trail", Options{})
+	msgs := tr.messages()
+	<-msgs // the second waits to be handed on; the rest will wait in the pipe
+	if err := tr.write(map[string]any{"type": "go"}); err != nil {
+		t.Fatal(err)
+	}
+	<-tr.exited
+	stall(t, idle, time.Second)
+	n := 1
+	for range msgs {
+		n++
+	}
+	if n != 33 {
+		t.Errorf("%d messages, want 33", n)
+	}
+	var ee *ExitError
+	if err := tr.wait(); !errors.As(err, &ee) || ee.Code != 1 || ee.Result != "late boom" {
+		t.Errorf("%v", err)
+	}
+}
+
+// A stderr callback that's behind when claude exits still gets every line,
+// and the exit error has the end of stderr.
+func TestTransportSlowStderr(t *testing.T) {
+	release := make(chan struct{})
+	var lines []string
+	tr, _, idle := helper(t, "fail", Options{Stderr: func(l string) {
+		<-release
+		lines = append(lines, l)
+	}})
+	<-tr.exited
+	stall(t, idle, 200*time.Millisecond)
+	close(release)
+	for range tr.messages() {
+		continue
+	}
+	var ee *ExitError
+	if err := tr.wait(); !errors.As(err, &ee) || !strings.HasSuffix(ee.Stderr, "fatal: no login") {
+		t.Fatalf("%v", err)
+	}
+	if len(lines) != 101 {
+		t.Errorf("%d stderr lines", len(lines))
+	}
+}
+
+// Pipes a process outside claude's group holds open are given up on once
+// nothing comes on them, with a warning; claude's exit is still reported.
+func TestTransportGivesUp(t *testing.T) {
+	var log lockedBuffer
+	tr, _, idle := helper(t, "orphan", Options{Log: slog.New(slog.NewTextHandler(&log, nil))})
+	msgs := tr.messages()
+	var ready struct{ PID int }
+	if err := json.Unmarshal((<-msgs).Frame().Raw, &ready); err != nil || ready.PID == 0 {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = syscall.Kill(ready.PID, syscall.SIGKILL) })
+	for open := true; open; {
+		select {
+		case tm := <-idle: // each wait is long enough
+			tm.fire <- time.Time{}
+		case m, ok := <-msgs:
+			if open = ok; ok {
+				t.Errorf("%+v", m)
+			}
+		}
+	}
+	if err := tr.wait(); err != nil {
+		t.Error(err)
+	}
+	for _, pipe := range []string{"stdout", "stderr"} {
+		if !strings.Contains(log.String(), "holds its "+pipe) {
+			t.Errorf("no warning for %s: %s", pipe, log.String())
+		}
+	}
+}
+
+// lockedBuffer is a log that the transport's goroutines write and the test
+// reads.
+type lockedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
 }
 
 // Start builds claude's spec from the options and hands it to the spawner.

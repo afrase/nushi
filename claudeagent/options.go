@@ -77,11 +77,14 @@ type Options struct {
 	// asks no one and decides by its settings.
 	CanUseTool func(ctx context.Context, r PermissionRequest) (PermissionResult, error)
 
-	Stderr    func(line string) // each line claude writes on stderr; nil = the log
-	ClientApp string            // names the app in claude's User-Agent, e.g. "nushi/0.9"
-	MaxLine   int               // the longest stdout line read; 0 = 128 MiB
-	Spawner   Spawner           // nil = Exec
-	Log       *slog.Logger      // nil = no log
+	// Stderr takes each line claude writes on stderr; nil = the log. It
+	// runs on the reading goroutine, and claude's exit is reported only
+	// once stderr is read through, so it should return promptly.
+	Stderr    func(line string)
+	ClientApp string       // names the app in claude's User-Agent, e.g. "nushi/0.9"
+	MaxLine   int          // the longest stdout line read; 0 = 128 MiB
+	Spawner   Spawner      // nil = Exec
+	Log       *slog.Logger // nil = no log
 }
 
 // defaultMaxLine is the stdout line cap: a tool result with images can
