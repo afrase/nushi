@@ -37,19 +37,17 @@ func redactArgs(args []string) []string {
 
 // redactJSON is raw with every value under a secretKeys object replaced,
 // and true, when raw is JSON holding one; else raw and false, untouched,
-// so a frame without secrets keeps its bytes and its keys' order.
+// so a frame without secrets keeps its bytes and its keys' order. Every
+// object or array is decoded to look: a key can be spelled with escapes.
 func redactJSON(raw []byte) ([]byte, bool) {
 	raw = bytes.TrimSpace(raw)
-	if len(raw) == 0 || raw[0] != '{' && raw[0] != '[' || !hasSecretKey(raw) {
+	if len(raw) == 0 || raw[0] != '{' && raw[0] != '[' {
 		return raw, false
 	}
 	var v any
 	d := json.NewDecoder(bytes.NewReader(raw))
 	d.UseNumber()
-	if d.Decode(&v) != nil {
-		return raw, false
-	}
-	if !redact(v) {
+	if d.Decode(&v) != nil || !redact(v) {
 		return raw, false
 	}
 	var b bytes.Buffer
@@ -59,17 +57,6 @@ func redactJSON(raw []byte) ([]byte, bool) {
 		return raw, false
 	}
 	return bytes.TrimSpace(b.Bytes()), true
-}
-
-// hasSecretKey says whether raw may hold a secretKeys key: a quick look
-// before decoding every frame.
-func hasSecretKey(raw []byte) bool {
-	for k := range secretKeys {
-		if bytes.Contains(raw, []byte(`"`+k+`"`)) {
-			return true
-		}
-	}
-	return false
 }
 
 // redact replaces, in place, the values of each secretKeys object in v,

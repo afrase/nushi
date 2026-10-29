@@ -14,6 +14,7 @@ func TestRedactJSON(t *testing.T) {
 	}{
 		{"mcp config", `{"mcpServers":{"gh":{"command":"gh-mcp","env":{"GH_TOKEN":"ghp_x"}},"web":{"type":"http","url":"https://x","headers":{"Authorization":"Bearer y"}}}}`,
 			`{"mcpServers":{"gh":{"command":"gh-mcp","env":{"GH_TOKEN":"<redacted>"}},"web":{"headers":{"Authorization":"<redacted>"},"type":"http","url":"https://x"}}}`, true},
+		{"escaped key", `{"\u0065nv":{"K":"v"},"h\u0065aders":{"A":"b"}}`, `{"env":{"K":"<redacted>"},"headers":{"A":"<redacted>"}}`, true},
 		{"in an array", `[{"name":"a","env":{"K":"v"}}]`, `[{"env":{"K":"<redacted>"},"name":"a"}]`, true},
 		{"settings env", `{"env":{"ANTHROPIC_API_KEY":"sk-1"},"model":"opus"}`, `{"env":{"ANTHROPIC_API_KEY":"<redacted>"},"model":"opus"}`, true},
 		{"nested values", `{"env":{"K":{"deep":"v"}}}`, `{"env":{"K":"<redacted>"}}`, true},
