@@ -27,11 +27,11 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Question** | A form the agent asks you to fill in (Claude's AskUserQuestion), as a question card. | `Question` item, `Field`, `QuestionCard`, `AnswerQuestion` | 0009 |
 | **Needs you** | The chat waits on you: a permission prompt or a question. Amber dot, Dock badge, "Needs you ↓". | `waiting` (`ChatStatus`, `ChatPhase`), `WaitingCard` | |
 | **Chat states** | A chat's dot and word: needs you, working, in background, done, asleep, idle, new, expired, couldn't start, archived. | `ChatPhase`, `phaseWord` | |
-| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, `ChatPhase.unseen` | |
+| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, proto `Chat.done`, `ChatPhase.unseen` | |
 | **Subagent** | A helper the agent starts for a task ("Explore: find the scroll handling"). Its steps show in its row and its pane; it can be stopped alone. | `Subagent`, `Item.Agent`, `SubagentPane` | 0044 |
-| **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `model.ToSubagent`, `Item.ToSubagentName`, `claude/subagents.go`, `to_subagent.go`, proto `to_subagent`, `relay_to` | |
+| **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `model.ToSubagent`, `Item.ToSubagentName`, `claude/subagents.go`, `to_subagent.go`, proto `to_subagent`, `to_subagent_name` | |
 | **Background task** | A subagent or command still running after the turn that started it ended. The Background tasks widget lists them; each has a Stop. | `ChatStatus.background`, `StopTask` | 0044 |
-| **Background command** | A command the agent left running in the background, its output in a pane. | `BackgroundCommand`, `ShellPane`, `Item.TaskID`, `background.go` | |
+| **Background command** | A command the agent left running in the background, its output in a pane. | `BackgroundCommand` (Go and proto), `ShellPane`, `Item.TaskID`, `background.go` | |
 | **Queue** | Messages sent while a turn runs (⏎, Queue). Each goes at the agent's next chance: into the running turn when the agent takes steering, else as the next message. Shown as pills over the box. | `QueuedMessage`, `ChatQueue`, `SendPrompt.queue`, `Unqueue`, `QueuePills` | |
 | **Steer** | "Steer: stop and send now" (⌘⏎): stops the running turn and sends at once. Not the agent's steering (Synonyms). | `SendPrompt.now` | |
 | **Side chat** | A fork of the chat, beside it, that knows the conversation but doesn't add to it; you can go back and forth in it, as in Claude Code's side chat. It ends when closed (⇧⌘B). | `ForkChat`, `CloseSideChat`, `sides.go`, `side_chat.dart`, `Daemon.openSide` | |
@@ -178,11 +178,11 @@ One line each; the word after the arrow wins.
 
 ## Renames to do
 
-Code that uses an old word, for the clean-up batch. Proto names stay (the API is additive, ADR 0004); a rename there is a new field or call.
+Code that uses an old word, for the clean-up batch. A proto field or message is renamed in place, its number and type kept (ADR 0004's amendment): the old name goes in its comment.
 
 - `PanelCard`, `PanelCards`, `panel_cards.dart`, `collapsedCards` → widget; `artifacts_card.dart`, `mcp_card.dart`, `pull_card.dart` → `*_widget.dart`; `agents_card.dart` holds the Background tasks widget → `background_tasks_widget.dart`. Doc comments that call them cards (`details_panel.dart`, `chat_header.dart`, `app_actions.dart`, `pull_link.dart`, `pull_states.dart`). `CardShell` and `CardList` serve the inbox's and task list's cards too: keep them.
-- Proto `relay_to`, `relay_call`, `relay_state`, `relayed_by`, `relay_stop` (`Item`, `QueuedMessage`) and the app's uses → `to_subagent…`, as Go's `ToSubagent…` (`model.ToSubagent`, `Item.ToSubagentName`, `ToSubagent`, `ToSubagentState`, `PassedOnBy`, `ToSubagentStop`), so relay means the server only. Their JSON names on disk and the state "relayed" stay.
-- Proto `Shell` and `ShellPane` (a background command) → `BackgroundCommand`, as Go's `model.BackgroundCommand`; `Shell` is easy to take for a terminal's.
-- Proto `Chat.unseen`, the app's `ChatState.unseen` and `ChatPhase.unseen` → `done`, as Go's `ChatRecord.Done` (stored as `Unseen`).
+- The app's `Draft.relay`, `_Relayed` and `relay_pane_test.dart` (a message to a subagent) → the `toSubagent` words Go and proto have (`model.ToSubagent`, `Item.to_subagent…`, `passed_on_by`), so relay means the server only. The JSON names on disk and the state "relayed" stay.
+- `ShellPane` and `shells.dart` (a background command) → `BackgroundCommand…`, as Go and proto say; `Shell` is easy to take for a terminal's.
+- The app's `ChatState.unseen`, `ChatPhase.unseen` and `unseenApi` → `done`, as Go's `ChatRecord.Done` (stored as `Unseen`) and proto `Chat.done`.
 - `ToolGroupView` → `RunView` (the UI's run).
 - Steer: the button that stops the turn shares its name with the agent's steering, which is what Queue does (proto `SendPromptRequest.queue`'s comment, `composer.dart`'s "steers"). Either rename the button (Stop and send) or always qualify the agent's ("the agent's steering"). A product call: the owner's.

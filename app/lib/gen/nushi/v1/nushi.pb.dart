@@ -951,7 +951,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? jiraSite,
     $core.String? jiraKey,
     GitHubLink? github,
-    $core.bool? unseen,
+    $core.bool? done,
     GitHubLink? pull,
     $core.int? pin,
   }) {
@@ -970,7 +970,7 @@ class Chat extends $pb.GeneratedMessage {
     if (jiraSite != null) result.jiraSite = jiraSite;
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (github != null) result.github = github;
-    if (unseen != null) result.unseen = unseen;
+    if (done != null) result.done = done;
     if (pull != null) result.pull = pull;
     if (pin != null) result.pin = pin;
     return result;
@@ -1006,7 +1006,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aOS(13, _omitFieldNames ? '' : 'jiraKey')
     ..aOM<GitHubLink>(14, _omitFieldNames ? '' : 'github',
         subBuilder: GitHubLink.$_createMessage)
-    ..aOB(15, _omitFieldNames ? '' : 'unseen')
+    ..aOB(15, _omitFieldNames ? '' : 'done')
     ..aOM<GitHubLink>(16, _omitFieldNames ? '' : 'pull',
         subBuilder: GitHubLink.$_createMessage)
     ..aI(17, _omitFieldNames ? '' : 'pin')
@@ -1176,16 +1176,17 @@ class Chat extends $pb.GeneratedMessage {
   GitHubLink ensureGithub() => $_ensure(13);
 
   /// A turn ended (it finished, or failed with an error to read; not one
-  /// the user stopped) while no client showed the chat (SetDeviceView);
-  /// showing it, or archiving it, clears it. API 76.
+  /// the user stopped) while no client showed the chat (SetDeviceView): the
+  /// chat state done. Showing it, or archiving it, clears it. API 76; named
+  /// unseen before API 92 (the same field).
   @$pb.TagNumber(15)
-  $core.bool get unseen => $_getBF(14);
+  $core.bool get done => $_getBF(14);
   @$pb.TagNumber(15)
-  set unseen($core.bool value) => $_setBool(14, value);
+  set done($core.bool value) => $_setBool(14, value);
   @$pb.TagNumber(15)
-  $core.bool hasUnseen() => $_has(14);
+  $core.bool hasDone() => $_has(14);
   @$pb.TagNumber(15)
-  void clearUnseen() => $_clearField(15);
+  void clearDone() => $_clearField(15);
 
   /// The chat's pull request: the one it was started from (github), else the
   /// one whose head is its branch, found or linked by hand. API 81.
@@ -3732,18 +3733,18 @@ class QueuedMessage extends $pb.GeneratedMessage {
     $core.String? text,
     $core.Iterable<$core.String>? files,
     $core.Iterable<ImageData>? images,
-    $core.String? relayTo,
+    $core.String? toSubagentName,
     $core.String? toSubagent,
-    $core.bool? relayStop,
+    $core.bool? toSubagentStop,
   }) {
     final result = QueuedMessage._();
     if (id != null) result.id = id;
     if (text != null) result.text = text;
     if (files != null) result.files.addAll(files);
     if (images != null) result.images.addAll(images);
-    if (relayTo != null) result.relayTo = relayTo;
+    if (toSubagentName != null) result.toSubagentName = toSubagentName;
     if (toSubagent != null) result.toSubagent = toSubagent;
-    if (relayStop != null) result.relayStop = relayStop;
+    if (toSubagentStop != null) result.toSubagentStop = toSubagentStop;
     return result;
   }
 
@@ -3765,9 +3766,9 @@ class QueuedMessage extends $pb.GeneratedMessage {
     ..pPS(3, _omitFieldNames ? '' : 'files')
     ..pPM<ImageData>(4, _omitFieldNames ? '' : 'images',
         subBuilder: ImageData.$_createMessage)
-    ..aOS(5, _omitFieldNames ? '' : 'relayTo')
+    ..aOS(5, _omitFieldNames ? '' : 'toSubagentName')
     ..aOS(6, _omitFieldNames ? '' : 'toSubagent')
-    ..aOB(7, _omitFieldNames ? '' : 'relayStop')
+    ..aOB(7, _omitFieldNames ? '' : 'toSubagentStop')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3817,14 +3818,15 @@ class QueuedMessage extends $pb.GeneratedMessage {
   $pb.PbList<ImageData> get images => $_getList(3);
 
   /// The type of the subagent it is for (SendPromptRequest.to_subagent).
+  /// Named relay_to before API 92 (the same field).
   @$pb.TagNumber(5)
-  $core.String get relayTo => $_getSZ(4);
+  $core.String get toSubagentName => $_getSZ(4);
   @$pb.TagNumber(5)
-  set relayTo($core.String value) => $_setString(4, value);
+  set toSubagentName($core.String value) => $_setString(4, value);
   @$pb.TagNumber(5)
-  $core.bool hasRelayTo() => $_has(4);
+  $core.bool hasToSubagentName() => $_has(4);
   @$pb.TagNumber(5)
-  void clearRelayTo() => $_clearField(5);
+  void clearToSubagentName() => $_clearField(5);
 
   /// That subagent's tool call (SendPromptRequest.to_subagent), to send it
   /// there again; empty when not known (a replayed message).
@@ -3838,15 +3840,15 @@ class QueuedMessage extends $pb.GeneratedMessage {
   void clearToSubagent() => $_clearField(6);
 
   /// It asks the agent to stop that subagent, or the background command
-  /// relay_to names (StopTask).
+  /// to_subagent_name names (StopTask). Named relay_stop before API 92.
   @$pb.TagNumber(7)
-  $core.bool get relayStop => $_getBF(6);
+  $core.bool get toSubagentStop => $_getBF(6);
   @$pb.TagNumber(7)
-  set relayStop($core.bool value) => $_setBool(6, value);
+  set toSubagentStop($core.bool value) => $_setBool(6, value);
   @$pb.TagNumber(7)
-  $core.bool hasRelayStop() => $_has(6);
+  $core.bool hasToSubagentStop() => $_has(6);
   @$pb.TagNumber(7)
-  void clearRelayStop() => $_clearField(7);
+  void clearToSubagentStop() => $_clearField(7);
 }
 
 /// Every message waiting in a chat's queue, in order.
@@ -6658,10 +6660,12 @@ class WorktreePlan extends $pb.GeneratedMessage {
   factory WorktreePlan({
     Worktree? worktree,
     WorktreeState? state,
+    $core.Iterable<$core.String>? others,
   }) {
     final result = WorktreePlan._();
     if (worktree != null) result.worktree = worktree;
     if (state != null) result.state = state;
+    if (others != null) result.others.addAll(others);
     return result;
   }
 
@@ -6682,6 +6686,7 @@ class WorktreePlan extends $pb.GeneratedMessage {
         subBuilder: Worktree.$_createMessage)
     ..aOM<WorktreeState>(2, _omitFieldNames ? '' : 'state',
         subBuilder: WorktreeState.$_createMessage)
+    ..pPS(3, _omitFieldNames ? '' : 'others')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6727,6 +6732,11 @@ class WorktreePlan extends $pb.GeneratedMessage {
   void clearState() => $_clearField(2);
   @$pb.TagNumber(2)
   WorktreeState ensureState() => $_ensure(1);
+
+  /// The other chats (not archived) working in it, by title: DeleteChat
+  /// refuses to remove it while there are any. API 92.
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get others => $_getList(2);
 }
 
 /// What removing a worktree and deleting its branch would lose.
@@ -12634,14 +12644,14 @@ class Item extends $pb.GeneratedMessage {
     $core.String? model,
     $core.String? effort,
     $core.String? ranModel,
-    Shell? shell,
+    BackgroundCommand? backgroundCommand,
     $core.String? agentId,
-    $core.String? relayTo,
-    $core.String? relayCall,
-    $core.String? relayState,
-    $core.String? relayedBy,
+    $core.String? toSubagentName,
+    $core.String? toSubagent,
+    $core.String? toSubagentState,
+    $core.String? passedOnBy,
     Findings? findings,
-    $core.bool? relayStop,
+    $core.bool? toSubagentStop,
     $fixnum.Int64? sent,
     $core.String? input,
     $core.String? rawOutput,
@@ -12671,14 +12681,14 @@ class Item extends $pb.GeneratedMessage {
     if (model != null) result.model = model;
     if (effort != null) result.effort = effort;
     if (ranModel != null) result.ranModel = ranModel;
-    if (shell != null) result.shell = shell;
+    if (backgroundCommand != null) result.backgroundCommand = backgroundCommand;
     if (agentId != null) result.agentId = agentId;
-    if (relayTo != null) result.relayTo = relayTo;
-    if (relayCall != null) result.relayCall = relayCall;
-    if (relayState != null) result.relayState = relayState;
-    if (relayedBy != null) result.relayedBy = relayedBy;
+    if (toSubagentName != null) result.toSubagentName = toSubagentName;
+    if (toSubagent != null) result.toSubagent = toSubagent;
+    if (toSubagentState != null) result.toSubagentState = toSubagentState;
+    if (passedOnBy != null) result.passedOnBy = passedOnBy;
     if (findings != null) result.findings = findings;
-    if (relayStop != null) result.relayStop = relayStop;
+    if (toSubagentStop != null) result.toSubagentStop = toSubagentStop;
     if (sent != null) result.sent = sent;
     if (input != null) result.input = input;
     if (rawOutput != null) result.rawOutput = rawOutput;
@@ -12729,16 +12739,16 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(22, _omitFieldNames ? '' : 'model')
     ..aOS(23, _omitFieldNames ? '' : 'effort')
     ..aOS(24, _omitFieldNames ? '' : 'ranModel')
-    ..aOM<Shell>(25, _omitFieldNames ? '' : 'shell',
-        subBuilder: Shell.$_createMessage)
+    ..aOM<BackgroundCommand>(25, _omitFieldNames ? '' : 'backgroundCommand',
+        subBuilder: BackgroundCommand.$_createMessage)
     ..aOS(26, _omitFieldNames ? '' : 'agentId')
-    ..aOS(27, _omitFieldNames ? '' : 'relayTo')
-    ..aOS(28, _omitFieldNames ? '' : 'relayCall')
-    ..aOS(29, _omitFieldNames ? '' : 'relayState')
-    ..aOS(30, _omitFieldNames ? '' : 'relayedBy')
+    ..aOS(27, _omitFieldNames ? '' : 'toSubagentName')
+    ..aOS(28, _omitFieldNames ? '' : 'toSubagent')
+    ..aOS(29, _omitFieldNames ? '' : 'toSubagentState')
+    ..aOS(30, _omitFieldNames ? '' : 'passedOnBy')
     ..aOM<Findings>(31, _omitFieldNames ? '' : 'findings',
         subBuilder: Findings.$_createMessage)
-    ..aOB(32, _omitFieldNames ? '' : 'relayStop')
+    ..aOB(32, _omitFieldNames ? '' : 'toSubagentStop')
     ..aInt64(33, _omitFieldNames ? '' : 'sent')
     ..aOS(34, _omitFieldNames ? '' : 'input')
     ..aOS(35, _omitFieldNames ? '' : 'rawOutput')
@@ -12970,16 +12980,17 @@ class Item extends $pb.GeneratedMessage {
   void clearRanModel() => $_clearField(24);
 
   /// For a tool call that left its command running in the background.
+  /// Named shell before API 92 (the same field).
   @$pb.TagNumber(25)
-  Shell get shell => $_getN(24);
+  BackgroundCommand get backgroundCommand => $_getN(24);
   @$pb.TagNumber(25)
-  set shell(Shell value) => $_setField(25, value);
+  set backgroundCommand(BackgroundCommand value) => $_setField(25, value);
   @$pb.TagNumber(25)
-  $core.bool hasShell() => $_has(24);
+  $core.bool hasBackgroundCommand() => $_has(24);
   @$pb.TagNumber(25)
-  void clearShell() => $_clearField(25);
+  void clearBackgroundCommand() => $_clearField(25);
   @$pb.TagNumber(25)
-  Shell ensureShell() => $_ensure(24);
+  BackgroundCommand ensureBackgroundCommand() => $_ensure(24);
 
   /// For a tool call that starts a subagent: the agent's id for it, when the
   /// agent can pass it messages (SendPromptRequest.to_subagent).
@@ -12992,47 +13003,49 @@ class Item extends $pb.GeneratedMessage {
   @$pb.TagNumber(26)
   void clearAgentId() => $_clearField(26);
 
-  /// For a user message: the type of the subagent the agent was asked to
-  /// pass it to, and that subagent's tool call (not known after a replay
-  /// the agent's own call doesn't link).
+  /// For a message to a subagent (a user message the agent was asked to
+  /// pass on): the subagent's type, and its tool call (not known after a
+  /// replay the agent's own call doesn't link). Named relay_to and
+  /// relay_call before API 92 (the same fields), as the three below were
+  /// relay_state, relayed_by and relay_stop.
   @$pb.TagNumber(27)
-  $core.String get relayTo => $_getSZ(26);
+  $core.String get toSubagentName => $_getSZ(26);
   @$pb.TagNumber(27)
-  set relayTo($core.String value) => $_setString(26, value);
+  set toSubagentName($core.String value) => $_setString(26, value);
   @$pb.TagNumber(27)
-  $core.bool hasRelayTo() => $_has(26);
+  $core.bool hasToSubagentName() => $_has(26);
   @$pb.TagNumber(27)
-  void clearRelayTo() => $_clearField(27);
+  void clearToSubagentName() => $_clearField(27);
 
   @$pb.TagNumber(28)
-  $core.String get relayCall => $_getSZ(27);
+  $core.String get toSubagent => $_getSZ(27);
   @$pb.TagNumber(28)
-  set relayCall($core.String value) => $_setString(27, value);
+  set toSubagent($core.String value) => $_setString(27, value);
   @$pb.TagNumber(28)
-  $core.bool hasRelayCall() => $_has(27);
+  $core.bool hasToSubagent() => $_has(27);
   @$pb.TagNumber(28)
-  void clearRelayCall() => $_clearField(28);
+  void clearToSubagent() => $_clearField(28);
 
-  /// How the relay went: "sending" until the agent passes it on (its call
-  /// that does is relayed_by), "relayed" once that call completes, "failed"
+  /// How it went: "sending" until the agent passes it on (its call that
+  /// does is passed_on_by), "relayed" once that call completes, "failed"
   /// when it fails or the turn ends without one; "" when unknown (replayed).
   @$pb.TagNumber(29)
-  $core.String get relayState => $_getSZ(28);
+  $core.String get toSubagentState => $_getSZ(28);
   @$pb.TagNumber(29)
-  set relayState($core.String value) => $_setString(28, value);
+  set toSubagentState($core.String value) => $_setString(28, value);
   @$pb.TagNumber(29)
-  $core.bool hasRelayState() => $_has(28);
+  $core.bool hasToSubagentState() => $_has(28);
   @$pb.TagNumber(29)
-  void clearRelayState() => $_clearField(29);
+  void clearToSubagentState() => $_clearField(29);
 
   @$pb.TagNumber(30)
-  $core.String get relayedBy => $_getSZ(29);
+  $core.String get passedOnBy => $_getSZ(29);
   @$pb.TagNumber(30)
-  set relayedBy($core.String value) => $_setString(29, value);
+  set passedOnBy($core.String value) => $_setString(29, value);
   @$pb.TagNumber(30)
-  $core.bool hasRelayedBy() => $_has(29);
+  $core.bool hasPassedOnBy() => $_has(29);
   @$pb.TagNumber(30)
-  void clearRelayedBy() => $_clearField(30);
+  void clearPassedOnBy() => $_clearField(30);
 
   /// For a tool call that reports a code review's result (Claude's
   /// ReportFindings): what it found.
@@ -13048,15 +13061,16 @@ class Item extends $pb.GeneratedMessage {
   Findings ensureFindings() => $_ensure(30);
 
   /// For a user message: it asked the agent to stop that subagent, or the
-  /// background command relay_to names (StopTask), not to pass anything on.
+  /// background command to_subagent_name names (StopTask), not to pass
+  /// anything on.
   @$pb.TagNumber(32)
-  $core.bool get relayStop => $_getBF(31);
+  $core.bool get toSubagentStop => $_getBF(31);
   @$pb.TagNumber(32)
-  set relayStop($core.bool value) => $_setBool(31, value);
+  set toSubagentStop($core.bool value) => $_setBool(31, value);
   @$pb.TagNumber(32)
-  $core.bool hasRelayStop() => $_has(31);
+  $core.bool hasToSubagentStop() => $_has(31);
   @$pb.TagNumber(32)
-  void clearRelayStop() => $_clearField(32);
+  void clearToSubagentStop() => $_clearField(32);
 
   /// For a user message sent through Nushi: when, in Unix milliseconds; 0
   /// when not known (one the agent replayed). API 78.
@@ -13299,9 +13313,10 @@ class Finding extends $pb.GeneratedMessage {
   void clearOutcome() => $_clearField(8);
 }
 
-/// A command the agent runs in the background.
-class Shell extends $pb.GeneratedMessage {
-  factory Shell({
+/// A command the agent runs in the background (a message named Shell
+/// before API 92).
+class BackgroundCommand extends $pb.GeneratedMessage {
+  factory BackgroundCommand({
     $core.String? id,
     $core.String? state,
     $fixnum.Int64? started,
@@ -13309,7 +13324,7 @@ class Shell extends $pb.GeneratedMessage {
     $core.String? output,
     $core.String? end,
   }) {
-    final result = Shell._();
+    final result = BackgroundCommand._();
     if (id != null) result.id = id;
     if (state != null) result.state = state;
     if (started != null) result.started = started;
@@ -13319,19 +13334,19 @@ class Shell extends $pb.GeneratedMessage {
     return result;
   }
 
-  Shell._();
+  BackgroundCommand._();
 
-  factory Shell.fromBuffer($core.List<$core.int> data,
+  factory BackgroundCommand.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      Shell()..mergeFromBuffer(data, registry);
-  factory Shell.fromJson($core.String json,
+      BackgroundCommand()..mergeFromBuffer(data, registry);
+  factory BackgroundCommand.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      Shell()..mergeFromJson(json, registry);
+      BackgroundCommand()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
-      _omitMessageNames ? '' : 'Shell',
+      _omitMessageNames ? '' : 'BackgroundCommand',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
-      createEmptyInstance: Shell.$_createMessage)
+      createEmptyInstance: BackgroundCommand.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'state')
     ..aInt64(3, _omitFieldNames ? '' : 'started')
@@ -13341,24 +13356,26 @@ class Shell extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Shell clone() => deepCopy();
+  BackgroundCommand clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Shell copyWith(void Function(Shell) updates) =>
-      super.copyWith((message) => updates(message as Shell)) as Shell;
+  BackgroundCommand copyWith(void Function(BackgroundCommand) updates) =>
+      super.copyWith((message) => updates(message as BackgroundCommand))
+          as BackgroundCommand;
 
   @$core.override
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
-  @$core.Deprecated('Use Shell() / Shell.new instead')
-  static Shell create() => Shell._();
-  static $pb.GeneratedMessage $_createMessage() => Shell._();
+  @$core.Deprecated('Use BackgroundCommand() / BackgroundCommand.new instead')
+  static BackgroundCommand create() => BackgroundCommand._();
+  static $pb.GeneratedMessage $_createMessage() => BackgroundCommand._();
   @$core.override
-  Shell createEmptyInstance() => Shell._();
+  BackgroundCommand createEmptyInstance() => BackgroundCommand._();
   @$core.pragma('dart2js:noInline')
-  static Shell getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<Shell>(Shell.$_createMessage);
-  static Shell? _defaultInstance;
+  static BackgroundCommand getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<BackgroundCommand>(
+          BackgroundCommand.$_createMessage);
+  static BackgroundCommand? _defaultInstance;
 
   /// The agent's id for it.
   @$pb.TagNumber(1)
@@ -26722,8 +26739,8 @@ class NushiServiceApi {
   /// Stops a subagent or a background command (the tool call that started
   /// it), alone: through its own session when the agent shows the subagent
   /// as one (Subagent.session), else by asking the agent, as a message of
-  /// the user's (Item.relay_stop) that waits for its next chance. It shows
-  /// as stopped once the agent says so.
+  /// the user's (Item.to_subagent_stop) that waits for its next chance. It
+  /// shows as stopped once the agent says so.
   $async.Future<StopTaskResponse> stopTask(
           $pb.ClientContext? ctx, StopTaskRequest request) =>
       _client.invoke<StopTaskResponse>(
@@ -27177,7 +27194,7 @@ class NushiServiceApi {
           'SetPushSubscription', request, SetPushSubscriptionResponse());
 
   /// The chat a client shows ("" none), said again within 40 s while it
-  /// does: that chat is seen (Chat.unseen), and no push for it goes to the
+  /// does: that chat is seen (Chat.done goes), and no push for it goes to the
   /// device while it's connected. On the Mac's socket it's the Mac's window
   /// (API 76; before, only on a device's channel).
   $async.Future<SetDeviceViewResponse> setDeviceView(

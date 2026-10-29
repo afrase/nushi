@@ -72,8 +72,8 @@ service NushiService {
   // Stops a subagent or a background command (the tool call that started
   // it), alone: through its own session when the agent shows the subagent
   // as one (Subagent.session), else by asking the agent, as a message of
-  // the user's (Item.relay_stop) that waits for its next chance. It shows
-  // as stopped once the agent says so.
+  // the user's (Item.to_subagent_stop) that waits for its next chance. It
+  // shows as stopped once the agent says so.
   rpc StopTask(StopTaskRequest) returns (StopTaskResponse);
   // Opens a side chat: a session the agent forks from the chat's (ACP
   // session/fork, when status.can_fork). It knows the conversation so far
@@ -289,7 +289,7 @@ service NushiService {
   // only on a device's channel. The endpoint must be a known push service.
   rpc SetPushSubscription(SetPushSubscriptionRequest) returns (SetPushSubscriptionResponse);
   // The chat a client shows ("" none), said again within 40 s while it
-  // does: that chat is seen (Chat.unseen), and no push for it goes to the
+  // does: that chat is seen (Chat.done goes), and no push for it goes to the
   // device while it's connected. On the Mac's socket it's the Mac's window
   // (API 76; before, only on a device's channel).
   rpc SetDeviceView(SetDeviceViewRequest) returns (SetDeviceViewResponse);
@@ -516,9 +516,10 @@ message Chat {
   // The GitHub pull request or issue it was started from, if it was.
   GitHubLink github = 14;
   // A turn ended (it finished, or failed with an error to read; not one
-  // the user stopped) while no client showed the chat (SetDeviceView);
-  // showing it, or archiving it, clears it. API 76.
-  bool unseen = 15;
+  // the user stopped) while no client showed the chat (SetDeviceView): the
+  // chat state done. Showing it, or archiving it, clears it. API 76; named
+  // unseen before API 92 (the same field).
+  bool done = 15;
   // The chat's pull request: the one it was started from (github), else the
   // one whose head is its branch, found or linked by hand. API 81.
   GitHubLink pull = 16;
@@ -824,13 +825,14 @@ message QueuedMessage {
   repeated string files = 3;
   repeated ImageData images = 4;
   // The type of the subagent it is for (SendPromptRequest.to_subagent).
-  string relay_to = 5;
+  // Named relay_to before API 92 (the same field).
+  string to_subagent_name = 5;
   // That subagent's tool call (SendPromptRequest.to_subagent), to send it
   // there again; empty when not known (a replayed message).
   string to_subagent = 6;
   // It asks the agent to stop that subagent, or the background command
-  // relay_to names (StopTask).
-  bool relay_stop = 7;
+  // to_subagent_name names (StopTask). Named relay_stop before API 92.
+  bool to_subagent_stop = 7;
 }
 
 // Every message waiting in a chat's queue, in order.
@@ -1081,6 +1083,9 @@ message PlanDeleteChatResponse {
 message WorktreePlan {
   Worktree worktree = 1;
   WorktreeState state = 2;
+  // The other chats (not archived) working in it, by title: DeleteChat
+  // refuses to remove it while there are any. API 92.
+  repeated string others = 3;
 }
 
 // What removing a worktree and deleting its branch would lose.
@@ -1726,26 +1731,30 @@ message Item {
   string effort = 23;
   string ran_model = 24;
   // For a tool call that left its command running in the background.
-  Shell shell = 25;
+  // Named shell before API 92 (the same field).
+  BackgroundCommand background_command = 25;
   // For a tool call that starts a subagent: the agent's id for it, when the
   // agent can pass it messages (SendPromptRequest.to_subagent).
   string agent_id = 26;
-  // For a user message: the type of the subagent the agent was asked to
-  // pass it to, and that subagent's tool call (not known after a replay
-  // the agent's own call doesn't link).
-  string relay_to = 27;
-  string relay_call = 28;
-  // How the relay went: "sending" until the agent passes it on (its call
-  // that does is relayed_by), "relayed" once that call completes, "failed"
+  // For a message to a subagent (a user message the agent was asked to
+  // pass on): the subagent's type, and its tool call (not known after a
+  // replay the agent's own call doesn't link). Named relay_to and
+  // relay_call before API 92 (the same fields), as the three below were
+  // relay_state, relayed_by and relay_stop.
+  string to_subagent_name = 27;
+  string to_subagent = 28;
+  // How it went: "sending" until the agent passes it on (its call that
+  // does is passed_on_by), "relayed" once that call completes, "failed"
   // when it fails or the turn ends without one; "" when unknown (replayed).
-  string relay_state = 29;
-  string relayed_by = 30;
+  string to_subagent_state = 29;
+  string passed_on_by = 30;
   // For a tool call that reports a code review's result (Claude's
   // ReportFindings): what it found.
   Findings findings = 31;
   // For a user message: it asked the agent to stop that subagent, or the
-  // background command relay_to names (StopTask), not to pass anything on.
-  bool relay_stop = 32;
+  // background command to_subagent_name names (StopTask), not to pass
+  // anything on.
+  bool to_subagent_stop = 32;
   // For a user message sent through Nushi: when, in Unix milliseconds; 0
   // when not known (one the agent replayed). API 78.
   int64 sent = 33;
@@ -1779,8 +1788,9 @@ message Finding {
   string outcome = 8;
 }
 
-// A command the agent runs in the background.
-message Shell {
+// A command the agent runs in the background (a message named Shell
+// before API 92).
+message BackgroundCommand {
   // The agent's id for it.
   string id = 1;
   // "running" while the daemon sees it run, then "done", "failed" or

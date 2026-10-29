@@ -232,11 +232,11 @@ class ToolCallView extends StatelessWidget {
               PreviewButton(preview),
             ],
             // The call ends at once; the command runs on (see shells.dart).
-            if (it.hasShell())
+            if (it.hasBackgroundCommand())
               Shine(
-                on: it.shell.state == 'running' && !still,
+                on: it.backgroundCommand.state == 'running' && !still,
                 child: Text(
-                  'in the background: ${it.shell.state}',
+                  'in the background: ${it.backgroundCommand.state}',
                   style: theme.ui(t.textMuted, size: 11.5),
                 ),
               ),

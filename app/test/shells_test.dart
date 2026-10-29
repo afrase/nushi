@@ -9,7 +9,7 @@ void main() {
         Item(
           id: 't',
           title: 'make',
-          shell: Shell(
+          backgroundCommand: BackgroundCommand(
             state: state,
             end: end,
             started: Int64(ms),

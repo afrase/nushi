@@ -26,10 +26,13 @@ type DeletePlan struct {
 
 // WorktreePlan is one of a chat's worktrees: State says what removing it
 // and its branch would lose, unless StateErr says why that can't be told.
+// Others are the other chats (not archived) working in it, by title:
+// while there are any, Delete refuses to remove it.
 type WorktreePlan struct {
 	Worktree model.Worktree
 	State    model.WorktreeState
 	StateErr error
+	Others   []string
 }
 
 // DeleteOptions say what to do with a deleted chat's worktrees and their
@@ -60,8 +63,12 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 		p.Scratch = filepath.Join(s.scratch, c.id)
 	}
 	for _, wt := range made(sess) {
-		st, err := s.worktrees.Inspect(ctx, wt)
-		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, st, err})
+		st, stErr := s.worktrees.Inspect(ctx, wt)
+		others, err := s.othersIn(c, wt.Path)
+		if err != nil {
+			return DeletePlan{}, err
+		}
+		p.Worktrees = append(p.Worktrees, WorktreePlan{wt, st, stErr, others})
 	}
 	s.mu.Lock()
 	known := c.kind.deletes
@@ -103,7 +110,7 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	if err != nil {
 		return err
 	}
-	if err := s.othersInWorktrees(chatID, p.Worktrees, opts); err != nil {
+	if err := othersInWorktrees(p.Worktrees, opts); err != nil {
 		return err
 	}
 	c, err := s.halt(chatID)
@@ -152,21 +159,10 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 
 // othersInWorktrees refuses removing a worktree another chat works in, as
 // RemoveWorktree does: it would take that chat's folder.
-func (s *Service) othersInWorktrees(chatID string, wts []WorktreePlan, opts DeleteOptions) error {
-	c, err := s.stored(chatID)
-	if err != nil {
-		return err
-	}
+func othersInWorktrees(wts []WorktreePlan, opts DeleteOptions) error {
 	for _, wt := range wts {
-		if !opts[wt.Worktree.Path].RemoveWorktree {
-			continue
-		}
-		others, err := s.othersIn(c, wt.Worktree.Path)
-		if err != nil {
-			return err
-		}
-		if len(others) > 0 {
-			return fmt.Errorf("“%s” works in %s too: delete the chat without removing the worktree", strings.Join(others, "”, “"), wt.Worktree.Path)
+		if opts[wt.Worktree.Path].RemoveWorktree && len(wt.Others) > 0 {
+			return fmt.Errorf("“%s” works in %s too: delete the chat without removing the worktree", strings.Join(wt.Others, "”, “"), wt.Worktree.Path)
 		}
 	}
 	return nil

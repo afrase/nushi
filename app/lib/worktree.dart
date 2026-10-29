@@ -234,7 +234,8 @@ Future<void> _confirmMove(
 /// The Delete dialog's choices for a chat's worktree and branch, each on by
 /// default only when nothing would be lost; forcing follows from the
 /// warning shown. The branch goes only with the worktree (git keeps a
-/// branch a worktree has checked out).
+/// branch a worktree has checked out), and the worktree stays while another
+/// chat works in it (the daemon refuses: WorktreePlan.others, API 92).
 class WorktreeChoices extends StatelessWidget {
   const new({
     required this.plan,
@@ -252,7 +253,11 @@ class WorktreeChoices extends StatelessWidget {
   /// The choices that start on for [plan]: (remove, branch).
   static (bool, bool) defaults(WorktreePlan plan) {
     final st = plan.state;
-    final remove = st.error.isEmpty && st.changed == 0 && st.ignored == 0;
+    final remove =
+        plan.others.isEmpty &&
+        st.error.isEmpty &&
+        st.changed == 0 &&
+        st.ignored == 0;
     return (remove, remove && st.commits == 0 && !st.branchGone);
   }
 
@@ -318,16 +323,24 @@ class WorktreeChoices extends StatelessWidget {
         ? '1 ignored file or folder'
         : '${st.ignored} ignored files or folders';
     final commits = st.commits == 1 ? '1 commit' : '${st.commits} commits';
+    final others = plan.others;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         choice(
           'Remove the worktree',
           '.worktrees/${wt.path.split('/').last}',
-          value: remove,
-          onChanged: (v) => onChanged(remove: v, branch: branch),
+          value: remove && others.isEmpty,
+          onChanged: others.isNotEmpty
+              ? null
+              : (v) => onChanged(remove: v, branch: branch),
         ),
-        if (st.gone)
+        if (others.isNotEmpty)
+          note(
+            '“${others.join('”, “')}” '
+            '${others.length == 1 ? 'works' : 'work'} in it too, so it stays.',
+          )
+        else if (st.gone)
           note('Its folder was already removed outside Nushi.')
         else ...[
           if (st.changed > 0)

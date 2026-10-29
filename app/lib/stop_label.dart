@@ -11,15 +11,17 @@ const stopCommandLength = 60;
 /// queued and sent: "Stop: " and what it stops, a background command (the
 /// call [call] in [chat] has a shell) by its first line cut to about 60
 /// characters in code type, never the whole command; a subagent by its
-/// type ([relayTo]).
+/// type ([name]).
 TextSpan stopLabel(
   NushiTheme theme,
   Color color,
   ChatState chat, {
-  required String relayTo,
+  required String name,
   required String call,
 }) {
-  final shell = chat.items.any((it) => it.id == call && it.hasShell());
+  final shell = chat.items.any(
+    (it) => it.id == call && it.hasBackgroundCommand(),
+  );
   return TextSpan(
     children: [
       TextSpan(
@@ -27,10 +29,10 @@ TextSpan stopLabel(
         style: theme.ui(color, size: 12, weight: FontWeight.w600),
       ),
       if (shell)
-        TextSpan(text: stopCommand(relayTo), style: theme.code(color, size: 12))
+        TextSpan(text: stopCommand(name), style: theme.code(color, size: 12))
       else
         TextSpan(
-          text: relayTo,
+          text: name,
           style: theme.ui(color, size: 12, weight: FontWeight.w600),
         ),
     ],

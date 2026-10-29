@@ -77,9 +77,9 @@ final _items = [
     id: 'u4',
     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
     text: 'look at the cookie tests too',
-    relayTo: 'Explore',
-    relayCall: 'sa',
-    relayState: 'relayed',
+    toSubagentName: 'Explore',
+    toSubagent: 'sa',
+    toSubagentState: 'relayed',
   ),
   Item(
     id: 'e1',

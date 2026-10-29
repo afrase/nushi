@@ -36,7 +36,7 @@ List<Chat> _chats() => [
     status: ChatStatus(busy: true),
   ),
   chat('d', 'claude', 'Plant the beds', folder: '/Users/me/garden', age: 2)
-    ..unseen = true,
+    ..done = true,
   chat('e', 'ante', 'Jot it down', folder: '/Users/me/notes', age: 3),
   chat('b', 'pig', 'Seed data', folder: '/Users/me/ledger-poc', age: 5),
 ];

@@ -348,8 +348,8 @@ extension type NushiServiceClient(connect.Transport _transport) {
   /// Stops a subagent or a background command (the tool call that started
   /// it), alone: through its own session when the agent shows the subagent
   /// as one (Subagent.session), else by asking the agent, as a message of
-  /// the user's (Item.relay_stop) that waits for its next chance. It shows
-  /// as stopped once the agent says so.
+  /// the user's (Item.to_subagent_stop) that waits for its next chance. It
+  /// shows as stopped once the agent says so.
   Future<nushiv1nushi.StopTaskResponse> stopTask(
     nushiv1nushi.StopTaskRequest input, {
     connect.Headers? headers,
@@ -1557,7 +1557,7 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }
 
   /// The chat a client shows ("" none), said again within 40 s while it
-  /// does: that chat is seen (Chat.unseen), and no push for it goes to the
+  /// does: that chat is seen (Chat.done goes), and no push for it goes to the
   /// device while it's connected. On the Mac's socket it's the Mac's window
   /// (API 76; before, only on a device's channel).
   Future<nushiv1nushi.SetDeviceViewResponse> setDeviceView(

@@ -40,7 +40,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 91;
+const apiVersion = 92;
 
 /// The API from which the daemon keeps which chats are pinned, in order
 /// (Chat.pin, PinChats).
@@ -769,7 +769,7 @@ class Daemon extends ChangeNotifier {
           : null
       ..title = c.title
       ..archived = c.archived
-      ..unseen = daemonApi >= unseenApi ? c.unseen : null
+      ..unseen = daemonApi >= unseenApi ? c.done : null
       ..pin = c.pin
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       // Only the list carries a status; a chat event would clear it.

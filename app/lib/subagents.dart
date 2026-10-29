@@ -20,7 +20,7 @@ typedef SubagentRun = ({Item call, List<Item> items});
 List<SubagentRun> subagentsOf(List<Item> items) {
   final under = <String, List<Item>>{};
   for (final it in items) {
-    final to = it.parent.isNotEmpty ? it.parent : it.relayCall;
+    final to = it.parent.isNotEmpty ? it.parent : it.toSubagent;
     if (to.isNotEmpty) (under[to] ??= []).add(it);
   }
   return [

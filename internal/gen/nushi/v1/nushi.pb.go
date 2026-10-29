@@ -915,9 +915,10 @@ type Chat struct {
 	// The GitHub pull request or issue it was started from, if it was.
 	Github *GitHubLink `protobuf:"bytes,14,opt,name=github,proto3" json:"github,omitempty"`
 	// A turn ended (it finished, or failed with an error to read; not one
-	// the user stopped) while no client showed the chat (SetDeviceView);
-	// showing it, or archiving it, clears it. API 76.
-	Unseen bool `protobuf:"varint,15,opt,name=unseen,proto3" json:"unseen,omitempty"`
+	// the user stopped) while no client showed the chat (SetDeviceView): the
+	// chat state done. Showing it, or archiving it, clears it. API 76; named
+	// unseen before API 92 (the same field).
+	Done bool `protobuf:"varint,15,opt,name=done,proto3" json:"done,omitempty"`
 	// The chat's pull request: the one it was started from (github), else the
 	// one whose head is its branch, found or linked by hand. API 81.
 	Pull *GitHubLink `protobuf:"bytes,16,opt,name=pull,proto3" json:"pull,omitempty"`
@@ -1056,9 +1057,9 @@ func (x *Chat) GetGithub() *GitHubLink {
 	return nil
 }
 
-func (x *Chat) GetUnseen() bool {
+func (x *Chat) GetDone() bool {
 	if x != nil {
-		return x.Unseen
+		return x.Done
 	}
 	return false
 }
@@ -2983,15 +2984,16 @@ type QueuedMessage struct {
 	Files  []string               `protobuf:"bytes,3,rep,name=files,proto3" json:"files,omitempty"`
 	Images []*ImageData           `protobuf:"bytes,4,rep,name=images,proto3" json:"images,omitempty"`
 	// The type of the subagent it is for (SendPromptRequest.to_subagent).
-	RelayTo string `protobuf:"bytes,5,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
+	// Named relay_to before API 92 (the same field).
+	ToSubagentName string `protobuf:"bytes,5,opt,name=to_subagent_name,json=toSubagentName,proto3" json:"to_subagent_name,omitempty"`
 	// That subagent's tool call (SendPromptRequest.to_subagent), to send it
 	// there again; empty when not known (a replayed message).
 	ToSubagent string `protobuf:"bytes,6,opt,name=to_subagent,json=toSubagent,proto3" json:"to_subagent,omitempty"`
 	// It asks the agent to stop that subagent, or the background command
-	// relay_to names (StopTask).
-	RelayStop     bool `protobuf:"varint,7,opt,name=relay_stop,json=relayStop,proto3" json:"relay_stop,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// to_subagent_name names (StopTask). Named relay_stop before API 92.
+	ToSubagentStop bool `protobuf:"varint,7,opt,name=to_subagent_stop,json=toSubagentStop,proto3" json:"to_subagent_stop,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *QueuedMessage) Reset() {
@@ -3052,9 +3054,9 @@ func (x *QueuedMessage) GetImages() []*ImageData {
 	return nil
 }
 
-func (x *QueuedMessage) GetRelayTo() string {
+func (x *QueuedMessage) GetToSubagentName() string {
 	if x != nil {
-		return x.RelayTo
+		return x.ToSubagentName
 	}
 	return ""
 }
@@ -3066,9 +3068,9 @@ func (x *QueuedMessage) GetToSubagent() string {
 	return ""
 }
 
-func (x *QueuedMessage) GetRelayStop() bool {
+func (x *QueuedMessage) GetToSubagentStop() bool {
 	if x != nil {
-		return x.RelayStop
+		return x.ToSubagentStop
 	}
 	return false
 }
@@ -5276,9 +5278,12 @@ func (x *PlanDeleteChatResponse) GetTerminals() []*Terminal {
 }
 
 type WorktreePlan struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Worktree      *Worktree              `protobuf:"bytes,1,opt,name=worktree,proto3" json:"worktree,omitempty"`
-	State         *WorktreeState         `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Worktree *Worktree              `protobuf:"bytes,1,opt,name=worktree,proto3" json:"worktree,omitempty"`
+	State    *WorktreeState         `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	// The other chats (not archived) working in it, by title: DeleteChat
+	// refuses to remove it while there are any. API 92.
+	Others        []string `protobuf:"bytes,3,rep,name=others,proto3" json:"others,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5323,6 +5328,13 @@ func (x *WorktreePlan) GetWorktree() *Worktree {
 func (x *WorktreePlan) GetState() *WorktreeState {
 	if x != nil {
 		return x.State
+	}
+	return nil
+}
+
+func (x *WorktreePlan) GetOthers() []string {
+	if x != nil {
+		return x.Others
 	}
 	return nil
 }
@@ -9893,26 +9905,30 @@ type Item struct {
 	Effort   string `protobuf:"bytes,23,opt,name=effort,proto3" json:"effort,omitempty"`
 	RanModel string `protobuf:"bytes,24,opt,name=ran_model,json=ranModel,proto3" json:"ran_model,omitempty"`
 	// For a tool call that left its command running in the background.
-	Shell *Shell `protobuf:"bytes,25,opt,name=shell,proto3" json:"shell,omitempty"`
+	// Named shell before API 92 (the same field).
+	BackgroundCommand *BackgroundCommand `protobuf:"bytes,25,opt,name=background_command,json=backgroundCommand,proto3" json:"background_command,omitempty"`
 	// For a tool call that starts a subagent: the agent's id for it, when the
 	// agent can pass it messages (SendPromptRequest.to_subagent).
 	AgentId string `protobuf:"bytes,26,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	// For a user message: the type of the subagent the agent was asked to
-	// pass it to, and that subagent's tool call (not known after a replay
-	// the agent's own call doesn't link).
-	RelayTo   string `protobuf:"bytes,27,opt,name=relay_to,json=relayTo,proto3" json:"relay_to,omitempty"`
-	RelayCall string `protobuf:"bytes,28,opt,name=relay_call,json=relayCall,proto3" json:"relay_call,omitempty"`
-	// How the relay went: "sending" until the agent passes it on (its call
-	// that does is relayed_by), "relayed" once that call completes, "failed"
+	// For a message to a subagent (a user message the agent was asked to
+	// pass on): the subagent's type, and its tool call (not known after a
+	// replay the agent's own call doesn't link). Named relay_to and
+	// relay_call before API 92 (the same fields), as the three below were
+	// relay_state, relayed_by and relay_stop.
+	ToSubagentName string `protobuf:"bytes,27,opt,name=to_subagent_name,json=toSubagentName,proto3" json:"to_subagent_name,omitempty"`
+	ToSubagent     string `protobuf:"bytes,28,opt,name=to_subagent,json=toSubagent,proto3" json:"to_subagent,omitempty"`
+	// How it went: "sending" until the agent passes it on (its call that
+	// does is passed_on_by), "relayed" once that call completes, "failed"
 	// when it fails or the turn ends without one; "" when unknown (replayed).
-	RelayState string `protobuf:"bytes,29,opt,name=relay_state,json=relayState,proto3" json:"relay_state,omitempty"`
-	RelayedBy  string `protobuf:"bytes,30,opt,name=relayed_by,json=relayedBy,proto3" json:"relayed_by,omitempty"`
+	ToSubagentState string `protobuf:"bytes,29,opt,name=to_subagent_state,json=toSubagentState,proto3" json:"to_subagent_state,omitempty"`
+	PassedOnBy      string `protobuf:"bytes,30,opt,name=passed_on_by,json=passedOnBy,proto3" json:"passed_on_by,omitempty"`
 	// For a tool call that reports a code review's result (Claude's
 	// ReportFindings): what it found.
 	Findings *Findings `protobuf:"bytes,31,opt,name=findings,proto3" json:"findings,omitempty"`
 	// For a user message: it asked the agent to stop that subagent, or the
-	// background command relay_to names (StopTask), not to pass anything on.
-	RelayStop bool `protobuf:"varint,32,opt,name=relay_stop,json=relayStop,proto3" json:"relay_stop,omitempty"`
+	// background command to_subagent_name names (StopTask), not to pass
+	// anything on.
+	ToSubagentStop bool `protobuf:"varint,32,opt,name=to_subagent_stop,json=toSubagentStop,proto3" json:"to_subagent_stop,omitempty"`
 	// For a user message sent through Nushi: when, in Unix milliseconds; 0
 	// when not known (one the agent replayed). API 78.
 	Sent int64 `protobuf:"varint,33,opt,name=sent,proto3" json:"sent,omitempty"`
@@ -10123,9 +10139,9 @@ func (x *Item) GetRanModel() string {
 	return ""
 }
 
-func (x *Item) GetShell() *Shell {
+func (x *Item) GetBackgroundCommand() *BackgroundCommand {
 	if x != nil {
-		return x.Shell
+		return x.BackgroundCommand
 	}
 	return nil
 }
@@ -10137,30 +10153,30 @@ func (x *Item) GetAgentId() string {
 	return ""
 }
 
-func (x *Item) GetRelayTo() string {
+func (x *Item) GetToSubagentName() string {
 	if x != nil {
-		return x.RelayTo
+		return x.ToSubagentName
 	}
 	return ""
 }
 
-func (x *Item) GetRelayCall() string {
+func (x *Item) GetToSubagent() string {
 	if x != nil {
-		return x.RelayCall
+		return x.ToSubagent
 	}
 	return ""
 }
 
-func (x *Item) GetRelayState() string {
+func (x *Item) GetToSubagentState() string {
 	if x != nil {
-		return x.RelayState
+		return x.ToSubagentState
 	}
 	return ""
 }
 
-func (x *Item) GetRelayedBy() string {
+func (x *Item) GetPassedOnBy() string {
 	if x != nil {
-		return x.RelayedBy
+		return x.PassedOnBy
 	}
 	return ""
 }
@@ -10172,9 +10188,9 @@ func (x *Item) GetFindings() *Findings {
 	return nil
 }
 
-func (x *Item) GetRelayStop() bool {
+func (x *Item) GetToSubagentStop() bool {
 	if x != nil {
-		return x.RelayStop
+		return x.ToSubagentStop
 	}
 	return false
 }
@@ -10359,8 +10375,9 @@ func (x *Finding) GetOutcome() string {
 	return ""
 }
 
-// A command the agent runs in the background.
-type Shell struct {
+// A command the agent runs in the background (a message named Shell
+// before API 92).
+type BackgroundCommand struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The agent's id for it.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -10379,20 +10396,20 @@ type Shell struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Shell) Reset() {
-	*x = Shell{}
+func (x *BackgroundCommand) Reset() {
+	*x = BackgroundCommand{}
 	mi := &file_nushi_v1_nushi_proto_msgTypes[162]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Shell) String() string {
+func (x *BackgroundCommand) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Shell) ProtoMessage() {}
+func (*BackgroundCommand) ProtoMessage() {}
 
-func (x *Shell) ProtoReflect() protoreflect.Message {
+func (x *BackgroundCommand) ProtoReflect() protoreflect.Message {
 	mi := &file_nushi_v1_nushi_proto_msgTypes[162]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -10404,47 +10421,47 @@ func (x *Shell) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Shell.ProtoReflect.Descriptor instead.
-func (*Shell) Descriptor() ([]byte, []int) {
+// Deprecated: Use BackgroundCommand.ProtoReflect.Descriptor instead.
+func (*BackgroundCommand) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{162}
 }
 
-func (x *Shell) GetId() string {
+func (x *BackgroundCommand) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Shell) GetState() string {
+func (x *BackgroundCommand) GetState() string {
 	if x != nil {
 		return x.State
 	}
 	return ""
 }
 
-func (x *Shell) GetStarted() int64 {
+func (x *BackgroundCommand) GetStarted() int64 {
 	if x != nil {
 		return x.Started
 	}
 	return 0
 }
 
-func (x *Shell) GetEnded() int64 {
+func (x *BackgroundCommand) GetEnded() int64 {
 	if x != nil {
 		return x.Ended
 	}
 	return 0
 }
 
-func (x *Shell) GetOutput() string {
+func (x *BackgroundCommand) GetOutput() string {
 	if x != nil {
 		return x.Output
 	}
 	return ""
 }
 
-func (x *Shell) GetEnd() string {
+func (x *BackgroundCommand) GetEnd() string {
 	if x != nil {
 		return x.End
 	}
@@ -20435,7 +20452,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05chats\x18\x01 \x03(\v2\x15.nushi.v1.RemovedChatR\x05chats\".\n" +
 	"\x1aDismissRemovedChatsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x1d\n" +
-	"\x1bDismissRemovedChatsResponse\"\x83\x04\n" +
+	"\x1bDismissRemovedChatsResponse\"\xff\x03\n" +
 	"\x04Chat\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x16\n" +
@@ -20452,8 +20469,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\ascratch\x18\v \x01(\bR\ascratch\x12\x1b\n" +
 	"\tjira_site\x18\f \x01(\tR\bjiraSite\x12\x19\n" +
 	"\bjira_key\x18\r \x01(\tR\ajiraKey\x12,\n" +
-	"\x06github\x18\x0e \x01(\v2\x14.nushi.v1.GitHubLinkR\x06github\x12\x16\n" +
-	"\x06unseen\x18\x0f \x01(\bR\x06unseen\x12(\n" +
+	"\x06github\x18\x0e \x01(\v2\x14.nushi.v1.GitHubLinkR\x06github\x12\x12\n" +
+	"\x04done\x18\x0f \x01(\bR\x04done\x12(\n" +
 	"\x04pull\x18\x10 \x01(\v2\x14.nushi.v1.GitHubLinkR\x04pull\x12\x10\n" +
 	"\x03pin\x18\x11 \x01(\x05R\x03pin\"\x95\x01\n" +
 	"\bWorktree\x12\x12\n" +
@@ -20594,17 +20611,16 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05queue\x18\x05 \x01(\bR\x05queue\x12\x10\n" +
 	"\x03now\x18\x06 \x01(\bR\x03now\x12\x1f\n" +
 	"\vto_subagent\x18\a \x01(\tR\n" +
-	"toSubagent\"\xd1\x01\n" +
+	"toSubagent\"\xeb\x01\n" +
 	"\rQueuedMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
 	"\x05files\x18\x03 \x03(\tR\x05files\x12+\n" +
-	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12\x19\n" +
-	"\brelay_to\x18\x05 \x01(\tR\arelayTo\x12\x1f\n" +
+	"\x06images\x18\x04 \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12(\n" +
+	"\x10to_subagent_name\x18\x05 \x01(\tR\x0etoSubagentName\x12\x1f\n" +
 	"\vto_subagent\x18\x06 \x01(\tR\n" +
-	"toSubagent\x12\x1d\n" +
-	"\n" +
-	"relay_stop\x18\a \x01(\bR\trelayStop\"@\n" +
+	"toSubagent\x12(\n" +
+	"\x10to_subagent_stop\x18\a \x01(\bR\x0etoSubagentStop\"@\n" +
 	"\tChatQueue\x123\n" +
 	"\bmessages\x18\x01 \x03(\v2\x17.nushi.v1.QueuedMessageR\bmessages\"E\n" +
 	"\x11RewindChatRequest\x12\x17\n" +
@@ -20725,10 +20741,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x0fdeletes_history\x18\x02 \x01(\bR\x0edeletesHistory\x12%\n" +
 	"\x0escratch_folder\x18\x03 \x01(\tR\rscratchFolder\x124\n" +
 	"\tworktrees\x18\x06 \x03(\v2\x16.nushi.v1.WorktreePlanR\tworktrees\x120\n" +
-	"\tterminals\x18\a \x03(\v2\x12.nushi.v1.TerminalR\tterminalsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\bworktreeR\x0eworktree_state\"m\n" +
+	"\tterminals\x18\a \x03(\v2\x12.nushi.v1.TerminalR\tterminalsJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\bworktreeR\x0eworktree_state\"\x85\x01\n" +
 	"\fWorktreePlan\x12.\n" +
 	"\bworktree\x18\x01 \x01(\v2\x12.nushi.v1.WorktreeR\bworktree\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.nushi.v1.WorktreeStateR\x05state\"\xa8\x01\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.nushi.v1.WorktreeStateR\x05state\x12\x16\n" +
+	"\x06others\x18\x03 \x03(\tR\x06others\"\xa8\x01\n" +
 	"\rWorktreeState\x12\x12\n" +
 	"\x04gone\x18\x01 \x01(\bR\x04gone\x12\x18\n" +
 	"\achanged\x18\x02 \x01(\x05R\achanged\x12\x18\n" +
@@ -21034,7 +21051,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\x9c\b\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\xeb\b\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -21062,19 +21079,17 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06prompt\x18\x15 \x01(\tR\x06prompt\x12\x14\n" +
 	"\x05model\x18\x16 \x01(\tR\x05model\x12\x16\n" +
 	"\x06effort\x18\x17 \x01(\tR\x06effort\x12\x1b\n" +
-	"\tran_model\x18\x18 \x01(\tR\branModel\x12%\n" +
-	"\x05shell\x18\x19 \x01(\v2\x0f.nushi.v1.ShellR\x05shell\x12\x19\n" +
-	"\bagent_id\x18\x1a \x01(\tR\aagentId\x12\x19\n" +
-	"\brelay_to\x18\x1b \x01(\tR\arelayTo\x12\x1d\n" +
-	"\n" +
-	"relay_call\x18\x1c \x01(\tR\trelayCall\x12\x1f\n" +
-	"\vrelay_state\x18\x1d \x01(\tR\n" +
-	"relayState\x12\x1d\n" +
-	"\n" +
-	"relayed_by\x18\x1e \x01(\tR\trelayedBy\x12.\n" +
-	"\bfindings\x18\x1f \x01(\v2\x12.nushi.v1.FindingsR\bfindings\x12\x1d\n" +
-	"\n" +
-	"relay_stop\x18  \x01(\bR\trelayStop\x12\x12\n" +
+	"\tran_model\x18\x18 \x01(\tR\branModel\x12J\n" +
+	"\x12background_command\x18\x19 \x01(\v2\x1b.nushi.v1.BackgroundCommandR\x11backgroundCommand\x12\x19\n" +
+	"\bagent_id\x18\x1a \x01(\tR\aagentId\x12(\n" +
+	"\x10to_subagent_name\x18\x1b \x01(\tR\x0etoSubagentName\x12\x1f\n" +
+	"\vto_subagent\x18\x1c \x01(\tR\n" +
+	"toSubagent\x12*\n" +
+	"\x11to_subagent_state\x18\x1d \x01(\tR\x0ftoSubagentState\x12 \n" +
+	"\fpassed_on_by\x18\x1e \x01(\tR\n" +
+	"passedOnBy\x12.\n" +
+	"\bfindings\x18\x1f \x01(\v2\x12.nushi.v1.FindingsR\bfindings\x12(\n" +
+	"\x10to_subagent_stop\x18  \x01(\bR\x0etoSubagentStop\x12\x12\n" +
 	"\x04sent\x18! \x01(\x03R\x04sent\x12\x14\n" +
 	"\x05input\x18\" \x01(\tR\x05input\x12\x1d\n" +
 	"\n" +
@@ -21090,8 +21105,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x10failure_scenario\x18\x05 \x01(\tR\x0ffailureScenario\x12\x1a\n" +
 	"\bcategory\x18\x06 \x01(\tR\bcategory\x12\x18\n" +
 	"\averdict\x18\a \x01(\tR\averdict\x12\x18\n" +
-	"\aoutcome\x18\b \x01(\tR\aoutcome\"\x87\x01\n" +
-	"\x05Shell\x12\x0e\n" +
+	"\aoutcome\x18\b \x01(\tR\aoutcome\"\x93\x01\n" +
+	"\x11BackgroundCommand\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x18\n" +
 	"\astarted\x18\x03 \x01(\x03R\astarted\x12\x14\n" +
@@ -22126,7 +22141,7 @@ var file_nushi_v1_nushi_proto_goTypes = []any{
 	(*Item)(nil),                        // 161: nushi.v1.Item
 	(*Findings)(nil),                    // 162: nushi.v1.Findings
 	(*Finding)(nil),                     // 163: nushi.v1.Finding
-	(*Shell)(nil),                       // 164: nushi.v1.Shell
+	(*BackgroundCommand)(nil),           // 164: nushi.v1.BackgroundCommand
 	(*Subagent)(nil),                    // 165: nushi.v1.Subagent
 	(*PlanEntry)(nil),                   // 166: nushi.v1.PlanEntry
 	(*Option)(nil),                      // 167: nushi.v1.Option
@@ -22371,7 +22386,7 @@ var file_nushi_v1_nushi_proto_depIdxs = []int32{
 	166, // 69: nushi.v1.Item.plan:type_name -> nushi.v1.PlanEntry
 	50,  // 70: nushi.v1.Item.images:type_name -> nushi.v1.ImageData
 	165, // 71: nushi.v1.Item.subagent:type_name -> nushi.v1.Subagent
-	164, // 72: nushi.v1.Item.shell:type_name -> nushi.v1.Shell
+	164, // 72: nushi.v1.Item.background_command:type_name -> nushi.v1.BackgroundCommand
 	162, // 73: nushi.v1.Item.findings:type_name -> nushi.v1.Findings
 	163, // 74: nushi.v1.Findings.items:type_name -> nushi.v1.Finding
 	1,   // 75: nushi.v1.Field.type:type_name -> nushi.v1.FieldType

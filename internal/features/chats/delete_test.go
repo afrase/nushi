@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // stuckWorktrees has a worktree with no work in it that won't go.
@@ -48,7 +50,8 @@ func (w *removingWorktrees) Remove(_ context.Context, wt model.Worktree, _ bool)
 }
 
 // A deleted chat's worktree that another chat works in stays, as with
-// RemoveWorktree: removing it would take that chat's folder.
+// RemoveWorktree: removing it would take that chat's folder. The plan
+// names that chat, for the dialog to say why.
 func TestDeleteLeavesAWorktreeAnotherChatWorksIn(t *testing.T) {
 	ctx := context.Background()
 	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
@@ -59,7 +62,12 @@ func TestDeleteLeavesAWorktreeAnotherChatWorksIn(t *testing.T) {
 	c.record.EarlierWorktrees = []model.Worktree{{Path: w}} // it moved out; the other chat started there
 	c.mu.Unlock()
 	svc.sessions.(*memSessions).stored = []model.ChatRecord{{ID: "other", Title: "Fix the build", Folder: filepath.Join(w, "app")}}
-	err := svc.Delete(ctx, c.id, DeleteOptions{w: {RemoveWorktree: true}})
+	p, err := svc.PlanDelete(ctx, c.id)
+	testcheck.NoErr(t, err)
+	if len(p.Worktrees) != 1 || !slices.Equal(p.Worktrees[0].Others, []string{"Fix the build"}) {
+		t.Errorf("plan: %+v", p.Worktrees)
+	}
+	err = svc.Delete(ctx, c.id, DeleteOptions{w: {RemoveWorktree: true}})
 	if err == nil || !strings.Contains(err.Error(), "Fix the build") {
 		t.Errorf("Delete = %v", err)
 	}
