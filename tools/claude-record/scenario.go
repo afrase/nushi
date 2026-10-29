@@ -19,9 +19,10 @@ type clientScript struct {
 }
 
 // step is one thing the client does; exactly one of its verbs is set.
-// Sessions are named by the scenario (New, Fork's As) and given by name;
-// "$<name>" in Params is the session's id, "$cwd" the folder sessions
-// run in.
+// Sessions are named by the scenario (New, Fork's As, WaitFor's Capture)
+// and given by name; "$<name>" in Params and MCPServers is the session's
+// id (or another captured value), "$cwd" the folder sessions run in,
+// "$mcp-echo" the path of claudetest's mcp-echo.
 type step struct {
 	Initialize json.RawMessage `json:"initialize,omitempty"` // {} sends Nushi's; params otherwise
 	New        string          `json:"new,omitempty"`        // session/new, named so
@@ -40,15 +41,18 @@ type step struct {
 	Await      string          `json:"await,omitempty"`      // the Async request to wait for
 	WaitFor    json.RawMessage `json:"waitFor,omitempty"`    // a message from the agent to wait for
 	Pause      string          `json:"pause,omitempty"`      // a wait of this long (a duration)
+	Kill       string          `json:"kill,omitempty"`       // stop the process group below the agent whose command line has this, as Nushi stops a background command
 
-	Session     string          `json:"session,omitempty"`     // Prompt's and Steer's session
-	As          string          `json:"as,omitempty"`          // Fork's name for the fork
-	Meta        json.RawMessage `json:"meta,omitempty"`        // joins a session request's _meta (Nushi's)
-	Params      json.RawMessage `json:"params,omitempty"`      // Request's and Notify's
-	Async       string          `json:"async,omitempty"`       // don't wait for the answer; Await waits for it by this name
-	ExpectError bool            `json:"expectError,omitempty"` // the request's answer is an error
-	Option      string          `json:"option,omitempty"`      // Answer's permission option: its kind or id, or "cancelled"
-	Result      json.RawMessage `json:"result,omitempty"`      // Answer's result, as it is
+	Session     string            `json:"session,omitempty"`     // Prompt's and Steer's session
+	As          string            `json:"as,omitempty"`          // Fork's name for the fork
+	Meta        json.RawMessage   `json:"meta,omitempty"`        // joins a session request's _meta (Nushi's)
+	MCPServers  json.RawMessage   `json:"mcpServers,omitempty"`  // a session request's MCP servers, as ACP gives them; [] when not given
+	Capture     map[string]string `json:"capture,omitempty"`     // WaitFor's: names for values in the message it found, by dotted path ("params.update.sessionId")
+	Params      json.RawMessage   `json:"params,omitempty"`      // Request's and Notify's
+	Async       string            `json:"async,omitempty"`       // don't wait for the answer; Await waits for it by this name
+	ExpectError bool              `json:"expectError,omitempty"` // the request's answer is an error
+	Option      string            `json:"option,omitempty"`      // Answer's permission option: its kind or id, or "cancelled"
+	Result      json.RawMessage   `json:"result,omitempty"`      // Answer's result, as it is
 }
 
 // verb is the step's verb, for messages.
@@ -58,7 +62,7 @@ func (s *step) verb() string {
 		"fork": s.Fork != "", "list": s.List != nil, "close": s.Close != "", "delete": s.Delete != "",
 		"prompt": s.Prompt != "", "steer": s.Steer != "", "cancel": s.Cancel != "", "request": s.Request != "",
 		"notify": s.Notify != "", "answer": s.Answer != "", "await": s.Await != "", "waitFor": s.WaitFor != nil,
-		"pause": s.Pause != "",
+		"pause": s.Pause != "", "kill": s.Kill != "",
 	}
 	var out string
 	for _, v := range slices.Sorted(maps.Keys(verbs)) {
@@ -89,6 +93,7 @@ func loadClient(dir string) (*clientScript, time.Duration, error) {
 			return nil, 0, fmt.Errorf("%s: timeout: %w", path, err)
 		}
 	}
+	named := map[string]bool{}
 	for i := range c.Steps {
 		s := &c.Steps[i]
 		switch s.verb() {
@@ -102,6 +107,14 @@ func loadClient(dir string) (*clientScript, time.Duration, error) {
 			if _, err := time.ParseDuration(s.Pause); err != nil {
 				return nil, 0, fmt.Errorf("%s: step %d: %w", path, i+1, err)
 			}
+		}
+		for _, name := range []string{s.Load, s.Resume, s.Fork, s.Close, s.Delete, s.Cancel, s.Session} {
+			if name != "" && !named[name] {
+				return nil, 0, fmt.Errorf("%s: step %d: no session named %q before it", path, i+1, name)
+			}
+		}
+		for _, name := range append([]string{s.New, s.As}, slices.Collect(maps.Keys(s.Capture))...) {
+			named[name] = name != ""
 		}
 	}
 	return &c, timeout, nil
