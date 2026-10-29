@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/material.dart';
 
@@ -16,6 +17,8 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/details_panel.dart';
+import 'package:nushi/drafts.dart';
+import 'package:nushi/drafts_mac.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
@@ -38,7 +41,7 @@ import 'package:nushi/update_toast.dart';
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
   catchErrors();
-  runApp(NushiApp(daemon: Daemon()));
+  runApp(NushiApp(daemon: Daemon(drafts: Drafts(DraftFiles(dataDir)))));
 }, (e, s) => appLog.error('uncaught error', e, s));
 
 class NushiApp extends StatefulWidget {
@@ -62,9 +65,21 @@ class _NushiAppState extends State<NushiApp> {
     _alerts = MacAlerts(widget.daemon);
     // The app coming to the front shows its chat again; the daemon knows
     // whether the window shows (focused or not) or is hidden, and the
-    // notifications whether it's in front.
+    // notifications whether it's in front. Drafts are saved at once when
+    // the app goes to the back or quits.
+    final drafts = widget.daemon.drafts;
     _lifecycle = AppLifecycleListener(
       onResume: widget.daemon.shown,
+      onInactive: () => unawaited(drafts?.flush()),
+      onHide: () => unawaited(drafts?.flush()),
+      onExitRequested: () async {
+        try {
+          await drafts?.flush().timeout(const Duration(seconds: 1));
+        } on Object {
+          // Quits all the same; the last save is at most 500 ms old.
+        }
+        return AppExitResponse.exit;
+      },
       onStateChange: (s) {
         widget.daemon.macView.window =
             s == AppLifecycleState.resumed || s == AppLifecycleState.inactive;

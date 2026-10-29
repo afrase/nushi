@@ -70,6 +70,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Chat header** | The top bar: title, agent, model, the tabs, the terminal and details buttons, ⋯. | `ChatHeader` | |
 | **Tabs** | Chat, Changes, Pull request (when the chat has one), in the header. | `chat_keys.dart` | |
 | **Composer** | The message box and its pickers under the transcript. "The box" is its text field. | `Composer` | |
+| **Draft** | What you've written in a chat and not sent: the box's text, mentioned files, reply cards and images, and the subagents' boxes. Kept on disk until sent, so a crash or restart doesn't lose it. | `Draft`, `Drafts`, `drafts.json` | 0062 |
 | **Reply card** | A quote put into the box to send with your message: a review thread, a comment, a failed check. | `ReplyCards`, `QuoteBlock` | 0059 |
 | **Side pane** | What opens beside the transcript: a subagent's pane, or the preview of an artifact. A side question opens beside it, apart. | `panes.dart`, `SubagentPane`, `PreviewPane` | |
 | **Details panel** | The right column, made of widgets. Show details, Hide details. | `details_panel.dart` | |

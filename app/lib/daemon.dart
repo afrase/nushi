@@ -12,6 +12,7 @@ import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
+import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mac_view.dart';
@@ -57,7 +58,7 @@ class Daemon extends ChangeNotifier {
   /// relay's, [remote]: then nothing of the Mac's runs (no bundled daemon,
   /// no token, no app log), and its link pings (phone/link.dart), which
   /// also keeps its relay connection alive.
-  new({connect.Transport? transport, this.remote = false}) {
+  new({connect.Transport? transport, this.remote = false, this.drafts}) {
     client = NushiServiceClient(
       transport ??
           protocol.Transport(
@@ -90,6 +91,9 @@ class Daemon extends ChangeNotifier {
 
   /// Whether this is the phone's link to a Mac's daemon through a relay.
   final bool remote;
+
+  /// Where the chats' drafts are kept, if anywhere (not in tests).
+  final Drafts? drafts;
 
   late final _transport = UdsTransport('$dataDir/nushid.sock');
   late final NushiServiceClient client;
@@ -558,6 +562,7 @@ class Daemon extends ChangeNotifier {
           ...terminalChats.value,
           ...rememberedContexts,
         ],
+        ...?drafts?.ids,
       };
       kept.difference(ids).difference(sides.keys.toSet()).forEach(_forget);
       for (final side in sides.values) {
@@ -590,9 +595,10 @@ class Daemon extends ChangeNotifier {
 
   /// Forgets chat [id], gone (deleted here, or while the app was away),
   /// and everything kept for it: its Changes scope, review comments,
-  /// terminals panel, context breakdown and terminals.
+  /// terminals panel, context breakdown, terminals and draft.
   void _forget(String id) {
     chats.remove(id);
+    drafts?.forget(id);
     if (changeScopes.value.containsKey(id)) {
       changeScopes.value = {...changeScopes.value}..remove(id);
     }
@@ -717,6 +723,12 @@ class Daemon extends ChangeNotifier {
     if (chat.folder != c.folder) {
       chat.moved(c.folder);
       closeSide(chat); // it ran on the old agent
+    }
+    // An archived chat's draft goes; one unarchived is followed again.
+    if (c.archived) {
+      drafts?.forget(c.id);
+    } else {
+      drafts?.attach(chat);
     }
     return chat
       ..worktree = c.hasWorktree() ? c.worktree : null
