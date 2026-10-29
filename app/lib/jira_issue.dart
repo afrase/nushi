@@ -363,7 +363,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         Text(i.assignee.isEmpty ? 'Unassigned' : i.assignee, style: dim),
         const Spacer(),
         MenuButton(
-          label: 'Start a chat',
+          label: 'Start work',
           entries: folderEntries(
             widget.daemon,
             onPick: (f) =>

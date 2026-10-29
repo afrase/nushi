@@ -60,7 +60,10 @@ class CleanUpJob extends ChangeNotifier {
   /// Waiting for the chat's turn to end.
   bool waiting = false;
   bool cancelled = false;
-  bool get started => steps.isNotEmpty;
+
+  /// Why it ended before any part ran (the turn wouldn't stop).
+  String? error;
+  bool get started => steps.isNotEmpty || error != null;
   bool get running => waiting || steps.any((s) => s.state == StepState.running);
   bool get finished =>
       started && !waiting && steps.every((s) => s.state.index >= 2);
@@ -81,11 +84,14 @@ class CleanUpJob extends ChangeNotifier {
   /// Runs [picks]: waits for the turn (or stops it), then archives the
   /// chat, removes its worktree, deletes its branch and the pull request's
   /// ([pull]) branch on GitHub, each that was picked; a part that fails
-  /// says why and the rest go on.
+  /// says why and the rest go on. One runs at a time: another asked for
+  /// meanwhile does nothing.
   Future<void> run(Daemon daemon, CleanUpPicks picks, GitHubRef? pull) async {
+    if (running) return;
     _daemon = daemon;
     _pull = pull;
     cancelled = false;
+    error = null;
     steps = [
       if (picks.remote && pull != null)
         CleanUpStep('remote', 'Delete the branch on GitHub'),
@@ -103,7 +109,18 @@ class CleanUpJob extends ChangeNotifier {
     waiting = chat.busy;
     notifyListeners();
     if (chat.busy && picks.stopTurn) {
-      await daemon.client.cancelTurn(CancelTurnRequest(chatId: chat.id));
+      try {
+        await daemon.client.cancelTurn(CancelTurnRequest(chatId: chat.id));
+      } on Object catch (e) {
+        waiting = false;
+        steps = [];
+        kept = '';
+        error =
+            "The turn didn't stop, so nothing was cleaned up: "
+            '${errorText(e)}';
+        notifyListeners();
+        return;
+      }
     }
     if (chat.busy && !await _turnEnds(picks.stopTurn)) return;
     waiting = false;
@@ -163,8 +180,8 @@ class CleanUpJob extends ChangeNotifier {
     final done = Completer<bool>();
     void check() {
       if (done.isCompleted) return;
-      if (cancelled) done.complete(false);
-      if (!chat.busy) done.complete(true);
+      if (cancelled) return done.complete(false);
+      if (!chat.busy) return done.complete(true);
     }
 
     chat.addListener(check);
@@ -220,6 +237,7 @@ class CleanUpJob extends ChangeNotifier {
   void clear() {
     steps = [];
     kept = '';
+    error = null;
     notifyListeners();
   }
 }
@@ -263,6 +281,8 @@ class CleanUpProgress extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (job.error case final e?)
+              line(Icons.error_outline, t.crashed, e),
             if (job.waiting)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),

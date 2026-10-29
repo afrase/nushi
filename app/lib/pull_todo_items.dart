@@ -95,7 +95,12 @@ Todo todo(GitHubPull p, {FindingsSetup? findings}) {
   return (
     items: [
       for (final c in checks)
-        TodoItem(id: 'check ${c.workflow}/${c.name}', check: c),
+        // By its id: a push and a pull request run share a name. A
+        // commit status has none, and is one per name.
+        TodoItem(
+          id: c.id.isZero ? 'status ${c.name}' : 'check ${c.id}',
+          check: c,
+        ),
       for (final r in changesRequested(p))
         TodoItem(id: 'review ${r.author}', review: r),
       for (final x in p.threads)

@@ -46,6 +46,9 @@ void main() {
       ..reviewers.clear()
       ..mergeState = 'clean';
     expect(_move(q, 0), 'Ready to merge.');
+    // GitHub's "unstable": checks fail that its base doesn't require.
+    q.mergeState = 'unstable';
+    expect(_move(q, 0), 'Ready to merge. Checks not passing (not required).');
     q.mergeState = 'behind';
     expect(_move(q, 0), 'Your move. The branch is behind main.');
     q.item.draft = true;
@@ -79,8 +82,6 @@ void main() {
       'Threads: None (No review threads)',
       'Branch: Conflicts (With main)',
     ]);
-    expect(blockers(p), 1); // the conflict
-    expect(blockers(fixturePull()), 5);
   });
 
   for (final (light, section) in [

@@ -276,7 +276,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Ann Lee · 5h ago'), findsOneWidget);
-    await tester.tap(find.text('Start a chat'));
+    await tester.tap(find.text('Start work'));
     await tester.pumpAndSettle();
     await tester.tap(menuRow('nushi'));
     await tester.pumpAndSettle();

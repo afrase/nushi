@@ -168,12 +168,7 @@ List<Light> pullLights(
   lights.add(switch (p.item.state) {
     'merged' => branch(Mood.ok, Icons.merge_type, 'Merged', 'Into $base'),
     'closed' => branch(Mood.quiet, closedIcon, 'Closed', 'Not merged'),
-    _ when p.mergeable == 'conflicting' || p.mergeState == 'dirty' => branch(
-      Mood.bad,
-      _bad,
-      'Conflicts',
-      'With $base',
-    ),
+    _ when hasConflicts(p) => branch(Mood.bad, _bad, 'Conflicts', 'With $base'),
     _ when p.mergeState == 'behind' => branch(
       Mood.warn,
       Icons.history,
@@ -260,9 +255,10 @@ const IconData _lock = Icons.lock_outline;
     return say('Your move.', Mood.warn, _lock, 'Changes requested.');
   }
   return switch (p.mergeState) {
-    'clean' ||
-    'has_hooks' ||
-    'unstable' => say('Ready to merge.', Mood.ok, _ok),
+    'clean' || 'has_hooks' => say('Ready to merge.', Mood.ok, _ok),
+    // GitHub's "unstable": it can merge, with checks not passing that
+    // its base doesn't require.
+    'unstable' => say('Ready to merge.', Mood.ok, _ok, '$unstableWords.'),
     'behind' => say(
       'Your move.',
       Mood.warn,
@@ -285,10 +281,10 @@ const IconData _lock = Icons.lock_outline;
   };
 }
 
-/// What blocks the merge, counted: failing checks, review threads not
-/// resolved, [findings] a review bot asked to address, and conflicts.
-int blockers(GitHubPull p, {int findings = 0}) =>
-    p.checks.where((c) => c.failed).length +
-    p.threads.where((x) => !x.resolved).length +
-    findings +
-    (p.mergeable == 'conflicting' ? 1 : 0);
+/// What an "unstable" merge state says beside Ready to merge.
+const unstableWords = 'Checks not passing (not required)';
+
+/// Whether the pull request conflicts with its base: GitHub says so in
+/// either of two fields, and may say it in one before the other.
+bool hasConflicts(GitHubPull p) =>
+    p.mergeable == 'conflicting' || p.mergeState == 'dirty';

@@ -194,6 +194,22 @@ void main() {
     );
   });
 
+  test('two failing checks of one name (a push run and a pull request '
+      "run) are two rows; a commit status's row is by its name", () {
+    final p = fixturePull()
+      ..checks.clear()
+      ..checks.addAll([
+        check('test', state: 'failure', id: 7),
+        check('test', state: 'failure', id: 8),
+        check('ci/circleci', state: 'failure'),
+      ]);
+    expect(todo(p).items.where((i) => i.check != null).map((i) => i.id), [
+      'check 7',
+      'check 8',
+      'status ci/circleci',
+    ]);
+  });
+
   test("only each bot's newest message: an older one's findings never "
       "show; one on an older commit's do, marked", () {
     List<TodoItem> found(GitHubPull p) => todo(

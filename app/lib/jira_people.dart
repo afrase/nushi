@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/jira_sources.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -194,9 +195,11 @@ bool mine(JiraIssue issue, JiraSite site) => issue.assigneeId.isNotEmpty
 
 /// Where a list's assignee filter is remembered: the site and the list
 /// ("sprint", "jql", a saved search by its JQL).
-String filterPlace(JiraSite site, String list) => switch (list) {
-  'sprint' || 'jql' || 'mine' => '${site.id} $list',
-  _ => '${site.id} search ${site.searches[int.parse(list)].jql}',
+String filterPlace(JiraSite site, JiraList list) => switch (list) {
+  MyIssues() => '${site.id} mine',
+  Sprint() => '${site.id} sprint',
+  Jql() => '${site.id} jql',
+  Saved(:final jql) => '${site.id} search $jql',
 };
 
 /// The filter remembered for [place].

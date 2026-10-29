@@ -24,22 +24,25 @@ const jiraPoll = Duration(minutes: 1);
 
 /// What the view had last: the site (the one used last, kept), and while
 /// the app runs every site's issues instead ([_all]), the list, the JQL
-/// typed, the issue picked and whether its details show.
+/// typed, the row picked, and the issue whose details show (with its
+/// site): kept whatever the list holds, so an issue opened from a chat, a
+/// subtask or one moved to Done stays open as the list is asked again.
 String? get _site => lastJiraSite.value;
 set _site(String? site) => lastJiraSite.value = site;
 bool _all = false;
-String _list = 'mine';
+JiraList _list = const MyIssues();
 String _jql = '';
 String? _key;
-bool _details = false;
+({String site, String key})? _details;
 
 /// Forgets what the view had (tests start afresh).
 @visibleForTesting
 void forgetJiraView() {
-  _all = _details = false;
-  _list = 'mine';
+  _all = false;
+  _list = const MyIssues();
   _jql = '';
   _key = null;
+  _details = null;
 }
 
 /// Shows [key], an issue of [site], in the Jira view: its details.
@@ -47,7 +50,7 @@ void showIssue(Daemon daemon, String site, String key) {
   _site = site;
   _all = false;
   _key = key;
-  _details = true;
+  _details = (site: site, key: key);
   daemon.showJira(open: true);
 }
 
@@ -114,7 +117,7 @@ class _JiraViewState extends State<JiraView> {
   /// Whose issues show: everyone's in Mine and every site's list, else as
   /// picked for the site and list.
   Assignee get _assignee => switch (_siteNow) {
-    final site? when _list != 'mine' && !_every => assigneeAt(
+    final site? when _list is! MyIssues && !_every => assigneeAt(
       filterPlace(site, _list),
     ),
     _ => const .everyone(),
@@ -199,15 +202,14 @@ class _JiraViewState extends State<JiraView> {
   /// list than the one shown shows what the daemon kept of it meanwhile.
   Future<void> _load({bool quiet = false}) async {
     final site = _siteNow;
-    if (int.tryParse(_list) case final i?
-        when i >= (site?.searches.length ?? 0)) {
-      _list = 'mine'; // a search removed, or another site's
+    if (_list case final Saved s when site == null || !s.on(site)) {
+      _list = const MyIssues(); // a search removed, or another site's
     }
-    if (_every) _list = 'mine';
+    if (_every) _list = const MyIssues();
     // Nothing to ask yet: the line above the list says what to do.
     if (site == null ||
-        _list == 'jql' && _jql.isEmpty ||
-        _list == 'sprint' && site.board == 0) {
+        _list is Jql && _jql.isEmpty ||
+        _list is Sprint && site.board == 0) {
       setState(() {
         _tasks = const [];
         _error = null;
@@ -216,18 +218,12 @@ class _JiraViewState extends State<JiraView> {
       return;
     }
     final n = ++_asked;
-    ListJiraIssuesRequest ask(String id) {
-      final req = ListJiraIssuesRequest(site: id);
-      switch (_list) {
-        case 'mine' || 'sprint':
-          req.list = _list;
-        case 'jql':
-          req.jql = _jql;
-        default:
-          req.jql = site.searches[int.parse(_list)].jql;
-      }
-      return req;
-    }
+    ListJiraIssuesRequest ask(String id) => switch (_list) {
+      MyIssues() => ListJiraIssuesRequest(site: id, list: 'mine'),
+      Sprint() => ListJiraIssuesRequest(site: id, list: 'sprint'),
+      Jql() => ListJiraIssuesRequest(site: id, jql: _jql),
+      Saved(:final jql) => ListJiraIssuesRequest(site: id, jql: jql),
+    };
 
     final on = _every ? [for (final s in _sites!) s.id] : [site.id];
     final key = _listKey(on, ask(on.first));
@@ -305,16 +301,19 @@ class _JiraViewState extends State<JiraView> {
         for (final is_ in r.issues) (site: on[i], issue: is_),
     ]);
     _sprint = got.first.sprint;
+    // The details stay as they are: the list moves only the row picked.
     if (!_visible.any((t) => t.issue.key == _key)) {
       _key = _visible.firstOrNull?.issue.key;
-      _details = false;
     }
   }
 
-  void _pickList(String list) {
-    setState(() => _list = list);
+  void _pickList(JiraList list) {
+    setState(() {
+      _list = list;
+      _details = null; // a list asked for shows
+    });
     unawaited(_load());
-    if (list == 'jql') _jqlFocus.requestFocus();
+    if (list is Jql) _jqlFocus.requestFocus();
   }
 
   void _move(int by) {
@@ -342,20 +341,27 @@ class _JiraViewState extends State<JiraView> {
   void _open(Task task) {
     setState(() {
       _key = task.issue.key;
-      _details = true;
+      _details = (site: task.site, key: task.issue.key);
     });
     _viewFocus.requestFocus(); // the list, which had it, goes
   }
 
   void _back() {
-    setState(() => _details = false);
+    setState(() {
+      // The issue last shown is picked, when the list has it.
+      if (_details case (:final key, site: _)
+          when _visible.any((t) => t.issue.key == key)) {
+        _key = key;
+      }
+      _details = null;
+    });
     // Once the list is back.
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _listFocus.requestFocus(),
     );
   }
 
-  Future<void> _pickBoard(JiraSite site) async {
+  Future<void> _pickBoard(JiraSite site) => tryOrShow(context, () async {
     final r = await widget.daemon.client.listJiraBoards(
       ListJiraBoardsRequest(site: site.id),
     );
@@ -366,16 +372,14 @@ class _JiraViewState extends State<JiraView> {
       SetJiraBoardRequest(site: site.id, board: board),
     );
     await _loadSites();
-  }
+  });
 
   Future<void> _saveSearch(JiraSite site) async {
     final n = await askName(context);
     if (n == null || n.isEmpty) return;
-    await _setSearches(site, [
-      ...site.searches,
-      JiraSearch(name: n, jql: _jql),
-    ]);
-    _pickList('${site.searches.length}');
+    final search = JiraSearch(name: n, jql: _jql);
+    await _setSearches(site, [...site.searches, search]);
+    _pickList(Saved(search));
   }
 
   Future<void> _setSearches(JiraSite site, List<JiraSearch> searches) =>
@@ -402,7 +406,7 @@ class _JiraViewState extends State<JiraView> {
         k == LogicalKeyboardKey.keyK && !meta) {
       _move(-1);
     } else if (k == LogicalKeyboardKey.slash) {
-      _pickList('jql');
+      _pickList(const Jql());
     } else {
       return KeyEventResult.ignored;
     }
@@ -414,24 +418,20 @@ class _JiraViewState extends State<JiraView> {
     final theme = NushiTheme.of(context);
     final sites = _sites;
     final site = _siteNow;
-    // The site of the issue whose details show.
-    final shown = _tasks
-        .where((x) => x.issue.key == _key)
-        .map((x) => x.site)
-        .firstWhere((_) => true, orElse: () => site?.id ?? '');
-    final lists = [
-      'mine',
-      if (!_every) 'sprint',
+    final details = _details;
+    final lists = <JiraList>[
+      const MyIssues(),
       if (!_every) ...[
-        for (var i = 0; i < (site?.searches.length ?? 0); i++) '$i',
-        'jql',
+        const Sprint(),
+        for (final s in site?.searches ?? const <JiraSearch>[]) Saved(s),
+        const Jql(),
       ],
     ];
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
-            _details ? _back() : widget.daemon.showJira(open: false),
+            details != null ? _back() : widget.daemon.showJira(open: false),
         // ⌥⌘: ⌘1–9 switch chats.
         for (var i = 0; i < lists.length && i < 9; i++)
           SingleActivator(
@@ -456,6 +456,7 @@ class _JiraViewState extends State<JiraView> {
                 setState(() {
                   _all = id == null;
                   if (id != null) _site = id;
+                  _details = null; // its list shows
                 });
                 unawaited(_load());
               },
@@ -467,7 +468,7 @@ class _JiraViewState extends State<JiraView> {
                   ? const SizedBox()
                   : site == null
                   ? NoSite(widget.daemon)
-                  : _details && _key != null
+                  : details != null
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -485,11 +486,14 @@ class _JiraViewState extends State<JiraView> {
                         ),
                         Expanded(
                           child: JiraIssuePane(
-                            key: ValueKey('$shown $_key'),
+                            key: ValueKey('${details.site} ${details.key}'),
                             daemon: widget.daemon,
-                            site: shown,
-                            issueKey: _key!,
-                            onOpen: (key) => setState(() => _key = key),
+                            site: details.site,
+                            issueKey: details.key,
+                            // A subtask or link: of the same site.
+                            onOpen: (key) => setState(
+                              () => _details = (site: details.site, key: key),
+                            ),
                             now: widget.now,
                           ),
                         ),
@@ -506,7 +510,7 @@ class _JiraViewState extends State<JiraView> {
   String _sprintLine() =>
       _sprint.isEmpty && !_loading ? 'no active sprint' : _sprint;
 
-  Widget _lists(NushiTheme theme, JiraSite site, List<String> lists) {
+  Widget _lists(NushiTheme theme, JiraSite site, List<JiraList> lists) {
     final t = theme.t;
     final who = _assignee;
     final rows = _filtered;
@@ -543,17 +547,17 @@ class _JiraViewState extends State<JiraView> {
           jqlFocus: _jqlFocus,
           onPick: _pickList,
           onPickBoard: () => _pickBoard(site),
-          onRemoveSearch: (i) => _setSearches(site, [
-            ...site.searches.take(i),
-            ...site.searches.skip(i + 1),
-          ]),
+          onRemoveSearch: (gone) {
+            final i = site.searches.indexWhere((s) => Saved(s) == gone);
+            unawaited(_setSearches(site, [...site.searches]..removeAt(i)));
+          },
           onRunJql: (jql) {
             _jql = jql;
             unawaited(_load());
             _listFocus.requestFocus();
           },
           onSave: () => _saveSearch(site),
-          filter: _list == 'mine' || _every || _tasks.isEmpty && who.everyone
+          filter: _list is MyIssues || _every || _tasks.isEmpty && who.everyone
               ? null
               : AssigneeMenu(
                   site: site,
@@ -584,7 +588,7 @@ class _JiraViewState extends State<JiraView> {
                     place: _place,
                     selected: _key,
                     sites: _every,
-                    people: _list != 'mine',
+                    people: _list is! MyIssues,
                     onOpen: (task) {
                       _listFocus.requestFocus();
                       _open(task);
@@ -599,7 +603,7 @@ class _JiraViewState extends State<JiraView> {
           Padding(
             padding: const EdgeInsets.all(14),
             child: Text(
-              _list == 'jql' && _jql.isEmpty
+              _list is Jql && _jql.isEmpty
                   ? 'Type JQL, then Enter'
                   : _tasks.isEmpty
                   ? 'Nothing here'

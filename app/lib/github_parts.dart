@@ -378,7 +378,10 @@ class _GitHubChipState extends State<GitHubChip> {
       tooltip: details,
       onTap: () => widget.daemon.showGitHub(
         open: true,
-        item: GitHubRef(host: l.host, repo: l.repo, number: l.number),
+        item: (
+          ref: GitHubRef(host: l.host, repo: l.repo, number: l.number),
+          pull: l.pull,
+        ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Row(

@@ -44,8 +44,9 @@ class GitHubFiles extends StatefulWidget {
 }
 
 /// The files a head was last read at, by pull request and head, while the
-/// app runs: a commit's files don't change.
+/// app runs: a commit's files don't change. The last [_readMost] only.
 final _read = <String, List<FileChange>>{};
+const _readMost = 20;
 
 class _GitHubFilesState extends State<GitHubFiles> {
   List<FileChange>? _files;
@@ -81,7 +82,9 @@ class _GitHubFilesState extends State<GitHubFiles> {
   void _redraw() => setState(() {});
 
   Future<void> _load() async {
-    if (_read[_key] case final files?) {
+    // The head asked for: another may come while GitHub answers.
+    final key = _key;
+    if (_read[key] case final files?) {
       setState(() => _pick(files));
       return;
     }
@@ -93,10 +96,15 @@ class _GitHubFilesState extends State<GitHubFiles> {
           headOid: widget.pull.headOid,
         ),
       );
-      _read[_key] = r.files;
-      if (mounted) setState(() => _pick(r.files));
+      _read[key] = r.files;
+      if (_read.length > _readMost) _read.remove(_read.keys.first);
+      if (!mounted || key != _key) return;
+      setState(() {
+        _pick(r.files);
+        _error = null;
+      });
     } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
+      if (mounted && key == _key) setState(() => _error = errorText(e));
     }
   }
 
