@@ -33,7 +33,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Background task** | A subagent or command still running after the turn that started it ended. The Background tasks widget lists them; each has a Stop. | `ChatStatus.background`, `StopTask` | 0044 |
 | **Background command** | A command the agent left running in the background, its output in a pane. | `BackgroundCommand` (Go and proto), `background_commands.dart`, `BackgroundCommandPane`, `Item.TaskID`, `background.go` | |
 | **Queue** | Messages sent while a turn runs (⏎, Queue). Each goes at the agent's next chance: into the running turn when the agent takes steering, else as the next message. Shown as pills over the box. | `QueuedMessage`, `ChatQueue`, `SendPrompt.queue`, `Unqueue`, `QueuePills` | |
-| **Steer** | "Steer: stop and send now" (⌘⏎): stops the running turn and sends at once. Not the agent's steering (Synonyms). | `SendPrompt.now` | |
+| **Stop and send** | ⌘⏎ while a turn runs: stops the turn and sends the message at once, which starts a new turn. Not steering, which is what Queue does (Synonyms). | `SendPrompt.now` | |
 | **Side chat** | A fork of the chat, beside it, that knows the conversation but doesn't add to it; you can go back and forth in it, as in Claude Code's side chat. It ends when closed (⇧⌘B). | `ForkChat`, `CloseSideChat`, `sides.go`, `side_chat.dart`, `Daemon.openSide` | |
 | **Rewind** | Go back to just before one of your messages: the session forks there and the message returns to the box. Files aren't rewound. Esc Esc lists them. | `RewindChat`, `Item.ForkAt`, `Rewindable` | 0020 |
 | **Sleep** | An idle chat's agent stops; the chat stays and the next message wakes it. On its own after 30 idle minutes. The chat is then asleep. | `SleepChat`, `ChatStatus.asleep` | 0032 |
@@ -167,7 +167,7 @@ One line each; the word after the arrow wins.
 - waiting → **needs you**.
 - relay, for a message to a subagent → **message to a subagent**. Relay is the server only.
 - shell, for a background command → **background command**. Shell is a terminal's.
-- steering (the agent taking a queued message into its turn) is what **Queue** does when the agent can; **Steer** is the button that stops the turn and sends. Don't call queueing steer.
+- steer, for the button that stops the turn and sends → **Stop and send** (the owner, 2026-10-29). Steering (the agent taking a message into its running turn, as other harnesses use the word) is what **Queue** does when the agent can.
 - transition (Jira's API) → **move** in the UI.
 - unpair → **Forget this Mac** on the phone, **Revoke** on the Mac.
 - Open in Finder → **Show in Finder** (it reveals the file).
@@ -180,4 +180,4 @@ One line each; the word after the arrow wins.
 
 Code that uses an old word, for the clean-up batch. A proto field or message is renamed in place, its number and type kept (ADR 0004's amendment): the old name goes in its comment.
 
-- Steer: the button that stops the turn shares its name with the agent's steering, which is what Queue does (proto `SendPromptRequest.queue`'s comment, `composer.dart`'s "steers"). Either rename the button (Stop and send) or always qualify the agent's ("the agent's steering"). A product call: the owner's.
+None left.

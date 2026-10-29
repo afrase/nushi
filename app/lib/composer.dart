@@ -25,8 +25,8 @@ import 'package:nushi/worktree.dart';
 /// (⌘V and dropping work too), and on its right a send button once there
 /// is something to send, or a stop button while a turn runs. Reply cards
 /// and attached images show above the text; the replies go first in the
-/// message. Under it, the agent's pickers. Enter sends (⌘⏎ steers while a
-/// turn runs), Shift-Enter starts a line ([isSendKey]); `/` completes the
+/// message. Under it, the agent's pickers. Enter sends (⌘⏎ stops and sends
+/// while a turn runs), Shift-Enter starts a line ([isSendKey]); `/` completes the
 /// agent's commands and `@` the folder's files (sent as links); Up in an
 /// empty box brings back the last prompt; Esc Esc lists your messages to
 /// rewind to (on a Mac).
@@ -206,7 +206,7 @@ class _ComposerState extends State<Composer> {
       });
 
   /// Sends a queued message now: out of the queue, then in place of the
-  /// running turn (steer). Should the send fail, it's back in the box.
+  /// running turn (Stop and send). Should the send fail, it's back in the box.
   Future<void> _sendNow(QueuedMessage m) => tryOrShow(context, () async {
     final r = await widget.daemon.client.unqueue(
       UnqueueRequest(chatId: widget.chat.id, id: m.id),
@@ -392,7 +392,7 @@ class _ComposerState extends State<Composer> {
                             hintText: !chat.busy
                                 ? widget.hint
                                 : touch
-                                ? 'Queue a message, or steer'
+                                ? 'Queue a message, or stop and send'
                                 : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
                                       'and sends',
                             border: InputBorder.none,
@@ -405,9 +405,9 @@ class _ComposerState extends State<Composer> {
                         ),
                       ),
                     ),
-                    // Queue (after this turn) and Steer (stop it, and this
-                    // goes now): a phone's only way, the Mac's ⏎ and ⌘⏎
-                    // as buttons.
+                    // Queue (after this turn) and Stop and send (stop it,
+                    // and this goes now): a phone's only way, the Mac's ⏎
+                    // and ⌘⏎ as buttons.
                     if (written && chat.busy) ...[
                       boxButton(
                         touch ? 'Queue' : 'Queue (⏎)',
@@ -416,9 +416,7 @@ class _ComposerState extends State<Composer> {
                       ),
                       if (chat.started != null)
                         boxButton(
-                          touch
-                              ? 'Steer: stop and send now'
-                              : 'Steer: stop and send now (⌘⏎)',
+                          touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
                           () => _send(now: true),
                           Icon(
                             Icons.fast_forward,

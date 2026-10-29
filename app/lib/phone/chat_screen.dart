@@ -23,8 +23,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// A chat on the phone: the Mac's transcript (messages, tool rows
 /// collapsed, plans, subagents, answerable prompts and questions) and its
-/// composer (send, queue, steer, stop); Artifacts in its bar lists the files
-/// it wrote, to preview.
+/// composer (send, queue, stop and send, stop); Artifacts in its bar lists
+/// the files it wrote, to preview.
 class ChatScreen extends StatelessWidget {
   const new(this.phone, this.chat, {super.key});
 
