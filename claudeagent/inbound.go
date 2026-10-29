@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 )
 
 // claude's requests: each is handled in a goroutine of its own and
@@ -115,11 +114,7 @@ func (s *Session) handle(ctx context.Context, subtype string, req json.RawMessag
 		}
 		return s.canUseTool(ctx, req)
 	case "hook_callback":
-		var r struct {
-			CallbackID string `json:"callback_id"`
-		}
-		_ = json.Unmarshal(req, &r)
-		return nil, fmt.Errorf("claudeagent: no hook %q", r.CallbackID)
+		return s.hookCallback(ctx, req)
 	case "elicitation":
 		return map[string]any{"action": "decline"}, nil
 	case "request_user_dialog":

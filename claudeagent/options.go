@@ -84,6 +84,9 @@ type Options struct {
 	// asks no one and decides by its settings. Nothing times out: until
 	// it returns, the tool waits.
 	CanUseTool func(ctx context.Context, r PermissionRequest) (PermissionResult, error)
+	// Hooks run at points in a turn, by event, beside the hooks in
+	// claude's settings.
+	Hooks map[HookEvent][]HookMatcher
 	// OnControl answers the requests the package doesn't, by subtype;
 	// its result is the answer's payload. ErrUnsupported, or no
 	// OnControl, tells claude the subtype isn't supported. Requests for
