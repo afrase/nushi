@@ -1,0 +1,6 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "first question"}, "content": [{"type": "text", "text": "First answer."}]},
+    {"match": {"lastUserText": "in the fork"}, "content": [{"type": "text", "text": "Forked answer."}]}
+  ]
+}

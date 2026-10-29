@@ -1,0 +1,7 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "count slowly"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "sleep 1; echo one", "description": "Count one"}}]},
+    {"match": {"toolResult": "Bash"}, "pauseMs": 300, "content": [{"type": "text", "deltas": ["One. ", "Now ", "two, ", "then ", "three."]}]},
+    {"match": {"lastUserText": "also say bye"}, "content": [{"type": "text", "text": "Bye."}]}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "make file a"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "touch a.txt", "description": "Make a.txt"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made a.txt."}]},
+    {"match": {"lastUserText": "make file b"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "touch b.txt", "description": "Make b.txt"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "I won't, then."}]},
+    {"match": {"lastUserText": "make file c"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "touch c.txt", "description": "Make c.txt"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made c.txt."}]},
+    {"match": {"lastUserText": "make file d"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "touch d.txt", "description": "Make d.txt"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made d.txt, without asking."}]}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
+    {"prompt": "wait a while", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call_update", "rawInput": {"command": "sleep 30"}}}}},
+    {"pause": "1s"},
+    {"cancel": "s1"},
+    {"await": "p1"},
+    {"prompt": "and now?", "session": "s1"}
+  ]
+}

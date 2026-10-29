@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1"},
+    {"prompt": "ask me two questions", "session": "s1", "async": "p1"},
+    {"answer": "elicitation/create", "result": {"action": "accept", "content": {"question_0": "Red", "question_1_custom": "Triangle"}}},
+    {"await": "p1"}
+  ]
+}

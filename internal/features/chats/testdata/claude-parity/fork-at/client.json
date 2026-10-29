@@ -1,0 +1,11 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1"},
+    {"prompt": "first question", "session": "s1"},
+    {"prompt": "second question", "session": "s1"},
+    {"fork": "s1", "as": "s2", "meta": {"jetbrains": {"air": {"fork": {"version": 1, "messageId": "msg_parity_fork_point"}}}}},
+    {"prompt": "rewound question", "session": "s2"},
+    {"close": "s1"}
+  ]
+}

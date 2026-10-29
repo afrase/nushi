@@ -1,0 +1,5 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "wait a while"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "sleep 32", "description": "Wait"}}]}
+  ]
+}
