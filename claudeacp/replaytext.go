@@ -49,3 +49,30 @@ func userText(text string) (string, bool) {
 	text = strings.TrimSpace(injected.ReplaceAllString(text, ""))
 	return text, text != ""
 }
+
+var (
+	notification = regexp.MustCompile(`(?s)<task-notification>(.*?)</task-notification>`)
+	taskID       = regexp.MustCompile(`(?s)<task-id>(.*?)</task-id>`)
+	taskStatus   = regexp.MustCompile(`(?s)<status>(.*?)</status>`)
+	taskSummary  = regexp.MustCompile(`(?s)<summary>(.*?)</summary>`)
+)
+
+// taskNote is what a task notification says of a task's end.
+type taskNote struct{ id, status, summary string }
+
+// taskEnds are the task notifications in a user message's text, in order.
+func taskEnds(text string) []taskNote {
+	var out []taskNote
+	for _, n := range notification.FindAllStringSubmatch(text, -1) {
+		field := func(re *regexp.Regexp) string {
+			if m := re.FindStringSubmatch(n[1]); m != nil {
+				return strings.TrimSpace(m[1])
+			}
+			return ""
+		}
+		if id := field(taskID); id != "" {
+			out = append(out, taskNote{id: id, status: field(taskStatus), summary: field(taskSummary)})
+		}
+	}
+	return out
+}

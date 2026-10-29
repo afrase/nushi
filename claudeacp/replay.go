@@ -15,20 +15,32 @@ import (
 // own copy can line the two up (docs/facts/claude.md, Sessions): the
 // user's messages under claude's uuids, the model's text under the API's
 // message ids, each tool call as a tool_call with its whole input then
-// its result. Usage, notices and permission requests aren't replayed.
+// its result. Usage, notices and permission requests aren't replayed. To
+// a client of subagents, each subagent is announced after the call that
+// started it, its own transcript replays on its session, and once the
+// whole history is out each says how it ended.
 
 // replayer is one replay of a session's history.
 type replayer struct {
-	s     *session
-	cwd   string           // where the transcript was found
-	calls map[string]*tool // calls shown, until their results
+	s      *session
+	cwd    string                       // where the transcript was found
+	agents map[string]sessions.Subagent // subagents' transcripts, by the call that started each
+	calls  map[string]*tool             // calls shown, until their results
+	inputs map[string]launch            // what the calls that start, message or stop a subagent said
+	kids   []*replayedKid               // the subagents announced, in order
+	byID   map[string]*replayedKid      // the same, by id
 }
 
 // replay sends the client the session's history, ms, found in cwd's
 // history folder ("" for any).
 func (s *session) replay(ms []sessions.Message, cwd string) {
-	r := &replayer{s: s, cwd: cwd, calls: map[string]*tool{}}
+	r := &replayer{s: s, cwd: cwd, agents: map[string]sessions.Subagent{}, calls: map[string]*tool{},
+		inputs: map[string]launch{}, byID: map[string]*replayedKid{}}
+	if s.children {
+		r.findAgents(ms)
+	}
 	r.messages(ms, "")
+	r.ends()
 }
 
 // messages replays ms, of the stream of the call stream ("" at the top).
@@ -69,8 +81,9 @@ func (r *replayer) assistant(stream string, msg claudeagent.APIMessage) {
 	}
 }
 
-// user replays a user message: the user's words (only at the top) and
-// tools' results.
+// user replays a user message: the user's words (only at the top: a
+// subagent's are its prompt, which its first message carries) and tools'
+// results. Tasks' ends it brings are kept for the subagents' ends.
 func (r *replayer) user(stream string, m sessions.Message, msg claudeagent.APIMessage) {
 	var structured json.RawMessage
 	if len(msg.Content) == 1 { // else whose it is can't be told
@@ -85,6 +98,7 @@ func (r *replayer) user(stream string, m sessions.Message, msg claudeagent.APIMe
 		case "tool_result":
 			r.toolResult(b, structured)
 		case "text":
+			r.notified(b.Text)
 			if text, ok := userText(b.Text); ok && stream == "" {
 				r.chunk("user_message_chunk", "", m.UUID, acp.ContentBlock{Text: &acp.TextContent{Text: text}})
 			}
@@ -115,7 +129,8 @@ func (r *replayer) chunk(kind, stream, id string, c acp.ContentBlock) {
 }
 
 // toolUse shows a call with its whole input; the main agent's plan tools
-// make the plan instead, as live.
+// make the plan instead, as live. A call that started a subagent is
+// followed by the subagent's own history.
 func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 	if isPlanTool(stream, b.Name) {
 		r.s.planInput(b)
@@ -127,6 +142,10 @@ func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 	if len(input) == 0 {
 		input = json.RawMessage(`{}`)
 	}
+	var in launch
+	if json.Unmarshal(input, &in) == nil {
+		r.inputs[b.ID] = in
+	}
 	v := toolView(t.name, input, r.s.tools.cwd)
 	content := v.content
 	if content == nil {
@@ -135,9 +154,13 @@ func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 	r.s.tools.mu.Lock()
 	r.s.sendLocked(t, report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input})
 	r.s.tools.mu.Unlock()
+	if a, ok := r.agents[b.ID]; ok {
+		r.subagent(stream, b.ID, a, in)
+	}
 }
 
-// toolResult ends a call shown, completed or failed.
+// toolResult ends a call shown, completed or failed, and keeps what it
+// says of a subagent.
 func (r *replayer) toolResult(b claudeagent.Block, structured json.RawMessage) {
 	if r.s.planResult(b, structured) {
 		return
@@ -157,4 +180,5 @@ func (r *replayer) toolResult(b claudeagent.Block, structured json.RawMessage) {
 	r.s.tools.mu.Lock()
 	r.s.sendLocked(t, rep)
 	r.s.tools.mu.Unlock()
+	r.called(t, b, structured)
 }
