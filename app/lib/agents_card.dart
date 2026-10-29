@@ -13,16 +13,16 @@ import 'package:nushi/widgets.dart';
 /// The panel's Background tasks card: the chat's running subagents, each
 /// with its state and current step, and its running background commands;
 /// then a quiet "n finished" line that opens the others. Under the pointer,
-/// a running one shows its Stop. Null (no card) when the chat never had
-/// one.
+/// a running one shows its Stop. Null (no card) while none runs: those
+/// that ended are in the transcript.
 PanelCard? agentsCard(ChatState chat, Daemon daemon) {
   final subs = subagentsOf(chat.items);
   final shells = shellsOf(chat.items);
-  if (subs.isEmpty && shells.isEmpty) return null;
   final running = [
     for (final s in subs.where(subagentRunning)) _AgentRow(chat, daemon, s),
     for (final it in shells.where(shellRunning)) _ShellRow(chat, daemon, it),
   ];
+  if (running.isEmpty) return null;
   final rest = [
     for (final s in subs.where((s) => !subagentRunning(s)))
       _AgentRow(chat, daemon, s),

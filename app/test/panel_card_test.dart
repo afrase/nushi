@@ -2,10 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 
@@ -149,4 +149,30 @@ void _goldens() {
       );
     });
   }
+
+  // UX review, finding 21: a card with nothing to offer is one line.
+  testWidgets('a card with a note is one line: its title and the note, '
+      'nothing to open', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: const Scaffold(
+          body: SizedBox(
+            width: 300,
+            child: PanelCard(
+              title: 'Changes',
+              note: 'Not a git repository',
+              rows: [(null, 'hidden')],
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Not a git repository'), findsOne);
+    expect(find.byType(Chevron), findsNothing);
+    expect(find.text('hidden'), findsNothing);
+    final title = tester.getRect(find.text('Changes'));
+    final note = tester.getRect(find.text('Not a git repository'));
+    expect(note.center.dy, closeTo(title.center.dy, 1)); // one line
+  });
 }
