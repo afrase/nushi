@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
@@ -13,7 +11,6 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_nav.dart';
 import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -158,8 +155,9 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-/// The footer: the ways into Settings' MCP servers and Skills (for the
-/// open chat's folder, else the home folder), Jira and GitHub.
+/// The footer: the views in the chat's place, Jira, GitHub and Settings
+/// (each again closes it). MCP servers and Skills are Settings' sections,
+/// reached there, from a chat's ⋯ and from the palette.
 class _Footer extends StatelessWidget {
   const new(this.daemon);
 
@@ -169,8 +167,6 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final mcp = daemon.settings == SettingsSection.mcp;
-    final skills = daemon.settings == SettingsSection.skills;
     Widget row(
       String label,
       IconData icon,
@@ -197,26 +193,6 @@ class _Footer extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           row(
-            'MCP servers',
-            Icons.hub_outlined,
-            open: mcp,
-            () => mcp
-                ? daemon.closeSettings()
-                : daemon.showMcp(
-                    daemon.selected?.folder ?? Platform.environment['HOME']!,
-                  ),
-          ),
-          row(
-            'Skills',
-            Icons.auto_awesome_outlined,
-            open: skills,
-            () => skills
-                ? daemon.closeSettings()
-                : daemon.showSkills(
-                    daemon.selected?.folder ?? Platform.environment['HOME']!,
-                  ),
-          ),
-          row(
             'Jira',
             Icons.task_alt,
             open: daemon.jiraOpen,
@@ -227,6 +203,14 @@ class _Footer extends StatelessWidget {
             Icons.merge_type,
             open: daemon.githubOpen,
             () => daemon.showGitHub(open: !daemon.githubOpen),
+          ),
+          row(
+            'Settings',
+            Icons.settings_outlined,
+            open: daemon.settings != null,
+            () => daemon.settings != null
+                ? daemon.closeSettings()
+                : daemon.openSettings(),
           ),
         ],
       ),

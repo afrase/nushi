@@ -124,9 +124,11 @@ void main() {
     d.dispose();
   }, variant: macOS);
 
-  testWidgets('deep links: the sidebar’s MCP servers and Skills open their '
-      'sections for the chat’s folder; Agents marks a row; Settings opened '
-      'from GitHub closes back to it', (tester) async {
+  testWidgets('deep links: a chat’s MCP servers… and Skills… open their '
+      'sections for its folder; the footer’s Settings opens and closes it; '
+      'Agents marks a row; Settings opened from GitHub closes back to it', (
+    tester,
+  ) async {
     final d = await pumpSettingsApp(
       tester,
       settingsFake(),
@@ -134,7 +136,9 @@ void main() {
     );
     d.select('c'); // in /Users/me/site
     await tester.pumpAndSettle();
-    await tester.tap(_footer('MCP servers'));
+    expect(_footer('MCP servers'), findsNothing); // Settings' sections now
+    expect(_footer('Skills'), findsNothing);
+    d.showMcp(d.selected!.folder); // as its ⋯'s MCP servers… does
     await tester.pumpAndSettle();
     expect(d.settings, SettingsSection.mcp);
     expect(find.byType(McpView), findsOneWidget);
@@ -142,17 +146,26 @@ void main() {
       tester.widget<McpView>(find.byType(McpView)).folder,
       '/Users/me/site',
     );
-    await tester.tap(_footer('Skills'));
+    d.closeSettings();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Chat menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Skills…', findRichText: true));
     await tester.pumpAndSettle();
     expect(d.settings, SettingsSection.skills);
     expect(
       tester.widget<SkillsView>(find.byType(SkillsView)).folder,
       '/Users/me/site',
     );
-    // The same row again leaves Settings.
-    await tester.tap(_footer('Skills'));
+    // The footer's Settings, open, leaves it; again, opens it.
+    await tester.tap(_footer('Settings'));
     await tester.pumpAndSettle();
     expect(d.settings, isNull);
+    await tester.tap(_footer('Settings'));
+    await tester.pumpAndSettle();
+    expect(d.settings, isNotNull);
+    d.closeSettings();
+    await tester.pumpAndSettle();
 
     d.openSettings(section: SettingsSection.agents, agent: 'codex');
     await tester.pumpAndSettle();
