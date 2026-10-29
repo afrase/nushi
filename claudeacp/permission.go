@@ -60,6 +60,11 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 	if len(input) == 0 {
 		input = json.RawMessage(`{}`)
 	}
+	if ts.byID[r.ToolUseID] == nil && r.AgentID != "" {
+		// A subagent's call its stream hasn't shown: not one the turn
+		// leaves open when it ends.
+		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID}
+	}
 	t := s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
 	v := toolView(t.name, input, ts.cwd)
 	cc := map[string]any{"toolName": t.name}

@@ -23,6 +23,7 @@ import (
 type tool struct {
 	id, name string
 	parent   string // the subagent's Agent call, for one of a subagent's
+	agent    string // the subagent asking about it, when a permission request showed it first
 	partial  strings.Builder
 	fields   int  // top-level fields of its input sent as it streamed
 	whole    bool // its input came whole: claude runs it (or asks first)
@@ -168,6 +169,7 @@ func (s *session) toolStart(stream string, index int, b *claudeagent.Block) {
 		t = &tool{id: b.ID, name: b.Name, parent: stream}
 		ts.byID[t.id] = t
 	}
+	t.parent = cmp.Or(t.parent, stream) // a request may have shown it before its stream
 	if ts.streaming[stream] == nil {
 		ts.streaming[stream] = map[int]*tool{}
 	}
@@ -216,6 +218,7 @@ func (s *session) wholeLocked(stream, id, name string, input json.RawMessage) *t
 		t = &tool{id: id, name: name, parent: stream}
 		ts.byID[id] = t
 	}
+	t.parent = cmp.Or(t.parent, stream)
 	if len(input) == 0 {
 		input = json.RawMessage(`{}`)
 	}
@@ -300,7 +303,7 @@ func (s *session) endTools(why int) (incomplete bool) {
 			delete(ts.byID, id) // its hook, if any, has come
 			continue
 		}
-		if t.parent != "" || t == ts.compact {
+		if t.parent != "" || t.agent != "" {
 			continue
 		}
 		t.ended = true

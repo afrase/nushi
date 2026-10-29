@@ -139,3 +139,23 @@ func TestPermissionWithdrawn(t *testing.T) {
 		t.Error(got)
 	}
 }
+
+// A subagent's call that a permission request shows before its stream
+// does isn't one the turn leaves open: it outlives the turn's result, and
+// its stream then says whose it is.
+func TestSubagentPermission(t *testing.T) {
+	f := fake(user("id2"), echo("id2"), canUseTool("toolu_s", "Bash", `{"command":"ls"}`, `,"agent_id":"a1"`),
+		answers("toolu_s", `{"behavior":"allow"}`), result(names("id2")), claudetest.Send(idle),
+		claudetest.Send(`{"type":"assistant","parent_tool_use_id":"toolu_p","message":{"id":"msg_2","content":[{"type":"tool_use","id":"toolu_s","name":"Bash","input":{"command":"ls"}}]}}`),
+		sendf(`{"type":"user","parent_tool_use_id":"toolu_p","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_s","content":"a"}]}}`))
+	p := start(t, nil, f)
+	p.permit = pick(optAllowOnce)
+	if got := stopReason(p.prompt(t, p.open(t), "go")); got != "end_turn" {
+		t.Fatal(got)
+	}
+	<-f.Played()
+	eventually(t, "the call's result", func() bool { return len(p.toolUpdates()) == 2 })
+	if got := p.toolUpdates()[1]; !strings.Contains(got, `"status":"completed"`) || !strings.Contains(got, `"parentToolUseId":"toolu_p"`) {
+		t.Errorf("%s", got)
+	}
+}
