@@ -261,7 +261,7 @@ func newWorld(t *testing.T) *world {
 	w.read = w.ghHosts
 	w.s = New(Deps{
 		Gh: Gh{
-			Token: func(_ context.Context, host string) (string, string) {
+			Token: func(ctx context.Context, host string) (string, string, error) {
 				w.mu.Lock()
 				w.asked = append(w.asked, host)
 				asking := w.asking
@@ -269,10 +269,13 @@ func newWorld(t *testing.T) *world {
 				if asking != nil {
 					asking()
 				}
-				if host == "github.com" || host == "git.corp.example" {
-					return "gho_gh", "gh"
+				if ctx.Err() != nil {
+					return "", "gh", ctx.Err() // as ghToken: gh killed, so it didn't say
 				}
-				return "", ""
+				if host == "github.com" || host == "git.corp.example" {
+					return "gho_gh", "gh", nil
+				}
+				return "", "", nil
 			},
 			Hosts: func() []string {
 				w.mu.Lock()
@@ -382,6 +385,21 @@ func TestNoToken(t *testing.T) {
 	w.s.noToken["git.example.com"] = time.Now().Add(-noTokenFor)
 	if _, err := w.s.Inbox(t.Context(), "git.example.com", githubapi.InboxFilter{}, false); err == nil || len(w.asked) != 2 {
 		t.Fatalf("gh not asked after 30 s: %v %v", err, w.asked)
+	}
+}
+
+// A token read its request cut short isn't gh having no token: the next
+// request asks gh again.
+func TestTokenReadCutShort(t *testing.T) {
+	w := newWorld(t)
+	ctx, cancel := context.WithCancel(t.Context())
+	w.asking = cancel // the app dropped the call while gh ran
+	if _, err := w.s.client(ctx, "github.com"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("a read cut short: %v", err)
+	}
+	w.asking = nil
+	if _, err := w.s.client(t.Context(), "github.com"); err != nil || len(w.asked) != 2 {
+		t.Fatalf("gh not asked again: %v %v", err, w.asked)
 	}
 }
 

@@ -47,11 +47,11 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 }
 
 // Gh is the gh CLI's login, read in this process through go-gh: a host's
-// token and where it came from ("" when gh has none), the hosts gh
-// knows, and Reload, which reads gh's config again (Hosts reads what was
-// read last).
+// token and where it came from ("" when gh has none; an error when the
+// read was cut short, so gh didn't say), the hosts gh knows, and Reload,
+// which reads gh's config again (Hosts reads what was read last).
 type Gh struct {
-	Token  func(ctx context.Context, host string) (token, source string)
+	Token  func(ctx context.Context, host string) (token, source string, err error)
 	Hosts  func() []string
 	Reload func()
 }
@@ -348,7 +348,10 @@ func (s *Service) host(ctx context.Context, name string, prompt bool) (*host, er
 			return nil, noToken
 		}
 		var t string
-		t, source = s.Gh.Token(ctx, name)
+		t, source, err = s.Gh.Token(ctx, name)
+		if err != nil {
+			return nil, err // not a miss: gh is asked again next time
+		}
 		if t == "" {
 			s.mu.Lock()
 			s.noToken[name] = time.Now()
