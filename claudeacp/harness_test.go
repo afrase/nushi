@@ -28,11 +28,36 @@ type peer struct {
 	clock *clock
 }
 
-// client records what the agent sends.
+// client records what the agent sends, and answers its requests with
+// permit and elicit when a test sets them.
 type client struct {
 	acp.UnimplementedClient
-	mu      sync.Mutex
-	updates []acp.SessionNotification
+	mu        sync.Mutex
+	updates   []acp.SessionNotification
+	permit    func(context.Context, *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error)
+	elicit    func(context.Context, *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error)
+	completed []acp.ElicitationID
+}
+
+func (c *client) RequestPermission(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+	if c.permit == nil {
+		return c.UnimplementedClient.RequestPermission(ctx, req)
+	}
+	return c.permit(ctx, req)
+}
+
+func (c *client) CreateElicitation(ctx context.Context, req *acp.CreateElicitationRequest) (*acp.CreateElicitationResponse, error) {
+	if c.elicit == nil {
+		return c.UnimplementedClient.CreateElicitation(ctx, req)
+	}
+	return c.elicit(ctx, req)
+}
+
+func (c *client) CompleteElicitation(_ context.Context, n *acp.CompleteElicitationNotification) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.completed = append(c.completed, n.ElicitationID)
+	return nil
 }
 
 func (c *client) SessionUpdate(_ context.Context, n *acp.SessionNotification) error {

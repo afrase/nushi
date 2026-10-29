@@ -37,6 +37,9 @@ func (s *session) cancel() {
 		}
 	}
 	s.dropTop = true
+	for _, withdraw := range s.open { // what it asks the user is moot now
+		withdraw()
+	}
 	s.mu.Unlock()
 	for _, id := range drop {
 		go func() {
