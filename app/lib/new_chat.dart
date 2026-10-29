@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/back_swipe.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -217,20 +218,26 @@ class _NewChatState extends State<_NewChat> {
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: _picking != null
-              ? IssuePicker(
-                  daemon: widget.daemon,
-                  sites: _sites,
-                  text: _picking!,
-                  onPick: _picked,
+              ? BackSwipe(
                   onBack: () => _picked(null),
+                  child: IssuePicker(
+                    daemon: widget.daemon,
+                    sites: _sites,
+                    text: _picking!,
+                    onPick: _picked,
+                    onBack: () => _picked(null),
+                  ),
                 )
               : agent != null
-              ? SessionList(
-                  daemon: widget.daemon,
-                  agent: agent,
-                  folder: folder,
-                  onOpen: (s) => Navigator.pop(context, (agent, s, null)),
+              ? BackSwipe(
                   onBack: () => _sessions(false),
+                  child: SessionList(
+                    daemon: widget.daemon,
+                    agent: agent,
+                    folder: folder,
+                    onOpen: (s) => Navigator.pop(context, (agent, s, null)),
+                    onBack: () => _sessions(false),
+                  ),
                 )
               : Focus(
                   focusNode: _focus,

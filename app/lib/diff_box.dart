@@ -4,6 +4,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/back_swipe.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
@@ -175,6 +176,11 @@ class _DiffBoxState extends State<DiffBox> {
       captureNames: syntaxCaptures,
       devicePixelRatio: dpr,
     )..selectionChanges.addListener(() => _selecting = true);
+    // Its panes scroll sideways without a Scrollable: a swipe back over
+    // it is the diff's while it moves.
+    _controller!.horizontal.addListener(() {
+      if (mounted) const SideScrolled().dispatch(context);
+    });
     // A comment being written stays, on the same lines while there are
     // that many.
     if (_draft case final d?) {

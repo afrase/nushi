@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/back_swipe.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -398,7 +399,7 @@ class _GitHubViewState extends State<GitHubView> {
                   : host == null
                   ? NoHost(onSettings: _settings, error: _error)
                   : details != null
-                  ? _detailsPane(details)
+                  ? BackSwipe(onBack: _back, child: _detailsPane(details))
                   : _list(host),
             ),
           ],

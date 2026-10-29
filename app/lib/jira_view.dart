@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/back_swipe.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -469,35 +470,38 @@ class _JiraViewState extends State<JiraView> {
                   : site == null
                   ? NoSite(widget.daemon)
                   : details != null
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-                          child: Row(
-                            children: [
-                              IconTap(
-                                Icons.arrow_back,
-                                tooltip: 'The list (Esc)',
-                                onTap: _back,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: JiraIssuePane(
-                            key: ValueKey('${details.site} ${details.key}'),
-                            daemon: widget.daemon,
-                            site: details.site,
-                            issueKey: details.key,
-                            // A subtask or link: of the same site.
-                            onOpen: (key) => setState(
-                              () => _details = (site: details.site, key: key),
+                  ? BackSwipe(
+                      onBack: _back,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+                            child: Row(
+                              children: [
+                                IconTap(
+                                  Icons.arrow_back,
+                                  tooltip: 'The list (Esc)',
+                                  onTap: _back,
+                                ),
+                              ],
                             ),
-                            now: widget.now,
                           ),
-                        ),
-                      ],
+                          Expanded(
+                            child: JiraIssuePane(
+                              key: ValueKey('${details.site} ${details.key}'),
+                              daemon: widget.daemon,
+                              site: details.site,
+                              issueKey: details.key,
+                              // A subtask or link: of the same site.
+                              onOpen: (key) => setState(
+                                () => _details = (site: details.site, key: key),
+                              ),
+                              now: widget.now,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   : _lists(theme, site, lists),
             ),
