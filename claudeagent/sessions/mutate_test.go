@@ -82,6 +82,9 @@ func TestFork(t *testing.T) {
 		!strings.HasSuffix(first, `,"logicalParentUuid":null,"forkedFrom":{"sessionId":"`+id+`","messageUuid":"u1"}}`) {
 		t.Errorf("the fork's first record isn't in the source's order: %s", first)
 	}
+	if !strings.Contains(string(data), `"replacements":[{"kind":"tool-result","id":"r1"}]`) {
+		t.Error("the content replacements aren't kept as written")
+	}
 	recs := readRecords(t, path)
 	// u1, a1, boundary, u2, a2, then the replacements and the title.
 	if len(recs) != 7 {
