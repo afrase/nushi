@@ -113,6 +113,71 @@ func TestLoadReplaysSubagents(t *testing.T) {
 	})
 }
 
+// A task notification claude took into a running turn is kept only as a
+// queued_command attachment, and one still queued as claude closed only
+// as a queue-operation (docs/facts/claude.md): a load reads both for the
+// subagents' ends, in the transcript's order with the user messages', so
+// the last about a subagent says how it ended.
+func TestLoadSubagentsQueuedEnds(t *testing.T) {
+	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, fake())
+	cwd, sid := t.TempDir(), uuid(1)
+	note := func(id, status, summary string) string {
+		return "<task-notification>\n<task-id>" + id + "</task-id>\n<status>" + status + "</status>\n<summary>" + summary + "</summary>\n</task-notification>"
+	}
+	queued := func(uuid, prompt string) rec {
+		return rec{"type": "attachment", "uuid": uuid, "attachment": map[string]any{"type": "queued_command", "prompt": prompt}}
+	}
+	queueOp := func(op, content string) rec {
+		r := rec{"type": "queue-operation", "operation": op}
+		if content != "" {
+			r["content"] = content
+		}
+		return r
+	}
+	var recs []rec
+	recs = append(recs, userRec("u1", "Go"))
+	for _, id := range []string{"B", "C", "D"} {
+		recs = append(recs, asstRec("a"+id, "msg_1", useBlock("toolu_"+id, "Agent", `{"description":"Task `+id+`","prompt":"go","run_in_background":true}`)))
+	}
+	for _, id := range []string{"B", "C", "D"} {
+		recs = append(recs, userRec("r"+id, resultBlocks("toolu_"+id, "Async agent launched", false)))
+	}
+	recs = append(recs,
+		userRec("n1", note("agentD", "completed", "D finished")),
+		asstRec("a5", "msg_2", useBlock("toolu_X", "Bash", `{"command":"true"}`)),
+		queueOp("enqueue", note("agentB", "completed", "B finished")),
+		userRec("r5", resultBlocks("toolu_X", "", false)),
+		queued("q1", note("agentB", "completed", "B finished")+note("agentD", "failed", "D broke")),
+		queueOp("remove", note("agentB", "completed", "B finished")),
+		asstRec("a6", "msg_3", textBlock("Done.")),
+		queueOp("enqueue", note("agentC", "killed", "C was stopped")),
+	)
+	p.writeHistory(t, cwd, sid, recs...)
+	for _, id := range []string{"B", "C", "D"} {
+		p.writeSubagent(t, cwd, sid, "agent"+id, "toolu_"+id, asstRec(id+"1", "msg_"+id, textBlock("on it")))
+	}
+	if _, err := p.load(sid, cwd); err != nil {
+		t.Fatal(err)
+	}
+	var ends []string
+	for _, l := range p.replayed() {
+		if strings.Contains(l, `"state":{"state":"idle"`) {
+			ends = append(ends, l)
+		}
+	}
+	ended := func(id, state string) string {
+		return sid + " subagent " + `{"sessionId":"agent` + id + `","state":` + state + `}`
+	}
+	want := []string{
+		ended("B", `{"state":"idle","stopReason":"end_turn"}`),
+		ended("C", `{"state":"idle","stopReason":"cancelled"}`),
+		ended("D", `{"state":"idle","stopReason":"error","error":{"code":-32603,"message":"D broke"}}`),
+	}
+	if !slices.Equal(ends, want) {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(ends, "\n"), strings.Join(want, "\n"))
+	}
+}
+
 // A client without subagents gets the calls that started them, and none
 // of their own steps.
 func TestLoadSubagentsFlat(t *testing.T) {

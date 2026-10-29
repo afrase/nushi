@@ -29,6 +29,7 @@ type replayer struct {
 	inputs map[string]launch            // what the calls that start, message or stop a subagent said
 	kids   []*replayedKid               // the subagents announced, in order
 	byID   map[string]*replayedKid      // the same, by id
+	queued map[string][]string          // prompts claude kept other than as user messages, by the message before each
 }
 
 // replay sends the client the session's history, ms, found in cwd's
@@ -38,7 +39,9 @@ func (s *session) replay(ms []sessions.Message, cwd string) {
 		inputs: map[string]launch{}, byID: map[string]*replayedKid{}}
 	if s.children {
 		r.findAgents(ms)
+		r.findQueued(ms)
 	}
+	r.notifiedAfter("")
 	r.messages(ms, "")
 	r.ends()
 }
@@ -47,14 +50,16 @@ func (s *session) replay(ms []sessions.Message, cwd string) {
 func (r *replayer) messages(ms []sessions.Message, stream string) {
 	for _, m := range ms {
 		var msg claudeagent.APIMessage
-		if json.Unmarshal(m.Message, &msg) != nil {
-			continue
+		if json.Unmarshal(m.Message, &msg) == nil {
+			switch m.Type {
+			case "assistant":
+				r.assistant(stream, msg)
+			case "user":
+				r.user(stream, m, msg)
+			}
 		}
-		switch m.Type {
-		case "assistant":
-			r.assistant(stream, msg)
-		case "user":
-			r.user(stream, m, msg)
+		if stream == "" {
+			r.notifiedAfter(m.UUID)
 		}
 	}
 }

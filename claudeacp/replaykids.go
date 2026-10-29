@@ -14,7 +14,8 @@ import (
 // transcript replays on its session; the subagent is kept as the
 // session's, so a SendMessage after the load runs it again on the same
 // session. Its end goes once the whole history is out: what the last
-// task notification about it said; else stopped, when the main agent
+// task notification about it said (a user message, or a prompt claude
+// queued: findQueued); else stopped, when the main agent
 // stopped it; else, for one in the foreground, how its call ended; else
 // idle with no reason, as nothing says (a background subagent that was
 // running when claude last exited).
@@ -140,6 +141,42 @@ func (r *replayer) launchOf(call string) *replayedKid {
 		}
 	}
 	return nil
+}
+
+// findQueued reads the prompts claude kept other than as user messages
+// (sessions.QueuedPrompts): a task notification delivered into a
+// running turn is only an attachment, and one still queued when claude
+// closed only a queue-operation (docs/facts/claude.md). Each is read
+// after the message before it, or first when that message isn't
+// replayed; one still queued comes after them all. claude-agent-acp
+// reads neither, so its replay leaves such a subagent idle with no
+// reason.
+func (r *replayer) findQueued(ms []sessions.Message) {
+	qs, err := sessions.QueuedPrompts(r.s.a.cfg.ConfigDir, r.s.id, r.cwd)
+	if err != nil {
+		return
+	}
+	known := map[string]bool{}
+	for _, m := range ms {
+		known[m.UUID] = true
+	}
+	r.queued = map[string][]string{}
+	for _, q := range qs {
+		after := q.After
+		if !known[after] {
+			after = ""
+		}
+		r.queued[after] = append(r.queued[after], q.Prompt)
+	}
+}
+
+// notifiedAfter keeps what the prompts queued after the message uuid
+// ("" for those first) say of subagents' ends.
+func (r *replayer) notifiedAfter(uuid string) {
+	for _, p := range r.queued[uuid] {
+		r.notified(p)
+	}
+	delete(r.queued, uuid)
 }
 
 // notified keeps what the task notifications in a user message's text
