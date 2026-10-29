@@ -78,7 +78,8 @@ type Options struct {
 
 	// The callbacks answer claude's requests. Each runs in a goroutine
 	// of its own; its ctx ends when claude withdraws the request or the
-	// session closes, and then what it returns isn't sent.
+	// session closes (a hook's also at the call's deadline), and then
+	// what it returns isn't sent.
 
 	// CanUseTool answers claude's permission requests; without it claude
 	// asks no one and decides by its settings. Nothing times out: until
