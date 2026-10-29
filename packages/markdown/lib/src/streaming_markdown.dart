@@ -4,6 +4,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_view/src/blocks.dart';
 import 'package:markdown_view/src/heal.dart';
+import 'package:markdown_view/src/stream_marks.dart';
 
 /// The colors and fonts of [StreamingMarkdown].
 @immutable
@@ -78,6 +79,8 @@ class StreamingMarkdown extends StatefulWidget {
     this.codeBlock,
     this.files,
     this.onTapFile,
+    this.fresh = const [],
+    this.caret,
   });
 
   /// The markdown so far.
@@ -112,6 +115,14 @@ class StreamingMarkdown extends StatefulWidget {
 
   /// Runs when one of [files] is clicked, with its path.
   final void Function(String path)? onTapFile;
+
+  /// While streaming, text just revealed, drawn faded in its paragraph
+  /// where that's safe ([markFresh]); elsewhere it just shows.
+  final List<FreshRun> fresh;
+
+  /// While streaming, drawn where the text ends, in its line and taking no
+  /// room, when the text ends in a line of prose ([caretFits]).
+  final Widget? caret;
 
   @override
   State<StreamingMarkdown> createState() => _StreamingMarkdownState();
@@ -151,7 +162,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
       return _body(w.text, streaming: false);
     }
     _cut(w.text);
-    if (_pieces.isEmpty) return _body(heal(w.text, markOpen: true));
+    if (_pieces.isEmpty) return _body(_last(w.text, 0));
     final gap = SizedBox(height: (w.style.body.fontSize ?? 14) * 0.75);
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -164,10 +175,20 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         gap,
         KeyedSubtree(
           key: const ValueKey('last'),
-          child: _body(heal(w.text.substring(_head.length), markOpen: true)),
+          child: _body(_last(w.text.substring(_head.length), _head.length)),
         ),
       ],
     );
+  }
+
+  /// The open block, [tail] (from [at] in the text), healed, with its
+  /// fresh runs and caret marked.
+  String _last(String tail, int at) {
+    final w = widget;
+    final healed = heal(markFresh(tail, at, w.fresh), markOpen: true);
+    return w.caret != null && caretFits(healed, openMark)
+        ? withCaret(healed)
+        : healed;
   }
 
   /// [data] as one Markdown body: parsed again only when it, or the style
@@ -189,9 +210,13 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
       data: data,
       softLineBreak: w.lineBreaks,
       blockSyntaxes: const [_HtmlAsText()],
-      inlineSyntaxes: linking ? [_FilePathSyntax(files.keys)] : null,
+      inlineSyntaxes: [
+        if (linking) _FilePathSyntax(files.keys),
+        if (streaming) ...streamSyntaxes,
+      ],
       builders: {
         'pre': _CodeBlockBuilder(s, w.codeBlock),
+        if (streaming) ...streamBuilders(w.caret),
         if (linking) ...{
           'code': _FileLinkBuilder(files, w.onTapFile!),
           _FilePathSyntax.tag: _FileLinkBuilder(files, w.onTapFile!),

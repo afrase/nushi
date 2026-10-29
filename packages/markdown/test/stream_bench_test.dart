@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -77,8 +76,8 @@ TextSpan? _plain(String language, String code, TextStyle style) => null;
 /// message 720 points wide, as it streams now (only the last block parsed
 /// again) and as it did (the whole message healed and parsed again), chunk
 /// by chunk in turn in one test so both meet the same machine: p50, p90,
-/// p99 and the most. Run with MARKDOWN_BENCH=1 (`flutter test
-/// test/stream_bench_test.dart`).
+/// p99 and the most. Run with `flutter test --dart-define=MARKDOWN_BENCH=true
+/// test/stream_bench_test.dart` (and `--platform chrome` for the web).
 void main() {
   testWidgets('a 3,000-word reply streaming: frame times per chunk', (
     tester,
@@ -138,5 +137,5 @@ void main() {
       '$words words, ${text.length} characters, ${ends.length} chunks\n'
       '${line('whole', times.whole)}\n${line('last block', times.now)}',
     );
-  }, skip: !Platform.environment.containsKey('MARKDOWN_BENCH'));
+  }, skip: !const bool.fromEnvironment('MARKDOWN_BENCH'));
 }

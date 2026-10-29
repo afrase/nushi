@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/mermaid.dart';
+import 'package:nushi/paced.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,9 +33,13 @@ class AgentMarkdown extends StatelessWidget {
     this.images = markdownImage,
     this.files,
     this.onTapFile,
+    this.shown,
   });
 
   final String text;
+
+  /// While it's paced ([Paced]): what shows, faded in, and the caret.
+  final Shown? shown;
 
   /// What an image shows as (Jira's text: only its attachments).
   final Widget Function(Uri uri, String? alt) images;
@@ -73,9 +78,14 @@ class AgentMarkdown extends StatelessWidget {
       highlight: codeHighlighter(t),
       languageName: languageName,
     );
+    final shown = this.shown;
     return StreamingMarkdown(
-      text,
-      streaming: live,
+      shown?.text ?? text,
+      streaming: live || shown != null,
+      fresh: shown?.fresh ?? const [],
+      caret: shown == null || shown.caret <= 0
+          ? null
+          : SoftCaret(opacity: shown.caret),
       lineBreaks: typed,
       onTapLink: _open,
       imageBuilder: images,

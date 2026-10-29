@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/paced.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thought_line.dart';
@@ -38,17 +39,27 @@ class _ThoughtViewState extends State<ThoughtView> {
   Widget build(BuildContext context) {
     final live = widget.live;
     final took = _took;
-    return Folded(
-      live
-          ? 'Thinking…'
-          : took == null
-          ? 'Thought'
-          : 'Thought for ${elapsed(took)}',
+    // Its words come as a message's do, paced ([Paced]).
+    return Paced(
       widget.item.text,
       live: live,
-      line: _since == null
-          ? null
-          : (style) => ThoughtLine(widget.item.text, live: live, style: style),
+      builder: (context, shown) => Folded(
+        live
+            ? 'Thinking…'
+            : took == null
+            ? 'Thought'
+            : 'Thought for ${elapsed(took)}',
+        widget.item.text,
+        live: live,
+        shown: shown,
+        line: _since == null
+            ? null
+            : (style) => ThoughtLine(
+                shown?.text ?? widget.item.text,
+                live: live,
+                style: style,
+              ),
+      ),
     );
   }
 }
@@ -68,12 +79,22 @@ class StoppedView extends StatelessWidget {
 /// A dim, italic [label] that opens to [text], shining while [live]; folded,
 /// [line] under it, in its style.
 class Folded extends StatefulWidget {
-  const new(this.label, this.text, {required this.live, super.key, this.line});
+  const new(
+    this.label,
+    this.text, {
+    required this.live,
+    super.key,
+    this.line,
+    this.shown,
+  });
 
   final String label;
   final String text;
   final bool live;
   final Widget Function(TextStyle style)? line;
+
+  /// While [text] is paced, what of it shows, opened.
+  final Shown? shown;
 
   @override
   State<Folded> createState() => _FoldedState();
@@ -120,7 +141,10 @@ class _FoldedState extends State<Folded> {
                 left: BorderSide(color: theme.t.borderStrong, width: 2),
               ),
             ),
-            child: Text(widget.text, style: style),
+            child: switch (widget.shown) {
+              final shown? => Text.rich(pacedSpan(shown, style)),
+              null => Text(widget.text, style: style),
+            },
           ),
       ],
     );
