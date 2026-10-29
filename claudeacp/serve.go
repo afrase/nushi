@@ -51,6 +51,8 @@ type clientCaps struct {
 	forms        bool // form elicitation, which AskUserQuestion needs
 	subagents    bool // subagents as sessions of their own
 	subagentText bool // subagents' text and thinking (_meta "subagent-transcript")
+	notices      bool // ACP's notices, for what claude says of its own
+	urls         bool // URL elicitation, which an MCP server's sign-in needs
 }
 
 // Serve runs the agent on r and w, the client's streams, until the client
@@ -91,6 +93,8 @@ func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.
 	var caps clientCaps
 	if c := req.ClientCapabilities; c != nil {
 		caps.forms = c.Elicitation != nil && c.Elicitation.Form != nil
+		caps.urls = c.Elicitation != nil && c.Elicitation.URL != nil
+		caps.notices = c.Session != nil && c.Session.Notices != nil
 		caps.subagents = c.Subagents != nil
 		caps.subagentText, _ = c.Meta["subagent-transcript"].(bool)
 	}
