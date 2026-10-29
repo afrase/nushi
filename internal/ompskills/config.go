@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -120,12 +121,15 @@ func errUnsafe(why string) error {
 	return fmt.Errorf("Nushi can't change omp's settings safely (%s): change it in config.yml", why)
 }
 
+// setMu is held from config.yml's read to its write, so two changes can't
+// lose one another (omp's own write still can: it doesn't ask).
+var setMu sync.Mutex
+
 // setDisabled adds item to (or takes it out of) disabledExtensions in the
-// config.yml at file.
+// config.yml at file (a link followed: atomicfile.Rewrite).
 func setDisabled(file, item string, add bool) error {
-	if resolved, err := filepath.EvalSymlinks(file); err == nil {
-		file = resolved // your dotfiles' link: change what it points at
-	}
+	setMu.Lock()
+	defer setMu.Unlock()
 	b, err := jsonsettings.ReadFile(file)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err

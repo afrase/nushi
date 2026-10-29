@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"bytes"
 	"cmp"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -21,6 +20,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -40,7 +40,7 @@ type Store struct {
 
 // Open opens the store in dir, made 0700 if it isn't there, and removes
 // what a crash left half-written (the temporary file of an image or of a
-// copy written anew).
+// copy written anew: atomicfile's, or one named as before step 443).
 func Open(dir string) (*Store, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
@@ -53,9 +53,12 @@ func Open(dir string) (*Store, error) {
 		return nil, err
 	}
 	s := &Store{root: root, repaired: map[string]bool{}}
-	tmps, _ := fs.Glob(root.FS(), "*/"+imagesDir+"/*.tmp*")
-	half, _ := fs.Glob(root.FS(), "*/"+itemsFile+".tmp")
-	for _, t := range append(tmps, half...) {
+	var half []string
+	for _, p := range []string{"*/.nushi-*", "*/" + imagesDir + "/.nushi-*", "*/" + imagesDir + "/*.tmp*", "*/" + itemsFile + ".tmp"} {
+		m, _ := fs.Glob(root.FS(), p)
+		half = append(half, m...)
+	}
+	for _, t := range half {
 		_ = root.Remove(t) // best effort: the next Open tries again
 	}
 	return s, nil
@@ -212,8 +215,9 @@ func (s *Store) storeImagesLocked(chat string, it model.Item) (*stored, error) {
 	return st, nil
 }
 
-// writeImageLocked writes an image under its hash, whole or not at all: to
-// a temporary file first, then renamed.
+// writeImageLocked writes an image under its hash, whole or not at all
+// (atomicfile.ReplaceIn): one there is never written again, so it must
+// never be there empty.
 func (s *Store) writeImageLocked(chat, hash string, data []byte) error {
 	if err := checkChat(chat); err != nil {
 		return err
@@ -226,15 +230,7 @@ func (s *Store) writeImageLocked(chat, hash string, data []byte) error {
 	if err := s.root.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp := name + ".tmp" + rand.Text()[:8]
-	err := s.root.WriteFile(tmp, data, 0o600)
-	if err == nil {
-		err = s.root.Rename(tmp, name)
-	}
-	if err != nil {
-		_ = s.root.Remove(tmp) // the write's error is the one to return
-	}
-	return err
+	return atomicfile.ReplaceIn(s.root, name, data, 0o600)
 }
 
 var validHash = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -304,7 +300,8 @@ func (s *Store) Replace(chat string, items []model.Item) error {
 	return s.rewriteLocked(chat, st)
 }
 
-// rewriteLocked replaces chat's file with items' records, atomically, and
+// rewriteLocked replaces chat's file with items' records, atomically and
+// durably (the file may be the only history left of the chat), and
 // removes the images no item names any more.
 func (s *Store) rewriteLocked(chat string, items []stored) error {
 	var buf bytes.Buffer
@@ -327,14 +324,7 @@ func (s *Store) rewriteLocked(chat string, items []stored) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
-	name := path.Join(chat, itemsFile)
-	tmp := name + ".tmp"
-	err := s.root.WriteFile(tmp, buf.Bytes(), 0o600)
-	if err == nil {
-		err = s.root.Rename(tmp, name)
-	}
-	if err != nil {
-		_ = s.root.Remove(tmp) // the write's error is the one to return
+	if err := atomicfile.ReplaceIn(s.root, path.Join(chat, itemsFile), buf.Bytes(), 0o600); err != nil {
 		return err
 	}
 	s.repaired[chat] = true

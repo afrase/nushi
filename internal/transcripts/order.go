@@ -5,7 +5,9 @@ import "slices"
 // transcript replays a chat's records into its items, in the transcript's
 // order: a new item goes right after the item it was written after, and
 // one written before that item waits for it (at the end, if it never
-// comes); a record of an item already there replaces it in place.
+// comes); a record of an item already there replaces it in place, and one
+// of an item still waiting replaces it there (or places it, its new After
+// there). So no id is there twice: in list or in waiting, once.
 type transcript struct {
 	list    []stored
 	waiting []record       // items whose After isn't there yet, in the order written
@@ -32,11 +34,18 @@ func (t *transcript) apply(r record) {
 			t.list[i] = *r.Item
 			return
 		}
-		if !t.place(r) {
+		j := slices.IndexFunc(t.waiting, func(w record) bool { return w.Item.ID == r.Item.ID })
+		switch placed := t.place(r); {
+		case !placed && j >= 0:
+			t.waiting[j] = r
+		case !placed:
 			t.waiting = append(t.waiting, r)
-			return
+		default:
+			if j >= 0 {
+				t.waiting = slices.Delete(t.waiting, j, j+1)
+			}
+			t.placeWaiting()
 		}
-		t.placeWaiting()
 	case r.Cut != "":
 		if i := t.index(r.Cut); i >= 0 {
 			t.list, t.waiting, t.pos = t.list[:i], nil, nil
@@ -76,11 +85,6 @@ func (t *transcript) placeWaiting() {
 	for placed := true; placed; {
 		placed = false
 		for i, w := range t.waiting {
-			if t.index(w.Item.ID) >= 0 { // written again meanwhile: the later one wins
-				t.waiting = slices.Delete(t.waiting, i, i+1)
-				placed = true
-				break
-			}
 			if t.place(w) {
 				t.waiting = slices.Delete(t.waiting, i, i+1)
 				placed = true
@@ -94,9 +98,7 @@ func (t *transcript) placeWaiting() {
 func (t *transcript) items() []stored {
 	out := t.list
 	for _, w := range t.waiting {
-		if t.index(w.Item.ID) < 0 {
-			out = append(out, *w.Item)
-		}
+		out = append(out, *w.Item)
 	}
 	return out
 }

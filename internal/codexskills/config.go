@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/BurntSushi/toml"
 
@@ -130,12 +131,15 @@ func errUnsafe(why string) error {
 	return fmt.Errorf("Nushi can't change this skill safely (%s): change it in config.toml", why)
 }
 
+// setMu is held from config.toml's read to its write, so two changes
+// can't lose one another (Codex's own write still can: it doesn't ask).
+var setMu sync.Mutex
+
 // setOn turns the skill whose resolved SKILL.md is file (named name) on
-// or off in the config.toml at path.
+// or off in the config.toml at path (a link followed: atomicfile.Rewrite).
 func setOn(path, file, name string, on bool) error {
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		path = resolved // your dotfiles' link: change the file it points at
-	}
+	setMu.Lock()
+	defer setMu.Unlock()
 	b, err := skillfile.ReadFile(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err

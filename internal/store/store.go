@@ -21,6 +21,10 @@ import (
 type Store struct {
 	dir string
 	mu  sync.Mutex
+	set *settings // settings.json as read or last written; nil until read
+	// cacheMu keeps the cache's files apart from mu: a cache file's rewrite
+	// doesn't hold up the settings, which chats read under their lock.
+	cacheMu sync.Mutex
 	// HadMessages says whether the agent's history of a session stored
 	// before sessions said so has messages.
 	HadMessages func(model.Session) bool
@@ -218,9 +222,13 @@ type settings struct {
 // user picks another time.
 const defaultSleepAfter = 30 * time.Minute
 
-// settingsLocked reads settings.json; one that can't be read is as if
-// empty.
+// settingsLocked is settings.json, read once and then kept (a hand edit
+// while the daemon runs is seen at its next start); one that can't be
+// read is as if empty.
 func (s *Store) settingsLocked() settings {
+	if s.set != nil {
+		return *s.set
+	}
 	var set settings
 	b, err := os.ReadFile(filepath.Join(s.dir, "settings.json"))
 	if err == nil {
@@ -229,16 +237,22 @@ func (s *Store) settingsLocked() settings {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		slog.Warn("reading settings.json", "err", err)
 	}
+	s.set = &set
 	return set
 }
 
-// changeSettings applies change to settings.json.
+// changeSettings applies change to settings.json, and keeps the result
+// once it's written.
 func (s *Store) changeSettings(change func(*settings)) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	set := s.settingsLocked()
 	change(&set)
-	return writeJSON(filepath.Join(s.dir, "settings.json"), set)
+	if err := writeJSON(filepath.Join(s.dir, "settings.json"), set); err != nil {
+		return err
+	}
+	s.set = &set
+	return nil
 }
 
 // SleepAfter returns how long a chat idles before its agent sleeps; 0:

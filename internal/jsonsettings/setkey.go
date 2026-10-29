@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"slices"
 )
@@ -29,6 +28,8 @@ func SetKeyIn(base, name, key string, change func(old json.RawMessage) (json.Raw
 	refuse := func(why string) error {
 		return fmt.Errorf("Nushi can't change %s alone (%s): change it in %s", key, why, name)
 	}
+	mu.Lock()
+	defer mu.Unlock()
 	b, err := readIn(root, name)
 	created := errors.Is(err, os.ErrNotExist)
 	if err != nil && !created {
@@ -62,14 +63,7 @@ func SetKeyIn(base, name, key string, change func(old json.RawMessage) (json.Raw
 	if !only(b, out, key, value) {
 		return refuse("the rest would change")
 	}
-	mode := os.FileMode(0o644)
-	if fi, err := root.Lstat(name); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	if err := root.MkdirAll(filepath.Dir(name), 0o755); err != nil {
-		return err
-	}
-	return replaceIn(root, name, out, mode)
+	return writeIn(root, name, out)
 }
 
 func quote(s string) string {

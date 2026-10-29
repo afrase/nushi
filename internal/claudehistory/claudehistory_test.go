@@ -56,7 +56,21 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 		}
 	}
 	if _, err := Copy(projects, "s1", from, to); err != nil {
+		t.Errorf("a copy a move left (all of this one) wasn't replaced: %v", err)
+	}
+	noErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("trans"), 0o600))
+	if _, err := Copy(projects, "s1", from, to); err != nil {
 		t.Errorf("a copy a move left (the start of this one) wasn't replaced: %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dst, "s1.jsonl")); string(b) != "transcript" {
+		t.Errorf("copied again: %q", b)
+	}
+	noErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("transcript, and more"), 0o600))
+	if _, err := Copy(projects, "s1", from, to); err == nil {
+		t.Error("a transcript there that goes on past this one was replaced")
+	}
+	if files, _ := os.ReadDir(dst); len(files) != 1 {
+		t.Errorf("left in the history: %v", files)
 	}
 	noErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("another"), 0o600))
 	if _, err := Copy(projects, "s1", from, to); err == nil {

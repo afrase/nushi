@@ -104,6 +104,48 @@ func TestOrder(t *testing.T) {
 	}
 }
 
+// An item written again while it waits is there once, as written last:
+// placed when its After comes, at the end if it never does, and at once
+// if it was written again after an item that is there.
+func TestOrderWrittenAgainWhileWaiting(t *testing.T) {
+	s, _ := open(t)
+	add(t, s, "C", "", msg("a", "A"))
+	add(t, s, "C", "b", msg("c", "C"))
+	add(t, s, "C", "b", msg("c", "C again"))
+	add(t, s, "C", "zz", msg("e", "E"))
+	add(t, s, "C", "zz", msg("e", "E again"))
+	if got := ids(read(t, s, "C")); got != "a=A c=C again e=E again" {
+		t.Fatalf("waiting: %s", got)
+	}
+	add(t, s, "C", "a", msg("b", "B"))
+	if got := ids(read(t, s, "C")); got != "a=A b=B c=C again e=E again" {
+		t.Fatalf("placed: %s", got)
+	}
+	add(t, s, "D", "", msg("a", "A"))
+	add(t, s, "D", "b", msg("c", "C"))
+	add(t, s, "D", "a", msg("c", "C again"))
+	add(t, s, "D", "a", msg("b", "B"))
+	if got := ids(read(t, s, "D")); got != "a=A b=B c=C again" {
+		t.Fatalf("written again after an item there: %s", got)
+	}
+}
+
+// A copy written anew while an item was there twice (before step 443)
+// reads with the item once, as written last.
+func TestReadDuplicates(t *testing.T) {
+	s, dir := open(t)
+	noErr(t, os.MkdirAll(filepath.Join(dir, "C"), 0o700))
+	lines := `{"item":{"ID":"a","Text":"A"}}
+{"item":{"ID":"b","Text":"B"},"after":"a"}
+{"item":{"ID":"c","Text":"C"},"after":"b"}
+{"item":{"ID":"b","Text":"B again"},"after":"c"}
+`
+	noErr(t, os.WriteFile(filepath.Join(dir, "C", itemsFile), []byte(lines), 0o600))
+	if got := ids(read(t, s, "C")); got != "a=A b=B again c=C" {
+		t.Fatalf("got %s", got)
+	}
+}
+
 func TestCutAndDrop(t *testing.T) {
 	s, _ := open(t)
 	add(t, s, "C", "", msg("a", "A"), msg("b", "B"), msg("c", "C"), msg("d", "D"))
@@ -139,15 +181,21 @@ func TestCrashMidWrite(t *testing.T) {
 		t.Fatalf("written after the crash: %s", got)
 	}
 	// A crash while an image was written leaves only its temporary file,
-	// which the next start removes.
-	tmp := filepath.Join(dir, "C", imagesDir, strings.Repeat("0", 64)+".tmpXXXX")
-	half := filepath.Join(dir, "C", itemsFile+".tmp") // a copy being written anew
+	// which the next start removes; the names before step 443 too.
+	tmp := filepath.Join(dir, "C", imagesDir, ".nushi-XXXX")
+	half := filepath.Join(dir, "C", ".nushi-YYYY") // a copy being written anew
+	oldTmp := filepath.Join(dir, "C", imagesDir, strings.Repeat("0", 64)+".tmpXXXX")
+	oldHalf := filepath.Join(dir, "C", itemsFile+".tmp")
 	noErr(t, os.MkdirAll(filepath.Dir(tmp), 0o700))
-	noErr(t, os.WriteFile(tmp, []byte("half"), 0o600))
-	noErr(t, os.WriteFile(half, []byte("half"), 0o600))
+	for _, p := range []string{tmp, half, oldTmp, oldHalf} {
+		noErr(t, os.WriteFile(p, []byte("half"), 0o600))
+	}
 	_, err = Open(dir)
 	noErr(t, err)
-	for _, p := range []string{tmp, half} {
+	if got := ids(read(t, s2, "C")); got != "a=A b=B" {
+		t.Fatalf("after the clean-up: %s", got)
+	}
+	for _, p := range []string{tmp, half, oldTmp, oldHalf} {
 		if _, err := os.Stat(p); !os.IsNotExist(err) {
 			t.Errorf("%s stayed: %v", p, err)
 		}

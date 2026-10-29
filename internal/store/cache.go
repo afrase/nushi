@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/afrase/nushi/internal/atomicfile"
 )
 
 // cacheKeys is how many answers a cache file keeps; the oldest go first.
@@ -54,22 +56,22 @@ func (s *Store) Cached(area, name, key string) (time.Time, json.RawMessage, erro
 	if err != nil {
 		return time.Time{}, nil, err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
 	m, err := s.cacheFile(path)
 	c := m[key]
 	return c.At, c.Data, err
 }
 
-// Cache keeps data under key in area's file for name, as it came at at.
-// Not synced to disk: a cache lost in a crash is asked for again.
+// Cache keeps data under key in area's file for name, as it came at at,
+// the file replaced at once (atomicfile).
 func (s *Store) Cache(area, name, key string, at time.Time, data json.RawMessage) error {
 	path, err := s.cachePath(area, name)
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
 	m, err := s.cacheFile(path)
 	if err != nil {
 		return err
@@ -86,11 +88,7 @@ func (s *Store) Cache(area, name, key string, at time.Time, data json.RawMessage
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.Replace(path, b, 0o600)
 }
 
 // ForgetCache removes area's file for name.
@@ -99,8 +97,8 @@ func (s *Store) ForgetCache(area, name string) error {
 	if err != nil {
 		return err
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.cacheMu.Lock()
+	defer s.cacheMu.Unlock()
 	if err := os.Remove(path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

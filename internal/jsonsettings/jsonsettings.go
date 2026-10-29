@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 
 	"github.com/afrase/nushi/internal/atomicfile"
@@ -15,6 +16,10 @@ import (
 
 // maxFile is the largest settings file read.
 const maxFile = 64 << 20
+
+// mu is held from a file's read to its write, so two of Nushi's changes
+// can't lose one another (an agent's own write still can: it doesn't ask).
+var mu sync.Mutex
 
 // ReadFile reads a regular file of at most 64 MiB (a link to one
 // followed); a fifo or device fails at once rather than waiting.
@@ -37,9 +42,12 @@ func ReadFile(path string) ([]byte, error) {
 // Edit reads the JSON settings file at path, changes it through change
 // (which gets its settings by key; none for a new file) and writes it
 // back through atomicfile.Rewrite: other keys kept, the file replaced at
-// once with its mode, a new one made private with its folder. created
+// once with its mode, a new one made private with its folder; a link
+// (your dotfiles') followed, to change the file it points at. created
 // says there was none.
 func Edit(path string, change func(map[string]json.RawMessage) error) (created bool, err error) {
+	mu.Lock()
+	defer mu.Unlock()
 	b, err := ReadFile(path)
 	out, created, err := apply(path, b, err, change)
 	if err != nil {
@@ -58,19 +66,14 @@ func EditIn(base, name string, change func(map[string]json.RawMessage) error) (c
 		return false, err
 	}
 	defer root.Close() //nolint:errcheck // nothing written through it
+	mu.Lock()
+	defer mu.Unlock()
 	b, err := readIn(root, name)
 	out, created, err := apply(filepath.Join(base, name), b, err, change)
 	if err != nil {
 		return false, err
 	}
-	if err := root.MkdirAll(filepath.Dir(name), 0o755); err != nil {
-		return false, err
-	}
-	mode := os.FileMode(0o644)
-	if fi, err := root.Lstat(name); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	return created, replaceIn(root, name, out, mode)
+	return created, writeIn(root, name, out)
 }
 
 // apply changes the settings file at path, b as read (readErr: a missing
@@ -116,7 +119,16 @@ func readIn(root *os.Root, name string) ([]byte, error) {
 	return b, err
 }
 
-// replaceIn replaces name inside root at once (atomicfile.ReplaceIn).
-func replaceIn(root *os.Root, name string, data []byte, mode os.FileMode) error {
+// writeIn replaces name inside root with data at once
+// (atomicfile.ReplaceIn), keeping its mode; a new file is 0644 (a
+// repository's settings), its folder made 0755 if it's missing.
+func writeIn(root *os.Root, name string, data []byte) error {
+	if err := root.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+		return err
+	}
+	mode := os.FileMode(0o644)
+	if fi, err := root.Lstat(name); err == nil {
+		mode = fi.Mode().Perm()
+	}
 	return atomicfile.ReplaceIn(root, name, data, mode)
 }
