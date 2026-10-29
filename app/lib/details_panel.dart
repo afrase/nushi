@@ -127,7 +127,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     super.initState();
     _couldAsk = _canAsk;
     chat.addListener(_onChat);
-    _pull = ChatPull.of(daemon, chat)..watch();
+    _pull = ChatPull.of(daemon, chat)..follow();
   }
 
   @override
@@ -137,8 +137,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     // Another chat: follow it, with what was asked of it.
     old.chat.removeListener(_onChat);
     widget.chat.addListener(_onChat);
-    _pull.unwatch();
-    _pull = ChatPull.of(daemon, chat)..watch();
+    _pull.unfollow();
+    _pull = ChatPull.of(daemon, chat)..follow();
     _timer?.cancel();
     _context = _last(chat.id)?.$2;
     _couldAsk = _canAsk;
@@ -149,7 +149,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   void dispose() {
     _timer?.cancel();
     chat.removeListener(_onChat);
-    _pull.unwatch();
+    _pull.unfollow();
     super.dispose();
   }
 

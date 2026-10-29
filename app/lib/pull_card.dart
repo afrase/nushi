@@ -80,6 +80,7 @@ PanelCard? pullCard(ChatPull cp, {VoidCallback? onShow}) {
   }
   return PanelCard(
     title: 'Pull request',
+    tooltip: () => cp.checkedText,
     summary: _seen(() => _Summary(cp)),
     action: _Menu(cp),
     onTap: cp.pull == null ? null : onShow,

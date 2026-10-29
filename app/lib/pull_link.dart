@@ -1,6 +1,7 @@
 import 'dart:async';
+import 'dart:math';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -12,11 +13,26 @@ import 'package:nushi/widgets.dart';
 /// LinkChatPull, Chat.pull).
 const chatPullApi = 81;
 
-/// How often a chat's pull request is asked for while it shows: an open
-/// one, or a branch without one yet, each minute; one merged or closed
-/// every 15 minutes (as Orca does).
+/// How often a chat's pull request is asked for while the chat is open:
+/// an open one, or a branch without one yet, each minute; one merged or
+/// closed every 15 minutes (as Orca does).
 const pullCardPoll = Duration(minutes: 1);
 const pullDonePoll = Duration(minutes: 15);
+
+/// When the chat's pull request was last looked for and how often it is,
+/// as the card's tooltip says it: "Checked 20 s ago · every minute".
+String checkedWords(DateTime? checked, Duration every, DateTime now) {
+  final m = every.inMinutes;
+  final often = m == 1 ? 'every minute' : 'every $m minutes';
+  if (checked == null) return 'Not checked yet · $often';
+  final age = now.difference(checked);
+  final when = switch (age) {
+    _ when age.inSeconds < 60 => '${max(age.inSeconds, 0)} s',
+    _ when age.inMinutes < 60 => '${age.inMinutes} min',
+    _ => '${age.inHours} h',
+  };
+  return 'Checked $when ago · $often';
+}
 
 /// Whether a tool call may have pushed the chat's branch or opened its
 /// pull request: `git push`, `gh pr create`, or a GitHub MCP server's
@@ -54,11 +70,13 @@ void markPullSeen(String chat, GitHubPull p) {
   pullSeen.value = {...pullSeen.value, chat: newest};
 }
 
-/// A chat's pull request, as its card and the phone's chip show it: what
+/// A chat's pull request, as its card and the header's tab show it: what
 /// the daemon found of its folder (repository, branch) and the pull
-/// request whole. It asks while something watches it ([watch]): at once,
-/// then on [pullCardPoll] (quietly), a few seconds after a tool call
-/// pushed or opened one, and when a turn ends.
+/// request whole. It asks while the chat is open ([follow]), whether the
+/// details panel shows or not: at once, then on [pullCardPoll] (quietly),
+/// 3 s after a tool call pushed or opened one and after a turn ends, and
+/// when the window comes to the front. Each ask that finds one links it
+/// (the daemon's FindChatPull); only Unlink keeps that one off.
 class ChatPull extends ChangeNotifier {
   /// The one of [chat].
   factory of(Daemon daemon, ChatState chat) =>
@@ -81,9 +99,9 @@ class ChatPull extends ChangeNotifier {
   String? error;
 
   int _followers = 0;
-  int _watchers = 0;
   Timer? _timer;
   Timer? _soon;
+  AppLifecycleListener? _front;
   bool _busy = false;
   final _seen = <String>{};
   Future<void>? _asking;
@@ -92,33 +110,40 @@ class ChatPull extends ChangeNotifier {
   /// The chat's link: the daemon's last word, else the chat's.
   GitHubLink? get link => chat.pull;
 
-  /// Follows the chat (its pane shows): asks now, after a tool call that
-  /// pushed or opened a pull request, and when a turn ends; no timer.
+  /// When it was last looked for and how often, as the card's tooltip
+  /// says it: "Checked 20 s ago · every minute".
+  String get checkedText => checkedWords(_asked, every, clock());
+
+  /// How long until the next ask on the timer: a minute, or 15 for a
+  /// pull request merged or closed.
+  Duration get every {
+    final state = pull?.item.state;
+    return state == 'merged' || state == 'closed' ? pullDonePoll : pullCardPoll;
+  }
+
+  /// Follows the chat (its pane shows): asks now, on [pullCardPoll], after
+  /// a tool call that pushed or opened a pull request, when a turn ends
+  /// and when the window comes to the front.
   void follow() {
     if (_followers++ == 0) {
       _busy = chat.busy;
       _seen.addAll(chat.items.map((i) => i.id));
       chat.addListener(_chatChanged);
+      _front = AppLifecycleListener(
+        onResume: () => unawaited(refresh(again: false)),
+      );
     }
     unawaited(refresh(again: false));
+    if (_asking == null) _schedule(); // asked within 10 s: none now
   }
 
   void unfollow() {
     if (--_followers > 0) return;
     chat.removeListener(_chatChanged);
+    _front?.dispose();
+    _front = null;
     _soon?.cancel();
-  }
-
-  /// Follows the chat, and asks on [pullCardPoll] too (the card shows).
-  void watch() {
-    _watchers++;
-    follow();
-    if (_asking == null) _schedule();
-  }
-
-  void unwatch() {
-    if (--_watchers == 0) _timer?.cancel();
-    unfollow();
+    _timer?.cancel();
   }
 
   /// A turn ended, or a tool call pushed or opened a pull request: ask
@@ -136,14 +161,16 @@ class ChatPull extends ChangeNotifier {
     }
   }
 
+  /// The next ask on the timer: [every] after the last.
   void _schedule() {
     _timer?.cancel();
-    if (_watchers == 0) return;
-    final state = pull?.item.state;
-    final wait = state == 'merged' || state == 'closed'
-        ? pullDonePoll
-        : pullCardPoll;
-    _timer = Timer(wait, () => unawaited(refresh(quiet: true)));
+    if (_followers == 0) return;
+    final at = clock();
+    final due = (_asked ?? at).add(every).difference(at);
+    _timer = Timer(
+      due.isNegative ? Duration.zero : due,
+      () => unawaited(refresh(quiet: true)),
+    );
   }
 
   /// Asks the daemon for the chat's pull request (it looks on GitHub and
@@ -154,12 +181,14 @@ class ChatPull extends ChangeNotifier {
     if (_asking case final a?) return a;
     if (!again &&
         asked != null &&
-        DateTime.now().difference(asked) < const Duration(seconds: 10)) {
+        clock().difference(asked) < const Duration(seconds: 10)) {
       return Future.value();
     }
     return _asking = _ask(quiet).whenComplete(() {
       _asking = null;
-      _asked = DateTime.now();
+      _asked = clock();
+      _schedule();
+      notifyListeners();
     });
   }
 
@@ -190,8 +219,6 @@ class ChatPull extends ChangeNotifier {
     } on Object catch (e) {
       error = errorText(e);
     }
-    _schedule();
-    notifyListeners();
   }
 
   /// Links [link] by hand, or unlinks (null).

@@ -63,3 +63,30 @@ func TestFindPull(t *testing.T) {
 		t.Fatalf("no pull request yet: %+v %v", got, err)
 	}
 }
+
+// TestFindPullNoneNotKept: a branch with no pull request yet is asked
+// again at once, so one opened a few seconds after the last ask (after a
+// push, or outside the chat) is found by the next; one found is kept for
+// 20 s.
+func TestFindPullNoneNotKept(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	w.branch["other"] = [2]string{"none-yet", ""}
+	if _, err := w.s.client("github.com"); err != nil {
+		t.Fatal(err)
+	}
+	c := w.clients["gho_gh"]
+	c.heads = map[string][]githubapi.HeadPull{}
+	if got, err := w.s.FindPull(ctx, "other", true); err != nil || got.Pull != nil {
+		t.Fatalf("none yet: %+v %v", got, err)
+	}
+	c.heads["afrase/other afrase:none-yet"] = []githubapi.HeadPull{{Number: 4, ID: "PR_4", State: "open"}}
+	got, err := w.s.FindPull(ctx, "other", true)
+	if err != nil || got.Pull == nil || got.Pull.Number != 4 {
+		t.Fatalf("opened since: %+v %v", got, err)
+	}
+	asked := len(c.asked)
+	if got, _ := w.s.FindPull(ctx, "other", true); got.Pull == nil || len(c.asked) != asked {
+		t.Fatalf("found, then asked again within 20 s: %v", c.asked[asked:])
+	}
+}

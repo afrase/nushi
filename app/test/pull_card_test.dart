@@ -1,3 +1,5 @@
+import 'package:fixnum/fixnum.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -8,6 +10,7 @@ import 'package:nushi/github_checks.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/panel_cards.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -33,12 +36,13 @@ Future<(Daemon, FakeDaemon)> _app(
   FindChatPullResponse? found,
   GitHubPull? whole,
   Size size = const Size(1700, 900),
+  bool details = true,
 }) async {
   tester.view
     ..devicePixelRatio = 1
     ..physicalSize = size;
   addTearDown(tester.view.reset);
-  showDetails.value = true;
+  showDetails.value = details;
   collapsedCards.value = {};
   cardOrder.value = ['Pull request'];
   pullSeen.value = {};
@@ -72,8 +76,154 @@ Finder _inCard(Finder f) => find.descendant(of: _card, matching: f);
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
+/// From now on FindChatPull finds #1 (opened since), and GetGitHubPull
+/// answers it whole.
+void _opened(FakeDaemon fake) => fake.answer = (input) => switch (input) {
+  FindChatPullRequest() => FindChatPullResponse(
+    host: 'github.com',
+    repo: _repo,
+    branch: 'subtract',
+    pull: _link,
+  ),
+  GetGitHubPullRequest() => GetGitHubPullResponse(pull: pull()),
+  _ => null,
+};
+
+int _asks(FakeDaemon fake) =>
+    fake.calls.whereType<FindChatPullRequest>().length;
+
+/// The header's Pull request tab: there once one is linked.
+Finder get _tab => find.descendant(
+  of: find.byType(ChatHeader),
+  matching: find.text('Pull request'),
+);
+
+/// The time the app sees ([clock]), moved by hand ([_later]).
+var _now = DateTime(2026, 10, 29, 12);
+
+/// [d] later, on the clock and the timers.
+Future<void> _later(WidgetTester tester, Duration d) async {
+  _now = _now.add(d);
+  await tester.pump(d);
+  await tester.pump();
+}
+
 void main() {
   setUpAll(loadFonts);
+  setUp(() => clock = () => _now);
+  tearDown(() => clock = DateTime.now);
+
+  // The owner's report: a chat whose card said "No pull request for x"
+  // didn't link the one opened since; only the details panel's card
+  // asked each minute, so with the panel hidden (or another tab) nothing
+  // asked again.
+  testWidgets('the details panel hidden: asked each minute all the same, '
+      'and one opened since is linked', (tester) async {
+    final (d, fake) = await _app(tester, details: false);
+    expect(find.byType(PanelCard), findsNothing);
+    expect(_tab, findsNothing);
+    final asked = _asks(fake);
+    expect(asked, 1);
+    _opened(fake);
+    await _later(tester, const Duration(seconds: 59));
+    expect(_asks(fake), asked);
+    await _later(tester, const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(_asks(fake), asked + 1);
+    expect(d.chats['c']!.pull?.number, 1);
+    expect(_tab, findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('the card collapsed: linked within a minute; its tooltip says '
+      'when it last looked and how often', (tester) async {
+    final (d, fake) = await _app(tester);
+    collapsedCards.value = {'Pull request'};
+    await tester.pumpAndSettle();
+    expect(_inCard(find.text('None')), findsOneWidget);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await _later(tester, const Duration(seconds: 20));
+    final title = _inCard(find.text('Pull request'));
+    await mouse.moveTo(tester.getCenter(title));
+    await tester.pump();
+    expect(find.byTooltip('Checked 20 s ago · every minute'), findsOneWidget);
+    await mouse.moveTo(Offset.zero); // the grip in the summary's place
+    _opened(fake);
+    await _later(tester, const Duration(seconds: 40));
+    await tester.pumpAndSettle();
+    expect(_inCard(find.text('#1')), findsOneWidget);
+    await _later(tester, const Duration(seconds: 5));
+    await mouse.moveTo(tester.getCenter(title));
+    await tester.pump();
+    expect(find.byTooltip('Checked 5 s ago · every minute'), findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('asked 3 s after a push (in a cd … &&) and after a turn ends, '
+      'and as the window comes to the front', (tester) async {
+    final (d, fake) = await _app(tester, details: false);
+    var asked = _asks(fake);
+    fake.emit(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(1),
+        item: ItemEvent(
+          item: Item(
+            id: 't1',
+            kind: ItemKind.ITEM_KIND_TOOL_CALL,
+            title: 'cd /Users/me/nushi && git push -u origin HEAD',
+            status: 'completed',
+          ),
+        ),
+      ),
+    );
+    await _later(tester, const Duration(seconds: 2));
+    expect(_asks(fake), asked);
+    await _later(tester, const Duration(seconds: 1));
+    expect(_asks(fake), ++asked);
+    // A turn: started, then ended.
+    fake.emit(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(2),
+        status: ChatStatus(busy: true, started: Int64(1000)),
+      ),
+    );
+    await _later(tester, const Duration(seconds: 5));
+    fake.emit(EventsResponse(chatId: 'c', seq: Int64(3), status: ChatStatus()));
+    await _later(tester, const Duration(seconds: 3));
+    expect(_asks(fake), ++asked);
+    // The window to the front: asked, unless it just was (within 10 s).
+    void front() => tester.binding
+      ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    front();
+    await tester.pump();
+    expect(_asks(fake), asked);
+    await _later(tester, const Duration(seconds: 11));
+    front();
+    await tester.pump();
+    expect(_asks(fake), ++asked);
+    d.dispose();
+  }, variant: _mac);
+
+  test('the tooltip: when last checked and how often', () {
+    final at = DateTime(2026, 10, 29, 12);
+    expect(
+      checkedWords(at, pullCardPoll, at.add(const Duration(seconds: 20))),
+      'Checked 20 s ago · every minute',
+    );
+    expect(
+      checkedWords(at, pullDonePoll, at.add(const Duration(minutes: 3))),
+      'Checked 3 min ago · every 15 minutes',
+    );
+    expect(
+      checkedWords(null, pullCardPoll, at),
+      'Not checked yet · every minute',
+    );
+  });
 
   testWidgets('no pull request yet: the branch, and Link…', (tester) async {
     final (d, fake) = await _app(tester);
