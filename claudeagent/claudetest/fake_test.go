@@ -75,6 +75,7 @@ func TestScript(t *testing.T) {
 	if got := s.read(t); got != `{"type":"user","uuid":"u-1","isReplay":true}` {
 		t.Errorf("%s", got)
 	}
+	<-f.Played() // before stdin closes
 	_ = s.Stdin.Close()
 	if err := s.Wait(); err != nil || f.Err() != nil {
 		t.Errorf("%v %v", err, f.Err())
