@@ -15,15 +15,9 @@ and the recordings `make claude-record` writes from them (never edit them by han
 
 A scenario without `cli.jsonl` is skipped by the test, by name, until it is recorded. The test also merges each load's replay with Nushi's copy of the chat (`TestClaudeMerge`, ADR 0047: no divider); a scenario that doesn't load has the Go agent load its first session after the recording, from `history/end/`.
 
-## Hand-written recordings
+## How the replay keeps the client's timing
 
-`hello`, `permission` and `question` have recordings written by hand, so the tests have more than one scenario before the first real run; the first `make claude-record` replaces them. They follow claude 2.1.312's shapes (its schemas, `claudeacp`'s fixtures) and the adapter's as the research read its source, and assume where nothing was seen:
-
-- the adapter here sends claude no `get_context_usage` after `initialize` and no `interrupt` as its client goes, though a run through it with a fake claude showed both; the Go agent sends neither, and the test drops both from a recording (below);
-- the adapter's hooks are `hook_0` (PostToolUse) to `hook_4`, and claude calls only PostToolUse here; the test drops calls of hooks the Go agent doesn't register and gives PostToolUse the Go agent's id;
-- `permission`: claude suggests a `mkdir:*` rule each time, so the adapter offers Yes, "Yes, and don't ask again for mkdir commands" and No (`allow-once`, `allow-with-updates`, `reject`); a refused command's result is shown fenced as `console`, as one that ran (how the adapter's reporter shows an error without the command's output wasn't established); the PostToolUse update comes before the result's, as Nushi saw it for MCP calls;
-- `question`: the adapter's form, each question's text as its field's description since there are two;
-- each has `history/end/`: claude's transcript of the run, written by hand.
+The test sends the Go agent the recorded client's messages in order, waiting where the recording's agent answered or asked, and each one only once the Go agent has sent its copy of the last update the adapter sent before it that marks a point (a call's report or status, a subagent's state, a message; 2 s at most), so it has shown what the client saw. A steer, a cancel, or a prompt queued behind a running one also waits until claude's replay has played up to the line it makes (`claudetest.Fake.Awaiting`), so it reaches claude where the recorded one did.
 
 ## What the replay leaves out
 
@@ -49,7 +43,7 @@ The scripts are written from what the research and Nushi's facts say claude 2.1.
 | `fork-at` | two prompts, a fork at the first answer (`_meta.jetbrains.air.fork`, a rewind), a prompt on it, the old session closed | |
 | `list` | `session/list` with a session written and one not | |
 | `delete` | `session/delete` of an open session, a list, the delete again 3 s later | the stub claude writes back |
-| `permission` | Yes, No, and "don't ask again" on commands, then a command not asked about | |
+| `permission` | Yes and No on `mkdir` (no "don't ask again": claude's rules would switch the mode), "don't ask again" on another command, which then runs again unasked | |
 | `question` | AskUserQuestion with two questions, the second answered with Other | |
 | `steering` | a steer while the model answers a command's result | |
 | `cancel` | a cancel during a command, then the next prompt (Nushi's own queue) | |
