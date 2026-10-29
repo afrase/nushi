@@ -8,7 +8,7 @@ import 'package:nushi/panel_cards.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/pull_summary.dart';
-import 'package:nushi/pull_widget.dart';
+import 'package:nushi/pull_widget_rows.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
