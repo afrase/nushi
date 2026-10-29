@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,4 +71,26 @@ func writeCassette(t *testing.T, dir, frame string) string {
 		t.Fatal(err)
 	}
 	return p
+}
+
+// The schemas checked in are a kind and its field names a row, nothing
+// more: the repo is public, and the full dump (descriptions, the CLI's
+// internal kinds and their flag) is a private reference.
+func TestSchemasArePublicOnly(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("testdata", "schemas-2.1.312.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowed := map[string]bool{"type": true, "subtype": true, "request_subtype": true, "fields": true}
+	for line := range bytes.Lines(b) {
+		var row map[string]json.RawMessage
+		if err := json.Unmarshal(line, &row); err != nil {
+			t.Fatalf("%v: %s", err, line)
+		}
+		for k := range row {
+			if !allowed[k] {
+				t.Errorf("a row has %q: %s", k, line)
+			}
+		}
+	}
 }
