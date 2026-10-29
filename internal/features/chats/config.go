@@ -8,6 +8,7 @@ import (
 	"maps"
 	"slices"
 	"strconv"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -163,6 +164,8 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 	if i < 0 {
 		return fmt.Errorf("the agent has no option %q", id)
 	}
+	ctx, cancel := context.WithTimeout(ctx, time.Minute) // an agent alive but silent
+	defer cancel()
 
 	var updated []acp.SessionConfigOption
 	switch {

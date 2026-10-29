@@ -145,6 +145,32 @@ func TestOneSteeringWorkerThatRespectsAStop(t *testing.T) {
 	}
 }
 
+// A turn that ends while a queued message is being steered in leaves the
+// rest of the queue to go next, not stranded until another prompt.
+func TestTheQueueGoesOnWhenATurnEndsMidSteer(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendQueue))
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
+	eventually(t, c, func() bool { return len(c.queue) == 1 }) // "two" is being handed over
+	agent.release()                                            // the turn ends meanwhile
+	eventually(t, c, func() bool { return !c.busy })
+	close(agent.steerGate) // the agent takes "two"; "three" starts the next turn
+	eventually(t, c, func() bool { return len(c.queue) == 0 && c.busy && !c.steering })
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	prompts, steered := agent.texts()
+	if !reflect.DeepEqual(prompts, []string{"one", "three"}) || !reflect.DeepEqual(steered, []string{"two"}) {
+		t.Errorf("prompts = %q, steered %q", prompts, steered)
+	}
+}
+
 // The daemon stopping cancels a running turn, so the agent ends it (and the
 // command it runs) and records it, before the agent is stopped.
 func TestCloseEndsTheTurnFirst(t *testing.T) {

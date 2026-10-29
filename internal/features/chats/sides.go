@@ -163,6 +163,9 @@ func (s *Service) CloseSide(id string) error {
 	agent := c.agent
 	c.agent = nil // what still follows it (a background command) stops
 	c.mu.Unlock()
+	if agent == nil {
+		return nil // dropSides took it first: discard deletes the session
+	}
 	s.throwAway(c.parent, agent, id)
 	return nil
 }
@@ -202,6 +205,10 @@ func (s *Service) CloseSides() {
 	}
 }
 
+// throwAwayWait is how long an agent gets to delete a thrown-away session:
+// one alive but silent would otherwise hold CloseSides' loop for good.
+var throwAwayWait = 30 * time.Second
+
 // throwAway has the chat's agent delete a session forked from the chat that
 // nobody will see again (a side chat, a /context fork), and again a moment
 // later for an agent that writes a little of it back as it ends
@@ -212,7 +219,9 @@ func (s *Service) CloseSides() {
 //nolint:contextcheck // the side chat's session is deleted after the request that closed it
 func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 	del := func() error {
-		_, err := agent.DeleteSession(context.Background(), &acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
+		ctx, cancel := context.WithTimeout(context.Background(), throwAwayWait)
+		defer cancel()
+		_, err := agent.DeleteSession(ctx, &acp.DeleteSessionRequest{SessionID: acp.SessionID(sid)})
 		if err != nil {
 			c.log().Warn("deleting a forked session", "fork", sid, "err", err)
 		}

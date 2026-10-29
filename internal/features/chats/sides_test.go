@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -94,5 +95,29 @@ func TestASideChatThatEndsSaysSo(t *testing.T) {
 	}
 	if got := <-removed; got != side {
 		t.Errorf("removed %q, want the side chat %q", got, side)
+	}
+}
+
+// An agent that never answers a side chat's delete doesn't hold CloseSide
+// (and CloseSides' loop after it) for good.
+func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
+	wait, grace := throwAwayWait, stopGrace
+	t.Cleanup(func() { throwAwayWait, stopGrace = wait, grace })
+	throwAwayWait, stopGrace = 10*time.Millisecond, 10*time.Millisecond
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	side, err := svc.Fork(context.Background(), c.id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	agent.deleteGate = make(chan struct{}) // never answers
+	closed := make(chan error)
+	go func() { closed <- svc.CloseSide(side) }()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("CloseSide waits on the agent's delete")
 	}
 }

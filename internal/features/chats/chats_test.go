@@ -366,6 +366,7 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 }
 
 func TestBackgroundShellsAreFollowed(t *testing.T) {
+	defer func(d time.Duration) { shellPoll = d }(shellPoll)
 	shellPoll = 10 * time.Millisecond
 	dir := filepath.Join(t.TempDir(), "tasks")
 	noErr(t, os.Mkdir(dir, 0o700))
@@ -439,6 +440,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 // A line that reads as the end, which the command printed itself, isn't
 // its end: the file goes on growing after it.
 func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
+	defer func(d time.Duration) { shellPoll = d }(shellPoll)
 	shellPoll = time.Millisecond
 	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
 	var states []string

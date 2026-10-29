@@ -74,7 +74,9 @@ func goneService(t *testing.T, loadErr error, historyGone func(sid, folder strin
 	ev := &events{}
 	k := Kind{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: claudeDialect,
 		Gone: NotFound, HistoryGone: historyGone, Expires: "it deletes old ones"}
-	return New([]Kind{k}, &memModes{}, sessions, stateWorktrees{}, t.TempDir(), ev.publish), agent, sessions, ev
+	svc := New([]Kind{k}, &memModes{}, sessions, stateWorktrees{}, t.TempDir(), ev.publish)
+	t.Cleanup(svc.Close)
+	return svc, agent, sessions, ev
 }
 
 func always(string, string) bool { return true }

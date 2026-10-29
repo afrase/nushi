@@ -3,6 +3,8 @@ package chats
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -33,6 +35,60 @@ func (stuckWorktrees) Branch(context.Context, string) string                    
 func (stuckWorktrees) Changed(context.Context, string) (int, error)                { return 0, nil }
 func (stuckWorktrees) Changes(context.Context, string, int) ([]string, error)      { return nil, nil }
 func (stuckWorktrees) Switch(context.Context, string, string, bool) error          { return nil }
+
+// removingWorktrees removes every worktree it's asked to, and says which.
+type removingWorktrees struct {
+	stuckWorktrees
+	removed []string
+}
+
+func (w *removingWorktrees) Remove(_ context.Context, wt model.Worktree, _ bool) error {
+	w.removed = append(w.removed, wt.Path)
+	return nil
+}
+
+// A deleted chat's worktree that another chat works in stays, as with
+// RemoveWorktree: removing it would take that chat's folder.
+func TestDeleteLeavesAWorktreeAnotherChatWorksIn(t *testing.T) {
+	ctx := context.Background()
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &removingWorktrees{}
+	svc.worktrees = wts
+	w := t.TempDir()
+	c.mu.Lock()
+	c.session.EarlierWorktrees = []model.Worktree{{Path: w}} // it moved out; the other chat started there
+	c.mu.Unlock()
+	svc.sessions.(*memSessions).stored = []model.Session{{ID: "other", Title: "Fix the build", Folder: filepath.Join(w, "app")}}
+	err := svc.Delete(ctx, c.id, DeleteOptions{w: {RemoveWorktree: true}})
+	if err == nil || !strings.Contains(err.Error(), "Fix the build") {
+		t.Errorf("Delete = %v", err)
+	}
+	c.mu.Lock()
+	halting := c.halting
+	c.mu.Unlock()
+	if len(wts.removed) > 0 || halting {
+		t.Errorf("removed %q, halting %v", wts.removed, halting)
+	}
+}
+
+// A move into a worktree the chat ran in before that fails leaves the
+// worktree: another chat may have started there since.
+func TestAFailedMoveKeepsAnEarlierWorktree(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &removingWorktrees{}
+	svc.worktrees = wts
+	turn(t, svc, c, "one") // with messages, the move forks: this kind can't
+	w := t.TempDir()
+	c.mu.Lock()
+	c.session.EarlierWorktrees = []model.Worktree{{Path: w}}
+	c.mu.Unlock()
+	if err := svc.Move(context.Background(), c.id, w, false); err == nil {
+		t.Fatal("moved")
+	}
+	if len(wts.removed) > 0 {
+		t.Errorf("a failed move removed %q", wts.removed)
+	}
+}
 
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	ctx := context.Background()

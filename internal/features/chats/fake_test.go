@@ -314,9 +314,13 @@ func (f *fakeAgent) CloseSession(context.Context, *acp.CloseSessionRequest) (*ac
 	return &acp.CloseSessionResponse{}, nil
 }
 
-func (f *fakeAgent) DeleteSession(_ context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
+func (f *fakeAgent) DeleteSession(ctx context.Context, req *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error) {
 	if f.deleteGate != nil {
-		<-f.deleteGate
+		select {
+		case <-f.deleteGate:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
