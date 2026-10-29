@@ -140,34 +140,34 @@ type placed struct {
 	notices []string
 }
 
-// placeNoteLocked returns the note for the prompt starting now, if the
-// chat moved or its folder's branch was switched since the agent's last
-// prompt (nil otherwise), and what to clear once the prompt went (nil
-// when nothing's pending).
+// place returns the note for the prompt, if the chat moved or its
+// folder's branch was switched since the agent's last prompt (nil
+// otherwise), and what to clear once the prompt went (nil when nothing's
+// pending).
 //
 //nolint:contextcheck // a turn starts on its own, after the request that queued its message
-func (c *chat) placeNoteLocked() (*acp.ContentBlock, *placed) {
-	sess := c.session
-	if c.parent != nil || !sess.Moved && sess.BranchFrom == "" {
+func (n *notes) place() (*acp.ContentBlock, *placed) {
+	sess := n.sess
+	if !sess.Moved && sess.BranchFrom == "" {
 		return nil, nil
 	}
 	p := &placed{}
-	if c.worktrees == nil {
+	if n.git == nil {
 		return nil, p
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	branch := c.worktrees.Branch(ctx, sess.Folder)
+	branch := n.git.Branch(ctx, sess.Folder)
 	for _, name := range []string{branch, sess.BranchFrom} {
-		if err := c.worktrees.CheckBranch(ctx, sess.Folder, name); name != "" && err != nil {
-			c.logLocked().Warn("the agent isn't told of its folder's branch", "err", err)
+		if err := n.git.CheckBranch(ctx, sess.Folder, name); name != "" && err != nil {
+			n.log.Warn("the agent isn't told of its folder's branch", "err", err)
 			return nil, p // dropped: the next prompt doesn't try again
 		}
 	}
 	var text string
 	switch {
 	case sess.Moved && strings.ContainsAny(sess.Folder, "`\r\n"):
-		c.logLocked().Warn("the agent isn't told where the chat moved: a folder name it can't be told")
+		n.log.Warn("the agent isn't told where the chat moved: a folder name it can't be told")
 		return nil, p
 	case sess.Moved:
 		text = moveNote(sess.Folder, branch)
@@ -176,15 +176,7 @@ func (c *chat) placeNoteLocked() (*acp.ContentBlock, *placed) {
 	default:
 		text = switchNote(sess.BranchFrom, branch)
 	}
-	users := 0
-	for i := len(c.items) - 1; i >= 0 && users < 2; i-- {
-		switch it := c.items[i]; {
-		case it.Kind == model.UserMessage && it.Parent == "":
-			users++
-		case it.Kind == model.Notice && it.Status == "branch_switched" && !strings.HasSuffix(it.Text, toldSuffix):
-			p.notices = append(p.notices, it.ID)
-		}
-	}
+	p.notices = n.switched
 	return &acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}, p
 }
 
@@ -193,12 +185,7 @@ func (c *chat) placeNoteLocked() (*acp.ContentBlock, *placed) {
 // the note and this: both wait for the turn's end.
 func (c *chat) placedLocked(p *placed) {
 	c.saveLocked(func(s *model.Session) { s.Moved, s.BranchFrom = false, "" })
-	for _, id := range p.notices {
-		if it := c.itemLocked(id); it != nil {
-			it.Text += toldSuffix
-			c.publishLocked(*it)
-		}
-	}
+	c.markToldLocked(p.notices)
 	if len(p.notices) > 0 {
 		c.copyLocked(false)
 	}
