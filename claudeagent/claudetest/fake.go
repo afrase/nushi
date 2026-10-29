@@ -49,6 +49,15 @@ type Fake struct {
 	stdin          *io.PipeReader
 	stdout, stderr *io.PipeWriter
 	lines          chan stdinLine // what stdin has that no responder answered
+
+	waiting  any       // the stdin line the step being played waits for, if it does
+	awaiters []awaiter // Awaiting's calls not yet met
+}
+
+// awaiter is a call of Awaiting's: what it waits for, and its channel.
+type awaiter struct {
+	match any
+	ch    chan struct{}
 }
 
 // stdinLine is a stdin line, or why there are no more.
@@ -152,12 +161,13 @@ var errExit = errors.New("exited")
 
 func (f *Fake) play() {
 	r := &run{f: f}
-	played := Step{"played", func(*run) error {
+	played := Step{name: "played", run: func(*run) error {
 		close(f.played)
 		return nil
 	}}
 	steps := append(slices.Clone(f.steps), played, ExpectEOF())
 	for _, st := range steps {
+		f.playing(st)
 		err := st.run(r)
 		if errors.Is(err, errExit) {
 			return
@@ -178,6 +188,45 @@ func (f *Fake) play() {
 		}
 	}
 	f.exit(nil)
+}
+
+// Awaiting is closed once the script waits for a stdin line that has
+// every field of match (as Expect matches): an Expect whose match has
+// them, or a Replay's step for a recorded line that has them. It is for
+// a test driving the client, to have it write such a line at the point
+// of the run where the recorded client did, not before.
+func (f *Fake) Awaiting(match string) <-chan struct{} {
+	var m any
+	if err := json.Unmarshal([]byte(match), &m); err != nil {
+		panic("claudetest: Awaiting's match isn't JSON: " + match)
+	}
+	ch := make(chan struct{})
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.waiting != nil && matches(m, f.waiting) {
+		close(ch)
+	} else {
+		f.awaiters = append(f.awaiters, awaiter{m, ch})
+	}
+	return ch
+}
+
+// playing notes the step the script plays now, and meets the Awaiting
+// calls waiting for the line it waits for.
+func (f *Fake) playing(st Step) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.waiting = st.wants
+	if st.wants == nil {
+		return
+	}
+	f.awaiters = slices.DeleteFunc(f.awaiters, func(a awaiter) bool {
+		if matches(a.match, st.wants) {
+			close(a.ch)
+			return true
+		}
+		return false
+	})
 }
 
 // exit ends the fake once: its pipes close and Wait returns err.
@@ -284,8 +333,9 @@ func captured(frame any) (req, uuid string) {
 
 // Step is one thing a Fake does.
 type Step struct {
-	name string
-	run  func(*run) error
+	name  string
+	run   func(*run) error
+	wants any // the stdin line it waits for, as JSON decodes it, if it does
 }
 
 // Expect waits for the next stdin line and checks it matches: match is
@@ -293,10 +343,11 @@ type Step struct {
 // match field by field, recursively). The line's request_id (or its
 // response's) and uuid are kept for Send's $req and $uuid.
 func Expect(match string) Step {
-	return Step{"expect " + match, func(r *run) error {
-		var want any
-		if err := json.Unmarshal([]byte(match), &want); err != nil {
-			return fmt.Errorf("the match isn't JSON: %w", err)
+	var want any
+	jsonErr := json.Unmarshal([]byte(match), &want)
+	return Step{name: "expect " + match, wants: want, run: func(r *run) error {
+		if jsonErr != nil {
+			return fmt.Errorf("the match isn't JSON: %w", jsonErr)
 		}
 		line, err := r.line()
 		if err != nil {
@@ -338,7 +389,7 @@ func matches(want, got any) bool {
 // Send writes line on stdout, $req and $uuid replaced by what Expect kept
 // last. The line isn't checked: a test may send what claude wouldn't.
 func Send(line string) Step {
-	return Step{"send " + line, func(r *run) error {
+	return Step{name: "send " + line, run: func(r *run) error {
 		line := strings.NewReplacer("$req", r.req, "$uuid", r.uuid).Replace(line)
 		_, err := io.WriteString(r.f.stdout, line+"\n")
 		return err
@@ -347,7 +398,7 @@ func Send(line string) Step {
 
 // Stderr writes text on stderr.
 func Stderr(text string) Step {
-	return Step{"stderr", func(r *run) error {
+	return Step{name: "stderr", run: func(r *run) error {
 		_, err := io.WriteString(r.f.stderr, text)
 		return err
 	}}
@@ -355,7 +406,7 @@ func Stderr(text string) Step {
 
 // ExpectEOF waits for stdin to close, with nothing more on it.
 func ExpectEOF() Step {
-	return Step{"expect EOF", func(r *run) error {
+	return Step{name: "expect EOF", run: func(r *run) error {
 		line, err := r.line()
 		if errors.Is(err, io.EOF) {
 			return nil
@@ -371,7 +422,7 @@ func ExpectEOF() Step {
 // keeps running a while after its stdin closes. A signal that ends the
 // fake ends the wait.
 func Until(release <-chan struct{}) Step {
-	return Step{"until released", func(r *run) error {
+	return Step{name: "until released", run: func(r *run) error {
 		select {
 		case <-release:
 		case <-r.f.exited:
@@ -383,7 +434,7 @@ func Until(release <-chan struct{}) Step {
 // Do calls fn, for a test to see how far the script has played or to
 // hold it; fn must return for the script to go on.
 func Do(fn func()) Step {
-	return Step{"do", func(*run) error {
+	return Step{name: "do", run: func(*run) error {
 		fn()
 		return nil
 	}}
@@ -391,7 +442,7 @@ func Do(fn func()) Step {
 
 // Exit ends the fake with code, after writing stderr on its stderr.
 func Exit(code int, stderr string) Step {
-	return Step{fmt.Sprintf("exit %d", code), func(r *run) error {
+	return Step{name: fmt.Sprintf("exit %d", code), run: func(r *run) error {
 		if stderr != "" {
 			_, _ = io.WriteString(r.f.stderr, stderr)
 		}
