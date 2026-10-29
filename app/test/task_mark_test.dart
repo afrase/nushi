@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/shells.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -79,7 +79,7 @@ void main() {
 
   testWidgets("a background command's words shine while it runs, and its "
       'check draws as it ends', (tester) async {
-    Item shell(String state) => Item(
+    Item command(String state) => Item(
       id: 's',
       kind: ItemKind.ITEM_KIND_TOOL_CALL,
       title: 'go test ./...',
@@ -88,15 +88,15 @@ void main() {
     Widget row(Item it) => Builder(
       builder: (context) => Row(
         children: [
-          Expanded(child: shellStateText(context, it, const TextStyle())),
-          shellMark(it),
+          Expanded(child: commandStateText(context, it, const TextStyle())),
+          commandMark(it),
         ],
       ),
     );
-    await tester.pumpWidget(_app(row(shell('running'))));
+    await tester.pumpWidget(_app(row(command('running'))));
     expect(find.byType(ShaderMask), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
-    await tester.pumpWidget(_app(row(shell('done'))));
+    await tester.pumpWidget(_app(row(command('done'))));
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 100));
     expect(_drawn(tester), inExclusiveRange(0, 1));

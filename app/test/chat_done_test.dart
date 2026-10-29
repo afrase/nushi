@@ -59,9 +59,7 @@ Finder _row(String title) =>
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('the sidebar: a dot for each state, unseen green', (
-    tester,
-  ) async {
+  testWidgets('the sidebar: a dot for each state, done green', (tester) async {
     viewport(tester, const Size(400, 400));
     final d = await FakeDaemon(_chats()).connect(tester);
     await tester.pumpWidget(_app(Sidebar(daemon: d)));
@@ -153,7 +151,7 @@ void main() {
     final d = await fake.connect(tester);
     await tester.pumpWidget(_app(Sidebar(daemon: d)));
     await tester.pump();
-    expect(d.chats['a']!.unseen, isNull);
+    expect(d.chats['a']!.done, isNull);
     expect(_dot(tester, _row('A')), _t.idle);
     expect(fake.calls.whereType<SetDeviceViewRequest>(), isEmpty);
     d.dispose();
@@ -185,14 +183,14 @@ void main() {
   });
 
   // The owner's four states side by side, in the dark theme.
-  testWidgets('golden: working, needs you, unseen, idle', (tester) async {
+  testWidgets('golden: working, needs you, done, idle', (tester) async {
     viewport(tester, const Size(400, 400));
     final d = await FakeDaemon(_chats().take(4).toList()).connect(tester);
     await tester.pumpWidget(_app(Sidebar(daemon: d)));
     await tester.pump();
     await expectLater(
       find.byKey(const Key('shot')),
-      matchesGoldenFile('goldens/sidebar_unseen_dark.png'),
+      matchesGoldenFile('goldens/sidebar_done_dark.png'),
     );
     d.dispose();
   });

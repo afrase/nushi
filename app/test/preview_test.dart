@@ -193,7 +193,7 @@ Finder _previewOf(String id) => find.descendant(
 );
 
 Finder get _groupPreview => find.descendant(
-  of: find.byType(ToolGroupView),
+  of: find.byType(RunView),
   matching: find.byWidgetPredicate(
     (w) => w is PreviewButton && w.path == 'docs/history/img/timings.png',
   ),

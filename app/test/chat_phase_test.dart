@@ -97,13 +97,13 @@ void main() {
 
   test('a collapsed group: working in the background is under working, '
       'over an unseen end', () {
-    ChatState of(ChatStatus s, {bool unseen = false}) => ChatState('x', '/f')
+    ChatState of(ChatStatus s, {bool done = false}) => ChatState('x', '/f')
       ..status(s)
-      ..unseen = unseen;
+      ..done = done;
     final background = of(ChatStatus(background: 1));
-    final unseen = of(ChatStatus(), unseen: true);
+    final done = of(ChatStatus(), done: true);
     final working = of(ChatStatus(busy: true));
-    expect(groupPhase([unseen, background]), ChatPhase.background);
+    expect(groupPhase([done, background]), ChatPhase.background);
     expect(groupPhase([background, working]), ChatPhase.working);
     expect(background.phase, ChatPhase.background);
     expect(of(ChatStatus(busy: true, background: 1)).phase, ChatPhase.working);

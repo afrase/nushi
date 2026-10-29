@@ -187,12 +187,12 @@ void main() {
       '/Users/me/notes',
     };
     await tester.pump();
-    expect(_dot(tester, 'garden'), ChatPhase.unseen);
+    expect(_dot(tester, 'garden'), ChatPhase.done);
     expect(_dot(tester, 'notes'), isNull); // all idle: nothing
     // A turn's end in notes goes unseen: its dot shows.
-    d.chats['e']!.unseen = true;
+    d.chats['e']!.done = true;
     await tester.pump();
-    expect(_dot(tester, 'notes'), ChatPhase.unseen);
+    expect(_dot(tester, 'notes'), ChatPhase.done);
     expect(chatOrder(d), isEmpty); // nothing shows for the keys
 
     await tester.tap(

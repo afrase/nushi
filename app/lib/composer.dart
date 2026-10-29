@@ -73,7 +73,7 @@ class _ComposerState extends State<Composer> {
     _draft.replies.addListener(_repliesChanged);
     _replyCount = _draft.replies.value.length;
     _completions.addListener(_imagesChanged);
-    _draft.relay.addListener(_imagesChanged);
+    _draft.toSubagent.addListener(_imagesChanged);
     _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
     widget.chat.takeBack.addListener(_takeBack);
@@ -91,7 +91,7 @@ class _ComposerState extends State<Composer> {
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
-    _draft.relay.removeListener(_imagesChanged);
+    _draft.toSubagent.removeListener(_imagesChanged);
     _draft.replies.removeListener(_repliesChanged);
     _draft.quote.removeListener(_quote);
     widget.chat.takeBack.removeListener(_takeBack);
@@ -187,7 +187,7 @@ class _ComposerState extends State<Composer> {
     if (m.toSubagentStop) return; // a stop has nothing to edit
     _restore(m.text, m.files, m.images);
     if (m.toSubagent.isNotEmpty) {
-      _draft.relay.value = (m.toSubagent, m.toSubagentName);
+      _draft.toSubagent.value = (m.toSubagent, m.toSubagentName);
     } else if (m.toSubagentName.isNotEmpty && mounted) {
       showError(
         context,
@@ -238,7 +238,7 @@ class _ComposerState extends State<Composer> {
     final images = _images.value;
     final replies = _draft.replies.value;
     final mentions = {..._mentions};
-    final relay = _draft.relay.value;
+    final toSubagent = _draft.toSubagent.value;
     final busy = widget.chat.busy;
     if (text.isEmpty && images.isEmpty && replies.isEmpty) return;
     final files = [
@@ -248,7 +248,7 @@ class _ComposerState extends State<Composer> {
     _text.clear();
     _images.clear();
     _draft.replies.value = const [];
-    _draft.relay.value = null;
+    _draft.toSubagent.value = null;
     _mentions.clear();
     _lastFiles = files;
     try {
@@ -260,7 +260,7 @@ class _ComposerState extends State<Composer> {
           images: images,
           queue: busy,
           now: now && widget.chat.started != null,
-          toSubagent: relay?.$1,
+          toSubagent: toSubagent?.$1,
         ),
       );
     } on Object catch (e) {
@@ -269,7 +269,7 @@ class _ComposerState extends State<Composer> {
       _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
       _images.value = [...images, ..._images.value];
       _draft.replies.value = [...replies, ..._draft.replies.value];
-      _draft.relay.value ??= relay;
+      _draft.toSubagent.value ??= toSubagent;
       _mentions.addAll(mentions);
       if (mounted) showError(context, e);
     }
@@ -328,17 +328,17 @@ class _ComposerState extends State<Composer> {
               children: [
                 if (_images.value.isNotEmpty ||
                     _draft.replies.value.isNotEmpty ||
-                    _draft.relay.value != null)
+                    _draft.toSubagent.value != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        if (_draft.relay.value case (_, final agent)?)
+                        if (_draft.toSubagent.value case (_, final agent)?)
                           Chip(
                             label: Text('To $agent, through ${chat.agentName}'),
-                            onDeleted: () => _draft.relay.value = null,
+                            onDeleted: () => _draft.toSubagent.value = null,
                             visualDensity: VisualDensity.compact,
                           ),
                         ReplyCards(_draft.replies, onDone: _focus.requestFocus),

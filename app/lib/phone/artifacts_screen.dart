@@ -11,7 +11,7 @@ import 'package:nushi/theme/theme.dart';
 /// sorts them without pins (they're kept in the Mac's `app.json`, which
 /// the phone can't reach): the recent, then "Older (n)" folding the rest;
 /// each row its name and folder; a tap opens it full screen.
-class FilesScreen extends StatefulWidget {
+class ArtifactsScreen extends StatefulWidget {
   const new(this.daemon, this.chat, {super.key});
 
   final Daemon daemon;
@@ -20,15 +20,17 @@ class FilesScreen extends StatefulWidget {
   static void open(BuildContext context, Daemon daemon, ChatState chat) =>
       Navigator.of(context)
           .push(
-            MaterialPageRoute<void>(builder: (_) => FilesScreen(daemon, chat)),
+            MaterialPageRoute<void>(
+              builder: (_) => ArtifactsScreen(daemon, chat),
+            ),
           )
           .ignore();
 
   @override
-  State<FilesScreen> createState() => _FilesScreenState();
+  State<ArtifactsScreen> createState() => _ArtifactsScreenState();
 }
 
-class _FilesScreenState extends State<FilesScreen> {
+class _ArtifactsScreenState extends State<ArtifactsScreen> {
   bool _older = false;
 
   @override
@@ -113,8 +115,8 @@ class _FilesScreenState extends State<FilesScreen> {
   );
 }
 
-/// The chat screen's bar's "Artifacts 4": opens [FilesScreen].
-class FilesAction extends StatelessWidget {
+/// The chat screen's bar's "Artifacts 4": opens [ArtifactsScreen].
+class ArtifactsAction extends StatelessWidget {
   const new(this.count, {required this.onTap, super.key});
 
   final int count;

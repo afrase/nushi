@@ -14,7 +14,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
-import 'package:nushi/phone/files_screen.dart';
+import 'package:nushi/phone/artifacts_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
@@ -350,7 +350,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Artifacts 3'));
     await tester.pumpAndSettle();
-    final screen = find.byType(FilesScreen);
+    final screen = find.byType(ArtifactsScreen);
     expect(screen, findsOneWidget);
     final names = find.descendant(of: screen, matching: find.byType(Text));
     expect(

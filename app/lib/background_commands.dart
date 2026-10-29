@@ -13,20 +13,20 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The tool calls that left a command running in the background, in order.
-List<Item> shellsOf(List<Item> items) => [
+List<Item> backgroundCommandsOf(List<Item> items) => [
   for (final it in items)
     if (it.hasBackgroundCommand()) it,
 ];
 
-bool shellRunning(Item it) => it.backgroundCommand.state == 'running';
+bool commandRunning(Item it) => it.backgroundCommand.state == 'running';
 
 /// A background command's state in a few words: "running · 12s", "done ·
 /// exited with code 0 · 15s", "stopped", or "started" (and how
 /// long ago, when the daemon saw it) when its end can't be known.
-String shellState(Item it) {
+String commandState(Item it) {
   final sh = it.backgroundCommand;
   final since = msTime(sh.started.toInt());
-  final end = shellRunning(it) ? DateTime.now() : msTime(sh.ended.toInt());
+  final end = commandRunning(it) ? DateTime.now() : msTime(sh.ended.toInt());
   return switch (sh.state) {
     'started' => [
       'started',
@@ -46,28 +46,29 @@ String lastLine(Item it) =>
 
 /// The command's [TaskMark]: room while it runs (its words shine), a check
 /// that draws as it's done, a red mark when it failed.
-Widget shellMark(Item it) => TaskMark(it.backgroundCommand.state);
+Widget commandMark(Item it) => TaskMark(it.backgroundCommand.state);
 
-/// [shellState] in [style], red once it failed, ticking and shining while
+/// [commandState] in [style], red once it failed, ticking and shining while
 /// it runs.
-Widget shellStateText(BuildContext context, Item it, TextStyle style) => Align(
-  alignment: Alignment.centerLeft,
-  child: Shine(
-    on: shellRunning(it),
-    child: LiveText(
-      () => shellState(it),
-      live: shellRunning(it),
-      style: it.backgroundCommand.state == 'failed'
-          ? style.copyWith(color: NushiTheme.of(context).t.crashed)
-          : style,
-    ),
-  ),
-);
+Widget commandStateText(BuildContext context, Item it, TextStyle style) =>
+    Align(
+      alignment: Alignment.centerLeft,
+      child: Shine(
+        on: commandRunning(it),
+        child: LiveText(
+          () => commandState(it),
+          live: commandRunning(it),
+          style: it.backgroundCommand.state == 'failed'
+              ? style.copyWith(color: NushiTheme.of(context).t.crashed)
+              : style,
+        ),
+      ),
+    );
 
 /// A background command beside the chat, left of the details panel: the
 /// command, its state, and its output as far as the daemon has read it.
 /// Stop stops it while it runs; × closes it.
-class ShellPane extends StatelessWidget {
+class BackgroundCommandPane extends StatelessWidget {
   const new({
     required this.chat,
     required this.daemon,
@@ -88,7 +89,9 @@ class ShellPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: chat,
       builder: (context, _) {
-        final it = shellsOf(chat.items).where((it) => it.id == id).firstOrNull;
+        final it = backgroundCommandsOf(chat.items)
+            .where((it) => it.id == id)
+            .firstOrNull;
         final small = theme.ui(t.textMuted, size: 12);
         final code = theme.code(t.text, size: 12);
         return Column(
@@ -108,7 +111,7 @@ class ShellPane extends StatelessWidget {
                       style: code,
                     ),
                   ),
-                  if (it != null && shellRunning(it))
+                  if (it != null && commandRunning(it))
                     stopButton(context, daemon, chat, id),
                   const WideToggle(),
                   IconTap(
@@ -142,9 +145,9 @@ class ShellPane extends StatelessWidget {
                             spacing: 6,
                             children: [
                               Flexible(
-                                child: shellStateText(context, it, small),
+                                child: commandStateText(context, it, small),
                               ),
-                              shellMark(it),
+                              commandMark(it),
                             ],
                           ),
                           if (it.backgroundCommand.state == 'started')
@@ -157,7 +160,7 @@ class ShellPane extends StatelessWidget {
                             ),
                           const SizedBox(height: 14),
                           Text(
-                            shellRunning(it) ? 'Output so far' : 'Output',
+                            commandRunning(it) ? 'Output so far' : 'Output',
                             style: theme.ui(
                               t.textSecondary,
                               size: 12,
@@ -171,7 +174,7 @@ class ShellPane extends StatelessWidget {
                             child: Text(
                               it.backgroundCommand.output.isNotEmpty
                                   ? it.backgroundCommand.output
-                                  : shellRunning(it)
+                                  : commandRunning(it)
                                   ? 'None yet.'
                                   : 'None.',
                               style: it.backgroundCommand.output.isEmpty

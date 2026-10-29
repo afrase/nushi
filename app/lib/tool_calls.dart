@@ -231,7 +231,7 @@ class ToolCallView extends StatelessWidget {
               const SizedBox(width: 8),
               PreviewButton(preview),
             ],
-            // The call ends at once; the command runs on (see shells.dart).
+            // The call ends; the command runs on (background_commands.dart).
             if (it.hasBackgroundCommand())
               Shine(
                 on: it.backgroundCommand.state == 'running' && !still,
@@ -294,7 +294,7 @@ Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
 /// A run of tool calls as one line ("Read 4 files, ran 2 commands") that
 /// opens to each call; while one runs, what it's doing ends the line and
 /// shines ("Read 4 files, searching").
-class ToolGroupView extends StatelessWidget {
+class RunView extends StatelessWidget {
   const new(this.calls, {super.key, this.still = false});
 
   final List<Item> calls;

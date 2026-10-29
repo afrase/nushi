@@ -20,7 +20,7 @@ enum ChatPhase {
   background, // no turn runs, but subagents or commands it started do
   expired, // its agent deleted its session: it can't reopen
   failed, // its reopen failed
-  unseen, // a turn ended that no client has shown yet (API 76)
+  done, // a turn ended that no client has shown yet (API 76)
   asleep, // no agent runs: a message wakes it
   fresh, // no messages yet
   idle,
@@ -94,11 +94,11 @@ class ChatState extends ChangeNotifier {
 
   /// A turn ended while no client showed the chat, until one does (the
   /// daemon keeps it); null from a daemon older than API 76.
-  bool? get unseen => _unseen;
-  bool? _unseen;
-  set unseen(bool? v) {
-    if (v == _unseen) return;
-    _unseen = v;
+  bool? get done => _done;
+  bool? _done;
+  set done(bool? v) {
+    if (v == _done) return;
+    _done = v;
     notifyListeners();
   }
 
@@ -159,8 +159,8 @@ class ChatState extends ChangeNotifier {
       ? .expired
       : reopenFailed
       ? .failed
-      : unseen ?? false
-      ? .unseen
+      : done ?? false
+      ? .done
       : asleep
       ? .asleep
       : fresh
@@ -194,9 +194,9 @@ class ChatState extends ChangeNotifier {
   /// put back in the box.
   final takeBack = ValueNotifier<QueuedMessage?>(null);
 
-  /// The subagent or background shell (its call's id) whose pane shows
+  /// The subagent or background command (its call's id) whose pane shows
   /// beside the chat, left of the details panel (see SubagentPane,
-  /// ShellPane).
+  /// BackgroundCommandPane).
   final pane = ValueNotifier<String?>(null);
 
   /// The file (as its tool row names it) whose preview shows in [pane]'s

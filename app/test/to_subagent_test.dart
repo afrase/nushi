@@ -56,7 +56,7 @@ final _items = [
 
 void main() {
   testWidgets('a message for a subagent shows in its pane, with how the '
-      'relay went', (tester) async {
+      'agent passed it on', (tester) async {
     viewport(tester, const Size(1400, 700));
     showDetails.value = false;
     subagentWide.value = false;

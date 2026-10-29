@@ -769,7 +769,7 @@ class Daemon extends ChangeNotifier {
           : null
       ..title = c.title
       ..archived = c.archived
-      ..unseen = daemonApi >= unseenApi ? c.done : null
+      ..done = daemonApi >= doneApi ? c.done : null
       ..pin = c.pin
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       // Only the list carries a status; a chat event would clear it.

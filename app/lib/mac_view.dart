@@ -5,7 +5,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// The daemon API that keeps each chat's unseen turn's end (Chat.done)
 /// and takes the Mac's view (SetDeviceView on the socket).
-const unseenApi = 76;
+const doneApi = 76;
 
 /// Tells the daemon which chat the Mac's window shows, as the phone does
 /// (the daemon's ViewLease): the selected chat while the window is focused
@@ -42,7 +42,7 @@ class MacView {
   /// Tells the daemon what shows if that changed, or it's time to say it
   /// again.
   void tick() {
-    if (!daemon.connected || daemon.daemonApi < unseenApi) return;
+    if (!daemon.connected || daemon.daemonApi < doneApi) return;
     final id = showing;
     final now = DateTime.now();
     // Nothing shown is what a daemon that was told nothing knows.
