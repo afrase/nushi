@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -15,9 +15,9 @@ void main() {
   _goldens();
 
   testWidgets('the title row: the open hand, and the grip while hovered, '
-      "in a collapsed card in its summary's place", (tester) async {
-    collapsedCards.value = {'Context'};
-    await tester.pumpWidget(_cards(Tokens.dark));
+      "in a collapsed widget in its summary's place", (tester) async {
+    collapsedWidgets.value = {'Context'};
+    await tester.pumpWidget(_widgets(Tokens.dark));
     expect(find.byType(DragGrip), findsNothing);
     expect(find.text('57%'), findsOneWidget);
 
@@ -28,7 +28,7 @@ void main() {
     expect(find.byType(DragGrip), findsOneWidget);
     expect(find.text('57%'), findsNothing); // the grip in its place
 
-    // An open card keeps its action; the grip goes beside it.
+    // An open widget keeps its action; the grip goes beside it.
     await mouse.moveTo(tester.getCenter(find.text('Background tasks')));
     await tester.pump();
     expect(_cursor(), SystemMouseCursors.grab);
@@ -48,7 +48,7 @@ void main() {
   });
 
   testWidgets('dragged: the closed hand and the grip', (tester) async {
-    await tester.pumpWidget(_cards(Tokens.light));
+    await tester.pumpWidget(_widgets(Tokens.light));
     final mouse = await _pointer(tester);
     await mouse.moveTo(tester.getCenter(find.text('Context')));
     await mouse.down(tester.getCenter(find.text('Context')));
@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets("a card's action sits on its title row while open", (
+  testWidgets("a widget's action sits on its title row while open", (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -72,7 +72,7 @@ void main() {
         home: const Scaffold(
           body: SizedBox(
             width: 320,
-            child: PanelCard(
+            child: PanelWidget(
               title: 'Context',
               summary: Text('4%'),
               action: Icon(Icons.refresh),
@@ -92,22 +92,22 @@ void main() {
     await tester.pump();
     expect(find.text('4%'), findsOneWidget);
     expect(find.byIcon(Icons.refresh), findsNothing);
-    collapsedCards.value = {};
+    collapsedWidgets.value = {};
   });
 }
 
-Widget _cards(Tokens tokens) => MaterialApp(
+Widget _widgets(Tokens tokens) => MaterialApp(
   theme: NushiTheme(tokens).toThemeData(),
   home: Scaffold(
     body: SizedBox(
       width: 300,
-      child: PanelCards([
-        const PanelCard(
+      child: PanelWidgets([
+        const PanelWidget(
           title: 'Context',
           summary: Text('57%'),
           rows: [(null, 'a row')],
         ),
-        PanelCard(
+        PanelWidget(
           title: 'Background tasks',
           summary: const Text('1 running'),
           action: Text('Stop all', style: NushiTheme(tokens).ui(tokens.link)),
@@ -133,22 +133,22 @@ void _goldens() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets('golden, a card with its grip on hover, $name', (tester) async {
+    testWidgets("golden, a widget's grip on hover, $name", (tester) async {
       viewport(tester, const Size(300, 190), ratio: 2);
-      collapsedCards.value = {'Context'};
-      await tester.pumpWidget(_cards(tokens));
+      collapsedWidgets.value = {'Context'};
+      await tester.pumpWidget(_widgets(tokens));
       final mouse = await _pointer(tester);
       await mouse.moveTo(tester.getCenter(find.text('Context')));
       await tester.pumpAndSettle();
       await expectLater(
-        find.byType(PanelCards),
-        matchesGoldenFile('goldens/card_grip_$name.png'),
+        find.byType(PanelWidgets),
+        matchesGoldenFile('goldens/widget_grip_$name.png'),
       );
     });
   }
 
-  // UX review, finding 21: a card with nothing to offer is one line.
-  testWidgets('a card with a note is one line: its title and the note, '
+  // UX review, finding 21: a widget with nothing to offer is one line.
+  testWidgets('a widget with a note is one line: its title and the note, '
       'nothing to open', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -156,7 +156,7 @@ void _goldens() {
         home: const Scaffold(
           body: SizedBox(
             width: 300,
-            child: PanelCard(
+            child: PanelWidget(
               title: 'Changes',
               note: 'Not a git repository',
               rows: [(null, 'hidden')],

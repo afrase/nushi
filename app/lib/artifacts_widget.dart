@@ -5,20 +5,20 @@ import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The panel's Artifacts card: the files the chat wrote as [chatArtifacts]
+/// The panel's Artifacts widget: the files the chat wrote as [chatArtifacts]
 /// sorts them, the pinned and the recent, then "Older (n)" folding the
 /// rest; each its name and, muted, its folder and when it changed, with a
 /// pin on hover (always on a pinned one); a click opens its preview, the
 /// open one's row marked. Collapsed, it counts the pinned and recent. Null
-/// (no card) when there are none.
-PanelCard? artifactsCard(ChatState chat) {
+/// (no widget) when there are none.
+PanelWidget? artifactsWidget(ChatState chat) {
   if (chatFilesOf(chat).isEmpty) return null;
-  return PanelCard(
+  return PanelWidget(
     title: 'Artifacts',
     summary: ListenableBuilder(
       listenable: artifactsOf(chat),
@@ -35,7 +35,7 @@ PanelCard? artifactsCard(ChatState chat) {
   );
 }
 
-/// The card's rows: the pinned and the recent, then "Older (n)", which
+/// The widget's rows: the pinned and the recent, then "Older (n)", which
 /// opens the rest in place.
 class FileRows extends StatefulWidget {
   const new(this.chat, {super.key});
@@ -92,8 +92,8 @@ class _FileRowsState extends State<FileRows> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    // The rows' names line up with the other cards' text, their marks
-    // reaching past it into the card's padding.
+    // The rows' names line up with the other widgets' text, their marks
+    // reaching past it into the widget's padding.
     return LayoutBuilder(
       builder: (context, box) => OverflowBox(
         minWidth: box.maxWidth + 2 * _inset,

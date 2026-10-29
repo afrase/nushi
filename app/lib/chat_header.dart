@@ -23,7 +23,7 @@ import 'package:nushi/widgets.dart';
 /// model and status, the folder while the details panel is hidden, the
 /// Chat | Changes (| Pull request, while it has one) switch, the
 /// terminal's and the panel's buttons and the chat's menu. (The files it
-/// wrote are in the details panel's Artifacts card.)
+/// wrote are in the details panel's Artifacts widget.)
 class ChatHeader extends StatefulWidget {
   const new(
     this.chat,

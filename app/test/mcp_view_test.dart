@@ -4,8 +4,8 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp.dart';
-import 'package:nushi/mcp_card.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/mcp_widget.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -103,7 +103,7 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets('the card: a switch a server, and after a change "Applies '
+  testWidgets('the widget: a switch a server, and after a change "Applies '
       'when the chat restarts" with Reload', (tester) async {
     final (fake, d) = await _daemon(tester);
     final chat = ChatState('c1', '/Users/me/card')
@@ -113,7 +113,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PanelCards([mcpCard(chat, d)])),
+        home: Scaffold(body: PanelWidgets([mcpWidget(chat, d)])),
       ),
     );
     await tester.pumpAndSettle();

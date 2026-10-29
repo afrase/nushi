@@ -6,7 +6,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Rename branch…, from the Environment card of a worktree chat; true
+/// Rename branch…, from the Environment widget of a worktree chat; true
 /// once renamed.
 Future<bool> renameBranch(
   BuildContext context,

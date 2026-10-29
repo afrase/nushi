@@ -9,7 +9,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -125,7 +125,7 @@ Future<void> showArtifacts(BuildContext context, ChatState chat) async {
   picked?.run();
 }
 
-/// Artifacts…: the details panel shown on Chat, its Artifacts card opened
+/// Artifacts…: the details panel shown on Chat, its Artifacts widget opened
 /// and scrolled to; where the window has no room for the panel, the
 /// palette lists them instead.
 void revealArtifacts(BuildContext context, ChatState chat) {
@@ -135,7 +135,7 @@ void revealArtifacts(BuildContext context, ChatState chat) {
   }
   chat.tab.value = ChatTab.chat;
   showDetails.value = true;
-  revealCard.value = 'Artifacts';
+  revealWidget.value = 'Artifacts';
 }
 
 /// [rows] that match [query] (each of its words in a row's title or

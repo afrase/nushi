@@ -104,7 +104,7 @@ void openRelease(Daemon d) {
 class UpdateToast extends StatefulWidget {
   const new(this.daemon, {super.key});
 
-  /// As wide as the details panel's cards, over whose empty bottom it
+  /// As wide as the details panel's widgets, over whose empty bottom it
   /// sits in a wide window.
   static const width = 240.0;
 

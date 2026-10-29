@@ -9,7 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktree.dart';
@@ -109,8 +109,10 @@ Future<Daemon> _panel(
 
 /// Opens the Branch row's menu.
 Future<void> _open(WidgetTester tester, String branch) async {
-  final card = find.widgetWithText(PanelCard, 'Environment');
-  await tester.tap(find.descendant(of: card, matching: find.text(branch)));
+  final environment = find.widgetWithText(PanelWidget, 'Environment');
+  await tester.tap(
+    find.descendant(of: environment, matching: find.text(branch)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -122,7 +124,7 @@ Finder _row(String label) => find.ancestor(
 
 void main() {
   setUpAll(loadFonts);
-  setUp(() => collapsedCards.value = {});
+  setUp(() => collapsedWidgets.value = {});
 
   // The whole window, wide and as narrow as shows the panel: the menu
   // opens under the row, inside the window; the row's ▾ at the panel's
@@ -162,8 +164,8 @@ void main() {
       await tester.pumpWidget(NushiApp(daemon: d));
       await tester.pumpAndSettle();
       final panel = tester.getRect(find.byType(DetailsPanel));
-      final card = tester.getRect(
-        find.widgetWithText(PanelCard, 'Environment'),
+      final box = tester.getRect(
+        find.widgetWithText(PanelWidget, 'Environment'),
       );
       expect(panel.right, width);
       final chevron = tester.getRect(
@@ -174,7 +176,7 @@ void main() {
             )
             .first,
       );
-      expect(card.right - chevron.right, lessThan(20));
+      expect(box.right - chevron.right, lessThan(20));
       await _open(tester, 'main');
       final menu = tester.getRect(_row('New branch…'));
       expect(menu.right, lessThanOrEqualTo(width));
@@ -432,15 +434,15 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('the card’s values end at one right edge, menus too', (
+  testWidgets('the widget’s values end at one right edge, menus too', (
     tester,
   ) async {
     final d = await _panel(tester, _fake(), _chat(), tokens: Tokens.light);
-    final card = find.widgetWithText(PanelCard, 'Environment');
-    // Inside the card's border and right inset, where text values end.
-    final edge = tester.getRect(card).right - 11;
+    final environment = find.widgetWithText(PanelWidget, 'Environment');
+    // Inside the widget's border and right inset, where text values end.
+    final edge = tester.getRect(environment).right - 11;
     final carets = find.descendant(
-      of: find.descendant(of: card, matching: find.byType(FlushMenus)),
+      of: find.descendant(of: environment, matching: find.byType(FlushMenus)),
       matching: find.byWidgetPredicate(
         (w) =>
             w is Icon &&

@@ -14,7 +14,7 @@ import 'package:nushi/widgets.dart';
 /// The icon that marks a worktree.
 const IconData worktreeIcon = Icons.account_tree_outlined;
 
-/// The Environment card's worktree rows for a chat in a git repository:
+/// The Environment widget's worktree rows for a chat in a git repository:
 /// its branch, a menu ([BranchMenu]: switch the folder's branch, or in a
 /// worktree move to another), with the worktree icon and Rename branch…
 /// (between turns) for a worktree chat, and its base; for a chat without

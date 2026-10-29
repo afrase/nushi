@@ -155,8 +155,8 @@ Future<(Daemon, FakeDaemon)> _app(
   showDetails.value = details;
   paneWidths.value = {};
   subagentWide.value = false;
-  collapsedCards.value = {};
-  cardOrder.value = [];
+  collapsedWidgets.value = {};
+  widgetOrder.value = [];
   pullSeen.value = {};
   final open = <StreamController<Object>>[];
   addTearDown(() {
@@ -223,7 +223,7 @@ void main() {
     Collapsible.opened.add('e2');
     addTearDown(Collapsible.opened.clear);
     final (d, _) = await _app(tester, const Size(1600, 1000), select: 'feed');
-    collapsedCards.value = {'Environment', 'Changes', 'Artifacts'};
+    collapsedWidgets.value = {'Environment', 'Changes', 'Artifacts'};
     d.chats['feed']!.pane.value = 'x';
     await _pump(tester);
     await _shoot('hero');

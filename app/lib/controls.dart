@@ -311,7 +311,7 @@ class SendButton extends StatelessWidget {
 }
 
 /// Says the compact [MenuField]s below end flush with their room: a
-/// panel card's values, so a menu's ▾ lines up with the text values'
+/// panel widget's values, so a menu's ▾ lines up with the text values'
 /// right edge.
 class FlushMenus extends InheritedWidget {
   const new({required super.child, super.key});

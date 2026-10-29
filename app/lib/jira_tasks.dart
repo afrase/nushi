@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'package:nushi/agent_mark.dart';
+import 'package:nushi/card_list.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -9,7 +9,6 @@ import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/panel_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';

@@ -75,9 +75,9 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Reply card** | A quote put into the box to send with your message: a review thread, a comment, a failed check. | `ReplyCards`, `QuoteBlock` | 0059 |
 | **Side pane** | What opens beside the transcript: a subagent's pane, or the preview of an artifact. A side chat opens beside it, apart. | `panes.dart`, `SubagentPane`, `PreviewPane` | |
 | **Details panel** | The right column, made of widgets. Show details, Hide details. | `details_panel.dart` | |
-| **Widget** | One part of the details panel: Environment, Context, Changes, Pull request, Artifacts, MCP, Background tasks. Each collapses and drags. | `PanelCard`, `panel_cards.dart` | |
-| **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell` | 0009 |
-| **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_card.dart`, `FileRows` | |
+| **Widget** | One part of the details panel: Environment, Context, Changes, Pull request, Artifacts, MCP, Background tasks. Each collapses and drags. | `PanelWidget`, `panel_widgets.dart`, `collapsedWidgets`, `widgetOrder` | |
+| **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell`, `CardList` (`card_list.dart`) | 0009 |
+| **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_widget.dart`, `FileRows` | |
 | **Preview** | An artifact shown in the side pane (or full screen on the phone), kept current as it changes; Preview and Source. | `preview.dart`, `WatchChatFile`, `internal/filewatch` | 0057 |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Read-only toward git. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
@@ -112,7 +112,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **To do** | The Pull request tab's list of what blocks the merge: failing checks, reviews that requested changes, review threads not resolved (an outdated one marked), and, with Findings from review bots on, a review bot's findings to address; each with Send; Send picked, Send all to agent. | `PullTodo`, `todo` | |
 | **Finding** (a review bot's) | An item a review bot's newest message lists under a heading such as "Must address" (Settings › GitHub › Findings from review bots, off at first: which bots, which headings), found by its Markdown's shape; one on a thread's lines joins that thread. | `readFindings`, `ReviewFinding` | |
 | **Findings from review bots** | Settings › GitHub's opt-in for findings in To do: the bots' logins and the headings that start them. | `githubFindings`, `FindingsGroup` | |
-| **PR widget** (Pull request widget) | The details panel's sum-up of the chat's pull request: state, title, the checks bar, a row a reviewer, open threads (Address), whether it can merge and by what it's blocked, comments; one line collapsed. | `pull_card.dart`, `PullRows`, `pullSummary` | 0059 |
+| **PR widget** (Pull request widget) | The details panel's sum-up of the chat's pull request: state, title, the checks bar, a row a reviewer, open threads (Address), whether it can merge and by what it's blocked, comments; one line collapsed. | `pull_widget.dart`, `PullRows`, `pullSummary` | 0059 |
 | **Clean up…** | After a chat's pull request merged or closed: delete its worktree, its local branch and the branch on GitHub, and archive the chat, each ticked in a dialog that says what it costs; Not now hides the PR widget's offer. | `showCleanUp`, `CleanUpJob`, `RemoveChatWorktree`, `DeleteChatBranch`, `DeleteGitHubBranch` | 0063 |
 | **Restore branch** | Make the pull request's branch on GitHub again at its head, after a clean-up deleted it. | `RestoreGitHubBranch` | 0063 |
 | **Review thread** | A GitHub inline comment and its replies at a line: Reply, Resolve, Unresolve. | `GitHubThread` | |
@@ -180,7 +180,6 @@ One line each; the word after the arrow wins.
 
 Code that uses an old word, for the clean-up batch. A proto field or message is renamed in place, its number and type kept (ADR 0004's amendment): the old name goes in its comment.
 
-- `PanelCard`, `PanelCards`, `panel_cards.dart`, `collapsedCards` → widget; `artifacts_card.dart`, `mcp_card.dart`, `pull_card.dart` → `*_widget.dart`; `agents_card.dart` holds the Background tasks widget → `background_tasks_widget.dart`. Doc comments that call them cards (`details_panel.dart`, `chat_header.dart`, `app_actions.dart`, `pull_link.dart`, `pull_states.dart`). `CardShell` and `CardList` serve the inbox's and task list's cards too: keep them.
 - The app's `Draft.relay`, `_Relayed` and `relay_pane_test.dart` (a message to a subagent) → the `toSubagent` words Go and proto have (`model.ToSubagent`, `Item.to_subagent…`, `passed_on_by`), so relay means the server only. The JSON names on disk and the state "relayed" stay.
 - `ShellPane` and `shells.dart` (a background command) → `BackgroundCommand…`, as Go and proto say; `Shell` is easy to take for a terminal's.
 - The app's `ChatState.unseen`, `ChatPhase.unseen` and `unseenApi` → `done`, as Go's `ChatRecord.Done` (stored as `Unseen`) and proto `Chat.done`.

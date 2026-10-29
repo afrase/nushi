@@ -40,7 +40,7 @@ String itemState(GitHubItem it) => switch (it.state) {
 /// The chats' pull requests as lists show them (their state and checks):
 /// asked of the daemon in one call (GetGitHubStates: one query a host, kept
 /// 30 s there) while something watches, at once, each minute quietly, and
-/// when a chat gets a pull request; a chat's card puts what it read too.
+/// when a chat gets a pull request; a chat's widget puts what it read too.
 class PullStates extends ChangeNotifier {
   /// The one of [daemon].
   factory of(Daemon daemon) => _all[daemon] ??= PullStates._(daemon);
@@ -59,7 +59,7 @@ class PullStates extends ChangeNotifier {
   /// [link]'s pull request as last known.
   GitHubItem? item(GitHubLink? link) => link == null ? null : _items[link.id];
 
-  /// Takes [it] as current (a card read the pull request whole).
+  /// Takes [it] as current (a widget read the pull request whole).
   void put(GitHubItem it) {
     if (_items[it.id] == it) return;
     _items[it.id] = it;

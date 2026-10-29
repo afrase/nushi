@@ -4,7 +4,7 @@ import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/pull_summary.dart';
@@ -13,19 +13,19 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The details panel's Pull request card: the chat's pull request (the
+/// The details panel's Pull request widget: the chat's pull request (the
 /// one it started from, else its branch's) as a summary, collapsed (its
 /// number in its state's color, its checks, review, unread comments),
 /// and as rows open; [onShow] opens its tab. Without one, on a branch of
 /// a GitHub repository: "No pull request for `branch`" and Link…. Null
-/// (no card) for a folder that isn't a GitHub repository's clone on a
+/// (no widget) for a folder that isn't a GitHub repository's clone on a
 /// host signed in to, or on its default branch.
-PanelCard? pullCard(ChatPull cp, {VoidCallback? onShow}) {
+PanelWidget? pullWidget(ChatPull cp, {VoidCallback? onShow}) {
   final f = cp.found;
   if (cp.link == null && (f == null || f.host.isEmpty || f.defaultBranch)) {
     return null;
   }
-  return PanelCard(
+  return PanelWidget(
     title: 'Pull request',
     tooltip: () => cp.checkedText,
     summary: ListenableBuilder(
@@ -74,7 +74,7 @@ class _Summary extends StatelessWidget {
   }
 }
 
-/// The card open: the pull request ([PullRows]); or why there's none.
+/// The widget open: the pull request ([PullRows]); or why there's none.
 class _Rows extends StatelessWidget {
   const new(this.cp);
 
@@ -137,7 +137,7 @@ class _Rows extends StatelessWidget {
   }
 }
 
-/// The card's menu: Open on GitHub, Link another…, Unlink.
+/// The widget's menu: Open on GitHub, Link another…, Unlink.
 class _Menu extends StatelessWidget {
   const new(this.cp);
 

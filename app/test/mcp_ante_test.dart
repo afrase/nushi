@@ -4,10 +4,10 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp.dart';
-import 'package:nushi/mcp_card.dart';
 import 'package:nushi/mcp_form.dart';
 import 'package:nushi/mcp_servers.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/mcp_widget.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -90,14 +90,14 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets('an Ante chat’s card shows its servers', (tester) async {
+  testWidgets('an Ante chat’s widget shows its servers', (tester) async {
     final (fake, d) = await _daemon(tester);
     final chat = ChatState('c1', '/Users/me/ante-card')..agent = 'ante';
     await tester.binding.setSurfaceSize(const Size(340, 500));
     await tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PanelCards([mcpCard(chat, d)])),
+        home: Scaffold(body: PanelWidgets([mcpWidget(chat, d)])),
       ),
     );
     await tester.pumpAndSettle();

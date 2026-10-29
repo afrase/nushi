@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/card_list.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_work.dart';
-import 'package:nushi/panel_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 

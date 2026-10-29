@@ -6,7 +6,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/artifacts_card.dart';
+import 'package:nushi/artifacts_widget.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
@@ -78,8 +78,8 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
   showDetails.value = true;
   paneWidths.value = {};
   subagentWide.value = false;
-  collapsedCards.value = {};
-  cardOrder.value = [];
+  collapsedWidgets.value = {};
+  widgetOrder.value = [];
   pinnedFiles.value = {};
   final was = fileChanged;
   fileChanged = (p) => switch (_minutes[p.split('/').last]) {
@@ -118,13 +118,13 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
   return (d, fake);
 }
 
-Finder get _card => find.byType(FileRows);
+Finder get _rows => find.byType(FileRows);
 
-Finder _inCard(Finder f) => find.descendant(of: _card, matching: f);
+Finder _inRows(Finder f) => find.descendant(of: _rows, matching: f);
 
-/// The names the card lists, top to bottom.
+/// The names the widget lists, top to bottom.
 List<String> _names(WidgetTester tester) => [
-  for (final e in _inCard(find.byType(Text)).evaluate())
+  for (final e in _inRows(find.byType(Text)).evaluate())
     if ((e.widget as Text).data case final s?
         when !s.contains('ago') && !s.startsWith('Older'))
       s,
@@ -135,7 +135,7 @@ final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('the Artifacts card lists the files, newest first; a click opens '
+  testWidgets('the Artifacts widget lists files, newest first; a click opens '
       'the preview and marks its row; a new file joins it', (tester) async {
     final (d, fake) = await _app(tester, _three);
     final panel = find.byType(DetailsPanel);
@@ -144,9 +144,9 @@ void main() {
       findsOneWidget,
     );
     expect(_names(tester), ['notes.md', 'chart.png', 'report.md']);
-    expect(_inCard(find.text('docs/img · 15m ago')), findsOneWidget);
-    expect(_inCard(find.text('2m ago')), findsOneWidget); // at the top
-    await tester.tap(_inCard(find.text('chart.png')));
+    expect(_inRows(find.text('docs/img · 15m ago')), findsOneWidget);
+    expect(_inRows(find.text('2m ago')), findsOneWidget); // at the top
+    await tester.tap(_inRows(find.text('chart.png')));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.preview.value, 'docs/img/chart.png');
     expect(
@@ -161,10 +161,10 @@ void main() {
         .widget<Tap>(
           find
               .ancestor(
-                of: _inCard(find.text(name)),
+                of: _inRows(find.text(name)),
                 matching: find.byType(Tap),
               )
-              .first, // its row's, not the card's
+              .first, // its row's, not the widget's
         )
         .selected;
     expect(marked('chart.png'), isTrue);
@@ -182,10 +182,10 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('no files, no card', (tester) async {
+  testWidgets('no files, no widget', (tester) async {
     final (d, _) = await _app(tester, [_user]);
     expect(find.byType(DetailsPanel), findsOneWidget);
-    expect(_card, findsNothing);
+    expect(_rows, findsNothing);
     d.dispose();
   }, variant: _mac);
 
@@ -193,8 +193,8 @@ void main() {
       '"Older (n)", newest first', (tester) async {
     final (d, _) = await _app(tester, _turns);
     expect(_names(tester), ['chart.png', 'report.md']);
-    expect(_inCard(find.text('Older (6)')), findsOneWidget);
-    await tester.tap(_inCard(find.text('Older (6)')));
+    expect(_inRows(find.text('Older (6)')), findsOneWidget);
+    await tester.tap(_inRows(find.text('Older (6)')));
     await tester.pumpAndSettle();
     expect(_names(tester), [
       'chart.png',
@@ -213,17 +213,17 @@ void main() {
       'in app.json', (tester) async {
     Directory(dataDir).createSync(recursive: true); // the tests' own
     final (d, _) = await _app(tester, _turns);
-    await tester.tap(_inCard(find.text('Older (6)')));
+    await tester.tap(_inRows(find.text('Older (6)')));
     await tester.pumpAndSettle();
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     addTearDown(mouse.removePointer);
     // No pin shows until the pointer is over a row.
-    expect(_inCard(find.byIcon(Icons.push_pin_outlined)), findsNothing);
+    expect(_inRows(find.byIcon(Icons.push_pin_outlined)), findsNothing);
     for (final name in ['home.html', 'brief.md']) {
-      await mouse.moveTo(tester.getCenter(_inCard(find.text(name))));
+      await mouse.moveTo(tester.getCenter(_inRows(find.text(name))));
       await tester.pumpAndSettle();
-      await tester.tap(_inCard(find.byIcon(Icons.push_pin_outlined)));
+      await tester.tap(_inRows(find.byIcon(Icons.push_pin_outlined)));
       await tester.pumpAndSettle();
     }
     await mouse.moveTo(Offset.zero);
@@ -234,17 +234,17 @@ void main() {
       'chart.png',
       'report.md',
     ]);
-    expect(_inCard(find.byIcon(Icons.push_pin)), findsNWidgets(2));
-    expect(_inCard(find.text('Older (4)')), findsOneWidget);
+    expect(_inRows(find.byIcon(Icons.push_pin)), findsNWidgets(2));
+    expect(_inRows(find.text('Older (4)')), findsOneWidget);
     expect(pinnedFiles.value, {
       'c': ['mock/home.html', 'docs/brief.md'],
     });
     expect(savedPins(readSaved()), pinnedFiles.value);
     // Unpinned, it goes back among the older.
-    await tester.tap(_inCard(find.byIcon(Icons.push_pin)).first);
+    await tester.tap(_inRows(find.byIcon(Icons.push_pin)).first);
     await tester.pumpAndSettle();
     expect(_names(tester).first, 'brief.md');
-    expect(_inCard(find.text('Older (5)')), findsOneWidget);
+    expect(_inRows(find.text('Older (5)')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
@@ -270,22 +270,22 @@ void main() {
     clock = () => start;
     final (d, _) = await _app(tester, _turns);
     final c = d.chats['c']!;
-    await tester.tap(_inCard(find.text('Older (6)')));
+    await tester.tap(_inRows(find.text('Older (6)')));
     await tester.pumpAndSettle();
-    await tester.tap(_inCard(find.text('flows.md')));
+    await tester.tap(_inRows(find.text('flows.md')));
     await tester.pumpAndSettle();
-    await tester.tap(_inCard(find.text('Older (5)'))); // fold it again
+    await tester.tap(_inRows(find.text('Older (5)'))); // fold it again
     await tester.pumpAndSettle();
     expect(_names(tester), ['chart.png', 'report.md', 'flows.md']);
     // Closed, it stays recent for the hour.
     c.preview.value = null;
     clock = () => start.add(const Duration(minutes: 59));
-    await tester.pump(const Duration(minutes: 1)); // the card's tick
+    await tester.pump(const Duration(minutes: 1)); // the widget's tick
     expect(_names(tester), ['chart.png', 'report.md', 'flows.md']);
     clock = () => start.add(const Duration(minutes: 61));
     await tester.pump(const Duration(minutes: 1));
     expect(_names(tester), ['chart.png', 'report.md']);
-    expect(_inCard(find.text('Older (6)')), findsOneWidget);
+    expect(_inRows(find.text('Older (6)')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
@@ -296,11 +296,11 @@ void main() {
       Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Glad to.'),
     ]);
     expect(_names(tester), ['notes.md', 'map.svg', 'list.html']);
-    expect(_inCard(find.text('Older (3)')), findsOneWidget);
+    expect(_inRows(find.text('Older (3)')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('golden: the card with a pin, two recent and Older (5), dark', (
+  testWidgets('golden: the widget with a pin, two recent and Older (5), dark', (
     tester,
   ) async {
     final (d, _) = await _app(tester, _turns);
@@ -311,7 +311,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(
       find.byType(NushiApp),
-      matchesGoldenFile('goldens/artifacts_card_dark.png'),
+      matchesGoldenFile('goldens/artifacts_widget_dark.png'),
     );
     d.dispose();
   }, variant: _mac);

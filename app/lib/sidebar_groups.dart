@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-
+import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/panel_cards.dart' show reordered;
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/slide_list.dart';

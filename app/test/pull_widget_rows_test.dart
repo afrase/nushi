@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -10,12 +10,12 @@ import 'pull_fixture.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-Finder get _card => find.ancestor(
+Finder get _pull => find.ancestor(
   of: find.text('Pull request').last,
-  matching: find.byType(PanelCard),
+  matching: find.byType(PanelWidget),
 );
 
-Finder _inCard(Finder f) => find.descendant(of: _card, matching: f);
+Finder _inPull(Finder f) => find.descendant(of: _pull, matching: f);
 
 /// The fixture in each of the widget's states.
 Map<String, GitHubPull Function()> states = {
@@ -66,7 +66,7 @@ void main() {
       open: false,
     );
     final box = d.chats['c']!.draft.replies;
-    await tester.tap(_inCard(find.text('Fix checks')));
+    await tester.tap(_inPull(find.text('Fix checks')));
     await tester.pumpAndSettle();
     expect(box.value, hasLength(3));
     expect(box.value.first.from, startsWith('Failed checks on PR'));
@@ -75,7 +75,7 @@ void main() {
       box.value.first.from,
       endsWith('on PR octo/notes#412 (GitHub), my pull request:'),
     );
-    await tester.tap(_inCard(find.text('Address')));
+    await tester.tap(_inPull(find.text('Address')));
     await tester.pumpAndSettle();
     expect(box.value, hasLength(5));
     expect(box.value.last.from, startsWith('Review comments from @mona'));
@@ -89,9 +89,9 @@ void main() {
       details: true,
       open: false,
     );
-    expect(_inCard(find.text('@notes-reviewers')), findsOneWidget);
-    expect(_inCard(find.byTooltip('Asked as a code owner')), findsOneWidget);
-    expect(_inCard(find.text('checks, review')), findsOneWidget);
+    expect(_inPull(find.text('@notes-reviewers')), findsOneWidget);
+    expect(_inPull(find.byTooltip('Asked as a code owner')), findsOneWidget);
+    expect(_inPull(find.text('checks, review')), findsOneWidget);
     d.dispose();
     (d, _) = await openPullTab(
       tester,
@@ -99,10 +99,10 @@ void main() {
       details: true,
       open: false,
     );
-    expect(_inCard(find.text('Ready to merge')), findsOneWidget);
-    expect(_inCard(find.text('All 10 checks passed')), findsNothing);
+    expect(_inPull(find.text('Ready to merge')), findsOneWidget);
+    expect(_inPull(find.text('All 10 checks passed')), findsNothing);
     expect(
-      _inCard(find.textContaining('checks passed', findRichText: true)),
+      _inPull(find.textContaining('checks passed', findRichText: true)),
       findsNothing, // two skipped: a legend, not "all passed"
     );
     d.dispose();
@@ -114,12 +114,12 @@ void main() {
       details: true,
       open: false,
     );
-    expect(_inCard(find.text('Ready to merge')), findsOneWidget);
+    expect(_inPull(find.text('Ready to merge')), findsOneWidget);
     expect(
-      _inCard(find.text('Checks not passing (not required)')),
+      _inPull(find.text('Checks not passing (not required)')),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Merge blocked')), findsNothing);
+    expect(_inPull(find.text('Merge blocked')), findsNothing);
     d.dispose();
     (d, _) = await openPullTab(
       tester,
@@ -128,7 +128,7 @@ void main() {
       open: false,
     );
     expect(
-      _inCard(
+      _inPull(
         find.text(
           'Closed without merging. Its 1 commit stays on filters-malformed-q.',
           findRichText: true,
@@ -136,7 +136,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Reopen on GitHub')), findsOneWidget);
+    expect(_inPull(find.text('Reopen on GitHub')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
@@ -155,7 +155,7 @@ void main() {
           brightness: brightness,
         );
         await expectLater(
-          _card,
+          _pull,
           matchesGoldenFile('goldens/pull_widget_${state}_$name.png'),
         );
         d.dispose();

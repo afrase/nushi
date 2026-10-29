@@ -9,7 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 
 /// What the app remembers across launches, in `app.json` in the data folder:
-/// whether the details panel shows (its toolbar button), which of its cards
+/// whether the details panel shows (its toolbar button), which of its widgets
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// panes' widths, whether changed files show flat, which chats show their
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
@@ -22,10 +22,13 @@ import 'package:nushi/file_mode.dart';
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
 final Pref<bool> showDetails = _plain('details', true);
-final Pref<Set<String>> collapsedCards = _set('collapsed');
 
-/// The details panel's cards by title, in the order they were dragged into.
-final Pref<List<String>> cardOrder = _list('cards');
+/// The details panel's widgets collapsed, by title.
+final Pref<Set<String>> collapsedWidgets = _set('collapsed');
+
+/// The details panel's widgets by title, in the order they were dragged
+/// into. Saved under `cards`, from when they were called that.
+final Pref<List<String>> widgetOrder = _list('cards');
 
 /// What each chat's Changes view shows (a `Scope`'s name), by chat, once
 /// picked.

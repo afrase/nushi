@@ -9,7 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
-import 'package:nushi/panel_cards.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -86,12 +86,12 @@ Future<Daemon> _panel(
   return d;
 }
 
-Finder get _environment => find.widgetWithText(PanelCard, 'Environment');
+Finder get _environment => find.widgetWithText(PanelWidget, 'Environment');
 Finder get _pencil => find.byTooltip('Rename branch…');
 
 void main() {
   setUpAll(loadFonts);
-  setUp(() => collapsedCards.value = {});
+  setUp(() => collapsedWidgets.value = {});
 
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
@@ -100,7 +100,7 @@ void main() {
     // At the panel's usual width and its widest: the pencil right after the
     // name, a long name cut before it.
     for (final width in [DetailsPanel.width, 480.0]) {
-      testWidgets('golden, the Environment card ${width.round()} wide, $name', (
+      testWidgets('golden, Environment ${width.round()} wide, $name', (
         tester,
       ) async {
         viewport(tester, Size(width, 520), ratio: 2);
@@ -111,9 +111,9 @@ void main() {
           tokens: tokens,
           width: width,
         );
-        final card = tester.getRect(_environment);
+        final box = tester.getRect(_environment);
         final pencil = tester.getRect(find.byIcon(Icons.edit_outlined));
-        expect(pencil.right, lessThanOrEqualTo(card.right));
+        expect(pencil.right, lessThanOrEqualTo(box.right));
         expect(
           pencil.left,
           greaterThan(tester.getRect(find.textContaining('nushi/bump')).right),

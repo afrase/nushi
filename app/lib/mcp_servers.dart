@@ -11,7 +11,7 @@ import 'package:nushi/widgets.dart' show errorText;
 /// The MCP servers an agent's config gives a folder, from the daemon (API
 /// 32; Ante's from API 80): read from the config at once, then checked
 /// (the agent connects to each, a few seconds), which fills in their
-/// states. One per agent and folder, shared by the view and the panel card
+/// states. One per agent and folder, shared by the view and the panel widget
 /// while the app runs; asked for again once it is a few minutes old, since
 /// servers connect, sign in and change outside Nushi too.
 class McpServers extends ChangeNotifier {
