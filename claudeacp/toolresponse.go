@@ -15,7 +15,8 @@ import (
 // clients read what the result's text doesn't say (a background
 // command's task id, a subagent's id and model), and an edit's diff as
 // claude made it.
-func (s *session) postToolUse(_ context.Context, in claudeagent.HookInput) (claudeagent.HookOutput, error) {
+func (s *session) postToolUse(ctx context.Context, in claudeagent.HookInput) (claudeagent.HookOutput, error) {
+	s.caughtUp(ctx)
 	switch {
 	case in.AgentID != "":
 	case isPlanTool("", in.ToolName): // the plan, not a call the client sees

@@ -91,6 +91,12 @@ func (s *session) handle(m claudeagent.Message) {
 			s.st.used = post
 			s.usage(nil, nil)
 		}
+	case *claudeagent.TaskStarted:
+		s.taskStarted(m)
+	case *claudeagent.TaskUpdated:
+		s.taskUpdated(m)
+	case *claudeagent.TaskNotification:
+		s.taskNotification(m)
 	case *claudeagent.RateLimit:
 		s.usage(nil, map[string]any{"_claude/rateLimit": m.Info})
 	}
@@ -293,5 +299,5 @@ func (s *session) chunk(kind, parent, msgID string, c acp.ContentBlock) {
 	} else {
 		u.AgentMessageChunk = ch
 	}
-	s.a.update(s.id, u)
+	s.emit(parent, u)
 }
