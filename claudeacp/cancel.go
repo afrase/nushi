@@ -60,21 +60,26 @@ func (s *session) cancel() {
 	}()
 }
 
-// backstop answers t cancelled if claude says nothing more of it.
+// backstop answers t cancelled if claude says nothing more of it. It
+// waits out its time even when t ends first (a select on both could pick
+// the timer when both are ready) and then does nothing, so it never ends
+// the calls of a turn that started since.
 func (s *session) backstop(t *turn) {
 	select {
 	case <-s.a.after(backstop):
-		s.mu.Lock()
-		over := t.settled
-		s.mu.Unlock()
-		if !over {
-			s.endTools(endedCancel)
-		}
-		s.mu.Lock()
-		s.settleLocked(t, cancelled(t))
-		s.mu.Unlock()
-	case <-t.ended:
+	case <-s.read: // claude is gone: the reader settled t
+		return
 	}
+	s.mu.Lock()
+	over := t.settled
+	s.mu.Unlock()
+	if over {
+		return
+	}
+	s.endTools(endedCancel)
+	s.mu.Lock()
+	s.settleLocked(t, cancelled(t))
+	s.mu.Unlock()
 }
 
 // steer is _session/steering: a message for the running turn.
