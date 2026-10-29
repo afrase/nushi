@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Nushi changes Claude's MCP config through Claude's own CLI, run in the
@@ -35,6 +37,7 @@ func (Claude) Login(ctx context.Context, folder, name string) error {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "script", "-q", "/dev/null", "claude", "mcp", "login", "--", name) //nolint:gosec // the user's claude, the server name after --
 	cmd.Dir = folder
+	procgroup.Bound(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("signing in to %s didn't finish: %s", name, lastLine(string(out)))
@@ -70,6 +73,7 @@ func run(ctx context.Context, folder string, args ...string) error {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "claude", append([]string{"mcp"}, args...)...) //nolint:gosec // the user's claude, names after --
 	cmd.Dir = folder
+	procgroup.Bound(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if msg := strings.TrimSpace(string(out)); msg != "" {

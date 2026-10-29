@@ -2,6 +2,7 @@ package pig
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/internal/agentproc"
 )
 
 // Spawn starts `pig --mode rpc` with args in cwd.
@@ -65,12 +68,15 @@ func startProc(spawn Spawn, cwd string, args ...string) (*proc, error) {
 	return p, nil
 }
 
+// read reads pig's output until it ends, or pig sends a line over
+// agentproc.MaxRead (then pig is killed).
 func (p *proc) read(out io.Reader) {
 	defer close(p.exited)
 	defer close(p.events)
-	r := bufio.NewReader(out)
-	for {
-		line, err := r.ReadBytes('\n')
+	r := bufio.NewScanner(out)
+	r.Buffer(nil, agentproc.MaxRead)
+	for r.Scan() {
+		line := bytes.Clone(r.Bytes()) // an event keeps it
 		var head struct {
 			Type string  `json:"type"`
 			ID   *string `json:"id"`
@@ -98,16 +104,17 @@ func (p *proc) read(out io.Reader) {
 			p.events <- event{Type: head.Type, Raw: line}
 			p.sent++
 		}
-		if err != nil {
-			p.mu.Lock()
-			for id, ch := range p.waiting {
-				close(ch)
-				delete(p.waiting, id)
-			}
-			p.mu.Unlock()
-			return
-		}
 	}
+	if err := r.Err(); err != nil {
+		warnf("stopped reading pig: %v", err) // bufio.Scanner: token too long
+		p.kill()
+	}
+	p.mu.Lock()
+	for id, ch := range p.waiting {
+		close(ch)
+		delete(p.waiting, id)
+	}
+	p.mu.Unlock()
 }
 
 // errStopped says pig is gone.

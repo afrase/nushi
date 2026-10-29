@@ -11,13 +11,15 @@ import (
 	"syscall"
 )
 
-// Server is a Spawn of bin (`ante serve --stdio`) with env, its stderr
-// dropped, in a process group of its own (so the MCP servers it starts go
-// with it).
-func Server(bin string, env []string) Spawn {
+// Server is a Spawn of bin (`ante serve --stdio`) with env (nil: this
+// process's), its stderr to stderr (nil: dropped), in a process group of
+// its own (so the MCP servers it starts go with it). The bridge's hosts
+// write to the bridge's stderr, which the daemon logs; the MCP check's
+// are dropped.
+func Server(bin string, env []string, stderr io.Writer) Spawn {
 	return func(cwd string) (io.WriteCloser, io.Reader, func(), error) {
-		cmd := exec.Command(bin, "serve", "--stdio") //nolint:noctx // killed by the check, whose context ends it
-		cmd.Dir, cmd.Env = cwd, env
+		cmd := exec.Command(bin, "serve", "--stdio") //nolint:noctx // lives until the session or the check ends, which kills it
+		cmd.Dir, cmd.Env, cmd.Stderr = cwd, env, stderr
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		in, err := cmd.StdinPipe()
 		if err != nil {

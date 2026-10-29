@@ -17,7 +17,7 @@ func newMCP(agentSvc *agents.Service, changed mcp.Changed) map[string]*mcp.Servi
 		if err != nil {
 			return nil, err
 		}
-		return ante.Server(r.CLI, r.Env), nil
+		return ante.Server(r.CLI, r.Env, nil), nil
 	}
 	return map[string]*mcp.Service{
 		"claude": mcp.New("claude", claudemcp.Claude{}, changed),

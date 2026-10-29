@@ -30,6 +30,7 @@ import (
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
@@ -54,7 +55,9 @@ func userRoot() string { return filepath.Join(configDir(), "skills") }
 // project's.
 func projectRoots(ctx context.Context, folder string) []string {
 	top := "/"
-	if out, err := exec.CommandContext(ctx, "git", "-C", folder, "rev-parse", "--show-toplevel").Output(); err == nil { //nolint:gosec // git in the folder asked about
+	cmd := exec.CommandContext(ctx, "git", "-C", folder, "rev-parse", "--show-toplevel") //nolint:gosec // git in the folder asked about
+	procgroup.Bound(cmd)
+	if out, err := cmd.Output(); err == nil {
 		top = strings.TrimSpace(string(out))
 	}
 	if resolved, err := filepath.EvalSymlinks(folder); err == nil {

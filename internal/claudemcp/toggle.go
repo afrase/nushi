@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"slices"
 	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // A user, local, plugin or claude.ai server is turned off per project by
@@ -34,6 +36,7 @@ func (Claude) Toggle(ctx context.Context, folder, name string, on bool) error {
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "claude", toggleArgs...)
 	cmd.Dir = folder
+	procgroup.Bound(cmd)
 	type request struct {
 		Type    string         `json:"type"`
 		ID      string         `json:"request_id"`

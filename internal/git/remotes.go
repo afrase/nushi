@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -44,7 +45,9 @@ func Fetch(ctx context.Context, folder, remote, refspec string) error {
 	cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=", "SSH_ASKPASS=")
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
+	// exec.ErrWaitDelay: git exited 0, and an ssh master it started
+	// (ControlPersist) still held stderr a second later.
+	if err := cmd.Run(); err != nil && !errors.Is(err, exec.ErrWaitDelay) {
 		if msg := strings.TrimSpace(stderr.String()); msg != "" {
 			return fmt.Errorf("git fetch: %s", msg)
 		}

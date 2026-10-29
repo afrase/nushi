@@ -15,6 +15,7 @@ import (
 
 	"github.com/afrase/nushi/internal/claudemcp"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // plugin is an installed plugin and its skills.
@@ -174,6 +175,7 @@ func claudePlugin(ctx context.Context, args ...string) ([]byte, error) {
 	if fi, err := os.Stat(cmd.Dir); err != nil || !fi.IsDir() {
 		cmd.Dir = os.TempDir()
 	}
+	procgroup.Bound(cmd)
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()

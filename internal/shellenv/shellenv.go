@@ -21,6 +21,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Resolving is set in the shell's environment while it's read, so a shell
@@ -52,8 +54,7 @@ func Read(ctx context.Context, shell string, env []string, timeout time.Duration
 	out := &limited{max: maxOutput}
 	cmd.Stdout = out
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} // no terminal to take or wait on
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
-	cmd.WaitDelay = time.Second // something it started in the background may hold stdout
+	procgroup.Bound(cmd)                                 // something it started in the background may hold stdout
 	err := cmd.Run()
 	vars, perr := parse(out.Bytes(), start, end)
 	switch {

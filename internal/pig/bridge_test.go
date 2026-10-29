@@ -313,7 +313,7 @@ func TestQuestionAndUnknownMessages(t *testing.T) {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	for _, want := range []string{"pig wrote a line that isn't JSON (9 bytes)", `an event the bridge doesn't know: "mystery"`, "DEBUG pig-acp: rpc prompt took="} {
+	for _, want := range []string{"pig wrote a line that isn't JSON (8 bytes)", `an event the bridge doesn't know: "mystery"`, "DEBUG pig-acp: rpc prompt took="} {
 		if !strings.Contains(log.String(), want) {
 			t.Errorf("log lacks %q:\n%s", want, log.String())
 		}
