@@ -23,17 +23,26 @@ Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
       ),
     );
 
-ChatState _working(Duration ran) => ChatState('c', '/x')
-  ..loaded = true
-  ..busy = true
-  ..started = DateTime.now().subtract(ran)
-  ..items.addAll([
-    Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
-    Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Done.'),
-  ]);
+ChatState _working(Duration ran) {
+  final chat = ChatState('c', '/x')
+    ..loaded = true
+    ..busy = true
+    ..started = DateTime.now().subtract(ran)
+    ..items.addAll([
+      Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
+      Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Done.'),
+    ]);
+  _ran[chat] = ran;
+  return chat;
+}
+
+/// How long each chat's turn ran, as it ends: its start is set again just
+/// before, so a slow machine's wall clock doesn't add a second.
+final _ran = Expando<Duration>();
 
 void _end(ChatState chat, {bool stopped = false}) {
   chat
+    ..started = DateTime.now().subtract(_ran[chat]!)
     ..stopping = stopped
     ..notifyListeners()
     ..busy = false
@@ -85,7 +94,7 @@ void main() {
       inExclusiveRange(0, line),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Done in 12s'), findsNothing);
+    expect(find.textContaining('Done in'), findsNothing);
     expect(tester.getSize(find.byType(TurnStatus)).height, 0);
   });
 
@@ -133,7 +142,7 @@ void main() {
     expect((check.drawn, check.sparks), (1, null));
     await tester.pump(const Duration(milliseconds: 1400));
     await tester.pump();
-    expect(find.text('Done in 2m 31s'), findsNothing);
+    expect(find.textContaining('Done in'), findsNothing);
   });
 
   testWidgets("the sidebar's dot sparks as its check draws; the header's "
