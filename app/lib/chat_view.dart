@@ -50,22 +50,9 @@ class ChatView extends StatefulWidget {
 
 class _ChatViewState extends State<ChatView> {
   bool _dragging = false; // files are dragged over the chat
-  bool _forking = false;
 
-  Future<void> _ask(String selection) async {
-    final chat = widget.chat;
-    if (chat.side == null && !_forking) {
-      setState(() => _forking = true);
-      try {
-        chat.side = await widget.daemon.forkChat(chat);
-      } on Object catch (e) {
-        if (mounted) showError(context, e);
-      } finally {
-        if (mounted) setState(() => _forking = false);
-      }
-    }
-    chat.side?.draft.quote.value = selection;
-  }
+  Future<void> _ask(String selection) =>
+      askAside(context, widget.daemon, widget.chat, selection);
 
   /// Attaches the images dropped on the chat.
   Future<void> _drop(DropDoneDetails d) async {
@@ -105,7 +92,7 @@ class _ChatViewState extends State<ChatView> {
                 stopTurn(context, chat, widget.daemon),
           },
           child: ListenableBuilder(
-            listenable: chat,
+            listenable: Listenable.merge([chat, chat.forking]),
             builder: (context, _) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -121,7 +108,7 @@ class _ChatViewState extends State<ChatView> {
                 ),
                 TurnStatus(
                   chat,
-                  what: _forking ? 'Starting a side chat' : null,
+                  what: chat.forking.value ? 'Starting a side question' : null,
                 ),
                 if (chat.mcpChanged && !chat.archived)
                   _McpChanged(chat, widget.daemon),
@@ -142,7 +129,12 @@ class _ChatViewState extends State<ChatView> {
       open: widget.daemon.daemonApi >= previewApi ? chat.openPreview : null,
       current: chat.preview,
       child: ListenableBuilder(
-        listenable: Listenable.merge([chat.pane, chat.preview, subagentWide]),
+        listenable: Listenable.merge([
+          chat.pane,
+          chat.preview,
+          chat.forking, // a side question opened
+          subagentWide,
+        ]),
         builder: (context, _) => _beside(transcript),
       ),
     );
@@ -320,21 +312,7 @@ class ReloadButton extends StatelessWidget {
     message: chat.busy ? 'Once ${chat.agentName} is done' : '',
     child: RunButton(
       label: 'Reload',
-      run: chat.busy
-          ? null
-          : () async {
-              if (await stopsBackground(
-                    context,
-                    chat,
-                    'Reload the chat?',
-                    'Reload',
-                  ) &&
-                  context.mounted) {
-                await daemon.client.reloadChat(
-                  ReloadChatRequest(chatId: chat.id),
-                );
-              }
-            },
+      run: chat.busy ? null : () => reloadChat(context, chat, daemon),
     ),
   );
 }

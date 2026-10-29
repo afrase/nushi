@@ -154,6 +154,13 @@ class ChatState extends ChangeNotifier {
   /// Its open side question, if any (see SidePanel).
   ChatState? side;
 
+  /// A side question is starting (its fork is on its way).
+  final forking = ValueNotifier<bool>(false);
+
+  /// The header's title is a field to rename it (Rename from the palette
+  /// or the Chat menu).
+  final renaming = ValueNotifier<bool>(false);
+
   /// A message taken back from the transcript, set for the composer to
   /// put back in the box.
   final takeBack = ValueNotifier<QueuedMessage?>(null);

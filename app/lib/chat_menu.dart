@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -15,28 +16,19 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
-/// The chat's menu: Rename, Sleep, Archive or Unarchive, MCP servers…,
-/// Delete….
+/// The chat's menu (its ⋯, its sidebar row's right-click): the menu bar's
+/// Chat menu, the actions that apply to it now ([chatActions]: Side
+/// question, Send review comments, Stop, Rename, Sleep, Reload, Link pull
+/// request…, Archive or Unarchive, MCP servers…, Skills…, Delete…).
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
   Daemon daemon, {
   required VoidCallback onRename,
 }) => [
-  MenuEntry('Rename', onPick: onRename),
-  if (chat.canSleep && !chat.archived)
-    MenuEntry('Sleep', onPick: () => sleepChat(context, chat, daemon)),
-  MenuEntry(
-    chat.archived ? 'Unarchive' : 'Archive',
-    onPick: () => tryOrShow(context, () => archiveChat(context, chat, daemon)),
-  ),
-  if (knownAgents[chat.agent]?.mcp ?? true)
-    MenuEntry('MCP servers…', onPick: () => daemon.showMcp(chat.folder)),
-  MenuEntry(
-    'Skills…',
-    onPick: () => daemon.showSkills(chat.folder, agent: chat.agent),
-  ),
-  MenuEntry('Delete…', onPick: () => showDeleteChat(context, chat, daemon)),
+  for (final a in chatActions(context, daemon, chat, onRename: onRename))
+    if (a.enabled)
+      MenuEntry(a.short, detail: a.act.shortcut ?? '', onPick: a.run),
 ];
 
 /// Asks before deleting a chat, listing what goes, then deletes it.
@@ -91,6 +83,19 @@ Future<bool> stopsBackground(
     '${chat.agentName}.',
     action,
   );
+}
+
+/// Reloads [chat]'s agent, so it picks up changed MCP servers, asking
+/// first when that stops subagents running in the background.
+Future<void> reloadChat(
+  BuildContext context,
+  ChatState chat,
+  Daemon daemon,
+) async {
+  if (await stopsBackground(context, chat, 'Reload the chat?', 'Reload') &&
+      context.mounted) {
+    await daemon.client.reloadChat(ReloadChatRequest(chatId: chat.id));
+  }
 }
 
 /// Archives (or unarchives) a chat. Archiving ends its terminals: when a

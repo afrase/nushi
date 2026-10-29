@@ -159,6 +159,8 @@ class _NushiAppState extends State<NushiApp> {
           _appearance('System Appearance', ThemeMode.system),
         ],
       ),
+      // The shown chat's actions, as its ⋯ menu has them.
+      PlatformMenu(label: 'Chat', menus: _items(ActMenu.chat)),
     ],
     child: MaterialApp(
       navigatorKey: _navigator,

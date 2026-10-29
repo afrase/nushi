@@ -147,7 +147,7 @@ class GitHubBar extends StatelessWidget {
               child: Text(line, style: theme.ui(t.textMuted, size: 12)),
             ),
           IconTap(Icons.refresh, tooltip: 'Refresh (⌘R)', onTap: onRefresh),
-          IconTap(Icons.close, tooltip: 'Close (⌘G)', onTap: onClose),
+          IconTap(Icons.close, tooltip: 'Close (esc)', onTap: onClose),
         ],
       ),
     );

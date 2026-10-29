@@ -34,9 +34,9 @@ class PaletteRow {
 /// runs: first in it when nothing is typed.
 final recentRows = <String>[];
 
-/// ⌘K: the palette. The chats (the current project's first) and the
-/// actions that apply now ([appActions]); what's picked runs once it
-/// closes.
+/// ⌘K: the palette. The chats (the current project's first), the actions
+/// that apply now ([appActions], the shown chat's among them), then the
+/// archived chats; what's picked runs once it closes.
 Future<void> showPalette(BuildContext context, Daemon d) async {
   final current = d.selected;
   final shown = chatShown(d) ? current : null;
@@ -63,6 +63,21 @@ Future<void> showPalette(BuildContext context, Daemon d) async {
           a.title,
           a.run,
           detail: a.shortcut ?? '',
+        ),
+    // Archived chats last, marked: the sidebar doesn't list them.
+    for (final chat
+        in d.chats.values.where((c) => c.archived).toList()
+          ..sort((a, b) => b.created.compareTo(a.created)))
+      if (chat != shown)
+        PaletteRow(
+          'chat:${chat.id}',
+          chat.title.isEmpty ? 'New chat' : chat.title,
+          () => d.select(chat.id),
+          detail: [
+            'archived',
+            if (!chat.scratch) baseName(chat.home),
+          ].join(' · '),
+          agent: chat.agent,
         ),
   ];
   final picked = await showDialog<PaletteRow>(
