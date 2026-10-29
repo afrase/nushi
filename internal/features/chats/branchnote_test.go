@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A replayed user's message loses the note that went before it: a block
@@ -73,7 +74,7 @@ func TestBranchNoteChecksOutsideTheLock(t *testing.T) {
 		t.Error("the chat stayed locked while git checked the names")
 	}
 	close(wts.held)
-	noErr(t, <-sent)
+	testcheck.NoErr(t, <-sent)
 	eventually(t, c, func() bool { return !c.busy })
 	agent.mu.Lock()
 	prompt := agent.prompt

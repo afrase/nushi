@@ -11,6 +11,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // notices returns the chat's notices as reason:text.
@@ -70,7 +71,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 		t.Errorf("status %+v: not asleep, but failed", st)
 	}
 
-	noErr(t, svc.Reopen("shown")) // still not set up: nothing starts
+	testcheck.NoErr(t, svc.Reopen("shown")) // still not set up: nothing starts
 	if launches, _, _ := agent.count(); launches != 0 || shown.busy || !slices.Equal(notices(shown), want) {
 		t.Errorf("shown while not set up: %d launches, notices %q", launches, notices(shown))
 	}
@@ -88,7 +89,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 		t.Errorf("%d agents started before a chat was shown", launches)
 	}
 
-	noErr(t, svc.Reopen("shown"))
+	testcheck.NoErr(t, svc.Reopen("shown"))
 	eventually(t, shown, func() bool { return shown.agent != nil && !shown.busy })
 	if got := texts(shown); !slices.Equal(got, []string{"agent:before"}) {
 		t.Errorf("shown: transcript %q, the notice should be gone", got)
@@ -96,7 +97,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 	if launches, _, _ := agent.count(); launches != 1 || hidden.agent != nil {
 		t.Errorf("%d launches; the hidden chat reopened before it was shown", launches)
 	}
-	noErr(t, svc.Reopen("hidden"))
+	testcheck.NoErr(t, svc.Reopen("hidden"))
 	eventually(t, hidden, func() bool { return hidden.agent != nil && !hidden.busy })
 	if got := texts(hidden); !slices.Equal(got, []string{"agent:before"}) {
 		t.Errorf("hidden: transcript %q", got)
@@ -117,7 +118,7 @@ func TestAFailingReopenTriesOncePerShow(t *testing.T) {
 	before, _, _ := agent.count()
 	for i := 1; i <= 3; i++ {
 		_, _ = svc.Get(c.id) // not a show
-		noErr(t, svc.Reopen(c.id))
+		testcheck.NoErr(t, svc.Reopen(c.id))
 		eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
 		if launches, _, _ := agent.count(); launches != before+i {
 			t.Fatalf("show %d: %d launches, want %d", i, launches, before+i)
@@ -128,7 +129,7 @@ func TestAFailingReopenTriesOncePerShow(t *testing.T) {
 		t.Errorf("notices %q", got)
 	}
 	agent.loadErr = nil
-	noErr(t, svc.Reopen(c.id))
+	testcheck.NoErr(t, svc.Reopen(c.id))
 	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
 	if got := notices(c); slices.Contains(got, failed) {
 		t.Errorf("notices %q once it reopened", got)
@@ -143,16 +144,16 @@ func TestAChatWhoseFolderIsGone(t *testing.T) {
 	agent.quit()
 	eventually(t, c, func() bool { return c.agent == nil })
 	folder := c.session.Folder
-	noErr(t, os.Remove(folder))
+	testcheck.NoErr(t, os.Remove(folder))
 	_, _ = svc.Get(c.id)
 	eventually(t, c, func() bool { return !c.busy && c.reopenFailed })
 	before, _, _ := agent.count()
-	noErr(t, svc.Reopen(c.id))
+	testcheck.NoErr(t, svc.Reopen(c.id))
 	got := notices(c)
 	if launches, _, _ := agent.count(); launches != before || c.busy || len(got) != 2 || got[1] != "folder_gone:Couldn't reopen the chat: its folder "+folder+" is gone" {
 		t.Errorf("%d launches, notices %q", launches-before, got)
 	}
-	noErr(t, os.Mkdir(folder, 0o700))
-	noErr(t, svc.Reopen(c.id))
+	testcheck.NoErr(t, os.Mkdir(folder, 0o700))
+	testcheck.NoErr(t, svc.Reopen(c.id))
 	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
@@ -36,17 +37,17 @@ import (
 func recorded(t *testing.T, name string) []acp.SessionNotification {
 	t.Helper()
 	f, err := os.Open(filepath.Join("testdata", "subagents", name))
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	defer f.Close() //nolint:errcheck // read-only
 	var out []acp.SessionNotification
 	sc := bufio.NewScanner(f)
 	sc.Buffer(nil, 1<<20)
 	for sc.Scan() {
 		var n acp.SessionNotification
-		noErr(t, json.Unmarshal(sc.Bytes(), &n))
+		testcheck.NoErr(t, json.Unmarshal(sc.Bytes(), &n))
 		out = append(out, n)
 	}
-	noErr(t, sc.Err())
+	testcheck.NoErr(t, sc.Err())
 	return out
 }
 
@@ -149,7 +150,7 @@ func TestSubagentsStoppedEachWay(t *testing.T) {
 		t.Fatalf("the one left running: %+v", sa)
 	}
 	agent.subagents = []acp.SessionID{"adab021219769ae55"}
-	noErr(t, svc.StopTask(t.Context(), c.id, counterD))
+	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, counterD))
 	if wire := agent.wired(); !slices.Contains(wire, "cancel adab021219769ae55") || slices.Contains(wire, "cancel") {
 		t.Errorf("sent %q", wire)
 	}
@@ -181,7 +182,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 			agent.updates = append(agent.updates, n.Update)
 		}
 	}
-	noErr(t, svc.StopTask(t.Context(), c.id, sleeping))
+	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, sleeping))
 	eventually(t, c, func() bool { return !c.busy })
 	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claude.StopTask("sleep 600; echo slept", "bgu2i75cc") {
 		t.Errorf("asked %q", prompts)
@@ -200,9 +201,9 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 // otherwise.
 func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	agent := &fakeAgent{}
-	noErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	on := &atomic.Bool{}
 	on.Store(true)
 	sessions := &memSessions{}
@@ -210,7 +211,7 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	svc := New(kinds, &memModes{}, sessions, nil, t.TempDir(), func(model.Event) {})
 	svc.UseCopies(store, on.Load)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	c := svc.chats[id]
 	feed(c, recorded(t, "stop_then_start.jsonl"))
 	feed(c, recorded(t, "stops.jsonl"))
@@ -225,8 +226,8 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	svc = New(kinds, &memModes{}, sessions, nil, t.TempDir(), func(model.Event) {})
 	svc.UseCopies(store, on.Load)
 	_, err = svc.Get(id)
-	noErr(t, err)
-	noErr(t, svc.Reopen(id))
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, svc.Reopen(id))
 	c = svc.chats[id]
 	eventually(t, c, func() bool { return c.agent != nil && !c.reopeningLocked() })
 	want := map[string]string{countSlowly: "stopped", countSlowlyV2: "done", counterA: "stopped", counterB: "stopped",

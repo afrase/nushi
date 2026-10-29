@@ -11,6 +11,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // claudeForm is the form claude-agent-acp 0.94.0 sent for AskUserQuestion
@@ -90,7 +91,7 @@ func TestMalformedFormIsAnError(t *testing.T) {
 		}
 	}
 	var s acp.ElicitationSchema
-	noErr(t, json.Unmarshal([]byte(`{"type":"object","properties":{"a":{"type":"hologram"}}}`), &s))
+	testcheck.NoErr(t, json.Unmarshal([]byte(`{"type":"object","properties":{"a":{"type":"hologram"}}}`), &s))
 	if _, err := formFields(&s); err == nil {
 		t.Error("a field of a type Nushi doesn't show: no error")
 	}
@@ -100,7 +101,7 @@ func TestMalformedFormIsAnError(t *testing.T) {
 func TestStopCancelsAPendingQuestion(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	var req acp.CreateElicitationRequest
 	if err := json.Unmarshal([]byte(claudeForm), &req); err != nil {
 		t.Fatal(err)

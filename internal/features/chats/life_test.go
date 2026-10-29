@@ -10,6 +10,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // noCopy is a CopyHistory with nothing to copy.
@@ -111,7 +112,7 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 	}
 	plan("moved")
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(ctx, c.id, true); err != nil {
 		t.Fatal(err)
 	}

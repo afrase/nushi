@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // The sessions are read once, then kept as they're saved and deleted: a
@@ -17,37 +18,31 @@ import (
 func TestSessionsKept(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	must := func(err error) {
-		t.Helper()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
 	titles := func() []string {
 		t.Helper()
 		got, err := s.Sessions()
-		must(err)
+		testcheck.NoErr(t, err)
 		var out []string
 		for _, sess := range got {
 			out = append(out, sess.ID+":"+sess.Title)
 		}
 		return out
 	}
-	must(s.SaveSession(model.Session{ID: "b", Title: "B"})) // before the first read
+	testcheck.NoErr(t, s.SaveSession(model.Session{ID: "b", Title: "B"})) // before the first read
 	if got := titles(); !slices.Equal(got, []string{"b:B"}) {
 		t.Fatalf("read: %q", got)
 	}
-	must(s.SaveSession(model.Session{ID: "a", Title: "A"}))
-	must(s.SaveSession(model.Session{ID: "b", Title: "B2"}))
-	must(os.WriteFile(filepath.Join(dir, "sessions", "c.json"), []byte(`{"ID":"c"}`), 0o600))
+	testcheck.NoErr(t, s.SaveSession(model.Session{ID: "a", Title: "A"}))
+	testcheck.NoErr(t, s.SaveSession(model.Session{ID: "b", Title: "B2"}))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "sessions", "c.json"), []byte(`{"ID":"c"}`), 0o600))
 	if got := titles(); !slices.Equal(got, []string{"a:A", "b:B2"}) {
 		t.Errorf("saved: %q", got)
 	}
-	must(s.DeleteSession("a"))
+	testcheck.NoErr(t, s.DeleteSession("a"))
 	if err := s.DeleteSession("a"); err == nil {
 		t.Error("deleted a session that was gone")
 	}
-	must(os.Chmod(filepath.Join(dir, "sessions"), 0o500)) // its new file can't be made
+	testcheck.NoErr(t, os.Chmod(filepath.Join(dir, "sessions"), 0o500)) // its new file can't be made
 	t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, "sessions"), 0o700) })
 	if err := s.SaveSession(model.Session{ID: "b", Title: "B3"}); err == nil {
 		t.Fatal("wrote in a folder it can't")
@@ -55,7 +50,7 @@ func TestSessionsKept(t *testing.T) {
 	if got := titles(); !slices.Equal(got, []string{"b:B2"}) {
 		t.Errorf("deleted, then a failed save: %q", got)
 	}
-	must(os.Chmod(filepath.Join(dir, "sessions"), 0o700))
+	testcheck.NoErr(t, os.Chmod(filepath.Join(dir, "sessions"), 0o700))
 	if got, err := New(dir).Sessions(); err != nil || len(got) != 2 { // b and c, from the files
 		t.Errorf("a new store: %+v, %v", got, err)
 	}

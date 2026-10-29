@@ -7,6 +7,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
@@ -26,7 +27,7 @@ func restarted(t *testing.T, agent *fakeAgent, c *chat, store *transcripts.Store
 func reopened(t *testing.T, svc *Service, id string) *chat {
 	t.Helper()
 	_, err := svc.Get(id)
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	c := svc.chats[id]
 	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
 	return c
@@ -54,7 +55,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turn := func(text string, updates ...acp.SessionUpdate) {
 		agent.updates = updates
-		noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
 		eventually(t, c, func() bool { return !c.busy })
 	}
 	turn("one", chunk("m1", "a"), toolCall("t1", "completed"))
@@ -66,7 +67,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 
 	svc2 := restarted(t, agent, c, store)
 	looked, err := svc2.lookup(c.id)
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	if got := shown(looked); got != want {
 		t.Fatalf("before the agent replays: %s", got)
 	}
@@ -79,7 +80,7 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 	}
 
 	// Reloading merges the replay the same way.
-	noErr(t, svc2.Reload(c.id))
+	testcheck.NoErr(t, svc2.Reload(c.id))
 	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
 	if got := shown(c2); got != want {
 		t.Errorf("after a reload: %s", got)
@@ -92,7 +93,7 @@ func TestReopenAfterACompaction(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turn := func(text string, updates ...acp.SessionUpdate) {
 		agent.updates = updates
-		noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
 		eventually(t, c, func() bool { return !c.busy })
 	}
 	turn("one", chunk("m1", "a"))
@@ -121,14 +122,14 @@ func TestReopenAfterACompaction(t *testing.T) {
 func TestArchivedChatShowsItsCopy(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
-	noErr(t, svc.Archive(c.id, true))
+	testcheck.NoErr(t, svc.Archive(c.id, true))
 	launches, _, _ := agent.count()
 
 	svc2 := restarted(t, agent, c, store)
 	_, err := svc2.Get(c.id)
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	if got := shown(svc2.chats[c.id]); got != "user:one agent:m1" {
 		t.Errorf("archived: %s", got)
 	}
@@ -158,8 +159,8 @@ func (s *slowCopies) Read(chat string) ([]model.Item, error) {
 // being read, its transcript there once its lock is had.
 func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 	store, err := transcripts.Open(t.TempDir())
-	noErr(t, err)
-	noErr(t, store.Append("slow", []model.Item{{ID: "m1", Kind: model.AgentMessage, Text: "kept"}}, []string{""}))
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, store.Append("slow", []model.Item{{ID: "m1", Kind: model.AgentMessage, Text: "kept"}}, []string{""}))
 	copies := &slowCopies{Copies: store, chat: "slow", reading: make(chan struct{}), held: make(chan struct{})}
 	stored := []model.Session{{ID: "slow", Agent: "claude", Archived: true}, {ID: "fast", Agent: "claude", Archived: true}}
 	svc := New([]Kind{{Name: "claude", Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: stored}, nil, t.TempDir(), func(model.Event) {})
@@ -177,13 +178,13 @@ func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 	}()
 	select {
 	case err := <-fast:
-		noErr(t, err)
+		testcheck.NoErr(t, err)
 	case <-time.After(5 * time.Second):
 		close(copies.held)
 		t.Fatal("another chat's lookup waited for the copy")
 	}
 	again, err := svc.lookup("slow")
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	close(copies.held)
 	if c := <-first; c != again {
 		t.Fatal("two chats for one id")
@@ -202,7 +203,7 @@ func TestRecordOpensNothing(t *testing.T) {
 	stored := []model.Session{{ID: "c1", SessionID: "s1", Agent: "claude", Folder: folder, Worktree: wt}, {ID: "c2", Agent: "claude", Archived: true}}
 	svc := New([]Kind{{Name: "claude", Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: stored}, nil, t.TempDir(), func(model.Event) {})
 	sess, err := svc.Session("c1")
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	if sess.Worktree.Told != "nushi/a" || sess.SessionID != "s1" {
 		t.Errorf("record %+v", sess)
 	}
@@ -219,7 +220,7 @@ func TestRecordOpensNothing(t *testing.T) {
 		t.Errorf("opened %d chats", len(svc.chats))
 	}
 	c, err := svc.lookup("c1")
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	c.mu.Lock()
 	c.session.Title = "open"
 	c.mu.Unlock()

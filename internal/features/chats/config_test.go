@@ -9,6 +9,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // claudeSession is part of claude-agent-acp 0.94.0's session/new result: it
@@ -119,11 +120,11 @@ func TestUltracode(t *testing.T) {
 	if ultracodeOn(agent.newMeta) || current(c, ultracodeID) != "false" {
 		t.Fatalf("a new chat: %v, %s", agent.newMeta, current(c, ultracodeID))
 	}
-	noErr(t, svc.SetConfig(context.Background(), c.id, "model", "sonnet"))
+	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, "model", "sonnet"))
 	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
 	turn(t, svc, c, "one")
 	launches, _, _ := agent.count()
-	noErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "true"))
+	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "true"))
 	again, _, _ := agent.count()
 	agent.mu.Lock()
 	meta := agent.loadMeta
@@ -134,13 +135,13 @@ func TestUltracode(t *testing.T) {
 	if current(c, "model") != "sonnet" {
 		t.Errorf("the model after: %s", current(c, "model"))
 	}
-	noErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "true")) // no change: nothing restarts
+	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "true")) // no change: nothing restarts
 	if n, _, _ := agent.count(); n != again {
 		t.Errorf("restarted for nothing: %d", n)
 	}
 
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
 	eventually(t, c, func() bool { return c.busy })
 	if err := svc.SetConfig(context.Background(), c.id, ultracodeID, "false"); err == nil || !c.session.Ultracode {
 		t.Errorf("during a turn: %v", err)
@@ -149,8 +150,8 @@ func TestUltracode(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy })
 
 	// Asleep: kept, the agent left asleep until something needs it.
-	noErr(t, svc.Sleep(c.id))
-	noErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "false"))
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, ultracodeID, "false"))
 	if c.agent != nil || c.session.Ultracode {
 		t.Errorf("asleep: agent %v, stored %v", c.agent, c.session.Ultracode)
 	}

@@ -10,6 +10,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A message the agent answered without words can't be kept by a fork at
@@ -37,8 +38,8 @@ func TestAFailedSteerTakesTheMessageOut(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
 	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
 	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
@@ -96,8 +97,8 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 func TestSendNowStopsOnlyTheTurnItCameFor(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate, agent.ignoreCancel = make(chan struct{}), true
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "held"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "held"}, SendQueue))
 	now := make(chan error)
 	go func() { now <- svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow) }()
 	eventually(t, c, func() bool { return slices.Contains(agent.onWire(), "cancel") })
@@ -120,8 +121,8 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	side, _ := svc.Fork(context.Background(), c.id)
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "two"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "two"}, SendQueue))
 	q := svc.chats[side]
 	q.mu.Lock()
 	id := q.queue[0].ID
@@ -133,7 +134,7 @@ func TestTakingBackKeepsWhatAMessageHad(t *testing.T) {
 	eventually(t, q, func() bool { return !q.busy })
 
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "look at @a.go", Files: []string{"a.go"}}, SendIdle))
 	m, err := svc.Stop(context.Background(), c.id, true)
 	if err != nil || m == nil || !slices.Equal(m.Files, []string{"a.go"}) {
 		t.Errorf("taken back: %+v, %v", m, err)
@@ -211,7 +212,7 @@ func TestAPermissionWhileTheSessionChanges(t *testing.T) {
 		close(done)
 	}()
 	for i := range 200 {
-		noErr(t, svc.Rename(c.id, strconv.Itoa(i)))
+		testcheck.NoErr(t, svc.Rename(c.id, strconv.Itoa(i)))
 	}
 	eventually(t, c, func() bool { return len(c.waiting) == 1 })
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {

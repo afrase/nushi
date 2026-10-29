@@ -11,6 +11,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
@@ -89,7 +90,7 @@ func TestAStuckStoreLoadsClean(t *testing.T) {
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
 	turn(t, svc, c, "one")
 	svc.Close()
-	noErr(t, store.Append(c.id, []model.Item{
+	testcheck.NoErr(t, store.Append(c.id, []model.Item{
 		{ID: "item-8", Kind: model.Permission, Status: "pending", Title: "rm -rf build"},
 		{ID: "item-9", Kind: model.Question, Status: "pending", Text: "Pick one"},
 	}, []string{"m1", "item-8"}))
@@ -108,7 +109,7 @@ func TestAStuckStoreLoadsClean(t *testing.T) {
 	// A copy that still has one (written meanwhile) is cancelled as the
 	// chat reopens, with no pending card on the way.
 	svc2.Close()
-	noErr(t, store.Append(c.id, []model.Item{{ID: "item-8", Kind: model.Permission, Status: "pending"}}, []string{"m1"}))
+	testcheck.NoErr(t, store.Append(c.id, []model.Item{{ID: "item-8", Kind: model.Permission, Status: "pending"}}, []string{"m1"}))
 	var mu sync.Mutex
 	var events []model.Event
 	svc3 := New([]Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{},
@@ -143,7 +144,7 @@ func TestAPromptAskedAsTheChatReopensShows(t *testing.T) {
 			agent.loadGate = make(chan struct{})
 			svc2 := restarted(t, agent, c, store)
 			_, err := svc2.Get(c.id)
-			noErr(t, err)
+			testcheck.NoErr(t, err)
 			c2 := svc2.chats[c.id]
 			eventually(t, c2, func() bool { return c2.replaying })
 			asks(t, c2, kind)
@@ -165,6 +166,6 @@ func shownPrompts(c *chat) string {
 func mustCopy(t *testing.T, store *transcripts.Store, id string) string {
 	t.Helper()
 	items, err := store.Read(id)
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	return prompts(items)
 }
