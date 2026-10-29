@@ -205,6 +205,31 @@ class _ComposerState extends State<Composer> {
         if (!drop) _restoreMessage(r.message);
       });
 
+  /// Sends a queued message now: out of the queue, then in place of the
+  /// running turn (steer). Should the send fail, it's back in the box.
+  Future<void> _sendNow(QueuedMessage m) => tryOrShow(context, () async {
+    final r = await widget.daemon.client.unqueue(
+      UnqueueRequest(chatId: widget.chat.id, id: m.id),
+    );
+    final q = r.message;
+    try {
+      await widget.daemon.sendPrompt(
+        SendPromptRequest(
+          chatId: widget.chat.id,
+          text: q.text,
+          files: q.files,
+          images: q.images,
+          queue: widget.chat.busy,
+          now: widget.chat.started != null,
+          toSubagent: q.toSubagent,
+        ),
+      );
+    } on Object {
+      _restoreMessage(q);
+      rethrow;
+    }
+  });
+
   /// Sends the box's message; while the agent works it waits in the
   /// chat's queue, or with [now] stops the turn and goes at once.
   Future<void> _send({bool now = false}) async {
@@ -272,6 +297,7 @@ class _ComposerState extends State<Composer> {
               chat,
               onEdit: _unqueue,
               onRemove: (m) => _unqueue(m, drop: true),
+              onSendNow: _sendNow,
             ),
           if (chat.error.isNotEmpty)
             Padding(
@@ -379,17 +405,20 @@ class _ComposerState extends State<Composer> {
                         ),
                       ),
                     ),
-                    // A phone has no ⏎ or ⌘⏎ to send with: Queue (after
-                    // this turn) and Steer (stop it, and this goes now).
-                    if (touch && written && chat.busy) ...[
+                    // Queue (after this turn) and Steer (stop it, and this
+                    // goes now): a phone's only way, the Mac's ⏎ and ⌘⏎
+                    // as buttons.
+                    if (written && chat.busy) ...[
                       boxButton(
-                        'Queue',
+                        touch ? 'Queue' : 'Queue (⏎)',
                         _send,
                         Icon(Icons.queue, size: 16, color: t.textSecondary),
                       ),
                       if (chat.started != null)
                         boxButton(
-                          'Steer: stop and send now',
+                          touch
+                              ? 'Steer: stop and send now'
+                              : 'Steer: stop and send now (⌘⏎)',
                           () => _send(now: true),
                           Icon(
                             Icons.fast_forward,
