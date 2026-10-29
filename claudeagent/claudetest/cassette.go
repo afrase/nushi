@@ -83,7 +83,7 @@ func (c *Cassette) parse(n int, line []byte) error {
 // and user messages', so responses and echoes carry the live ones.
 func Replay(c *Cassette) *Fake {
 	ids := map[string]string{}
-	steps := []Step{{"the session's id", func(r *run) error {
+	steps := []Step{{name: "the session's id", run: func(r *run) error {
 		live := flags(r.f.Spec().Args)
 		for k, rec := range flags(c.Header.Argv) {
 			if l := live[k]; l != "" {
@@ -144,7 +144,9 @@ func expectRecorded(rec json.RawMessage, ids map[string]string) Step {
 	if r.Request.Subtype != "" {
 		want["request"] = map[string]any{"subtype": r.Request.Subtype}
 	}
-	return Step{strings.TrimSpace("expect recorded " + r.Type + " " + r.Subtype + r.Request.Subtype), func(run *run) error {
+	var recorded any
+	_ = json.Unmarshal(rec, &recorded)
+	return Step{name: strings.TrimSpace("expect recorded " + r.Type + " " + r.Subtype + r.Request.Subtype), wants: recorded, run: func(run *run) error {
 		line, err := run.line()
 		if err != nil {
 			return fmt.Errorf("stdin: %w", err)
@@ -165,7 +167,7 @@ func expectRecorded(rec json.RawMessage, ids map[string]string) Step {
 
 // sendRecorded writes rec with the live ids for the recorded ones.
 func sendRecorded(rec json.RawMessage, ids map[string]string) Step {
-	return Step{"send recorded", func(r *run) error {
+	return Step{name: "send recorded", run: func(r *run) error {
 		pairs := make([]string, 0, 2*len(ids))
 		for rec, live := range ids {
 			pairs = append(pairs, `"`+rec+`"`, `"`+live+`"`) // whole JSON strings, never part of one

@@ -249,3 +249,44 @@ func TestRespond(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 }
+
+// Awaiting is met once the script waits for such a line, not while it
+// plays what comes before; a recorded line counts as an Expect's match.
+func TestAwaiting(t *testing.T) {
+	hold := make(chan struct{})
+	interrupt := `{"type":"control_request","request_id":"i1","request":{"subtype":"interrupt"}}`
+	c := &Cassette{Header: Header{Argv: []string{"--verbose"}}, Frames: []Frame{
+		{Dir: "in", Frame: []byte(`{"type":"user","uuid":"u-1"}`)},
+		{Dir: "in", Frame: []byte(interrupt)},
+	}}
+	f := Replay(c)
+	f.steps = slices.Insert(f.steps, 2, Until(hold), Send(`{"type":"result"}`))
+	s := start(t, f)
+	interrupted := f.Awaiting(`{"type":"control_request"}`)
+	select {
+	case <-f.Awaiting(`{"type":"user"}`):
+	case <-f.Exited():
+		t.Fatal("the fake ended")
+	}
+	s.write(t, `{"type":"user","uuid":"u-2"}`)
+	select {
+	case <-interrupted:
+		t.Fatal("met before the script got there")
+	default:
+	}
+	close(hold)
+	if got := s.read(t); got != `{"type":"result"}` {
+		t.Fatalf("read %s", got)
+	}
+	<-interrupted
+	select {
+	case <-f.Awaiting(`{"request":{"subtype":"interrupt"}}`): // at once: the script is there
+	default:
+		t.Fatal("not met while the script waits there")
+	}
+	s.write(t, interrupt)
+	_ = s.Stdin.Close()
+	if err := s.Wait(); err != nil || f.Err() != nil {
+		t.Errorf("%v %v", err, f.Err())
+	}
+}
