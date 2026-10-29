@@ -15,13 +15,32 @@ import 'package:nushi/widgets.dart';
 /// put in a chat's box, to go with the user's next message; never sent
 /// here. In a chat's Pull request tab, that chat's box (its bar counts
 /// them); else the item's chat (the one picked, when it has several),
-/// and with none, Start work makes one first.
+/// and with none, Start work makes one first; [chat], that chat (the PR
+/// widget's).
 Future<void> toAgent(
   BuildContext context,
   Daemon daemon,
   GitHubItem item, {
   required Future<List<Reply>> Function() replies,
+  ChatState? chat,
 }) async {
+  if (chat case final mine?) {
+    await tryOrShow(context, () async {
+      final me = await githubLogin(daemon, item.ref.host);
+      for (final r in await replies()) {
+        mine.draft.addReply(
+          onPull(
+            r,
+            repo: item.ref.repo,
+            number: item.ref.number,
+            author: item.author,
+            me: me,
+          ),
+        );
+      }
+    });
+    return;
+  }
   if (context.getInheritedWidgetOfExactType<SendToAgent>() case final here?) {
     await tryOrShow(
       context,
@@ -30,18 +49,18 @@ Future<void> toAgent(
     return;
   }
   var chats = chatsOnItem(daemon, item.ref);
-  ChatState? chat;
+  ChatState? picked;
   if (chats.length == 1) {
-    chat = chats.first;
+    picked = chats.first;
   } else if (chats.length > 1) {
-    chat = await showDialog<ChatState>(
+    picked = await showDialog<ChatState>(
       context: context,
       builder: (_) => _PickChat(chats),
     );
-    if (chat == null) return;
+    if (picked == null) return;
   }
   if (!context.mounted) return;
-  if (chat == null) {
+  if (picked == null) {
     final clones =
         githubFolders.value[(item.ref.host, item.ref.repo)] ?? const [];
     await startOn(
@@ -52,9 +71,9 @@ Future<void> toAgent(
     );
     chats = chatsOnItem(daemon, item.ref);
     if (chats.isEmpty) return; // not started
-    chat = chats.first;
+    picked = chats.first;
   }
-  final target = chat;
+  final target = picked;
   if (!context.mounted) return;
   await tryOrShow(context, () async {
     final me = await githubLogin(daemon, item.ref.host);
