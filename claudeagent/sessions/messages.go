@@ -44,7 +44,7 @@ type Message struct {
 // are left out. An error matching fs.ErrNotExist says the session isn't
 // there.
 func Messages(configDir, id, cwd string) ([]Message, error) {
-	path, err := find(configDir, id, cwd, false)
+	path, err := find(configDir, id, cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ type Subagent struct {
 // in the order of their files' names. A session with none has none; an
 // error matching fs.ErrNotExist says the session isn't there.
 func Subagents(configDir, id, cwd string) ([]Subagent, error) {
-	path, err := find(configDir, id, cwd, false)
+	path, err := find(configDir, id, cwd)
 	if err != nil {
 		return nil, err
 	}

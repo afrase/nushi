@@ -1,8 +1,8 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/session_mutations.py), MIT License,
 // Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: Fork can
-// write into another folder's history, and Delete of a missing session
-// succeeds.
+// write into another folder's history, and Delete clears every folder the
+// session may be in and succeeds when it isn't there.
 
 package sessions
 
@@ -42,7 +42,7 @@ func Fork(configDir, id, cwd string, o ForkOptions) (string, error) {
 			return "", err
 		}
 	}
-	path, err := find(configDir, id, cwd, false)
+	path, err := find(configDir, id, cwd)
 	if err != nil {
 		return "", err
 	}
@@ -212,19 +212,28 @@ func writeNew(path string, data []byte) error {
 }
 
 // Delete removes session id's transcript and its folder (its subagents'
-// transcripts and the like) for good. A session that isn't there is no
-// error. A running CLI writes to a transcript as it ends, so stop the
-// session's process first.
+// transcripts and the like) for good, from every project folder Get would
+// look in. A session that isn't there is no error. A running CLI writes to
+// a transcript as it ends, so stop the session's process first.
 func Delete(configDir, id, cwd string) error {
-	path, err := find(configDir, id, cwd, true)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
+	if err := checkID(id); err != nil {
+		return err
 	}
+	projects, err := projectsDir(configDir)
 	if err != nil {
 		return err
 	}
-	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+	// Every folder, not just the first with the transcript: the CLI leaves
+	// empty transcripts in some, and one ahead of the real one must not
+	// keep it.
+	for _, dir := range candidates(projects, cwd) {
+		path := filepath.Join(dir, id)
+		if err := os.Remove(path + ".jsonl"); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		}
 	}
-	return os.RemoveAll(strings.TrimSuffix(path, ".jsonl"))
+	return nil
 }
