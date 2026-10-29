@@ -15,13 +15,13 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 
+	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/folderfiles"
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
@@ -40,13 +40,7 @@ type Trust struct{}
 func (Trust) Key(folder string) string { return folderfiles.Key("codex", folder, files(folder)) }
 
 // configFile is Codex's own config.
-func configFile() string {
-	if dir := os.Getenv("CODEX_HOME"); dir != "" {
-		return filepath.Join(dir, "config.toml")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".codex", "config.toml")
-}
+func configFile() string { return filepath.Join(codex.Home(), "config.toml") }
 
 // Trusted says whether folder is trusted: by Codex, or by one of also,
 // keys Nushi was told to trust.

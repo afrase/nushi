@@ -29,18 +29,14 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/afrase/nushi/internal/codex"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
 // Codex reads and changes Codex's skills.
 type Codex struct{}
-
-// home is Codex's folder: $CODEX_HOME, else ~/.codex.
-func home() string {
-	userHome, _ := os.UserHomeDir()
-	return cmp.Or(os.Getenv("CODEX_HOME"), filepath.Join(userHome, ".codex"))
-}
 
 // root is a skills folder and what its skills are.
 type root struct {
@@ -53,11 +49,11 @@ type root struct {
 func roots(folder string) []root {
 	userHome, _ := os.UserHomeDir()
 	out := []root{
-		{path: filepath.Join(home(), "skills"), source: "user"},
-		{path: filepath.Join(home(), "skills", ".system"), source: "system"},
+		{path: filepath.Join(codex.Home(), "skills"), source: "user"},
+		{path: filepath.Join(codex.Home(), "skills", ".system"), source: "system"},
 		{path: filepath.Join(userHome, ".agents", "skills"), source: "shared", everywhere: true},
 	}
-	folder = realPath(folder)
+	folder = git.RealPath(folder)
 	top := cmp.Or(skillfile.Top(folder), folder)
 	for _, kind := range []struct{ rel, source string }{{".codex/skills", "project"}, {".agents/skills", "shared"}} {
 		for _, r := range skillfile.Roots(folder, top, kind.rel) {
@@ -67,13 +63,6 @@ func roots(folder string) []root {
 		}
 	}
 	return out
-}
-
-func realPath(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil {
-		return r
-	}
-	return p
 }
 
 // List returns Codex's skills in folder, the shared ones among them, each
@@ -104,21 +93,13 @@ func (Codex) List(_ context.Context, folder string) (model.Skills, error) {
 }
 
 // skillFile is a skill's SKILL.md as Codex names it: links resolved.
-func skillFile(dir string) string { return realPath(filepath.Join(dir, "SKILL.md")) }
-
-// Shared returns the shared skills Codex loads in folder.
-func (c Codex) Shared(ctx context.Context, folder string) []model.Skill {
-	l, _ := c.List(ctx, folder)
-	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
-}
+func skillFile(dir string) string { return git.RealPath(filepath.Join(dir, "SKILL.md")) }
 
 // find is folder's skill of source and name, as listed.
 func (c Codex) find(ctx context.Context, folder, source, name string) (model.Skill, error) {
 	l, _ := c.List(ctx, folder)
-	for _, s := range l.Skills {
-		if s.Source == source && s.Name == name {
-			return s, nil
-		}
+	if s, ok := l.Find(source, name); ok {
+		return s, nil
 	}
 	return model.Skill{}, fmt.Errorf("Codex has no %s skill %q here", source, name)
 }

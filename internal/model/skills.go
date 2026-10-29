@@ -23,6 +23,16 @@ type Skills struct {
 	ReadsShared bool
 }
 
+// Find is the listed skill of source and name, the first if several.
+func (s Skills) Find(source, name string) (Skill, bool) {
+	for _, sk := range s.Skills {
+		if sk.Source == source && sk.Name == name {
+			return sk, true
+		}
+	}
+	return Skill{}, false
+}
+
 // Skill is one skill, as its files give it.
 type Skill struct {
 	// Name is the skill's name as the agent lists it (a plugin's

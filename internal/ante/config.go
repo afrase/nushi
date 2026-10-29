@@ -1,6 +1,7 @@
 package ante
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -51,7 +52,7 @@ func (b *bridge) options(in info) []acp.SessionConfigOption {
 			continue
 		}
 		for _, m := range p.Models {
-			models = append(models, value{m.ID, cmp(m.Description, m.ID)})
+			models = append(models, value{m.ID, cmp.Or(m.Description, m.ID)})
 		}
 	}
 	if !slices.ContainsFunc(models, func(v value) bool { return v.Value == in.Model.ID }) {
@@ -92,13 +93,6 @@ func (b *bridge) efforts(in info) []string {
 		efforts = ladder
 	}
 	return efforts
-}
-
-func cmp(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 // configUpdates tell the client the session's mode and options as Ante

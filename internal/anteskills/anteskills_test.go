@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -27,6 +28,11 @@ func listed(skills []model.Skill) string {
 		out = append(out, fmt.Sprintf("%s %s %s", s.Source, s.Name, s.State))
 	}
 	return strings.Join(out, "|")
+}
+
+// sharedOf is a list's shared skills, as the skills feature takes them.
+func sharedOf(l model.Skills) []model.Skill {
+	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
 }
 
 // Ante's skills: the folder's own (no walk up), .ante over .agents over
@@ -74,8 +80,8 @@ func TestListAndSwitch(t *testing.T) {
 	if string(b) != "{\n  \"exclude_skills\": [\n    \"release\"\n  ],\n  \"model\": \"x\"\n}\n" {
 		t.Errorf("settings: %s", b)
 	}
-	if sh := (Ante{}).Shared(ctx, folder); listed(sh) != "shared release off|shared everyday on" {
-		t.Errorf("shared: %s", listed(sh))
+	if l, _ := (Ante{}).List(ctx, folder); listed(sharedOf(l)) != "shared release off|shared everyday on" {
+		t.Errorf("shared: %s", listed(sharedOf(l)))
 	}
 	if err := (Ante{}).SetSkillOn(ctx, folder, "shared", "release", true); err != nil {
 		t.Fatal(err)

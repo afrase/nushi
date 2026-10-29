@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/afrase/nushi/internal/claudemcp"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
@@ -29,10 +29,10 @@ type plugin struct {
 // listPlugins asks Claude for the plugins installed (`claude plugin list
 // --json`, run outside the folder: never in a folder that may be a
 // stranger's), keeps those that count for folder (yours, and those
-// installed for its project), and works out whether each is on there from
-// the settings files' enabledPlugins (local over shared over yours, as
+// installed for its project, key), and works out whether each is on there
+// from the settings files' enabledPlugins (the first that names it, as
 // Claude does). It reads what each brings from its folder.
-func listPlugins(ctx context.Context, folder string) ([]plugin, error) {
+func listPlugins(ctx context.Context, folder, key string) ([]plugin, error) {
 	out, err := claudePlugin(ctx, "list", "--json")
 	if err != nil {
 		return nil, err
@@ -41,11 +41,11 @@ func listPlugins(ctx context.Context, folder string) ([]plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-	here := []string{folder, claudemcp.Claude{}.Project(folder)}
+	here := []string{folder, key}
 	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
 		here = append(here, resolved)
 	}
-	files := settingsFiles(folder)
+	files := settingsFiles(folder, key)
 	var kept []plugin
 	for _, p := range plugins {
 		if p.Scope != "user" && !slices.Contains(here, p.projectPath) {
@@ -172,7 +172,7 @@ func claudePlugin(ctx context.Context, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "claude", append([]string{"plugin"}, args...)...) //nolint:gosec // the user's claude; ids checked and after --
-	cmd.Dir = configDir()
+	cmd.Dir = claude.ConfigDir()
 	if fi, err := os.Stat(cmd.Dir); err != nil || !fi.IsDir() {
 		cmd.Dir = os.TempDir()
 	}

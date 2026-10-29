@@ -33,17 +33,19 @@ func errSetIn(what, file string) error {
 // off. Off is "off"; on drops the skill's override, or says "on" when a
 // file below the one changed would keep it off.
 func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
+	key := claudemcp.Project(folder)
 	if source == "shared" { // a shared skill Claude has through a link of its own: that skill
-		i := slices.IndexFunc(c.Shared(ctx, folder), func(s model.Skill) bool { return s.Name == name })
+		shared := c.shared(ctx, folder, key)
+		i := slices.IndexFunc(shared, func(s model.Skill) bool { return s.Name == name })
 		if i < 0 {
 			return fmt.Errorf("Claude doesn't load a shared skill %q here", name)
 		}
 		source = "project"
-		if filepath.Dir(c.Shared(ctx, folder)[i].Agents[0].Via) == userRoot() {
+		if filepath.Dir(shared[i].Agents[0].Via) == userRoot() {
 			source = "user"
 		}
 	}
-	roots := map[string][]string{"user": {userRoot()}, "project": projectRoots(ctx, folder)}[source]
+	roots := map[string][]string{"user": {userRoot()}, "project": projectRoots(folder)}[source]
 	found := false
 	for _, root := range roots {
 		found = found || slices.ContainsFunc(read(root, source), func(s model.Skill) bool { return s.Name == name })
@@ -51,8 +53,8 @@ func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on 
 	if !found {
 		return fmt.Errorf("no %s skill %q here", source, name)
 	}
-	files := settingsFiles(folder)
-	t := target(source)
+	files := settingsFiles(folder, key)
+	t := target(files, source)
 	if _, setIn := state(files, model.Skill{Name: name, Source: source}); setIn != "" {
 		return errSetIn(name, setIn)
 	}
@@ -83,7 +85,7 @@ func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on 
 		return err
 	}
 	if t == 0 {
-		return claudemcp.EditLocal(ctx, folder, change)
+		return claudemcp.EditLocal(ctx, key, change)
 	}
 	return claudemcp.EditUser(change)
 }
@@ -91,7 +93,7 @@ func (c Claude) SetSkillOn(ctx context.Context, folder, source, name string, on 
 // SetBuiltInOn turns Claude's built-in skills on or off, everywhere
 // (disableBundledSkills in your settings).
 func (Claude) SetBuiltInOn(_ context.Context, folder string, on bool) error {
-	if _, setIn := builtInOff(settingsFiles(folder)); setIn != "" {
+	if _, setIn := builtInOff(settingsFiles(folder, claudemcp.Project(folder))); setIn != "" {
 		return errSetIn("Whether built-in skills are on", setIn)
 	}
 	return claudemcp.EditUser(func(settings map[string]json.RawMessage) error {
@@ -106,12 +108,13 @@ func (Claude) SetBuiltInOn(_ context.Context, folder string, on bool) error {
 // validID is a plugin's id as Claude makes it: "<name>@<marketplace>".
 var validID = regexp.MustCompile(`^[A-Za-z0-9_.][A-Za-z0-9_.-]*(@[A-Za-z0-9_.][A-Za-z0-9_.-]*)?$`)
 
-// installed is folder's installed plugin id.
-func installed(ctx context.Context, folder, id string) (plugin, error) {
+// installed is folder's installed plugin id, the folder's project being
+// key.
+func installed(ctx context.Context, folder, key, id string) (plugin, error) {
 	if !validID.MatchString(id) {
 		return plugin{}, fmt.Errorf("%q isn't a plugin's id", id)
 	}
-	plugins, err := listPlugins(ctx, folder)
+	plugins, err := listPlugins(ctx, folder, key)
 	if err != nil {
 		return plugin{}, err
 	}
@@ -128,10 +131,15 @@ func installed(ctx context.Context, folder, id string) (plugin, error) {
 // else the project's local settings ("local"), which win over the shared
 // ones (Claude's own `--scope` guess changed a shared file, seen).
 func (Claude) PluginScope(folder string, p model.Plugin) string {
+	return pluginScope(settingsFiles(folder, claudemcp.Project(folder)), p)
+}
+
+// pluginScope is PluginScope, from the folder's settings files.
+func pluginScope(files []settings, p model.Plugin) string {
 	if p.Scope != "user" {
 		return "local"
 	}
-	for _, f := range settingsFiles(folder)[:2] {
+	for _, f := range files[:len(files)-1] { // all but yours
 		if _, ok := f.EnabledPlugins[p.ID]; ok {
 			return "local"
 		}
@@ -145,12 +153,13 @@ func (Claude) PluginScope(folder string, p model.Plugin) string {
 // enabledPlugins entry in the project's local settings, the key Claude's
 // own advice names (only that entry changes).
 func (Claude) SetPluginOn(ctx context.Context, folder, id string, on bool) error {
-	p, err := installed(ctx, folder, id)
+	key := claudemcp.Project(folder)
+	p, err := installed(ctx, folder, key, id)
 	if err != nil {
 		return err
 	}
-	if (Claude{}).PluginScope(folder, p.Plugin) == "local" {
-		return claudemcp.EditLocal(ctx, folder, func(settings map[string]json.RawMessage) error {
+	if pluginScope(settingsFiles(folder, key), p.Plugin) == "local" {
+		return claudemcp.EditLocal(ctx, key, func(settings map[string]json.RawMessage) error {
 			enabled := map[string]json.RawMessage{}
 			if raw, ok := settings["enabledPlugins"]; ok && string(raw) != "null" && json.Unmarshal(raw, &enabled) != nil {
 				return errors.New("enabledPlugins isn't a map")
@@ -177,7 +186,7 @@ func (Claude) SetPluginOn(ctx context.Context, folder, id string, on bool) error
 // project is uninstalled there, with /plugin in a terminal: Claude would
 // have to run in the folder.
 func (Claude) Uninstall(ctx context.Context, folder, id string) error {
-	p, err := installed(ctx, folder, id)
+	p, err := installed(ctx, folder, claudemcp.Project(folder), id)
 	if err != nil {
 		return err
 	}
@@ -193,7 +202,7 @@ func (Claude) Uninstall(ctx context.Context, folder, id string) error {
 // folder's project's, holding a SKILL.md.
 func (Claude) Trash(ctx context.Context, folder, path string) error {
 	name := filepath.Base(path)
-	roots := append([]string{userRoot()}, projectRoots(ctx, folder)...)
+	roots := append([]string{userRoot()}, projectRoots(folder)...)
 	if filepath.Clean(path) != path || strings.HasPrefix(name, ".") || !slices.Contains(roots, filepath.Dir(path)) {
 		return fmt.Errorf("%s isn't a skill's folder", path)
 	}
@@ -210,5 +219,5 @@ func (Claude) Trash(ctx context.Context, folder, path string) error {
 			}
 		}
 	}
-	return skillfile.Trash(ctx, projectRoots(ctx, folder), []string{userRoot()}, path)
+	return skillfile.Trash(ctx, projectRoots(folder), []string{userRoot()}, path)
 }

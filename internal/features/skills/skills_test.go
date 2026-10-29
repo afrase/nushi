@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -12,13 +13,15 @@ import (
 
 type fakeReader struct {
 	list   model.Skills
-	shared []model.Skill
+	listed int // List's calls
 	calls  *[]string
 	name   string
 }
 
-func (f *fakeReader) List(context.Context, string) (model.Skills, error) { return f.list, nil }
-func (f *fakeReader) Shared(context.Context, string) []model.Skill       { return f.shared }
+func (f *fakeReader) List(context.Context, string) (model.Skills, error) {
+	f.listed++
+	return model.Skills{Skills: slices.Clone(f.list.Skills)}, nil
+}
 func (f *fakeReader) SetSkillOn(_ context.Context, _, source, name string, on bool) error {
 	*f.calls = append(*f.calls, fmt.Sprintf("%s skill %s %s %v", f.name, source, name, on))
 	return nil
@@ -28,8 +31,12 @@ func (f *fakeReader) Trash(_ context.Context, _, path string) error {
 	return nil
 }
 
-type fakeClaude struct{ fakeReader }
+type fakeClaude struct {
+	fakeReader
+	shared []model.Skill
+}
 
+func (f *fakeClaude) Shared(context.Context, string) []model.Skill { return f.shared }
 func (f *fakeClaude) SetBuiltInOn(_ context.Context, _ string, on bool) error {
 	*f.calls = append(*f.calls, fmt.Sprintf("builtin %v", on))
 	return nil
@@ -42,20 +49,25 @@ func (f *fakeClaude) Link(_ context.Context, _, path string) error {
 // Two agents: Codex reads /r/.agents/skills/a and /r/.agents/skills/b;
 // Claude has b through its link /r/.claude/skills/b.
 func fakes() (*Service, *[]string) {
+	svc, _, calls := fakesWithCodex()
+	return svc, calls
+}
+
+func fakesWithCodex() (*Service, *fakeReader, *[]string) {
 	calls := &[]string{}
 	codex := &fakeReader{name: "codex", calls: calls,
-		list: model.Skills{Skills: []model.Skill{{Name: "mine", Source: "user"}, {Name: "a", Source: "shared", Path: "/r/.agents/skills/a"}}},
-		shared: []model.Skill{{Name: "a", Source: "shared", Path: "/r/.agents/skills/a", State: "off"},
-			{Name: "b", Source: "shared", Path: "/r/.agents/skills/b", State: "on"}}}
-	claude := &fakeClaude{fakeReader{name: "claude", calls: calls,
+		list: model.Skills{Skills: []model.Skill{{Name: "mine", Source: "user"},
+			{Name: "a", Source: "shared", Path: "/r/.agents/skills/a", State: "off"},
+			{Name: "b", Source: "shared", Path: "/r/.agents/skills/b", State: "on"}}}}
+	claude := &fakeClaude{name: "claude", calls: calls,
 		list: model.Skills{Skills: []model.Skill{{Name: "b", Source: "project", Path: "/r/.claude/skills/b", Linked: "../../.agents/skills/b"},
 			{Name: "own", Source: "project", Path: "/r/.claude/skills/own"}}},
-		shared: []model.Skill{{Name: "b", Source: "shared", Path: "/r/.agents/skills/b", State: "on", Agents: []model.SkillAgent{{Via: "/r/.claude/skills/b"}}}}}}
+		shared: []model.Skill{{Name: "b", Source: "shared", Path: "/r/.agents/skills/b", State: "on", Agents: []model.SkillAgent{{Via: "/r/.claude/skills/b"}}}}}
 	trash := func(_ context.Context, project, yours []string, path string) error {
 		*calls = append(*calls, fmt.Sprintf("trash %s in %v %v", path, project, yours))
 		return nil
 	}
-	return New([]string{"claude", "codex"}, map[string]Reader{"claude": claude, "codex": codex}, trash), calls
+	return New([]string{"claude", "codex"}, map[string]Reader{"claude": claude, "codex": codex}, trash), codex, calls
 }
 
 func show(skills []model.Skill) []string {
@@ -77,7 +89,7 @@ func show(skills []model.Skill) []string {
 // An agent's list has its own skills, then every shared skill with the
 // agents that load it; its own link to a shared one shows as that one.
 func TestListMergesShared(t *testing.T) {
-	svc, _ := fakes()
+	svc, codex, _ := fakesWithCodex()
 	ctx := context.Background()
 	got, err := svc.List(ctx, "claude", "/r")
 	if err != nil {
@@ -87,9 +99,13 @@ func TestListMergesShared(t *testing.T) {
 	if !reflect.DeepEqual(show(got.Skills), want) {
 		t.Errorf("claude's:\n%q\nwant\n%q", show(got.Skills), want)
 	}
+	codex.listed = 0
 	got, _ = svc.List(ctx, "codex", "/r")
 	if want := []string{"user mine", "shared a codex:off", "shared b claude:on@/r/.claude/skills/b codex:on"}; !reflect.DeepEqual(show(got.Skills), want) {
 		t.Errorf("codex's: %q", show(got.Skills))
+	}
+	if codex.listed != 1 {
+		t.Errorf("codex's skills read %d times for its list, want once", codex.listed)
 	}
 	if got, err := svc.List(ctx, "gemini", "/r"); err != nil || got.NoSkills == "" {
 		t.Errorf("an agent without a reader: %+v %v", got, err)

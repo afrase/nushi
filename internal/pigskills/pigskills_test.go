@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,6 +24,11 @@ func listed(skills []model.Skill) string {
 		out = append(out, fmt.Sprintf("%s %s %s", s.Source, s.Name, s.State))
 	}
 	return strings.Join(out, "|")
+}
+
+// sharedOf is a list's shared skills, as the skills feature takes them.
+func sharedOf(l model.Skills) []model.Skill {
+	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
 }
 
 // setup gives PiG a throwaway agent folder and HOME, and a repository
@@ -81,8 +87,8 @@ func TestTrust(t *testing.T) {
 	if l, _ := (PiG{}).List(ctx, deeper); !strings.Contains(listed(l.Skills), "release on") {
 		t.Errorf("trusted by default: %s", listed(l.Skills))
 	}
-	if sh := (PiG{}).Shared(ctx, deeper); len(sh) != 3 {
-		t.Errorf("shared: %s", listed(sh))
+	if l, _ := (PiG{}).List(ctx, deeper); len(sharedOf(l)) != 3 {
+		t.Errorf("shared: %s", listed(sharedOf(l)))
 	}
 }
 

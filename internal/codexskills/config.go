@@ -17,6 +17,8 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/afrase/nushi/internal/atomicfile"
+	"github.com/afrase/nushi/internal/codex"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 )
 
@@ -32,7 +34,7 @@ import (
 // config.toml". Only that list changes, and the file is replaced at once.
 
 // configFile is Codex's config.toml.
-func configFile() string { return filepath.Join(home(), "config.toml") }
+func configFile() string { return filepath.Join(codex.Home(), "config.toml") }
 
 // entry is one [[skills.config]] entry.
 type entry struct {
@@ -71,7 +73,7 @@ func enabled(entries []entry, file, name string) bool {
 		if e.Path != nil && e.Name != nil {
 			continue
 		}
-		if e.Path != nil && realPath(*e.Path) == file || e.Name != nil && *e.Name == name {
+		if e.Path != nil && git.RealPath(*e.Path) == file || e.Name != nil && *e.Name == name {
 			on = e.Enabled == nil || *e.Enabled
 		}
 	}
@@ -112,7 +114,7 @@ func blocks(lines []string) []block {
 			case m[2] == "path":
 				var v struct{ Path string }
 				if _, err := toml.Decode(strings.TrimSpace(line), &v); err == nil {
-					b.path, b.pathLine = realPath(v.Path), b.end
+					b.path, b.pathLine = git.RealPath(v.Path), b.end
 				} else {
 					b.simple = false
 				}
@@ -252,7 +254,7 @@ func only(before, after map[string]any, file, name string, on bool) bool {
 			}
 		}
 		for _, e := range list(m) {
-			if p, ok := e["path"].(string); ok && realPath(p) == file {
+			if p, ok := e["path"].(string); ok && git.RealPath(p) == file {
 				ours = append(ours, e)
 			} else {
 				others = append(others, e)

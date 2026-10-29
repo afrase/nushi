@@ -10,6 +10,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
@@ -119,6 +120,6 @@ func projectDisabled(folder string) ([]string, error) {
 			Disabled names `json:"disabledMcpServers"`
 		} `json:"projects"`
 	}
-	err := readJSON(ConfigFile(), &cfg)
-	return cfg.Projects[project(folder)].Disabled, err
+	err := readJSON(claude.ConfigFile(), &cfg)
+	return cfg.Projects[Project(folder)].Disabled, err
 }

@@ -1,6 +1,7 @@
 package ante
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/git"
 )
 
 func resume(id acp.SessionID) map[string]any {
@@ -162,7 +165,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 	src.mu.Lock()
 	op := map[string]any{}
 	if t := turnOf(after); t != "" {
-		i := slicesIndex(src.turns, t)
+		i := slices.Index(src.turns, t)
 		if i < 0 {
 			src.mu.Unlock()
 			return nil, fmt.Errorf("no message %q in the session", after)
@@ -187,22 +190,13 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 	return &acp.ForkSessionResponse{SessionID: acp.SessionID(forked.ID), Modes: n.Modes, ConfigOptions: n.ConfigOptions}, nil
 }
 
-func slicesIndex(s []string, v string) int {
-	for i, x := range s {
-		if x == v {
-			return i
-		}
-	}
-	return -1
-}
-
 // list reads Ante's saved sessions (it has no op for them): each one's
 // meta.json, newest first, only those in cwd when given (links resolved on
 // both sides: a terminal's Ante keeps the real path), with how many
 // messages each has.
 func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 	out := acp.ListSessionsResponse{Sessions: []acp.SessionInfo{}}
-	cwd = realPath(cwd)
+	cwd = git.RealPath(cwd)
 	dirs, _ := os.ReadDir(filepath.Join(b.home, "sessions"))
 	for _, d := range dirs {
 		raw, err := os.ReadFile(filepath.Join(b.home, "sessions", d.Name(), "meta.json"))
@@ -212,10 +206,10 @@ func (b *bridge) list(cwd string) acp.ListSessionsResponse {
 			Messages       int    `json:"message_count"`
 			Active         string `json:"last_active_time"`
 		}
-		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && realPath(m.Dir) != cwd {
+		if err != nil || json.Unmarshal(raw, &m) != nil || !isSessionID(m.ID) || cwd != "" && git.RealPath(m.Dir) != cwd {
 			continue
 		}
-		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp(m.Title, firstLine(skillRun(m.First))), UpdatedAt: m.Active}
+		info := acp.SessionInfo{SessionID: acp.SessionID(m.ID), Cwd: m.Dir, Title: cmp.Or(m.Title, firstLine(skillRun(m.First))), UpdatedAt: m.Active}
 		if m.Messages > 0 {
 			info.Meta = map[string]any{"messageCount": m.Messages}
 		}
@@ -251,14 +245,6 @@ func withoutFolder(text string) string {
 		return before
 	}
 	return text
-}
-
-// realPath is path with its links resolved, or as it is when it can't be.
-func realPath(path string) string {
-	if resolved, err := filepath.EvalSymlinks(path); err == nil && path != "" {
-		return resolved
-	}
-	return path
 }
 
 // delete removes a saved session: its folder, as Ante has no op for it,

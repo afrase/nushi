@@ -12,7 +12,9 @@ import (
 	"io/fs"
 	"log/slog"
 	"math"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -57,6 +59,31 @@ const (
 	CLI  = "claude"
 	Page = "https://code.claude.com/docs/en/setup"
 )
+
+// ConfigDir is Claude Code's config folder: $CLAUDE_CONFIG_DIR, else
+// ~/.claude. As every agent's folder, it is read from the daemon's own
+// environment.
+func ConfigDir() string {
+	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
+		return dir
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".claude")
+}
+
+// ConfigFile is Claude's own config file, which holds user and local MCP
+// servers and the folders trusted: $CLAUDE_CONFIG_DIR/.claude.json, else
+// ~/.claude.json (beside ~/.claude, not in it).
+func ConfigFile() string {
+	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
+		return filepath.Join(dir, ".claude.json")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".claude.json")
+}
+
+// UserSettings is your settings file: settings.json in the config folder.
+func UserSettings() string { return filepath.Join(ConfigDir(), "settings.json") }
 
 // Tested are the Claude Code versions the adapter was run with: its own
 // (until milestone Z), then the user's.

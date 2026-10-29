@@ -12,13 +12,18 @@ import (
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
-// RealPath returns path with its symlinks resolved, or as it is when that
-// fails.
+// RealPath returns path with its symlinks resolved (macOS's /tmp is
+// /private/tmp), as git reports worktrees and agents keep a session's
+// cwd; path cleaned when it can't be resolved (a folder that's gone), so
+// two spellings of it still compare equal; "" for "".
 func RealPath(path string) string {
+	if path == "" {
+		return ""
+	}
 	if r, err := filepath.EvalSymlinks(path); err == nil {
 		return r
 	}
-	return path
+	return filepath.Clean(path)
 }
 
 // TrustRoot returns the root of folder's work tree ("" outside git) and
