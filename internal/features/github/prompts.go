@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/afrase/nushi/internal/mdwrite"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -73,7 +74,7 @@ func (s *Service) FixChecks(ctx context.Context, ref model.GitHubRef) (string, e
 		}
 		if c.ID != 0 {
 			if tail, err := s.JobTail(ctx, ref, c.ID); err == nil && tail != "" {
-				fmt.Fprintf(&data, "The end of its log:\n%s\n", fence(tail))
+				fmt.Fprintf(&data, "The end of its log:\n%s\n", mdwrite.Fence(tail, ""))
 			}
 		}
 		data.WriteString("\n")
@@ -105,15 +106,6 @@ func (s *Service) whose(ctx context.Context, ref model.GitHubRef, author string)
 	default:
 		return ", @" + author + "'s pull request"
 	}
-}
-
-// fence is text in a code fence longer than any it holds.
-func fence(text string) string {
-	f := "```"
-	for strings.Contains(text, f) {
-		f += "`"
-	}
-	return f + "\n" + text + "\n" + f
 }
 
 // AddressComments is a message asking the agent to address a pull
@@ -182,5 +174,5 @@ func (s *Service) AddressComments(ctx context.Context, ref model.GitHubRef, thre
 		"- Don't commit, push, reply to or resolve threads, or change anything on GitHub: I'll do that.\n"+
 		"- Say which threads you addressed, how, and which you didn't, and why.\n",
 		ref.Repo, ref.Number, s.whose(ctx, ref, p.Author), n, ref.Number, ref.Repo,
-		asData("the review threads, as JSON", fence(string(payload)))), nil
+		asData("the review threads, as JSON", mdwrite.Fence(string(payload), ""))), nil
 }

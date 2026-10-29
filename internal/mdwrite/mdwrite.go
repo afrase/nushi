@@ -55,10 +55,7 @@ func Code(s string) string {
 	// A code span reads a line break as a space; one left in could let
 	// the next line start a block (a heading, HTML) and end the span.
 	s = strings.NewReplacer("\r\n", " ", "\n", " ", "\r", " ").Replace(s)
-	ticks := "`"
-	for strings.Contains(s, ticks) {
-		ticks += "`"
-	}
+	ticks := strings.Repeat("`", longestRun(s, '`')+1)
 	if strings.HasPrefix(s, "`") || strings.HasSuffix(s, "`") {
 		s = " " + s + " "
 	}
@@ -71,10 +68,7 @@ func Fence(s, lang string) string {
 	if strings.TrimLeft(lang, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+#.-") != "" {
 		lang = "" // only a language's name may follow the fence
 	}
-	f := "```"
-	for strings.Contains(s, f) {
-		f += "`"
-	}
+	f := strings.Repeat("`", max(3, longestRun(s, '`')+1))
 	return f + lang + "\n" + strings.TrimSuffix(s, "\n") + "\n" + f
 }
 
@@ -122,4 +116,20 @@ func SafeLink(href string) bool {
 func SafeImage(src string) bool {
 	h := strings.ToLower(strings.TrimSpace(src))
 	return strings.HasPrefix(h, "https://") || strings.HasPrefix(h, "http://")
+}
+
+// longestRun is the longest run of c in s, in one pass: growing a fence
+// one strings.Contains at a time was quadratic in a long run of
+// backticks, and an agent's output can hold one.
+func longestRun(s string, c byte) int {
+	longest, run := 0, 0
+	for i := range len(s) {
+		if s[i] != c {
+			run = 0
+			continue
+		}
+		run++
+		longest = max(longest, run)
+	}
+	return longest
 }
