@@ -250,7 +250,7 @@ class _ItemRowState extends State<ItemRow> {
             'Start work',
             submenu: startEntries(context, widget.daemon, it),
           ),
-          MenuEntry('Open in the browser', onPick: () => openWeb(it.url)),
+          MenuEntry('Open on GitHub', onPick: () => openWeb(it.url)),
           MenuEntry.divider,
           MenuEntry(
             'Hide this repository',

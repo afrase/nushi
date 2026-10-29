@@ -293,7 +293,7 @@ void main() {
     ]);
     expect(_inPane(find.byKey(const Key('page'))), findsOneWidget);
     // The header: Live, Preview and Source, Reload, Open in browser at its
-    // right edge, before Open in Finder and Close.
+    // right edge, before Show in Finder and Close.
     expect(_inPane(find.text('Live')), findsOneWidget);
     final reload = _inPane(find.byTooltip('Reload'));
     final browser = _inPane(find.byTooltip('Open in browser'));

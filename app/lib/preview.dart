@@ -182,7 +182,7 @@ class FileWatch extends ChangeNotifier {
 /// Why [watch]'s file shows nothing yet, as a note in its place: the
 /// daemon refused it, it hasn't come, it isn't there, or it's over the
 /// daemon's cap (unless [capped] is false: a web view reads it from disk),
-/// offering [onReveal] (Open in Finder) when given. Null once it can show.
+/// offering [onReveal] (Show in Finder) when given. Null once it can show.
 Widget? previewStatus(
   BuildContext context,
   FileWatch watch, {
@@ -206,7 +206,7 @@ Widget? previewStatus(
       action: onReveal == null
           ? null
           : Button(
-              label: 'Open in Finder',
+              label: 'Show in Finder',
               icon: Icons.folder_open_outlined,
               onPressed: onReveal,
             ),

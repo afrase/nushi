@@ -14,7 +14,7 @@ import 'package:nushi/web_page.dart';
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
 /// its name (a menu of the chat's other files), Live while the daemon
 /// keeps it current, Preview or Source (a file that renders), Reload and
-/// Open in browser (a page, not a diagram), Open in Finder and Close.
+/// Open in browser (a page, not a diagram), Show in Finder and Close.
 /// Read-only.
 class PreviewPane extends StatefulWidget {
   const new({
@@ -134,7 +134,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                     ],
                     IconTap(
                       Icons.folder_open_outlined,
-                      tooltip: 'Open in Finder',
+                      tooltip: 'Show in Finder',
                       size: 14,
                       onTap: _reveal,
                     ),
