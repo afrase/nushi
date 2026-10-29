@@ -2,6 +2,16 @@
 
 Each milestone's demo script (what to run, what to see), newest first. An archive.
 
+## Demo (the pull request redesign, steps 428, 430–436)
+
+1. Open a chat whose branch has a pull request with failing checks and review threads; Pull request beside Chat and Changes: the head says "Your move. n things block the merge." over Checks, Review, Threads and Branch.
+2. To do lists the failing checks, the open threads and a review bot's must-address findings. Log on a check: its failing part. Tick two, Send 2 picked: "2 replies wait in the chat's box"; Show the chat: two cards, each saying whose and on which PR.
+3. Click the Checks light: the Checks section, failing first, Re-run failed and Fix checks; Files: the files with open threads first.
+4. Activity: a bot's comment on one line, a long review clamped with "2 findings to address · in To do".
+5. The details panel's PR widget: the checks bar, a row per reviewer (a code owner waiting), open threads with Address, Merge blocked by what; collapse it: one line.
+6. Merge the pull request on GitHub: within a minute the widget says "Merged into main" with Clean up… and Not now. Clean up…: the worktree, its branch, the branch on GitHub and Archive ticked (a dirty worktree unticked; tick it and the button turns red, naming the files). Clean up: each part ticks off; Restore branch puts the GitHub branch back; Unarchive.
+7. On the phone: the chat's bar shows the same one line.
+
 ## Demo (the phone on a real iPhone, steps 327–332)
 
 1. On the Mac: Settings › Remote access, relay `wss://nushi.aaronfrase.com`: Connected. Pair a phone: the QR code.

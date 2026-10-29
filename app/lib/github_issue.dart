@@ -6,7 +6,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_pull.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 

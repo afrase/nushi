@@ -8,7 +8,6 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/send_to_agent.dart';
