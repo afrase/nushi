@@ -124,6 +124,7 @@ func TestListNewestFirstInPages(t *testing.T) {
 		{2, 2, []string{ids[1], ids[0]}},
 		{0, 3, []string{ids[0]}},
 		{5, 10, nil},
+		{1, -1, []string{ids[3]}},
 	} {
 		got, err := List(config, cwd, c.limit, c.offset)
 		if err != nil || strings.Join(sessionIDs(got), ",") != strings.Join(c.want, ",") {
