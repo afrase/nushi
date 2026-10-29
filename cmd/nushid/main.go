@@ -25,6 +25,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
+	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claudehistory"
@@ -56,6 +57,10 @@ func main() {
 	}
 	if len(os.Args) > 1 && os.Args[1] == pig.Command { // and PiG
 		pig.Main()
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == claudeacp.Command { // and Claude, when NUSHI_CLAUDE_ADAPTER=go
+		claudeacp.Main()
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == mcpserver.Command { // a chat's agent's MCP server of Nushi's tools

@@ -2,7 +2,9 @@
 // 0.94.0) does beyond ACP: how to start it, the _meta it reads and sends,
 // and its quirks. `main` hands these to the chats feature, which knows
 // nothing of Claude. Claude's files are read in claudehistory, claudemcp
-// and claudetrust.
+// and claudetrust. Nushi's Go agent (claudeacp, `nushid claude-acp`)
+// speaks the same dialect and runs instead of the adapter when the daemon
+// is told to (goagent.go).
 package claude
 
 import (
@@ -22,6 +24,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/model"
 )
@@ -86,7 +89,8 @@ func ConfigFile() string {
 func UserSettings() string { return filepath.Join(ConfigDir(), "settings.json") }
 
 // Tested are the Claude Code versions the adapter was run with: its own
-// (until milestone Z), then the user's.
+// (until milestone Z), then the user's. The Go agent has none: it pins no
+// version, and asks claude what it supports.
 var Tested = []string{"2.1.303", "2.1.310"}
 
 // SignedIn asks the CLI whether it's signed in (`claude auth status`,
@@ -150,13 +154,13 @@ func TurnDone(u *acp.UsageUpdate) bool {
 }
 
 // ForkAt says how to fork a session at a message, if the agent is the
-// adapter. ACP's session/fork copies a whole conversation; the adapter cuts
-// the copy after an agent message (its ACP messageId, the message included)
-// only given a vendor extension meant for JetBrains AIR,
-// `_meta.jetbrains.air.fork` (ADR 0020). Drop it when ACP has a standard
-// way.
+// adapter or Nushi's Go agent. ACP's session/fork copies a whole
+// conversation; the adapter cuts the copy after an agent message (its ACP
+// messageId, the message included) only given a vendor extension meant for
+// JetBrains AIR, `_meta.jetbrains.air.fork` (ADR 0020), which the Go agent
+// reads too. Drop it when ACP has a standard way.
 func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
-	if init.AgentInfo == nil || init.AgentInfo.Name != "@agentclientprotocol/claude-agent-acp" {
+	if init.AgentInfo == nil || init.AgentInfo.Name != AdapterPackage && init.AgentInfo.Name != claudeacp.Name {
 		return nil
 	}
 	return func(messageID string) map[string]any {
