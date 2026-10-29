@@ -44,6 +44,7 @@ type session struct {
 	setting sync.Mutex // one change of them at a time
 	cmds    commands
 	title   titles
+	plan    plan
 
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
@@ -71,6 +72,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), open: map[int]context.CancelFunc{}}
 	s.st.init()
 	s.tools.init(o.Cwd)
+	s.plan.init()
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
 		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
 	}

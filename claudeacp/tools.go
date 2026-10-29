@@ -202,7 +202,12 @@ func (s *session) toolDelta(stream string, index int, partial string) {
 }
 
 // toolInput is a tool use as claude's message has it, its input whole.
+// The main agent's plan tools make the plan instead.
 func (s *session) toolInput(stream string, b claudeagent.Block) {
+	if isPlanTool(stream, b.Name) {
+		s.planInput(b)
+		return
+	}
 	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()

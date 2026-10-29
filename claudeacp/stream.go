@@ -59,6 +59,7 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.CommandsChanged:
 		s.commandsChanged(m.Commands)
 	case *claudeagent.ConversationReset:
+		s.planReset()
 		s.titleReset()
 	case *claudeagent.Status:
 		s.modeChanged(m.PermissionMode)
@@ -98,7 +99,14 @@ func (s *session) handle(m claudeagent.Message) {
 // user is a user message: tools' results, or the echo of a prompt.
 func (s *session) user(m *claudeagent.User) {
 	for _, b := range m.Message.Content {
-		if b.Type == "tool_result" {
+		if b.Type != "tool_result" {
+			continue
+		}
+		var structured json.RawMessage
+		if len(m.Message.Content) == 1 { // else whose it is can't be told
+			structured = m.ToolUseResult
+		}
+		if !s.planResult(b, structured) {
 			s.toolResult(b)
 		}
 	}
@@ -141,7 +149,7 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 			}
 		}
 	case "content_block_start":
-		if b := ev.ContentBlock; b != nil && isToolUse(b.Type) {
+		if b := ev.ContentBlock; b != nil && isToolUse(b.Type) && !isPlanTool(key, b.Name) {
 			s.toolStart(key, ev.Index, b)
 		}
 	case "content_block_delta":

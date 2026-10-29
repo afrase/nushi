@@ -165,6 +165,7 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	if err != nil {
 		return nil, err
 	}
+	s.planAgain()
 	t, err := s.send(ctx, content)
 	if err != nil {
 		return nil, err
