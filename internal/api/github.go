@@ -244,9 +244,9 @@ func pullProto(p model.GitHubPull) *nushiv1.GitHubPull {
 		Base: p.Base, Head: p.Head, HeadRepo: p.HeadRepo, CrossRepo: p.CrossRepo, BaseOid: p.BaseOID, HeadOid: p.HeadOID,
 		Mergeable: p.Mergeable, MergeState: p.MergeState, Additions: int32(p.Additions), Deletions: int32(p.Deletions),
 		ChangedFiles: int32(p.ChangedFiles), Conversation: ghCommentsProto(p.Conversation), PendingReview: p.PendingReview,
-		PendingComments: int32(p.PendingComments)}
+		PendingComments: int32(p.PendingComments), Commits: int32(p.Commits)}
 	for _, r := range p.Reviewers {
-		out.Reviewers = append(out.Reviewers, &nushiv1.GitHubReviewer{Login: r.Login, State: r.State, Team: r.Team})
+		out.Reviewers = append(out.Reviewers, &nushiv1.GitHubReviewer{Login: r.Login, State: r.State, Team: r.Team, CodeOwner: r.CodeOwner})
 	}
 	for _, t := range p.Threads {
 		out.Threads = append(out.Threads, &nushiv1.GitHubThread{Id: t.ID, Path: t.Path, Side: t.Side, Line: int32(t.Line), StartLine: int32(t.StartLine),

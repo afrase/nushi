@@ -39,7 +39,7 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 86;
+const apiVersion = 87;
 
 /// The API from which the daemon checks for a newer release of Nushi
 /// (Ping's update, CheckForUpdates, Settings.check_updates).

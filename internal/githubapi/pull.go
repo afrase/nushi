@@ -24,7 +24,8 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
       body authorAssociation baseRefName headRefName baseRefOid headRefOid isCrossRepository
       headRepository { nameWithOwner }
       mergeable mergeStateStatus additions deletions changedFiles viewerCanUpdate
-      reviewRequests(first: 30) { nodes { requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
+      commitCount: commits { totalCount }
+      reviewRequests(first: 30) { nodes { asCodeOwner requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
       latestReviews(first: 30) { nodes { author { login } state } }
       comments(last: 100) { nodes { id url author { login __typename } authorAssociation body createdAt } }
       reviews(last: 100) { nodes { id url author { login __typename } authorAssociation body state submittedAt } }
@@ -202,8 +203,12 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 				Deletions        int    `json:"deletions"`
 				ChangedFiles     int    `json:"changedFiles"`
 				ViewerCanUpdate  bool   `json:"viewerCanUpdate"`
-				ReviewRequests   struct {
+				CommitCount      struct {
+					TotalCount int `json:"totalCount"`
+				} `json:"commitCount"`
+				ReviewRequests struct {
 					Nodes []struct {
+						AsCodeOwner       bool `json:"asCodeOwner"`
 						RequestedReviewer *struct {
 							Typename string `json:"__typename"`
 							Login    string `json:"login"`
@@ -253,13 +258,14 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 	out := model.GitHubPull{GitHubItem: p.item(c.Host), Body: Markdown(p.Body), Association: p.AuthorAssociation,
 		Base: p.BaseRefName, Head: p.HeadRefName, BaseOID: p.BaseRefOid, HeadOID: p.HeadRefOid, CrossRepo: p.IsCrossRepository,
 		Mergeable: strings.ToLower(p.Mergeable), MergeState: strings.ToLower(p.MergeStateStatus), Additions: p.Additions,
-		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, CanComment: p.ViewerCanUpdate}
+		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Commits: p.CommitCount.TotalCount, CanComment: p.ViewerCanUpdate}
 	if p.HeadRepository != nil {
 		out.HeadRepo = p.HeadRepository.NameWithOwner
 	}
 	for _, r := range p.ReviewRequests.Nodes {
 		if x := r.RequestedReviewer; x != nil {
-			out.Reviewers = append(out.Reviewers, model.GitHubReviewer{Login: cmp.Or(x.Login, x.Slug), State: "requested", Team: x.Typename == "Team"})
+			out.Reviewers = append(out.Reviewers, model.GitHubReviewer{Login: cmp.Or(x.Login, x.Slug), State: "requested", Team: x.Typename == "Team",
+				CodeOwner: r.AsCodeOwner})
 		}
 	}
 	for _, r := range p.LatestReviews.Nodes {

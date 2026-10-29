@@ -61,7 +61,15 @@
         "changedFiles": 3,
         "viewerCanUpdate": true,
         "reviewRequests": {
-          "nodes": []
+          "nodes": [
+            {
+              "asCodeOwner": true,
+              "requestedReviewer": {
+                "__typename": "Team",
+                "slug": "core"
+              }
+            }
+          ]
         },
         "latestReviews": {
           "nodes": []
@@ -414,6 +422,9 @@
               }
             }
           ]
+        },
+        "commitCount": {
+          "totalCount": 2
         }
       }
     }

@@ -146,8 +146,14 @@ GitHubPull fixturePull() => GitHubPull(
   additions: 69,
   deletions: 5,
   changedFiles: 12,
+  commits: 1,
   reviewers: [
-    GitHubReviewer(login: 'notes-reviewers', state: 'requested', team: true),
+    GitHubReviewer(
+      login: 'notes-reviewers',
+      state: 'requested',
+      team: true,
+      codeOwner: true,
+    ),
     GitHubReviewer(login: 'mona', state: 'changes_requested'),
     GitHubReviewer(login: 'github-actions', state: 'commented'),
   ],

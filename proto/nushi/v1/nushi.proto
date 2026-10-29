@@ -2710,6 +2710,8 @@ message GitHubReviewer {
   string login = 1;
   string state = 2;
   bool team = 3;
+  // Asked as a code owner of what the pull request changes.
+  bool code_owner = 4;
 }
 
 message GitHubPull {
@@ -2741,6 +2743,8 @@ message GitHubPull {
   // submitted here joins, and its comments' count.
   string pending_review = 20;
   int32 pending_comments = 21;
+  // Its commits.
+  int32 commits = 22;
 }
 
 message GetGitHubPullRequest {
