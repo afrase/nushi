@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
-	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -108,31 +107,20 @@ func loadAfter(t *testing.T, dir string, node []event, sent []acpLine) (string, 
 	return sid, []acpLine{{Dir: "in", Msg: load}, {Dir: "out", Msg: json.RawMessage(`{"jsonrpc":"2.0","id":"merge-load","result":{}}`)}}
 }
 
-// copyOf is Nushi's copy of session sid's transcript: the chat as it
-// stood before the session's first load, the prompts it sent in it.
+// copyOf is Nushi's copy of session sid's transcript: its chat as it
+// stood before the session's first load, with the prompts it sent and
+// the agent's requests (permissions, questions) it showed and answered.
 func copyOf(t *testing.T, events []event, sid string) []model.Item {
 	t.Helper()
-	_, _, c := newChat(t, claudeSession, &memModes{})
-	children := map[string]bool{}
+	p := newPlayer(t, true)
 	for _, e := range events {
-		switch {
-		case e.session != sid:
-		case e.method == "session/load":
-			return chatItems(c)
-		case e.method == "session/prompt" && !e.done: // as Service.Prompt shows it
-			c.mu.Lock()
-			c.busy, c.started = true, time.Now()
-			c.addLocked(model.Item{Kind: model.UserMessage, Text: e.text})
-			c.mu.Unlock()
-		case e.method == "session/prompt":
-			c.mu.Lock()
-			c.busy, c.started = false, time.Time{}
-			c.mu.Unlock()
+		if e.session == sid && e.method == "session/load" {
+			break
 		}
-		if e.note != nil {
-			sessionNote(c, *e.note, sid, children)
-		}
+		p.play(e)
 	}
+	p.end()
+	_, c, _ := p.chatOf(sid)
 	return chatItems(c)
 }
 

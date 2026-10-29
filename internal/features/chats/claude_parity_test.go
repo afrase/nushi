@@ -3,15 +3,15 @@ package chats
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
-	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -31,30 +31,61 @@ import (
 // yet is skipped, by name.
 //
 // The test replays the cassettes to the Go agent as its claudes, in the
-// order it starts them, sends it what Nushi sent the adapter, and feeds
-// both agents' session updates to a chat for each session Nushi opened
-// (a subagent's session goes with its parent's). The chats' items, usage
-// and status must match: the JSON may differ where Nushi doesn't look.
+// order it starts them, sends it what Nushi sent the adapter, and plays
+// both agents' session updates and requests (permissions, questions,
+// answered as the recording's client answered) into a chat for each
+// session Nushi opened, a subagent's session going with its parent's
+// (claude_chats_test.go). The chats' items, usage and status must match:
+// the JSON may differ where Nushi doesn't look.
 //
-// "hello" is written by hand, in the shapes of claude 2.1.312 and the
-// adapter 0.94.0, until real ones are recorded with a fake Messages API.
+// "hello", "permission" and "question" are written by hand, in the shapes
+// of claude 2.1.312 and the adapter 0.94.0, until they are recorded with
+// a fake Messages API (the README says what each assumes).
 func TestClaudeParity(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
 			node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
 			goRun := runGoAgent(t, dir, sent, nil)
-			want, got := views(t, updates(node)), views(t, updates(goRun))
+			want, got := views(t, node), views(t, goRun)
 			if len(want) == 0 || len(want[0].Items) == 0 {
 				t.Fatal("the recording shows nothing to compare")
 			}
 			if !reflect.DeepEqual(got, want) {
-				g, _ := json.MarshalIndent(got, "", "  ")
-				w, _ := json.MarshalIndent(want, "", "  ")
-				t.Errorf("the Go agent's chats:\n%s\nthe adapter's:\n%s", g, w)
+				t.Errorf("the Go agent's chats differ from the adapter's:\n%s", differences(got, want))
 			}
 		})
 	}
+}
+
+// differences says where the Go agent's chats (got) differ from the
+// adapter's (want): each item, usage or status that does, as JSON.
+func differences(got, want []parity) string {
+	var b strings.Builder
+	js := func(v any) string { s, _ := json.Marshal(v); return string(s) }
+	if len(got) != len(want) {
+		fmt.Fprintf(&b, "%d chats, the adapter's %d\n", len(got), len(want))
+	}
+	for i := range min(len(got), len(want)) {
+		g, w := got[i], want[i]
+		for j := range max(len(g.Items), len(w.Items)) {
+			var gi, wi any = "none", "none"
+			if j < len(g.Items) {
+				gi = g.Items[j]
+			}
+			if j < len(w.Items) {
+				wi = w.Items[j]
+			}
+			if !reflect.DeepEqual(gi, wi) {
+				fmt.Fprintf(&b, "session %s, item %d:\n  go:      %s\n  adapter: %s\n", w.Session, j, js(gi), js(wi))
+			}
+		}
+		g.Items, w.Items = nil, nil
+		if !reflect.DeepEqual(g, w) {
+			fmt.Fprintf(&b, "session %s:\n  go:      %s\n  adapter: %s\n", w.Session, js(g), js(w))
+		}
+	}
+	return b.String()
 }
 
 // scenarios are the scenarios' folders.
@@ -98,25 +129,20 @@ type rpc struct {
 }
 
 // event is what happened on an agent's connection, in order, as the tests
-// read it: a session update, or a prompt or load of the client's, or its
-// answer. Sessions go by the recording's ids.
+// read it: a session update; a prompt or load of the client's, or its
+// answer; a request of the agent's (a permission, a question), or the
+// client's answer to it. Sessions go by the recording's ids.
 type event struct {
 	note    *acp.SessionNotification
 	method  string // the client's session/prompt or session/load
 	session string // its session
 	text    string // a prompt's text
 	done    bool   // its answer
-}
 
-// updates are the session updates among events.
-func updates(events []event) []acp.SessionNotification {
-	var out []acp.SessionNotification
-	for _, e := range events {
-		if e.note != nil {
-			out = append(out, *e.note)
-		}
-	}
-	return out
+	ask    string          // the method of a request of the agent's
+	params json.RawMessage // its params
+	id     string          // its id, the recording's, for the request and the answer alike
+	reply  json.RawMessage // the client's answer to it: its result
 }
 
 // marked says whether a request of the client's is one events mark.
@@ -167,79 +193,11 @@ func readACP(t *testing.T, path string) (events []event, all []acpLine) {
 				e.done = true
 				events = append(events, e)
 			}
+		case l.Dir == "out" && m.ID != nil: // a request of the agent's
+			events = append(events, event{ask: m.Method, params: m.Params, id: string(m.ID)})
+		case l.Dir == "in" && m.Method == "": // the client's answer to one
+			events = append(events, event{reply: m.Result, id: string(m.ID)})
 		}
 	}
 	return events, all
-}
-
-// parity is what Nushi makes of a session's updates: a chat's items,
-// usage and status, without the times of this run.
-type parity struct {
-	Session           string
-	Items             []model.Item
-	Usage             model.Usage
-	Busy, Waiting     bool
-	BackgroundRunning int
-}
-
-// views are the chats Nushi makes of an agent's session updates: one for
-// each session the client opened, in the order they first had one, a
-// subagent's session (announced by subagent_update) in its parent's.
-func views(t *testing.T, notes []acp.SessionNotification) []parity {
-	t.Helper()
-	var order []string
-	chats := map[string]*chat{}
-	owner := map[string]string{} // subagents' sessions to their parents'
-	for i := range notes {
-		n := notes[i]
-		sid := string(n.SessionID)
-		if parent, ok := owner[sid]; ok {
-			feed(chats[parent], []acp.SessionNotification{n})
-			continue
-		}
-		if su := n.Update.SubagentUpdate; su != nil {
-			owner[string(su.SessionID)] = sid
-		}
-		if chats[sid] == nil {
-			_, _, chats[sid] = newChat(t, claudeSession, &memModes{})
-			order = append(order, sid)
-		}
-		n.SessionID = "s1" // newChat's
-		feed(chats[sid], []acp.SessionNotification{n})
-	}
-	var out []parity
-	for _, sid := range order {
-		p := view(chats[sid])
-		p.Session = sid
-		out = append(out, p)
-	}
-	return out
-}
-
-// view is a chat's items, usage and status, without the times of this run.
-func view(c *chat) parity {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	st := c.statusLocked()
-	p := parity{Usage: c.usage, Busy: st.Busy, Waiting: st.Waiting, BackgroundRunning: st.Background}
-	for _, it := range c.items {
-		p.Items = append(p.Items, timeless(it))
-	}
-	return p
-}
-
-// timeless is an item without the times of this run.
-func timeless(it model.Item) model.Item {
-	it.Sent = time.Time{}
-	if it.Subagent != nil {
-		sa := *it.Subagent
-		sa.Started, sa.Ended = time.Time{}, time.Time{}
-		it.Subagent = &sa
-	}
-	if it.BackgroundCommand != nil {
-		bc := *it.BackgroundCommand
-		bc.Started, bc.Ended = time.Time{}, time.Time{}
-		it.BackgroundCommand = &bc
-	}
-	return it
 }
