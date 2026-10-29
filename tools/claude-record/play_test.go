@@ -75,14 +75,14 @@ func TestPlay(t *testing.T) {
 	}
 	p := &player{c: c, cwd: "/work", timeout: 5 * time.Second, ids: map[string]string{}, async: map[string]<-chan msg{}}
 	errs := make(chan error, 1)
-	go func() { errs <- p.play(s[:9]) }()
+	go func() { errs <- p.play(t.Context(), s[:9]) }()
 	if err := <-errs; err != nil {
 		t.Fatal(err)
 	}
 	// The rest, with an echo the fake never answers: play's await of it
 	// times out.
 	p.timeout = 50 * time.Millisecond
-	if err := p.play(s[9:]); err == nil || !strings.Contains(err.Error(), "e: no answer") {
+	if err := p.play(t.Context(), s[9:]); err == nil || !strings.Contains(err.Error(), "e: no answer") {
 		t.Errorf("play: %v", err)
 	}
 	_ = toAgentW.Close()
