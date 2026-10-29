@@ -161,6 +161,9 @@ func TestListAcrossFoldersAndPages(t *testing.T) {
 	if strings.Join(got, " ") != strings.Join(mine, " ") || found.NextCursor != "" {
 		t.Errorf("listed %v (next %q), want %v, the newest first", got, found.NextCursor, mine)
 	}
+	if !found.OneWriter || found.SeesOpen {
+		t.Errorf("one writer %v, sees open %v: want Codex's one writer, and no look at this Mac's processes", found.OneWriter, found.SeesOpen)
+	}
 	all := must(a.c.ListAgentSessions(ctx, connect.NewRequest(&nushiv1.ListAgentSessionsRequest{Agent: "codex"})))
 	if len(all.Sessions) != 6 || all.Sessions[0].Title != "three" {
 		t.Errorf("every folder's: %v", all.Sessions)

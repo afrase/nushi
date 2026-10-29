@@ -83,10 +83,15 @@ type Service struct {
 	publish    func(model.Event)
 
 	terminals Terminals   // set once at startup, if there are any
-	viewers   Viewers     // set once at startup, for unseen turns' ends (seen.go)
-	prefs     SleepPrefs  // set once at startup, if chats sleep
-	copies    Copies      // set once at startup, if chats keep copies of their transcripts
+	viewers   Viewers     // Options', for unseen turns' ends (seen.go)
+	prefs     SleepPrefs  // Options', if chats sleep
+	copies    Copies      // Options', if chats keep copies of their transcripts
 	copiesOn  func() bool // whether they write them now
+
+	// ctx ends with Close, and with it what the service started on its own:
+	// its loops, the background commands it follows, its timers.
+	ctx    context.Context //nolint:containedctx // the service's life, which Close ends
+	cancel context.CancelFunc
 
 	pinMu sync.Mutex // Pin's, one order at a time
 
@@ -132,9 +137,10 @@ type chat struct {
 	sessions Sessions
 	// worktrees are the service's, for naming the chat's branch (branch.go).
 	worktrees Worktrees
-	copies    Copies      // the service's
-	copiesOn  func() bool // and whether it writes them
-	viewers   Viewers     // the service's
+	copies    Copies          // the service's
+	copiesOn  func() bool     // and whether it writes them
+	viewers   Viewers         // the service's
+	ctx       context.Context //nolint:containedctx // the service's life, which ends what the chat follows on its own
 
 	mu           sync.Mutex
 	items        []model.Item
@@ -328,7 +334,7 @@ func CheckFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, waiting: map[string]chan<- string{},
+	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 

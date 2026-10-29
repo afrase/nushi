@@ -84,9 +84,9 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 // fresh agent's: else Claude's stub of it would stay.
 func TestARedeleteAfterTheAgentWent(t *testing.T) {
 	agent := &fakeAgent{deletes: true}
-	dialect := claudeDialect
+	dialect := testDialect
 	dialect.Redelete = 20 * time.Millisecond
-	svc := New([]Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{})
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	side, err := svc.Fork(ctx, id)
@@ -104,9 +104,9 @@ func TestARedeleteAfterTheAgentWent(t *testing.T) {
 // on a dead agent.
 func TestAForkAsTheAgentEnds(t *testing.T) {
 	agent := &fakeAgent{deletes: true}
-	dialect := claudeDialect
+	dialect := testDialect
 	dialect.Redelete = 0
-	svc := New([]Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, &memModes{}, &memSessions{}, nil, "", func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{})
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	c := svc.chats[id]
@@ -136,5 +136,50 @@ func TestARewindOutlivesTheApp(t *testing.T) {
 	cancel() // gone already
 	if _, err := svc.Rewind(ctx, c.id, c.items[0].ID); err != nil || len(c.session.Earlier) != 1 {
 		t.Errorf("Rewind = %v, session %+v", err, c.session)
+	}
+}
+
+// What the service runs on its own ends with its life: a background
+// command its agent still runs is no longer read once the ctx New was
+// given ends, and Close leaves no side chats' timer behind.
+func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
+	defer func(d time.Duration) { shellPoll = d }(shellPoll)
+	shellPoll = time.Millisecond
+	reads := make(chan struct{}, 1)
+	dialect := testDialect
+	dialect.ReadShell = func(string, string) (string, string, error) {
+		select {
+		case reads <- struct{}{}:
+		default:
+		}
+		return "still going", "", nil
+	}
+	agent := &fakeAgent{}
+	life, end := context.WithCancel(t.Context())
+	svc := New(life, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
+	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	c.mu.Lock()
+	c.items = append(c.items, model.Item{ID: "t1", Shell: &model.Shell{State: "running"}})
+	running := c.agent
+	c.mu.Unlock()
+	followed := make(chan struct{})
+	go func() { c.followShell("t1", "b1", "f", running); close(followed) }()
+	<-reads
+	end()
+	select {
+	case <-followed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the background command is still followed")
+	}
+
+	svc.Following(1)
+	svc.Following(-1) // the last app went: the side chats' timer starts
+	svc.Close()
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+	if svc.idle.Stop() {
+		t.Error("Close left the side chats' timer running")
 	}
 }

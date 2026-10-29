@@ -10,6 +10,7 @@ import (
 	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // Side chats go from the agent's history however they end: here by a
@@ -33,13 +34,9 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 	}
 	gone := func(s string) {
 		t.Helper()
-		for range 100 {
-			if !history.Has(s) {
-				return
-			}
-			time.Sleep(10 * time.Millisecond)
+		if !testcheck.Eventually(func() bool { return !history.Has(s) }) {
+			t.Errorf("side chat %s is still in the agent's history", s)
 		}
-		t.Errorf("side chat %s is still in the agent's history", s)
 	}
 
 	s1 := side()
@@ -85,11 +82,7 @@ func TestSideChatsStayWhileAPhoneFollows(t *testing.T) {
 		t.Fatal("the Mac quitting closed the side chat a phone follows")
 	}
 	phone.quit()
-	for range 100 {
-		if !history.Has(side) {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
+	if !testcheck.Eventually(func() bool { return !history.Has(side) }) {
+		t.Error("the side chat outlived every app")
 	}
-	t.Error("the side chat outlived every app")
 }

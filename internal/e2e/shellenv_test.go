@@ -9,14 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -26,6 +24,7 @@ import (
 	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // An agent's process starts with a variable only the login shell sets,
@@ -94,16 +93,14 @@ exec /bin/sh -c "$4"
 	}
 }
 
+// waitFor returns the file at path once it is there, 5 s at most.
 func waitFor(t *testing.T, path string) string {
 	t.Helper()
-	for range 100 {
-		if b, err := os.ReadFile(path); err == nil {
-			return string(b)
-		}
-		time.Sleep(50 * time.Millisecond)
+	var b []byte
+	if !testcheck.Eventually(func() bool { var err error; b, err = os.ReadFile(path); return err == nil }) {
+		t.Fatalf("%s never came", path)
 	}
-	t.Fatalf("%s never came", path)
-	return ""
+	return string(b)
 }
 
 // setUp has every adapter set up.
@@ -136,7 +133,7 @@ func TestTheAppGetsNothingOfTheEnvironment(t *testing.T) {
 	agentSvc.UseEnv(env)
 	data := t.TempDir()
 	st := store.New(data)
-	svc := chats.New([]chats.Kind{{Name: "fake", Title: "Fake"}}, st, st, git.Worktrees{}, filepath.Join(data, "scratch"), (&events.Hub{}).Publish)
+	svc := chats.New(t.Context(), []chats.Kind{{Name: "fake", Title: "Fake"}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
 	agentSvc.UseChats(svc)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Transcripts: st})))
 	defer srv.Close()

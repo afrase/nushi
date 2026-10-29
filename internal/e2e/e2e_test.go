@@ -26,7 +26,6 @@ import (
 	"github.com/afrase/nushi/internal/ante/antetest"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
@@ -36,16 +35,16 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/pig"
 	"github.com/afrase/nushi/internal/pig/pigtest"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
-// daemon is nushid with the fake agent, as two agents: "fake" (the
-// default) and "codex" (Codex-shaped). Its agents share one History, as
+// daemon is nushid with fake agents: "fake" (the default), and main's
+// others on fakes (startDaemon). The fake agents share one History, as
 // Claude's sessions outlive its processes. A nil copyHistory copies through
 // the History, as Claude's projects folder would be copied.
 type daemon struct {
@@ -96,19 +95,21 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
-	// The other agents are shaped like Codex and omp, with their dialects,
-	// and Ante is its bridge on a fake Ante.
-	codexKind := chats.Kind{Name: "codex", Title: "Codex", Resume: codex.Resume, Launch: fake(true, false), History: copyHistory,
-		Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}}
-	anteKind := chats.Kind{Name: "ante", Title: "Ante", Resume: ante.Resume,
-		Launch: launch(func(r io.Reader, w io.Writer) {
+	// The default agent is "fake", shaped like Claude's adapter as far as
+	// these tests need: it names its sessions, and its notices read as
+	// Claude's (the fake isn't Claude's adapter, so the rest of Claude's
+	// dialect stays out). The others are main's (knownagents), each on a
+	// fake: Codex and omp as the fake agent shaped like them, Ante and PiG
+	// as their bridges on a fake Ante and PiG. What reads an agent's own
+	// files on this Mac (Local) is left out.
+	pigs := pigStores(dataDir)
+	launches := map[string]chats.Launch{
+		"codex": fake(true, false),
+		"ante": launch(func(r io.Reader, w io.Writer) {
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
 		}),
-		Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}}
-	ompKind := chats.Kind{Name: "omp", Title: "oh-my-pi", Resume: omp.Resume, Launch: fake(false, true), Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}}
-	pigs := pigStores(dataDir)
-	pigKind := chats.Kind{Name: "pig", Title: "PiG", Resume: pig.Resume,
-		Launch: launch(func(r io.Reader, w io.Writer) {
+		"omp": fake(false, true),
+		"pig": launch(func(r io.Reader, w io.Writer) {
 			spawn := func(cwd string, args ...string) (pig.Pig, error) {
 				inR, inW := io.Pipe()
 				outR, outW := io.Pipe()
@@ -117,18 +118,24 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			}
 			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
 		}),
-		Dialect: chats.Dialect{ForkAt: pig.ForkAt}}
-	// The fake is shaped like Claude's adapter, which names its sessions.
-	svc := chats.New([]chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Notice}}, codexKind, anteKind, ompKind, pigKind},
-		st, st, git.Worktrees{}, filepath.Join(dataDir, "scratch"), hub.Publish)
-	terms := terminals.New(startSh, "sh", svc, hub.Publish)
-	svc.UseTerminals(terms)
+	}
+	kinds := []chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Notice}}}
+	for _, a := range knownagents.All("") { // no projects folder: Local isn't called
+		if l := launches[a.Agent.Name]; l != nil {
+			k := a.Chats
+			k.Launch = l
+			kinds = append(kinds, k)
+		}
+	}
 	copies, err := transcripts.Open(filepath.Join(dataDir, "transcripts"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc.UseCopies(copies, st.KeepTranscripts)
-	svc.AutoSleep(st) // as main does: the settings are the daemon's
+	// Sleep and the copies as main has them: the settings are the daemon's.
+	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(dataDir, "scratch"),
+		Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts, Sleep: st})
+	terms := terminals.New(startSh, "sh", svc, hub.Publish)
+	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())
 	go func() {
 		_ = hub.Subscribe(follow, func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
@@ -489,13 +496,5 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 	must(a.c.RenameChat(ctx, connect.NewRequest(&nushiv1.RenameChatRequest{ChatId: kept})))
 	if c := list()[kept]; c.Archived || c.Title != "hello" {
 		t.Errorf("chat = %v, want the first prompt's title back", c)
-	}
-}
-
-// check fails the test on err.
-func check(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
 	}
 }

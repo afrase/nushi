@@ -41,12 +41,6 @@ type Copies interface {
 	List() ([]model.TranscriptCopy, error)
 }
 
-// UseCopies has chats keep copies of their transcripts in c while on
-// says so; set once at startup.
-func (s *Service) UseCopies(c Copies, on func() bool) {
-	s.copies, s.copiesOn = c, on
-}
-
 // shownOnly says an item is the chat's state rather than its history:
 // notices of how its reopen went, and those the merge of a copy and the
 // agent's replay draws. The copy never has them.
@@ -223,23 +217,21 @@ func (s *Service) Older(age time.Duration) ([]string, error) {
 // copiesCheck is how often copies past their days are looked for.
 var copiesCheck = time.Hour
 
-// AutoClearCopies deletes the copies last written more than days() ago
-// (0: none), now and each hour, until Close.
-func (s *Service) AutoClearCopies(days func() int) {
-	go func() {
-		for {
-			s.mu.Lock()
-			closing := s.closing
-			s.mu.Unlock()
-			if closing {
-				return
-			}
-			if d := days(); d > 0 {
-				s.clearOlder(time.Duration(d) * 24 * time.Hour)
-			}
-			time.Sleep(copiesCheck)
+// autoClearCopies deletes the copies last written more than days() ago
+// (0: none), now and each hour, until the service's life ends.
+func (s *Service) autoClearCopies(days func() int) {
+	tick := time.NewTicker(copiesCheck)
+	defer tick.Stop()
+	for {
+		if d := days(); d > 0 {
+			s.clearOlder(time.Duration(d) * 24 * time.Hour)
 		}
-	}()
+		select {
+		case <-tick.C:
+		case <-s.ctx.Done():
+			return
+		}
+	}
 }
 
 func (s *Service) clearOlder(age time.Duration) {
@@ -247,7 +239,7 @@ func (s *Service) clearOlder(age time.Duration) {
 	if err == nil && len(ids) > 0 {
 		var n int
 		var bytes int64
-		n, bytes, err = s.ClearCopies(context.Background(), ids)
+		n, bytes, err = s.ClearCopies(s.ctx, ids)
 		slog.Info("transcript copies cleared", "why", "older than "+age.String(), "copies", n, "bytes", bytes)
 	}
 	if err != nil {

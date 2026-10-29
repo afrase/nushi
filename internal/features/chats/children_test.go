@@ -207,9 +207,8 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	on := &atomic.Bool{}
 	on.Store(true)
 	sessions := &memSessions{}
-	kinds := []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: claudeDialect}}
-	svc := New(kinds, &memModes{}, sessions, nil, t.TempDir(), func(model.Event) {})
-	svc.UseCopies(store, on.Load)
+	kinds := []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}
+	svc := newService(t, kinds, Options{Sessions: sessions, Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
@@ -223,8 +222,7 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	// The daemon is killed: the next finds the copy, and Claude replays.
 	sessions.stored = []model.Session{sessions.saved[len(sessions.saved)-1]}
 	agent.replay = recorded(t, "restart_load.jsonl")
-	svc = New(kinds, &memModes{}, sessions, nil, t.TempDir(), func(model.Event) {})
-	svc.UseCopies(store, on.Load)
+	svc = newService(t, kinds, Options{Sessions: sessions, Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
 	_, err = svc.Get(id)
 	testcheck.NoErr(t, err)
 	testcheck.NoErr(t, svc.Reopen(id))

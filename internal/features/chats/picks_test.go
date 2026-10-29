@@ -57,7 +57,7 @@ func TestPicksComeBack(t *testing.T) {
 	c.mu.Lock()
 	stored := c.session
 	c.mu.Unlock()
-	svc2 := New([]Kind{{Name: "claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: []model.Session{stored}}, nil, t.TempDir(), func(model.Event) {})
+	svc2 := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.Session{stored}}, Scratch: t.TempDir()})
 	c2 := reopened(t, svc2, c.id)
 	if wantSet := []string{`model="sonnet"`, `effort="high"`, "fast=true"}; !slices.Equal(agent.set, wantSet) || !maps.Equal(picksOf(c2), want) {
 		t.Errorf("restarted: set %v, picks %v", agent.set, picksOf(c2))

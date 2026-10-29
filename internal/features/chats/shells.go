@@ -66,7 +66,11 @@ func (c *chat) followShell(callID, id, file string, agent Agent) {
 		if sh.State != "running" {
 			return
 		}
-		time.Sleep(shellPoll)
+		select {
+		case <-time.After(shellPoll):
+		case <-c.ctx.Done():
+			return // the service closed: its agents end, and nobody is left to tell
+		}
 	}
 }
 

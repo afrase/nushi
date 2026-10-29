@@ -53,7 +53,7 @@ func TestAChatReopensOnceItsAgentIsReady(t *testing.T) {
 		{ID: "shown", SessionID: "s1", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
 		{ID: "hidden", SessionID: "s2", Agent: "fake", Folder: t.TempDir(), HasMessages: true},
 	}}
-	svc := New([]Kind{{Name: "fake", Launch: launch, Ready: check, Dialect: claudeDialect}}, &memModes{}, sessions, nil, "", func(model.Event) {})
+	svc := newService(t, []Kind{{Name: "fake", Launch: launch, Ready: check, Dialect: testDialect}}, Options{Sessions: sessions})
 	for _, id := range []string{"shown", "hidden"} {
 		if _, err := svc.Get(id); err != nil { // as after a daemon restart
 			t.Fatal(err)

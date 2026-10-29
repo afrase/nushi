@@ -43,7 +43,7 @@ func execLogin() error {
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	argv, env := loginCommand(loginShell, bin, filepath.Join(dir, "nushid.log"), os.Environ())
+	argv, env := loginCommand(loginShell(), bin, filepath.Join(dir, "nushid.log"), os.Environ())
 	return syscall.Exec(argv[0], argv, env) //nolint:gosec // the login shell, running this nushid
 }
 

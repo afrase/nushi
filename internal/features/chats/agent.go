@@ -129,13 +129,6 @@ func merged(a, b map[string]any) map[string]any {
 // (internal/features/tools): its id, its agent, its issue.
 type Tools func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer
 
-// UseTools gives chats' sessions Nushi's tools, set once at startup.
-func (s *Service) UseTools(t Tools) {
-	for _, k := range s.kinds {
-		k.tools = t
-	}
-}
-
 // mcpServers are the MCP servers of Nushi's own tools for the chat, if
 // any; the agent's own come from its config.
 func (c *chat) mcpServers() []acp.MCPServer {

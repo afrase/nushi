@@ -62,8 +62,8 @@ func (e *events) removed() (ids, gone []string) {
 var errNotFound = &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "Resource not found: s1"}
 
 // goneService has one stored chat, "c", whose agent answers session/load
-// with loadErr; historyGone is Kind.HistoryGone.
-func goneService(t *testing.T, loadErr error, historyGone func(sid, folder string) bool, sess model.Session) (*Service, *fakeAgent, *memSessions, *events) {
+// with loadErr; historyGone is Kind.HistoryGone, o the rest of its Options.
+func goneService(t *testing.T, loadErr error, historyGone func(sid, folder string) bool, sess model.Session, o Options) (*Service, *fakeAgent, *memSessions, *events) {
 	t.Helper()
 	agent := &fakeAgent{loadErr: loadErr}
 	sess.ID, sess.SessionID, sess.Agent = "c", "s1", "fake"
@@ -73,9 +73,10 @@ func goneService(t *testing.T, loadErr error, historyGone func(sid, folder strin
 	sess.HasMessages = true
 	sessions := &memSessions{stored: []model.Session{sess}}
 	ev := &events{}
-	k := Kind{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: claudeDialect,
+	k := Kind{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect,
 		Gone: NotFound, HistoryGone: historyGone, Expires: "it deletes old ones"}
-	svc := New([]Kind{k}, &memModes{}, sessions, stateWorktrees{}, t.TempDir(), ev.publish)
+	o.Sessions, o.Worktrees, o.Scratch, o.Publish = sessions, stateWorktrees{}, t.TempDir(), ev.publish
+	svc := newService(t, []Kind{k}, o)
 	t.Cleanup(svc.Close)
 	return svc, agent, sessions, ev
 }
@@ -87,7 +88,7 @@ func never(string, string) bool  { return false }
 // is forgotten when it reopens: its record goes, and the list of removed
 // chats says so, until dismissed.
 func TestAChatWhoseSessionIsGoneIsRemoved(t *testing.T) {
-	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"})
+	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"}, Options{})
 	_, _ = svc.Get("c")
 	if !testcheck.Eventually(func() bool { _, gone := ev.removed(); return len(gone) == 1 }) {
 		t.Fatal("not removed")
@@ -126,7 +127,7 @@ func TestAChatStaysUnlessItsSessionIsSurelyGone(t *testing.T) {
 		"its folder unreachable": {errNotFound, always, false, "/Volumes/not-mounted/x"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			svc, _, sessions, ev := goneService(t, tc.err, tc.historyGone, model.Session{Folder: tc.folder})
+			svc, _, sessions, ev := goneService(t, tc.err, tc.historyGone, model.Session{Folder: tc.folder}, Options{})
 			if tc.fresh {
 				sessions.stored[0].HasMessages = false
 			}
@@ -166,7 +167,7 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 				testcheck.NoErr(t, os.MkdirAll(tc.sess.Folder, 0o700))
 				testcheck.NoErr(t, os.WriteFile(filepath.Join(tc.sess.Folder, "notes.md"), []byte("x"), 0o600))
 			}
-			svc, agent, sessions, ev := goneService(t, errNotFound, always, tc.sess)
+			svc, agent, sessions, ev := goneService(t, errNotFound, always, tc.sess, Options{})
 			svc.worktrees, svc.scratch = tc.worktrees, scratch
 			_, _ = svc.Get("c")
 			c := svc.chats["c"]
@@ -214,10 +215,10 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 	}}
 	ev := &events{}
 	historyGone := func(sid, _ string) bool { return gone[sid] }
-	svc := New([]Kind{
-		{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: claudeDialect, Gone: NotFound, HistoryGone: historyGone},
-		{Name: "other", Title: "Other", Launch: agent.launch, Dialect: claudeDialect, Gone: NotFound},
-	}, &memModes{}, sessions, stateWorktrees{}, t.TempDir(), ev.publish)
+	svc := newService(t, []Kind{
+		{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect, Gone: NotFound, HistoryGone: historyGone},
+		{Name: "other", Title: "Other", Launch: agent.launch, Dialect: testDialect, Gone: NotFound},
+	}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
 	svc.Sweep(context.Background())
 	if !slices.Equal(sessions.deleted, []string{"gone"}) {
 		t.Errorf("deleted %v", sessions.deleted)

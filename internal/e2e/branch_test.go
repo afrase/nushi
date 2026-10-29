@@ -12,6 +12,7 @@ import (
 
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A plain worktree chat's branch is named after the chat once a turn ends
@@ -136,10 +137,10 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 
 	// Not once pushed, as it was, nor after.
 	bare := t.TempDir()
-	gitIn(t, bare, "init", "-q", "--bare")
-	gitIn(t, repo, "remote", "add", "origin", bare)
+	testcheck.Git(t, bare, "init", "-q", "--bare")
+	testcheck.Git(t, repo, "remote", "add", "origin", bare)
 	id6, wt6 := start()
-	gitIn(t, wt6.Path, "push", "-q", "-u", "origin", "HEAD")
+	testcheck.Git(t, wt6.Path, "push", "-q", "-u", "origin", "HEAD")
 	for _, title := range []string{"Pushed work", "Still pushed"} {
 		if got := turn(id6, "title: "+title).Chat.Worktree.Branch; got != wt6.Branch {
 			t.Errorf("a pushed branch renamed to %s", got)
@@ -177,7 +178,7 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id7})))
 
 	// Delete offers the renamed branch and deletes it.
-	gitIn(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
+	testcheck.Git(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
 	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
 	if p := plan.Worktrees[0]; p.Worktree.Branch != want || p.State.BranchGone || p.State.Commits != 1 {
 		t.Fatalf("plan = %v", plan)
@@ -192,10 +193,8 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 // until waits for ok, 5 s at most.
 func until(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	for end := time.Now().Add(5 * time.Second); !ok(); time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(end) {
-			t.Fatalf("timed out waiting for %s", what)
-		}
+	if !testcheck.Eventually(ok) {
+		t.Fatalf("timed out waiting for %s", what)
 	}
 }
 

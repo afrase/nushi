@@ -59,27 +59,26 @@ type SleepPrefs interface {
 // sleepCheck is how often idle chats are looked for.
 var sleepCheck = time.Minute
 
-// AutoSleep puts chats to sleep once they have idled as long as prefs say,
-// from now on, until Close.
-func (s *Service) AutoSleep(prefs SleepPrefs) {
-	s.prefs = prefs
-	go func() {
-		tick := time.NewTicker(sleepCheck)
-		defer tick.Stop()
-		for range tick.C {
-			s.mu.Lock()
-			closing, open := s.closing, slices.Collect(maps.Values(s.chats))
-			s.mu.Unlock()
-			if closing {
-				return
-			}
-			if after := prefs.SleepAfter(); after > 0 {
-				for _, c := range open {
-					s.doze(c, after)
-				}
+// autoSleep puts chats to sleep once they have idled as long as the
+// service's prefs say, until the service's life ends.
+func (s *Service) autoSleep() {
+	tick := time.NewTicker(sleepCheck)
+	defer tick.Stop()
+	for {
+		select {
+		case <-tick.C:
+		case <-s.ctx.Done():
+			return
+		}
+		s.mu.Lock()
+		open := slices.Collect(maps.Values(s.chats))
+		s.mu.Unlock()
+		if after := s.prefs.SleepAfter(); after > 0 {
+			for _, c := range open {
+				s.doze(c, after)
 			}
 		}
-	}()
+	}
 }
 
 // SleepAfter is how long a chat idles before its agent sleeps; 0: never.
