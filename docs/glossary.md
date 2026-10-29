@@ -62,7 +62,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 |---|---|---|---|
 | **Daemon** | `nushid`: runs the agents, terminals and checks, and keeps running when the app quits. In the app as a background-only helper. | `cmd/nushid`, `Nushi Daemon.app` | 0002, 0036 |
 | **Restart daemon** | Start the daemon again; an older daemon does it on its own once nothing runs. | `RestartWhenIdle`, `features/restart` | 0056 |
-| **Sidebar** | The left column: Pinned, then projects and their chats, archived last; Jira, GitHub and Settings at its foot. | `sidebar.dart`, `sidebar_groups.dart`, `sidebar_rows.dart` | |
+| **Sidebar** | The left column: Pinned, then projects and their chats, archived last; Jira, GitHub and Settings at its foot. | `sidebar.dart`, `sidebar_groups.dart`, `sidebar_rows.dart`, `slide_list.dart` | |
 | **Project** | A group in the sidebar: a folder (a repository with its worktrees) and its chats, in the order they were dragged into. Also the "in this project" scope of MCP servers and skills. | `sidebarGroups`, `sidebarChats` | |
 | **Pinned** | The sidebar's section above the projects, shown while a chat is pinned: Pin chat and Unpin chat (⌘D). A pinned chat leaves its project's list; the daemon keeps which and in what order, so the phone has them too. Not an artifact's pin. | `Chat.pin`, `PinChats`, `PinnedSection`, `chat_pins.dart` | 0064 |
 | **Folder** | Where a chat's agent works. A chat with No folder gets a scratch folder of its own. | `Session.Folder`, `Session.Scratch` | |

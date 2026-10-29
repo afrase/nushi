@@ -7,6 +7,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/panel_cards.dart' show reordered;
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_rows.dart';
+import 'package:nushi/slide_list.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -14,12 +15,12 @@ import 'package:nushi/widgets.dart';
 /// The sidebar's project groups ([sidebarGroups]), each a header and its
 /// chats. A header is the folder's name on one line, its path in its
 /// tooltip; two projects of the same name show their parents after it. A
-/// group moves by dragging its header, a line showing where it will go
-/// (the order is kept in [sidebarOrder]); the header's chevron
-/// collapses it (kept in [sidebarCollapsed]). A collapsed group shows the
-/// most urgent of its chats' states as one dot beside its name, and of
-/// its rows only the selected chat's.
-class SidebarGroups extends StatefulWidget {
+/// group moves by dragging its header, the others sliding apart where it
+/// would go ([SlideList]; the order is kept in [sidebarOrder]); the
+/// header's chevron collapses it (kept in [sidebarCollapsed]). A collapsed
+/// group shows the most urgent of its chats' states as one dot beside its
+/// name, and of its rows only the selected chat's.
+class SidebarGroups extends StatelessWidget {
   const new({
     required this.groups,
     required this.selectedId,
@@ -44,7 +45,60 @@ class SidebarGroups extends StatefulWidget {
   final void Function(String folder, List<ChatState> chats) onTerminal;
 
   @override
-  State<SidebarGroups> createState() => _SidebarGroupsState();
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final entries = groups.entries.toList();
+    final parents = twinParents(groups.keys);
+    return SlideList<_Moving>(
+      count: entries.length,
+      accepts: (_) => true,
+      onMove: (from, to) => sidebarOrder.value = reordered(
+        sidebarOrder.value,
+        groups.keys.toList(),
+        from,
+        to,
+      ),
+      item: (i, drag) {
+        final MapEntry(key: folder, value: chats) = entries[i];
+        final shown = [...shownChats(folder, chats, selectedId)];
+        return Column(
+          key: ValueKey(folder),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Header(
+              folder,
+              twin: parents[folder] ?? '',
+              chats: chats,
+              collapsed: sidebarCollapsed.value.contains(folder),
+              onNew: switch (onNew) {
+                final f? => () => f(folder),
+                null => null,
+              },
+              onTerminal: folder.isEmpty || chats.isEmpty
+                  ? null
+                  : () => onTerminal(folder, chats),
+              drag: drag,
+            ),
+            if (starting == folder)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
+                child: Text(
+                  'Starting…',
+                  style: theme.ui(t.textMuted, size: 12),
+                ),
+              ),
+            MovableRows(
+              group: folder,
+              chats: shown,
+              row: row,
+              onMove: (from, to) => moveInProject(folder, shown, from, to),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 /// What a header's drag carries: its group's folder.
@@ -52,155 +106,6 @@ class _Moving {
   const new(this.folder);
 
   final String folder;
-}
-
-class _SidebarGroupsState extends State<SidebarGroups> {
-  String? _moving; // the folder whose group is being dragged
-  int? _dropAt; // where it would go: before the group at this index
-  final _scroll = EdgeScroll();
-
-  /// Where the dragged group is now, if it's being dragged.
-  int get _from =>
-      _moving == null ? -1 : widget.groups.keys.toList().indexOf(_moving!);
-
-  /// Whether a drop at [_dropAt] would move the group (not just put it
-  /// back where it is).
-  bool get _moves {
-    final at = _dropAt;
-    final from = _from;
-    return from >= 0 && at != null && at != from && at != from + 1;
-  }
-
-  void _over(int at) {
-    if (at != _dropAt) setState(() => _dropAt = at);
-  }
-
-  void _drop() {
-    if (_moves) {
-      final from = _from;
-      final at = _dropAt!;
-      sidebarOrder.value = reordered(
-        sidebarOrder.value,
-        widget.groups.keys.toList(),
-        from,
-        at > from ? at - 1 : at,
-      );
-    }
-    _end();
-  }
-
-  void _end() {
-    _scroll.stop();
-    if (mounted) {
-      setState(() {
-        _moving = null;
-        _dropAt = null;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final n = widget.groups.length;
-    final line = _moves ? _dropAt : null;
-    final parents = twinParents(widget.groups.keys);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final (i, MapEntry(key: folder, value: chats))
-            in widget.groups.entries.indexed)
-          _Target(
-            key: ValueKey(folder),
-            onOver: ({required after}) => _over(i + (after ? 1 : 0)),
-            onLeave: () => setState(() => _dropAt = null),
-            onDrop: _drop,
-            line: line == i
-                ? VerticalDirection.down
-                : line == n && i == n - 1
-                ? VerticalDirection.up
-                : null,
-            child: Opacity(
-              opacity: _moving == folder ? 0.4 : 1,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Header(
-                    folder,
-                    twin: parents[folder] ?? '',
-                    chats: chats,
-                    collapsed: sidebarCollapsed.value.contains(folder),
-                    onNew: switch (widget.onNew) {
-                      final f? => () => f(folder),
-                      null => null,
-                    },
-                    onTerminal: folder.isEmpty || chats.isEmpty
-                        ? null
-                        : () => widget.onTerminal(folder, chats),
-                    onDragStarted: () => setState(() => _moving = folder),
-                    onDragUpdate: (d) => _scroll.update(context, d),
-                    onDragEnd: _end,
-                  ),
-                  if (widget.starting == folder)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
-                      child: Text(
-                        'Starting…',
-                        style: theme.ui(t.textMuted, size: 12),
-                      ),
-                    ),
-                  MovableRows(
-                    group: folder,
-                    chats: [...shownChats(folder, chats, widget.selectedId)],
-                    row: widget.row,
-                    onMove: (from, to) => moveInProject(
-                      folder,
-                      [...shownChats(folder, chats, widget.selectedId)],
-                      from,
-                      to,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// A group as a place to drop a dragged header: its upper half puts the
-/// group before it, its lower half after. [line] draws the drop line at
-/// its top (down) or bottom (up).
-class _Target extends StatelessWidget {
-  const new({
-    required this.onOver,
-    required this.onLeave,
-    required this.onDrop,
-    required this.line,
-    required this.child,
-    super.key,
-  });
-
-  final void Function({required bool after}) onOver;
-  final VoidCallback onLeave;
-  final VoidCallback onDrop;
-  final VerticalDirection? line;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DragTarget<_Moving>(
-      onMove: (d) {
-        final box = context.findRenderObject()! as RenderBox;
-        onOver(after: box.globalToLocal(d.offset).dy > box.size.height / 2);
-      },
-      onLeave: (_) => onLeave(),
-      onAcceptWithDetails: (_) => onDrop(),
-      builder: (context, _, _) => DropLine(line: line, child: child),
-    );
-  }
 }
 
 /// Moves the chat at [from] of [shown] (the rows of [folder]'s group) to
@@ -252,9 +157,7 @@ class _Header extends StatefulWidget {
     required this.collapsed,
     required this.onNew,
     required this.onTerminal,
-    required this.onDragStarted,
-    required this.onDragUpdate,
-    required this.onDragEnd,
+    required this.drag,
   });
 
   final String folder;
@@ -263,9 +166,7 @@ class _Header extends StatefulWidget {
   final bool collapsed;
   final VoidCallback? onNew;
   final VoidCallback? onTerminal; // a terminal there, in one of its chats
-  final VoidCallback onDragStarted;
-  final void Function(DragUpdateDetails) onDragUpdate;
-  final VoidCallback onDragEnd;
+  final ItemDrag<_Moving> drag;
 
   @override
   State<_Header> createState() => _HeaderState();
@@ -291,13 +192,9 @@ class _HeaderState extends State<_Header> {
         MenuEntry('Open in terminal', onPick: widget.onTerminal),
       ],
       builder: (context, open) => LayoutBuilder(
-        builder: (context, box) => Draggable<_Moving>(
+        builder: (context, box) => widget.drag.draggable(
           data: _Moving(folder),
-          dragAnchorStrategy: pointerDragAnchorStrategy,
           feedback: Lifted(name, width: box.maxWidth),
-          onDragStarted: widget.onDragStarted,
-          onDragUpdate: widget.onDragUpdate,
-          onDragEnd: (_) => widget.onDragEnd(),
           child: MouseRegion(
             cursor: SystemMouseCursors.grab,
             onEnter: (_) => setState(() => _hover = true),
