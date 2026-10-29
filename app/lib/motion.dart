@@ -196,6 +196,15 @@ class Shine extends StatelessWidget {
   }
 }
 
+/// Where in a loop of [period] something that loops on [loopClock] is: as
+/// the clock says, or where [Shine.stopAt] stops every shine, for a still
+/// frame.
+double loopPhase(Duration period) => Shine.stopAt ?? loopClock.phase(period);
+
+/// What a looping painter repaints with: [loopClock], unless stopped for a
+/// still frame (see [loopPhase]).
+Listenable? get loopRepaint => Shine.stopAt == null ? loopClock : null;
+
 /// [child] coming in once, as it's first built: it fades in from [from]
 /// away. Not [play], or with Reduce Motion, it's there at once.
 class Enter extends StatefulWidget {
