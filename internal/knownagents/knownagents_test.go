@@ -4,6 +4,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/features/chats"
 )
 
@@ -38,5 +39,20 @@ func TestEveryAgentIsWhole(t *testing.T) {
 	}
 	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "pig"}) {
 		t.Errorf("agents %v", names)
+	}
+}
+
+// Claude runs through the adapter unless the daemon is told to run Nushi's
+// Go agent, which needs no Node, set-up or tested versions.
+func TestClaudesAgentIsTheAdapterUnlessToldGo(t *testing.T) {
+	for _, tc := range []struct {
+		choice string
+		goes   bool
+	}{{"", false}, {"node", false}, {"Go", false}, {"go", true}} {
+		t.Setenv(claude.AdapterChoice, tc.choice)
+		c := All(t.TempDir())[0]
+		if goes := c.Agent.Adapter == nil; goes != tc.goes || goes != (len(c.Agent.Tested) == 0) || c.Start == nil {
+			t.Errorf("%q: adapter %v, tested %v", tc.choice, c.Agent.Adapter, c.Agent.Tested)
+		}
 	}
 }

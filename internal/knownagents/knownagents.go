@@ -141,6 +141,13 @@ func All(projects string) []Agent {
 			Skills: pigskills.PiG{}, Trust: pig.Trust{},
 		},
 	}
+	if claude.UsesGo() { // Nushi's Go agent instead of the adapter: no Node, nothing to set up, no version pinned
+		c := &all[0]
+		c.Agent.Adapter, c.Agent.Tested = nil, nil
+		c.Start = func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+			return claude.StartGo(dir, r.CLI, r.Env, h, log)
+		}
+	}
 	for i := range all {
 		a := &all[i]
 		a.Chats.Name, a.Chats.Title, a.Chats.MCP = a.Agent.Name, a.Agent.Title, a.MCP != nil
