@@ -15,6 +15,7 @@ import (
 // the ones it sends us. Its methods are safe to call from any goroutine.
 type Session struct {
 	o     Options
+	hooks map[string]HookFunc // Options.Hooks, by the ids initialize gave them
 	t     *transport
 	log   *slog.Logger
 	after func(time.Duration) <-chan time.Time // requests' clock; tests give a fake one
@@ -52,11 +53,18 @@ func Start(ctx context.Context, o Options) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	hooks, byID, err := registerHooks(o.Hooks)
+	if err != nil {
+		return nil, err
+	}
+	if len(hooks) > 0 {
+		body["hooks"] = hooks
+	}
 	t, err := startTransport(ctx, o)
 	if err != nil {
 		return nil, err
 	}
-	s := newSession(ctx, t, o)
+	s := newSession(ctx, t, o, byID)
 	raw, err := s.request(ctx, "initialize", body, false)
 	if err != nil {
 		_ = s.Close()
@@ -80,13 +88,14 @@ func Start(ctx context.Context, o Options) (*Session, error) {
 	return s, nil
 }
 
-// newSession reads t's messages and starts handing them on. The session
-// outlives ctx, which lends it only its values.
+// newSession reads t's messages and starts handing them on; hooks are
+// o's by their ids. The session outlives ctx, which lends it only its
+// values.
 //
 //nolint:contextcheck // claude's requests get the session's context, made from ctx, which they outlive
-func newSession(ctx context.Context, t *transport, o Options) *Session {
+func newSession(ctx context.Context, t *transport, o Options, hooks map[string]HookFunc) *Session {
 	s := &Session{
-		o: o, t: t, log: t.log, after: time.After,
+		o: o, hooks: hooks, t: t, log: t.log, after: time.After,
 		pending: map[string]chan reply{}, inbound: map[string]context.CancelFunc{}, caps: map[string]bool{},
 		initCh: make(chan struct{}), closing: make(chan struct{}),
 		qwake: make(chan struct{}, 1), out: make(chan Message),

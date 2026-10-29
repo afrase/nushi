@@ -56,7 +56,7 @@ func TestWritesWaitForInitialize(t *testing.T) {
 			},
 			Signal: func(os.Signal) error { return nil },
 		}
-		s := newSession(t.Context(), newTransport(p, Options{}), Options{})
+		s := newSession(t.Context(), newTransport(p, Options{}), Options{}, nil)
 		t.Cleanup(func() { _ = s.Close() }) // in the bubble, which ends with no goroutine left
 		if _, err := io.WriteString(outW, `{"type":"control_request","request_id":"early","request":{"subtype":"ping"}}`+"\n"); err != nil {
 			t.Fatal(err)
