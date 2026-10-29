@@ -305,6 +305,35 @@ Future<(Daemon, FakeDaemon)> openPullTab(
                 '     expected 5 users, got 0\n'
                 '##[error]Process completed with exit code 1.',
           ),
+          GetGitHubFilesRequest() => GetGitHubFilesResponse(
+            files: [
+              for (final (path, text) in [
+                (
+                  'app/helpers/admin/search_helper.rb',
+                  'module Admin\n  module SearchHelper\n  end\nend\n',
+                ),
+                (
+                  'app/controllers/admin/notes_controller.rb',
+                  [
+                    for (var i = 1; i <= 50; i++)
+                      if (i == 42)
+                        '      q.is_a?(Hash) ? q : {}'
+                      else
+                        '    # $i',
+                  ].join('\n'),
+                ),
+                ('spec/reports/page_spec.rb', 'describe "reports" do\nend\n'),
+              ])
+                FileChange(
+                  path: path,
+                  status: 'modified',
+                  oldText: text.replaceFirst('q.is_a?(Hash) ? q : {}', 'q'),
+                  newText: text,
+                  added: 1,
+                  removed: 1,
+                ),
+            ],
+          ),
           _ => null,
         };
   final d = await fake.connect(tester);

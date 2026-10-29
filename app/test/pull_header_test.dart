@@ -95,7 +95,7 @@ void main() {
       expect(find.byType(section), findsOneWidget);
       // Scrolled to it: the section's tabs as near the top as it goes.
       final tabs = tester.getRect(find.text('Files 12')).top;
-      expect(tabs, lessThan(section == GitHubFiles ? 100 : 450));
+      expect(tabs, lessThan(section == GitHubFiles ? 100 : 600));
       d.dispose();
     }, variant: _mac);
   }

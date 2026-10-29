@@ -347,6 +347,9 @@ const (
 	// NushiServiceSubmitGitHubReviewProcedure is the fully-qualified name of the NushiService's
 	// SubmitGitHubReview RPC.
 	NushiServiceSubmitGitHubReviewProcedure = "/nushi.v1.NushiService/SubmitGitHubReview"
+	// NushiServiceRerunGitHubChecksProcedure is the fully-qualified name of the NushiService's
+	// RerunGitHubChecks RPC.
+	NushiServiceRerunGitHubChecksProcedure = "/nushi.v1.NushiService/RerunGitHubChecks"
 	// NushiServiceFindChatPullProcedure is the fully-qualified name of the NushiService's FindChatPull
 	// RPC.
 	NushiServiceFindChatPullProcedure = "/nushi.v1.NushiService/FindChatPull"
@@ -719,6 +722,9 @@ type NushiServiceClient interface {
 	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
 	AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error)
 	SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error)
+	// Re-runs the failed jobs of the workflow runs that a pull request's
+	// failed Actions jobs belong to. API 88.
+	RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error)
 	// A chat's pull request: the one it was started from, else the one whose
 	// head is its folder's branch, looked for on GitHub (and linked when
 	// found), with the folder's repository and branch. API 81.
@@ -1432,6 +1438,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("SubmitGitHubReview")),
 			connect.WithClientOptions(opts...),
 		),
+		rerunGitHubChecks: connect.NewClient[v1.RerunGitHubChecksRequest, v1.RerunGitHubChecksResponse](
+			httpClient,
+			baseURL+NushiServiceRerunGitHubChecksProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("RerunGitHubChecks")),
+			connect.WithClientOptions(opts...),
+		),
 		findChatPull: connect.NewClient[v1.FindChatPullRequest, v1.FindChatPullResponse](
 			httpClient,
 			baseURL+NushiServiceFindChatPullProcedure,
@@ -1570,6 +1582,7 @@ type nushiServiceClient struct {
 	resolveGitHubThread *connect.Client[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse]
 	addGitHubComment    *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
 	submitGitHubReview  *connect.Client[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse]
+	rerunGitHubChecks   *connect.Client[v1.RerunGitHubChecksRequest, v1.RerunGitHubChecksResponse]
 	findChatPull        *connect.Client[v1.FindChatPullRequest, v1.FindChatPullResponse]
 	linkChatPull        *connect.Client[v1.LinkChatPullRequest, v1.LinkChatPullResponse]
 	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
@@ -2150,6 +2163,11 @@ func (c *nushiServiceClient) SubmitGitHubReview(ctx context.Context, req *connec
 	return c.submitGitHubReview.CallUnary(ctx, req)
 }
 
+// RerunGitHubChecks calls nushi.v1.NushiService.RerunGitHubChecks.
+func (c *nushiServiceClient) RerunGitHubChecks(ctx context.Context, req *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error) {
+	return c.rerunGitHubChecks.CallUnary(ctx, req)
+}
+
 // FindChatPull calls nushi.v1.NushiService.FindChatPull.
 func (c *nushiServiceClient) FindChatPull(ctx context.Context, req *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error) {
 	return c.findChatPull.CallUnary(ctx, req)
@@ -2527,6 +2545,9 @@ type NushiServiceHandler interface {
 	ResolveGitHubThread(context.Context, *connect.Request[v1.ResolveGitHubThreadRequest]) (*connect.Response[v1.ResolveGitHubThreadResponse], error)
 	AddGitHubComment(context.Context, *connect.Request[v1.AddGitHubCommentRequest]) (*connect.Response[v1.AddGitHubCommentResponse], error)
 	SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error)
+	// Re-runs the failed jobs of the workflow runs that a pull request's
+	// failed Actions jobs belong to. API 88.
+	RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error)
 	// A chat's pull request: the one it was started from, else the one whose
 	// head is its folder's branch, looked for on GitHub (and linked when
 	// found), with the folder's repository and branch. API 81.
@@ -3236,6 +3257,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("SubmitGitHubReview")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceRerunGitHubChecksHandler := connect.NewUnaryHandler(
+		NushiServiceRerunGitHubChecksProcedure,
+		svc.RerunGitHubChecks,
+		connect.WithSchema(nushiServiceMethods.ByName("RerunGitHubChecks")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceFindChatPullHandler := connect.NewUnaryHandler(
 		NushiServiceFindChatPullProcedure,
 		svc.FindChatPull,
@@ -3486,6 +3513,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceAddGitHubCommentHandler.ServeHTTP(w, r)
 		case NushiServiceSubmitGitHubReviewProcedure:
 			nushiServiceSubmitGitHubReviewHandler.ServeHTTP(w, r)
+		case NushiServiceRerunGitHubChecksProcedure:
+			nushiServiceRerunGitHubChecksHandler.ServeHTTP(w, r)
 		case NushiServiceFindChatPullProcedure:
 			nushiServiceFindChatPullHandler.ServeHTTP(w, r)
 		case NushiServiceLinkChatPullProcedure:
@@ -3959,6 +3988,10 @@ func (UnimplementedNushiServiceHandler) AddGitHubComment(context.Context, *conne
 
 func (UnimplementedNushiServiceHandler) SubmitGitHubReview(context.Context, *connect.Request[v1.SubmitGitHubReviewRequest]) (*connect.Response[v1.SubmitGitHubReviewResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SubmitGitHubReview is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RerunGitHubChecks is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) FindChatPull(context.Context, *connect.Request[v1.FindChatPullRequest]) (*connect.Response[v1.FindChatPullResponse], error) {

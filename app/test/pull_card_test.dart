@@ -357,7 +357,7 @@ void main() {
     expect(find.text('Should this check for overflow?'), findsOneWidget);
     expect(find.text('A first look.'), findsOneWidget);
     expect(pullSeen.value['c'], greaterThan(0));
-    await tester.tap(find.text('Checks · 1 failed'));
+    await tester.tap(find.text('Checks · 1 failing'));
     await tester.pumpAndSettle();
     expect(find.byType(GitHubChecks), findsOneWidget);
     expect(fake.calls.whereType<GetGitHubPullRequest>().last.ref.number, 1);

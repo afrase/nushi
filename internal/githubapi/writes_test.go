@@ -82,3 +82,20 @@ func TestSubmitReview(t *testing.T) {
 		t.Fatal("an unknown event went")
 	}
 }
+
+func TestRerunFailed(t *testing.T) {
+	f := newFake(t)
+	f.route("GET /repos/afrase/nushi-gh-test/actions/jobs/8", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"id":8,"run_id":70}`)) })
+	f.route("GET /repos/afrase/nushi-gh-test/actions/jobs/9", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{"id":9,"run_id":70}`)) })
+	f.route("POST /repos/afrase/nushi-gh-test/actions/runs/70/rerun-failed-jobs", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusCreated) })
+	runs, err := f.client().RerunFailed(t.Context(), repo, []int64{8, 9, 0})
+	if err != nil || len(runs) != 1 || runs[0] != 70 || f.count("POST /repos/afrase/nushi-gh-test/actions/runs/70/rerun-failed-jobs") != 1 {
+		t.Fatalf("%v %v %v", runs, err, f.calls)
+	}
+	if _, err := f.client().RerunFailed(t.Context(), repo, []int64{0}); err == nil {
+		t.Fatal("a status (no job) re-ran")
+	}
+	if _, err := f.client().RerunFailed(t.Context(), "../x", []int64{8}); err == nil {
+		t.Fatal("a bad repository was asked")
+	}
+}

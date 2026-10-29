@@ -102,8 +102,19 @@ class _GitHubFilesState extends State<GitHubFiles> {
 
   void _pick(List<FileChange> files) {
     _files = files;
-    if (!files.any((f) => f.path == _path)) _path = files.firstOrNull?.path;
+    if (!files.any((f) => f.path == _path)) {
+      _path = _ordered(files).firstOrNull?.path;
+    }
   }
+
+  bool _open(FileChange f) => _threadsOf(f.path).any((x) => !x.resolved);
+
+  /// The files with review threads not resolved first, each part in
+  /// GitHub's order.
+  List<FileChange> _ordered(List<FileChange> files) => [
+    ...files.where(_open),
+    ...files.where((f) => !_open(f)),
+  ];
 
   List<GitHubThread> _threadsOf(String path) =>
       widget.pull.threads.where((x) => x.path == path).toList();
@@ -112,8 +123,8 @@ class _GitHubFilesState extends State<GitHubFiles> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final files = _files;
-    if (files == null) {
+    final read = _files;
+    if (read == null) {
       return Center(
         child: Text(
           _error ?? 'Loading the files…',
@@ -121,7 +132,9 @@ class _GitHubFilesState extends State<GitHubFiles> {
         ),
       );
     }
+    final files = _ordered(read);
     final file = files.where((f) => f.path == _path).firstOrNull;
+    final withThreads = files.where(_open).length;
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: t.borderSubtle)),
@@ -134,7 +147,13 @@ class _GitHubFilesState extends State<GitHubFiles> {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 6),
               children: [
-                for (final f in files) _fileRow(theme, f),
+                for (final (i, f) in files.indexed) ...[
+                  if (i == 0 && withThreads > 0)
+                    _group(theme, 'With unresolved threads · $withThreads'),
+                  if (i == withThreads && withThreads > 0)
+                    _group(theme, 'The rest · ${files.length - withThreads}'),
+                  _fileRow(theme, f),
+                ],
                 if (widget.pull.changedFiles > files.length)
                   Padding(
                     padding: const EdgeInsets.all(10),
@@ -153,6 +172,14 @@ class _GitHubFilesState extends State<GitHubFiles> {
       ),
     );
   }
+
+  Widget _group(NushiTheme theme, String name) => Padding(
+    padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
+    child: Text(
+      name,
+      style: theme.ui(theme.t.textMuted, size: 11.5, weight: FontWeight.w600),
+    ),
+  );
 
   Widget _fileRow(NushiTheme theme, FileChange f) {
     final t = theme.t;
@@ -467,9 +494,8 @@ class _ThreadCardState extends State<ThreadCard> {
                       onPressed: _busy ? null : () => _resolve(false),
                     ),
                   if (SendToAgent.maybeOf(context) case final to?)
-                    Button(
+                    SendButton(
                       label: 'Send to agent',
-                      icon: Icons.subdirectory_arrow_right,
                       onPressed: () => to.onSend(threadReply(x)),
                     ),
                 ],

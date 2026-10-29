@@ -25,11 +25,20 @@ double readablePad(double width, {double least = 20}) =>
 /// In a chat's tab it can be sent to the agent ([SendToAgent]), unless
 /// it's part of a thread ([sendable] false: the thread is sent whole).
 class CommentEntry extends StatefulWidget {
-  const new(this.comment, {required this.now, super.key, this.sendable = true});
+  const new(
+    this.comment, {
+    required this.now,
+    super.key,
+    this.sendable = true,
+    this.mark = true,
+  });
 
   final GitHubComment comment;
   final DateTime now;
   final bool sendable;
+
+  /// A bot's mark before its name (none where an avatar shows it).
+  final bool mark;
 
   @override
   State<CommentEntry> createState() => _CommentEntryState();
@@ -65,7 +74,7 @@ class _CommentEntryState extends State<CommentEntry> {
     );
     final head = Row(
       children: [
-        if (c.bot) ...[
+        if (c.bot && widget.mark) ...[
           Icon(Icons.smart_toy_outlined, size: 13, color: t.textMuted),
           const SizedBox(width: 5),
         ],
@@ -112,7 +121,7 @@ class _CommentEntryState extends State<CommentEntry> {
     );
     final clamped = long && !_open;
     final body = AgentMarkdown(
-      githubText(clamped ? _start(c.body) : c.body),
+      githubText(clamped ? textStart(c.body) : c.body),
       images: githubImage,
     );
     return Padding(
@@ -124,7 +133,7 @@ class _CommentEntryState extends State<CommentEntry> {
           if (c.body.isNotEmpty && (!folds || _open))
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: clamped ? _Clamped(body) : body,
+              child: clamped ? Clamped(body) : body,
             ),
           if (long)
             Padding(padding: const EdgeInsets.only(top: 4), child: toggle),
@@ -135,8 +144,8 @@ class _CommentEntryState extends State<CommentEntry> {
 }
 
 /// [child]'s first three lines or so, fading out at the foot.
-class _Clamped extends StatelessWidget {
-  const new(this.child);
+class Clamped extends StatelessWidget {
+  const new(this.child, {super.key});
 
   final Widget child;
 
@@ -166,7 +175,7 @@ class _Clamped extends StatelessWidget {
 
 /// [body] from its first text: a heading it starts with ("## Summary")
 /// would take the lines a clamped text shows.
-String _start(String body) {
+String textStart(String body) {
   final lines = body.trimLeft().split('\n');
   var i = 0;
   while (i < lines.length &&
