@@ -200,3 +200,44 @@ func TestExitEndsCalls(t *testing.T) {
 		t.Errorf("%q", ended)
 	}
 }
+
+// A cancel's backstop that comes once its turn has ended does nothing:
+// the calls open since aren't its to end.
+func TestLateBackstop(t *testing.T) {
+	at, release := make(chan struct{}), make(chan struct{})
+	f := fake(user("id2"), echo("id2"),
+		event(`{"type":"message_start","message":{"id":"msg_1"}}`),
+		event(`{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"Read"}}`),
+		signal(at), claudetest.Until(release), result(names("id2")), claudetest.Send(idle))
+	p := start(t, nil, f)
+	sid := p.open(t)
+	w := p.prompt(t, sid, "go")
+	wait(t, at, "the call's start")
+	eventually(t, "the call", func() bool { return len(p.of("tool_call")) == 1 })
+	s, err := p.agent.session(sid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	over := newTurn("id0") // a cancelled turn that has since ended
+	s.mu.Lock()
+	s.settleLocked(over, cancelled(over))
+	s.mu.Unlock()
+	done := make(chan struct{})
+	go func() {
+		s.backstop(over)
+		close(done)
+	}()
+	p.clock.fire(t, backstop)
+	wait(t, done, "the backstop")
+	s.tools.mu.Lock()
+	call := s.tools.byID["toolu_1"]
+	open := call != nil && !call.ended
+	s.tools.mu.Unlock()
+	if !open {
+		t.Error("the backstop ended the call")
+	}
+	close(release)
+	if got := stopReason(w); got != "end_turn" {
+		t.Error(got)
+	}
+}
