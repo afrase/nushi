@@ -44,14 +44,7 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.Assistant:
 		s.assistant(m)
 	case *claudeagent.User:
-		for _, b := range m.Message.Content {
-			if b.Type == "tool_result" {
-				s.toolResult(b)
-			}
-		}
-		if m.UUID != "" {
-			s.echo(m.UUID)
-		}
+		s.user(m)
 	case *claudeagent.ToolProgress:
 		s.toolProgress(m.ToolUseID)
 	case *claudeagent.PermissionDenied:
@@ -59,19 +52,7 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.Result:
 		s.result(m)
 	case *claudeagent.SessionState:
-		s.mu.Lock()
-		ends := m.State == "idle" && s.owedIdle == 0 && s.active != nil // a turn ends with no result
-		why := endedTurn
-		if ends && s.active.cancelled {
-			why = endedCancel
-		}
-		s.mu.Unlock()
-		if ends {
-			s.endTools(why)
-		}
-		s.mu.Lock()
-		s.stateLocked(m.State)
-		s.mu.Unlock()
+		s.sessionState(m.State)
 	case *claudeagent.Status:
 		switch {
 		case m.Status == "requesting": // new work: what stopped can't ask the API again
@@ -104,6 +85,35 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.RateLimit:
 		s.usage(nil, map[string]any{"_claude/rateLimit": m.Info})
 	}
+}
+
+// user is a user message: tools' results, or the echo of a prompt.
+func (s *session) user(m *claudeagent.User) {
+	for _, b := range m.Message.Content {
+		if b.Type == "tool_result" {
+			s.toolResult(b)
+		}
+	}
+	if m.UUID != "" {
+		s.echo(m.UUID)
+	}
+}
+
+// sessionState is claude's session going idle, running or waiting.
+func (s *session) sessionState(state string) {
+	s.mu.Lock()
+	ends := state == "idle" && s.owedIdle == 0 && s.active != nil // a turn ends with no result
+	why := endedTurn
+	if ends && s.active.cancelled {
+		why = endedCancel
+	}
+	s.mu.Unlock()
+	if ends {
+		s.endTools(why)
+	}
+	s.mu.Lock()
+	s.stateLocked(state)
+	s.mu.Unlock()
 }
 
 func (s *session) streamEvent(m *claudeagent.StreamEvent) {
