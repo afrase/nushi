@@ -7,6 +7,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/phone/chat_sheet.dart';
 import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/new_chat_screen.dart';
@@ -55,6 +56,11 @@ class ChatScreen extends StatelessWidget {
                 onTap: () => FilesScreen.open(context, daemon, chat),
               ),
             ),
+          PhoneIcon(
+            Icons.more_horiz,
+            label: 'Chat',
+            onTap: () => unawaited(showChatSheet(context, daemon, chat)),
+          ),
         ],
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

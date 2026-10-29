@@ -373,6 +373,56 @@ void main() {
     await _end(tester, phone);
   });
 
+  // UX review, finding 19.
+  testWidgets("the chat's ⋯: its folder, branch and model; Rename and "
+      'Archive', (tester) async {
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) => switch (input) {
+        GetChatRequest() => GetChatResponse(
+          chat: _chats[0],
+          status: _chats[0].status,
+          config: [
+            ConfigOption(
+              id: 'model',
+              category: 'model',
+              current: 'opus',
+              values: [ConfigValue(value: 'opus', name: 'Opus 5.5')],
+            ),
+          ],
+        ),
+        GetFolderStatusRequest() => GetFolderStatusResponse(
+          git: true,
+          branch: 'relay-fix',
+        ),
+        _ => null,
+      };
+    final (phone, _) = await _app(tester, fake);
+    await tester.tap(find.text('Fix the flaky relay test'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Chat'));
+    await tester.pumpAndSettle();
+    expect(find.text('relay-fix'), findsOne);
+    expect(find.text('Opus 5.5'), findsWidgets); // the box's picker too
+    expect(find.text('nushi  /Users/me'), findsOne);
+    await expectLater(
+      find.byType(PhoneApp),
+      matchesGoldenFile('goldens/phone_chat_sheet_390.png'),
+    );
+    await tester.tap(find.text('Rename…'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Relay test fixed');
+    await tester.tap(find.text('Rename').last);
+    await tester.pumpAndSettle();
+    expect(
+      fake.calls.whereType<RenameChatRequest>().single.title,
+      'Relay test fixed',
+    );
+    await tester.tap(find.text('Archive'));
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<ArchiveChatRequest>().single.chatId, 'a');
+    await _end(tester, phone);
+  });
+
   testWidgets('notifications on and off: the subscription to the daemon', (
     tester,
   ) async {
