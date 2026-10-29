@@ -163,7 +163,8 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request) {
 		apiError(w, turn.Error)
 		return
 	}
-	rep := newReply(turn, req.Model, len(body), s.newID)
+	vals, _ := turn.Match.captured(&req)
+	rep := newReply(turn, req.Model, len(body), s.newID, vals)
 	if !req.Stream {
 		writeJSON(w, rep.message())
 		return

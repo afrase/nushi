@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -44,6 +45,9 @@ type Script struct {
 type Turn struct {
 	Match   *Match  `json:"match,omitempty"`
 	Content []Block `json:"content,omitempty"`
+	// ID is the message's id; "" numbers one. A scenario names one to
+	// refer to the message later (a fork at it).
+	ID string `json:"id,omitempty"`
 	// StopReason is message_delta's stop_reason; "" is "tool_use" when
 	// Content has a tool_use block, else "end_turn".
 	StopReason string `json:"stop_reason,omitempty"`
@@ -78,6 +82,12 @@ type Match struct {
 	System string `json:"system,omitempty"`
 	// Tools says whether the request has tools.
 	Tools *bool `json:"tools,omitempty"`
+	// Capture names values to take from the request's text (its messages'
+	// text and tool results; each one's last match), for "${name}" in the
+	// reply's text and tool inputs: an id only claude knows, such as a
+	// background task's. Each is a regular expression whose first group is
+	// the value, and must match.
+	Capture map[string]string `json:"capture,omitempty"`
 }
 
 // Block is a content block of a reply: text, thinking or tool_use.
@@ -125,6 +135,13 @@ func Load(path string) (*Script, error) {
 		return nil, fmt.Errorf("fakeapi: %s: %w", path, err)
 	}
 	for i, t := range append(append([]Turn(nil), s.Turns...), s.Side...) {
+		if t.Match != nil {
+			for name, expr := range t.Match.Capture {
+				if re, err := regexp.Compile(expr); err != nil || re.NumSubexp() < 1 {
+					return nil, fmt.Errorf("fakeapi: %s: turn %d: capture %s isn't a regular expression with a group", path, i, name)
+				}
+			}
+		}
 		for _, blk := range t.Content {
 			switch blk.Type {
 			case "text", "thinking":
@@ -170,10 +187,15 @@ type reqBlock struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	ToolUseID string `json:"tool_use_id"`
+	// Content is a tool result's: a string, or blocks.
+	Content json.RawMessage `json:"content"`
 }
 
 // blocks are content's blocks: a string is one text block.
 func blocks(content json.RawMessage) []reqBlock {
+	if len(content) == 0 {
+		return nil
+	}
 	var s string
 	if json.Unmarshal(content, &s) == nil {
 		return []reqBlock{{Type: "text", Text: s}}
@@ -207,6 +229,9 @@ func (m *Match) matches(r *request, side bool) bool {
 	if m.System != "" && !strings.Contains(r.systemText(), m.System) {
 		return false
 	}
+	if _, ok := m.captured(r); !ok {
+		return false
+	}
 	last := r.lastUser()
 	if m.LastUserText != "" {
 		var text strings.Builder
@@ -220,6 +245,46 @@ func (m *Match) matches(r *request, side bool) bool {
 		}
 	}
 	return m.ToolResult == "" || r.hasToolResult(last, m.ToolResult)
+}
+
+// captured are m's captures' values in r (nil m: none), and whether each
+// found one.
+func (m *Match) captured(r *request) (map[string]string, bool) {
+	if m == nil || len(m.Capture) == 0 {
+		return nil, true
+	}
+	text := r.text()
+	out := map[string]string{}
+	for name, expr := range m.Capture {
+		re, err := regexp.Compile(expr)
+		if err != nil {
+			return nil, false
+		}
+		found := re.FindAllStringSubmatch(text, -1)
+		if len(found) == 0 || len(found[len(found)-1]) < 2 {
+			return nil, false
+		}
+		out[name] = found[len(found)-1][1]
+	}
+	return out, true
+}
+
+// text is the request's messages' text and tool results' text, in order,
+// a line each.
+func (r *request) text() string {
+	var b strings.Builder
+	for _, m := range r.Messages {
+		for _, blk := range blocks(m.Content) {
+			if blk.Type == "tool_result" {
+				for _, c := range blocks(blk.Content) {
+					b.WriteString(c.Text + "\n")
+				}
+				continue
+			}
+			b.WriteString(blk.Text + "\n")
+		}
+	}
+	return b.String()
 }
 
 // lastUser is the last user message's blocks.
