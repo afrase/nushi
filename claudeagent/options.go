@@ -73,6 +73,9 @@ type Options struct {
 	// --key for a nil value.
 	ExtraArgs map[string]*string
 
+	// Init is what the initialize request carries.
+	Init Init
+
 	// CanUseTool answers claude's permission requests; without it claude
 	// asks no one and decides by its settings.
 	CanUseTool func(ctx context.Context, r PermissionRequest) (PermissionResult, error)
