@@ -111,26 +111,24 @@ void main() {
   });
 
   testWidgets('a project is dragged by its header into another place, '
-      'a line showing where; remembered, a new project first', (tester) async {
+      'the others moving apart where it goes; remembered, a new project '
+      'first', (tester) async {
     var d = await _sidebar(tester);
     expect(_order(tester), _projects);
     // With the mouse, as on the Mac (a touch drag scrolls the list); up,
     // into the top half of ledger-poc's group.
+    final top = _y(tester, 'ledger-poc');
     var at = tester.getCenter(find.text('notes'));
     final drag = await tester.startGesture(at, kind: PointerDeviceKind.mouse);
-    while (at.dy > _y(tester, 'ledger-poc') - 4) {
+    while (at.dy > top - 4) {
       at -= const Offset(0, 12);
       await drag.moveTo(at);
       await tester.pump();
     }
-    expect(find.byKey(const Key('drop line')), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.byKey(const Key('drop line'))).dy,
-      lessThan(_y(tester, 'ledger-poc')),
-    );
+    // Reduce Motion: there at once, notes's place open above it.
+    expect(_y(tester, 'ledger-poc'), greaterThan(top));
     await drag.up();
     await tester.pump();
-    expect(find.byKey(const Key('drop line')), findsNothing);
     final order = ['notes', 'ledger-poc', 'cappy', 'garden'];
     expect(_order(tester), order);
     final paths = [for (final p in order) '/Users/me/$p'];

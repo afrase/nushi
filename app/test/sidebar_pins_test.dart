@@ -100,8 +100,6 @@ Future<void> _drag(
   await tester.pump();
 }
 
-final Finder _line = find.byKey(const Key('drop line'));
-
 /// The app on [_chats], [select] shown; archiving answered as the daemon
 /// does (it unpins).
 Future<(Daemon, FakeDaemon)> _app(
@@ -150,28 +148,22 @@ void main() {
     Directory(dataDir).createSync(recursive: true); // the tests' own
   });
 
-  testWidgets('a chat is dragged into another place in its project, a line '
-      'showing where; refused in another project; kept, a new chat first', (
-    tester,
-  ) async {
+  testWidgets('a chat is dragged into another place in its project, the '
+      'rows moving apart where it goes; refused in another project; kept, a '
+      'new chat first', (tester) async {
     const ledger = ['Wire the ledger', 'Seed data', 'Price the bonds'];
     var d = await _sidebar(tester, _chats());
     expect(_rows(tester, ledger), ledger); // the newest first
 
-    // Up, into the top half of Wire the ledger's row.
+    // Up, into the top half of Wire the ledger's row, which moves down.
+    final wire = _ys(tester, 'Wire the ledger');
     await _drag(
       tester,
       'Price the bonds',
       'Wire the ledger',
-      whileOver: () async {
-        expect(_line, findsOneWidget);
-        expect(
-          tester.getTopLeft(_line).dy,
-          lessThan(_y(tester, 'Wire the ledger')),
-        );
-      },
+      whileOver: () async =>
+          expect(_ys(tester, 'Wire the ledger'), greaterThan(wire)),
     );
-    expect(_line, findsNothing);
     const moved = ['Price the bonds', 'Wire the ledger', 'Seed data'];
     expect(_rows(tester, ledger), moved);
     expect(sidebarChats.value, {
@@ -180,13 +172,14 @@ void main() {
     expect((readSaved()['sidebarChats']! as Map)[_ledger], ['f', 'a', 'b']);
     expect(chatOrder(d).take(3).map((c) => c.id), ['f', 'a', 'b']);
 
-    // Cap the rates (cappy) onto ledger-poc's rows: no line, no move.
+    // Cap the rates (cappy) onto ledger-poc's rows: they stay, no move.
+    final seed = _ys(tester, 'Seed data');
     await _drag(
       tester,
       'Cap the rates',
       'Seed data',
       by: 4,
-      whileOver: () async => expect(_line, findsNothing),
+      whileOver: () async => expect(_ys(tester, 'Seed data'), seed),
     );
     expect(_rows(tester, ledger), moved);
     expect(_y(tester, 'Cap the rates'), greaterThan(_y(tester, 'Seed data')));
