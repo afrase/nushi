@@ -41,6 +41,8 @@ func TestHelperProcess(*testing.T) {
 		out(os.Stdout, "\n[SandboxDebug] hello\n{\"type\":\"keep_alive\"}\n{not json\n")
 		out(os.Stdout, "{\"type\":\"user\",\"pad\":%q}\n", strings.Repeat("x", 300))
 		out(os.Stdout, "{\"type\":\"transcript_mirror\"}\n{\"type\":\"system\",\"subtype\":\"session_state_changed\",\"state\":\"idle\"}\r\n")
+	case "group": // its pid and its process group's
+		out(os.Stdout, "{\"pid\":%d,\"pgid\":%d}\n", os.Getpid(), syscall.Getpgrp())
 	case "echo": // each stdin line back, until EOF
 		for stdin.Scan() {
 			out(os.Stdout, "%s\n", stdin.Text())
@@ -376,11 +378,11 @@ func (l *lockedBuffer) String() string {
 // Start builds claude's spec from the options and hands it to the spawner.
 func TestStartTransport(t *testing.T) {
 	var got Spec
-	_, err := startTransport(context.Background(), Options{CLIPath: "/c", Env: []string{}, Model: "m", Spawner: func(_ context.Context, s Spec) (*Proc, error) {
+	_, err := startTransport(context.Background(), Options{CLIPath: "/c", Env: []string{}, Model: "m", SharedGroup: true, Spawner: func(_ context.Context, s Spec) (*Proc, error) {
 		got = s
 		return nil, errors.New("no")
 	}})
-	if err == nil || got.Path != "/c" || got.Args[len(got.Args)-1] != "--model=m" || !strings.Contains(strings.Join(got.Env, " "), "CLAUDE_CODE_ENTRYPOINT=sdk-cli") {
+	if err == nil || got.Path != "/c" || got.Args[len(got.Args)-1] != "--model=m" || !strings.Contains(strings.Join(got.Env, " "), "CLAUDE_CODE_ENTRYPOINT=sdk-cli") || !got.SharedGroup {
 		t.Errorf("%+v %v", got, err)
 	}
 	if _, err := startTransport(context.Background(), Options{CLIPath: t.TempDir() + "/none", Env: []string{}}); err == nil {
