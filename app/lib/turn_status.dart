@@ -154,13 +154,24 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
         size: const Size.square(12),
         painter: StatusMark(waiting ? t.needs : t.accent),
       ),
-      Shine(
-        on: !waiting && !folding,
-        child: Text(
-          what,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.ui(waiting ? t.needs : t.textSecondary, size: 12.5),
+      // "Waiting for you" crossfades in as a prompt comes, and out.
+      AnimatedSwitcher(
+        duration: reduceMotion(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 150),
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.centerLeft,
+          children: [...previous, ?current],
+        ),
+        child: Shine(
+          key: ValueKey(waiting),
+          on: !waiting && !folding,
+          child: Text(
+            what,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.ui(waiting ? t.needs : t.textSecondary, size: 12.5),
+          ),
         ),
       ),
       started != null && !waiting && !folding

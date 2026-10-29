@@ -103,26 +103,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   DateTime? _since; // when the running turn started, as last known
   bool _sparks = false; // the check's sparks fly
 
-  static const _hopFor = Duration(milliseconds: 1200);
   static const _checkFor = Duration(milliseconds: 2700);
-
-  // The hop: up 3 px, down, up 1.5, down, still.
-  static final Animatable<double> _rise = TweenSequence([
-    for (final (from, to, weight) in const [
-      (0.0, 3.0, 20.0),
-      (3.0, 0.0, 20.0),
-      (0.0, 1.5, 15.0),
-      (1.5, 0.0, 15.0),
-      (0.0, 0.0, 30.0),
-    ])
-      TweenSequenceItem(
-        tween: Tween(
-          begin: from,
-          end: to,
-        ).chain(CurveTween(curve: Curves.easeInOut)),
-        weight: weight,
-      ),
-  ]);
 
   @override
   void initState() {
@@ -165,7 +146,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     if (c.busy) _since = c.started ?? _since ?? DateTime.now();
     if (c.stopping) _stopped = true;
     if (c.waiting && !_waiting && !reduceMotion(context)) {
-      (_hop ??= _once(_hopFor)).forward(from: 0).ignore();
+      (_hop ??= _once(hopFor)).forward(from: 0).ignore();
     }
     if (_busy && !c.busy && !c.waiting && !_stopped) {
       final lasted = DateTime.now().difference(_since ?? DateTime.now());
@@ -273,7 +254,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     return AnimatedBuilder(
       animation: hop,
       builder: (context, child) => Transform.translate(
-        offset: Offset(0, -_rise.transform(hop.value)),
+        offset: Offset(0, -hopHeight(hop.value)),
         child: child,
       ),
       child: dot,

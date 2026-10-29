@@ -99,6 +99,30 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
   }
 }
 
+/// How long a hop lasts: a dot (or the Jump chip) saying "this needs you".
+const hopFor = Duration(milliseconds: 1200);
+
+// The hop: up 3 px, down, up 1.5, down, still.
+final Animatable<double> _hop = TweenSequence([
+  for (final (from, to, weight) in const [
+    (0.0, 3.0, 20.0),
+    (3.0, 0.0, 20.0),
+    (0.0, 1.5, 15.0),
+    (1.5, 0.0, 15.0),
+    (0.0, 0.0, 30.0),
+  ])
+    TweenSequenceItem(
+      tween: Tween(
+        begin: from,
+        end: to,
+      ).chain(CurveTween(curve: Curves.easeInOut)),
+      weight: weight,
+    ),
+]);
+
+/// How high a hop is [v] of the way through it (0 to 1), in pixels.
+double hopHeight(double v) => _hop.transform(v.clamp(0.0, 1.0));
+
 /// How far [ms] is into a part of a run from [start] lasting [length]
 /// (all in milliseconds), from 0 to 1, through [curve].
 double part(
@@ -107,6 +131,21 @@ double part(
   double length, [
   Curve curve = Curves.linear,
 ]) => curve.transform(((ms - start) / length).clamp(0.0, 1.0));
+
+/// Whether what's built under it comes as the user watches: a transcript's
+/// entry that rose in, or one built again as the agent works (a call
+/// joining a run). Not what a chat opened or loaded with.
+class Arriving extends InheritedWidget {
+  const new({required this.play, required super.child, super.key});
+
+  final bool play;
+
+  static bool of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<Arriving>()?.play ?? false;
+
+  @override
+  bool updateShouldNotify(Arriving old) => false; // read once, as it comes
+}
 
 /// Text that is still going (a running call's title, "Thinking…"): a light
 /// band sweeps across it, left to right, every two seconds, in the

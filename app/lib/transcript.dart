@@ -8,14 +8,12 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
+import 'package:nushi/jump_chip.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
-import 'package:nushi/typed.dart';
-import 'package:nushi/widgets.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
 /// them (a review's findings show as a card of their own).
@@ -317,8 +315,6 @@ class _TranscriptState extends State<Transcript> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
     final chat = widget.chat;
     final entries = _entries(widget.items ?? chat.items);
     _keepPlace(entries);
@@ -417,32 +413,10 @@ class _TranscriptState extends State<Transcript> {
                 : Positioned(
                     right: 20,
                     bottom: 12,
-                    child: DecoratedBox(
-                      decoration: ShapeDecoration(
-                        color: t.raised,
-                        shape: StadiumBorder(
-                          side: BorderSide(color: t.borderStrong),
-                        ),
-                      ),
-                      child: Tap(
-                        onTap: _follower.follow,
-                        radius: 14,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          spacing: 6,
-                          children: [
-                            Icon(Icons.arrow_downward, size: 14, color: t.text),
-                            Text(
-                              'Jump to latest',
-                              style: theme.ui(t.text, size: 12),
-                            ),
-                          ],
-                        ),
-                      ),
+                    child: JumpChip(
+                      // A prompt waits below: the chip says so.
+                      needs: widget.items == null && chat.waiting,
+                      onTap: _follower.follow,
                     ),
                   ),
           ),
