@@ -163,14 +163,13 @@ func (c *chat) toldLocked(t *told) {
 	c.copyLocked(false)
 }
 
-// toldBeforeLocked is, for a chat stored before Nushi kept Told, the
-// branch as its agent has it: the worktree's (a rename until then was
-// never told).
-func (c *chat) toldBeforeLocked() {
-	if wt := c.session.Worktree; wt != nil && wt.Told == "" {
+// toldBefore is, for a chat stored before Nushi kept Told, the branch as
+// its agent has it: the worktree's (a rename until then was never told).
+func toldBefore(sess *model.Session) {
+	if wt := sess.Worktree; wt != nil && wt.Told == "" {
 		w := *wt
 		w.Told = w.Branch
-		c.session.Worktree = &w
+		sess.Worktree = &w
 	}
 }
 

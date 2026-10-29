@@ -21,26 +21,37 @@ func (s *Service) lookup(id string) (*chat, error) {
 	if c := s.chats[id]; c != nil {
 		return c, nil
 	}
-	stored, err := s.sessions.Sessions()
-	if err != nil {
-		return nil, err
-	}
-	i := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == id })
-	if i < 0 {
-		return nil, fmt.Errorf("no chat %q", id)
-	}
-	k, err := s.kindOf(stored[i].Agent)
+	sess, k, err := s.storedSession(id)
 	if err != nil {
 		return nil, err
 	}
 	c := s.newChat(k)
-	c.id, c.sid, c.session, c.issue = id, stored[i].SessionID, stored[i], stored[i].Issue
-	c.session.Scratch = s.isScratch(c.session.Folder)
-	c.ultracode.Store(stored[i].Ultracode)
-	c.toldBeforeLocked()
+	c.id, c.sid, c.session, c.issue = id, sess.SessionID, sess, sess.Issue
+	c.ultracode.Store(sess.Ultracode)
 	c.loadCopy() // its transcript until the agent replays it, or for good when it can't
 	s.chats[id] = c
 	return c, nil
+}
+
+// storedSession is a stored chat's session, as its chat starts with it,
+// and its agent's kind.
+func (s *Service) storedSession(id string) (model.Session, *kind, error) {
+	stored, err := s.sessions.Sessions()
+	if err != nil {
+		return model.Session{}, nil, err
+	}
+	i := slices.IndexFunc(stored, func(sess model.Session) bool { return sess.ID == id })
+	if i < 0 {
+		return model.Session{}, nil, fmt.Errorf("no chat %q", id)
+	}
+	k, err := s.kindOf(stored[i].Agent)
+	if err != nil {
+		return model.Session{}, nil, err
+	}
+	sess := stored[i]
+	sess.Scratch = s.isScratch(sess.Folder)
+	toldBefore(&sess)
+	return sess, k, nil
 }
 
 // open returns a chat. A stored chat whose agent isn't running (the daemon

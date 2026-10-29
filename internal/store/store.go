@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -25,6 +26,10 @@ type Store struct {
 	// cacheMu keeps the cache's files apart from mu: a cache file's rewrite
 	// doesn't hold up the settings, which chats read under their lock.
 	cacheMu sync.Mutex
+	// sessMu keeps the sessions apart from mu too: reading them all the
+	// first time doesn't hold up the settings.
+	sessMu   sync.Mutex
+	sessions map[string]model.Session // by file name; nil until read
 	// HadMessages says whether the agent's history of a session stored
 	// before sessions said so has messages.
 	HadMessages func(model.Session) bool
@@ -159,54 +164,121 @@ func writeJSON(path string, v any) error {
 	return nil
 }
 
-// SaveSession writes a session's file, replacing any earlier one.
+// SaveSession writes a session's file, replacing any earlier one, and
+// keeps it once written. A chat's saves come one at a time (under its
+// lock), so what's kept is what its file has.
 func (s *Store) SaveSession(sess model.Session) error {
 	dir := filepath.Join(s.dir, "sessions")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	return writeJSON(filepath.Join(dir, url.PathEscape(sess.ID)+".json"), sess)
+	name := sessionFile(sess.ID)
+	if err := writeJSON(filepath.Join(dir, name), sess); err != nil {
+		return err
+	}
+	s.sessMu.Lock()
+	defer s.sessMu.Unlock()
+	if s.sessions != nil {
+		s.sessions[name] = clone(sess)
+	}
+	return nil
 }
 
 // DeleteSession removes a session's file.
 func (s *Store) DeleteSession(id string) error {
-	return os.Remove(filepath.Join(s.dir, "sessions", url.PathEscape(id)+".json"))
+	name := sessionFile(id)
+	err := os.Remove(filepath.Join(s.dir, "sessions", name))
+	if err == nil || errors.Is(err, fs.ErrNotExist) {
+		s.sessMu.Lock()
+		delete(s.sessions, name)
+		s.sessMu.Unlock()
+	}
+	return err
 }
 
-// Sessions reads every stored session.
+// sessionFile is the name of the file a session is kept in.
+func sessionFile(id string) string { return url.PathEscape(id) + ".json" }
+
+// Sessions returns every stored session, in their files' order. The
+// folder is read the first time; after, the sessions are kept as they're
+// saved (nothing else writes it while the daemon runs).
 func (s *Store) Sessions() ([]model.Session, error) {
+	s.sessMu.Lock()
+	defer s.sessMu.Unlock()
+	if s.sessions == nil {
+		read, err := s.readSessions()
+		if err != nil {
+			return nil, err
+		}
+		s.sessions = read
+	}
+	var out []model.Session
+	for _, name := range slices.Sorted(maps.Keys(s.sessions)) {
+		out = append(out, clone(s.sessions[name]))
+	}
+	return out, nil
+}
+
+// readSessions reads every session's file, by its name.
+func (s *Store) readSessions() (map[string]model.Session, error) {
 	entries, err := os.ReadDir(filepath.Join(s.dir, "sessions")) // not a glob: the folder may hold a pattern's characters
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return nil, err
 	}
-	var out []model.Session
+	read := map[string]model.Session{}
 	for _, e := range entries {
 		if !strings.HasSuffix(e.Name(), ".json") {
 			continue
 		}
 		f := filepath.Join(s.dir, "sessions", e.Name())
-		var sess model.Session
-		var flags struct{ HasMessages *bool }
+		// HasMessages of its own, shallower, takes the file's in place of
+		// the session's: nil says the file has none.
+		var file struct {
+			model.Session
+			HasMessages *bool `json:"HasMessages"`
+		}
 		b, err := os.ReadFile(f)
 		if err == nil {
-			err = json.Unmarshal(b, &sess)
-		}
-		if err == nil {
-			err = json.Unmarshal(b, &flags)
+			err = json.Unmarshal(b, &file)
 		}
 		if err != nil { // one bad file doesn't hide the other chats
 			slog.Warn("skipping a chat file", "file", f, "err", err)
 			continue
 		}
+		sess := file.Session
 		if sess.SessionID == "" { // stored before step 22, when the ids were one
 			sess.SessionID = sess.ID
 		}
-		if flags.HasMessages == nil { // stored before step 59
+		if file.HasMessages != nil {
+			sess.HasMessages = *file.HasMessages
+		} else { // stored before step 59
 			sess.HasMessages = sess.Title != "" || s.HadMessages != nil && s.HadMessages(sess)
 		}
-		out = append(out, sess)
+		read[e.Name()] = sess
 	}
-	return out, nil
+	return read, nil
+}
+
+// clone is sess sharing nothing with it: a session kept, or handed out,
+// can't be changed through another copy's slice, map or pointer.
+func clone(sess model.Session) model.Session {
+	sess.Earlier = slices.Clone(sess.Earlier)
+	sess.Worktree = copyOf(sess.Worktree)
+	sess.EarlierWorktrees = slices.Clone(sess.EarlierWorktrees)
+	sess.Throwaway = slices.Clone(sess.Throwaway)
+	sess.Issue = copyOf(sess.Issue)
+	sess.GitHub = copyOf(sess.GitHub)
+	sess.Pull = copyOf(sess.Pull)
+	sess.Picks = maps.Clone(sess.Picks)
+	return sess
+}
+
+func copyOf[T any](p *T) *T {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
 }
 
 // settings are the daemon's own settings (settings.json).

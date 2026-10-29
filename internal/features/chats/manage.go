@@ -35,15 +35,28 @@ func (s *Service) Rename(chatID, name string) error {
 	return nil
 }
 
-// Session is what Nushi keeps of a chat, without reopening it.
-func (s *Service) Session(chatID string) (model.Session, error) {
-	c, err := s.stored(chatID)
-	if err != nil {
-		return model.Session{}, err
+// record is what Nushi keeps of a listed chat, as stored has it: the open
+// chat's, or else the stored one's, without opening the chat (its
+// transcript isn't read).
+func (s *Service) record(id string) (model.Session, error) {
+	s.mu.Lock()
+	c := s.chats[id]
+	s.mu.Unlock()
+	if c == nil {
+		sess, _, err := s.storedSession(id)
+		return sess, err
+	}
+	if c.parent != nil {
+		return model.Session{}, fmt.Errorf("%q is a side chat", id)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.session, nil
+}
+
+// Session is what Nushi keeps of a chat, without reopening it.
+func (s *Service) Session(chatID string) (model.Session, error) {
+	return s.record(chatID)
 }
 
 // LinkPull sets the pull request of a chat's branch (found, or picked by
@@ -271,16 +284,14 @@ func (c *chat) throwawayLocked(ids []string, deleted bool) {
 // Folder returns the folder a chat runs in (in its worktree, for a worktree
 // chat). An archived chat has none to work in.
 func (s *Service) Folder(chatID string) (string, error) {
-	c, err := s.stored(chatID)
+	sess, err := s.record(chatID)
 	if err != nil {
 		return "", err
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.session.Archived {
+	if sess.Archived {
 		return "", errors.New("the chat is archived")
 	}
-	return c.session.Folder, nil
+	return sess.Folder, nil
 }
 
 // Roots returns the folders a chat's files may be read from: its folder

@@ -135,3 +135,38 @@ func TestArchivedChatShowsItsCopy(t *testing.T) {
 		t.Error("an archived chat started its agent")
 	}
 }
+
+// A chat's record and folder come from what's stored, as the chat would
+// have them, without opening it (its copy isn't read); an open one's from
+// the chat.
+func TestRecordOpensNothing(t *testing.T) {
+	folder := t.TempDir()
+	wt := &model.Worktree{Repo: folder, Path: folder, Branch: "nushi/a"} // stored before Told
+	stored := []model.Session{{ID: "c1", SessionID: "s1", Agent: "claude", Folder: folder, Worktree: wt}, {ID: "c2", Agent: "claude", Archived: true}}
+	svc := New([]Kind{{Name: "claude", Dialect: claudeDialect}}, &memModes{}, &memSessions{stored: stored}, nil, t.TempDir(), func(model.Event) {})
+	sess, err := svc.Session("c1")
+	noErr(t, err)
+	if sess.Worktree.Told != "nushi/a" || sess.SessionID != "s1" {
+		t.Errorf("record %+v", sess)
+	}
+	if got, err := svc.Folder("c1"); err != nil || got != folder {
+		t.Errorf("folder %q, %v", got, err)
+	}
+	if _, err := svc.Folder("c2"); err == nil {
+		t.Error("an archived chat's folder")
+	}
+	if _, err := svc.Session("c3"); err == nil {
+		t.Error("a chat that isn't stored")
+	}
+	if len(svc.chats) != 0 {
+		t.Errorf("opened %d chats", len(svc.chats))
+	}
+	c, err := svc.lookup("c1")
+	noErr(t, err)
+	c.mu.Lock()
+	c.session.Title = "open"
+	c.mu.Unlock()
+	if sess, err := svc.Session("c1"); err != nil || sess.Title != "open" {
+		t.Errorf("an open chat's record: %+v, %v", sess, err)
+	}
+}
