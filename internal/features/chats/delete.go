@@ -3,9 +3,11 @@ package chats
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -95,9 +97,13 @@ func (s *Service) startDeleter(ctx context.Context, c *chat) (Agent, bool, error
 // as opts say, the agent deletes its history of each of the chat's sessions
 // (when it can), the chat's scratch folder goes, and then Nushi's record
 // of it. If the worktree or the agent's history can't go, the chat stays.
+// Removing a worktree another chat works in is refused.
 func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions) error {
 	p, err := s.PlanDelete(ctx, chatID)
 	if err != nil {
+		return err
+	}
+	if err := s.othersInWorktrees(chatID, p.Worktrees, opts); err != nil {
 		return err
 	}
 	c, err := s.halt(chatID)
@@ -142,6 +148,28 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 		c.mu.Unlock()
 	}
 	return err
+}
+
+// othersInWorktrees refuses removing a worktree another chat works in, as
+// RemoveWorktree does: it would take that chat's folder.
+func (s *Service) othersInWorktrees(chatID string, wts []WorktreePlan, opts DeleteOptions) error {
+	c, err := s.stored(chatID)
+	if err != nil {
+		return err
+	}
+	for _, wt := range wts {
+		if !opts[wt.Worktree.Path].RemoveWorktree {
+			continue
+		}
+		others, err := s.othersIn(c, wt.Worktree.Path)
+		if err != nil {
+			return err
+		}
+		if len(others) > 0 {
+			return fmt.Errorf("“%s” works in %s too: delete the chat without removing the worktree", strings.Join(others, "”, “"), wt.Worktree.Path)
+		}
+	}
+	return nil
 }
 
 // deleteHistory has a new agent delete its history of sessions.

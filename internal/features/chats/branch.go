@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
@@ -117,7 +115,7 @@ func (c *chat) branchTakenLocked(ctx context.Context, wt model.Worktree) (string
 // usesBranch says whether a chat has wt's branch: it runs in wt's folder,
 // or has (or had) a worktree on that branch.
 func usesBranch(s model.Session, wt model.Worktree) bool {
-	if rel, err := filepath.Rel(wt.Path, s.Folder); err == nil && rel != ".." && !strings.HasPrefix(rel, "../") {
+	if within(s.Folder, wt.Path) {
 		return true
 	}
 	wts := s.EarlierWorktrees

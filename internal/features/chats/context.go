@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -42,6 +43,8 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	if err != nil {
 		return model.ContextUsage{}, err
 	}
+	ctx, cancel := context.WithTimeout(ctx, time.Minute) // an agent alive but silent
+	defer cancel()
 	if c.dialect.Context != nil {
 		return c.dialect.Context(ctx, agent.Call, sid)
 	}

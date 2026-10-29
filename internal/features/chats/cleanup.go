@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
@@ -63,18 +62,12 @@ func (s *Service) othersIn(c *chat, folder string) ([]string, error) {
 	}
 	var titles []string
 	for _, sess := range stored {
-		if sess.ID == c.id || sess.Archived || !inFolder(sess.Folder, folder) {
+		if sess.ID == c.id || sess.Archived || !within(sess.Folder, folder) {
 			continue
 		}
 		titles = append(titles, cmp.Or(sess.Name, sess.Title, "a chat without a title"))
 	}
 	return titles, nil
-}
-
-// inFolder says whether path is folder or inside it.
-func inFolder(path, folder string) bool {
-	rel, err := filepath.Rel(folder, path)
-	return err == nil && filepath.IsLocal(rel)
 }
 
 // RemoveWorktree removes the chat's worktree (git worktree remove): refused

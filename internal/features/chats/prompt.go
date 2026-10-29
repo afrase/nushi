@@ -373,6 +373,14 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		c.queueChangedLocked()
 		return
 	}
+	// The turn ended while a message was out: its end found this worker
+	// running and delivered nothing, so the rest goes as the next prompt.
+	// Not in the defer: the failed hand-off above puts its message back,
+	// and that waits for the next chance.
+	c.steering = false
+	if !c.busy {
+		c.deliverLocked()
+	}
 }
 
 // unsendLocked takes a message the agent never got out of the transcript,

@@ -116,8 +116,8 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		} else if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
 			c.log().Warn("mode after moving", "err", err)
 		}
-	} else if wt != oldWT {
-		s.dropWorktree(wt)
+	} else if worktree && wt != nil {
+		s.dropWorktree(wt) // only one this move made: an earlier one may have another chat in it
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()

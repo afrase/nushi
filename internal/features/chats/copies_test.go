@@ -31,6 +31,7 @@ func newCopyingChat(t *testing.T) (*Service, *fakeAgent, *chat, *transcripts.Sto
 	on.Store(true)
 	svc := New([]Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, &memSessions{}, nil, t.TempDir(), func(model.Event) {})
 	svc.UseCopies(store, on.Load)
+	t.Cleanup(svc.Close)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	noErr(t, err)
 	return svc, agent, svc.chats[id], store, on
