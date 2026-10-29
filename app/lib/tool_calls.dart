@@ -6,10 +6,10 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart';
+import 'package:nushi/typed.dart';
 import 'package:nushi/widgets.dart';
 
 export 'package:nushi/collapsible.dart';
@@ -162,9 +162,10 @@ class ToolCallView extends StatelessWidget {
     final code = theme.code(t.text, size: 12).copyWith(height: 1.2);
     final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
     final verb = kindOf(it).verb;
-    final InlineSpan title = it.toolKind == 'execute'
+    final pathed = it.toolKind != 'execute' && verb != null && path != null;
+    final title = it.toolKind == 'execute'
         ? TextSpan(text: '\$ ${it.title}', style: code)
-        : verb != null && path != null
+        : pathed
         ? TextSpan(
             children: [
               TextSpan(text: '$verb ', style: theme.ui(t.textSecondary)),
@@ -198,20 +199,18 @@ class ToolCallView extends StatelessWidget {
               color: failed ? t.crashed : t.toolAccent,
             ),
             const SizedBox(width: 6),
-            // The title shines while the call runs, the band across the
-            // text alone.
+            // The title types out as the call comes (the path after the
+            // verb), then shines while it runs, the band across the text
+            // alone.
             Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Shine(
-                  on: _running(it) && !still,
-                  child: _tooltip(
-                    rawName,
-                    Text.rich(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                child: _tooltip(
+                  rawName,
+                  Typed(
+                    title,
+                    keep: pathed ? verb.length + 1 : 0,
+                    shine: _running(it) && !still,
                   ),
                 ),
               ),
@@ -353,11 +352,14 @@ Widget _groupTitle(NushiTheme theme, List<Item> calls, {required bool still}) {
   return Row(
     children: [
       if (done.isNotEmpty) Flexible(child: text('${groupLabel(done)}, ')),
+      // What it's doing now types out as it starts, then shines.
       Flexible(
-        child: Shine(
-          child: text(
-            done.isEmpty ? now : now[0].toLowerCase() + now.substring(1),
+        child: Typed(
+          TextSpan(
+            text: done.isEmpty ? now : now[0].toLowerCase() + now.substring(1),
+            style: style,
           ),
+          shine: true,
         ),
       ),
     ],
