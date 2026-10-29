@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -77,4 +78,96 @@ func (s *Service) AnswerPermission(chatID, itemID, optionID string) error {
 	delete(c.waiting, itemID)
 	answer <- optionID
 	return nil
+}
+
+// A prompt or question is answered only by the agent that asked it, while
+// it waits: once that agent stops (sleep, a crash, the daemon's restart) it
+// ends "cancelled", saved, and a resumed agent that wants an answer asks
+// again, with a card of its own.
+
+// asking says an item is a permission prompt or a question still pending.
+func asking(it model.Item) bool {
+	return (it.Kind == model.Permission || it.Kind == model.Question) && it.Status == "pending"
+}
+
+// liveLocked says the agent still waits on the prompt or question id.
+func (c *chat) liveLocked(id string) bool {
+	return c.waiting[id] != nil || c.questions[id] != nil
+}
+
+// dropPromptsLocked cancels the prompts and questions the agent waits on,
+// as ACP asks of a client that stops a turn: each request answers
+// "cancelled" and marks its item so once it has the lock.
+func (c *chat) dropPromptsLocked() {
+	if len(c.waiting)+len(c.questions) == 0 {
+		return
+	}
+	for _, answer := range c.waiting {
+		answer <- ""
+	}
+	for _, answer := range c.questions {
+		close(answer)
+	}
+	clear(c.waiting)
+	clear(c.questions)
+	c.statusChangedLocked()
+}
+
+// endPromptsLocked marks the pending prompts and questions no agent waits
+// on cancelled (left by an agent that stopped, or by a copy written before
+// it did), and tells the app.
+func (c *chat) endPromptsLocked() {
+	for i, it := range c.items {
+		if asking(it) && !c.liveLocked(it.ID) {
+			c.items[i].Status = "cancelled"
+			c.publishLocked(c.items[i])
+		}
+	}
+}
+
+// EndStalePrompts cancels, in the transcripts' copies, the prompts and
+// questions a daemon that stopped left pending: no agent waits on them
+// now. A chat already open is its own (restoreLocked). Run at start.
+func (s *Service) EndStalePrompts() {
+	if s.copies == nil {
+		return
+	}
+	stored, err := s.sessions.Sessions()
+	if err != nil {
+		slog.Warn("ending stale prompts", "err", err)
+		return
+	}
+	for _, sess := range stored {
+		s.mu.Lock() // no chat opens while its copy is fixed (lookup)
+		if s.chats[sess.ID] == nil && s.copies.Has(sess.ID) {
+			s.endStale(sess.ID)
+		}
+		s.mu.Unlock()
+	}
+}
+
+func (s *Service) endStale(id string) {
+	items, err := s.copies.Read(id)
+	if err != nil {
+		slog.Warn("ending stale prompts", "chat", id, "err", err)
+		return
+	}
+	var ended []model.Item
+	var after []string
+	prev := ""
+	for _, it := range items {
+		if asking(it) {
+			it.Status = "cancelled"
+			ended, after = append(ended, it), append(after, prev)
+		}
+		prev = it.ID
+	}
+	if len(ended) == 0 {
+		return
+	}
+	if err := s.copies.Append(id, ended, after); err != nil {
+		slog.Warn("ending stale prompts", "chat", id, "err", err)
+		return
+	}
+	slog.Info("stale prompts cancelled", "chat", id, "items", len(ended))
 }

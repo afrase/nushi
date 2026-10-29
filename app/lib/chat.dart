@@ -316,6 +316,14 @@ class ChatState extends ChangeNotifier {
   /// Asks for a fresh snapshot once the events at hand are applied.
   void _stale() => scheduleMicrotask(() => stale?.call());
 
+  /// Its status as the chat list has it: what shows it follows (its dot
+  /// in the sidebar, after a daemon's restart) without a snapshot.
+  void listed(ChatStatus? s) {
+    if (s == null) return;
+    status(s);
+    notifyListeners();
+  }
+
   void status(ChatStatus? s) {
     if (s == null) return;
     busy = s.busy;

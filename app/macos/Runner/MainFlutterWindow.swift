@@ -148,6 +148,9 @@ final class Alerts: NSObject, UNUserNotificationCenterDelegate {
         center.removeDeliveredNotifications(withIdentifiers: ids)
         DispatchQueue.main.async { result(nil) }
       }
+    case "withdraw":
+      center.removeDeliveredNotifications(withIdentifiers: call.arguments as? [String] ?? [])
+      result(nil)
     case "openSettings":
       let id = Bundle.main.bundleIdentifier ?? ""
       NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")!)

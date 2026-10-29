@@ -747,7 +747,7 @@ class Daemon extends ChangeNotifier {
       ..unseen = daemonApi >= unseenApi ? c.unseen : null
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       // Only the list carries a status; a chat event would clear it.
-      ..status(c.hasStatus() ? c.status : null);
+      ..listed(c.hasStatus() ? c.status : null);
   }
 
   void select(String chatId) {

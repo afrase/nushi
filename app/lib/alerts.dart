@@ -36,8 +36,9 @@ enum AlertKind {
 /// stopped it), "failed" when the turn had an error. A notification is
 /// posted unless Nushi is the app in front *and* shows that chat: in the
 /// background every chat's; in front, the other chats'. A click opens its
-/// chat. Nothing leaves the Mac: macOS shows them. The badge is the number
-/// of chats that need you. macOS asks for permission on the first
+/// chat, and a "needs you" goes once its chat no longer does. Nothing
+/// leaves the Mac: macOS shows them. The badge is the number of chats that
+/// need you. macOS asks for permission on the first
 /// notification, not at launch.
 class MacAlerts {
   new(this.daemon, {this.channel = alertsChannel}) {
@@ -71,6 +72,9 @@ class MacAlerts {
   final _asked = <String, Set<String>>{}; // prompts already notified
   final _finishing = <String, Timer>{};
   final _posted = <String>{}; // chats with notifications posted
+  // Chats with a "needs you" posted: whether the chat has been seen
+  // waiting since, after which its end takes the notification back.
+  final _needs = <String, bool>{};
   String? _badgeShown;
 
   void dispose() {
@@ -141,6 +145,9 @@ class MacAlerts {
     if (!kind.on || chat == null || chat.archived) return;
     if (_focused && daemon.macView.showing == id) return;
     _posted.add(id);
+    if (kind == AlertKind.permission || kind == AlertKind.question) {
+      _needs[id] = chat.waiting;
+    }
     unawaited(
       channel
           .invokeMethod<Object?>('post', {
@@ -173,11 +180,29 @@ class MacAlerts {
     );
   }
 
-  /// The Dock badge: the chats that need you, or none.
+  /// The Dock badge: the chats that need you, or none. A chat that no
+  /// longer does (answered, cancelled, or its agent stopped: a daemon's
+  /// restart) has its "needs you" notifications taken back.
   void _badge() {
     final n = daemon.chats.values
         .where((c) => c.phase == ChatPhase.waiting)
         .length;
+    for (final MapEntry(key: id, value: seen) in _needs.entries.toList()) {
+      final waiting = daemon.chats[id]?.waiting ?? false;
+      if (waiting) {
+        _needs[id] = true;
+      } else if (seen || !daemon.chats.containsKey(id)) {
+        _needs.remove(id);
+        unawaited(
+          channel
+              .invokeMethod<Object?>('withdraw', [
+                '$id/${AlertKind.permission.name}',
+                '$id/${AlertKind.question.name}',
+              ])
+              .then((_) {}, onError: (Object _) {}),
+        );
+      }
+    }
     final label = dockBadge.value && n > 0 ? '$n' : '';
     if (label == _badgeShown) return;
     _badgeShown = label;

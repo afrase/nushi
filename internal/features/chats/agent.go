@@ -198,6 +198,7 @@ func (s *Service) watch(c *chat, agent Agent) {
 	}
 	c.agent, c.kept = nil, true
 	c.logLocked().Error("the chat's agent quit unexpectedly", "pid", agent.Pid())
+	c.dropPromptsLocked()
 	c.orphanLocked(false)
 	c.noticeLocked("error", "The agent quit unexpectedly. Your next message reopens the chat.")
 	c.statusChangedLocked()
@@ -207,8 +208,9 @@ func (s *Service) watch(c *chat, agent Agent) {
 
 // orphanLocked fails what can't finish once the agent that ran it is gone:
 // tool calls still pending or running (also as a replay brings them back,
-// when the agent died before their results), and subagents running in the
-// background, which are "stopped" when Nushi stopped the agent.
+// when the agent died before their results), subagents running in the
+// background, which are "stopped" when Nushi stopped the agent, and
+// prompts and questions no agent waits on, "cancelled".
 func (c *chat) orphanLocked(stopped bool) {
 	c.ownTurn = false
 	for i, it := range c.items {
@@ -227,6 +229,7 @@ func (c *chat) orphanLocked(stopped bool) {
 			c.publishLocked(c.items[i])
 		}
 	}
+	c.endPromptsLocked()
 	c.copyLocked(true) // what the agent left is as it stays
 }
 
@@ -237,6 +240,7 @@ func (c *chat) disconnect() {
 	c.mu.Lock()
 	agent := c.agent
 	c.agent, c.kept = nil, len(c.items) > 0
+	c.dropPromptsLocked() // the agent can't take an answer once stopped
 	c.orphanLocked(true)
 	c.mu.Unlock()
 	if agent != nil {
