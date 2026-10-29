@@ -60,7 +60,7 @@ func readReplays(t *testing.T, dir string) *replays {
 		// goroutine of its own, so when it asks isn't in a cassette's
 		// order: it is answered (with none) whenever it comes, and a
 		// recording's ask isn't expected.
-		r.fakes = append(r.fakes, claudetest.Replay(withoutTitles(c)).Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
+		r.fakes = append(r.fakes, claudetest.Replay(forGoAgent(c)).Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
 			`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":null}}}`))
 	}
 }
@@ -148,9 +148,9 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 	ids := map[string]string{} // the recorded sessions' ids to the live ones
 	// sessions is a recorded message with the live sessions' ids.
 	sessions := func(msg json.RawMessage) string { return liveIDs(ids).Replace(string(msg)) }
-	agentReqs := map[string]string{} // the recorded agent's request ids to the Go agent's
-	asked := map[string]event{}      // the marked requests, by recorded id
-	reads := 0                       // the requests that read claude's history so far
+	agentReqs := map[string]agentReq{} // the agent's requests, by the recorded id
+	asked := map[string]event{}        // the marked requests, by recorded id
+	reads := 0                         // the requests that read claude's history so far
 	for i, l := range append(slices.Clone(rec), more...) {
 		var m rpc
 		testcheck.NoErr(t, json.Unmarshal(l.Msg, &m))
@@ -164,16 +164,21 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 				}
 				installHistory(t, filepath.Join(dir, "history", history), configDir, cwd, ids)
 			}
-			var id json.RawMessage
-			if m.Method == "" { // an answer to the agent's request: under the Go agent's id
-				id = json.RawMessage(agentReqs[string(m.ID)])
+			msg, id := l.Msg, json.RawMessage(nil)
+			if m.Method == "" { // an answer to the agent's request: under the Go agent's id, in its terms
+				req := agentReqs[string(m.ID)]
+				id = req.id
+				if result := req.answer(m.Result); m.Error == nil {
+					msg, _ = json.Marshal(map[string]any{"jsonrpc": "2.0", "id": m.ID, "result": result})
+					events = append(events, event{reply: result, id: string(m.ID)})
+				}
 			}
 			if marked(m.Method) {
 				e := request(m)
 				asked[string(m.ID)] = e
 				events = append(events, e)
 			}
-			_, err := io.WriteString(toAgentW, rewrite(t, sessions(l.Msg), id, cwd)+"\n")
+			_, err := io.WriteString(toAgentW, rewrite(t, sessions(msg), id, cwd)+"\n")
 			testcheck.NoErr(t, err)
 		case m.Method == sessionUpdate: // the adapter's, read by readACP
 		case m.Method != "" && m.ID == nil: // another notification (the adapter's _auth/status_update): Nushi reads none
@@ -182,7 +187,9 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			if got.Method != m.Method {
 				t.Fatalf("the Go agent sent %s %s, the adapter %s", got.Method, got.Params, m.Method)
 			}
-			agentReqs[string(m.ID)] = string(got.ID)
+			agentReqs[string(m.ID)] = agentReq{id: got.ID, method: got.Method, recorded: m.Params, live: got.Params}
+			params := recordedIDs(ids).Replace(string(got.Params))
+			events = append(events, event{ask: got.Method, params: json.RawMessage(params), id: string(m.ID)})
 		default: // the agent's answer to the request with this id
 			got := next("the answer to " + string(m.ID))
 			if string(got.ID) != string(m.ID) || (got.Error == nil) != (m.Error == nil) {
@@ -222,6 +229,51 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		}
 	}
 	return events
+}
+
+// agentReq is a request of the Go agent's: its id, and what it and the
+// adapter's request asked.
+type agentReq struct {
+	id             json.RawMessage
+	method         string
+	recorded, live json.RawMessage
+}
+
+// answer is the recorded client's answer to the adapter's request as an
+// answer to the Go agent's: a permission option of the same kind, the
+// options' ids being each agent's own (Nushi only passes back the one
+// picked).
+func (r agentReq) answer(result json.RawMessage) json.RawMessage {
+	var res acp.RequestPermissionResponse
+	if r.method != "session/request_permission" || json.Unmarshal(result, &res) != nil || res.Outcome.Selected == nil {
+		return result
+	}
+	var rec, live acp.RequestPermissionRequest
+	_, _ = json.Unmarshal(r.recorded, &rec), json.Unmarshal(r.live, &live)
+	i := slices.IndexFunc(rec.Options, func(o acp.PermissionOption) bool { return o.OptionID == res.Outcome.Selected.OptionID })
+	if i < 0 {
+		return result
+	}
+	j := slices.IndexFunc(live.Options, func(o acp.PermissionOption) bool { return o.Kind == rec.Options[i].Kind })
+	if j < 0 {
+		return result
+	}
+	res.Outcome.Selected.OptionID = live.Options[j].OptionID
+	b, err := json.Marshal(res)
+	if err != nil {
+		return result
+	}
+	return b
+}
+
+// recordedIDs replaces live sessions' ids with the recorded ones, as
+// liveIDs the other way.
+func recordedIDs(ids map[string]string) *strings.Replacer {
+	back := make(map[string]string, len(ids))
+	for rec, live := range ids {
+		back[live] = rec
+	}
+	return liveIDs(back)
 }
 
 // liveIDs replaces recorded sessions' ids with the live ones, as whole
@@ -285,26 +337,50 @@ func rewrite(t *testing.T, msg string, id json.RawMessage, cwd string) string {
 	return string(b)
 }
 
-// withoutTitles is c without claude's asks for a title and its answers.
-func withoutTitles(c *claudetest.Cassette) *claudetest.Cassette {
-	asks := map[string]bool{}
+// goAgentHook is the callback id the Go agent gives its one hook,
+// PostToolUse (claudeacp's session start; claudeagent numbers hooks in
+// the order of their events' names).
+const goAgentHook = "hook_0"
+
+// forGoAgent is c as the Go agent's claude plays it. Without claude's
+// asks for a title and their answers: the Go agent asks on a goroutine
+// of its own, answered whenever it comes. And with the hooks the Go agent
+// registers only: the adapter registers more (PostCompact, TaskCreated…)
+// under ids of its own, so claude's calls of the others go, with their
+// answers, and a PostToolUse call takes the Go agent's id.
+func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
+	dropped := map[string]bool{} // claude's requests whose answers go too
 	out := *c
-	out.Frames = slices.DeleteFunc(slices.Clone(c.Frames), func(f claudetest.Frame) bool {
+	out.Frames = nil
+	for _, f := range c.Frames {
 		var fr struct {
 			RequestID string `json:"request_id"`
 			Request   struct {
 				Subtype string `json:"subtype"`
+				Input   struct {
+					Event string `json:"hook_event_name"`
+				} `json:"input"`
 			} `json:"request"`
 			Response struct {
 				RequestID string `json:"request_id"`
 			} `json:"response"`
 		}
 		_ = json.Unmarshal(f.Frame, &fr)
-		if f.Dir == "in" && fr.Request.Subtype == "generate_session_title" {
-			asks[fr.RequestID] = true
-			return true
+		switch {
+		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title",
+			f.Dir == "out" && fr.Request.Subtype == "hook_callback" && fr.Request.Input.Event != "PostToolUse":
+			dropped[fr.RequestID] = true
+			continue
+		case fr.Response.RequestID != "" && dropped[fr.Response.RequestID]:
+			continue
+		case fr.Request.Subtype == "hook_callback":
+			var m map[string]any
+			if json.Unmarshal(f.Frame, &m) == nil {
+				m["request"].(map[string]any)["callback_id"] = goAgentHook
+				f.Frame, _ = json.Marshal(m)
+			}
 		}
-		return f.Dir == "out" && fr.Response.RequestID != "" && asks[fr.Response.RequestID]
-	})
+		out.Frames = append(out.Frames, f)
+	}
 	return &out
 }
