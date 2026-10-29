@@ -166,21 +166,21 @@ func (c *chat) sendLocked(m model.Message) {
 
 // startLocked starts a turn with prompt, after notes of where the chat
 // works (moved, its folder's branch switched) and its worktree's branch
-// renamed since the last one, if they were. The prompt is written to
-// the agent in the background; a cancel waits for it (see cancelLocked).
+// renamed since the last one, if they were. The notes are made and the
+// prompt is written to the agent in the background; a cancel waits for
+// it (see cancelLocked).
 func (c *chat) startLocked(prompt []acp.ContentBlock) {
 	if c.agent == nil {
 		c.noticeLocked("error", "The agent isn't running; send the message again to reopen the chat.")
 		return
 	}
-	notes, told := c.notesLocked()
-	prompt = append(notes, prompt...)
+	notes := c.notesLocked()
 	sent, done := make(chan struct{}), make(chan struct{})
 	c.busy, c.started, c.done, c.sent, c.held = true, time.Now(), done, sent, false
 	c.released, c.steered, c.turnFrom, c.stopped = false, 0, len(c.items), false
 	c.statusChangedLocked()
 	c.logLocked().Info("turn started", "queued", len(c.queue))
-	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, told, sent, done)
+	go c.run(c.agent, &acp.PromptRequest{SessionID: acp.SessionID(c.sid), Prompt: prompt}, notes, sent, done)
 }
 
 // releaseLocked ends the running turn for the chat while the agent still
@@ -249,7 +249,9 @@ func title(prompt string) string {
 }
 
 //nolint:contextcheck // a turn outlives the request that started it
-func (c *chat) run(agent Agent, req *acp.PromptRequest, t *told, sent, done chan struct{}) {
+func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done chan struct{}) {
+	blocks, t := n.blocks()
+	req.Prompt = append(blocks, req.Prompt...)
 	wait, err := agent.StartPrompt(context.Background(), req)
 	close(sent)
 	var resp *acp.PromptResponse
