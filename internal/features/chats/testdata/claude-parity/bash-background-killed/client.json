@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
+    {"prompt": "run it in the background", "session": "s1"},
+    {"kill": "sleep 37"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "_meta": {"_claude/origin": {"kind": "task-notification"}}}}}}
+  ]
+}

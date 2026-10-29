@@ -1,0 +1,9 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "hello"}, "content": [{"type": "text", "text": "Hello!"}]},
+    {"match": {"lastUserText": "what did we do"}, "content": [{"type": "text", "text": "We said hello."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "summary"}, "content": [{"type": "text", "text": "<analysis>Short.</analysis>\n<summary>The user said hello and Claude said hello back.</summary>"}]}
+  ]
+}

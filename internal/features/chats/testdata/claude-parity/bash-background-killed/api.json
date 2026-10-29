@@ -1,0 +1,9 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "run it in the background"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "sleep 37; echo never", "description": "Wait long", "run_in_background": true}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "It runs in the background."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "It failed."}]}
+  ]
+}

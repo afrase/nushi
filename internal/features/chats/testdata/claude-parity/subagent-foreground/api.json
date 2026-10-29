@@ -1,0 +1,10 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "ask a helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Say hi", "subagent_type": "general-purpose", "prompt": "Reply with one word: hi."}}]},
+    {"match": {"lastUserText": "Reply with one word: hi."}, "content": [{"type": "text", "text": "hi"}]},
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "The helper said hi."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

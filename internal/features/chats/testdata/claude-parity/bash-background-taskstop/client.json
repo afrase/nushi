@@ -1,0 +1,8 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash", "TaskStop"]}}}}}},
+    {"prompt": "run it in the background", "session": "s1"},
+    {"prompt": "stop it", "session": "s1"}
+  ]
+}

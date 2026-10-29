@@ -1,0 +1,7 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "echo hi"}, "content": [{"type": "tool_use", "name": "ToolSearch", "input": {"query": "select:mcp__echo__echo", "max_results": 1}}]},
+    {"match": {"toolResult": "ToolSearch"}, "content": [{"type": "tool_use", "name": "mcp__echo__echo", "input": {"text": "hi"}}]},
+    {"match": {"toolResult": "mcp__echo__echo"}, "content": [{"type": "text", "text": "It said hi."}]}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "ask a helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Say later", "subagent_type": "general-purpose", "prompt": "Reply with one word: later.", "run_in_background": true}}]},
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "It runs in the background."}]},
+    {"match": {"lastUserText": "tell the helper"}, "content": [{"type": "tool_use", "name": "ToolSearch", "input": {"query": "select:SendMessage", "max_results": 1}}]},
+    {"match": {"toolResult": "ToolSearch", "capture": {"agent": "agentId: ([A-Za-z0-9_-]+)"}}, "content": [{"type": "tool_use", "name": "SendMessage", "input": {"to": "${agent}", "message": "Now reply with one word: bye.", "summary": "Ask for bye", "type": "message"}}]},
+    {"match": {"toolResult": "SendMessage"}, "content": [{"type": "text", "text": "Sent."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "Reply with one word: later."}, "content": [{"type": "text", "text": "later"}]},
+    {"match": {"lastUserText": "Now reply with one word: bye."}, "content": [{"type": "text", "text": "bye"}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

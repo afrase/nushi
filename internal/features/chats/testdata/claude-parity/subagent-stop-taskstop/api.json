@@ -1,0 +1,14 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "start a helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Wait", "subagent_type": "general-purpose", "prompt": "Wait for a signal that never comes.", "run_in_background": true}}]},
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "It runs in the background."}]},
+    {"match": {"lastUserText": "stop the helper"}, "content": [{"type": "tool_use", "name": "ToolSearch", "input": {"query": "select:TaskStop", "max_results": 1}}]},
+    {"match": {"toolResult": "ToolSearch", "capture": {"agent": "agentId: ([A-Za-z0-9_-]+)"}}, "content": [{"type": "tool_use", "name": "TaskStop", "input": {"task_id": "${agent}"}}]},
+    {"match": {"toolResult": "TaskStop"}, "content": [{"type": "text", "text": "Stopped."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "Wait for a signal that never comes."}, "hang": true, "content": [{"type": "text", "text": "Waiting."}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

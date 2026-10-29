@@ -1,0 +1,11 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "TaskStop", "SendMessage"]}}}}}},
+    {"prompt": "start a helper and wait for it", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "running"}}}}},
+    {"cancel": "s1"},
+    {"await": "p1"},
+    {"prompt": "after the stop", "session": "s1"}
+  ]
+}

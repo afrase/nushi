@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "TaskStop", "SendMessage"]}}}}}},
+    {"prompt": "ask a helper in the background", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p1"},
+    {"prompt": "tell the helper to say bye", "session": "s1", "async": "p2"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "running"}}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p2"}
+  ]
+}

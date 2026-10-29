@@ -1,0 +1,8 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"ultracode": true}}}}},
+    {"request": "session/set_config_option", "params": {"sessionId": "$s1", "configId": "effort", "value": "high"}},
+    {"prompt": "hello", "session": "s1"}
+  ]
+}

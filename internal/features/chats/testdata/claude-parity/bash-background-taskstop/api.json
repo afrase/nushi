@@ -1,0 +1,12 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "run it in the background"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "sleep 38; echo never", "description": "Wait long", "run_in_background": true}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "It runs in the background."}]},
+    {"match": {"lastUserText": "stop it"}, "content": [{"type": "tool_use", "name": "ToolSearch", "input": {"query": "select:TaskStop", "max_results": 1}}]},
+    {"match": {"toolResult": "ToolSearch", "capture": {"task": "with ID: ([A-Za-z0-9_-]+)"}}, "content": [{"type": "tool_use", "name": "TaskStop", "input": {"task_id": "${task}"}}]},
+    {"match": {"toolResult": "TaskStop"}, "content": [{"type": "text", "text": "Stopped."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}
