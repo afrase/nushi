@@ -155,7 +155,9 @@ func resultContent(name string, b claudeagent.Block) (content []acp.ToolCallCont
 		if text == "" {
 			return nil, false
 		}
-		return []acp.ToolCallContent{textContent(fence("console", text))}, true
+		if !b.IsError { // a failed or refused command is fenced as any error, as claude-agent-acp does for a client without terminals
+			return []acp.ToolCallContent{textContent(fence("console", text))}, true
+		}
 	case "Read":
 		if !b.IsError {
 			text = strings.Trim(reminders.ReplaceAllString(text, ""), "\n")

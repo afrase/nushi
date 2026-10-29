@@ -65,6 +65,8 @@ func TestResultContent(t *testing.T) {
 	}{
 		{"Bash", `"a\nb"`, false, "```console\na\nb\n```"},
 		{"Bash", `""`, false, "-"},
+		{"Bash", `"User refused permission to run tool"`, true, "```\nUser refused permission to run tool\n```"},
+		{"PowerShell", `"Exit code 1\nFAIL"`, true, "```\nExit code 1\nFAIL\n```"},
 		{"Read", `"     1\tx = 1\n<system-reminder>be careful</system-reminder>\n"`, false, "```\n     1\tx = 1\n```"},
 		{"Read", `"no such file"`, true, "```\nno such file\n```"},
 		{"Edit", `"ok"`, false, "-"},
