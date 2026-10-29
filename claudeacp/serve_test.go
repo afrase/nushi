@@ -2,6 +2,7 @@ package claudeacp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -31,6 +32,62 @@ func TestInitialize(t *testing.T) {
 	if !c.PromptCapabilities.Image || !c.PromptCapabilities.EmbeddedContext || !c.MCPCapabilities.HTTP || !c.MCPCapabilities.SSE ||
 		c.SessionCapabilities.Close == nil || !queueing {
 		t.Errorf("%+v", c)
+	}
+}
+
+// session/new runs claude in the folder with the session's id, the
+// user's settings, partial messages and echoes, the ACP MCP servers over
+// the options' and the options Nushi sends; initialize carries what the
+// command line can't.
+func TestNewSession(t *testing.T) {
+	f := claudetest.New(
+		claudetest.Expect(`{"type":"control_request","request":{"subtype":"initialize","appendSystemPrompt":"Be brief.\n\nBe kind."}}`),
+		claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`),
+	)
+	p := start(t, nil, f)
+	dir := t.TempDir()
+	r, err := p.NewSession(context.Background(), &acp.NewSessionRequest{
+		Cwd: dir, AdditionalDirectories: []string{"/extra"},
+		MCPServers: []acp.MCPServer{
+			{Stdio: &acp.MCPServerStdio{Name: "tools", Command: "/bin/tools", Args: []string{"-x"}, Env: []acp.EnvVariable{{Name: "K", Value: "v"}}}},
+			{HTTP: &acp.MCPServerHTTP{Name: "web", URL: "https://mcp.example", Headers: []acp.HTTPHeader{{Name: "H", Value: "1"}}}},
+		},
+		SystemPrompt: &acp.SystemPrompt{Mode: acp.SystemPromptModeAppend, Content: []acp.ContentBlock{
+			{Text: &acp.TextContent{Text: "Be brief."}}, {Text: &acp.TextContent{Text: "Be kind."}}}},
+		Meta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+			"perTaskStopAffordance": false, "env": map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
+			"settings": map[string]any{"ultracode": true}, "model": "opus", "unknownKey": 1,
+			"mcpServers": map[string]any{"tools": map[string]any{"type": "stdio", "command": "/old"}, "kept": map[string]any{"type": "sse", "url": "https://kept"}},
+		}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.SessionID != "id1" {
+		t.Errorf("session %s", r.SessionID)
+	}
+	<-f.Played()
+	sp := f.Spec()
+	if sp.Dir != dir || sp.Path != "/claude" {
+		t.Errorf("%+v", sp)
+	}
+	for _, want := range []string{"--session-id=id1", "--setting-sources=user,project,local", "--include-partial-messages",
+		"--replay-user-messages", "--model=opus", "--add-dir=/extra", "--disallowedTools=AskUserQuestion", `{"ultracode":true}`} {
+		if !slices.Contains(sp.Args, want) {
+			t.Errorf("no %s in %q", want, sp.Args)
+		}
+	}
+	i := slices.Index(sp.Args, "--mcp-config")
+	var mcp struct{ MCPServers map[string]map[string]any }
+	if i < 0 || json.Unmarshal([]byte(sp.Args[i+1]), &mcp) != nil {
+		t.Fatalf("%q", sp.Args)
+	}
+	if got := mcp.MCPServers; got["tools"]["command"] != "/bin/tools" || got["web"]["type"] != "http" ||
+		got["web"]["headers"].(map[string]any)["H"] != "1" || got["kept"]["url"] != "https://kept" {
+		t.Errorf("%v", got)
+	}
+	if !slices.Contains(sp.Env, "CLAUDE_CODE_REPORT_FINDINGS=1") {
+		t.Error("the options' env isn't claude's")
 	}
 }
 
@@ -67,6 +124,9 @@ func TestNewSessionFails(t *testing.T) {
 		{"relative cwd", acp.NewSessionRequest{Cwd: "here"}, acp.ErrorCodeInvalidParams},
 		{"missing cwd", acp.NewSessionRequest{Cwd: "/no/such/folder"}, acp.ErrorCodeInvalidParams},
 		{"file cwd", acp.NewSessionRequest{Cwd: file}, acp.ErrorCodeInvalidParams},
+		{"image system prompt", acp.NewSessionRequest{Cwd: t.TempDir(), SystemPrompt: &acp.SystemPrompt{Mode: acp.SystemPromptModeOverride,
+			Content: []acp.ContentBlock{{Image: &acp.ImageContent{Data: "x", MimeType: "image/png"}}}}}, acp.ErrorCodeInvalidParams},
+		{"bad settings", acp.NewSessionRequest{Cwd: t.TempDir(), Meta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{"settings": 3}}}}, acp.ErrorCodeInvalidParams},
 		{"claude exits", acp.NewSessionRequest{Cwd: t.TempDir()}, acp.ErrorCodeInternalError},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -110,30 +170,4 @@ func TestDeath(t *testing.T) {
 	p := start(t, nil, fake(claudetest.Exit(1, "crash\n")))
 	sid := p.open(t)
 	eventually(t, "the session gone", func() bool { _, err := p.agent.session(sid); return err != nil })
-}
-
-// session/new runs claude in the folder with the session's id, the
-// user's settings, partial messages and echoes.
-func TestNewSession(t *testing.T) {
-	f := fake()
-	p := start(t, nil, f)
-	dir := t.TempDir()
-	r, err := p.NewSession(context.Background(), &acp.NewSessionRequest{Cwd: dir, AdditionalDirectories: []string{"/extra"}, MCPServers: []acp.MCPServer{}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r.SessionID != "id1" {
-		t.Errorf("session %s", r.SessionID)
-	}
-	<-f.Played()
-	sp := f.Spec()
-	if sp.Dir != dir || sp.Path != "/claude" {
-		t.Errorf("%+v", sp)
-	}
-	for _, want := range []string{"--session-id=id1", "--setting-sources=user,project,local", "--include-partial-messages",
-		"--replay-user-messages", "--add-dir=/extra", "--disallowedTools=AskUserQuestion"} {
-		if !slices.Contains(sp.Args, want) {
-			t.Errorf("no %s in %q", want, sp.Args)
-		}
-	}
 }
