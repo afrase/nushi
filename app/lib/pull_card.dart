@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/github_parts.dart';
@@ -117,7 +118,22 @@ class _Rows extends StatelessWidget {
     if (p == null) {
       return Text(error ?? '#${l.number}…', style: muted);
     }
-    return PullRows(cp);
+    // Kept from before while it's asked: says when it was read.
+    final kept = cp.keptAt;
+    if (kept == null) return PullRows(cp);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PullRows(cp),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            updatedLine(kept, loading: cp.asking, now: clock())!,
+            style: theme.ui(t.textMuted, size: 11.5),
+          ),
+        ),
+      ],
+    );
   }
 }
 

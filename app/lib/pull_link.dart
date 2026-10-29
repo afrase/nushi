@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
@@ -80,7 +81,7 @@ void markPullSeen(String chat, GitHubPull p) {
 class ChatPull extends ChangeNotifier {
   /// The one of [chat].
   factory of(Daemon daemon, ChatState chat) =>
-      _all[chat] ??= ChatPull._(daemon, chat);
+      (_all[chat] ??= ChatPull._(daemon, chat)).._seed();
 
   new _(this.daemon, this.chat);
 
@@ -92,8 +93,27 @@ class ChatPull extends ChangeNotifier {
   /// What the daemon said of the chat's folder; null until it answered.
   FindChatPullResponse? found;
 
-  /// The linked pull request whole; null until asked, or with none.
+  /// The linked pull request whole; null until asked, or with none. Until
+  /// the first ask answers, what was read last (`pull_cache.dart`), from
+  /// [keptAt].
   GitHubPull? pull;
+
+  /// When the pull request showing was read, while it's the one kept
+  /// from before (null once asked).
+  DateTime? keptAt;
+
+  /// Whether it's being asked for now.
+  bool get asking => _asking != null;
+
+  /// What was read last of the linked pull request, until it's asked.
+  void _seed() {
+    final l = chat.pull;
+    if (pull != null || l == null) return;
+    if (cachedPull(_ref(l)) case (final at, final p)) {
+      pull = p;
+      keptAt = at;
+    }
+  }
 
   /// Why the last ask failed (what shows stays).
   String? error;
@@ -204,14 +224,15 @@ class ChatPull extends ChangeNotifier {
       final l = chat.pull;
       if (l == null) {
         pull = null;
+        keptAt = null;
       } else {
+        final ref = _ref(l);
         final r = await daemon.client.getGitHubPull(
-          GetGitHubPullRequest(
-            ref: GitHubRef(host: l.host, repo: l.repo, number: l.number),
-            quiet: quiet,
-          ),
+          GetGitHubPullRequest(ref: ref, quiet: quiet),
         );
         pull = r.pull;
+        keptAt = null;
+        keepPull(ref, r.pull);
         PullStates.of(daemon).put(r.pull.item);
         // The comments there when the chat first saw it aren't new.
         if (!pullSeen.value.containsKey(chat.id)) markPullSeen(chat.id, r.pull);
@@ -221,6 +242,9 @@ class ChatPull extends ChangeNotifier {
     }
   }
 
+  static GitHubRef _ref(GitHubLink l) =>
+      GitHubRef(host: l.host, repo: l.repo, number: l.number);
+
   /// Links [link] by hand, or unlinks (null).
   Future<void> setLink(GitHubLink? link) async {
     await daemon.client.linkChatPull(
@@ -228,6 +252,8 @@ class ChatPull extends ChangeNotifier {
     );
     chat.linkPull(link);
     pull = null;
+    keptAt = null;
+    _seed();
     notifyListeners();
     await refresh();
   }
