@@ -141,6 +141,8 @@ void main() {
     expect(rows, orderedEquals([...rows]..sort()));
     expect(find.text('To Do  1'), findsOneWidget);
     expect(find.byType(JiraIssuePane), findsNothing); // a list, no details
+    // Its close names Esc, as Settings' and GitHub's do (UX review, 22).
+    expect(find.byTooltip('Close (esc)'), findsOne);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyK);

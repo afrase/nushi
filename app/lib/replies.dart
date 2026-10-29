@@ -138,7 +138,7 @@ class UserMessageText extends StatelessWidget {
   }
 }
 
-/// The dark pill over a selection: "Start a side chat | Reply".
+/// The dark pill over a selection: "Side question | Reply".
 class SelectionToolbar extends StatelessWidget {
   const new({super.key, this.onSide, this.onReply});
 
@@ -166,7 +166,7 @@ class SelectionToolbar extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (onSide case final run?) action('Start a side chat', run),
+            if (onSide case final run?) action('Side question', run),
             if (onSide != null && onReply != null)
               VerticalDivider(
                 width: 1,

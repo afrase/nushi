@@ -80,7 +80,7 @@ class SidePanel extends StatelessWidget {
               ),
             ),
             TurnStatus(side),
-            Composer(chat: side, daemon: daemon, hint: 'Ask on the side'),
+            Composer(chat: side, daemon: daemon, hint: 'Ask a side question'),
           ],
         ),
       ),
@@ -98,4 +98,26 @@ extension SideChats on Daemon {
     sides.remove(side.id);
     client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
   }
+}
+
+/// Opens [chat]'s side question (a fork of it; once at a time), with
+/// [selection] quoted in its box when given: from a selection's "Side
+/// question", the palette or ⇧⌘B (Claude Code's /btw).
+Future<void> askAside(
+  BuildContext context,
+  Daemon daemon,
+  ChatState chat, [
+  String selection = '',
+]) async {
+  if (chat.side == null && !chat.forking.value) {
+    chat.forking.value = true;
+    try {
+      chat.side = await daemon.forkChat(chat);
+    } on Object catch (e) {
+      if (context.mounted) showError(context, e);
+    } finally {
+      chat.forking.value = false; // the chat's view shows the side
+    }
+  }
+  if (selection.isNotEmpty) chat.side?.draft.quote.value = selection;
 }

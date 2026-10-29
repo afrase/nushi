@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/agents.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
+import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
@@ -16,10 +18,14 @@ import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_link_dialog.dart';
+import 'package:nushi/review.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_view.dart';
+import 'package:nushi/side_panel.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/widgets.dart';
@@ -28,8 +34,16 @@ import 'package:nushi/widgets.dart';
 // key (bound at the app's root, and passed on by a terminal) and, when it
 // names a menu, a menu bar item.
 
-/// The menus an action can be in.
-enum ActMenu { nushi, file, view }
+/// The menus an action can be in; the Chat menu's are the chat's ⋯ menu
+/// too.
+enum ActMenu { nushi, file, view, chat }
+
+/// ⇧⌘B: a side question (Claude Code's /btw, "by the way").
+const sideQuestionKey = SingleActivator(
+  LogicalKeyboardKey.keyB,
+  meta: true,
+  shift: true,
+);
 
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
@@ -42,12 +56,25 @@ enum Act {
   details,
   terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
   rewind(keyText: 'Esc Esc'), // the composer's
-  archive,
+  sideQuestion(
+    key: sideQuestionKey,
+    menu: ActMenu.chat,
+    menuLabel: 'Side Question',
+  ),
+  sendComments(menu: ActMenu.chat, menuLabel: 'Send Review Comments to Agent'),
+  stop(keyText: 'Esc', menu: ActMenu.chat, menuLabel: 'Stop'), // the chat's
+  rename(menu: ActMenu.chat, menuLabel: 'Rename'),
+  sleep(menu: ActMenu.chat, menuLabel: 'Sleep'),
+  reload(menu: ActMenu.chat, menuLabel: 'Reload'),
+  linkPull(menu: ActMenu.chat, menuLabel: 'Link Pull Request…'),
+  archive(menu: ActMenu.chat, menuLabel: 'Archive'),
+  unarchive(menu: ActMenu.chat, menuLabel: 'Unarchive'),
+  mcp(menu: ActMenu.chat, menuLabel: 'MCP Servers…'),
+  skills(menu: ActMenu.chat, menuLabel: 'Skills…'),
+  delete(menu: ActMenu.chat, menuLabel: 'Delete…'),
   settings(key: settingsKey, menu: ActMenu.nushi, menuLabel: 'Settings…'),
   jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
   github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
-  mcp,
-  skills,
   restart;
 
   new({this.key, this.keyText, this.menu, this.menuLabel});
@@ -68,14 +95,22 @@ enum Act {
 }
 
 /// One row of the palette: what it says, whether it applies now, and what
-/// it does.
+/// it does; [short], what a chat's ⋯ menu says ("Rename" for "Rename
+/// chat").
 class AppAction {
-  const new(this.act, this.title, {required this.run, this.enabled = true});
+  const new(
+    this.act,
+    this.title, {
+    required this.run,
+    this.enabled = true,
+    String? short,
+  }) : short = short ?? title;
 
   final Act act;
   final String title;
   final bool enabled;
   final VoidCallback run;
+  final String short;
 
   String? get shortcut => act.shortcut;
 }
@@ -176,12 +211,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       enabled: shown != null && rewindChoices(shown).isNotEmpty,
       run: () => unawaited(pickRewind(context, d, shown!)),
     ),
-    AppAction(
-      .archive,
-      'Archive chat',
-      enabled: shown != null && !shown.archived,
-      run: () => tryOrShow(context, () => archiveChat(context, shown!, d)),
-    ),
+    ...chatActions(context, d, shown),
     AppAction(.settings, 'Settings', run: d.openSettings),
     AppAction(
       .jira,
@@ -194,8 +224,94 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       run: () => d.showGitHub(open: !d.githubOpen),
     ),
     AppAction(
+      .restart,
+      'Restart daemon',
+      enabled: bundledDaemon != null,
+      run: () => unawaited(restartDaemonAsking(context, d)),
+    ),
+  ];
+}
+
+/// What can be done to [chat] (the shown one, from the palette and the
+/// menu bar; any, from its ⋯ menu or its sidebar row's), each as it is now:
+/// the Chat menu's actions. Without a chat they don't apply, but MCP
+/// servers and Skills, which open their Settings sections. [onRename]
+/// renames in place (a sidebar row); else the header's title does.
+List<AppAction> chatActions(
+  BuildContext context,
+  Daemon d,
+  ChatState? chat, {
+  VoidCallback? onRename,
+}) {
+  final live = chat != null && !chat.archived && !chat.sessionGone;
+  final comments = chat == null ? 0 : unsentComments(chat.id).length;
+  return [
+    AppAction(
+      .sideQuestion,
+      'Side question',
+      enabled: live && chat.canFork,
+      run: () => unawaited(askAside(context, d, chat!)),
+    ),
+    AppAction(
+      .sendComments,
+      'Send review comments to agent ($comments)',
+      short: 'Send review comments ($comments)',
+      enabled: live && comments > 0,
+      run: () => reviewToBox(chat!),
+    ),
+    AppAction(
+      .stop,
+      'Stop the turn',
+      short: 'Stop',
+      enabled: chat != null && chat.started != null && !chat.stopping,
+      run: () => unawaited(stopTurn(context, chat!, d)),
+    ),
+    AppAction(
+      .rename,
+      'Rename chat',
+      short: 'Rename',
+      enabled: chat != null,
+      run: onRename ?? () => chat!.renaming.value = true,
+    ),
+    AppAction(
+      .sleep,
+      'Sleep chat',
+      short: 'Sleep',
+      enabled: chat != null && chat.canSleep && !chat.archived,
+      run: () => unawaited(sleepChat(context, chat!, d)),
+    ),
+    AppAction(
+      .reload,
+      'Reload chat',
+      short: 'Reload',
+      enabled: live && !chat.busy && !chat.asleep && !chat.reopenFailed,
+      run: () => tryOrShow(context, () => reloadChat(context, chat!, d)),
+    ),
+    AppAction(
+      .linkPull,
+      chat?.pull == null ? 'Link pull request…' : 'Link another pull request…',
+      enabled: live && d.daemonApi >= chatPullApi,
+      run: () => unawaited(linkPull(context, ChatPull.of(d, chat!))),
+    ),
+    AppAction(
+      .archive,
+      'Archive chat',
+      short: 'Archive',
+      enabled: chat != null && !chat.archived,
+      run: () => tryOrShow(context, () => archiveChat(context, chat!, d)),
+    ),
+    AppAction(
+      .unarchive,
+      'Unarchive chat',
+      short: 'Unarchive',
+      enabled: chat != null && chat.archived,
+      run: () => tryOrShow(context, () => archiveChat(context, chat!, d)),
+    ),
+    AppAction(
       .mcp,
       'MCP servers',
+      short: 'MCP servers…',
+      enabled: knownAgents[chat?.agent]?.mcp ?? true,
       run: () => chat == null
           ? d.openSettings(section: SettingsSection.mcp)
           : d.showMcp(chat.folder),
@@ -203,15 +319,17 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .skills,
       'Skills',
+      short: 'Skills…',
       run: () => chat == null
           ? d.openSettings(section: SettingsSection.skills)
           : d.showSkills(chat.folder, agent: chat.agent),
     ),
     AppAction(
-      .restart,
-      'Restart daemon',
-      enabled: bundledDaemon != null,
-      run: () => unawaited(restartDaemonAsking(context, d)),
+      .delete,
+      'Delete chat…',
+      short: 'Delete…',
+      enabled: chat != null,
+      run: () => unawaited(showDeleteChat(context, chat!, d)),
     ),
   ];
 }

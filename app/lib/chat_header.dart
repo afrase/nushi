@@ -47,7 +47,32 @@ class ChatHeader extends StatefulWidget {
 }
 
 class _ChatHeaderState extends State<ChatHeader> {
-  bool _renaming = false;
+  // The title is a field (a double-click, ⋯'s Rename, or the palette's
+  // and the Chat menu's, through the chat).
+  bool get _renaming => widget.chat.renaming.value;
+  set _renaming(bool v) => widget.chat.renaming.value = v;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.chat.renaming.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(ChatHeader old) {
+    super.didUpdateWidget(old);
+    if (old.chat == widget.chat) return;
+    old.chat.renaming.removeListener(_changed);
+    widget.chat.renaming.addListener(_changed);
+  }
+
+  @override
+  void dispose() {
+    widget.chat.renaming.removeListener(_changed);
+    super.dispose();
+  }
+
+  void _changed() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -131,10 +156,10 @@ class _ChatHeaderState extends State<ChatHeader> {
                     chat: chat,
                     daemon: widget.daemon,
                     style: titleStyle,
-                    onDone: () => setState(() => _renaming = false),
+                    onDone: () => _renaming = false,
                   )
                 : GestureDetector(
-                    onDoubleTap: () => setState(() => _renaming = true),
+                    onDoubleTap: () => _renaming = true,
                     child: Text(
                       chat.title.isEmpty ? 'New chat' : chat.title,
                       maxLines: 1,
@@ -275,7 +300,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                 context,
                 chat,
                 widget.daemon,
-                onRename: () => setState(() => _renaming = true),
+                onRename: () => _renaming = true,
               ),
             ],
           ),

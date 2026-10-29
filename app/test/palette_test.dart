@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_nav.dart';
+import 'package:nushi/side_panel.dart';
 import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
@@ -239,6 +243,101 @@ void main() {
     expect(_p('Close Jira'), findsOneWidget);
     tester.daemonOf().dispose();
   }, variant: macOS);
+
+  // UX review, findings 9 and 12: the chat's actions are one list, read
+  // by the palette, the Chat menu and ⋯.
+  testWidgets("the chat's actions in the palette: Rename, Side question "
+      '(⇧⌘B), Reload, Delete…; archived chats last, marked', (tester) async {
+    final (d, fake) = await _app(tester, select: 'a');
+    d.chats['c']!.archived = true;
+    fake.emit(
+      EventsResponse(
+        chatId: 'a',
+        seq: Int64(1),
+        status: ChatStatus(canFork: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Future<void> pick(String query, String row) async {
+      await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+      await _type(tester, query);
+      await tester.tap(
+        find.descendant(of: find.byType(Palette), matching: find.text(row)),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pick('rename', 'Rename chat');
+    expect(d.chats['a']!.renaming.value, isTrue);
+    expect(find.byType(RenameField), findsOne); // the header's title
+    d.chats['a']!.renaming.value = false;
+    await tester.pumpAndSettle();
+
+    await pick('side', 'Side question');
+    expect(fake.calls.whereType<ForkChatRequest>().single.chatId, 'a');
+
+    // ⇧⌘B, wherever the focus is.
+    d.closeSide(d.chats['a']!);
+    await tester.pumpAndSettle();
+    await _keys(tester, LogicalKeyboardKey.keyB, meta: true, shift: true);
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<ForkChatRequest>(), hasLength(2));
+
+    await _keys(tester, LogicalKeyboardKey.keyK, meta: true);
+    await _type(tester, 'release');
+    expect(
+      find.descendant(
+        of: find.byType(Palette),
+        matching: find.text('archived · site'),
+      ),
+      findsOne,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    await pick('delete', 'Delete chat…');
+    expect(find.textContaining('Delete'), findsWidgets); // its dialog
+    expect(fake.calls.whereType<PlanDeleteChatRequest>(), isNotEmpty);
+    d.dispose();
+  }, variant: macOS);
+
+  testWidgets("⋯ lists the chat's actions that apply, with their keys", (
+    tester,
+  ) async {
+    final (d, fake) = await _app(tester, select: 'a');
+    fake.emit(
+      EventsResponse(
+        chatId: 'a',
+        seq: Int64(1),
+        status: ChatStatus(canFork: true, canSleep: true),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Chat menu'));
+    await tester.pumpAndSettle();
+    for (final row in [
+      'Side question   ⇧⌘B',
+      'Rename',
+      'Sleep',
+      'Reload',
+      'Link pull request…',
+      'Archive',
+      'Skills…',
+      'Delete…',
+    ]) {
+      expect(find.text(row, findRichText: true), findsOne, reason: row);
+    }
+    // Not what doesn't apply.
+    expect(find.text('Unarchive', findRichText: true), findsNothing);
+    expect(find.textContaining('Stop', findRichText: true), findsNothing);
+    d.dispose();
+  }, variant: macOS);
+
+  test('every action of the Chat menu has its label there', () {
+    for (final a in Act.values.where((a) => a.menu == ActMenu.chat)) {
+      expect(a.menuLabel, isNotNull, reason: a.name);
+    }
+  });
 
   testWidgets('golden: the palette with a few matches, dark', (tester) async {
     await loadFonts();
