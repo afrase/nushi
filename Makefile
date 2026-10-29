@@ -1,4 +1,4 @@
-# Dart's protoc plugins: dart pub global activate protoc_plugin; dart pub global activate connectrpc
+# Dart's protoc plugins (make gen-tools), from pub's global bin.
 export PATH := $(HOME)/.pub-cache/bin:$(PATH)
 BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 # golangci-lint and govulncheck, pinned in their own module so the daemon's
@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -118,9 +118,21 @@ icons:
 adapters:
 	tools/adapters.sh
 
-gen:
+# The API's code from proto/, committed; CI checks it is what this makes.
+# Go's plugins are go.mod's tools; Dart's are pinned in gen-tools, and
+# connectrpc's output is formatted (it writes its own layout).
+gen: gen-tools
 	$(BUF) lint
 	$(BUF) generate
+	dart format app/lib/gen
+
+# Dart's protoc plugins at the versions gen is checked with, activated in
+# pub's global packages unless they are already.
+PROTOC_DART := 25.1.0
+CONNECT_DART := 2.0.0
+gen-tools:
+	@dart pub global list | grep -qx 'protoc_plugin $(PROTOC_DART)' || dart pub global activate protoc_plugin $(PROTOC_DART)
+	@dart pub global list | grep -qx 'connectrpc $(CONNECT_DART)' || dart pub global activate connectrpc $(CONNECT_DART)
 
 $(GOLANGCI): tools/lint/go.mod tools/lint/go.sum
 	GOWORK=off go build -modfile=tools/lint/go.mod -o $@ github.com/golangci/golangci-lint/v2/cmd/golangci-lint
@@ -154,8 +166,10 @@ test: test-go test-packages test-app test-web
 
 # With the race detector: about twice the time, still under the app's
 # tests in CI, and a goroutine nothing waits for shows up here first.
+# GOTESTFLAGS adds flags (CI's -shuffle=on, which finds tests that pass
+# only in their file's order; go test prints the seed to run it again).
 test-go:
-	go test -race ./...
+	go test -race $(GOTESTFLAGS) ./...
 
 # The packages run anywhere with Go (remote_transport's interop builds a
 # Go peer) and Chrome.

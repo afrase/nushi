@@ -33,7 +33,7 @@ Settings › Logs & advanced shows the app's version and the running daemon's (`
 ## Requirements
 
 - Go (current stable) and Flutter on `PATH`
-- For `make gen`: `dart pub global activate protoc_plugin` and `dart pub global activate connectrpc` (buf runs through `go run`)
+- For `make gen`: nothing more (it activates the Dart protoc plugins at the versions it pins; buf runs through `go run`)
 
 ## Run
 

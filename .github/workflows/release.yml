@@ -5,6 +5,8 @@ name: Release
 # in afrase/homebrew-tap (ADR 0055). A draft triggers nothing until it is published. Run it by hand to rebuild an
 # existing release's files. The app (macOS), the relays and the web app (Linux) build in parallel jobs, beside the
 # check; publish attaches them once all are built and the commit is checked. Actions are pinned by commit, as in CI.
+# Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (step 445), room
+# for a cold cache.
 on:
   release:
     types: [published]
@@ -26,6 +28,7 @@ jobs:
   tag:
     name: Check the tag and CI
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
       actions: read
@@ -70,6 +73,7 @@ jobs:
     needs: tag
     # What CI's macos-latest is (macos-26-arm64): the daemon is cgo, built for arm64.
     runs-on: macos-26
+    timeout-minutes: 20
     permissions:
       contents: read
     env:
@@ -102,6 +106,7 @@ jobs:
     name: Build the relays (Linux)
     needs: tag
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     env:
@@ -127,6 +132,7 @@ jobs:
     name: Build the web app (Linux)
     needs: tag
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     env:
@@ -167,6 +173,7 @@ jobs:
       needs.relay.result == 'success' && needs.web.result == 'success' &&
       (needs.ci.result == 'success' || needs.ci.result == 'skipped')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     env:

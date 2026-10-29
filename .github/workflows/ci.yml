@@ -5,6 +5,10 @@
 # rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
 # protos' and Dart's lint, the Dart packages' tests, and the packages that also run elsewhere (the relay, the Noise
 # channel). The ACP library, github.com/afrase/acp-go, has its own CI. Actions are pinned by commit.
+#
+# Each job's timeout is two to three times its longest recent run with warm caches (step 445: Go 4.4 minutes, the
+# app's shards 6.2, the web 7.1, Linux's 2 at most), room for a cold cache's downloads and builds: a hung test ends
+# there, not at GitHub's six hours on a scarce macOS runner.
 name: CI
 
 on:
@@ -30,6 +34,10 @@ jobs:
   go:
     name: Go lint and tests (macOS)
     runs-on: macos-latest
+    timeout-minutes: 15
+    # The tests in a new order each run: one that passes only after another shows (the log has the seed).
+    env:
+      GOTESTFLAGS: -shuffle=on
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -67,6 +75,7 @@ jobs:
   lint:
     name: Proto and Dart lint (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -85,10 +94,17 @@ jobs:
           flutter-version: 3.47.7
           cache: true
       - run: make lint-dart
+      # The committed API code is what make gen makes from the protos, with the plugins it pins.
+      - if: ${{ !cancelled() }}
+        run: |
+          make gen
+          git diff --exit-code -- internal/gen app/lib/gen
+          test -z "$(git status --porcelain -- internal/gen app/lib/gen)"
 
   packages:
     name: Dart packages (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -108,6 +124,7 @@ jobs:
   app:
     name: App tests (macOS, ${{ matrix.shard }}/2)
     runs-on: macos-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -159,6 +176,7 @@ jobs:
   web:
     name: Web app in Chrome (macOS)
     runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -191,6 +209,7 @@ jobs:
   linux:
     name: Go packages (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -199,4 +218,7 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - run: go test -race ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
+      - run: go test -race -shuffle=on ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
+      # go.mod and go.sum name what the code imports, no more and no less.
+      - if: ${{ !cancelled() }}
+        run: go mod tidy -diff
