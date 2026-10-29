@@ -17,16 +17,18 @@ import (
 
 // fakeClient is a host's client: its answers, and what it was asked.
 type fakeClient struct {
-	mu      sync.Mutex
-	token   string
-	inbox   githubapi.Inbox
-	fail    error
-	states  map[string]model.GitHubItem
-	asked   []string
-	blobs   map[githubapi.BlobAt]githubapi.Blob
-	files   []githubapi.File
-	written []string
-	heads   map[string][]githubapi.HeadPull // by repository and head
+	mu       sync.Mutex
+	token    string
+	inbox    githubapi.Inbox
+	fail     error
+	states   map[string]model.GitHubItem
+	asked    []string
+	blobs    map[githubapi.BlobAt]githubapi.Blob
+	files    []githubapi.File
+	written  []string
+	heads    map[string][]githubapi.HeadPull // by repository and head
+	branches map[string]string               // a branch's head, by name
+	pull     *model.GitHubPull               // what Pull answers, when set
 }
 
 func (f *fakeClient) note(s string) {
@@ -67,6 +69,9 @@ func (f *fakeClient) Status(_ context.Context, ids []string) (map[string]model.G
 }
 
 func (f *fakeClient) Pull(_ context.Context, _ string, n int) (model.GitHubPull, error) {
+	if f.pull != nil {
+		return *f.pull, nil
+	}
 	if n == 9 { // a fork's
 		return model.GitHubPull{ID: "PR_9", Head: "Fix: the thing!", CrossRepo: true}, nil
 	}
@@ -138,6 +143,36 @@ func (f *fakeClient) RerunFailed(_ context.Context, _ string, jobs []int64) ([]i
 	f.written = append(f.written, "rerun")
 	return jobs[:1], nil
 }
+
+func (f *fakeClient) BranchHead(_ context.Context, _, branch string) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if sha, ok := f.branches[branch]; ok {
+		return sha, nil
+	}
+	return "", githubapi.ErrNotFound
+}
+
+func (f *fakeClient) DeleteBranch(_ context.Context, _, branch string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.written = append(f.written, "delete "+branch)
+	delete(f.branches, branch)
+	return nil
+}
+
+func (f *fakeClient) CreateBranch(_ context.Context, _, branch, sha string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.written = append(f.written, "create "+branch)
+	if f.branches == nil {
+		f.branches = map[string]string{}
+	}
+	f.branches[branch] = sha
+	return nil
+}
+
+func (f *fakeClient) DefaultBranch(context.Context, string) (string, error) { return "main", nil }
 
 func (f *fakeClient) SubmitReview(context.Context, githubapi.Review) error {
 	f.written = append(f.written, "review")
@@ -418,6 +453,45 @@ func TestRerunFailed(t *testing.T) {
 	n, err := w.s.RerunFailed(ctx, model.GitHubRef{Host: "github.com", Repo: "afrase/nushi-gh-test", Number: 1}, []int64{8, 9})
 	if c := w.clients["gho_gh"]; err != nil || n != 1 || !slices.Contains(c.written, "rerun") {
 		t.Fatalf("%d %v %v", n, err, c.written)
+	}
+}
+
+func TestHeadBranch(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
+	c := w.clients["gho_gh"]
+	ref := model.GitHubRef{Host: "github.com", Repo: "afrase/nushi-gh-test", Number: 3}
+	p := model.GitHubPull{State: "open", Head: "feat", HeadOID: "abc", HeadRepo: "afrase/nushi-gh-test"}
+	c.pull = &p
+	c.branches = map[string]string{"feat": "abc"}
+	if _, err := w.s.DeleteHeadBranch(ctx, ref); err == nil || !strings.Contains(err.Error(), "still open") {
+		t.Fatalf("an open pull request's branch: %v", err)
+	}
+	p.State = "merged"
+	c.branches["feat"] = "def" // moved on since
+	if _, err := w.s.DeleteHeadBranch(ctx, ref); err == nil || !strings.Contains(err.Error(), "moved on") {
+		t.Fatalf("a branch with new commits: %v", err)
+	}
+	c.branches["feat"] = "abc"
+	if ok, err := w.s.DeleteHeadBranch(ctx, ref); !ok || err != nil {
+		t.Fatalf("%v %v", ok, err)
+	}
+	if ok, err := w.s.DeleteHeadBranch(ctx, ref); ok || err != nil { // gone already
+		t.Fatalf("%v %v", ok, err)
+	}
+	if err := w.s.RestoreHeadBranch(ctx, ref); err != nil || c.branches["feat"] != "abc" {
+		t.Fatalf("%v %v", err, c.branches)
+	}
+	if err := w.s.RestoreHeadBranch(ctx, ref); err != nil { // there already
+		t.Fatal(err)
+	}
+	p.Head = "main" // the default branch
+	if _, err := w.s.DeleteHeadBranch(ctx, ref); err == nil || !strings.Contains(err.Error(), "default branch") {
+		t.Fatalf("the default branch: %v", err)
+	}
+	if got := strings.Join(c.written, ","); got != "delete feat,create feat" {
+		t.Fatal(got)
 	}
 }
 

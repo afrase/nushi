@@ -31,6 +31,7 @@ func (stuckWorktrees) List(context.Context, string) ([]model.WorktreeEntry, erro
 func (stuckWorktrees) Found(context.Context, string) *model.Worktree               { return nil }
 func (stuckWorktrees) Branch(context.Context, string) string                       { return "" }
 func (stuckWorktrees) Changed(context.Context, string) (int, error)                { return 0, nil }
+func (stuckWorktrees) Changes(context.Context, string, int) ([]string, error)      { return nil, nil }
 func (stuckWorktrees) Switch(context.Context, string, string, bool) error          { return nil }
 
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {

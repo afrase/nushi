@@ -121,6 +121,28 @@ func Branches(ctx context.Context, folder string, limit int) ([]model.Branch, er
 	return list, nil
 }
 
+// Changes lists folder's first n uncommitted changes, untracked files
+// included, as git status --short says each ("M a.go", "?? b.txt").
+func (Worktrees) Changes(ctx context.Context, folder string, n int) ([]string, error) {
+	out, err := run(ctx, folder, "status", "--porcelain", "-z", "--untracked-files=all", "--ignore-submodules=dirty")
+	if err != nil {
+		return nil, err
+	}
+	var list []string
+	fields := split(out)
+	for i := 0; i < len(fields) && len(list) < n; i++ {
+		f := fields[i]
+		if len(f) <= 3 {
+			continue
+		}
+		list = append(list, strings.TrimSpace(f[:2])+" "+f[3:])
+		if f[0] == 'R' || f[0] == 'C' {
+			i++
+		}
+	}
+	return list, nil
+}
+
 // Changed counts folder's checkout's uncommitted changes to tracked files
 // (staged or not); untracked files go along with a switch.
 func (Worktrees) Changed(ctx context.Context, folder string) (int, error) {

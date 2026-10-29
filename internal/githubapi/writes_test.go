@@ -2,6 +2,7 @@ package githubapi
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -97,5 +98,58 @@ func TestRerunFailed(t *testing.T) {
 	}
 	if _, err := f.client().RerunFailed(t.Context(), "../x", []int64{8}); err == nil {
 		t.Fatal("a bad repository was asked")
+	}
+}
+
+func TestBranchRefs(t *testing.T) {
+	f := newFake(t)
+	var deleted, created []string
+	f.route("GET /repos/afrase/nushi-gh-test/git/ref/heads/feat/a", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"ref":"refs/heads/feat/a","object":{"sha":"abc"}}`))
+	})
+	f.route("GET /repos/afrase/nushi-gh-test/git/ref/heads/gone", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	f.route("DELETE /repos/afrase/nushi-gh-test/git/refs/heads/feat/a", func(w http.ResponseWriter, r *http.Request) {
+		deleted = append(deleted, r.URL.Path)
+		w.WriteHeader(http.StatusNoContent)
+	})
+	f.route("DELETE /repos/afrase/nushi-gh-test/git/refs/heads/gone", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, _ = w.Write([]byte(`{"message":"Reference does not exist"}`))
+	})
+	f.route("POST /repos/afrase/nushi-gh-test/git/refs", func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		created = append(created, body["ref"]+" "+body["sha"])
+		w.WriteHeader(http.StatusCreated)
+	})
+	f.route("GET /repos/afrase/nushi-gh-test", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"default_branch":"main"}`))
+	})
+	c := f.client()
+	ctx := t.Context()
+	if sha, err := c.BranchHead(ctx, repo, "feat/a"); err != nil || sha != "abc" {
+		t.Fatalf("%q %v", sha, err)
+	}
+	if _, err := c.BranchHead(ctx, repo, "gone"); !errors.Is(err, ErrNotFound) {
+		t.Fatal(err)
+	}
+	if err := c.DeleteBranch(ctx, repo, "feat/a"); err != nil || len(deleted) != 1 {
+		t.Fatalf("%v %v", err, deleted)
+	}
+	if err := c.DeleteBranch(ctx, repo, "gone"); !errors.Is(err, ErrNotFound) {
+		t.Fatal(err)
+	}
+	if err := c.CreateBranch(ctx, repo, "feat/a", "abc"); err != nil || created[0] != "refs/heads/feat/a abc" {
+		t.Fatalf("%v %v", err, created)
+	}
+	if b, err := c.DefaultBranch(ctx, repo); err != nil || b != "main" {
+		t.Fatalf("%q %v", b, err)
+	}
+	for _, bad := range []string{"", "-x", "a..b", "a b", "../x", "x.lock"} {
+		if err := c.DeleteBranch(ctx, repo, bad); err == nil {
+			t.Fatalf("%q deleted", bad)
+		}
 	}
 }

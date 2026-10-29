@@ -111,6 +111,8 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **To do** | The Pull request tab's list of what blocks the merge: failing checks, review threads not resolved and a review bot's findings to address, each with Send; Send picked, Send all to agent. | `PullTodo`, `todoItems` | |
 | **Finding** (a review bot's) | An item a review bot's comment lists under a heading such as "Must address", found by its Markdown's shape (a guess); one on a thread's lines joins that thread. | `reviewFindings`, `ReviewFinding` | |
 | **PR widget** (Pull request widget) | The details panel's sum-up of the chat's pull request: state, title, the checks bar, a row a reviewer, open threads (Address), whether it can merge and by what it's blocked, comments; one line collapsed. | `pull_card.dart`, `PullRows`, `pullSummary` | 0059 |
+| **Clean up…** | After a chat's pull request merged or closed: delete its worktree, its local branch and the branch on GitHub, and archive the chat, each ticked in a dialog that says what it costs; Not now hides the PR widget's offer. | `showCleanUp`, `CleanUpJob`, `RemoveChatWorktree`, `DeleteChatBranch`, `DeleteGitHubBranch` | 0063 |
+| **Restore branch** | Make the pull request's branch on GitHub again at its head, after a clean-up deleted it. | `RestoreGitHubBranch` | 0063 |
 | **Review thread** | A GitHub inline comment and its replies at a line: Reply, Resolve, Unresolve. | `GitHubThread` | |
 | **Your review** | Inline comments you wrote on a pull request, not sent until Review… (comment, approve, request changes). | `GitHubDraft`, `SubmitGitHubReview` | |
 | **Check** | A CI check of a pull request; a failed one opens to its annotations and its job's log. | `GitHubCheck`, `GetGitHubJobLog` | |

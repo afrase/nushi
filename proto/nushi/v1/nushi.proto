@@ -368,6 +368,22 @@ service NushiService {
   // Re-runs the failed jobs of the workflow runs that a pull request's
   // failed Actions jobs belong to. API 88.
   rpc RerunGitHubChecks(RerunGitHubChecksRequest) returns (RerunGitHubChecksResponse);
+  // Cleaning up after a chat's pull request: what the chat's worktree and
+  // branch would lose (GetCleanUp), removing the worktree, deleting its
+  // branch, and the pull request's branch on GitHub deleted or made again.
+  // API 89.
+  rpc GetCleanUp(GetCleanUpRequest) returns (GetCleanUpResponse);
+  // Refused mid-turn, while another chat works in the worktree, and with
+  // uncommitted changes unless force. API 89.
+  rpc RemoveChatWorktree(RemoveChatWorktreeRequest) returns (RemoveChatWorktreeResponse);
+  // Refused while a worktree has the branch checked out, and with commits
+  // its base doesn't have unless force. API 89.
+  rpc DeleteChatBranch(DeleteChatBranchRequest) returns (DeleteChatBranchResponse);
+  // A merged or closed pull request's head branch, only while it points at
+  // the pull request's head; never the default branch. API 89.
+  rpc DeleteGitHubBranch(DeleteGitHubBranchRequest) returns (DeleteGitHubBranchResponse);
+  // That branch made again at the pull request's head. API 89.
+  rpc RestoreGitHubBranch(RestoreGitHubBranchRequest) returns (RestoreGitHubBranchResponse);
   // A chat's pull request: the one it was started from, else the one whose
   // head is its folder's branch, looked for on GitHub (and linked when
   // found), with the folder's repository and branch. API 81.
@@ -2823,6 +2839,54 @@ message RerunGitHubChecksRequest {
   // The failed checks' ids (Actions jobs').
   repeated int64 jobs = 2;
 }
+
+message GetCleanUpRequest {
+  string chat_id = 1;
+}
+
+message GetCleanUpResponse {
+  // The chat's worktree; unset when it has none.
+  Worktree worktree = 1;
+  WorktreeState state = 2;
+  // Its first uncommitted changes, as git status says them ("M a.go").
+  repeated string changes = 3;
+  // Another worktree has its branch checked out.
+  bool branch_elsewhere = 4;
+  // The other chats (not archived) working in it, by title.
+  repeated string others = 5;
+}
+
+message RemoveChatWorktreeRequest {
+  string chat_id = 1;
+  // Remove it with its uncommitted changes.
+  bool force = 2;
+}
+
+message RemoveChatWorktreeResponse {}
+
+message DeleteChatBranchRequest {
+  string chat_id = 1;
+  // Delete it with commits its base doesn't have (a squash merge's).
+  bool force = 2;
+}
+
+message DeleteChatBranchResponse {}
+
+message DeleteGitHubBranchRequest {
+  // The pull request.
+  GitHubRef ref = 1;
+}
+
+message DeleteGitHubBranchResponse {
+  // False: it was gone already.
+  bool deleted = 1;
+}
+
+message RestoreGitHubBranchRequest {
+  GitHubRef ref = 1;
+}
+
+message RestoreGitHubBranchResponse {}
 
 message RerunGitHubChecksResponse {
   // The workflow runs asked to re-run.
