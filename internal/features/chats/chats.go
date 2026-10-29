@@ -397,8 +397,8 @@ func (c *chat) statusLocked() model.Status {
 // runningLocked counts the subagents and background commands that run.
 func (c *chat) runningLocked() int {
 	n := 0
-	for _, it := range c.items {
-		if running(it) {
+	for i := range c.items {
+		if running(c.items[i]) {
 			n++
 		}
 	}
@@ -449,12 +449,14 @@ func (c *chat) cancelLocked() error {
 	}
 }
 
-// itemLocked returns the item with id, or nil.
+// itemLocked returns the item with id, or nil; nil for "" (every item
+// has an id), without a look.
 func (c *chat) itemLocked(id string) *model.Item {
-	for i := range c.items {
-		if c.items[i].ID == id {
-			return &c.items[i]
-		}
+	if id == "" {
+		return nil
+	}
+	if i := c.indexLocked(id); i >= 0 {
+		return &c.items[i]
 	}
 	return nil
 }
