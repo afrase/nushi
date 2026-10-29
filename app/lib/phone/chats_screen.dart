@@ -217,7 +217,7 @@ class ChatRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  ChatDot(chat: chat),
+                  ChatDot(chat: chat, sparks: true),
                   const SizedBox(width: 10),
                   AgentMark(chat.agent, color: t.textSecondary),
                   const SizedBox(width: 10),

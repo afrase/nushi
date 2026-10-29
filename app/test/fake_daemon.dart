@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -172,3 +173,17 @@ Future<void> loadFonts() async {
     await loader.load();
   }
 }
+
+/// [child] laid out at [size] and drawn [scale] times as large, so a
+/// golden (taken at one pixel a point) shows a small mark's pixels.
+Widget enlarged(Size size, double scale, Widget child) => RepaintBoundary(
+  child: SizedBox(
+    width: size.width * scale,
+    height: size.height * scale,
+    child: FittedBox(
+      fit: BoxFit.fill,
+      alignment: Alignment.topLeft,
+      child: SizedBox.fromSize(size: size, child: child),
+    ),
+  ),
+);

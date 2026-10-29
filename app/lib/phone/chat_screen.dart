@@ -15,9 +15,9 @@ import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/pull_states.dart';
-import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
+import 'package:nushi/turn_status.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// A chat on the phone: the Mac's transcript (messages, tool rows
@@ -82,7 +82,7 @@ class ChatScreen extends StatelessWidget {
                       ),
                     ),
             ),
-            if (chat.busy) TurnStatus(chat),
+            TurnStatus(chat),
           ],
         ),
         bottom: chat.archived
