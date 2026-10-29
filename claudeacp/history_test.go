@@ -44,15 +44,18 @@ func resultBlocks(id, content string, isError bool) []any {
 	return []any{map[string]any{"type": "tool_result", "tool_use_id": id, "content": content, "is_error": isError}}
 }
 
-// writeRecords writes records to path, each the parent of the next, in
-// session sid.
+// writeRecords writes records to path, each with a uuid the parent of
+// the next such, in session sid.
 func writeRecords(t *testing.T, path, sid string, records ...rec) {
 	t.Helper()
 	var b strings.Builder
 	parent := any(nil)
 	for _, r := range records {
-		r["parentUuid"], r["sessionId"] = parent, sid
-		parent = r["uuid"]
+		r["sessionId"] = sid
+		if r["uuid"] != nil {
+			r["parentUuid"] = parent
+			parent = r["uuid"]
+		}
 		line, err := json.Marshal(r)
 		if err != nil {
 			t.Fatal(err)
