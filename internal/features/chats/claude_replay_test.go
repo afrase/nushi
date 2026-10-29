@@ -31,13 +31,29 @@ const goAgentHook = "hook_0"
 //   - The interrupt the adapter sends as it closes a session claude isn't
 //     running: the Go agent interrupts only a running turn and otherwise
 //     just ends stdin (claudeacp's close). See idleTeardown.
+//   - A second interrupt before claude answers the first: the adapter
+//     sends two as its client goes mid-turn (the session's close and the
+//     prompt's cancel each send one; eof-mid-tool), the Go agent one,
+//     which stops the turn as well.
 func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 	dropped := map[string]bool{} // claude's requests and the adapter's whose answers go too
 	out := *c
 	out.Frames = nil
+	pending := "" // the adapter's last interrupt, until claude answers it
 	for _, f := range c.Frames[:idleTeardown(c)] {
 		fr := readFrame(f)
+		again := pending != "" && f.Dir == "in" && fr.Request.Subtype == "interrupt"
 		switch {
+		case again:
+		case f.Dir == "in" && fr.Request.Subtype == "interrupt":
+			pending = fr.RequestID
+		case pending != "" && fr.Response.RequestID == pending:
+			pending = ""
+		}
+		switch {
+		case again:
+			dropped[fr.RequestID] = true
+			continue
 		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title",
 			f.Dir == "in" && fr.Request.Subtype == "get_context_usage",
 			f.Dir == "out" && fr.Request.Subtype == "hook_callback" && fr.Request.Input.Event != "PostToolUse":
@@ -129,6 +145,9 @@ func TestForGoAgent(t *testing.T) {
 		prompt       = `{"type":"user","message":{"role":"user","content":"hi"}}`
 		result       = `{"type":"result","subtype":"success"}`
 		keepAlive    = `{"type":"keep_alive"}`
+		// the adapter's second interrupt as its client goes mid-turn
+		interrupt2Ask = `{"type":"control_request","request_id":"int2","request":{"subtype":"interrupt"}}`
+		interrupt2Ack = `{"type":"control_response","response":{"subtype":"success","request_id":"int2","response":{"still_queued":[]}}}`
 	)
 	in, out := func(s string) string { return "in " + s }, func(s string) string { return "out " + s }
 	for _, tc := range []struct {
@@ -143,6 +162,8 @@ func TestForGoAgent(t *testing.T) {
 		{"interrupt closing a session never prompted", []string{in(initAsk), out(initAnswer), in(interruptAsk), out(interruptAck)}, []int{2, 3}},
 		{"a keep-alive after the closing interrupt", []string{in(initAsk), out(initAnswer), in(interruptAsk), in(keepAlive)}, []int{2, 3}},
 		{"interrupt closing a running turn", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), out(interruptAck), out(result), out(stateIdle)}, nil},
+		{"two interrupts closing a running turn", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), in(interrupt2Ask), out(interruptAck), out(interrupt2Ack)}, []int{5, 7}},
+		{"an interrupt after the last was answered", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), in(interruptAsk), out(interruptAck), in(interrupt2Ask), out(interrupt2Ack)}, nil},
 		{"a cancel's interrupt, then a prompt", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(interruptAsk), out(interruptAck), in(prompt)}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
