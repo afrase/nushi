@@ -40,6 +40,7 @@ type session struct {
 	tools tools // the tool calls shown
 
 	cwd   string
+	cmds  commands
 	title titles
 
 	st   stream        // the reader's own
@@ -56,6 +57,7 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 	if err != nil {
 		return nil, err
 	}
+	a.out.after(s.id, s.sendCommands)
 	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id)}, nil
 }
 
@@ -74,6 +76,9 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Claude didn't start: %v", err)}
 	}
 	s.cs = cs
+	if ir := cs.Init(); ir != nil {
+		s.cmds.list = ir.Commands
+	}
 	a.mu.Lock()
 	a.sessions[id] = s
 	a.mu.Unlock()

@@ -53,6 +53,10 @@ func (s *session) handle(m claudeagent.Message) {
 		s.result(m)
 	case *claudeagent.SessionState:
 		s.sessionState(m.State)
+	case *claudeagent.SystemInit:
+		s.terminalCommands(m.TerminalSlashCommands)
+	case *claudeagent.CommandsChanged:
+		s.commandsChanged(m.Commands)
 	case *claudeagent.ConversationReset:
 		s.titleReset()
 	case *claudeagent.Status:
