@@ -76,9 +76,19 @@ type Options struct {
 	// Init is what the initialize request carries.
 	Init Init
 
+	// The callbacks answer claude's requests. Each runs in a goroutine
+	// of its own; its ctx ends when claude withdraws the request or the
+	// session closes, and then what it returns isn't sent.
+
 	// CanUseTool answers claude's permission requests; without it claude
-	// asks no one and decides by its settings.
+	// asks no one and decides by its settings. Nothing times out: until
+	// it returns, the tool waits.
 	CanUseTool func(ctx context.Context, r PermissionRequest) (PermissionResult, error)
+	// OnControl answers the requests the package doesn't, by subtype;
+	// its result is the answer's payload. ErrUnsupported, or no
+	// OnControl, tells claude the subtype isn't supported. Requests for
+	// credentials never reach it.
+	OnControl func(ctx context.Context, subtype string, req json.RawMessage) (any, error)
 
 	// Stderr takes each line claude writes on stderr; nil = the log. It
 	// runs on the reading goroutine, and claude's exit is reported only
