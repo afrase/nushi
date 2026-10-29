@@ -23,11 +23,11 @@ const goAgentHook = "hook_0"
 //   - Hooks: the adapter registers more (PostCompact, TaskCreated…) under
 //     ids of its own, so claude's calls of the others go, and a
 //     PostToolUse call takes the Go agent's id.
-//   - get_context_usage: the adapter asks it in the background, unawaited,
-//     after initialize and a model change, for the window of a model whose
-//     id doesn't say. The Go agent doesn't ask: it takes the window from
-//     each result's modelUsage (claudeacp/usage.go), so the two differ at
-//     most before a session's first result, which the chats compared show.
+//   - get_context_usage after a model switch claude made itself (a
+//     refusal's fallback), which the adapter hears of by its
+//     PostModelSwitch hook: the Go agent registers no such hook. Both ask
+//     as a session starts and as the client changes the model
+//     (claudeacp/window.go), and those asks stay.
 //   - The interrupt the adapter sends as it closes a session claude isn't
 //     running: the Go agent interrupts only a running turn and otherwise
 //     just ends stdin (claudeacp's close). See idleTeardown.
@@ -39,7 +39,8 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 	dropped := map[string]bool{} // claude's requests and the adapter's whose answers go too
 	out := *c
 	out.Frames = nil
-	pending := "" // the adapter's last interrupt, until claude answers it
+	pending := ""     // the adapter's last interrupt, until claude answers it
+	switched := false // claude called the PostModelSwitch hook, and the adapter hasn't yet asked for the window
 	for _, f := range c.Frames[:idleTeardown(c)] {
 		fr := readFrame(f)
 		again := pending != "" && f.Dir == "in" && fr.Request.Subtype == "interrupt"
@@ -54,9 +55,13 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 		case again:
 			dropped[fr.RequestID] = true
 			continue
+		case f.Dir == "in" && fr.Request.Subtype == "get_context_usage" && switched:
+			switched = false
+			dropped[fr.RequestID] = true
+			continue
 		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title",
-			f.Dir == "in" && fr.Request.Subtype == "get_context_usage",
 			f.Dir == "out" && fr.Request.Subtype == "hook_callback" && fr.Request.Input.Event != "PostToolUse":
+			switched = switched || fr.Request.Input.Event == "PostModelSwitch"
 			dropped[fr.RequestID] = true
 			continue
 		case fr.Response.RequestID != "" && dropped[fr.Response.RequestID]:
@@ -145,6 +150,9 @@ func TestForGoAgent(t *testing.T) {
 		prompt       = `{"type":"user","message":{"role":"user","content":"hi"}}`
 		result       = `{"type":"result","subtype":"success"}`
 		keepAlive    = `{"type":"keep_alive"}`
+		// claude's call of the adapter's PostModelSwitch hook, and its answer
+		modelSwitch    = `{"type":"control_request","request_id":"ms","request":{"subtype":"hook_callback","callback_id":"hook_1","input":{"hook_event_name":"PostModelSwitch"}}}`
+		modelSwitchAck = `{"type":"control_response","response":{"subtype":"success","request_id":"ms","response":{"continue":true}}}`
 		// the adapter's second interrupt as its client goes mid-turn
 		interrupt2Ask = `{"type":"control_request","request_id":"int2","request":{"subtype":"interrupt"}}`
 		interrupt2Ack = `{"type":"control_response","response":{"subtype":"success","request_id":"int2","response":{"still_queued":[]}}}`
@@ -155,7 +163,8 @@ func TestForGoAgent(t *testing.T) {
 		frames   []string
 		wantDrop []int // the indexes of frames that go
 	}{
-		{"context usage after initialize", []string{in(initAsk), out(initAnswer), in(contextAsk), in(prompt), out(contextAnswer), out(result)}, []int{2, 4}},
+		{"context usage after initialize", []string{in(initAsk), out(initAnswer), in(contextAsk), in(prompt), out(contextAnswer), out(result)}, nil},
+		{"context usage after a model switch claude made", []string{in(initAsk), out(initAnswer), in(prompt), out(modelSwitch), in(modelSwitchAck), in(contextAsk), out(contextAnswer), out(result)}, []int{3, 4, 5, 6}},
 		{"interrupt closing an idle session", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(interruptAsk), out(interruptAck)}, []int{6, 7}},
 		{"interrupt closing a session after the result, before claude says idle", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), in(interruptAsk), out(stateIdle), out(interruptAck)}, []int{5, 6, 7}},
 		{"interrupt after a prompt claude hasn't started", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(prompt), in(interruptAsk), out(interruptAck)}, nil},

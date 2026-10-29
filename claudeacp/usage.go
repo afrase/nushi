@@ -1,7 +1,6 @@
 package claudeacp
 
 import (
-	"regexp"
 	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -21,32 +20,27 @@ func (s *session) contextUsed() {
 }
 
 // usage sends a usage_update: the context's use and size, cost when
-// given, and meta, with the model under _claude/model.
+// given, and meta, with the model under _claude/model. It is sent under
+// the window's lock, so claude's answer about the window (window.go)
+// comes before or after it, never in between.
 func (s *session) usage(cost *acp.Cost, meta map[string]any) {
+	s.win.mu.Lock()
+	defer s.win.mu.Unlock()
+	s.win.shown = shownUsage{used: s.st.used, model: s.st.model, size: s.sizeLocked(), ok: true}
+	s.sendUsage(s.win.shown, cost, meta)
+}
+
+// sendUsage sends u as a usage_update.
+func (s *session) sendUsage(u shownUsage, cost *acp.Cost, meta map[string]any) {
 	if meta == nil {
 		meta = map[string]any{}
 	}
-	if s.st.model != "" {
-		meta["_claude/model"] = s.st.model
+	if u.model != "" {
+		meta["_claude/model"] = u.model
 	}
 	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
-		Used: uint64(max(s.st.used, 0)), Size: uint64(s.size()), Cost: cost, Meta: meta, //nolint:gosec // token counts
+		Used: uint64(max(u.used, 0)), Size: uint64(u.size), Cost: cost, Meta: meta, //nolint:gosec // token counts
 	}})
-}
-
-// oneM is a model id or name that says it has a million-token context.
-var oneM = regexp.MustCompile(`(?i)\b1m\b`)
-
-// size is the context window's: what the last result said, else a
-// million for a model whose id says 1m, else 200k.
-func (s *session) size() int {
-	switch {
-	case s.st.window > 0:
-		return s.st.window
-	case oneM.MatchString(s.st.model):
-		return 1_000_000
-	}
-	return 200_000
 }
 
 // result is the end of one of claude's turns. A result after a model
@@ -59,13 +53,7 @@ func (s *session) size() int {
 // at zero. A prompt's turn that showed no text shows the result's. Then
 // the turn engine ends the turn.
 func (s *session) result(r *claudeagent.Result) {
-	if mu, ok := r.ModelUsage[s.st.model]; ok && mu.ContextWindow > 0 {
-		s.st.window = mu.ContextWindow
-	} else {
-		for _, mu := range r.ModelUsage {
-			s.st.window = max(s.st.window, mu.ContextWindow)
-		}
-	}
+	s.resultWindow(r, s.st.model)
 	s.mu.Lock()
 	user := s.userLaneLocked(r)
 	t := s.targetLocked(s.namedLocked(resultIDs(r)))

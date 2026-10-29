@@ -49,6 +49,7 @@ type session struct {
 	title   titles
 	plan    plan
 
+	win  window        // the context window's size
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
 
@@ -97,6 +98,8 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	if ir := cs.Init(); ir != nil {
 		s.cmds.list = ir.Commands
 	}
+	s.win.provider = providerKey(o.Env)
+	s.seedWindow(0)
 	a.mu.Lock()
 	a.sessions[id] = s
 	a.mu.Unlock()
