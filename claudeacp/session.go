@@ -3,9 +3,12 @@ package claudeacp
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -20,9 +23,17 @@ type session struct {
 	cs  *claudeagent.Session
 	log *slog.Logger
 
-	mu     sync.Mutex
-	closed bool // closed or gone: no more prompts
+	// wmu orders the user messages written with the turns they join: the
+	// queue's order is claude's.
+	wmu sync.Mutex
 
+	mu       sync.Mutex
+	turns    []*turn // unsettled prompts, in the order written
+	active   *turn   // the one claude runs, from its echo; nil between turns
+	owedIdle int     // idles still to come after results that ended a turn
+	closed   bool    // closed or gone: no more prompts
+
+	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
 }
 
@@ -59,24 +70,64 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 // until claude's output ends.
 func (s *session) reader() {
 	defer close(s.read)
-	for range s.cs.Messages() {
-		// Read through: nothing is mapped yet.
+	for m := range s.cs.Messages() {
+		s.handle(m)
 	}
 	err := s.cs.Wait()
 	_ = s.cs.Close()
 	s.mu.Lock()
 	gone := !s.closed
 	s.closed = true
+	if gone {
+		// claude died under the session: its turns fail, and the
+		// session goes, so later prompts are told so.
+		for _, t := range slices.Clone(s.turns) {
+			s.settleLocked(t, outcome{err: died})
+		}
+	}
 	s.mu.Unlock()
 	if gone {
-		// claude died under the session, which goes, so later
-		// requests are told so.
 		s.log.Warn("claude exited", "err", err)
 		s.a.forget(s)
 	}
 }
 
-// close ends the session: claude is closed. It returns once claude has
+// died is what a turn gets when claude exits under it.
+var died = &acp.Error{Code: acp.ErrorCodeInternalError, Message: "The Claude process exited unexpectedly. Please start a new session.",
+	Data: []byte(`{"errorKind":"transport_lost"}`)}
+
+// errEnded is what a prompt for a session closing gets.
+var errEnded = &acp.Error{Code: acp.ErrorCodeInternalError, Message: "The Claude session has ended. Please start a new session."}
+
+// send writes a prompt's user message and queues its turn.
+func (s *session) send(ctx context.Context, content []claudeagent.Block) (*turn, error) {
+	s.wmu.Lock()
+	defer s.wmu.Unlock()
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return nil, errEnded
+	}
+	t := newTurn(s.a.newID())
+	s.turns = append(s.turns, t)
+	s.mu.Unlock()
+	if _, err := s.cs.Send(ctx, claudeagent.UserInput{Content: content, UUID: t.id}); err != nil {
+		s.mu.Lock()
+		s.settleLocked(t, outcome{err: err})
+		s.mu.Unlock()
+		if errors.Is(err, claudeagent.ErrClosed) {
+			return nil, errEnded
+		}
+		return nil, fmt.Errorf("writing the prompt to claude: %w", err)
+	}
+	return t, nil
+}
+
+// closeWait is how long close waits for claude to take an interrupt.
+const closeWait = 2 * time.Second
+
+// close ends the session: a running turn is interrupted, every turn
+// answered cancelled, and claude closed. It returns once claude has
 // exited and the reader is done, and does nothing the second time.
 func (s *session) close() {
 	s.a.forget(s)
@@ -87,6 +138,30 @@ func (s *session) close() {
 		return
 	}
 	s.closed = true
+	running := len(s.turns) > 0
+	if s.active != nil {
+		s.active.cancelled = true // its result, if the interrupt brings one, ends it cancelled
+	}
+	s.mu.Unlock()
+	if running {
+		// claude would finish the turn before it took stdin's end.
+		ctx, cancel := context.WithCancel(s.a.ctx)
+		go func() {
+			select {
+			case <-s.a.after(closeWait):
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+		if _, err := s.cs.Interrupt(ctx); err != nil {
+			s.log.Info("interrupting claude to close", "err", err)
+		}
+		cancel()
+	}
+	s.mu.Lock()
+	for _, t := range slices.Clone(s.turns) {
+		s.settleLocked(t, cancelled(t))
+	}
 	s.mu.Unlock()
 	_ = s.cs.Close()
 	<-s.read

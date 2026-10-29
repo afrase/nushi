@@ -148,26 +148,49 @@ func TestNewSessionFails(t *testing.T) {
 	}
 }
 
-// Close closes claude, and the session is gone; closing it again is no
-// error.
+// Close interrupts the running turn, answers it cancelled and closes
+// claude; the session is gone, and closing it again is no error.
 func TestClose(t *testing.T) {
-	f := fake()
+	taken := make(chan struct{})
+	f := fake(user("id2"), echo("id2"), signal(taken))
 	p := start(t, nil, f)
 	sid := p.open(t)
-	for range 2 {
-		if _, err := p.CloseSession(context.Background(), &acp.CloseSessionRequest{SessionID: sid}); err != nil {
-			t.Fatal(err)
-		}
+	w := p.prompt(t, sid, "hi")
+	wait(t, taken, "the prompt taken")
+	if _, err := p.CloseSession(context.Background(), &acp.CloseSessionRequest{SessionID: sid}); err != nil {
+		t.Fatal(err)
+	}
+	if got := stopReason(w); got != "cancelled" {
+		t.Errorf("the prompt: %s", got)
 	}
 	<-f.Exited()
-	if _, err := p.agent.session(sid); err == nil || f.Err() != nil {
-		t.Errorf("%v %v", err, f.Err())
+	if f.Err() != nil || len(f.Responded()) != 1 || !strings.Contains(f.Responded()[0], "interrupt") {
+		t.Errorf("%v %q", f.Err(), f.Responded())
+	}
+	if _, err := p.CloseSession(context.Background(), &acp.CloseSessionRequest{SessionID: sid}); err != nil {
+		t.Error(err)
+	}
+	if got := stopReason(p.prompt(t, sid, "again")); !strings.Contains(got, "no open session") {
+		t.Errorf("a prompt after close: %s", got)
 	}
 }
 
-// claude dying closes its session.
+// claude dying fails the turns, and the session goes.
 func TestDeath(t *testing.T) {
-	p := start(t, nil, fake(claudetest.Exit(1, "crash\n")))
+	first := make(chan struct{})
+	f := fake(user("id2"), signal(first), echo("id2"), user("id3"), claudetest.Exit(1, "crash\n"))
+	p := start(t, nil, f)
 	sid := p.open(t)
-	eventually(t, "the session gone", func() bool { _, err := p.agent.session(sid); return err != nil })
+	w1 := p.prompt(t, sid, "one")
+	wait(t, first, "the first prompt written")
+	w2 := p.prompt(t, sid, "two")
+	for _, w := range []func() (*acp.PromptResponse, error){w1, w2} {
+		_, err := w()
+		if e, ok := errors.AsType[*acp.Error](err); !ok || e.Code != acp.ErrorCodeInternalError || string(e.Data) != `{"errorKind":"transport_lost"}` {
+			t.Errorf("%v", err)
+		}
+	}
+	if got := stopReason(p.prompt(t, sid, "again")); !strings.Contains(got, "no open session") {
+		t.Errorf("a prompt after death: %s", got)
+	}
 }
