@@ -38,6 +38,10 @@ type player struct {
 func (p *player) play(ctx context.Context, steps []step) error {
 	for i := range steps {
 		s := &steps[i]
+		if s.verb() == "end" { // the client goes now, waiting for nothing more
+			clear(p.async)
+			break
+		}
 		err := ctx.Err()
 		if err == nil {
 			err = p.step(ctx, s)
