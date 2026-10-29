@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -12,7 +13,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show comment, item, pull;
+import 'github_view_test.dart' show comment, item, pull, testNow;
 
 const _repo = 'afrase/nushi-gh-test';
 
@@ -234,6 +235,9 @@ void main() {
   }, variant: _mac);
 
   testWidgets('golden: the Pull request tab, dark', (tester) async {
+    // Its comments' ages from the test's day, not the real one.
+    clock = () => testNow;
+    addTearDown(() => clock = DateTime.now);
     final (d, _) = await _app(tester, whole: pull());
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
