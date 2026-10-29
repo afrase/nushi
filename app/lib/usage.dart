@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A token count in short: 950, 21.8k, 1M.
@@ -36,28 +37,99 @@ String cacheUse(Usage u) => [
 /// percentage and a small pill that fills, amber past 70% and red past 90%.
 /// From [usage] when the agent reported it; else from [breakdown] (what
 /// /context said, e.g. for a reopened chat before its first turn); else
-/// nothing.
-class ContextMeter extends StatelessWidget {
+/// nothing. The fill eases to its new width over 400 ms and its color
+/// crossfades; a compaction (a drop of more than 20 points) drains it over
+/// 600 ms, the figure counting down with it. With Reduce Motion it jumps.
+class ContextMeter extends StatefulWidget {
   const new(this.usage, {super.key, this.breakdown});
 
   final Usage usage;
   final GetContextUsageResponse? breakdown;
 
   @override
+  State<ContextMeter> createState() => _ContextMeterState();
+}
+
+class _ContextMeterState extends State<ContextMeter> with ClockRun {
+  double? _from; // the fill the motion started from
+  double? _to; // the fill it goes to
+  bool _drain = false; // a compaction: the figure follows the fill
+
+  static const _fillFor = Duration(milliseconds: 400);
+  static const _drainFor = Duration(milliseconds: 600);
+  static const _colorFor = 300.0;
+
+  double? get _fill => widget.usage.contextSize > 0
+      ? _fillOf(widget.usage)
+      : breakdownFill(widget.breakdown?.categories ?? const []);
+
+  @override
+  void initState() {
+    super.initState();
+    _to = _fill;
+  }
+
+  @override
+  void didUpdateWidget(ContextMeter old) {
+    super.didUpdateWidget(old);
+    final to = _fill;
+    if (to == _to) return;
+    final from = _now;
+    _to = to;
+    if (from == null || to == null || reduceMotion(context)) {
+      stopRun();
+      return;
+    }
+    _from = from;
+    _drain = from - to > 0.2;
+    runFor(_drain ? _drainFor : _fillFor);
+  }
+
+  /// The fill as it shows now, moving or not.
+  double? get _now {
+    final (from, to) = (_from, _to);
+    if (!running || from == null || to == null) return to;
+    return from + (to - from) * _eased;
+  }
+
+  double get _eased => _drain
+      ? const Cubic(
+          0.4,
+          0,
+          0.2,
+          1,
+        ).transform((ranMs / _drainFor.inMilliseconds).clamp(0.0, 1.0))
+      : const Cubic(
+          0.2,
+          0.8,
+          0.2,
+          1,
+        ).transform((ranMs / _fillFor.inMilliseconds).clamp(0.0, 1.0));
+
+  @override
   Widget build(BuildContext context) {
-    final fill = usage.contextSize > 0
-        ? _fill(usage)
-        : breakdownFill(breakdown?.categories ?? const []);
-    if (fill == null) return const SizedBox.shrink();
+    final fill = _now;
+    final to = _to;
+    if (fill == null || to == null) return const SizedBox.shrink();
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final color = _color(t, fill, t.accent);
+    // The color crossfades from where it was to the new fill's.
+    final from = _from;
+    Color color(Color quiet) => running && from != null
+        ? Color.lerp(
+            _color(t, from, quiet),
+            _color(t, to, quiet),
+            part(ranMs, 0, _colorFor),
+          )!
+        : _color(t, to, quiet);
+    // The figure jumps to the new fill, but follows a drain down.
+    final shown = _drain && running ? fill : to;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          '${(fill * 100).round()}%',
-          style: theme.ui(_color(t, fill, t.textMuted), size: 12),
+          '${(shown * 100).round()}%',
+          style: theme.ui(color(t.textMuted), size: 12),
         ),
         const SizedBox(width: 6),
         Container(
@@ -73,7 +145,7 @@ class ContextMeter extends StatelessWidget {
             widthFactor: fill.clamp(8 / 22, 1.0),
             child: Container(
               decoration: BoxDecoration(
-                color: color,
+                color: color(t.accent),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -99,7 +171,7 @@ double? breakdownFill(List<ContextCategory> cs) {
   return size == 0 ? null : (used / size).clamp(0.0, 1.0);
 }
 
-double _fill(Usage u) =>
+double _fillOf(Usage u) =>
     (u.contextUsed.toInt() / u.contextSize.toInt()).clamp(0.0, 1.0);
 
 /// [quiet] until it fills: amber past 70%, red past 90%.
@@ -119,7 +191,7 @@ class ContextUsed extends StatelessWidget {
   Widget build(BuildContext context) {
     if (usage.contextSize == 0) return const SizedBox.shrink();
     final theme = NushiTheme.of(context);
-    final fill = _fill(usage);
+    final fill = _fillOf(usage);
     return Text(
       '${(fill * 100).round()}% used',
       style: theme.ui(_color(theme.t, fill, theme.t.textSecondary), size: 12),
@@ -136,7 +208,7 @@ class UsageBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final fill = _fill(usage);
+    final fill = _fillOf(usage);
     return framed(
       height: 8,
       border: t.borderSubtle,
