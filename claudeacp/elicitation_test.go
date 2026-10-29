@@ -91,6 +91,7 @@ func TestMCPElicitationPages(t *testing.T) {
 		{"http://127.0.0.1:8080/callback", true},
 		{"http://127.1.2.3/", true},
 		{"http://localhost:3000/", true},
+		{"http://LocalHost/", true},
 		{"http://[::1]:9000/", true},
 		{"HTTPS://OK.example", true},
 		{"http://example.com/", false},

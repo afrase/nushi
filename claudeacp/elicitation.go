@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"slices"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -94,7 +95,7 @@ func safePage(raw string) bool {
 // loopback says whether a host is this machine's: localhost or a loopback
 // address.
 func loopback(host string) bool {
-	if host == "localhost" {
+	if strings.EqualFold(host, "localhost") {
 		return true
 	}
 	ip := net.ParseIP(host)
