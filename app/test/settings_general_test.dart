@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 
@@ -103,6 +106,22 @@ void main() {
       // JetBrains Mono alone draws its ?-box, of another width.
       expect(width(icon, alone), isNot(width(icon, symbols)), reason: code);
     }
+    d.dispose();
+  });
+
+  // UX review, finding 15: remembered, not the View menu's state alone.
+  testWidgets('the appearance is a setting, kept in app.json', (tester) async {
+    addTearDown(() => appearance.value = ThemeMode.system);
+    Directory(dataDir).createSync(recursive: true);
+    final (_, d) = await _open(tester, SettingsSection.general);
+    expect(find.text('As the system'), findsOne);
+    await tester.tap(find.text('As the system'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dark', findRichText: true).last);
+    await tester.pumpAndSettle();
+    expect(appearance.value, ThemeMode.dark);
+    expect(readSaved()['appearance'], 'dark');
+    expect(find.text('Dark'), findsOne); // the field says it
     d.dispose();
   });
 }

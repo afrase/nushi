@@ -339,6 +339,26 @@ void main() {
     }
   });
 
+  // UX review, finding 13.
+  testWidgets('a chat keeps its tab across a look at another; one that '
+      'needs you opens on its transcript', (tester) async {
+    final (d, _) = await _app(tester, select: 'a');
+    d.chats['a']!.tab.value = ChatTab.changes;
+    d.select('b');
+    await tester.pumpAndSettle();
+    d.select('a');
+    await tester.pumpAndSettle();
+    expect(d.chats['a']!.tab.value, ChatTab.changes);
+    d.select('b');
+    await tester.pumpAndSettle();
+    // A permission prompt came meanwhile.
+    d.chats['a']!.status(ChatStatus(busy: true, waiting: true));
+    d.select('a');
+    await tester.pumpAndSettle();
+    expect(d.chats['a']!.tab.value, ChatTab.chat);
+    d.dispose();
+  }, variant: macOS);
+
   testWidgets('golden: the palette with a few matches, dark', (tester) async {
     await loadFonts();
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;

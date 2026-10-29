@@ -50,7 +50,7 @@ make install # package, then copy it to ~/Applications
 make icons   # redraw the app icon and the mark (tools/icongen)
 ```
 
-Settings (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left; Esc or Close goes back ([ADR 0053](docs/adr/0053-settings-is-a-view.md)).
+Settings (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left; Esc or Close goes back ([ADR 0053](docs/adr/0053-settings-is-a-view.md)). Settings › General's Appearance (Light, Dark, as the system; View's items too) is remembered. A chat opens on the tab it was left on (Chat, Changes, Pull request), and on Chat when it needs you.
 
 The Mac notifies you, in the phone's words, when a chat needs you ("Claude needs you", "Claude has a question"), when a turn ends ("Claude finished", 2 s after, none if the agent goes straight on or you stopped it) and when a turn fails, the chat's title under each; and the Dock icon counts the chats that need you. A notification shows while Nushi isn't the app in front, or for a chat other than the one showing; a click opens its chat, and showing the chat clears its notifications. macOS asks to allow them on the first one. Settings › General › Notifications turns each kind, the sound (off at first) and the badge on or off. Nothing leaves the Mac.
 
