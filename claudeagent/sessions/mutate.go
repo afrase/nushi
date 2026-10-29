@@ -7,6 +7,7 @@
 package sessions
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -77,7 +78,7 @@ func Fork(configDir, id, cwd string, o ForkOptions) (string, error) {
 
 // parseFork reads the records a fork copies, and the session's content
 // replacements (tool results the CLI stored apart), which the fork keeps.
-func parseFork(data []byte, id string) (records []*object, replacements []any) {
+func parseFork(data []byte, id string) (records []*object, replacements []json.RawMessage) {
 	for line := range strings.SplitSeq(string(data), "\n") {
 		o, err := parseObject([]byte(strings.TrimSpace(line)))
 		if err != nil {
@@ -88,7 +89,7 @@ func parseFork(data []byte, id string) (records []*object, replacements []any) {
 			records = append(records, o)
 			continue
 		}
-		var list []any
+		var list []json.RawMessage
 		if typ == "content-replacement" && str(o.vals["sessionId"]) == id && unmarshalOK(o.vals["replacements"], &list) {
 			replacements = append(replacements, list...)
 		}
@@ -97,7 +98,7 @@ func parseFork(data []byte, id string) (records []*object, replacements []any) {
 }
 
 // forkLines turns records into the fork's lines, up to the record upTo.
-func forkLines(records []*object, replacements []any, id, upTo string) (string, []string, error) {
+func forkLines(records []*object, replacements []json.RawMessage, id, upTo string) (string, []string, error) {
 	kept, found := cut(records, upTo)
 	if upTo != "" && !found {
 		return "", nil, fmt.Errorf("message %s isn't in session %s", upTo, id)
