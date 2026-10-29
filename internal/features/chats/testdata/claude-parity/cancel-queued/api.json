@@ -1,6 +1,6 @@
 {
   "turns": [
-    {"match": {"lastUserText": "wait a while"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "sleep 31", "description": "Wait"}}]},
+    {"match": {"lastUserText": "wait a while"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"command": "perl -e 'sleep 31'", "description": "Wait"}}]},
     {"match": {"lastUserText": "after the cancel"}, "content": [{"type": "text", "text": "Here now."}]}
   ],
   "side": [

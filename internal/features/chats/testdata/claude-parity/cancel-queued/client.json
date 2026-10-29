@@ -3,7 +3,7 @@
     {"initialize": {}},
     {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
     {"prompt": "wait a while", "session": "s1", "async": "p1"},
-    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call_update", "rawInput": {"command": "sleep 31"}}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call_update", "rawInput": {"command": "perl -e 'sleep 31'"}}}}},
     {"pause": "1s"},
     {"prompt": "queued meanwhile", "session": "s1", "async": "p2"},
     {"cancel": "s1"},
