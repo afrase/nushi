@@ -17,8 +17,10 @@ func TestPermissionAnswer(t *testing.T) {
 		want   string
 	}{
 		{"allow", asked, Allow{}, `{"behavior":"allow","toolUseID":"t1","updatedInput":{"command":"ls"}}`},
-		{"allow changed", asked, Allow{UpdatedInput: json.RawMessage(`{"command":"pwd"}`), UpdatedPermissions: []json.RawMessage{json.RawMessage(`{"type":"setMode","mode":"plan"}`)}, Classification: "user_permanent"},
-			`{"behavior":"allow","decisionClassification":"user_permanent","toolUseID":"t1","updatedInput":{"command":"pwd"},"updatedPermissions":[{"type":"setMode","mode":"plan"}]}`},
+		{"allow changed", asked, Allow{UpdatedInput: json.RawMessage(`{"command":"pwd"}`), UpdatedPermissions: []PermissionUpdate{{Type: "setMode", Mode: Plan, Destination: "session"}}, Classification: UserPermanent},
+			`{"behavior":"allow","decisionClassification":"user_permanent","toolUseID":"t1","updatedInput":{"command":"pwd"},"updatedPermissions":[{"type":"setMode","mode":"plan","destination":"session"}]}`},
+		{"allow rules", asked, Allow{UpdatedPermissions: []PermissionUpdate{{Type: "addRules", Rules: []PermissionRule{{ToolName: "Bash", RuleContent: "ls:*"}, {ToolName: "Read"}}, Behavior: "allow", Destination: "localSettings"}}},
+			`{"behavior":"allow","toolUseID":"t1","updatedInput":{"command":"ls"},"updatedPermissions":[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"ls:*"},{"toolName":"Read"}],"behavior":"allow","destination":"localSettings"}]}`},
 		{"allow no input", PermissionRequest{ToolUseID: "t1"}, Allow{}, `{"behavior":"allow","toolUseID":"t1","updatedInput":{}}`},
 		{"deny", asked, Deny{}, `{"behavior":"deny","message":"Permission denied","toolUseID":"t1"}`},
 		{"deny and stop", asked, Deny{Message: "no", Interrupt: true, Classification: "user_reject"},
@@ -66,6 +68,26 @@ func TestPermissionRequest(t *testing.T) {
 		if g, w := pretty(got), pretty(tc.want); g != w {
 			t.Errorf("got %s, want %s", g, w)
 		}
+	}
+}
+
+// A suggestion decodes into its fields and goes back to claude as it
+// came, fields the package doesn't know kept; one built from fields is
+// sent from them.
+func TestPermissionUpdate(t *testing.T) {
+	raw := `{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"npm test:*"}],"behavior":"allow","destination":"localSettings","future":1}`
+	var u PermissionUpdate
+	if err := json.Unmarshal([]byte(raw), &u); err != nil {
+		t.Fatal(err)
+	}
+	if u.Type != "addRules" || u.Rules[0] != (PermissionRule{"Bash", "npm test:*"}) || u.Behavior != "allow" || u.Destination != "localSettings" {
+		t.Errorf("%+v", u)
+	}
+	if b, _ := json.Marshal([]PermissionUpdate{u}); string(b) != "["+raw+"]" {
+		t.Errorf("sent back %s", b)
+	}
+	if b, _ := json.Marshal(PermissionUpdate{Type: "addDirectories", Directories: []string{"/a"}, Destination: "session"}); string(b) != `{"type":"addDirectories","directories":["/a"],"destination":"session"}` {
+		t.Errorf("built %s", b)
 	}
 }
 

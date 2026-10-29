@@ -16,7 +16,7 @@ type PermissionRequest struct {
 	Input     json.RawMessage
 	ToolUseID string
 
-	Suggestions             []json.RawMessage // permission updates claude offers for "always allow"
+	Suggestions             []PermissionUpdate // what claude offers for "always allow"
 	BlockedPath             string
 	DecisionReason          string
 	AgentID                 string // the subagent asking, if one is
@@ -35,16 +35,73 @@ type PermissionResult interface{ permissionResult() }
 
 // Allow lets the tool run.
 type Allow struct {
-	UpdatedInput       json.RawMessage   // nil = the input as asked
-	UpdatedPermissions []json.RawMessage // e.g. the request's Suggestions, to stop asking
-	Classification     string            // "user_temporary" or "user_permanent"
+	UpdatedInput       json.RawMessage    // nil = the input as asked
+	UpdatedPermissions []PermissionUpdate // e.g. the request's Suggestions, to stop asking
+	Classification     string             // UserTemporary or UserPermanent
 }
 
 // Deny stops the tool.
 type Deny struct {
 	Message        string // what the model is told; never empty on the wire
 	Interrupt      bool   // also stops the turn
-	Classification string // "user_reject"
+	Classification string // UserReject
+}
+
+// How the user decided, for claude's records: an Allow's or a Deny's
+// Classification.
+const (
+	UserTemporary = "user_temporary" // allowed this once
+	UserPermanent = "user_permanent" // allowed from now on
+	UserReject    = "user_reject"
+)
+
+// PermissionUpdate is a change to what claude may do without asking: one
+// of a request's Suggestions, or one made for an Allow. Type says which
+// fields it uses:
+//
+//   - "addRules", "replaceRules", "removeRules": Rules and Behavior;
+//   - "setMode": Mode;
+//   - "addDirectories", "removeDirectories": Directories.
+//
+// Destination says where the change is kept: "session", "localSettings",
+// "projectSettings", "userSettings" or "cliArg".
+type PermissionUpdate struct {
+	Type        string           `json:"type"`
+	Rules       []PermissionRule `json:"rules,omitempty"`
+	Behavior    string           `json:"behavior,omitempty"` // "allow", "deny" or "ask"
+	Mode        PermissionMode   `json:"mode,omitempty"`
+	Directories []string         `json:"directories,omitempty"`
+	Destination string           `json:"destination,omitempty"`
+	// Raw is the update as claude wrote it. When set it is what goes
+	// back, unchanged, with any fields the package doesn't know; clear it
+	// to send the fields instead.
+	Raw json.RawMessage `json:"-"`
+}
+
+// PermissionRule names a tool and, optionally, which uses of it: ToolName
+// "Bash" with RuleContent "npm test:*", say.
+type PermissionRule struct {
+	ToolName    string `json:"toolName"`
+	RuleContent string `json:"ruleContent,omitempty"`
+}
+
+// UnmarshalJSON decodes u, keeping it in Raw.
+func (u *PermissionUpdate) UnmarshalJSON(data []byte) error {
+	type plain PermissionUpdate
+	if err := json.Unmarshal(data, (*plain)(u)); err != nil {
+		return err
+	}
+	u.Raw = bytes.Clone(data)
+	return nil
+}
+
+// MarshalJSON encodes u: Raw when set, else the fields.
+func (u PermissionUpdate) MarshalJSON() ([]byte, error) {
+	if len(u.Raw) > 0 {
+		return u.Raw, nil
+	}
+	type plain PermissionUpdate
+	return json.Marshal(plain(u))
 }
 
 func (Allow) permissionResult() {}
@@ -54,20 +111,20 @@ func (Deny) permissionResult()  {}
 // the answer as claude reads it.
 func (s *Session) canUseTool(ctx context.Context, raw json.RawMessage) (any, error) {
 	var w struct {
-		ToolName                string            `json:"tool_name"`
-		Input                   json.RawMessage   `json:"input"`
-		ToolUseID               string            `json:"tool_use_id"`
-		Suggestions             []json.RawMessage `json:"permission_suggestions"`
-		BlockedPath             string            `json:"blocked_path"`
-		DecisionReason          string            `json:"decision_reason"`
-		AgentID                 string            `json:"agent_id"`
-		Title                   string            `json:"title"`
-		DisplayName             string            `json:"display_name"`
-		Description             string            `json:"description"`
-		MatchedAskRule          json.RawMessage   `json:"matched_ask_rule"`
-		SuppressAlwaysAllowRule json.RawMessage   `json:"suppress_always_allow_rule"`
-		DefaultToNo             json.RawMessage   `json:"default_to_no"`
-		MCPServer               json.RawMessage   `json:"mcp_server"`
+		ToolName                string             `json:"tool_name"`
+		Input                   json.RawMessage    `json:"input"`
+		ToolUseID               string             `json:"tool_use_id"`
+		Suggestions             []PermissionUpdate `json:"permission_suggestions"`
+		BlockedPath             string             `json:"blocked_path"`
+		DecisionReason          string             `json:"decision_reason"`
+		AgentID                 string             `json:"agent_id"`
+		Title                   string             `json:"title"`
+		DisplayName             string             `json:"display_name"`
+		Description             string             `json:"description"`
+		MatchedAskRule          json.RawMessage    `json:"matched_ask_rule"`
+		SuppressAlwaysAllowRule json.RawMessage    `json:"suppress_always_allow_rule"`
+		DefaultToNo             json.RawMessage    `json:"default_to_no"`
+		MCPServer               json.RawMessage    `json:"mcp_server"`
 	}
 	if err := json.Unmarshal(raw, &w); err != nil {
 		return nil, fmt.Errorf("claudeagent: a permission request that doesn't decode: %w", err)

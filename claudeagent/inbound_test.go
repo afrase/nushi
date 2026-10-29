@@ -43,6 +43,12 @@ func TestInbound(t *testing.T) {
 	allow := func(context.Context, claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
 		return claudeagent.Allow{}, nil
 	}
+	allowAlways := func(_ context.Context, r claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
+		return claudeagent.Allow{UpdatedPermissions: r.Suggestions, Classification: claudeagent.UserPermanent}, nil
+	}
+	deny := func(context.Context, claudeagent.PermissionRequest) (claudeagent.PermissionResult, error) {
+		return claudeagent.Deny{Interrupt: true}, nil
+	}
 	for _, tc := range []struct {
 		name       string
 		o          claudeagent.Options
@@ -63,6 +69,10 @@ func TestInbound(t *testing.T) {
 		{"can_use_tool unasked", claudeagent.Options{}, `{"subtype":"can_use_tool","tool_name":"Bash","input":{},"tool_use_id":"t1"}`, "", "claudeagent: no CanUseTool to ask"},
 		{"can_use_tool", claudeagent.Options{CanUseTool: allow}, `{"subtype":"can_use_tool","tool_name":"Bash","input":{"command":"ls"},"tool_use_id":"t1"}`,
 			`{"behavior":"allow","updatedInput":{"command":"ls"},"toolUseID":"t1"}`, ""},
+		{"can_use_tool always", claudeagent.Options{CanUseTool: allowAlways}, `{"subtype":"can_use_tool","tool_name":"Bash","input":{"command":"ls"},"tool_use_id":"t1","permission_suggestions":[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"ls"}],"behavior":"allow","destination":"localSettings","x":1}]}`,
+			`{"behavior":"allow","updatedInput":{"command":"ls"},"toolUseID":"t1","decisionClassification":"user_permanent","updatedPermissions":[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"ls"}],"behavior":"allow","destination":"localSettings","x":1}]}`, ""},
+		{"can_use_tool deny", claudeagent.Options{CanUseTool: deny}, `{"subtype":"can_use_tool","tool_name":"Bash","input":{},"tool_use_id":"t2"}`,
+			`{"behavior":"deny","message":"Permission denied","toolUseID":"t2","interrupt":true}`, ""},
 		{"hook_callback", claudeagent.Options{}, `{"subtype":"hook_callback","callback_id":"hook_9"}`, "", `claudeagent: no hook "hook_9"`},
 		{"elicitation", claudeagent.Options{}, `{"subtype":"elicitation","mcp_server_name":"s","message":"m"}`, `{"action":"decline"}`, ""},
 	} {
