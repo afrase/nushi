@@ -1,0 +1,9 @@
+{
+  "turns": [
+    {
+      "match": {"lastUserText": "hello"},
+      "content": [{"type": "text", "deltas": ["Hello! ", "How can I help?"]}],
+      "usage": {"input_tokens": 3, "cache_creation_input_tokens": 500, "cache_read_input_tokens": 12000, "output_tokens": 9}
+    }
+  ]
+}

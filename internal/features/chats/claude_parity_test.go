@@ -3,19 +3,24 @@ package chats
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/claudeacp"
+	"github.com/afrase/nushi/claudeagent"
 	"github.com/afrase/nushi/claudeagent/claudetest"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -25,11 +30,17 @@ import (
 // claude-agent-acp does, as far as Nushi reads it. Each scenario in
 // testdata/claude-parity is one run of the Node adapter, recorded at both
 // ends:
-//   - cli.jsonl: claude's stdin and stdout, a claudetest cassette;
+//   - cli.jsonl: claude's stdin and stdout, a claudetest cassette, and
+//     cli-2.jsonl and on for each further claude the adapter ran;
 //   - acp-node.jsonl: the ACP between Nushi and the adapter, a line a
 //     message, {"dir":"in"|"out","msg":…}, "in" being to the agent.
 //
-// The test replays cli.jsonl to the Go agent as its claude, sends it what
+// make claude-record writes them from the scenario's api.json and
+// client.json (testdata/claude-parity/README.md); a scenario not recorded
+// yet is skipped.
+//
+// The test replays the cassettes to the Go agent as its claudes, in the
+// order it starts them, sends it what
 // Nushi sent the adapter, and feeds both agents' session updates to a chat
 // each. The chats' items, usage and status must match: the JSON may differ
 // where Nushi doesn't look.
@@ -43,9 +54,15 @@ func TestClaudeParity(t *testing.T) {
 		t.Fatal("no scenarios")
 	}
 	for _, dir := range dirs {
+		if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
+			continue // the README
+		}
 		t.Run(filepath.Base(dir), func(t *testing.T) {
+			if _, err := os.Stat(filepath.Join(dir, "cli.jsonl")); err != nil {
+				t.Skip("not recorded yet (make claude-record)")
+			}
 			node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
-			goNotes := runGoAgent(t, filepath.Join(dir, "cli.jsonl"), sent)
+			goNotes := runGoAgent(t, dir, sent)
 			want, got := parityView(t, node), parityView(t, goNotes)
 			if len(want.Items) == 0 {
 				t.Fatal("the recording shows nothing to compare")
@@ -99,22 +116,69 @@ func readACP(t *testing.T, path string) (notes []acp.SessionNotification, all []
 	return notes, all
 }
 
-// runGoAgent runs the Go agent on the cassette at path and sends it what
+// replays are a scenario's cassettes as fake claudes, the nth for the
+// nth claude the agent starts.
+type replays struct {
+	mu    sync.Mutex
+	fakes []*claudetest.Fake
+	next  int
+}
+
+// readReplays reads dir's cli.jsonl, cli-2.jsonl and on, as claude-tee
+// names them.
+func readReplays(t *testing.T, dir string) *replays {
+	t.Helper()
+	r := &replays{}
+	for n := 1; ; n++ {
+		name := "cli.jsonl"
+		if n > 1 {
+			name = fmt.Sprintf("cli-%d.jsonl", n)
+		}
+		f, err := os.Open(filepath.Join(dir, name))
+		if errors.Is(err, os.ErrNotExist) {
+			return r
+		}
+		testcheck.NoErr(t, err)
+		c, err := claudetest.ReadCassette(f)
+		_ = f.Close()
+		testcheck.NoErr(t, err)
+		// The Go agent asks claude for a title after a turn, on a
+		// goroutine of its own, so when it asks isn't in a cassette's
+		// order: it is answered (with none) whenever it comes, and a
+		// recording's ask isn't expected.
+		r.fakes = append(r.fakes, claudetest.Replay(withoutTitles(c)).Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
+			`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":null}}}`))
+	}
+}
+
+// Spawn starts the next claude.
+func (r *replays) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.Proc, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.next == len(r.fakes) {
+		return nil, fmt.Errorf("the Go agent started claude %d times, the adapter %d", r.next+1, len(r.fakes))
+	}
+	r.next++
+	return r.fakes[r.next-1].Spawn(ctx, s)
+}
+
+// Err is what went wrong with the claudes' scripts.
+func (r *replays) Err() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var errs []error
+	for _, f := range r.fakes {
+		errs = append(errs, f.Err())
+	}
+	return errors.Join(errs...)
+}
+
+// runGoAgent runs the Go agent on the cassettes in dir and sends it what
 // the recording's client sent, waiting where the recording's agent
 // answered or asked; it returns the Go agent's session updates.
-func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotification {
+func runGoAgent(t *testing.T, dir string, rec []acpLine) []acp.SessionNotification {
 	t.Helper()
-	f, err := os.Open(path)
-	testcheck.NoErr(t, err)
-	c, err := claudetest.ReadCassette(f)
-	_ = f.Close()
-	testcheck.NoErr(t, err)
-	// The Go agent asks claude for a title after a turn, on a goroutine
-	// of its own, so when it asks isn't in a cassette's order: it is
-	// answered (with none) whenever it comes, and a recording's ask isn't
-	// expected.
-	fake := claudetest.Replay(withoutTitles(c)).Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
-		`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":null}}}`)
+	fake := readReplays(t, dir)
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
 	served := make(chan struct{})
@@ -185,6 +249,7 @@ func runGoAgent(t *testing.T, path string, rec []acpLine) []acp.SessionNotificat
 			_, err := io.WriteString(toAgentW, rewrite(t, sessions(l.Msg), id, cwd)+"\n")
 			testcheck.NoErr(t, err)
 		case m.Method == sessionUpdate: // kept by readACP
+		case m.Method != "" && m.ID == nil: // another notification (the adapter's _auth/status_update): Nushi reads none
 		case m.Method != "": // a request of the agent's
 			got := next(m.Method)
 			if got.Method != m.Method {
