@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // fakeClaude puts a claude first on PATH that records its arguments and
@@ -20,7 +22,7 @@ func fakeClaude(t *testing.T) (dir string) {
 		"[ -n \"$FAKE_CONFIG\" ] && printf '%s' \"$FAKE_CONFIG\" > \"$CLAUDE_CONFIG_DIR/.claude.json\"\n" +
 		"echo '{\"type\":\"control_response\",\"response\":{\"subtype\":\"success\",\"request_id\":\"init\",\"response\":{}}}'\n" +
 		"echo \"$FAKE_ANSWER\"\n"
-	write(t, filepath.Join(dir, "claude"), script)
+	testcheck.Write(t, filepath.Join(dir, "claude"), script)
 	if err := os.Chmod(filepath.Join(dir, "claude"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +35,7 @@ func TestToggleAsksClaudeAndReadsItBack(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
 	folder, _ := filepath.EvalSymlinks(t.TempDir())
 	dir := fakeClaude(t)
-	write(t, filepath.Join(cfg, ".claude.json"), `{"mcpServers":{"web":{"command":"w"}},"projects":{"`+folder+`":{"mcpServers":{"loc":{"command":"l"}}}}}`)
+	testcheck.Write(t, filepath.Join(cfg, ".claude.json"), `{"mcpServers":{"web":{"command":"w"}},"projects":{"`+folder+`":{"mcpServers":{"loc":{"command":"l"}}}}}`)
 	off := `{"mcpServers":{"web":{"command":"w"}},"projects":{"` + folder + `":{"mcpServers":{"loc":{"command":"l"}},"disabledMcpServers":["web"],"x":1}}}`
 	t.Setenv("FAKE_CONFIG", off)
 	t.Setenv("FAKE_ANSWER", `{"type":"control_response","response":{"subtype":"success","request_id":"toggle"}}`)

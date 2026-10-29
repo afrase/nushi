@@ -5,11 +5,11 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/ante/antetest"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // commands is the session's last commands list, as name:hint.
@@ -34,12 +34,8 @@ func (c *client) commands(sid acp.SessionID) []string {
 
 func (c *client) waitCommands(t *testing.T, sid acp.SessionID, want []string) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for !slices.Equal(c.commands(sid), want) {
-		if time.Now().After(deadline) {
-			t.Fatalf("commands %v, want %v", c.commands(sid), want)
-		}
-		time.Sleep(10 * time.Millisecond)
+	if !testcheck.Eventually(func() bool { return slices.Equal(c.commands(sid), want) }) {
+		t.Fatalf("commands %v, want %v", c.commands(sid), want)
 	}
 }
 

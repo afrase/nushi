@@ -14,6 +14,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/logs"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // logBuffer is a log to look into.
@@ -42,13 +43,9 @@ func newLog(level slog.Level) (*slog.Logger, *logBuffer) {
 // waitLog waits for the log to have want.
 func waitLog(t *testing.T, b *logBuffer, want string) {
 	t.Helper()
-	for range 300 {
-		if strings.Contains(b.String(), want) {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
+	if !testcheck.Eventually(func() bool { return strings.Contains(b.String(), want) }) {
+		t.Fatalf("no %q in the log:\n%s", want, b)
 	}
-	t.Fatalf("no %q in the log:\n%s", want, b)
 }
 
 type quiet struct{ acp.UnimplementedClient }

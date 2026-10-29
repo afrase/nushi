@@ -2,36 +2,27 @@ package omptrust
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
-)
 
-func write(t *testing.T, path, body string) {
-	t.Helper()
-	noErr(t, os.MkdirAll(filepath.Dir(path), 0o700))
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
+	"github.com/afrase/nushi/internal/testcheck"
+)
 
 // The card shows the code and settings omp loads, from the repository's
 // root down, and not the instructions.
 func TestWhatOmpLoads(t *testing.T) {
 	var tr Trust
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	if err := exec.Command("git", "-C", repo, "init", "-q").Run(); err != nil {
-		t.Skip("no git")
-	}
+	testcheck.Git(t, repo, "init", "-q")
 	sub := filepath.Join(repo, "pkg")
-	write(t, filepath.Join(repo, ".omp", "extensions", "x.ts"), "export default 1")
-	write(t, filepath.Join(sub, ".claude", "hooks", "pre", "h.ts"), "hook")
-	write(t, filepath.Join(sub, ".claude", "commands", "go", "index.ts"), "command")
-	write(t, filepath.Join(sub, ".claude", "commands", "doc.md"), "a prompt")
-	write(t, filepath.Join(sub, ".claude", "skills", "s", "SKILL.md"), "a skill")
-	write(t, filepath.Join(sub, "lsp.json"), `{"x":{}}`)
-	write(t, filepath.Join(sub, "AGENTS.md"), "instructions")
+	testcheck.Write(t, filepath.Join(repo, ".omp", "extensions", "x.ts"), "export default 1")
+	testcheck.Write(t, filepath.Join(sub, ".claude", "hooks", "pre", "h.ts"), "hook")
+	testcheck.Write(t, filepath.Join(sub, ".claude", "commands", "go", "index.ts"), "command")
+	testcheck.Write(t, filepath.Join(sub, ".claude", "commands", "doc.md"), "a prompt")
+	testcheck.Write(t, filepath.Join(sub, ".claude", "skills", "s", "SKILL.md"), "a skill")
+	testcheck.Write(t, filepath.Join(sub, "lsp.json"), `{"x":{}}`)
+	testcheck.Write(t, filepath.Join(sub, "AGENTS.md"), "instructions")
 	runs, key, _ := tr.Runs(sub)
 	var got []string
 	for _, r := range runs {
@@ -44,11 +35,11 @@ func TestWhatOmpLoads(t *testing.T) {
 	if ok, _ := tr.Trusted(sub, []string{key}); !ok {
 		t.Error("Start anyway didn't take")
 	}
-	write(t, filepath.Join(repo, ".omp", "config.yml"), "shellPath: /bin/evil")
+	testcheck.Write(t, filepath.Join(repo, ".omp", "config.yml"), "shellPath: /bin/evil")
 	if ok, _ := tr.Trusted(sub, []string{key}); ok {
 		t.Error("a file added since is trusted")
 	}
-	noErr(t, os.Symlink(repo, filepath.Join(sub, ".codex")))
+	testcheck.NoErr(t, os.Symlink(repo, filepath.Join(sub, ".codex")))
 	if _, key, _ := tr.Runs(sub); key != "" {
 		t.Error("a linked .codex is remembered")
 	}
@@ -61,14 +52,14 @@ func TestCommandsUnderAPathWithPatternCharacters(t *testing.T) {
 	base, _ := filepath.EvalSymlinks(t.TempDir())
 	dir := filepath.Join(base, "x[1]*?")
 	module := filepath.Join(dir, ".claude", "commands", "go", "index.ts")
-	write(t, module, "command")
+	testcheck.Write(t, module, "command")
 	runs, key, _ := tr.Runs(dir)
 	if len(runs) != 1 || runs[0].File != module || key == "" {
 		t.Fatalf("runs %v, key %q", runs, key)
 	}
 	commands := filepath.Dir(filepath.Dir(module))
-	noErr(t, os.Chmod(commands, 0))
-	t.Cleanup(func() { noErr(t, os.Chmod(commands, 0o700)) }) // before TempDir's cleanup removes it
+	testcheck.NoErr(t, os.Chmod(commands, 0))
+	t.Cleanup(func() { testcheck.NoErr(t, os.Chmod(commands, 0o700)) }) // before TempDir's cleanup removes it
 	runs, key, _ = tr.Runs(dir)
 	if len(runs) != 1 || runs[0].File != commands || !strings.Contains(runs[0].Command, "couldn't read") || key != "" {
 		t.Errorf("unreadable: runs %v, key %q", runs, key)

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A program run read-only prints, but can't write a file; one that
@@ -13,7 +15,7 @@ import (
 func TestOutput(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "probe")
-	noErr(t, os.WriteFile(script, []byte("#!/bin/sh\necho 1.2.3\necho x > \"$1\" 2>/dev/null\n[ \"$2\" = hang ] && sleep 30\nexit 0\n"), 0o755))
+	testcheck.NoErr(t, os.WriteFile(script, []byte("#!/bin/sh\necho 1.2.3\necho x > \"$1\" 2>/dev/null\n[ \"$2\" = hang ] && sleep 30\nexit 0\n"), 0o755))
 	out, err := Output(context.Background(), nil, script, filepath.Join(dir, "written"))
 	if err != nil || string(out) != "1.2.3\n" {
 		t.Fatalf("%q, %v", out, err)

@@ -4,23 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
-
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
 
 // fakeClaude puts a claude first on PATH that records its arguments (a
 // line each, a call a paragraph) in dir/args and prints $FAKE_OUT, exiting
@@ -28,7 +18,7 @@ func write(t *testing.T, path, text string) {
 func fakeClaude(t *testing.T) (dir string) {
 	t.Helper()
 	dir = t.TempDir()
-	write(t, filepath.Join(dir, "claude"), "#!/bin/sh\npwd >> \""+dir+"/pwd\"\n{ printf '%s\\n' \"$@\"; echo; } >> \""+dir+"/args\"\nprintf '%s' \"$FAKE_OUT\"\nexit ${FAKE_EXIT:-0}\n")
+	testcheck.Write(t, filepath.Join(dir, "claude"), "#!/bin/sh\npwd >> \""+dir+"/pwd\"\n{ printf '%s\\n' \"$@\"; echo; } >> \""+dir+"/args\"\nprintf '%s' \"$FAKE_OUT\"\nexit ${FAKE_EXIT:-0}\n")
 	if err := os.Chmod(filepath.Join(dir, "claude"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -39,16 +29,14 @@ func fakeClaude(t *testing.T) (dir string) {
 // skill writes a SKILL.md in root/name.
 func skill(t *testing.T, root, name, text string) {
 	t.Helper()
-	write(t, filepath.Join(root, name, "SKILL.md"), text)
+	testcheck.Write(t, filepath.Join(root, name, "SKILL.md"), text)
 }
 
 // repo is a git repository in a temp folder (real path), and its sub/deeper.
 func repo(t *testing.T) (top, deeper string) {
 	t.Helper()
 	top, _ = filepath.EvalSymlinks(t.TempDir())
-	if out, err := exec.Command("git", "-C", top, "init", "-q").CombinedOutput(); err != nil {
-		t.Fatal(string(out))
-	}
+	testcheck.Git(t, top, "init", "-q")
 	deeper = filepath.Join(top, "sub", "deeper")
 	if err := os.MkdirAll(deeper, 0o700); err != nil {
 		t.Fatal(err)
@@ -79,19 +67,19 @@ func TestListReadsEachSource(t *testing.T) {
 	skill(t, filepath.Join(top, ".claude", "skills"), "manual", "---\ndescription: dir differs\ndisable-model-invocation: true\n---\n")
 	skill(t, filepath.Join(top, "sub", ".claude", "skills"), "dup", "---\ndescription: near\n---\n")
 	skill(t, filepath.Join(filepath.Dir(top), ".claude", "skills"), "above", "---\ndescription: above the repo\n---\n") // not read
-	write(t, filepath.Join(top, ".claude", "skills", "notadir"), "x")
-	write(t, filepath.Join(top, ".claude", "skills", "empty", "README.md"), "no SKILL.md")
-	write(t, filepath.Join(cfg, "settings.json"), `{"skillOverrides":{"quiet":"off","projskill":"on","noname":"off"},"other":1}`)
-	write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"skillOverrides":{"projskill":"off","quiet":"name-only"}}`)
-	write(t, filepath.Join(top, ".claude", "settings.json"), `{"skillOverrides":"not a map","disableBundledSkills":true}`)
+	testcheck.Write(t, filepath.Join(top, ".claude", "skills", "notadir"), "x")
+	testcheck.Write(t, filepath.Join(top, ".claude", "skills", "empty", "README.md"), "no SKILL.md")
+	testcheck.Write(t, filepath.Join(cfg, "settings.json"), `{"skillOverrides":{"quiet":"off","projskill":"on","noname":"off"},"other":1}`)
+	testcheck.Write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"skillOverrides":{"projskill":"off","quiet":"name-only"}}`)
+	testcheck.Write(t, filepath.Join(top, ".claude", "settings.json"), `{"skillOverrides":"not a map","disableBundledSkills":true}`)
 
 	plugin := t.TempDir()
 	skill(t, filepath.Join(plugin, "skills"), "hello", "---\ndescription: Says hello when the user greets. Use for greetings.\n---\n")
 	skill(t, filepath.Join(plugin, "extra"), "more", "---\ndescription: from the manifest's folder\n---\n")
-	write(t, filepath.Join(plugin, "commands", "democmd.md"), "x")
-	write(t, filepath.Join(plugin, "agents", "a.md"), "x")
-	write(t, filepath.Join(plugin, "agents", "b.md"), "x")
-	write(t, filepath.Join(plugin, ".claude-plugin", "plugin.json"), `{"name":"demo","description":"A demo plugin","skills":["./extra","../outside"]}`)
+	testcheck.Write(t, filepath.Join(plugin, "commands", "democmd.md"), "x")
+	testcheck.Write(t, filepath.Join(plugin, "agents", "a.md"), "x")
+	testcheck.Write(t, filepath.Join(plugin, "agents", "b.md"), "x")
+	testcheck.Write(t, filepath.Join(plugin, ".claude-plugin", "plugin.json"), `{"name":"demo","description":"A demo plugin","skills":["./extra","../outside"]}`)
 	fakeClaude(t)
 	t.Setenv("FAKE_OUT", `[{"id":"demo@mk","version":"1.0.0","scope":"user","enabled":false,"installPath":"`+plugin+`",
 		"mcpServers":{"pms":{"command":"x"}},"projectEnabled":false,"somethingNew":{"a":[1]}},{"id":"","installPath":"/x"}]`)

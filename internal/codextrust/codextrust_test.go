@@ -8,33 +8,22 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/folderfiles"
+	"github.com/afrase/nushi/internal/testcheck"
 )
-
-func write(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	var tr Trust
 	home := t.TempDir()
 	t.Setenv("CODEX_HOME", home)
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
-		t.Fatal(string(out))
-	}
+	testcheck.Git(t, repo, "init", "-q")
 	config := filepath.Join(repo, ".codex", "config.toml")
 	// notify isn't anything Nushi looks for: the file shows whole anyway.
 	body := "notify = [\"./notify.sh\"]\n[mcp_servers.echo]\ncommand = \"echo\"\nargs = [\"hi\"]\n"
-	write(t, config, body)
+	testcheck.Write(t, config, body)
 	rules := filepath.Join(repo, ".codex", "rules", "allow.rules")
-	write(t, rules, `prefix_rule(pattern = ["rm"], decision = "allow")`)
-	write(t, filepath.Join(repo, ".codex", "empty.json"), "")
+	testcheck.Write(t, rules, `prefix_rule(pattern = ["rm"], decision = "allow")`)
+	testcheck.Write(t, filepath.Join(repo, ".codex", "empty.json"), "")
 
 	shown := func(folder string) string {
 		runs, _, err := tr.Runs(folder)
@@ -68,7 +57,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	// A .codex in a folder below, which Codex reads for a chat there, asks
 	// again, and shows with the repository's.
 	sub := filepath.Join(repo, "sub")
-	write(t, filepath.Join(sub, ".codex", "config.toml"), "model_provider = \"evil\"\n")
+	testcheck.Write(t, filepath.Join(sub, ".codex", "config.toml"), "model_provider = \"evil\"\n")
 	if trusted(sub, key) {
 		t.Error("the repository's Start anyway covered a .codex below it")
 	}
@@ -76,21 +65,21 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Errorf("a chat in sub shows:\n%s", got)
 	}
 	// A file changed since asks again.
-	write(t, rules, `prefix_rule(pattern = ["curl"], decision = "allow")`)
+	testcheck.Write(t, rules, `prefix_rule(pattern = ["curl"], decision = "allow")`)
 	if trusted(repo, key) {
 		t.Error("a changed rules file didn't ask again")
 	}
 
-	write(t, filepath.Join(home, "config.toml"), "[projects.\""+repo+"\"]\ntrust_level = \"untrusted\"\n")
+	testcheck.Write(t, filepath.Join(home, "config.toml"), "[projects.\""+repo+"\"]\ntrust_level = \"untrusted\"\n")
 	if trusted(repo) {
 		t.Error("an untrusted record trusted it")
 	}
-	write(t, filepath.Join(home, "config.toml"), "model = \"m\"\n[projects.\""+repo+"\"]\ntrust_level = \"trusted\"\n")
+	testcheck.Write(t, filepath.Join(home, "config.toml"), "model = \"m\"\n[projects.\""+repo+"\"]\ntrust_level = \"trusted\"\n")
 	if !trusted(repo) || !trusted(sub) {
 		t.Error("Codex's trust of the repository didn't count, for it or a folder in it")
 	}
 
-	write(t, config, "[mcp_servers.x\ncommand = 1")
+	testcheck.Write(t, config, "[mcp_servers.x\ncommand = 1")
 	if got := shown(repo); !strings.HasPrefix(got, "/.codex/config.toml Read by Codex: [mcp_servers.x\ncommand = 1") {
 		t.Errorf("an unreadable config.toml shows as %s", got)
 	}
@@ -104,12 +93,12 @@ func TestTheKeyCoversWhatTheCardShows(t *testing.T) {
 	t.Setenv("CODEX_HOME", t.TempDir())
 	folder, _ := filepath.EvalSymlinks(t.TempDir())
 	big := filepath.Join(folder, ".codex", "rules", "big.rules")
-	write(t, big, strings.Repeat("x", folderfiles.Shown+10)+"a")
+	testcheck.Write(t, big, strings.Repeat("x", folderfiles.Shown+10)+"a")
 	runs, key, _ := tr.Runs(folder)
 	if key == "" || len(runs) != 1 || !strings.HasPrefix(runs[0].Command, "too large to show") {
 		t.Fatalf("key %q, runs %v", key, runs)
 	}
-	write(t, big, strings.Repeat("x", folderfiles.Shown+10)+"b") // changed past what the card shows
+	testcheck.Write(t, big, strings.Repeat("x", folderfiles.Shown+10)+"b") // changed past what the card shows
 	if tr.Key(folder) == key {
 		t.Error("a change past the card's cap kept the key")
 	}
@@ -127,6 +116,6 @@ func TestTheKeyCoversWhatTheCardShows(t *testing.T) {
 		if key != "" || tr.Key(folder) != "" || !strings.Contains(runs[0].What+runs[1].What, "asks every time") {
 			t.Errorf("%s: key %q, runs %v", name, key, runs)
 		}
-		noErr(t, os.Remove(odd))
+		testcheck.NoErr(t, os.Remove(odd))
 	}
 }

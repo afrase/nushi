@@ -11,15 +11,16 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestWorktrees(t *testing.T) {
 	ctx := context.Background()
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "sub", "a.txt"), "a\n")
-	git(t, repo, "add", ".")
-	git(t, repo, "commit", "-q", "-m", "init")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
 
 	wt, folder, err := Worktrees{}.Add(ctx, filepath.Join(repo, "sub"), "brave-otter", "", "")
 	want := model.Worktree{Repo: repo, Path: filepath.Join(repo, ".worktrees", "brave-otter"), Branch: "nushi/brave-otter", Base: "main"}
@@ -37,8 +38,8 @@ func TestWorktrees(t *testing.T) {
 	}
 	// A name is taken by its folder alone, or by its branch alone (a
 	// deleted chat can leave its branch).
-	noErr(t, os.MkdirAll(filepath.Join(repo, ".worktrees", "lone-folder"), 0o755))
-	git(t, repo, "branch", "nushi/lone-branch")
+	testcheck.NoErr(t, os.MkdirAll(filepath.Join(repo, ".worktrees", "lone-folder"), 0o755))
+	testcheck.Git(t, repo, "branch", "nushi/lone-branch")
 	for _, name := range []string{"lone-folder", "lone-branch"} {
 		if _, _, err := (Worktrees{}).Add(ctx, repo, name, "", ""); !errors.Is(err, fs.ErrExist) {
 			t.Errorf("%s: %v", name, err)
@@ -46,7 +47,7 @@ func TestWorktrees(t *testing.T) {
 	}
 	// Through a link to the repository, the worktree keeps the link's spelling.
 	link := filepath.Join(t.TempDir(), "link")
-	noErr(t, os.Symlink(repo, link))
+	testcheck.NoErr(t, os.Symlink(repo, link))
 	if via, in, err := (Worktrees{}).Add(ctx, filepath.Join(link, "sub"), "swift-yak", "", ""); err != nil || via.Repo != link || in != filepath.Join(link, ".worktrees", "swift-yak", "sub") {
 		t.Errorf("Add through a link = %+v, %q, %v", via, in, err)
 	}
@@ -65,7 +66,7 @@ func TestWorktrees(t *testing.T) {
 	// base doesn't have.
 	write(t, filepath.Join(second.Path, "new.txt"), "work\n")
 	write(t, filepath.Join(second.Path, "sub", "a.txt"), "b\n")
-	git(t, second.Path, "commit", "-q", "-am", "one")
+	testcheck.Git(t, second.Path, "commit", "-q", "-am", "one")
 	write(t, filepath.Join(second.Path, "sub", "a.txt"), "c\n")
 	// Ignored files go with the worktree too.
 	write(t, filepath.Join(second.Path, ".gitignore"), ".env\nbuild/\n")
@@ -75,7 +76,7 @@ func TestWorktrees(t *testing.T) {
 		t.Errorf("Inspect = %+v, %v", st, err)
 	}
 	// Its base branch deleted (merged, say): counted from where it started.
-	git(t, repo, "update-ref", "-d", "refs/heads/nushi/brave-otter")
+	testcheck.Git(t, repo, "update-ref", "-d", "refs/heads/nushi/brave-otter")
 	if n, err := (Worktrees{}).Inspect(ctx, second); err != nil || n.Commits != 1 {
 		t.Errorf("Inspect with its base gone = %+v, %v", n, err)
 	}
@@ -97,9 +98,9 @@ func TestWorktrees(t *testing.T) {
 	// A worktree whose folder went outside git: removing clears git's record
 	// of it, not of another missing one (the user's, on a volume not mounted).
 	theirs := filepath.Join(t.TempDir(), "theirs")
-	git(t, repo, "worktree", "add", "-q", theirs)
-	noErr(t, os.RemoveAll(theirs))
-	noErr(t, os.RemoveAll(wt.Path))
+	testcheck.Git(t, repo, "worktree", "add", "-q", theirs)
+	testcheck.NoErr(t, os.RemoveAll(theirs))
+	testcheck.NoErr(t, os.RemoveAll(wt.Path))
 	for range 2 { // and again: nothing left to remove is no error
 		if err := (Worktrees{}).Remove(ctx, wt, false); err != nil {
 			t.Errorf("removing a worktree whose folder is gone: %v", err)
@@ -115,11 +116,11 @@ func TestWorktrees(t *testing.T) {
 func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 	ctx := context.Background()
 	repo, elsewhere := t.TempDir(), t.TempDir()
-	git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "SKILL.md"), "evil\n")
-	git(t, repo, "add", ".")
-	git(t, repo, "commit", "-q", "-m", "init")
-	noErr(t, os.Symlink(elsewhere, filepath.Join(repo, ".worktrees")))
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
+	testcheck.NoErr(t, os.Symlink(elsewhere, filepath.Join(repo, ".worktrees")))
 	if _, _, err := (Worktrees{}).Add(ctx, repo, "brave-otter", "", ""); err == nil {
 		t.Error("made a worktree through a linked .worktrees")
 	}
@@ -130,13 +131,13 @@ func TestNoWritesThroughARepositorysLinks(t *testing.T) {
 	target := filepath.Join(elsewhere, "settings.json")
 	write(t, target, "{}")
 	exclude := filepath.Join(repo, ".git", "info", "exclude")
-	noErr(t, os.Remove(exclude))
-	noErr(t, os.Symlink(target, exclude))
+	testcheck.NoErr(t, os.Remove(exclude))
+	testcheck.NoErr(t, os.Symlink(target, exclude))
 	if err := Exclude(ctx, repo, "/.worktrees/"); err == nil {
 		t.Error("wrote through a linked info/exclude")
 	}
-	noErr(t, os.RemoveAll(filepath.Join(repo, ".git", "info")))
-	noErr(t, os.Symlink(elsewhere, filepath.Join(repo, ".git", "info")))
+	testcheck.NoErr(t, os.RemoveAll(filepath.Join(repo, ".git", "info")))
+	testcheck.NoErr(t, os.Symlink(elsewhere, filepath.Join(repo, ".git", "info")))
 	if err := Exclude(ctx, repo, "/.worktrees/"); err == nil {
 		t.Error("wrote through a linked info folder")
 	}

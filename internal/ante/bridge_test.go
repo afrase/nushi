@@ -18,6 +18,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/ante/antetest"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -315,12 +316,12 @@ func TestIDs(t *testing.T) {
 func TestWritesOldText(t *testing.T) {
 	dir := t.TempDir()
 	small, big, fifo := dir+"/small", dir+"/big", dir+"/fifo"
-	check(t, os.WriteFile(small, []byte("before"), 0o600))
-	check(t, os.WriteFile(big, make([]byte, toolcall.MaxOld+1), 0o600))
+	testcheck.NoErr(t, os.WriteFile(small, []byte("before"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(big, make([]byte, toolcall.MaxOld+1), 0o600))
 	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	check(t, os.Symlink(small, dir+"/link"))
+	testcheck.NoErr(t, os.Symlink(small, dir+"/link"))
 	s := &session{cwd: dir}
 	done := make(chan map[string]toolcall.Old)
 	go func() {
@@ -424,7 +425,7 @@ func TestOpenFiles(t *testing.T) {
 	dir := t.TempDir()
 	open, closed := filepath.Join(dir, "a", "events.jsonl"), filepath.Join(dir, "b", "events.jsonl")
 	for _, f := range []string{open, closed} {
-		check(t, os.MkdirAll(filepath.Dir(f), 0o700))
+		testcheck.NoErr(t, os.MkdirAll(filepath.Dir(f), 0o700))
 		if err := os.WriteFile(f, nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -449,14 +450,6 @@ func TestWithoutFolder(t *testing.T) {
 		if got := withoutFolder(in); got != want {
 			t.Errorf("withoutFolder(%q) = %q", in, got)
 		}
-	}
-}
-
-// check fails the test on err.
-func check(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
 	}
 }
 

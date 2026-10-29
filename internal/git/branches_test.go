@@ -10,28 +10,29 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestWorktreeListBranchesAndSwitch(t *testing.T) {
 	ctx := context.Background()
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "sub", "a.txt"), "a\n")
-	git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "add", ".")
 	t.Setenv("GIT_COMMITTER_DATE", "2001-01-01T00:00:00")
-	git(t, repo, "commit", "-q", "-m", "init")
-	git(t, repo, "branch", "old")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
+	testcheck.Git(t, repo, "branch", "old")
 	t.Setenv("GIT_COMMITTER_DATE", "2030-01-01T00:00:00")
-	git(t, repo, "commit", "-q", "--allow-empty", "-m", "later")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "later")
 	w := Worktrees{}
 	try := filepath.Join(repo, ".worktrees", "try")
-	git(t, repo, "worktree", "add", "-q", "-b", "try", try)
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "try", try)
 	locked := filepath.Join(t.TempDir(), "locked")
-	git(t, repo, "worktree", "add", "-q", "-b", "kept", locked)
-	git(t, repo, "worktree", "lock", locked)
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "kept", locked)
+	testcheck.Git(t, repo, "worktree", "lock", locked)
 	gone := filepath.Join(t.TempDir(), "gone")
-	git(t, repo, "worktree", "add", "-q", "--detach", gone)
-	noErr(t, os.RemoveAll(gone))
+	testcheck.Git(t, repo, "worktree", "add", "-q", "--detach", gone)
+	testcheck.NoErr(t, os.RemoveAll(gone))
 
 	// The list: the main worktree first, the one the folder is in current
 	// (inside the repository's folder, a worktree is its own), a locked one
@@ -86,7 +87,7 @@ func TestWorktreeListBranchesAndSwitch(t *testing.T) {
 	if n, err := w.Changed(ctx, repo); n != 1 || err != nil {
 		t.Errorf("Changed = %d, %v", n, err)
 	}
-	git(t, repo, "checkout", "--", "sub/a.txt")
+	testcheck.Git(t, repo, "checkout", "--", "sub/a.txt")
 	if err := w.Switch(ctx, repo, "old", false); err != nil || w.Branch(ctx, repo) != "old" {
 		t.Fatalf("Switch = %v, on %s", err, w.Branch(ctx, repo))
 	}

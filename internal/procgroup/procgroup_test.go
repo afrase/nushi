@@ -7,6 +7,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A run whose context ends returns at once, though the program left a
@@ -26,11 +28,8 @@ func TestBound(t *testing.T) {
 	if took := time.Since(start); took > 2500*time.Millisecond {
 		t.Errorf("the run took %s after its context ended", took)
 	}
-	for i := 0; syscall.Kill(-cmd.Process.Pid, 0) == nil; i++ { // the background sleep is reaped by launchd
-		if i == 50 {
-			t.Fatal("the process group is still there")
-		}
-		time.Sleep(20 * time.Millisecond)
+	if !testcheck.Eventually(func() bool { return syscall.Kill(-cmd.Process.Pid, 0) != nil }) { // the background sleep is reaped by launchd
+		t.Fatal("the process group is still there")
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A record counts while its process runs and started when it says.
@@ -40,7 +42,7 @@ func TestOpen(t *testing.T) {
 	write(dead.Process.Pid, map[string]any{"sessionId": "dead", "kind": "interactive", "updatedAt": time.Now().UnixMilli()})
 	write(sleeper.Process.Pid, map[string]any{"sessionId": "reused", "kind": "interactive", "procStart": stamp(start.Add(-time.Hour))})
 	write(1, map[string]any{"sessionId": "sdk", "kind": "interactive", "entrypoint": "sdk-cli", "updatedAt": time.Now().UnixMilli()})
-	noErr(t, os.WriteFile(filepath.Join(dir, "1.abc.key"), []byte("{}"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "1.abc.key"), []byte("{}"), 0o600))
 	got := open(dir, started)
 	want := map[string]string{"cli": "a terminal", "sdk": "another app"}
 	if !maps.Equal(got, want) {

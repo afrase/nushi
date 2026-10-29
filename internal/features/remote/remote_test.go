@@ -24,6 +24,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/noiseconn"
 	"github.com/afrase/nushi/relay"
 )
@@ -75,10 +76,8 @@ func startRemote(t *testing.T, dir, relayURL string, tune ...func(*timing)) *Ser
 
 func waitFor(t *testing.T, ok func() bool) {
 	t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); !ok(); time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("timed out")
-		}
+	if !testcheck.Eventually(ok) {
+		t.Fatal("timed out")
 	}
 }
 

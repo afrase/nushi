@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // webDir is a built app's folder: a page, its loader, a hashed script, an
@@ -41,19 +43,19 @@ func webDir(t *testing.T) string {
 		".git/config":                 "secret",
 	} {
 		p := filepath.Join(dir, name)
-		check(t, os.MkdirAll(filepath.Dir(p), 0o755))
-		check(t, os.WriteFile(p, []byte(body), 0o600))
+		testcheck.NoErr(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		testcheck.NoErr(t, os.WriteFile(p, []byte(body), 0o600))
 	}
 	secret := filepath.Join(t.TempDir(), "secret")
-	check(t, os.WriteFile(secret, []byte("secret"), 0o600))
-	check(t, os.Symlink(secret, filepath.Join(dir, "secret.txt")))
+	testcheck.NoErr(t, os.WriteFile(secret, []byte("secret"), 0o600))
+	testcheck.NoErr(t, os.Symlink(secret, filepath.Join(dir, "secret.txt")))
 	return dir
 }
 
 func webRelay(t *testing.T, origin string) *httptest.Server {
 	t.Helper()
 	site, err := LoadSite(webDir(t), origin)
-	check(t, err)
+	testcheck.NoErr(t, err)
 	lim := Defaults
 	lim.Site = site
 	srv := httptest.NewServer(New(lim))
@@ -70,16 +72,16 @@ type answer struct {
 func get(t *testing.T, url string, h http.Header) (answer, []byte) {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, url, http.NoBody)
-	check(t, err)
+	testcheck.NoErr(t, err)
 	if h != nil {
 		req.Header = h
 	}
 	tr := &http.Transport{DisableCompression: true}
 	resp, err := tr.RoundTrip(req)
-	check(t, err)
+	testcheck.NoErr(t, err)
 	defer resp.Body.Close() //nolint:errcheck // read-only
 	body, err := io.ReadAll(resp.Body)
-	check(t, err)
+	testcheck.NoErr(t, err)
 	return answer{resp.StatusCode, resp.Header}, body
 }
 
@@ -254,9 +256,9 @@ func TestWebCompressionAndETags(t *testing.T) {
 		t.Fatal("not compressed")
 	}
 	z, err := gzip.NewReader(bytes.NewReader(body))
-	check(t, err)
+	testcheck.NoErr(t, err)
 	plain, err := io.ReadAll(z)
-	check(t, err)
+	testcheck.NoErr(t, err)
 	if string(plain) != strings.Repeat("var x = 1;\n", 500) {
 		t.Fatal("compressed wrongly")
 	}
@@ -291,20 +293,20 @@ func TestSlowReaderLetGo(t *testing.T) {
 	dir := webDir(t)
 	big := make([]byte, 32<<20)
 	_, _ = rand.Read(big) // incompressible
-	check(t, os.WriteFile(filepath.Join(dir, "big.0123456789abcdef.wasm"), big, 0o600))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "big.0123456789abcdef.wasm"), big, 0o600))
 	site, err := LoadSite(dir, "http://127.0.0.1")
-	check(t, err)
+	testcheck.NoErr(t, err)
 	lim := Defaults
 	lim.Site = site
 	srv := httptest.NewServer(NewServer(lim).Handler)
 	t.Cleanup(srv.Close)
 	c, err := net.Dial("tcp", strings.TrimPrefix(srv.URL, "http://"))
-	check(t, err)
+	testcheck.NoErr(t, err)
 	defer c.Close() //nolint:errcheck // a test's connection
 	_, err = io.WriteString(c, "GET /big.0123456789abcdef.wasm HTTP/1.1\r\nHost: x\r\n\r\n")
-	check(t, err)
+	testcheck.NoErr(t, err)
 	time.Sleep(time.Second) // reading nothing, past its time
-	check(t, c.SetReadDeadline(time.Now().Add(10*time.Second)))
+	testcheck.NoErr(t, c.SetReadDeadline(time.Now().Add(10*time.Second)))
 	n, err := io.Copy(io.Discard, c)
 	if err != nil || n >= int64(len(big)) {
 		t.Fatalf("read %d of %d: %v", n, len(big), err)
@@ -323,14 +325,14 @@ func TestFallbackFontsFromDisk(t *testing.T) {
 		"assets/fonts/fallback/Roboto-Regular.ttf": "roboto",
 	} {
 		p := filepath.Join(dir, filepath.FromSlash(name))
-		check(t, os.MkdirAll(filepath.Dir(p), 0o755))
-		check(t, os.WriteFile(p, []byte(body), 0o600))
+		testcheck.NoErr(t, os.MkdirAll(filepath.Dir(p), 0o755))
+		testcheck.NoErr(t, os.WriteFile(p, []byte(body), 0o600))
 	}
 	secret := filepath.Join(t.TempDir(), "secret")
-	check(t, os.WriteFile(secret, []byte("secret"), 0o600))
-	check(t, os.Symlink(secret, filepath.Join(dir, filepath.FromSlash("assets/fonts/fallback/notosansjp/v53/link.woff2"))))
+	testcheck.NoErr(t, os.WriteFile(secret, []byte("secret"), 0o600))
+	testcheck.NoErr(t, os.Symlink(secret, filepath.Join(dir, filepath.FromSlash("assets/fonts/fallback/notosansjp/v53/link.woff2"))))
 	site, err := LoadSite(dir, "https://relay.example.com")
-	check(t, err)
+	testcheck.NoErr(t, err)
 	if site.files[font] != nil || site.files["assets/fonts/fallback/OFL.txt"] != nil || site.files["assets/fonts/fallback/Roboto-Regular.ttf"] == nil {
 		t.Fatal("the fallback fonts in memory, or Roboto (loaded at start) not")
 	}
@@ -350,14 +352,14 @@ func TestFallbackFontsFromDisk(t *testing.T) {
 		t.Errorf("the licence: %d %q %v", resp.StatusCode, body, resp.Header)
 	}
 	late := "assets/fonts/fallback/notosansjp/v53/late.woff2"
-	check(t, os.WriteFile(filepath.Join(dir, filepath.FromSlash(late)), []byte("late"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, filepath.FromSlash(late)), []byte("late"), 0o600))
 	for _, name := range []string{late, "assets/fonts/fallback/notosansjp/v53/link.woff2", "assets/fonts/fallback/notosansjp/v53/../../../../../index.html"} {
 		if resp, body := get(t, srv.URL+"/"+name, nil); resp.StatusCode == http.StatusOK && !bytes.Contains(body, []byte("doctype")) || bytes.Contains(body, []byte("secret")) {
 			t.Errorf("%s: %d %q", name, resp.StatusCode, body)
 		}
 	}
 	// Gone from the folder since: not found, as any other missing file.
-	check(t, os.Remove(filepath.Join(dir, filepath.FromSlash(font))))
+	testcheck.NoErr(t, os.Remove(filepath.Join(dir, filepath.FromSlash(font))))
 	if resp, _ := get(t, srv.URL+"/"+font, nil); resp.StatusCode != http.StatusNotFound {
 		t.Errorf("a removed font: %d", resp.StatusCode)
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/skillfile"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // Claude doesn't read .agents/skills: a shared skill is Claude's only
@@ -53,7 +54,7 @@ func TestSharedThroughALink(t *testing.T) {
 		t.Errorf("local settings: %s", s)
 	}
 	bin := t.TempDir()
-	write(t, filepath.Join(bin, "trash"), "#!/bin/sh\nmv \"$1\" \""+bin+"/gone\"\n")
+	testcheck.Write(t, filepath.Join(bin, "trash"), "#!/bin/sh\nmv \"$1\" \""+bin+"/gone\"\n")
 	if err := os.Chmod(filepath.Join(bin, "trash"), 0o700); err != nil {
 		t.Fatal(err)
 	}

@@ -9,21 +9,12 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
-
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func skill(t *testing.T, root, dir string) {
 	t.Helper()
-	write(t, filepath.Join(root, dir, "SKILL.md"), "---\ndescription: "+dir+"\n---\n")
+	testcheck.Write(t, filepath.Join(root, dir, "SKILL.md"), "---\ndescription: "+dir+"\n---\n")
 }
 
 func listed(skills []model.Skill) string {
@@ -56,8 +47,8 @@ func setup(t *testing.T) (agent, top, deeper string) {
 	skill(t, filepath.Join(top, "sub", ".agents", "skills"), "release")
 	skill(t, filepath.Join(top, ".agents", "skills"), "release") // kept twice: omp renames one
 	skill(t, filepath.Join(above, ".agents", "skills"), "above") // above the repository: not read
-	write(t, filepath.Join(top, ".agents", "skills", "plain", "SKILL.md"), "no front matter\n")
-	write(t, filepath.Join(top, ".omp", "skills", "nodesc", "SKILL.md"), "no front matter\n") // .omp's need one
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "plain", "SKILL.md"), "no front matter\n")
+	testcheck.Write(t, filepath.Join(top, ".omp", "skills", "nodesc", "SKILL.md"), "no front matter\n") // .omp's need one
 	return agent, top, deeper
 }
 
@@ -70,8 +61,8 @@ func TestList(t *testing.T) {
 	if err := os.Symlink(elsewhere, filepath.Join(deeper, ".agents")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, filepath.Join(agent, "config.yml"), "disabledExtensions:\n  - skill:mine\nskills:\n  ignoredSkills: [\"claude*\"]\n")
-	write(t, filepath.Join(top, ".omp", "config.yml"), "disabledExtensions: [skill:plain]\n")
+	testcheck.Write(t, filepath.Join(agent, "config.yml"), "disabledExtensions:\n  - skill:mine\nskills:\n  ignoredSkills: [\"claude*\"]\n")
+	testcheck.Write(t, filepath.Join(top, ".omp", "config.yml"), "disabledExtensions: [skill:plain]\n")
 	ctx := context.Background()
 	l, err := OMP{}.List(ctx, deeper)
 	if err != nil {
@@ -97,7 +88,7 @@ func TestSetSkillOn(t *testing.T) {
 	agent, _, deeper := setup(t)
 	cfg := filepath.Join(agent, "config.yml")
 	start := "# my omp\nmodelRoles:\n  default: fireworks/x # cheap\n"
-	write(t, cfg, start)
+	testcheck.Write(t, cfg, start)
 	ctx := context.Background()
 	if err := (OMP{}).SetSkillOn(ctx, deeper, "shared", "everyday", false); err != nil {
 		t.Fatal(err)
@@ -113,7 +104,7 @@ func TestSetSkillOn(t *testing.T) {
 		t.Errorf("on again:\n%s", b)
 	}
 	odd := "modelRoles:\n    default: x\n"
-	write(t, cfg, odd)
+	testcheck.Write(t, cfg, odd)
 	if err := (OMP{}).SetSkillOn(ctx, deeper, "shared", "everyday", false); err == nil || !strings.Contains(err.Error(), "change it in config.yml") {
 		t.Errorf("four spaces: %v", err)
 	}

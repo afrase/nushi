@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func read(t *testing.T, path string) string {
@@ -28,7 +30,7 @@ func TestSetSkillOnKeepsTheRest(t *testing.T) {
 	cfg := filepath.Join(codexHome, "config.toml")
 	start := "# My Codex\nmodel = \"x\" # the model\n\n[projects.\"/p\"]\ntrust_level = \"trusted\"\n\n# keep other off\n[[skills.config]]\npath = \"" +
 		filepath.Join(top, ".agents", "skills", "other", "SKILL.md") + "\"\nenabled = false\n"
-	write(t, cfg, start)
+	testcheck.Write(t, cfg, start)
 	if err := os.Chmod(cfg, 0o640); err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +53,7 @@ func TestSetSkillOnKeepsTheRest(t *testing.T) {
 	}
 
 	// An entry with a comment in it keeps it: enabled flips.
-	write(t, cfg, "[[skills.config]]\n# why\npath = \""+file+"\"\nenabled = false # for now\n[x]\ny = 1\n")
+	testcheck.Write(t, cfg, "[[skills.config]]\n# why\npath = \""+file+"\"\nenabled = false # for now\n[x]\ny = 1\n")
 	if err := (Codex{}).SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +62,7 @@ func TestSetSkillOnKeepsTheRest(t *testing.T) {
 	}
 
 	// A name entry keeps it off: on adds a path entry after it.
-	write(t, cfg, "[[skills.config]]\nname = \"release\"\nenabled = false\n")
+	testcheck.Write(t, cfg, "[[skills.config]]\nname = \"release\"\nenabled = false\n")
 	if err := (Codex{}).SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +98,7 @@ func TestSetSkillOnRefusesWhatItCantEdit(t *testing.T) {
 		{"not toml = = \n", true},
 	} {
 		text := c.text
-		write(t, cfg, text)
+		testcheck.Write(t, cfg, text)
 		err := (Codex{}).SetSkillOn(context.Background(), deeper, "shared", "release", c.on)
 		if err == nil || !strings.Contains(err.Error(), "change it in config.toml") {
 			t.Errorf("%q: %v", text, err)

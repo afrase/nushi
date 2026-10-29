@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 
 	"github.com/afrase/nushi/internal/readonly"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // fakeCLI writes a program into dir that prints out for --version and
@@ -179,7 +180,7 @@ func TestSetUp(t *testing.T) {
 	if err := svc.Remove("claude"); err != nil || svc.List(context.Background())[0].Ready {
 		t.Errorf("Remove: %v", err)
 	}
-	noErr(t, os.Remove(filepath.Join(bin, "node")))
+	testcheck.NoErr(t, os.Remove(filepath.Join(bin, "node")))
 	in.versions = map[string]string{filepath.Join(dir, "claude"): "1.0.0"}
 	if st := svc.List(context.Background())[0]; st.Problem != "Needs Node" || st.Ready {
 		t.Errorf("without Node: %+v", st)

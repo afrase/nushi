@@ -16,6 +16,8 @@ import (
 	"path/filepath"
 	"testing"
 	"testing/fstest"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // tarball packs files as npm packs a package (under package/).
@@ -104,7 +106,7 @@ func TestInstall(t *testing.T) {
 	marker := filepath.Join(tmp, "script-ran")
 	url, lock, tamper := registry(t, marker)
 	npmrc := filepath.Join(tmp, "npmrc")
-	noErr(t, os.WriteFile(npmrc, []byte("registry="+url+"/\nfetch-retries=0\n"), 0o600)) // no retries of the changed tarball
+	testcheck.NoErr(t, os.WriteFile(npmrc, []byte("registry="+url+"/\nfetch-retries=0\n"), 0o600)) // no retries of the changed tarball
 	t.Setenv("HOME", filepath.Join(tmp, "home"))
 	in := Installer{Env: []string{"npm_config_userconfig=" + npmrc, "npm_config_globalconfig=" + npmrc + ".global"}}
 	folder := filepath.Join(tmp, "agents", "x")

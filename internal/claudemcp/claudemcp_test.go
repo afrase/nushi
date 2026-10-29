@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestParseList(t *testing.T) {
@@ -45,11 +46,11 @@ func TestServersReadsEachScope(t *testing.T) {
 	root, _ = filepath.EvalSymlinks(root)
 	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
 	folder := filepath.Join(root, "repo", "sub")
-	write(t, filepath.Join(cfg, ".claude.json"), `{"mcpServers":{"u":{"command":"x","env":{"TOKEN":"secret"}}},
+	testcheck.Write(t, filepath.Join(cfg, ".claude.json"), `{"mcpServers":{"u":{"command":"x","env":{"TOKEN":"secret"}}},
 		"projects":{"`+folder+`":{"mcpServers":{"l":{"type":"http","url":"http://l","headers":{"Authorization":"Bearer secret"}}}}}}`)
-	write(t, filepath.Join(root, "repo", "sub", ".mcp.json"), `{"mcpServers":{"p":{"command":"near"}}}`)
-	write(t, filepath.Join(root, "repo", ".mcp.json"), `{"mcpServers":{"p":{"command":"far"},"q":{"command":"q"}}}`)
-	write(t, filepath.Join(root, ".mcp.json"), `{"mcpServers":{"bad":{},}}`) // left out, as Claude does
+	testcheck.Write(t, filepath.Join(root, "repo", "sub", ".mcp.json"), `{"mcpServers":{"p":{"command":"near"}}}`)
+	testcheck.Write(t, filepath.Join(root, "repo", ".mcp.json"), `{"mcpServers":{"p":{"command":"far"},"q":{"command":"q"}}}`)
+	testcheck.Write(t, filepath.Join(root, ".mcp.json"), `{"mcpServers":{"bad":{},}}`) // left out, as Claude does
 	got, err := Claude{}.Servers(folder)
 	if err != nil {
 		t.Fatal(err)
@@ -70,23 +71,11 @@ func TestServersReadsEachScope(t *testing.T) {
 	}
 }
 
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestSetOnKeepsOtherSettings(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	if out, err := exec.Command("git", "-C", repo, "init", "-q").CombinedOutput(); err != nil {
-		t.Fatal(string(out))
-	}
-	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"web":{"type":"http","url":"http://x"}}}`)
+	testcheck.Git(t, repo, "init", "-q")
+	testcheck.Write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"web":{"type":"http","url":"http://x"}}}`)
 	ctx := context.Background()
 	if err := (Claude{}).SetOn(ctx, repo, "project", "web", false); err != nil {
 		t.Fatal(err)
@@ -100,7 +89,7 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 		t.Errorf("info/exclude:\n%s", exclude)
 	}
 	path := filepath.Join(repo, ".claude", "settings.local.json")
-	write(t, path, `{"permissions":{"allow":["Bash(ls)"]},"disabledMcpjsonServers":["web","other"]}`)
+	testcheck.Write(t, path, `{"permissions":{"allow":["Bash(ls)"]},"disabledMcpjsonServers":["web","other"]}`)
 	if err := (Claude{}).SetOn(ctx, repo, "project", "web", true); err != nil {
 		t.Fatal(err)
 	}
@@ -112,11 +101,11 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 		t.Errorf("settings = %s, want %s", g, want)
 	}
 	// A file of null, and one name alone (which Claude takes for a list).
-	write(t, path, `null`)
+	testcheck.Write(t, path, `null`)
 	if err := (Claude{}).SetOn(ctx, repo, "project", "web", false); err != nil {
 		t.Fatal(err)
 	}
-	write(t, path, `{"enabledMcpjsonServers":"web"}`)
+	testcheck.Write(t, path, `{"enabledMcpjsonServers":"web"}`)
 	if servers, _ := (Claude{}).Servers(repo); !servers[0].Approved {
 		t.Errorf("approved by one name alone: %+v", servers[0])
 	}
@@ -126,7 +115,7 @@ func TestSetOnKeepsOtherSettings(t *testing.T) {
 	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"enabledMcpjsonServers": []`) {
 		t.Errorf("settings = %s", b)
 	}
-	write(t, filepath.Join(repo, ".claude", "settings.json"), `{"disabledMcpjsonServers":"web"}`)
+	testcheck.Write(t, filepath.Join(repo, ".claude", "settings.json"), `{"disabledMcpjsonServers":"web"}`)
 	if servers, _ := (Claude{}).Servers(repo); !servers[0].Off || servers[0].OffBy != filepath.Join(repo, ".claude", "settings.json") {
 		t.Errorf("turned off by the shared settings: %+v", servers[0])
 	}
@@ -138,7 +127,7 @@ func TestSetOnRefusesSymlinks(t *testing.T) {
 	for _, link := range []string{".claude", ".claude/settings.local.json"} {
 		repo, outside := t.TempDir(), t.TempDir()
 		target := filepath.Join(outside, "victim")
-		write(t, filepath.Join(target, "settings.local.json"), "keep")
+		testcheck.Write(t, filepath.Join(target, "settings.local.json"), "keep")
 		if link == ".claude" {
 			if err := os.Symlink(target, filepath.Join(repo, ".claude")); err != nil {
 				t.Fatal(err)

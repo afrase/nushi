@@ -11,6 +11,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/skillfile"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // calls are the fake's calls, each its arguments.
@@ -50,7 +51,7 @@ func TestSetSkillOnChangesOnlyItsKey(t *testing.T) {
 	skill(t, filepath.Join(cfg, "skills"), "mine", "---\ndescription: d\n---\n")
 	skill(t, filepath.Join(top, ".claude", "skills"), "proj", "---\ndescription: d\n---\n")
 	user := filepath.Join(cfg, "settings.json")
-	write(t, user, `{"model":"opus","skillOverrides":{"proj":"off","other":"name-only"}}`)
+	testcheck.Write(t, user, `{"model":"opus","skillOverrides":{"proj":"off","other":"name-only"}}`)
 	if err := os.Chmod(user, 0o640); err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +90,7 @@ func TestSetSkillOnChangesOnlyItsKey(t *testing.T) {
 		}
 	}
 	// Your skill the project's settings decide can't be changed for you.
-	write(t, local, `{"skillOverrides":{"mine":"off"}}`)
+	testcheck.Write(t, local, `{"skillOverrides":{"mine":"off"}}`)
 	if err := (Claude{}).SetSkillOn(ctx, deeper, "user", "mine", true); err == nil || !strings.Contains(err.Error(), local) {
 		t.Errorf("set in the project: %v", err)
 	}
@@ -98,13 +99,13 @@ func TestSetSkillOnChangesOnlyItsKey(t *testing.T) {
 			t.Errorf("%s %s: changed", s[0], s[1])
 		}
 	}
-	write(t, user, `{"skillOverrides":["not a map"]}`)
+	testcheck.Write(t, user, `{"skillOverrides":["not a map"]}`)
 	if err := (Claude{}).SetSkillOn(ctx, deeper, "user", "mine", false); err == nil {
 		t.Error("a skillOverrides of another shape: changed")
 	}
 	// A link to your settings (dotfiles) is followed, not replaced.
 	linked := filepath.Join(t.TempDir(), "settings.json")
-	write(t, linked, `{}`)
+	testcheck.Write(t, linked, `{}`)
 	_ = os.Remove(user)
 	if err := os.Symlink(linked, user); err != nil {
 		t.Fatal(err)
@@ -132,7 +133,7 @@ func TestPluginsThroughTheCLI(t *testing.T) {
 		{"id":"team@mk","scope":"local","enabled":false,"projectPath":"`+top+`","installPath":"`+plugin+`"},
 		{"id":"other@mk","scope":"local","enabled":true,"projectPath":"/elsewhere","installPath":"`+plugin+`"}]`)
 	ctx := context.Background()
-	write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"enabledPlugins":{"team@mk":true}}`)
+	testcheck.Write(t, filepath.Join(top, ".claude", "settings.local.json"), `{"enabledPlugins":{"team@mk":true}}`)
 	got, err := listPlugins(ctx, top)
 	if err != nil || len(got) != 2 || got[0].ID != "demo@mk" || !got[0].Enabled || got[1].ID != "team@mk" || !got[1].Enabled {
 		t.Fatalf("listed %+v, %v", got, err)
@@ -140,7 +141,7 @@ func TestPluginsThroughTheCLI(t *testing.T) {
 	if err := (Claude{}).SetPluginOn(ctx, top, "demo@mk", false); err != nil {
 		t.Fatal(err)
 	}
-	write(t, filepath.Join(top, ".claude", "settings.json"), `{"enabledPlugins":{"demo@mk":true}}`)
+	testcheck.Write(t, filepath.Join(top, ".claude", "settings.json"), `{"enabledPlugins":{"demo@mk":true}}`)
 	if err := (Claude{}).SetPluginOn(ctx, top, "demo@mk", false); err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +183,7 @@ func TestTrashOnlyASkillsFolder(t *testing.T) {
 	top, deeper := repo(t)
 	bin := t.TempDir()
 	trashed := filepath.Join(bin, "trashed")
-	write(t, filepath.Join(bin, "trash"), "#!/bin/sh\necho \"$1\" >> \""+trashed+"\"\nmv \"$1\" \""+bin+"/gone\"\n")
+	testcheck.Write(t, filepath.Join(bin, "trash"), "#!/bin/sh\necho \"$1\" >> \""+trashed+"\"\nmv \"$1\" \""+bin+"/gone\"\n")
 	if err := os.Chmod(filepath.Join(bin, "trash"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +191,7 @@ func TestTrashOnlyASkillsFolder(t *testing.T) {
 	skillfile.TrashProgram = filepath.Join(bin, "trash")
 	defer func() { skillfile.TrashProgram = old }()
 	skill(t, filepath.Join(top, ".claude", "skills"), "proj", "x")
-	write(t, filepath.Join(top, ".claude", "skills", "nofile", "README.md"), "x")
+	testcheck.Write(t, filepath.Join(top, ".claude", "skills", "nofile", "README.md"), "x")
 	ctx := context.Background()
 	for _, bad := range []string{
 		filepath.Join(top, ".claude", "skills"),

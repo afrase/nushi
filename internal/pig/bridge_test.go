@@ -17,6 +17,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/pig/pigtest"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
@@ -98,19 +99,21 @@ func (c *client) texts(sid acp.SessionID) []string {
 // accepts, waiting a little for it.
 func (c *client) find(t *testing.T, sid acp.SessionID, kind string, ok func(acp.SessionUpdate) bool) acp.SessionUpdate {
 	t.Helper()
-	for range 100 {
+	var found acp.SessionUpdate
+	if !testcheck.Eventually(func() bool {
 		c.mu.Lock()
+		defer c.mu.Unlock()
 		for _, n := range c.updates {
 			if n.SessionID == sid && n.Update.SessionUpdate == kind && (ok == nil || ok(n.Update)) {
-				c.mu.Unlock()
-				return n.Update
+				found = n.Update
+				return true
 			}
 		}
-		c.mu.Unlock()
-		time.Sleep(10 * time.Millisecond)
+		return false
+	}) {
+		t.Fatalf("no %s", kind)
 	}
-	t.Fatalf("no %s", kind)
-	return acp.SessionUpdate{}
+	return found
 }
 
 // start runs a bridge on a fake pig whose sessions are in store, and
@@ -537,8 +540,9 @@ func TestPlans(t *testing.T) {
 	prompt(t, c, s.SessionID, "update the todo list")
 	plans := func(c *peer) string {
 		var out []string
-		for range 100 {
+		testcheck.Eventually(func() bool {
 			c.mu.Lock()
+			defer c.mu.Unlock()
 			out = nil
 			for _, n := range c.updates {
 				if p := n.Update.Plan; p != nil && n.SessionID == s.SessionID {
@@ -549,12 +553,8 @@ func TestPlans(t *testing.T) {
 					out = append(out, strings.Join(es, ","))
 				}
 			}
-			c.mu.Unlock()
-			if len(out) >= 2 {
-				break
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
+			return len(out) >= 2
+		})
 		return strings.Join(out, " | ")
 	}
 	want := "Write tests=completed,Ship=pending | Plan it=pending"

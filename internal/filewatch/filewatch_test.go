@@ -7,17 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-)
 
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
+	"github.com/afrase/nushi/internal/testcheck"
+)
 
 func TestLocate(t *testing.T) {
 	dir := t.TempDir()
@@ -46,8 +38,8 @@ func TestLocate(t *testing.T) {
 func TestReadRefusesLinksOut(t *testing.T) {
 	dir := t.TempDir()
 	folder, outside := filepath.Join(dir, "folder"), filepath.Join(dir, "secret.md")
-	write(t, outside, "secret")
-	write(t, filepath.Join(folder, "real.md"), "# real")
+	testcheck.Write(t, outside, "secret")
+	testcheck.Write(t, filepath.Join(folder, "real.md"), "# real")
 	for name, target := range map[string]string{
 		"out.md":    outside,
 		"rel.md":    "../secret.md",
@@ -79,8 +71,8 @@ func TestReadRefusesLinksOut(t *testing.T) {
 
 func TestReadCapsSize(t *testing.T) {
 	dir := t.TempDir()
-	write(t, filepath.Join(dir, "big.png"), string(bytes.Repeat([]byte{'x'}, MaxSize+1)))
-	write(t, filepath.Join(dir, "ok.png"), string(bytes.Repeat([]byte{'x'}, MaxSize)))
+	testcheck.Write(t, filepath.Join(dir, "big.png"), string(bytes.Repeat([]byte{'x'}, MaxSize+1)))
+	testcheck.Write(t, filepath.Join(dir, "ok.png"), string(bytes.Repeat([]byte{'x'}, MaxSize)))
 	f, err := Read(dir, "big.png")
 	if err != nil || !f.TooLarge || f.Data != nil || f.Size != MaxSize+1 {
 		t.Errorf("big: TooLarge %v, %d bytes, size %d, %v", f.TooLarge, len(f.Data), f.Size, err)
@@ -116,12 +108,12 @@ func TestWatchSendsChanges(t *testing.T) {
 	if f := next(); !f.Missing || f.Path != path {
 		t.Fatalf("first = %+v; want missing %s", f, path)
 	}
-	write(t, path, "# one")
+	testcheck.Write(t, path, "# one")
 	if f := next(); string(f.Data) != "# one" {
 		t.Fatalf("after writing: %q", f.Data)
 	}
 	// A rewrite (as an agent's Write: a new file renamed over it).
-	write(t, path+".tmp", "# two, longer")
+	testcheck.Write(t, path+".tmp", "# two, longer")
 	if err := os.Rename(path+".tmp", path); err != nil {
 		t.Fatal(err)
 	}
