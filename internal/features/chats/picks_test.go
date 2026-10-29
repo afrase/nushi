@@ -9,6 +9,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // pickSession offers the effort before the model, as no agent need: the
@@ -33,16 +34,16 @@ func TestPicksComeBack(t *testing.T) {
 		t.Fatalf("a new chat's picks: %v", picksOf(c))
 	}
 	ctx := context.Background()
-	noErr(t, svc.SetConfig(ctx, c.id, "effort", "high"))
-	noErr(t, svc.SetConfig(ctx, c.id, "fast", "true"))
-	noErr(t, svc.SetConfig(ctx, c.id, "model", "sonnet"))
+	testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "effort", "high"))
+	testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "fast", "true"))
+	testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "model", "sonnet"))
 	want := map[string]string{"model": "sonnet", "effort": "high", "fast": "true"}
 	if !maps.Equal(picksOf(c), want) {
 		t.Fatalf("picks %v, want %v", picksOf(c), want)
 	}
 	turn(t, svc, c, "one")
 
-	noErr(t, svc.Sleep(c.id))
+	testcheck.NoErr(t, svc.Sleep(c.id))
 	agent.set = nil
 	turn(t, svc, c, "two")
 	if wantSet := []string{`model="sonnet"`, `effort="high"`, "fast=true"}; !slices.Equal(agent.set, wantSet) {
@@ -72,7 +73,7 @@ func TestPicksDroppedKeptAndFollowed(t *testing.T) {
 	c.mu.Lock()
 	c.saveLocked(func(s *model.Session) { s.Picks = map[string]string{"model": "sonnet", "effort": "max", "gone": "x"} })
 	c.mu.Unlock()
-	noErr(t, svc.Sleep(c.id))
+	testcheck.NoErr(t, svc.Sleep(c.id))
 	agent.session.ConfigOptions[1].Select.CurrentValue = "sonnet" // it kept the model
 	agent.set = nil
 	turn(t, svc, c, "two")
@@ -94,8 +95,8 @@ func TestPicksDroppedKeptAndFollowed(t *testing.T) {
 func TestANewChatStartsOnTheLastPicks(t *testing.T) {
 	modes := &memModes{}
 	svc, _, c := newChat(t, pickSession, modes)
-	noErr(t, svc.SetConfig(context.Background(), c.id, "model", "sonnet"))
-	noErr(t, svc.SetConfig(context.Background(), c.id, "effort", "low"))
+	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, "model", "sonnet"))
+	testcheck.NoErr(t, svc.SetConfig(context.Background(), c.id, "effort", "low"))
 	(*modes)["claude/fast"] = "true"
 
 	_, agent2, c2 := newChat(t, pickSession, modes)

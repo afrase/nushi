@@ -14,6 +14,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // stateWorktrees are worktrees in the given state.
@@ -88,7 +89,9 @@ func never(string, string) bool  { return false }
 func TestAChatWhoseSessionIsGoneIsRemoved(t *testing.T) {
 	svc, _, sessions, ev := goneService(t, errNotFound, always, model.Session{Title: "Old work"})
 	_, _ = svc.Get("c")
-	waitFor(t, func() bool { _, gone := ev.removed(); return len(gone) == 1 })
+	if !testcheck.Eventually(func() bool { _, gone := ev.removed(); return len(gone) == 1 }) {
+		t.Fatal("not removed")
+	}
 	ids, gone := ev.removed()
 	if !slices.Equal(ids, []string{"c"}) || !slices.Equal(gone, []string{"c"}) || !slices.Equal(sessions.deleted, []string{"c"}) {
 		t.Errorf("removed %v, gone %v, deleted %v", ids, gone, sessions.deleted)
@@ -160,8 +163,8 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 			scratch := t.TempDir()
 			if tc.sess.Folder == "scratch" { // a scratch folder with a file
 				tc.sess.Folder = filepath.Join(scratch, "c")
-				noErr(t, os.MkdirAll(tc.sess.Folder, 0o700))
-				noErr(t, os.WriteFile(filepath.Join(tc.sess.Folder, "notes.md"), []byte("x"), 0o600))
+				testcheck.NoErr(t, os.MkdirAll(tc.sess.Folder, 0o700))
+				testcheck.NoErr(t, os.WriteFile(filepath.Join(tc.sess.Folder, "notes.md"), []byte("x"), 0o600))
 			}
 			svc, agent, sessions, ev := goneService(t, errNotFound, always, tc.sess)
 			svc.worktrees, svc.scratch = tc.worktrees, scratch
@@ -177,14 +180,14 @@ func TestAChatWithWorkStaysWhenItsSessionIsGone(t *testing.T) {
 				t.Errorf("status %+v", st)
 			}
 			launches, _, _ := agent.count()
-			noErr(t, svc.Reopen("c"))
+			testcheck.NoErr(t, svc.Reopen("c"))
 			if err := svc.Prompt(t.Context(), "c", model.Message{Text: "hi"}, SendQueue); err == nil {
 				t.Error("a message went to a chat whose session is gone")
 			}
 			if l, _, _ := agent.count(); l != launches || c.busy {
 				t.Errorf("tried again: %d launches after %d", l, launches)
 			}
-			noErr(t, svc.Delete(context.Background(), "c", nil))
+			testcheck.NoErr(t, svc.Delete(context.Background(), "c", nil))
 			if !slices.Equal(sessions.deleted, []string{"c"}) {
 				t.Errorf("Delete: deleted %v", sessions.deleted)
 			}
@@ -232,16 +235,4 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 	if !slices.Equal(sessions.deleted, []string{"gone", "here"}) {
 		t.Errorf("deleted %v", sessions.deleted)
 	}
-}
-
-// waitFor waits for cond, up to about two seconds.
-func waitFor(t *testing.T, cond func() bool) {
-	t.Helper()
-	for range 200 {
-		if cond() {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatal("timed out")
 }

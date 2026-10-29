@@ -9,6 +9,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 type memPrefs struct{ after time.Duration }
@@ -49,7 +50,7 @@ func TestSleepAndWakeOnSend(t *testing.T) {
 func TestForkWakes(t *testing.T) {
 	svc, _, c := newChat(t, claudeSession, &memModes{})
 	turn(t, svc, c, "one")
-	noErr(t, svc.Sleep(c.id))
+	testcheck.NoErr(t, svc.Sleep(c.id))
 	if _, err := svc.Fork(context.Background(), c.id); err != nil || c.agent == nil {
 		t.Errorf("Fork = %v, agent %v", err, c.agent)
 	}

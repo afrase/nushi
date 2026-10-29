@@ -9,21 +9,19 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // eventually waits for cond, checked under the chat's lock.
 func eventually(t *testing.T, c *chat, cond func() bool) {
 	t.Helper()
-	for range 200 {
+	if !testcheck.Eventually(func() bool {
 		c.mu.Lock()
-		ok := cond()
-		c.mu.Unlock()
-		if ok {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
+		defer c.mu.Unlock()
+		return cond()
+	}) {
+		t.Fatal("timed out")
 	}
-	t.Fatal("timed out")
 }
 
 func (f *fakeAgent) texts() ([]string, []string) {
@@ -67,8 +65,8 @@ func TestQueueSteersBetweenToolCalls(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
 	if _, steered := agent.texts(); len(steered) != 0 {
 		t.Fatalf("steered %q before the agent's chance", steered)
 	}
@@ -85,8 +83,8 @@ func TestQueueSteersBetweenToolCalls(t *testing.T) {
 func TestSendNowStopsTheTurn(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "held"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "held"}, SendQueue))
 	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "now"}, SendNow); err != nil {
 		t.Fatal(err)
 	}
@@ -107,8 +105,8 @@ func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
 	call := func(id string, meta map[string]any) {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
 			ToolCall: &acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: "ls", Status: "in_progress", Meta: meta}}})

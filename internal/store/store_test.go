@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestStateSurvivesANewStore(t *testing.T) {
@@ -72,7 +73,7 @@ func TestOldAndBrokenSessionFiles(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	noErr(t, os.Chmod(filepath.Join(dir, "sessions", "unreadable.json"), 0))
+	testcheck.NoErr(t, os.Chmod(filepath.Join(dir, "sessions", "unreadable.json"), 0))
 	got, err := s.Sessions()
 	if err != nil {
 		t.Fatal(err)
@@ -92,8 +93,8 @@ func TestTranscriptSettings(t *testing.T) {
 	if !s.KeepTranscripts() || s.TranscriptDays() != 0 {
 		t.Fatalf("by default: keep %v, days %d", s.KeepTranscripts(), s.TranscriptDays())
 	}
-	noErr(t, s.SetKeepTranscripts(false))
-	noErr(t, s.SetTranscriptDays(90))
+	testcheck.NoErr(t, s.SetKeepTranscripts(false))
+	testcheck.NoErr(t, s.SetTranscriptDays(90))
 	s = New(dir)
 	if s.KeepTranscripts() || s.TranscriptDays() != 90 || s.SleepAfter() != 30*time.Minute {
 		t.Errorf("kept: keep %v, days %d, sleep %v", s.KeepTranscripts(), s.TranscriptDays(), s.SleepAfter())
@@ -105,12 +106,12 @@ func TestTranscriptSettings(t *testing.T) {
 func TestSettingsKept(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)
-	noErr(t, s.SetDebugLog(true))
-	noErr(t, os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{}`), 0o600))
+	testcheck.NoErr(t, s.SetDebugLog(true))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{}`), 0o600))
 	if !s.DebugLog() {
 		t.Error("read settings.json again")
 	}
-	noErr(t, os.Chmod(dir, 0o500)) // its new file can't be made
+	testcheck.NoErr(t, os.Chmod(dir, 0o500)) // its new file can't be made
 	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
 	if err := s.SetDebugLog(false); err == nil {
 		t.Fatal("wrote in a folder it can't")

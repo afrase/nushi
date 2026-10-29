@@ -10,6 +10,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func (f *fakeAgent) count() (launches, closed int, deleted []acp.SessionID) {
@@ -72,7 +73,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 	if n != 1 {
 		t.Errorf("%d notices", n)
 	}
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "again"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "again"}, SendQueue))
 	eventually(t, c, func() bool { again, _, _ := agent.count(); return !c.busy && again == launches+1 })
 	if n := notices(); n != 1 {
 		t.Errorf("%d notices after trying again: the new one replaces the old", n)
@@ -92,7 +93,7 @@ func TestARedeleteAfterTheAgentWent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	noErr(t, svc.CloseSide(side))
+	testcheck.NoErr(t, svc.CloseSide(side))
 	agent.quit()
 	c := svc.chats[id]
 	eventually(t, c, func() bool { _, _, deleted := agent.count(); return len(deleted) == 2 })

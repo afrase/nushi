@@ -8,6 +8,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // viewers are the clients' views, as a test sets them.
@@ -38,7 +39,7 @@ func newSeenChat(t *testing.T, st Sessions, v Viewers) (*Service, *fakeAgent, *c
 	svc := New([]Kind{{Name: "claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, st, nil, "", func(model.Event) {})
 	svc.UseViewers(v)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	return svc, agent, svc.chats[id]
 }
 
@@ -63,13 +64,13 @@ func TestATurnsEndIsUnseenUntilShown(t *testing.T) {
 	if !unseen(c) {
 		t.Fatal("a turn that ended while nobody looked is seen")
 	}
-	noErr(t, svc.Seen(c.id))
+	testcheck.NoErr(t, svc.Seen(c.id))
 	if unseen(c) {
 		t.Error("shown, it's still unseen")
 	}
 	// Archiving clears it too.
 	turn(t, svc, c, "three")
-	noErr(t, svc.Archive(c.id, true))
+	testcheck.NoErr(t, svc.Archive(c.id, true))
 	if unseen(c) {
 		t.Error("archived, it's still unseen")
 	}
@@ -80,7 +81,7 @@ func TestAStoppedTurnIsntUnseen(t *testing.T) {
 	v := &viewers{shown: map[string]bool{}}
 	svc, agent, c := newSeenChat(t, &memSessions{}, v)
 	agent.gate = make(chan struct{})
-	noErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
 		t.Fatal(err)
 	}
@@ -100,13 +101,13 @@ func TestUnseenSurvivesARestart(t *testing.T) {
 	again := New([]Kind{{Name: "claude", Launch: agent.launch, Dialect: claudeDialect}}, &memModes{}, st, nil, "", func(model.Event) {})
 	again.UseViewers(v)
 	list, err := again.List()
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	if len(list) != 1 || !list[0].Unseen {
 		t.Fatalf("after a restart: %+v", list)
 	}
-	noErr(t, again.Seen(c.id))
+	testcheck.NoErr(t, again.Seen(c.id))
 	list, err = again.List()
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	if list[0].Unseen {
 		t.Error("shown after a restart, it's still unseen")
 	}

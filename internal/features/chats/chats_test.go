@@ -17,6 +17,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestPromptStreamsTheReply(t *testing.T) {
@@ -374,9 +375,9 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	defer func(d time.Duration) { shellPoll = d }(shellPoll)
 	shellPoll = 10 * time.Millisecond
 	dir := filepath.Join(t.TempDir(), "tasks")
-	noErr(t, os.Mkdir(dir, 0o700))
+	testcheck.NoErr(t, os.Mkdir(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
-	noErr(t, os.WriteFile(file, []byte("half"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	var counts []int // how many run in the background, as each status said (under c.mu)
 	c := &chat{id: "s1", sid: "s1", dialect: claudeDialect, agent: &fakeAgent{}, session: model.Session{Folder: "/w"},
@@ -417,7 +418,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	if sh := shell("running"); sh.Output != "half" || sh.Started.IsZero() {
 		t.Errorf("running: %+v", sh)
 	}
-	noErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(file, []byte("all\n\n[exited with code 0]\n"), 0o600))
 	if sh := shell("done"); sh.Output != "all" || sh.End != "exited with code 0" || sh.Ended.IsZero() {
 		t.Errorf("done: %+v", sh)
 	}
@@ -429,7 +430,7 @@ func TestBackgroundShellsAreFollowed(t *testing.T) {
 	}
 
 	// Its agent gone without a word of its end: only that it started.
-	noErr(t, os.WriteFile(file, []byte("again"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(file, []byte("again"), 0o600))
 	c.mu.Lock()
 	c.items[0].Shell = nil
 	c.mu.Unlock()
