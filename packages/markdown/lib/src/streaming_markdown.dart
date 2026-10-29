@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:markdown_view/src/blocks.dart';
 import 'package:markdown_view/src/heal.dart';
 
 /// The colors and fonts of [StreamingMarkdown].
@@ -60,7 +61,11 @@ class MarkdownStyle {
 /// what [imageBuilder] makes of them, or else their alt text: nothing is
 /// fetched on its own. Raw HTML shows as the text it is. Put it in a
 /// [SelectionArea] to select text.
-class StreamingMarkdown extends StatelessWidget {
+///
+/// While it streams, only its last block is parsed again as text comes:
+/// the blocks before it ([lastBoundary]) are kept as they were parsed, in
+/// pieces, each parsed once, as the cut moves on.
+class StreamingMarkdown extends StatefulWidget {
   /// Markdown for [text], drawn in [style].
   const new(
     this.text, {
@@ -109,26 +114,87 @@ class StreamingMarkdown extends StatelessWidget {
   final void Function(String path)? onTapFile;
 
   @override
+  State<StreamingMarkdown> createState() => _StreamingMarkdownState();
+}
+
+class _StreamingMarkdownState extends State<StreamingMarkdown> {
+  // While streaming: the finished blocks so far, in the pieces they were
+  // cut in, and the text they make.
+  final _pieces = <String>[];
+  String _head = '';
+
+  /// Moves the cut on to the last finished block, if it moved; back to
+  /// none when the text isn't the same up to it (another message).
+  void _cut(String text) {
+    if (!text.startsWith(_head)) {
+      _pieces.clear();
+      _head = '';
+    }
+    if (hasReferences(text)) {
+      // A link anywhere may refer to it: the whole is parsed as one.
+      _pieces.clear();
+      _head = '';
+      return;
+    }
+    final at = lastBoundary(text, from: _head.length);
+    if (at == null) return;
+    _pieces.add(text.substring(_head.length, at));
+    _head = text.substring(0, at);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final s = style;
+    final w = widget;
+    if (!w.streaming) {
+      _pieces.clear();
+      _head = '';
+      return _body(w.text, streaming: false);
+    }
+    _cut(w.text);
+    if (_pieces.isEmpty) return _body(heal(w.text, markOpen: true));
+    final gap = SizedBox(height: (w.style.body.fontSize ?? 14) * 0.75);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (i, piece) in _pieces.indexed) ...[
+          if (i > 0) gap,
+          KeyedSubtree(key: ValueKey(i), child: _body(piece)),
+        ],
+        gap,
+        KeyedSubtree(
+          key: const ValueKey('last'),
+          child: _body(heal(w.text.substring(_head.length), markOpen: true)),
+        ),
+      ],
+    );
+  }
+
+  /// [data] as one Markdown body: parsed again only when it, or the style
+  /// sheet, changes.
+  Widget _body(String data, {bool streaming = true}) {
+    final w = widget;
+    final s = w.style;
     final body = s.body;
-    final files = streaming || onTapFile == null ? null : this.files;
+    final files = streaming || w.onTapFile == null ? null : w.files;
     final linking = files != null && files.isNotEmpty;
     final heading = body.copyWith(fontWeight: FontWeight.w600);
     final size = body.fontSize ?? 14;
+    final onTapLink = w.onTapLink;
+    final imageBuilder = w.imageBuilder;
     return MarkdownBody(
       // The body parses again only for new text or a new style sheet:
       // other links, another body.
       key: linking ? ValueKey(Object.hashAllUnordered(files.keys)) : null,
-      data: streaming ? heal(text, markOpen: true) : text,
-      softLineBreak: lineBreaks,
+      data: data,
+      softLineBreak: w.lineBreaks,
       blockSyntaxes: const [_HtmlAsText()],
       inlineSyntaxes: linking ? [_FilePathSyntax(files.keys)] : null,
       builders: {
-        'pre': _CodeBlockBuilder(s, codeBlock),
+        'pre': _CodeBlockBuilder(s, w.codeBlock),
         if (linking) ...{
-          'code': _FileLinkBuilder(files, onTapFile!),
-          _FilePathSyntax.tag: _FileLinkBuilder(files, onTapFile!),
+          'code': _FileLinkBuilder(files, w.onTapFile!),
+          _FilePathSyntax.tag: _FileLinkBuilder(files, w.onTapFile!),
         },
       },
       // A task list's box ("- [x]"), as text so it lines up with the item.
