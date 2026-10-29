@@ -59,7 +59,7 @@ func (s *Service) Run(ctx context.Context) {
 	defer tick.Stop()
 	for {
 		if s.prefs.CheckUpdates() {
-			if _, err := s.Check(ctx); err != nil {
+			if _, err := s.check(ctx, true); err != nil {
 				slog.Debug("update check failed", "err", err)
 			}
 		}
@@ -93,15 +93,22 @@ func (s *Service) SetOn(on bool) error {
 		return nil
 	}
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.found.Version, s.found.URL, s.found.Published = "", "", time.Time{}
 	found := s.found
-	s.mu.Unlock()
-	s.publish(model.Event{Update: &found})
+	s.publish(model.Event{Update: &found}) // under mu: a check ending now publishes before, or not at all
 	return nil
 }
 
 // Check asks GitHub now, whatever the setting, and says what it found.
 func (s *Service) Check(ctx context.Context) (model.Update, error) {
+	return s.check(ctx, false)
+}
+
+// check is Check; auto is Run's, whose answer is dropped when the checks
+// were turned off while GitHub was asked (else a newer release found
+// would come back after Off forgot it, until a restart).
+func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	s.checking.Lock()
 	defer s.checking.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -120,9 +127,12 @@ func (s *Service) Check(ctx context.Context) (model.Update, error) {
 		found.Version, found.URL, found.Published = v, s.web+"/releases/tag/"+url.PathEscape(tag), published
 	}
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	if auto && !s.prefs.CheckUpdates() {
+		return s.found, nil
+	}
 	before := s.found.Latest
 	s.found = found
-	s.mu.Unlock()
 	if v != before {
 		slog.Info("latest release", "version", v, "running", s.current, "newer", newer)
 	} else {

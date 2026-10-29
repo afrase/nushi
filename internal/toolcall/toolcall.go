@@ -8,10 +8,11 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"strings"
 	"syscall"
 
 	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/internal/mdwrite"
 )
 
 // Old is what a file held before a write, for its diff, or why it isn't
@@ -75,22 +76,13 @@ func Update(u acp.ToolCallUpdate) acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: &u}
 }
 
-// Fence puts output in a code fence longer than any run of backticks in it.
+// Fence puts output in a code fence longer than any run of backticks in
+// it; nothing for no output.
 func Fence(output string) string {
 	if output == "" {
 		return ""
 	}
-	longest, run := 0, 0
-	for _, r := range output {
-		if r == '`' {
-			run++
-			longest = max(longest, run)
-		} else {
-			run = 0
-		}
-	}
-	f := strings.Repeat("`", max(3, longest+1))
-	return f + "\n" + strings.TrimSuffix(output, "\n") + "\n" + f
+	return mdwrite.Fence(output, "")
 }
 
 // AddUsage adds a model call's tokens to a turn's usage.
