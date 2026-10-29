@@ -1,6 +1,7 @@
 package claudeacp
 
 import (
+	"cmp"
 	"encoding/json"
 	"strings"
 
@@ -19,6 +20,9 @@ type stream struct {
 	usage     claudeagent.Usage    // the last top-level message's
 	used      int                  // tokens in the context window
 	window    int                  // its size, once a result has said
+	local     bool                 // a slash command claude ran itself printed, this turn
+	refused   string               // why the model refused, this turn
+	login     bool                 // claude said it isn't signed in, this turn
 }
 
 // streamed is a message being written: its API id, the text and thinking
@@ -69,12 +73,28 @@ func (s *session) handle(m claudeagent.Message) {
 		s.stateLocked(m.State)
 		s.mu.Unlock()
 	case *claudeagent.Status:
-		if m.Status == "requesting" { // new work: what stopped can't ask the API again
+		switch {
+		case m.Status == "requesting": // new work: what stopped can't ask the API again
 			s.mu.Lock()
 			s.dropTop = false
 			s.mu.Unlock()
+		case m.Status == "compacting":
+			s.compacting(m.UUID)
+		case m.CompactResult != "":
+			s.compactEnded(m.CompactResult, m.CompactError)
 		}
+	case *claudeagent.Informational:
+		s.notice(m.Level, m.Content)
+	case *claudeagent.ModelRefusalFallback:
+		s.modelFallback(m)
+	case *claudeagent.ModelRefusalNoFallback:
+		s.refusal(nil, cmp.Or(m.APIRefusalExplanation, m.Content))
+	case *claudeagent.MemoryRecall:
+		s.memoryRecall(m)
+	case *claudeagent.LocalCommandOutput:
+		s.localOutput(m)
 	case *claudeagent.CompactBoundary:
+		s.compacted(m)
 		if post := m.CompactMetadata.PostTokens; post > 0 {
 			s.st.used = post
 			s.usage(nil, nil)
@@ -132,21 +152,33 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 		b.WriteString(text)
 		s.chunk(kind, key, msg.id, acp.ContentBlock{Text: &acp.TextContent{Text: text}})
 	case "message_delta":
-		if key == "" && ev.Usage != nil {
-			// Its counts are the message's so far; one it leaves out
-			// (zero) stays as it was.
-			u, d := &s.st.usage, ev.Usage
-			for _, f := range []struct{ to, from *int }{
-				{&u.InputTokens, &d.InputTokens}, {&u.OutputTokens, &d.OutputTokens},
-				{&u.CacheReadInputTokens, &d.CacheReadInputTokens}, {&u.CacheCreationInputTokens, &d.CacheCreationInputTokens},
-			} {
-				if *f.from != 0 {
-					*f.to = *f.from
-				}
-			}
-			s.contextUsed()
+		if key == "" {
+			s.messageDelta(ev)
 		}
 	}
+}
+
+// messageDelta is the end of a top-level message: why it stopped, and its
+// counts.
+func (s *session) messageDelta(ev claudeagent.Event) {
+	if ev.Delta != nil && ev.Delta.StopReason == "refusal" {
+		s.refusal(ev.Delta.StopDetails, "")
+	}
+	if ev.Usage == nil {
+		return
+	}
+	// Its counts are the message's so far; one it leaves out (zero)
+	// stays as it was.
+	u, d := &s.st.usage, ev.Usage
+	for _, f := range []struct{ to, from *int }{
+		{&u.InputTokens, &d.InputTokens}, {&u.OutputTokens, &d.OutputTokens},
+		{&u.CacheReadInputTokens, &d.CacheReadInputTokens}, {&u.CacheCreationInputTokens, &d.CacheCreationInputTokens},
+	} {
+		if *f.from != 0 {
+			*f.to = *f.from
+		}
+	}
+	s.contextUsed()
 }
 
 // assistant is a completed block of a message (claude writes one message
@@ -155,7 +187,14 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 func (s *session) assistant(m *claudeagent.Assistant) {
 	key, id := m.ParentToolUseID, m.Message.ID
 	if key == "" {
+		if signIn(m) { // the turn fails asking for a sign-in instead
+			s.st.login = true
+			return
+		}
 		s.st.model, s.st.errorKind = m.Message.Model, m.Error
+		if m.Message.StopReason == "refusal" {
+			s.refusal(m.Message.StopDetails, "")
+		}
 	}
 	msg := s.st.msgs[key]
 	if msg == nil || msg.id != id {

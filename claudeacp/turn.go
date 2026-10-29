@@ -169,6 +169,7 @@ func (s *session) targetLocked(named []*turn, orphan bool) *turn {
 type ending struct {
 	errorKind  string // the API error its last top-level message named
 	incomplete bool   // a tool it ran gave no result
+	login      bool   // claude isn't signed in
 }
 
 // resultLocked ends the turn r ends, with r's stop reason; the prompts
@@ -192,6 +193,9 @@ func (s *session) resultLocked(r *claudeagent.Result, end ending) {
 		delete(t.steers, id)
 	}
 	o := stop(r, t, end.errorKind)
+	if end.login && !t.cancelled {
+		o = outcome{err: &acp.Error{Code: acp.ErrorCodeAuthenticationRequired, Message: "Claude isn't signed in: run claude, then /login."}}
+	}
 	if end.incomplete && !t.cancelled && o.err == nil {
 		o = outcome{err: &acp.Error{Code: acp.ErrorCodeInternalError,
 			Message: "Claude ended the turn without a tool's result.", Data: []byte(`{"errorKind":"incomplete_tool_call"}`)}}

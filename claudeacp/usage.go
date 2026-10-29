@@ -2,6 +2,7 @@ package claudeacp
 
 import (
 	"regexp"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -63,7 +64,7 @@ func (s *session) result(r *claudeagent.Result) {
 	s.mu.Lock()
 	user := s.userLaneLocked(r)
 	t := s.targetLocked(s.namedLocked(resultIDs(r)))
-	fallback := user && t != nil && !t.textSent && !s.dropTop && r.Subtype == "success" && !r.IsError && r.Result != ""
+	fallback := user && t != nil && (!t.textSent || s.st.local) && !s.dropTop && r.Subtype == "success" && !r.IsError && r.Result != ""
 	why := endedTurn
 	if s.dropTop || t != nil && t.cancelled {
 		why = endedCancel
@@ -82,7 +83,13 @@ func (s *session) result(r *claudeagent.Result) {
 	if fallback {
 		s.chunk("agent_message_chunk", "", r.UUID, acp.ContentBlock{Text: &acp.TextContent{Text: r.Result}})
 	}
+	if r.StopReason == "refusal" && s.st.refused != "" {
+		s.chunk("agent_message_chunk", "", r.UUID, acp.ContentBlock{Text: &acp.TextContent{Text: s.st.refused}})
+	}
+	end := ending{errorKind: s.st.errorKind, incomplete: incomplete,
+		login: s.st.login || r.IsError && strings.Contains(r.Result, "Please run /login")}
+	s.st.local, s.st.refused, s.st.login = false, "", false
 	s.mu.Lock()
-	s.resultLocked(r, ending{errorKind: s.st.errorKind, incomplete: incomplete})
+	s.resultLocked(r, end)
 	s.mu.Unlock()
 }
