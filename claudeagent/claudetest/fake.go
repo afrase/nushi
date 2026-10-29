@@ -40,6 +40,7 @@ type Fake struct {
 	err     error
 	exitErr error
 	exited  chan struct{}
+	played  chan struct{}
 	end     sync.Once
 
 	stdin          *io.PipeReader
@@ -48,7 +49,7 @@ type Fake struct {
 
 // New makes a fake that plays steps.
 func New(steps ...Step) *Fake {
-	return &Fake{steps: steps, exited: make(chan struct{})}
+	return &Fake{steps: steps, exited: make(chan struct{}), played: make(chan struct{})}
 }
 
 // Spawn starts the fake; it is the Spawner to put in claudeagent.Options.
@@ -103,12 +104,20 @@ func (f *Fake) Err() error {
 // Exited is closed once the fake has exited.
 func (f *Fake) Exited() <-chan struct{} { return f.exited }
 
+// Played is closed once the script has played through, before the fake
+// waits for stdin to close; not when a step fails or Exit ends it.
+func (f *Fake) Played() <-chan struct{} { return f.played }
+
 // errExit stops the script: an Exit step ended the fake.
 var errExit = errors.New("exited")
 
 func (f *Fake) play(stdin *bufio.Reader) {
 	r := &run{f: f, stdin: stdin}
-	steps := append(slices.Clone(f.steps), ExpectEOF())
+	played := Step{"played", func(*run) error {
+		close(f.played)
+		return nil
+	}}
+	steps := append(slices.Clone(f.steps), played, ExpectEOF())
 	for _, st := range steps {
 		err := st.run(r)
 		if errors.Is(err, errExit) {
