@@ -86,10 +86,17 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
     loopClock.removeListener(_tick);
   }
 
+  /// Called on each tick before the rebuild ([ran] as of this tick; the
+  /// run may have just ended), to start another with [runFor].
+  @protected
+  void ticked() {}
+
   void _tick() {
     final from = _from ??= loopClock.now;
     if (loopClock.now - from >= _length) stopRun();
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    ticked();
+    setState(() {});
   }
 
   @override
