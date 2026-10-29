@@ -110,6 +110,16 @@ func decodeAnswer(subtype string, payload json.RawMessage, v any) error {
 // payload, a *ControlError for an error answer, or ErrClosed once the
 // session has ended. A request ctx gives up on is withdrawn.
 func (s *Session) request(ctx context.Context, subtype string, body any, timeout bool) (json.RawMessage, error) {
+	wait, err := s.begin(ctx, subtype, body, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return wait()
+}
+
+// begin writes claude a request, as request does, and returns once it is
+// written; wait waits for the answer, and must be called once.
+func (s *Session) begin(ctx context.Context, subtype string, body any, timeout bool) (wait func() (json.RawMessage, error), err error) {
 	fields, err := requestBody(subtype, body)
 	if err != nil {
 		return nil, err
@@ -123,11 +133,11 @@ func (s *Session) request(ctx context.Context, subtype string, body any, timeout
 	}
 	s.pending[id] = ch
 	s.mu.Unlock()
-	defer func() {
+	forget := func() {
 		s.mu.Lock()
 		delete(s.pending, id)
 		s.mu.Unlock()
-	}()
+	}
 	frame := map[string]any{"type": "control_request", "request_id": id, "request": fields}
 	if subtype == "initialize" && !s.initWritten() {
 		err = s.t.write(frame)
@@ -136,25 +146,48 @@ func (s *Session) request(ctx context.Context, subtype string, body any, timeout
 		err = s.write(ctx, frame)
 	}
 	if err != nil {
+		forget()
 		return nil, err
 	}
-	var expired <-chan time.Time
-	if timeout {
-		expired = s.after(requestTimeout)
-	}
-	select {
-	case r := <-ch:
-		if ce, ok := errors.AsType[*ControlError](r.err); ok {
-			ce.Subtype = subtype
+	return func() (json.RawMessage, error) {
+		defer forget()
+		var expired <-chan time.Time
+		if timeout {
+			expired = s.after(requestTimeout)
 		}
-		return r.payload, r.err
-	case <-ctx.Done():
-		s.withdraw(ctx, id)
-		return nil, fmt.Errorf("claudeagent: %s: %w", subtype, ctx.Err())
-	case <-expired:
-		s.withdraw(ctx, id)
-		return nil, fmt.Errorf("claudeagent: claude didn't answer %s in %s: %w", subtype, requestTimeout, context.DeadlineExceeded)
+		select {
+		case r := <-ch:
+			if ce, ok := errors.AsType[*ControlError](r.err); ok {
+				ce.Subtype = subtype
+			}
+			return r.payload, r.err
+		case <-ctx.Done():
+			s.withdraw(ctx, id)
+			return nil, fmt.Errorf("claudeagent: %s: %w", subtype, ctx.Err())
+		case <-expired:
+			s.withdraw(ctx, id)
+			return nil, fmt.Errorf("claudeagent: claude didn't answer %s in %s: %w", subtype, requestTimeout, context.DeadlineExceeded)
+		}
+	}, nil
+}
+
+// Begin sends claude a request as Request does, but returns once it is
+// written; wait waits for the answer as Request does and decodes it into
+// resp (when not nil). Requests begun one after another reach claude in
+// that order, which requests made on goroutines of their own don't. Call
+// wait once.
+func (s *Session) Begin(ctx context.Context, subtype string, req any) (wait func(resp any) error, err error) {
+	w, err := s.begin(ctx, subtype, req, true)
+	if err != nil {
+		return nil, err
 	}
+	return func(resp any) error {
+		payload, err := w()
+		if err != nil {
+			return err
+		}
+		return decodeAnswer(subtype, payload, resp)
+	}, nil
 }
 
 // withdraw tells claude a request of ours is no longer wanted. It goes
