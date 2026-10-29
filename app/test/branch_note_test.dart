@@ -104,7 +104,6 @@ Future<Future<void> Function()> _open(
 
 void main() {
   setUpAll(loadFonts);
-  tearDown(() => paneWidths.value = {});
 
   // The line in the transcript, whole and quiet, at a wide window with the
   // details panel at its usual and widest width, and at a narrow window.

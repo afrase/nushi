@@ -424,7 +424,6 @@ void main() {
     // Lines 3–4 picked (the diff's line numbers): a comment of my review,
     // kept here.
     final ref = pull().item.ref;
-    addTearDown(() => setDrafts(ref, const []));
     tester.widget<DiffBox>(find.byType(DiffBox)).onLines!(
       const LineSelection(side: PaneSide.neu, anchor: 2, focus: 3),
     );

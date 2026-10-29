@@ -58,16 +58,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   List<Commit> _commits = []; // in Commits
   ListBranchesResponse? _branches; // for the Branch row's menu
   String? _error;
-  late GetContextUsageResponse? _context = _last(chat.id)?.$2;
-
-  /// What fills each chat's context, and when it was asked: kept across
-  /// panels, so switching chats doesn't ask again.
-  static final _asked = <String, (DateTime, GetContextUsageResponse)>{};
-
-  /// What was last asked of [id]'s chat: in this run, else as remembered
-  /// from an earlier one.
-  static (DateTime, GetContextUsageResponse)? _last(String id) =>
-      _asked[id] ?? recalledContext(id);
+  late GetContextUsageResponse? _context = lastContext(chat.id)?.$2;
   Timer? _timer;
   bool _asking = false;
   bool _couldAsk = false; // the last time the chat changed
@@ -84,8 +75,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       final r = await daemon.client.getContextUsage(
         GetContextUsageRequest(chatId: chat.id),
       );
-      _asked[chat.id] = (DateTime.now(), r);
-      rememberContext(chat.id, r);
+      askedContext(chat.id, r);
       if (mounted) setState(() => _context = r);
     } on Object {
       // The card keeps what it had; it asks again after the next turn.
@@ -102,7 +92,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     _timer?.cancel();
     bool ready() => mounted && _canAsk;
     if (!ready()) return;
-    final last = _asked[chat.id]?.$1;
+    final last = contextAskedAt(chat.id);
     var wait = const Duration(seconds: 1);
     if (last != null) {
       final next = last
@@ -140,7 +130,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     _pull.unfollow();
     _pull = ChatPull.of(daemon, chat)..follow();
     _timer?.cancel();
-    _context = _last(chat.id)?.$2;
+    _context = lastContext(chat.id)?.$2;
     _couldAsk = _canAsk;
     _schedule();
   }

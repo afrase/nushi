@@ -72,10 +72,7 @@ Future<(Daemon, FakeDaemon)> _app(
     d.select(select);
     await tester.pumpAndSettle();
   }
-  addTearDown(() {
-    recentRows.clear();
-    terminalChats.value = {};
-  });
+  addTearDown(recentRows.clear);
   return (d, fake);
 }
 
@@ -203,7 +200,6 @@ void main() {
   testWidgets('a chat’s row opens the chat; the last opened first', (
     tester,
   ) async {
-    addTearDown(() => chatOpened.value = {});
     final (d, _) = await _app(tester, select: 'a');
     // c (site) was opened after b (nushi): it comes first, whatever the
     // project; a, the one showing, isn't offered.

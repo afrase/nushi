@@ -15,7 +15,6 @@ void main() {
 
   testWidgets("Activity: a review's findings and threads point at To do; its "
       "resolved threads one line; a bot's numbers muted", (tester) async {
-    addTearDown(() => githubFindings.value = false);
     final (d, _) = await openPullTab(tester, fixturePull());
     await tester.tap(find.text('Activity 4'));
     await tester.pumpAndSettle();

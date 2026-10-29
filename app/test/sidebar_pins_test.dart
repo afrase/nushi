@@ -159,11 +159,6 @@ void main() {
     await loadFonts();
     Directory(dataDir).createSync(recursive: true); // the tests' own
   });
-  tearDown(() {
-    sidebarChats.value = {};
-    pinnedCollapsed.value = false;
-    sidebarCollapsed.value = {};
-  });
 
   testWidgets('a chat is dragged into another place in its project, a line '
       'showing where; refused in another project; kept, a new chat first', (
@@ -265,7 +260,6 @@ void main() {
 
   testWidgets('Pin from ⋯, ⌘D, Unpin from the palette, the pinned first '
       'in it; archiving unpins', (tester) async {
-    addTearDown(() => chatOpened.value = {});
     final (d, fake) = await _app(tester, select: 'a');
     List<String> pinned() =>
         fake.calls.whereType<PinChatsRequest>().last.chatIds;

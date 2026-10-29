@@ -55,14 +55,8 @@ void keepPull(GitHubRef ref, GitHubPull p) {
   _known[name] = (clock(), p);
   if (was == p) return _touch(name); // the same: only when
   try {
-    if (!_dir.existsSync()) {
-      _dir.createSync(recursive: true);
-      setMode(_dir.path, 0x1c0);
-    }
-    final tmp = File('${_dir.path}/$name.tmp')
-      ..writeAsBytesSync(p.writeToBuffer(), flush: true);
-    setMode(tmp.path, 0x180);
-    tmp.renameSync('${_dir.path}/$name');
+    privateDir(_dir);
+    writeWhole(File('${_dir.path}/$name'), p.writeToBuffer());
     _touch(name);
     _prune();
   } on Object {

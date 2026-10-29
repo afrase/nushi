@@ -35,9 +35,10 @@ void main() {
   });
 
   test('an old app.json with worktrees loads, and the key goes on the next '
-      'save', () {
+      'save', () async {
     expect(showDetails.value, isFalse); // the rest of it was read
     showDetails.value = true;
+    await pumpEventQueue(); // saved once the changes are in
     final saved = jsonDecode(_appJson.readAsStringSync()) as Map;
     expect(saved['details'], isTrue);
     expect(saved.containsKey('worktrees'), isFalse);

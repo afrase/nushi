@@ -263,7 +263,6 @@ void main() {
         'UnixNano would make a shorter cursor than RFC 3339 here.',
       ),
     ]);
-    addTearDown(() => setComments(heroChat.id, []));
     final (d, _) = await _app(tester, _small, select: 'feed', details: false);
     d.chats['feed']!.tab.value = ChatTab.changes;
     await _pump(tester, 10);
@@ -340,7 +339,6 @@ void main() {
 
   testWidgets('terminal: beside the chat', (tester) async {
     terminalChats.value = {heroChat.id};
-    addTearDown(() => terminalChats.value = {});
     final (d, _) = await _app(tester, _small, select: 'feed', details: false);
     await _pump(tester, 10);
     await _shoot('terminal');

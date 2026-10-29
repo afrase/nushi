@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:fixnum/fixnum.dart';
 
 import 'package:nushi/daemon.dart';
+import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings.dart';
 
 /// What last filled each chat's context (its /context categories) and when
 /// it was asked, in `context.json` in the data folder, so the Context card
@@ -51,15 +51,36 @@ final Map<String, (DateTime, GetContextUsageResponse)> _known = () {
   }
 }();
 
+/// What each chat's context held when asked in this run, and when (a
+/// markdown-only answer too): the Details panel's, kept across panels so
+/// switching chats doesn't ask again.
+final _asked = <String, (DateTime, GetContextUsageResponse)>{};
+
 /// What [chatId]'s context held when last asked, and when; null if never.
 (DateTime, GetContextUsageResponse)? recalledContext(String chatId) =>
     _known[chatId];
+
+/// What was last asked of [chatId]'s context: in this run, else as
+/// remembered from an earlier one.
+(DateTime, GetContextUsageResponse)? lastContext(String chatId) =>
+    _asked[chatId] ?? _known[chatId];
+
+/// When [chatId]'s context was asked in this run; null if it wasn't.
+DateTime? contextAskedAt(String chatId) => _asked[chatId]?.$1;
+
+/// Keeps [r] as what [chatId]'s context holds now: for this run, and on
+/// disk as [rememberContext] keeps it.
+void askedContext(String chatId, GetContextUsageResponse r) {
+  _asked[chatId] = (DateTime.now(), r);
+  rememberContext(chatId, r);
+}
 
 /// The chats whose context is remembered.
 Iterable<String> get rememberedContexts => _known.keys;
 
 /// Forgets [chatId]'s context (the chat is gone).
 void forgetContext(String chatId) {
+  _asked.remove(chatId);
   if (_known.remove(chatId) != null) _write();
 }
 
@@ -83,21 +104,23 @@ void _write() {
   try {
     writeWhole(
       _file,
-      jsonEncode({
-        for (final MapEntry(:key, value: (at, r)) in _known.entries)
-          key: {
-            'at': at.millisecondsSinceEpoch,
-            'categories': [
-              for (final c in r.categories)
-                {
-                  'name': c.name,
-                  'tokens': c.tokens.toInt(),
-                  'percent': c.percent,
-                  'kind': c.kind,
-                },
-            ],
-          },
-      }),
+      utf8.encode(
+        jsonEncode({
+          for (final MapEntry(:key, value: (at, r)) in _known.entries)
+            key: {
+              'at': at.millisecondsSinceEpoch,
+              'categories': [
+                for (final c in r.categories)
+                  {
+                    'name': c.name,
+                    'tokens': c.tokens.toInt(),
+                    'percent': c.percent,
+                    'kind': c.kind,
+                  },
+              ],
+            },
+        }),
+      ),
     );
   } on Object {
     // Not remembered; the card still has it until the app quits.

@@ -14,3 +14,20 @@ void setMode(String path, int mode) {
     throw FileSystemException("can't make it private", path);
   }
 }
+
+/// Writes [file] whole or not at all, only the user's ([mode], 0600
+/// unless said): to a file beside it, renamed over it, so a crash
+/// mid-write can't leave half of it.
+void writeWhole(File file, List<int> bytes, {int mode = 0x180}) {
+  final tmp = File('${file.path}.tmp')..writeAsBytesSync(bytes, flush: true);
+  setMode(tmp.path, mode);
+  tmp.renameSync(file.path);
+}
+
+/// Makes [dir] (and the folders it's in) unless it's there, [dir] only
+/// the user's (0700).
+void privateDir(Directory dir) {
+  if (dir.existsSync()) return;
+  dir.createSync(recursive: true);
+  setMode(dir.path, 0x1c0);
+}

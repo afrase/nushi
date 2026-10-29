@@ -335,7 +335,6 @@ void main() {
 
   testWidgets("Settings' Findings from review bots: off, no findings; on, "
       'under their bot', (tester) async {
-    addTearDown(() => githubFindings.value = false);
     final (d, _) = await openPullTab(tester, fixturePull());
     expect(find.text('@mona'), findsOneWidget);
     expect(find.text('Findings from github-actions'), findsNothing);
@@ -350,7 +349,6 @@ void main() {
   testWidgets("a bot's review on an older commit: its findings' group says "
       'so, and shows it', (tester) async {
     githubFindings.value = true;
-    addTearDown(() => githubFindings.value = false);
     final old = fixturePull();
     old.conversation[1].commit = 'c0ffee1${'c' * 33}';
     final (d2, _) = await openPullTab(tester, old);

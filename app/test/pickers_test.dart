@@ -51,7 +51,6 @@ void main() {
   testWidgets('the model menu puts the models picked last first', (
     tester,
   ) async {
-    addTearDown(() => recentModels.value = []);
     var current = 'a';
     final names = {
       for (final v in 'abcdef'.split('')) v: 'Model ${v.toUpperCase()}',

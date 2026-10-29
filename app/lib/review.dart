@@ -6,9 +6,9 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/file_mode.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/replies.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/syntax.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
@@ -153,11 +153,15 @@ void setComments(String chat, List<ReviewComment> comments) {
   reviews.value = {...reviews.value, chat: comments}
     ..removeWhere((_, v) => v.isEmpty);
   try {
-    writeWhole(_file, jsonEncode(reviews.value));
+    writeWhole(_file, utf8.encode(jsonEncode(reviews.value)));
   } on Object {
     // Kept until the app quits.
   }
 }
+
+/// No chat's comments, in memory (tests: each starts with none).
+@visibleForTesting
+void forgetReviews() => reviews.value = {};
 
 /// [chat]'s comments.
 List<ReviewComment> commentsOf(String chat) => reviews.value[chat] ?? const [];

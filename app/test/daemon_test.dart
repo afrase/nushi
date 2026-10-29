@@ -108,10 +108,13 @@ void main() {
     expect(d.chats['b']!.scratch, isTrue);
 
     changeScopes.value = {'a': 'branch'};
+    pullSeen.value = {'a': 1};
+    cleanUpLater.value = {'a'};
     await send(EventsResponse(chatId: 'a', removed: true));
     expect(d.chats.keys, ['b']);
     expect(d.selectedId, isNull);
     expect(changeScopes.value, isEmpty);
+    expect(chatsKept(), isEmpty);
   });
 
   test('a chat deleted while the app was away: what was kept goes', () async {
@@ -126,8 +129,19 @@ void main() {
       quote: 'x',
       text: 'why?',
     );
+    // Every pref kept by chat has something for both.
     changeScopes.value = {'a': 'branch', 'gone': 'branch'};
     terminalChats.value = {'a', 'gone'};
+    sidebarChats.value = {
+      '/x': ['gone', 'a'],
+    };
+    chatOpened.value = {'a': 1, 'gone': 2};
+    pinnedFiles.value = {
+      'a': ['notes.md'],
+      'gone': ['notes.md'],
+    };
+    pullSeen.value = {'a': 1, 'gone': 2};
+    cleanUpLater.value = {'a', 'gone'};
     setComments('a', [comment('a')]);
     setComments('gone', [comment('gone')]);
     final context = GetContextUsageResponse(
@@ -135,12 +149,7 @@ void main() {
     );
     rememberContext('a', context);
     rememberContext('gone', context);
-    addTearDown(() {
-      changeScopes.value = {};
-      terminalChats.value = {};
-      setComments('a', []);
-      forgetContext('a');
-    });
+    addTearDown(() => forgetContext('a'));
 
     final fake = _Fake();
     final d = Daemon(transport: fake);
@@ -150,6 +159,10 @@ void main() {
     expect(d.chats.keys, ['a']);
     expect(changeScopes.value.keys, ['a']);
     expect(terminalChats.value, {'a'});
+    expect(sidebarChats.value, {
+      '/x': ['a'],
+    });
+    expect(chatsKept(), {'a'});
     expect(reviews.value.keys, ['a']);
     expect(rememberedContexts, contains('a'));
     expect(rememberedContexts, isNot(contains('gone')));

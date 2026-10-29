@@ -1,7 +1,6 @@
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_nav.dart';
@@ -87,7 +86,6 @@ Future<(FakeDaemon, Daemon)> _settings(
 void main() {
   setUpAll(loadFonts);
   setUp(() {
-    shellEnvironment.value = null; // as a test before left it
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('nushi/fonts'),

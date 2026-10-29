@@ -125,7 +125,6 @@ Finder _row(String label) => find.ancestor(
 void main() {
   setUpAll(loadFonts);
   setUp(() => collapsedCards.value = {});
-  tearDown(() => paneWidths.value = {});
 
   // The whole window, wide and as narrow as shows the panel: the menu
   // opens under the row, inside the window; the row's ▾ at the panel's

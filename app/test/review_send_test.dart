@@ -65,7 +65,6 @@ Future<Daemon> _app(WidgetTester tester, double width) async {
     _comment('1', 4, '\treturn a - b', 'Check for overflow.'),
     _comment('2', 3, 'func Sub(a, b int) int {', 'Name it Subtract.'),
   ]);
-  addTearDown(() => setComments('c', []));
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();

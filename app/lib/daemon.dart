@@ -569,7 +569,7 @@ class Daemon extends ChangeNotifier {
       _chat(e.chat);
       notifyListeners();
     } else if (e.removed) {
-      _forget(e.chatId);
+      _forget({e.chatId});
       notifyListeners();
     } else if (chats[e.chatId] case final chat?) {
       final failed = chat.reopenFailed;
@@ -603,15 +603,13 @@ class Daemon extends ChangeNotifier {
       final kept = {
         ...chats.keys,
         if (!remote) ...[
-          ...changeScopes.value.keys,
+          ...chatsKept(),
           ...reviews.value.keys,
-          ...terminalChats.value,
           ...rememberedContexts,
-          for (final ids in sidebarChats.value.values) ...ids,
         ],
         ...?drafts?.ids,
       };
-      kept.difference(ids).difference(sides.keys.toSet()).forEach(_forget);
+      _forget(kept.difference(ids).difference(sides.keys.toSet()));
       for (final side in sides.values) {
         side.loading = true; // its events wait for its snapshot
       }
@@ -640,32 +638,22 @@ class Daemon extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Forgets chat [id], gone (deleted here, or while the app was away),
-  /// and everything kept for it: its Changes scope, review comments,
-  /// terminals panel, context breakdown, terminals, draft and place in
-  /// its project's order. (Its pin goes with it: the daemon's.)
-  void _forget(String id) {
-    chats.remove(id);
-    drafts?.forget(id);
-    if (changeScopes.value.containsKey(id)) {
-      changeScopes.value = {...changeScopes.value}..remove(id);
+  /// Forgets the chats [ids], gone (deleted here, or while the app was
+  /// away), and everything kept for them: the prefs kept by chat (their
+  /// Changes scope, terminals panel, place in their project's order, when
+  /// opened, pins, pull request's comments seen and Clean up's Not now),
+  /// review comments, context breakdown, terminals and draft. (A pin goes
+  /// with its chat: the daemon's.)
+  void _forget(Set<String> ids) {
+    for (final id in ids) {
+      chats.remove(id);
+      drafts?.forget(id);
+      if (commentsOf(id).isNotEmpty) setComments(id, []);
+      if (!remote) forgetContext(id);
+      terminals.forget(id);
     }
-    if (commentsOf(id).isNotEmpty) setComments(id, []);
-    if (terminalChats.value.contains(id)) {
-      terminalChats.value = {...terminalChats.value}..remove(id);
-    }
-    if (chatOpened.value.containsKey(id)) {
-      chatOpened.value = {...chatOpened.value}..remove(id);
-    }
-    if (sidebarChats.value.values.any((ids) => ids.contains(id))) {
-      sidebarChats.value = {
-        for (final MapEntry(:key, :value) in sidebarChats.value.entries)
-          key: [...value.where((c) => c != id)],
-      };
-    }
-    if (!remote) forgetContext(id);
-    terminals.forget(id);
-    if (selectedId == id) selectedId = null;
+    forgetChats(ids);
+    if (ids.contains(selectedId)) selectedId = null;
   }
 
   Future<void> _listAgents() async {

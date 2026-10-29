@@ -16,7 +16,6 @@ void main() {
   testWidgets('the title row: the open hand, and the grip while hovered, '
       "in a collapsed card in its summary's place", (tester) async {
     collapsedCards.value = {'Context'};
-    addTearDown(() => collapsedCards.value = {});
     await tester.pumpWidget(_cards(Tokens.dark));
     expect(find.byType(DragGrip), findsNothing);
     expect(find.text('57%'), findsOneWidget);
@@ -138,7 +137,6 @@ void _goldens() {
       tester.view.physicalSize = const Size(300, 190) * 2;
       addTearDown(tester.view.reset);
       collapsedCards.value = {'Context'};
-      addTearDown(() => collapsedCards.value = {});
       await tester.pumpWidget(_cards(tokens));
       final mouse = await _pointer(tester);
       await mouse.moveTo(tester.getCenter(find.text('Context')));
