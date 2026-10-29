@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -60,29 +61,33 @@ func newGitHub(st *store.Store, dev bool) *github.Service {
 // reads it once a process: a login after the daemon started went unseen)
 // and `gh auth token` given 10 s, its process group killed with it: the
 // environment's token, else gh's config's, else the one gh keeps in the
-// keychain.
-func ghToken(ctx context.Context, host string) (string, string) {
+// keychain. A `gh auth token` the request or the 10 s cut short is an
+// error, not gh having no token.
+func ghToken(ctx context.Context, host string) (string, string, error) {
 	_ = config.Reload(nil)
 	if token, source := auth.TokenFromEnvOrConfig(host); token != "" {
 		if source == "oauth_token" {
 			source = "gh" // gh's config
 		}
-		return token, source
+		return token, source, nil
 	}
 	gh := os.Getenv("GH_PATH")
 	if gh == "" {
 		gh, _ = exec.LookPath("gh")
 	}
 	if gh == "" {
-		return "", "gh"
+		return "", "gh", nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, gh, "auth", "token", "--secure-storage", "--hostname", host) //nolint:gosec // gh for a known host; the token comes on stdout
 	procgroup.Bound(cmd)
 	out, err := cmd.Output()
-	if err != nil {
-		return "", "gh"
+	if ctx.Err() != nil {
+		return "", "gh", fmt.Errorf("asking gh for %s's token: %w", host, ctx.Err())
 	}
-	return strings.TrimSpace(string(out)), "gh"
+	if err != nil {
+		return "", "gh", nil
+	}
+	return strings.TrimSpace(string(out)), "gh", nil
 }
