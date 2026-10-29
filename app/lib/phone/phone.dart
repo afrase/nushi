@@ -7,8 +7,10 @@ import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:flutter/foundation.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/link.dart';
+import 'package:nushi/phone/phone_drafts.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/remote.dart';
@@ -57,6 +59,9 @@ class Phone extends ChangeNotifier {
 
   /// The link to the paired Mac's daemon.
   Daemon? daemon;
+
+  /// The chats' drafts, kept in the browser's storage across reloads.
+  late final drafts = Drafts(PhoneDrafts(platform));
   rt.RelayTransport? _transport;
 
   /// What keeps it up, and says how it stands.
@@ -81,6 +86,7 @@ class Phone extends ChangeNotifier {
       ..onVisible(({required visible}) {
         _visible = visible;
         link?.visible(shown: visible);
+        if (!visible) unawaited(drafts.flush());
         if (visible) unawaited(platform.checkForUpdate());
         unawaited(view(visible ? daemon?.selectedId : null));
       })
@@ -193,7 +199,8 @@ class Phone extends ChangeNotifier {
       acceptCompressions: const [rt.Gzip()],
     );
     final d = daemon =
-        (connectTo?.call(t) ?? Daemon(transport: t, remote: true))
+        (connectTo?.call(t) ??
+              Daemon(transport: t, remote: true, drafts: drafts))
           ..addListener(_daemonChanged);
     link = Link(
       d,
@@ -359,6 +366,9 @@ class Phone extends ChangeNotifier {
       } on Object {
         // Not connected: Revoke on the Mac.
       }
+      // The drafts too.
+      drafts.ids.toList().forEach(drafts.forget);
+      await drafts.flush();
       // The storage first: if it fails, nothing here looks forgotten.
       await platform.clear();
       await platform.reset();

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// The five agents, as the daemon lists them: installed, ready.
@@ -60,9 +61,10 @@ class FakeDaemon implements Transport {
   /// Sends [e] down the events stream.
   void emit(EventsResponse e) => _events.add(e);
 
-  /// A [Daemon] on this fake, its chats and agents listed.
-  Future<Daemon> connect(WidgetTester tester) async {
-    final d = Daemon(transport: this);
+  /// A [Daemon] on this fake, its chats and agents listed; it keeps
+  /// drafts in [drafts], if given.
+  Future<Daemon> connect(WidgetTester tester, {Drafts? drafts}) async {
+    final d = Daemon(transport: this, drafts: drafts);
     for (var i = 0; i < 5; i++) {
       await tester.pump();
     }

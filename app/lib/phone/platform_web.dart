@@ -8,9 +8,10 @@ import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/phone/update_ready.dart';
 import 'package:web/web.dart' as web;
 
-/// The browser: IndexedDB for the device's key and pairing, the service
-/// worker, Web Push, and the page's address (a pairing link or a chat to
-/// open arrive in its fragment, which never reaches a server).
+/// The browser: IndexedDB for the device's key and pairing and the chats'
+/// drafts, the service worker, Web Push, and the page's address (a pairing
+/// link or a chat to open arrive in its fragment, which never reaches a
+/// server).
 final class PhonePlatform {
   new() {
     _fromAddress(starting: true);
@@ -185,6 +186,23 @@ final class PhonePlatform {
 
   Future<void> clear() async {
     await _run('readwrite', (s) => s.delete('phone'.toJS));
+    await saveDrafts(null);
+  }
+
+  /// The chats' drafts (phone_drafts.dart), as JSON: the record "drafts".
+  Future<String?> loadDrafts() async {
+    final v = await _run('readonly', (s) => s.get('drafts'.toJS));
+    return v != null && v.isA<JSString>() ? (v as JSString).toDart : null;
+  }
+
+  /// Keeps [json] as the drafts; null removes them.
+  Future<void> saveDrafts(String? json) async {
+    await _run(
+      'readwrite',
+      (s) => json == null
+          ? s.delete('drafts'.toJS)
+          : s.put(json.toJS, 'drafts'.toJS),
+    );
   }
 
   /// The page's origin's host, to tell a pairing link for another relay.

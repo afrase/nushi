@@ -34,7 +34,13 @@ final class PhonePlatform {
   Future<void> clear() async {
     if (clearFails case final e?) throw e;
     saved = null;
+    drafts = null;
   }
+
+  /// The chats' drafts as [saveDrafts] kept them.
+  String? drafts;
+  Future<String?> loadDrafts() async => drafts;
+  Future<void> saveDrafts(String? json) async => drafts = json;
 
   /// What [clear] throws (a test sets it).
   Error? clearFails;
