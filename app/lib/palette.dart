@@ -8,6 +8,7 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -34,20 +35,18 @@ class PaletteRow {
 /// runs: first in it when nothing is typed.
 final recentRows = <String>[];
 
-/// ⌘K: the palette. The chats (the current project's first), the actions
+/// ⌘K: the palette. The chats (the last opened first), the actions
 /// that apply now ([appActions], the shown chat's among them), then the
 /// archived chats; what's picked runs once it closes.
 Future<void> showPalette(BuildContext context, Daemon d) async {
-  final current = d.selected;
-  final shown = chatShown(d) ? current : null;
-  final home = current == null || current.scratch ? '' : current.home;
-  final groups = chatGroups(d);
+  final shown = chatShown(d) ? d.selected : null;
+  // The chats the last opened first, then the newest; whatever the project.
+  int opened(ChatState c) =>
+      chatOpened.value[c.id] ?? c.created.millisecondsSinceEpoch;
+  final live = [for (final group in chatGroups(d).values) ...group]
+    ..sort((a, b) => opened(b).compareTo(opened(a)));
   final rows = [
-    for (final chat in [
-      ...?groups[home],
-      for (final MapEntry(:key, :value) in groups.entries)
-        if (key != home) ...value,
-    ])
+    for (final chat in live)
       if (chat != shown)
         PaletteRow(
           'chat:${chat.id}',

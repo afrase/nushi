@@ -610,6 +610,9 @@ class Daemon extends ChangeNotifier {
     if (terminalChats.value.contains(id)) {
       terminalChats.value = {...terminalChats.value}..remove(id);
     }
+    if (chatOpened.value.containsKey(id)) {
+      chatOpened.value = {...chatOpened.value}..remove(id);
+    }
     if (!remote) forgetContext(id);
     terminals.forget(id);
     if (selectedId == id) selectedId = null;
@@ -757,6 +760,10 @@ class Daemon extends ChangeNotifier {
   void select(String chatId) {
     _leaveTrust();
     selectedId = chatId;
+    chatOpened.value = {
+      ...chatOpened.value,
+      chatId: DateTime.now().millisecondsSinceEpoch,
+    };
     settings = null;
     jiraOpen = githubOpen = false;
     final chat = chats[chatId];

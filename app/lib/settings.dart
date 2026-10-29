@@ -108,6 +108,14 @@ final sidebarCollapsed = ValueNotifier<Set<String>>(
 final recentModels = ValueNotifier<List<String>>([..._strings('models')])
   ..addListener(_save);
 
+/// When each chat was last opened (milliseconds since the epoch), by chat
+/// id: the palette lists chats the last opened first.
+final chatOpened = ValueNotifier<Map<String, int>>({
+  for (final MapEntry(:key, :value)
+      in ((_saved['opened'] as Map?) ?? {}).entries)
+    if (key is String && value is int) key: value,
+})..addListener(_save);
+
 /// Each chat's pinned artifacts (as `chatFiles` names them), by chat id,
 /// in the order pinned.
 final pinnedFiles = ValueNotifier<Map<String, List<String>>>(savedPins(_saved))
@@ -240,6 +248,7 @@ void _save() {
         'sidebarOrder': sidebarOrder.value,
         'sidebarCollapsed': sidebarCollapsed.value.toList(),
         'models': recentModels.value,
+        'opened': chatOpened.value,
         'pins': pinnedFiles.value,
         'pullSeen': pullSeen.value,
         'cleanUpLater': cleanUpLater.value.toList(),
