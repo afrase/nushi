@@ -83,11 +83,13 @@ void main() {
     await tester.pumpAndSettle();
     final pane = tester.getRect(find.byType(GitHubPullPane));
     final text = tester.getRect(
-      find.text(
-        'Thanks, the guard looks right. Two small things before '
-        'this goes in.',
-        findRichText: true,
-      ),
+      find
+          .text(
+            'Thanks, the guard looks right. Two small things before '
+            'this goes in.',
+            findRichText: true,
+          )
+          .last, // To do's line of it first
     );
     final pad = readablePad(pane.width);
     // In the column: beside the avatar, in its card.

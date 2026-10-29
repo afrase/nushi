@@ -14,7 +14,9 @@ import 'package:nushi/pull_activity.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_todo.dart';
 import 'package:nushi/pull_todo_items.dart';
+import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -59,6 +61,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   final GlobalKey _tabs = GlobalKey();
   final GlobalKey _todo = GlobalKey();
 
+  /// A review To do pointed at in Activity, and its key.
+  (String, GlobalKey)? _shown;
+
   /// Who the user is on its host ('' until known).
   String _me = '';
 
@@ -72,10 +77,14 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       }),
     );
     _poll = Timer.periodic(pullPoll, (_) => unawaited(_load(quiet: true)));
+    _findingsSetup.addListener(_setupChanged);
   }
+
+  void _setupChanged() => setState(() {});
 
   @override
   void dispose() {
+    _findingsSetup.removeListener(_setupChanged);
     _poll?.cancel();
     _scroll.dispose();
     super.dispose();
@@ -116,6 +125,23 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     WidgetsBinding.instance.addPostFrameCallback((_) => show());
   }
 
+  /// Shows review [c] in Activity, To do's pointer to it.
+  void _showReview(GitHubComment c) {
+    setState(() {
+      _tab = PullSection.activity;
+      _shown = (c.id, GlobalKey());
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final to = _shown?.$2.currentContext;
+      if (to == null || !to.mounted) return;
+      Scrollable.ensureVisible(
+        to,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -131,7 +157,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     }
     final failed = p.checks.where((c) => c.failed).length;
     final now = widget.now ?? clock();
-    final items = todoItems(p);
+    final todo = todoOf(p);
+    final items = todo.items;
     final open = p.item.state == 'open';
     // The text reads in a column of [readableWidth] at most, centred; the
     // files' diff takes the whole width.
@@ -164,6 +191,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                   daemon: widget.daemon,
                   pull: p,
                   items: items,
+                  older: todo.older,
+                  onOlder: _showReview,
                   now: now,
                   onChanged: _load,
                 ),
@@ -228,6 +257,8 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                   me: _me,
                   onPosted: _load,
                   onTodo: () => _jump(PullSection.todo),
+                  findings: findingCounts(items),
+                  shown: _shown,
                 ),
                 top: 6,
                 bottom: 24,
@@ -259,6 +290,21 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     ];
   }
 }
+
+/// Settings' Findings from review bots, whose changes redraw the list.
+final _findingsSetup = Listenable.merge([
+  githubFindings,
+  githubFindingBots,
+  githubFindingHeadings,
+]);
+
+/// [p]'s To do, with the bots' findings when Settings reads them.
+Todo todoOf(GitHubPull p) => todo(
+  p,
+  findings: githubFindings.value
+      ? findingsSetup(githubFindingBots.value, githubFindingHeadings.value)
+      : null,
+);
 
 /// The chats on the pull request, in the GitHub view: each a link to it.
 class _Chats extends StatelessWidget {

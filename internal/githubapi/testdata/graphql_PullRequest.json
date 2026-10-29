@@ -101,7 +101,10 @@
               "authorAssociation": "OWNER",
               "body": "A first look.",
               "state": "COMMENTED",
-              "submittedAt": "2026-10-26T04:15:07Z"
+              "submittedAt": "2026-10-26T04:15:07Z",
+              "commit": {
+                "oid": "c0ffee10c4b1a7d2e9f3a6b8c5d4e1f0a9b8c7d6"
+              }
             },
             {
               "id": "PRR_kwDOVXdqNc8AAAABUJxVdg",

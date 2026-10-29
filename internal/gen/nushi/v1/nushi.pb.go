@@ -17937,7 +17937,9 @@ type GitHubComment struct {
 	CreatedMs int64  `protobuf:"varint,8,opt,name=created_ms,json=createdMs,proto3" json:"created_ms,omitempty"`
 	// A review's state ("approved", "changes_requested", "commented",
 	// "dismissed"); empty for a comment.
-	Review        string `protobuf:"bytes,9,opt,name=review,proto3" json:"review,omitempty"`
+	Review string `protobuf:"bytes,9,opt,name=review,proto3" json:"review,omitempty"`
+	// The head commit a review was made on (its oid); empty for a comment.
+	Commit        string `protobuf:"bytes,10,opt,name=commit,proto3" json:"commit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -18031,6 +18033,13 @@ func (x *GitHubComment) GetCreatedMs() int64 {
 func (x *GitHubComment) GetReview() string {
 	if x != nil {
 		return x.Review
+	}
+	return ""
+}
+
+func (x *GitHubComment) GetCommit() string {
+	if x != nil {
+		return x.Commit
 	}
 	return ""
 }
@@ -21594,7 +21603,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\x14.nushi.v1.GitHubLinkR\x05items\x12\x14\n" +
 	"\x05quiet\x18\x02 \x01(\bR\x05quiet\"E\n" +
 	"\x17GetGitHubStatesResponse\x12*\n" +
-	"\x05items\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x05items\"\xe2\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x05items\"\xfa\x01\n" +
 	"\rGitHubComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06author\x18\x02 \x01(\tR\x06author\x12 \n" +
@@ -21605,7 +21614,9 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x03url\x18\a \x01(\tR\x03url\x12\x1d\n" +
 	"\n" +
 	"created_ms\x18\b \x01(\x03R\tcreatedMs\x12\x16\n" +
-	"\x06review\x18\t \x01(\tR\x06review\"\xb7\x03\n" +
+	"\x06review\x18\t \x01(\tR\x06review\x12\x16\n" +
+	"\x06commit\x18\n" +
+	" \x01(\tR\x06commit\"\xb7\x03\n" +
 	"\fGitHubThread\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +

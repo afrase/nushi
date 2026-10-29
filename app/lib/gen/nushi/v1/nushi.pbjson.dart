@@ -5362,6 +5362,7 @@ const GitHubComment$json = {
     {'1': 'url', '3': 7, '4': 1, '5': 9, '10': 'url'},
     {'1': 'created_ms', '3': 8, '4': 1, '5': 3, '10': 'createdMs'},
     {'1': 'review', '3': 9, '4': 1, '5': 9, '10': 'review'},
+    {'1': 'commit', '3': 10, '4': 1, '5': 9, '10': 'commit'},
   ],
 };
 
@@ -5371,7 +5372,7 @@ final $typed_data.Uint8List gitHubCommentDescriptor = $convert.base64Decode(
     'IgCgthc3NvY2lhdGlvbhgDIAEoCVILYXNzb2NpYXRpb24SGAoHb3V0c2lkZRgEIAEoCFIHb3V0'
     'c2lkZRIQCgNib3QYBSABKAhSA2JvdBISCgRib2R5GAYgASgJUgRib2R5EhAKA3VybBgHIAEoCV'
     'IDdXJsEh0KCmNyZWF0ZWRfbXMYCCABKANSCWNyZWF0ZWRNcxIWCgZyZXZpZXcYCSABKAlSBnJl'
-    'dmlldw==');
+    'dmlldxIWCgZjb21taXQYCiABKAlSBmNvbW1pdA==');
 
 @$core.Deprecated('Use gitHubThreadDescriptor instead')
 const GitHubThread$json = {

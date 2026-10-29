@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_findings_settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -181,6 +182,8 @@ class _GitHubPageState extends State<GitHubPage> {
               ),
             ],
           ),
+        const SizedBox(height: 24),
+        const FindingsGroup(),
       ],
     );
   }

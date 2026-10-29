@@ -24,11 +24,19 @@ class PullTodo extends StatefulWidget {
     required this.now,
     required this.onChanged,
     super.key,
+    this.older = const {},
+    this.onOlder,
   });
 
   final Daemon daemon;
   final GitHubPull pull;
   final List<TodoItem> items;
+
+  /// The review bots whose findings come from a message on an older
+  /// commit than the head, and that commit: their group says so, with the
+  /// way to the message in Activity ([onOlder]).
+  final Map<String, String> older;
+  final ValueChanged<GitHubComment>? onOlder;
   final DateTime now;
   final Future<void> Function() onChanged;
 
@@ -66,10 +74,14 @@ class _PullTodoState extends State<PullTodo> {
       for (final i in items)
         if (i.check != null) i,
     ];
-    final rest = [
+    final reviews = [
       for (final i in items)
-        if (i.check == null) i,
+        if (i.review != null || i.thread != null) i,
     ];
+    final bots = <String, List<TodoItem>>{};
+    for (final i in items) {
+      if (i.finding case final f?) (bots[f.from.author] ??= []).add(i);
+    }
     Widget group(String name) => Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
       child: Text(
@@ -141,11 +153,73 @@ class _PullTodoState extends State<PullTodo> {
             group('Failing checks'),
             for (final i in checks) row(i),
           ],
-          if (rest.isNotEmpty) ...[
-            group('Review comments and findings'),
-            for (final i in rest) row(i),
+          if (reviews.isNotEmpty) ...[
+            group('Reviews and threads'),
+            for (final i in reviews) row(i),
+          ],
+          for (final MapEntry(key: bot, value: found) in bots.entries) ...[
+            if (widget.older[bot] case final commit?)
+              _OlderGroup(
+                bot: bot,
+                commit: commit,
+                onShow: () => widget.onOlder?.call(found.first.finding!.from),
+              )
+            else
+              group('Findings from $bot'),
+            for (final i in found) row(i),
           ],
           _Next(pull: widget.pull, after: items.isNotEmpty),
+        ],
+      ),
+    );
+  }
+}
+
+/// A review bot's findings' group, from a message on an older commit
+/// than the head: some may be done, and it says so.
+class _OlderGroup extends StatelessWidget {
+  const new({required this.bot, required this.commit, required this.onShow});
+
+  final String bot;
+  final String commit;
+  final VoidCallback onShow;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final short = commit.length > 7 ? commit.substring(0, 7) : commit;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 6, 8, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Findings from $bot',
+                    style: theme.ui(
+                      t.textSecondary,
+                      size: 12,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  TextSpan(
+                    text:
+                        '  from a review on an older commit ($short) · '
+                        'comment /review for a fresh one',
+                  ),
+                ],
+              ),
+              style: theme.ui(t.textMuted, size: 12),
+            ),
+          ),
+          GhostButton(
+            'Show the review',
+            tooltip: 'Its card in Activity',
+            onTap: onShow,
+          ),
         ],
       ),
     );

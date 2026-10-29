@@ -130,14 +130,22 @@ class _TodoRowState extends State<TodoRow> {
     final t = theme.t;
     final i = widget.item;
     final c = i.check;
+    final r = i.review;
     final x = i.thread;
     final f = i.finding;
     final small = theme.ui(t.textMuted, size: 11.5);
     final (IconData icon, Color color) = c != null
         ? (Icons.cancel_outlined, t.crashed)
+        : r != null
+        ? (Icons.rate_review_outlined, t.crashed)
         : x != null
         ? (Icons.forum_outlined, t.needs)
         : (Icons.warning_amber_rounded, t.findingsAccent);
+    final place = x != null
+        ? threadPlace(x)
+        : f != null
+        ? findingPlace(f)
+        : '';
     final title = c != null
         ? Text.rich(
             TextSpan(
@@ -154,19 +162,34 @@ class _TodoRowState extends State<TodoRow> {
             overflow: TextOverflow.ellipsis,
             style: theme.ui(t.text, weight: FontWeight.w500),
           )
+        : r != null
+        ? Text(
+            '@${r.author}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.ui(t.text, weight: FontWeight.w500),
+          )
+        : place.isEmpty
+        ? null
         : Text(
-            x != null ? _threadPlace(x) : findingPlace(f!),
+            place,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.code(t.text, size: 12),
           );
     final tag = c != null
         ? (c.required ? _Tag('Required', t.textSecondary) : null)
+        : r != null
+        ? _Tag('Changes requested', t.crashed, soft: true)
         : x != null
         ? _Tag(x.outdated ? 'Outdated' : 'Unresolved', t.needs, soft: true)
         : _Tag('Must address', t.findingsAccent, soft: true);
     final detail = c != null
         ? _checkDetail(c)
+        : r != null
+        ? (r.body.isEmpty
+              ? 'No text: their review threads say what'
+              : _firstLine(plainText(r.body)))
         : x != null
         ? plainText(x.comments.isEmpty ? '' : x.comments.first.body)
         : plainText(f!.text);
@@ -203,8 +226,11 @@ class _TodoRowState extends State<TodoRow> {
                       padding: const EdgeInsets.only(top: 2),
                       child: Row(
                         children: [
-                          Flexible(child: title),
-                          if (tag != null) ...[const SizedBox(width: 8), tag],
+                          if (title != null) ...[
+                            Flexible(child: title),
+                            if (tag != null) const SizedBox(width: 8),
+                          ],
+                          ?tag,
                         ],
                       ),
                     ),
@@ -303,15 +329,6 @@ class _TodoRowState extends State<TodoRow> {
       ),
     );
   }
-
-  String _threadPlace(GitHubThread x) {
-    if (x.onFile) return x.path;
-    final line = x.outdated ? x.originalLine : x.line;
-    final start = x.outdated ? x.originalStartLine : x.startLine;
-    return start > 0 && start != line
-        ? '${x.path}:$start–$line'
-        : '${x.path}:$line';
-  }
 }
 
 /// What a failed check says: its failures counted and the first, as
@@ -331,20 +348,31 @@ String _checkDetail(GitHubCheck c) {
   return c.state == 'timed_out' ? 'Timed out' : 'Failed';
 }
 
+/// [text]'s first line (a review's summary, in one line).
+String _firstLine(String text) => text.trim().split('\n').first.trim();
+
 /// Whose an item is: a thread's authors (and a bot's review when its
 /// finding is on the same lines), a finding's review; and when.
 String _whose(TodoItem i, DateTime now) {
   if (i.thread case final x?) {
     final people = {for (final c in x.comments) c.author}.join(', ');
     final last = x.comments.isEmpty ? null : x.comments.last;
-    final also = {for (final f in i.also) "${f.from.author}'s review"};
+    final also = {
+      for (final f in i.also) '${possessive(f.from.author)} review',
+    };
     return [
       if (also.isEmpty) people else '$people, and ${also.join(', ')}',
       if (last != null) githubAgo(last.createdMs.toInt(), now),
     ].join(' · ');
   }
+  if (i.review case final r?) {
+    return [
+      'their latest review',
+      if (r.createdMs != 0) githubAgo(r.createdMs.toInt(), now),
+    ].join(' · ');
+  }
   final f = i.finding!;
-  return "${f.from.author}'s review · "
+  return '${possessive(f.from.author)} review · '
       '${githubAgo(f.from.createdMs.toInt(), now)}';
 }
 

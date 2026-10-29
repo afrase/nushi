@@ -2686,6 +2686,8 @@ message GitHubComment {
   // A review's state ("approved", "changes_requested", "commented",
   // "dismissed"); empty for a comment.
   string review = 9;
+  // The head commit a review was made on (its oid); empty for a comment.
+  string commit = 10;
 }
 
 // A review thread on line (from start_line) of path's side ("left", the

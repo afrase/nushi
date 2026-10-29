@@ -96,6 +96,26 @@ final githubOwners = ValueNotifier<Map<String, List<String>>>(
   _byPlace('githubOwners'),
 )..addListener(_save);
 
+/// Findings from review bots (Settings › GitHub; off at first): the To do
+/// list reads must-address findings out of these bots' reviews (logins,
+/// comma-separated), the list items under a heading with any of
+/// [githubFindingHeadings]' words (comma-separated, any case).
+final githubFindings = ValueNotifier<bool>(_saved['githubFindings'] == true)
+  ..addListener(_save);
+final githubFindingBots = ValueNotifier<String>(
+  switch (_saved['githubFindingBots']) {
+    final String s => s,
+    _ => 'github-actions',
+  },
+)..addListener(_save);
+final githubFindingHeadings = ValueNotifier<String>(
+  switch (_saved['githubFindingHeadings']) {
+    final String s => s,
+    _ => findingHeadingsDefault,
+  },
+)..addListener(_save);
+const findingHeadingsDefault = 'Key findings, Must address';
+
 /// The sidebar's project groups, by folder path: the order they were
 /// dragged into (folders it doesn't name go first), and those collapsed.
 final sidebarOrder = ValueNotifier<List<String>>([..._strings('sidebarOrder')])
@@ -257,6 +277,9 @@ void _save() {
         'githubDays': githubDays.value,
         'githubHidden': githubHidden.value,
         'githubOwners': githubOwners.value,
+        'githubFindings': githubFindings.value,
+        'githubFindingBots': githubFindingBots.value,
+        'githubFindingHeadings': githubFindingHeadings.value,
         'sidebarOrder': sidebarOrder.value,
         'sidebarCollapsed': sidebarCollapsed.value.toList(),
         'sidebarChats': sidebarChats.value,
