@@ -1,6 +1,7 @@
 // Package claudetest is a fake claude for testing code built on
 // claudeagent: a Spawner that plays a script on pipes, so tests run with
-// no process and no login.
+// no process and no login. A script is written by hand, or replays a
+// recorded run of the real claude (a Cassette).
 package claudetest
 
 import (
