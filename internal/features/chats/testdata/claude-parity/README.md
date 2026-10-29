@@ -10,7 +10,8 @@ A scenario is two scripts, written by hand:
 and the recordings `make claude-record` writes from them (never edit them by hand):
 
 - `cli.jsonl`: `claude`'s stdin and stdout, a `claudetest` cassette, written by `claude-tee`; `cli-2.jsonl` and on for each further `claude` the adapter starts in the run (a load, a fork), in the order it starts them;
-- `acp-node.jsonl`: the ACP between the client and the adapter, `{"dir":"in"|"out","msg":…}` a line, `"in"` being to the agent.
+- `acp-node.jsonl`: the ACP between the client and the adapter, `{"dir":"in"|"out","msg":…}` a line, `"in"` being to the agent;
+- `history/`: claude's transcripts (its project folder, the folder's own name and `memory/` left out): `history/1/` and on just before each request that reads them (`session/load`, `resume`, `fork`), `history/end/` once the run is over. The Go agent reads transcripts itself, so the test gives it these at the same points.
 
 A scenario without `cli.jsonl` is skipped by the test until it is recorded. `hello` is still the hand-written recording from before the tools existed; the first `make claude-record` replaces it.
 
@@ -49,9 +50,10 @@ Only a run that went as the scripts say replaces the scenario's recordings. A fa
 ```
 
 - `turns` answer claude's requests for a reply, **in order, each once**. A request takes the next turn when the turn's `match` fits it; otherwise it is a miss, which fails the recording. A turn streams its `content` as the API does (server-sent events: `message_start`, each block's start, deltas and stop, `message_delta` with the stop reason and usage, `message_stop`).
-- `match` (every field given must hold): `lastUserText`, text in the last user message; `toolResult`, a tool (its name, `"*"` for any) whose result the last user message carries; `model`, text in the model's name; `system`, text in the system prompt; `tools`, whether the request has tools. A turn whose `match` doesn't say `tools` only matches requests with tools, which is to say claude's conversation, not its small requests of its own.
+- `match` (every field given must hold): `lastUserText`, text in the last user message; `toolResult`, a tool (its name, `"*"` for any) whose result the last user message carries; `model`, text in the model's name; `system`, text in the system prompt; `tools`, whether the request has tools; `capture`, values to take from the conversation (below). A turn whose `match` doesn't say `tools` only matches requests with tools, which is to say claude's conversation, not its small requests of its own.
+- `capture` names ids only claude knows, a background task's or a subagent's: `{"task": "with ID: (\\w+)"}` takes the first group of the pattern's last match in the request's messages (their text and tool results), and `${task}` in the turn's text, deltas and tool inputs becomes it. A turn whose pattern finds nothing doesn't match.
 - A block is `text` (`text`), `thinking` (`thinking`, `signature`) or `tool_use` (`name`, `input`, `id`: one is made up when not given). `deltas` streams it in those pieces; otherwise text and thinking come whole and a tool's input in two halves.
-- A turn's other fields: `stop_reason` (default `tool_use` when it has a tool use, else `end_turn`), `stop_details` (a refusal's, as is), `usage` (`input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`; default: counted), `pauseMs` (a pause before each event, so the client can act mid-stream), `hang` (stop before `message_delta` until claude drops the request: a turn cut short by a cancel), `error` (`{"status": 529, "type": "overloaded_error", "message": "Overloaded"}` instead of a reply).
+- A turn's other fields: `id` (the message's id, for a fork at it; one is made up when not given), `stop_reason` (default `tool_use` when it has a tool use, else `end_turn`), `stop_details` (a refusal's, as is), `usage` (`input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`; default: counted), `pauseMs` (a pause before each event, so the client can act mid-stream), `hang` (stop before `message_delta` until claude drops the request: a turn cut short by a cancel), `error` (`{"status": 529, "type": "overloaded_error", "message": "Overloaded"}` instead of a reply).
 - `side` turns answer any request they match, as often as it comes, before `turns` are tried: for claude's requests whose number or order the scenario doesn't fix. Their `match` has no implicit `tools`.
 - What neither takes and has no tools (or forces a tool): claude's small requests of its own, such as a title, get `sideText` (default "Fake title"), or a forced tool's input made from its schema. `count_tokens` and the models list (`models`) get canned answers. Anything else is a 404, in `fakeapi.log`.
 
@@ -89,13 +91,14 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"request": "method", "params": {…}}` | any request; `"$s1"` in params is that session's id, `"$cwd"` the run's folder |
 | `{"notify": "method", "params": {…}}` | any notification, the same way |
 
-`meta` on `new`, `load`, `resume` and `fork` joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`).
+`meta` on `new`, `load`, `resume` and `fork` joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
 
 | Step | Does |
 |---|---|
 | `{"answer": "session/request_permission", "option": "allow_once"}` | waits for the agent's next unanswered request of that method and answers it: `option` picks a permission option by its kind or id (`"cancelled"` cancels); `result` answers with that JSON as it is (an `elicitation/create` answer: `{"action": "accept", "content": {…}}`) |
-| `{"waitFor": {…}}` | waits for a request or notification from the agent (answers are `await`'s) that has every field given, with the same values (objects field by field), after the one the last `waitFor` found |
+| `{"waitFor": {…}}` | waits for a request or notification from the agent (answers are `await`'s) that has every field given, with the same values (objects field by field), after the one the last `waitFor` found; `"capture": {"c1": "params.update.sessionId"}` names the string at that path in it, as a session is named (a subagent's session, for `{"cancel": "c1"}`) |
 | `{"await": "p1"}` | waits for an `async` request's answer |
+| `{"kill": "sleep 37"}` | stops the process group below the agent whose command line has the text, as Nushi stops a background command (SIGTERM, then SIGKILL; ADR 0065), once one runs |
 | `{"pause": "500ms"}` | waits that long; prefer `waitFor` |
 
 Every request the agent makes must be answered by a step, or the recording fails.

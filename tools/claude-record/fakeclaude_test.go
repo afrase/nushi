@@ -5,10 +5,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -125,6 +127,9 @@ func (f *fake) turn(u map[string]any) error {
 			"tools": []any{"Bash"}, "mcp_servers": []any{}, "slash_commands": []any{}, "uuid": f.uuid()})
 	}
 	f.history = append(f.history, u["message"])
+	if err := f.keep(u); err != nil {
+		return err
+	}
 	var text strings.Builder
 	var usage any
 	var stop string
@@ -159,6 +164,22 @@ func (f *fake) turn(u map[string]any) error {
 		"origin": map[string]any{"kind": "human"}, "user_message_uuids": []any{u["uuid"]}, "uuid": f.uuid()})
 	f.send(map[string]any{"type": "system", "subtype": "session_state_changed", "state": "idle", "session_id": f.sid, "uuid": f.uuid()})
 	return nil
+}
+
+// keep adds a user message to the session's transcript, as claude keeps
+// one in its config folder (the user's prompts only, here).
+func (f *fake) keep(u map[string]any) error {
+	dir := filepath.Join(os.Getenv("CLAUDE_CONFIG_DIR"), "projects", "-fake-project")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(filepath.Join(dir, f.sid+".jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	b, _ := json.Marshal(map[string]any{"type": "user", "uuid": u["uuid"], "sessionId": f.sid, "message": u["message"]})
+	_, err = file.Write(append(b, '\n'))
+	return errors.Join(err, file.Close())
 }
 
 // use asks the client about a tool_use and returns its tool_result.

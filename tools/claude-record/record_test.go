@@ -130,11 +130,21 @@ func acpLines(t *testing.T, path string) []string {
 func TestRecord(t *testing.T) {
 	r := testRecorder(t)
 	dir := scenario(t, filepath.Join("testdata", "permission"), map[string]string{"cli-3.jsonl": "an old recording\n"})
+	if err := os.MkdirAll(filepath.Join(dir, "history", "7"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := r.record(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "cli-3.jsonl")); err == nil {
-		t.Error("an old recording is left")
+	for _, old := range []string{"cli-3.jsonl", "history/7"} {
+		if _, err := os.Stat(filepath.Join(dir, old)); err == nil {
+			t.Errorf("an old recording is left: %s", old)
+		}
+	}
+	if kept, _ := filepath.Glob(filepath.Join(dir, "history", "end", "*.jsonl")); len(kept) != 1 {
+		t.Errorf("claude's history at the end: %v", kept)
+	} else if b, _ := os.ReadFile(kept[0]); !strings.Contains(string(b), "list the files") {
+		t.Errorf("claude's history: %s", b)
 	}
 	f, err := os.Open(filepath.Join(dir, "cli.jsonl"))
 	if err != nil {

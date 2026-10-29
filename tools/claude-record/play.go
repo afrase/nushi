@@ -20,9 +20,17 @@ type player struct {
 	c       *conn
 	cwd     string // the folder the sessions run in
 	timeout time.Duration
-	ids     map[string]string     // sessions' names to their ids
+	ids     map[string]string     // sessions' names to their ids, and other captured values
+	vars    map[string]string     // more "$<name>" values: mcp-echo's path
 	async   map[string]<-chan msg // the Async requests not yet awaited
 	waited  int                   // where the next waitFor looks from
+
+	// snapshot, when set, is called before each request that reads
+	// claude's history of a session (a load, a resume, a fork).
+	snapshot func() error
+	// kill, when set, stops the process group below the agent whose
+	// command line has the text.
+	kill func(ctx context.Context, text string) error
 }
 
 // play plays steps, and stops at the first that fails or when ctx is
@@ -77,12 +85,20 @@ func (p *player) step(ctx context.Context, s *step) error {
 		if err := json.Unmarshal(s.WaitFor, &want); err != nil {
 			return err
 		}
-		i, _, err := p.c.first(ctx, string(s.WaitFor), p.waited, func(_ int, m msg) bool {
+		i, m, err := p.c.first(ctx, string(s.WaitFor), p.waited, func(_ int, m msg) bool {
 			var got any
 			return json.Unmarshal(m.raw, &got) == nil && matches(want, got)
 		}, p.timeout)
+		if err != nil {
+			return err
+		}
 		p.waited = i + 1
-		return err
+		return p.capture(s.Capture, m)
+	case "kill":
+		if p.kill == nil {
+			return errors.New("this run can't stop processes")
+		}
+		return p.kill(ctx, s.Kill)
 	case "answer":
 		return p.answer(ctx, s)
 	case "cancel":
@@ -97,6 +113,11 @@ func (p *player) step(ctx context.Context, s *step) error {
 	method, params, err := p.build(s)
 	if err != nil {
 		return err
+	}
+	if p.snapshot != nil && slices.Contains([]string{"session/load", "session/resume", "session/fork"}, method) {
+		if err := p.snapshot(); err != nil {
+			return fmt.Errorf("claude's history before %s: %w", method, err)
+		}
 	}
 	ch, err := p.c.call(method, params)
 	if err != nil {
@@ -114,6 +135,26 @@ func (p *player) step(ctx context.Context, s *step) error {
 		return err
 	}
 	return p.name(s, m)
+}
+
+// capture keeps the values at paths (dotted, into objects) in m under
+// their names, as sessions' ids are kept: a subagent's session, say,
+// which a later step cancels.
+func (p *player) capture(paths map[string]string, m msg) error {
+	for name, path := range paths {
+		var v any
+		_ = json.Unmarshal(m.raw, &v)
+		for key := range strings.SplitSeq(path, ".") {
+			obj, _ := v.(map[string]any)
+			v = obj[key]
+		}
+		s, ok := v.(string)
+		if !ok || s == "" {
+			return fmt.Errorf("capture %s: no string at %s in %s", name, path, m.raw)
+		}
+		p.ids[name] = s
+	}
+	return nil
 }
 
 // answerErr says what is wrong with a request's answer m, if anything.
@@ -161,7 +202,17 @@ func (p *player) build(s *step) (string, any, error) {
 		return acp.SessionID(id), nil
 	}
 	text := func(t string) []acp.ContentBlock { return []acp.ContentBlock{{Text: &acp.TextContent{Text: t}}} }
-	none := []acp.MCPServer{}
+	servers := []acp.MCPServer{} // Nushi sends [], never null
+	if s.MCPServers != nil {
+		v, err := p.params(s.MCPServers)
+		if err != nil {
+			return "", nil, err
+		}
+		b, _ := json.Marshal(v) //nolint:errchkjson // it was JSON
+		if err := json.Unmarshal(b, &servers); err != nil {
+			return "", nil, fmt.Errorf("mcpServers: %w", err)
+		}
+	}
 	var id acp.SessionID
 	for _, name := range []string{s.Load, s.Resume, s.Fork, s.Close, s.Delete, s.Session} {
 		if name != "" {
@@ -183,13 +234,13 @@ func (p *player) build(s *step) (string, any, error) {
 		return "initialize", acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion, ClientCapabilities: caps,
 			ClientInfo: &acp.Implementation{Name: "nushi", Title: "Nushi"}}, nil
 	case "new":
-		return "session/new", acp.NewSessionRequest{Cwd: p.cwd, MCPServers: none, Meta: meta}, nil
+		return "session/new", acp.NewSessionRequest{Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
 	case "load":
-		return "session/load", acp.LoadSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: none, Meta: meta}, nil
+		return "session/load", acp.LoadSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
 	case "resume":
-		return "session/resume", acp.ResumeSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: none, Meta: meta}, nil
+		return "session/resume", acp.ResumeSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
 	case "fork":
-		return "session/fork", acp.ForkSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: none, Meta: meta}, nil
+		return "session/fork", acp.ForkSessionRequest{SessionID: id, Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
 	case "list":
 		return "session/list", acp.ListSessionsRequest{Cwd: p.cwd}, nil
 	case "close":
@@ -238,8 +289,8 @@ func merged(a, b map[string]any) map[string]any {
 	return a
 }
 
-// params are raw with "$<name>" strings put to the sessions' ids and
-// "$cwd" to the sessions' folder.
+// params are raw with "$<name>" strings put to the sessions' ids (and
+// other captured values or vars) and "$cwd" to the sessions' folder.
 func (p *player) params(raw json.RawMessage) (any, error) {
 	if raw == nil {
 		return map[string]any{}, nil
@@ -255,8 +306,13 @@ func (p *player) params(raw json.RawMessage) (any, error) {
 			if t == "$cwd" {
 				return p.cwd
 			}
-			if id, ok := p.ids[strings.TrimPrefix(t, "$")]; ok && strings.HasPrefix(t, "$") {
-				return id
+			if name, ok := strings.CutPrefix(t, "$"); ok {
+				if id, ok := p.ids[name]; ok {
+					return id
+				}
+				if v, ok := p.vars[name]; ok {
+					return v
+				}
 			}
 		case map[string]any:
 			for k, e := range t {

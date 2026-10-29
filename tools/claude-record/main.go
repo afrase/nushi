@@ -42,6 +42,7 @@ func main() {
 	claudePath := flag.String("claude", os.Getenv("CLAUDE_TEE_REAL"), "the claude to record ($CLAUDE_TEE_REAL)")
 	adapterDir := flag.String("adapter-dir", "", "where claude-agent-acp is set up (default: a cache folder)")
 	acpName := flag.String("acp", "acp-node.jsonl", "the ACP recording's file name")
+	mcpEcho := flag.String("mcp-echo", "", "claudetest's mcp-echo, built: the scenarios' $mcp-echo")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	if *tee == "" || *claudePath == "" {
@@ -54,36 +55,43 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	context.AfterFunc(ctx, cancel)
-	if err := run(ctx, log, *scenarios, *only, *tee, *claudePath, *adapterDir, *acpName, flag.Args()); err != nil {
+	r := &recorder{tee: *tee, claude: *claudePath, agent: flag.Args(), acp: *acpName, mcpEcho: *mcpEcho, log: log}
+	if err := run(ctx, *scenarios, *only, *adapterDir, r); err != nil {
 		log.Error("claude-record", "err", err)
 		cancel()
 		os.Exit(1) //nolint:gocritic // cancel ran
 	}
 }
 
-func run(ctx context.Context, log *slog.Logger, scenarios, only, tee, claudePath, adapterDir, acpName string, agent []string) error {
+// run records the scenarios only names in scenarios with r, whose paths
+// it makes absolute; r's agent is the pinned claude-agent-acp, set up in
+// adapterDir, unless r names one.
+func run(ctx context.Context, scenarios, only, adapterDir string, r *recorder) error {
 	dirs, err := pick(scenarios, only)
 	if err != nil {
 		return err
 	}
 	abs := func(p string) (string, error) {
 		if !strings.Contains(p, "/") {
-			return p, nil // a program on PATH
+			return p, nil // a program on PATH, or none
 		}
 		return filepath.Abs(p)
 	}
-	if tee, err = filepath.Abs(tee); err != nil {
+	if r.tee, err = filepath.Abs(r.tee); err != nil {
 		return err
 	}
-	if claudePath, err = abs(claudePath); err != nil {
+	if r.claude, err = abs(r.claude); err != nil {
 		return err
 	}
-	if len(agent) == 0 {
-		if agent, err = nodeAgent(ctx, log, adapterDir); err != nil {
+	if r.mcpEcho, err = abs(r.mcpEcho); err != nil {
+		return err
+	}
+	log := r.log
+	if len(r.agent) == 0 {
+		if r.agent, err = nodeAgent(ctx, log, adapterDir); err != nil {
 			return err
 		}
 	}
-	r := &recorder{tee: tee, claude: claudePath, agent: agent, acp: acpName, log: log}
 	var failed []string
 	for _, dir := range dirs {
 		if err := ctx.Err(); err != nil { // interrupted: the rest stay as they are
