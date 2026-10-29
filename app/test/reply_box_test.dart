@@ -184,7 +184,7 @@ void main() {
     final sent = fake.calls.whereType<SendPromptRequest>().single;
     expect(
       sent.text,
-      withReplies([(quote: _quote, text: _lines.join('\n'))], ''),
+      withReplies([(quote: _quote, text: _lines.join('\n'), from: '')], ''),
     );
     expect(splitReplies(sent.text).$1.single.text, _lines.join('\n'));
     await end();
@@ -267,7 +267,7 @@ void main() {
 
   testWidgets('a reply edited from its card grows too: Shift-Enter starts '
       'a line, Enter saves it', (tester) async {
-    final replies = Replies([(quote: _quote, text: _lines.first)]);
+    final replies = Replies([(quote: _quote, text: _lines.first, from: '')]);
     await tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),

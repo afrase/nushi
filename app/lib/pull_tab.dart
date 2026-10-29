@@ -5,6 +5,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -32,8 +33,22 @@ class PullTab extends StatelessWidget {
     final l = chat.pull;
     if (l == null) return const SizedBox.shrink();
     final ref = GitHubRef(host: l.host, repo: l.repo, number: l.number);
+    // Each card says what it is, on which pull request, and whose that is.
+    Future<void> send(Reply r) async {
+      final me = await githubLogin(daemon, l.host);
+      chat.draft.addReply(
+        onPull(
+          r,
+          repo: l.repo,
+          number: l.number,
+          author: _authors[chat.id] ?? '',
+          me: me,
+        ),
+      );
+    }
+
     return SendToAgent(
-      onSend: chat.draft.addReply,
+      onSend: (r) => send(r).ignore(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -49,7 +64,10 @@ class PullTab extends StatelessWidget {
               daemon: daemon,
               ref: ref,
               inChat: true,
-              onLoad: (p) => markPullSeen(chat.id, p),
+              onLoad: (p) {
+                _authors[chat.id] = p.item.author;
+                markPullSeen(chat.id, p);
+              },
             ),
           ),
         ],
@@ -57,6 +75,9 @@ class PullTab extends StatelessWidget {
     );
   }
 }
+
+/// Each chat's pull request's author, as its tab last loaded it.
+final _authors = <String, String>{};
 
 /// "2 replies wait in the chat's box", and Show the chat: over the Pull
 /// request tab and the Changes view while cards they sent wait there.

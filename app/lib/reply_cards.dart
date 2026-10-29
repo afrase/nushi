@@ -22,7 +22,11 @@ class ReplyCards extends StatelessWidget {
     onDone();
     if (text == null) return;
     replies.value = [...replies.value]
-      ..[i] = (quote: replies.value[i].quote, text: text.trim());
+      ..[i] = (
+        quote: replies.value[i].quote,
+        text: text.trim(),
+        from: replies.value[i].from,
+      );
   }
 
   @override

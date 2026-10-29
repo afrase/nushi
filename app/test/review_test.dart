@@ -24,12 +24,14 @@ void main() {
     expect(reviewReply(comment('main.go', 10, 10, '\tfmt.Println(msg, 42)')), (
       quote: '`main.go`, line 10:\n```go\n\tfmt.Println(msg, 42)\n```',
       text: 'Fix main.go.',
+      from: myReviewComments,
     ));
     expect(reviewReply(comment('a/b.md', 2, 3, 'one\n```\ntwo', old: true)), (
       quote:
           '`a/b.md`, lines 2–3 (the old version, before the change):\n'
           '````md\none\n```\ntwo\n````',
       text: 'Fix a/b.md.',
+      from: myReviewComments,
     ));
   });
 

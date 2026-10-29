@@ -415,6 +415,12 @@ void main() {
     final cards = d.chats['c1']!.draft.replies.value;
     expect(cards, hasLength(1)); // the one failed check
     expect(cards.single.quote, startsWith('Check checks / on-demand: failure'));
+    // What it is, on which pull request, and whose (the user's: afrase).
+    expect(
+      cards.single.from,
+      'Failed check checks / on-demand on PR $_repo#1 (GitHub), my pull '
+      'request:',
+    );
     expect(cards.single.quote, contains('Process completed with exit code 1'));
     expect(d.chats['c1']!.draft.text.text, isEmpty);
     expect(d.selectedId, 'c1');
@@ -459,6 +465,11 @@ void main() {
     expect(
       cards.single.quote,
       startsWith('Review thread on sub.go:10 (outdated'),
+    );
+    expect(
+      cards.single.from,
+      'Review comments from @afrase on PR $_repo#1 (GitHub), my pull '
+      'request:',
     );
     expect(fake.calls.whereType<GetGitHubPromptRequest>(), isEmpty);
     await closeView(tester, d);

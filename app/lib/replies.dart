@@ -7,22 +7,34 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// A reply to a part of the transcript: the quoted text, and what the user
-/// says about it (either may be empty, not both).
-typedef Reply = ({String quote, String text});
+/// says about it (either may be empty, not both); `from` says whose the
+/// quoted text is and where it's from ("My review comments on your
+/// changes:", "Review comments from @octo on PR afrase/nushi#12 (GitHub),
+/// my pull request:"), the lead line of its group in the message, or ''.
+/// An agent told only "Review comments" took the user's own for a
+/// reviewer's and answered as the pull request's author.
+typedef Reply = ({String quote, String text, String from});
 
 /// The replies waiting in a composer, as cards, sent with its next message.
 typedef Replies = ValueNotifier<List<Reply>>;
 
 final _marker = RegExp(r'^<!-- reply \d+ -->\n', multiLine: true);
+
+/// A group's lead line, before its first reply's marker.
+final _from = RegExp(r'^<!-- from -->\n(.*)\n\n', multiLine: true);
 const _end = '<!-- end of replies -->';
 final _endLine = RegExp('^$_end\$', multiLine: true);
 
 /// A message's text: each reply as `<!-- reply n -->`, its quote as `> `
 /// lines and its text (its lines as written) after a blank line, then
 /// [text]. When the last reply's text has a blank line of its own,
-/// `<!-- end of replies -->` says where the replies end.
+/// `<!-- end of replies -->` says where the replies end. Replies from the
+/// same place in a row are a group, its lead ((its `from`)) once before
+/// it, after `<!-- from -->`.
 String withReplies(List<Reply> replies, String text) => [
-  for (final (i, r) in replies.indexed)
+  for (final (i, r) in replies.indexed) ...[
+    if (r.from.isNotEmpty && (i == 0 || replies[i - 1].from != r.from))
+      '<!-- from -->\n${r.from.trim()}',
     [
       '<!-- reply ${i + 1} -->\n',
       [
@@ -31,20 +43,30 @@ String withReplies(List<Reply> replies, String text) => [
       ].join('\n'),
       if (r.text.trim().isNotEmpty) '\n\n${r.text.trim()}',
     ].join(),
+  ],
   if (replies.lastOrNull?.text.trim().contains('\n\n') ?? false) _end,
   if (text.isNotEmpty) text,
 ].join('\n\n');
 
 /// The replies [message] starts with, and the rest of it ([withReplies]
 /// backwards). Without `<!-- end of replies -->`, the last reply's text
-/// ends at its first blank line.
+/// ends at its first blank line. A group's lead goes to its first reply.
 (List<Reply>, String) splitReplies(String message) {
-  if (_marker.matchAsPrefix(message) == null) return (const [], message);
-  var head = message;
+  // The leads out, each kept for the reply after it (by its number).
+  final leads = <int, String>{};
+  var all = message;
+  if (_from.matchAsPrefix(all) != null || _marker.matchAsPrefix(all) != null) {
+    all = all.replaceAllMapped(_from, (m) {
+      leads[_marker.allMatches(message.substring(0, m.start)).length] = m[1]!;
+      return '';
+    });
+  }
+  if (_marker.matchAsPrefix(all) == null) return (const [], message);
+  var head = all;
   String? rest;
-  if (_endLine.firstMatch(message) case final m?) {
-    head = message.substring(0, m.start);
-    rest = message.substring(m.end);
+  if (_endLine.firstMatch(all) case final m?) {
+    head = all.substring(0, m.start);
+    rest = all.substring(m.end);
   }
   final blocks = head.split(_marker).skip(1).toList();
   final replies = <Reply>[];
@@ -63,6 +85,7 @@ String withReplies(List<Reply> replies, String text) => [
           if (l.startsWith('> ')) l.substring(2) else l.substring(1),
       ].join('\n'),
       text: text,
+      from: leads[i] ?? '',
     ));
   }
   return (replies, (rest ?? '').trim());
@@ -127,6 +150,12 @@ class UserMessageText extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 3,
             children: [
+              if (r.from.isNotEmpty)
+                Text(
+                  r.from,
+                  style: NushiTheme.of(context)
+                      .ui(NushiTheme.of(context).t.userBandMuted, size: 12),
+                ),
               if (r.quote.isNotEmpty)
                 QuoteBlock(r.quote, size: 13.5, band: true),
               if (r.text.isNotEmpty) AgentMarkdown(r.text, typed: true),
@@ -221,7 +250,11 @@ class _ReplyBoxState extends State<ReplyBox> {
   }
 
   void _send() {
-    widget.onReply((quote: widget.quote.trim(), text: _text.text.trim()));
+    widget.onReply((
+      quote: widget.quote.trim(),
+      text: _text.text.trim(),
+      from: '',
+    ));
     widget.onClose();
   }
 

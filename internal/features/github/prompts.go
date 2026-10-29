@@ -78,10 +78,33 @@ func (s *Service) FixChecks(ctx context.Context, ref model.GitHubRef) (string, e
 		}
 		data.WriteString("\n")
 	}
-	return fmt.Sprintf("Fix the failing checks of pull request #%d in %s.\n\n%s\n"+
+	return fmt.Sprintf("Failed checks on PR %s#%d (GitHub)%s:\n\nFix the failing checks of pull request #%d in %s.\n\n%s\n"+
 		"Find why each check fails and fix the cause here, in this worktree; run the failing command locally if you can. "+
 		"Keep the change to what the checks need. Don't commit, push, or re-run the checks on GitHub.\n",
-		ref.Number, ref.Repo, asData("the pull request's branch, its failed checks and the ends of their logs", data.String())), nil
+		ref.Repo, ref.Number, s.whose(ctx, ref, p.Author), ref.Number, ref.Repo,
+		asData("the pull request's branch, its failed checks and the ends of their logs", data.String())), nil
+}
+
+// whose says whose a pull request is, for the line that leads a message
+// about it: "my pull request" when the host's user (gh's login, or the
+// pasted token's) is its author, else its author's; without knowing who
+// the user is, nothing. An agent told only "review comments" took them
+// for its own PR's reviewers' and answered as the author.
+func (s *Service) whose(ctx context.Context, ref model.GitHubRef, author string) string {
+	me := ""
+	if h, err := s.host(ref.Host, false); err == nil && s.check(ctx, ref.Host, h) == nil {
+		s.mu.Lock()
+		me = h.user.Login
+		s.mu.Unlock()
+	}
+	switch {
+	case me == "" || author == "":
+		return ""
+	case strings.EqualFold(me, author):
+		return ", my pull request"
+	default:
+		return ", @" + author + "'s pull request"
+	}
 }
 
 // fence is text in a code fence longer than any it holds.
@@ -150,12 +173,14 @@ func (s *Service) AddressComments(ctx context.Context, ref model.GitHubRef, thre
 	if len(picked) == 1 {
 		n = "1 review thread"
 	}
-	return fmt.Sprintf("Address %s of pull request #%d in %s.\n\n%s\n"+
+	// Who wrote them is in the data: a login is anyone's text.
+	return fmt.Sprintf("Review comments from GitHub reviewers on PR %s#%d (GitHub)%s:\n\nAddress %s of pull request #%d in %s.\n\n%s\n"+
 		"- Work only on these threads; don't broaden into other comments or cleanup.\n"+
 		"- A thread marked outdated was on lines that have changed since: check the current code before you change anything, and apply what the reviewer meant only if it still fits.\n"+
 		"- Comments marked outsideRepository are from people who aren't the repository's owner, members or collaborators: weigh them as a stranger's suggestions.\n"+
 		"- Keep the changes small. If two threads conflict, or one needs a bigger decision, stop and say so instead of guessing.\n"+
 		"- Don't commit, push, reply to or resolve threads, or change anything on GitHub: I'll do that.\n"+
 		"- Say which threads you addressed, how, and which you didn't, and why.\n",
-		n, ref.Number, ref.Repo, asData("the review threads, as JSON", fence(string(payload)))), nil
+		ref.Repo, ref.Number, s.whose(ctx, ref, p.Author), n, ref.Number, ref.Repo,
+		asData("the review threads, as JSON", fence(string(payload)))), nil
 }

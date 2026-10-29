@@ -194,6 +194,9 @@ int _hash(String s) {
   return h;
 }
 
+/// The lead line of the user's own review comments in a message.
+const myReviewComments = 'My review comments on your changes:';
+
 /// A review comment as a reply card in the chat's box (the reply-card
 /// model the Pull request tab's Send to agent uses): the quote is the
 /// file, the lines and their text in a fence, the reply the comment.
@@ -212,6 +215,8 @@ Reply reviewReply(ReviewComment c) {
         '`${c.path}`, ${c.lines.toLowerCase()}$side:\n'
         '$fence${languageOf(c.path) ?? ''}\n${c.quote}\n$fence',
     text: c.text,
+    // The user's own: Claude took them for a reviewer's once.
+    from: myReviewComments,
   );
 }
 

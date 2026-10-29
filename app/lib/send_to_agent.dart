@@ -35,6 +35,55 @@ String _cut(String text, int max) {
   return '…\n${nl < 0 ? rest : rest.substring(nl + 1)}';
 }
 
+/// A login as the lead line names it: GitHub's logins are letters, digits
+/// and dashes (a bot's ends in `[bot]`); anything else isn't one, and isn't
+/// put outside the quote.
+String _who(String login) =>
+    RegExp(r'^[A-Za-z0-9-]{1,39}(\[bot\])?$').hasMatch(login)
+    ? '@$login'
+    : 'someone';
+
+/// [r]'s lead (its `from`, what it is: "Review comments from @octo")
+/// finished with the pull request it's on, and whose that is: "… on PR
+/// afrase/nushi#12 (GitHub), my pull request:" when the host's user
+/// ([me]) is its [author], else "@author's pull request"; neither when
+/// who the user is isn't known.
+Reply onPull(
+  Reply r, {
+  required String repo,
+  required int number,
+  required String author,
+  required String me,
+}) {
+  final whose = me.isEmpty || author.isEmpty
+      ? ''
+      : me.toLowerCase() == author.toLowerCase()
+      ? ', my pull request'
+      : ", ${_who(author)}'s pull request";
+  return (
+    quote: r.quote,
+    text: r.text,
+    from: '${r.from} on PR $repo#$number (GitHub)$whose:',
+  );
+}
+
+/// Who the user is on GitHub [host] ('' when not known), asked of the
+/// daemon once a launch.
+Future<String> githubLogin(Daemon daemon, String host) async {
+  if (_logins[host] case final l?) return l;
+  try {
+    final r = await daemon.client.listGitHubHosts(ListGitHubHostsRequest());
+    for (final h in r.hosts) {
+      if (h.login.isNotEmpty) _logins[h.host] = h.login;
+    }
+  } on Object {
+    return '';
+  }
+  return _logins[host] ?? '';
+}
+
+final _logins = <String, String>{};
+
 /// A comment in the pull request's conversation, for the agent.
 Reply commentReply(GitHubComment c) => (
   quote: _cut(
@@ -43,6 +92,7 @@ Reply commentReply(GitHubComment c) => (
     6000,
   ),
   text: 'Address this comment on the pull request here. $_asData',
+  from: 'A comment from ${_who(c.author)}',
 );
 
 /// A review thread, its place and every comment, for the agent.
@@ -68,6 +118,9 @@ Reply threadReply(GitHubThread x) {
     text:
         'Address this review thread here; check the current code first. '
         "Don't reply to or resolve it on GitHub. $_asData",
+    from:
+        'Review comments from '
+        '${{for (final c in x.comments) _who(c.author)}.join(', ')}',
   );
 }
 
@@ -128,6 +181,7 @@ Future<Reply> checkReply(Daemon daemon, GitHubRef ref, GitHubCheck c) async {
         'Find why this check fails and fix the cause here; run the failing '
         "command locally if you can. Don't commit, push or re-run checks. "
         '$_asData',
+    from: 'Failed check $name',
   );
 }
 

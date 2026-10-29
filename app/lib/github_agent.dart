@@ -57,7 +57,18 @@ Future<void> toAgent(
   final target = chat;
   if (!context.mounted) return;
   await tryOrShow(context, () async {
-    (await replies()).forEach(target.draft.addReply);
+    final me = await githubLogin(daemon, item.ref.host);
+    for (final r in await replies()) {
+      target.draft.addReply(
+        onPull(
+          r,
+          repo: item.ref.repo,
+          number: item.ref.number,
+          author: item.author,
+          me: me,
+        ),
+      );
+    }
     daemon.select(target.id);
   });
 }
