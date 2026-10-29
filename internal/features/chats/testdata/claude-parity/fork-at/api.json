@@ -1,0 +1,7 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "first question"}, "id": "msg_parity_fork_point", "content": [{"type": "text", "text": "First answer."}]},
+    {"match": {"lastUserText": "second question"}, "content": [{"type": "text", "text": "Second answer."}]},
+    {"match": {"lastUserText": "rewound"}, "content": [{"type": "text", "text": "Rewound answer."}]}
+  ]
+}

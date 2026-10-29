@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1"},
+    {"prompt": "first question", "session": "s1"},
+    {"fork": "s1", "as": "s2"},
+    {"prompt": "a question in the fork", "session": "s2"}
+  ]
+}

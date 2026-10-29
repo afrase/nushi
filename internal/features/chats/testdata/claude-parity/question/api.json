@@ -1,0 +1,6 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "ask me"}, "content": [{"type": "tool_use", "name": "AskUserQuestion", "input": {"questions": [{"question": "Which color?", "header": "Color", "multiSelect": false, "options": [{"label": "Red", "description": "Warm"}, {"label": "Blue", "description": "Cool"}]}, {"question": "Which shape?", "header": "Shape", "multiSelect": false, "options": [{"label": "Circle", "description": "Round"}, {"label": "Square", "description": "Boxy"}]}]}}]},
+    {"match": {"toolResult": "AskUserQuestion"}, "content": [{"type": "text", "text": "A red triangle, then."}]}
+  ]
+}

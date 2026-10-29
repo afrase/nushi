@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
+    {"prompt": "make a note", "session": "s1"},
+    {"close": "s1"},
+    {"load": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
+    {"prompt": "is it there?", "session": "s1"}
+  ]
+}

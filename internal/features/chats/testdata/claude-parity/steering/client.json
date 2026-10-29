@@ -1,0 +1,11 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Bash"]}}}}}},
+    {"prompt": "count slowly", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call_update", "status": "completed"}}}},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "agent_message_chunk"}}}},
+    {"steer": "also say bye", "session": "s1"},
+    {"await": "p1"}
+  ]
+}
