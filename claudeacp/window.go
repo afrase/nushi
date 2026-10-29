@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -44,14 +45,14 @@ type windows struct {
 	m  map[string]int
 }
 
-func (w *windows) get(provider, model string) (int, bool) {
+func (w *windows) find(provider, model string) (int, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	n, ok := w.m[provider+"\x00"+model]
 	return n, ok
 }
 
-func (w *windows) set(provider, model string, size int) {
+func (w *windows) keep(provider, model string, size int) {
 	if size <= 0 || model == "" {
 		return
 	}
@@ -101,10 +102,8 @@ func guessWindow(m *claudeagent.ModelInfo, value string) int {
 	if m != nil {
 		names = append(names, m.ResolvedModel, m.DisplayName, m.Description)
 	}
-	for _, n := range names {
-		if oneM.MatchString(n) {
-			return 1_000_000
-		}
+	if slices.ContainsFunc(names, oneM.MatchString) {
+		return 1_000_000
 	}
 	return 0
 }
@@ -120,7 +119,7 @@ func modelID(m *claudeagent.ModelInfo, value string) string {
 // seedWindow sets the window for the session's model as it starts or
 // changes: the cache's, else a guess from the model's names (fallback
 // when they say nothing), and asks claude when it isn't sure.
-func (s *session) seedWindow(fallback int) {
+func (s *session) seedWindow(ctx context.Context, fallback int) {
 	s.cfg.mu.Lock()
 	m, value := s.cfg.modelInfo(), s.cfg.model
 	s.cfg.mu.Unlock()
@@ -128,7 +127,7 @@ func (s *session) seedWindow(fallback int) {
 	w.mu.Lock()
 	w.gen++
 	gen := w.gen
-	size, sure := s.a.windows.get(w.provider, modelID(m, value))
+	size, sure := s.a.windows.find(w.provider, modelID(m, value))
 	if !sure {
 		size = guessWindow(m, value)
 		if size == 0 {
@@ -138,7 +137,7 @@ func (s *session) seedWindow(fallback int) {
 	w.size, w.sure = size, sure
 	w.mu.Unlock()
 	if !sure {
-		s.askWindow(gen)
+		s.askWindow(ctx, gen)
 	}
 }
 
@@ -149,12 +148,10 @@ func (s *session) seedWindow(fallback int) {
 // answers beside its stream, so a usage_update may have gone out with
 // the guess meanwhile: it is sent again with the answer's size, so the
 // meter doesn't wait for the next one.
-func (s *session) askWindow(gen int) {
-	ctx := s.a.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	wait, err := s.cs.Begin(ctx, "get_context_usage", map[string]any{"detail": "summary"})
+func (s *session) askWindow(ctx context.Context, gen int) {
+	// The answer outlives the request that asked: the session's end ends
+	// the wait.
+	wait, err := s.cs.Begin(context.WithoutCancel(ctx), "get_context_usage", map[string]any{"detail": "summary"})
 	if err != nil {
 		s.log.Debug("asking claude for the context window", "err", err)
 		return
@@ -200,9 +197,9 @@ func (s *session) resultWindow(r *claudeagent.Result, model string) {
 	s.win.size, s.win.sure = size, true
 	provider := s.win.provider
 	s.win.mu.Unlock()
-	s.a.windows.set(provider, id, size)
+	s.a.windows.keep(provider, id, size)
 	if id != model {
-		s.a.windows.set(provider, model, size)
+		s.a.windows.keep(provider, model, size)
 	}
 }
 
