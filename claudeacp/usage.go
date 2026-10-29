@@ -92,4 +92,7 @@ func (s *session) result(r *claudeagent.Result) {
 	s.mu.Lock()
 	s.resultLocked(r, end)
 	s.mu.Unlock()
+	if user {
+		s.retitle()
+	}
 }

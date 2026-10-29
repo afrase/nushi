@@ -53,6 +53,8 @@ func (s *session) handle(m claudeagent.Message) {
 		s.result(m)
 	case *claudeagent.SessionState:
 		s.sessionState(m.State)
+	case *claudeagent.ConversationReset:
+		s.titleReset()
 	case *claudeagent.Status:
 		switch {
 		case m.Status == "requesting": // new work: what stopped can't ask the API again
@@ -224,6 +226,7 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 		msg.done++
 		switch b.Type {
 		case "text":
+			s.heard(key, b.Text)
 			if rest, ok := strings.CutPrefix(b.Text, sent); ok && rest != "" {
 				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Text: &acp.TextContent{Text: rest}})
 			}

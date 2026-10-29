@@ -64,10 +64,10 @@ func TestToolLifecycle(t *testing.T) {
 	steps = append(steps,
 		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"Found.\n<usage>tokens: 5</usage>"}]}]}}`),
 		result(names("id2")), claudetest.Send(idle))
-	f := claudetest.New(append([]claudetest.Step{
+	f := withTitle(claudetest.New(append([]claudetest.Step{
 		claudetest.Expect(`{"type":"control_request","request":{"subtype":"initialize","hooks":{"PostToolUse":[{"hookCallbackIds":["hook_0"]}]}}}`),
 		claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`),
-	}, steps...)...)
+	}, steps...)...), `null`)
 	p := start(t, nil, f)
 	if got := stopReason(p.prompt(t, p.open(t), "go")); got != "end_turn" {
 		t.Fatal(got)
@@ -152,8 +152,8 @@ func TestUnfinishedTools(t *testing.T) {
 			steps := append([]claudetest.Step{user("id2"), echo("id2"),
 				event(`{"type":"message_start","message":{"id":"msg_1"}}`), signal(at)}, tc.steps...)
 			steps = append(steps, claudetest.Send(idle))
-			f := claudetest.New(append([]claudetest.Step{claudetest.Expect(initRequest),
-				claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)}, steps...)...)
+			f := withTitle(claudetest.New(append([]claudetest.Step{claudetest.Expect(initRequest),
+				claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)}, steps...)...), `null`)
 			p := start(t, nil, f)
 			sid := p.open(t)
 			w := p.prompt(t, sid, "go")

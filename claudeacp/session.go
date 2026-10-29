@@ -39,6 +39,9 @@ type session struct {
 
 	tools tools // the tool calls shown
 
+	cwd   string
+	title titles
+
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
 }
@@ -59,7 +62,7 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 // start runs claude for session id and opens the session once claude has
 // answered initialize.
 func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*session, error) {
-	s := &session{a: a, id: id, log: a.log.With("session", id), read: make(chan struct{}), open: map[int]context.CancelFunc{}}
+	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), open: map[int]context.CancelFunc{}}
 	s.st.init()
 	s.tools.init(o.Cwd)
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
@@ -178,6 +181,7 @@ func (s *session) close() {
 	s.mu.Unlock()
 	_ = s.cs.Close()
 	<-s.read
+	s.title.looked.Wait()
 }
 
 // newUUID is a random (version 4) UUID.
