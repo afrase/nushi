@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"errors"
 	"slices"
 	"time"
@@ -58,7 +59,11 @@ func (c *chat) relayedLocked(it *model.Item) bool {
 		it.RelayTo, it.Text = agent, text
 		if i := slices.IndexFunc(c.items, func(call model.Item) bool { return taskOf(call) == id }); i >= 0 {
 			it.RelayCall = c.items[i].ID
+			if it.RelayTo == "" { // a stop names the task by its id only
+				it.RelayTo = cmp.Or(c.items[i].Agent, c.items[i].Title)
+			}
 		}
+		it.RelayTo = cmp.Or(it.RelayTo, "task "+id)
 	}
 	return ok
 }

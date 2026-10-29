@@ -84,6 +84,7 @@ type Service struct {
 
 	terminals Terminals   // set once at startup, if there are any
 	viewers   Viewers     // Options', for unseen turns' ends (seen.go)
+	procs     Processes   // Options', for stopping background commands
 	prefs     SleepPrefs  // Options', if chats sleep
 	copies    Copies      // Options', if chats keep copies of their transcripts
 	copiesOn  func() bool // whether they write them now
@@ -174,6 +175,7 @@ type chat struct {
 	parent       *chat                 // a side chat's chat
 	started      time.Time             // when the running turn started
 	background   int                   // subagents and background commands running, as last said
+	killed       []string              // background commands Nushi stopped since the last prompt, by the agent's id: told with the next (stopNote)
 	done         chan struct{}         // closed when the running turn ends
 	sent         chan struct{}         // closed once the running turn's prompt is written
 	seq          int64                 // the last event's number

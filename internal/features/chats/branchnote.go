@@ -49,9 +49,20 @@ func moveNote(folder, branch string) string {
 	return "[Nushi] This chat moved to `" + folder + "`, on branch " + branch + ". Work there from now on."
 }
 
+// stopNote tells the agent the user stopped its background command id
+// (stopShell): the agent heard only that it failed, with an exit code
+// (docs/facts/claude.md). Only an id of noteID's shape is told.
+func stopNote(id string) string {
+	return "[Nushi] The user stopped your background command " + id + "; its exit code was that stop, not a failure."
+}
+
+// noteID is a task id a note may name: the replay finds the note again.
+var noteID = regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
+
 // noteTexts match the notes at the start of a user's message as the agent
 // replays it (its own text block, or run into the user's text).
 var noteTexts = []*regexp.Regexp{
+	regexp.MustCompile(`^\[Nushi\] The user stopped your background command [0-9A-Za-z_-]+; its exit code was that stop, not a failure\.\s*`),
 	regexp.MustCompile(`^\[Nushi\] This worktree's branch was renamed from \S+ to \S+\. Use the new name\.\s*`),
 	regexp.MustCompile(`^\[Nushi\] This folder's branch changed from \S+ to \S+\. Work on \S+ from now on\.\s*`),
 	regexp.MustCompile("^\\[Nushi\\] This chat moved to `[^`\n]*`(?:, on branch \\S+)?\\. Work there from now on\\.\\s*"),
@@ -91,6 +102,7 @@ type notes struct {
 	log      *slog.Logger
 	renamed  []string // the renames' lines not told yet, when the branch was renamed
 	switched []string // the moves' and switches' lines not told yet, when there's one
+	stopped  []string // the background commands Nushi stopped since the last prompt
 }
 
 // notesLocked takes what the notes for the prompt starting now need; nil
@@ -100,7 +112,8 @@ func (c *chat) notesLocked() *notes {
 		return nil
 	}
 	sess := c.session
-	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked()}
+	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), stopped: c.killed}
+	c.killed = nil
 	if wt := sess.Worktree; wt != nil && wt.Told != "" && wt.Told != wt.Branch {
 		n.renamed = c.untoldLocked("branch_renamed")
 	}
@@ -117,6 +130,9 @@ func (n *notes) blocks() ([]acp.ContentBlock, *told) {
 		return nil, nil
 	}
 	var blocks []acp.ContentBlock
+	for _, id := range n.stopped {
+		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: stopNote(id)}})
+	}
 	place, p := n.place()
 	if place != nil {
 		blocks = append(blocks, *place)

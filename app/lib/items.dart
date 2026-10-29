@@ -15,6 +15,7 @@ import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/settings_nav.dart';
+import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/tool_calls.dart';
@@ -237,30 +238,50 @@ class _Relayed extends StatelessWidget {
       'failed' => ('$agent didn’t pass it on', t.crashed),
       _ => ('', t.userBandMuted),
     };
-    final shell = chat.items.any(
-      (it) => it.id == item.relayCall && it.hasShell(),
-    );
-    final target = shell ? '\$ ${item.relayTo}' : item.relayTo;
-    final label = Text.rich(
-      TextSpan(
-        children: [
-          TextSpan(
-            text: stop ? 'Stop $target' : '→ $target',
-            style: theme.ui(t.userBandMuted, size: 12, weight: FontWeight.w600),
-          ),
-          TextSpan(
-            text: ', through $agent${state.isEmpty ? '' : ' · $state'}',
-            style: theme.ui(color, size: 12),
-          ),
-        ],
-      ),
-    );
+    // A stop is one line, as it was queued (stopLabel); the command it
+    // stops can be many.
+    final label = stop
+        ? Text.rich(
+            TextSpan(
+              children: [
+                stopLabel(
+                  theme,
+                  t.userBandMuted,
+                  chat,
+                  relayTo: item.relayTo,
+                  call: item.relayCall,
+                ),
+                if (state.isNotEmpty)
+                  TextSpan(text: ' · $state', style: theme.ui(color, size: 12)),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          )
+        : Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '→ ${item.relayTo}',
+                  style: theme.ui(
+                    t.userBandMuted,
+                    size: 12,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: ', through $agent${state.isEmpty ? '' : ' · $state'}',
+                  style: theme.ui(color, size: 12),
+                ),
+              ],
+            ),
+          );
     if (item.relayCall.isEmpty) return label;
     return Align(
       alignment: Alignment.centerLeft,
       child: Tap(
         onTap: () => chat.pane.value = item.relayCall,
-        tooltip: 'Open ${item.relayTo}’s steps',
+        tooltip: 'Open ${stopCommand(item.relayTo)}’s steps',
         child: label,
       ),
     );

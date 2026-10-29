@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -55,12 +56,24 @@ class QueuePills extends StatelessWidget {
                         children: [
                           Icon(Icons.schedule, size: 13, color: t.textMuted),
                           Flexible(
-                            child: Text(
-                              _label(m),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.ui(t.textSecondary, size: 12),
-                            ),
+                            child: m.relayStop
+                                ? Text.rich(
+                                    stopLabel(
+                                      theme,
+                                      t.textSecondary,
+                                      chat,
+                                      relayTo: m.relayTo,
+                                      call: m.toSubagent,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : Text(
+                                    _label(m),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.ui(t.textSecondary, size: 12),
+                                  ),
                           ),
                         ],
                       ),
@@ -91,7 +104,6 @@ class QueuePills extends StatelessWidget {
 
 /// A queued message in one line: its text, or what it holds.
 String _label(QueuedMessage m) {
-  if (m.relayStop) return 'Stop ${m.relayTo}';
   final (replies, text) = splitReplies(m.text);
   final line = (text.isEmpty ? replies.firstOrNull?.text ?? '' : text)
       .replaceAll(RegExp(r'\s+'), ' ')

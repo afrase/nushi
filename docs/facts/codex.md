@@ -41,3 +41,6 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 
 **MCP on/off (step 301; looked at in the binary, not run)**
 - `enabled = false` under `[mcp_servers.<name>]` in `config.toml` turns a server off (as Codex documents it; not tried). Nushi's MCP view doesn't list Codex's servers at all, so it isn't offered.
+
+**Background commands (2026-10-29; read in codex 0.163.0's strings and codex-acp 2.2.2's source, not run)**
+- `exec_command` leaves a command running past its wait ("Process running with session ID …"), a turn's interrupt too; Codex stops one only by `write_stdin` (Ctrl-C, with a terminal) or `kill`. Through codex-acp the call stays `in_progress` past the turn and ends with `terminal_exit`; its `_session/async_task/stop` (`thread/backgroundTerminals/terminate`) is only for clients declaring AIR's `asyncTasks`. Nushi shows no background row or Stop for Codex (the call reads as running; Cancel doesn't end it).
