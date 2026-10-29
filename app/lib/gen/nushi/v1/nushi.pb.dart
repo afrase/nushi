@@ -25122,6 +25122,138 @@ class ResolveGitHubThreadResponse extends $pb.GeneratedMessage {
   static ResolveGitHubThreadResponse? _defaultInstance;
 }
 
+class RerunGitHubChecksRequest extends $pb.GeneratedMessage {
+  factory RerunGitHubChecksRequest({
+    GitHubRef? ref,
+    $core.Iterable<$fixnum.Int64>? jobs,
+  }) {
+    final result = RerunGitHubChecksRequest._();
+    if (ref != null) result.ref = ref;
+    if (jobs != null) result.jobs.addAll(jobs);
+    return result;
+  }
+
+  RerunGitHubChecksRequest._();
+
+  factory RerunGitHubChecksRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RerunGitHubChecksRequest()..mergeFromBuffer(data, registry);
+  factory RerunGitHubChecksRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RerunGitHubChecksRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RerunGitHubChecksRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RerunGitHubChecksRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..p<$fixnum.Int64>(2, _omitFieldNames ? '' : 'jobs', $pb.PbFieldType.K6)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RerunGitHubChecksRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RerunGitHubChecksRequest copyWith(
+          void Function(RerunGitHubChecksRequest) updates) =>
+      super.copyWith((message) => updates(message as RerunGitHubChecksRequest))
+          as RerunGitHubChecksRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RerunGitHubChecksRequest() / RerunGitHubChecksRequest.new instead')
+  static RerunGitHubChecksRequest create() => RerunGitHubChecksRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RerunGitHubChecksRequest._();
+  @$core.override
+  RerunGitHubChecksRequest createEmptyInstance() =>
+      RerunGitHubChecksRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RerunGitHubChecksRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RerunGitHubChecksRequest>(
+          RerunGitHubChecksRequest.$_createMessage);
+  static RerunGitHubChecksRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// The failed checks' ids (Actions jobs').
+  @$pb.TagNumber(2)
+  $pb.PbList<$fixnum.Int64> get jobs => $_getList(1);
+}
+
+class RerunGitHubChecksResponse extends $pb.GeneratedMessage {
+  factory RerunGitHubChecksResponse({
+    $core.int? runs,
+  }) {
+    final result = RerunGitHubChecksResponse._();
+    if (runs != null) result.runs = runs;
+    return result;
+  }
+
+  RerunGitHubChecksResponse._();
+
+  factory RerunGitHubChecksResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RerunGitHubChecksResponse()..mergeFromBuffer(data, registry);
+  factory RerunGitHubChecksResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RerunGitHubChecksResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RerunGitHubChecksResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RerunGitHubChecksResponse.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'runs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RerunGitHubChecksResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RerunGitHubChecksResponse copyWith(
+          void Function(RerunGitHubChecksResponse) updates) =>
+      super.copyWith((message) => updates(message as RerunGitHubChecksResponse))
+          as RerunGitHubChecksResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RerunGitHubChecksResponse() / RerunGitHubChecksResponse.new instead')
+  static RerunGitHubChecksResponse create() => RerunGitHubChecksResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RerunGitHubChecksResponse._();
+  @$core.override
+  RerunGitHubChecksResponse createEmptyInstance() =>
+      RerunGitHubChecksResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RerunGitHubChecksResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RerunGitHubChecksResponse>(
+          RerunGitHubChecksResponse.$_createMessage);
+  static RerunGitHubChecksResponse? _defaultInstance;
+
+  /// The workflow runs asked to re-run.
+  @$pb.TagNumber(1)
+  $core.int get runs => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set runs($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRuns() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRuns() => $_clearField(1);
+}
+
 class AddGitHubCommentRequest extends $pb.GeneratedMessage {
   factory AddGitHubCommentRequest({
     $core.String? host,
@@ -26496,6 +26628,13 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SubmitGitHubReviewRequest request) =>
       _client.invoke<SubmitGitHubReviewResponse>(ctx, 'NushiService',
           'SubmitGitHubReview', request, SubmitGitHubReviewResponse());
+
+  /// Re-runs the failed jobs of the workflow runs that a pull request's
+  /// failed Actions jobs belong to. API 88.
+  $async.Future<RerunGitHubChecksResponse> rerunGitHubChecks(
+          $pb.ClientContext? ctx, RerunGitHubChecksRequest request) =>
+      _client.invoke<RerunGitHubChecksResponse>(ctx, 'NushiService',
+          'RerunGitHubChecks', request, RerunGitHubChecksResponse());
 
   /// A chat's pull request: the one it was started from, else the one whose
   /// head is its folder's branch, looked for on GitHub (and linked when

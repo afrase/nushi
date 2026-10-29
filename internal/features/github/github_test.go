@@ -134,6 +134,11 @@ func (f *fakeClient) Comment(context.Context, string, string) (model.GitHubComme
 	return model.GitHubComment{ID: "C2"}, nil
 }
 
+func (f *fakeClient) RerunFailed(_ context.Context, _ string, jobs []int64) ([]int64, error) {
+	f.written = append(f.written, "rerun")
+	return jobs[:1], nil
+}
+
 func (f *fakeClient) SubmitReview(context.Context, githubapi.Review) error {
 	f.written = append(f.written, "review")
 	return nil
@@ -403,6 +408,16 @@ func TestStates(t *testing.T) {
 	}
 	if _, err := w.s.Comment(ctx, "github.com", "PR_1", " "); err == nil {
 		t.Fatal("an empty comment")
+	}
+}
+
+func TestRerunFailed(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
+	n, err := w.s.RerunFailed(ctx, model.GitHubRef{Host: "github.com", Repo: "afrase/nushi-gh-test", Number: 1}, []int64{8, 9})
+	if c := w.clients["gho_gh"]; err != nil || n != 1 || !slices.Contains(c.written, "rerun") {
+		t.Fatalf("%d %v %v", n, err, c.written)
 	}
 }
 

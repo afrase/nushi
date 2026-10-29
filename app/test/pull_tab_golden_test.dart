@@ -32,4 +32,29 @@ void main() {
       }, variant: _mac);
     }
   }
+
+  // Each section, scrolled to, at 1440.
+  for (final section in ['Activity 4', 'Checks · 3 failing', 'Files 12']) {
+    for (final (name, brightness) in [
+      ('dark', Brightness.dark),
+      ('light', Brightness.light),
+    ]) {
+      final file = section.split(' ').first.toLowerCase();
+      testWidgets('golden: $file at 1440, $name', (tester) async {
+        final (d, _) = await openPullTab(
+          tester,
+          fixturePull(),
+          size: const Size(1440, 1000),
+          brightness: brightness,
+        );
+        await tester.tap(find.text(section));
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byType(NushiApp),
+          matchesGoldenFile('goldens/pull_tab_${file}_$name.png'),
+        );
+        d.dispose();
+      }, variant: _mac);
+    }
+  }
 }

@@ -54,12 +54,12 @@ void main() {
   testWidgets("a bot's comment folds to one line; a long review shows its "
       'start, and whole on Show', (tester) async {
     final (d, _) = await openPullTab(tester, fixturePull());
-    await tester.tap(find.text('Conversation 3')); // scrolled to it
+    await tester.tap(find.text('Activity 4')); // scrolled to it
     await tester.pumpAndSettle();
     // Danger's table: its first row, on one line, until Show.
     expect(find.textContaining('Review App Links · Notes'), findsOneWidget);
     expect(find.byType(Table), findsNothing);
-    await tester.tap(find.text('Show'));
+    await tester.tap(find.text('Show').first); // Danger's
     await tester.pumpAndSettle();
     expect(find.byType(Table), findsOneWidget);
     expect(find.text('Hide'), findsOneWidget);
@@ -79,7 +79,7 @@ void main() {
 
   testWidgets('the text reads in 860 points, centred, at 1440', (tester) async {
     final (d, _) = await openPullTab(tester, fixturePull());
-    await tester.tap(find.text('Conversation 3'));
+    await tester.tap(find.text('Activity 4'));
     await tester.pumpAndSettle();
     final pane = tester.getRect(find.byType(GitHubPullPane));
     final text = tester.getRect(
@@ -90,7 +90,9 @@ void main() {
       ),
     );
     final pad = readablePad(pane.width);
-    expect(text.left, moreOrLessEquals(pane.left + pad, epsilon: 1));
+    // In the column: beside the avatar, in its card.
+    expect(text.left, greaterThan(pane.left + pad));
+    expect(text.left, lessThan(pane.left + pad + 60));
     expect(text.right, lessThanOrEqualTo(pane.right - pad + 1));
     d.dispose();
   }, variant: _mac);
@@ -99,7 +101,7 @@ void main() {
     final p = fixturePull();
     p.conversation.first.bot = false; // shown whole
     final (d, _) = await openPullTab(tester, p, size: const Size(1100, 900));
-    await tester.tap(find.text('Conversation 3'));
+    await tester.tap(find.text('Activity 4'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     final pane = tester.getRect(find.byType(GitHubPullPane));

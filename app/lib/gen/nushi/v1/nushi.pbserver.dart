@@ -251,6 +251,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.AddGitHubCommentRequest request);
   $async.Future<$0.SubmitGitHubReviewResponse> submitGitHubReview(
       $pb.ServerContext ctx, $0.SubmitGitHubReviewRequest request);
+  $async.Future<$0.RerunGitHubChecksResponse> rerunGitHubChecks(
+      $pb.ServerContext ctx, $0.RerunGitHubChecksRequest request);
   $async.Future<$0.FindChatPullResponse> findChatPull(
       $pb.ServerContext ctx, $0.FindChatPullRequest request);
   $async.Future<$0.LinkChatPullResponse> linkChatPull(
@@ -490,6 +492,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.AddGitHubCommentRequest();
       case 'SubmitGitHubReview':
         return $0.SubmitGitHubReviewRequest();
+      case 'RerunGitHubChecks':
+        return $0.RerunGitHubChecksRequest();
       case 'FindChatPull':
         return $0.FindChatPullRequest();
       case 'LinkChatPull':
@@ -739,6 +743,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return addGitHubComment(ctx, request as $0.AddGitHubCommentRequest);
       case 'SubmitGitHubReview':
         return submitGitHubReview(ctx, request as $0.SubmitGitHubReviewRequest);
+      case 'RerunGitHubChecks':
+        return rerunGitHubChecks(ctx, request as $0.RerunGitHubChecksRequest);
       case 'FindChatPull':
         return findChatPull(ctx, request as $0.FindChatPullRequest);
       case 'LinkChatPull':

@@ -11,9 +11,11 @@ import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/pull_activity.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_todo.dart';
 import 'package:nushi/pull_todo_items.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -58,10 +60,18 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   final GlobalKey _tabs = GlobalKey();
   final GlobalKey _todo = GlobalKey();
 
+  /// Who the user is on its host ('' until known).
+  String _me = '';
+
   @override
   void initState() {
     super.initState();
     unawaited(_load());
+    unawaited(
+      githubLogin(widget.daemon, widget.ref.host).then((me) {
+        if (mounted) setState(() => _me = me);
+      }),
+    );
     _poll = Timer.periodic(pullPoll, (_) => unawaited(_load(quiet: true)));
   }
 
@@ -175,12 +185,12 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                     segments: [
                       (
                         PullSection.activity,
-                        'Conversation ${p.conversation.length}',
+                        'Activity ${p.conversation.length + 1}',
                       ),
                       (
                         PullSection.checks,
                         failed > 0
-                            ? 'Checks · $failed failed'
+                            ? 'Checks · $failed failing'
                             : 'Checks ${p.checks.length}',
                       ),
                       (PullSection.files, 'Files ${p.changedFiles}'),
@@ -195,7 +205,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
             ),
             switch (_tab) {
               PullSection.checks => column(
-                GitHubChecks(daemon: widget.daemon, pull: p),
+                GitHubChecks(daemon: widget.daemon, pull: p, onChanged: _load),
                 bottom: 20,
               ),
               PullSection.files => SliverToBoxAdapter(
@@ -212,13 +222,16 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 ),
               ),
               _ => column(
-                _Conversation(
+                PullActivity(
                   daemon: widget.daemon,
                   pull: p,
                   now: now,
+                  me: _me,
                   onPosted: _load,
+                  onTodo: () => _jump(PullSection.todo),
                 ),
-                bottom: 20,
+                top: 6,
+                bottom: 24,
               ),
             },
           ],
@@ -316,62 +329,6 @@ class _Chats extends StatelessWidget {
   };
 }
 
-/// The description, then the comments and reviews, oldest first, and a
-/// box for a comment (Markdown; ⌘⏎ posts it).
-class _Conversation extends StatelessWidget {
-  const new({
-    required this.daemon,
-    required this.pull,
-    required this.now,
-    required this.onPosted,
-  });
-
-  final Daemon daemon;
-  final GitHubPull pull;
-  final DateTime now;
-  final Future<void> Function() onPosted;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final p = pull;
-    return SelectionArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          CommentEntry(
-            GitHubComment(
-              author: p.item.author,
-              outside: p.outside,
-              body: p.body.isEmpty ? '' : p.body,
-              createdMs: p.item.updatedMs,
-            ),
-            now: now,
-          ),
-          if (p.body.isEmpty)
-            Text('No description.', style: theme.ui(t.textMuted, size: 12.5)),
-          for (final c in p.conversation) CommentEntry(c, now: now),
-          const SizedBox(height: 16),
-          CommentBox(
-            hint: 'Comment on the pull request (Markdown; ⌘⏎ posts it)',
-            onPost: (text) async {
-              await daemon.client.addGitHubComment(
-                AddGitHubCommentRequest(
-                  host: p.item.ref.host,
-                  subject: p.item.id,
-                  body: text,
-                ),
-              );
-              await onPosted();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// A box for a comment or a reply: Markdown, ⌘⏎ or the button posts it;
 /// what GitHub said wrong shows under it.
 class CommentBox extends StatefulWidget {
@@ -382,10 +339,19 @@ class CommentBox extends StatefulWidget {
     this.label = 'Comment',
     this.autofocus = false,
     this.onCancel,
+    this.note = '',
+    this.primary = false,
   });
 
   final String hint;
   final String label;
+
+  /// Small print at the buttons' left ("Markdown · posts to GitHub as
+  /// octo").
+  final String note;
+
+  /// Its button is the accent's (the conversation's box).
+  final bool primary;
   final bool autofocus;
   final Future<void> Function(String text) onPost;
   final VoidCallback? onCancel;
@@ -452,12 +418,22 @@ class _CommentBoxState extends State<CommentBox> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (widget.note.isNotEmpty)
+                Expanded(
+                  child: Text(
+                    widget.note,
+                    style: theme.ui(t.textMuted, size: 12),
+                  ),
+                ),
               if (widget.onCancel case final cancel?)
                 Button(label: 'Cancel', onPressed: cancel),
               const SizedBox(width: 6),
               Button(
                 label: _busy ? 'Posting…' : widget.label,
                 hint: '⌘⏎',
+                kind: widget.primary
+                    ? ButtonKind.primary
+                    : ButtonKind.secondary,
                 onPressed: _busy ? null : _post,
               ),
             ],

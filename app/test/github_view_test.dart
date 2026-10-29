@@ -360,7 +360,7 @@ void main() {
     expect(find.text('  outside'), findsOneWidget);
     await tester.tap(find.text('1 failing')); // the light: to the checks
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Checks · 1 failed'));
+    await tester.tap(find.text('Checks · 1 failing'));
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('on-demand', findRichText: true).last);
     await tester.pumpAndSettle();
@@ -661,7 +661,7 @@ void main() {
         find.byType(GitHubView),
         matchesGoldenFile('goldens/github_pull_$name.png'),
       );
-      await tester.tap(find.text('Checks · 1 failed'));
+      await tester.tap(find.text('Checks · 1 failing'));
       await tester.pumpAndSettle();
       await tester.tap(
         find.textContaining('on-demand', findRichText: true).last,

@@ -39,7 +39,11 @@ final String dataDir =
         : '$support/Nushi');
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 87;
+const apiVersion = 88;
+
+/// The API from which the daemon re-runs a pull request's failed jobs
+/// (RerunGitHubChecks).
+const rerunApi = 88;
 
 /// The API from which the daemon checks for a newer release of Nushi
 /// (Ping's update, CheckForUpdates, Settings.check_updates).

@@ -1061,6 +1061,15 @@ abstract final class NushiService {
     nushiv1nushi.SubmitGitHubReviewResponse.new,
   );
 
+  /// Re-runs the failed jobs of the workflow runs that a pull request's
+  /// failed Actions jobs belong to. API 88.
+  static const rerunGitHubChecks = connect.Spec(
+    '/$name/RerunGitHubChecks',
+    connect.StreamType.unary,
+    nushiv1nushi.RerunGitHubChecksRequest.new,
+    nushiv1nushi.RerunGitHubChecksResponse.new,
+  );
+
   /// A chat's pull request: the one it was started from, else the one whose
   /// head is its folder's branch, looked for on GitHub (and linked when
   /// found), with the folder's repository and branch. API 81.

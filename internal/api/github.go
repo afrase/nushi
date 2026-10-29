@@ -192,6 +192,14 @@ func (s *server) ResolveGitHubThread(ctx context.Context, req *connect.Request[n
 	return connect.NewResponse(&nushiv1.ResolveGitHubThreadResponse{}), nil
 }
 
+func (s *server) RerunGitHubChecks(ctx context.Context, req *connect.Request[nushiv1.RerunGitHubChecksRequest]) (*connect.Response[nushiv1.RerunGitHubChecksResponse], error) {
+	n, err := s.github.RerunFailed(ctx, ref(req.Msg.Ref), req.Msg.Jobs)
+	if err != nil {
+		return nil, githubErr(err)
+	}
+	return connect.NewResponse(&nushiv1.RerunGitHubChecksResponse{Runs: int32(n)}), nil
+}
+
 func (s *server) AddGitHubComment(ctx context.Context, req *connect.Request[nushiv1.AddGitHubCommentRequest]) (*connect.Response[nushiv1.AddGitHubCommentResponse], error) {
 	c, err := s.github.Comment(ctx, req.Msg.Host, req.Msg.Subject, req.Msg.Body)
 	if err != nil {

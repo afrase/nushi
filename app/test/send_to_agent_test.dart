@@ -110,6 +110,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Activity 3')); // scrolled to it
+    await tester.pumpAndSettle();
     // The description and the two comments.
     expect(_send, findsNWidgets(3));
     await tester.tap(_send.at(2)); // drive-by's
@@ -136,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(box.value, hasLength(1));
 
-    await tester.tap(find.text('Checks · 1 failed'));
+    await tester.tap(find.text('Checks · 1 failing'));
     await tester.pumpAndSettle();
     expect(_send, findsOneWidget); // the failed one only
     await tester.tap(_send);

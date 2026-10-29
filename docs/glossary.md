@@ -97,7 +97,9 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 |---|---|---|---|
 | **Review comment** | A comment you write on a line in Changes, for the agent: Add to review, then Send review comments to agent. | `ReviewComment` | |
 | **Send to agent** | Put a GitHub comment, thread or failed check into the box as a reply card, to send when you're ready. Never sends by itself. | `SendToAgent` | 0059 |
-| **Fix checks**, **Address comments** | Put the failed checks, or the review threads, into the box as reply cards. | `GetGitHubPrompt` | 0059 |
+| **Fix checks**, **Address** | Put the failed checks, or the review threads, into the box as reply cards: the Checks section's and the PR widget's buttons, in the send look. | `checkReplies`, `threadReplies` | 0059 |
+| **Re-run failed** | Ask GitHub to re-run the failed jobs of a pull request's failed checks' workflow runs. | `RerunGitHubChecks` | |
+| **Activity** | The Pull request tab's conversation, under To do: the description, comments and reviews, a bot's comment one line, a long review its start. | `PullActivity` | |
 | **GitHub view** | ⌘G: GitHub in the chat's place: the inbox, and an item's details. | `github_view.dart` | 0046 |
 | **Inbox** | The GitHub view's three cards: Review requested, My pull requests, Assigned issues. | `ListGitHubInbox`, `github_inbox.dart` | 0046 |
 | **Item** (GitHub) | A pull request or an issue in the inbox. | `GitHubItem`, `GitHubRef` | |

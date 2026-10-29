@@ -2209,6 +2209,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Re-runs the failed jobs of the workflow runs that a pull request's
+  /// failed Actions jobs belong to. API 88.
+  Future<nushiv1nushi.RerunGitHubChecksResponse> rerunGitHubChecks(
+    nushiv1nushi.RerunGitHubChecksRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.rerunGitHubChecks,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// A chat's pull request: the one it was started from, else the one whose
   /// head is its folder's branch, looked for on GitHub (and linked when
   /// found), with the folder's repository and branch. API 81.

@@ -242,6 +242,18 @@ func (s *Service) Resolve(ctx context.Context, name, thread string, resolve bool
 	return err
 }
 
+// RerunFailed re-runs the failed jobs of the workflow runs jobs (failed
+// checks' ids) belong to, and says how many runs.
+func (s *Service) RerunFailed(ctx context.Context, ref model.GitHubRef, jobs []int64) (int, error) {
+	c, err := s.writer(ref.Host)
+	if err != nil {
+		return 0, err
+	}
+	runs, err := c.RerunFailed(ctx, ref.Repo, jobs)
+	s.wrote(ref.Host, "rerun failed jobs", err)
+	return len(runs), err
+}
+
 // Comment adds the user's comment to a pull request's or an issue's
 // conversation (subject is its node id).
 func (s *Service) Comment(ctx context.Context, name, subject, body string) (model.GitHubComment, error) {

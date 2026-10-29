@@ -33,6 +33,7 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Issue(ctx context.Context, repo string, number int) (model.GitHubIssue, error)
 	PullsByHead(ctx context.Context, repo, head string) ([]githubapi.HeadPull, time.Duration, error)
 	JobLog(ctx context.Context, repo string, job int64) (string, error)
+	RerunFailed(ctx context.Context, repo string, jobs []int64) ([]int64, error)
 	Compare(ctx context.Context, repo, base, head string) (string, []githubapi.File, error)
 	Blobs(ctx context.Context, repo string, at []githubapi.BlobAt) (map[githubapi.BlobAt]githubapi.Blob, error)
 	Reply(ctx context.Context, thread, body string) (model.GitHubComment, error)

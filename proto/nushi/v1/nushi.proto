@@ -365,6 +365,9 @@ service NushiService {
   rpc ResolveGitHubThread(ResolveGitHubThreadRequest) returns (ResolveGitHubThreadResponse);
   rpc AddGitHubComment(AddGitHubCommentRequest) returns (AddGitHubCommentResponse);
   rpc SubmitGitHubReview(SubmitGitHubReviewRequest) returns (SubmitGitHubReviewResponse);
+  // Re-runs the failed jobs of the workflow runs that a pull request's
+  // failed Actions jobs belong to. API 88.
+  rpc RerunGitHubChecks(RerunGitHubChecksRequest) returns (RerunGitHubChecksResponse);
   // A chat's pull request: the one it was started from, else the one whose
   // head is its folder's branch, looked for on GitHub (and linked when
   // found), with the folder's repository and branch. API 81.
@@ -2814,6 +2817,17 @@ message ResolveGitHubThreadRequest {
 }
 
 message ResolveGitHubThreadResponse {}
+
+message RerunGitHubChecksRequest {
+  GitHubRef ref = 1;
+  // The failed checks' ids (Actions jobs').
+  repeated int64 jobs = 2;
+}
+
+message RerunGitHubChecksResponse {
+  // The workflow runs asked to re-run.
+  int32 runs = 1;
+}
 
 message AddGitHubCommentRequest {
   string host = 1;
