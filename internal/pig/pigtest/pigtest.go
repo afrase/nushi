@@ -19,6 +19,10 @@
 //   - the command compact: a compaction entry ("Summary: <instructions>"),
 //     unless the session has nothing to compact; "slow" waits for abort;
 //   - anything else: "You said: <text>", as two deltas.
+//
+// One that waits ("/hang", "wait", a slow compact) says so on the Store's
+// Waiting once it does, so a test stops or steers it when it runs, not
+// after a sleep that may lose the race.
 package pigtest
 
 import (
@@ -37,6 +41,10 @@ import (
 // Store is PiG's sessions folder.
 type Store struct {
 	Sessions string
+	// Waiting, when set, gets the text of each prompt or command that
+	// waits for an abort or a steer, once it waits. The fake blocks on
+	// it: the test reads each, or gives the channel room.
+	Waiting chan string
 
 	mu sync.Mutex
 	n  int
@@ -92,6 +100,13 @@ func (st *Store) Serve(r io.Reader, w io.Writer, cwd string, args []string) {
 			continue
 		}
 		go p.command(cmd)
+	}
+}
+
+// waiting says a turn running text now waits.
+func (st *Store) waiting(text string) {
+	if st.Waiting != nil {
+		st.Waiting <- text
 	}
 }
 
@@ -174,6 +189,7 @@ func (p *Pig) command(cmd map[string]any) {
 			return
 		}
 		if text == "/hang" { // a command that never ends
+			p.st.waiting(text)
 			return
 		}
 		if text == "/ask" {
@@ -349,6 +365,7 @@ func (p *Pig) run(text string) {
 		p.emit(map[string]any{"type": "mystery"})
 		say(assistant(textBlock("Still here")))
 	case strings.Contains(text, "wait"):
+		p.st.waiting(text)
 		select {
 		case <-aborted:
 			m := assistant()
@@ -409,6 +426,7 @@ func (p *Pig) compact(cmd map[string]any) {
 		stop := make(chan struct{})
 		p.compacting = stop
 		p.mu.Unlock()
+		p.st.waiting("/compact " + instructions)
 		<-stop
 		p.mu.Lock()
 		p.emit(map[string]any{"type": "compaction_end", "reason": "manual", "aborted": true, "willRetry": false})

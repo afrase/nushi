@@ -4,18 +4,19 @@
 // starts one, prompts it, answers its permission card, gets the streamed
 // events, and is revoked.
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:remote_transport/remote_transport.dart';
 import 'package:uds_transport/uds_transport.dart';
+
+import 'e2e_rig.dart';
 
 NushiServiceClient _client(Http2ClientTransport t, {String? token}) =>
     NushiServiceClient(
@@ -34,103 +35,22 @@ NushiServiceClient _client(Http2ClientTransport t, {String? token}) =>
       ),
     );
 
-Future<void> _until(Future<bool> Function() ok) async {
-  for (var i = 0; i < 300; i++) {
-    if (await ok()) return;
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-  }
-  throw TimeoutException('waited too long');
-}
-
 void main() {
-  late Directory tmp;
-  final procs = <Process>[];
+  late Rig rig;
 
-  setUpAll(() async {
-    // A short path: the socket's path has a length limit.
-    tmp = await Directory('/tmp').createTemp('nre');
-    for (final d in ['bin', 'data', 'home', 'work']) {
-      await Directory('${tmp.path}/$d').create();
-    }
-    for (final (out, pkg) in [
-      ('nushid', './cmd/nushid'),
-      ('nushi-relay', './cmd/nushi-relay'),
-      ('fakeagent', './internal/acptest/fakeagent'),
-    ]) {
-      final r = await Process.run('go', [
-        'build',
-        '-o',
-        '${tmp.path}/bin/$out',
-        pkg,
-      ], workingDirectory: '..');
-      if (r.exitCode != 0) throw StateError('building $pkg: ${r.stderr}');
-    }
-    // Claude, set up: its CLI on PATH, its adapter in the data folder, run
-    // by a "node" that runs the fake agent instead.
-    for (final (name, body) in [
-      ('node', 'exec ${tmp.path}/bin/fakeagent'),
-      ('claude', 'echo 2.1.310'),
-    ]) {
-      final f = File('${tmp.path}/bin/$name');
-      await f.writeAsString('#!/bin/sh\n$body\n');
-      await Process.run('chmod', ['+x', f.path]);
-    }
-    final adapter = Directory(
-      '${tmp.path}/data/agents/claude/node_modules/@agentclientprotocol/claude-agent-acp',
-    );
-    await adapter.create(recursive: true);
-    await File('${adapter.path}/package.json').writeAsString(
-      '{"version": "0.94.0", "bin": {"claude-agent-acp": "dist/index.js"}}',
-    );
-  });
-
-  tearDownAll(() async {
-    for (final p in procs) {
-      p.kill();
-      await p.exitCode;
-    }
-    await tmp.delete(recursive: true);
-  });
+  setUpAll(() async => rig = await Rig.build('nre'));
+  tearDownAll(() => rig.close());
 
   test('a phone through the relay', () async {
     // A dialer waits 2 s for the Mac, not 10: a revoked phone dials an id
     // nobody listens on any more, and is refused after that wait.
-    final relay = await Process.start('${tmp.path}/bin/nushi-relay', [
-      '-addr',
-      '127.0.0.1:0',
-      '-dial-wait',
-      '2s',
-    ]);
-    procs.add(relay);
-    final started = await relay.stderr
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .first;
-    final relayUrl = 'ws://${started.split(' ').last}';
-    final daemon = await Process.start(
-      '${tmp.path}/bin/nushid',
-      [],
-      environment: {
-        'PATH': '${tmp.path}/bin:/usr/bin:/bin',
-        'HOME': '${tmp.path}/home',
-        'NUSHI_DATA': '${tmp.path}/data',
-        // Its fake agents are on this PATH: not the login shell's.
-        'NUSHI_SHELL_ENV': 'off',
-      },
-      includeParentEnvironment: false,
-    );
-    procs.add(daemon);
-    unawaited(daemon.stdout.drain<void>());
-    unawaited(daemon.stderr.drain<void>());
-    await _until(() async => File('${tmp.path}/data/nushid.sock').existsSync());
-    final token = (await File('${tmp.path}/data/token').readAsString()).trim();
-    final mac = _client(
-      UdsTransport('${tmp.path}/data/nushid.sock'),
-      token: token,
-    );
+    await rig.startRelay(args: ['-dial-wait', '2s']);
+    await rig.startDaemon();
+    final relayUrl = rig.relayUrl;
+    final mac = _client(UdsTransport(rig.socket), token: rig.token);
 
     await mac.setRemote(SetRemoteRequest(on: true, relay: relayUrl));
-    await _until(
+    await until(
       () async =>
           (await mac.getRemote(GetRemoteRequest())).remote.state == 'connected',
     );
@@ -146,7 +66,7 @@ void main() {
       onCode: shown.complete,
     );
     final code = await shown.future;
-    await _until(
+    await until(
       () async =>
           (await mac.getRemote(GetRemoteRequest())).remote.pairing.code == code,
     );
@@ -158,16 +78,14 @@ void main() {
     final (paired, transport) = await pairing;
     final phone = _client(transport);
 
-    // The phone is a full client, with the same generated client.
-    expect(
-      (await phone.ping(PingRequest())).apiVersion,
-      greaterThanOrEqualTo(47),
-    );
+    // The phone is a full client, with the same generated client. The
+    // daemon's API is the app's: one bumped without the other shows here.
+    expect((await phone.ping(PingRequest())).apiVersion, apiVersion);
     expect((await phone.listChats(ListChatsRequest())).chats, isEmpty);
     final events = StreamIterator(phone.events(EventsRequest()));
     expect(await events.moveNext(), isTrue); // live
     final chat = (await phone.startChat(
-      StartChatRequest(agent: 'claude', folder: '${tmp.path}/work'),
+      StartChatRequest(agent: 'claude', folder: rig.work),
     )).chatId;
     await phone.sendPrompt(
       SendPromptRequest(chatId: chat, text: 'hello from the phone'),
@@ -222,7 +140,7 @@ void main() {
     );
     final devices = (await mac.getRemote(GetRemoteRequest())).remote.devices;
     expect(devices.single.name, 'Test phone');
-    await _until(
+    await until(
       () async =>
           (await mac.getRemote(GetRemoteRequest()))
               .remote

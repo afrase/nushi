@@ -146,18 +146,50 @@ func start(t *testing.T, store *antetest.Store) *peer {
 	return c
 }
 
+// turnTimeout bounds a turn's wait: a turn that never ends fails its test
+// then, not at go test's 10 minutes.
+const turnTimeout = 10 * time.Second
+
 func prompt(t *testing.T, c *peer, sid acp.SessionID, text string) *acp.PromptResponse {
 	t.Helper()
-	r, err := c.Prompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+	defer cancel()
+	r, err := c.Prompt(ctx, &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
 	if err != nil {
 		t.Fatalf("prompt %q: %v", text, err)
 	}
 	return r
 }
 
+// begin starts a turn that waits (the fake's "wait") and returns once the
+// fake waits in it, so a Cancel or a Steer finds it running; wait waits
+// for its result.
+func begin(t *testing.T, c *peer, store *antetest.Store, sid acp.SessionID, text string) (wait func() *acp.PromptResponse) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+	t.Cleanup(cancel)
+	w, err := c.StartPrompt(ctx, &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	if err != nil {
+		t.Fatalf("prompt %q: %v", text, err)
+	}
+	select {
+	case <-store.Waiting:
+	case <-ctx.Done():
+		t.Fatalf("prompt %q: the fake never waited", text)
+	}
+	return func() *acp.PromptResponse {
+		t.Helper()
+		r, err := w(ctx)
+		if err != nil {
+			t.Fatalf("prompt %q: %v", text, err)
+		}
+		return r
+	}
+}
+
 func TestASessionThroughTheBridge(t *testing.T) {
 	ctx := context.Background()
-	store := &antetest.Store{Home: t.TempDir()}
+	store := &antetest.Store{Home: t.TempDir(), Waiting: make(chan string)}
 	c := start(t, store)
 	s, err := c.NewSession(ctx, &acp.NewSessionRequest{Cwd: "/work"})
 	if err != nil {
@@ -184,21 +216,17 @@ func TestASessionThroughTheBridge(t *testing.T) {
 		t.Errorf("forms %+v", c.forms)
 	}
 
-	wait, _ := c.StartPrompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
-	time.Sleep(50 * time.Millisecond)
+	wait := begin(t, c, store, sid, "wait")
 	if ok, err := c.Steer(ctx, sid, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}}); !ok || err != nil {
 		t.Errorf("steer: %v %v", ok, err)
 	}
-	if _, err := wait(ctx); err != nil {
-		t.Errorf("steered turn: %v", err)
-	}
-	wait, _ = c.StartPrompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "wait"}}}})
-	time.Sleep(50 * time.Millisecond)
+	wait()
+	wait = begin(t, c, store, sid, "wait")
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: sid}); err != nil {
 		t.Error(err)
 	}
-	if r, err := wait(ctx); err != nil || r.StopReason != "cancelled" {
-		t.Errorf("cancelled turn: %+v %v", r, err)
+	if r := wait(); r.StopReason != "cancelled" {
+		t.Errorf("cancelled turn: %+v", r)
 	}
 	var report struct {
 		Used int64 `json:"used_tokens"`

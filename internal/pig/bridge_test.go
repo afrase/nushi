@@ -149,13 +149,45 @@ func start(t *testing.T, store *pigtest.Store, log io.Writer) *peer {
 	return c
 }
 
+// turnTimeout bounds a turn's wait: a turn that never ends fails its test
+// then, not at go test's 10 minutes.
+const turnTimeout = 10 * time.Second
+
 func prompt(t *testing.T, c *peer, sid acp.SessionID, text string) *acp.PromptResponse {
 	t.Helper()
-	r, err := c.Prompt(context.Background(), &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+	defer cancel()
+	r, err := c.Prompt(ctx, &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
 	if err != nil {
 		t.Fatalf("%s: %v", text, err)
 	}
 	return r
+}
+
+// begin starts a turn that waits (the fake's "wait", "/hang", a slow
+// compact) and returns once the fake waits in it, so a Cancel or a steer
+// finds it running; wait waits for its result.
+func begin(t *testing.T, c *peer, store *pigtest.Store, sid acp.SessionID, text string) (wait func() *acp.PromptResponse) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+	t.Cleanup(cancel)
+	w, err := c.StartPrompt(ctx, &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}})
+	if err != nil {
+		t.Fatalf("%s: %v", text, err)
+	}
+	select {
+	case <-store.Waiting:
+	case <-ctx.Done():
+		t.Fatalf("%s: the fake never waited", text)
+	}
+	return func() *acp.PromptResponse {
+		t.Helper()
+		r, err := w(ctx)
+		if err != nil {
+			t.Fatalf("%s: %v", text, err)
+		}
+		return r
+	}
 }
 
 func openNew(t *testing.T, c *peer, cwd string) *acp.NewSessionResponse {
@@ -219,23 +251,21 @@ func TestATurn(t *testing.T) {
 // Stop ends a running turn as cancelled; a message sent meanwhile is
 // steered into it.
 func TestCancelAndSteer(t *testing.T) {
-	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	store := &pigtest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
+	c := start(t, store, io.Discard)
 	s := openNew(t, c, t.TempDir())
-	done := make(chan *acp.PromptResponse)
-	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
-	time.Sleep(50 * time.Millisecond)
+	wait := begin(t, c, store, s.SessionID, "wait")
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
-	if r := <-done; r.StopReason != "cancelled" {
+	if r := wait(); r.StopReason != "cancelled" {
 		t.Errorf("stop = %s", r.StopReason)
 	}
-	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
-	time.Sleep(50 * time.Millisecond)
+	wait = begin(t, c, store, s.SessionID, "wait")
 	if ok, err := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "turn left"}}}); !ok || err != nil {
 		t.Fatalf("steer = %v, %v", ok, err)
 	}
-	if r := <-done; r.StopReason != "end_turn" {
+	if r := wait(); r.StopReason != "end_turn" {
 		t.Errorf("stop = %s", r.StopReason)
 	}
 	if texts := c.texts(s.SessionID); !strings.HasSuffix(texts[len(texts)-1], "Steered: turn left") {
@@ -245,18 +275,16 @@ func TestCancelAndSteer(t *testing.T) {
 		t.Error("steered with no turn running")
 	}
 	// An extension's command that never ends stops at once.
-	go func() { done <- prompt(t, c, s.SessionID, "/hang") }()
-	time.Sleep(50 * time.Millisecond)
+	wait = begin(t, c, store, s.SessionID, "/hang")
+	stopped := time.Now()
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
-	select {
-	case r := <-done:
-		if r.StopReason != "cancelled" {
-			t.Errorf("stop = %s", r.StopReason)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("a hung command can't be stopped")
+	if r := wait(); r.StopReason != "cancelled" {
+		t.Errorf("stop = %s", r.StopReason)
+	}
+	if d := time.Since(stopped); d > 2*time.Second {
+		t.Errorf("a hung command took %v to stop", d)
 	}
 }
 
@@ -401,7 +429,7 @@ func TestToolCalls(t *testing.T) {
 // compact says so in its call, a stopped one ends at once. /name names
 // the session. Both are slash commands; neither is steered into a turn.
 func TestCompactAndName(t *testing.T) {
-	store := &pigtest.Store{Sessions: t.TempDir()}
+	store := &pigtest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
 	c := start(t, store, io.Discard)
 	cwd := t.TempDir()
 	s := openNew(t, c, cwd)
@@ -432,13 +460,11 @@ func TestCompactAndName(t *testing.T) {
 	}
 	c.find(t, s.SessionID, "usage_update", func(u acp.SessionUpdate) bool { return u.UsageUpdate.Used == 42 })
 
-	done := make(chan *acp.PromptResponse)
-	go func() { done <- prompt(t, c, s.SessionID, "/compact slow") }()
-	time.Sleep(50 * time.Millisecond)
+	wait := begin(t, c, store, s.SessionID, "/compact slow")
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
-	if r := <-done; r.StopReason != "cancelled" {
+	if r := wait(); r.StopReason != "cancelled" {
 		t.Errorf("stop = %s", r.StopReason)
 	}
 	c.find(t, s.SessionID, "tool_call_update", func(u acp.SessionUpdate) bool {
@@ -454,18 +480,19 @@ func TestCompactAndName(t *testing.T) {
 		t.Error("/name without a name")
 	}
 
-	go func() { done <- prompt(t, c, s.SessionID, "wait") }()
-	time.Sleep(50 * time.Millisecond)
+	wait = begin(t, c, store, s.SessionID, "wait")
 	steered := make(chan bool)
 	go func() {
 		ok, _ := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/compact"}}})
 		steered <- ok
 	}()
+	// Time for the steer to wait on the turn (it never reaches pig, so the
+	// fake can't say); one that comes after the stop isn't steered either.
 	time.Sleep(50 * time.Millisecond)
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
 		t.Error(err)
 	}
-	<-done
+	wait()
 	if <-steered {
 		t.Error("/compact steered into a turn")
 	}

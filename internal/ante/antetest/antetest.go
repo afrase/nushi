@@ -19,6 +19,10 @@
 // instructions ("<skill>\n<name>review</name>\n\nReview <args>\n</skill>"),
 // and any other name as the input "/name args". Compact compacts, its
 // summary "the summary", in an info block as Ante's.
+//
+// An input that waits ("wait") says so on the Store's Waiting once it
+// does, so a test stops or steers it when it runs, not after a sleep that
+// may lose the race.
 package antetest
 
 import (
@@ -36,6 +40,10 @@ import (
 // Store holds the saved sessions, by id, and writes their meta.json in Home.
 type Store struct {
 	Home string
+	// Waiting, when set, gets the text of each input that waits for an
+	// Interrupt or a Steer, once it waits. The fake blocks on it: the
+	// test reads each, or gives the channel room.
+	Waiting chan string
 
 	mu       sync.Mutex
 	sessions map[string]*saved
@@ -346,6 +354,9 @@ func (h *Host) run(turn, text string) {
 			"result_json": map[string]any{"message": "answered"}}}, true)
 		h.emit(turn, map[string]any{"AgentMessage": "Reply: " + string(reply)}, true)
 	case strings.Contains(text, "wait"):
+		if h.store.Waiting != nil {
+			h.store.Waiting <- text
+		}
 		select {
 		case <-h.paused:
 			status = map[string]any{"Interrupted": map[string]any{"reason": "turn cancelled"}}
