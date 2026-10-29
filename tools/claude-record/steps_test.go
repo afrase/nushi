@@ -87,6 +87,30 @@ func TestPlayCapturesAndHooks(t *testing.T) {
 	}
 }
 
+// At an end step the client goes at once: the steps after it don't run,
+// and a prompt it didn't await isn't waited for.
+func TestPlayEnd(t *testing.T) {
+	toAgentR, toAgentW := io.Pipe()
+	fromAgentR, fromAgentW := io.Pipe()
+	agent := childAgent(toAgentR, fromAgentW) // it never answers a prompt
+	c := newConn(toAgentW, fromAgentR, io.Discard)
+	var s []step
+	if err := json.Unmarshal([]byte(`[{"new": "s1"}, {"prompt": "hi", "session": "s1", "async": "p1"}, {"end": {}}, {"cancel": "s1"}]`), &s); err != nil {
+		t.Fatal(err)
+	}
+	p := &player{c: c, cwd: "/work", timeout: time.Hour, ids: map[string]string{}, async: map[string]<-chan msg{}}
+	if err := p.play(t.Context(), s); err != nil {
+		t.Fatal(err)
+	}
+	_ = toAgentW.Close()
+	got := <-agent
+	_ = fromAgentW.Close()
+	<-c.done
+	if len(got) != 2 || got[1]["method"] != "session/prompt" {
+		t.Errorf("the agent got %v", got)
+	}
+}
+
 // A script that names a session before any step made it doesn't load.
 func TestLoadClientNames(t *testing.T) {
 	for _, tc := range []struct {
