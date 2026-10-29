@@ -57,9 +57,9 @@ func (s *session) askUser(ctx context.Context, r claudeagent.PermissionRequest) 
 		return claudeagent.Deny{Message: "AskUserQuestion called with no valid questions."}, nil
 	}
 	s.shown(r)
-	ctx, done := s.opened(ctx)
+	ctx, done := s.opened(ctx, r.AgentID)
 	defer done()
-	resp, err := s.a.client.CreateElicitation(ctx, questionForm(s.id, r.ToolUseID, qs))
+	resp, err := s.a.client.CreateElicitation(ctx, questionForm(s.sessionOf(r.AgentID), r.ToolUseID, qs))
 	switch {
 	case err != nil:
 		s.log.Info("asking the user claude's questions", "err", err)

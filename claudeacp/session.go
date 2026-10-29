@@ -28,12 +28,12 @@ type session struct {
 	wmu sync.Mutex
 
 	mu       sync.Mutex
-	turns    []*turn                    // unsettled prompts, in the order written
-	active   *turn                      // the one claude runs, from its echo; nil between turns
-	dropTop  bool                       // after a cancel, until a turn starts: the stopped work's top-level text goes
-	owedIdle int                        // idles still to come after results that ended a turn
-	asks     int                        // permission and question requests open
-	open     map[int]context.CancelFunc // withdraws each, by a number of its own
+	turns    []*turn      // unsettled prompts, in the order written
+	active   *turn        // the one claude runs, from its echo; nil between turns
+	dropTop  bool         // after a cancel, until a turn starts: the stopped work's top-level text goes
+	owedIdle int          // idles still to come after results that ended a turn
+	asks     int          // permission and question requests open
+	open     map[int]*ask // the requests open, by a number of their own
 	lastAsk  int
 	closed   bool // closed or gone: no more prompts
 
@@ -75,7 +75,7 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 // start runs claude for session id and opens the session once claude has
 // answered initialize.
 func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*session, error) {
-	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), tick: make(chan struct{}), open: map[int]context.CancelFunc{},
+	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), tick: make(chan struct{}), open: map[int]*ask{},
 		children: a.clientCaps().subagents}
 	s.st.init()
 	s.kids.init()

@@ -1,6 +1,7 @@
 package claudeacp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -60,6 +61,11 @@ func (c *client) states() []string {
 	}
 	return out
 }
+
+const (
+	stateRunning = `{"state":"running"}`
+	stateAsking  = `{"state":"requires_action"}`
+)
 
 // A subagent is a session of its own: announced on the session with its
 // call's name, role and description, its first message the call's
@@ -185,6 +191,87 @@ func TestSubagentHeldBounds(t *testing.T) {
 	if on[string(sid)] != maxHeldPerCall+2 || on["a1"] != 7 {
 		t.Errorf("calls by session: %v", on)
 	}
+}
+
+// A subagent's permission is asked on its session, which requires action
+// meanwhile. A cancel of the session stops that subagent alone, through
+// claude, and withdraws what it asks; a cancel of the turn spares a
+// background subagent's request.
+func TestSubagentAsks(t *testing.T) {
+	ask := canUseTool("toolu_s", "Bash", `{"command":"ls"}`, `,"agent_id":"a1"`)
+	t.Run("answered", func(t *testing.T) {
+		p := start(t, withSubagents, fake(user("id2"), echo("id2"), agentCall(false), taskStarted(""),
+			ask, answers("toolu_s", `{"behavior":"allow"}`), agentDone, result(names("id2")), claudetest.Send(idle)))
+		var asked acp.SessionID
+		p.permit = func(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+			asked = req.SessionID
+			return pick(optAllowOnce)(ctx, req)
+		}
+		if got := stopReason(p.prompt(t, p.open(t), "go")); got != "end_turn" {
+			t.Fatal(got)
+		}
+		if got := p.states(); asked != "a1" || !slices.Equal(got, []string{stateAsking, stateRunning}) {
+			t.Errorf("asked on %q; states %v", asked, got)
+		}
+	})
+	t.Run("its session cancelled", func(t *testing.T) {
+		// The request's answer and stop_task go apart, in either order.
+		f := fake(user("id2"), echo("id2"), agentCall(false), taskStarted(""), ask,
+			answers("toolu_s", `{"behavior":"deny","interrupt":true}`), taskEnd("stopped"), agentDone,
+			result(names("id2")), claudetest.Send(idle)).
+			Respond(`{"type":"control_request","request":{"subtype":"stop_task"}}`,
+				`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)
+		p := start(t, withSubagents, f)
+		opened := make(chan struct{})
+		p.permit = func(ctx context.Context, _ *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+			close(opened)
+			<-ctx.Done()
+			return nil, ctx.Err()
+		}
+		w := p.prompt(t, p.open(t), "go")
+		wait(t, opened, "the request")
+		if err := p.Cancel(context.Background(), &acp.CancelNotification{SessionID: "a1"}); err != nil {
+			t.Fatal(err)
+		}
+		if got := stopReason(w); got != "end_turn" {
+			t.Fatal(got)
+		}
+		if got := p.states(); !slices.Equal(got, []string{stateAsking, `{"state":"idle","stopReason":"cancelled"}`}) {
+			t.Errorf("states %v", got)
+		}
+		eventually(t, "stop_task", func() bool { return len(asked(f)) > 0 })
+		if got := asked(f); !strings.Contains(got[0], `"subtype":"stop_task","task_id":"a1"`) {
+			t.Errorf("claude was asked %v", got)
+		}
+	})
+	t.Run("the turn cancelled", func(t *testing.T) {
+		opened, release := make(chan struct{}), make(chan struct{})
+		f := fake(user("id2"), echo("id2"), agentCall(true), taskStarted(`,"is_backgrounded":true`), agentDone, ask,
+			claudetest.Until(release), result(names("id2")), claudetest.Send(idle),
+			answers("toolu_s", `{"behavior":"allow"}`))
+		p := start(t, withSubagents, f)
+		withdrawn := make(chan bool, 1)
+		p.permit = func(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+			close(opened)
+			<-release
+			withdrawn <- ctx.Err() != nil
+			return pick(optAllowOnce)(ctx, req)
+		}
+		sid := p.open(t)
+		w := p.prompt(t, sid, "go")
+		wait(t, opened, "the request")
+		if err := p.Cancel(context.Background(), &acp.CancelNotification{SessionID: sid}); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, "the interrupt", func() bool { return len(asked(f)) > 0 })
+		close(release)
+		if got := stopReason(w); got != "cancelled" {
+			t.Fatal(got)
+		}
+		if <-withdrawn {
+			t.Error("the turn's cancel withdrew a background subagent's request")
+		}
+	})
 }
 
 // When claude exits, a subagent still running ends with no reason given.

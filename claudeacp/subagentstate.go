@@ -10,7 +10,8 @@ import (
 	"github.com/afrase/nushi/claudeagent"
 )
 
-// A subagent's state, as claude's task events tell it.
+// A subagent's state, as claude's task events and the agent's own
+// requests tell it, and its stop.
 
 // taskUpdated is a change to a task: a subagent backgrounded, or ended.
 func (s *session) taskUpdated(m *claudeagent.TaskUpdated) {
@@ -122,4 +123,53 @@ func (s *session) subagentsGone() {
 	for len(k.order) > 0 {
 		s.flushLocked(k.order[0], s.id)
 	}
+}
+
+// asking counts a request of the subagent agent opening (+1) or closing
+// (-1): it requires action while one is open, and runs again once none
+// is, unless a cancel withdrew it.
+func (s *session) asking(agent string, d int, withdrawn bool) {
+	k := &s.kids
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	sa := k.byID[agent]
+	if sa == nil {
+		return
+	}
+	sa.asks += d
+	switch {
+	case !sa.shown || sa.ended:
+	case d > 0 && sa.asks == 1:
+		s.childStateLocked(sa, acp.StateUpdate{RequiresAction: &acp.RequiresActionStateUpdate{}})
+	case d < 0 && sa.asks == 0 && !withdrawn:
+		s.childStateLocked(sa, acp.StateUpdate{Running: &acp.RunningStateUpdate{}})
+	}
+}
+
+// child is the session one of whose subagents is the child session id.
+func (a *agent) child(id string) *session {
+	a.mu.Lock()
+	open := slices.Collect(maps.Values(a.sessions))
+	a.mu.Unlock()
+	for _, s := range open {
+		s.kids.mu.Lock()
+		sa := s.kids.byID[id]
+		s.kids.mu.Unlock()
+		if sa != nil && sa.shown {
+			return s
+		}
+	}
+	return nil
+}
+
+// stopSubagent stops the subagent id alone, as a cancel of its child
+// session asks: what it asks the user is withdrawn, and claude stops its
+// task. Its end comes as claude reports it.
+func (s *session) stopSubagent(id string) {
+	s.withdraw(func(a *ask) bool { return a.agent == id })
+	go func() {
+		if err := s.cs.StopTask(s.a.ctx, id); err != nil {
+			s.log.Info("stopping a subagent", "err", err)
+		}
+	}()
 }

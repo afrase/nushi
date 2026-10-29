@@ -45,10 +45,10 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	case "EnterPlanMode":
 		opts = enterPlanOptions
 	}
-	ctx, done := s.opened(ctx)
+	ctx, done := s.opened(ctx, r.AgentID)
 	defer done()
 	resp, err := s.a.client.RequestPermission(ctx, &acp.RequestPermissionRequest{
-		SessionID: acp.SessionID(s.id), ToolCall: call, Options: opts})
+		SessionID: acp.SessionID(s.sessionOf(r.AgentID)), ToolCall: call, Options: opts})
 	if err != nil {
 		s.log.Info("asking for a permission", "err", err)
 	}
@@ -126,22 +126,53 @@ func permissionResult(r claudeagent.PermissionRequest, resp *acp.RequestPermissi
 	return claudeagent.Deny{Message: "The user cancelled.", Interrupt: true}
 }
 
+// ask is a permission or question the user is asked, while it is open.
+type ask struct {
+	cancel    context.CancelFunc
+	agent     string // the subagent asking, if one is
+	withdrawn bool   // a cancel withdrew it
+}
+
 // opened counts a permission or question the user is asked while it is
-// open, so steers wait behind it and a cancel withdraws it; done closes
-// it.
-func (s *session) opened(ctx context.Context) (context.Context, func()) {
+// open, so steers wait behind it and a cancel withdraws it, and a
+// subagent asking requires action meanwhile; done closes it.
+func (s *session) opened(ctx context.Context, agent string) (context.Context, func()) {
 	ctx, cancel := context.WithCancel(ctx)
+	a := &ask{cancel: cancel, agent: agent}
 	s.mu.Lock()
 	s.asks++
 	s.lastAsk++
 	n := s.lastAsk
-	s.open[n] = cancel
+	s.open[n] = a
 	s.mu.Unlock()
+	if agent != "" {
+		s.asking(agent, 1, false)
+	}
 	return ctx, func() {
 		cancel()
 		s.mu.Lock()
 		s.asks--
 		delete(s.open, n)
+		withdrawn := a.withdrawn
 		s.mu.Unlock()
+		if agent != "" {
+			s.asking(agent, -1, withdrawn)
+		}
+	}
+}
+
+// withdraw withdraws the open requests which says.
+func (s *session) withdraw(which func(*ask) bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.withdrawLocked(which)
+}
+
+func (s *session) withdrawLocked(which func(*ask) bool) {
+	for _, a := range s.open {
+		if which(a) {
+			a.withdrawn = true
+			a.cancel()
+		}
 	}
 }
