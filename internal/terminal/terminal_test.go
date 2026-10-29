@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // shell starts /bin/sh in a terminal and collects what it prints.
@@ -41,19 +43,18 @@ func (o *output) add(b []byte) {
 func (o *output) wait(t *testing.T, re string) []string {
 	t.Helper()
 	r := regexp.MustCompile(re)
-	for range 100 {
+	var m []string
+	if !testcheck.Eventually(func() bool {
 		o.mu.Lock()
-		m := r.FindStringSubmatch(o.buf.String())
-		o.mu.Unlock()
-		if m != nil {
-			return m
-		}
-		time.Sleep(50 * time.Millisecond)
+		defer o.mu.Unlock()
+		m = r.FindStringSubmatch(o.buf.String())
+		return m != nil
+	}) {
+		o.mu.Lock()
+		defer o.mu.Unlock()
+		t.Fatalf("no %q in %q", re, o.buf.String())
 	}
-	o.mu.Lock()
-	defer o.mu.Unlock()
-	t.Fatalf("no %q in %q", re, o.buf.String())
-	return nil
+	return m
 }
 
 func TestInputOutputAndSize(t *testing.T) {
@@ -91,13 +92,9 @@ func TestProgram(t *testing.T) {
 	term, out := shell(t)
 	_ = term.Write([]byte("echo started; sleep 30\n"))
 	out.wait(t, `started\r\n`)
-	for range 40 {
-		if term.Program() == "sleep 30" {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
+	if !testcheck.Eventually(func() bool { return term.Program() == "sleep 30" }) {
+		t.Fatalf("program %q, want sleep 30", term.Program())
 	}
-	t.Fatalf("program %q, want sleep 30", term.Program())
 }
 
 func TestCloseKillsChildren(t *testing.T) {
@@ -109,15 +106,11 @@ func TestCloseKillsChildren(t *testing.T) {
 		t.Fatalf("child %d not running: %v", pid, err)
 	}
 	term.Close()
-	for range 50 {
-		if err := syscall.Kill(pid, 0); err != nil {
-			return
-		}
-		time.Sleep(100 * time.Millisecond)
+	if !testcheck.Eventually(func() bool { return syscall.Kill(pid, 0) != nil }) {
+		p, _ := os.FindProcess(pid)
+		_ = p.Kill()
+		t.Fatalf("child %d still runs after Close", pid)
 	}
-	p, _ := os.FindProcess(pid)
-	_ = p.Kill()
-	t.Fatalf("child %d still runs after Close", pid)
 }
 
 // No process started after a terminal holds its master: it could type

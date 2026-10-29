@@ -9,17 +9,8 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
-
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func skill(t *testing.T, root, dir, name string) {
 	t.Helper()
@@ -27,7 +18,7 @@ func skill(t *testing.T, root, dir, name string) {
 	if name != "" {
 		text += "name: " + name + "\n"
 	}
-	write(t, filepath.Join(root, dir, "SKILL.md"), text+"---\n")
+	testcheck.Write(t, filepath.Join(root, dir, "SKILL.md"), text+"---\n")
 }
 
 func listed(skills []model.Skill) string {
@@ -62,7 +53,7 @@ func TestListAndSwitch(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(folder, ".ante"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	write(t, filepath.Join(top, ".ante", "settings.json"), `{"exclude_skills": ["proj"]}`)
+	testcheck.Write(t, filepath.Join(top, ".ante", "settings.json"), `{"exclude_skills": ["proj"]}`)
 	ctx := context.Background()
 	l, err := Ante{}.List(ctx, folder)
 	if err != nil {
@@ -75,7 +66,7 @@ func TestListAndSwitch(t *testing.T) {
 	if err := (Ante{}).SetSkillOn(ctx, folder, "project", "proj", true); err == nil || !strings.Contains(err.Error(), "change it there") {
 		t.Errorf("set in the project's settings: %v", err)
 	}
-	write(t, filepath.Join(anteHome, "settings.json"), `{"model": "x"}`)
+	testcheck.Write(t, filepath.Join(anteHome, "settings.json"), `{"model": "x"}`)
 	if err := (Ante{}).SetSkillOn(ctx, folder, "shared", "release", false); err != nil {
 		t.Fatal(err)
 	}

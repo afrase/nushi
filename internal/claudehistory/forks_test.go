@@ -5,12 +5,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestForked(t *testing.T) {
 	projects := t.TempDir()
 	write := func(dir, id, body string) {
-		noErr(t, os.MkdirAll(filepath.Join(projects, dir), 0o700))
+		testcheck.NoErr(t, os.MkdirAll(filepath.Join(projects, dir), 0o700))
 		if err := os.WriteFile(filepath.Join(projects, dir, id+".jsonl"), []byte(body), 0o600); err != nil {
 			t.Fatal(err)
 		}

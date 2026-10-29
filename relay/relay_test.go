@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func start(t *testing.T, lim Limits) string {
@@ -60,14 +62,6 @@ func pair(t *testing.T, url string, key ed25519.PrivateKey) (l, d *Conn) {
 	}
 	t.Cleanup(func() { _ = d.Close() })
 	return l, d
-}
-
-// check fails the test on err.
-func check(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
-	}
 }
 
 func send(t *testing.T, c *Conn, m string) {
@@ -114,7 +108,7 @@ func TestPeersMeetAndTalk(t *testing.T) {
 	expect(t, l, "hello")
 	send(t, l, "back")
 	expect(t, d, "back")
-	check(t, d.Close())
+	testcheck.NoErr(t, d.Close())
 	expectClosed(t, l)
 }
 
@@ -310,7 +304,7 @@ func TestNoDiskNoLogs(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = cmd.Process.Kill() }) // a failure below doesn't leave it running
-	check(t, pw.Close())
+	testcheck.NoErr(t, pw.Close())
 	r := bufio.NewReader(pr)
 	first, err := r.ReadString('\n')
 	if err != nil {
@@ -333,10 +327,10 @@ func TestNoDiskNoLogs(t *testing.T) {
 		}
 	}
 	_, _ = dl.Dial(context.Background(), url, "bad")
-	check(t, l.Close())
-	check(t, d.Close())
+	testcheck.NoErr(t, l.Close())
+	testcheck.NoErr(t, d.Close())
 
-	check(t, cmd.Process.Signal(syscall.SIGTERM))
+	testcheck.NoErr(t, cmd.Process.Signal(syscall.SIGTERM))
 	_ = cmd.Wait() // its exit after SIGTERM; what it logged is checked below
 	<-rest
 	if lines := strings.Split(strings.TrimSpace(stderr.String()), "\n"); len(lines) != 1 || !strings.Contains(lines[0], "listening on") {
@@ -433,21 +427,17 @@ func TestPerAddressCaps(t *testing.T) {
 	}
 	// Once the connections are gone (and the address's rate is back), the
 	// relay holds nothing about the addresses.
-	deadline := time.Now().Add(5 * time.Second)
-	for {
+	var n, total int
+	if !testcheck.Eventually(func() bool {
 		h.mu.Lock()
-		n, total := len(h.sources), h.total
-		h.mu.Unlock()
-		if total == 0 {
-			if n != 0 {
-				t.Fatalf("%d addresses kept", n)
-			}
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("%d connections still counted", total)
-		}
-		time.Sleep(20 * time.Millisecond)
+		defer h.mu.Unlock()
+		n, total = len(h.sources), h.total
+		return total == 0
+	}) {
+		t.Fatalf("%d connections still counted", total)
+	}
+	if n != 0 {
+		t.Fatalf("%d addresses kept", n)
 	}
 
 	// One address never takes more than half of the total.
@@ -525,7 +515,7 @@ func TestListenNeedsTheKey(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		check(t, ws.SetReadDeadline(time.Now().Add(2*time.Second)))
+		testcheck.NoErr(t, ws.SetReadDeadline(time.Now().Add(2*time.Second)))
 		_, m, err := ws.ReadMessage()
 		if err != nil || !bytes.HasPrefix(m, []byte(challengeTag)) {
 			t.Fatalf("no challenge: %q %v", m, err)
@@ -541,7 +531,7 @@ func TestListenNeedsTheKey(t *testing.T) {
 		},
 	} {
 		ws, challenge := raw()
-		check(t, ws.WriteMessage(websocket.BinaryMessage, answer(challenge)))
+		testcheck.NoErr(t, ws.WriteMessage(websocket.BinaryMessage, answer(challenge)))
 		if _, _, err := ws.ReadMessage(); err == nil {
 			t.Errorf("%s listened", name)
 		}
@@ -592,7 +582,7 @@ func TestIdleHTTPConnections(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		check(t, c.SetDeadline(time.Now().Add(2*time.Second)))
+		testcheck.NoErr(t, c.SetDeadline(time.Now().Add(2*time.Second)))
 		_, _ = io.WriteString(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\n\r\n") // a refused one may be closed already: the answer says
 		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
 		if err == nil {
@@ -617,7 +607,7 @@ func TestIdleHTTPConnections(t *testing.T) {
 	send(t, d, "still")
 	expect(t, l, "still")
 	for _, c := range open {
-		check(t, c.SetDeadline(time.Now().Add(2*time.Second)))
+		testcheck.NoErr(t, c.SetDeadline(time.Now().Add(2*time.Second)))
 		if _, err := c.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 			t.Fatalf("an idle connection stayed: %v", err)
 		}
@@ -758,9 +748,13 @@ func TestSlowHeadersFloodDoesntStarve(t *testing.T) {
 	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
 	send(t, d, "through")
 	expect(t, l, "through")
+	// Closed, not timed out: an end or a reset, which is the end when the
+	// relay closed it before its server had read the headers' start (the
+	// kernel resets a connection closed with input unread; under load,
+	// FirstWait can pass before that read).
 	last := slow[len(slow)-1]
-	check(t, last.SetReadDeadline(time.Now().Add(2*time.Second)))
-	if _, err := last.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
+	testcheck.NoErr(t, last.SetReadDeadline(time.Now().Add(2*time.Second)))
+	if _, err := last.Read(make([]byte, 1)); !errors.Is(err, io.EOF) && !errors.Is(err, syscall.ECONNRESET) {
 		t.Fatalf("a connection without its headers stayed past FirstWait: %v", err)
 	}
 }

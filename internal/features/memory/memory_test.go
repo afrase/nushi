@@ -3,7 +3,8 @@ package memory
 import (
 	"os/exec"
 	"testing"
-	"time"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 type chats map[string]int
@@ -25,16 +26,12 @@ func TestReport(t *testing.T) {
 	// A process just started still grows as it loads: read until the two
 	// readings of the second (as the app, and as another child) agree.
 	var r Report
-	for range 50 {
+	testcheck.Eventually(func() bool {
 		var err error
-		if r, err = New(chats{"c1": pids[0]}).Report(pids[1]); err != nil {
-			t.Fatal(err)
-		}
-		if r.App == r.Other {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+		r, err = New(chats{"c1": pids[0]}).Report(pids[1])
+		testcheck.NoErr(t, err)
+		return r.App == r.Other
+	})
 	if r.Daemon == 0 || r.Chats["c1"] == 0 || r.Other == 0 || r.App != r.Other {
 		t.Errorf("%+v", r)
 	}

@@ -2,50 +2,32 @@ package claudetrust
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
-
-func write(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func runGit(t *testing.T, dir string, args ...string) {
-	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git %v: %s", args, out)
-	}
-}
 
 func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	config := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", config)
 	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	runGit(t, repo, "init", "-q")
-	write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},"web":{"type":"http","url":"https://example.com/mcp"},"off":{"command":"off"}}}`)
+	testcheck.Git(t, repo, "init", "-q")
+	testcheck.Write(t, filepath.Join(repo, ".mcp.json"), `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},"web":{"type":"http","url":"https://example.com/mcp"},"off":{"command":"off"}}}`)
 	settings := filepath.Join(repo, ".claude", "settings.json")
-	write(t, settings, `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"./setup.sh"}]}]},
+	testcheck.Write(t, settings, `{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"./setup.sh"}]}]},
 		"env":{"B":"1","A":"2"},"apiKeyHelper":"./key.sh","permissions":{"allow":["Bash(ls)"]}}`)
 	skill := filepath.Join(repo, ".claude", "skills", "lint", "SKILL.md")
-	write(t, skill, "---\nname: lint\nhooks:\n  PostToolUse:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"./lint.sh\"\n---\nRun ./not-a-hook.sh\n")
+	testcheck.Write(t, skill, "---\nname: lint\nhooks:\n  PostToolUse:\n    - matcher: Edit\n      hooks:\n        - type: command\n          command: \"./lint.sh\"\n---\nRun ./not-a-hook.sh\n")
 
 	local := filepath.Join(repo, ".claude", "settings.local.json")
-	write(t, local, `{"disabledMcpjsonServers":["off"],"hooks":{"Stop":[{"hooks":[{"type":"prompt","prompt":"check it"}]}]},
+	testcheck.Write(t, local, `{"disabledMcpjsonServers":["off"],"hooks":{"Stop":[{"hooks":[{"type":"prompt","prompt":"check it"}]}]},
 		"awsAuthRefresh":"./aws.sh","otelHeadersHelper":"./otel.sh","proxyAuthHelper":"./proxy.sh","gcpAuthRefresh":"./gcp.sh"}`)
 	sub := filepath.Join(repo, "src")
-	noErr(t, os.Mkdir(sub, 0o700))
+	testcheck.NoErr(t, os.Mkdir(sub, 0o700))
 
 	got, err := runs(sub) // a chat in a subfolder: the repository's root runs too
 	if err != nil {
@@ -80,18 +62,18 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	if trusted(repo) || trusted(filepath.Join(repo, ".claude")) {
 		t.Error("an untrusted repository is trusted")
 	}
-	write(t, filepath.Join(config, ".claude.json"), `{"projects":{"`+repo+`":{"hasTrustDialogAccepted":true}}}`)
-	runGit(t, repo, "commit", "-q", "--allow-empty", "-m", "first")
+	testcheck.Write(t, filepath.Join(config, ".claude.json"), `{"projects":{"`+repo+`":{"hasTrustDialogAccepted":true}}}`)
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "first")
 	wt := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-wt")
-	runGit(t, repo, "worktree", "add", "-q", wt)
-	t.Cleanup(func() { noErr(t, os.RemoveAll(wt)) })
+	testcheck.Git(t, repo, "worktree", "add", "-q", wt)
+	t.Cleanup(func() { testcheck.NoErr(t, os.RemoveAll(wt)) })
 	if !trusted(repo) || !trusted(filepath.Join(repo, ".claude")) || !trusted(wt) {
 		t.Error("a trusted repository, its subfolder or its worktree isn't trusted")
 	}
 
 	// A folder whose .git names the trusted repository's worktree isn't one.
 	fake, _ := filepath.EvalSymlinks(t.TempDir())
-	write(t, filepath.Join(fake, ".git"), "gitdir: "+filepath.Join(repo, ".git", "worktrees", filepath.Base(wt))+"\n")
+	testcheck.Write(t, filepath.Join(fake, ".git"), "gitdir: "+filepath.Join(repo, ".git", "worktrees", filepath.Base(wt))+"\n")
 	if trusted(fake) || (Trust{}).Key(fake) != fake {
 		t.Errorf("a folder pretending to be a worktree is trusted (key %s)", (Trust{}).Key(fake))
 	}
@@ -99,8 +81,8 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	// Nor one whose worktree record isn't under worktrees/.
 	other := filepath.Join(repo, ".git", "other", "x")
 	fake2, _ := filepath.EvalSymlinks(t.TempDir())
-	write(t, filepath.Join(fake2, ".git"), "gitdir: "+other+"\n")
-	write(t, filepath.Join(other, "gitdir"), filepath.Join(fake2, ".git")+"\n")
+	testcheck.Write(t, filepath.Join(fake2, ".git"), "gitdir: "+other+"\n")
+	testcheck.Write(t, filepath.Join(other, "gitdir"), filepath.Join(fake2, ".git")+"\n")
 	if trusted(fake2) {
 		t.Error("a folder named back by a record outside worktrees/ is trusted")
 	}
@@ -108,20 +90,20 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	// Nor a folder in a repository whose own config points its work tree
 	// elsewhere, a worktree's common config included: it keys on itself.
 	steer, _ := filepath.EvalSymlinks(t.TempDir())
-	runGit(t, steer, "init", "-q")
-	runGit(t, steer, "config", "core.worktree", repo)
+	testcheck.Git(t, steer, "init", "-q")
+	testcheck.Git(t, steer, "config", "core.worktree", repo)
 	in := filepath.Join(steer, "in")
-	noErr(t, os.Mkdir(in, 0o700))
+	testcheck.NoErr(t, os.Mkdir(in, 0o700))
 	if trusted(in, steer) || (Trust{}).Key(in) != in {
 		t.Errorf("a folder steering git's work tree keys on %s", (Trust{}).Key(in))
 	}
 	main, _ := filepath.EvalSymlinks(t.TempDir())
-	runGit(t, main, "init", "-q")
-	runGit(t, main, "commit", "-q", "--allow-empty", "-m", "first")
+	testcheck.Git(t, main, "init", "-q")
+	testcheck.Git(t, main, "commit", "-q", "--allow-empty", "-m", "first")
 	wt2 := main + "-wt"
-	runGit(t, main, "worktree", "add", "-q", wt2)
-	t.Cleanup(func() { noErr(t, os.RemoveAll(wt2)) })
-	runGit(t, main, "config", "core.worktree", repo)
+	testcheck.Git(t, main, "worktree", "add", "-q", wt2)
+	t.Cleanup(func() { testcheck.NoErr(t, os.RemoveAll(wt2)) })
+	testcheck.Git(t, main, "config", "core.worktree", repo)
 	if k := (Trust{}).Key(wt2); k != wt2 {
 		t.Errorf("a worktree of a repository steering its work tree keys on %s", k)
 	}
@@ -129,7 +111,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	// Outside git a folder above counts, Claude's or Nushi's.
 	plain, _ := filepath.EvalSymlinks(t.TempDir())
 	sub = filepath.Join(plain, "a", "b")
-	noErr(t, os.MkdirAll(sub, 0o700))
+	testcheck.NoErr(t, os.MkdirAll(sub, 0o700))
 	if trusted(sub) || !trusted(sub, plain) || !trusted(sub, sub) || trusted(plain, sub) {
 		t.Error("trust outside git doesn't follow the folders above")
 	}
@@ -141,13 +123,13 @@ func TestTheHomeFolder(t *testing.T) {
 	home, _ := filepath.EvalSymlinks(t.TempDir())
 	t.Setenv("HOME", home)
 	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(home, ".claude"))
-	write(t, filepath.Join(home, ".claude", "settings.json"), `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}`)
+	testcheck.Write(t, filepath.Join(home, ".claude", "settings.json"), `{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}`)
 	if runs, err := runs(home); err != nil || len(runs) > 0 {
 		t.Errorf("the home folder runs %v, %v", runs, err)
 	}
 	download := filepath.Join(home, "Downloads", "evil")
-	noErr(t, os.MkdirAll(download, 0o700))
-	write(t, filepath.Join(home, ".claude.json"), `{"projects":{"`+home+`":{"hasTrustDialogAccepted":true}}}`)
+	testcheck.NoErr(t, os.MkdirAll(download, 0o700))
+	testcheck.Write(t, filepath.Join(home, ".claude.json"), `{"projects":{"`+home+`":{"hasTrustDialogAccepted":true}}}`)
 	if ok, _ := (Trust{}).Trusted(home, []string{home}); !ok {
 		t.Error("the home folder itself isn't trusted")
 	}
@@ -163,8 +145,8 @@ func TestASettingsFileThatNeverEnds(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	for _, name := range []string{".mcp.json", ".claude/settings.json"} {
 		repo := t.TempDir()
-		noErr(t, os.MkdirAll(filepath.Join(repo, ".claude"), 0o700))
-		noErr(t, os.Symlink("/dev/zero", filepath.Join(repo, name)))
+		testcheck.NoErr(t, os.MkdirAll(filepath.Join(repo, ".claude"), 0o700))
+		testcheck.NoErr(t, os.Symlink("/dev/zero", filepath.Join(repo, name)))
 		if runs, err := runs(repo); err == nil && len(runs) == 0 {
 			t.Errorf("%s linked to /dev/zero: nothing to say", name)
 		}
@@ -177,7 +159,7 @@ func TestAnMCPFileNushiCantRead(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	repo := t.TempDir()
 	body := `{"mcpServers":{"echo":{"command":"echo","args":["hi"]},}}`
-	write(t, filepath.Join(repo, ".mcp.json"), body)
+	testcheck.Write(t, filepath.Join(repo, ".mcp.json"), body)
 	runs, err := runs(repo)
 	if err != nil || len(runs) != 1 || runs[0].Command != body || runs[0].File != filepath.Join(repo, ".mcp.json") {
 		t.Errorf("runs = %+v, %v", runs, err)
@@ -205,7 +187,7 @@ func TestSkillHooksShowWhole(t *testing.T) {
 		"---\nname: x\nhooks:\n  Stop: [{hooks: [{command: echo unclosed}]}]\n": "---\nname: x\nhooks:\n  Stop: [{hooks: [{command: echo unclosed}]}]\n",
 	} {
 		path := filepath.Join(dir, "SKILL.md")
-		write(t, path, body)
+		testcheck.Write(t, path, body)
 		if got, ok := skillHooks(path); ok != (want != "") || ok && string(got) != want {
 			t.Errorf("%.60q: %.60q, %v", body, got, ok)
 		}
@@ -219,11 +201,11 @@ func TestAFileShownWholeOrNotAtAll(t *testing.T) {
 	repo := t.TempDir()
 	mcp := filepath.Join(repo, ".mcp.json")
 	body := "{" + strings.Repeat(" ", 100<<10)
-	write(t, mcp, body)
+	testcheck.Write(t, mcp, body)
 	if runs, _ := runs(repo); len(runs) != 1 || runs[0].Command != body {
 		t.Error("a 100 KB file isn't shown whole")
 	}
-	write(t, mcp, "{"+strings.Repeat(" ", 300<<10))
+	testcheck.Write(t, mcp, "{"+strings.Repeat(" ", 300<<10))
 	if runs, _ := runs(repo); len(runs) != 1 || runs[0].Command != "too large to show (301 KB): read "+mcp {
 		t.Errorf("runs = %.80q", runs[0].Command)
 	}
@@ -236,14 +218,14 @@ func TestSkillsUnderAPathWithPatternCharacters(t *testing.T) {
 	base, _ := filepath.EvalSymlinks(t.TempDir())
 	repo := filepath.Join(base, "x[1]*?")
 	skill := filepath.Join(repo, ".claude", "skills", "lint", "SKILL.md")
-	write(t, skill, "---\nname: lint\nhooks:\n  Stop: [{hooks: [{command: ./lint.sh}]}]\n---\n")
+	testcheck.Write(t, skill, "---\nname: lint\nhooks:\n  Stop: [{hooks: [{command: ./lint.sh}]}]\n---\n")
 	got, err := runs(repo)
 	if err != nil || len(got) != 1 || got[0].File != skill {
 		t.Fatalf("runs = %v, %v", got, err)
 	}
 	skills := filepath.Dir(filepath.Dir(skill))
-	noErr(t, os.Chmod(skills, 0))
-	t.Cleanup(func() { noErr(t, os.Chmod(skills, 0o700)) }) // before TempDir's cleanup removes it
+	testcheck.NoErr(t, os.Chmod(skills, 0))
+	t.Cleanup(func() { testcheck.NoErr(t, os.Chmod(skills, 0o700)) }) // before TempDir's cleanup removes it
 	if _, err := runs(repo); err == nil {
 		t.Error("an unreadable skills folder was passed over")
 	}

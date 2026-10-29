@@ -7,17 +7,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
-)
 
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
+	"github.com/afrase/nushi/internal/testcheck"
+)
 
 // The front matter's name and description, cleaned; the first line
 // without one.
@@ -39,9 +31,9 @@ func TestParse(t *testing.T) {
 func TestRootsAndList(t *testing.T) {
 	top, _ := filepath.EvalSymlinks(t.TempDir())
 	deeper := filepath.Join(top, "a", "b")
-	write(t, filepath.Join(top, ".agents", "skills", "s", "SKILL.md"), "x")
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "s", "SKILL.md"), "x")
 	elsewhere := t.TempDir()
-	write(t, filepath.Join(elsewhere, "skills", "far", "SKILL.md"), "x")
+	testcheck.Write(t, filepath.Join(elsewhere, "skills", "far", "SKILL.md"), "x")
 	if err := os.MkdirAll(deeper, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +54,7 @@ func TestRootsAndList(t *testing.T) {
 	if err := os.Symlink(filepath.Join(elsewhere, "skills", "far", "SKILL.md"), filepath.Join(top, ".agents", "skills", "lf", "SKILL.md")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, filepath.Join(top, ".agents", "skills")+"/evil\u202egnp/SKILL.md", "x") // a name posing as another: skipped
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills")+"/evil\u202egnp/SKILL.md", "x") // a name posing as another: skipped
 	l := List(filepath.Join(top, ".agents", "skills"))
 	if len(l) != 3 || l[0].Entry != "lf" || !l[0].FileLinked || l[1].Linked != filepath.Join(elsewhere, "skills", "far") || l[2].Linked != "" {
 		t.Errorf("%+v", l)
@@ -82,7 +74,7 @@ func TestTrash(t *testing.T) {
 	}
 	root := filepath.Join(top, ".agents", "skills")
 	bin := t.TempDir()
-	write(t, filepath.Join(bin, "trash"), "#!/bin/sh\necho \"$1\" >> \""+bin+"/trashed\"\nmv \"$1\" \""+bin+"/gone\"\n")
+	testcheck.Write(t, filepath.Join(bin, "trash"), "#!/bin/sh\necho \"$1\" >> \""+bin+"/trashed\"\nmv \"$1\" \""+bin+"/gone\"\n")
 	if err := os.Chmod(filepath.Join(bin, "trash"), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -90,14 +82,14 @@ func TestTrash(t *testing.T) {
 	TrashProgram = filepath.Join(bin, "trash")
 	defer func() { TrashProgram = old }()
 	target := t.TempDir()
-	write(t, filepath.Join(target, "SKILL.md"), "x")
+	testcheck.Write(t, filepath.Join(target, "SKILL.md"), "x")
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Symlink(target, filepath.Join(root, "linked")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, filepath.Join(root, "nofile", "README"), "x")
+	testcheck.Write(t, filepath.Join(root, "nofile", "README"), "x")
 	ctx := context.Background()
 	for _, bad := range []string{root, filepath.Join(root, "nofile"), filepath.Join(root, "linked") + "/../linked", "rel/linked", target} {
 		if err := Trash(ctx, []string{root}, nil, bad); err == nil {
@@ -120,7 +112,7 @@ func TestTrash(t *testing.T) {
 
 	// A project root that became a link: refused, and nothing moves.
 	elsewhere := t.TempDir()
-	write(t, filepath.Join(elsewhere, "victim", "SKILL.md"), "x")
+	testcheck.Write(t, filepath.Join(elsewhere, "victim", "SKILL.md"), "x")
 	if err := os.RemoveAll(filepath.Join(top, ".agents")); err != nil {
 		t.Fatal(err)
 	}

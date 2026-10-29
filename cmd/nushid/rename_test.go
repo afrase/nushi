@@ -8,6 +8,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestMoveData(t *testing.T) {
@@ -72,8 +73,8 @@ func TestMoveData(t *testing.T) {
 	}
 
 	// A copy left by an earlier move, which the chat went on from: it goes.
-	check(t, os.WriteFile(filepath.Join(hist(newScratch), "s1.jsonl"), []byte("{}\n{}\n"), 0o600))
-	check(t, os.WriteFile(filepath.Join(hist(scratch), "s1.jsonl"), []byte("{}\n"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(hist(newScratch), "s1.jsonl"), []byte("{}\n{}\n"), 0o600))
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(hist(scratch), "s1.jsonl"), []byte("{}\n"), 0o600))
 	if err := moveData(old, dir, projects); err != nil {
 		t.Fatal(err)
 	}

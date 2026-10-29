@@ -9,17 +9,8 @@ import (
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
-
-func write(t *testing.T, path, text string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func skill(t *testing.T, root, dir, name string) {
 	t.Helper()
@@ -27,7 +18,7 @@ func skill(t *testing.T, root, dir, name string) {
 	if name != "" {
 		fm += "name: " + name + "\n"
 	}
-	write(t, filepath.Join(root, dir, "SKILL.md"), fm+"---\nbody\n")
+	testcheck.Write(t, filepath.Join(root, dir, "SKILL.md"), fm+"---\nbody\n")
 }
 
 func link(t *testing.T, target, at string) {
@@ -89,15 +80,15 @@ func TestListReadsEachRoot(t *testing.T) {
 	skill(t, filepath.Join(top, ".codex", "skills"), "codexonly", "")
 	skill(t, filepath.Join(top, "sub", ".agents", "skills"), "near", "")
 	skill(t, filepath.Join(filepath.Dir(top), ".agents", "skills"), "above", "") // above the repository: not read
-	write(t, filepath.Join(top, ".agents", "skills", "nofm", "SKILL.md"), "no front matter\n")
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "nofm", "SKILL.md"), "no front matter\n")
 	elsewhere := t.TempDir()
 	skill(t, elsewhere, "outside", "")
 	link(t, filepath.Join(elsewhere, "outside"), filepath.Join(top, ".agents", "skills", "linkedskill"))
-	write(t, filepath.Join(elsewhere, "file.md"), "---\ndescription: x\n---\n")
-	write(t, filepath.Join(top, ".agents", "skills", "linkedfile", "README"), "")
+	testcheck.Write(t, filepath.Join(elsewhere, "file.md"), "---\ndescription: x\n---\n")
+	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "linkedfile", "README"), "")
 	link(t, filepath.Join(elsewhere, "file.md"), filepath.Join(top, ".agents", "skills", "linkedfile", "SKILL.md"))
 	link(t, elsewhere, filepath.Join(deeper, ".agents")) // a linked root
-	write(t, filepath.Join(codexHome, "config.toml"), "# mine\n[[skills.config]]\nname = \"everyday\"\nenabled = false\n\n[[skills.config]]\npath = \""+
+	testcheck.Write(t, filepath.Join(codexHome, "config.toml"), "# mine\n[[skills.config]]\nname = \"everyday\"\nenabled = false\n\n[[skills.config]]\npath = \""+
 		filepath.Join(top, ".codex", "skills", "codexonly", "SKILL.md")+"\"\nenabled = false\n")
 
 	got, err := Codex{}.List(context.Background(), deeper)
@@ -126,7 +117,7 @@ func TestListReadsEachRoot(t *testing.T) {
 	}
 
 	// A config.toml that doesn't read: no switches.
-	write(t, filepath.Join(codexHome, "config.toml"), "[[skills.config]\n")
+	testcheck.Write(t, filepath.Join(codexHome, "config.toml"), "[[skills.config]\n")
 	if got, _ := (Codex{}).List(context.Background(), deeper); got.NoSwitch == "" {
 		t.Error("a broken config.toml: switches offered")
 	}

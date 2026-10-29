@@ -5,17 +5,19 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestRemotes(t *testing.T) {
 	repo := t.TempDir()
-	git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	if rs, err := Remotes(t.Context(), repo); err != nil || len(rs) != 0 {
 		t.Fatalf("%+v %v", rs, err)
 	}
-	git(t, repo, "remote", "add", "origin", "git@github.com:afrase/nushi.git")
-	git(t, repo, "remote", "add", "up", "https://github.com/someone/nushi")
-	git(t, repo, "remote", "set-url", "--push", "up", "no_push")
+	testcheck.Git(t, repo, "remote", "add", "origin", "git@github.com:afrase/nushi.git")
+	testcheck.Git(t, repo, "remote", "add", "up", "https://github.com/someone/nushi")
+	testcheck.Git(t, repo, "remote", "set-url", "--push", "up", "no_push")
 	rs, err := Remotes(t.Context(), repo)
 	if err != nil || len(rs) != 2 || rs[0] != (Remote{"origin", "git@github.com:afrase/nushi.git"}) || rs[1].URL != "https://github.com/someone/nushi" {
 		t.Fatalf("%+v %v", rs, err)
@@ -31,19 +33,19 @@ func TestRemotes(t *testing.T) {
 func TestFetchAPullsHead(t *testing.T) {
 	ctx := t.Context()
 	base := t.TempDir()
-	git(t, base, "init", "-q", "-b", "main")
+	testcheck.Git(t, base, "init", "-q", "-b", "main")
 	write(t, filepath.Join(base, "a.txt"), "a\n")
-	git(t, base, "add", ".")
-	git(t, base, "commit", "-q", "-m", "a")
-	git(t, base, "checkout", "-q", "-b", "feature")
+	testcheck.Git(t, base, "add", ".")
+	testcheck.Git(t, base, "commit", "-q", "-m", "a")
+	testcheck.Git(t, base, "checkout", "-q", "-b", "feature")
 	write(t, filepath.Join(base, "a.txt"), "feature\n")
-	git(t, base, "commit", "-q", "-am", "feature")
-	git(t, base, "update-ref", "refs/pull/7/head", "HEAD") // as GitHub keeps a fork's
-	git(t, base, "checkout", "-q", "main")
+	testcheck.Git(t, base, "commit", "-q", "-am", "feature")
+	testcheck.Git(t, base, "update-ref", "refs/pull/7/head", "HEAD") // as GitHub keeps a fork's
+	testcheck.Git(t, base, "checkout", "-q", "main")
 	clone := filepath.Join(t.TempDir(), "clone")
-	git(t, filepath.Dir(clone), "clone", "-q", base, clone)
+	testcheck.Git(t, filepath.Dir(clone), "clone", "-q", base, clone)
 
-	noErr(t, Fetch(ctx, clone, "origin", "+refs/heads/feature:refs/remotes/origin/feature"))
+	testcheck.NoErr(t, Fetch(ctx, clone, "origin", "+refs/heads/feature:refs/remotes/origin/feature"))
 	wt, in, err := Worktrees{}.Add(ctx, clone, "feature", "feature", "refs/remotes/origin/feature")
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +60,7 @@ func TestFetchAPullsHead(t *testing.T) {
 		t.Fatalf("its fetched commits count as work: %+v %v", st, err)
 	}
 
-	noErr(t, Fetch(ctx, clone, "origin", "+refs/pull/7/head:refs/nushi/pull/7"))
+	testcheck.NoErr(t, Fetch(ctx, clone, "origin", "+refs/pull/7/head:refs/nushi/pull/7"))
 	_, in, err = Worktrees{}.Add(ctx, clone, "pr-7", "pr-7-feature", "refs/nushi/pull/7")
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +82,7 @@ func TestFetchAPullsHead(t *testing.T) {
 func upstream(t *testing.T, dir string) string {
 	t.Helper()
 	out, err := run(t.Context(), dir, "rev-parse", "--abbrev-ref", "@{upstream}")
-	noErr(t, err)
+	testcheck.NoErr(t, err)
 	return strings.TrimSpace(string(out))
 }
 
@@ -88,25 +90,25 @@ func upstream(t *testing.T, dir string) string {
 func TestHead(t *testing.T) {
 	ctx := t.Context()
 	repo := t.TempDir()
-	git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
 	write(t, filepath.Join(repo, "a.txt"), "a\n")
-	git(t, repo, "add", ".")
-	git(t, repo, "commit", "-q", "-m", "a")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "a")
 	if b, r := Head(ctx, repo); b != "main" || r != "" {
 		t.Fatalf("%q %q", b, r)
 	}
-	git(t, repo, "remote", "add", "origin", "https://github.com/afrase/nushi")
-	git(t, repo, "remote", "add", "fork", "https://github.com/me/nushi")
-	git(t, repo, "checkout", "-q", "-b", "feat/x")
-	git(t, repo, "config", "branch.feat/x.remote", "origin")
+	testcheck.Git(t, repo, "remote", "add", "origin", "https://github.com/afrase/nushi")
+	testcheck.Git(t, repo, "remote", "add", "fork", "https://github.com/me/nushi")
+	testcheck.Git(t, repo, "checkout", "-q", "-b", "feat/x")
+	testcheck.Git(t, repo, "config", "branch.feat/x.remote", "origin")
 	if b, r := Head(ctx, repo); b != "feat/x" || r != "origin" {
 		t.Fatalf("%q %q", b, r)
 	}
-	git(t, repo, "config", "branch.feat/x.pushRemote", "fork")
+	testcheck.Git(t, repo, "config", "branch.feat/x.pushRemote", "fork")
 	if _, r := Head(ctx, repo); r != "fork" {
 		t.Fatalf("the push remote: %q", r)
 	}
-	git(t, repo, "checkout", "-q", "--detach")
+	testcheck.Git(t, repo, "checkout", "-q", "--detach")
 	if b, _ := Head(ctx, repo); b != "" {
 		t.Fatalf("detached: %q", b)
 	}
