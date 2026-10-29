@@ -12,8 +12,8 @@ import 'package:nushi/main.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
+import 'package:nushi/pull_widget.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_view_test.dart' show comment, item, pull, testNow;
@@ -256,7 +256,7 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('a draft', (tester) async {
+  testWidgets('a draft: grey, no merge row, Ready for review', (tester) async {
     final (d, _) = await _app(
       tester,
       whole: pull()
@@ -264,55 +264,62 @@ void main() {
         ..checks.clear(),
     );
     expect(_inCard(find.text('Draft')), findsOneWidget);
-    expect(_inCard(find.text('Draft: not ready to merge')), findsOneWidget);
-    expect(_inCard(find.text('None')), findsOneWidget); // checks
+    expect(_inCard(find.text('Ready for review')), findsOneWidget);
+    expect(_inCard(find.text('Merge blocked')), findsNothing);
+    expect(_inCard(find.byType(ChecksBar)), findsNothing);
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('open with a failing check: counted, and what blocks merging', (
+  testWidgets('open with a failing check: the bar and its legend, Fix '
+      'checks, a row a reviewer, the threads, what blocks merging', (
     tester,
   ) async {
     final (d, _) = await _app(tester, whole: pull());
+    expect(_inCard(find.text('Add Sub and Neg')), findsOneWidget);
+    expect(_inCard(find.text('Open')), findsOneWidget);
+    expect(_inCard(find.byType(ChecksBar)), findsOneWidget);
     expect(
-      _inCard(find.text('#1 Add Sub and Neg', findRichText: true)),
+      _inCard(find.textContaining('1 failed', findRichText: true)),
       findsOneWidget,
     );
-    expect(_inCard(find.text('Open')), findsOneWidget);
-    final checks = _inCard(find.text('1 failing · 1 passed'));
-    expect(checks, findsOneWidget);
-    // Each count in its own color: the passed one isn't red.
-    final t = NushiTheme.of(tester.element(checks)).t;
-    Color? color(String words) {
-      Color? found;
-      tester.widget<Text>(checks).textSpan!.visitChildren((s) {
-        if (s is TextSpan && s.text == words) found = s.style?.color;
-        return found == null;
-      });
-      return found;
-    }
-
-    expect(color('1 failing'), t.crashed);
-    expect(color('1 passed'), t.done);
-    expect(_inCard(find.text('Checks failing')), findsOneWidget);
-    expect(_inCard(find.text('5')), findsOneWidget); // comments, none new
-    // Collapsed: its number and the failing count.
+    expect(_inCard(find.text('Fix checks')), findsOneWidget);
+    expect(_inCard(find.text('octo')), findsOneWidget);
+    expect(_inCard(find.text('Approved')), findsOneWidget);
+    expect(_inCard(find.text('@core-team')), findsOneWidget);
+    expect(_inCard(find.text('waiting')), findsOneWidget);
+    expect(_inCard(find.text('2 open threads')), findsOneWidget);
+    expect(_inCard(find.text('Address')), findsOneWidget);
+    expect(_inCard(find.text('Merge blocked')), findsOneWidget);
+    expect(_inCard(find.text('checks, review, threads')), findsOneWidget);
+    expect(_inCard(find.text('5 comments')), findsOneWidget);
+    // Collapsed: its number, the failing count, the threads.
     await tester.tap(_inCard(find.text('Pull request')));
     await tester.pumpAndSettle();
     expect(_inCard(find.text('#1')), findsOneWidget);
-    expect(_inCard(find.byIcon(Icons.close)), findsOneWidget);
+    expect(_inCard(find.byIcon(Icons.cancel_outlined)), findsOneWidget);
+    expect(_inCard(find.byIcon(Icons.forum_outlined)), findsOneWidget);
+    expect(_inCard(find.text('2')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('merged: no merge row; a new comment is counted', (tester) async {
+  testWidgets('merged: what it merged into, no rows; a new comment counted '
+      'while open', (tester) async {
     final p = pull()..item = item(1, 'Add Sub and Neg', state: 'merged');
     final (d, _) = await _app(tester, whole: p);
     expect(_inCard(find.text('Merged')), findsOneWidget);
-    expect(_inCard(find.text('Checks failing')), findsNothing);
-    // A comment newer than those first seen.
+    expect(
+      _inCard(find.text('Merged into main.', findRichText: true)),
+      findsOneWidget,
+    );
+    expect(_inCard(find.text('Merge blocked')), findsNothing);
+    expect(_inCard(find.text('Fix checks')), findsNothing);
+    final q = pull();
+    final (e, _) = await _app(tester, whole: q);
     pullSeen.value = {'c': pullSeen.value['c']! - 1};
     await tester.pump();
-    expect(_inCard(find.text('1 new of 5')), findsOneWidget);
+    expect(_inCard(find.text('1 new')), findsOneWidget);
     d.dispose();
+    e.dispose();
   }, variant: _mac);
 
   test('a pull request named by its link, owner/name#n or its number', () {
@@ -343,7 +350,7 @@ void main() {
     pullSeen.value = {'c': pullSeen.value['c']! - 1};
     await tester.pump();
     expect(find.text('Pull request'), findsNWidgets(2)); // the switch, the card
-    await tester.tap(find.text('1 new of 5'));
+    await tester.tap(find.text('1 new'));
     await tester.pumpAndSettle();
     expect(find.byType(GitHubPullPane), findsOneWidget);
     expect(

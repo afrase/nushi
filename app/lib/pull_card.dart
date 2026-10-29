@@ -1,70 +1,15 @@
 import 'package:flutter/material.dart';
-
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_pull.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panel_cards.dart';
+import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
+import 'package:nushi/pull_widget.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-
-/// A pull request's checks counted: failing, running and passed.
-({int failing, int running, int passed}) checkCounts(GitHubPull p) => (
-  failing: p.checks.where((c) => c.failed).length,
-  running: p.checks.where((c) => c.state == 'pending').length,
-  passed: p.checks.where((c) => c.state == 'success').length,
-);
-
-/// The checks in words ("2 failing · 1 running · 5 passed") and the
-/// color of the worst; null when there are none.
-(String, Color)? checksWords(Tokens t, GitHubPull p) {
-  final n = checkCounts(p);
-  if (p.checks.isEmpty) return null;
-  final words = [
-    if (n.failing > 0) '${n.failing} failing',
-    if (n.running > 0) '${n.running} running',
-    if (n.passed > 0) '${n.passed} passed',
-  ];
-  return (
-    words.isEmpty ? '${p.checks.length} skipped' : words.join(' · '),
-    n.failing > 0
-        ? t.crashed
-        : n.running > 0
-        ? t.needs
-        : t.done,
-  );
-}
-
-/// The checks in words as [checksWords] says them, each count in its own
-/// color (failing red, running amber, passed green) and the dots between
-/// muted: "1 passed" beside "1 failing" isn't red.
-TextSpan checksSpan(NushiTheme theme, GitHubPull p) {
-  final t = theme.t;
-  final n = checkCounts(p);
-  final parts = [
-    if (n.failing > 0) ('${n.failing} failing', t.crashed),
-    if (n.running > 0) ('${n.running} running', t.needs),
-    if (n.passed > 0) ('${n.passed} passed', t.done),
-  ];
-  if (parts.isEmpty) {
-    return TextSpan(
-      text: '${p.checks.length} skipped',
-      style: theme.ui(t.textMuted, size: 12),
-    );
-  }
-  return TextSpan(
-    children: [
-      for (final (i, (words, color)) in parts.indexed) ...[
-        if (i > 0)
-          TextSpan(text: ' · ', style: theme.ui(t.textMuted, size: 12)),
-        TextSpan(text: words, style: theme.ui(color, size: 12)),
-      ],
-    ],
-  );
-}
 
 /// The details panel's Pull request card: the chat's pull request (the
 /// one it started from, else its branch's) as a summary, collapsed (its
@@ -106,70 +51,146 @@ class _Summary extends StatelessWidget {
     final l = cp.link;
     final p = cp.pull;
     if (l == null) return Text('None', style: theme.ui(t.textMuted, size: 12));
-    final checks = p == null ? null : checksWords(t, p);
-    final n = p == null ? null : checkCounts(p);
-    final review = p == null ? null : reviewWords(t, p.item.review);
-    final unread = p == null ? 0 : unreadComments(cp.chat.id, p);
-    final small = theme.ui(t.textSecondary, size: 12);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 8,
-      children: [
-        Text(
-          '#${l.number}',
-          style: theme.code(
-            p == null ? t.link : itemColor(t, p.item),
-            size: 12,
-          ),
-        ),
-        if (checks != null && n != null)
-          Tooltip(
-            message: 'Checks: ${checks.$1}',
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 2,
-              children: [
-                Icon(
-                  n.failing > 0
-                      ? Icons.close
-                      : n.running > 0
-                      ? Icons.schedule
-                      : Icons.check,
-                  size: 13,
-                  color: checks.$2,
-                ),
-                if (n.failing + n.running > 0)
-                  Text(
-                    '${n.failing > 0 ? n.failing : n.running}',
-                    style: theme.ui(checks.$2, size: 12),
-                  ),
-              ],
-            ),
-          ),
-        if (review != null)
-          Tooltip(
-            message: review.$1,
-            child: Icon(Icons.rate_review_outlined, size: 13, color: review.$2),
-          ),
-        if (unread > 0)
-          Tooltip(
-            message: '$unread new comment${unread == 1 ? '' : 's'}',
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 2,
-              children: [
-                Icon(Icons.chat_bubble_outline, size: 12, color: t.link),
-                Text('$unread', style: small.copyWith(color: t.link)),
-              ],
-            ),
-          ),
-      ],
+    return pullSummary(
+      theme,
+      number: l.number,
+      pull: p,
+      unread: p == null ? 0 : unreadComments(cp.chat.id, p),
     );
   }
 }
 
-/// The card open: the title, then its state, checks, review, whether it
-/// can merge and its comments; or why there's none.
+/// A pull request on one line, as the collapsed PR widget (and the
+/// phone's chat bar) shows it: its number in its state's color, then for
+/// an open one what's going on (failing or running checks, changes
+/// requested or a reviewer waiting, threads not resolved, new comments),
+/// or "Ready" once it can merge; "Draft", "Merged", "Closed" else.
+Widget pullSummary(
+  NushiTheme theme, {
+  required int number,
+  required GitHubPull? pull,
+  int unread = 0,
+  double size = 12,
+}) {
+  final t = theme.t;
+  final p = pull;
+  Widget count(IconData icon, Color color, String words, String tip) => Tooltip(
+    message: tip,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 3,
+      children: [
+        Icon(icon, size: size + 1, color: color),
+        if (words.isNotEmpty) Text(words, style: theme.ui(color, size: size)),
+      ],
+    ),
+  );
+  final it = p?.item;
+  final parts = <Widget>[];
+  if (p != null && it != null) {
+    final n = countChecks(p);
+    final open = p.threads.where((x) => !x.resolved).length;
+    final waiting = p.reviewers.any((r) => r.state == 'requested');
+    final ready =
+        (p.mergeState == 'clean' || p.mergeState == 'has_hooks') &&
+        n.failing + n.running == 0 &&
+        open == 0;
+    switch (it.state) {
+      case 'merged' || 'closed':
+        parts.add(
+          Text(itemState(it), style: theme.ui(itemColor(t, it), size: size)),
+        );
+      case _ when it.draft:
+        parts.add(Text('Draft', style: theme.ui(t.textMuted, size: size)));
+      case _ when ready:
+        parts.add(count(Icons.merge_type, t.done, 'Ready', 'Ready to merge'));
+      default:
+        if (n.failing > 0) {
+          parts.add(
+            count(
+              Icons.cancel_outlined,
+              t.crashed,
+              '${n.failing}',
+              'Checks: ${n.failing} failing',
+            ),
+          );
+        } else if (n.running > 0) {
+          parts.add(
+            count(
+              Icons.schedule,
+              t.needs,
+              '${n.running}',
+              'Checks: ${n.running} running',
+            ),
+          );
+        }
+        if (it.review == 'changes_requested') {
+          parts.add(
+            count(
+              Icons.rate_review_outlined,
+              t.crashed,
+              '',
+              'Changes requested',
+            ),
+          );
+        } else if (waiting) {
+          parts.add(
+            Tooltip(
+              message: 'A reviewer is waited on',
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: t.textMuted, width: 1.2),
+                ),
+              ),
+            ),
+          );
+        }
+        if (open > 0) {
+          parts.add(
+            count(
+              Icons.forum_outlined,
+              t.needs,
+              '$open',
+              '$open unresolved thread${open == 1 ? '' : 's'}',
+            ),
+          );
+        }
+    }
+    if (unread > 0 && it.state == 'open') {
+      parts.add(
+        count(
+          Icons.chat_bubble_outline,
+          t.link,
+          '$unread',
+          '$unread new comment${unread == 1 ? '' : 's'}',
+        ),
+      );
+    }
+  }
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    spacing: 7,
+    children: [
+      Text(
+        '#$number',
+        style: theme.code(
+          it == null
+              ? t.link
+              : it.draft && it.state == 'open'
+              ? t.textMuted
+              : itemColor(t, it),
+          size: size,
+        ),
+      ),
+      ...parts,
+    ],
+  );
+}
+
+/// The card open: the pull request ([PullRows]); or why there's none.
 class _Rows extends StatelessWidget {
   const new(this.cp);
 
@@ -213,70 +234,7 @@ class _Rows extends StatelessWidget {
     if (p == null) {
       return Text(error ?? '#${l.number}…', style: muted);
     }
-    final it = p.item;
-    final checks = checksWords(t, p);
-    final review = reviewWords(t, it.review);
-    final merge = mergeWords(t, p);
-    final unread = unreadComments(cp.chat.id, p);
-    final total = commentTimes(p).length;
-    Widget row(String label, String value, Color color, {TextSpan? span}) =>
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(width: 72, child: Text(label, style: muted)),
-              Expanded(
-                child: Text.rich(
-                  span ?? TextSpan(text: value),
-                  textAlign: TextAlign.right,
-                  style: theme.ui(color, size: 12),
-                ),
-              ),
-            ],
-          ),
-        );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: '#${it.ref.number} ',
-                  style: theme.code(itemColor(t, it), size: 12),
-                ),
-                TextSpan(text: it.title),
-              ],
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.text, size: 12.5, weight: FontWeight.w500),
-          ),
-        ),
-        row('State', itemState(it), itemColor(t, it)),
-        row(
-          'Checks',
-          checks?.$1 ?? 'None',
-          t.textMuted,
-          span: checks == null ? null : checksSpan(theme, p),
-        ),
-        row('Review', review?.$1 ?? 'None yet', review?.$2 ?? t.textMuted),
-        if (it.state == 'open') row('Merge', merge.$1, merge.$2),
-        row(
-          'Comments',
-          unread > 0 ? '$unread new of $total' : '$total',
-          unread > 0 ? t.link : t.text,
-        ),
-        if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text('Not current: $error', style: muted),
-          ),
-      ],
-    );
+    return PullRows(cp);
   }
 }
 
