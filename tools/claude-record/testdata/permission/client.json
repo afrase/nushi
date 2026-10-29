@@ -1,0 +1,13 @@
+{
+  "timeout": "20s",
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1"},
+    {"prompt": "list the files", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "tool_call"}}}},
+    {"answer": "session/request_permission", "option": "allow_once"},
+    {"await": "p1"},
+    {"prompt": "thanks", "session": "s1"},
+    {"list": {}}
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "turns": [
+    {
+      "match": {"lastUserText": "list the files"},
+      "content": [
+        {"type": "thinking", "thinking": "I'll look."},
+        {"type": "text", "text": "Let me look."},
+        {"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}
+      ]
+    },
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "deltas": ["There are ", "two files."]}]},
+    {"match": {"lastUserText": "thanks"}, "content": [{"type": "text", "text": "You're welcome."}]}
+  ]
+}
