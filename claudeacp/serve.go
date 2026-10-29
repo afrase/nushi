@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/afrase/acp-go/steering"
 	acp "github.com/afrase/acp-go/unstable"
@@ -35,7 +36,8 @@ type agent struct {
 	ctx    context.Context //nolint:containedctx // ends with the client's connection
 	cfg    Config
 	log    *slog.Logger
-	newID  func() string // session and message ids; tests give counted ones
+	after  func(time.Duration) <-chan time.Time // the clock; tests give a fake one
+	newID  func() string                        // session and message ids; tests give counted ones
 
 	mu       sync.Mutex
 	caps     clientCaps
@@ -59,7 +61,7 @@ func newAgent(cfg Config) *agent {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	return &agent{cfg: cfg, log: log, newID: newUUID, sessions: map[string]*session{}}
+	return &agent{cfg: cfg, log: log, after: time.After, newID: newUUID, sessions: map[string]*session{}}
 }
 
 func (a *agent) serve(r io.Reader, w io.Writer) {
@@ -136,6 +138,34 @@ func (a *agent) forget(s *session) {
 	defer a.mu.Unlock()
 	if a.sessions[s.id] == s {
 		delete(a.sessions, s.id)
+	}
+}
+
+// update sends the client one of a session's updates. It fails only when
+// the client is gone, and then nothing more can be sent.
+func (a *agent) update(sid string, u acp.SessionUpdate) {
+	_ = a.client.SessionUpdate(a.ctx, &acp.SessionNotification{SessionID: acp.SessionID(sid), Update: u})
+}
+
+func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.PromptResponse, error) {
+	s, err := a.session(req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	content, err := toClaude(req.Prompt)
+	if err != nil {
+		return nil, err
+	}
+	t, err := s.send(ctx, content)
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case o := <-t.done:
+		return o.resp, o.err
+	case <-ctx.Done():
+		// The client withdrew the prompt; the turn goes on in claude.
+		return nil, ctx.Err()
 	}
 }
 
