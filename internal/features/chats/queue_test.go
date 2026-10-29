@@ -98,6 +98,7 @@ func TestSendNowStopsTheTurn(t *testing.T) {
 	eventually(t, c, func() bool { return len(c.queue) == 0 })
 	eventually(t, c, func() bool { got, _ := agent.texts(); return reflect.DeepEqual(got, []string{"one", "now", "held"}) })
 	agent.release()
+	eventually(t, c, func() bool { return !c.busy }) // else Close's cancel could close the gate the release did
 }
 
 // A subagent's own step ending isn't the agent's chance: a message steered
