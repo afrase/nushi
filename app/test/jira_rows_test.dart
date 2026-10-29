@@ -210,7 +210,6 @@ void main() {
     await loadFonts();
     Directory(dataDir).createSync(recursive: true); // the tests' own
   });
-  tearDown(() => jiraAssignee.value = {});
 
   test('initials, colors and plain names', () {
     expect(initials('Ann Lee'), 'AL');

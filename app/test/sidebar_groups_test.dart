@@ -116,10 +116,6 @@ void main() {
     await loadFonts();
     Directory(dataDir).createSync(recursive: true); // the tests' own
   });
-  tearDown(() {
-    sidebarOrder.value = [];
-    sidebarCollapsed.value = {};
-  });
 
   testWidgets('a project is dragged by its header into another place, '
       'a line showing where; remembered, a new project first', (tester) async {

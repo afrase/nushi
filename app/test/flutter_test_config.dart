@@ -3,9 +3,16 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/github_parts.dart';
+import 'package:nushi/github_review.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/panel_cards.dart';
 import 'package:nushi/pull_cache.dart';
+import 'package:nushi/remote.dart';
+import 'package:nushi/review.dart';
+import 'package:nushi/settings.dart';
 
 /// On CI (GitHub's macOS image draws text a few pixels differently from a
 /// Mac), a golden may differ in up to 1% of its pixels (a card dense with
@@ -13,9 +20,10 @@ import 'package:nushi/pull_cache.dart';
 /// here it must match. Every shine stands still, its band before the text,
 /// and so does every loop on the shared clock that reads `loopPhase` (a
 /// pull request's running ring, a streaming reply's caret), so goldens are
-/// one frame and pumpAndSettle settles while a call runs. No pull request
-/// read in one test shows in the next, and the test process's data folder
-/// goes when its tests end.
+/// one frame and pumpAndSettle settles while a call runs. No test sees
+/// what another left: the app's prefs as at launch, no pull request read,
+/// no agents, review comments or drafts, remote state or clones known.
+/// The test process's data folder goes when its tests end.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
   final local = goldenFileComparator;
@@ -24,8 +32,17 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
       local.basedir.resolve('flutter_test_config.dart'),
     );
   }
-  // Each test starts with no pull request kept from another.
-  setUp(forgetPulls);
+  setUp(() {
+    resetAppSettings();
+    forgetPulls();
+    forgetReviews();
+    forgetReviewDrafts();
+    agentList.value = {};
+    shellEnvironment.value = null;
+    remoteState.value = null;
+    githubFolders.value = {};
+    revealCard.value = null;
+  });
   tearDownAll(() {
     final dir = Directory(dataDir);
     if (dir.existsSync()) dir.deleteSync(recursive: true);

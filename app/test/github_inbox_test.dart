@@ -218,7 +218,6 @@ void main() {
 
   testWidgets('Review requested: only me at first, or me and my teams, '
       'remembered', (tester) async {
-    addTearDown(() => githubTeamReviews.value = false);
     Directory(dataDir).createSync(recursive: true); // the tests' own
     // The asks that reach GitHub, not those for what the daemon kept.
     List<ListGitHubInboxRequest> asks(FakeDaemon fake) => [

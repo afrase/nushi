@@ -11,7 +11,6 @@ import 'fake_daemon.dart';
 void main() {
   testWidgets('what fills the context is asked, the card collapsed or not, '
       'once the chat can be asked', (tester) async {
-    addTearDown(() => collapsedCards.value = {});
     collapsedCards.value = {'Context'};
     final fake = FakeDaemon([Chat(id: 'c', agent: 'claude', folder: '/x')]);
     final d = await fake.connect(tester);

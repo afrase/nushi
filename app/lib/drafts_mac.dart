@@ -39,10 +39,7 @@ final class DraftFiles implements DraftStore {
     if (drafts.isEmpty) {
       if (_json.existsSync()) _json.deleteSync();
     } else {
-      final tmp = File('${_json.path}.tmp')
-        ..writeAsStringSync(jsonEncode(drafts), flush: true);
-      setMode(tmp.path, 0x180); // 0600
-      tmp.renameSync(_json.path);
+      writeWhole(_json, utf8.encode(jsonEncode(drafts)));
     }
     // The images no draft has any more (sent, removed, or the chat gone).
     if (!_images.existsSync()) return;
@@ -61,16 +58,10 @@ final class DraftFiles implements DraftStore {
   String? keepImage(ImageData image) {
     if (_names[image] case final name?) return name;
     try {
-      if (!_images.existsSync()) {
-        _images.createSync();
-        setMode(_images.path, 0x1c0); // 0700
-      }
+      privateDir(_images);
       final ext = image.mimeType.split('/').last;
       final name = '${DateTime.now().microsecondsSinceEpoch}-${_made++}.$ext';
-      final f = File('${_images.path}/$name.tmp')
-        ..writeAsBytesSync(image.data, flush: true);
-      setMode(f.path, 0x180);
-      f.renameSync('${_images.path}/$name');
+      writeWhole(File('${_images.path}/$name'), image.data);
       return _names[image] = name;
     } on Object {
       return null; // the draft goes without it

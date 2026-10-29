@@ -57,4 +57,19 @@ void main() {
     expect(r.categories.length, asked.length);
     expect(r.markdown, isEmpty);
   });
+
+  test('asked in this run: a markdown-only answer too, until the chat is '
+      'forgotten', () {
+    askedContext('m', GetContextUsageResponse(markdown: 'only text'));
+    expect(lastContext('m')!.$2.markdown, 'only text');
+    expect(contextAskedAt('m'), isNotNull);
+    expect(recalledContext('m'), isNull); // not on disk
+    askedContext('n', GetContextUsageResponse(categories: asked));
+    forgetContext('m');
+    forgetContext('n');
+    for (final id in ['m', 'n']) {
+      expect(lastContext(id), isNull);
+      expect(contextAskedAt(id), isNull);
+    }
+  });
 }

@@ -178,10 +178,6 @@ void main() {
   ) async {
     final d = await _app(tester); // the panel hidden
     collapsedCards.value = {'Artifacts'};
-    addTearDown(() {
-      collapsedCards.value = {};
-      showDetails.value = false;
-    });
     expect(find.textContaining('Artifacts'), findsNothing);
     await tester.tap(find.text('Changes'));
     await tester.pumpAndSettle();

@@ -111,7 +111,6 @@ void main() {
 
   // UX review, finding 15: remembered, not the View menu's state alone.
   testWidgets('the appearance is a setting, kept in app.json', (tester) async {
-    addTearDown(() => appearance.value = ThemeMode.system);
     Directory(dataDir).createSync(recursive: true);
     final (_, d) = await _open(tester, SettingsSection.general);
     expect(find.text('As the system'), findsOne);

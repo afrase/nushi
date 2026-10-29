@@ -39,10 +39,6 @@ void main() {
     await loadFonts();
     Directory(dataDir).createSync(recursive: true); // the tests' own
   });
-  tearDown(() {
-    jiraGroupOrder.value = {};
-    jiraCollapsed.value = {};
-  });
 
   testWidgets('a card is dragged by its title into another place, '
       'remembered for the site', (tester) async {

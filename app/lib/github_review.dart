@@ -22,6 +22,13 @@ void setDrafts(GitHubRef r, List<GitHubDraft> drafts) {
   draftsChanged.value++;
 }
 
+/// No pull request's drafts (tests: each starts with none).
+@visibleForTesting
+void forgetReviewDrafts() {
+  _drafts.clear();
+  draftsChanged.value = 0;
+}
+
 /// Asks for the review (comment, approve, request changes, and what it
 /// says) and submits it with the drafts, and with my review pending on
 /// GitHub if there is one; then [onDone].
