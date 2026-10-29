@@ -2,20 +2,55 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/thought_line.dart';
 import 'package:nushi/widgets.dart';
 
-/// The agent's thinking: a dim "Thinking" line that opens to the thoughts,
-/// shining while they stream ([live]).
-class ThoughtView extends StatelessWidget {
+/// The agent's thinking: a dim "Thinking…" line that opens to the
+/// thoughts, shining while they stream ([live]), the newest sentence
+/// under it while folded ([ThoughtLine]). Once done, "Thought for 12s",
+/// as long as the app watched it stream; "Thought" for one it loaded.
+class ThoughtView extends StatefulWidget {
   const new(this.item, {required this.live, super.key});
 
   final Item item;
   final bool live;
 
   @override
-  Widget build(BuildContext context) =>
-      Folded(live ? 'Thinking…' : 'Thought', item.text, live: live);
+  State<ThoughtView> createState() => _ThoughtViewState();
+}
+
+class _ThoughtViewState extends State<ThoughtView> {
+  late DateTime? _since = widget.live ? DateTime.now() : null;
+  Duration? _took;
+
+  @override
+  void didUpdateWidget(ThoughtView old) {
+    super.didUpdateWidget(old);
+    if (widget.live) _since ??= DateTime.now();
+    if (old.live && !widget.live && _since != null) {
+      _took = DateTime.now().difference(_since!);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final live = widget.live;
+    final took = _took;
+    return Folded(
+      live
+          ? 'Thinking…'
+          : took == null
+          ? 'Thought'
+          : 'Thought for ${elapsed(took)}',
+      widget.item.text,
+      live: live,
+      line: _since == null
+          ? null
+          : (style) => ThoughtLine(widget.item.text, live: live, style: style),
+    );
+  }
 }
 
 /// What streamed of a response the model's safeguards stopped (the agent
@@ -30,13 +65,15 @@ class StoppedView extends StatelessWidget {
       Folded('Stopped by safeguards', item.text, live: false);
 }
 
-/// A dim, italic [label] that opens to [text], shining while [live].
+/// A dim, italic [label] that opens to [text], shining while [live]; folded,
+/// [line] under it, in its style.
 class Folded extends StatefulWidget {
-  const new(this.label, this.text, {required this.live, super.key});
+  const new(this.label, this.text, {required this.live, super.key, this.line});
 
   final String label;
   final String text;
   final bool live;
+  final Widget Function(TextStyle style)? line;
 
   @override
   State<Folded> createState() => _FoldedState();
@@ -69,6 +106,11 @@ class _FoldedState extends State<Folded> {
             ],
           ),
         ),
+        if (!_open && widget.line != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 18),
+            child: widget.line!(style),
+          ),
         if (_open)
           Container(
             margin: const EdgeInsets.only(left: 6, top: 4),
