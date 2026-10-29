@@ -24,18 +24,20 @@ var ErrClosed = errors.New("claudeagent: closed")
 // transport is a running claude's pipes: the messages on its stdout, JSON
 // lines to its stdin, its stderr's lines, and its end.
 type transport struct {
-	proc   *Proc
-	log    *slog.Logger
-	stderr func(string)
-	// after is the shutdown's clock: tests give a fake one.
-	after func(time.Duration) <-chan time.Time
+	proc           *Proc
+	stdout, errOut *watched
+	log            *slog.Logger
+	stderr         func(string)
+	// after is the shutdown's clock, idle the one for giving up on a pipe
+	// after claude exits: tests give fake ones.
+	after, idle func(time.Duration) <-chan time.Time
 
 	msgs       chan Message
 	closing    chan struct{} // closed by close: what no one takes is dropped
 	stdoutDone chan struct{}
 	stderrDone chan struct{}
 	exited     chan struct{}
-	done       chan struct{} // exited, and stderr ended or had its 200 ms
+	done       chan struct{} // exited, and stderr ended or given up on
 	exitErr    error         // Wait's, once exited is closed
 
 	tail        tail
@@ -65,8 +67,16 @@ func startTransport(ctx context.Context, o Options) (*transport, error) {
 
 // newTransport reads p's stdout and stderr and waits for it.
 func newTransport(p *Proc, o Options) *transport {
+	t := makeTransport(p, o)
+	t.start(o.MaxLine)
+	return t
+}
+
+// makeTransport is a transport for p that isn't reading yet.
+func makeTransport(p *Proc, o Options) *transport {
 	t := &transport{
-		proc: p, log: o.Log, stderr: o.Stderr, after: time.After,
+		proc: p, stdout: &watched{ReadCloser: p.Stdout}, errOut: &watched{ReadCloser: p.Stderr},
+		log: o.Log, stderr: o.Stderr, after: time.After, idle: time.After,
 		msgs: make(chan Message), closing: make(chan struct{}),
 		stdoutDone: make(chan struct{}), stderrDone: make(chan struct{}),
 		exited: make(chan struct{}), done: make(chan struct{}),
@@ -74,14 +84,17 @@ func newTransport(p *Proc, o Options) *transport {
 	if t.log == nil {
 		t.log = slog.New(slog.DiscardHandler)
 	}
-	maxLine := o.MaxLine
+	return t
+}
+
+// start reads claude's stdout and stderr and waits for it.
+func (t *transport) start(maxLine int) {
 	if maxLine <= 0 {
 		maxLine = defaultMaxLine
 	}
 	go t.readStdout(maxLine)
 	go t.readStderr()
 	go t.waitExit()
-	return t
 }
 
 // messages are claude's messages, in order; the channel is closed when
@@ -91,7 +104,7 @@ func (t *transport) messages() <-chan Message { return t.msgs }
 func (t *transport) readStdout(maxLine int) {
 	defer close(t.stdoutDone)
 	defer close(t.msgs)
-	lines := newLineReader(t.proc.Stdout, maxLine)
+	lines := newLineReader(t.stdout, maxLine)
 	for {
 		line, over, err := lines.next()
 		if err != nil {
@@ -147,7 +160,7 @@ func (t *transport) message(line []byte, over int) Message {
 
 func (t *transport) readStderr() {
 	defer close(t.stderrDone)
-	lines := newLineReader(t.proc.Stderr, 1<<20)
+	lines := newLineReader(t.errOut, 1<<20)
 	for {
 		line, over, err := lines.next()
 		if err != nil {
@@ -167,23 +180,50 @@ func (t *transport) readStderr() {
 }
 
 // waitExit waits for claude to exit. Its exit is reported once its stderr
-// has ended, so the error has all of it, or 200 ms after, when a process
-// it left holds stderr open; such a process gets a second more to let go
-// of stdout.
+// has been read through, so the error has all of it. A process claude
+// started outside its group can hold its pipes open after it exits:
+// stderr is given up on once nothing has come on it for 200 ms, stdout
+// after a second.
 func (t *transport) waitExit() {
 	t.exitErr = t.proc.Wait()
 	close(t.exited)
-	select {
-	case <-t.stderrDone:
-	case <-time.After(200 * time.Millisecond):
-		_ = t.proc.Stderr.Close()
-	}
+	t.giveUp(t.errOut, 200*time.Millisecond, t.stderrDone, "stderr")
 	close(t.done)
-	select {
-	case <-t.stdoutDone:
-	case <-time.After(time.Second):
-		_ = t.proc.Stdout.Close()
+	t.giveUp(t.stdout, time.Second, t.stdoutDone, "stdout")
+}
+
+// giveUp waits for a pipe's reader to end, or closes the pipe once a Read
+// on it has waited d with nothing to read. A reader that is behind, still
+// handing on what it read, isn't given up on: what claude wrote before it
+// exited is still in the pipe, its last result maybe among it.
+func (t *transport) giveUp(w *watched, d time.Duration, ended <-chan struct{}, name string) {
+	for {
+		armed := w.edges.Load()
+		select {
+		case <-ended:
+			return
+		case <-t.idle(d):
+		}
+		if armed%2 == 1 && w.edges.Load() == armed {
+			t.log.Warn("claude exited, but a process it started holds its "+name+"; no longer reading it", "waited", d)
+			_ = w.Close()
+			return
+		}
 	}
+}
+
+// watched is a pipe that tells whether its reader is waiting on it: edges
+// counts each Read's start and its end, so an odd count is a Read under
+// way.
+type watched struct {
+	io.ReadCloser
+	edges atomic.Int64
+}
+
+func (w *watched) Read(p []byte) (int, error) {
+	w.edges.Add(1)
+	defer w.edges.Add(1)
+	return w.ReadCloser.Read(p)
 }
 
 // write writes v to claude's stdin as one JSON line. Only marshalled
