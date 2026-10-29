@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -103,6 +105,49 @@ func TestStart(t *testing.T) {
 	if _, err := claudeagent.Start(context.Background(), claudeagent.Options{Init: claudeagent.Init{Extra: map[string]any{"title": 1}}}); err == nil {
 		t.Error("started with Extra setting the title")
 	}
+}
+
+// An answer to initialize that names no account is a warning in the log:
+// claude may have started without the user's login.
+func TestStartWithoutAccount(t *testing.T) {
+	for _, tc := range []struct {
+		answer string
+		warn   bool
+	}{
+		{`{"account":{"subscriptionType":"max"}}`, false},
+		{`{"account":{"apiKeySource":"ANTHROPIC_API_KEY"}}`, false},
+		{`{"account":{}}`, true},
+		{`{"claude_code_version":"9.9.9"}`, true},
+		{`null`, true},
+	} {
+		t.Run(tc.answer, func(t *testing.T) {
+			var log syncBuffer
+			s, f := startWith(t, claudeagent.Options{Log: slog.New(slog.NewTextHandler(&log, nil))}, tc.answer)
+			got := log.String() // Start logs before it returns
+			finish(t, s, f)
+			if warned := strings.Contains(got, `level=WARN msg="claude's answer to initialize names no account`); warned != tc.warn {
+				t.Errorf("warned %v:\n%s", warned, got)
+			}
+		})
+	}
+}
+
+// syncBuffer is a log the session's goroutines write and a test reads.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  strings.Builder
+}
+
+func (l *syncBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *syncBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
 }
 
 // A request claude sends before initialize is written is answered only

@@ -34,6 +34,13 @@ func TestInitialize(t *testing.T) {
 		c.SessionCapabilities.Fork == nil || c.SessionCapabilities.List == nil || c.SessionCapabilities.Delete == nil {
 		t.Errorf("%+v", c)
 	}
+	// systemPrompt {} is append; its mode lists override beside it.
+	if sp := c.SessionCapabilities.SystemPrompt; sp == nil || sp.Mode == nil || sp.Mode.Override == nil {
+		t.Errorf("system prompt %+v", sp)
+	}
+	if b, _ := json.Marshal(c.SessionCapabilities.SystemPrompt); string(b) != `{"mode":{"override":{}}}` {
+		t.Errorf("system prompt %s", b)
+	}
 }
 
 // session/new runs claude in the folder with the session's id, the
