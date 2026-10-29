@@ -7,6 +7,7 @@ import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/transcript_find.dart';
 
 /// A chat's state in a word, worked out in one place ([ChatState.phase]):
 /// the Mac's dot and word, the phone's row and the status bar read it, so
@@ -153,6 +154,12 @@ class ChatState extends ChangeNotifier {
 
   /// Its open side question, if any (see SidePanel).
   ChatState? side;
+
+  /// ⌘F in its transcript (the Mac's).
+  final find = TranscriptFind();
+
+  /// ⌘F in its Changes view: the files' filter, null while closed.
+  final filesFilter = ValueNotifier<String?>(null);
 
   /// A side question is starting (its fork is on its way).
   final forking = ValueNotifier<bool>(false);

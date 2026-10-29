@@ -15,6 +15,7 @@ import 'package:nushi/pull_tab.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 
 /// The chat folder's changes in a [Scope]: a toolbar, the changed files
@@ -330,13 +331,27 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                               padding: const EdgeInsets.all(14),
                               child: Text(empty, style: theme.ui(t.textMuted)),
                             ),
+                          // ⌘F: the files with a text.
+                          ValueListenableBuilder(
+                            valueListenable: chat.filesFilter,
+                            builder: (context, q, _) => q == null
+                                ? const SizedBox.shrink()
+                                : FilesFilterField(
+                                    chat.filesFilter,
+                                    shown: _shownFiles(q).length,
+                                    total: _files.length,
+                                  ),
+                          ),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(top: 4),
-                              child: ValueListenableBuilder(
-                                valueListenable: reviews,
-                                builder: (context, _, _) => FileList(
-                                  files: _files,
+                              child: ListenableBuilder(
+                                listenable: Listenable.merge([
+                                  reviews,
+                                  chat.filesFilter,
+                                ]),
+                                builder: (context, _) => FileList(
+                                  files: _shownFiles(chat.filesFilter.value),
                                   selected: _plain == null ? _path : null,
                                   onSelect: (p) => setState(() {
                                     _path = p;
@@ -402,6 +417,14 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   }
 
   /// The scope, what the files add up to, and the list's controls.
+  /// The files the list shows: those with [query] (⌘F), else all.
+  List<FileChange> _shownFiles(String? query) => query == null || query.isEmpty
+      ? _files
+      : [
+          for (final f in _files)
+            if (fileHas(f, query)) f,
+        ];
+
   /// The reply cards waiting in the chat's box (the review's, sent from
   /// here), with the way to the chat.
   Widget _cardsWaiting() => ValueListenableBuilder(

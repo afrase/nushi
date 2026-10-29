@@ -15,6 +15,7 @@ import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/transcript_find.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
 /// them (a review's findings show as a card of their own).
@@ -169,6 +170,7 @@ class _TranscriptState extends State<Transcript> {
     required bool still,
     required double top,
     bool rise = false,
+    int mark = 0, // 1: a find's hit, 2: its current one
   }) {
     final key = _keyOf(e);
     final items = switch (e) {
@@ -177,7 +179,7 @@ class _TranscriptState extends State<Transcript> {
       _ => [e],
     };
     final rewindable = e is Item && canRewindTo(widget.chat, e);
-    final from = [live, still, rewindable, top, ...items];
+    final from = [live, still, rewindable, top, mark, ...items];
     final was = before[key];
     final same =
         was != null &&
@@ -196,18 +198,22 @@ class _TranscriptState extends State<Transcript> {
                       ? EdgeInsets.only(top: top)
                       : _sides.copyWith(top: top),
                   // New while the chat is open, it rises in, once.
-                  child: Enter.rise(
-                    play: rise,
-                    child: RepaintBoundary(
-                      // A call's title types out as it comes, or as it
-                      // joins a run; not what the chat opened with.
-                      child: Arriving(
-                        play: rise || was != null,
-                        child: _view(
-                          e,
-                          live: live,
-                          still: still,
-                          rewindable: rewindable,
+                  child: Hit(
+                    mark: mark,
+                    key: mark == 2 ? _currentHit : null,
+                    child: Enter.rise(
+                      play: rise,
+                      child: RepaintBoundary(
+                        // A call's title types out as it comes, or as it
+                        // joins a run; not what the chat opened with.
+                        child: Arriving(
+                          play: rise || was != null,
+                          child: _view(
+                            e,
+                            live: live,
+                            still: still,
+                            rewindable: rewindable,
+                          ),
                         ),
                       ),
                     ),
@@ -248,10 +254,25 @@ class _TranscriptState extends State<Transcript> {
     super.initState();
     // A finished subagent's steps open at the top, at its prompt.
     if (widget.items != null && !widget.live) _follower.following = false;
+    if (widget.items == null) widget.chat.find.addListener(_findChanged);
+  }
+
+  void _findChanged() => setState(() {});
+
+  @override
+  void didUpdateWidget(Transcript old) {
+    super.didUpdateWidget(old);
+    if (old.chat == widget.chat &&
+        (old.items == null) == (widget.items == null)) {
+      return;
+    }
+    old.chat.find.removeListener(_findChanged);
+    if (widget.items == null) widget.chat.find.addListener(_findChanged);
   }
 
   @override
   void dispose() {
+    widget.chat.find.removeListener(_findChanged);
     _hold.dispose();
     _follower.dispose();
     _areaFocus.dispose();
@@ -320,10 +341,51 @@ class _TranscriptState extends State<Transcript> {
 
   void _closeToolbar() => setState(() => _at = _replyTo = null);
 
+  // The find's current hit (ChatState.find), to scroll to.
+  final GlobalKey _currentHit = GlobalKey(debugLabel: 'current hit');
+  String? _scrolledTo;
+
+  /// The find's hits among [entries] (the chat's own transcript only), and
+  /// once laid out, its current one scrolled into view.
+  Set<String> _hits(List<Object> entries) {
+    final find = widget.chat.find;
+    final q = find.query ?? '';
+    if (widget.items != null || q.isEmpty) {
+      if (widget.items == null && find.hits.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => find.found(const []),
+        );
+      }
+      _scrolledTo = null;
+      return const {};
+    }
+    final hits = [
+      for (final e in entries)
+        if (entryHas(e, q)) _keyOf(e),
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      find.found(hits);
+      final current = find.current;
+      if (current == null || current == _scrolledTo) return;
+      if (_currentHit.currentContext case final c? when c.mounted) {
+        _scrolledTo = current;
+        _follower.following = false;
+        Scrollable.ensureVisible(
+          c,
+          alignment: 0.3,
+          duration: const Duration(milliseconds: 150),
+        );
+      }
+    });
+    return hits.toSet();
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
     final entries = _entries(widget.items ?? chat.items);
+    final hits = _hits(entries);
+    final current = hits.isEmpty ? null : chat.find.current;
     _keepPlace(entries);
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
@@ -395,6 +457,11 @@ class _TranscriptState extends State<Transcript> {
                               header: widget.header != null,
                             ),
                             rise: arrived.contains(_keyOf(e)),
+                            mark: _keyOf(e) == current
+                                ? 2
+                                : hits.contains(_keyOf(e))
+                                ? 1
+                                : 0,
                           ),
                         if (widget.footer case final f?)
                           Padding(padding: _sides, child: f),

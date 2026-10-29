@@ -38,8 +38,9 @@ class TerminalScreen extends StatelessWidget {
         SingleActivator(key, meta: true);
     return {
       // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–3…) and ⌘⇧P, the palette,
-      // passed on; ⌘K clears here, as in Terminal.
-      ...actKeys,
+      // passed on; ⌘K clears here, as in Terminal, and ⌘F finds here.
+      for (final MapEntry(:key, :value) in actKeys.entries)
+        if (!identical(key, findKey)) key: value,
       paletteKeyToo: const OpenPaletteIntent(),
       cmd(LogicalKeyboardKey.keyC): CopySelectionTextIntent.copy,
       cmd(LogicalKeyboardKey.keyV): const PasteTextIntent(
