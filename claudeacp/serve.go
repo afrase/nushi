@@ -124,6 +124,8 @@ func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.
 				List:                  &acp.SessionListCapabilities{},
 				Delete:                &acp.SessionDeleteCapabilities{},
 				AdditionalDirectories: &acp.SessionAdditionalDirectoriesCapabilities{},
+				// The capability itself says append (claude's
+				// appendSystemPrompt); its mode adds override.
 				SystemPrompt: &acp.SessionSystemPromptCapabilities{
 					Mode: &acp.SessionSystemPromptModeCapabilities{Override: &acp.SessionSystemPromptOverrideCapabilities{}},
 				},

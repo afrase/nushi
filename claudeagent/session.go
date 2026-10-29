@@ -87,6 +87,13 @@ func Start(ctx context.Context, o Options) (*Session, error) {
 	}
 	s.initResp = r
 	s.addCapabilities(r.Capabilities)
+	if r.Account == (Account{}) {
+		// claude names the login it runs with; none may mean a claude that
+		// starts bare by default, without the user's login, settings,
+		// CLAUDE.md, skills and hooks.
+		s.log.Warn("claude's answer to initialize names no account: it may be running without the user's login and settings",
+			"version", r.ClaudeCodeVersion)
+	}
 	return s, nil
 }
 
