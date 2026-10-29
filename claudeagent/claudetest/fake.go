@@ -31,25 +31,62 @@ type Fake struct {
 	// only SIGKILL ends it.
 	IgnoreTerm bool
 
-	steps []Step
+	steps      []Step
+	responders []responder
 
-	mu      sync.Mutex
-	spawned bool
-	spec    claudeagent.Spec
-	signals []os.Signal
-	err     error
-	exitErr error
-	exited  chan struct{}
-	played  chan struct{}
-	end     sync.Once
+	mu        sync.Mutex
+	responded []string
+	spawned   bool
+	spec      claudeagent.Spec
+	signals   []os.Signal
+	err       error
+	exitErr   error
+	exited    chan struct{}
+	played    chan struct{}
+	end       sync.Once
 
 	stdin          *io.PipeReader
 	stdout, stderr *io.PipeWriter
+	lines          chan stdinLine // what stdin has that no responder answered
+}
+
+// stdinLine is a stdin line, or why there are no more.
+type stdinLine struct {
+	line []byte
+	err  error
+}
+
+// responder answers the stdin lines that match its match with reply.
+type responder struct {
+	match any
+	reply string
 }
 
 // New makes a fake that plays steps.
 func New(steps ...Step) *Fake {
-	return &Fake{steps: steps, exited: make(chan struct{}), played: make(chan struct{})}
+	return &Fake{steps: steps, exited: make(chan struct{}), played: make(chan struct{}), lines: make(chan stdinLine)}
+}
+
+// Respond has the fake answer every stdin line that matches match (as
+// Expect matches) with reply, whenever it comes and whatever step the
+// script is at; $req and $uuid in reply are that line's. Such lines never
+// reach the script. It is for what a client sends in an order it doesn't
+// promise, such as requests made from goroutines of their own. Call it
+// before the fake starts.
+func (f *Fake) Respond(match, reply string) *Fake {
+	var m any
+	if err := json.Unmarshal([]byte(match), &m); err != nil {
+		panic("claudetest: Respond's match isn't JSON: " + match)
+	}
+	f.responders = append(f.responders, responder{m, reply})
+	return f
+}
+
+// Responded are the stdin lines Respond answered, in order.
+func (f *Fake) Responded() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.responded)
 }
 
 // Spawn starts the fake; it is the Spawner to put in claudeagent.Options.
@@ -68,7 +105,8 @@ func (f *Fake) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.Proc
 	outR, outW := io.Pipe()
 	errR, errW := io.Pipe()
 	f.stdin, f.stdout, f.stderr = inR, outW, errW
-	go f.play(bufio.NewReader(inR))
+	go f.read(bufio.NewReader(inR))
+	go f.play()
 	return &claudeagent.Proc{
 		Stdin: inW, Stdout: outR, Stderr: errR,
 		Wait: func() error {
@@ -111,8 +149,8 @@ func (f *Fake) Played() <-chan struct{} { return f.played }
 // errExit stops the script: an Exit step ended the fake.
 var errExit = errors.New("exited")
 
-func (f *Fake) play(stdin *bufio.Reader) {
-	r := &run{f: f, stdin: stdin}
+func (f *Fake) play() {
+	r := &run{f: f}
 	played := Step{"played", func(*run) error {
 		close(f.played)
 		return nil
@@ -170,25 +208,77 @@ func (f *Fake) signal(sig os.Signal) error {
 // run is a script being played.
 type run struct {
 	f         *Fake
-	stdin     *bufio.Reader
 	req, uuid string // the last request_id and uuid Expect kept
 }
 
-// line is the next stdin line, keep_alive passed over; io.EOF when stdin
-// is closed.
+// line is the next stdin line for the script; io.EOF when stdin is
+// closed.
 func (r *run) line() ([]byte, error) {
+	l, ok := <-r.f.lines
+	if !ok {
+		return nil, io.EOF
+	}
+	return l.line, l.err
+}
+
+// read reads stdin to its end: keep_alive is passed over, what a
+// responder matches is answered here, and the rest goes to the script.
+func (f *Fake) read(stdin *bufio.Reader) {
+	defer close(f.lines)
 	for {
-		line, err := r.stdin.ReadBytes('\n')
+		line, err := stdin.ReadBytes('\n')
 		if err != nil && (len(line) == 0 || !errors.Is(err, io.EOF)) {
-			return nil, err
+			select {
+			case f.lines <- stdinLine{err: err}:
+			case <-f.exited:
+			}
+			return
 		}
 		line = bytes.TrimSpace(line)
-		var head struct{ Type string }
-		if json.Unmarshal(line, &head) == nil && head.Type == "keep_alive" {
+		var frame any
+		_ = json.Unmarshal(line, &frame)
+		if head, _ := frame.(map[string]any); head["type"] == "keep_alive" {
 			continue
 		}
-		return line, nil
+		if f.respond(line, frame) {
+			continue
+		}
+		select {
+		case f.lines <- stdinLine{line: line}:
+		case <-f.exited:
+			return
+		}
 	}
+}
+
+// respond answers line if a responder matches it.
+func (f *Fake) respond(line []byte, frame any) bool {
+	for _, rs := range f.responders {
+		if !matches(rs.match, frame) {
+			continue
+		}
+		req, uuid := captured(frame)
+		f.mu.Lock()
+		f.responded = append(f.responded, string(line))
+		f.mu.Unlock()
+		_, _ = io.WriteString(f.stdout, strings.NewReplacer("$req", req, "$uuid", uuid).Replace(rs.reply)+"\n")
+		return true
+	}
+	return false
+}
+
+// captured is a stdin frame's request_id (or its response's) and uuid.
+func captured(frame any) (req, uuid string) {
+	m, _ := frame.(map[string]any)
+	response, _ := m["response"].(map[string]any)
+	for _, id := range []any{m["request_id"], response["request_id"]} {
+		if s, ok := id.(string); ok {
+			req = s
+			break
+		}
+	}
+	uuid, _ = m["uuid"].(string)
+	return req, uuid
 }
 
 // Step is one thing a Fake does.
@@ -215,16 +305,12 @@ func Expect(match string) Step {
 		if err := json.Unmarshal(line, &got); err != nil || !matches(want, got) {
 			return fmt.Errorf("got %s", line)
 		}
-		frame, _ := got.(map[string]any)
-		response, _ := frame["response"].(map[string]any)
-		for _, req := range []any{frame["request_id"], response["request_id"]} {
-			if s, ok := req.(string); ok {
-				r.req = s
-				break
-			}
+		req, uuid := captured(got)
+		if req != "" {
+			r.req = req
 		}
-		if s, ok := frame["uuid"].(string); ok {
-			r.uuid = s
+		if uuid != "" {
+			r.uuid = uuid
 		}
 		return nil
 	}}
@@ -289,6 +375,15 @@ func Until(release <-chan struct{}) Step {
 		case <-release:
 		case <-r.f.exited:
 		}
+		return nil
+	}}
+}
+
+// Do calls fn, for a test to see how far the script has played or to
+// hold it; fn must return for the script to go on.
+func Do(fn func()) Step {
+	return Step{"do", func(*run) error {
+		fn()
 		return nil
 	}}
 }
