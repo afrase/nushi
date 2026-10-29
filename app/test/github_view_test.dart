@@ -393,9 +393,8 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets("Fix checks puts the message in the chat's box, unsent", (
-    tester,
-  ) async {
+  testWidgets("Fix checks puts a reply card per failed check in the chat's "
+      'box, unsent', (tester) async {
     final (fake, d) = await openView(
       tester,
       chats: [
@@ -413,17 +412,26 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Fix checks'));
     await tester.pumpAndSettle();
-    expect(
-      fake.calls.whereType<GetGitHubPromptRequest>().single.kind,
-      'fix_checks',
-    );
-    expect(d.chats['c1']!.draft.text.text, 'A fix_checks message');
+    final cards = d.chats['c1']!.draft.replies.value;
+    expect(cards, hasLength(1)); // the one failed check
+    expect(cards.single.quote, startsWith('Check checks / on-demand: failure'));
+    expect(cards.single.quote, contains('Process completed with exit code 1'));
+    expect(d.chats['c1']!.draft.text.text, isEmpty);
     expect(d.selectedId, 'c1');
+    expect(fake.calls.whereType<GetGitHubPromptRequest>(), isEmpty);
     expect(fake.calls.whereType<SendPromptRequest>(), isEmpty);
+    // Again: the same card once.
+    d.showGitHub(open: true);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fix checks'));
+    await tester.pumpAndSettle();
+    expect(d.chats['c1']!.draft.replies.value, hasLength(1));
     await closeView(tester, d);
   });
 
-  testWidgets('Address comments: the threads picked', (tester) async {
+  testWidgets('Address comments: a reply card per thread picked', (
+    tester,
+  ) async {
     final (fake, d) = await openView(
       tester,
       chats: [
@@ -446,10 +454,13 @@ void main() {
     await tester.tap(find.text('sub.go:5'));
     await tester.tap(find.text('Put in the box'));
     await tester.pumpAndSettle();
-    final asked = fake.calls.whereType<GetGitHubPromptRequest>().single;
-    expect(asked.kind, 'address_comments');
-    expect(asked.threads, ['T2']);
-    expect(d.chats['c1']!.draft.text.text, 'A address_comments message');
+    final cards = d.chats['c1']!.draft.replies.value;
+    expect(cards, hasLength(1));
+    expect(
+      cards.single.quote,
+      startsWith('Review thread on sub.go:10 (outdated'),
+    );
+    expect(fake.calls.whereType<GetGitHubPromptRequest>(), isEmpty);
     await closeView(tester, d);
   });
 

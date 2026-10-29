@@ -5,7 +5,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/pull_link.dart';
-import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -28,20 +27,13 @@ class PullTab extends StatelessWidget {
   final Daemon daemon;
   final VoidCallback onChat;
 
-  /// Adds [r] to the chat's box, unless it's there already.
-  void _send(Reply r) {
-    final now = chat.draft.replies.value;
-    if (now.any((x) => x.quote == r.quote)) return;
-    chat.draft.replies.value = [...now, r];
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = chat.pull;
     if (l == null) return const SizedBox.shrink();
     final ref = GitHubRef(host: l.host, repo: l.repo, number: l.number);
     return SendToAgent(
-      onSend: _send,
+      onSend: chat.draft.addReply,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -49,7 +41,7 @@ class PullTab extends StatelessWidget {
             valueListenable: chat.draft.replies,
             builder: (context, replies, _) => replies.isEmpty
                 ? const SizedBox.shrink()
-                : _Waiting(replies.length, onChat: onChat),
+                : RepliesWaiting(replies.length, onChat: onChat),
           ),
           Expanded(
             child: GitHubPullPane(
@@ -66,9 +58,10 @@ class PullTab extends StatelessWidget {
   }
 }
 
-/// "2 waiting in the chat's box", and Show the chat.
-class _Waiting extends StatelessWidget {
-  const new(this.n, {required this.onChat});
+/// "2 replies wait in the chat's box", and Show the chat: over the Pull
+/// request tab and the Changes view while cards they sent wait there.
+class RepliesWaiting extends StatelessWidget {
+  const new(this.n, {required this.onChat, super.key});
 
   final int n;
   final VoidCallback onChat;

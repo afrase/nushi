@@ -15,6 +15,7 @@ import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/shells.dart';
 import 'package:nushi/side_panel.dart';
@@ -124,6 +125,7 @@ class _ChatViewState extends State<ChatView> {
                 ),
                 if (chat.mcpChanged && !chat.archived)
                   _McpChanged(chat, widget.daemon),
+                if (!chat.archived && !chat.sessionGone) UnsentReview(chat),
                 if (chat.archived)
                   _Archived(chat, widget.daemon)
                 else if (chat.sessionGone)

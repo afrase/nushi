@@ -5,21 +5,30 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/replies.dart';
+import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Fix checks and Address comments: a message for an agent about [item]
-/// (the daemon writes it: [kind] "fix_checks" or "address_comments", the
-/// [threads] picked, else all not resolved), put in a chat's box to read,
-/// change and send; never sent here. The chat is the item's (the one
-/// picked, when it has several); with none, Start work makes one first.
+/// Fix checks and Address comments: [replies] (one reply card per failed
+/// check or thread, as the Pull request tab's Send to agent makes them)
+/// put in a chat's box, to go with the user's next message; never sent
+/// here. In a chat's Pull request tab, that chat's box (its bar counts
+/// them); else the item's chat (the one picked, when it has several),
+/// and with none, Start work makes one first.
 Future<void> toAgent(
   BuildContext context,
   Daemon daemon,
   GitHubItem item, {
-  required String kind,
-  List<String> threads = const [],
+  required Future<List<Reply>> Function() replies,
 }) async {
+  if (context.getInheritedWidgetOfExactType<SendToAgent>() case final here?) {
+    await tryOrShow(
+      context,
+      () async => (await replies()).forEach(here.onSend),
+    );
+    return;
+  }
   var chats = chatsOnItem(daemon, item.ref);
   ChatState? chat;
   if (chats.length == 1) {
@@ -48,16 +57,26 @@ Future<void> toAgent(
   final target = chat;
   if (!context.mounted) return;
   await tryOrShow(context, () async {
-    final r = await daemon.client.getGitHubPrompt(
-      GetGitHubPromptRequest(ref: item.ref, kind: kind, threads: threads),
-    );
-    final box = target.draft.text;
-    box.text = box.text.trim().isEmpty
-        ? r.text
-        : '${box.text.trimRight()}\n\n${r.text}';
+    (await replies()).forEach(target.draft.addReply);
     daemon.select(target.id);
   });
 }
+
+/// Fix checks' cards: one per failed check (five at most), each with the
+/// failing part of its job's log.
+Future<List<Reply>> checkReplies(Daemon daemon, GitHubRef ref, GitHubPull p) =>
+    Future.wait([
+      for (final c in p.checks.where((c) => c.failed).take(5))
+        checkReply(daemon, ref, c),
+    ]);
+
+/// Address comments' cards: one per thread not resolved, of [picked] when
+/// given.
+List<Reply> threadReplies(GitHubPull p, [List<String>? picked]) => [
+  for (final x in p.threads)
+    if (!x.resolved && (picked == null || picked.contains(x.id)))
+      threadReply(x),
+];
 
 class _PickChat extends StatelessWidget {
   const new(this.chats);

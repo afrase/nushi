@@ -12,6 +12,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -67,32 +68,39 @@ class _ChatHeaderState extends State<ChatHeader> {
     // chat's menu (⋯) stays at the row's end: the model, the agent's name
     // (its mark stays), the details button while the panel can't show,
     // the tabs into a menu field, the status word (the dot's tooltip says
-    // it), then the terminal's and the details' buttons into ⋯.
-    return LayoutBuilder(
-      builder: (context, box) {
-        final more = chat.pull == null ? 0 : 88;
-        final folds = headerFolds(
-          box.maxWidth,
-          pull: chat.pull != null,
-          panel: widget.onPanel != null,
-          model: modelName != null,
-        );
-        final shown = modelName != null && !folds.model;
-        // What the title and the model (its gap taken out) share.
-        final room = box.maxWidth - 455 - more + folds.saved - (shown ? 10 : 0);
-        const least = 80.0;
-        var title = (room * 0.6).clamp(least, 320.0);
-        if (shown) title = min(title, max(least, room - 40));
-        return _row(
-          context,
-          titleStyle,
-          meta,
-          modelName,
-          folds,
-          titleMax: title,
-          modelMax: (room - title).clamp(40.0, 200.0),
-        );
-      },
+    // it), then the terminal's and the details' buttons into ⋯. Changes
+    // counts the review comments not sent yet (14 points more).
+    return ValueListenableBuilder(
+      valueListenable: reviews,
+      builder: (context, _, _) => LayoutBuilder(
+        builder: (context, box) {
+          final comments = unsentComments(chat.id).isNotEmpty;
+          final more = (chat.pull == null ? 0 : 88) + (comments ? 14 : 0);
+          final folds = headerFolds(
+            box.maxWidth,
+            pull: chat.pull != null,
+            panel: widget.onPanel != null,
+            model: modelName != null,
+            comments: comments,
+          );
+          final shown = modelName != null && !folds.model;
+          // What the title and the model (its gap taken out) share.
+          final room =
+              box.maxWidth - 455 - more + folds.saved - (shown ? 10 : 0);
+          const least = 80.0;
+          var title = (room * 0.6).clamp(least, 320.0);
+          if (shown) title = min(title, max(least, room - 40));
+          return _row(
+            context,
+            titleStyle,
+            meta,
+            modelName,
+            folds,
+            titleMax: title,
+            modelMax: (room - title).clamp(40.0, 200.0),
+          );
+        },
+      ),
     );
   }
 
@@ -278,7 +286,10 @@ class _ChatHeaderState extends State<ChatHeader> {
 
   List<(ChatTab, String)> _tabs(ChatState chat) => [
     (ChatTab.chat, 'Chat'),
-    (ChatTab.changes, 'Changes'),
+    switch (unsentComments(chat.id).length) {
+      0 => (ChatTab.changes, 'Changes'),
+      final n => (ChatTab.changes, 'Changes $n'),
+    },
     if (chat.pull != null) (ChatTab.pull, 'Pull request'),
   ];
 }
@@ -305,11 +316,13 @@ HeaderFolds headerFolds(
   required bool pull,
   required bool panel,
   bool model = false,
+  bool comments = false,
 }) {
   // Measured: the row without its title and model takes about 455
   // points (oh-my-pi's name, "in background"), the Pull request tab 88
   // more.
-  final need = 455.0 + (pull ? 88 : 0) + 80 + (model ? 50 : 0);
+  final need =
+      455.0 + (pull ? 88 : 0) + (comments ? 14 : 0) + 80 + (model ? 50 : 0);
   var saved = 0.0;
   final folds = <String>{};
   // Each part and about how much folding it frees.
@@ -317,7 +330,7 @@ HeaderFolds headerFolds(
     if (model) ('model', 50.0),
     ('name', 48.0),
     if (!panel) ('panel', 26.0),
-    ('tabs', pull ? 115.0 : 50.0),
+    ('tabs', (pull ? 115.0 : 50.0) + (comments ? 14 : 0)),
     ('word', 45.0),
     ('buttons', panel ? 52.0 : 26.0),
   ]) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/chat.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
@@ -99,9 +100,11 @@ class CommentBox extends StatefulWidget {
     required this.onCancel,
     super.key,
     this.editing = false,
+    this.hint = 'Your comment',
   });
 
   final String lines;
+  final String hint;
 
   /// Its text, kept by the diff so it outlives the box.
   final TextEditingController controller;
@@ -157,8 +160,8 @@ class _CommentBoxState extends State<CommentBox> {
                 minLines: 1,
                 maxLines: 8,
                 style: theme.ui(t.text),
-                decoration: const InputDecoration(
-                  hintText: 'Your comment',
+                decoration: InputDecoration(
+                  hintText: widget.hint,
                   isDense: true,
                 ),
               ),
@@ -203,6 +206,56 @@ class _Inlay extends StatelessWidget {
         ),
         child: child,
       ),
+    );
+  }
+}
+
+/// Over the composer while review comments made in Changes aren't in a
+/// message yet (they're easy to forget there): how many, Send to agent
+/// (reply cards in the box, as the Changes view's button) and Show them.
+class UnsentReview extends StatelessWidget {
+  const new(this.chat, {super.key});
+
+  final ChatState chat;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return ValueListenableBuilder(
+      valueListenable: reviews,
+      builder: (context, _, _) {
+        final n = unsentComments(chat.id).length;
+        if (n == 0) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+          child: Row(
+            spacing: 6,
+            children: [
+              Icon(Icons.rate_review_outlined, size: 13, color: t.textMuted),
+              Flexible(
+                child: Text(
+                  n == 1
+                      ? '1 review comment in Changes isn’t sent.'
+                      : '$n review comments in Changes aren’t sent.',
+                  style: theme.ui(t.textSecondary, size: 12),
+                ),
+              ),
+              LinkText(
+                'Send to agent',
+                size: 12,
+                tooltip: 'Each as a reply card in the box, to send',
+                onTap: () => reviewToBox(chat),
+              ),
+              LinkText(
+                'Show',
+                size: 12,
+                onTap: () => chat.tab.value = ChatTab.changes,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

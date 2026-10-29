@@ -19,34 +19,19 @@ void main() {
     text: 'Fix $path.',
   );
 
-  test(
-    'a review is one message: file, lines, quote, comment, then the note',
-    () {
-      final msg = reviewMessage([
-        comment('main.go', 10, 10, '\tfmt.Println(msg, 42)'),
-        comment('a/b.md', 2, 3, 'one\n```\ntwo', old: true),
-      ], '  Thanks. ');
-      expect(msg, '''
-Review comments:
-
-1. `main.go`, line 10:
-```go
-\tfmt.Println(msg, 42)
-```
-Fix main.go.
-
-2. `a/b.md`, lines 2–3 (the old version, before the change):
-````md
-one
-```
-two
-````
-Fix a/b.md.
-
-Thanks.
-''');
-    },
-  );
+  test('each comment is a reply card: its file, lines and quote, then '
+      'the comment', () {
+    expect(reviewReply(comment('main.go', 10, 10, '\tfmt.Println(msg, 42)')), (
+      quote: '`main.go`, line 10:\n```go\n\tfmt.Println(msg, 42)\n```',
+      text: 'Fix main.go.',
+    ));
+    expect(reviewReply(comment('a/b.md', 2, 3, 'one\n```\ntwo', old: true)), (
+      quote:
+          '`a/b.md`, lines 2–3 (the old version, before the change):\n'
+          '````md\none\n```\ntwo\n````',
+      text: 'Fix a/b.md.',
+    ));
+  });
 
   test('a comment follows its lines, or is outdated', () {
     final c = ReviewComment(

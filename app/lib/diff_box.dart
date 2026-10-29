@@ -54,7 +54,7 @@ class DiffBox extends StatefulWidget {
 
   final FileChange change;
   final bool fit;
-  final ({String chat, String where})? review;
+  final ({String chat, String where, String agent})? review;
   final List<DiffNote> notes;
   final Widget Function(String id)? note;
   final ValueChanged<LineSelection>? onLines;
@@ -98,11 +98,11 @@ class _DiffBoxState extends State<DiffBox> {
     }
   }
 
-  String? _draftKey(({String chat, String where})? r) =>
+  String? _draftKey(({String chat, String where, String agent})? r) =>
       r == null ? null : '${r.chat}\n${r.where}\n${widget.change.path}';
 
   /// Keeps the comment being written for when the view shows again.
-  void _keepDraft(({String chat, String where})? r) {
+  void _keepDraft(({String chat, String where, String agent})? r) {
     if (_draft case final at? when _comment.text.trim().isNotEmpty) {
       if (_draftKey(r) case final key?) {
         _drafts[key] = (at: at, text: _comment.text, editing: _editing?.id);
@@ -339,6 +339,8 @@ class _DiffBoxState extends State<DiffBox> {
             ? 'Line ${s.start + 1}'
             : 'Lines ${s.start + 1}–${s.end}',
         controller: _comment,
+        // It goes to the agent (Send to agent), never to GitHub.
+        hint: 'Comment for ${r.agent}',
         editing: _editing != null,
         onSave: _save,
         onCancel: _closeDraft,
