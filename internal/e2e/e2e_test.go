@@ -20,6 +20,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/acptest"
 	"github.com/afrase/nushi/internal/agentproc"
 	"github.com/afrase/nushi/internal/ante"
@@ -53,6 +54,7 @@ type daemon struct {
 	stop    func()
 	kill    func() // ends the last agent started, as if its process died
 	restart *restart.Service
+	claudes *claudes // the fake claudes Claude's Go agent ran
 }
 
 // pipeAgent is a fake agent "process" over pipes.
@@ -100,10 +102,15 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// Claude's (the fake isn't Claude's adapter, so the rest of Claude's
 	// dialect stays out). The others are main's (knownagents), each on a
 	// fake: Codex and omp as the fake agent shaped like them, Ante and PiG
-	// as their bridges on a fake Ante and PiG. What reads an agent's own
-	// files on this Mac (Local) is left out.
+	// as their bridges on a fake Ante and PiG, Claude as Nushi's Go agent
+	// on fake claudes. What reads an agent's own files on this Mac (Local)
+	// is left out.
 	pigs := pigStores(dataDir)
+	cls := &claudes{}
 	launches := map[string]chats.Launch{
+		"claude": launch(func(r io.Reader, w io.Writer) {
+			claudeacp.Serve(r, w, claudeacp.Config{CLIPath: "/fake/claude", ConfigDir: filepath.Join(dataDir, "claude"), Spawn: cls.spawn})
+		}),
 		"codex": fake(true, false),
 		"ante": launch(func(r io.Reader, w io.Writer) {
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
@@ -154,7 +161,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, kill: func() {
+	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, kill: func() {
 		mu.Lock()
 		defer mu.Unlock()
 		kill()
