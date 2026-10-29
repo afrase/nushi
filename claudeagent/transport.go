@@ -57,6 +57,7 @@ func startTransport(ctx context.Context, o Options) (*transport, error) {
 	spawn := o.Spawner
 	if spawn == nil {
 		spawn = Exec
+		go logVersion(context.WithoutCancel(ctx), s, o.Log)
 	}
 	p, err := spawn(ctx, s)
 	if err != nil {
