@@ -5,6 +5,10 @@ part of 'streaming_markdown.dart';
 /// changes.
 final _spans = <(String, String, TextStyle, Object), TextSpan>{};
 
+/// Code blocks still streaming in, the last few: each one's whole lines
+/// highlighted so far, kept as more come.
+final _streaming = <_Streaming>[];
+
 /// A fenced code block: its language and a copy button over the code,
 /// highlighted when the language is known.
 class _CodeBlockBuilder extends MarkdownElementBuilder {
@@ -37,10 +41,10 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
         language == openMark ||
         (element.attributes['data-metadata']?.endsWith(openMark) ?? false);
     if (language == openMark) language = '';
-    var code = element.textContent;
+    var code = unmarked(element.textContent);
     if (code.endsWith('\n')) code = code.substring(0, code.length - 1);
     return custom?.call(language, code, open: open) ??
-        CodeBlockView(language: language, code: code, style: style);
+        CodeBlockView(language: language, code: code, style: style, open: open);
   }
 }
 
@@ -57,7 +61,12 @@ class CodeBlockView extends StatelessWidget {
     this.actions = const [],
     this.body,
     this.footer,
+    this.open = false,
   });
+
+  /// Still streaming in: its whole lines are highlighted once each, in
+  /// runs kept as more come, and its last line plain until it ends.
+  final bool open;
 
   /// The fence's language, as written.
   final String language;
@@ -120,15 +129,29 @@ class CodeBlockView extends StatelessWidget {
     );
   }
 
-  /// [code] highlighted, scrolling sideways.
+  /// [code] highlighted, scrolling sideways. While [open], in groups of
+  /// lines, each its own paragraph: one that's done isn't laid out again.
   Widget codeText(String code) {
     final codeStyle = style.code.copyWith(color: style.body.color);
     // Text draws a tab as one space.
-    final span = _highlighted(code.replaceAll('\t', '    '), codeStyle);
+    final text = code.replaceAll('\t', '    ');
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.all(10),
-      child: Text.rich(span, softWrap: false),
+      child: open
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final span in _Streaming.of(
+                  text,
+                  language,
+                  codeStyle,
+                  style,
+                ).spans(text))
+                  Text.rich(span, softWrap: false),
+              ],
+            )
+          : Text.rich(_highlighted(text, codeStyle), softWrap: false),
     );
   }
 }
@@ -162,5 +185,155 @@ class _CopyButtonState extends State<_CopyButton> {
     visualDensity: VisualDensity.compact,
     onPressed: _copy,
     icon: Icon(_copied ? Icons.check : Icons.copy),
+  );
+}
+
+/// A [CodeBlockView.open] block, highlighted a run of whole lines at a time:
+/// the lines that came since, from the top level of the language, unless
+/// the last run ended inside a token (a comment or a string going on to
+/// the next line), which is then highlighted again with them. Runs no
+/// longer last are final, and make groups of at least [_group] lines, each
+/// drawn as its own paragraph. Once whole, the block is highlighted as one.
+class _Streaming {
+  new(this.language, this.codeStyle, this.style);
+
+  /// The one for [code]'s block: the same language and colors, and its
+  /// lines so far start [code]; else a new one.
+  factory of(
+    String code,
+    String language,
+    TextStyle codeStyle,
+    MarkdownStyle s,
+  ) {
+    for (final b in _streaming.reversed) {
+      if (b.language == language &&
+          b.codeStyle == codeStyle &&
+          b.style.highlight == s.highlight &&
+          code.startsWith(b._done)) {
+        _streaming
+          ..remove(b)
+          ..add(b);
+        return b;
+      }
+    }
+    if (_streaming.length >= 4) _streaming.removeAt(0);
+    final b = _Streaming(language, codeStyle, s);
+    _streaming.add(b);
+    return b;
+  }
+
+  static const _group = 40;
+
+  final String language;
+  final TextStyle codeStyle;
+  final MarkdownStyle style;
+  final _runs = <_Run>[];
+  var _done = ''; // the runs' text
+  final _groups = <TextSpan>[]; // of the first [_grouped] runs
+  var _grouped = 0;
+  (String, List<TextSpan>)? _last; // the code last asked for, its spans
+
+  /// [code]'s spans: the groups done, then the rest with its last line
+  /// plain.
+  List<TextSpan> spans(String code) {
+    if (_last case (final c, final spans) when c == code) return spans;
+    if (!code.startsWith(_done)) {
+      _runs.clear();
+      _groups.clear();
+      _grouped = 0;
+      _done = '';
+    }
+    final whole = code.lastIndexOf('\n') + 1;
+    if (whole > _done.length) {
+      var from = _done.length;
+      if (_runs.length > _grouped && !_runs.last.plain) {
+        from -= _runs.removeLast().text.length;
+      }
+      final text = code.substring(from, whole);
+      final span =
+          style.highlight(language, text, codeStyle) ??
+          TextSpan(text: text, style: codeStyle);
+      _runs.add(_Run(text, span));
+      _done = code.substring(0, whole);
+    }
+    // Runs before the last are final: group them.
+    var lines = 0;
+    for (var i = _grouped; i < _runs.length - 1; i++) {
+      lines += _runs[i].lines;
+      if (lines < _group) continue;
+      _groups.add(
+        TextSpan(
+          style: codeStyle,
+          children: [
+            for (final r in _runs.sublist(_grouped, i)) r.span,
+            // The line break before the next group is the paragraph's.
+            _withoutLastBreak(_runs[i].span),
+          ],
+        ),
+      );
+      _grouped = i + 1;
+      lines = 0;
+    }
+    final spans = [
+      ..._groups,
+      TextSpan(
+        style: codeStyle,
+        children: [
+          for (final r in _runs.skip(_grouped)) r.span,
+          if (whole < code.length) TextSpan(text: code.substring(whole)),
+        ],
+      ),
+    ];
+    _last = (code, spans);
+    return spans;
+  }
+}
+
+/// Whole lines of an open block, highlighted together.
+class _Run {
+  new(this.text, this.span)
+    : lines = '\n'.allMatches(text).length,
+      plain = _endsPlain(span);
+
+  final String text;
+  final TextSpan span;
+  final int lines;
+
+  /// The highlighter ended outside any token.
+  final bool plain;
+}
+
+/// Whether [span]'s last character is drawn in no style of its own (only
+/// the block's): the highlighter ended outside any token.
+bool _endsPlain(TextSpan span) {
+  bool? last(InlineSpan s, {required bool styled}) {
+    if (s is! TextSpan) return null;
+    final children = s.children ?? const <InlineSpan>[];
+    for (final c in children.reversed) {
+      final plain = last(c, styled: styled || c.style != null);
+      if (plain != null) return plain;
+    }
+    return s.text?.isNotEmpty ?? false ? !styled : null;
+  }
+
+  return last(span, styled: false) ?? true;
+}
+
+/// [span] without the line break its text ends with.
+InlineSpan _withoutLastBreak(InlineSpan span) {
+  if (span is! TextSpan) return span;
+  final children = span.children ?? const <InlineSpan>[];
+  for (var i = children.length - 1; i >= 0; i--) {
+    if (children[i].toPlainText().isEmpty) continue;
+    return TextSpan(
+      text: span.text,
+      style: span.style,
+      children: [...children.take(i), _withoutLastBreak(children[i])],
+    );
+  }
+  final text = span.text ?? '';
+  return TextSpan(
+    text: text.endsWith('\n') ? text.substring(0, text.length - 1) : text,
+    style: span.style,
   );
 }

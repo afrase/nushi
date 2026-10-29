@@ -108,4 +108,48 @@ void main() {
     expect(all.map((s) => s.$1).join(), 'Run make test then check it•item two');
     expect(all.where((s) => (s.$2 ?? 1) < 0.9), isEmpty);
   });
+
+  testWidgets('no mark in a code block: a fresh run in a fence, open or '
+      'closed, and the caret after a closing fence, just show', (tester) async {
+    const caret = SizedBox.shrink(key: ValueKey('caret'));
+    for (final text in [
+      'Here:\n\n```\nlet total = sum of parts\n',
+      'Here:\n\n```\nlet total = sum of parts\n```\n\nand more words',
+      '<div>\nsome html words here\n',
+      'Here:\n\n    let total = sum of parts',
+    ]) {
+      final at = text.indexOf('sum');
+      await show(
+        tester,
+        text,
+        fresh: [(start: at, end: at + 'sum of parts'.length, opacity: 0.3)],
+        caret: caret,
+      );
+      for (final r in tester.widgetList<RichText>(find.byType(RichText))) {
+        final s = r.text.toPlainText();
+        expect(_broken(s), isFalse, reason: '$text: "$s"');
+      }
+    }
+    await show(tester, 'Here:\n\n```\nlet a = 1\n```', caret: caret);
+    expect(find.byKey(const ValueKey('caret')), findsNothing);
+    for (final r in tester.widgetList<RichText>(find.byType(RichText))) {
+      expect(_broken(r.text.toPlainText()), isFalse);
+    }
+  });
+}
+
+/// Whether [s] has one of the stream's private-use marks, or a lone half
+/// of a surrogate pair: either draws as a broken character.
+bool _broken(String s) {
+  for (var i = 0; i < s.length; i++) {
+    final c = s.codeUnitAt(i);
+    if (c >= 0xE000 && c <= 0xE003) return true;
+    final high = c >= 0xD800 && c <= 0xDBFF;
+    final low = c >= 0xDC00 && c <= 0xDFFF;
+    final next = i + 1 < s.length ? s.codeUnitAt(i + 1) : 0;
+    if (high && !(next >= 0xDC00 && next <= 0xDFFF)) return true;
+    if (low) return true; // a low half not after a high one
+    if (high) i++;
+  }
+  return false;
 }
