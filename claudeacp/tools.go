@@ -282,28 +282,34 @@ func (s *session) toolDenied(m *claudeagent.PermissionDenied) {
 			"decisionReasonType": m.DecisionReasonType, "decisionReason": m.DecisionReason, "message": m.Message}}})
 }
 
-// Why the top-level calls still open end.
+// Why the calls still open end.
 const (
 	endedTurn = iota
 	endedCancel
 	endedExit
 )
 
+// exitedText is what a call claude exited under says.
+const exitedText = "Claude exited before this call had a result."
+
 // endTools ends the top-level calls still open as claude's turn ends;
 // incomplete says one of them claude ran (its input came whole) yet
-// gave no result. Subagents' calls go on: a subagent may outlive the
-// turn.
+// gave no result. Subagents' calls go on, as a subagent may outlive the
+// turn, and so does a compaction still running; one that has ended is
+// forgotten. When claude exits nothing can end a call later, so every
+// one ends, the compaction's too.
 func (s *session) endTools(why int) (incomplete bool) {
 	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
+	exited := why == endedExit
 	for _, id := range slices.Sorted(maps.Keys(ts.byID)) {
 		t := ts.byID[id]
 		if t.ended {
 			delete(ts.byID, id) // its hook, if any, has come
 			continue
 		}
-		if t.parent != "" || t.agent != "" {
+		if !exited && (t.parent != "" || t.agent != "") {
 			continue
 		}
 		t.ended = true
@@ -312,8 +318,8 @@ func (s *session) endTools(why int) (incomplete bool) {
 		switch {
 		case why == endedCancel:
 			text = "The turn was cancelled before this call had a result."
-		case why == endedExit:
-			text = "Claude exited before this call had a result."
+		case exited:
+			text = exitedText
 		case !t.whole:
 			text = "The model stopped before finishing this call; it never ran."
 		default:
@@ -321,6 +327,13 @@ func (s *session) endTools(why int) (incomplete bool) {
 			incomplete = true
 		}
 		s.sendLocked(t, report{status: acp.ToolCallStatusFailed, content: texts(text)})
+	}
+	if c := ts.compact; c != nil && (c.ended || exited) {
+		ts.compact = nil
+		if !c.ended {
+			c.ended = true
+			s.sendLocked(c, report{status: acp.ToolCallStatusFailed, content: texts(exitedText)})
+		}
 	}
 	delete(ts.streaming, "")
 	return incomplete
