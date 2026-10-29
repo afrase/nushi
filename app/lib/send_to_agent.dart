@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/review_findings.dart';
 import 'package:nushi/widgets.dart';
 
 /// Where the pull request's parts send what's picked to the agent: a chat's
@@ -95,8 +96,9 @@ Reply commentReply(GitHubComment c) => (
   from: 'A comment from ${_who(c.author)}',
 );
 
-/// A review thread, its place and every comment, for the agent.
-Reply threadReply(GitHubThread x) {
+/// A review thread, its place and every comment, for the agent; with
+/// [also], a review bot's findings on the same lines.
+Reply threadReply(GitHubThread x, {List<ReviewFinding> also = const []}) {
   final line = x.outdated ? x.originalLine : x.line;
   final start = x.outdated ? x.originalStartLine : x.startLine;
   final where = x.onFile
@@ -107,20 +109,39 @@ Reply threadReply(GitHubThread x) {
   final outdated = x.outdated ? ' (outdated: the lines changed since)' : '';
   String who(GitHubComment c) =>
       c.outside ? '${c.author} (outside the repository)' : c.author;
+  final voices = {
+    for (final c in x.comments) _who(c.author),
+    for (final f in also) _who(f.from.author),
+  };
   return (
     quote: _cut(
       [
         'Review thread on $where$outdated:',
         for (final c in x.comments) '${who(c)}: ${c.body}',
+        for (final f in also) "${f.from.author}'s review: ${f.text}",
       ].join('\n'),
       6000,
     ),
     text:
         'Address this review thread here; check the current code first. '
         "Don't reply to or resolve it on GitHub. $_asData",
-    from:
-        'Review comments from '
-        '${{for (final c in x.comments) _who(c.author)}.join(', ')}',
+    from: 'Review comments from ${voices.join(', ')}',
+  );
+}
+
+/// A finding a review bot asked to address, its place, for the agent.
+Reply findingReply(ReviewFinding f) {
+  final where = findingPlace(f);
+  return (
+    quote: _cut(
+      "Finding in ${f.from.author}'s review"
+      '${where.isEmpty ? '' : ' on $where'}:\n${f.text}',
+      6000,
+    ),
+    text:
+        'Address this finding from a review here; check the current code '
+        "first. Don't reply to it on GitHub. $_asData",
+    from: "A finding from ${_who(f.from.author)}'s review",
   );
 }
 

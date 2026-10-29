@@ -210,6 +210,12 @@ String commentSummary(String body) {
   return '';
 }
 
+/// [body] as one plain line: each line without Markdown's marks, joined.
+String plainText(String body) => [
+  for (final l in body.split('\n'))
+    if (_plain(l.trim()) case final p when p.isNotEmpty) p,
+].join(' ');
+
 /// [line] without Markdown's marks.
 String _plain(String line) => line
     .replaceAll(RegExp(r'!\[[^\]]*\]\([^)]*\)'), '')
