@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/comment_box.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
@@ -100,8 +101,7 @@ class _TodoRowState extends State<TodoRow> {
   bool _replying = false;
   bool _busy = false;
 
-  Future<void> _toggleLog() async {
-    final c = widget.item.check!;
+  Future<void> _toggleLog(GitHubCheck c) async {
     setState(() => _log = !_log);
     if (!_log || _tail != null || c.id == 0) return;
     try {
@@ -114,13 +114,13 @@ class _TodoRowState extends State<TodoRow> {
     }
   }
 
-  Future<void> _resolve() async {
+  Future<void> _resolve(GitHubThread x) async {
     setState(() => _busy = true);
     await tryOrShow(context, () async {
       await widget.daemon.client.resolveGitHubThread(
         ResolveGitHubThreadRequest(
           host: widget.pull.item.ref.host,
-          thread: widget.item.thread!.id,
+          thread: x.id,
           resolve: true,
         ),
       );
@@ -134,47 +134,8 @@ class _TodoRowState extends State<TodoRow> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final i = widget.item;
-    final c = i.check;
-    final r = i.review;
-    final x = i.thread;
-    final f = i.finding;
     final small = theme.ui(t.textMuted, size: 11.5);
-    final (IconData icon, Color color) = c != null
-        ? (Icons.cancel_outlined, t.crashed)
-        : r != null
-        ? (Icons.rate_review_outlined, t.crashed)
-        : x != null
-        ? (Icons.forum_outlined, t.needs)
-        : (Icons.warning_amber_rounded, t.findingsAccent);
-    final place = x != null
-        ? threadPlace(x)
-        : f != null
-        ? findingPlace(f)
-        : '';
-    final title = c != null
-        ? Text.rich(
-            TextSpan(
-              children: [
-                if (c.workflow.isNotEmpty)
-                  TextSpan(
-                    text: '${c.workflow} / ',
-                    style: theme.ui(t.textMuted),
-                  ),
-                TextSpan(text: c.name),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.text, weight: FontWeight.w500),
-          )
-        : r != null
-        ? Text(
-            '@${r.author}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.text, weight: FontWeight.w500),
-          )
-        : place.isEmpty
+    Text? where(String place) => place.isEmpty
         ? null
         : Text(
             place,
@@ -182,23 +143,64 @@ class _TodoRowState extends State<TodoRow> {
             overflow: TextOverflow.ellipsis,
             style: theme.code(t.text, size: 12),
           );
-    final tag = c != null
-        ? (c.required ? _Tag('Required', t.textSecondary) : null)
-        : r != null
-        ? _Tag('Changes requested', t.crashed, soft: true)
-        : x != null
-        ? _Tag(x.outdated ? 'Outdated' : 'Unresolved', t.needs, soft: true)
-        : _Tag('Must address', t.findingsAccent, soft: true);
-    final detail = c != null
-        ? _checkDetail(c)
-        : r != null
-        ? (r.body.isEmpty
-              ? 'No text: their review threads say what'
-              : _firstLine(plainText(r.body)))
-        : x != null
-        ? plainText(x.comments.isEmpty ? '' : x.comments.first.body)
-        : plainText(f!.text);
-    final who = c != null ? '' : _whose(i, widget.now);
+    final (
+      IconData icon,
+      Color color,
+      Text? title,
+      _Tag? tag,
+      String detail,
+    ) = switch (i) {
+      CheckTodo(check: final c) => (
+        Icons.cancel_outlined,
+        t.crashed,
+        Text.rich(
+          TextSpan(
+            children: [
+              if (c.workflow.isNotEmpty)
+                TextSpan(
+                  text: '${c.workflow} / ',
+                  style: theme.ui(t.textMuted),
+                ),
+              TextSpan(text: c.name),
+            ],
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.ui(t.text, weight: FontWeight.w500),
+        ),
+        c.required ? _Tag('Required', t.textSecondary) : null,
+        _checkDetail(c),
+      ),
+      ReviewTodo(review: final r) => (
+        Icons.rate_review_outlined,
+        t.crashed,
+        Text(
+          '@${r.author}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.ui(t.text, weight: FontWeight.w500),
+        ),
+        _Tag('Changes requested', t.crashed, soft: true),
+        r.body.isEmpty
+            ? 'No text: their review threads say what'
+            : _firstLine(plainText(r.body)),
+      ),
+      ThreadTodo(thread: final x) => (
+        Icons.forum_outlined,
+        t.needs,
+        where(threadPlace(x)),
+        _Tag(x.outdated ? 'Outdated' : 'Unresolved', t.needs, soft: true),
+        plainText(x.comments.isEmpty ? '' : x.comments.first.body),
+      ),
+      FindingTodo(finding: final f) => (
+        Icons.warning_amber_rounded,
+        t.findingsAccent,
+        where(findingPlace(f)),
+        _Tag('Must address', t.findingsAccent, soft: true),
+        plainText(f.text),
+      ),
+    };
+    final who = _whose(i, widget.now);
     return Container(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: t.borderSubtle)),
@@ -262,21 +264,27 @@ class _TodoRowState extends State<TodoRow> {
                 mainAxisSize: MainAxisSize.min,
                 spacing: 2,
                 children: [
-                  if (c != null && (c.id != 0 || c.url.isNotEmpty))
+                  if (i case CheckTodo(check: final c)
+                      when c.id != 0 || c.url.isNotEmpty)
                     GhostButton(
                       _log ? 'Hide log' : 'Log',
                       tooltip: c.id == 0
                           ? 'Open its page on GitHub'
                           : 'The failing part of its log',
-                      onTap: c.id == 0 ? () => openWeb(c.url) : _toggleLog,
+                      onTap: c.id == 0
+                          ? () => openWeb(c.url)
+                          : () => _toggleLog(c),
                     ),
-                  if (x != null && x.canReply)
+                  if (i case ThreadTodo(thread: final x) when x.canReply)
                     GhostButton(
                       'Reply',
                       onTap: () => setState(() => _replying = true),
                     ),
-                  if (x != null && x.canResolve)
-                    GhostButton('Resolve', onTap: _busy ? null : _resolve),
+                  if (i case ThreadTodo(thread: final x) when x.canResolve)
+                    GhostButton(
+                      'Resolve',
+                      onTap: _busy ? null : () => _resolve(x),
+                    ),
                   const SizedBox(width: 4),
                   SendButton(
                     label: widget.inBox ? 'In the box ✓' : 'Send',
@@ -310,7 +318,7 @@ class _TodoRowState extends State<TodoRow> {
                       ),
                     ),
             ),
-          if (_replying)
+          if (_replying && i is ThreadTodo)
             Padding(
               padding: const EdgeInsets.fromLTRB(50, 6, 0, 0),
               child: CommentBox(
@@ -322,7 +330,7 @@ class _TodoRowState extends State<TodoRow> {
                   await widget.daemon.client.replyGitHubThread(
                     ReplyGitHubThreadRequest(
                       host: widget.pull.item.ref.host,
-                      thread: x!.id,
+                      thread: i.thread.id,
                       body: text,
                     ),
                   );
@@ -358,28 +366,31 @@ String _checkDetail(GitHubCheck c) {
 String _firstLine(String text) => text.trim().split('\n').first.trim();
 
 /// Whose an item is: a thread's authors (and a bot's review when its
-/// finding is on the same lines), a finding's review; and when.
+/// finding is on the same lines), a finding's review; and when. A check
+/// is no one's.
 String _whose(TodoItem i, DateTime now) {
-  if (i.thread case final x?) {
-    final people = {for (final c in x.comments) c.author}.join(', ');
-    final last = x.comments.isEmpty ? null : x.comments.last;
-    final also = {
-      for (final f in i.also) '${possessive(f.from.author)} review',
-    };
-    return [
-      if (also.isEmpty) people else '$people, and ${also.join(', ')}',
-      if (last != null) githubAgo(last.createdMs.toInt(), now),
-    ].join(' · ');
+  switch (i) {
+    case ThreadTodo(thread: final x, :final also):
+      final people = {for (final c in x.comments) c.author}.join(', ');
+      final last = x.comments.lastOrNull;
+      final bots = {
+        for (final f in also) '${possessive(f.from.author)} review',
+      };
+      return [
+        if (bots.isEmpty) people else '$people, and ${bots.join(', ')}',
+        if (last != null) agoAt(last.createdMs.toInt(), now),
+      ].join(' · ');
+    case ReviewTodo(review: final r):
+      return [
+        'their latest review',
+        if (r.createdMs != 0) agoAt(r.createdMs.toInt(), now),
+      ].join(' · ');
+    case FindingTodo(finding: final f):
+      return '${possessive(f.from.author)} review · '
+          '${agoAt(f.from.createdMs.toInt(), now)}';
+    case CheckTodo():
+      return '';
   }
-  if (i.review case final r?) {
-    return [
-      'their latest review',
-      if (r.createdMs != 0) githubAgo(r.createdMs.toInt(), now),
-    ].join(' · ');
-  }
-  final f = i.finding!;
-  return '${possessive(f.from.author)} review · '
-      '${githubAgo(f.from.createdMs.toInt(), now)}';
 }
 
 class _Tag extends StatelessWidget {

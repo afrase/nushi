@@ -314,8 +314,12 @@ class _ItemRowState extends State<ItemRow> {
                   checks == null
                       ? null
                       : Tooltip(
-                          message: checks.$3,
-                          child: Icon(checks.$1, size: 14, color: checks.$2),
+                          message: checks.words,
+                          child: Icon(
+                            checks.icon,
+                            size: 14,
+                            color: checks.color,
+                          ),
                         ),
                 ),
                 _column(40, _talk(theme, it)),

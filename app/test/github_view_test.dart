@@ -425,9 +425,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Lines 3–4: a comment of your review'), findsOneWidget);
     await tester.enterText(find.byType(TextField).last, 'Call it Minus?');
+    await tester.pump(); // the button waits for some text
     await tester.tap(find.text('Add to review'));
     await tester.pumpAndSettle();
     expect(find.text('Call it Minus?'), findsOneWidget);
+    // The head counts it.
+    expect(find.text('Review (1)…', skipOffstage: false), findsOneWidget);
     // Nothing went to GitHub but what was asked.
     expect(fake.calls.whereType<SubmitGitHubReviewRequest>(), isEmpty);
     expect(fake.calls.whereType<AddGitHubCommentRequest>(), isEmpty);

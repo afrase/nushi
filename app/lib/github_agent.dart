@@ -27,18 +27,13 @@ Future<void> toAgent(
 }) async {
   if (chat case final mine?) {
     await tryOrShow(context, () async {
-      final me = await githubLogin(daemon, item.ref.host);
-      for (final r in await replies()) {
-        mine.draft.addReply(
-          onPull(
-            r,
-            repo: item.ref.repo,
-            number: item.ref.number,
-            author: item.author,
-            me: me,
-          ),
-        );
-      }
+      await putReplies(
+        daemon,
+        mine,
+        item.ref,
+        author: item.author,
+        replies: await replies(),
+      );
     });
     return;
   }
@@ -74,20 +69,40 @@ Future<void> toAgent(
   final target = picked;
   if (!context.mounted) return;
   await tryOrShow(context, () async {
-    final me = await githubLogin(daemon, item.ref.host);
-    for (final r in await replies()) {
-      target.draft.addReply(
-        onPull(
-          r,
-          repo: item.ref.repo,
-          number: item.ref.number,
-          author: item.author,
-          me: me,
-        ),
-      );
-    }
+    await putReplies(
+      daemon,
+      target,
+      item.ref,
+      author: item.author,
+      replies: await replies(),
+    );
     daemon.select(target.id);
   });
+}
+
+/// Puts [replies] in [chat]'s box as cards on pull request [ref] (by
+/// [author]; each says what it is, on which pull request, and whose that
+/// is); how many of them were new there.
+Future<int> putReplies(
+  Daemon daemon,
+  ChatState chat,
+  GitHubRef ref, {
+  required String author,
+  required List<Reply> replies,
+}) async {
+  final me = await githubLogin(daemon, ref.host);
+  var added = 0;
+  for (final r in replies) {
+    final card = onPull(
+      r,
+      repo: ref.repo,
+      number: ref.number,
+      author: author,
+      me: me,
+    );
+    if (chat.draft.addReply(card)) added++;
+  }
+  return added;
 }
 
 /// Fix checks' cards: one per failed check (five at most), each with the

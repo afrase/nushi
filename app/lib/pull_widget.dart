@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_link.dart';
@@ -48,7 +48,7 @@ class PullRows extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                githubAgo(it.updatedMs.toInt(), clock()),
+                agoAt(it.updatedMs.toInt(), clock()),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,

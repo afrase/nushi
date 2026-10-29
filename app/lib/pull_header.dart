@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -126,9 +126,7 @@ class PullHeader extends StatelessWidget {
                             text: ' (outside the repository)',
                             style: theme.ui(t.needs, size: 12),
                           ),
-                        TextSpan(
-                          text: ', ${githubAgo(it.updatedMs.toInt(), now)}',
-                        ),
+                        TextSpan(text: ', ${agoAt(it.updatedMs.toInt(), now)}'),
                       ],
                     ),
                     style: small,

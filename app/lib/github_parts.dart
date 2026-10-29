@@ -16,7 +16,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-export 'package:nushi/pull_states.dart' show itemColor, itemState;
+export 'package:nushi/pull_states.dart' show checksIcon, itemColor, itemState;
 
 /// A review decision in words, and its color.
 (String, Color)? reviewWords(Tokens t, String review) => switch (review) {
@@ -25,15 +25,6 @@ export 'package:nushi/pull_states.dart' show itemColor, itemState;
   'review_required' => ('Review required', t.textMuted),
   _ => null,
 };
-
-/// A checks' state's icon and color.
-(IconData, Color, String)? checksIcon(Tokens t, String state) =>
-    switch (state) {
-      'success' => (Icons.check, t.done, 'Checks passed'),
-      'failure' || 'error' => (Icons.close, t.crashed, 'Checks failed'),
-      'pending' => (Icons.schedule, t.needs, 'Checks running'),
-      _ => null,
-    };
 
 /// The chats on a GitHub item (started from it, or on its branch), the
 /// newest first.
@@ -66,8 +57,8 @@ class ItemBadges extends StatelessWidget {
       children: [
         if (checks != null)
           Tooltip(
-            message: checks.$3,
-            child: Icon(checks.$1, size: 14, color: checks.$2),
+            message: checks.words,
+            child: Icon(checks.icon, size: 14, color: checks.color),
           ),
         if (review != null) ...[
           const SizedBox(width: 8),
@@ -334,12 +325,6 @@ class _GitHubChipState extends State<GitHubChip> {
   }
 
   @override
-  void didUpdateWidget(GitHubChip old) {
-    super.didUpdateWidget(old);
-    if (old.link.id != widget.link.id) unawaited(_load(quiet: false));
-  }
-
-  @override
   void dispose() {
     _poll?.cancel();
     super.dispose();
@@ -370,7 +355,7 @@ class _GitHubChipState extends State<GitHubChip> {
         : [
             '${l.repo}#${l.number}: ${it.title}',
             itemState(it),
-            ?checks?.$3,
+            ?checks?.words,
             ?review?.$1,
             if (it.unresolved > 0) unresolvedWords(it.unresolved),
           ].join('\n');

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_settings.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/review_findings.dart';
@@ -99,7 +98,7 @@ class _CommentEntryState extends State<CommentEntry> {
             ),
           ),
         Text(
-          '  ${githubAgo(c.createdMs.toInt(), widget.now)}',
+          '  ${agoAt(c.createdMs.toInt(), widget.now)}',
           style: theme.ui(t.textMuted, size: 11.5),
         ),
         if (!folds || _open) const Spacer(),
@@ -172,119 +171,4 @@ class Clamped extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// A box for a comment or a reply: Markdown, ⌘⏎ or the button posts it;
-/// what GitHub said wrong shows under it.
-class CommentBox extends StatefulWidget {
-  const new({
-    required this.hint,
-    required this.onPost,
-    super.key,
-    this.label = 'Comment',
-    this.autofocus = false,
-    this.onCancel,
-    this.note = '',
-    this.primary = false,
-  });
-
-  final String hint;
-  final String label;
-
-  /// Small print at the buttons' left ("Markdown · posts to GitHub as
-  /// octo").
-  final String note;
-
-  /// Its button is the accent's (the conversation's box).
-  final bool primary;
-  final bool autofocus;
-  final Future<void> Function(String text) onPost;
-  final VoidCallback? onCancel;
-
-  @override
-  State<CommentBox> createState() => _CommentBoxState();
-}
-
-class _CommentBoxState extends State<CommentBox> {
-  final _text = TextEditingController();
-  bool _busy = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  Future<void> _post() async {
-    final text = _text.text.trim();
-    if (text.isEmpty || _busy) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await widget.onPost(text);
-      _text.clear();
-    } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.enter, meta: true): _post,
-        const SingleActivator(LogicalKeyboardKey.escape): ?widget.onCancel,
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _text,
-            autofocus: widget.autofocus,
-            enabled: !_busy,
-            minLines: 2,
-            maxLines: 8,
-            style: theme.ui(t.text),
-            decoration: InputDecoration(hintText: widget.hint, isDense: true),
-          ),
-          if (_error case final e?)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(e, style: theme.ui(t.crashed, size: 12)),
-            ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (widget.note.isNotEmpty)
-                Expanded(
-                  child: Text(
-                    widget.note,
-                    style: theme.ui(t.textMuted, size: 12),
-                  ),
-                ),
-              if (widget.onCancel case final cancel?)
-                Button(label: 'Cancel', onPressed: cancel),
-              const SizedBox(width: 6),
-              Button(
-                label: _busy ? 'Posting…' : widget.label,
-                hint: '⌘⏎',
-                kind: widget.primary
-                    ? ButtonKind.primary
-                    : ButtonKind.secondary,
-                onPressed: _busy ? null : _post,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -243,6 +243,12 @@ class ChatPull extends ChangeNotifier {
     }
   }
 
+  /// Marks the pull request's comments seen: its Pull request tab shows
+  /// them.
+  void markSeen() {
+    if (pull case final p?) markPullSeen(chat.id, p);
+  }
+
   static GitHubRef _ref(GitHubLink l) =>
       GitHubRef(host: l.host, repo: l.repo, number: l.number);
 

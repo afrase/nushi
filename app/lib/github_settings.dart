@@ -1,15 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/account_rows.dart';
 import 'package:nushi/clock.dart';
-import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_findings_settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Where GitHub makes tokens.
 final Uri githubTokensPage = Uri.parse('https://github.com/settings/tokens');
@@ -142,7 +141,8 @@ class _GitHubPageState extends State<GitHubPage> {
           ),
           children: [
             for (final h in hosts)
-              _HostRow(
+              _hostRow(
+                t,
                 h,
                 now: widget.now ?? clock(),
                 onAllow: () => _allow(h),
@@ -163,9 +163,27 @@ class _GitHubPageState extends State<GitHubPage> {
             child: Text(e, style: theme.ui(t.crashed, size: 12)),
           ),
         if (_adding)
-          _AddToken(
-            widget.client,
-            onAdded: () {
+          TokenForm(
+            title: 'Add a GitHub token',
+            note:
+                "Used for its host instead of gh's login, until removed. A "
+                'classic token with repo and read:org covers what Nushi '
+                'does.',
+            fields: const [
+              TokenField('Host', 'github.com', text: 'github.com'),
+              TokenField(
+                'Token',
+                'ghp_… or github_pat_…',
+                secret: true,
+                autofocus: true,
+              ),
+            ],
+            tokensPage: githubTokensPage,
+            onAdd: (text) async {
+              await widget.client.addGitHubToken(
+                AddGitHubTokenRequest(host: text[0], token: text[1]),
+              );
+              if (!mounted) return;
               setState(() => _adding = false);
               unawaited(_load());
             },
@@ -190,217 +208,42 @@ class _GitHubPageState extends State<GitHubPage> {
   }
 }
 
-class _HostRow extends StatelessWidget {
-  const new(
-    this.host, {
-    required this.now,
-    required this.onAllow,
-    required this.onRemove,
-  });
-
-  final GitHubHost host;
-  final DateTime now;
-  final VoidCallback onAllow;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final h = host;
-    final who = h.login.isEmpty
-        ? null
-        : 'Signed in as ${h.login}${h.name.isEmpty ? '' : ' (${h.name})'}';
-    final status = h.needsOk
-        ? 'This build of Nushi needs your OK to read the token: macOS asks '
-              'for your password.'
-        : h.problem.isNotEmpty
-        ? h.problem
-        : who ?? 'Checking…';
-    final statusColor = h.needsOk
-        ? t.needs
-        : h.problem.isNotEmpty
-        ? t.crashed
-        : t.textSecondary;
-    final kind = tokenKind(h.kind);
-    final budget = budgetLine(h, now);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(h.host, style: theme.ui(t.text, weight: FontWeight.w600)),
-                Text(status, style: theme.ui(statusColor, size: 12)),
-                if (h.source.isNotEmpty)
-                  Text(
-                    [
-                      'From ${tokenSource(h)}',
-                      if (kind.isNotEmpty) kind,
-                      if (h.scopes.isNotEmpty) 'scopes ${h.scopes.join(', ')}',
-                    ].join(' · '),
-                    style: theme.ui(t.textMuted, size: 12),
-                  ),
-                if (budget.isNotEmpty)
-                  Text(budget, style: theme.ui(t.textMuted, size: 12)),
-              ],
-            ),
-          ),
-          if (h.needsOk)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Button(label: 'Allow…', onPressed: onAllow),
-            ),
-          if (h.pasted)
-            Button(
-              label: 'Remove',
-              kind: ButtonKind.destructive,
-              onPressed: onRemove,
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The form for a token: the host (github.com, or an Enterprise server's)
-/// and the token, checked with GitHub before it's kept.
-class _AddToken extends StatefulWidget {
-  const new(this.client, {required this.onAdded, required this.onCancel});
-
-  final NushiServiceClient client;
-  final VoidCallback onAdded;
-  final VoidCallback? onCancel;
-
-  @override
-  State<_AddToken> createState() => _AddTokenState();
-}
-
-class _AddTokenState extends State<_AddToken> {
-  final _host = TextEditingController(text: 'github.com');
-  final _token = TextEditingController();
-  bool _busy = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _host.dispose();
-    _token.dispose();
-    super.dispose();
-  }
-
-  Future<void> _add() async {
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await widget.client.addGitHubToken(
-        AddGitHubTokenRequest(
-          host: _host.text.trim(),
-          token: _token.text.trim(),
+/// A host's row: who its token is or what's wrong, where the token
+/// comes from, and what's left of its rate limits.
+AccountRow _hostRow(
+  Tokens t,
+  GitHubHost h, {
+  required DateTime now,
+  required VoidCallback onAllow,
+  required VoidCallback onRemove,
+}) {
+  final who = h.login.isEmpty
+      ? null
+      : 'Signed in as ${h.login}${h.name.isEmpty ? '' : ' (${h.name})'}';
+  final kind = tokenKind(h.kind);
+  final budget = budgetLine(h, now);
+  return AccountRow(
+    title: h.host,
+    lines: [
+      if (h.needsOk)
+        (needsOkStatus, t.needs)
+      else if (h.problem.isNotEmpty)
+        (h.problem, t.crashed)
+      else
+        (who ?? 'Checking…', t.textSecondary),
+      if (h.source.isNotEmpty)
+        (
+          [
+            'From ${tokenSource(h)}',
+            if (kind.isNotEmpty) kind,
+            if (h.scopes.isNotEmpty) 'scopes ${h.scopes.join(', ')}',
+          ].join(' · '),
+          t.textMuted,
         ),
-      );
-      _token.clear();
-      widget.onAdded();
-    } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final mono = theme.code(t.text, size: 12);
-    Widget field(
-      String label,
-      TextEditingController c,
-      String hint, {
-      bool secret = false,
-      bool autofocus = false,
-    }) => Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(label, style: theme.ui(t.textSecondary)),
-          ),
-          Expanded(
-            child: TextField(
-              controller: c,
-              obscureText: secret,
-              autofocus: autofocus,
-              enabled: !_busy,
-              style: mono,
-              decoration: InputDecoration(hintText: hint, isDense: true),
-              onSubmitted: (_) => _add(),
-            ),
-          ),
-        ],
-      ),
-    );
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: box(t.borderSubtle, fill: t.base),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Add a GitHub token',
-            style: theme.ui(t.text, weight: FontWeight.w600),
-          ),
-          Text(
-            "Used for its host instead of gh's login, until removed. A "
-            'classic token with repo and read:org covers what Nushi does.',
-            style: theme.ui(t.textMuted, size: 12),
-          ),
-          field('Host', _host, 'github.com'),
-          field(
-            'Token',
-            _token,
-            'ghp_… or github_pat_…',
-            secret: true,
-            autofocus: true,
-          ),
-          if (_error case final e?)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(e, style: theme.ui(t.crashed, size: 12)),
-            ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              LinkText(
-                'Make a token',
-                size: 12,
-                onTap: () => unawaited(launchUrl(githubTokensPage)),
-              ),
-              const Spacer(),
-              if (widget.onCancel case final cancel?)
-                Button(label: 'Cancel', onPressed: _busy ? null : cancel),
-              const SizedBox(width: 6),
-              Button(
-                label: _busy ? 'Checking…' : 'Add',
-                kind: ButtonKind.primary,
-                onPressed: _busy ? null : _add,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// How long ago a GitHub time (ms) was, as lists say it.
-String githubAgo(int ms, DateTime now) {
-  final when = DateTime.fromMillisecondsSinceEpoch(ms);
-  return ago(now.difference(when), when);
+      if (budget.isNotEmpty) (budget, t.textMuted),
+    ],
+    needsOk: h.needsOk,
+    onAllow: onAllow,
+    onRemove: h.pasted ? onRemove : null,
+  );
 }

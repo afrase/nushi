@@ -97,17 +97,14 @@ class _PullTodoState extends State<PullTodo> {
       for (final i in items)
         if (_picked.contains(i.id)) i,
     ];
-    final checks = [
-      for (final i in items)
-        if (i.check != null) i,
-    ];
+    final checks = items.whereType<CheckTodo>();
     final reviews = [
       for (final i in items)
-        if (i.review != null || i.thread != null) i,
+        if (i is ReviewTodo || i is ThreadTodo) i,
     ];
-    final bots = <String, List<TodoItem>>{};
-    for (final i in items) {
-      if (i.finding case final f?) (bots[f.from.author] ??= []).add(i);
+    final bots = <String, List<FindingTodo>>{};
+    for (final i in items.whereType<FindingTodo>()) {
+      (bots[i.finding.from.author] ??= []).add(i);
     }
     Widget group(String name) => Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 2),
@@ -190,7 +187,7 @@ class _PullTodoState extends State<PullTodo> {
               _OlderGroup(
                 bot: bot,
                 commit: commit,
-                onShow: () => widget.onOlder?.call(found.first.finding!.from),
+                onShow: () => widget.onOlder?.call(found.first.finding.from),
               )
             else
               group('Findings from $bot'),

@@ -24,6 +24,19 @@ String itemState(GitHubItem it) => switch (it.state) {
   _ => it.draft ? 'Draft' : 'Open',
 };
 
+/// A checks' state (an item's `checks`) as an icon, its color and its
+/// words; null with no checks.
+({IconData icon, Color color, String words})? checksIcon(
+  Tokens t,
+  String state,
+) => switch (state) {
+  'success' => (icon: Icons.check, color: t.done, words: 'Checks passed'),
+  'failure' ||
+  'error' => (icon: Icons.close, color: t.crashed, words: 'Checks failing'),
+  'pending' => (icon: Icons.schedule, color: t.needs, words: 'Checks running'),
+  _ => null,
+};
+
 /// The chats' pull requests as lists show them (their state and checks):
 /// asked of the daemon in one call (GetGitHubStates: one query a host, kept
 /// 30 s there) while something watches, at once, each minute quietly, and
@@ -276,21 +289,30 @@ class _PullChipState extends State<PullChip> {
       const Duration(minutes: 1),
       (_) => unawaited(_ask(quiet: true)),
     );
+    widget.chat.addListener(_chatChanged);
     unawaited(_ask());
   }
 
   @override
   void dispose() {
+    widget.chat.removeListener(_chatChanged);
     _timer?.cancel();
     _states.unwatch();
     super.dispose();
   }
 
+  /// The chat's link changed: the pull request it names is asked for.
+  void _chatChanged() {
+    if (widget.chat.pull?.id == _asked) return;
+    setState(() => _pull = null);
+    unawaited(_ask());
+  }
+
   /// Asks for the linked pull request whole.
   Future<void> _ask({bool quiet = false}) async {
     final l = widget.chat.pull;
+    _asked = l?.id;
     if (l == null) return;
-    _asked = l.id;
     try {
       final r = await widget.daemon.client.getGitHubPull(
         GetGitHubPullRequest(
@@ -315,23 +337,14 @@ class _PullChipState extends State<PullChip> {
       final t = theme.t;
       final l = widget.chat.pull;
       if (l == null) return const SizedBox.shrink();
-      if (_asked != l.id) {
-        _pull = null;
-        unawaited(_ask());
-      }
       final p = _pull?.item.id == l.id ? _pull : null;
       final it = p?.item ?? _states.item(l);
-      final checks = switch (it?.checks) {
-        'success' => (Icons.check, t.done, 'checks passed'),
-        'failure' || 'error' => (Icons.close, t.crashed, 'checks failing'),
-        'pending' => (Icons.schedule, t.needs, 'checks running'),
-        _ => null,
-      };
+      final checks = it == null ? null : checksIcon(t, it.checks);
       final open = p?.threads.where((x) => !x.resolved).length ?? 0;
       final words = [
         'Pull request #${l.number}',
         if (it != null) itemState(it),
-        ?checks?.$3,
+        ?checks?.words.toLowerCase(),
         if (open > 0) '$open open thread${open == 1 ? '' : 's'}',
       ].join(', ');
       return Semantics(
@@ -369,7 +382,7 @@ class _PullChipState extends State<PullChip> {
                           ),
                         ),
                         if (checks != null)
-                          Icon(checks.$1, size: 15, color: checks.$2),
+                          Icon(checks.icon, size: 15, color: checks.color),
                       ],
                     ),
             ),
