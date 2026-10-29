@@ -4,7 +4,10 @@
     {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "TaskStop", "SendMessage"]}}}}}},
     {"prompt": "start a helper in the background", "session": "s1", "async": "p1"},
     {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "running"}}}}},
-    {"prompt": "stop the helper", "session": "s1"},
-    {"await": "p1"}
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "_meta": {"_claude/origin": {"kind": "human"}}}}}},
+    {"prompt": "stop the helper", "session": "s1", "async": "p2"},
+    {"await": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p2"}
   ]
 }
