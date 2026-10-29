@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/completions.dart';
 
@@ -41,10 +43,16 @@ void main() {
         'packages/module_${i % 97}/lib/src/part_$i/file_$i.dart',
     ];
     rankChoices(paths, 'file'); // warm
-    final watch = Stopwatch()..start();
-    final got = rankChoices(paths, 'file');
-    watch.stop();
-    expect(got.first, 'packages/module_0/lib/src/part_0/file_0.dart');
-    expect(watch.elapsedMilliseconds, lessThan(100)); // 11–15 ms here
+    // The best of three, so a pause on a busy runner (a collection, the
+    // runner's other work) doesn't count; a slow ranking is slow in all.
+    var best = 1 << 30;
+    for (var run = 0; run < 3; run++) {
+      final watch = Stopwatch()..start();
+      final got = rankChoices(paths, 'file');
+      watch.stop();
+      expect(got.first, 'packages/module_0/lib/src/part_0/file_0.dart');
+      best = min(best, watch.elapsedMilliseconds);
+    }
+    expect(best, lessThan(100)); // 11–15 ms here
   });
 }
