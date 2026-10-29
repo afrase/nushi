@@ -8,6 +8,16 @@ import (
 	"github.com/afrase/nushi/claudeagent"
 )
 
+// contextUsed sends the context's use when the last top-level message's
+// counts change it.
+func (s *session) contextUsed() {
+	u := s.st.usage
+	if used := u.InputTokens + u.OutputTokens + u.CacheReadInputTokens + u.CacheCreationInputTokens; used != s.st.used {
+		s.st.used = used
+		s.usage(nil, nil)
+	}
+}
+
 // usage sends a usage_update: the context's use and size, cost when
 // given, and meta, with the model under _claude/model.
 func (s *session) usage(cost *acp.Cost, meta map[string]any) {
@@ -52,6 +62,8 @@ func (s *session) result(r *claudeagent.Result) {
 	}
 	s.mu.Lock()
 	user := s.userLaneLocked(r)
+	t := s.targetLocked(s.namedLocked(resultIDs(r)))
+	fallback := user && t != nil && !t.textSent && r.Subtype == "success" && !r.IsError && r.Result != ""
 	s.mu.Unlock()
 	meta := map[string]any{}
 	switch {
@@ -61,6 +73,9 @@ func (s *session) result(r *claudeagent.Result) {
 		meta["_claude/origin"] = claudeagent.Origin{Kind: "human"}
 	}
 	s.usage(&acp.Cost{Amount: r.TotalCostUSD, Currency: "USD"}, meta)
+	if fallback {
+		s.chunk("agent_message_chunk", "", r.UUID, acp.ContentBlock{Text: &acp.TextContent{Text: r.Result}})
+	}
 	s.mu.Lock()
 	s.resultLocked(r, s.st.errorKind)
 	s.mu.Unlock()
