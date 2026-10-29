@@ -84,3 +84,38 @@ func TestSteerIdle(t *testing.T) {
 		}
 	}
 }
+
+// A turn held for its unnamed steer, when claude takes the next prompt,
+// ends with its own result's answer: a refusal stays one, a failure
+// stays a failure.
+func TestSteerHandOff(t *testing.T) {
+	for _, tc := range []struct {
+		name, fields, want string
+	}{
+		{"refusal", `"stop_reason":"refusal"`, "refusal"},
+		{"error", `"is_error":true,"result":"API Error: 500"`, "error: session/prompt: acp: API Error: 500 (-32603)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := gates(2)
+			steered := make(chan struct{})
+			f := fake(user("id2"), signal(g[0]), echo("id2"), user("id3"), signal(g[1]),
+				claudetest.Expect(`{"type":"user","uuid":"id4","priority":"now"}`), signal(steered),
+				result(names("id2")+","+tc.fields), echo("id3"), result(names("id3")))
+			p := start(t, nil, f)
+			sid := p.open(t)
+			ws := p.prompts(t, sid, g, "one", "two")
+			eventually(t, "one running", func() bool { _, a := p.queue(t, sid); return a == "id2" })
+			outcome, err := steering.Steer(t.Context(), p.AgentConn, string(sid), steerText("also"))
+			if err != nil || outcome != steering.Injected {
+				t.Fatalf("%s %v", outcome, err)
+			}
+			wait(t, steered, "the steer read")
+			if got := stopReason(ws[0]); got != tc.want {
+				t.Errorf("one: %s, want %s", got, tc.want)
+			}
+			if got := stopReason(ws[1]); got != "end_turn" {
+				t.Errorf("two: %s", got)
+			}
+		})
+	}
+}
