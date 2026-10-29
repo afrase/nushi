@@ -11,6 +11,12 @@
 // subtype it doesn't know arrives as Unknown, and nothing claude writes
 // ends the stream except the end of its stdout. Features are detected from
 // what claude says it supports, never from its version.
+//
+// Start runs a session: claude stays up, takes user messages (Send) and
+// requests (SetModel, Interrupt…) and writes its messages (Messages)
+// until Close. Query is the one-shot form: one prompt, its messages up to
+// the result. claude's own requests (permissions and the like) go to the
+// callbacks in Options; it never gets credentials from the package.
 package claudeagent
 
 // Version is this package's version, sent as the client app's when
