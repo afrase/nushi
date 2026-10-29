@@ -24,7 +24,10 @@ type BranchPull struct {
 
 // headsFresh is how long a branch's pull requests are taken as current
 // unless GitHub asks for longer (X-Poll-Interval): windows asking at once
-// cost one request.
+// cost one request. A branch with none isn't kept (only for what GitHub
+// asked): the ask 3 s after a push, and the next a few seconds on when
+// the agent opens one, must reach GitHub, and an unchanged answer is a
+// free 304 there.
 const headsFresh = 20 * time.Second
 
 type headsCache struct {
@@ -118,7 +121,7 @@ func pick(pulls []githubapi.HeadPull) (githubapi.HeadPull, bool) {
 }
 
 // heads are repo's pull requests with head, as GitHub said within the
-// last 20 s (or the poll interval it asked for).
+// last 20 s (or the poll interval it asked for); none, as it said now.
 func (s *Service) heads(ctx context.Context, host, repo, head string, poll bool) ([]githubapi.HeadPull, error) {
 	key := host + " " + repo + " " + head
 	s.mu.Lock()
@@ -143,7 +146,10 @@ func (s *Service) heads(ctx context.Context, host, repo, head string, poll bool)
 	if len(s.branches) > 200 {
 		clear(s.branches)
 	}
-	s.branches[key] = headsCache{until: now.Add(max(wait, headsFresh)), pulls: pulls}
+	if len(pulls) > 0 {
+		wait = max(wait, headsFresh)
+	}
+	s.branches[key] = headsCache{until: now.Add(wait), pulls: pulls}
 	s.mu.Unlock()
 	return pulls, nil
 }
