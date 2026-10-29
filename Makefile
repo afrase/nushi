@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid screenshots
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -191,6 +191,12 @@ test-app:
 # The web app in Chrome with the real nushid and nushi-relay (macOS).
 test-web:
 	cd app && flutter test --platform chrome test/web
+
+# The README's screenshots (docs/images): the real app on a fake daemon with
+# made-up data, drawn by app/test/screenshots/readme_shots.dart. Not part of
+# make test (the file's name doesn't end in _test.dart).
+screenshots:
+	cd app && flutter test --update-goldens test/screenshots/readme_shots.dart
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:
