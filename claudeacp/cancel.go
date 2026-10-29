@@ -61,6 +61,7 @@ func (s *session) cancel() {
 func (s *session) backstop(t *turn) {
 	select {
 	case <-s.a.after(backstop):
+		s.endTools(endedCancel)
 		s.mu.Lock()
 		s.settleLocked(t, cancelled(t))
 		s.mu.Unlock()
