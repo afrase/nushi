@@ -123,7 +123,8 @@ func TestToolResults(t *testing.T) {
 
 // Calls a turn leaves open end with it: one the model never finished
 // writing was never run; one claude ran with no result fails the turn;
-// after a cancel, each says the turn was cancelled.
+// after a cancel, whether claude then goes idle or sends a result, each
+// says the turn was cancelled.
 func TestUnfinishedTools(t *testing.T) {
 	started := event(`{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"Read"}}`)
 	for _, tc := range []struct {
@@ -140,6 +141,10 @@ func TestUnfinishedTools(t *testing.T) {
 		{"cancelled", []claudetest.Step{started, claudetest.Expect(`{"type":"control_request","request":{"subtype":"interrupt"}}`),
 			claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`),
 			claudetest.Send(idle)}, true,
+			"The turn was cancelled before this call had a result.", "cancelled"},
+		{"cancelled, then a result", []claudetest.Step{started, claudetest.Expect(`{"type":"control_request","request":{"subtype":"interrupt"}}`),
+			claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`),
+			result(names("id2"))}, true,
 			"The turn was cancelled before this call had a result.", "cancelled"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -175,6 +180,56 @@ func TestUnfinishedTools(t *testing.T) {
 				t.Errorf("%+v", last)
 			}
 		})
+	}
+}
+
+// A hook's report that comes while the call's input still streams waits
+// for the whole input, and follows it.
+func TestHookBeforeInput(t *testing.T) {
+	at, release := make(chan struct{}), make(chan struct{})
+	steps := []claudetest.Step{user("id2"), echo("id2"),
+		event(`{"type":"message_start","message":{"id":"msg_1"}}`),
+		event(`{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"Bash","input":{}}}`),
+		signal(at), claudetest.Until(release)}
+	steps = append(steps, hookCall("toolu_1", "Bash", `{"stdout":"a"}`)...)
+	steps = append(steps, assistant(`{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"ls"}}`),
+		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"a"}]}}`),
+		result(names("id2")), claudetest.Send(idle))
+	p := start(t, nil, fake(steps...))
+	w := p.prompt(t, p.open(t), "go")
+	wait(t, at, "the call's start")
+	eventually(t, "the call", func() bool { return len(p.of("tool_call")) == 1 })
+	close(release)
+	if got := stopReason(w); got != "end_turn" {
+		t.Fatal(got)
+	}
+	ups := p.toolUpdates()
+	whole := slices.IndexFunc(ups, func(u string) bool { return strings.Contains(u, `"rawInput":{"command":"ls"}`) })
+	hook := slices.IndexFunc(ups, func(u string) bool { return strings.Contains(u, `"toolResponse"`) })
+	if whole < 0 || hook < whole {
+		t.Errorf("the whole input at %d, the hook's report at %d:\n%s", whole, hook, strings.Join(ups, "\n"))
+	}
+}
+
+// A call a permission request showed whole stays so when its stream's
+// start comes after.
+func TestPermissionBeforeStream(t *testing.T) {
+	f := fake(user("id2"), echo("id2"), canUseTool("toolu_1", "Bash", `{"command":"ls"}`, ""),
+		answers("toolu_1", `{"behavior":"allow"}`),
+		event(`{"type":"message_start","message":{"id":"msg_1"}}`),
+		event(`{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"Bash","input":{}}}`),
+		assistant(`{"type":"tool_use","id":"toolu_1","name":"Bash","input":{"command":"ls"}}`),
+		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"a"}]}}`),
+		result(names("id2")), claudetest.Send(idle))
+	p := start(t, nil, f)
+	p.permit = pick(optAllowOnce)
+	if got := stopReason(p.prompt(t, p.open(t), "go")); got != "end_turn" {
+		t.Fatal(got)
+	}
+	for _, u := range p.toolUpdates() {
+		if strings.Contains(u, `"rawInput":{}`) || strings.Contains(u, `"title":"Bash"`) {
+			t.Errorf("the stream's start undid the request's call: %s", u)
+		}
 	}
 }
 
