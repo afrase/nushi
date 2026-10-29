@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/panel_cards.dart';
 import 'package:nushi/shells.dart';
 import 'package:nushi/subagents.dart';
@@ -115,11 +116,14 @@ class _ShellRow extends StatelessWidget {
             ),
             shellStateText(context, it, theme.ui(t.textMuted, size: 11.5)),
             if (last.isNotEmpty)
-              Text(
-                last,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.code(t.textMuted, size: 10.5),
+              Shine(
+                on: shellRunning(it),
+                child: Text(
+                  last,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.code(t.textMuted, size: 10.5),
+                ),
               ),
           ],
         ),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
@@ -43,28 +45,25 @@ String shellState(Item it) {
 /// The command's last line of output, if it wrote any.
 String lastLine(Item it) => it.shell.output.trimRight().split('\n').last.trim();
 
-/// A spinner while it runs, a check once done, nothing otherwise.
-Widget shellMark(BuildContext context, Item it) {
-  final t = NushiTheme.of(context).t;
-  return switch (it.shell.state) {
-    'running' => const SizedBox.square(
-      dimension: 10,
-      child: CircularProgressIndicator(strokeWidth: 1.5),
-    ),
-    'done' => Icon(Icons.check, size: 13, color: t.done),
-    _ => const SizedBox.shrink(),
-  };
-}
+/// The command's [TaskMark]: room while it runs (its words shine), a check
+/// that draws as it's done, a red mark when it failed.
+Widget shellMark(Item it) => TaskMark(it.shell.state);
 
-/// [shellState] in [style], red once it failed, ticking while it runs.
-Widget shellStateText(BuildContext context, Item it, TextStyle style) =>
-    LiveText(
+/// [shellState] in [style], red once it failed, ticking and shining while
+/// it runs.
+Widget shellStateText(BuildContext context, Item it, TextStyle style) => Align(
+  alignment: Alignment.centerLeft,
+  child: Shine(
+    on: shellRunning(it),
+    child: LiveText(
       () => shellState(it),
       live: shellRunning(it),
       style: it.shell.state == 'failed'
           ? style.copyWith(color: NushiTheme.of(context).t.crashed)
           : style,
-    );
+    ),
+  ),
+);
 
 /// A background command beside the chat, left of the details panel: the
 /// command, its state, and its output as far as the daemon has read it.
@@ -158,7 +157,7 @@ class ShellPane extends StatelessWidget {
                               Flexible(
                                 child: shellStateText(context, it, small),
                               ),
-                              shellMark(context, it),
+                              shellMark(it),
                             ],
                           ),
                           if (it.shell.state == 'started')

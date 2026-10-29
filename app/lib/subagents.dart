@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -179,21 +181,17 @@ class _LiveTextState extends State<LiveText> {
   );
 }
 
-/// A spinner while the subagent works (unless the agent waits on the user,
-/// [still]), a check once done, a stop mark once stopped with its agent,
-/// nothing when it failed.
-Widget subagentMark(BuildContext context, SubagentRun s, {bool still = false}) {
-  final t = NushiTheme.of(context).t;
-  return switch (s.call.subagent.state) {
-    'running' when !still => const SizedBox.square(
-      dimension: 10,
-      child: CircularProgressIndicator(strokeWidth: 1.5),
-    ),
-    'done' => Icon(Icons.check, size: 13, color: t.done),
-    'stopped' => Icon(Icons.stop_circle_outlined, size: 13, color: t.textMuted),
-    _ => const SizedBox.shrink(),
-  };
-}
+/// The subagent's [TaskMark]: room while it works (its words shine), a
+/// check that draws as it's done, a stop mark once stopped with its agent,
+/// a red mark when it failed.
+Widget subagentMark(SubagentRun s) => TaskMark(s.call.subagent.state);
+
+/// [child] shining while the subagent runs, unless [still].
+Widget subagentShine(SubagentRun s, Widget child, {bool still = false}) =>
+    Align(
+      alignment: Alignment.centerLeft,
+      child: Shine(on: subagentRunning(s) && !still, child: child),
+    );
 
 /// A subagent in the transcript, on one line: its type and task ("Explore:
 /// find the scroll handling") and its state, live. A click opens its pane;
@@ -249,7 +247,13 @@ class _SubagentLineState extends State<SubagentLine> {
                     size: 14,
                     color: failed ? t.crashed : t.subagentAccent,
                   ),
-                  Expanded(child: subagentName(context, s)),
+                  Expanded(
+                    child: subagentShine(
+                      s,
+                      subagentName(context, s),
+                      still: widget.still,
+                    ),
+                  ),
                   // The name takes the room; the state ends the line.
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 240),
@@ -261,7 +265,7 @@ class _SubagentLineState extends State<SubagentLine> {
                   if (stop)
                     stopButton(context, daemon, chat, s.call.id, size: 13)
                   else
-                    subagentMark(context, s, still: widget.still),
+                    subagentMark(s),
                   Icon(Icons.chevron_right, size: 14, color: t.textMuted),
                 ],
               ),

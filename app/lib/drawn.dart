@@ -2,6 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/motion.dart';
+import 'package:nushi/theme/theme.dart';
+
 /// A check drawn [drawn] of the way (0 to 1), at [opacity]: a turn's end,
 /// a finished subagent or command. With [sparks], a burst of them leaves
 /// it ([Sparks]).
@@ -115,3 +118,61 @@ bool sparksFor(Duration turnLasted) =>
     turnLasted >= Sparks.after &&
     (WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) ==
         AppLifecycleState.resumed;
+
+/// A subagent's or background command's mark by its [state]: nothing while
+/// it runs (its words shine instead), a check that draws itself as it
+/// finishes while shown (whole when it had finished before, or with Reduce
+/// Motion), a stop mark once stopped, a red mark once it failed.
+class TaskMark extends StatefulWidget {
+  const new(this.state, {super.key});
+
+  final String state;
+
+  static const size = 13.0;
+
+  @override
+  State<TaskMark> createState() => _TaskMarkState();
+}
+
+class _TaskMarkState extends State<TaskMark> with ClockRun {
+  @override
+  void didUpdateWidget(TaskMark old) {
+    super.didUpdateWidget(old);
+    if (old.state == 'running' &&
+        widget.state == 'done' &&
+        !reduceMotion(context)) {
+      runFor(CheckPainter.drawFor);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    const size = TaskMark.size;
+    return switch (widget.state) {
+      'running' => const SizedBox.square(dimension: size),
+      'done' => CustomPaint(
+        size: const Size.square(size),
+        painter: CheckPainter(
+          t.done,
+          running
+              ? part(
+                  ranMs,
+                  0,
+                  CheckPainter.drawFor.inMilliseconds.toDouble(),
+                  Curves.easeOut,
+                )
+              : 1,
+          1,
+        ),
+      ),
+      'stopped' => Icon(
+        Icons.stop_circle_outlined,
+        size: size,
+        color: t.textMuted,
+      ),
+      'failed' => Icon(Icons.error_outline, size: size, color: t.crashed),
+      _ => const SizedBox.shrink(),
+    };
+  }
+}
