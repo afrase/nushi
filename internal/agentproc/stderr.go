@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +25,11 @@ const (
 // maxKeyLines bounds a private key's lines left out of the log after its
 // BEGIN line, should its END line not come (an 8192-bit RSA key has 100).
 const maxKeyLines = 200
+
+// keyBegin is a private or secret key's BEGIN line: PEM's ("RSA PRIVATE
+// KEY", "OPENSSH PRIVATE KEY", "ENCRYPTED PRIVATE KEY") and PGP's
+// ("PGP PRIVATE KEY BLOCK", "PGP SECRET KEY BLOCK").
+var keyBegin = regexp.MustCompile(`-----BEGIN [A-Z0-9 ]*(PRIVATE|SECRET) KEY`)
 
 // stderrLines makes a log record (source=agent) of each line the agent
 // writes to its stderr, within the caps above; the lines dropped are
@@ -79,7 +85,7 @@ func (s *stderrLines) emit() {
 		}
 		return
 	}
-	if strings.Contains(line, "-----BEGIN ") && strings.Contains(line, "PRIVATE KEY-----") && !strings.Contains(line, "-----END ") {
+	if keyBegin.MatchString(line) && !strings.Contains(line, "-----END ") {
 		s.inKey = maxKeyLines
 	}
 	level := slog.LevelInfo

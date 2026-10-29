@@ -103,21 +103,24 @@ func TestReadLimit(t *testing.T) {
 	}
 }
 
-// A private key on stderr leaves no line of its body in the log, and
-// lines after its END line are logged again.
+// A private key on stderr (PEM's, PGP's) leaves no line of its body in
+// the log, and lines after its END line are logged again.
 func TestStderrPrivateKey(t *testing.T) {
 	var b logBuffer
 	s := &stderrLines{log: slog.New(logs.Handler(&b))}
 	if _, err := io.WriteString(s, "loading\n-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmU\nAAAAAAAAAAAAAAAAAAAAAAAA\n-----END OPENSSH PRIVATE KEY-----\nloaded\n"); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := io.WriteString(s, "-----BEGIN PGP PRIVATE KEY BLOCK-----\nlQOYBGVzZWNyZXQ\n=x5Ab\n-----END PGP PRIVATE KEY BLOCK-----\nsigned\n"); err != nil {
+		t.Fatal(err)
+	}
 	got := b.String()
-	for _, body := range []string{"b3Blbn", "AAAAAAAA", "-----END"} {
+	for _, body := range []string{"b3Blbn", "AAAAAAAA", "-----END", "lQOYBG", "=x5Ab"} {
 		if strings.Contains(got, body) {
 			t.Errorf("%q in the log:\n%s", body, got)
 		}
 	}
-	for _, want := range []string{"msg=loading", `msg="-----BEGIN OPENSSH PRIVATE KEY-----[redacted]"`, "msg=loaded"} {
+	for _, want := range []string{"msg=loading", `msg="-----BEGIN OPENSSH PRIVATE KEY-----[redacted]"`, "msg=loaded", "msg=signed"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %q in the log:\n%s", want, got)
 		}
