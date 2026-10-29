@@ -354,6 +354,84 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('removing a saved search leaves the one shown showing, not '
+      'the next', (tester) async {
+    var searches = [
+      JiraSearch(name: 'Bugs', jql: 'type = Bug'),
+      JiraSearch(name: 'Later', jql: 'labels = later'),
+      JiraSearch(name: 'Old', jql: 'created < -1y'),
+    ];
+    final (fake, d) = await openView(
+      tester,
+      more: (input) {
+        if (input is SetJiraSearchesRequest) searches = [...input.searches];
+        return switch (input) {
+          ListJiraSitesRequest() => ListJiraSitesResponse(
+            sites: [
+              _site.deepCopy()
+                ..searches.clear()
+                ..searches.addAll(searches),
+            ],
+          ),
+          SetJiraSearchesRequest() => SetJiraSearchesResponse(),
+          _ => null,
+        };
+      },
+    );
+    await tester.tap(find.text('Later'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bugs'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove the search'));
+    await tester.pumpAndSettle();
+    expect(searches.map((s) => s.name), ['Later', 'Old']);
+    expect(
+      fake.calls.whereType<ListJiraIssuesRequest>().last.jql,
+      'labels = later',
+    );
+    // Removing the one shown goes back to Mine.
+    await tester.tap(find.text('Later'), buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove the search'));
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<ListJiraIssuesRequest>().last.list, 'mine');
+    await closeView(tester, d);
+  });
+
+  testWidgets('an issue shown from elsewhere, or a subtask, stays open as '
+      'the list is asked again', (tester) async {
+    final (_, d) = await openView(tester);
+    await tester.pumpWidget(const SizedBox());
+    // Not in Mine: a chat's issue, say, assigned to someone else.
+    showIssue(d, _site.id, 'ACME-77');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(body: JiraView(d, now: DateTime(2026, 10, 25, 12))),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(shown(tester), 'ACME-77');
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(shown(tester), 'ACME-77');
+    // A subtask, opened from its parent, through the poll.
+    tester.widget<JiraIssuePane>(find.byType(JiraIssuePane)).onOpen('ACME-78');
+    await tester.pumpAndSettle();
+    await tester.pump(jiraPoll);
+    await tester.pumpAndSettle();
+    expect(shown(tester), 'ACME-78');
+    expect(
+      tester.widget<JiraIssuePane>(find.byType(JiraIssuePane)).site,
+      _site.id,
+    );
+    // Back: the list.
+    await tester.tap(find.byTooltip('The list (Esc)'));
+    await tester.pumpAndSettle();
+    expect(find.byType(JiraIssuePane), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('a list that fails says why', (tester) async {
     final (_, d) = await openView(
       tester,

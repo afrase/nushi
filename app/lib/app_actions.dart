@@ -327,7 +327,10 @@ List<AppAction> chatActions(
       'Clean up the worktree…',
       short: 'Clean up…',
       enabled:
-          chat != null && chat.worktree != null && d.daemonApi >= cleanUpApi,
+          chat != null &&
+          chat.worktree != null &&
+          d.daemonApi >= cleanUpApi &&
+          !CleanUpJob.of(chat).running,
       run: () => unawaited(
         showCleanUp(context, d, chat!, pull: ChatPull.of(d, chat).pull),
       ),

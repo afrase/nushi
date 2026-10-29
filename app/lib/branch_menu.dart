@@ -9,6 +9,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+import 'package:nushi/worktree.dart';
 
 /// The Environment card's Branch row, a menu (ADR 0016's amendment of
 /// steps 392–393).
@@ -68,7 +69,7 @@ class BranchMenu extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (chat.worktree != null) ...[
-            Icon(Icons.account_tree_outlined, size: 13, color: t.textSecondary),
+            Icon(worktreeIcon, size: 13, color: t.textSecondary),
             const SizedBox(width: 5),
           ],
           Flexible(

@@ -169,7 +169,10 @@ class _Menu extends StatelessWidget {
                 cp.daemon.daemonApi >= cleanUpApi)
           MenuEntry(
             'Clean up…',
-            onPick: () => showCleanUp(context, cp.daemon, cp.chat, pull: p),
+            // Off while one runs.
+            onPick: CleanUpJob.of(cp.chat).running
+                ? null
+                : () => showCleanUp(context, cp.daemon, cp.chat, pull: p),
           ),
         if (l != null)
           MenuEntry(

@@ -195,7 +195,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
               PullHeader(
                 pull: p,
                 now: now,
-                todo: items.length + (p.mergeable == 'conflicting' ? 1 : 0),
+                todo: items.length + (hasConflicts(p) ? 1 : 0),
                 onJump: _jump,
                 threadsTo: open ? PullSection.todo : PullSection.activity,
                 actions: _actions(context, p),
@@ -373,21 +373,4 @@ class _Chats extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Whether the pull request can merge, in a few words.
-(String, Color) mergeWords(Tokens t, GitHubPull p) {
-  if (p.item.state != 'open') return (itemState(p.item), itemColor(t, p.item));
-  if (p.item.draft) return ('Draft: not ready to merge', t.textMuted);
-  if (p.mergeable == 'conflicting') {
-    return ('Conflicts with its base', t.crashed);
-  }
-  return switch (p.mergeState) {
-    'clean' || 'has_hooks' => ('Ready to merge', t.done),
-    'blocked' => ('Blocked: a review or a check its base requires', t.needs),
-    'behind' => ('Behind its base', t.needs),
-    'unstable' => ('Checks failing', t.needs),
-    'dirty' => ('Conflicts with its base', t.crashed),
-    _ => ('Checking whether it can merge…', t.textMuted),
-  };
 }

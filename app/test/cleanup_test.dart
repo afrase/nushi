@@ -47,6 +47,7 @@ Future<(Daemon, FakeDaemon)> _open(
   GetCleanUpResponse? u,
   bool busy = false,
   Brightness brightness = Brightness.dark,
+  Object? Function(Object input)? more,
 }) async {
   cleanUpLater.value = {};
   final r = await openPullTab(
@@ -58,11 +59,15 @@ Future<(Daemon, FakeDaemon)> _open(
     busy: busy,
     brightness: brightness,
     size: const Size(1100, 760),
-    more: (input) => switch (input) {
-      GetCleanUpRequest() => u ?? _clean(),
-      DeleteGitHubBranchRequest() => DeleteGitHubBranchResponse(deleted: true),
-      _ => null,
-    },
+    more: (input) =>
+        more?.call(input) ??
+        switch (input) {
+          GetCleanUpRequest() => u ?? _clean(),
+          DeleteGitHubBranchRequest() => DeleteGitHubBranchResponse(
+            deleted: true,
+          ),
+          _ => null,
+        },
   );
   if (busy) {
     r.$2.emit(
@@ -202,13 +207,53 @@ void main() {
     await _pump(tester);
     expect(_inCard(find.text('Waiting for the turn to end…')), findsOneWidget);
     expect(fake.calls.whereType<ArchiveChatRequest>(), isEmpty);
+    // Another asked for meanwhile (the ⋯ menu, say) does nothing.
+    final job = CleanUpJob.of(d.chats['c']!);
+    await job.run(d, (
+      archive: true,
+      worktree: false,
+      force: false,
+      branch: false,
+      forceBranch: false,
+      remote: false,
+      stopTurn: false,
+    ), null);
+    expect(job.waiting, isTrue);
     fake.emit(
       EventsResponse(chatId: 'c', seq: Int64(1001), status: ChatStatus()),
     );
     await _pump(tester);
     expect(fake.calls.whereType<ArchiveChatRequest>(), hasLength(1));
     expect(_inCard(find.text('Chat archived')), findsOneWidget);
-    expect(CleanUpJob.of(d.chats['c']!).finished, isTrue);
+    expect(job.finished, isTrue);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets("mid-turn, a stop the daemon refuses: it says so and isn't "
+      'left waiting', (tester) async {
+    var stops = 0;
+    final (d, fake) = await _open(
+      tester,
+      busy: true,
+      more: (input) => input is CancelTurnRequest
+          ? throw Exception('no such turn ${++stops}')
+          : null,
+    );
+    await tester.tap(_inCard(find.text('Clean up…')));
+    await _pump(tester);
+    await tester.tap(find.text('Stop the turn, clean up now'));
+    await _pump(tester);
+    await tester.tap(find.text('Clean up'));
+    await _pump(tester);
+    expect(stops, 1);
+    expect(
+      _inCard(find.textContaining("The turn didn't stop")),
+      findsOneWidget,
+    );
+    expect(_inCard(find.text('Waiting for the turn to end…')), findsNothing);
+    final job = CleanUpJob.of(d.chats['c']!);
+    expect((job.running, job.finished), (false, true));
+    expect(fake.calls.whereType<ArchiveChatRequest>(), isEmpty);
     d.dispose();
   }, variant: _mac);
 

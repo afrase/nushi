@@ -14,7 +14,7 @@ List<String> mergeBlockers(GitHubPull p) => [
       p.reviewers.any((r) => r.state == 'requested'))
     'review',
   if (p.threads.any((x) => !x.resolved)) 'threads',
-  if (p.mergeable == 'conflicting' || p.mergeState == 'dirty') 'conflicts',
+  if (hasConflicts(p)) 'conflicts',
   if (p.mergeState == 'behind') 'behind ${p.base}',
 ];
 

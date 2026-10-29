@@ -7,12 +7,51 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A list's tab: "mine", "sprint", "jql", or a saved search's index.
-String label(String list, JiraSite site) => switch (list) {
-  'mine' => 'Mine',
-  'sprint' => 'Sprint',
-  'jql' => 'JQL',
-  _ => site.searches[int.parse(list)].name,
+/// Which list the Jira view shows: my open issues, a board's sprint, a
+/// saved search or the JQL typed. A saved search is known by its name and
+/// JQL, not its place, so removing another leaves it showing. The others
+/// are const (one of each, so `==` holds).
+@immutable
+sealed class JiraList {
+  const new();
+}
+
+final class MyIssues extends JiraList {
+  const new();
+}
+
+final class Sprint extends JiraList {
+  const new();
+}
+
+final class Jql extends JiraList {
+  const new();
+}
+
+final class Saved extends JiraList {
+  new(JiraSearch s) : name = s.name, jql = s.jql;
+
+  final String name;
+  final String jql;
+
+  /// Whether [site] still has this search.
+  bool on(JiraSite site) =>
+      site.searches.any((s) => s.name == name && s.jql == jql);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Saved && other.name == name && other.jql == jql;
+
+  @override
+  int get hashCode => Object.hash(name, jql);
+}
+
+/// A list's tab.
+String label(JiraList list) => switch (list) {
+  MyIssues() => 'Mine',
+  Sprint() => 'Sprint',
+  Jql() => 'JQL',
+  Saved(:final name) => name,
 };
 
 /// Where the Jira view's list comes from: a tab for each of [lists] (a
@@ -40,8 +79,8 @@ class JiraSources extends StatelessWidget {
 
   final Daemon daemon;
   final JiraSite site;
-  final List<String> lists;
-  final String list;
+  final List<JiraList> lists;
+  final JiraList list;
 
   /// The sprint's name, or what to say without one.
   final String sprint;
@@ -50,9 +89,9 @@ class JiraSources extends StatelessWidget {
   final String jql;
   final TextEditingController jqlText;
   final FocusNode jqlFocus;
-  final ValueChanged<String> onPick;
+  final ValueChanged<JiraList> onPick;
   final VoidCallback onPickBoard;
-  final ValueChanged<int> onRemoveSearch;
+  final ValueChanged<Saved> onRemoveSearch;
   final ValueChanged<String> onRunJql;
   final VoidCallback onSave;
 
@@ -75,7 +114,7 @@ class JiraSources extends StatelessWidget {
             ],
           ),
         ),
-        if (list == 'sprint')
+        if (list is Sprint)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 2, 10, 4),
             child: site.board == 0
@@ -91,7 +130,7 @@ class JiraSources extends StatelessWidget {
                     style: theme.ui(t.textMuted, size: 12),
                   ),
           ),
-        if (list == 'jql')
+        if (list is Jql)
           Padding(
             padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
             child: Column(
@@ -126,10 +165,10 @@ class JiraSources extends StatelessWidget {
         for (final l in lists)
           Menu(
             entries: [
-              if (l == 'sprint')
+              if (l is Sprint)
                 MenuEntry('Pick the board…', onPick: onPickBoard),
-              if (int.tryParse(l) case final i?)
-                MenuEntry('Remove the search', onPick: () => onRemoveSearch(i)),
+              if (l is Saved)
+                MenuEntry('Remove the search', onPick: () => onRemoveSearch(l)),
             ],
             builder: (context, open) => GestureDetector(
               onSecondaryTapUp: (d) => open(d.localPosition),
@@ -138,7 +177,7 @@ class JiraSources extends StatelessWidget {
                 onTap: () => onPick(l),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 child: Text(
-                  label(l, site),
+                  label(l),
                   style: theme.ui(
                     l == list ? t.text : t.textSecondary,
                     size: 12,

@@ -38,7 +38,9 @@ Widget pullSummary(
     final open = p.threads.where((x) => !x.resolved).length;
     final waiting = p.reviewers.any((r) => r.state == 'requested');
     final ready =
-        (p.mergeState == 'clean' || p.mergeState == 'has_hooks') &&
+        (p.mergeState == 'clean' ||
+            p.mergeState == 'has_hooks' ||
+            p.mergeState == 'unstable') &&
         n.failing + n.running == 0 &&
         open == 0;
     switch (it.state) {

@@ -5,7 +5,6 @@ import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/pull_header.dart';
@@ -142,11 +141,18 @@ class PullRows extends StatelessWidget {
   }
 
   List<Widget> _rows(BuildContext context, GitHubPull p, int unread) {
-    final t = NushiTheme.of(context).t;
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
     final it = p.item;
     final open = p.threads.where((x) => !x.resolved).length;
     final comments = commentTimes(p).length;
     final block = mergeBlockers(p);
+    // Unstable with nothing else in the way, as the header has it: it can
+    // merge (the checks that don't pass aren't required).
+    final unstable = p.mergeState == 'unstable' && block.isEmpty;
+    final ready =
+        !hasConflicts(p) &&
+        (p.mergeState == 'clean' || p.mergeState == 'has_hooks' || unstable);
     return [
       if (it.draft && p.reviewers.isEmpty)
         WidgetRow(
@@ -177,7 +183,7 @@ class PullRows extends StatelessWidget {
         ),
       if (!it.draft)
         switch (p.mergeState) {
-          'clean' || 'has_hooks' when p.mergeable != 'conflicting' => WidgetRow(
+          _ when ready => WidgetRow(
             icon: Icon(Icons.merge_type, size: 14, color: t.done),
             label: 'Ready to merge',
             color: t.done,
@@ -193,7 +199,7 @@ class PullRows extends StatelessWidget {
                     },
                   ),
           ),
-          'unknown' || '' when p.mergeable != 'conflicting' => WidgetRow(
+          'unknown' || '' when !hasConflicts(p) => WidgetRow(
             icon: Icon(Icons.schedule, size: 14, color: t.textMuted),
             label: 'Checking whether it can merge…',
             muted: true,
@@ -203,9 +209,16 @@ class PullRows extends StatelessWidget {
             label: 'Merge blocked',
             color: t.needs,
             keepLabel: true,
-            value: block.isEmpty ? mergeWords(t, p).$1 : block.join(', '),
+            // Nothing named: a rule of its base's (GitHub's "blocked").
+            value: block.isEmpty ? "a rule of ${p.base}'s" : block.join(', '),
           ),
         },
+      // Under Ready to merge, whole (it may wrap).
+      if (!it.draft && ready && unstable)
+        Padding(
+          padding: const EdgeInsets.only(left: 26, bottom: 4),
+          child: Text(unstableWords, style: theme.ui(t.textMuted, size: 12)),
+        ),
       WidgetRow(
         icon: Icon(Icons.chat_bubble_outline, size: 13, color: t.textMuted),
         label: comments == 0

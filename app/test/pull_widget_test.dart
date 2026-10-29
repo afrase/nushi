@@ -39,6 +39,10 @@ Map<String, GitHubPull Function()> states = {
     ])
     ..threads.removeWhere((x) => !x.resolved)
     ..mergeState = 'clean',
+  // GitHub's "unstable": a check its base doesn't require didn't pass.
+  'unstable': () => states['ready']!()
+    ..mergeState = 'unstable'
+    ..checks.add(check('lint', state: 'cancelled')),
   'draft': () => fixturePull()
     ..item.draft = true
     ..checks.removeWhere((c) => c.failed)
@@ -101,6 +105,21 @@ void main() {
       _inCard(find.textContaining('checks passed', findRichText: true)),
       findsNothing, // two skipped: a legend, not "all passed"
     );
+    d.dispose();
+    // Unstable: a check its base doesn't require didn't pass. It can
+    // merge, as the header says.
+    (d, _) = await openPullTab(
+      tester,
+      states['unstable']!(),
+      details: true,
+      open: false,
+    );
+    expect(_inCard(find.text('Ready to merge')), findsOneWidget);
+    expect(
+      _inCard(find.text('Checks not passing (not required)')),
+      findsOneWidget,
+    );
+    expect(_inCard(find.text('Merge blocked')), findsNothing);
     d.dispose();
     (d, _) = await openPullTab(
       tester,

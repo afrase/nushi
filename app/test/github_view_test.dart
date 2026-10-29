@@ -1,13 +1,16 @@
+import 'package:diff_view/diff_view.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
+import 'package:nushi/github_review.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -326,6 +329,27 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a pull request the inbox no longer holds stays a pull '
+      'request', (tester) async {
+    var dropped = false;
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is ListGitHubInboxRequest && dropped
+          ? ListGitHubInboxResponse(atMs: Int64(testNow.millisecondsSinceEpoch))
+          : null,
+    );
+    await tester.tap(find.text('Add Sub and Neg'));
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsOneWidget);
+    // Merged, say, or its review given: the next poll leaves it out.
+    dropped = true;
+    await tester.pump(githubPoll);
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsOneWidget);
+    expect(find.byType(GitHubIssuePane), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets("only my folders' repositories", (tester) async {
     final (fake, d) = await openView(tester);
     await tester.tap(find.text('All repositories'));
@@ -397,9 +421,48 @@ void main() {
     await tester.pumpAndSettle();
     final resolve = fake.calls.whereType<ResolveGitHubThreadRequest>().single;
     expect((resolve.thread, resolve.resolve), ('T1', true));
+    // Lines 3–4 picked (the diff's line numbers): a comment of my review,
+    // kept here.
+    final ref = pull().item.ref;
+    addTearDown(() => setDrafts(ref, const []));
+    tester.widget<DiffBox>(find.byType(DiffBox)).onLines!(
+      const LineSelection(side: PaneSide.neu, anchor: 2, focus: 3),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Lines 3–4: a comment of your review'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'Call it Minus?');
+    await tester.tap(find.text('Add to review'));
+    await tester.pumpAndSettle();
+    expect(find.text('Call it Minus?'), findsOneWidget);
     // Nothing went to GitHub but what was asked.
     expect(fake.calls.whereType<SubmitGitHubReviewRequest>(), isEmpty);
     expect(fake.calls.whereType<AddGitHubCommentRequest>(), isEmpty);
+    // Review…: it goes with the review, and is gone from here.
+    final button = find.textContaining(
+      RegExp(r'^Review( \(\d+\))?…$'),
+      skipOffstage: false,
+    );
+    await tester.ensureVisible(button); // the head, scrolled away
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.text('With 1 inline comment from here.'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'Close.');
+    await tester.tap(find.text('Submit review'));
+    await tester.pumpAndSettle();
+    final review = fake.calls.whereType<SubmitGitHubReviewRequest>().single;
+    expect(
+      (review.event, review.body, review.headOid),
+      ('comment', 'Close.', 'b' * 40),
+    );
+    expect(
+      review.drafts.map(
+        (x) => '${x.path} ${x.side} ${x.startLine}-${x.line}: ${x.body}',
+      ),
+      ['sub.go right 3-4: Call it Minus?'],
+    );
+    expect(reviewDrafts(ref), isEmpty);
+    expect(find.text('Call it Minus?'), findsNothing);
     await closeView(tester, d);
   });
 
@@ -620,7 +683,10 @@ void main() {
     final asked = fake.calls.whereType<GetGitHubStatesRequest>().single;
     expect((asked.items.single.id, asked.quiet), ('PR_1', false));
     await tester.tap(find.text('#1'));
-    expect((d.githubOpen, d.githubShow?.number), (true, 1));
+    expect(
+      (d.githubOpen, d.githubShow?.ref.number, d.githubShow?.pull),
+      (true, 1, true),
+    );
     await tester.pumpWidget(const SizedBox());
     d.dispose();
   });

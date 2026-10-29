@@ -25,12 +25,13 @@ const githubKey = SingleActivator(LogicalKeyboardKey.keyG, meta: true);
 const githubPoll = Duration(minutes: 1);
 
 /// What the view had last, while the app runs: the host, whether the
-/// inbox is only the repositories of folders Nushi knows, the item picked
-/// and whether its details show.
+/// inbox is only the repositories of folders Nushi knows, the item picked,
+/// and the one whose details show: kept whatever the inbox holds, so a
+/// pull request that leaves Review requested stays a pull request.
 String? _host;
 bool _known = false;
 GitHubRef? _picked;
-bool _details = false;
+GitHubPick? _details;
 
 /// The cards whose older items show too ("Show"), until Nushi quits or
 /// the span or host changes.
@@ -40,7 +41,8 @@ final _wide = <String>{};
 @visibleForTesting
 void forgetGitHubView() {
   _host = _picked = null;
-  _known = _details = false;
+  _details = null;
+  _known = false;
   _wide.clear();
 }
 
@@ -111,10 +113,10 @@ class _GitHubViewState extends State<GitHubView> {
   @override
   void initState() {
     super.initState();
-    if (widget.daemon.githubShow case final ref?) {
-      _picked = ref;
-      _details = true;
-      _host = ref.host;
+    if (widget.daemon.githubShow case final show?) {
+      _picked = show.ref;
+      _details = show;
+      _host = show.ref.host;
       widget.daemon.githubShow = null;
     }
     unawaited(_loadHosts());
@@ -231,7 +233,7 @@ class _GitHubViewState extends State<GitHubView> {
   void _show(String key, ListGitHubInboxResponse r) {
     _shown = key;
     _inbox = r;
-    if (!_details && !_items.any((x) => sameRef(x.ref, _picked))) {
+    if (_details == null && !_items.any((x) => sameRef(x.ref, _picked))) {
       _picked = _items.firstOrNull?.ref;
     }
   }
@@ -262,13 +264,13 @@ class _GitHubViewState extends State<GitHubView> {
   void _open(GitHubItem it) {
     setState(() {
       _picked = it.ref;
-      _details = true;
+      _details = (ref: it.ref, pull: it.pull);
     });
     _viewFocus.requestFocus(); // the list, which had it, goes
   }
 
   void _back() {
-    setState(() => _details = false);
+    setState(() => _details = null);
     unawaited(_load(quiet: true));
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _listFocus.requestFocus(),
@@ -347,12 +349,12 @@ class _GitHubViewState extends State<GitHubView> {
   Widget build(BuildContext context) {
     final hosts = _hosts;
     final host = _hostNow;
-    final picked = _picked;
+    final details = _details;
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
-            _details ? _back() : widget.daemon.showGitHub(open: false),
+            details != null ? _back() : widget.daemon.showGitHub(open: false),
       },
       child: Focus(
         focusNode: _viewFocus,
@@ -377,7 +379,7 @@ class _GitHubViewState extends State<GitHubView> {
                 setState(() {
                   _host = h;
                   _inbox = null;
-                  _details = false;
+                  _details = null;
                   _wide.clear();
                 });
                 unawaited(_load());
@@ -395,8 +397,8 @@ class _GitHubViewState extends State<GitHubView> {
                   ? const SizedBox()
                   : host == null
                   ? NoHost(onSettings: _settings, error: _error)
-                  : _details && picked != null
-                  ? _detailsPane(picked)
+                  : details != null
+                  ? _detailsPane(details)
                   : _list(host),
             ),
           ],
@@ -405,18 +407,8 @@ class _GitHubViewState extends State<GitHubView> {
     );
   }
 
-  Widget _detailsPane(GitHubRef ref) {
-    final item = [for (final s in _sections) ...s.items]
-        .where((x) => sameRef(x.ref, ref))
-        .firstOrNull;
-    final pull =
-        item?.pull ??
-        widget.daemon.chats.values.any(
-          (c) =>
-              (c.github?.pull ?? false) &&
-              c.github?.number == ref.number &&
-              c.github?.repo == ref.repo,
-        );
+  Widget _detailsPane(GitHubPick details) {
+    final (:ref, :pull) = details;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
