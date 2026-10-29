@@ -216,3 +216,36 @@ func TestSignals(t *testing.T) {
 		})
 	}
 }
+
+// Respond answers its lines whenever they come, out of the script's
+// order, and Do runs between steps.
+func TestRespond(t *testing.T) {
+	reached := make(chan struct{})
+	f := New(
+		Expect(`{"type":"user"}`),
+		Do(func() { close(reached) }),
+		Send(`{"type":"result","uuid":"$uuid"}`),
+	).Respond(`{"type":"control_request","request":{"subtype":"interrupt"}}`,
+		`{"type":"control_response","response":{"subtype":"success","request_id":"$req"}}`)
+	s := start(t, f)
+	s.write(t, `{"type":"control_request","request_id":"r1","request":{"subtype":"interrupt"}}`)
+	if got := s.read(t); got != `{"type":"control_response","response":{"subtype":"success","request_id":"r1"}}` {
+		t.Errorf("%s", got)
+	}
+	s.write(t, `{"type":"user","uuid":"u-1"}`)
+	<-reached
+	if got := s.read(t); got != `{"type":"result","uuid":"u-1"}` {
+		t.Errorf("%s", got)
+	}
+	s.write(t, `{"type":"control_request","request_id":"r2","request":{"subtype":"interrupt"}}`)
+	if got := s.read(t); !strings.Contains(got, `"r2"`) {
+		t.Errorf("%s", got)
+	}
+	_ = s.Stdin.Close()
+	if err := s.Wait(); err != nil || f.Err() != nil {
+		t.Errorf("%v %v", err, f.Err())
+	}
+	if got := f.Responded(); len(got) != 2 || !strings.Contains(got[1], `"r2"`) {
+		t.Errorf("%q", got)
+	}
+}
