@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -75,6 +76,38 @@ func TestParseWorktrees(t *testing.T) {
 	out := "worktree /repo\nHEAD abc\nbranch refs/heads/main\n\nworktree /repo/.worktrees/x y\nHEAD def\ndetached\n\n"
 	if got := parseWorktrees(out); !slices.Equal(got, []string{"/repo", "/repo/.worktrees/x y"}) {
 		t.Errorf("parseWorktrees = %q", got)
+	}
+}
+
+func TestWorktreesFromGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("no git")
+	}
+	// git here and in worktrees: without the owner's config.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "test@example.com")
+	}
+	root := canonical(t.TempDir())
+	main, wt := filepath.Join(root, "main"), filepath.Join(root, "wt")
+	for _, args := range [][]string{
+		{"init", "-q", main},
+		{"-C", main, "commit", "-q", "--allow-empty", "-m", "start"},
+		{"-C", main, "worktree", "add", "-q", wt},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	for _, dir := range []string{main, wt} {
+		if got := worktrees(dir); !slices.Equal(got, []string{main, wt}) {
+			t.Errorf("worktrees(%s) = %q", dir, got)
+		}
+	}
+	if got := worktrees(t.TempDir()); len(got) != 0 {
+		t.Errorf("worktrees outside a repository = %q", got)
 	}
 }
 
