@@ -44,11 +44,11 @@ func TestProjectDirResolvesLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := filepath.Join(config, "projects", folderName(resolved))
-	if got := ProjectDir(config, link); got != want {
+	if got := (Store{ConfigDir: config}).ProjectDir(link); got != want {
 		t.Errorf("ProjectDir = %q, want %q", got, want)
 	}
 	t.Setenv("CLAUDE_CONFIG_DIR", config)
-	if got := ProjectDir("", link); got != want {
+	if got := (Store{}).ProjectDir(link); got != want {
 		t.Errorf("ProjectDir with CLAUDE_CONFIG_DIR = %q, want %q", got, want)
 	}
 }
@@ -131,15 +131,15 @@ func TestFindLooksInWorktrees(t *testing.T) {
 	main, other := canonical(t.TempDir()), canonical(t.TempDir())
 	stubWorktrees(t, map[string][]string{other: {main, other}})
 	id := newUUID()
-	writeLines(t, ProjectDir(config, main), id, `{"type":"user"}`)
+	writeLines(t, Store{ConfigDir: config}.ProjectDir(main), id, `{"type":"user"}`)
 
-	if path, err := find(config, id, other); err != nil || filepath.Dir(path) != ProjectDir(config, main) {
+	if path, err := (Store{ConfigDir: config}).find(id, other); err != nil || filepath.Dir(path) != (Store{ConfigDir: config}).ProjectDir(main) {
 		t.Errorf("find from the other worktree = %q, %v", path, err)
 	}
-	if _, err := find(config, newUUID(), other); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := (Store{ConfigDir: config}).find(newUUID(), other); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("find of a missing session = %v", err)
 	}
-	if path, err := find(config, id, ""); err != nil || filepath.Base(path) != id+".jsonl" {
+	if path, err := (Store{ConfigDir: config}).find(id, ""); err != nil || filepath.Base(path) != id+".jsonl" {
 		t.Errorf("find anywhere = %q, %v", path, err)
 	}
 }
@@ -149,9 +149,9 @@ func TestFindSkipsEmptyTranscripts(t *testing.T) {
 	a, b := canonical(t.TempDir()), canonical(t.TempDir())
 	stubWorktrees(t, map[string][]string{a: {a, b}})
 	id := newUUID()
-	writeLines(t, ProjectDir(config, a), id)
-	writeLines(t, ProjectDir(config, b), id, `{"type":"user"}`)
-	if path, err := find(config, id, a); err != nil || filepath.Dir(path) != ProjectDir(config, b) {
+	writeLines(t, Store{ConfigDir: config}.ProjectDir(a), id)
+	writeLines(t, Store{ConfigDir: config}.ProjectDir(b), id, `{"type":"user"}`)
+	if path, err := (Store{ConfigDir: config}).find(id, a); err != nil || filepath.Dir(path) != (Store{ConfigDir: config}).ProjectDir(b) {
 		t.Errorf("find = %q, %v; want the one with records", path, err)
 	}
 }

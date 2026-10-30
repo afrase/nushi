@@ -30,8 +30,8 @@ type Queued struct {
 // (enqueue, then dequeue as a turn takes it or remove as a running one
 // absorbs it), which come last. An error matching fs.ErrNotExist says
 // the session isn't there.
-func QueuedPrompts(configDir, id, cwd string) ([]Queued, error) {
-	path, err := find(configDir, id, cwd)
+func (s Store) QueuedPrompts(id, cwd string) ([]Queued, error) {
+	path, err := s.find(id, cwd)
 	if err != nil {
 		return nil, err
 	}

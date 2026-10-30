@@ -1,7 +1,8 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/sessions.py), MIT License,
 // Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
-// as Go, records read into typed structs.
+// as Go, the functions a Store's methods and records read into typed
+// structs.
 
 package sessions
 
@@ -44,8 +45,8 @@ type Message struct {
 // (a user message with isCompactSummary). Meta messages and subagents'
 // are left out. An error matching fs.ErrNotExist says the session isn't
 // there.
-func Messages(configDir, id, cwd string) ([]Message, error) {
-	path, err := find(configDir, id, cwd)
+func (s Store) Messages(id, cwd string) ([]Message, error) {
+	path, err := s.find(id, cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -82,8 +83,8 @@ type Subagent struct {
 // Subagents returns the subagents of session id that have a transcript,
 // in the order of their files' names. A session with none has none; an
 // error matching fs.ErrNotExist says the session isn't there.
-func Subagents(configDir, id, cwd string) ([]Subagent, error) {
-	path, err := find(configDir, id, cwd)
+func (s Store) Subagents(id, cwd string) ([]Subagent, error) {
+	path, err := s.find(id, cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -133,8 +134,8 @@ func (a *Subagent) readMeta() {
 // oldest first, each with the Agent tool call that started the subagent.
 // An error matching fs.ErrNotExist says the session or the subagent isn't
 // there.
-func SubagentMessages(configDir, id, agentID, cwd string) ([]Message, error) {
-	agents, err := Subagents(configDir, id, cwd)
+func (s Store) SubagentMessages(id, cwd, agentID string) ([]Message, error) {
+	agents, err := s.Subagents(id, cwd)
 	if err != nil {
 		return nil, err
 	}

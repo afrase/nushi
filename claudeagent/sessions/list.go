@@ -1,6 +1,7 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/sessions.py), MIT License,
-// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE.
+// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
+// as Go, the functions a Store's methods.
 
 package sessions
 
@@ -51,8 +52,8 @@ type Info struct {
 // subagents' transcripts and ones with nothing to name them by. offset
 // sessions are skipped and at most limit returned (0 = all). Folders that
 // can't be read are skipped.
-func List(configDir, cwd string, limit, offset int) ([]Info, error) {
-	projects, err := projectsDir(configDir)
+func (s Store) List(cwd string, limit, offset int) ([]Info, error) {
+	projects, err := s.projects()
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +155,8 @@ func readProject(dir, cwd string) []Info {
 
 // Get returns the details of session id; an error matching fs.ErrNotExist
 // when it isn't there, is a subagent's, or has nothing to name it by.
-func Get(configDir, id, cwd string) (*Info, error) {
-	path, err := find(configDir, id, cwd)
+func (s Store) Get(id, cwd string) (*Info, error) {
+	path, err := s.find(id, cwd)
 	if err != nil {
 		return nil, err
 	}

@@ -118,7 +118,7 @@ func TestLoadUnreadable(t *testing.T) {
 	p := start(t, nil)
 	cwd, sid := t.TempDir(), uuid(1)
 	p.writeHistory(t, cwd, sid, userRec("u1", "Fix the bug"))
-	path := filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl")
+	path := filepath.Join(sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd), sid+".jsonl")
 	if err := os.Chmod(path, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestResumeClaudeQuits(t *testing.T) {
 				claudetest.Exit(1, "Error: settings.json: unexpected token\n"))
 			p := start(t, nil, quits)
 			p.writeHistory(t, cwd, sid, userRec("u1", "hello"))
-			path = filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl")
+			path = filepath.Join(sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd), sid+".jsonl")
 			_, err := p.ResumeSession(context.Background(), &acp.ResumeSessionRequest{SessionID: acp.SessionID(sid), Cwd: cwd})
 			var e *acp.Error
 			if !errors.As(err, &e) || e.Code != tc.want {

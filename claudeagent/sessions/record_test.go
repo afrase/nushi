@@ -28,17 +28,17 @@ func TestLastRecord(t *testing.T) {
 		{"msg_old", "a1"},          // from before the compaction
 		{"call-0", "call-0"},       // a record of its own
 	} {
-		got, err := LastRecord(config, id, cwd, tc.message)
+		got, err := Store{ConfigDir: config}.LastRecord(id, cwd, tc.message)
 		if err != nil || got != tc.want {
 			t.Errorf("LastRecord(%s) = %q, %v; want %s", tc.message, got, err, tc.want)
 		}
 	}
 	for _, missing := range []string{"msg_side", "side", "boundary", "nothing"} {
-		if got, err := LastRecord(config, id, cwd, missing); !errors.Is(err, fs.ErrNotExist) {
+		if got, err := (Store{ConfigDir: config}).LastRecord(id, cwd, missing); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("LastRecord(%s) = %q, %v; want not found", missing, got, err)
 		}
 	}
-	if _, err := LastRecord(config, newUUID(), cwd, "u1"); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := (Store{ConfigDir: config}).LastRecord(newUUID(), cwd, "u1"); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("no session: %v", err)
 	}
 }

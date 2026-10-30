@@ -67,7 +67,7 @@ func project(t *testing.T) (config, cwd, dir string) {
 		t.Fatal(err)
 	}
 	stubWorktrees(t, nil)
-	return config, cwd, ProjectDir(config, cwd)
+	return config, cwd, Store{ConfigDir: config}.ProjectDir(cwd)
 }
 
 func TestListOneSession(t *testing.T) {
@@ -75,7 +75,7 @@ func TestListOneSession(t *testing.T) {
 	id := newUUID()
 	fixture{prompt: "What is 2+2?", branch: "main", cwd: cwd}.write(t, dir, id)
 
-	got, err := List(config, cwd, 0, 0)
+	got, err := Store{ConfigDir: config}.List(cwd, 0, 0)
 	if err != nil || len(got) != 1 {
 		t.Fatalf("List = %+v, %v", got, err)
 	}
@@ -101,7 +101,7 @@ func TestListSummary(t *testing.T) {
 	} {
 		config, cwd, dir := project(t)
 		c.f.write(t, dir, newUUID())
-		got, err := List(config, cwd, 0, 0)
+		got, err := Store{ConfigDir: config}.List(cwd, 0, 0)
 		if err != nil || len(got) != 1 || got[0].Summary != c.want || got[0].CustomTitle != c.title {
 			t.Errorf("%s: List = %+v, %v", c.name, got, err)
 		}
@@ -126,7 +126,7 @@ func TestListNewestFirstInPages(t *testing.T) {
 		{5, 10, nil},
 		{1, -1, []string{ids[3]}},
 	} {
-		got, err := List(config, cwd, c.limit, c.offset)
+		got, err := Store{ConfigDir: config}.List(cwd, c.limit, c.offset)
 		if err != nil || strings.Join(sessionIDs(got), ",") != strings.Join(c.want, ",") {
 			t.Errorf("List(limit %d, offset %d) = %v, %v; want %v", c.limit, c.offset, sessionIDs(got), err, c.want)
 		}
@@ -145,14 +145,14 @@ func TestListSkips(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, newUUID()+".txt"), []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	got, err := List(config, cwd, 0, 0)
+	got, err := Store{ConfigDir: config}.List(cwd, 0, 0)
 	if err != nil || strings.Join(sessionIDs(got), ",") != keep {
 		t.Errorf("List = %v, %v; want only %s", sessionIDs(got), err, keep)
 	}
-	if got, err := List(config, filepath.Join(cwd, "elsewhere"), 0, 0); err != nil || len(got) != 0 {
+	if got, err := (Store{ConfigDir: config}).List(filepath.Join(cwd, "elsewhere"), 0, 0); err != nil || len(got) != 0 {
 		t.Errorf("List of a folder with no sessions = %v, %v", got, err)
 	}
-	if got, err := List(filepath.Join(config, "nothing"), "", 0, 0); err != nil || len(got) != 0 {
+	if got, err := (Store{ConfigDir: filepath.Join(config, "nothing")}).List("", 0, 0); err != nil || len(got) != 0 {
 		t.Errorf("List with no config folder = %v, %v", got, err)
 	}
 }
@@ -162,13 +162,13 @@ func TestListEveryProject(t *testing.T) {
 	stubWorktrees(t, nil)
 	a, b, shared := newUUID(), newUUID(), newUUID()
 	old := time.Now().Add(-time.Hour)
-	fixture{}.write(t, ProjectDir(config, "/one"), a)
-	fixture{}.write(t, ProjectDir(config, "/two"), b)
-	fixture{prompt: "old copy", modified: old}.write(t, ProjectDir(config, "/one"), shared)
-	fixture{prompt: "new copy"}.write(t, ProjectDir(config, "/two"), shared)
+	fixture{}.write(t, Store{ConfigDir: config}.ProjectDir("/one"), a)
+	fixture{}.write(t, Store{ConfigDir: config}.ProjectDir("/two"), b)
+	fixture{prompt: "old copy", modified: old}.write(t, Store{ConfigDir: config}.ProjectDir("/one"), shared)
+	fixture{prompt: "new copy"}.write(t, Store{ConfigDir: config}.ProjectDir("/two"), shared)
 	t.Setenv("CLAUDE_CONFIG_DIR", config)
 
-	got, err := List("", "", 0, 0)
+	got, err := Store{}.List("", 0, 0)
 	if err != nil || len(got) != 3 {
 		t.Fatalf("List = %v, %v", sessionIDs(got), err)
 	}
@@ -188,10 +188,10 @@ func TestListWorktrees(t *testing.T) {
 	}
 	stubWorktrees(t, map[string][]string{main: {main, wt}, inside: {main, wt}})
 	inMain, inWt, inInside, elsewhere := newUUID(), newUUID(), newUUID(), newUUID()
-	fixture{}.write(t, ProjectDir(config, main), inMain)
-	fixture{}.write(t, ProjectDir(config, wt), inWt)
-	fixture{}.write(t, ProjectDir(config, inside), inInside)
-	fixture{}.write(t, ProjectDir(config, main+"-other"), elsewhere)
+	fixture{}.write(t, Store{ConfigDir: config}.ProjectDir(main), inMain)
+	fixture{}.write(t, Store{ConfigDir: config}.ProjectDir(wt), inWt)
+	fixture{}.write(t, Store{ConfigDir: config}.ProjectDir(inside), inInside)
+	fixture{}.write(t, Store{ConfigDir: config}.ProjectDir(main+"-other"), elsewhere)
 
 	for _, c := range []struct {
 		cwd  string
@@ -200,7 +200,7 @@ func TestListWorktrees(t *testing.T) {
 		{main, []string{inMain, inWt}},
 		{inside, []string{inInside, inMain, inWt}},
 	} {
-		got, err := List(config, c.cwd, 0, 0)
+		got, err := Store{ConfigDir: config}.List(c.cwd, 0, 0)
 		if err != nil || !sameSet(sessionIDs(got), c.want) {
 			t.Errorf("List(%s) = %v, %v; want %v", c.cwd, sessionIDs(got), err, c.want)
 		}
@@ -247,26 +247,26 @@ func TestGet(t *testing.T) {
 	fixture{sidechain: true}.write(t, dir, side)
 
 	for _, where := range []string{cwd, ""} {
-		if s, err := Get(config, id, where); err != nil || s.ID != id || s.Summary != "hello" || s.Tag != "t" {
+		if s, err := (Store{ConfigDir: config}).Get(id, where); err != nil || s.ID != id || s.Summary != "hello" || s.Tag != "t" {
 			t.Errorf("Get(cwd %q) = %+v, %v", where, s, err)
 		}
 	}
-	if _, err := Get(config, id, t.TempDir()); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := (Store{ConfigDir: config}).Get(id, t.TempDir()); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Get from another folder = %v", err)
 	}
 	for _, id := range []string{newUUID(), side} {
-		if _, err := Get(config, id, cwd); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := (Store{ConfigDir: config}).Get(id, cwd); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("Get(%s) = %v", id, err)
 		}
 	}
-	if _, err := Get(config, "not-a-uuid", cwd); err == nil || errors.Is(err, fs.ErrNotExist) {
+	if _, err := (Store{ConfigDir: config}).Get("not-a-uuid", cwd); err == nil || errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Get of a bad id = %v", err)
 	}
 }
 
 func mustList(t *testing.T, config, cwd string) []Info {
 	t.Helper()
-	got, err := List(config, cwd, 0, 0)
+	got, err := Store{ConfigDir: config}.List(cwd, 0, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

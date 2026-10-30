@@ -1,20 +1,18 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/sessions.py), MIT License,
-// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: folder names
-// are counted and hashed by UTF-16 unit, as the CLI does.
+// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
+// as Go, the functions a Store's methods; folder names are counted and
+// hashed by UTF-16 unit, as the CLI does.
 
 // Package sessions reads and changes the Claude CLI's session transcripts on
 // disk: listing sessions, one session's details and messages, its subagents'
-// messages, forking and deleting.
+// messages, forking and deleting. A Store holds them.
 //
 // The CLI keeps each session as <config>/projects/<folder>/<id>.jsonl, the
 // folder named after the session's working directory, and its subagents'
 // transcripts under <folder>/<id>/subagents/. The layout is the CLI's own and
 // undocumented; Anthropic's Agent SDKs read and write it the same way, and
 // this package is a port of the Python SDK's helpers.
-//
-// Every function takes the CLI's config folder; "" means $CLAUDE_CONFIG_DIR,
-// else ~/.claude. A cwd of "" searches every project folder.
 package sessions
 
 import (
@@ -70,8 +68,22 @@ func notFound(what string) error {
 	return fmt.Errorf("%s: %w", what, fs.ErrNotExist)
 }
 
-// projectsDir returns the projects folder in configDir.
-func projectsDir(configDir string) (string, error) {
+// Store is the CLI's session transcripts in one config folder. The zero
+// Store is the CLI's default folder.
+//
+// Its methods that read or change one session take the session's id, then
+// the working directory to look from: its project folder first, then its
+// git repository's other worktrees' (the CLI resumes a session from any of
+// them); "" looks in every project folder.
+type Store struct {
+	// ConfigDir is the CLI's config folder; "" is $CLAUDE_CONFIG_DIR, else
+	// ~/.claude.
+	ConfigDir string
+}
+
+// projects returns the projects folder in the config folder.
+func (s Store) projects() (string, error) {
+	configDir := s.ConfigDir
 	if configDir == "" {
 		configDir = os.Getenv("CLAUDE_CONFIG_DIR")
 	}
@@ -88,7 +100,7 @@ func projectsDir(configDir string) (string, error) {
 // ProjectDir returns the folder in which the CLI keeps the transcripts of
 // sessions run in cwd: cwd's real path with every UTF-16 unit that isn't an
 // ASCII letter or digit replaced by "-", and past 200 characters cut and
-// followed by a base-36 hash of the path. It returns "" when configDir is ""
+// followed by a base-36 hash of the path. It returns "" when ConfigDir is ""
 // and there is no home folder.
 //
 // The CLI also puts the path in Unicode NFC first; ProjectDir doesn't (the
@@ -96,8 +108,8 @@ func projectsDir(configDir string) (string, error) {
 // gets another name. The CLI's own builds may hash a long path otherwise
 // (the Python SDK says Bun's hash); reads here then find the folder by its
 // first 200 characters.
-func ProjectDir(configDir, cwd string) string {
-	projects, err := projectsDir(configDir)
+func (s Store) ProjectDir(cwd string) string {
+	projects, err := s.projects()
 	if err != nil {
 		return ""
 	}
@@ -228,11 +240,11 @@ func candidates(projects, cwd string) []string {
 // find returns the path of session id's transcript, looking where
 // candidates says. Only a file with something in it counts, as the CLI
 // writes an empty one in some folders.
-func find(configDir, id, cwd string) (string, error) {
+func (s Store) find(id, cwd string) (string, error) {
 	if err := checkID(id); err != nil {
 		return "", err
 	}
-	projects, err := projectsDir(configDir)
+	projects, err := s.projects()
 	if err != nil {
 		return "", err
 	}

@@ -95,7 +95,7 @@ func TestTitleFromTranscript(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	project := sessions.ProjectDir(p.agent.cfg.ConfigDir, dir)
+	project := sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(dir)
 	transcript := `{"type":"user","uuid":"u1","message":{"role":"user","content":"Fix the login page"}}` + "\n" +
 		`{"type":"custom-title","customTitle":"Login"}` + "\n"
 	if err := os.MkdirAll(project, 0o700); err != nil {

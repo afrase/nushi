@@ -433,7 +433,7 @@ func installHistory(t *testing.T, from, configDir, cwd string, ids map[string]st
 	if _, err := os.Stat(from); errors.Is(err, fs.ErrNotExist) {
 		return // not recorded: none
 	}
-	to := sessions.ProjectDir(configDir, cwd)
+	to := sessions.Store{ConfigDir: configDir}.ProjectDir(cwd)
 	recorded := os.DirFS(from)
 	err := fs.WalkDir(recorded, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {

@@ -36,7 +36,7 @@ type replayedKid struct {
 // them: each one's sidecar names its call; else the call's result names
 // the subagent (an Agent call's toolUseResult.agentId).
 func (r *replayer) findAgents(ms []sessions.Message) {
-	list, err := sessions.Subagents(r.s.a.cfg.ConfigDir, r.s.id, r.cwd)
+	list, err := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}.Subagents(r.s.id, r.cwd)
 	if err != nil {
 		return
 	}
@@ -89,7 +89,7 @@ func (r *replayer) subagent(stream, call string, a sessions.Subagent, in launch)
 	kid := &replayedKid{sa: sa, background: in.Background}
 	r.kids = append(r.kids, kid)
 	r.byID[sa.id] = kid
-	ms, err := sessions.SubagentMessages(r.s.a.cfg.ConfigDir, r.s.id, a.ID, r.cwd)
+	ms, err := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}.SubagentMessages(r.s.id, r.cwd, a.ID)
 	if err != nil {
 		r.s.log.Info("replaying a subagent", "agent", a.ID, "err", err)
 		return
@@ -144,7 +144,7 @@ func (r *replayer) launchOf(call string) *replayedKid {
 }
 
 // findQueued reads the prompts claude kept other than as user messages
-// (sessions.QueuedPrompts): a task notification delivered into a
+// (sessions.Store.QueuedPrompts): a task notification delivered into a
 // running turn is only an attachment, and one still queued when claude
 // closed only a queue-operation (docs/facts/claude.md). Each is read
 // after the message before it, or first when that message isn't
@@ -152,7 +152,7 @@ func (r *replayer) launchOf(call string) *replayedKid {
 // reads neither, so its replay leaves such a subagent idle with no
 // reason.
 func (r *replayer) findQueued(ms []sessions.Message) {
-	qs, err := sessions.QueuedPrompts(r.s.a.cfg.ConfigDir, r.s.id, r.cwd)
+	qs, err := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}.QueuedPrompts(r.s.id, r.cwd)
 	if err != nil {
 		return
 	}

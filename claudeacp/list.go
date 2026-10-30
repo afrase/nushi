@@ -33,7 +33,7 @@ func (a *agent) ListSessions(_ context.Context, req *acp.ListSessionsRequest) (*
 		}
 		offset = n
 	}
-	infos, err := sessions.List(a.cfg.ConfigDir, req.Cwd, listPage+1, offset)
+	infos, err := sessions.Store{ConfigDir: a.cfg.ConfigDir}.List(req.Cwd, listPage+1, offset)
 	if err != nil {
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Listing sessions: %v", err)}
 	}
@@ -72,7 +72,8 @@ func (a *agent) DeleteSession(_ context.Context, req *acp.DeleteSessionRequest) 
 	if s, err := a.session(req.SessionID); err == nil {
 		s.close()
 	}
-	if err := sessions.Delete(a.cfg.ConfigDir, string(req.SessionID), ""); err != nil {
+	store := sessions.Store{ConfigDir: a.cfg.ConfigDir}
+	if err := store.Delete(string(req.SessionID), ""); err != nil {
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Deleting the session: %v", err)}
 	}
 	return &acp.DeleteSessionResponse{}, nil
