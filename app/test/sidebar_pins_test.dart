@@ -272,7 +272,8 @@ void main() {
 
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Pin   ⌘D', findRichText: true));
+    expect(find.text('⌘D'), findsOne); // Pin's key, at its right
+    await tester.tap(find.text('Pin', findRichText: true));
     await tester.pumpAndSettle();
     expect(pinned(), ['a']);
     expect(find.text('Pinned'), findsOne);

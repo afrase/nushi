@@ -311,8 +311,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();
+    expect(find.text('⇧⌘B'), findsOne, reason: "Side chat's key, at its right");
     for (final row in [
-      'Side chat   ⇧⌘B',
+      'Side chat',
       'Rename',
       'Sleep',
       'Reload',
