@@ -34,10 +34,11 @@ func requests(t *testing.T, f *claudetest.Fake) []string {
 // settings.
 func setter(init string) *claudetest.Fake {
 	ok := `{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`
-	return started(init, `null`).
-		Respond(`{"type":"control_request","request":{"subtype":"set_permission_mode"}}`, ok).
-		Respond(`{"type":"control_request","request":{"subtype":"set_model"}}`, ok).
-		Respond(`{"type":"control_request","request":{"subtype":"apply_flag_settings"}}`, ok)
+	f := started(init, `null`)
+	f.Respond(`{"type":"control_request","request":{"subtype":"set_permission_mode"}}`, ok)
+	f.Respond(`{"type":"control_request","request":{"subtype":"set_model"}}`, ok)
+	f.Respond(`{"type":"control_request","request":{"subtype":"apply_flag_settings"}}`, ok)
+	return f
 }
 
 // Each option is set with claude's control request for it; the answer
@@ -123,9 +124,9 @@ func TestSetConfigOptionRefused(t *testing.T) {
 func TestSetMode(t *testing.T) {
 	refuse := `{"type":"control_response","response":{"subtype":"error","request_id":"$req","error":"bypass is off","error_code":"bypass_disabled"}}`
 	ok := `{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`
-	f := started(initAnswer, `null`).
-		Respond(`{"type":"control_request","request":{"subtype":"set_permission_mode","mode":"bypassPermissions"}}`, refuse).
-		Respond(`{"type":"control_request","request":{"subtype":"set_permission_mode"}}`, ok)
+	f := started(initAnswer, `null`)
+	f.Respond(`{"type":"control_request","request":{"subtype":"set_permission_mode","mode":"bypassPermissions"}}`, refuse)
+	f.Respond(`{"type":"control_request","request":{"subtype":"set_permission_mode"}}`, ok)
 	p := start(t, nil, f)
 	sid := p.open(t)
 	if _, err := p.SetSessionMode(t.Context(), &acp.SetSessionModeRequest{SessionID: sid, ModeID: "plan"}); err != nil {

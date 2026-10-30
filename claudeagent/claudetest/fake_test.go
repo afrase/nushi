@@ -225,7 +225,8 @@ func TestRespond(t *testing.T) {
 		Expect(`{"type":"user"}`),
 		Do(func() { close(reached) }),
 		Send(`{"type":"result","uuid":"$uuid"}`),
-	).Respond(`{"type":"control_request","request":{"subtype":"interrupt"}}`,
+	)
+	f.Respond(`{"type":"control_request","request":{"subtype":"interrupt"}}`,
 		`{"type":"control_response","response":{"subtype":"success","request_id":"$req"}}`)
 	s := start(t, f)
 	s.write(t, `{"type":"control_request","request_id":"r1","request":{"subtype":"interrupt"}}`)

@@ -34,10 +34,10 @@ func (c *claudes) spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 		`{"type":"result","subtype":"success","is_error":false,"result":"Hello from claude","total_cost_usd":0.25,"usage":{"input_tokens":5,"output_tokens":4},"user_message_uuids":["$uuid"]}`,
 		`{"type":"system","subtype":"session_state_changed","state":"idle"}`,
 	}, "\n")
-	f := claudetest.New().
-		Respond(`{"type":"control_request","request":{"subtype":"initialize"}}`, ok).
-		Respond(`{"type":"user"}`, turn).
-		Respond(`{"type":"control_request"}`, ok)
+	f := claudetest.New()
+	f.Respond(`{"type":"control_request","request":{"subtype":"initialize"}}`, ok)
+	f.Respond(`{"type":"user"}`, turn)
+	f.Respond(`{"type":"control_request"}`, ok)
 	c.mu.Lock()
 	c.fakes = append(c.fakes, f)
 	c.mu.Unlock()
