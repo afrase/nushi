@@ -24,6 +24,24 @@ type UserInput struct {
 	ParentToolUseID string // the tool call it answers, if any
 }
 
+// userLine is a user message as written: the SDKs' shape.
+type userLine struct {
+	Type            string      `json:"type"`       // "user"
+	SessionID       string      `json:"session_id"` // always "": claude fills it in
+	UUID            string      `json:"uuid"`
+	Origin          *Origin     `json:"origin"`
+	Message         userMessage `json:"message"`
+	ParentToolUseID *string     `json:"parent_tool_use_id"` // null at the top
+	Priority        string      `json:"priority,omitempty"`
+	ShouldQuery     *bool       `json:"shouldQuery,omitempty"`
+}
+
+// userMessage is a user line's message: its content a string or blocks.
+type userMessage struct {
+	Role    string `json:"role"`
+	Content any    `json:"content"`
+}
+
 // Send writes a user message and returns its uuid. It doesn't wait for
 // claude to take it: claude queues what comes during a turn.
 func (s *Session) Send(ctx context.Context, m UserInput) (string, error) {
@@ -46,19 +64,12 @@ func (s *Session) Send(ctx context.Context, m UserInput) (string, error) {
 	if origin == nil {
 		origin = &Origin{Kind: "human"}
 	}
-	line := map[string]any{
-		"type": "user", "session_id": "", "uuid": id, "origin": origin,
-		"message":            map[string]any{"role": "user", "content": content},
-		"parent_tool_use_id": nil,
+	line := userLine{
+		Type: "user", UUID: id, Origin: origin, Message: userMessage{Role: "user", Content: content},
+		Priority: m.Priority, ShouldQuery: m.ShouldQuery,
 	}
 	if m.ParentToolUseID != "" {
-		line["parent_tool_use_id"] = m.ParentToolUseID
-	}
-	if m.Priority != "" {
-		line["priority"] = m.Priority
-	}
-	if m.ShouldQuery != nil {
-		line["shouldQuery"] = *m.ShouldQuery
+		line.ParentToolUseID = &m.ParentToolUseID
 	}
 	if err := s.write(ctx, line); err != nil {
 		return "", err

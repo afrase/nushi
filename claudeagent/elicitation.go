@@ -41,7 +41,7 @@ const (
 // is a decline.
 func (s *Session) elicitation(ctx context.Context, raw json.RawMessage) (any, error) {
 	if s.o.OnElicitation == nil {
-		return map[string]any{"action": ElicitationDecline}, nil
+		return elicitationReply{Action: ElicitationDecline}, nil
 	}
 	var w struct {
 		ServerName      string          `json:"mcp_server_name"`
@@ -67,21 +67,27 @@ func (s *Session) elicitation(ctx context.Context, raw json.RawMessage) (any, er
 	if err != nil {
 		return nil, err
 	}
-	return elicitationAnswer(result)
+	a, err := elicitationAnswer(result)
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+// elicitationReply is an elicitation's answer as claude reads it.
+type elicitationReply struct {
+	Action  string         `json:"action"`
+	Content map[string]any `json:"content,omitzero"` // an accepted form's values
 }
 
 // elicitationAnswer is result as claude reads it: the action, and a
 // form's values only with an accept.
-func elicitationAnswer(result ElicitationResult) (map[string]any, error) {
+func elicitationAnswer(result ElicitationResult) (elicitationReply, error) {
 	switch result.Action {
 	case ElicitationAccept:
-		a := map[string]any{"action": result.Action}
-		if result.Content != nil {
-			a["content"] = result.Content
-		}
-		return a, nil
+		return elicitationReply(result), nil
 	case ElicitationDecline, ElicitationCancel:
-		return map[string]any{"action": result.Action}, nil
+		return elicitationReply{Action: result.Action}, nil
 	}
-	return nil, fmt.Errorf("claudeagent: OnElicitation answered %q, not accept, decline or cancel", result.Action)
+	return elicitationReply{}, fmt.Errorf("claudeagent: OnElicitation answered %q, not accept, decline or cancel", result.Action)
 }
