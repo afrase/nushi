@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -88,6 +89,14 @@ func TestSubagentsRecording(t *testing.T) {
 		{"Start slow counter C in the foreground.", "cancelled", "turn", "ad76736e336389cfa", "toolu_01Mdphs8jnoDD1q2gDpAoQF7"},
 		{"Start slow counter D in the background.", "end_turn", "", "", ""},
 	} {
+		// The recording's next prompt came after what the last step set off
+		// (a subagent's stop_task, sent as the cancel is handled): wait
+		// for claude's replay to want it, not before.
+		select {
+		case <-fk.Awaiting(`{"type":"user"}`):
+		case <-time.After(5 * time.Second):
+			t.Fatalf("%q: claude's replay never wanted it: %v", step.prompt, fk.Err())
+		}
 		w := p.prompt(t, sid, step.prompt)
 		switch step.cancel {
 		case "during":
