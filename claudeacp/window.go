@@ -158,7 +158,7 @@ func (s *session) askWindow(ctx context.Context, gen int) {
 		s.log.Debug("asking claude for the context window", "err", err)
 		return
 	}
-	go func() {
+	s.bg.Go(func() {
 		var u claudeagent.ContextUsage
 		if err := call.Wait(&u); err != nil {
 			s.log.Debug("reading the context window", "err", err)
@@ -175,7 +175,7 @@ func (s *session) askWindow(ctx context.Context, gen int) {
 			w.shown.size = w.size
 			s.sendUsage(w.shown, nil, nil)
 		}
-	}()
+	})
 }
 
 // resultWindow takes the window a result says: its model's (model, the

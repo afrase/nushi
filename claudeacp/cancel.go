@@ -33,7 +33,7 @@ func (s *session) cancel() {
 			s.settleLocked(t, cancelled(t)) // its result came: nothing to wait for
 		case !t.cancelled:
 			t.cancelled = true
-			go s.backstop(t)
+			s.bg.Go(func() { s.backstop(t) })
 		}
 	}
 	s.dropTop = true
@@ -46,7 +46,7 @@ func (s *session) cancel() {
 	// cancel-queued parity scenario). Claude is interrupted even when no
 	// prompt is known to run: it may have taken one whose echo hasn't come
 	// yet, or be at work of its own.
-	go func() {
+	s.bg.Go(func() {
 		var calls []*claudeagent.Call
 		for _, id := range drop {
 			// Begun, not CancelAsyncMessage: each is written before the
@@ -73,7 +73,7 @@ func (s *session) cancel() {
 		} else if r.Known && len(r.StillQueued) > 0 {
 			s.log.Info("claude still has queued messages after the interrupt", "count", len(r.StillQueued))
 		}
-	}()
+	})
 }
 
 // backstop answers t cancelled if claude says nothing more of it. It
