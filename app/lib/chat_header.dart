@@ -290,6 +290,7 @@ class _ChatHeaderState extends State<ChatHeader> {
           MenuIcon(
             Icons.more_horiz,
             tooltip: 'Chat menu',
+            filter: false,
             entries: [
               if (folds.buttons) ...[
                 if (!chat.archived)
@@ -297,12 +298,14 @@ class _ChatHeaderState extends State<ChatHeader> {
                     terminalChats.value.contains(chat.id)
                         ? 'Hide terminal'
                         : 'Show terminal',
-                    detail: '⌃`',
+                    shortcut: '⌃`',
+                    icon: Icons.terminal,
                     onPick: () => toggleTerminal(chat.id),
                   ),
                 if (widget.onPanel case final toggle?)
                   MenuEntry(
                     widget.panel ? 'Hide details' : 'Show details',
+                    icon: Icons.view_sidebar_outlined,
                     onPick: toggle,
                   ),
                 MenuEntry.divider,

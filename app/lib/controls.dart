@@ -466,6 +466,7 @@ class MenuIcon extends StatelessWidget {
     super.key,
     this.size = 16,
     this.onClose,
+    this.filter = true,
   });
 
   final IconData icon;
@@ -474,10 +475,14 @@ class MenuIcon extends StatelessWidget {
   final double size;
   final VoidCallback? onClose;
 
+  /// Whether a long list gets a filter field ([Menu.filter]).
+  final bool filter;
+
   @override
   Widget build(BuildContext context) => Menu(
     entries: entries,
     onClose: onClose,
+    filter: filter,
     builder: (context, open) => IconTap(
       icon,
       tooltip: tooltip,
