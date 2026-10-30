@@ -158,4 +158,41 @@ void main() {
     expect(tester.getTopLeft(reply).dy, moreOrLessEquals(y, epsilon: 1));
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('only the chats picked last keep their items; one let go '
+      'loads again when picked', (tester) async {
+    final chats = [for (var i = 0; i < 8; i++) chat('c$i', 'claude', 'C$i')];
+    final asked = <String>[];
+    final fake = FakeDaemon(chats)
+      ..answer = (input) {
+        if (input is! GetChatRequest) return null;
+        asked.add(input.chatId);
+        return GetChatResponse(
+          chat: chats.firstWhere((c) => c.id == input.chatId),
+          items: longChat(input.chatId, turns: 1),
+        );
+      };
+    final d = await fake.connect(tester);
+    for (final c in chats) {
+      d.select(c.id);
+      await tester.pump();
+    }
+    final loaded = [
+      for (final c in chats)
+        if (d.chats[c.id]!.loaded) c.id,
+    ];
+    expect(loaded, ['c2', 'c3', 'c4', 'c5', 'c6', 'c7']);
+    expect(d.chats['c0']!.items, isEmpty);
+
+    asked.clear();
+    d.select('c0');
+    await tester.pump();
+    expect(asked, ['c0']);
+    expect(d.chats['c0']!.items, isNotEmpty);
+    expect(d.chats['c2']!.loaded, isFalse, reason: 'the longest unseen');
+    d.select('c3'); // still kept: not asked again
+    await tester.pump();
+    expect(asked, ['c0']);
+    d.dispose();
+  });
 }
