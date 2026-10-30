@@ -179,7 +179,7 @@ void main() {
     Widget card({required bool tab}) {
       final thread = ThreadCard(
         daemon: d,
-        host: 'github.com',
+        ref: pull().item.ref,
         thread: pull().threads.first,
         onChanged: () async {},
       );

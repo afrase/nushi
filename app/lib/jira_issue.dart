@@ -331,7 +331,11 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                   ],
                 ),
               ),
-            CommentBox(onPost: _comment, primary: true),
+            CommentBox(
+              draft: 'jira ${widget.site} ${widget.issueKey} comment',
+              onPost: _comment,
+              primary: true,
+            ),
           ]),
         ],
       ),

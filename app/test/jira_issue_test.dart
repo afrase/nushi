@@ -258,6 +258,22 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a comment not posted outlives the pane (a look at a chat); '
+      'posted, it goes', (tester) async {
+    var (fake, d, _) = await _open(tester);
+    await tester.enterText(find.byType(TextField), 'Safari first?');
+    await closeView(tester, d);
+    (fake, d, _) = await _open(tester);
+    expect(find.widgetWithText(TextField, 'Safari first?'), findsOneWidget);
+    await tester.tap(find.text('Comment'));
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<AddJiraCommentRequest>(), hasLength(1));
+    await closeView(tester, d);
+    (fake, d, _) = await _open(tester);
+    expect(find.widgetWithText(TextField, 'Safari first?'), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('a chat on the issue: the dialog has it picked, a worktree on '
       'its branch; the box is empty', (tester) async {
     final (fake, d, _) = await _open(tester);
