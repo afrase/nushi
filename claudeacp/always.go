@@ -333,72 +333,90 @@ func shortPaths(paths []string) string {
 	return fmt.Sprintf("%s, %s and %d more", names[0], names[1], len(names)-2)
 }
 
-// fileLabel words claude's suggestions for reading (or, with write,
-// editing) the file or folder at path ("" when the call names none) for
-// the session: what they allow must take in path. "" when they don't, or
-// do more than allow such rules or, for an edit, reach folders.
-func fileLabel(updates []claudeagent.PermissionUpdate, path, cwd string, write bool) string {
-	tool := "Read"
-	if write {
-		tool = "Edit"
-	}
-	if len(updates) == 0 {
-		return ""
-	}
-	broad, rules := false, false
-	var reach []string // the folders the rules and folders added reach
+// grant is what file rules for the session allow: any file, or the
+// files below one folder.
+type grant struct {
+	broad  bool   // a rule naming no path: any file
+	rules  bool   // a rule at all, not only folders added
+	folder string // the one folder the rules and the folders added reach
+}
+
+// readGrant reads updates as rules for tool (Read, or Edit with the
+// folders write adds) for the session; not ok when they are anything
+// else, a rule for a single file or a pattern, or reach more than one
+// folder.
+func readGrant(updates []claudeagent.PermissionUpdate, tool, cwd string, write bool) (g grant, ok bool) {
+	var reached []string
 	for _, u := range updates {
 		switch {
 		case u.Destination != "session":
-			return ""
+			return g, false
 		case u.Type == "addDirectories" && write:
-			reach = append(reach, u.Directories...)
+			reached = append(reached, u.Directories...)
 		case u.Type == "addRules" && u.Behavior == "allow":
-			rules = true
 			for _, r := range u.Rules {
+				content := strings.TrimSpace(r.RuleContent)
 				switch {
 				case r.ToolName != tool:
-					return ""
-				case strings.TrimSpace(r.RuleContent) == "":
-					broad = true
+					return g, false
+				case content == "":
+					g.broad = true
+				case strings.HasSuffix(content, "/**"):
+					reached = append(reached, strings.TrimSuffix(content, "/**"))
 				default:
-					reach = append(reach, strings.TrimSuffix(strings.TrimSpace(r.RuleContent), "/**"))
+					return g, false
 				}
+				g.rules = true
 			}
 		default:
-			return ""
+			return g, false
 		}
 	}
-	if path == "" {
-		if !broad {
-			return ""
+	for _, d := range reached {
+		if d = absIn(cwd, d); g.folder != "" && g.folder != d {
+			return g, false
 		}
-		if write {
-			return "Yes, allow all edits during this session"
-		}
-		return "Yes, during this session"
+		g.folder = d
+	}
+	return g, true
+}
+
+// fileLabel words claude's suggestions for reading (or, with write,
+// editing) the file or folder at path ("" when the call names none) for
+// the session, saying no less than they allow: any file (a rule naming
+// no path) while the call is in the session's folder, or the one folder
+// their rules and the folders they add reach, which must take in path.
+// "" when the words can't say what they allow: rules for a single file
+// or a pattern, more than one folder, a rule for any file outside the
+// session's folder, rules kept past the session, or more than such rules
+// and, for an edit, folders.
+func fileLabel(updates []claudeagent.PermissionUpdate, path, cwd string, write bool) string {
+	tool, anything := "Read", "Yes, during this session"
+	if write {
+		tool, anything = "Edit", "Yes, allow all edits during this session"
+	}
+	g, ok := readGrant(updates, tool, cwd, write)
+	if !ok {
+		return ""
 	}
 	abs := absIn(cwd, path)
-	if !broad && !slices.ContainsFunc(reach, func(d string) bool {
-		d = absIn(cwd, d)
-		return d == filepath.Dir(abs) || inside(d, abs)
-	}) {
+	switch {
+	case g.broad && (path == "" || inside(cwd, abs)):
+		return anything
+	case g.broad, !g.rules, path == "", !inside(g.folder, abs):
 		return ""
 	}
 	home, _ := os.UserHomeDir()
-	ownSettings := write && rules && (inside(filepath.Join(cwd, ".claude"), abs) || home != "" && inside(filepath.Join(home, ".claude"), abs))
-	switch dir := filepath.Base(filepath.Dir(abs)); {
-	case ownSettings:
+	dir := filepath.Base(g.folder) + string(filepath.Separator)
+	switch {
+	case write && (g.folder == filepath.Join(cwd, ".claude") || home != "" && g.folder == filepath.Join(home, ".claude")):
 		return "Yes, and allow Claude to edit its own settings for this session"
-	case inside(cwd, abs) && write:
-		return "Yes, allow all edits during this session"
-	case inside(cwd, abs):
-		return "Yes, during this session"
+	case g.folder == cwd:
+		return anything
 	case write:
-		return "Yes, allow all edits in " + dir + string(filepath.Separator) + " during this session"
-	default:
-		return "Yes, allow reading from " + dir + string(filepath.Separator) + " during this session"
+		return "Yes, allow all edits in " + dir + " during this session"
 	}
+	return "Yes, allow reading from " + dir + " during this session"
 }
 
 // absIn is path made absolute from cwd.
