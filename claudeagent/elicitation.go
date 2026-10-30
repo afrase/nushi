@@ -7,12 +7,12 @@ import (
 )
 
 // ElicitationRequest is an MCP server asking the user, through claude,
-// for input: a form to fill (Mode "form", RequestedSchema) or a page to
-// visit (Mode "url", URL). Raw has the whole request.
+// for input: a form to fill (ElicitationForm, RequestedSchema) or a page
+// to visit (ElicitationURL, URL). Raw has the whole request.
 type ElicitationRequest struct {
 	ServerName      string
 	Message         string
-	Mode            string // "form" or "url"; "" is a form
+	Mode            ElicitationMode // "" is a form
 	URL             string
 	ElicitationID   string          // a URL elicitation's, which ElicitationComplete names when done
 	RequestedSchema json.RawMessage // a form's fields, as a JSON Schema object
@@ -23,17 +23,29 @@ type ElicitationRequest struct {
 	Raw             json.RawMessage
 }
 
+// ElicitationMode is what an elicitation asks for, as MCP names it.
+type ElicitationMode string
+
+// The elicitation modes.
+const (
+	ElicitationForm ElicitationMode = "form" // a form's values
+	ElicitationURL  ElicitationMode = "url"  // a visit to a page
+)
+
 // ElicitationResult is the user's answer to an ElicitationRequest.
 type ElicitationResult struct {
-	Action  string         // ElicitationAccept, ElicitationDecline or ElicitationCancel
+	Action  ElicitationAction
 	Content map[string]any // with ElicitationAccept, a form's values by field
 }
 
+// ElicitationAction is how the user answered an elicitation.
+type ElicitationAction string
+
 // An ElicitationResult's actions, as MCP names them.
 const (
-	ElicitationAccept  = "accept"  // the user answered
-	ElicitationDecline = "decline" // the user said no
-	ElicitationCancel  = "cancel"  // the user dismissed it without choosing
+	ElicitationAccept  ElicitationAction = "accept"  // the user answered
+	ElicitationDecline ElicitationAction = "decline" // the user said no
+	ElicitationCancel  ElicitationAction = "cancel"  // the user dismissed it without choosing
 )
 
 // elicitation asks OnElicitation about an elicitation request and
@@ -46,7 +58,7 @@ func (s *Session) elicitation(ctx context.Context, raw json.RawMessage) (any, er
 	var w struct {
 		ServerName      string          `json:"mcp_server_name"`
 		Message         string          `json:"message"`
-		Mode            string          `json:"mode"`
+		Mode            ElicitationMode `json:"mode"`
 		URL             string          `json:"url"`
 		ElicitationID   string          `json:"elicitation_id"`
 		RequestedSchema json.RawMessage `json:"requested_schema"`
@@ -76,8 +88,8 @@ func (s *Session) elicitation(ctx context.Context, raw json.RawMessage) (any, er
 
 // elicitationReply is an elicitation's answer as claude reads it.
 type elicitationReply struct {
-	Action  string         `json:"action"`
-	Content map[string]any `json:"content,omitzero"` // an accepted form's values
+	Action  ElicitationAction `json:"action"`
+	Content map[string]any    `json:"content,omitzero"` // an accepted form's values
 }
 
 // elicitationAnswer is result as claude reads it: the action, and a

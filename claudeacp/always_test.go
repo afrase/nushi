@@ -12,7 +12,7 @@ import (
 
 // rules is an addRules update allowing each rule ("Tool" or
 // "Tool(content)") at dest.
-func rules(dest string, rs ...string) claudeagent.PermissionUpdate {
+func rules(dest claudeagent.PermissionDestination, rs ...string) claudeagent.PermissionUpdate {
 	u := claudeagent.PermissionUpdate{Type: "addRules", Behavior: "allow", Destination: dest}
 	for _, r := range rs {
 		tool, content, _ := strings.Cut(strings.TrimSuffix(r, ")"), "(")

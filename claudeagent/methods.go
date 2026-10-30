@@ -14,15 +14,25 @@ type UserInput struct {
 	Text    string
 	Content []Block
 	UUID    string // "" = a new one; claude echoes it and names it in results
-	// Priority is when claude takes it during a turn: "now", "next" or
-	// "later"; "" = claude's default.
-	Priority string
+	// Priority is when claude takes it during a turn; "" = claude's
+	// default.
+	Priority Priority
 	// Origin says who wrote it; nil = a person ({"kind":"human"}), which
 	// is what claude's checks for a person's say-so trust.
 	Origin          *Origin
 	ShouldQuery     *bool  // false = add it to the conversation without a turn
 	ParentToolUseID string // the tool call it answers, if any
 }
+
+// Priority is when claude takes a user message that comes during a turn.
+type Priority string
+
+// The priorities.
+const (
+	PriorityNow   Priority = "now"   // at once, interrupting the turn
+	PriorityNext  Priority = "next"  // at the turn's next step
+	PriorityLater Priority = "later" // once the turn ends
+)
 
 // userLine is a user message as written: the SDKs' shape.
 type userLine struct {
@@ -32,7 +42,7 @@ type userLine struct {
 	Origin          *Origin     `json:"origin"`
 	Message         userMessage `json:"message"`
 	ParentToolUseID *string     `json:"parent_tool_use_id"` // null at the top
-	Priority        string      `json:"priority,omitempty"`
+	Priority        Priority    `json:"priority,omitempty"`
 	ShouldQuery     *bool       `json:"shouldQuery,omitempty"`
 }
 

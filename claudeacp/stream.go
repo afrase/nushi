@@ -62,7 +62,7 @@ func (s *session) handle(m claudeagent.Message) {
 		s.planReset()
 		s.titleReset()
 	case *claudeagent.Status:
-		s.modeChanged(m.PermissionMode)
+		s.modeChanged(string(m.PermissionMode))
 		switch {
 		case m.Status == "requesting": // new work: what stopped can't ask the API again
 			s.mu.Lock()

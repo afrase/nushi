@@ -87,17 +87,17 @@ func initRequest(i Init) (initializeRequest, error) {
 // and how it starts. Fields an older claude doesn't send are zero; Raw
 // has them all.
 type InitResponse struct {
-	Commands              []Command   `json:"commands"`
-	Agents                []AgentInfo `json:"agents"`
-	Models                []ModelInfo `json:"models"`
-	Account               Account     `json:"account"`
-	OutputStyle           string      `json:"output_style"`
-	AvailableOutputStyles []string    `json:"available_output_styles"`
-	CurrentModel          string      `json:"current_model"`
-	CurrentPermissionMode string      `json:"current_permission_mode"`
-	FastModeState         string      `json:"fast_mode_state"`
-	ClaudeCodeVersion     string      `json:"claude_code_version"`
-	PID                   int         `json:"pid"`
+	Commands              []Command      `json:"commands"`
+	Agents                []AgentInfo    `json:"agents"`
+	Models                []ModelInfo    `json:"models"`
+	Account               Account        `json:"account"`
+	OutputStyle           string         `json:"output_style"`
+	AvailableOutputStyles []string       `json:"available_output_styles"`
+	CurrentModel          string         `json:"current_model"`
+	CurrentPermissionMode PermissionMode `json:"current_permission_mode"`
+	FastModeState         string         `json:"fast_mode_state"`
+	ClaudeCodeVersion     string         `json:"claude_code_version"`
+	PID                   int            `json:"pid"`
 	// Capabilities are the protocol features claude supports; Session.Has
 	// reads them with system/init's.
 	Capabilities []string        `json:"capabilities"`

@@ -66,7 +66,7 @@ func (c *config) init(o claudeagent.Options, ir *claudeagent.InitResponse, boole
 	if ir == nil {
 		ir = &claudeagent.InitResponse{}
 	}
-	c.mode = cmp.Or(ir.CurrentPermissionMode, string(o.PermissionMode), string(claudeagent.PermissionDefault))
+	c.mode = string(cmp.Or(ir.CurrentPermissionMode, o.PermissionMode, claudeagent.PermissionDefault))
 	c.bypass, c.models, c.booleans = o.AllowBypass, ir.Models, booleans
 	c.effort, c.agent = cmp.Or(set.EffortLevel, defaultValue), cmp.Or(set.Agent, defaultValue)
 	c.fast = ir.FastModeState == "on" || ir.FastModeState == "" && set.FastMode
@@ -239,7 +239,7 @@ func (s *session) modeChanged(mode string) {
 // followInit follows what a turn's system/init says of the model, mode
 // and fast mode; the client is told of what changed.
 func (s *session) followInit(m *claudeagent.SystemInit) {
-	s.modeChanged(m.PermissionMode)
+	s.modeChanged(string(m.PermissionMode))
 	c := &s.cfg
 	c.mu.Lock()
 	news := false

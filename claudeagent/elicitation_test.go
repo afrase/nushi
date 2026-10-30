@@ -64,7 +64,7 @@ func TestElicitationAnswer(t *testing.T) {
 			}
 		})
 	}
-	for _, action := range []string{"", "maybe"} {
+	for _, action := range []ElicitationAction{"", "maybe"} {
 		if _, err := elicitationAnswer(ElicitationResult{Action: action}); err == nil {
 			t.Errorf("%q answered", action)
 		}

@@ -33,15 +33,15 @@ var systemDecoders = map[string]func() Message{
 // commands, and the protocol capabilities claude supports.
 type SystemInit struct {
 	Envelope
-	ClaudeCodeVersion string   `json:"claude_code_version"`
-	Cwd               string   `json:"cwd"`
-	Model             string   `json:"model"`
-	PermissionMode    string   `json:"permissionMode"`
-	FastModeState     string   `json:"fast_mode_state"`
-	Effort            string   `json:"effort"`
-	APIKeySource      string   `json:"apiKeySource"`
-	Tools             []string `json:"tools"`
-	SlashCommands     []string `json:"slash_commands"`
+	ClaudeCodeVersion string         `json:"claude_code_version"`
+	Cwd               string         `json:"cwd"`
+	Model             string         `json:"model"`
+	PermissionMode    PermissionMode `json:"permissionMode"`
+	FastModeState     string         `json:"fast_mode_state"`
+	Effort            string         `json:"effort"`
+	APIKeySource      string         `json:"apiKeySource"`
+	Tools             []string       `json:"tools"`
+	SlashCommands     []string       `json:"slash_commands"`
 	// TerminalSlashCommands are the commands only claude's terminal runs.
 	TerminalSlashCommands []string    `json:"terminal_slash_commands"`
 	MCPServers            []MCPStatus `json:"mcp_servers"`
@@ -58,10 +58,10 @@ type MCPStatus struct {
 // "requesting", or "" for nothing), or of the permission mode.
 type Status struct {
 	Envelope
-	Status         string `json:"status"`
-	PermissionMode string `json:"permissionMode"`
-	CompactResult  string `json:"compact_result"`
-	CompactError   string `json:"compact_error"`
+	Status         string         `json:"status"`
+	PermissionMode PermissionMode `json:"permissionMode"`
+	CompactResult  string         `json:"compact_result"`
+	CompactError   string         `json:"compact_error"`
 }
 
 // CompactBoundary marks where the conversation was compacted.
