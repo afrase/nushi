@@ -27,11 +27,13 @@ import (
 //	cfg.changing → cfg.mu
 //	cfg.changing → win.mu → agent.windows.mu
 //
-// No other lock is taken while plan.mu, cmds.mu, title.mu, hmu, bg.mu
-// or stderr's is held, nor while one at a line's end is, but for the
-// client connection's: tools.mu, kids.mu, plan.mu, cmds.mu and win.mu
-// send the client their updates while held, to keep the updates' order,
-// so the connection's own lock is always taken last.
+// The rest (plan.mu, cmds.mu, title.mu, hmu, bg.mu, stderr's) are
+// leaves, as are the locks at the lines' ends: one may be taken with
+// any lock above held (cancel starts its goroutines under mu), and none
+// is held while another is taken but for the client connection's.
+// tools.mu, kids.mu, plan.mu, cmds.mu and win.mu send the client their
+// updates while held, to keep the updates' order, so the connection's
+// own lock is always taken last.
 type session struct {
 	a      *agent
 	id     string // claude's session id too
