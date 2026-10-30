@@ -67,6 +67,8 @@ typedef OpenMenu = void Function([Offset? at]);
 /// opens it is a control of `controls.dart` (a [MenuField], a
 /// [MenuButton], a [MenuIcon]) or a row's right-click: never bare text.
 /// With [digits] the keys 1–9 pick its first rows, numbered on their right.
+/// A list of choices longer than ten gets a filter field; an action menu
+/// ([filter] false: a chat's) never does, keeping its groups and icons.
 /// [onOpen] runs as it opens, [onClose] once it has closed.
 class Menu extends StatefulWidget {
   const new({
@@ -74,6 +76,7 @@ class Menu extends StatefulWidget {
     required this.builder,
     super.key,
     this.digits = false,
+    this.filter = true,
     this.onOpen,
     this.onClose,
   });
@@ -81,6 +84,7 @@ class Menu extends StatefulWidget {
   final List<MenuEntry> entries;
   final Widget Function(BuildContext context, OpenMenu open) builder;
   final bool digits;
+  final bool filter;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
@@ -124,6 +128,7 @@ class _MenuState extends State<Menu> {
         widget.entries,
         _menu.close,
         digits: widget.digits,
+        filter: widget.filter,
       ),
       onOpen: () {
         if (widget.digits) _focus.requestFocus();
@@ -146,16 +151,19 @@ List<Widget> _rows(
   List<MenuEntry> entries,
   VoidCallback close, {
   bool digits = false,
+  bool filter = true,
 }) {
-  if (entries.where((e) => e._pickable).length > _filterPast) {
+  if (filter && entries.where((e) => e._pickable).length > _filterPast) {
     return [_Filtered(entries, close)];
   }
   final theme = NushiTheme.of(context);
   final t = theme.t;
   var n = 0;
   // Rows without an icon keep its room when others have one, so the
-  // labels line up.
+  // labels line up; the check's room only where a row can have one, so a
+  // key sits at the right edge, as macOS draws it.
   final icons = entries.any((e) => e.icon != null);
+  final checks = entries.any((e) => e.checked);
   return [
     for (final e in entries)
       if (identical(e, MenuEntry.divider))
@@ -171,6 +179,7 @@ List<Widget> _rows(
           e,
           close,
           icons: icons,
+          checks: checks,
           digit: !digits
               ? null
               : e._pickable && n < 9
@@ -189,6 +198,7 @@ Widget _row(
   String? digit,
   bool lit = false,
   bool icons = false,
+  bool checks = true,
   Key? key,
 }) {
   final theme = NushiTheme.of(context);
@@ -251,13 +261,23 @@ Widget _row(
             digit: digit,
             lit: lit,
             icon: icon,
+            checks: checks,
             action: action(hover: hover),
             onHover: onHover,
             onFocus: onFocus,
           ),
     );
   }
-  return _button(theme, e, label, digit: digit, lit: lit, icon: icon, key: key);
+  return _button(
+    theme,
+    e,
+    label,
+    digit: digit,
+    lit: lit,
+    icon: icon,
+    checks: checks,
+    key: key,
+  );
 }
 
 Widget _button(
@@ -266,6 +286,7 @@ Widget _button(
   Widget label, {
   required String? digit,
   required bool lit,
+  required bool checks,
   Widget? icon,
   Widget? action,
   ValueChanged<bool>? onHover,
@@ -286,13 +307,23 @@ Widget _button(
         ?action,
         if (e.shortcut.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 16, right: 4),
-            child: Text(e.shortcut, style: theme.code(t.textMuted, size: 12)),
+            padding: const EdgeInsets.only(left: 24),
+            child: Text(
+              e.shortcut,
+              // The label's font; its keys' symbols from the code font,
+              // which has them.
+              style: theme
+                  .ui(t.textMuted)
+                  .copyWith(fontFamilyFallback: const [NushiTheme.codeFont]),
+            ),
           ),
-        SizedBox(
-          width: 14,
-          child: e.checked ? Icon(Icons.check, size: 14, color: t.text) : null,
-        ),
+        if (checks)
+          SizedBox(
+            width: 14,
+            child: e.checked
+                ? Icon(Icons.check, size: 14, color: t.text)
+                : null,
+          ),
         if (digit != null)
           SizedBox(
             width: 22,
@@ -432,6 +463,7 @@ class _FilteredState extends State<_Filtered> {
                     context,
                     e,
                     widget.close,
+                    icons: widget.entries.any((e) => e.icon != null),
                     lit: i == _at,
                     key: i == _at ? _lit : null,
                   ),

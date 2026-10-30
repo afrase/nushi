@@ -277,6 +277,7 @@ class _ChatRowState extends State<_ChatRow> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
           child: Menu(
+            filter: false,
             entries: chatMenu(
               context,
               chat,
