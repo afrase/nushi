@@ -38,63 +38,80 @@ class _FileLinkBuilder extends MarkdownElementBuilder {
     final text = element.textContent;
     final path = files[text.trim()];
     if (path == null) return null;
-    // A widget span: the spans of a paragraph's text are made again as
-    // they're merged, without their hover.
+    // Widget spans: the spans of a paragraph's text are made again as
+    // they're merged, without their hover. One a line tall each, cut after
+    // its slashes: a paragraph's lines are all the one height, so a span
+    // that wrapped would run into the line below it.
+    final style = (parentStyle ?? const TextStyle()).merge(preferredStyle);
+    final hover = ValueNotifier(false);
     return Text.rich(
       TextSpan(
         children: [
-          WidgetSpan(
-            alignment: PlaceholderAlignment.baseline,
-            baseline: TextBaseline.alphabetic,
-            child: FileLink(
-              text,
-              style: (parentStyle ?? const TextStyle()).merge(preferredStyle),
-              onTap: () => onTap(path),
+          for (final piece in _pieces(text))
+            WidgetSpan(
+              alignment: PlaceholderAlignment.baseline,
+              baseline: TextBaseline.alphabetic,
+              child: FileLink(
+                piece,
+                style: style,
+                hover: hover,
+                onTap: () => onTap(path),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
+
+  /// [path] cut after each slash, where a line may break: "a/b" is "a/"
+  /// and "b".
+  static Iterable<String> _pieces(String path) =>
+      RegExp('[^/]*/|[^/]+').allMatches(path).map((m) => m[0]!);
 }
 
-/// A file's name in a message, as a link: the hand over it, underlined
-/// while the pointer is.
-class FileLink extends StatefulWidget {
+/// A piece of a file's name in a message, as a link: the hand over it,
+/// underlined, with the name's other pieces, while the pointer is over
+/// one of them.
+class FileLink extends StatelessWidget {
   /// [text] in [style], running [onTap] when clicked.
-  const new(this.text, {required this.style, required this.onTap, super.key});
+  const new(
+    this.text, {
+    required this.style,
+    required this.hover,
+    required this.onTap,
+    super.key,
+  });
 
-  /// The path as written.
+  /// The piece as written.
   final String text;
 
   /// The text's style where it's written (inline code's, or the body's).
   final TextStyle style;
 
+  /// Whether the pointer is over the name: shared by its pieces.
+  final ValueNotifier<bool> hover;
+
   /// Opens the file.
   final VoidCallback onTap;
 
   @override
-  State<FileLink> createState() => _FileLinkState();
-}
-
-class _FileLinkState extends State<FileLink> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) => MouseRegion(
     cursor: SystemMouseCursors.click,
-    onEnter: (_) => setState(() => _hover = true),
-    onExit: (_) => setState(() => _hover = false),
+    onEnter: (_) => hover.value = true,
+    onExit: (_) => hover.value = false,
     child: GestureDetector(
-      onTap: widget.onTap,
-      child: Text(
-        widget.text,
-        style: _hover
-            ? widget.style.copyWith(
-                decoration: TextDecoration.underline,
-                decorationColor: widget.style.color,
-              )
-            : widget.style,
+      onTap: onTap,
+      child: ValueListenableBuilder(
+        valueListenable: hover,
+        builder: (context, over, _) => Text(
+          text,
+          style: over
+              ? style.copyWith(
+                  decoration: TextDecoration.underline,
+                  decorationColor: style.color,
+                )
+              : style,
+        ),
       ),
     ),
   );
