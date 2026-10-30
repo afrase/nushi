@@ -1,12 +1,14 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/session_mutations.py), MIT License,
-// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: Fork can
-// write into another folder's history, and Delete clears every folder the
-// session may be in and succeeds when it isn't there.
+// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
+// as Go, records read into typed structs and new ones written from them;
+// Fork can write into another folder's history, and Delete clears every
+// folder the session may be in and succeeds when it isn't there.
 
 package sessions
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,8 +61,9 @@ func Fork(configDir, id, cwd string, o ForkOptions) (string, error) {
 	if title == "" {
 		title = firstOf(titleOf(data), "Forked session") + " (fork)"
 	}
-	lines = append(lines, encode(
-		"type", "custom-title", "sessionId", newID, "customTitle", title, "uuid", newUUID(), "timestamp", stamp()))
+	lines = append(lines, string(marshal(titleRecord{
+		Type: "custom-title", SessionID: newID, CustomTitle: title, UUID: newUUID(), Timestamp: stamp(),
+	})))
 
 	dir := filepath.Dir(path)
 	if o.Cwd != "" {
@@ -76,41 +79,74 @@ func Fork(configDir, id, cwd string, o ForkOptions) (string, error) {
 	return newID, writeNew(filepath.Join(dir, newID+".jsonl"), []byte(strings.Join(lines, "\n")+"\n"))
 }
 
+// copied is a record a fork copies: its fields as read, and the record
+// itself, which Fork rewrites keeping every key, in its place, as the CLI
+// wrote it.
+type copied struct {
+	recordFields
+	obj *object
+}
+
+// forkedFrom is where a fork's record was copied from.
+type forkedFrom struct {
+	SessionID   string `json:"sessionId"`
+	MessageUUID string `json:"messageUuid"`
+}
+
+// replacementRecord carries the session's content replacements into the
+// fork.
+type replacementRecord struct {
+	Type         string            `json:"type"` // "content-replacement"
+	SessionID    string            `json:"sessionId"`
+	Replacements []json.RawMessage `json:"replacements"`
+	UUID         string            `json:"uuid"`
+	Timestamp    string            `json:"timestamp"`
+}
+
+// titleRecord names a session.
+type titleRecord struct {
+	Type        string `json:"type"` // "custom-title"
+	SessionID   string `json:"sessionId"`
+	CustomTitle string `json:"customTitle"`
+	UUID        string `json:"uuid"`
+	Timestamp   string `json:"timestamp"`
+}
+
 // parseFork reads the records a fork copies, and the session's content
 // replacements (tool results the CLI stored apart), which the fork keeps.
-func parseFork(data []byte, id string) (records []*object, replacements []json.RawMessage) {
-	for line := range strings.SplitSeq(string(data), "\n") {
-		o, err := parseObject([]byte(strings.TrimSpace(line)))
-		if err != nil {
-			continue
-		}
-		typ := str(o.vals["type"])
-		if _, ok := isString(o.vals["uuid"]); ok && chainTypes[typ] {
-			records = append(records, o)
-			continue
-		}
-		var list []json.RawMessage
-		if typ == "content-replacement" && str(o.vals["sessionId"]) == id && unmarshalOK(o.vals["replacements"], &list) {
-			replacements = append(replacements, list...)
+func parseFork(data []byte, id string) (records []copied, replacements []json.RawMessage) {
+	for line := range bytes.SplitSeq(data, []byte("\n")) {
+		line = bytes.TrimSpace(line)
+		r, ok := decodeRecord(line)
+		switch {
+		case !ok:
+		case r.inChain():
+			if o, err := parseObject(line); err == nil {
+				records = append(records, copied{r, o})
+			}
+		case r.Type == "content-replacement" && string(r.SessionID) == id:
+			var list []json.RawMessage
+			if json.Unmarshal(r.Replacements, &list) == nil {
+				replacements = append(replacements, list...)
+			}
 		}
 	}
 	return records, replacements
 }
 
 // forkLines turns records into the fork's lines, up to the record upTo.
-func forkLines(records []*object, replacements []json.RawMessage, id, upTo string) (string, []string, error) {
+func forkLines(records []copied, replacements []json.RawMessage, id, upTo string) (string, []string, error) {
 	kept, found := cut(records, upTo)
 	if upTo != "" && !found {
 		return "", nil, fmt.Errorf("message %s isn't in session %s", upTo, id)
 	}
 	// Progress records only link others: they get a uuid for the links
 	// through them, but aren't written.
-	fresh, byUUID := map[string]string{}, map[string]*object{}
-	var writable []*object
+	fresh, byUUID := map[string]string{}, map[string]copied{}
+	var writable []copied
 	for _, r := range kept {
-		u := str(r.vals["uuid"])
-		fresh[u], byUUID[u] = newUUID(), r
-		if str(r.vals["type"]) != "progress" {
+		fresh[r.UUID.val], byUUID[r.UUID.val] = newUUID(), r
+		if r.Type != "progress" {
 			writable = append(writable, r)
 		}
 	}
@@ -120,61 +156,62 @@ func forkLines(records []*object, replacements []json.RawMessage, id, upTo strin
 	newID, now := newUUID(), stamp()
 	var lines []string
 	for i, r := range writable {
-		old := str(r.vals["uuid"])
-		// The nearest record above that isn't progress (progress records
-		// are never rewritten, so their links are still the old ones).
-		var parent any
-		pid := str(r.vals["parentUuid"])
+		old, o := r.UUID.val, r.obj
+		// The nearest record above that isn't progress.
+		var parent *string
+		pid := string(r.Parent)
 		for range kept { // as many steps as records: a cycle ends
-			p := byUUID[pid]
-			if p == nil {
+			p, ok := byUUID[pid]
+			if !ok {
 				break
 			}
-			if str(p.vals["type"]) != "progress" {
-				parent = fresh[pid]
+			if p.Type != "progress" {
+				u := fresh[pid]
+				parent = &u
 				break
 			}
-			pid = str(p.vals["parentUuid"])
+			pid = string(p.Parent)
 		}
-		r.set("uuid", fresh[old])
-		r.set("parentUuid", parent)
+		o.set("uuid", fresh[old])
+		o.set("parentUuid", parent)
 		// A compaction's link to what it replaced follows when that was
 		// copied; otherwise it is null.
-		if logical, ok := r.vals["logicalParentUuid"]; !ok || truthy(logical) {
-			var to any
-			if u, ok := fresh[str(logical)]; ok && truthy(logical) {
-				to = u
+		if l := r.Logical; !l.present || l.set {
+			var to *string
+			if u, ok := fresh[string(l.uuid)]; ok && l.set {
+				to = &u
 			}
-			r.set("logicalParentUuid", to)
+			o.set("logicalParentUuid", to)
 		}
-		r.set("sessionId", newID)
+		o.set("sessionId", newID)
 		// The last record's time is now, so a resume takes it as the leaf.
-		if _, ok := r.vals["timestamp"]; !ok || i == len(writable)-1 {
-			r.set("timestamp", now)
+		if !o.has("timestamp") || i == len(writable)-1 {
+			o.set("timestamp", now)
 		}
-		r.set("isSidechain", false)
-		r.set("forkedFrom", ordered("sessionId", id, "messageUuid", old))
+		o.set("isSidechain", false)
+		o.set("forkedFrom", forkedFrom{SessionID: id, MessageUUID: old})
 		for _, k := range []string{"teamName", "agentName", "slug", "sourceToolAssistantUUID"} {
-			r.remove(k)
+			o.remove(k)
 		}
-		lines = append(lines, string(r.encode()))
+		lines = append(lines, string(o.encode()))
 	}
 	if len(replacements) > 0 {
-		lines = append(lines, encode(
-			"type", "content-replacement", "sessionId", newID, "replacements", replacements, "uuid", newUUID(), "timestamp", now))
+		lines = append(lines, string(marshal(replacementRecord{
+			Type: "content-replacement", SessionID: newID, Replacements: replacements, UUID: newUUID(), Timestamp: now,
+		})))
 	}
 	return newID, lines, nil
 }
 
 // cut returns the main conversation's records (not subagents') up to the
 // one with uuid upTo, itself included, and whether it was there.
-func cut(records []*object, upTo string) (kept []*object, found bool) {
+func cut(records []copied, upTo string) (kept []copied, found bool) {
 	for _, r := range records {
-		if truthy(r.vals["isSidechain"]) {
+		if r.Sidechain {
 			continue
 		}
 		kept = append(kept, r)
-		if upTo != "" && str(r.vals["uuid"]) == upTo {
+		if upTo != "" && r.UUID.val == upTo {
 			return kept, true
 		}
 	}

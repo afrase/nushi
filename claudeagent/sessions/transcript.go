@@ -1,6 +1,7 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/sessions.py), MIT License,
-// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE.
+// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
+// as Go, records read into typed structs.
 
 package sessions
 
@@ -8,13 +9,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"slices"
-	"strings"
 )
 
 // entry is one record of a transcript, with the fields that place it in
-// the conversation. Every field is read leniently: one of the wrong type
-// counts as absent, so a record the CLI writes otherwise one day doesn't
-// lose the rest.
+// the conversation, read leniently (see recordFields).
 type entry struct {
 	raw       json.RawMessage
 	typ       string
@@ -46,22 +44,18 @@ func parseEntries(data []byte) []*entry {
 		if len(line) == 0 {
 			continue
 		}
-		var m map[string]json.RawMessage
-		if json.Unmarshal(line, &m) != nil {
+		r, ok := decodeRecord(line)
+		if !ok || !r.inChain() {
 			continue
 		}
-		e := &entry{raw: line, typ: str(m["type"])}
-		var ok bool
-		if e.uuid, ok = isString(m["uuid"]); !ok || !chainTypes[e.typ] {
-			continue
+		e := &entry{
+			raw: line, typ: string(r.Type), uuid: r.UUID.val, parent: string(r.Parent), sessionID: string(r.SessionID),
+			sidechain: bool(r.Sidechain), meta: bool(r.Meta), team: bool(r.Team),
+			timestamp: string(r.Timestamp), source: string(r.Source), message: r.Message,
 		}
-		e.parent, e.sessionID = str(m["parentUuid"]), str(m["sessionId"])
-		e.sidechain, e.meta, e.team = truthy(m["isSidechain"]), truthy(m["isMeta"]), truthy(m["teamName"])
-		if id := bytes.TrimSpace(m["agentId"]); string(id) != "null" {
+		if id := bytes.TrimSpace(r.AgentID); string(id) != "null" {
 			e.agentID = string(id)
 		}
-		e.timestamp, e.source = str(m["timestamp"]), str(m["sourceToolAssistantUUID"])
-		e.message = m["message"]
 		e.readMessage()
 		out = append(out, e)
 	}
@@ -70,63 +64,26 @@ func parseEntries(data []byte) []*entry {
 
 // readMessage reads the message's id and its tool calls and results.
 func (e *entry) readMessage() {
-	var msg struct {
-		ID      json.RawMessage
-		Content json.RawMessage
-	}
+	var msg apiMessage
 	if json.Unmarshal(e.message, &msg) != nil {
 		return
 	}
 	if e.typ == "assistant" {
-		e.msgID = str(msg.ID)
+		e.msgID = string(msg.ID)
 	}
-	var blocks []json.RawMessage
-	if json.Unmarshal(msg.Content, &blocks) != nil {
-		return
-	}
-	for _, raw := range blocks {
-		var b struct {
-			Type, ID  json.RawMessage
-			ToolUseID json.RawMessage `json:"tool_use_id"`
-		}
-		if json.Unmarshal(raw, &b) != nil {
-			continue
-		}
-		switch str(b.Type) {
+	for _, b := range msg.Content {
+		switch b.Type {
 		case "tool_use":
-			if id, ok := isString(b.ID); ok {
-				e.calls = append(e.calls, id)
+			if b.ID.ok {
+				e.calls = append(e.calls, b.ID.val)
 			}
 		case "tool_result":
 			e.hasResult = true
-			if id, ok := isString(b.ToolUseID); ok {
-				e.answers = append(e.answers, id)
+			if b.ToolUseID.ok {
+				e.answers = append(e.answers, b.ToolUseID.val)
 			}
 		}
 	}
-}
-
-// isString returns raw's value when it is a JSON string.
-func isString(raw json.RawMessage) (string, bool) {
-	var s string
-	err := json.Unmarshal(raw, &s)
-	return s, err == nil && len(raw) > 0 && raw[0] == '"'
-}
-
-// str is raw's value when it is a JSON string, else "".
-func str(raw json.RawMessage) string {
-	s, _ := isString(raw)
-	return s
-}
-
-// truthy says raw is set to something, as Python's truth goes: not
-// absent, null, false, 0, "", [] or {}.
-func truthy(raw json.RawMessage) bool {
-	switch strings.Join(strings.Fields(string(raw)), "") {
-	case "", "null", "false", "0", `""`, "[]", "{}":
-		return false
-	}
-	return true
 }
 
 // chain returns the conversation as it stands: from the latest message of

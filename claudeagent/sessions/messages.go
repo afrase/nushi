@@ -1,6 +1,7 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/sessions.py), MIT License,
-// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE.
+// Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
+// as Go, records read into typed structs.
 
 package sessions
 
@@ -118,11 +119,14 @@ func (a *Subagent) readMeta() {
 	if err != nil {
 		return
 	}
-	var meta map[string]json.RawMessage
+	var meta struct {
+		ToolUseID     str `json:"toolUseId"`
+		ParentAgentID str `json:"parentAgentId"`
+	}
 	if json.Unmarshal(data, &meta) != nil {
 		return
 	}
-	a.ParentToolUseID, a.ParentAgentID = str(meta["toolUseId"]), str(meta["parentAgentId"])
+	a.ParentToolUseID, a.ParentAgentID = string(meta.ToolUseID), string(meta.ParentAgentID)
 }
 
 // SubagentMessages returns the messages of session id's subagent agentID,
