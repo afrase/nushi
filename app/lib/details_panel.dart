@@ -158,14 +158,52 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     }
   }
 
-  // Live with the chat (usage, subagents), not only when a turn ends.
+  // Live with the chat (usage, subagents), not only when a turn ends; and
+  // with its side chat coming and going (its line follows its usage).
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([chat, _pull]),
-    builder: (context, _) => _panel(),
+    listenable: Listenable.merge([chat, chat.side, _pull]),
+    builder: (context, _) => _panel(chat.side.value),
   );
 
-  Widget _panel() {
+  /// The Context widget's line for [side], the chat's side chat: its own
+  /// meter and cost, always under the chat's, so neither changes meaning
+  /// with the focus. What fills it isn't asked: the breakdown is the chat's.
+  (String, Object) _sideRow(ChatState side) => (
+    'Side chat',
+    ListenableBuilder(
+      listenable: side,
+      builder: (context, _) {
+        final theme = NushiTheme.of(context);
+        final t = theme.t;
+        final u = side.usage;
+        final spent = cost(u);
+        if (u.contextSize == 0 && spent.isEmpty) {
+          return Text(
+            'Not reported yet',
+            style: theme.ui(t.textMuted, size: 12),
+          );
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 10,
+          children: [
+            if (u.contextSize > 0)
+              Tooltip(
+                message:
+                    '${tokens(u.contextUsed.toInt())} / '
+                    '${tokens(u.contextSize.toInt())}',
+                child: ContextMeter(u),
+              ),
+            if (spent.isNotEmpty)
+              Text(spent, style: theme.ui(t.text, size: 12)),
+          ],
+        );
+      },
+    ),
+  );
+
+  Widget _panel(ChatState? side) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final u = chat.usage;
@@ -229,7 +267,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         title: 'Context',
         // Nothing to show yet: one line.
         note:
-            u.contextSize == 0 &&
+            side == null &&
+                u.contextSize == 0 &&
                 cost(u).isEmpty &&
                 lastTurn(u).isEmpty &&
                 _context == null &&
@@ -289,6 +328,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             ),
           if (cost(u).isNotEmpty)
             ('Cost', Text(cost(u), style: theme.ui(t.text, size: 12))),
+          if (side != null) _sideRow(side),
         ],
       ),
       PanelWidget(
