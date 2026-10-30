@@ -3,6 +3,7 @@ package claudeacp
 import (
 	"cmp"
 	"encoding/json"
+	"log/slog"
 	"slices"
 	"strings"
 	"sync"
@@ -34,6 +35,10 @@ const defaultValue = "default"
 
 // config is a session's modes and options as the client was last told.
 type config struct {
+	send     func(acp.SessionUpdate) // to the client, on the session
+	log      *slog.Logger
+	changing sync.Mutex // one change of the modes and options at a time, claude's answer included
+
 	mu        sync.Mutex
 	mode      claudeagent.PermissionMode
 	bypass    bool // bypassPermissions may be picked
@@ -208,68 +213,94 @@ func selectOption(id, name string, cat acp.SessionConfigOptionCategory, current 
 		Select: &acp.SessionConfigSelect{CurrentValue: acp.SessionConfigValueID(current), Options: acp.SessionConfigSelectOptions{Ungrouped: vs}}}
 }
 
-// sendOptions tells the client the whole set of options.
-func (s *session) sendOptions() {
-	s.cfg.mu.Lock()
-	opts := s.cfg.optionsLocked()
-	s.cfg.mu.Unlock()
-	s.update(acp.SessionUpdate{SessionUpdate: "config_option_update", ConfigOptionUpdate: &acp.ConfigOptionUpdate{ConfigOptions: opts}})
+// state is the session's modes and options, as a session's answer says
+// them.
+func (c *config) state() (*acp.SessionModeState, []acp.SessionConfigOption) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.modeStateLocked(), c.optionsLocked()
 }
 
-// sendMode tells the client the current mode.
-func (s *session) sendMode(mode claudeagent.PermissionMode) {
-	s.update(acp.SessionUpdate{SessionUpdate: "current_mode_update", CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: acp.SessionModeID(mode)}})
+// options are the session's config options, the whole set.
+func (c *config) options() []acp.SessionConfigOption {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.optionsLocked()
+}
+
+// sendOptions tells the client the whole set of options.
+func (c *config) sendOptions() {
+	c.send(acp.SessionUpdate{SessionUpdate: "config_option_update", ConfigOptionUpdate: &acp.ConfigOptionUpdate{ConfigOptions: c.options()}})
 }
 
 // modeChanged is claude in another mode, by its own doing or a plan's
 // approval: the client is told when it is news.
-func (s *session) modeChanged(mode claudeagent.PermissionMode) {
-	s.cfg.mu.Lock()
-	news := mode != "" && mode != s.cfg.mode
+func (c *config) modeChanged(mode claudeagent.PermissionMode) {
+	c.mu.Lock()
+	news := mode != "" && mode != c.mode
 	if news {
-		s.cfg.mode = mode
+		c.mode = mode
 	}
-	s.cfg.mu.Unlock()
+	c.mu.Unlock()
 	if news {
-		s.sendMode(mode)
-		s.sendOptions()
+		c.send(acp.SessionUpdate{SessionUpdate: "current_mode_update", CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: acp.SessionModeID(mode)}})
+		c.sendOptions()
 	}
+}
+
+// modelChanged follows claude's model, as a turn's system/init names it,
+// and says whether that changed the option. Only a model the list names
+// exactly counts: "opus" in a model's id may not be the default's model,
+// whose resolved model an older claude doesn't say.
+func (c *config) modelChanged(model string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if v, ok := c.lookup(model, c.model, false); ok && v != c.model {
+		c.model = v
+		return true
+	}
+	return false
+}
+
+// fastChanged follows claude's word on fast mode, "on" or "off"
+// ("cooldown" is a pause, not a change), and says whether it changed.
+func (c *config) fastChanged(state string) bool {
+	if state != "on" && state != "off" {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	on := state == "on"
+	news := on != c.fast
+	c.fast = on
+	return news
+}
+
+// currentModel is the current model's info (nil when claude listed none) and
+// the option's value.
+func (c *config) currentModel() (*claudeagent.ModelInfo, string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.modelInfo(), c.model
 }
 
 // followInit follows what a turn's system/init says of the model, mode
 // and fast mode; the client is told of what changed.
 func (s *session) followInit(m *claudeagent.SystemInit) {
-	s.modeChanged(m.PermissionMode)
-	c := &s.cfg
-	c.mu.Lock()
-	news := false
-	// Only a model the list names exactly: "opus" in a model's id may not
-	// be the default's model, whose resolved model an older claude doesn't
-	// say.
-	if v, ok := c.lookup(m.Model, c.model, false); ok && v != c.model {
-		c.model, news = v, true
-	}
-	c.mu.Unlock()
+	s.cfg.modeChanged(m.PermissionMode)
+	news := s.cfg.modelChanged(m.Model)
 	if s.fastState(m.FastModeState, "") || news {
-		s.sendOptions()
+		s.cfg.sendOptions()
 	}
 }
 
-// fastState follows claude's word on fast mode: "on" or "off" ("cooldown"
-// is a pause, not a change). Turned off for a reason, the user is told
-// why. It says whether fast mode changed.
+// fastState follows claude's word on fast mode (config.fastChanged).
+// Turned off for a reason, the user is told why. It says whether fast
+// mode changed.
 func (s *session) fastState(state, why string) bool {
-	if state != "on" && state != "off" {
-		return false
-	}
-	c := &s.cfg
-	c.mu.Lock()
-	on := state == "on"
-	news := on != c.fast
-	c.fast = on
-	c.mu.Unlock()
+	news := s.cfg.fastChanged(state)
 	switch {
-	case !news || on || why == "":
+	case !news || state == "on" || why == "":
 	case s.a.clientCaps().notices:
 		s.update(acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: acp.NoticeSeverityWarning, Title: "Fast mode turned off: " + why}})
 	default: // the shape claude-agent-acp gives it, as the model fallback's

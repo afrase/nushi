@@ -85,7 +85,7 @@ func (s *session) result(r *claudeagent.Result) {
 		login: s.st.login || r.IsError && strings.Contains(r.Result, "Please run /login")}
 	s.st.local, s.st.refused, s.st.login, s.st.counted = false, "", false, false
 	if s.fastState(r.FastModeState, r.FastModeDisabledReason) {
-		s.sendOptions()
+		s.cfg.sendOptions()
 	}
 	s.mu.Lock()
 	s.resultLocked(r, end)

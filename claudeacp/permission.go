@@ -45,7 +45,7 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	var opts []acp.PermissionOption
 	switch r.ToolName {
 	case "ExitPlanMode":
-		opts = s.exitPlanOptions()
+		opts = s.cfg.exitPlanOptions()
 	case "EnterPlanMode":
 		opts = enterPlanOptions
 	default:

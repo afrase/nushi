@@ -120,9 +120,7 @@ func modelID(m *claudeagent.ModelInfo, value string) string {
 // changes: the cache's, else a guess from the model's names (fallback
 // when they say nothing), and asks claude when it isn't sure.
 func (s *session) seedWindow(ctx context.Context, fallback int) {
-	s.cfg.mu.Lock()
-	m, value := s.cfg.modelInfo(), s.cfg.model
-	s.cfg.mu.Unlock()
+	m, value := s.cfg.currentModel()
 	w := &s.win
 	w.mu.Lock()
 	w.gen++
