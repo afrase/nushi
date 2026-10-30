@@ -70,7 +70,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	switch {
 	case err != nil:
 	case fresh:
-		o, err = c.openSession(ctx, "", folder, false)
+		o, err = c.openSession(ctx, "", folder, false, "")
 	default:
 		o, err = s.fork(ctx, c, sid, from, folder)
 	}
@@ -175,7 +175,7 @@ func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (open
 			c.log().Warn("removing the history copied for the move", "old", sid, "to", to, "err", err)
 		}
 	}()
-	return c.openSession(ctx, sid, to, true)
+	return c.openSession(ctx, sid, to, true, "")
 }
 
 // inUse says whether something but chat c runs in dir: another chat, or a

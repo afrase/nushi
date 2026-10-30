@@ -109,6 +109,8 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	p.mu.Lock()
 	agent, sid, folder := p.agent, p.sid, p.record.Folder
 	can := p.canFork && p.parent == nil
+	base, _ := p.finishedLocked() // the side chat forks the whole session
+	lastItem := p.lastItem        // the side chat's own items come after
 	p.mu.Unlock()
 	if agent == nil || !can {
 		return "", errors.New("the agent can't fork this chat")
@@ -125,7 +127,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		return "", ctx.Err()
 	}
 	side := s.newChat(p.kind)
-	side.id, side.agent, side.parent = id, agent, p
+	side.id, side.agent, side.parent, side.base, side.lastItem = id, agent, p, base, lastItem
 	side.sid, side.canImage = side.id, p.canImage
 	side.record = model.ChatRecord{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side chat", Created: time.Now()}
 	p.mu.Lock()
@@ -155,8 +157,12 @@ func (s *Service) CloseSide(id string) error {
 	delete(s.chats, id)
 	s.mu.Unlock()
 	c.parent.mu.Lock()
+	mine := c.parent.sides[id] == c
 	delete(c.parent.sides, id)
 	c.parent.mu.Unlock()
+	if !mine {
+		return nil // kept (KeepSide) or dropped (dropSides) meanwhile: theirs
+	}
 	c.log().Info("side chat closed")
 	c.mu.Lock()
 	_ = c.cancelLocked() // the agent may be gone already

@@ -58,9 +58,12 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	sess := c.record
 	c.mu.Unlock()
 	p := DeletePlan{Sessions: append(slices.Clone(sess.Earlier), model.AgentSession{ID: sess.SessionID, Folder: sess.Folder})}
-	// Only the folder Nushi made for the chat, never one the user picked.
-	if fi, err := os.Lstat(filepath.Join(s.scratch, c.id)); err == nil && fi.IsDir() {
-		p.Scratch = filepath.Join(s.scratch, c.id)
+	// Only the folder Nushi made for the chat, never one the user picked,
+	// nor one a fork of the chat works in (ADR 0067).
+	if dir := filepath.Join(s.scratch, c.id); !s.othersWorkIn(c, dir) {
+		if fi, err := os.Lstat(dir); err == nil && fi.IsDir() {
+			p.Scratch = dir
+		}
 	}
 	for _, wt := range made(sess) {
 		st, stErr := s.worktrees.Inspect(ctx, wt)
@@ -83,6 +86,13 @@ func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, er
 	}
 	p.History = *known
 	return p, nil
+}
+
+// othersWorkIn says whether a chat but c, archived or not, has its folder
+// in dir; when the chats can't be read, that one might.
+func (s *Service) othersWorkIn(c *chat, dir string) bool {
+	stored, err := s.sessions.Sessions()
+	return err != nil || slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID != c.id && within(sess.Folder, dir) })
 }
 
 // startDeleter starts the chat's agent with no session, to delete sessions
