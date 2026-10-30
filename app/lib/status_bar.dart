@@ -218,9 +218,11 @@ class _MemoryButton extends StatelessWidget {
       menuChildren: [
         for (final (c, n) in chats) row(label(c.shownTitle), n, chat: c),
         if (chats.isNotEmpty) const Divider(height: 9),
+        // Apart: one large number for both read as the daemon's.
+        if (m.app > 0) row(label('Nushi app'), m.app.toInt()),
         row(
-          label('Nushi', 'daemon and app'),
-          nushi,
+          label('Nushi daemon'),
+          m.daemon.toInt(),
           action: bundledDaemon == null
               ? null
               : Button(
