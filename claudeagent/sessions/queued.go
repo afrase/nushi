@@ -51,12 +51,12 @@ func QueuedPrompts(configDir, id, cwd string) ([]Queued, error) {
 		case e.typ == "attachment":
 			var rec struct {
 				Attachment struct {
-					Type   string          `json:"type"`
-					Prompt json.RawMessage `json:"prompt"`
+					Type   string     `json:"type"`
+					Prompt promptText `json:"prompt"`
 				} `json:"attachment"`
 			}
 			if json.Unmarshal(e.raw, &rec) == nil && rec.Attachment.Type == "queued_command" {
-				if p := promptText(rec.Attachment.Prompt); p != "" {
+				if p := string(rec.Attachment.Prompt); p != "" {
 					out = append(out, Queued{Prompt: p, After: last})
 				}
 			}
@@ -74,14 +74,14 @@ func stillQueued(data []byte) []string {
 	var queue []string
 	for line := range bytes.SplitSeq(data, []byte("\n")) {
 		var rec struct {
-			Type      string          `json:"type"`
-			Operation string          `json:"operation"`
-			Content   json.RawMessage `json:"content"`
+			Type      string     `json:"type"`
+			Operation string     `json:"operation"`
+			Content   promptText `json:"content"`
 		}
 		if json.Unmarshal(bytes.TrimSpace(line), &rec) != nil || rec.Type != "queue-operation" {
 			continue
 		}
-		content := promptText(rec.Content)
+		content := string(rec.Content)
 		switch rec.Operation {
 		case "enqueue":
 			queue = append(queue, content)
@@ -99,16 +99,25 @@ func stillQueued(data []byte) []string {
 }
 
 // promptText is a queued prompt's text: a string, or the text of its
-// content blocks.
-func promptText(raw json.RawMessage) string {
-	if s, ok := isString(raw); ok {
+// content blocks; "" when it is neither.
+type promptText string
+
+// UnmarshalJSON reads data's text; it never fails.
+func (p *promptText) UnmarshalJSON(data []byte) error {
+	*p = promptText(textOf(data))
+	return nil
+}
+
+// textOf is a prompt's text, as promptText reads it.
+func textOf(data []byte) string {
+	if s, ok := stringOf(data); ok {
 		return s
 	}
 	var blocks []struct {
 		Type string `json:"type"`
 		Text string `json:"text"`
 	}
-	if json.Unmarshal(raw, &blocks) != nil {
+	if json.Unmarshal(data, &blocks) != nil {
 		return ""
 	}
 	var b strings.Builder

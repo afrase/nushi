@@ -43,34 +43,21 @@ func parseObject(data []byte) (*object, error) {
 	return o, nil
 }
 
-// ordered makes an object of key-value pairs, in that order.
-func ordered(kv ...any) *object {
-	o := &object{vals: map[string]json.RawMessage{}}
-	for i := 0; i+1 < len(kv); i += 2 {
-		key, _ := kv[i].(string)
-		o.set(key, kv[i+1])
-	}
-	return o
-}
-
-// encode is ordered(kv...) as a line of JSON.
-func encode(kv ...any) string { return string(ordered(kv...).encode()) }
-
 func (o *object) put(key string, v json.RawMessage) {
-	if _, ok := o.vals[key]; !ok {
+	if !o.has(key) {
 		o.keys = append(o.keys, key)
 	}
 	o.vals[key] = v
 }
 
-// set sets key to v, in its place when the object has it, else last.
-func (o *object) set(key string, v any) {
-	if inner, ok := v.(*object); ok {
-		o.put(key, inner.encode())
-		return
-	}
-	o.put(key, marshal(v))
+// has says the object has key, whatever its value.
+func (o *object) has(key string) bool {
+	_, ok := o.vals[key]
+	return ok
 }
+
+// set sets key to v, in its place when the object has it, else last.
+func (o *object) set(key string, v any) { o.put(key, marshal(v)) }
 
 func (o *object) remove(key string) {
 	if _, ok := o.vals[key]; !ok {
@@ -110,10 +97,7 @@ func marshal(v any) json.RawMessage {
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
 	if err := enc.Encode(v); err != nil {
-		return json.RawMessage("null") // never: only strings, objects and values read as JSON
+		return json.RawMessage("null") // never: only strings, structs of them and values read as JSON
 	}
 	return bytes.TrimSuffix(b.Bytes(), []byte("\n"))
 }
-
-// unmarshalOK decodes raw into v and says whether it could.
-func unmarshalOK(raw json.RawMessage, v any) bool { return json.Unmarshal(raw, v) == nil }

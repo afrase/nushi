@@ -8,7 +8,10 @@ func TestObjectKeepsTheRecord(t *testing.T) {
 		t.Fatal(err)
 	}
 	o.set("a", "new <a>")
-	o.set("z", ordered("k", 1, "j", nil))
+	o.set("z", struct {
+		K int `json:"k"`
+		J any `json:"j"`
+	}{1, nil})
 	o.remove("c")
 	o.remove("missing")
 	if got, want := string(o.encode()), `{"type":"user","b":3,"a":"new <a>","z":{"k":1,"j":null}}`; got != want {
@@ -19,7 +22,8 @@ func TestObjectKeepsTheRecord(t *testing.T) {
 			t.Errorf("parseObject(%q) took it", bad)
 		}
 	}
-	if got := encode("type", "tag", "tag", "a&b"); got != `{"type":"tag","tag":"a&b"}` {
-		t.Errorf("encode = %s", got)
+	if got := string(marshal(titleRecord{Type: "custom-title", CustomTitle: "a&b"})); got !=
+		`{"type":"custom-title","sessionId":"","customTitle":"a&b","uuid":"","timestamp":""}` {
+		t.Errorf("marshal = %s", got)
 	}
 }
