@@ -108,10 +108,14 @@ func (s *session) findTitle() string {
 	if !ask {
 		return ""
 	}
+	req := struct {
+		Description string `json:"description"`
+		Persist     bool   `json:"persist"` // claude keeps it in the transcript
+	}{text, true}
 	var r struct {
 		Title *string `json:"title"`
 	}
-	err := s.cs.Request(s.a.ctx, "generate_session_title", map[string]any{"description": text, "persist": true}, &r)
+	err := s.cs.Request(s.a.ctx, "generate_session_title", req, &r)
 	if err != nil || r.Title == nil {
 		s.log.Info("no title from claude", "err", err)
 		return ""
