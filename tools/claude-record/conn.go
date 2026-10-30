@@ -111,9 +111,34 @@ func (c *conn) record(dir string, line []byte) {
 	_, _ = c.rec.Write(append(b, '\n'))
 }
 
-// send writes m to the agent, and records it.
-func (c *conn) send(m map[string]any) error {
-	m["jsonrpc"] = "2.0"
+// The JSON-RPC messages the recorder sends: a request, a notification,
+// and an answer to the agent's request. Their fields are in the order
+// of their names, as the recordings have them.
+type (
+	request struct {
+		ID      int    `json:"id"`
+		JSONRPC string `json:"jsonrpc"`
+		Method  string `json:"method"`
+		Params  any    `json:"params"`
+	}
+	notification struct {
+		JSONRPC string `json:"jsonrpc"`
+		Method  string `json:"method"`
+		Params  any    `json:"params"`
+	}
+	answer struct {
+		ID      json.RawMessage `json:"id"`
+		JSONRPC string          `json:"jsonrpc"`
+		Result  any             `json:"result"`
+	}
+)
+
+// jsonrpc is the version every message says.
+const jsonrpc = "2.0"
+
+// send writes m, one of the messages above, to the agent, and records
+// it.
+func (c *conn) send(m any) error {
 	b, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -133,12 +158,12 @@ func (c *conn) call(method string, params any) (<-chan msg, error) {
 	ch := make(chan msg, 1)
 	c.pending[id] = ch
 	c.mu.Unlock()
-	return ch, c.send(map[string]any{"id": c.next, "method": method, "params": params})
+	return ch, c.send(request{ID: c.next, JSONRPC: jsonrpc, Method: method, Params: params})
 }
 
 // notify sends a notification.
 func (c *conn) notify(method string, params any) error {
-	return c.send(map[string]any{"method": method, "params": params})
+	return c.send(notification{JSONRPC: jsonrpc, Method: method, Params: params})
 }
 
 // await waits for an answer to a call, up to timeout, until the agent's

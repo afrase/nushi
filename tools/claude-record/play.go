@@ -349,15 +349,15 @@ func (p *player) answer(ctx context.Context, s *step) error {
 	default:
 		return errors.New("an answer needs an option or a result")
 	}
-	return p.c.send(map[string]any{"id": m.ID, "result": result})
+	return p.c.send(answer{ID: m.ID, JSONRPC: jsonrpc, Result: result})
 }
 
 // permission is the answer to a permission request choosing option: an
 // option's kind (allow_once, allow_always, reject_once…) or id, or
 // "cancelled".
-func permission(m msg, option string) (any, error) {
+func permission(m msg, option string) (*acp.RequestPermissionResponse, error) {
 	if option == "cancelled" {
-		return map[string]any{"outcome": map[string]any{"outcome": "cancelled"}}, nil
+		return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Cancelled: true}}, nil
 	}
 	var req struct {
 		Options []struct {
@@ -370,7 +370,8 @@ func permission(m msg, option string) (any, error) {
 	}
 	for _, o := range req.Options {
 		if o.Kind == option || o.OptionID == option {
-			return map[string]any{"outcome": map[string]any{"outcome": "selected", "optionId": o.OptionID}}, nil
+			return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{
+				Selected: &acp.SelectedPermissionOutcome{OptionID: acp.PermissionOptionID(o.OptionID)}}}, nil
 		}
 	}
 	return nil, fmt.Errorf("the request has no option %q: %s", option, m.Params)
