@@ -63,7 +63,7 @@ type report struct {
 	content             []acp.ToolCallContent
 	locations           []acp.ToolCallLocation
 	rawInput, rawOutput json.RawMessage
-	meta                map[string]any // _meta.claudeCode's keys beyond the tool's name and parent
+	response            json.RawMessage // _meta.claudeCode.toolResponse: the tool's whole response, when known
 }
 
 // sendLocked tells the client of t: the whole call the first time, then
@@ -95,15 +95,10 @@ func (s *session) sendLocked(t *tool, r report) {
 		}
 		t.sent[k] = string(b)
 	}
-	if !first && len(fields) == 0 && len(r.meta) == 0 {
+	if !first && len(fields) == 0 && r.response == nil {
 		return
 	}
-	cc := map[string]any{"toolName": t.name}
-	if t.parent != "" {
-		cc["parentToolUseId"] = t.parent
-	}
-	maps.Copy(cc, r.meta)
-	meta := map[string]any{"claudeCode": cc}
+	meta := claudeCodeMeta{ToolName: t.name, ParentToolUseID: t.parent, ToolResponse: r.response}.meta()
 	has := func(k string) bool { _, ok := fields[k]; return ok }
 	pick := func(ok bool, v json.RawMessage) json.RawMessage {
 		if ok {
@@ -283,9 +278,12 @@ func (s *session) toolDenied(m *claudeagent.PermissionDenied) {
 	}
 	t.ended = true
 	reason := cmp.Or(m.Message, m.DecisionReason)
-	s.sendLocked(t, report{status: acp.ToolCallStatusFailed, content: texts("Permission denied: " + reason),
-		meta: map[string]any{"toolResponse": map[string]any{
-			"decisionReasonType": m.DecisionReasonType, "decisionReason": m.DecisionReason, "message": m.Message}}})
+	response, _ := json.Marshal(struct {
+		DecisionReasonType string `json:"decisionReasonType"`
+		DecisionReason     string `json:"decisionReason"`
+		Message            string `json:"message"`
+	}{m.DecisionReasonType, m.DecisionReason, m.Message})
+	s.sendLocked(t, report{status: acp.ToolCallStatusFailed, content: texts("Permission denied: " + reason), response: response})
 }
 
 // Why the calls still open end.

@@ -181,11 +181,16 @@ func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*
 // uuid, with any ":segment:N" claude-agent-acp's clients add taken off.
 // "" keeps the whole conversation.
 func forkAt(meta map[string]any) string {
-	jb, _ := meta["jetbrains"].(map[string]any)
-	air, _ := jb["air"].(map[string]any)
-	fork, _ := air["fork"].(map[string]any)
-	id, _ := fork["messageId"].(string)
-	id, _, _ = strings.Cut(id, ":segment:")
+	m := readMeta[struct {
+		JetBrains struct {
+			Air struct {
+				Fork struct {
+					MessageID string `json:"messageId"`
+				} `json:"fork"`
+			} `json:"air"`
+		} `json:"jetbrains"`
+	}](meta)
+	id, _, _ := strings.Cut(m.JetBrains.Air.Fork.MessageID, ":segment:")
 	return id
 }
 

@@ -24,14 +24,13 @@ func (s *session) postToolUse(ctx context.Context, in claudeagent.HookInput) (cl
 	case in.ToolName == "EnterPlanMode": // claude is in plan mode now
 		s.modeChanged(claudeagent.Plan)
 	}
-	var resp any
-	if json.Unmarshal(in.ToolResponse, &resp) != nil {
+	if !json.Valid(in.ToolResponse) {
 		return claudeagent.HookOutput{}, nil
 	}
 	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	r := report{meta: map[string]any{"toolResponse": resp}}
+	r := report{response: in.ToolResponse}
 	if in.ToolName == "Edit" || in.ToolName == "Write" {
 		if path, diffs := patched(in.ToolResponse); len(diffs) > 0 {
 			r.content, r.locations = diffs, at(path, nil)

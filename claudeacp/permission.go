@@ -96,16 +96,13 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 		t = s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
 	}
 	v := toolView(t.name, input, ts.cwd)
-	cc := map[string]any{"toolName": t.name}
-	if t.parent != "" {
-		cc["parentToolUseId"] = t.parent
-	}
+	cc := claudeCodeMeta{ToolName: t.name, ParentToolUseID: t.parent}
 	if r.MCPServer != "" {
-		cc["mcpServer"] = map[string]any{"name": r.MCPServer}
+		cc.MCPServer = &serverName{r.MCPServer}
 	}
 	return acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(t.id), Name: t.name, Status: acp.ToolCallStatusPending,
 		Title: v.title, Kind: v.kind, Content: v.content, Locations: v.locations, RawInput: input,
-		Meta: map[string]any{"claudeCode": cc}}
+		Meta: cc.meta()}
 }
 
 // permissionOptions are Yes and No, and between them the "don't ask
