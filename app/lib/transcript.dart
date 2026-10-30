@@ -84,6 +84,11 @@ class Transcript extends StatefulWidget {
   /// page then); what shows stays put as items come in above it.
   final VoidCallback? onTop;
 
+  /// The entries a transcript's first frame builds, and how many more
+  /// each frame after it adds, while it fills in.
+  static const firstEntries = 12;
+  static const moreEntries = 24;
+
   @override
   State<Transcript> createState() => _TranscriptState();
 }
@@ -116,6 +121,27 @@ class _TranscriptState extends State<Transcript> {
   // the list moves down by their height, so what shows stays put.
   String? _first;
 
+  /// How many of the last entries are built, while the transcript fills
+  /// in; null once all of it is. A chat opens at its bottom, so its first
+  /// frame builds only what shows there and the rest comes in above it
+  /// over the next frames: a click on a long chat shows at once
+  /// (ADR 0026). One opening at the top (a finished subagent's) builds
+  /// all of it.
+  int? _tail;
+  bool _growing = false;
+
+  /// Builds [Transcript.moreEntries] more after this frame.
+  void _grow() {
+    if (_growing) return;
+    _growing = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _growing = false;
+      if (mounted && _tail != null) {
+        setState(() => _tail = _tail! + Transcript.moreEntries);
+      }
+    });
+  }
+
   // The entries' keys at the last build, once the chat had loaded: what
   // comes in after them rises in. Not what a load or an older page brings.
   List<String>? _shown;
@@ -147,8 +173,8 @@ class _TranscriptState extends State<Transcript> {
     return _follower.onNotification(n);
   }
 
-  void _keepPlace(List<Object> entries) {
-    if (widget.onTop == null || entries.isEmpty) return;
+  void _keepPlace(List<Object> entries, {required bool filling}) {
+    if (widget.onTop == null && !filling || entries.isEmpty) return;
     final was = _first;
     final first = _first = _keyOf(entries.first);
     if (was == null || was == first || !_follower.scroll.hasClients) return;
@@ -265,6 +291,7 @@ class _TranscriptState extends State<Transcript> {
     super.initState();
     // A finished subagent's steps open at the top, at its prompt.
     if (widget.items != null && !widget.live) _follower.following = false;
+    if (_follower.following) _tail = Transcript.firstEntries;
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
   }
 
@@ -276,6 +303,9 @@ class _TranscriptState extends State<Transcript> {
     if (old.chat == widget.chat &&
         (old.items == null) == (widget.items == null)) {
       return;
+    }
+    if (old.chat != widget.chat && _follower.following) {
+      _tail = Transcript.firstEntries;
     }
     old.chat.find.removeListener(_findChanged);
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
@@ -394,7 +424,15 @@ class _TranscriptState extends State<Transcript> {
     final entries = _entries(widget.items ?? chat.items);
     final hits = _hits(entries);
     final current = hits.isEmpty ? null : chat.find.current;
-    _keepPlace(entries);
+    // While it fills in, the entries above what's built wait.
+    final tail = _tail;
+    final from = tail == null ? 0 : max(0, entries.length - tail);
+    if (from > 0) {
+      _grow();
+    } else if (widget.items != null || chat.loaded) {
+      _tail = null;
+    }
+    _keepPlace(entries.sublist(from), filling: tail != null);
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
@@ -453,7 +491,7 @@ class _TranscriptState extends State<Transcript> {
                       children: [
                         if (widget.header case final h?)
                           Padding(padding: _sides, child: h),
-                        for (final (i, e) in entries.indexed)
+                        for (final (i, e) in entries.indexed.skip(from))
                           _entry(
                             before,
                             e,
