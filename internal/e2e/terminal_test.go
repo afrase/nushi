@@ -3,8 +3,10 @@ package e2e
 import (
 	"context"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,7 +18,19 @@ import (
 	"github.com/afrase/nushi/internal/terminal"
 )
 
+// A terminal's shell inherits the daemon's ignored signals, and a test
+// binary started in the background by a script has SIGINT ignored, so a
+// terminal's ^C wouldn't reach its command. nushid handles SIGINT (serve's
+// signal.Notify), which un-ignores it for what it starts; the test binary
+// stands in for nushid, and was ignoring SIGINT itself anyway.
+var handleInterrupt = sync.OnceFunc(func() {
+	if signal.Ignored(os.Interrupt) {
+		signal.Notify(make(chan os.Signal, 1), os.Interrupt)
+	}
+})
+
 func startSh(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
+	handleInterrupt()
 	return terminal.Start([]string{"/bin/sh"}, folder, []string{"PS1=$ ", "TERM=xterm-256color"}, cols, rows, changed)
 }
 
