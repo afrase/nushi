@@ -392,7 +392,7 @@ func TestStartTransport(t *testing.T) {
 		_, in := io.Pipe()
 		return &Proc{
 			Stdin: in, Stdout: io.NopCloser(strings.NewReader("")), Stderr: io.NopCloser(strings.NewReader("")),
-			Wait: func() error { return nil }, Signal: func(os.Signal) error { return os.ErrProcessDone },
+			Process: exitedProcess{},
 		}, nil
 	}})
 	if err != nil {
@@ -403,3 +403,9 @@ func TestStartTransport(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// exitedProcess is a claude that has exited with 0.
+type exitedProcess struct{}
+
+func (exitedProcess) Wait() error            { return nil }
+func (exitedProcess) Signal(os.Signal) error { return os.ErrProcessDone }

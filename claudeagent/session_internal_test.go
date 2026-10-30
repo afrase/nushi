@@ -37,6 +37,21 @@ func (w *stdin) written() []string {
 	return append([]string(nil), w.lines...)
 }
 
+// untilStdinCloses is a claude that exits once its stdin closes.
+type untilStdinCloses struct {
+	in          *stdin
+	out, errOut io.Closer
+}
+
+func (p *untilStdinCloses) Wait() error {
+	<-p.in.closed
+	_ = p.out.Close()
+	_ = p.errOut.Close()
+	return nil
+}
+
+func (p *untilStdinCloses) Signal(os.Signal) error { return nil }
+
 // A request claude sends before initialize is answered only once
 // initialize is written: claude takes its first stdin line for the
 // session's start. Start writes initialize before the request is read,
@@ -46,16 +61,7 @@ func TestWritesWaitForInitialize(t *testing.T) {
 		in := &stdin{closed: make(chan struct{})}
 		outR, outW := io.Pipe()
 		errR, errW := io.Pipe()
-		p := &Proc{
-			Stdin: in, Stdout: outR, Stderr: errR,
-			Wait: func() error { // claude exits once its stdin closes
-				<-in.closed
-				_ = outW.Close()
-				_ = errW.Close()
-				return nil
-			},
-			Signal: func(os.Signal) error { return nil },
-		}
+		p := &Proc{Stdin: in, Stdout: outR, Stderr: errR, Process: &untilStdinCloses{in, outW, errW}}
 		s := newSession(t.Context(), newTransport(p, Options{}), Options{}, nil)
 		t.Cleanup(func() { _ = s.Close() }) // in the bubble, which ends with no goroutine left
 		if _, err := io.WriteString(outW, `{"type":"control_request","request_id":"early","request":{"subtype":"ping"}}`+"\n"); err != nil {

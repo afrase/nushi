@@ -158,85 +158,99 @@ func decodeAnswer(subtype string, payload json.RawMessage, v any) error {
 // payload, a *ControlError for an error answer, or ErrClosed once the
 // session has ended. A request ctx gives up on is withdrawn.
 func (s *Session) request(ctx context.Context, body requestBody, timeout bool) (json.RawMessage, error) {
-	wait, err := s.begin(ctx, body, timeout)
+	c, err := s.begin(ctx, body, timeout)
 	if err != nil {
 		return nil, err
 	}
-	return wait()
+	return c.answer()
+}
+
+// Call is a request of ours that has been written and waits for its
+// answer: Begin's.
+type Call struct {
+	s       *Session
+	ctx     context.Context //nolint:containedctx // the request's: Wait gives up, and withdraws it, when it ends
+	id      string
+	subtype string
+	ch      chan reply
+	timeout bool
 }
 
 // begin writes claude a request, as request does, and returns once it is
-// written; wait waits for the answer, and must be called once.
-func (s *Session) begin(ctx context.Context, body requestBody, timeout bool) (wait func() (json.RawMessage, error), err error) {
-	subtype := body.subtype()
-	id := s.newRequestID()
-	ch := make(chan reply, 1)
+// written; the Call's answer must then be waited for, once.
+func (s *Session) begin(ctx context.Context, body requestBody, timeout bool) (*Call, error) {
+	c := &Call{s: s, ctx: ctx, id: s.newRequestID(), subtype: body.subtype(), ch: make(chan reply, 1), timeout: timeout}
 	s.mu.Lock()
 	if s.endErr != nil {
 		s.mu.Unlock()
 		return nil, s.endErr
 	}
-	s.pending[id] = ch
+	s.pending[c.id] = c.ch
 	s.mu.Unlock()
-	forget := func() {
-		s.mu.Lock()
-		delete(s.pending, id)
-		s.mu.Unlock()
-	}
-	frame := controlRequestLine{Type: "control_request", RequestID: id, Request: body}
-	if subtype == "initialize" && !s.initWritten() {
+	frame := controlRequestLine{Type: "control_request", RequestID: c.id, Request: body}
+	var err error
+	if c.subtype == "initialize" && !s.initWritten() {
 		err = s.t.write(frame)
 		s.initDone()
 	} else {
 		err = s.write(ctx, frame)
 	}
 	if err != nil {
-		forget()
+		c.forget()
 		return nil, err
 	}
-	return func() (json.RawMessage, error) {
-		defer forget()
-		var expired <-chan time.Time
-		if timeout {
-			expired = s.after(requestTimeout)
+	return c, nil
+}
+
+// forget stops waiting for c's answer: one that comes now is dropped.
+func (c *Call) forget() {
+	c.s.mu.Lock()
+	delete(c.s.pending, c.id)
+	c.s.mu.Unlock()
+}
+
+// answer waits for c's answer and returns its payload, as request does.
+func (c *Call) answer() (json.RawMessage, error) {
+	defer c.forget()
+	var expired <-chan time.Time
+	if c.timeout {
+		expired = c.s.after(requestTimeout)
+	}
+	select {
+	case r := <-c.ch:
+		if ce, ok := errors.AsType[*ControlError](r.err); ok {
+			ce.Subtype = c.subtype
 		}
-		select {
-		case r := <-ch:
-			if ce, ok := errors.AsType[*ControlError](r.err); ok {
-				ce.Subtype = subtype
-			}
-			return r.payload, r.err
-		case <-ctx.Done():
-			s.withdraw(ctx, id)
-			return nil, fmt.Errorf("claudeagent: %s: %w", subtype, ctx.Err())
-		case <-expired:
-			s.withdraw(ctx, id)
-			return nil, fmt.Errorf("claudeagent: claude didn't answer %s in %s: %w", subtype, requestTimeout, context.DeadlineExceeded)
-		}
-	}, nil
+		return r.payload, r.err
+	case <-c.ctx.Done():
+		c.s.withdraw(c.ctx, c.id)
+		return nil, fmt.Errorf("claudeagent: %s: %w", c.subtype, c.ctx.Err())
+	case <-expired:
+		c.s.withdraw(c.ctx, c.id)
+		return nil, fmt.Errorf("claudeagent: claude didn't answer %s in %s: %w", c.subtype, requestTimeout, context.DeadlineExceeded)
+	}
+}
+
+// Wait waits for the answer as Request does and decodes it into resp
+// (when not nil). Call it once.
+func (c *Call) Wait(resp any) error {
+	payload, err := c.answer()
+	if err != nil {
+		return err
+	}
+	return decodeAnswer(c.subtype, payload, resp)
 }
 
 // Begin sends claude a request as Request does, but returns once it is
-// written; wait waits for the answer as Request does and decodes it into
-// resp (when not nil). Requests begun one after another reach claude in
-// that order, which requests made on goroutines of their own don't. Call
-// wait once.
-func (s *Session) Begin(ctx context.Context, subtype string, req any) (wait func(resp any) error, err error) {
+// written; the Call's Wait waits for the answer. Requests begun one after
+// another reach claude in that order, which requests made on goroutines
+// of their own don't.
+func (s *Session) Begin(ctx context.Context, subtype string, req any) (*Call, error) {
 	body, err := newRawRequest(subtype, req)
 	if err != nil {
 		return nil, err
 	}
-	w, err := s.begin(ctx, body, true)
-	if err != nil {
-		return nil, err
-	}
-	return func(resp any) error {
-		payload, err := w()
-		if err != nil {
-			return err
-		}
-		return decodeAnswer(subtype, payload, resp)
-	}, nil
+	return s.begin(ctx, body, true)
 }
 
 // withdraw tells claude a request of ours is no longer wanted. It goes

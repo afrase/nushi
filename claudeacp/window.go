@@ -151,14 +151,14 @@ func (s *session) seedWindow(ctx context.Context, fallback int) {
 func (s *session) askWindow(ctx context.Context, gen int) {
 	// The answer outlives the request that asked: the session's end ends
 	// the wait.
-	wait, err := s.cs.Begin(context.WithoutCancel(ctx), "get_context_usage", map[string]any{"detail": "summary"})
+	call, err := s.cs.Begin(context.WithoutCancel(ctx), "get_context_usage", map[string]any{"detail": "summary"})
 	if err != nil {
 		s.log.Debug("asking claude for the context window", "err", err)
 		return
 	}
 	go func() {
 		var u claudeagent.ContextUsage
-		if err := wait(&u); err != nil {
+		if err := call.Wait(&u); err != nil {
 			s.log.Debug("reading the context window", "err", err)
 			return
 		}

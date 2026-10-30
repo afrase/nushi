@@ -83,11 +83,11 @@ func TestBegin(t *testing.T) {
 	var r struct {
 		StillQueued []string `json:"still_queued"`
 	}
-	if err := stop(&r); err != nil || r.StillQueued == nil {
+	if err := stop.Wait(&r); err != nil || r.StillQueued == nil {
 		t.Fatalf("%v %+v", err, r)
 	}
 	cancel() // the first is never answered: it gives up, withdrawn
-	if err := drop(nil); !errors.Is(err, context.Canceled) {
+	if err := drop.Wait(nil); !errors.Is(err, context.Canceled) {
 		t.Fatalf("%v", err)
 	}
 	if m, ok := next(t, s).(*claudeagent.Status); !ok || m.Status != "idle" {
