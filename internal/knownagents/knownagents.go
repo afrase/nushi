@@ -73,7 +73,7 @@ func All(projects string) []Agent {
 			Agent: agents.Agent{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
 				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
 			Chats: chats.Kind{Resume: "claude --resume", Gone: chats.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
-				Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
+				Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice, Interrupted: claude.Interrupted,
 					Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 					BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
 					SubagentID: claude.SubagentID, ToSubagent: claude.ToSubagent, ReadToSubagent: claude.ReadToSubagent, PassesToSubagent: claude.PassesToSubagent,

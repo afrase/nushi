@@ -22,7 +22,7 @@ import (
 // left off on purpose: the fake never titles a session, so a worktree's
 // branch is named after the first turn instead of waiting one more for a
 // title (branch.go). A test of another agent's shape sets its own.
-var testDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice,
+var testDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice, Interrupted: claude.Interrupted,
 	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 	BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
 	SubagentID: claude.SubagentID, ToSubagent: claude.ToSubagent, ReadToSubagent: claude.ReadToSubagent, PassesToSubagent: claude.PassesToSubagent,

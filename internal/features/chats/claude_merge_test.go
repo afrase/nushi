@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,6 +65,12 @@ func TestClaudeMerge(t *testing.T) {
 						if slices.ContainsFunc(merged, func(it model.Item) bool { return it.Kind == model.Notice && it.Status == differsNotice }) {
 							t.Errorf("%s copy and %s replay of %s merge with a divider:\ncopy:   %s\nreplay: %s\nmerged: %s",
 								cname, rname, sid, short(c), short(r), short(merged))
+						}
+						// Claude's mark of a stopped turn isn't the user's.
+						if slices.ContainsFunc(merged, func(it model.Item) bool {
+							return it.Kind == model.UserMessage && strings.Contains(it.Text, "[Request interrupted by user")
+						}) {
+							t.Errorf("%s copy and %s replay of %s show claude's interrupt mark: %s", cname, rname, sid, short(merged))
 						}
 					}
 				}

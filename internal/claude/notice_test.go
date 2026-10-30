@@ -31,3 +31,18 @@ func TestNotice(t *testing.T) {
 		}
 	}
 }
+
+// Claude's marks of a stopped turn, and only those: a user who writes
+// about one still wrote it.
+func TestInterrupted(t *testing.T) {
+	for text, want := range map[string]bool{
+		"[Request interrupted by user]":                  true,
+		"[Request interrupted by user for tool use]":     true,
+		"Why did you say [Request interrupted by user]?": false,
+		"Go on": false,
+	} {
+		if got := Interrupted(text); got != want {
+			t.Errorf("Interrupted(%q) = %v", text, got)
+		}
+	}
+}

@@ -6,6 +6,17 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
+// Interrupted says a replayed user message's text is the mark Claude
+// Code writes into its history where the user stopped a turn, not the
+// user's words.
+func Interrupted(text string) bool {
+	switch strings.TrimSpace(text) {
+	case "[Request interrupted by user]", "[Request interrupted by user for tool use]":
+		return true
+	}
+	return false
+}
+
 // Notice reads a message chunk the adapter marks as a notice of Claude
 // Code's own, not the model's words: `_meta.claudeCode.kind`
 // "informational", sent as agent text to a client without ACP's notices
