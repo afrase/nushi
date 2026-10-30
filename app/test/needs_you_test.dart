@@ -111,6 +111,8 @@ void main() {
         ),
       ),
     );
+    // Filled in (it opens on its last entries), then scrolled up.
+    await tester.pumpAndSettle();
     await tester.drag(find.byType(SingleChildScrollView), const Offset(0, 400));
     await tester.pumpAndSettle();
     expect(find.text('Jump to latest'), findsOneWidget);
