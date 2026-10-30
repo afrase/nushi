@@ -39,6 +39,15 @@ func TestSideChatKeepsToItself(t *testing.T) {
 	if len(main.Items) != 1 || main.Items[0].Text != "main" || len(aside.Items) != 1 || aside.Items[0].Text != "aside" {
 		t.Errorf("main = %+v, side = %+v", main.Items, aside.Items)
 	}
+	// Its usage is its own: the app's Context widget shows it on a line of
+	// its own.
+	_ = agent.h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: "fork1", Update: acp.SessionUpdate{
+		SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 24000, Size: 200000}}})
+	main, _ = svc.Get(id)
+	aside, _ = svc.Get(side)
+	if aside.Usage.Used != 24000 || aside.Usage.Size != 200000 || main.Usage != (model.Usage{}) {
+		t.Errorf("usage: main = %+v, side = %+v", main.Usage, aside.Usage)
+	}
 	if p := svc.chats[id]; !reflect.DeepEqual(p.record.Throwaway, []string{"fork1"}) {
 		t.Errorf("the chat doesn't keep its side chat's session until it's deleted: %v", p.record.Throwaway)
 	}
