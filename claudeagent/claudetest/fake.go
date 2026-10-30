@@ -117,15 +117,21 @@ func (f *Fake) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.Proc
 	f.stdin, f.stdout, f.stderr = inR, outW, errW
 	go f.read(bufio.NewReader(inR))
 	go f.play()
-	return &claudeagent.Proc{
-		Stdin: inW, Stdout: outR, Stderr: errR,
-		Wait: func() error {
-			<-f.exited
-			return f.exitErr
-		},
-		Signal: f.signal,
-	}, nil
+	return &claudeagent.Proc{Stdin: inW, Stdout: outR, Stderr: errR, Process: process{f}}, nil
 }
+
+// process is the fake as its client's claudeagent.Process.
+type process struct{ f *Fake }
+
+// Wait waits for the fake to exit.
+func (p process) Wait() error {
+	<-p.f.exited
+	return p.f.exitErr
+}
+
+// Signal sends the fake a signal: SIGKILL ends it, and SIGTERM unless
+// IgnoreTerm.
+func (p process) Signal(sig os.Signal) error { return p.f.signal(sig) }
 
 // Spec is what the fake was started with: claude's path, arguments,
 // environment and folder.

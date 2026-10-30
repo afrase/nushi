@@ -22,18 +22,24 @@ type Spec struct {
 	SharedGroup bool
 }
 
-// Proc is a started claude. Stdout and Stderr are read until they end,
-// and closed early only to give up on them.
+// Proc is a started claude: its pipes, and the Process to wait for and
+// signal. Stdout and Stderr are read until they end, and closed early
+// only to give up on them.
 type Proc struct {
 	Stdin  io.WriteCloser
 	Stdout io.ReadCloser
 	Stderr io.ReadCloser
+	Process
+}
+
+// Process is a started claude's process.
+type Process interface {
 	// Wait waits for it to exit, once: nil when it exits with 0, an
 	// *ExitError when it exits with another code or is killed.
-	Wait func() error
+	Wait() error
 	// Signal sends it a signal: to its process group, where there is one.
 	// After it has exited Signal returns os.ErrProcessDone.
-	Signal func(os.Signal) error
+	Signal(sig os.Signal) error
 }
 
 // Spawner starts claude. ctx bounds the start only, not the process's
@@ -118,27 +124,36 @@ func Exec(ctx context.Context, s Spec) (*Proc, error) {
 	for _, f := range []*os.File{inR, outW, errW} {
 		_ = f.Close() // claude's ends
 	}
-	var exited atomic.Bool
-	return &Proc{
-		Stdin: inW, Stdout: outR, Stderr: errR,
-		Wait: func() error {
-			err := cmd.Wait()
-			exited.Store(true)
-			if !s.SharedGroup {
-				_ = killGroup(cmd) // what it left running
-			}
-			return exitError(err)
-		},
-		Signal: func(sig os.Signal) error {
-			if exited.Load() {
-				return os.ErrProcessDone
-			}
-			if s.SharedGroup {
-				return cmd.Process.Signal(sig) // the group is ours too
-			}
-			return signalGroup(cmd, sig)
-		},
-	}, nil
+	return &Proc{Stdin: inW, Stdout: outR, Stderr: errR, Process: &process{cmd: cmd, shared: s.SharedGroup}}, nil
+}
+
+// process is a claude Exec started.
+type process struct {
+	cmd    *exec.Cmd
+	shared bool // in this process's group, not one of its own
+	exited atomic.Bool
+}
+
+// Wait waits for claude, then kills what it left in its group.
+func (p *process) Wait() error {
+	err := p.cmd.Wait()
+	p.exited.Store(true)
+	if !p.shared {
+		_ = killGroup(p.cmd) // what it left running
+	}
+	return exitError(err)
+}
+
+// Signal signals claude's group, or claude alone when the group is ours
+// too.
+func (p *process) Signal(sig os.Signal) error {
+	if p.exited.Load() {
+		return os.ErrProcessDone
+	}
+	if p.shared {
+		return p.cmd.Process.Signal(sig)
+	}
+	return signalGroup(p.cmd, sig)
 }
 
 // exitError turns exec's error into an *ExitError.

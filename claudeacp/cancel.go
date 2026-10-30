@@ -47,18 +47,18 @@ func (s *session) cancel() {
 	// prompt is known to run: it may have taken one whose echo hasn't come
 	// yet, or be at work of its own.
 	go func() {
-		var waits []func(any) error
+		var calls []*claudeagent.Call
 		for _, id := range drop {
-			wait, err := s.cs.Begin(s.a.ctx, "cancel_async_message", map[string]any{"message_uuid": id})
+			c, err := s.cs.Begin(s.a.ctx, "cancel_async_message", map[string]any{"message_uuid": id})
 			if err != nil {
 				s.log.Info("dropping a queued prompt", "err", err)
 				continue
 			}
-			waits = append(waits, wait)
+			calls = append(calls, c)
 		}
 		defer func() {
-			for _, wait := range waits {
-				if err := wait(nil); err != nil {
+			for _, c := range calls {
+				if err := c.Wait(nil); err != nil {
 					s.log.Info("dropping a queued prompt", "err", err)
 				}
 			}
