@@ -16,7 +16,22 @@ import (
 )
 
 // session is an ACP session: one claude, its turns, and what its stream
-// has shown so far.
+// has shown so far. The turns are its own, under mu; each part below
+// them keeps its state under a lock of its own and owns what changes it.
+//
+// The order its locks nest in: a lock may be taken while one to its left
+// on a line is held, never the other way round.
+//
+//	wmu → mu → kids.mu
+//	tools.mu → kids.mu
+//	cfg.changing → cfg.mu
+//	cfg.changing → win.mu → agent.windows.mu
+//
+// No other lock is taken while plan.mu, cmds.mu, title.mu, hmu, bg.mu
+// or stderr's is held, nor while one at a line's end is, but for the
+// client connection's: tools.mu, kids.mu, plan.mu, cmds.mu and win.mu
+// send the client their updates while held, to keep the updates' order,
+// so the connection's own lock is always taken last.
 type session struct {
 	a      *agent
 	id     string // claude's session id too
