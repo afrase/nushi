@@ -13,7 +13,7 @@ Nushi is an agentic development environment for macOS: coding agents (Claude, Co
 
 ## Repository map
 
-- `cmd/nushid`: main and wiring; the subcommands `ante-acp`, `pig-acp` (Nushi's bridges), `claude-acp` (Claude's Go agent, with `NUSHI_CLAUDE_ADAPTER=go`), `tools-mcp` (a chat's tools), `-login`.
+- `cmd/nushid`: main and wiring; the subcommands `ante-acp`, `pig-acp` (Nushi's bridges), `claude-acp` (Claude's Go agent, when its setting is on), `tools-mcp` (a chat's tools), `-login`.
 - `internal/features/`: `chats` (sessions, turns, queue, rewind, move, sleep, worktrees, side chats, subagents), `agents` (finding, setting up, removing), `trust` (the trust card), `mcp`, `skills`, `terminals`, `memory`, `remote` (pairing, devices, `push.go`), `jira`, `github`, `tools`, `updates`.
 - `internal/api`: the Connect handlers (`api.Version`); generated code in `internal/gen` and `app/lib/gen`.
 - Agents: `internal/claude`, `codex`, `omp` (what each adapter or CLI does; `adapter/` holds pinned lockfiles), `ante`, `pig` (the bridges), `*trust` (what a folder brings each agent), `*skills` (`skillfile` reads a skills folder), `claudemcp`, `antemcp`, `claudehistory`, `agentproc` (an agent's process and ACP connection), `toolcall`, `acptest` (the fake agent), `knownagents` (the one table of the agents, each feature's facts of each). At the module's root, public and free of `internal/`: `claudeagent` (a Go client for claude's stream-JSON protocol; `sessions`, its transcripts; `claudetest`, a fake claude and cassettes, with `fakeapi`, a fake Messages API, `cmd/claude-tee`, which records the real claude, and `cmd/mcp-echo`, a stdio MCP server for its recordings) and `claudeacp` (an ACP agent on it, ADR 0066).
