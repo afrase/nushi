@@ -17,7 +17,12 @@ A scenario without `cli.jsonl` is skipped by the test, by name, until it is reco
 
 ## How the replay keeps the client's timing
 
-The test sends the Go agent the recorded client's messages in order, waiting where the recording's agent answered or asked, and each one only once the Go agent has sent its copy of the last update the adapter sent before it that marks a point (a call's report or status, a subagent's state, a message; 2 s at most), so it has shown what the client saw. A steer, a cancel, or a prompt queued behind a running one also waits until claude's replay has played up to the line it makes (`claudetest.Fake.Awaiting`), so it reaches claude where the recorded one did.
+The test sends the Go agent the recorded client's messages in order, waiting where the recording's agent answered or asked. The replayed claude plays at its own pace, not the recording's, so a client's line also waits for one or two points of the run, `runGoAgent` in `../../claude_goagent_test.go`:
+
+- **The Go agent caught up** (every line): the line goes once the Go agent has sent its copy of the last update the adapter sent before it that marks a point (a call's report or status, a subagent's state, a message; `mark`), 2 s at most, so the Go agent has shown what the client saw. Without it a cancel sent after the adapter showed a subagent running reached the Go agent before claude's echo of the prompt had, and the Go agent took the prompt for a queued one (`subagent-stop-turn`).
+- **claude's replay waits for the line** (a steer, a cancel, a prompt queued behind a running one: `midTurn`): the line goes only once claude's script waits for the line it makes (`claudetest.Fake.Awaiting`), so it reaches claude where the recorded one did. Without it a cancel's interrupt reached claude ahead of the queued prompt just before it, and a steer ahead of a tool's hook answer.
+
+They stay two: the first is about the Go agent's state (what it has read of claude), which claude's script can't see, the second about where claude's script is, which the Go agent's updates don't say; neither implies the other, and only the lines that write claude one mid-turn need the second.
 
 ## What the replay leaves out
 
@@ -33,27 +38,27 @@ The replay's client goes only once the Go agent has sent what the recording's cl
 
 ## The scenarios
 
-The scripts are written from what the research and Nushi's facts say claude 2.1.312 and the adapter do; none has run on the real `claude` yet, so the first recording may need a `match` loosened or a `side` turn added (a failed run says which request missed). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
+Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
 
-| Scenario | What it does | Also settles |
+| Scenario | What it does | Also showed |
 |---|---|---|
-| `hello` | a new session, one prompt | `generate_session_title` |
-| `load` | thinking, text and a command; `session/close`; `session/load` (the replay); a prompt after | `tool_use_result` against the hook's `tool_response` |
+| `hello` | a new session, one prompt | |
+| `load` | thinking, text and a command; `session/close`; `session/load` (the replay); a prompt after | `tool_use_result` equals the hook's `tool_response` |
 | `fork` | a fork of the whole session, a prompt on it | |
 | `fork-at` | two prompts, a fork at the first answer (`_meta.jetbrains.air.fork`, a rewind), a prompt on it, the old session closed | |
 | `list` | `session/list` with a session written and one not | |
-| `delete` | `session/delete` of an open session, a list, the delete again 3 s later | the stub claude writes back |
+| `delete` | `session/delete` of an open session, a list, the delete again 3 s later | |
 | `permission` | Yes and No on `mkdir` (no "don't ask again": claude's rules would switch the mode), "don't ask again" on another command, which then runs again unasked | |
 | `question` | AskUserQuestion with two questions, the second answered with Other | |
 | `steering` | a steer while the model answers a command's result | |
 | `cancel` | a cancel during a command, then the next prompt (Nushi's own queue) | |
 | `cancel-queued` | a prompt queued at the agent while one runs a command, then a cancel | |
-| `eof-mid-tool` | the client goes while a command runs | stdin's end during a tool |
+| `eof-mid-tool` | the client goes while a command runs | stdin's end during a tool: no result, no idle |
 | `bash-background` | a background command that ends; claude's turn on its own after | |
 | `bash-background-killed` | a background command whose process group Nushi stops (`kill`) | |
 | `bash-background-taskstop` | a background command stopped by Claude's `TaskStop` | |
 | `subagent-foreground` | a foreground subagent | |
-| `subagent-background` | a background subagent that ends; the held turn | `session_state_changed` with background subagents |
+| `subagent-background` | a background subagent that ends; the held turn | `session_state_changed: idle` only once no subagent runs |
 | `subagent-stop-taskstop` | a background subagent stopped by `TaskStop` | |
 | `subagent-stop-cancel` | a background subagent stopped by `session/cancel` on its session (Nushi's Stop) | |
 | `subagent-stop-turn` | a foreground subagent stopped with the turn | |
@@ -64,7 +69,7 @@ The scripts are written from what the research and Nushi's facts say claude 2.1.
 | `refusal` | a refusal of the retry too: the turn ends `refusal` | |
 | `findings` | a `ReportFindings` call | |
 | `ultracode` | ultracode on, then an effort change | |
-| `models` | `availableModels` in the session's settings | whether `initialize`'s models are filtered |
+| `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
 
 `stop_task` on a background command isn't among them: the adapter never sends it, so a recording through it can't show it.
