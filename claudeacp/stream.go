@@ -46,9 +46,9 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.User:
 		s.user(m)
 	case *claudeagent.ToolProgress:
-		s.toolProgress(m.ToolUseID)
+		s.tools.progress(m.ToolUseID)
 	case *claudeagent.PermissionDenied:
-		s.toolDenied(m)
+		s.tools.denied(m)
 	case *claudeagent.Result:
 		s.result(m)
 	case *claudeagent.SessionState:
@@ -69,9 +69,9 @@ func (s *session) handle(m claudeagent.Message) {
 			s.dropTop = false
 			s.mu.Unlock()
 		case m.Status == "compacting":
-			s.compacting(m.UUID)
+			s.tools.compacting(m.UUID)
 		case m.CompactResult != "":
-			s.compactEnded(m.CompactResult, m.CompactError)
+			s.tools.compactEnded(m.CompactResult, m.CompactError)
 		}
 	case *claudeagent.Informational:
 		s.notice(m.Level, m.Content)
@@ -80,13 +80,13 @@ func (s *session) handle(m claudeagent.Message) {
 	case *claudeagent.ModelRefusalNoFallback:
 		s.refusal(nil, cmp.Or(m.APIRefusalExplanation, m.Content))
 	case *claudeagent.MemoryRecall:
-		s.memoryRecall(m)
+		s.tools.memoryRecall(m)
 	case *claudeagent.LocalCommandOutput:
 		s.localOutput(m)
 	case *claudeagent.ElicitationComplete:
 		s.elicitationDone(m)
 	case *claudeagent.CompactBoundary:
-		s.compacted(m)
+		s.tools.compacted(m)
 		if post := m.CompactMetadata.PostTokens; post > 0 {
 			s.st.used = post
 			s.usage(nil, nil)
@@ -113,7 +113,7 @@ func (s *session) user(m *claudeagent.User) {
 			structured = m.ToolUseResult
 		}
 		if !s.planResult(b, structured) {
-			s.toolResult(b)
+			s.tools.result(b)
 		}
 		s.resumed(b.ToolUseID, structured)
 	}
@@ -132,7 +132,7 @@ func (s *session) sessionState(state string) {
 	}
 	s.mu.Unlock()
 	if ends {
-		s.endTools(why)
+		s.tools.end(why)
 	}
 	s.mu.Lock()
 	s.stateLocked(state)
@@ -147,7 +147,7 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 			return
 		}
 		s.st.msgs[key] = &streamed{id: ev.Message.ID, blocks: map[int]*strings.Builder{}}
-		s.newMessage(key)
+		s.tools.newMessage(key)
 		if key == "" {
 			s.st.model = ev.Message.Model
 			if ev.Message.Usage != nil {
@@ -157,7 +157,7 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 		}
 	case "content_block_start":
 		if b := ev.ContentBlock; b != nil && isToolUse(b.Type) && !isPlanTool(key, b.Name) {
-			s.toolStart(key, ev.Index, b)
+			s.tools.start(key, ev.Index, b)
 		}
 	case "content_block_delta":
 		msg := s.st.msgs[key]
@@ -171,7 +171,7 @@ func (s *session) streamEvent(m *claudeagent.StreamEvent) {
 		case "thinking_delta":
 			kind, text = "agent_thought_chunk", ev.Delta.Thinking
 		case "input_json_delta":
-			s.toolDelta(key, ev.Index, ev.Delta.PartialJSON)
+			s.tools.delta(key, ev.Index, ev.Delta.PartialJSON)
 			return
 		default:
 			return
@@ -261,10 +261,12 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 			}
 		default:
 			switch {
+			case isToolUse(b.Type) && isPlanTool(key, b.Name): // the main agent's plan, not a call
+				s.planInput(b)
 			case isToolUse(b.Type):
-				s.toolInput(key, b)
+				s.tools.input(key, b)
 			case strings.HasSuffix(b.Type, "_tool_result"): // a server tool's, which the API ran
-				s.toolResult(b)
+				s.tools.result(b)
 			}
 		}
 	}

@@ -24,10 +24,16 @@ func (s *session) postToolUse(ctx context.Context, in claudeagent.HookInput) (cl
 	case in.ToolName == "EnterPlanMode": // claude is in plan mode now
 		s.modeChanged(claudeagent.Plan)
 	}
-	if !json.Valid(in.ToolResponse) {
-		return claudeagent.HookOutput{}, nil
+	if json.Valid(in.ToolResponse) {
+		s.tools.responded(in)
 	}
-	ts := &s.tools
+	return claudeagent.HookOutput{}, nil
+}
+
+// responded is a tool's whole response, as the hook has it: it goes
+// under _meta.claudeCode.toolResponse, and an edit's diff as claude made
+// it replaces the one its input showed.
+func (ts *tools) responded(in claudeagent.HookInput) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	r := report{response: in.ToolResponse}
@@ -40,11 +46,10 @@ func (s *session) postToolUse(ctx context.Context, in claudeagent.HookInput) (cl
 	// hasn't taken it yet.
 	switch t := ts.byID[in.ToolUseID]; {
 	case t != nil && t.whole:
-		s.sendLocked(t, r)
+		ts.sendLocked(t, r)
 	case len(ts.early) < maxEarly:
 		ts.early[in.ToolUseID] = r
 	}
-	return claudeagent.HookOutput{}, nil
 }
 
 // patched is an Edit's or a Write's change as diffs, from its response:

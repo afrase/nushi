@@ -19,7 +19,7 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	if m.SubagentType == "" && m.TaskType != "local_agent" {
 		return // a background command's
 	}
-	in, stream := s.callInput(m.ToolUseID)
+	in, stream := s.tools.callInput(m.ToolUseID)
 	s.kids.started(m, in, stream)
 }
 
@@ -40,7 +40,7 @@ func (s *session) taskNotification(m *claudeagent.TaskNotification) {
 // still open with it, as nothing will end them now.
 func (s *session) taskEnded(id, run, call, status, text string) {
 	if calls, ok := s.kids.ended(id, run, call, status, text); ok {
-		s.endSubagentTools(id, calls)
+		s.tools.endSubagent(id, calls)
 	}
 }
 
@@ -54,7 +54,7 @@ func (s *session) resumed(call string, structured json.RawMessage) {
 	if json.Unmarshal(structured, &r) != nil || !r.Success || r.ResumedAgentID == "" {
 		return
 	}
-	in, _ := s.callInput(call)
+	in, _ := s.tools.callInput(call)
 	s.kids.resumed(r.ResumedAgentID, call, in.Message)
 }
 

@@ -64,7 +64,7 @@ func (s *session) result(r *claudeagent.Result) {
 	}
 	s.mu.Unlock()
 	// claude's turn is over: what it left open won't end now.
-	incomplete := s.endTools(why)
+	incomplete := s.tools.end(why)
 	meta := map[string]any{}
 	switch {
 	case r.Origin != nil:

@@ -80,7 +80,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), tick: make(chan struct{}), open: map[int]*ask{}}
 	s.st.init()
 	s.kids.init(id, a.clientCaps().subagents, a.update)
-	s.tools.init(o.Cwd)
+	s.tools.init(o.Cwd, &s.kids, a.newID)
 	s.plan.init()
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
 		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
@@ -121,7 +121,7 @@ func (s *session) reader() {
 	err := s.cs.Wait() // and its stderr read through
 	s.stderr.flush()
 	_ = s.cs.Close()
-	s.endTools(endedExit)
+	s.tools.end(endedExit)
 	s.kids.gone()
 	s.mu.Lock()
 	gone := !s.closed

@@ -65,36 +65,33 @@ func (s *session) modelFallback(m *claudeagent.ModelRefusalFallback) {
 // only to a client that declares them. One that has ended is kept until
 // the turn's result, so its boundary and claude's word on its outcome
 // end the same call in either order; a start after it is a new one.
-func (s *session) compacting(id string) {
-	ts := &s.tools
+func (ts *tools) compacting(id string) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	s.compactingLocked(id)
+	ts.compactingLocked(id)
 }
 
-func (s *session) compactingLocked(id string) *tool {
-	ts := &s.tools
+func (ts *tools) compactingLocked(id string) *tool {
 	if ts.compact != nil && !ts.compact.ended {
 		return ts.compact
 	}
 	if id == "" {
-		id = "compact-" + s.a.newID()
+		id = "compact-" + ts.newID()
 	}
 	t := &tool{id: id, name: "compact"}
 	ts.compact = t
-	s.sendLocked(t, report{status: acp.ToolCallStatusInProgress, title: "Compact conversation", kind: acp.ToolKindThink})
+	ts.sendLocked(t, report{status: acp.ToolCallStatusInProgress, title: "Compact conversation", kind: acp.ToolKindThink})
 	return t
 }
 
 // compacted ends the compaction at its boundary, with its facts; one
 // claude has already said the outcome of gets only the facts.
-func (s *session) compacted(m *claudeagent.CompactBoundary) {
-	ts := &s.tools
+func (ts *tools) compacted(m *claudeagent.CompactBoundary) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	t := ts.compact
 	if t == nil {
-		t = s.compactingLocked(m.UUID) // an automatic one may come without its start
+		t = ts.compactingLocked(m.UUID) // an automatic one may come without its start
 	}
 	r := report{status: acp.ToolCallStatusCompleted}
 	if t.ended {
@@ -109,14 +106,13 @@ func (s *session) compacted(m *claudeagent.CompactBoundary) {
 		DurationMS int64  `json:"durationMs"`
 	}{c.Trigger, c.PreTokens, c.PostTokens, c.DurationMS})
 	r.rawOutput = out
-	s.sendLocked(t, r)
+	ts.sendLocked(t, r)
 }
 
 // compactEnded is a compaction's outcome when claude says it: a failed
 // one fails, saying why; a success ends one its boundary hasn't. Claude
 // may say it twice: the second is ignored.
-func (s *session) compactEnded(result, why string) {
-	ts := &s.tools
+func (ts *tools) compactEnded(result, why string) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	t := ts.compact
@@ -125,16 +121,16 @@ func (s *session) compactEnded(result, why string) {
 	}
 	t.ended = true
 	if result != "failed" {
-		s.sendLocked(t, report{status: acp.ToolCallStatusCompleted})
+		ts.sendLocked(t, report{status: acp.ToolCallStatusCompleted})
 		return
 	}
 	out, _ := json.Marshal(map[string]string{"error": why})
-	s.sendLocked(t, report{status: acp.ToolCallStatusFailed, rawOutput: out, content: texts("Compaction failed: " + why)})
+	ts.sendLocked(t, report{status: acp.ToolCallStatusFailed, rawOutput: out, content: texts("Compaction failed: " + why)})
 }
 
 // memoryRecall is the memories claude recalled for a turn, as a read
 // that has ended.
-func (s *session) memoryRecall(m *claudeagent.MemoryRecall) {
+func (ts *tools) memoryRecall(m *claudeagent.MemoryRecall) {
 	var memories []json.RawMessage
 	title := "Recalled memory"
 	if json.Unmarshal(m.Memories, &memories) == nil {
@@ -145,12 +141,11 @@ func (s *session) memoryRecall(m *claudeagent.MemoryRecall) {
 	}
 	id := m.UUID
 	if id == "" {
-		id = "memory-" + s.a.newID()
+		id = "memory-" + ts.newID()
 	}
-	ts := &s.tools
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	s.sendLocked(&tool{id: id, name: "memory_recall", ended: true},
+	ts.sendLocked(&tool{id: id, name: "memory_recall", ended: true},
 		report{status: acp.ToolCallStatusCompleted, title: title, kind: acp.ToolKindRead, rawOutput: m.Memories})
 }
 
