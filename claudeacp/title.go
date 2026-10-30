@@ -27,12 +27,11 @@ const (
 
 // titles is what a session keeps for its title.
 type titles struct {
-	mu     sync.Mutex
-	text   string // the conversation's latest words: prompts and top-level answers
-	sent   string // the title the client has
-	asked  bool   // claude was asked to make one
-	busy   bool   // a look is under way
-	looked sync.WaitGroup
+	mu    sync.Mutex
+	text  string // the conversation's latest words: prompts and top-level answers
+	sent  string // the title the client has
+	asked bool   // claude was asked to make one
+	busy  bool   // a look is under way
 }
 
 // heard adds words of the conversation to what a title is made from:
@@ -69,10 +68,8 @@ func (s *session) retitle() {
 		return
 	}
 	t.busy = true
-	t.looked.Add(1)
 	t.mu.Unlock()
-	go func() {
-		defer t.looked.Done()
+	s.bg.Go(func() {
 		title := s.findTitle()
 		t.mu.Lock()
 		t.busy = false
@@ -87,7 +84,7 @@ func (s *session) retitle() {
 				Title: acp.Nullable[string]{Value: &title, Present: true}, UpdatedAt: acp.Nullable[string]{Value: &now, Present: true},
 			}})
 		}
-	}()
+	})
 }
 
 // findTitle is the title in the session's transcript, else the one claude

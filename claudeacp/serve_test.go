@@ -238,3 +238,26 @@ func TestServeReturns(t *testing.T) {
 		t.Errorf("ctx ended: %v", err)
 	}
 }
+
+// A session's goroutines are waited for as it closes, and none starts
+// after.
+func TestBackgroundWaits(t *testing.T) {
+	var bg background
+	release, ended := make(chan struct{}), false
+	bg.Go(func() {
+		<-release
+		ended = true
+	})
+	waited := make(chan struct{})
+	go func() {
+		bg.wait()
+		close(waited)
+	}()
+	close(release)
+	<-waited
+	if !ended {
+		t.Error("wait returned before the goroutine ended")
+	}
+	bg.Go(func() { t.Error("a goroutine started after the wait") })
+	bg.wait()
+}

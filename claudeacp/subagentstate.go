@@ -196,9 +196,9 @@ func (a *agent) child(id string) *session {
 // task. Its end comes as claude reports it.
 func (s *session) stopSubagent(id string) {
 	s.withdraw(func(a *ask) bool { return a.agent == id })
-	go func() {
+	s.bg.Go(func() {
 		if err := s.cs.StopTask(s.a.ctx, id); err != nil {
 			s.log.Info("stopping a subagent", "err", err)
 		}
-	}()
+	})
 }

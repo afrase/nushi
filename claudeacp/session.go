@@ -52,6 +52,7 @@ type session struct {
 	win  window        // the context window's size
 	st   stream        // the reader's own
 	read chan struct{} // closed once the reader is done
+	bg   background    // its goroutines besides the reader's
 
 	hmu     sync.Mutex
 	handled uint64        // claude's messages the reader has handled
@@ -212,6 +213,7 @@ func (s *session) close() {
 	if s.closed {
 		s.mu.Unlock()
 		<-s.read
+		s.bg.wait()
 		return
 	}
 	s.closed = true
@@ -242,7 +244,34 @@ func (s *session) close() {
 	s.mu.Unlock()
 	_ = s.cs.Close()
 	<-s.read
-	s.title.looked.Wait()
+	s.bg.wait()
+}
+
+// background is a session's goroutines besides its reader: a cancel's
+// requests and backstop, a subagent's stop, the context window's answer,
+// a look for its title. close waits for them; once it has, no more
+// start, as claude is gone and each would only fail.
+type background struct {
+	mu     sync.Mutex
+	wg     sync.WaitGroup
+	closed bool
+}
+
+// Go runs fn on a goroutine of the session's, unless it has closed.
+func (b *background) Go(fn func()) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if !b.closed {
+		b.wg.Go(fn)
+	}
+}
+
+// wait waits for the goroutines running, and starts no more.
+func (b *background) wait() {
+	b.mu.Lock()
+	b.closed = true
+	b.mu.Unlock()
+	b.wg.Wait()
 }
 
 // newUUID is a random (version 4) UUID: a new message's id.
