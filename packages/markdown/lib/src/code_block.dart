@@ -4,10 +4,11 @@ part of 'streaming_markdown.dart';
 /// built again for every chunk that streams in, and only its open block
 /// changes. Kept while their code is [_spansBudget] characters at most in
 /// all ([_spansChars]), the oldest going first: by count, a few long blocks
-/// would hold far more.
+/// would hold far more. A highlighted character takes about 40 bytes (its
+/// spans and their styles), so the budget holds about 16 MB.
 final _spans = <(String, String, TextStyle, Object), TextSpan>{};
 var _spansChars = 0;
-const _spansBudget = 2000000;
+const _spansBudget = 400000;
 
 /// Code blocks still streaming in, the last few: each one's whole lines
 /// highlighted so far, kept as more come.

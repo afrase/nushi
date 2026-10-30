@@ -790,8 +790,32 @@ class Daemon extends ChangeNotifier {
     place = const ChatPlace();
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
+    _letGo();
     shown();
     notifyListeners();
+  }
+
+  /// How many chats keep their items in memory: the shown one and the
+  /// ones shown just before it, quick to go back to. A long chat's items
+  /// take from about half a megabyte to several (tool output, diffs,
+  /// images); kept for every chat opened since launch, they added up.
+  static const keptChats = 6;
+
+  /// The chats picked since launch, the last picked last.
+  final _picked = <String>[];
+
+  /// Lets the items of loaded chats not among the last [keptChats] picked
+  /// go; each loads again when opened.
+  void _letGo() {
+    if (selectedId case final id?) {
+      _picked
+        ..remove(id)
+        ..add(id);
+    }
+    if (_picked.length > keptChats) _picked.removeAt(0);
+    for (final c in chats.values) {
+      if (c.loaded && !_picked.contains(c.id)) c.letGo();
+    }
   }
 
   /// The selected chat is shown: picked, or the app came to the front. A

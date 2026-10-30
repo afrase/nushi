@@ -322,6 +322,15 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Lets its items go, to save memory while it isn't shown: it loads
+  /// again when opened, as at launch (Daemon.keptChats).
+  void letGo() {
+    unload();
+    items.clear();
+    older = 0;
+    revision++;
+  }
+
   /// Forgets the snapshot (the connection was lost): the next one replaces it.
   void unload() {
     loaded = false;
