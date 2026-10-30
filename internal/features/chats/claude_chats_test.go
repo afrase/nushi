@@ -249,6 +249,14 @@ func view(c *chat) parity {
 		if before, _, ok := strings.Cut(it.Text, modelFallback); ok {
 			it.Text = before + modelFallback
 		}
+		// Nushi reads a background command's output from the file claude
+		// writes, not from the agent; the run's file is gone, or another
+		// run's, so neither agent has a say in it.
+		if it.BackgroundCommand != nil {
+			sh := *it.BackgroundCommand
+			sh.Output = ""
+			it.BackgroundCommand = &sh
+		}
 		if it.Kind == model.Permission {
 			opts := make([]model.Option, 0, len(it.Options))
 			for _, o := range it.Options {

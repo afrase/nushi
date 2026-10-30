@@ -349,6 +349,9 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 	if len(more) == 0 {
 		waitLast()
 	}
+	if pending != "" { // the adapter's last word came before its client went
+		sent(pending)
+	}
 	_ = toAgentW.Close() // the client goes: the agent closes its sessions, and claude ends
 	for m := range msgs {
 		if !keep(m) {

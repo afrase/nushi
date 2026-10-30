@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/claudeagent/claudetest/fakeapi"
+	"github.com/afrase/nushi/claudeagent/sessions"
 	"github.com/afrase/nushi/internal/proctree"
 )
 
@@ -53,6 +54,7 @@ func (r *recorder) record(ctx context.Context, dir string) error {
 	if scratch, err = filepath.EvalSymlinks(scratch); err != nil { // the path claude sees
 		return err
 	}
+	defer removeTaskFiles(filepath.Join(scratch, "work"))
 	if err := r.run(ctx, scratch, script, client, timeout); err != nil {
 		return fmt.Errorf("%w (its run is kept in %s)", err, scratch)
 	}
@@ -297,4 +299,18 @@ func keep(out, dir, acpName string) error {
 		}
 	}
 	return nil
+}
+
+// removeTaskFiles removes what claude keeps of a run outside its
+// throwaway folders: background tasks' output, under
+// /tmp/claude-<uid>/<the work folder's project name>, whatever TMPDIR
+// says. Left there, it outlives the run, and Nushi, which reads a
+// background command's output from that file, would read it in a later
+// parity test on this machine.
+func removeTaskFiles(work string) {
+	name := filepath.Base(sessions.Store{}.ProjectDir(work))
+	if !strings.Contains(name, "claude-record-") { // only a run's own folder
+		return
+	}
+	_ = os.RemoveAll(filepath.Join("/tmp/claude-"+strconv.Itoa(os.Getuid()), name))
 }
