@@ -103,15 +103,17 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// dialect stays out). The others are main's (knownagents), each on a
 	// fake: Codex and omp as the fake agent shaped like them, Ante and PiG
 	// as their bridges on a fake Ante and PiG, Claude as Nushi's Go agent
-	// on fake claudes. What reads an agent's own files on this Mac (Local)
-	// is left out.
+	// on fake claudes, or, as its setting says when a chat's agent starts
+	// (agents.Agent.Own), as the fake agent for the adapter. What reads an
+	// agent's own files on this Mac (Local) is left out.
 	pigs := pigStores(dataDir)
 	cls := &claudes{}
 	launches := map[string]chats.Launch{
 		"claude": launch(func(r io.Reader, w io.Writer) {
 			_ = claudeacp.Serve(context.Background(), r, w, claudeacp.Config{CLIPath: "/fake/claude", ConfigDir: filepath.Join(dataDir, "claude"), Spawn: cls.spawn})
 		}),
-		"codex": fake(true, false),
+		"claude adapter": fake(false, false),
+		"codex":          fake(true, false),
 		"ante": launch(func(r io.Reader, w io.Writer) {
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
 		}),
@@ -127,10 +129,18 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		}),
 	}
 	kinds := []chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Notice}}}
-	for _, a := range knownagents.All("") { // no projects folder: Local isn't called
+	for _, a := range knownagents.All("", st.ClaudeGoAgent) { // no projects folder: Local isn't called
 		if l := launches[a.Agent.Name]; l != nil {
 			k := a.Chats
 			k.Launch = l
+			if own := a.Agent.Own; own != nil {
+				k.Launch = func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
+					if own() {
+						return l(h, log)
+					}
+					return launches[a.Agent.Name+" adapter"](h, log)
+				}
+			}
 			kinds = append(kinds, k)
 		}
 	}
@@ -149,7 +159,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	}()
 	restarts := restart.New(svc, terms)
 	restarts.Every = 20 * time.Millisecond
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts}
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts, ClaudeGo: st}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))
 	stop := func() {

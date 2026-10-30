@@ -1010,6 +1010,13 @@ message Settings {
   // 2 hours; on by default. SetSettings leaves it as it is when not given
   // (API 86).
   optional bool check_updates = 5;
+  // Claude's chats run through Nushi's Go agent (claudeacp, ADR 0066), which
+  // needs no Node and nothing set up, instead of the adapter
+  // (claude-agent-acp); off by default. A Claude chat's agent reads it each
+  // time it starts (a new chat, a reopened or woken one), so chats already
+  // running keep theirs until then. SetSettings leaves it as it is when not
+  // given (API 93).
+  optional bool claude_go_agent = 6;
 }
 
 message ListTranscriptsRequest {}

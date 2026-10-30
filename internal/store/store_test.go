@@ -101,6 +101,24 @@ func TestTranscriptSettings(t *testing.T) {
 	}
 }
 
+// Claude runs through the adapter until the Go agent is turned on, which
+// is kept.
+func TestClaudeGoAgentSetting(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	if s.ClaudeGoAgent() {
+		t.Fatal("the Go agent is on by default")
+	}
+	testcheck.NoErr(t, s.SetClaudeGoAgent(true))
+	if s = New(dir); !s.ClaudeGoAgent() || !s.KeepTranscripts() {
+		t.Errorf("kept: go %v, keep %v", s.ClaudeGoAgent(), s.KeepTranscripts())
+	}
+	testcheck.NoErr(t, s.SetClaudeGoAgent(false))
+	if New(dir).ClaudeGoAgent() {
+		t.Error("turned off, still on")
+	}
+}
+
 // The settings are read once and kept: a change is kept once it's
 // written, and one that couldn't be written isn't.
 func TestSettingsKept(t *testing.T) {

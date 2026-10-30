@@ -12,15 +12,15 @@ import (
 	"github.com/afrase/nushi/internal/agentproc"
 )
 
-// AdapterChoice is the daemon's environment variable that picks Claude's
-// ACP agent: "go" runs Nushi's own (claudeacp, StartGo), anything else the
-// adapter. It is read once, when the daemon builds its agents, so a change
-// takes a restart; the adapter stays the default until the Go agent has
-// proved itself in use.
+// AdapterChoice is a dev override in the daemon's environment: "go" runs
+// Claude through Nushi's own agent (claudeacp, StartGo) whatever the
+// setting (Settings › Agents, store's claudeGoAgent) says, for a dev
+// daemon (NOTES.md's working notes). Nothing else reads it.
 const AdapterChoice = "NUSHI_CLAUDE_ADAPTER"
 
-// UsesGo says the daemon runs Claude through Nushi's Go agent.
-func UsesGo() bool { return os.Getenv(AdapterChoice) == "go" }
+// GoForced says the daemon's environment forces Nushi's Go agent
+// (AdapterChoice).
+func GoForced() bool { return os.Getenv(AdapterChoice) == "go" }
 
 // StartGo starts Nushi's Go agent for Claude, as Start does the adapter:
 // this executable's claudeacp.Command, in dir (the daemon's folder) and

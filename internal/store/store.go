@@ -288,6 +288,7 @@ type settings struct {
 	KeepTranscripts   *bool `json:"keepTranscripts,omitempty"`
 	TranscriptDays    int   `json:"transcriptDays,omitempty"`
 	CheckUpdates      *bool `json:"checkUpdates,omitempty"`
+	ClaudeGoAgent     bool  `json:"claudeGoAgent,omitempty"`
 }
 
 // defaultSleepAfter is how long chats idle before they sleep, until the
@@ -395,4 +396,17 @@ func (s *Store) CheckUpdates() bool {
 // SetCheckUpdates remembers whether the daemon checks for a newer release.
 func (s *Store) SetCheckUpdates(on bool) error {
 	return s.changeSettings(func(set *settings) { set.CheckUpdates = &on })
+}
+
+// ClaudeGoAgent says whether Claude's chats run through Nushi's Go agent
+// rather than the adapter (ADR 0066); off until turned on.
+func (s *Store) ClaudeGoAgent() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.settingsLocked().ClaudeGoAgent
+}
+
+// SetClaudeGoAgent remembers whether Claude runs through the Go agent.
+func (s *Store) SetClaudeGoAgent(on bool) error {
+	return s.changeSettings(func(set *settings) { set.ClaudeGoAgent = on })
 }

@@ -12,7 +12,7 @@ import (
 // started, with its skills and trust; Claude first; what reads this Mac
 // only in Local.
 func TestEveryAgentIsWhole(t *testing.T) {
-	all := All(t.TempDir())
+	all := All(t.TempDir(), func() bool { return false })
 	var names []string
 	for _, a := range all {
 		n := a.Agent.Name
@@ -42,17 +42,26 @@ func TestEveryAgentIsWhole(t *testing.T) {
 	}
 }
 
-// Claude runs through the adapter unless the daemon is told to run Nushi's
-// Go agent, which needs no Node, set-up or tested versions.
+// Claude runs through the adapter unless the setting, or the daemon's
+// environment (a dev override), says Nushi's Go agent, asked each time.
 func TestClaudesAgentIsTheAdapterUnlessToldGo(t *testing.T) {
 	for _, tc := range []struct {
-		choice string
-		goes   bool
-	}{{"", false}, {"node", false}, {"Go", false}, {"go", true}} {
-		t.Setenv(claude.AdapterChoice, tc.choice)
-		c := All(t.TempDir())[0]
-		if goes := c.Agent.Adapter == nil; goes != tc.goes || goes != (len(c.Agent.Tested) == 0) || c.Start == nil {
-			t.Errorf("%q: adapter %v, tested %v", tc.choice, c.Agent.Adapter, c.Agent.Tested)
+		env     string
+		setting bool
+		goes    bool
+	}{{"", false, false}, {"node", false, false}, {"Go", false, false}, {"go", false, true}, {"", true, true}, {"node", true, true}} {
+		t.Setenv(claude.AdapterChoice, tc.env)
+		setting := tc.setting
+		c := All(t.TempDir(), func() bool { return setting })[0]
+		if c.Agent.Adapter == nil || len(c.Agent.Tested) == 0 || c.Start == nil {
+			t.Fatalf("Claude without its adapter: %+v", c.Agent)
+		}
+		if got := c.Agent.Own(); got != tc.goes {
+			t.Errorf("env %q, setting %v: own %v", tc.env, tc.setting, got)
+		}
+		setting = !setting
+		if got := c.Agent.Own(); tc.env != "go" && got == tc.goes {
+			t.Errorf("env %q: the setting's change wasn't seen", tc.env)
 		}
 	}
 }

@@ -1450,11 +1450,21 @@ const Settings$json = {
       '10': 'checkUpdates',
       '17': true
     },
+    {
+      '1': 'claude_go_agent',
+      '3': 6,
+      '4': 1,
+      '5': 8,
+      '9': 3,
+      '10': 'claudeGoAgent',
+      '17': true
+    },
   ],
   '8': [
     {'1': '_keep_transcripts'},
     {'1': '_transcript_days'},
     {'1': '_check_updates'},
+    {'1': '_claude_go_agent'},
   ],
 };
 
@@ -1464,8 +1474,9 @@ final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'RlcxIbCglkZWJ1Z19sb2cYAiABKAhSCGRlYnVnTG9nEi4KEGtlZXBfdHJhbnNjcmlwdHMYAyAB'
     'KAhIAFIPa2VlcFRyYW5zY3JpcHRziAEBEiwKD3RyYW5zY3JpcHRfZGF5cxgEIAEoBUgBUg50cm'
     'Fuc2NyaXB0RGF5c4gBARIoCg1jaGVja191cGRhdGVzGAUgASgISAJSDGNoZWNrVXBkYXRlc4gB'
-    'AUITChFfa2VlcF90cmFuc2NyaXB0c0ISChBfdHJhbnNjcmlwdF9kYXlzQhAKDl9jaGVja191cG'
-    'RhdGVz');
+    'ARIrCg9jbGF1ZGVfZ29fYWdlbnQYBiABKAhIA1INY2xhdWRlR29BZ2VudIgBAUITChFfa2VlcF'
+    '90cmFuc2NyaXB0c0ISChBfdHJhbnNjcmlwdF9kYXlzQhAKDl9jaGVja191cGRhdGVzQhIKEF9j'
+    'bGF1ZGVfZ29fYWdlbnQ=');
 
 @$core.Deprecated('Use listTranscriptsRequestDescriptor instead')
 const ListTranscriptsRequest$json = {

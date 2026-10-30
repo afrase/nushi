@@ -66,12 +66,17 @@ type Agent struct {
 
 // All is every agent, in the order they're listed, the default (Claude)
 // first. projects is Claude's projects folder (claudehistory.Projects),
-// which its Local reads.
-func All(projects string) []Agent {
+// which its Local reads. claudeGo is the user's setting that runs Claude
+// through Nushi's Go agent instead of the adapter (ADR 0066), asked each
+// time a Claude chat's agent starts; the daemon's environment can force it
+// (claude.GoForced, a dev override).
+func All(projects string, claudeGo func() bool) []Agent {
 	all := []Agent{
 		{
 			Agent: agents.Agent{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
-				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk}},
+				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk},
+				// The Go agent needs no Node, nothing set up and no version pinned.
+				Own: func() bool { return claude.GoForced() || claudeGo() }},
 			Chats: chats.Kind{Resume: "claude --resume", Gone: chats.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
 				Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice, Interrupted: claude.Interrupted,
 					Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
@@ -87,6 +92,9 @@ func All(projects string) []Agent {
 				k.HistoryGone = func(sid, folder string) bool { return claudehistory.Gone(projects, sid, folder) }
 			},
 			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+				if r.Own {
+					return claude.StartGo(dir, r.CLI, r.Env, h, log)
+				}
 				return claude.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
 			},
 			Skills: claudeskills.Claude{}, Trust: claudetrust.Trust{},
@@ -140,13 +148,6 @@ func All(projects string) []Agent {
 			},
 			Skills: pigskills.PiG{}, Trust: pig.Trust{},
 		},
-	}
-	if claude.UsesGo() { // Nushi's Go agent instead of the adapter: no Node, nothing to set up, no version pinned
-		c := &all[0]
-		c.Agent.Adapter, c.Agent.Tested = nil, nil
-		c.Start = func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-			return claude.StartGo(dir, r.CLI, r.Env, h, log)
-		}
 	}
 	for i := range all {
 		a := &all[i]

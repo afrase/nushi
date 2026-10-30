@@ -4669,7 +4669,14 @@ type Settings struct {
 	// The daemon asks GitHub for a newer release of Nushi at start and every
 	// 2 hours; on by default. SetSettings leaves it as it is when not given
 	// (API 86).
-	CheckUpdates  *bool `protobuf:"varint,5,opt,name=check_updates,json=checkUpdates,proto3,oneof" json:"check_updates,omitempty"`
+	CheckUpdates *bool `protobuf:"varint,5,opt,name=check_updates,json=checkUpdates,proto3,oneof" json:"check_updates,omitempty"`
+	// Claude's chats run through Nushi's Go agent (claudeacp, ADR 0066), which
+	// needs no Node and nothing set up, instead of the adapter
+	// (claude-agent-acp); off by default. A Claude chat's agent reads it each
+	// time it starts (a new chat, a reopened or woken one), so chats already
+	// running keep theirs until then. SetSettings leaves it as it is when not
+	// given (API 93).
+	ClaudeGoAgent *bool `protobuf:"varint,6,opt,name=claude_go_agent,json=claudeGoAgent,proto3,oneof" json:"claude_go_agent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4735,6 +4742,13 @@ func (x *Settings) GetTranscriptDays() int32 {
 func (x *Settings) GetCheckUpdates() bool {
 	if x != nil && x.CheckUpdates != nil {
 		return *x.CheckUpdates
+	}
+	return false
+}
+
+func (x *Settings) GetClaudeGoAgent() bool {
+	if x != nil && x.ClaudeGoAgent != nil {
+		return *x.ClaudeGoAgent
 	}
 	return false
 }
@@ -20701,16 +20715,18 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"ChatsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x14\n" +
-	"\x12GetSettingsRequest\"\x9a\x02\n" +
+	"\x12GetSettingsRequest\"\xdb\x02\n" +
 	"\bSettings\x12.\n" +
 	"\x13sleep_after_minutes\x18\x01 \x01(\x05R\x11sleepAfterMinutes\x12\x1b\n" +
 	"\tdebug_log\x18\x02 \x01(\bR\bdebugLog\x12.\n" +
 	"\x10keep_transcripts\x18\x03 \x01(\bH\x00R\x0fkeepTranscripts\x88\x01\x01\x12,\n" +
 	"\x0ftranscript_days\x18\x04 \x01(\x05H\x01R\x0etranscriptDays\x88\x01\x01\x12(\n" +
-	"\rcheck_updates\x18\x05 \x01(\bH\x02R\fcheckUpdates\x88\x01\x01B\x13\n" +
+	"\rcheck_updates\x18\x05 \x01(\bH\x02R\fcheckUpdates\x88\x01\x01\x12+\n" +
+	"\x0fclaude_go_agent\x18\x06 \x01(\bH\x03R\rclaudeGoAgent\x88\x01\x01B\x13\n" +
 	"\x11_keep_transcriptsB\x12\n" +
 	"\x10_transcript_daysB\x10\n" +
-	"\x0e_check_updates\"\x18\n" +
+	"\x0e_check_updatesB\x12\n" +
+	"\x10_claude_go_agent\"\x18\n" +
 	"\x16ListTranscriptsRequest\"l\n" +
 	"\x17ListTranscriptsResponse\x12\x1f\n" +
 	"\vtotal_bytes\x18\x01 \x01(\x03R\n" +

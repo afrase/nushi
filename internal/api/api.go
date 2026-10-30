@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 92
+const Version = 93
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -72,6 +72,7 @@ type server struct {
 	updates  Updates
 
 	transcripts TranscriptPrefs
+	claudeGo    ClaudeGoPref
 }
 
 // Services are what the API serves.
@@ -94,6 +95,9 @@ type Services struct {
 	Restart Restart
 	// Updates checks for a newer release; nil: it doesn't.
 	Updates Updates
+	// ClaudeGo keeps whether Claude runs through Nushi's Go agent; nil:
+	// not kept.
+	ClaudeGo ClaudeGoPref
 }
 
 // Restart stops the daemon for a newer build once nothing would be lost
@@ -110,7 +114,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates, claudeGo: sv.ClaudeGo}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
 		connect.WithCompressMinBytes(1024),
@@ -517,6 +521,10 @@ func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettin
 		on := s.updates.On()
 		set.CheckUpdates = &on
 	}
+	if s.claudeGo != nil {
+		on := s.claudeGo.ClaudeGoAgent()
+		set.ClaudeGoAgent = &on
+	}
 	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: set}), nil
 }
 
@@ -535,6 +543,9 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 		return nil, invalid(err)
 	}
 	if err := s.setCheckUpdates(req.Msg.GetSettings()); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	if err := s.setClaudeGo(req.Msg.GetSettings()); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&nushiv1.SetSettingsResponse{}), nil
