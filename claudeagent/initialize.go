@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"maps"
 )
 
 // Init is what the initialize request tells claude beyond its command
@@ -34,33 +33,53 @@ type AgentDefinition struct {
 	Model       string   `json:"model,omitempty"`
 }
 
-// initRequest is the initialize request's fields for i.
-func initRequest(i Init) (map[string]any, error) {
-	r := map[string]any{}
-	if i.SystemPrompt != "" {
-		r["systemPrompt"] = []string{i.SystemPrompt} // a list, as the TypeScript SDK sends it
+// initializeRequest is the initialize request: only what is set, then
+// Extra's fields. The fields after ask are in their keys' order, as
+// claude has always been sent them.
+type initializeRequest struct {
+	ask
+	Agents                map[string]AgentDefinition       `json:"agents,omitempty"`
+	AppendSystemPrompt    string                           `json:"appendSystemPrompt,omitempty"`
+	ForwardSubagentText   bool                             `json:"forwardSubagentText,omitempty"`
+	Hooks                 map[HookEvent][]hookRegistration `json:"hooks,omitempty"`
+	PerTaskStopAffordance bool                             `json:"perTaskStopAffordance,omitempty"`
+	SystemPrompt          []string                         `json:"systemPrompt,omitempty"` // a list, as the TypeScript SDK sends it
+	Title                 string                           `json:"title,omitempty"`
+	Extra                 map[string]any                   `json:"-"`
+}
+
+// MarshalJSON writes r's fields, then Extra's in their keys' order.
+func (r initializeRequest) MarshalJSON() ([]byte, error) {
+	type plain initializeRequest
+	b, err := json.Marshal(plain(r))
+	if err != nil || len(r.Extra) == 0 {
+		return b, err
 	}
-	if i.AppendSystemPrompt != "" {
-		r["appendSystemPrompt"] = i.AppendSystemPrompt
+	extra, err := json.Marshal(r.Extra)
+	if err != nil {
+		return nil, err
 	}
-	if len(i.Agents) > 0 {
-		r["agents"] = i.Agents
+	if len(b) == len("{}") {
+		return extra, nil
 	}
-	if i.PerTaskStopAffordance {
-		r["perTaskStopAffordance"] = true
-	}
-	if i.ForwardSubagentText {
-		r["forwardSubagentText"] = true
-	}
-	if i.Title != "" {
-		r["title"] = i.Title
-	}
+	return append(append(b[:len(b)-1], ','), extra[1:]...), nil
+}
+
+// initRequest is the initialize request for i, without its subtype and
+// hooks, which Start adds.
+func initRequest(i Init) (initializeRequest, error) {
 	for _, k := range []string{"subtype", "systemPrompt", "appendSystemPrompt", "agents", "perTaskStopAffordance", "forwardSubagentText", "title", "hooks"} {
 		if _, ok := i.Extra[k]; ok {
-			return nil, fmt.Errorf("claudeagent: Init.Extra can't set %q", k)
+			return initializeRequest{}, fmt.Errorf("claudeagent: Init.Extra can't set %q", k)
 		}
 	}
-	maps.Copy(r, i.Extra)
+	r := initializeRequest{
+		Agents: i.Agents, AppendSystemPrompt: i.AppendSystemPrompt, ForwardSubagentText: i.ForwardSubagentText,
+		PerTaskStopAffordance: i.PerTaskStopAffordance, Title: i.Title, Extra: i.Extra,
+	}
+	if i.SystemPrompt != "" {
+		r.SystemPrompt = []string{i.SystemPrompt}
+	}
 	return r, nil
 }
 

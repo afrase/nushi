@@ -63,22 +63,60 @@ func (s *Session) newRequestID() string {
 	return "req_" + strconv.FormatUint(s.nextID.Add(1), 10) + "_" + hex.EncodeToString(b[:])
 }
 
-// requestBody is body's fields with subtype among them. body is nil or
-// encodes to a JSON object.
-func requestBody(subtype string, body any) (map[string]json.RawMessage, error) {
+// requestBody is a request of ours: a struct that embeds ask, or a
+// rawRequest.
+type requestBody interface{ subtype() string }
+
+// ask is what every request of ours has: which request it is. Embedded
+// first, it is the first field on the wire.
+type ask struct {
+	Subtype string `json:"subtype,omitempty"` // "" only in initRequest's, until Start names it
+}
+
+func (a ask) subtype() string { return a.Subtype }
+
+// rawRequest is a request the package has no type for (Request's and
+// Begin's): the caller's fields with the subtype among them.
+type rawRequest struct {
+	name   string
+	fields map[string]json.RawMessage
+}
+
+func (r rawRequest) subtype() string { return r.name }
+
+// MarshalJSON writes the fields.
+func (r rawRequest) MarshalJSON() ([]byte, error) { return json.Marshal(r.fields) }
+
+// newRawRequest is a request of subtype with body's fields beside it.
+// body is nil or encodes to a JSON object; a subtype among its fields is
+// replaced.
+func newRawRequest(subtype string, body any) (rawRequest, error) {
 	fields := map[string]json.RawMessage{}
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return nil, fmt.Errorf("claudeagent: encoding %s: %w", subtype, err)
+			return rawRequest{}, fmt.Errorf("claudeagent: encoding %s: %w", subtype, err)
 		}
 		if err := json.Unmarshal(b, &fields); err != nil || fields == nil {
-			return nil, fmt.Errorf("claudeagent: %s's request isn't a JSON object", subtype)
+			return rawRequest{}, fmt.Errorf("claudeagent: %s's request isn't a JSON object", subtype)
 		}
 	}
 	sub, _ := json.Marshal(subtype)
 	fields["subtype"] = sub
-	return fields, nil
+	return rawRequest{name: subtype, fields: fields}, nil
+}
+
+// controlRequestLine is a request of ours as written.
+type controlRequestLine struct {
+	Type      string      `json:"type"` // "control_request"
+	RequestID string      `json:"request_id"`
+	Request   requestBody `json:"request"`
+}
+
+// cancelRequestLine withdraws a request of ours.
+type cancelRequestLine struct {
+	Type      string `json:"type"` // "control_cancel_request"
+	RequestID string `json:"request_id"`
 }
 
 // Request sends claude a request the package has no method for and
@@ -86,11 +124,21 @@ func requestBody(subtype string, body any) (map[string]json.RawMessage, error) {
 // JSON object; its fields go beside the subtype. It waits at most 60 s,
 // or less as ctx says; an error answer is a *ControlError.
 func (s *Session) Request(ctx context.Context, subtype string, req, resp any) error {
-	payload, err := s.request(ctx, subtype, req, true)
+	body, err := newRawRequest(subtype, req)
 	if err != nil {
 		return err
 	}
-	return decodeAnswer(subtype, payload, resp)
+	return s.do(ctx, body, resp)
+}
+
+// do sends claude a request and decodes its answer into resp (when not
+// nil), as Request does.
+func (s *Session) do(ctx context.Context, body requestBody, resp any) error {
+	payload, err := s.request(ctx, body, true)
+	if err != nil {
+		return err
+	}
+	return decodeAnswer(body.subtype(), payload, resp)
 }
 
 // decodeAnswer decodes a response's payload into v; a missing payload
@@ -109,8 +157,8 @@ func decodeAnswer(subtype string, payload json.RawMessage, v any) error {
 // with timeout, at most requestTimeout. It returns the response's
 // payload, a *ControlError for an error answer, or ErrClosed once the
 // session has ended. A request ctx gives up on is withdrawn.
-func (s *Session) request(ctx context.Context, subtype string, body any, timeout bool) (json.RawMessage, error) {
-	wait, err := s.begin(ctx, subtype, body, timeout)
+func (s *Session) request(ctx context.Context, body requestBody, timeout bool) (json.RawMessage, error) {
+	wait, err := s.begin(ctx, body, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -119,11 +167,8 @@ func (s *Session) request(ctx context.Context, subtype string, body any, timeout
 
 // begin writes claude a request, as request does, and returns once it is
 // written; wait waits for the answer, and must be called once.
-func (s *Session) begin(ctx context.Context, subtype string, body any, timeout bool) (wait func() (json.RawMessage, error), err error) {
-	fields, err := requestBody(subtype, body)
-	if err != nil {
-		return nil, err
-	}
+func (s *Session) begin(ctx context.Context, body requestBody, timeout bool) (wait func() (json.RawMessage, error), err error) {
+	subtype := body.subtype()
 	id := s.newRequestID()
 	ch := make(chan reply, 1)
 	s.mu.Lock()
@@ -138,7 +183,7 @@ func (s *Session) begin(ctx context.Context, subtype string, body any, timeout b
 		delete(s.pending, id)
 		s.mu.Unlock()
 	}
-	frame := map[string]any{"type": "control_request", "request_id": id, "request": fields}
+	frame := controlRequestLine{Type: "control_request", RequestID: id, Request: body}
 	if subtype == "initialize" && !s.initWritten() {
 		err = s.t.write(frame)
 		s.initDone()
@@ -177,7 +222,11 @@ func (s *Session) begin(ctx context.Context, subtype string, body any, timeout b
 // that order, which requests made on goroutines of their own don't. Call
 // wait once.
 func (s *Session) Begin(ctx context.Context, subtype string, req any) (wait func(resp any) error, err error) {
-	w, err := s.begin(ctx, subtype, req, true)
+	body, err := newRawRequest(subtype, req)
+	if err != nil {
+		return nil, err
+	}
+	w, err := s.begin(ctx, body, true)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +242,7 @@ func (s *Session) Begin(ctx context.Context, subtype string, req any) (wait func
 // withdraw tells claude a request of ours is no longer wanted. It goes
 // out whether or not ctx has ended.
 func (s *Session) withdraw(ctx context.Context, id string) {
-	_ = s.write(context.WithoutCancel(ctx), map[string]any{"type": "control_cancel_request", "request_id": id})
+	_ = s.write(context.WithoutCancel(ctx), cancelRequestLine{Type: "control_cancel_request", RequestID: id})
 }
 
 // answered hands a control_response to the request waiting for it. One

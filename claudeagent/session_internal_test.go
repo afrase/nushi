@@ -68,7 +68,7 @@ func TestWritesWaitForInitialize(t *testing.T) {
 
 		initErr := make(chan error, 1)
 		go func() {
-			_, err := s.request(t.Context(), "initialize", nil, false)
+			_, err := s.request(t.Context(), ask{"initialize"}, false)
 			initErr <- err
 		}()
 		synctest.Wait()
