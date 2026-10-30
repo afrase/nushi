@@ -28,8 +28,11 @@ var planTools = []string{"TodoWrite", "TaskCreate", "TaskUpdate", "TaskList", "T
 func isPlanTool(stream, name string) bool { return stream == "" && slices.Contains(planTools, name) }
 
 // plan is the session's plan and the task tools' calls waiting for their
-// results.
+// results. Each new plan goes to the client under mu, so the last the
+// client has is the plan.
 type plan struct {
+	send func(acp.SessionUpdate) // to the client, on the session
+
 	mu      sync.Mutex
 	calls   map[string]planCall // by tool use id
 	tasks   map[string]*task
@@ -51,12 +54,13 @@ type task struct {
 	ActiveForm string `json:"activeForm"`
 }
 
-func (p *plan) init() { p.calls, p.tasks = map[string]planCall{}, map[string]*task{} }
+func (p *plan) init(send func(acp.SessionUpdate)) {
+	p.send, p.calls, p.tasks = send, map[string]planCall{}, map[string]*task{}
+}
 
-// planInput is a plan tool's call with its whole input: TodoWrite's is
-// the plan; a task tool's waits for its result.
-func (s *session) planInput(b claudeagent.Block) {
-	p := &s.plan
+// input is a plan tool's call with its whole input: TodoWrite's is the
+// plan; a task tool's waits for its result.
+func (p *plan) input(b claudeagent.Block) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if b.Name != "TodoWrite" {
@@ -77,13 +81,12 @@ func (s *session) planInput(b claudeagent.Block) {
 	for _, t := range in.Todos {
 		entries = append(entries, entry(t.Content, t.ActiveForm, t.Status))
 	}
-	s.sendPlanLocked(entries)
+	p.sendLocked(entries)
 }
 
-// planResult is a tool's result, if it is a task tool's: the tasks change
-// as it says. structured is the tool's own output, when claude gave it.
-func (s *session) planResult(b claudeagent.Block, structured json.RawMessage) bool {
-	p := &s.plan
+// result is a tool's result, if it is a task tool's: the tasks change as
+// it says. structured is the tool's own output, when claude gave it.
+func (p *plan) result(b claudeagent.Block, structured json.RawMessage) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	call, ok := p.calls[b.ToolUseID]
@@ -142,7 +145,7 @@ func (s *session) planResult(b claudeagent.Block, structured json.RawMessage) bo
 		t := p.tasks[id]
 		entries = append(entries, entry(t.Subject, t.ActiveForm, t.Status))
 	}
-	s.sendPlanLocked(entries)
+	p.sendLocked(entries)
 	return true
 }
 
@@ -159,32 +162,30 @@ func entry(content, active, status string) acp.PlanEntry {
 	return acp.PlanEntry{Content: content, Status: st, Priority: acp.PlanEntryPriorityMedium}
 }
 
-func (s *session) sendPlanLocked(entries []acp.PlanEntry) {
-	s.plan.entries, s.plan.shown = entries, true
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "plan", Plan: &acp.Plan{Entries: entries}})
+// sendLocked makes entries the plan, and tells the client.
+func (p *plan) sendLocked(entries []acp.PlanEntry) {
+	p.entries, p.shown = entries, true
+	p.send(acp.SessionUpdate{SessionUpdate: "plan", Plan: &acp.Plan{Entries: entries}})
 }
 
-// planAgain shows the plan again as a prompt starts, while some of it is
+// again shows the plan again as a prompt starts, while some of it is
 // left to do.
-func (s *session) planAgain() {
-	p := &s.plan
+func (p *plan) again() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if slices.ContainsFunc(p.entries, func(e acp.PlanEntry) bool { return e.Status != acp.PlanEntryStatusCompleted }) {
-		s.sendPlanLocked(p.entries)
+		p.sendLocked(p.entries)
 	}
 }
 
-// planReset is the conversation starting over: the plan is empty.
-func (s *session) planReset() {
-	p := &s.plan
+// reset is the conversation starting over: the plan is empty.
+func (p *plan) reset() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	shown := p.shown
-	p.init()
-	p.order, p.entries = nil, nil
+	p.calls, p.tasks, p.order, p.entries = map[string]planCall{}, map[string]*task{}, nil, nil
 	if shown {
-		s.sendPlanLocked([]acp.PlanEntry{})
+		p.sendLocked([]acp.PlanEntry{})
 	}
 }
 

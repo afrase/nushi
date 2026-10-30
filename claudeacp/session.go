@@ -68,7 +68,7 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 	if err != nil {
 		return nil, err
 	}
-	a.out.after(s.id, s.sendCommands)
+	a.out.after(s.id, s.cmds.sendAll)
 	s.cfg.mu.Lock()
 	defer s.cfg.mu.Unlock()
 	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
@@ -81,7 +81,8 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	s.st.init()
 	s.kids.init(id, a.clientCaps().subagents, a.update)
 	s.tools.init(o.Cwd, &s.kids, a.newID)
-	s.plan.init()
+	s.plan.init(s.update)
+	s.cmds.send = s.update
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
 		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
 	}
@@ -271,6 +272,9 @@ func (b *background) wait() {
 	b.mu.Unlock()
 	b.wg.Wait()
 }
+
+// update sends the client an update of the session's own.
+func (s *session) update(u acp.SessionUpdate) { s.a.update(s.id, u) }
 
 // newUUID is a random (version 4) UUID: a new message's id.
 func newUUID() string { return uuid.NewV4().String() }

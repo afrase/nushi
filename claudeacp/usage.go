@@ -38,7 +38,7 @@ func (s *session) sendUsage(u shownUsage, cost *acp.Cost, meta map[string]any) {
 	if u.model != "" {
 		meta["_claude/model"] = u.model
 	}
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
+	s.update(acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
 		Used: uint64(max(u.used, 0)), Size: uint64(u.size), Cost: cost, Meta: meta, //nolint:gosec // token counts
 	}})
 }

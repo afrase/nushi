@@ -201,14 +201,14 @@ func (a *agent) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Prompt
 	if err != nil {
 		return nil, err
 	}
-	s.planAgain()
+	s.plan.again()
 	t, err := s.send(ctx, content)
 	if err != nil {
 		return nil, err
 	}
 	for _, b := range req.Prompt {
 		if b.Text != nil {
-			s.heard("", b.Text.Text)
+			s.title.heard("", b.Text.Text)
 		}
 	}
 	select {

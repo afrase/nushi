@@ -36,11 +36,10 @@ type titles struct {
 
 // heard adds words of the conversation to what a title is made from:
 // the user's, and the main agent's (stream ""), not a subagent's.
-func (s *session) heard(stream, text string) {
+func (t *titles) heard(stream, text string) {
 	if text == "" || stream != "" {
 		return
 	}
-	t := &s.title
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.text += text + "\n"
@@ -49,38 +48,60 @@ func (s *session) heard(stream, text string) {
 	}
 }
 
-// titleReset is the conversation starting over (/clear): it is named
-// anew.
-func (s *session) titleReset() {
-	t := &s.title
+// reset is the conversation starting over (/clear): it is named anew.
+func (t *titles) reset() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.text, t.asked = "", false
 }
 
+// look starts a look for the title: false when one is under way.
+func (t *titles) look() bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.busy {
+		return false
+	}
+	t.busy = true
+	return true
+}
+
+// found ends a look that found title ("" for none): true when it is news
+// to the client, which now has it.
+func (t *titles) found(title string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.busy = false
+	news := title != "" && title != t.sent
+	if news {
+		t.sent = title
+	}
+	return news
+}
+
+// toMake is the text claude makes a title from, the first time there is
+// enough of it; false after, and until then.
+func (t *titles) toMake() (string, bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.asked || len(strings.TrimSpace(t.text)) < titleMin {
+		return "", false
+	}
+	t.asked = true
+	return t.text, true
+}
+
 // retitle looks for the session's title, after a turn of the user's, on
 // a goroutine of its own: a look that is under way is enough.
 func (s *session) retitle() {
-	t := &s.title
-	t.mu.Lock()
-	if t.busy {
-		t.mu.Unlock()
+	if !s.title.look() {
 		return
 	}
-	t.busy = true
-	t.mu.Unlock()
 	s.bg.Go(func() {
 		title := s.findTitle()
-		t.mu.Lock()
-		t.busy = false
-		news := title != "" && title != t.sent
-		if news {
-			t.sent = title
-		}
-		t.mu.Unlock()
-		if news {
+		if s.title.found(title) {
 			now := time.Now().UTC().Format(time.RFC3339)
-			s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "session_info_update", SessionInfoUpdate: &acp.SessionInfoUpdate{
+			s.update(acp.SessionUpdate{SessionUpdate: "session_info_update", SessionInfoUpdate: &acp.SessionInfoUpdate{
 				Title: acp.Nullable[string]{Value: &title, Present: true}, UpdatedAt: acp.Nullable[string]{Value: &now, Present: true},
 			}})
 		}
@@ -94,15 +115,8 @@ func (s *session) findTitle() string {
 	if info, err := store.Get(s.id, s.cwd); err == nil && info.CustomTitle != "" {
 		return info.CustomTitle
 	}
-	t := &s.title
-	t.mu.Lock()
-	ask := !t.asked && len(strings.TrimSpace(t.text)) >= titleMin
-	text := t.text
-	if ask {
-		t.asked = true
-	}
-	t.mu.Unlock()
-	if !ask {
+	text, ok := s.title.toMake()
+	if !ok {
 		return ""
 	}
 	req := struct {

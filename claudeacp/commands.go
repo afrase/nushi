@@ -23,16 +23,17 @@ var hiddenCommands = []string{"clear", "cost", "keybindings-help", "login", "log
 
 // commands are the slash commands the client was told of.
 type commands struct {
+	send func(acp.SessionUpdate) // to the client, on the session
+
 	mu       sync.Mutex
 	list     []claudeagent.Command
 	terminal []string // the ones claude runs only in its terminal, from system/init
 }
 
-// sendCommands tells the client of the session's commands, all of them.
-// It holds the lock while it sends, so the client's last list is the
-// last one claude gave.
-func (s *session) sendCommands() {
-	c := &s.cmds
+// sendAll tells the client of the session's commands, all of them. It
+// holds the lock while it sends, so the client's last list is the last
+// one claude gave.
+func (c *commands) sendAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	out := []acp.AvailableCommand{}
@@ -46,33 +47,33 @@ func (s *session) sendCommands() {
 		}
 		out = append(out, ac)
 	}
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "available_commands_update",
+	c.send(acp.SessionUpdate{SessionUpdate: "available_commands_update",
 		AvailableCommandsUpdate: &acp.AvailableCommandsUpdate{AvailableCommands: out}})
 }
 
-// commandsChanged is claude's new list of commands.
-func (s *session) commandsChanged(list []claudeagent.Command) {
-	s.cmds.mu.Lock()
-	s.cmds.list = list
-	s.cmds.mu.Unlock()
-	s.sendCommands()
+// changed is claude's new list of commands.
+func (c *commands) changed(list []claudeagent.Command) {
+	c.mu.Lock()
+	c.list = list
+	c.mu.Unlock()
+	c.sendAll()
 }
 
-// terminalCommands follows system/init's list of the commands only
-// claude's terminal runs: when it changes, so does the client's.
-func (s *session) terminalCommands(names []string) {
+// terminalOnly follows system/init's list of the commands only claude's
+// terminal runs: when it changes, so does the client's.
+func (c *commands) terminalOnly(names []string) {
 	names = slices.Clone(names)
 	for i, n := range names {
 		names[i] = strings.TrimPrefix(n, "/")
 	}
-	s.cmds.mu.Lock()
-	news := names != nil && !slices.Equal(names, s.cmds.terminal)
+	c.mu.Lock()
+	news := names != nil && !slices.Equal(names, c.terminal)
 	if news {
-		s.cmds.terminal = names
+		c.terminal = names
 	}
-	s.cmds.mu.Unlock()
+	c.mu.Unlock()
 	if news {
-		s.sendCommands()
+		c.sendAll()
 	}
 }
 

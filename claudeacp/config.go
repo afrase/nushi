@@ -213,12 +213,12 @@ func (s *session) sendOptions() {
 	s.cfg.mu.Lock()
 	opts := s.cfg.optionsLocked()
 	s.cfg.mu.Unlock()
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "config_option_update", ConfigOptionUpdate: &acp.ConfigOptionUpdate{ConfigOptions: opts}})
+	s.update(acp.SessionUpdate{SessionUpdate: "config_option_update", ConfigOptionUpdate: &acp.ConfigOptionUpdate{ConfigOptions: opts}})
 }
 
 // sendMode tells the client the current mode.
 func (s *session) sendMode(mode claudeagent.PermissionMode) {
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "current_mode_update", CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: acp.SessionModeID(mode)}})
+	s.update(acp.SessionUpdate{SessionUpdate: "current_mode_update", CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: acp.SessionModeID(mode)}})
 }
 
 // modeChanged is claude in another mode, by its own doing or a plan's
@@ -271,9 +271,9 @@ func (s *session) fastState(state, why string) bool {
 	switch {
 	case !news || on || why == "":
 	case s.a.clientCaps().notices:
-		s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: acp.NoticeSeverityWarning, Title: "Fast mode turned off: " + why}})
+		s.update(acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: acp.NoticeSeverityWarning, Title: "Fast mode turned off: " + why}})
 	default: // the shape claude-agent-acp gives it, as the model fallback's
-		s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
+		s.update(acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
 			Content: acp.ContentBlock{Text: &acp.TextContent{Text: "**Fast mode turned off:** " + why}},
 		}})
 	}
