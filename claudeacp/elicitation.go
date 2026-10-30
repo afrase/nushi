@@ -29,7 +29,7 @@ func (s *session) elicit(ctx context.Context, r claudeagent.ElicitationRequest) 
 		req.Meta = map[string]any{"mcpServer": map[string]any{"name": r.ServerName}}
 	}
 	switch r.Mode {
-	case "url":
+	case claudeagent.ElicitationURL:
 		if !caps.urls {
 			return decline, nil
 		}

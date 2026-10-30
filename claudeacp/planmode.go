@@ -53,9 +53,9 @@ func (s *session) exitPlanOptions() []acp.PermissionOption {
 // stops the turn, which ends cancelled.
 func (s *session) exitPlan(option string) claudeagent.PermissionResult {
 	if mode, ok := planModes[option]; ok {
-		s.modeChanged(string(mode))
+		s.modeChanged(mode)
 		return claudeagent.Allow{Classification: claudeagent.UserTemporary,
-			UpdatedPermissions: []claudeagent.PermissionUpdate{{Type: "setMode", Mode: mode, Destination: "session"}}}
+			UpdatedPermissions: []claudeagent.PermissionUpdate{{Type: claudeagent.UpdateSetMode, Mode: mode, Destination: claudeagent.DestinationSession}}}
 	}
 	if option != optReject {
 		return claudeagent.Deny{Message: "The user cancelled.", Interrupt: true}

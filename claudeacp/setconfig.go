@@ -16,7 +16,7 @@ func (a *agent) SetSessionMode(ctx context.Context, req *acp.SetSessionModeReque
 	if err != nil {
 		return nil, err
 	}
-	if err := s.setMode(ctx, string(req.ModeID)); err != nil {
+	if err := s.setMode(ctx, claudeagent.PermissionMode(req.ModeID)); err != nil {
 		return nil, err
 	}
 	return &acp.SetSessionModeResponse{}, nil
@@ -40,7 +40,7 @@ func (a *agent) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionC
 	}
 	switch id := string(req.ConfigID); id {
 	case optMode:
-		err = s.setMode(ctx, value)
+		err = s.setMode(ctx, claudeagent.PermissionMode(value))
 	case optModel:
 		err = s.setModel(ctx, value)
 	case optEffort, optFast, optAgent:
@@ -58,12 +58,12 @@ func (a *agent) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionC
 
 // setMode switches claude's permission mode. A claude that refuses to
 // bypass permissions (it started without leave to) no longer offers it.
-func (s *session) setMode(ctx context.Context, mode string) error {
+func (s *session) setMode(ctx context.Context, mode claudeagent.PermissionMode) error {
 	s.setting.Lock()
 	defer s.setting.Unlock()
 	c := &s.cfg
 	c.mu.Lock()
-	offered := slices.ContainsFunc(c.modesLocked(), func(m acp.SessionMode) bool { return string(m.ID) == mode })
+	offered := slices.ContainsFunc(c.modesLocked(), func(m acp.SessionMode) bool { return m.ID == acp.SessionModeID(mode) })
 	same := mode == c.mode
 	c.mu.Unlock()
 	switch {
@@ -72,7 +72,7 @@ func (s *session) setMode(ctx context.Context, mode string) error {
 	case same:
 		return nil
 	}
-	if err := s.cs.SetPermissionMode(ctx, claudeagent.PermissionMode(mode)); err != nil {
+	if err := s.cs.SetPermissionMode(ctx, mode); err != nil {
 		if ce := (*claudeagent.ControlError)(nil); errors.As(err, &ce) && ce.Code == "bypass_disabled" {
 			c.mu.Lock()
 			c.bypass = false
