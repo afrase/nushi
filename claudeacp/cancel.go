@@ -92,7 +92,7 @@ func (s *session) backstop(t *turn) {
 	if over {
 		return
 	}
-	s.endTools(endedCancel)
+	s.tools.end(endedCancel)
 	s.mu.Lock()
 	s.settleLocked(t, cancelled(t))
 	s.mu.Unlock()

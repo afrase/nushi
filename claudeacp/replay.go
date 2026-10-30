@@ -156,9 +156,7 @@ func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 	if content == nil {
 		content = []acp.ToolCallContent{}
 	}
-	r.s.tools.mu.Lock()
-	r.s.sendLocked(t, report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input})
-	r.s.tools.mu.Unlock()
+	r.s.tools.show(t, report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input})
 	if a, ok := r.agents[b.ID]; ok {
 		r.subagent(stream, b.ID, a, in)
 	}
@@ -182,8 +180,6 @@ func (r *replayer) toolResult(b claudeagent.Block, structured json.RawMessage) {
 	if content, ok := resultContent(t.name, b); ok {
 		rep.content = content
 	}
-	r.s.tools.mu.Lock()
-	r.s.sendLocked(t, rep)
-	r.s.tools.mu.Unlock()
+	r.s.tools.show(t, rep)
 	r.called(t, b, structured)
 }

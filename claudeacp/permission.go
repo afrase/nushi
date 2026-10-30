@@ -37,7 +37,7 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	if r.ToolName == "AskUserQuestion" {
 		return s.askUser(ctx, r)
 	}
-	call := s.shown(r)
+	call := s.tools.shown(r)
 	if r.BlockedPath != "" {
 		call.Locations = append(call.Locations, acp.ToolCallLocation{Path: r.BlockedPath})
 	}
@@ -67,8 +67,7 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 
 // shown shows the call a request names, whole, if it hasn't been, and
 // returns it as a permission request names it.
-func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
-	ts := &s.tools
+func (ts *tools) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	parent := ""
@@ -83,7 +82,7 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 		// A subagent's call its stream hasn't shown: not one the turn
 		// leaves open when it ends, and of the stream of the call that
 		// started the subagent, if claude has said which.
-		parent = s.kids.callOf(r.AgentID)
+		parent = ts.out.callOf(r.AgentID)
 		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID, parent: parent}
 	}
 	// A call the stream showed whole keeps the input it showed, as with
@@ -92,7 +91,7 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 	// so the call reads as what the user is asked to allow.
 	t := ts.byID[r.ToolUseID]
 	if t == nil || !t.whole || !sameJSON(t.last.rawInput, input) {
-		t = s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
+		t = ts.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
 	}
 	v := toolView(t.name, input, ts.cwd)
 	cc := claudeCodeMeta{ToolName: t.name, ParentToolUseID: t.parent}
