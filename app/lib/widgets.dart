@@ -1,9 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/errors.dart';
-
 import 'package:nushi/theme/theme.dart';
 
 export 'package:nushi/controls.dart';
@@ -29,6 +30,45 @@ Future<void> tryOrShow(
     } else {
       messenger?.showSnackBar(SnackBar(content: Text(errorText(e))));
     }
+  }
+}
+
+/// Runs a call that shows nothing of its own while it runs, saying so in
+/// a toast: [running] (when it takes longer than a moment), then [done],
+/// or its error; without [done] (what it made shows) the toast just goes.
+Future<void> runAndSay(
+  BuildContext context,
+  Future<void> Function() call, {
+  required String running,
+  String? done,
+}) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  void say(String text, {Duration? lasts}) => messenger
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: lasts ?? const Duration(seconds: 4),
+      ),
+    );
+  // Said only past a moment: a quick call goes straight to [done].
+  var shown = false;
+  final slow = Timer(const Duration(milliseconds: 300), () {
+    shown = true;
+    say(running, lasts: const Duration(minutes: 5));
+  });
+  try {
+    await call();
+  } on Object catch (e) {
+    say(errorText(e));
+    return;
+  } finally {
+    slow.cancel();
+  }
+  if (done != null) {
+    say(done);
+  } else if (shown) {
+    messenger?.hideCurrentSnackBar();
   }
 }
 

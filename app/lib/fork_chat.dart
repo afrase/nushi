@@ -40,7 +40,8 @@ Future<ChatState?> forkChat(
   bool select = true,
 }) async {
   ChatState? fork;
-  await tryOrShow(context, () async {
+  // The new chat shows once it's made; a fork can take a moment.
+  await runAndSay(context, running: 'Forking ${chat.shownTitle}…', () async {
     final r = await d.client.forkAsChat(
       ForkAsChatRequest(chatId: chat.id, itemId: at?.id),
     );

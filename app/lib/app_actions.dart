@@ -318,7 +318,8 @@ List<AppAction> chatActions(
       'Reload chat',
       short: 'Reload',
       enabled: live && !chat.busy && !chat.asleep && !chat.reopenFailed,
-      run: () => tryOrShow(context, () => reloadChat(context, chat!, d)),
+      // Nothing in the chat shows a reload: a toast says it.
+      run: () => unawaited(reloadChat(context, chat!, d, say: true)),
     ),
     AppAction(
       .linkPull,

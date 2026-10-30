@@ -226,8 +226,10 @@ class _MemoryButton extends StatelessWidget {
           action: bundledDaemon == null
               ? null
               : Button(
-                  label: 'Restart',
-                  onPressed: () => restartDaemonAsking(context, daemon),
+                  label: daemon.restarting ? 'Restarting…' : 'Restart',
+                  onPressed: daemon.restarting
+                      ? null
+                      : () => restartDaemonAsking(context, daemon),
                 ),
         ),
         if (m.other > 0) row(label('Terminals and other'), m.other.toInt()),
