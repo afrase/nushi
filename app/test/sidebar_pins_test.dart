@@ -148,6 +148,28 @@ void main() {
     Directory(dataDir).createSync(recursive: true); // the tests' own
   });
 
+  testWidgets('a double click opens a chat; only its menu renames it', (
+    tester,
+  ) async {
+    final d = await _sidebar(tester, _chats());
+    final row = _inSidebar('Cap the rates');
+    await tester.tap(row);
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(d.selectedId, 'c');
+    expect(find.byType(EditableText), findsNothing);
+
+    await tester.tap(row, buttons: kSecondaryButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rename'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EditableText), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    d.dispose();
+  });
+
   testWidgets('a chat is dragged into another place in its project, the '
       'rows moving apart where it goes; refused in another project; kept, a '
       'new chat first', (tester) async {
