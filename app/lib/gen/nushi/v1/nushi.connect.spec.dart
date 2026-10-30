@@ -207,6 +207,28 @@ abstract final class NushiService {
     nushiv1nushi.CloseSideChatResponse.new,
   );
 
+  /// Forks a chat into a new one (Fork, ADR 0067): the same agent and folder
+  /// (and worktree), the chat's picks, its title marked " (fork)", and its
+  /// conversation: all that has finished, or with item_id (an agent message
+  /// with Item.forkable, while status.can_rewind) up to it, it included. The
+  /// chat stays as it was. Refused unless status.can_fork. (API 94)
+  static const forkAsChat = connect.Spec(
+    '/$name/ForkAsChat',
+    connect.StreamType.unary,
+    nushiv1nushi.ForkAsChatRequest.new,
+    nushiv1nushi.ForkAsChatResponse.new,
+  );
+
+  /// Makes a side chat a chat of its own, a fork of its chat, listed and
+  /// kept; the side chat ends (a removed event) without its session being
+  /// deleted. Refused during its turn. (API 94)
+  static const keepSideChat = connect.Spec(
+    '/$name/KeepSideChat',
+    connect.StreamType.unary,
+    nushiv1nushi.KeepSideChatRequest.new,
+    nushiv1nushi.KeepSideChatResponse.new,
+  );
+
   /// Sets the chat's title; it wins over the agent's. An empty title goes
   /// back to the agent's.
   static const renameChat = connect.Spec(

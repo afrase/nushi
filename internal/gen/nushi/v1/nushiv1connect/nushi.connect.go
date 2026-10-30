@@ -80,6 +80,11 @@ const (
 	// NushiServiceCloseSideChatProcedure is the fully-qualified name of the NushiService's
 	// CloseSideChat RPC.
 	NushiServiceCloseSideChatProcedure = "/nushi.v1.NushiService/CloseSideChat"
+	// NushiServiceForkAsChatProcedure is the fully-qualified name of the NushiService's ForkAsChat RPC.
+	NushiServiceForkAsChatProcedure = "/nushi.v1.NushiService/ForkAsChat"
+	// NushiServiceKeepSideChatProcedure is the fully-qualified name of the NushiService's KeepSideChat
+	// RPC.
+	NushiServiceKeepSideChatProcedure = "/nushi.v1.NushiService/KeepSideChat"
 	// NushiServiceRenameChatProcedure is the fully-qualified name of the NushiService's RenameChat RPC.
 	NushiServiceRenameChatProcedure = "/nushi.v1.NushiService/RenameChat"
 	// NushiServicePinChatsProcedure is the fully-qualified name of the NushiService's PinChats RPC.
@@ -454,6 +459,16 @@ type NushiServiceClient interface {
 	// CloseSideChat. Its items and status come as events like any chat's.
 	ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error)
 	CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error)
+	// Forks a chat into a new one (Fork, ADR 0067): the same agent and folder
+	// (and worktree), the chat's picks, its title marked " (fork)", and its
+	// conversation: all that has finished, or with item_id (an agent message
+	// with Item.forkable, while status.can_rewind) up to it, it included. The
+	// chat stays as it was. Refused unless status.can_fork. (API 94)
+	ForkAsChat(context.Context, *connect.Request[v1.ForkAsChatRequest]) (*connect.Response[v1.ForkAsChatResponse], error)
+	// Makes a side chat a chat of its own, a fork of its chat, listed and
+	// kept; the side chat ends (a removed event) without its session being
+	// deleted. Refused during its turn. (API 94)
+	KeepSideChat(context.Context, *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error)
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
@@ -903,6 +918,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceCloseSideChatProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("CloseSideChat")),
+			connect.WithClientOptions(opts...),
+		),
+		forkAsChat: connect.NewClient[v1.ForkAsChatRequest, v1.ForkAsChatResponse](
+			httpClient,
+			baseURL+NushiServiceForkAsChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ForkAsChat")),
+			connect.WithClientOptions(opts...),
+		),
+		keepSideChat: connect.NewClient[v1.KeepSideChatRequest, v1.KeepSideChatResponse](
+			httpClient,
+			baseURL+NushiServiceKeepSideChatProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("KeepSideChat")),
 			connect.WithClientOptions(opts...),
 		),
 		renameChat: connect.NewClient[v1.RenameChatRequest, v1.RenameChatResponse](
@@ -1560,6 +1587,8 @@ type nushiServiceClient struct {
 	stopTask            *connect.Client[v1.StopTaskRequest, v1.StopTaskResponse]
 	forkChat            *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
 	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
+	forkAsChat          *connect.Client[v1.ForkAsChatRequest, v1.ForkAsChatResponse]
+	keepSideChat        *connect.Client[v1.KeepSideChatRequest, v1.KeepSideChatResponse]
 	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
 	pinChats            *connect.Client[v1.PinChatsRequest, v1.PinChatsResponse]
 	renameBranch        *connect.Client[v1.RenameBranchRequest, v1.RenameBranchResponse]
@@ -1765,6 +1794,16 @@ func (c *nushiServiceClient) ForkChat(ctx context.Context, req *connect.Request[
 // CloseSideChat calls nushi.v1.NushiService.CloseSideChat.
 func (c *nushiServiceClient) CloseSideChat(ctx context.Context, req *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error) {
 	return c.closeSideChat.CallUnary(ctx, req)
+}
+
+// ForkAsChat calls nushi.v1.NushiService.ForkAsChat.
+func (c *nushiServiceClient) ForkAsChat(ctx context.Context, req *connect.Request[v1.ForkAsChatRequest]) (*connect.Response[v1.ForkAsChatResponse], error) {
+	return c.forkAsChat.CallUnary(ctx, req)
+}
+
+// KeepSideChat calls nushi.v1.NushiService.KeepSideChat.
+func (c *nushiServiceClient) KeepSideChat(ctx context.Context, req *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error) {
+	return c.keepSideChat.CallUnary(ctx, req)
 }
 
 // RenameChat calls nushi.v1.NushiService.RenameChat.
@@ -2370,6 +2409,16 @@ type NushiServiceHandler interface {
 	// CloseSideChat. Its items and status come as events like any chat's.
 	ForkChat(context.Context, *connect.Request[v1.ForkChatRequest]) (*connect.Response[v1.ForkChatResponse], error)
 	CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error)
+	// Forks a chat into a new one (Fork, ADR 0067): the same agent and folder
+	// (and worktree), the chat's picks, its title marked " (fork)", and its
+	// conversation: all that has finished, or with item_id (an agent message
+	// with Item.forkable, while status.can_rewind) up to it, it included. The
+	// chat stays as it was. Refused unless status.can_fork. (API 94)
+	ForkAsChat(context.Context, *connect.Request[v1.ForkAsChatRequest]) (*connect.Response[v1.ForkAsChatResponse], error)
+	// Makes a side chat a chat of its own, a fork of its chat, listed and
+	// kept; the side chat ends (a removed event) without its session being
+	// deleted. Refused during its turn. (API 94)
+	KeepSideChat(context.Context, *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error)
 	// Sets the chat's title; it wins over the agent's. An empty title goes
 	// back to the agent's.
 	RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error)
@@ -2815,6 +2864,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceCloseSideChatProcedure,
 		svc.CloseSideChat,
 		connect.WithSchema(nushiServiceMethods.ByName("CloseSideChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceForkAsChatHandler := connect.NewUnaryHandler(
+		NushiServiceForkAsChatProcedure,
+		svc.ForkAsChat,
+		connect.WithSchema(nushiServiceMethods.ByName("ForkAsChat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceKeepSideChatHandler := connect.NewUnaryHandler(
+		NushiServiceKeepSideChatProcedure,
+		svc.KeepSideChat,
+		connect.WithSchema(nushiServiceMethods.ByName("KeepSideChat")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceRenameChatHandler := connect.NewUnaryHandler(
@@ -3489,6 +3550,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceForkChatHandler.ServeHTTP(w, r)
 		case NushiServiceCloseSideChatProcedure:
 			nushiServiceCloseSideChatHandler.ServeHTTP(w, r)
+		case NushiServiceForkAsChatProcedure:
+			nushiServiceForkAsChatHandler.ServeHTTP(w, r)
+		case NushiServiceKeepSideChatProcedure:
+			nushiServiceKeepSideChatHandler.ServeHTTP(w, r)
 		case NushiServiceRenameChatProcedure:
 			nushiServiceRenameChatHandler.ServeHTTP(w, r)
 		case NushiServicePinChatsProcedure:
@@ -3786,6 +3851,14 @@ func (UnimplementedNushiServiceHandler) ForkChat(context.Context, *connect.Reque
 
 func (UnimplementedNushiServiceHandler) CloseSideChat(context.Context, *connect.Request[v1.CloseSideChatRequest]) (*connect.Response[v1.CloseSideChatResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CloseSideChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ForkAsChat(context.Context, *connect.Request[v1.ForkAsChatRequest]) (*connect.Response[v1.ForkAsChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ForkAsChat is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) KeepSideChat(context.Context, *connect.Request[v1.KeepSideChatRequest]) (*connect.Response[v1.KeepSideChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.KeepSideChat is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) RenameChat(context.Context, *connect.Request[v1.RenameChatRequest]) (*connect.Response[v1.RenameChatResponse], error) {

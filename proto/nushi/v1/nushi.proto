@@ -81,6 +81,16 @@ service NushiService {
   // CloseSideChat. Its items and status come as events like any chat's.
   rpc ForkChat(ForkChatRequest) returns (ForkChatResponse);
   rpc CloseSideChat(CloseSideChatRequest) returns (CloseSideChatResponse);
+  // Forks a chat into a new one (Fork, ADR 0067): the same agent and folder
+  // (and worktree), the chat's picks, its title marked " (fork)", and its
+  // conversation: all that has finished, or with item_id (an agent message
+  // with Item.forkable, while status.can_rewind) up to it, it included. The
+  // chat stays as it was. Refused unless status.can_fork. (API 94)
+  rpc ForkAsChat(ForkAsChatRequest) returns (ForkAsChatResponse);
+  // Makes a side chat a chat of its own, a fork of its chat, listed and
+  // kept; the side chat ends (a removed event) without its session being
+  // deleted. Refused during its turn. (API 94)
+  rpc KeepSideChat(KeepSideChatRequest) returns (KeepSideChatResponse);
   // Sets the chat's title; it wins over the agent's. An empty title goes
   // back to the agent's.
   rpc RenameChat(RenameChatRequest) returns (RenameChatResponse);
@@ -904,6 +914,27 @@ message ForkChatRequest {
 
 message ForkChatResponse {
   // The side chat's id.
+  string chat_id = 1;
+}
+
+message ForkAsChatRequest {
+  string chat_id = 1;
+  // The agent's message to fork at; "" for all of the conversation.
+  string item_id = 2;
+}
+
+message ForkAsChatResponse {
+  // The new chat's id.
+  string chat_id = 1;
+}
+
+message KeepSideChatRequest {
+  // The side chat's id.
+  string chat_id = 1;
+}
+
+message KeepSideChatResponse {
+  // The new chat's id.
   string chat_id = 1;
 }
 
@@ -1770,6 +1801,9 @@ message Item {
   // text, diffs and images show nothing; each cut to about 8 KB. API 79.
   string input = 34;
   string raw_output = 35;
+  // For an agent message: a fork can be cut there (Fork from here,
+  // ForkAsChatRequest.item_id) while status.can_rewind. API 94.
+  bool forkable = 36;
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when
