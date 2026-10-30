@@ -130,6 +130,8 @@ class _SettingsViewState extends State<SettingsView> {
             SettingsPlace(:final agent) => agent,
             _ => null,
           },
+          settings: _set,
+          onChange: _change,
         ),
       ],
     ),

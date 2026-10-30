@@ -6,6 +6,7 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
@@ -14,13 +15,25 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Settings › Agents: each agent as found on this Mac (its version and
 /// path, or "Not installed" with where to get it), and for one that runs
-/// through an adapter, Set up, Update and Remove (ADR 0037). The [marked]
-/// agent's row stands out: a chat that couldn't start it sent you here.
+/// through an adapter, Set up, Update and Remove (ADR 0037). Under Claude,
+/// the daemon's setting that runs it through Nushi's Go agent instead of
+/// its adapter (ADR 0066), once [settings] came. The [marked] agent's row
+/// stands out: a chat that couldn't start it sent you here.
 class AgentsPage extends StatefulWidget {
-  const new(this.client, {super.key, this.marked});
+  const new(
+    this.client, {
+    super.key,
+    this.marked,
+    this.settings,
+    this.onChange,
+  });
 
   final NushiServiceClient client;
   final String? marked;
+
+  /// The daemon's settings; null until it said.
+  final Settings? settings;
+  final SettingsChange? onChange;
 
   @override
   State<AgentsPage> createState() => _AgentsPageState();
@@ -48,6 +61,29 @@ class _AgentsPageState extends State<AgentsPage> {
     if (mounted) setState(() => _removing.remove(a.name));
   }
 
+  /// Claude's switch between its adapter and Nushi's Go agent, set in
+  /// line with Claude's name; the agents are found again once it's set,
+  /// as Claude's needs changed. Null while the daemon's settings aren't
+  /// known (or it is too old to have the setting).
+  Widget? _goAgent() {
+    final (set, change) = (widget.settings, widget.onChange);
+    if (set == null || change == null || !set.hasClaudeGoAgent()) return null;
+    return Padding(
+      padding: const EdgeInsets.only(left: agentTextIndent),
+      child: SettingsRow(
+        "Use Nushi's Go agent",
+        description: 'Runs Claude without Node. New and reopened chats use it.',
+        control: SettingsSwitch(
+          value: set.claudeGoAgent,
+          run: ({required on}) async {
+            await change((s) => s.claudeGoAgent = on);
+            await listAgents(widget.client);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: agentList,
@@ -58,7 +94,7 @@ class _AgentsPageState extends State<AgentsPage> {
         if (agents.isNotEmpty)
           SettingsGroup(
             children: [
-              for (final a in agents.values)
+              for (final a in agents.values) ...[
                 AgentRow(
                   a,
                   client: widget.client,
@@ -67,6 +103,8 @@ class _AgentsPageState extends State<AgentsPage> {
                       ? null
                       : () => _remove(a),
                 ),
+                if (a.name == 'claude') ?_goAgent(),
+              ],
             ],
           ),
         ShellEnvLine(widget.client),
@@ -84,6 +122,10 @@ String tilde(String path) {
 }
 
 String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
+
+/// How far an agent's name sits from its row's padding: past its mark
+/// and the gap after it.
+const agentTextIndent = 32.0;
 
 /// One agent: its mark and name, what was found, and what can be done.
 class AgentRow extends StatelessWidget {
@@ -126,7 +168,7 @@ class AgentRow extends StatelessWidget {
             padding: const EdgeInsets.only(top: 1),
             child: AgentMark(a.name, size: 20, color: t.text),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: agentTextIndent - 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

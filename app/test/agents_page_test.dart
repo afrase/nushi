@@ -1,8 +1,10 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -68,10 +70,13 @@ Future<(FakeDaemon, Daemon)> _settings(
   Tokens tokens = Tokens.dark,
   String? agent,
   ShellEnvironment? environment,
+  bool goAgent = false,
+  Size size = const Size(1000, 760),
 }) async {
   final fake = FakeDaemon([])
     ..agents = _found
     ..environment = environment;
+  fake.settings.claudeGoAgent = goAgent;
   final d = await fake.connect(tester);
   await pumpSettings(
     tester,
@@ -79,9 +84,19 @@ Future<(FakeDaemon, Daemon)> _settings(
     SettingsSection.agents,
     tokens: tokens,
     agent: agent,
+    size: size,
   );
   return (fake, d);
 }
+
+/// Settings › Agents' switch for Claude's Go agent.
+Finder get _goSwitch => find.descendant(
+  of: find.ancestor(
+    of: find.text("Use Nushi's Go agent"),
+    matching: find.byType(SettingsRow),
+  ),
+  matching: find.byType(Switch),
+);
 
 void main() {
   setUpAll(loadFonts);
@@ -148,6 +163,54 @@ void main() {
     d.dispose();
   });
 
+  testWidgets("Claude's Go agent: the switch sets it, and Claude then needs "
+      'no set-up; off again, it does', (tester) async {
+    final (fake, d) = await _settings(tester);
+    expect(
+      find.text('Runs Claude without Node. New and reopened chats use it.'),
+      findsOneWidget,
+    );
+    // In line with Claude's name, under Claude's row.
+    expect(
+      tester.getRect(find.text("Use Nushi's Go agent")).left,
+      tester.getRect(find.text('Claude')).left,
+    );
+    expect(
+      tester.getRect(find.text("Use Nushi's Go agent")).top,
+      greaterThan(tester.getRect(find.text('Not signed in')).bottom),
+    );
+    expect(
+      tester.getRect(find.text("Use Nushi's Go agent")).bottom,
+      lessThan(tester.getRect(find.text('Codex')).top),
+    );
+    expect(tester.widget<Switch>(_goSwitch).value, isFalse);
+    expect(find.text('Set up'), findsOneWidget);
+    final listed = fake.calls.whereType<ListAgentsRequest>().length;
+    await tester.tap(_goSwitch);
+    await tester.pumpAndSettle();
+    expect(fake.setSettings.single.claudeGoAgent, isTrue);
+    expect(fake.setSettings.single.sleepAfterMinutes, 30); // the rest kept
+    expect(fake.calls.whereType<ListAgentsRequest>().length, listed + 1);
+    expect(tester.widget<Switch>(_goSwitch).value, isTrue);
+    expect(find.text('Set up'), findsNothing);
+    expect(find.text('Ready'), findsNWidgets(3)); // Claude, Ante, PiG
+    await tester.tap(_goSwitch);
+    await tester.pumpAndSettle();
+    expect(fake.setSettings.last.claudeGoAgent, isFalse);
+    expect(find.text('Set up'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('no switch from a daemon without the setting', (tester) async {
+    final fake = FakeDaemon([])..agents = _found;
+    fake.settings.clearClaudeGoAgent();
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.agents);
+    expect(find.text("Use Nushi's Go agent"), findsNothing);
+    expect(find.text('Set up'), findsOneWidget);
+    d.dispose();
+  });
+
   testWidgets("the shell's environment: when it was read, and Reload", (
     tester,
   ) async {
@@ -204,6 +267,37 @@ void main() {
       );
       d.dispose();
     });
+
+    // Claude's Go agent off (Set up, as today) and on (no adapter, nothing
+    // to set up), in a wide window and a narrow one.
+    for (final (size, sizeName) in [
+      (const Size(1700, 900), 'wide'),
+      (const Size(720, 760), 'narrow'),
+    ]) {
+      for (final on in [false, true]) {
+        final state = on ? 'on' : 'off';
+        testWidgets('the page, the Go agent $state, $sizeName ($name)', (
+          tester,
+        ) async {
+          final (_, d) = await _settings(
+            tester,
+            tokens: tokens,
+            goAgent: on,
+            size: size,
+          );
+          final row = tester.getRect(find.byType(SettingsRow).first);
+          expect(tester.getRect(_goSwitch).right, closeTo(row.right - 14, 1));
+          expect(find.text('Set up'), on ? findsNothing : findsOneWidget);
+          await expectLater(
+            find.byType(SettingsView),
+            matchesGoldenFile(
+              'goldens/agents_go_${state}_${sizeName}_$name.png',
+            ),
+          );
+          d.dispose();
+        });
+      }
+    }
 
     // A chat that couldn't start Codex sent you here: its row stands out.
     testWidgets('the page, an agent marked ($name)', (tester) async {
