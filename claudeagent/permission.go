@@ -140,17 +140,31 @@ func (s *Session) canUseTool(ctx context.Context, raw json.RawMessage) (any, err
 	if err != nil {
 		return nil, err
 	}
-	return permissionAnswer(r, result)
+	a, err := permissionAnswer(r, result)
+	if err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+// permissionReply is a can_use_tool answer as claude reads it. The
+// fields are in their keys' order, as claude has always been sent them.
+type permissionReply struct {
+	Behavior               string             `json:"behavior"` // "allow" or "deny"
+	DecisionClassification string             `json:"decisionClassification,omitempty"`
+	Interrupt              bool               `json:"interrupt,omitempty"`
+	Message                string             `json:"message,omitempty"` // a deny's
+	ToolUseID              string             `json:"toolUseID"`
+	UpdatedInput           json.RawMessage    `json:"updatedInput,omitzero"` // an allow's
+	UpdatedPermissions     []PermissionUpdate `json:"updatedPermissions,omitzero"`
 }
 
 // permissionAnswer is result as claude reads it. It always names the
 // tool call, an allow always carries the input (the asked one when
 // unchanged) and a deny always a message: claude checks all three.
-func permissionAnswer(r PermissionRequest, result PermissionResult) (map[string]any, error) {
-	a := map[string]any{"toolUseID": r.ToolUseID}
+func permissionAnswer(r PermissionRequest, result PermissionResult) (permissionReply, error) {
 	switch p := result.(type) {
 	case Allow:
-		a["behavior"] = "allow"
 		input := p.UpdatedInput
 		if input == nil {
 			input = r.Input
@@ -158,26 +172,17 @@ func permissionAnswer(r PermissionRequest, result PermissionResult) (map[string]
 		if input == nil {
 			input = json.RawMessage(`{}`)
 		}
-		a["updatedInput"] = input
-		if p.UpdatedPermissions != nil {
-			a["updatedPermissions"] = p.UpdatedPermissions
-		}
-		if p.Classification != "" {
-			a["decisionClassification"] = p.Classification
-		}
+		return permissionReply{
+			Behavior: "allow", ToolUseID: r.ToolUseID, UpdatedInput: input,
+			UpdatedPermissions: p.UpdatedPermissions, DecisionClassification: p.Classification,
+		}, nil
 	case Deny:
-		a["behavior"] = "deny"
-		a["message"] = cmp.Or(p.Message, "Permission denied")
-		if p.Interrupt {
-			a["interrupt"] = true
-		}
-		if p.Classification != "" {
-			a["decisionClassification"] = p.Classification
-		}
-	default:
-		return nil, errors.New("claudeagent: CanUseTool returned no Allow or Deny")
+		return permissionReply{
+			Behavior: "deny", ToolUseID: r.ToolUseID, Message: cmp.Or(p.Message, "Permission denied"),
+			Interrupt: p.Interrupt, DecisionClassification: p.Classification,
+		}, nil
 	}
-	return a, nil
+	return permissionReply{}, errors.New("claudeagent: CanUseTool returned no Allow or Deny")
 }
 
 // isSet says whether an optional flag is on: present, and not false,

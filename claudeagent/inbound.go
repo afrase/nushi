@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 // claude's requests: each is handled in a goroutine of its own and
@@ -57,16 +58,7 @@ func (s *Session) received(raw json.RawMessage) {
 		if withdrawn || errors.Is(err, errNoReply) {
 			return // claude no longer waits, or mustn't be answered
 		}
-		r := controlResponse{Subtype: "success", RequestID: f.RequestID}
-		if payload == nil {
-			payload = struct{}{}
-		}
-		if err != nil {
-			r.Subtype, r.Error = "error", err.Error()
-		} else if r.Response, err = json.Marshal(payload); err != nil {
-			r.Subtype, r.Error, r.Response = "error", "claudeagent: encoding the answer: "+err.Error(), nil
-		}
-		if err := s.write(ctx, map[string]any{"type": "control_response", "response": wireResponse(r)}); err != nil {
+		if err := s.write(ctx, responseLine(f.RequestID, payload, err)); err != nil {
 			s.log.Debug("answering claude", "subtype", head.Subtype, "err", err)
 		}
 	}()
@@ -87,16 +79,46 @@ func MessagesBefore(ctx context.Context) (n uint64, ok bool) {
 	return n, ok
 }
 
-// wireResponse is r as claude reads it: a success's payload or an
-// error's message, not both.
-func wireResponse(r controlResponse) map[string]any {
-	w := map[string]any{"subtype": r.Subtype, "request_id": r.RequestID}
-	if r.Subtype == "error" {
-		w["error"] = r.Error
-	} else {
-		w["response"] = r.Response
+// controlResponseLine is our answer to a request of claude's: a success
+// or a failure.
+type controlResponseLine struct {
+	Type     string `json:"type"` // "control_response"
+	Response any    `json:"response"`
+}
+
+// success is an answer's payload.
+type success struct {
+	Subtype   string          `json:"subtype"` // "success"
+	RequestID string          `json:"request_id"`
+	Response  json.RawMessage `json:"response"`
+}
+
+// failure is an error's message, for claude to show.
+type failure struct {
+	Subtype   string `json:"subtype"` // "error"
+	RequestID string `json:"request_id"`
+	Error     string `json:"error"`
+}
+
+// responseLine answers request id with a handler's payload, {} when nil,
+// or its error.
+func responseLine(id string, payload any, err error) controlResponseLine {
+	line := controlResponseLine{Type: "control_response"}
+	if payload == nil {
+		payload = struct{}{}
 	}
-	return w
+	var b []byte
+	if err == nil {
+		if b, err = json.Marshal(payload); err != nil {
+			err = fmt.Errorf("claudeagent: encoding the answer: %w", err)
+		}
+	}
+	if err != nil {
+		line.Response = failure{Subtype: "error", RequestID: id, Error: err.Error()}
+	} else {
+		line.Response = success{Subtype: "success", RequestID: id, Response: b}
+	}
+	return line
 }
 
 // withdrawn ends the handling of a request claude no longer wants; what

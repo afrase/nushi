@@ -170,37 +170,37 @@ func (s *Session) hookCallback(ctx context.Context, raw json.RawMessage) (any, e
 	return hookAnswer(in.Event, out), nil
 }
 
-// hookAnswer is out as claude reads it: only what is set.
-func hookAnswer(event HookEvent, out HookOutput) map[string]any {
-	a := map[string]any{}
+// hookReply is a hook's answer as claude reads it: only what is set. The
+// fields are in their keys' order, as claude has always been sent them.
+type hookReply struct {
+	Async              bool           `json:"async,omitempty"`
+	AsyncTimeout       int64          `json:"asyncTimeout,omitempty"` // in milliseconds
+	Continue           *bool          `json:"continue,omitempty"`     // only ever false: claude stops
+	Decision           string         `json:"decision,omitempty"`
+	HookSpecificOutput map[string]any `json:"hookSpecificOutput,omitzero"`
+	Reason             string         `json:"reason,omitempty"`
+	StopReason         string         `json:"stopReason,omitempty"`
+	SuppressOutput     bool           `json:"suppressOutput,omitempty"`
+	SystemMessage      string         `json:"systemMessage,omitempty"`
+}
+
+// hookAnswer is out as claude reads it; an async one says only that.
+func hookAnswer(event HookEvent, out HookOutput) hookReply {
 	if out.Async {
-		a["async"] = true
-		if out.AsyncTimeout > 0 {
-			a["asyncTimeout"] = out.AsyncTimeout.Milliseconds()
-		}
-		return a
+		return hookReply{Async: true, AsyncTimeout: max(out.AsyncTimeout, 0).Milliseconds()}
+	}
+	r := hookReply{
+		Decision: out.Decision, Reason: out.Reason, StopReason: out.StopReason,
+		SuppressOutput: out.SuppressOutput, SystemMessage: out.SystemMessage,
 	}
 	if out.Stop {
-		a["continue"] = false
-	}
-	set := func(k, v string) {
-		if v != "" {
-			a[k] = v
-		}
-	}
-	set("stopReason", out.StopReason)
-	set("decision", out.Decision)
-	set("reason", out.Reason)
-	set("systemMessage", out.SystemMessage)
-	if out.SuppressOutput {
-		a["suppressOutput"] = true
+		r.Continue = new(false)
 	}
 	if out.Specific != nil {
-		specific := maps.Clone(out.Specific)
+		r.HookSpecificOutput = maps.Clone(out.Specific)
 		if event != "" {
-			specific["hookEventName"] = event
+			r.HookSpecificOutput["hookEventName"] = event
 		}
-		a["hookSpecificOutput"] = specific
 	}
-	return a
+	return r
 }
