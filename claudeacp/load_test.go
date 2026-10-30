@@ -29,7 +29,7 @@ func (p *peer) load(sid, cwd string) (*acp.LoadSessionResponse, error) {
 func TestLoadReplaysHistory(t *testing.T) {
 	f := fake()
 	p := start(t, nil, f)
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	p.writeHistory(t, cwd, sid,
 		userRec("u1", "Fix the bug"),
 		asstRec("a1", "msg_1", map[string]any{"type": "thinking", "thinking": "Looking"}),
@@ -77,7 +77,7 @@ func TestLoadReplaysHistory(t *testing.T) {
 // session the first opened.
 func TestLoadTwiceAtOnce(t *testing.T) {
 	p := start(t, nil, fake()) // one claude: a second start would fail
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	p.writeHistory(t, cwd, sid, userRec("u1", "hello"))
 	errs := make(chan error, 2)
 	for range 2 {
@@ -97,14 +97,14 @@ func TestLoadTwiceAtOnce(t *testing.T) {
 func TestLoadMissing(t *testing.T) {
 	p := start(t, nil)
 	cwd := t.TempDir()
-	for _, sid := range []string{uuid(1), "../../etc"} {
+	for _, sid := range []string{nthUUID(1), "../../etc"} {
 		_, err := p.load(sid, cwd)
 		var e *acp.Error
 		if !errors.As(err, &e) || e.Code != acp.ErrorCodeResourceNotFound || string(e.Data) != `{"uri":"`+sid+`"}` {
 			t.Errorf("%s: %v", sid, err)
 		}
 	}
-	if _, err := p.ResumeSession(context.Background(), &acp.ResumeSessionRequest{SessionID: acp.SessionID(uuid(3)), Cwd: cwd}); err == nil {
+	if _, err := p.ResumeSession(context.Background(), &acp.ResumeSessionRequest{SessionID: acp.SessionID(nthUUID(3)), Cwd: cwd}); err == nil {
 		t.Error("resumed a session claude doesn't have")
 	}
 	if len(p.notes()) != 0 {
@@ -116,7 +116,7 @@ func TestLoadMissing(t *testing.T) {
 // not resourceNotFound: the session isn't gone, so a client keeps it.
 func TestLoadUnreadable(t *testing.T) {
 	p := start(t, nil)
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	p.writeHistory(t, cwd, sid, userRec("u1", "Fix the bug"))
 	path := filepath.Join(sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd), sid+".jsonl")
 	if err := os.Chmod(path, 0); err != nil {
@@ -147,7 +147,7 @@ func TestResumeClaudeQuits(t *testing.T) {
 		{"transcript gone", true, acp.ErrorCodeResourceNotFound},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			cwd, sid := t.TempDir(), uuid(1)
+			cwd, sid := t.TempDir(), nthUUID(1)
 			var path string
 			quits := claudetest.New(claudetest.Expect(initRequest),
 				claudetest.Do(func() {
@@ -177,7 +177,7 @@ func TestResumeClaudeQuits(t *testing.T) {
 func TestResume(t *testing.T) {
 	f := fake()
 	p := start(t, nil, f) // one claude: a second start would fail
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	p.writeHistory(t, cwd, sid, userRec("u1", "hello"), asstRec("a1", "msg_1", textBlock("hi")))
 	for range 2 {
 		r, err := p.ResumeSession(context.Background(), &acp.ResumeSessionRequest{SessionID: acp.SessionID(sid), Cwd: cwd})

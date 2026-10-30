@@ -61,24 +61,32 @@ type Options struct {
 	Cwd     string   // "" = this process's
 	Env     []string // nil = os.Environ(); edited as the package doc says
 
-	Model, FallbackModel, Effort string
-	PermissionMode               PermissionMode // "" = claude decides, from the settings
-	AllowBypass                  bool           // lets the session switch to BypassPermissions
-	Resume                       string         // a session id to continue
-	SessionID                    string         // the new session's id
-	ForkSession                  bool           // with Resume: continue in a new session
-	ResumeSessionAt              string         // with Resume: the message to resume after
-	SettingSources               []string       // nil = every source; empty = none
-	Settings                     json.RawMessage
-	MCPServers                   map[string]MCPServer
-	AddDirs                      []string
-	AllowedTools                 []string
-	DisallowedTools              []string
-	Tools                        []string // nil = the default set; empty = none
-	Thinking                     *Thinking
-	MaxTurns                     int
-	IncludePartialMessages       bool // StreamEvent messages as the model writes
-	ReplayUserMessages           bool // claude echoes the user messages it takes
+	// Model is the model to start with, an alias ("opus") or an id; "" =
+	// claude's default. SetModel switches it later.
+	Model string
+	// FallbackModel is the model claude retries on when Model is
+	// overloaded or refuses; it can't be Model.
+	FallbackModel string
+	// Effort is how hard the model works ("low", "medium", "high"…; a
+	// model's SupportedEffortLevels); "" = claude's default.
+	Effort                 string
+	PermissionMode         PermissionMode // "" = claude decides, from the settings
+	AllowBypass            bool           // lets the session switch to BypassPermissions
+	Resume                 string         // a session id to continue
+	SessionID              string         // the new session's id
+	ForkSession            bool           // with Resume: continue in a new session
+	ResumeSessionAt        string         // with Resume: the message to resume after
+	SettingSources         []string       // nil = every source; empty = none
+	Settings               json.RawMessage
+	MCPServers             map[string]MCPServer
+	AddDirs                []string
+	AllowedTools           []string
+	DisallowedTools        []string
+	Tools                  []string // nil = the default set; empty = none
+	Thinking               *Thinking
+	MaxTurns               int
+	IncludePartialMessages bool // StreamEvent messages as the model writes
+	ReplayUserMessages     bool // claude echoes the user messages it takes
 	// ExtraArgs passes flags the options don't name: --key=value, or
 	// --key for a nil value.
 	ExtraArgs map[string]*string

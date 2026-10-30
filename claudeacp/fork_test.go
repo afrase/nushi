@@ -16,13 +16,13 @@ import (
 // conversation is a session of two turns, the first making a call.
 func conversation() []rec {
 	return []rec{
-		userRec(uuid(101), "first"),
-		asstRec(uuid(102), "msg_1", textBlock("one")),
-		asstRec(uuid(103), "msg_1", useBlock("toolu_1", "Bash", `{"command":"ls"}`)),
-		userRec(uuid(104), resultBlocks("toolu_1", "x.go", false)),
-		asstRec(uuid(105), "msg_2", textBlock("two")),
-		userRec(uuid(106), "second"),
-		asstRec(uuid(107), "msg_3", textBlock("three")),
+		userRec(nthUUID(101), "first"),
+		asstRec(nthUUID(102), "msg_1", textBlock("one")),
+		asstRec(nthUUID(103), "msg_1", useBlock("toolu_1", "Bash", `{"command":"ls"}`)),
+		userRec(nthUUID(104), resultBlocks("toolu_1", "x.go", false)),
+		asstRec(nthUUID(105), "msg_2", textBlock("two")),
+		userRec(nthUUID(106), "second"),
+		asstRec(nthUUID(107), "msg_3", textBlock("three")),
 	}
 }
 
@@ -73,12 +73,12 @@ func TestFork(t *testing.T) {
 		{"whole", "", all},
 		{"at an agent message", "msg_1", all[:3]},
 		{"at a message's segment", "msg_2:segment:1", all[:5]},
-		{"at a user message", uuid(106), all[:6]},
+		{"at a user message", nthUUID(106), all[:6]},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := fake()
 			p := start(t, nil, f)
-			from, to, sid := t.TempDir(), t.TempDir(), uuid(1)
+			from, to, sid := t.TempDir(), t.TempDir(), nthUUID(1)
 			p.writeHistory(t, from, sid, conversation()...)
 			req := &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: to}
 			if tc.at != "" {
@@ -112,13 +112,13 @@ func TestFork(t *testing.T) {
 // claude.
 func TestForkFails(t *testing.T) {
 	p := start(t, nil)
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	p.writeHistory(t, cwd, sid, conversation()...)
 	for _, tc := range []struct {
 		sid, at string
 		code    acp.ErrorCode
 	}{
-		{uuid(2), "", acp.ErrorCodeResourceNotFound},
+		{nthUUID(2), "", acp.ErrorCodeResourceNotFound},
 		{sid, "msg_nothing", acp.ErrorCodeInvalidParams},
 	} {
 		req := &acp.ForkSessionRequest{SessionID: acp.SessionID(tc.sid), Cwd: cwd}
