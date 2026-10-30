@@ -49,7 +49,11 @@ func (s *session) cancel() {
 	go func() {
 		var calls []*claudeagent.Call
 		for _, id := range drop {
-			c, err := s.cs.Begin(s.a.ctx, "cancel_async_message", map[string]any{"message_uuid": id})
+			// Begun, not CancelAsyncMessage: each is written before the
+			// next and the interrupt, with no wait for its answer.
+			c, err := s.cs.Begin(s.a.ctx, "cancel_async_message", struct {
+				MessageUUID string `json:"message_uuid"`
+			}{id})
 			if err != nil {
 				s.log.Info("dropping a queued prompt", "err", err)
 				continue

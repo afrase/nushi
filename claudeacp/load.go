@@ -107,21 +107,36 @@ func (a *agent) reopen(ctx context.Context, id string, su setup, replay bool) (*
 	return s, nil
 }
 
+// reopener is the lock on reopening one session, and how many hold it or
+// wait for it: the last to let go forgets it.
+type reopener struct {
+	sync.Mutex
+	users int // under the agent's mu
+}
+
 // opening has the caller reopen session id alone, so two loads of a
 // session at once run one claude, not two; it returns the unlock.
 func (a *agent) opening(id string) (unlock func()) {
 	a.mu.Lock()
 	if a.reopening == nil {
-		a.reopening = map[string]*sync.Mutex{}
+		a.reopening = map[string]*reopener{}
 	}
-	m := a.reopening[id]
-	if m == nil {
-		m = new(sync.Mutex)
-		a.reopening[id] = m
+	r := a.reopening[id]
+	if r == nil {
+		r = new(reopener)
+		a.reopening[id] = r
 	}
+	r.users++
 	a.mu.Unlock()
-	m.Lock()
-	return m.Unlock
+	r.Lock()
+	return func() {
+		r.Unlock()
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		if r.users--; r.users == 0 {
+			delete(a.reopening, id)
+		}
+	}
 }
 
 func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {

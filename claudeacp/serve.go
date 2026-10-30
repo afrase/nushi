@@ -49,7 +49,7 @@ type agent struct {
 	mu        sync.Mutex
 	caps      clientCaps
 	sessions  map[string]*session
-	reopening map[string]*sync.Mutex // by session id: one load or resume of each at a time
+	reopening map[string]*reopener // by session id: one load or resume of each at a time
 
 	windows windows // the context windows results have said (window.go)
 }

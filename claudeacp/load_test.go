@@ -91,6 +91,12 @@ func TestLoadTwiceAtOnce(t *testing.T) {
 			t.Error(err)
 		}
 	}
+	// Once both are done the session's lock is forgotten.
+	p.agent.mu.Lock()
+	defer p.agent.mu.Unlock()
+	if n := len(p.agent.reopening); n != 0 {
+		t.Errorf("%d reopening locks kept", n)
+	}
 }
 
 // A session claude has no transcript of is resourceNotFound, naming it.
