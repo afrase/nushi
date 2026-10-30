@@ -5,10 +5,12 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/phone/artifacts_screen.dart';
 import 'package:nushi/phone/chat_sheet.dart';
+import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/new_chat_screen.dart';
 import 'package:nushi/phone/phone.dart';
@@ -58,7 +60,14 @@ class ChatScreen extends StatelessWidget {
           PhoneIcon(
             Icons.more_horiz,
             label: 'Chat',
-            onTap: () => unawaited(showChatSheet(context, daemon, chat)),
+            onTap: () => unawaited(
+              showChatSheet(
+                context,
+                daemon,
+                chat,
+                onFork: () => unawaited(_fork(context, daemon)),
+              ),
+            ),
           ),
         ],
         body: Column(
@@ -100,6 +109,15 @@ class ChatScreen extends StatelessWidget {
               ),
       ),
     );
+  }
+
+  /// Forks the chat and shows the fork on a screen of its own, over this
+  /// one.
+  Future<void> _fork(BuildContext context, Daemon daemon) async {
+    final fork = await forkChat(context, daemon, chat, select: false);
+    if (fork != null && context.mounted) {
+      await openPhoneChat(context, phone, fork);
+    }
   }
 }
 

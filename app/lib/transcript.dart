@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
@@ -179,7 +180,12 @@ class _TranscriptState extends State<Transcript> {
       _ => [e],
     };
     final rewindable = e is Item && canRewindTo(widget.chat, e);
-    final from = [live, still, rewindable, top, mark, ...items];
+    final forkable =
+        widget.items == null &&
+        e is Item &&
+        e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE &&
+        canForkAt(widget.daemon, widget.chat, e, live: live);
+    final from = [live, still, rewindable, forkable, top, mark, ...items];
     final was = before[key];
     final same =
         was != null &&
@@ -213,6 +219,7 @@ class _TranscriptState extends State<Transcript> {
                             live: live,
                             still: still,
                             rewindable: rewindable,
+                            forkable: forkable,
                           ),
                         ),
                       ),
@@ -229,6 +236,7 @@ class _TranscriptState extends State<Transcript> {
     required bool live,
     required bool still,
     bool rewindable = false,
+    bool forkable = false,
   }) => switch (e) {
     final List<Item> run => RunView(run, still: still),
     final SubagentRun s => SubagentLine(
@@ -245,6 +253,9 @@ class _TranscriptState extends State<Transcript> {
       still: still,
       onRewind: rewindable
           ? () => rewind(context, widget.daemon, widget.chat, e)
+          : null,
+      onFork: forkable
+          ? () => forkChat(context, widget.daemon, widget.chat, at: e)
           : null,
     ),
   };

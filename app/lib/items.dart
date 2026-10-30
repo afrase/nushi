@@ -8,6 +8,7 @@ import 'package:nushi/file_links.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/marks.dart';
@@ -30,6 +31,7 @@ class ItemView extends StatelessWidget {
     required this.still,
     super.key,
     this.onRewind,
+    this.onFork,
   });
 
   final Item item;
@@ -44,6 +46,9 @@ class ItemView extends StatelessWidget {
 
   /// Rewinds the chat to just before this user message, if it can be.
   final VoidCallback? onRewind;
+
+  /// Forks a new chat up to this agent message, if it can be.
+  final VoidCallback? onFork;
 
   @override
   Widget build(BuildContext context) {
@@ -181,32 +186,35 @@ class ItemView extends StatelessWidget {
                   findingsShownBefore(chat.items, chat.items.indexOf(item)),
                 )
                 .isEmpty;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 4,
-          children: [
-            if (found == null)
-              LinkedMarkdown(item.text, chat, daemon, live: live)
-            else ...[
-              if (found.before.isNotEmpty)
-                LinkedMarkdown(found.before, chat, daemon, live: false),
-              if (again)
-                FindingsAgain(found.json)
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: FindingsCard(
-                    found.findings,
-                    chat,
-                    json: found.json,
-                    key: const ValueKey('findings'),
+        return ForkTarget(
+          onFork: onFork,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 4,
+            children: [
+              if (found == null)
+                LinkedMarkdown(item.text, chat, daemon, live: live)
+              else ...[
+                if (found.before.isNotEmpty)
+                  LinkedMarkdown(found.before, chat, daemon, live: false),
+                if (again)
+                  FindingsAgain(found.json)
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: FindingsCard(
+                      found.findings,
+                      chat,
+                      json: found.json,
+                      key: const ValueKey('findings'),
+                    ),
                   ),
-                ),
-              if (found.after.isNotEmpty)
-                LinkedMarkdown(found.after, chat, daemon, live: live),
+                if (found.after.isNotEmpty)
+                  LinkedMarkdown(found.after, chat, daemon, live: live),
+              ],
+              if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
             ],
-            if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
-          ],
+          ),
         );
     }
   }

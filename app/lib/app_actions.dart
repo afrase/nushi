@@ -13,6 +13,7 @@ import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
@@ -65,6 +66,7 @@ enum Act {
   terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
   rewind(keyText: 'Esc Esc'), // the composer's
   sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
+  fork(menu: ActMenu.chat, menuLabel: 'Fork Chat'),
   sendComments(menu: ActMenu.chat, menuLabel: 'Send Review Comments to Agent'),
   stop(keyText: 'Esc', menu: ActMenu.chat, menuLabel: 'Stop'), // the chat's
   rename(menu: ActMenu.chat, menuLabel: 'Rename'),
@@ -268,6 +270,13 @@ List<AppAction> chatActions(
       },
       enabled: live && (chat.canFork || chat.side.value != null),
       run: () => unawaited(toggleSide(context, d, chat!)),
+    ),
+    AppAction(
+      .fork,
+      'Fork chat',
+      short: 'Fork',
+      enabled: canForkChat(d, chat),
+      run: () => unawaited(forkChat(context, d, chat!)),
     ),
     AppAction(
       .sendComments,

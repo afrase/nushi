@@ -445,6 +445,39 @@ void main() {
     await endPhone(tester, phone);
   });
 
+  for (final b in Brightness.values) {
+    testWidgets("the chat's ⋯ forks it, and shows the fork (${b.name})", (
+      tester,
+    ) async {
+      final status = ChatStatus(canFork: true);
+      final fake = FakeDaemon(_chats)
+        ..answer = (input) => switch (input) {
+          GetChatRequest(chatId: 'c') => GetChatResponse(
+            chat: _chats[2],
+            status: status,
+          ),
+          _ => null,
+        };
+      final (phone, _) = await _app(tester, fake, brightness: b);
+      await tester.tap(find.text('Web Push from the daemon'));
+      await tester.pumpAndSettle();
+      fake.emit(EventsResponse(chatId: 'c', seq: Int64(9), status: status));
+      await tester.pumpAndSettle();
+      await tester.tap(find.bySemanticsLabel('Chat'));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(PhoneApp),
+        matchesGoldenFile('goldens/phone_chat_sheet_fork_${b.name}.png'),
+      );
+      await tester.tap(find.text('Fork'));
+      await tester.pumpAndSettle();
+      expect(fake.calls.whereType<ForkAsChatRequest>().single.chatId, 'c');
+      expect(find.text('Web Push from the daemon (fork)'), findsOne);
+      _chats.removeWhere((c) => c.id == 'fork'); // the fake listed it
+      await endPhone(tester, phone);
+    });
+  }
+
   testWidgets('notifications on and off: the subscription to the daemon', (
     tester,
   ) async {

@@ -7,6 +7,7 @@ import 'package:nushi/chat_menu.dart';
 import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/subagents.dart';
@@ -14,25 +15,30 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The phone's chat ⋯: what the chat runs in (its folder, branch and
-/// model) and what can be done to it from a phone: Rename, Pin or Unpin,
-/// Sleep, Archive or Unarchive, and Stop every subagent and background
-/// command that runs. Everything else stays the Mac's.
+/// model) and what can be done to it from a phone: Rename, Fork ([onFork],
+/// which shows the fork), Pin or Unpin, Sleep, Archive or Unarchive, and
+/// Stop every subagent and background command that runs. Everything else
+/// stays the Mac's.
 Future<void> showChatSheet(
   BuildContext context,
   Daemon daemon,
-  ChatState chat,
-) => showModalBottomSheet<void>(
+  ChatState chat, {
+  VoidCallback? onFork,
+}) => showModalBottomSheet<void>(
   context: context,
   backgroundColor: NushiTheme.of(context).t.raised,
   showDragHandle: true,
-  builder: (_) => ChatSheet(daemon, chat),
+  builder: (_) => ChatSheet(daemon, chat, onFork: onFork),
 );
 
 class ChatSheet extends StatefulWidget {
-  const new(this.daemon, this.chat, {super.key});
+  const new(this.daemon, this.chat, {super.key, this.onFork});
 
   final Daemon daemon;
   final ChatState chat;
+
+  /// Forks the chat (the sheet closes first).
+  final VoidCallback? onFork;
 
   @override
   State<ChatSheet> createState() => _ChatSheetState();
@@ -124,6 +130,16 @@ class _ChatSheetState extends State<ChatSheet> {
             const SizedBox(height: 12),
             for (final (label, run, destructive) in [
               ('Rename…', _rename, false),
+              if (widget.onFork case final fork? when canForkChat(d, chat))
+                (
+                  'Fork',
+                  // Closed first: the fork's screen goes over the chat's.
+                  () async {
+                    Navigator.pop(context);
+                    fork();
+                  },
+                  false,
+                ),
               if (canPinChat(d, chat))
                 (
                   chat.pin > 0 ? 'Unpin' : 'Pin',

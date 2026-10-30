@@ -18,8 +18,8 @@ import 'package:nushi/worktree.dart';
 
 /// The chat's menu (its ⋯, its sidebar row's right-click): the menu bar's
 /// Chat menu, the actions that apply to it now ([chatActions]: Side
-/// question, Send review comments, Stop, Rename, Sleep, Reload, Link pull
-/// request…, Archive or Unarchive, MCP servers…, Skills…, Delete…), each
+/// question, Fork, Send review comments, Stop, Rename, Sleep, Reload, Link
+/// pull request…, Archive or Unarchive, MCP servers…, Skills…, Delete…), each
 /// with its icon, in groups ([_group]) with a line between them; Delete in
 /// red.
 List<MenuEntry> chatMenu(
@@ -50,7 +50,7 @@ List<MenuEntry> chatMenu(
 /// itself, what it's linked to and uses, keeping it, deleting it. One the
 /// menu doesn't know yet goes with the chat itself.
 int _group(Act act) => switch (act) {
-  Act.sideChat || Act.sendComments || Act.stop => 0,
+  Act.sideChat || Act.fork || Act.sendComments || Act.stop => 0,
   Act.linkPull || Act.cleanUp || Act.mcp || Act.skills => 2,
   Act.archive || Act.unarchive => 3,
   Act.delete => 4,
@@ -59,6 +59,7 @@ int _group(Act act) => switch (act) {
 
 IconData? _icon(Act act) => switch (act) {
   Act.sideChat => Icons.forum_outlined,
+  Act.fork => Icons.call_split,
   Act.sendComments => Icons.rate_review_outlined,
   Act.stop => Icons.stop_circle_outlined,
   Act.rename => Icons.edit_outlined,

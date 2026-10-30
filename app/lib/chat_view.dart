@@ -10,6 +10,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/motion.dart';
@@ -198,6 +199,7 @@ class _ChatViewState extends State<ChatView> {
               daemon: widget.daemon,
               onHide: () => chat.sideHidden.value = true,
               onClose: () => unawaited(endSide(context, widget.daemon, chat)),
+              onKeep: () => unawaited(keepSide(context, widget.daemon, chat)),
             ),
           ),
         if (id != null)
