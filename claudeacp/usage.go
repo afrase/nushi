@@ -19,26 +19,31 @@ func (s *session) contextUsed() {
 	}
 }
 
-// usage sends a usage_update: the context's use and size, cost when
-// given, and meta, with the model under _claude/model. It is sent under
-// the window's lock, so claude's answer about the window (window.go)
-// comes before or after it, never in between.
+// usage sends a usage_update (window.report) of the stream's counts.
 func (s *session) usage(cost *acp.Cost, meta map[string]any) {
-	s.win.mu.Lock()
-	defer s.win.mu.Unlock()
-	s.win.shown = shownUsage{used: s.st.used, model: s.st.model, size: s.sizeLocked(), ok: true}
-	s.sendUsage(s.win.shown, cost, meta)
+	s.win.report(s.st.used, s.st.model, cost, meta)
 }
 
-// sendUsage sends u as a usage_update.
-func (s *session) sendUsage(u shownUsage, cost *acp.Cost, meta map[string]any) {
+// report sends a usage_update: the context's use (used) and size, cost
+// when given, and meta, with the model under _claude/model. It is sent
+// under the window's lock, so claude's answer about the window comes
+// before or after it, never in between.
+func (w *window) report(used int, model string, cost *acp.Cost, meta map[string]any) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.shown = shownUsage{used: used, model: model, size: w.sizeLocked(model), ok: true}
+	w.sendLocked(w.shown, cost, meta)
+}
+
+// sendLocked sends u as a usage_update.
+func (w *window) sendLocked(u shownUsage, cost *acp.Cost, meta map[string]any) {
 	if meta == nil {
 		meta = map[string]any{}
 	}
 	if u.model != "" {
 		meta["_claude/model"] = u.model
 	}
-	s.update(acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
+	w.send(acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{
 		Used: uint64(max(u.used, 0)), Size: uint64(u.size), Cost: cost, Meta: meta, //nolint:gosec // token counts
 	}})
 }

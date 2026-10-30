@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/claudeagent"
 )
 
@@ -22,6 +24,8 @@ import (
 // window is a session's context window, as far as it is known. The
 // reader, a model change and claude's answer each set it.
 type window struct {
+	send func(acp.SessionUpdate) // to the client, on the session
+
 	mu       sync.Mutex
 	size     int        // 0 until known or guessed from the model's names
 	sure     bool       // from a result or the cache: claude's answer doesn't replace it
@@ -117,15 +121,23 @@ func modelID(m *claudeagent.ModelInfo, value string) string {
 }
 
 // seedWindow sets the window for the session's model as it starts or
-// changes: the cache's, else a guess from the model's names (fallback
-// when they say nothing), and asks claude when it isn't sure.
+// changes (window.seed), and asks claude when it isn't sure.
 func (s *session) seedWindow(ctx context.Context, fallback int) {
 	m, value := s.cfg.currentModel()
-	w := &s.win
+	if gen, sure := s.win.seed(&s.a.windows, m, value, fallback); !sure {
+		s.askWindow(ctx, gen)
+	}
+}
+
+// seed sets the window for the model m (nil when claude listed none),
+// the model option's value: the cache's, else a guess from the model's
+// names, else fallback. It returns the window's generation, and whether
+// the size is sure.
+func (w *window) seed(cache *windows, m *claudeagent.ModelInfo, value string, fallback int) (gen int, sure bool) {
 	w.mu.Lock()
+	defer w.mu.Unlock()
 	w.gen++
-	gen := w.gen
-	size, sure := s.a.windows.find(w.provider, modelID(m, value))
+	size, sure := cache.find(w.provider, modelID(m, value))
 	if !sure {
 		size = guessWindow(m, value)
 		if size == 0 {
@@ -133,19 +145,12 @@ func (s *session) seedWindow(ctx context.Context, fallback int) {
 		}
 	}
 	w.size, w.sure = size, sure
-	w.mu.Unlock()
-	if !sure {
-		s.askWindow(ctx, gen)
-	}
+	return w.gen, sure
 }
 
 // askWindow asks claude for the window and waits for its answer on a
 // goroutine of its own: the request is written now, so it reaches claude
-// before what the session writes next, as claude-agent-acp's does. The
-// answer counts unless a result, or another model, came first. claude
-// answers beside its stream, so a usage_update may have gone out with
-// the guess meanwhile: it is sent again with the answer's size, so the
-// meter doesn't wait for the next one.
+// before what the session writes next, as claude-agent-acp's does.
 func (s *session) askWindow(ctx context.Context, gen int) {
 	// The answer outlives the request that asked: the session's end ends
 	// the wait.
@@ -162,18 +167,26 @@ func (s *session) askWindow(ctx context.Context, gen int) {
 			s.log.Debug("reading the context window", "err", err)
 			return
 		}
-		w := &s.win
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		if u.RawMaxTokens <= 0 || w.sure || w.gen != gen {
-			return
-		}
-		w.size = u.RawMaxTokens
-		if w.shown.ok && w.shown.size != w.size {
-			w.shown.size = w.size
-			s.sendUsage(w.shown, nil, nil)
-		}
+		s.win.answered(gen, u.RawMaxTokens)
 	})
+}
+
+// answered is claude's answer, size, to the ask of generation gen. It
+// counts unless a result, or another model, came first. claude answers
+// beside its stream, so a usage_update may have gone out with the guess
+// meanwhile: it is sent again with the answer's size, so the meter
+// doesn't wait for the next one.
+func (w *window) answered(gen, size int) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if size <= 0 || w.sure || w.gen != gen {
+		return
+	}
+	w.size = size
+	if w.shown.ok && w.shown.size != w.size {
+		w.shown.size = w.size
+		w.sendLocked(w.shown, nil, nil)
+	}
 }
 
 // resultWindow takes the window a result says: its model's (model, the
@@ -193,24 +206,29 @@ func (s *session) resultWindow(r *claudeagent.Result, model string) {
 	if size <= 0 {
 		return
 	}
-	s.win.mu.Lock()
-	s.win.size, s.win.sure = size, true
-	provider := s.win.provider
-	s.win.mu.Unlock()
+	provider := s.win.measured(size)
 	s.a.windows.keep(provider, id, size)
 	if id != model {
 		s.a.windows.keep(provider, model, size)
 	}
 }
 
-// sizeLocked is the context window's: as known, else a million for a
-// model whose id says 1m, else 200k. The reader calls it, with the
-// window locked.
-func (s *session) sizeLocked() int {
+// measured is the window's size as a result says it, for sure; it
+// returns the backend's key, for the cache.
+func (w *window) measured(size int) (provider string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.size, w.sure = size, true
+	return w.provider
+}
+
+// sizeLocked is the context window's: as known, else a million for model
+// (the last top-level message's) when its id says 1m, else 200k.
+func (w *window) sizeLocked(model string) int {
 	switch {
-	case s.win.size > 0:
-		return s.win.size
-	case oneM.MatchString(s.st.model):
+	case w.size > 0:
+		return w.size
+	case oneM.MatchString(model):
 		return 1_000_000
 	}
 	return 200_000

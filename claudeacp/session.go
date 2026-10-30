@@ -97,7 +97,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	if ir := cs.Init(); ir != nil {
 		s.cmds.list = ir.Commands
 	}
-	s.win.provider = providerKey(o.Env)
+	s.win.send, s.win.provider = s.update, providerKey(o.Env)
 	s.seedWindow(ctx, 0)
 	a.mu.Lock()
 	a.sessions[id] = s
