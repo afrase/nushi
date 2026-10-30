@@ -120,7 +120,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		var req request
 		_ = json.Unmarshal(body, &req)
 		s.note(r, req.Model, "count_tokens")
-		writeJSON(w, map[string]any{"input_tokens": max(1, len(body)/4)})
+		writeJSON(w, struct {
+			InputTokens int `json:"input_tokens"`
+		}{max(1, len(body)/4)})
 	case r.Method == http.MethodGet && path == "/v1/models":
 		s.note(r, "", "models")
 		s.models(w)
@@ -233,30 +235,56 @@ func (s *Server) models(w http.ResponseWriter) {
 	if ids == nil {
 		ids = []string{"claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"}
 	}
-	data := make([]any, 0, len(ids))
+	list := modelList{Data: make([]modelInfo, 0, len(ids))}
 	for _, id := range ids {
-		data = append(data, model(id))
+		list.Data = append(list.Data, model(id))
 	}
-	var first, last any
 	if len(ids) > 0 {
-		first, last = ids[0], ids[len(ids)-1]
+		list.FirstID, list.LastID = &ids[0], &ids[len(ids)-1]
 	}
-	writeJSON(w, map[string]any{"data": data, "has_more": false, "first_id": first, "last_id": last})
+	writeJSON(w, list)
 }
 
-// model is a model as the models API describes one.
-func model(id string) map[string]any {
-	return map[string]any{"type": "model", "id": id, "display_name": id, "created_at": "2026-01-01T00:00:00Z"}
+// modelList is a page of the models API: all of them.
+type modelList struct {
+	Data    []modelInfo `json:"data"`
+	HasMore bool        `json:"has_more"`
+	FirstID *string     `json:"first_id"` // null when there are none
+	LastID  *string     `json:"last_id"`
+}
+
+// modelInfo is a model as the models API describes one.
+type modelInfo struct {
+	Type        string `json:"type"` // "model"
+	ID          string `json:"id"`
+	DisplayName string `json:"display_name"`
+	CreatedAt   string `json:"created_at"`
+}
+
+// model is the model id as the models API describes it.
+func model(id string) modelInfo {
+	return modelInfo{Type: "model", ID: id, DisplayName: id, CreatedAt: "2026-01-01T00:00:00Z"}
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(v) //nolint:errchkjson // maps of plain values; a failed write is the client gone
+	_ = json.NewEncoder(w).Encode(v) //nolint:errchkjson // plain values; a failed write is the client gone
+}
+
+// errorBody is an error answer as the API writes it.
+type errorBody struct {
+	Type  string `json:"type"` // "error"
+	Error struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error"`
 }
 
 // apiError answers with e, in the API's error shape.
 func apiError(w http.ResponseWriter, e *APIError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(e.Status)
-	_ = json.NewEncoder(w).Encode(map[string]any{"type": "error", "error": map[string]any{"type": e.Type, "message": e.Message}}) //nolint:errchkjson // as writeJSON
+	body := errorBody{Type: "error"}
+	body.Error.Type, body.Error.Message = e.Type, e.Message
+	_ = json.NewEncoder(w).Encode(body) //nolint:errchkjson // as writeJSON
 }

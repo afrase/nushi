@@ -329,8 +329,10 @@ func TestCapture(t *testing.T) {
 	body, _ := rep.events()
 	var input strings.Builder
 	for _, ev := range body {
-		if d, ok := ev.data.(map[string]any)["delta"].(map[string]any); ok && d["type"] == "input_json_delta" {
-			input.WriteString(d["partial_json"].(string))
+		if d, ok := ev.data.(blockDelta); ok {
+			if in, ok := d.Delta.(inputDelta); ok {
+				input.WriteString(in.PartialJSON)
+			}
 		}
 	}
 	if input.String() != `{"task_id":"a\"b"}` {
