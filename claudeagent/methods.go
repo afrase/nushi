@@ -3,10 +3,9 @@ package claudeagent
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"uuid"
 )
 
 // UserInput is a user message for claude: Text, or Content's blocks.
@@ -20,7 +19,7 @@ type UserInput struct {
 	// Origin says who wrote it; nil = a person ({"kind":"human"}), which
 	// is what claude's checks for a person's say-so trust.
 	Origin          *Origin
-	ShouldQuery     *bool  // false = add it to the conversation without a turn
+	NoQuery         bool   // adds it to the conversation without a turn
 	ParentToolUseID string // the tool call it answers, if any
 }
 
@@ -43,7 +42,7 @@ type userLine struct {
 	Message         userMessage `json:"message"`
 	ParentToolUseID *string     `json:"parent_tool_use_id"` // null at the top
 	Priority        Priority    `json:"priority,omitempty"`
-	ShouldQuery     *bool       `json:"shouldQuery,omitempty"`
+	ShouldQuery     *bool       `json:"shouldQuery,omitempty"` // only ever false: NoQuery
 }
 
 // userMessage is a user line's message: its content a string or blocks.
@@ -68,7 +67,7 @@ func (s *Session) Send(ctx context.Context, m UserInput) (string, error) {
 	}
 	id := m.UUID
 	if id == "" {
-		id = newUUID()
+		id = uuid.NewV4().String()
 	}
 	origin := m.Origin
 	if origin == nil {
@@ -76,24 +75,18 @@ func (s *Session) Send(ctx context.Context, m UserInput) (string, error) {
 	}
 	line := userLine{
 		Type: "user", UUID: id, Origin: origin, Message: userMessage{Role: "user", Content: content},
-		Priority: m.Priority, ShouldQuery: m.ShouldQuery,
+		Priority: m.Priority,
 	}
 	if m.ParentToolUseID != "" {
 		line.ParentToolUseID = &m.ParentToolUseID
+	}
+	if m.NoQuery {
+		line.ShouldQuery = new(false)
 	}
 	if err := s.write(ctx, line); err != nil {
 		return "", err
 	}
 	return id, nil
-}
-
-// newUUID is a random (version 4) UUID.
-func newUUID() string {
-	var b [16]byte
-	_, _ = rand.Read(b[:])
-	b[6] = b[6]&0x0f | 0x40
-	b[8] = b[8]&0x3f | 0x80
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
 // InterruptReceipt is what an interrupt left: the user messages claude
@@ -209,8 +202,9 @@ func (s *Session) ContextUsage(ctx context.Context, detail string) (*ContextUsag
 	return u, nil
 }
 
-// MCPServerStatus is an MCP server's state; Raw has what else claude
-// says of it (its tools, its config…).
+// MCPServerStatus is an MCP server's state, as MCPServers and SystemInit
+// report it; Raw has what else claude says of it (its tools, its
+// config…).
 type MCPServerStatus struct {
 	Name   string          `json:"name"`
 	Status string          `json:"status"` // "connected", "failed", "needs-auth", "pending", "disabled"…
@@ -229,8 +223,8 @@ func (m *MCPServerStatus) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MCPStatus asks for the state of the session's MCP servers.
-func (s *Session) MCPStatus(ctx context.Context) ([]MCPServerStatus, error) {
+// MCPServers asks for the state of the session's MCP servers.
+func (s *Session) MCPServers(ctx context.Context) ([]MCPServerStatus, error) {
 	var r struct {
 		MCPServers []MCPServerStatus `json:"mcpServers"`
 	}

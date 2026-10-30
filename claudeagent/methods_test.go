@@ -42,7 +42,7 @@ func TestRequests(t *testing.T) {
 			func(s *claudeagent.Session) (any, error) { return nil, s.MCPReconnect(ctx, "jira") }, ""},
 		{"mcp_status", `{}`, `{"subtype":"mcp_status"}`, `{"mcpServers":[{"name":"jira","status":"failed","error":"401","tools":[]}]}`,
 			func(s *claudeagent.Session) (any, error) {
-				st, err := s.MCPStatus(ctx)
+				st, err := s.MCPServers(ctx)
 				return []string{st[0].Name, st[0].Status, st[0].Error, string(st[0].Raw)}, err
 			}, `["jira","failed","401","{\"name\":\"jira\",\"status\":\"failed\",\"error\":\"401\",\"tools\":[]}"]`},
 		{"get_context_usage", `{}`, `{"subtype":"get_context_usage","detail":"summary"}`, `{"categories":[{"name":"Messages","tokens":5}],"totalTokens":5,"rawMaxTokens":1000000}`,
@@ -104,14 +104,13 @@ func TestSend(t *testing.T) {
 	if id, err := s.Send(ctx, claudeagent.UserInput{Text: "hi", UUID: "u-1"}); err != nil || id != "u-1" {
 		t.Fatal(id, err)
 	}
-	no := false
 	id, err := s.Send(ctx, claudeagent.UserInput{
 		Content: []claudeagent.Block{
 			{Type: "text", Text: "a"},
 			{Raw: json.RawMessage(`{"type":"image","source":{"type":"base64"}}`)},
 		},
 		Origin:   &claudeagent.Origin{Raw: json.RawMessage(`{"kind":"peer","from":"x"}`)},
-		Priority: "now", ShouldQuery: &no, ParentToolUseID: "toolu_1",
+		Priority: "now", NoQuery: true, ParentToolUseID: "toolu_1",
 	})
 	if err != nil || !regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`).MatchString(id) {
 		t.Fatal(id, err)

@@ -36,8 +36,8 @@ func twoTurns(a, b string, done chan struct{}) []claudetest.Step {
 	return append(append(turn(a), turn(b)...), signal(done))
 }
 
-// uuid is the nth of a run of UUIDs.
-func uuid(n int) string { return fmt.Sprintf("00000000-0000-4000-8000-%012d", n) }
+// nthUUID is the nth of a run of UUIDs.
+func nthUUID(n int) string { return fmt.Sprintf("00000000-0000-4000-8000-%012d", n) }
 
 // A session is titled once: claude makes the title from the conversation
 // after the first turn and keeps it; nothing asks again. A title that
@@ -86,10 +86,10 @@ func TestTitle(t *testing.T) {
 // the session's, and claude isn't asked for one.
 func TestTitleFromTranscript(t *testing.T) {
 	done := make(chan struct{})
-	f := started(`{}`, `"Never asked"`, twoTurns(uuid(2), uuid(3), done)...)
+	f := started(`{}`, `"Never asked"`, twoTurns(nthUUID(2), nthUUID(3), done)...)
 	p := start(t, nil, f)
 	var n atomic.Int32 // the transcript's name is a UUID
-	p.agent.newID = func() string { return uuid(int(n.Add(1))) }
+	p.agent.newID = func() string { return nthUUID(int(n.Add(1))) }
 	dir := t.TempDir()
 	r, err := p.NewSession(context.Background(), &acp.NewSessionRequest{Cwd: dir, MCPServers: []acp.MCPServer{}})
 	if err != nil {

@@ -21,7 +21,7 @@ func TestLoadReplaysSubagents(t *testing.T) {
 	f.Respond(`{"type":"control_request","request":{"subtype":"stop_task"}}`,
 		`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)
 	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, f)
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	agent := func(id, input string) map[string]any { return useBlock(id, "Agent", input) }
 	p.writeHistory(t, cwd, sid,
 		userRec("u1", "Count"),
@@ -120,7 +120,7 @@ func TestLoadReplaysSubagents(t *testing.T) {
 // the last about a subagent says how it ended.
 func TestLoadSubagentsQueuedEnds(t *testing.T) {
 	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, fake())
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	note := func(id, status, summary string) string {
 		return "<task-notification>\n<task-id>" + id + "</task-id>\n<status>" + status + "</status>\n<summary>" + summary + "</summary>\n</task-notification>"
 	}
@@ -182,7 +182,7 @@ func TestLoadSubagentsQueuedEnds(t *testing.T) {
 // of their own steps.
 func TestLoadSubagentsFlat(t *testing.T) {
 	p := start(t, nil, fake())
-	cwd, sid := t.TempDir(), uuid(1)
+	cwd, sid := t.TempDir(), nthUUID(1)
 	p.writeHistory(t, cwd, sid,
 		userRec("u1", "Count"),
 		asstRec("a1", "msg_1", useBlock("toolu_A", "Agent", `{"description":"Count","prompt":"count"}`)),

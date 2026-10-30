@@ -12,7 +12,7 @@ func TestDecodeSystem(t *testing.T) {
 		{
 			`{"type":"system","subtype":"init","claude_code_version":"2.1.312","cwd":"/w","tools":["Bash"],"mcp_servers":[{"name":"t","status":"connected"}],"model":"claude-opus-5","permissionMode":"default","slash_commands":["compact"],"apiKeySource":"none","fast_mode_state":"off","effort":"high","capabilities":["interrupt_receipt_v1"],"agents":["x"],"uuid":"u15","session_id":"s1"}`,
 			&SystemInit{ClaudeCodeVersion: "2.1.312", Cwd: "/w", Model: "claude-opus-5", PermissionMode: "default", FastModeState: "off", Effort: "high",
-				APIKeySource: "none", Tools: []string{"Bash"}, SlashCommands: []string{"compact"}, MCPServers: []MCPStatus{{"t", "connected"}},
+				APIKeySource: "none", Tools: []string{"Bash"}, SlashCommands: []string{"compact"}, MCPServers: []MCPServerStatus{{Name: "t", Status: "connected"}},
 				Capabilities: []string{"interrupt_receipt_v1"}},
 		},
 		{`{"type":"system","subtype":"status","status":null,"permissionMode":"plan","uuid":"u16","session_id":"s1"}`, &Status{PermissionMode: "plan"}},

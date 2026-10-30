@@ -43,15 +43,9 @@ type SystemInit struct {
 	Tools             []string       `json:"tools"`
 	SlashCommands     []string       `json:"slash_commands"`
 	// TerminalSlashCommands are the commands only claude's terminal runs.
-	TerminalSlashCommands []string    `json:"terminal_slash_commands"`
-	MCPServers            []MCPStatus `json:"mcp_servers"`
-	Capabilities          []string    `json:"capabilities"`
-}
-
-// MCPStatus is an MCP server's state, as claude reports it.
-type MCPStatus struct {
-	Name   string `json:"name"`
-	Status string `json:"status"` // e.g. "connected", "failed", "needs-auth", "pending"
+	TerminalSlashCommands []string          `json:"terminal_slash_commands"`
+	MCPServers            []MCPServerStatus `json:"mcp_servers"` // their names and states
+	Capabilities          []string          `json:"capabilities"`
 }
 
 // Status is a change of what claude is doing (Status "compacting",

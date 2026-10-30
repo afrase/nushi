@@ -112,7 +112,8 @@ func checkDecode(t *testing.T, cases []decodeCase) {
 	}
 }
 
-// clearRaw drops the blocks' and origins' Raw, which the table leaves out.
+// clearRaw drops the blocks', origins' and MCP servers' Raw, which the
+// table leaves out.
 func clearRaw(m Message) {
 	noRaw := func(bs Blocks) {
 		for i := range bs {
@@ -120,6 +121,10 @@ func clearRaw(m Message) {
 		}
 	}
 	switch m := m.(type) {
+	case *SystemInit:
+		for i := range m.MCPServers {
+			m.MCPServers[i].Raw = nil
+		}
 	case *Assistant:
 		noRaw(m.Message.Content)
 	case *User:
