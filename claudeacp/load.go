@@ -103,7 +103,7 @@ func (a *agent) reopen(ctx context.Context, id string, su setup, replay bool) (*
 	if replay {
 		s.replay(ms, dir)
 	}
-	s.sendCommands()
+	s.cmds.sendAll()
 	return s, nil
 }
 
@@ -169,7 +169,7 @@ func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	a.out.after(s.id, s.sendCommands)
+	a.out.after(s.id, s.cmds.sendAll)
 	s.cfg.mu.Lock()
 	defer s.cfg.mu.Unlock()
 	return &acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil

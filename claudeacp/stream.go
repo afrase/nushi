@@ -55,12 +55,12 @@ func (s *session) handle(m claudeagent.Message) {
 		s.sessionState(m.State)
 	case *claudeagent.SystemInit:
 		s.followInit(m)
-		s.terminalCommands(m.TerminalSlashCommands)
+		s.cmds.terminalOnly(m.TerminalSlashCommands)
 	case *claudeagent.CommandsChanged:
-		s.commandsChanged(m.Commands)
+		s.cmds.changed(m.Commands)
 	case *claudeagent.ConversationReset:
-		s.planReset()
-		s.titleReset()
+		s.plan.reset()
+		s.title.reset()
 	case *claudeagent.Status:
 		s.modeChanged(m.PermissionMode)
 		switch {
@@ -112,7 +112,7 @@ func (s *session) user(m *claudeagent.User) {
 		if len(m.Message.Content) == 1 { // else whose it is can't be told
 			structured = m.ToolUseResult
 		}
-		if !s.planResult(b, structured) {
+		if !s.plan.result(b, structured) {
 			s.tools.result(b)
 		}
 		s.resumed(b.ToolUseID, structured)
@@ -247,7 +247,7 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 		msg.done++
 		switch b.Type {
 		case "text":
-			s.heard(key, b.Text)
+			s.title.heard(key, b.Text)
 			if rest, ok := strings.CutPrefix(b.Text, sent); ok && rest != "" {
 				s.chunk("agent_message_chunk", key, id, acp.ContentBlock{Text: &acp.TextContent{Text: rest}})
 			}
@@ -262,7 +262,7 @@ func (s *session) assistant(m *claudeagent.Assistant) {
 		default:
 			switch {
 			case isToolUse(b.Type) && isPlanTool(key, b.Name): // the main agent's plan, not a call
-				s.planInput(b)
+				s.plan.input(b)
 			case isToolUse(b.Type):
 				s.tools.input(key, b)
 			case strings.HasSuffix(b.Type, "_tool_result"): // a server tool's, which the API ran

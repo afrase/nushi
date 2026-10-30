@@ -31,14 +31,14 @@ func (s *session) notice(level, content string) {
 		if level == "warning" {
 			sev = acp.NoticeSeverityWarning
 		}
-		s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: sev, Title: content}})
+		s.update(acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: sev, Title: content}})
 		return
 	}
 	text := content
 	if level != "" && level != "info" {
 		text = "**" + strings.ToUpper(level[:1]) + level[1:] + ":** " + content
 	}
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
+	s.update(acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
 		Content: acp.ContentBlock{Text: &acp.TextContent{Text: text}},
 		Meta:    claudeCodeMeta{Kind: "informational", Level: &level}.meta(),
 	}})
@@ -52,10 +52,10 @@ func (s *session) modelFallback(m *claudeagent.ModelRefusalFallback) {
 		text = "Retried with " + m.FallbackModel + " after " + m.OriginalModel + " refused."
 	}
 	if s.a.clientCaps().notices {
-		s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: acp.NoticeSeverityWarning, Title: text}})
+		s.update(acp.SessionUpdate{SessionUpdate: "notice", Notice: &acp.Notice{Severity: acp.NoticeSeverityWarning, Title: text}})
 		return
 	}
-	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
+	s.update(acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
 		Content: acp.ContentBlock{Text: &acp.TextContent{Text: "**Model fallback:** " + text}},
 	}})
 }

@@ -138,7 +138,7 @@ func (r *replayer) chunk(kind, stream, id string, c acp.ContentBlock) {
 // followed by the subagent's own history.
 func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 	if isPlanTool(stream, b.Name) {
-		r.s.planInput(b)
+		r.s.plan.input(b)
 		return
 	}
 	t := &tool{id: b.ID, name: b.Name, parent: stream, whole: true}
@@ -165,7 +165,7 @@ func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 // toolResult ends a call shown, completed or failed, and keeps what it
 // says of a subagent.
 func (r *replayer) toolResult(b claudeagent.Block, structured json.RawMessage) {
-	if r.s.planResult(b, structured) {
+	if r.s.plan.result(b, structured) {
 		return
 	}
 	t := r.calls[b.ToolUseID]
