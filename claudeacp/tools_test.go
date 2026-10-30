@@ -296,3 +296,20 @@ func TestLateBackstop(t *testing.T) {
 		t.Error(got)
 	}
 }
+
+// An update carries only what changed: a field left empty says nothing,
+// raw JSON that differs only in its spacing isn't news, and raw JSON
+// that isn't JSON is never sent.
+func TestReportUpdate(t *testing.T) {
+	var last report
+	if u, changed := last.update(report{rawInput: json.RawMessage(`{"a": 1}`)}); !changed || u.RawInput == nil {
+		t.Errorf("the first input: %v %+v", changed, u)
+	}
+	u, changed := last.update(report{rawInput: json.RawMessage(`{"a":1}`), status: acp.ToolCallStatusCompleted})
+	if !changed || u.RawInput != nil || u.Status != acp.ToolCallStatusCompleted || u.Title != "" {
+		t.Errorf("the status: %v %+v", changed, u)
+	}
+	if u, changed := last.update(report{rawOutput: json.RawMessage(`{`), status: acp.ToolCallStatusCompleted}); changed {
+		t.Errorf("nothing new: %+v", u)
+	}
+}

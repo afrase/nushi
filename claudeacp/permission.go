@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"reflect"
 	"slices"
-	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -92,7 +91,7 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 	// same but for its keys' order. Input a hook changed is shown again,
 	// so the call reads as what the user is asked to allow.
 	t := ts.byID[r.ToolUseID]
-	if t == nil || !t.whole || !sameJSON(t.sent["rawInput"], input) {
+	if t == nil || !t.whole || !sameJSON(t.last.rawInput, input) {
 		t = s.wholeLocked(parent, r.ToolUseID, r.ToolName, input)
 	}
 	v := toolView(t.name, input, ts.cwd)
@@ -194,9 +193,9 @@ func (s *session) withdrawLocked(which func(*ask) bool) {
 
 // sameJSON says whether a and b are the same JSON value, whatever their
 // keys' order and spacing.
-func sameJSON(a string, b json.RawMessage) bool {
+func sameJSON(a, b json.RawMessage) bool {
 	var x, y any
-	da, db := json.NewDecoder(strings.NewReader(a)), json.NewDecoder(bytes.NewReader(b))
+	da, db := json.NewDecoder(bytes.NewReader(a)), json.NewDecoder(bytes.NewReader(b))
 	da.UseNumber()
 	db.UseNumber()
 	return da.Decode(&x) == nil && db.Decode(&y) == nil && reflect.DeepEqual(x, y)
