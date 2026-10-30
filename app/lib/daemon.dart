@@ -544,7 +544,7 @@ class Daemon extends ChangeNotifier {
     } else if (e.hasTerminals()) {
       terminals.apply(e.chatId, e.terminals.terminals);
     } else if (sides[e.chatId] case final side?) {
-      e.removed ? _sideGone(side) : side.apply(e);
+      e.removed ? _sideGone(side) : _applySide(side, e);
     } else if (e.hasChat()) {
       _chat(e.chat);
       notifyListeners();
@@ -930,6 +930,7 @@ class Daemon extends ChangeNotifier {
       final side = sides[resp.chatId] = ChatState(resp.chatId, chat.folder)
         ..agent = chat.agent;
       unawaited(_load(side));
+      chat.sideHidden.value = false;
       chat.side.value = side;
     } finally {
       chat.forking.value = false;
@@ -943,6 +944,18 @@ class Daemon extends ChangeNotifier {
     chat.side.value = null;
     sides.remove(side.id);
     client.closeSideChat(CloseSideChatRequest(chatId: side.id)).ignore();
+  }
+
+  /// Applies [e] to [side]; a turn that ends while it's hidden is unseen
+  /// (its chip's dot) until it shows again.
+  void _applySide(ChatState side, EventsResponse e) {
+    final was = side.busy;
+    side.apply(e);
+    if (was &&
+        !side.busy &&
+        chats.values.any((c) => c.side.value == side && c.sideHidden.value)) {
+      side.done = true;
+    }
   }
 
   /// A side chat the daemon ended (its chat reloaded, moved or archived,

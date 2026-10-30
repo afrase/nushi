@@ -52,7 +52,7 @@ The chat keys work in a terminal too.
 
 Rows match as you type, each with its key. Actions that don't apply now are left out, and what you picked lately comes first.
 
-**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it, and closing it ends it.
+**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it. ⇧⌘B (or its −) hides it and shows it again, alive all the while: hidden, a Side chat chip in the chat's header shows it, with a dot while it works or when a turn ended unseen. Its × ends it and deletes its conversation, so one with messages asks first.
 
 The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and its sidebar row's right-click.
 

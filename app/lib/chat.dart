@@ -177,6 +177,10 @@ class ChatState extends ChangeNotifier {
   /// Its open side chat, if any (see SideChat).
   final side = ValueNotifier<ChatState?>(null);
 
+  /// Its side chat is hidden (⇧⌘B), alive all the same: a chip in the
+  /// header shows it again. In the app's memory only.
+  final sideHidden = ValueNotifier<bool>(false);
+
   /// ⌘F in its transcript (the Mac's).
   final find = TranscriptFind();
 
