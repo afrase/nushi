@@ -119,4 +119,8 @@ type Dialect struct {
 	// not its model's words (Claude Code's, which it sends as agent text):
 	// it shows as a notice line, not in a message.
 	Notice func(meta map[string]any, text string) (model.AgentNotice, bool)
+	// Interrupted says a replayed user message's text is the agent's mark
+	// of a turn the user stopped, not the user's words: it's left out, as
+	// the chat's own notice says the turn stopped.
+	Interrupted func(text string) bool
 }

@@ -213,6 +213,9 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	default:
 		return
 	}
+	if kind == model.UserMessage && c.dialect.Interrupted != nil && c.dialect.Interrupted(text) {
+		return
+	}
 	id := string(m.MessageID)
 	if kind == model.Thought && id != "" {
 		id = "thought-" + id // a thought may share its message's id
