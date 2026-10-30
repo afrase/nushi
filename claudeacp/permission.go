@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"slices"
 	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -41,12 +42,16 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	if r.BlockedPath != "" {
 		call.Locations = append(call.Locations, acp.ToolCallLocation{Path: r.BlockedPath})
 	}
-	opts := permissionOptions(r)
+	var offered offers
+	var opts []acp.PermissionOption
 	switch r.ToolName {
 	case "ExitPlanMode":
 		opts = s.exitPlanOptions()
 	case "EnterPlanMode":
 		opts = enterPlanOptions
+	default:
+		offered = alwaysOptions(r, s.cwd)
+		opts = permissionOptions(offered, r.DefaultToNo)
 	}
 	ctx, done := s.opened(ctx, r.AgentID)
 	defer done()
@@ -58,7 +63,7 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	if r.ToolName == "ExitPlanMode" && err == nil && resp != nil && resp.Outcome.Selected != nil {
 		return s.exitPlan(string(resp.Outcome.Selected.OptionID)), nil
 	}
-	return permissionResult(r, resp, err), nil
+	return permissionResult(offered, resp, err), nil
 }
 
 // shown shows the call a request names, whole, if it hasn't been, and
@@ -103,60 +108,37 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 		Meta: map[string]any{"claudeCode": cc}}
 }
 
-// permissionOptions are Yes and No, and between them "don't ask again"
-// when claude offers rules for it (its own, kept as it says) and no rule
-// of the user's asks to be asked each time. Claude's default-to-no puts
-// No first.
-func permissionOptions(r claudeagent.PermissionRequest) []acp.PermissionOption {
+// permissionOptions are Yes and No, and between them the "don't ask
+// again" options offered (always.go). Claude's default-to-no puts No
+// first.
+func permissionOptions(offered offers, defaultToNo bool) []acp.PermissionOption {
 	opts := []acp.PermissionOption{{OptionID: optAllowOnce, Name: "Yes", Kind: acp.PermissionOptionKindAllowOnce}}
-	if len(r.Suggestions) > 0 && !r.MatchedAskRule && !r.SuppressAlwaysAllowRule && sayable(r) {
-		opts = append(opts, acp.PermissionOption{OptionID: optAllowAlways, Name: "Yes, and don't ask again", Kind: acp.PermissionOptionKindAllowAlways})
+	for _, a := range offered {
+		opts = append(opts, acp.PermissionOption{OptionID: acp.PermissionOptionID(a.id), Name: a.name, Kind: acp.PermissionOptionKindAllowAlways})
 	}
 	no := acp.PermissionOption{OptionID: optReject, Name: "No", Kind: acp.PermissionOptionKindRejectOnce}
-	if r.DefaultToNo {
+	if defaultToNo {
 		return append([]acp.PermissionOption{no}, opts...)
 	}
 	return append(opts, no)
 }
 
-// sayable says whether "don't ask again" says what claude's rules for a
-// command would do: allow it, or more of its kind, and reach folders for
-// the session, but not change the session's mode, as claude 2.1.312
-// suggests (acceptEdits) for a command writing outside the session's
-// folder (docs/facts/claude.md). claude-agent-acp offers no "don't ask
-// again" then, as here.
-func sayable(r claudeagent.PermissionRequest) bool {
-	if r.ToolName != "Bash" && r.ToolName != "PowerShell" {
-		return true
+// permissionResult is the user's pick as claude's answer: a "don't ask
+// again" gives claude its rules. No answer (the request withdrawn, the
+// turn cancelled, an option the request didn't offer) stops the tool and
+// the turn.
+func permissionResult(offered offers, resp *acp.RequestPermissionResponse, err error) claudeagent.PermissionResult {
+	if err != nil || resp == nil || resp.Outcome.Selected == nil {
+		return claudeagent.Deny{Message: "The user cancelled.", Interrupt: true}
 	}
-	for _, u := range r.Suggestions {
-		switch {
-		case u.Type == "addDirectories" && u.Destination == "session":
-		case u.Type == "addRules" && u.Behavior == "allow":
-			for _, rule := range u.Rules {
-				if rule.ToolName != r.ToolName && rule.ToolName != "Read" || strings.TrimSpace(rule.RuleContent) == "" {
-					return false
-				}
-			}
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-// permissionResult is the user's pick as claude's answer. No answer (the
-// request withdrawn, the turn cancelled, an option the request didn't
-// offer) stops the tool and the turn.
-func permissionResult(r claudeagent.PermissionRequest, resp *acp.RequestPermissionResponse, err error) claudeagent.PermissionResult {
-	if err == nil && resp != nil && resp.Outcome.Selected != nil {
-		switch resp.Outcome.Selected.OptionID {
-		case optAllowOnce:
-			return claudeagent.Allow{Classification: claudeagent.UserTemporary}
-		case optAllowAlways:
-			return claudeagent.Allow{UpdatedPermissions: r.Suggestions, Classification: claudeagent.UserPermanent}
-		case optReject:
-			return claudeagent.Deny{Message: "The user refused permission to run the tool.", Classification: claudeagent.UserReject}
+	switch id := string(resp.Outcome.Selected.OptionID); id {
+	case optAllowOnce:
+		return claudeagent.Allow{Classification: claudeagent.UserTemporary}
+	case optReject:
+		return claudeagent.Deny{Message: "The user refused permission to run the tool.", Classification: claudeagent.UserReject}
+	default:
+		if i := slices.IndexFunc(offered, func(a always) bool { return a.id == id }); i >= 0 {
+			return claudeagent.Allow{UpdatedPermissions: offered[i].updates, Classification: claudeagent.UserPermanent}
 		}
 	}
 	return claudeagent.Deny{Message: "The user cancelled.", Interrupt: true}

@@ -235,10 +235,6 @@ func views(t *testing.T, events []event) []parity {
 // view is a chat's items, usage and status, without the times of this
 // run and the ids an agent gives a permission prompt's options, which
 // Nushi only passes back: the kind of option picked stands for its id.
-// "Don't ask again" goes without its name too: the Go agent words it
-// the same for every tool (claudeacp/permission.go), where the adapter
-// ports claude's own labels ("…for mkdir commands"), a difference in
-// wording only, chosen.
 func view(c *chat) parity {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -260,9 +256,6 @@ func view(c *chat) parity {
 					it.Answer = o.Kind
 				}
 				o.ID = ""
-				if o.Kind == string(acp.PermissionOptionKindAllowAlways) {
-					o.Name = ""
-				}
 				opts = append(opts, o)
 			}
 			it.Options = opts
