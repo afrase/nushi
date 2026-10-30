@@ -27,8 +27,8 @@ func TestDirNameMatchesSessions(t *testing.T) {
 		target,
 		link,
 	} {
-		if got, want := filepath.Base(sessions.ProjectDir(config, folder)), dirName(folder); got != want {
-			t.Errorf("sessions.ProjectDir(%q) is %q, dirName %q", folder, got, want)
+		if got, want := filepath.Base(sessions.Store{ConfigDir: config}.ProjectDir(folder)), dirName(folder); got != want {
+			t.Errorf("Store.ProjectDir(%q) is %q, dirName %q", folder, got, want)
 		}
 	}
 }

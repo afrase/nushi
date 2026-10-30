@@ -27,7 +27,7 @@ func TestListSessions(t *testing.T) {
 		sid := uuid(i + 1)
 		p.writeHistory(t, cwd, sid, userRec(uuid(1000+i), "Fix  the\nlogin page "+sid[len(sid)-4:], "cwd", cwd))
 		at := base.Add(time.Duration(i) * time.Minute)
-		if err := os.Chtimes(filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl"), at, at); err != nil {
+		if err := os.Chtimes(filepath.Join(sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd), sid+".jsonl"), at, at); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -82,7 +82,7 @@ func TestDeleteSession(t *testing.T) {
 			t.Fatal("deleted while claude ran")
 		}
 	}
-	project := sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd)
+	project := sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd)
 	entries, err := os.ReadDir(project)
 	if err != nil || len(entries) != 0 {
 		t.Errorf("left %v %v", entries, err)

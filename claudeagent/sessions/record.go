@@ -9,8 +9,8 @@ import "os"
 // counts, on abandoned branches and from before a compaction too, but a
 // subagent's. An error matching fs.ErrNotExist says the session or the
 // message isn't there.
-func LastRecord(configDir, id, cwd, messageID string) (string, error) {
-	path, err := find(configDir, id, cwd)
+func (s Store) LastRecord(id, cwd, messageID string) (string, error) {
+	path, err := s.find(id, cwd)
 	if err != nil {
 		return "", err
 	}

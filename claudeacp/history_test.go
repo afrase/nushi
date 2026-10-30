@@ -74,14 +74,14 @@ func writeRecords(t *testing.T, path, sid string, records ...rec) {
 // writeHistory writes session sid's transcript in cwd's history folder.
 func (p *peer) writeHistory(t *testing.T, cwd, sid string, records ...rec) {
 	t.Helper()
-	writeRecords(t, filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid+".jsonl"), sid, records...)
+	writeRecords(t, filepath.Join(sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd), sid+".jsonl"), sid, records...)
 }
 
 // writeSubagent writes the transcript of session sid's subagent agent,
 // and its sidecar naming the call that started it ("" for none).
 func (p *peer) writeSubagent(t *testing.T, cwd, sid, agent, call string, records ...rec) {
 	t.Helper()
-	dir := filepath.Join(sessions.ProjectDir(p.agent.cfg.ConfigDir, cwd), sid, "subagents")
+	dir := filepath.Join(sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd), sid, "subagents")
 	writeRecords(t, filepath.Join(dir, "agent-"+agent+".jsonl"), sid, records...)
 	meta := `{"agentType":"general-purpose"}`
 	if call != "" {

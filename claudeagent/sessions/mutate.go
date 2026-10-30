@@ -1,9 +1,10 @@
 // Ported from the Claude Agent SDK for Python (commit 27858cbb,
 // src/claude_agent_sdk/_internal/session_mutations.py), MIT License,
 // Copyright (c) 2025 Anthropic, PBC: see ../NOTICE. Modified: restructured
-// as Go, records read into typed structs and new ones written from them;
-// Fork can write into another folder's history, and Delete clears every
-// folder the session may be in and succeeds when it isn't there.
+// as Go, the functions a Store's methods, records read into typed structs
+// and new ones written from them; Fork can write into another folder's
+// history, and Delete clears every folder the session may be in and
+// succeeds when it isn't there.
 
 package sessions
 
@@ -38,13 +39,13 @@ type ForkOptions struct {
 // records and progress records stay behind, as do the session's file
 // history snapshots, so the fork can't undo file changes made before it.
 // The fork ends with a custom-title record.
-func Fork(configDir, id, cwd string, o ForkOptions) (string, error) {
+func (s Store) Fork(id, cwd string, o ForkOptions) (string, error) {
 	if o.UpTo != "" {
 		if err := checkID(o.UpTo); err != nil {
 			return "", err
 		}
 	}
-	path, err := find(configDir, id, cwd)
+	path, err := s.find(id, cwd)
 	if err != nil {
 		return "", err
 	}
@@ -67,13 +68,13 @@ func Fork(configDir, id, cwd string, o ForkOptions) (string, error) {
 
 	dir := filepath.Dir(path)
 	if o.Cwd != "" {
-		projects, err := projectsDir(configDir)
+		projects, err := s.projects()
 		if err != nil {
 			return "", err
 		}
 		var ok bool
 		if dir, ok = findProjectDir(projects, canonical(o.Cwd)); !ok {
-			dir = ProjectDir(configDir, o.Cwd)
+			dir = s.ProjectDir(o.Cwd)
 		}
 	}
 	return newID, writeNew(filepath.Join(dir, newID+".jsonl"), []byte(strings.Join(lines, "\n")+"\n"))
@@ -252,11 +253,11 @@ func writeNew(path string, data []byte) error {
 // transcripts and the like) for good, from every project folder Get would
 // look in. A session that isn't there is no error. A running CLI writes to
 // a transcript as it ends, so stop the session's process first.
-func Delete(configDir, id, cwd string) error {
+func (s Store) Delete(id, cwd string) error {
 	if err := checkID(id); err != nil {
 		return err
 	}
-	projects, err := projectsDir(configDir)
+	projects, err := s.projects()
 	if err != nil {
 		return err
 	}

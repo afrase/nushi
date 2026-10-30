@@ -38,8 +38,9 @@ func (a *agent) startError(resume, cwd string, err error) error {
 // transcriptGone says claude has no transcript of session id, for cwd's
 // folder or any other.
 func (a *agent) transcriptGone(id, cwd string) bool {
+	store := sessions.Store{ConfigDir: a.cfg.ConfigDir}
 	for _, dir := range []string{cwd, ""} {
-		if _, err := sessions.Messages(a.cfg.ConfigDir, id, dir); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := store.Messages(id, dir); !errors.Is(err, fs.ErrNotExist) {
 			return false
 		}
 	}
@@ -137,13 +138,14 @@ func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*
 	if _, from, err = a.findHistory(id, from); err != nil {
 		return nil, err
 	}
+	store := sessions.Store{ConfigDir: a.cfg.ConfigDir}
 	var upTo string
 	if at := forkAt(req.Meta); at != "" {
-		if upTo, err = sessions.LastRecord(a.cfg.ConfigDir, id, from, at); err != nil {
+		if upTo, err = store.LastRecord(id, from, at); err != nil {
 			return nil, invalidParams("no message %q in session %s to fork at", at, id)
 		}
 	}
-	fork, err := sessions.Fork(a.cfg.ConfigDir, id, from, sessions.ForkOptions{UpTo: upTo, Cwd: req.Cwd})
+	fork, err := store.Fork(id, from, sessions.ForkOptions{UpTo: upTo, Cwd: req.Cwd})
 	if err != nil {
 		return nil, &acp.Error{Code: acp.ErrorCodeInternalError, Message: fmt.Sprintf("Forking the session: %v", err)}
 	}
@@ -178,7 +180,7 @@ func forkAt(meta map[string]any) string {
 // read, so a client keeps a session it may yet get back.
 func (a *agent) findHistory(id, cwd string) ([]sessions.Message, string, error) {
 	for _, dir := range []string{cwd, ""} {
-		ms, err := sessions.Messages(a.cfg.ConfigDir, id, dir)
+		ms, err := sessions.Store{ConfigDir: a.cfg.ConfigDir}.Messages(id, dir)
 		switch {
 		case err == nil:
 			return ms, dir, nil

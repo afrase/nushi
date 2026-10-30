@@ -34,7 +34,7 @@ func forkAtMeta(messageID string) map[string]any {
 // texts is a session's conversation in short, as claude has it now.
 func historyTexts(t *testing.T, config, sid, cwd string) []string {
 	t.Helper()
-	ms, err := sessions.Messages(config, sid, cwd)
+	ms, err := sessions.Store{ConfigDir: config}.Messages(sid, cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestForkFails(t *testing.T) {
 			t.Errorf("%s at %q: %v", tc.sid, tc.at, err)
 		}
 	}
-	ms, _ := sessions.List(p.agent.cfg.ConfigDir, cwd, 0, 0)
+	ms, _ := sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.List(cwd, 0, 0)
 	if len(ms) != 1 {
 		t.Errorf("sessions %+v", ms)
 	}

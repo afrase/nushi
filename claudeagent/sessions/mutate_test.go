@@ -62,7 +62,7 @@ func TestFork(t *testing.T) {
 	forkSource(t, dir, id)
 	before := time.Now().UTC().Add(-time.Second)
 
-	newID, err := Fork(config, id, cwd, ForkOptions{})
+	newID, err := Store{ConfigDir: config}.Fork(id, cwd, ForkOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,11 +139,11 @@ func TestFork(t *testing.T) {
 		t.Errorf("title = %v", r)
 	}
 
-	msgs, err := Messages(config, newID, cwd)
+	msgs, err := Store{ConfigDir: config}.Messages(newID, cwd)
 	if err != nil || len(msgs) != 2 || msgs[1].UUID != fresh["a2"] {
 		t.Errorf("the fork's messages = %s, %v", messageUUIDs(msgs), err)
 	}
-	if info, err := Get(config, newID, ""); err != nil || info.CustomTitle != "first question (fork)" {
+	if info, err := (Store{ConfigDir: config}).Get(newID, ""); err != nil || info.CustomTitle != "first question (fork)" {
 		t.Errorf("Get(fork) = %+v, %v", info, err)
 	}
 }
@@ -175,7 +175,7 @@ func TestForkUpTo(t *testing.T) {
 		{newUUID(), 0, true},
 		{"not-a-uuid", 0, true},
 	} {
-		newID, err := Fork(config, other, cwd, ForkOptions{UpTo: c.upTo})
+		newID, err := Store{ConfigDir: config}.Fork(other, cwd, ForkOptions{UpTo: c.upTo})
 		if (err != nil) != c.err {
 			t.Errorf("Fork up to %s: %v", c.upTo, err)
 			continue
@@ -205,9 +205,9 @@ func TestForkTitleAndPlace(t *testing.T) {
 		{titled, ForkOptions{Title: "  Picked  "}, "Picked", dir},
 		{untitled, ForkOptions{}, "what now? (fork)", dir},
 		{bare, ForkOptions{}, "Forked session (fork)", dir},
-		{untitled, ForkOptions{Cwd: elsewhere}, "what now? (fork)", ProjectDir(config, elsewhere)},
+		{untitled, ForkOptions{Cwd: elsewhere}, "what now? (fork)", Store{ConfigDir: config}.ProjectDir(elsewhere)},
 	} {
-		newID, err := Fork(config, c.id, "", c.o)
+		newID, err := Store{ConfigDir: config}.Fork(c.id, "", c.o)
 		if err != nil {
 			t.Errorf("Fork(%+v): %v", c.o, err)
 			continue
@@ -225,11 +225,11 @@ func TestForkMissing(t *testing.T) {
 	writeLines(t, dir, empty)
 	transcript(t, dir, sideOnly, rec("user", "u", "", "isSidechain", true))
 	for _, id := range []string{newUUID(), empty} {
-		if _, err := Fork(config, id, cwd, ForkOptions{}); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := (Store{ConfigDir: config}).Fork(id, cwd, ForkOptions{}); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("Fork(%s) = %v", id, err)
 		}
 	}
-	if _, err := Fork(config, sideOnly, cwd, ForkOptions{}); err == nil {
+	if _, err := (Store{ConfigDir: config}).Fork(sideOnly, cwd, ForkOptions{}); err == nil {
 		t.Error("Fork of only a subagent's records made a fork")
 	}
 }
@@ -243,7 +243,7 @@ func TestDelete(t *testing.T) {
 	transcript(t, filepath.Join(dir, id, "subagents"), "agent-a", text("user", "u", "", "q"))
 
 	for range 2 { // the second time there is nothing to delete
-		if err := Delete(config, id, cwd); err != nil {
+		if err := (Store{ConfigDir: config}).Delete(id, cwd); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -255,16 +255,16 @@ func TestDelete(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, keep+".jsonl")); err != nil {
 		t.Errorf("another session went: %v", err)
 	}
-	if err := Delete(config, empty, ""); err != nil {
+	if err := (Store{ConfigDir: config}).Delete(empty, ""); err != nil {
 		t.Error(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, empty+".jsonl")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("an empty transcript stayed: %v", err)
 	}
-	if err := Delete(config, "../"+keep, cwd); err == nil {
+	if err := (Store{ConfigDir: config}).Delete("../"+keep, cwd); err == nil {
 		t.Error("Delete took a path")
 	}
-	if err := Delete(filepath.Join(config, "none"), newUUID(), ""); err != nil {
+	if err := (Store{ConfigDir: filepath.Join(config, "none")}).Delete(newUUID(), ""); err != nil {
 		t.Errorf("Delete with no projects folder = %v", err)
 	}
 }
@@ -277,20 +277,20 @@ func TestDeleteBehindEmptyTranscript(t *testing.T) {
 	stubWorktrees(t, map[string][]string{main: {main, other}})
 	for _, cwd := range []string{main, ""} {
 		id := newUUID()
-		writeLines(t, ProjectDir(config, main), id)
-		transcript(t, ProjectDir(config, other), id, text("user", "u", "", "q"))
-		transcript(t, filepath.Join(ProjectDir(config, other), id, "subagents"), "agent-a", text("user", "u", "", "q"))
-		if err := Delete(config, id, cwd); err != nil {
+		writeLines(t, Store{ConfigDir: config}.ProjectDir(main), id)
+		transcript(t, Store{ConfigDir: config}.ProjectDir(other), id, text("user", "u", "", "q"))
+		transcript(t, filepath.Join(Store{ConfigDir: config}.ProjectDir(other), id, "subagents"), "agent-a", text("user", "u", "", "q"))
+		if err := (Store{ConfigDir: config}).Delete(id, cwd); err != nil {
 			t.Fatalf("Delete(%q) = %v", cwd, err)
 		}
 		for _, dir := range []string{main, other} {
 			for _, gone := range []string{id + ".jsonl", id} {
-				if _, err := os.Lstat(filepath.Join(ProjectDir(config, dir), gone)); !errors.Is(err, fs.ErrNotExist) {
+				if _, err := os.Lstat(filepath.Join(Store{ConfigDir: config}.ProjectDir(dir), gone)); !errors.Is(err, fs.ErrNotExist) {
 					t.Errorf("Delete(%q) left %s in %s: %v", cwd, gone, dir, err)
 				}
 			}
 		}
-		if _, err := Get(config, id, cwd); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := (Store{ConfigDir: config}).Get(id, cwd); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("Get(%q) after Delete = %v", cwd, err)
 		}
 	}

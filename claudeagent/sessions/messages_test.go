@@ -40,7 +40,7 @@ func TestMessages(t *testing.T) {
 		text("user", "u2", "sys", "read them"),
 	}, c, r, []record{text("assistant", "a2", "result-0", "done")})...)
 
-	got, err := Messages(config, id, cwd)
+	got, err := Store{ConfigDir: config}.Messages(id, cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestMessages(t *testing.T) {
 		!strings.Contains(string(first.Raw), `"uuid":"u1"`) || first.ParentToolUseID != "" {
 		t.Errorf("first message = %+v", first)
 	}
-	if all, err := Messages(config, id, ""); err != nil || len(all) != len(got) {
+	if all, err := (Store{ConfigDir: config}).Messages(id, ""); err != nil || len(all) != len(got) {
 		t.Errorf("Messages anywhere = %d, %v", len(all), err)
 	}
 }
@@ -69,7 +69,7 @@ func TestMessagesAfterCompaction(t *testing.T) {
 		text("assistant", "kept", "summary", "kept verbatim"),
 		text("user", "new-u", "kept", "after"),
 	)
-	got, err := Messages(config, id, cwd)
+	got, err := Store{ConfigDir: config}.Messages(id, cwd)
 	if err != nil || messageUUIDs(got) != "summary kept new-u" {
 		t.Errorf("Messages = %s, %v; want the summary and what follows", messageUUIDs(got), err)
 	}
@@ -80,16 +80,16 @@ func TestMessagesMissing(t *testing.T) {
 	empty := newUUID()
 	writeLines(t, dir, empty)
 	for _, id := range []string{newUUID(), empty} {
-		if _, err := Messages(config, id, cwd); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := (Store{ConfigDir: config}).Messages(id, cwd); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("Messages(%s) = %v", id, err)
 		}
 	}
-	if _, err := Messages(config, "../x", cwd); err == nil || errors.Is(err, fs.ErrNotExist) {
+	if _, err := (Store{ConfigDir: config}).Messages("../x", cwd); err == nil || errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Messages of a bad id = %v", err)
 	}
 	corrupt := newUUID()
 	writeLines(t, dir, corrupt, "{oops", `{"type":"user","uuid":"u","message":{"content":"hi"}}`, "nope")
-	if got, err := Messages(config, corrupt, cwd); err != nil || messageUUIDs(got) != "u" {
+	if got, err := (Store{ConfigDir: config}).Messages(corrupt, cwd); err != nil || messageUUIDs(got) != "u" {
 		t.Errorf("Messages past corrupt lines = %s, %v", messageUUIDs(got), err)
 	}
 }
@@ -119,7 +119,7 @@ func TestSubagents(t *testing.T) {
 		}
 	}
 
-	got, err := Subagents(config, id, cwd)
+	got, err := Store{ConfigDir: config}.Subagents(id, cwd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,19 +133,19 @@ func TestSubagents(t *testing.T) {
 			t.Errorf("Subagents[%d] = %+v, want %+v", i, got[i], want[i])
 		}
 	}
-	if got, err := Subagents(config, none, ""); err != nil || len(got) != 0 {
+	if got, err := (Store{ConfigDir: config}).Subagents(none, ""); err != nil || len(got) != 0 {
 		t.Errorf("Subagents of a session with none = %+v, %v", got, err)
 	}
-	if _, err := Subagents(config, newUUID(), cwd); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := (Store{ConfigDir: config}).Subagents(newUUID(), cwd); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Subagents of a missing session = %v", err)
 	}
 
-	ms, err := SubagentMessages(config, id, "c3", cwd)
+	ms, err := Store{ConfigDir: config}.SubagentMessages(id, cwd, "c3")
 	if err != nil || messageUUIDs(ms) != "c-u c-a" || ms[0].ParentToolUseID != "toolu_c" || ms[1].ParentAgentID != "b2" {
 		t.Errorf("SubagentMessages = %+v, %v", ms, err)
 	}
 	for _, agent := range []string{"zz", "", "d4"} {
-		if _, err := SubagentMessages(config, id, agent, cwd); !errors.Is(err, fs.ErrNotExist) {
+		if _, err := (Store{ConfigDir: config}).SubagentMessages(id, cwd, agent); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("SubagentMessages(%q) = %v", agent, err)
 		}
 	}

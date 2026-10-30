@@ -40,7 +40,7 @@ func TestQueuedPrompts(t *testing.T) {
 		queueOp("dequeue", ""),
 		queueOp("enqueue", "left"),
 	)
-	got, err := QueuedPrompts(config, id, cwd)
+	got, err := Store{ConfigDir: config}.QueuedPrompts(id, cwd)
 	if err != nil {
 		t.Fatal(err)
 	}

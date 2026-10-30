@@ -93,7 +93,8 @@ func (s *session) retitle() {
 // findTitle is the title in the session's transcript, else the one claude
 // makes, the first time it is asked; "" when there is none.
 func (s *session) findTitle() string {
-	if info, err := sessions.Get(s.a.cfg.ConfigDir, s.id, s.cwd); err == nil && info.CustomTitle != "" {
+	store := sessions.Store{ConfigDir: s.a.cfg.ConfigDir}
+	if info, err := store.Get(s.id, s.cwd); err == nil && info.CustomTitle != "" {
 		return info.CustomTitle
 	}
 	t := &s.title
