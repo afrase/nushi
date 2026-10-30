@@ -173,6 +173,7 @@ type chat struct {
 	sides        map[string]*chat      // the chat's side chats, by session id
 	children     map[string]*child     // its agent's subagents' sessions, by session id (children.go)
 	parent       *chat                 // a side chat's chat
+	base         []model.Item          // a side chat's: the chat's transcript as it forked, which a kept one starts with (forks.go)
 	started      time.Time             // when the running turn started
 	background   int                   // subagents and background commands running, as last said
 	killed       []string              // background commands Nushi stopped since the last prompt, by the agent's id: told with the next (stopNote)
@@ -299,7 +300,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	if err != nil {
 		return "", err
 	}
-	o, err := c.openSession(ctx, "", folder, false)
+	o, err := c.openSession(ctx, "", folder, false, "")
 	if err != nil {
 		err = fmt.Errorf("%w %s: %w", ErrStart, k.Title, err)
 		if scratch {

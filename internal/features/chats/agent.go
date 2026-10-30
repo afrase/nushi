@@ -26,9 +26,10 @@ type opened struct {
 
 // openSession launches an agent and opens a session in folder: a new one,
 // or, given its id, an existing one, replayed through session/load, or with
-// fork a new one that starts with a copy of it (session/fork). The agent
+// fork a new one that starts with a copy of it (session/fork): all of it,
+// or up to and with the agent's message at (Dialect.ForkAt). The agent
 // stops if that fails.
-func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (opened, error) {
+func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool, at string) (opened, error) {
 	c.mu.Lock()
 	clear(c.children) // the last agent's: a replay announces them again
 	c.mu.Unlock()
@@ -50,8 +51,14 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool) (
 		o.sid, o.config, err = c.newSession(ctx, agent, folder)
 	case fork && !agent.CanFork():
 		err = errors.New("the agent can't fork sessions")
+	case fork && at != "" && o.forkAt == nil:
+		err = errors.New("the agent can't fork at a message")
 	case fork:
-		o.sid, o.config, err = c.forkSession(ctx, agent, sid, folder, nil)
+		var meta map[string]any
+		if at != "" {
+			meta = o.forkAt(at)
+		}
+		o.sid, o.config, err = c.forkSession(ctx, agent, sid, folder, meta)
 	case init.AgentCapabilities == nil || !init.AgentCapabilities.LoadSession:
 		err = errors.New("the agent can't reopen sessions")
 	default:

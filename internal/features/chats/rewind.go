@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strings"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -22,7 +21,7 @@ func (c *chat) forkPointLocked() string {
 		if it.Kind == model.UserMessage {
 			return ""
 		} else if it.Kind == model.AgentMessage && it.Parent == "" && it.Status != model.StoppedBySafeguards { // the agent keeps nothing of a stopped one
-			if strings.HasPrefix(it.ID, "item-") { // no messageId: can't fork there
+			if !Forkable(it) { // no messageId: can't fork there
 				return ""
 			}
 			return it.ID

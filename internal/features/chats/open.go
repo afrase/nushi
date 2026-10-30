@@ -73,7 +73,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.replaying = true
 	c.record = model.ChatRecord{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
 	c.mu.Unlock()
-	o, err := c.openSession(ctx, sessionID, folder, false)
+	o, err := c.openSession(ctx, sessionID, folder, false, "")
 	c.mu.Lock()
 	replayed := c.replay
 	c.replaying, c.replay = false, nil

@@ -224,9 +224,9 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 		case <-time.After(2 * stopGrace):
 		}
 	}
-	o, err := c.openSession(ctx, sid, folder, false)
+	o, err := c.openSession(ctx, sid, folder, false, "")
 	if err != nil && fresh {
-		o, err = c.openSession(ctx, "", folder, false)
+		o, err = c.openSession(ctx, "", folder, false, "")
 	}
 	c.mu.Lock()
 	replayed := c.replay
