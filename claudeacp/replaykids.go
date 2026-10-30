@@ -72,20 +72,10 @@ func (r *replayer) subagent(stream, call string, a sessions.Subagent, in launch)
 	if r.byID[a.ID] != nil {
 		return // another call ran it again: the first one showed it
 	}
-	k := &r.s.kids
-	k.mu.Lock()
-	if k.byID[a.ID] != nil { // the session is live and has it already
-		k.mu.Unlock()
+	sa := r.s.kids.replayed(a.ID, call, stream, in)
+	if sa == nil { // the session is live and has it already
 		return
 	}
-	sa := &subagent{id: a.ID, call: call, on: r.s.id, background: in.Background}
-	if p := k.byCall[stream]; p != nil && p.shown {
-		sa.on = p.id
-	}
-	k.byID[sa.id], k.byCall[call] = sa, sa
-	r.s.announceLocked(sa, in, "", "")
-	r.s.delegatedLocked(sa, call, in.Prompt)
-	k.mu.Unlock()
 	kid := &replayedKid{sa: sa, background: in.Background}
 	r.kids = append(r.kids, kid)
 	r.byID[sa.id] = kid
@@ -124,11 +114,7 @@ func (r *replayer) called(t *tool, b claudeagent.Block, structured json.RawMessa
 			return
 		}
 		if kid := r.byID[res.ResumedAgentID]; kid != nil {
-			k := &r.s.kids
-			k.mu.Lock()
-			kid.sa.call, k.byCall[t.id] = t.id, kid.sa
-			r.s.delegatedLocked(kid.sa, t.id, in.Message)
-			k.mu.Unlock()
+			r.s.kids.rerun(kid.sa, t.id, in.Message)
 		}
 	}
 }
@@ -193,9 +179,7 @@ func (r *replayer) notified(text string) {
 
 // ends tells the client how each subagent announced ended.
 func (r *replayer) ends() {
-	k := &r.s.kids
-	k.mu.Lock()
-	defer k.mu.Unlock()
+	ends := make([]replayEnd, 0, len(r.kids))
 	for _, kid := range r.kids {
 		st, ok := endState(kid.ended, kid.summary)
 		switch {
@@ -209,9 +193,53 @@ func (r *replayer) ends() {
 		default:
 			st = acp.StateUpdate{Other: json.RawMessage(`{"state":"idle"}`)}
 		}
-		sa := kid.sa
-		sa.ended = true
-		sa.endedRuns = map[string]bool{sa.call: true}
-		r.s.childStateLocked(sa, st)
+		ends = append(ends, replayEnd{kid.sa, st})
+	}
+	r.s.kids.replayEnded(ends)
+}
+
+// replayed is the subagent id, started by call (of the stream named
+// stream) with input in, as a replay announces it, with its first
+// message; nil when the session is live and has it already.
+func (k *subagents) replayed(id, call, stream string, in launch) *subagent {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	if k.byID[id] != nil {
+		return nil
+	}
+	sa := &subagent{id: id, call: call, on: k.sid, background: in.Background}
+	if p := k.byCall[stream]; p != nil && p.shown {
+		sa.on = p.id
+	}
+	k.byID[sa.id], k.byCall[call] = sa, sa
+	k.announceLocked(sa, in, "", "")
+	k.delegatedLocked(sa, call, in.Prompt)
+	return sa
+}
+
+// rerun is the subagent sa run again by the SendMessage call with
+// message, in a replay.
+func (k *subagents) rerun(sa *subagent, call, message string) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	sa.call, k.byCall[call] = call, sa
+	k.delegatedLocked(sa, call, message)
+}
+
+// replayEnd is how a subagent a replay announced ended.
+type replayEnd struct {
+	sa *subagent
+	st acp.StateUpdate
+}
+
+// replayEnded tells the client how each subagent a replay announced
+// ended, in order.
+func (k *subagents) replayEnded(ends []replayEnd) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	for _, e := range ends {
+		e.sa.ended = true
+		e.sa.endedRuns = map[string]bool{e.sa.call: true}
+		k.childStateLocked(e.sa, e.st)
 	}
 }

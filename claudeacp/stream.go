@@ -307,5 +307,5 @@ func (s *session) chunk(kind, parent, msgID string, c acp.ContentBlock) {
 	} else {
 		u.AgentMessageChunk = ch
 	}
-	s.emit(parent, u)
+	s.kids.emit(parent, u)
 }

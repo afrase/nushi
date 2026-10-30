@@ -2,7 +2,6 @@ package claudeacp
 
 import (
 	"cmp"
-	"encoding/json"
 	"slices"
 	"sync"
 
@@ -38,9 +37,15 @@ type subagent struct {
 	endedRuns  map[string]bool // the calls whose run of it has ended
 }
 
-// subagents are a session's subagents. What goes to their children goes
-// out under mu, so a child's announcement comes before its work.
+// subagents are a session's subagents, and the way every update of a
+// stream goes to the client: a subagent's work to its child. What goes to
+// their children goes out under mu, so a child's announcement comes
+// before its work.
 type subagents struct {
+	sid      string                                // the session's id
+	children bool                                  // the client takes subagents as sessions of their own
+	send     func(sid string, u acp.SessionUpdate) // to the client
+
 	mu     sync.Mutex
 	byID   map[string]*subagent           // by task id
 	byCall map[string]*subagent           // by each call that started or ran one
@@ -57,23 +62,23 @@ const (
 	maxHeldPerCall = 32
 )
 
-func (k *subagents) init() {
+func (k *subagents) init(sid string, children bool, send func(string, acp.SessionUpdate)) {
+	k.sid, k.children, k.send = sid, children, send
 	k.byID, k.byCall, k.held = map[string]*subagent{}, map[string]*subagent{}, map[string][]acp.SessionUpdate{}
 }
 
 // emit sends an update of the stream of call parent ("" at the top): a
 // subagent's goes to its child, and waits while claude hasn't said which
 // subagent the call started.
-func (s *session) emit(parent string, u acp.SessionUpdate) {
-	if parent == "" || !s.children {
-		s.a.update(s.id, u)
+func (k *subagents) emit(parent string, u acp.SessionUpdate) {
+	if parent == "" || !k.children {
+		k.send(k.sid, u)
 		return
 	}
-	k := &s.kids
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if sa := k.byCall[parent]; sa != nil && sa.shown {
-		s.a.update(sa.id, u)
+		k.send(sa.id, u)
 		return
 	}
 	if _, ok := k.held[parent]; !ok {
@@ -84,18 +89,17 @@ func (s *session) emit(parent string, u acp.SessionUpdate) {
 	// Past the bounds the oldest work goes on the session, as a client
 	// without subagents has it: it still names its call.
 	for len(k.order) > maxHeldCalls || k.nheld > maxHeld {
-		s.flushLocked(k.order[0], s.id)
+		k.flushLocked(k.order[0], k.sid)
 	}
 	if len(k.held[parent]) > maxHeldPerCall {
-		s.flushLocked(parent, s.id)
+		k.flushLocked(parent, k.sid)
 	}
 }
 
 // flushLocked sends the work held for call to session to.
-func (s *session) flushLocked(call, to string) {
-	k := &s.kids
+func (k *subagents) flushLocked(call, to string) {
 	for _, u := range k.held[call] {
-		s.a.update(to, u)
+		k.send(to, u)
 	}
 	k.nheld -= len(k.held[call])
 	delete(k.held, call)
@@ -104,19 +108,17 @@ func (s *session) flushLocked(call, to string) {
 
 // release sends what is held for call on the session: the call has ended
 // and claude never said it started a subagent.
-func (s *session) release(call string) {
-	k := &s.kids
+func (k *subagents) release(call string) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.byCall[call] == nil {
-		s.flushLocked(call, s.id)
+		k.flushLocked(call, k.sid)
 	}
 }
 
 // callOf is the call the subagent agent works for, "" when it isn't
 // known: what its requests name as their parent.
-func (s *session) callOf(agent string) string {
-	k := &s.kids
+func (k *subagents) callOf(agent string) string {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if sa := k.byID[agent]; sa != nil {
@@ -126,25 +128,31 @@ func (s *session) callOf(agent string) string {
 }
 
 // sessionOf is the session a request of the subagent agent goes to: its
-// child once announced, else this one.
-func (s *session) sessionOf(agent string) string {
-	k := &s.kids
+// child once announced, else the session.
+func (k *subagents) sessionOf(agent string) string {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if sa := k.byID[agent]; sa != nil && sa.shown {
 		return sa.id
 	}
-	return s.id
+	return k.sid
 }
 
 // inBackground says the subagent agent runs in the background, where a
 // cancel of the session's turn doesn't reach.
-func (s *session) inBackground(agent string) bool {
-	k := &s.kids
+func (k *subagents) inBackground(agent string) bool {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	sa := k.byID[agent]
 	return sa != nil && sa.background && !sa.ended
+}
+
+// shownChild says the child session id is one of these subagents'.
+func (k *subagents) shownChild(id string) bool {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	sa := k.byID[id]
+	return sa != nil && sa.shown
 }
 
 // launch is what the call that starts a subagent says of it.
@@ -158,32 +166,15 @@ type launch struct {
 	TaskID       string `json:"task_id"` // a TaskStop's
 }
 
-// callInput is the input of the call id as the client was last shown it,
-// and the stream it is of.
-func (s *session) callInput(id string) (in launch, stream string) {
-	ts := &s.tools
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
-	if t := ts.byID[id]; t != nil {
-		_ = json.Unmarshal(t.last.rawInput, &in)
-		return in, t.parent
-	}
-	return in, ""
-}
-
-// taskStarted is claude starting a task. A subagent's is announced, or,
-// when it ran before, runs again for the call that started it now.
-func (s *session) taskStarted(m *claudeagent.TaskStarted) {
-	if m.SubagentType == "" && m.TaskType != "local_agent" {
-		return // a background command's
-	}
-	in, stream := s.callInput(m.ToolUseID)
-	k := &s.kids
+// started is claude starting a subagent's task, for the call whose input
+// is in, of the stream stream. A new one is announced; one that ran
+// before runs again for the call that started it now.
+func (k *subagents) started(m *claudeagent.TaskStarted, in launch, stream string) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if sa := k.byID[m.TaskID]; sa != nil {
 		sa.run, sa.background = m.RunID, m.IsBackgrounded
-		s.againLocked(sa, m.ToolUseID, cmp.Or(m.Prompt, in.Message, in.Prompt))
+		k.againLocked(sa, m.ToolUseID, cmp.Or(m.Prompt, in.Message, in.Prompt))
 		return
 	}
 	sa := &subagent{id: m.TaskID, call: m.ToolUseID, run: m.RunID, background: m.IsBackgrounded}
@@ -191,22 +182,22 @@ func (s *session) taskStarted(m *claudeagent.TaskStarted) {
 	if sa.call != "" {
 		k.byCall[sa.call] = sa
 	}
-	if !s.children {
+	if !k.children {
 		return
 	}
 	// A subagent's subagent is announced on its parent's child.
-	sa.on = s.id
+	sa.on = k.sid
 	if p := cmp.Or(k.byID[m.ParentTaskID], k.byCall[stream]); p != nil && p.shown {
 		sa.on = p.id
 	}
-	s.announceLocked(sa, in, m.SubagentType, m.Description)
-	s.delegatedLocked(sa, sa.call, cmp.Or(in.Prompt, m.Prompt))
+	k.announceLocked(sa, in, m.SubagentType, m.Description)
+	k.delegatedLocked(sa, sa.call, cmp.Or(in.Prompt, m.Prompt))
 }
 
 // announceLocked tells the client of the subagent sa, on the session
 // sa.on: its role and description from in, the input of the call that
 // started it, else role and description.
-func (s *session) announceLocked(sa *subagent, in launch, role, description string) {
+func (k *subagents) announceLocked(sa *subagent, in launch, role, description string) {
 	role = cmp.Or(in.SubagentType, role)
 	title := role
 	if in.Name != "" && role != "" {
@@ -223,7 +214,7 @@ func (s *session) announceLocked(sa *subagent, in launch, role, description stri
 	if d := cmp.Or(in.Description, description); d != "" {
 		su.Description = acp.Nullable[string]{Value: &d, Present: true}
 	}
-	s.a.update(sa.on, acp.SessionUpdate{SessionUpdate: "subagent_update", SubagentUpdate: su})
+	k.send(sa.on, acp.SessionUpdate{SessionUpdate: "subagent_update", SubagentUpdate: su})
 	sa.shown = true
 }
 
@@ -232,8 +223,7 @@ func (s *session) announceLocked(sa *subagent, in launch, role, description stri
 // unless it had already (claude may say so twice: the SendMessage's
 // result, then the task's start). The result can come after the run it
 // started has ended, and then runs nothing.
-func (s *session) againLocked(sa *subagent, call, prompt string) {
-	k := &s.kids
+func (k *subagents) againLocked(sa *subagent, call, prompt string) {
 	fresh := call != "" && k.byCall[call] != sa
 	if call != "" && !fresh && sa.endedRuns[call] {
 		return
@@ -247,17 +237,17 @@ func (s *session) againLocked(sa *subagent, call, prompt string) {
 	}
 	if sa.ended {
 		sa.ended = false
-		s.childStateLocked(sa, acp.StateUpdate{Running: &acp.RunningStateUpdate{}})
+		k.childStateLocked(sa, acp.StateUpdate{Running: &acp.RunningStateUpdate{}})
 	}
 	if fresh {
-		s.delegatedLocked(sa, call, prompt)
+		k.delegatedLocked(sa, call, prompt)
 	}
 }
 
 // delegatedLocked sends the child sa its message from call, which names
 // the call (clients find the Agent call by it), then the call's work held
 // so far.
-func (s *session) delegatedLocked(sa *subagent, call, prompt string) {
+func (k *subagents) delegatedLocked(sa *subagent, call, prompt string) {
 	if call == "" {
 		return
 	}
@@ -266,13 +256,13 @@ func (s *session) delegatedLocked(sa *subagent, call, prompt string) {
 		c := []acp.ContentBlock{{Text: &acp.TextContent{Text: prompt}}}
 		m.Content = acp.Nullable[[]acp.ContentBlock]{Value: &c, Present: true}
 	}
-	s.a.update(sa.id, acp.SessionUpdate{SessionUpdate: "session_message", SessionMessage: m})
-	s.flushLocked(call, sa.id)
+	k.send(sa.id, acp.SessionUpdate{SessionUpdate: "session_message", SessionMessage: m})
+	k.flushLocked(call, sa.id)
 }
 
 // childStateLocked tells the client the subagent sa's state.
-func (s *session) childStateLocked(sa *subagent, st acp.StateUpdate) {
-	s.a.update(sa.on, acp.SessionUpdate{SessionUpdate: "subagent_update", SubagentUpdate: &acp.SubagentUpdate{
+func (k *subagents) childStateLocked(sa *subagent, st acp.StateUpdate) {
+	k.send(sa.on, acp.SessionUpdate{SessionUpdate: "subagent_update", SubagentUpdate: &acp.SubagentUpdate{
 		SessionID: acp.SessionID(sa.id), State: stateOf(st)}})
 }
 
