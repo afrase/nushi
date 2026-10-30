@@ -1,6 +1,7 @@
 package claudeacp
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"os"
@@ -24,7 +25,10 @@ const Command = "claude-acp"
 // exits; a second one kills the agent at once.
 func Main() {
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	Serve(untilSignal(os.Stdin, log), os.Stdout, Config{CLIPath: os.Getenv("CLAUDE_CODE_EXECUTABLE"), Log: log, SharedGroup: true})
+	cfg := Config{CLIPath: os.Getenv("CLAUDE_CODE_EXECUTABLE"), Log: log, SharedGroup: true}
+	if err := Serve(context.Background(), untilSignal(os.Stdin, log), os.Stdout, cfg); err != nil {
+		log.Error("serving the client", "err", err)
+	}
 }
 
 // untilSignal is r until it ends or the process gets SIGTERM or SIGINT,
