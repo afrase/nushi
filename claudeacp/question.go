@@ -59,7 +59,7 @@ func (s *session) askUser(ctx context.Context, r claudeagent.PermissionRequest) 
 	s.shown(r)
 	ctx, done := s.opened(ctx, r.AgentID)
 	defer done()
-	resp, err := s.a.client.CreateElicitation(ctx, questionForm(s.sessionOf(r.AgentID), r.ToolUseID, qs))
+	resp, err := s.a.client.CreateElicitation(ctx, questionForm(s.kids.sessionOf(r.AgentID), r.ToolUseID, qs))
 	switch {
 	case err != nil:
 		s.log.Info("asking the user claude's questions", "err", err)

@@ -75,7 +75,7 @@ func (s *session) sendLocked(t *tool, r report) {
 	meta := claudeCodeMeta{ToolName: t.name, ParentToolUseID: t.parent, ToolResponse: r.response}.meta()
 	if !t.shown {
 		t.shown, t.last = true, r
-		s.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
+		s.kids.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 			ToolCallID: acp.ToolCallID(t.id), Name: t.name, Status: orPending(r.status), Title: r.title, Kind: r.kind,
 			Content: r.content, Locations: r.locations, RawInput: r.rawInput, RawOutput: r.rawOutput, Meta: meta,
 		}})
@@ -86,7 +86,7 @@ func (s *session) sendLocked(t *tool, r report) {
 		return
 	}
 	u.ToolCallID, u.Meta = acp.ToolCallID(t.id), meta
-	s.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: u})
+	s.kids.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: u})
 }
 
 // update is the update that tells a client which has last of what r
@@ -257,7 +257,7 @@ func (s *session) toolResult(b claudeagent.Block) {
 		r.content = content
 	}
 	s.sendLocked(t, r)
-	s.release(t.id) // its work, if it started a subagent claude never named
+	s.kids.release(t.id) // its work, if it started a subagent claude never named
 }
 
 // toolProgress is a tool still running.
@@ -344,4 +344,35 @@ func (s *session) endTools(why int) (incomplete bool) {
 	}
 	delete(ts.streaming, "")
 	return incomplete
+}
+
+// callInput is the input of the call id as the client was last shown it,
+// and the stream it is of.
+func (s *session) callInput(id string) (in launch, stream string) {
+	ts := &s.tools
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	if t := ts.byID[id]; t != nil {
+		_ = json.Unmarshal(t.last.rawInput, &in)
+		return in, t.parent
+	}
+	return in, ""
+}
+
+// stoppedText is what a call of a subagent that ended says when it had
+// no result.
+const stoppedText = "The subagent stopped before this call had a result."
+
+// endSubagentTools ends the open calls of the subagent agent, whose
+// stream is one of calls.
+func (s *session) endSubagentTools(agent string, calls map[string]bool) {
+	ts := &s.tools
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	for _, id := range slices.Sorted(maps.Keys(ts.byID)) {
+		if t := ts.byID[id]; !t.ended && (calls[t.parent] || t.parent == "" && t.agent == agent) {
+			t.ended = true
+			s.sendLocked(t, report{status: acp.ToolCallStatusFailed, content: texts(stoppedText)})
+		}
+	}
 }

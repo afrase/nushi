@@ -37,7 +37,7 @@ type replayer struct {
 func (s *session) replay(ms []sessions.Message, cwd string) {
 	r := &replayer{s: s, cwd: cwd, agents: map[string]sessions.Subagent{}, calls: map[string]*tool{},
 		inputs: map[string]launch{}, byID: map[string]*replayedKid{}}
-	if s.children {
+	if s.kids.children {
 		r.findAgents(ms)
 		r.findQueued(ms)
 	}
@@ -130,7 +130,7 @@ func (r *replayer) chunk(kind, stream, id string, c acp.ContentBlock) {
 	default:
 		u.AgentMessageChunk = ch
 	}
-	r.s.emit(stream, u)
+	r.s.kids.emit(stream, u)
 }
 
 // toolUse shows a call with its whole input; the main agent's plan tools

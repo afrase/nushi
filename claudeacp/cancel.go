@@ -39,7 +39,7 @@ func (s *session) cancel() {
 	s.dropTop = true
 	// What it asks the user is moot now; a background subagent's isn't,
 	// as the cancel spares it.
-	s.withdrawLocked(func(a *ask) bool { return a.agent == "" || !s.inBackground(a.agent) })
+	s.withdrawLocked(func(a *ask) bool { return a.agent == "" || !s.kids.inBackground(a.agent) })
 	s.mu.Unlock()
 	// The queued prompts are dropped first, then claude is interrupted,
 	// with no wait between, as claude-agent-acp writes them (the

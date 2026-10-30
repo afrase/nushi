@@ -38,9 +38,8 @@ type session struct {
 	lastAsk  int
 	closed   bool // closed or gone: no more prompts
 
-	tools    tools     // the tool calls shown
-	kids     subagents // its subagents
-	children bool      // the client takes subagents as sessions of their own
+	tools tools     // the tool calls shown
+	kids  subagents // its subagents, through which every update of a stream goes
 
 	cwd     string
 	cfg     config     // its modes and options
@@ -78,10 +77,9 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 // start runs claude for session id and opens the session once claude has
 // answered initialize.
 func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*session, error) {
-	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), tick: make(chan struct{}), open: map[int]*ask{},
-		children: a.clientCaps().subagents}
+	s := &session{a: a, id: id, cwd: o.Cwd, log: a.log.With("session", id), read: make(chan struct{}), tick: make(chan struct{}), open: map[int]*ask{}}
 	s.st.init()
-	s.kids.init()
+	s.kids.init(id, a.clientCaps().subagents, a.update)
 	s.tools.init(o.Cwd)
 	s.plan.init()
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
@@ -124,7 +122,7 @@ func (s *session) reader() {
 	s.stderr.flush()
 	_ = s.cs.Close()
 	s.endTools(endedExit)
-	s.subagentsGone()
+	s.kids.gone()
 	s.mu.Lock()
 	gone := !s.closed
 	s.closed = true // no more turns join

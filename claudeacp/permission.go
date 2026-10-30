@@ -55,7 +55,7 @@ func (s *session) canUseTool(ctx context.Context, r claudeagent.PermissionReques
 	ctx, done := s.opened(ctx, r.AgentID)
 	defer done()
 	resp, err := s.a.client.RequestPermission(ctx, &acp.RequestPermissionRequest{
-		SessionID: acp.SessionID(s.sessionOf(r.AgentID)), ToolCall: call, Options: opts})
+		SessionID: acp.SessionID(s.kids.sessionOf(r.AgentID)), ToolCall: call, Options: opts})
 	if err != nil {
 		s.log.Info("asking for a permission", "err", err)
 	}
@@ -83,7 +83,7 @@ func (s *session) shown(r claudeagent.PermissionRequest) acp.ToolCallUpdate {
 		// A subagent's call its stream hasn't shown: not one the turn
 		// leaves open when it ends, and of the stream of the call that
 		// started the subagent, if claude has said which.
-		parent = s.callOf(r.AgentID)
+		parent = s.kids.callOf(r.AgentID)
 		ts.byID[r.ToolUseID] = &tool{id: r.ToolUseID, name: r.ToolName, agent: r.AgentID, parent: parent}
 	}
 	// A call the stream showed whole keeps the input it showed, as with
@@ -160,7 +160,7 @@ func (s *session) opened(ctx context.Context, agent string) (context.Context, fu
 	s.open[n] = a
 	s.mu.Unlock()
 	if agent != "" {
-		s.asking(agent, 1, false)
+		s.kids.asking(agent, 1, false)
 	}
 	return ctx, func() {
 		cancel()
@@ -170,7 +170,7 @@ func (s *session) opened(ctx context.Context, agent string) (context.Context, fu
 		withdrawn := a.withdrawn
 		s.mu.Unlock()
 		if agent != "" {
-			s.asking(agent, -1, withdrawn)
+			s.kids.asking(agent, -1, withdrawn)
 		}
 	}
 }
