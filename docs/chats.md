@@ -48,11 +48,11 @@ The chat keys work in a terminal too.
 ⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, so use ⌘⇧P there, which works everywhere.
 
 - **Go to a chat** by its title: the pinned first, then the last opened. Archived chats are listed last, marked.
-- **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the details and the terminal, Rewind…; the chat's own: Side chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
+- **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the details and the terminal, Rewind…; the chat's own: Side chat, Fork chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
 
 Rows match as you type, each with its key. Actions that don't apply now are left out, and what you picked lately comes first.
 
-**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it. ⇧⌘B (or its −) hides it and shows it again, alive all the while: hidden, a Side chat chip in the chat's header shows it, with a dot while it works or when a turn ended unseen. Its × ends it and deletes its conversation, so one with messages asks first. While it's open, the Context widget shows its context and cost on a Side chat line under the chat's.
+**Side chat** (⇧⌘B) opens a fork of the chat beside it. It knows the conversation and doesn't add to it; you can go back and forth in it. ⇧⌘B (or its −) hides it and shows it again, alive all the while: hidden, a Side chat chip in the chat's header shows it, with a dot while it works or when a turn ended unseen. Its × ends it and deletes its conversation, so one with messages asks first; **Keep as chat**, beside it, makes it a chat of its own in the sidebar instead (a fork, below). While it's open, the Context widget shows its context and cost on a Side chat line under the chat's.
 
 The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and its sidebar row's right-click.
 
@@ -71,6 +71,10 @@ A chat whose agent can rewind goes back to just before one of your messages. Rew
 - Rewind shows on a message under the pointer, and in its right-click menu.
 - Esc twice quickly in the box lists your messages, newest first, with when each was sent. Type to filter; ↑↓ and ⏎ (or a click) rewind at once.
 - A single Esc stops a running turn. A turn must stop before a rewind.
+
+## Fork
+
+**Fork chat** (the chat's menus, the palette, the phone's ⋯) makes a new chat from this one's conversation, which then goes on separately: the same agent, folder and worktree, the chat's model, mode and effort, its title marked "(fork)". The original stays as it was. While a turn runs, the fork has what has finished. **Fork from here**, on one of the agent's messages under the pointer, makes it from the conversation up to that message. Both need an agent that can fork; a fork shares the folder's files with the original ([ADR 0067](adr/0067-forking-a-chat-makes-a-new-chat.md)).
 
 ## Changes and review comments
 
