@@ -475,10 +475,12 @@ func TestNewConnectionRate(t *testing.T) {
 // A listener waits only so long, pings or not; one with a peer stays.
 func TestWaitingLifetime(t *testing.T) {
 	lim := Defaults
-	lim.MaxWait = 300 * time.Millisecond
+	lim.MaxWait = time.Second
 	url := start(t, lim)
+	// The client gives up on a pong after three pings, so they're far
+	// enough apart for a loaded CI runner (as in TestIdle).
 	old := KeepAlive
-	KeepAlive = 50 * time.Millisecond
+	KeepAlive = 200 * time.Millisecond
 	defer func() { KeepAlive = old }()
 	var dl Dialer
 	l, err := dl.Listen(context.Background(), url, newKey())
@@ -488,7 +490,7 @@ func TestWaitingLifetime(t *testing.T) {
 	t.Cleanup(func() { _ = l.Close() })
 	began := time.Now()
 	expectClosed(t, l)
-	if time.Since(began) < 250*time.Millisecond {
+	if time.Since(began) < lim.MaxWait-50*time.Millisecond {
 		t.Fatal("closed too soon")
 	}
 
@@ -497,7 +499,7 @@ func TestWaitingLifetime(t *testing.T) {
 	expect(t, l, "hello")
 	got := make(chan string, 1)
 	go func() { m, _ := l.ReadMessage(); got <- string(m) }()
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(3 * lim.MaxWait / 2)
 	send(t, d, "still here")
 	if m := <-got; m != "still here" {
 		t.Fatalf("read %q", m)
