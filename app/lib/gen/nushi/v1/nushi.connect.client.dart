@@ -405,6 +405,48 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Forks a chat into a new one (Fork, ADR 0067): the same agent and folder
+  /// (and worktree), the chat's picks, its title marked " (fork)", and its
+  /// conversation: all that has finished, or with item_id (an agent message
+  /// with Item.forkable, while status.can_rewind) up to it, it included. The
+  /// chat stays as it was. Refused unless status.can_fork. (API 94)
+  Future<nushiv1nushi.ForkAsChatResponse> forkAsChat(
+    nushiv1nushi.ForkAsChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.forkAsChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Makes a side chat a chat of its own, a fork of its chat, listed and
+  /// kept; the side chat ends (a removed event) without its session being
+  /// deleted. Refused during its turn. (API 94)
+  Future<nushiv1nushi.KeepSideChatResponse> keepSideChat(
+    nushiv1nushi.KeepSideChatRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.keepSideChat,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Sets the chat's title; it wins over the agent's. An empty title goes
   /// back to the agent's.
   Future<nushiv1nushi.RenameChatResponse> renameChat(

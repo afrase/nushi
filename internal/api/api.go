@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 93
+const Version = 94
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -448,6 +448,22 @@ func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.Fork
 		return nil, refused(err)
 	}
 	return connect.NewResponse(&nushiv1.ForkChatResponse{ChatId: id}), nil
+}
+
+func (s *server) ForkAsChat(ctx context.Context, req *connect.Request[nushiv1.ForkAsChatRequest]) (*connect.Response[nushiv1.ForkAsChatResponse], error) {
+	id, err := s.chats.ForkAsChat(ctx, req.Msg.ChatId, req.Msg.ItemId)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.ForkAsChatResponse{ChatId: id}), nil
+}
+
+func (s *server) KeepSideChat(ctx context.Context, req *connect.Request[nushiv1.KeepSideChatRequest]) (*connect.Response[nushiv1.KeepSideChatResponse], error) {
+	id, err := s.chats.KeepSide(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.KeepSideChatResponse{ChatId: id}), nil
 }
 
 func (s *server) CloseSideChat(_ context.Context, req *connect.Request[nushiv1.CloseSideChatRequest]) (*connect.Response[nushiv1.CloseSideChatResponse], error) {
