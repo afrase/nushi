@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/menu.dart';
@@ -14,8 +15,10 @@ import 'package:nushi/theme/theme.dart';
 const controlHeight = 26.0;
 
 /// How a control is, to draw it: under the pointer, focused from the
-/// keyboard, pressable at all.
-typedef ControlLook = ({bool hover, bool focus, bool enabled});
+/// keyboard, pressed (the pointer down on it: a click shows at once, before
+/// what it does is done), pressable at all. A pressed control is also
+/// hover, so one drawn only for hover still answers a press.
+typedef ControlLook = ({bool hover, bool focus, bool pressed, bool enabled});
 
 /// Says the controls below are for a finger (the phone): each gets a
 /// target of at least [TouchTargets.size] points, as iOS asks.
@@ -44,9 +47,51 @@ Widget touchTarget(BuildContext context, Widget child) =>
       )
     : child;
 
+/// Tells [onPress] true as the primary pointer goes down on [child], and
+/// false as it lifts, is cancelled or moves past the touch slop (a drag,
+/// not a click): a control's pressed look, from the pointer itself rather
+/// than the tap's win, which can wait on a drag recognizer beside it.
+class PressWatch extends StatefulWidget {
+  const new({required this.onPress, required this.child, super.key});
+
+  final ValueChanged<bool> onPress;
+  final Widget child;
+
+  @override
+  State<PressWatch> createState() => _PressWatchState();
+}
+
+class _PressWatchState extends State<PressWatch> {
+  Offset? _at; // where the pointer went down, while it is
+
+  void _end() {
+    if (_at == null) return;
+    _at = null;
+    widget.onPress(false);
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (e) {
+      if (e.buttons != kPrimaryButton) return;
+      _at = e.position;
+      widget.onPress(true);
+    },
+    onPointerMove: (e) {
+      if (_at case final at? when (e.position - at).distance > kTouchSlop) {
+        _end();
+      }
+    },
+    onPointerUp: (_) => _end(),
+    onPointerCancel: (_) => _end(),
+    child: widget.child,
+  );
+}
+
 /// Hover, keyboard focus and press for a control that [builder] draws:
-/// the pointing hand, a click or Enter or Space press it. Without [onTap]
-/// it's disabled: no hand, no focus.
+/// the pointing hand, a click or Enter or Space press it. Pressed from the
+/// pointer's going down, not the tap's win, which can wait on a drag
+/// beside it. Without [onTap] it's disabled: no hand, no focus.
 class Pressable extends StatefulWidget {
   const new({
     required this.onTap,
@@ -68,6 +113,11 @@ class Pressable extends StatefulWidget {
 class _PressableState extends State<Pressable> {
   bool _hover = false;
   bool _focus = false;
+  bool _down = false;
+
+  void _press(bool down) {
+    if (mounted && down != _down) setState(() => _down = down);
+  }
 
   void _set(bool hover, bool focus) {
     if (mounted && (hover != _hover || focus != _focus)) {
@@ -92,16 +142,20 @@ class _PressableState extends State<Pressable> {
       },
       onShowHoverHighlight: (v) => _set(v, _focus),
       onShowFocusHighlight: (v) => _set(_hover, v),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: touchTarget(
-          context,
-          widget.builder(context, (
-            hover: _hover && on,
-            focus: _focus && on,
-            enabled: on,
-          )),
+      child: PressWatch(
+        onPress: (down) => _press(down && on),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          child: touchTarget(
+            context,
+            widget.builder(context, (
+              hover: (_hover || _down) && on,
+              focus: _focus && on,
+              pressed: _down && on,
+              enabled: on,
+            )),
+          ),
         ),
       ),
     );
@@ -118,6 +172,9 @@ BoxDecoration? focusRing(Tokens t, ControlLook look) => look.focus
         borderRadius: BorderRadius.circular(NushiTheme.control),
       )
     : null;
+
+/// The tint under a control: deeper while it's pressed.
+Color _tint(Tokens t, ControlLook look) => look.pressed ? t.pressed : t.hover;
 
 /// [child] faded while [look] is disabled.
 Widget _faded(ControlLook look, Widget child) =>
@@ -195,14 +252,16 @@ class Button extends StatelessWidget {
               : const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
             color: primary
-                ? (look.hover
+                ? (look.pressed
+                      ? t.accentPressed
+                      : look.hover
                       ? Color.alphaBlend(
                           t.onAccent.withValues(alpha: 0.12),
                           t.accent,
                         )
                       : t.accent)
                 : (look.hover
-                      ? Color.alphaBlend(t.hover, t.fieldFill)
+                      ? Color.alphaBlend(_tint(t, look), t.fieldFill)
                       : t.fieldFill),
             border: primary
                 ? null
@@ -284,7 +343,10 @@ class SendButton extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
           decoration: BoxDecoration(
             color: look.hover
-                ? Color.alphaBlend(fg.withValues(alpha: 0.12), fill)
+                ? Color.alphaBlend(
+                    fg.withValues(alpha: look.pressed ? 0.24 : 0.12),
+                    fill,
+                  )
                 : fill,
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
@@ -397,9 +459,9 @@ class MenuField extends StatelessWidget {
                   : const EdgeInsets.fromLTRB(8, 0, 5, 0),
               decoration: BoxDecoration(
                 color: compact
-                    ? (look.hover ? t.hover : null)
+                    ? (look.hover ? _tint(t, look) : null)
                     : (look.hover
-                          ? Color.alphaBlend(t.hover, t.fieldFill)
+                          ? Color.alphaBlend(_tint(t, look), t.fieldFill)
                           : t.fieldFill),
                 border: compact
                     ? null
@@ -567,7 +629,7 @@ class IconTap extends StatelessWidget {
       builder: (context, look) => Container(
         padding: EdgeInsets.all(padding),
         decoration: BoxDecoration(
-          color: look.hover ? t.hover : null,
+          color: look.hover ? _tint(t, look) : null,
           borderRadius: BorderRadius.circular(NushiTheme.control),
         ),
         foregroundDecoration: focusRing(t, look),

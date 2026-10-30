@@ -10,8 +10,9 @@ import 'package:nushi/theme/theme.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-/// Each control four times: at rest, under the pointer, focused from the
-/// keyboard, disabled; each builds one, pressable or not.
+/// Each control five times: at rest, under the pointer, focused from the
+/// keyboard, pressed (the pointer down on it), disabled; each builds one,
+/// pressable or not.
 final _controls = <String, Widget Function({required bool on})>{
   'button_primary': ({required on}) => Button(
     label: 'Done',
@@ -53,10 +54,10 @@ void main() {
     ('light', Tokens.light),
   ]) {
     for (final MapEntry(key: control, value: make) in _controls.entries) {
-      testWidgets('golden, $control at rest, hovered, focused, disabled, '
-          '$name', (tester) async {
-        viewport(tester, const Size(600, 72), ratio: 2);
-        const states = ['rest', 'hover', 'focused', 'disabled'];
+      testWidgets('golden, $control at rest, hovered, focused, pressed, '
+          'disabled, $name', (tester) async {
+        viewport(tester, const Size(760, 72), ratio: 2);
+        const states = ['rest', 'hover', 'focused', 'pressed', 'disabled'];
         await tester.pumpWidget(
           _app(
             tokens,
@@ -101,11 +102,29 @@ void main() {
           ),
         );
         addTearDown(mouse.removePointer);
+        // A second mouse's button down on the fourth, held (a finger
+        // would turn the hover and focus highlights off).
+        final pressed = tester.getCenter(
+          find
+              .descendant(
+                of: find.byKey(const ValueKey('pressed')),
+                matching: find.byType(Pressable),
+              )
+              .first,
+        );
+        final press = TestPointer(9, PointerDeviceKind.mouse, 2);
+        tester.binding
+          ..handlePointerEvent(press.addPointer(location: pressed))
+          ..handlePointerEvent(press.down(pressed));
         await tester.pumpAndSettle();
         await expectLater(
           find.byType(Scaffold),
           matchesGoldenFile('goldens/control_${control}_$name.png'),
         );
+        tester.binding
+          ..handlePointerEvent(press.up())
+          ..handlePointerEvent(press.removePointer());
+        await tester.pumpAndSettle();
       });
     }
   }

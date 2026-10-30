@@ -195,6 +195,13 @@ class Tokens {
   /// The tint of a row or button under the pointer.
   Color get hover => text.withValues(alpha: 0.06);
 
+  /// The tint of a row or button while the pointer is down on it: a click
+  /// shows before what it does is done.
+  Color get pressed => text.withValues(alpha: 0.12);
+
+  /// The accent's fill while a primary button is pressed: a shade darker.
+  Color get accentPressed => Color.alphaBlend(const Color(0x2E000000), accent);
+
   static const light = Tokens(
     brightness: Brightness.light,
     base: Color(0xFFFFFFFF),

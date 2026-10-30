@@ -147,7 +147,8 @@ void revealRow(GlobalKey row, {required bool down, VoidCallback? then}) {
 
 /// A quiet pressable area: a light tint under the pointer (unless not
 /// [tint]: a card's title, which shows its grip instead) or when
-/// [selected], no ripple.
+/// [selected], a deeper one from the pointer's going down (a click shows
+/// at once, before what it opens is built), no ripple.
 class Tap extends StatefulWidget {
   const new({
     required this.onTap,
@@ -182,6 +183,11 @@ class Tap extends StatefulWidget {
 
 class _TapState extends State<Tap> {
   bool _hover = false;
+  bool _down = false;
+
+  void _press(bool down) {
+    if (mounted && down != _down) setState(() => _down = down);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,27 +198,34 @@ class _TapState extends State<Tap> {
           widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        onSecondaryTapUp: widget.onSecondaryTapUp,
-        child: Container(
-          padding: widget.padding,
-          constraints: TouchTargets.of(context)
-              ? const BoxConstraints(minHeight: TouchTargets.size)
-              : null,
-          alignment: TouchTargets.of(context)
-              ? AlignmentDirectional.centerStart
-              : null,
-          decoration: BoxDecoration(
-            color: widget.selected
-                ? t.selected
-                : _hover && on && widget.tint
-                ? t.hover
+      child: PressWatch(
+        onPress: (down) => _press(down && on),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onSecondaryTapUp: widget.onSecondaryTapUp,
+          child: Container(
+            padding: widget.padding,
+            constraints: TouchTargets.of(context)
+                ? const BoxConstraints(minHeight: TouchTargets.size)
                 : null,
-            borderRadius: BorderRadius.circular(widget.radius),
+            alignment: TouchTargets.of(context)
+                ? AlignmentDirectional.centerStart
+                : null,
+            decoration: BoxDecoration(
+              color: _down && on
+                  ? (widget.selected
+                        ? Color.alphaBlend(t.pressed, t.selected)
+                        : t.pressed)
+                  : widget.selected
+                  ? t.selected
+                  : _hover && on && widget.tint
+                  ? t.hover
+                  : null,
+              borderRadius: BorderRadius.circular(widget.radius),
+            ),
+            child: widget.child,
           ),
-          child: widget.child,
         ),
       ),
     );
