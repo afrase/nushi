@@ -147,9 +147,9 @@ func (s *session) inject(ctx context.Context, content []claudeagent.Block) (bool
 	}
 	id := s.a.newID()
 	t.ids[id], t.steers[id] = true, true
-	priority := "now"
+	priority := claudeagent.PriorityNow
 	if s.asks > 0 {
-		priority = "later"
+		priority = claudeagent.PriorityLater
 	}
 	s.mu.Unlock()
 	if _, err := s.cs.Send(ctx, claudeagent.UserInput{Content: content, UUID: id, Priority: priority}); err != nil {

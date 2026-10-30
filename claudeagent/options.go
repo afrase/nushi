@@ -29,10 +29,20 @@ const (
 
 // Thinking is how the model thinks before it answers.
 type Thinking struct {
-	Type         string // "adaptive", "enabled" or "disabled"
-	BudgetTokens int    // for "enabled"; 0 means adaptive
+	Type         ThinkingType
+	BudgetTokens int    // for ThinkingEnabled; 0 means adaptive
 	Display      string // "summarized", "omitted"…; "" = claude's default
 }
+
+// ThinkingType is whether the model thinks, and how much.
+type ThinkingType string
+
+// The thinking types.
+const (
+	ThinkingAdaptive ThinkingType = "adaptive" // as much as the model decides
+	ThinkingEnabled  ThinkingType = "enabled"  // up to BudgetTokens
+	ThinkingDisabled ThinkingType = "disabled"
+)
 
 // MCPServer is an MCP server claude starts or connects to for the session.
 type MCPServer struct {
@@ -176,14 +186,14 @@ func args(o Options) ([]string, error) {
 	list("tools", o.Tools)
 	if t := o.Thinking; t != nil {
 		switch {
-		case t.Type == "disabled":
+		case t.Type == ThinkingDisabled:
 			a = append(a, "--thinking=disabled")
-		case t.Type == "enabled" && t.BudgetTokens > 0:
+		case t.Type == ThinkingEnabled && t.BudgetTokens > 0:
 			a = append(a, "--max-thinking-tokens="+strconv.Itoa(t.BudgetTokens))
 		default:
 			a = append(a, "--thinking=adaptive")
 		}
-		if t.Type != "disabled" {
+		if t.Type != ThinkingDisabled {
 			flag("thinking-display", t.Display)
 		}
 	}

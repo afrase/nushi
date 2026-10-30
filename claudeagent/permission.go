@@ -37,41 +37,44 @@ type PermissionResult interface{ permissionResult() }
 type Allow struct {
 	UpdatedInput       json.RawMessage    // nil = the input as asked
 	UpdatedPermissions []PermissionUpdate // e.g. the request's Suggestions, to stop asking
-	Classification     string             // UserTemporary or UserPermanent
+	Classification     Classification     // UserTemporary or UserPermanent
 }
 
 // Deny stops the tool.
 type Deny struct {
-	Message        string // what the model is told; never empty on the wire
-	Interrupt      bool   // also stops the turn
-	Classification string // UserReject
+	Message        string         // what the model is told; never empty on the wire
+	Interrupt      bool           // also stops the turn
+	Classification Classification // UserReject
 }
 
-// How the user decided, for claude's records: an Allow's or a Deny's
-// Classification.
+// Classification is how the user decided, for claude's records: an
+// Allow's or a Deny's.
+type Classification string
+
+// The classifications.
 const (
-	UserTemporary = "user_temporary" // allowed this once
-	UserPermanent = "user_permanent" // allowed from now on
-	UserReject    = "user_reject"
+	UserTemporary Classification = "user_temporary" // allowed this once
+	UserPermanent Classification = "user_permanent" // allowed from now on
+	UserReject    Classification = "user_reject"
 )
 
 // PermissionUpdate is a change to what claude may do without asking: one
 // of a request's Suggestions, or one made for an Allow. Type says which
 // fields it uses:
 //
-//   - "addRules", "replaceRules", "removeRules": Rules and Behavior;
-//   - "setMode": Mode;
-//   - "addDirectories", "removeDirectories": Directories.
+//   - UpdateAddRules, UpdateReplaceRules, UpdateRemoveRules: Rules and
+//     Behavior;
+//   - UpdateSetMode: Mode;
+//   - UpdateAddDirectories, UpdateRemoveDirectories: Directories.
 //
-// Destination says where the change is kept: "session", "localSettings",
-// "projectSettings", "userSettings" or "cliArg".
+// Destination says where the change is kept.
 type PermissionUpdate struct {
-	Type        string           `json:"type"`
-	Rules       []PermissionRule `json:"rules,omitempty"`
-	Behavior    string           `json:"behavior,omitempty"` // "allow", "deny" or "ask"
-	Mode        PermissionMode   `json:"mode,omitempty"`
-	Directories []string         `json:"directories,omitempty"`
-	Destination string           `json:"destination,omitempty"`
+	Type        PermissionUpdateType  `json:"type"`
+	Rules       []PermissionRule      `json:"rules,omitempty"`
+	Behavior    PermissionBehavior    `json:"behavior,omitempty"`
+	Mode        PermissionMode        `json:"mode,omitempty"`
+	Directories []string              `json:"directories,omitempty"`
+	Destination PermissionDestination `json:"destination,omitempty"`
 	// Raw is the update as claude wrote it. When set it is what goes
 	// back, unchanged, with any fields the package doesn't know; clear it
 	// to send the fields instead.
@@ -84,6 +87,41 @@ type PermissionRule struct {
 	ToolName    string `json:"toolName"`
 	RuleContent string `json:"ruleContent,omitempty"`
 }
+
+// PermissionUpdateType is the change a PermissionUpdate makes.
+type PermissionUpdateType string
+
+// The permission updates claude knows; it may know more.
+const (
+	UpdateAddRules          PermissionUpdateType = "addRules"
+	UpdateReplaceRules      PermissionUpdateType = "replaceRules"
+	UpdateRemoveRules       PermissionUpdateType = "removeRules"
+	UpdateSetMode           PermissionUpdateType = "setMode"
+	UpdateAddDirectories    PermissionUpdateType = "addDirectories"
+	UpdateRemoveDirectories PermissionUpdateType = "removeDirectories"
+)
+
+// PermissionBehavior is what a rule does with the tool uses it names.
+type PermissionBehavior string
+
+// The rules' behaviors.
+const (
+	BehaviorAllow PermissionBehavior = "allow"
+	BehaviorDeny  PermissionBehavior = "deny"
+	BehaviorAsk   PermissionBehavior = "ask"
+)
+
+// PermissionDestination is where a PermissionUpdate is kept.
+type PermissionDestination string
+
+// The destinations claude knows.
+const (
+	DestinationSession         PermissionDestination = "session" // this session only
+	DestinationLocalSettings   PermissionDestination = "localSettings"
+	DestinationProjectSettings PermissionDestination = "projectSettings"
+	DestinationUserSettings    PermissionDestination = "userSettings"
+	DestinationCLIArg          PermissionDestination = "cliArg"
+)
 
 // UnmarshalJSON decodes u, keeping it in Raw.
 func (u *PermissionUpdate) UnmarshalJSON(data []byte) error {
@@ -150,8 +188,8 @@ func (s *Session) canUseTool(ctx context.Context, raw json.RawMessage) (any, err
 // permissionReply is a can_use_tool answer as claude reads it. The
 // fields are in their keys' order, as claude has always been sent them.
 type permissionReply struct {
-	Behavior               string             `json:"behavior"` // "allow" or "deny"
-	DecisionClassification string             `json:"decisionClassification,omitempty"`
+	Behavior               PermissionBehavior `json:"behavior"` // allow or deny
+	DecisionClassification Classification     `json:"decisionClassification,omitempty"`
 	Interrupt              bool               `json:"interrupt,omitempty"`
 	Message                string             `json:"message,omitempty"` // a deny's
 	ToolUseID              string             `json:"toolUseID"`
@@ -173,12 +211,12 @@ func permissionAnswer(r PermissionRequest, result PermissionResult) (permissionR
 			input = json.RawMessage(`{}`)
 		}
 		return permissionReply{
-			Behavior: "allow", ToolUseID: r.ToolUseID, UpdatedInput: input,
+			Behavior: BehaviorAllow, ToolUseID: r.ToolUseID, UpdatedInput: input,
 			UpdatedPermissions: p.UpdatedPermissions, DecisionClassification: p.Classification,
 		}, nil
 	case Deny:
 		return permissionReply{
-			Behavior: "deny", ToolUseID: r.ToolUseID, Message: cmp.Or(p.Message, "Permission denied"),
+			Behavior: BehaviorDeny, ToolUseID: r.ToolUseID, Message: cmp.Or(p.Message, "Permission denied"),
 			Interrupt: p.Interrupt, DecisionClassification: p.Classification,
 		}, nil
 	}

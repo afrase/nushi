@@ -78,7 +78,7 @@ type HookOutput struct {
 	Stop           bool   // claude stops after the hook
 	StopReason     string // why, with Stop: shown to the user
 	SuppressOutput bool   // keeps the hook's output out of the transcript
-	Decision       string // "block" stops what the event is about
+	Decision       HookDecision
 	Reason         string // why, for the model
 	SystemMessage  string // a warning shown to the user
 	// Async says the hook goes on in the background: claude doesn't wait
@@ -91,6 +91,13 @@ type HookOutput struct {
 	// additionalContext. hookEventName is filled in.
 	Specific map[string]any
 }
+
+// HookDecision is a hook's say on what its event is about.
+type HookDecision string
+
+// HookBlock stops what the event is about: the tool call, the prompt, the
+// stop.
+const HookBlock HookDecision = "block"
 
 // hookCallbackID is the id the nth hook is registered under, as the
 // official SDKs make them.
@@ -176,7 +183,7 @@ type hookReply struct {
 	Async              bool           `json:"async,omitempty"`
 	AsyncTimeout       int64          `json:"asyncTimeout,omitempty"` // in milliseconds
 	Continue           *bool          `json:"continue,omitempty"`     // only ever false: claude stops
-	Decision           string         `json:"decision,omitempty"`
+	Decision           HookDecision   `json:"decision,omitempty"`
 	HookSpecificOutput map[string]any `json:"hookSpecificOutput,omitzero"`
 	Reason             string         `json:"reason,omitempty"`
 	StopReason         string         `json:"stopReason,omitempty"`
