@@ -19,17 +19,61 @@ import 'package:nushi/worktree.dart';
 /// The chat's menu (its ⋯, its sidebar row's right-click): the menu bar's
 /// Chat menu, the actions that apply to it now ([chatActions]: Side
 /// question, Send review comments, Stop, Rename, Sleep, Reload, Link pull
-/// request…, Archive or Unarchive, MCP servers…, Skills…, Delete…).
+/// request…, Archive or Unarchive, MCP servers…, Skills…, Delete…), each
+/// with its icon, in groups ([_group]) with a line between them; Delete in
+/// red.
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
   Daemon daemon, {
   required VoidCallback onRename,
-}) => [
-  for (final a in chatActions(context, daemon, chat, onRename: onRename))
-    if (a.enabled)
-      MenuEntry(a.short, detail: a.act.shortcut ?? '', onPick: a.run),
-];
+}) {
+  final shown = [
+    for (final a in chatActions(context, daemon, chat, onRename: onRename))
+      if (a.enabled) a,
+  ]..sort((a, b) => _group(a.act).compareTo(_group(b.act)));
+  return [
+    for (final (i, a) in shown.indexed) ...[
+      if (i > 0 && _group(a.act) != _group(shown[i - 1].act)) MenuEntry.divider,
+      MenuEntry(
+        a.short,
+        shortcut: a.act.shortcut ?? '',
+        onPick: a.run,
+        icon: _icon(a.act),
+        danger: a.act == Act.delete,
+      ),
+    ],
+  ];
+}
+
+/// Where an action goes in the chat's menu: the conversation, the chat
+/// itself, what it's linked to and uses, keeping it, deleting it. One the
+/// menu doesn't know yet goes with the chat itself.
+int _group(Act act) => switch (act) {
+  Act.sideChat || Act.sendComments || Act.stop => 0,
+  Act.linkPull || Act.cleanUp || Act.mcp || Act.skills => 2,
+  Act.archive || Act.unarchive => 3,
+  Act.delete => 4,
+  _ => 1,
+};
+
+IconData? _icon(Act act) => switch (act) {
+  Act.sideChat => Icons.forum_outlined,
+  Act.sendComments => Icons.rate_review_outlined,
+  Act.stop => Icons.stop_circle_outlined,
+  Act.rename => Icons.edit_outlined,
+  Act.pin => Icons.push_pin_outlined,
+  Act.sleep => Icons.bedtime_outlined,
+  Act.reload => Icons.refresh,
+  Act.linkPull => Icons.link,
+  Act.cleanUp => Icons.cleaning_services_outlined,
+  Act.mcp => Icons.hub_outlined,
+  Act.skills => Icons.auto_awesome_outlined,
+  Act.archive => Icons.archive_outlined,
+  Act.unarchive => Icons.unarchive_outlined,
+  Act.delete => Icons.delete_outline,
+  _ => null,
+};
 
 /// Asks before deleting a chat, listing what goes, then deletes it.
 Future<void> showDeleteChat(
