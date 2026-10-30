@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/fork_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
@@ -16,13 +17,15 @@ import 'package:nushi/widgets.dart';
 /// A side chat: a forked session beside the chat, which knows the
 /// conversation so far but doesn't add to it; you can go back and forth in
 /// it. ⇧⌘B or its − hides it ([toggleSide]), alive all the same; its ×
-/// ends it ([endSide]), the only way to.
+/// ends it ([endSide]), the only way to, unless Keep as chat makes it a
+/// chat of its own ([keepSide]).
 class SideChat extends StatelessWidget {
   const new({
     required this.side,
     required this.daemon,
     required this.onHide,
     required this.onClose,
+    required this.onKeep,
     super.key,
   });
 
@@ -30,6 +33,7 @@ class SideChat extends StatelessWidget {
   final Daemon daemon;
   final VoidCallback onHide;
   final VoidCallback onClose;
+  final VoidCallback onKeep;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +66,24 @@ class SideChat extends StatelessWidget {
                       style: theme.ui(t.textMuted, size: 12),
                     ),
                   ),
+                  if (daemon.daemonApi >= forkApi)
+                    Tap(
+                      tooltip: 'Keep as chat: a chat of its own in the sidebar',
+                      onTap: canKeepSide(daemon, side) ? onKeep : null,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      child: Text(
+                        'Keep as chat',
+                        style: theme.ui(
+                          canKeepSide(daemon, side)
+                              ? t.textSecondary
+                              : t.textMuted,
+                          size: 12,
+                        ),
+                      ),
+                    ),
                   IconTap(
                     Icons.remove,
                     tooltip: 'Hide the side chat   ${keyLabel(sideChatKey)}',

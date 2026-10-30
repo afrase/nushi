@@ -85,6 +85,8 @@ class FakeDaemon implements Transport {
     if (input is RemoveAgentRequest) removed.add(input.agent);
     if (input is SetSettingsRequest) setSettings.add(settings = input.settings);
     if (input is PinChatsRequest) _pin(input.chatIds);
+    if (input is ForkAsChatRequest) _fork(input.chatId, 'fork');
+    if (input is KeepSideChatRequest) _fork(chats.first.id, 'kept');
     if (input is StartChatRequest) {
       started.add(input);
       if (startError case final e?) {
@@ -121,6 +123,8 @@ class FakeDaemon implements Transport {
           OpenAgentSessionRequest() => OpenAgentSessionResponse(
             chatId: chats.first.id,
           ),
+          ForkAsChatRequest() => ForkAsChatResponse(chatId: 'fork'),
+          KeepSideChatRequest() => KeepSideChatResponse(chatId: 'kept'),
           _ => spec.outputFactory(),
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());
@@ -133,6 +137,22 @@ class FakeDaemon implements Transport {
           ..clearAdapter()
           ..ready = a.path.isNotEmpty && a.problem.isEmpty)
       : a;
+
+  /// A fork of chat [of] as the daemon makes one (ForkAsChat, and a kept
+  /// side chat's): chat [id], titled as a fork, listed and announced.
+  void _fork(String of, String id) {
+    final c = chats.firstWhere((c) => c.id == of);
+    final fork = Chat(
+      id: id,
+      agent: c.agent,
+      title: '${c.title} (fork)',
+      folder: c.folder,
+      createdUnixMs: c.createdUnixMs,
+      status: ChatStatus(asleep: id == 'kept'),
+    );
+    chats.add(fork);
+    emit(EventsResponse(chatId: id, chat: fork));
+  }
 
   /// Pins [ids] as the daemon does: each at its place, every other chat
   /// unpinned, an archived one never; a chat whose pin changed comes as
