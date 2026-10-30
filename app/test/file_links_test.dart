@@ -98,17 +98,18 @@ void main() {
           'notes.txt',
           'Node.js',
         });
-        expect(find.byType(FileLink), findsNWidgets(2));
-        await tester.tap(find.widgetWithText(FileLink, 'docs/plan.md'));
-        await tester.tap(find.widgetWithText(FileLink, 'lib/main.dart:12'));
+        // Each a link in pieces, cut after its slashes.
+        expect(find.byType(FileLink), findsNWidgets(4));
+        await tester.tap(find.widgetWithText(FileLink, 'plan.md'));
+        await tester.tap(find.widgetWithText(FileLink, 'lib/'));
         expect(opened, ['docs/plan.md', 'lib/main.dart']);
 
-        // Underlined while the pointer is over it.
+        // Underlined, all of it, while the pointer is over a piece.
         final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
         addTearDown(mouse.removePointer);
         await mouse.addPointer(location: Offset.zero);
         await mouse.moveTo(
-          tester.getCenter(find.widgetWithText(FileLink, 'docs/plan.md')),
+          tester.getCenter(find.widgetWithText(FileLink, 'plan.md')),
         );
         await tester.pumpAndSettle();
         Text text(String s) => tester.widget<Text>(
@@ -117,14 +118,15 @@ void main() {
             matching: find.byType(Text),
           ),
         );
-        expect(
-          text('docs/plan.md').style?.decoration,
-          TextDecoration.underline,
-        );
-        expect(
-          text('lib/main.dart:12').style?.decoration,
-          isNot(TextDecoration.underline),
-        );
+        for (final piece in ['docs/', 'plan.md']) {
+          expect(text(piece).style?.decoration, TextDecoration.underline);
+        }
+        for (final piece in ['lib/', 'main.dart:12']) {
+          expect(
+            text(piece).style?.decoration,
+            isNot(TextDecoration.underline),
+          );
+        }
         if (width == 720) {
           await expectLater(
             find.byType(Scaffold),
@@ -134,6 +136,64 @@ void main() {
         d.dispose();
       });
     }
+  }
+
+  for (final width in [720.0, 1700.0]) {
+    testWidgets('a long path wraps between its folders, clear of the '
+        'text after it (${width.round()})', (tester) async {
+      const path =
+          '/Users/me/Developer/a-long-project-name/work/out/'
+          'export-records-0123456789-raw.json';
+      viewport(tester, Size(width, 200));
+      final fake = FakeDaemon([])
+        ..answer = (input) => switch (input) {
+          FindChatFilesRequest() => FindChatFilesResponse(found: [path]),
+          _ => null,
+        };
+      final d = await fake.connect(tester);
+      final chat = ChatState('c', '/Users/me/repo')..agent = 'claude';
+      await tester.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
+          home: Scaffold(
+            body: Previews(
+              open: (_) {},
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 420,
+                    child: ItemView(
+                      Item(
+                        id: 'm',
+                        kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+                        text:
+                            'The records:\n\n'
+                            '- `$path`: the first export\n'
+                            '- `$path` again, then more words after it\n',
+                      ),
+                      chat,
+                      d,
+                      live: false,
+                      still: false,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(FileLink), findsWidgets);
+      await expectLater(
+        find.byType(Scaffold),
+        matchesGoldenFile('goldens/file_links_long_${width.round()}.png'),
+      );
+      d.dispose();
+    });
   }
 
   testWidgets('a message still streaming has no links and asks nothing', (
