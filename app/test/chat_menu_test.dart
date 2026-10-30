@@ -1,0 +1,79 @@
+import 'dart:io';
+
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/daemon.dart';
+import 'package:nushi/sidebar.dart';
+import 'package:nushi/theme/theme.dart';
+
+import 'fake_daemon.dart';
+import 'harness.dart';
+
+void main() {
+  setUpAll(() async {
+    await loadFonts();
+    Directory(dataDir).createSync(recursive: true); // the tests' own
+  });
+
+  for (final (name, tokens) in [
+    ('dark', Tokens.dark),
+    ('light', Tokens.light),
+  ]) {
+    testWidgets(
+      "a chat row's right-click menu: rows a pointer hits without aiming, "
+      'in groups, with icons, the key on the right, Delete in red ($name)',
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+      (tester) async {
+        viewport(tester, const Size(520, 520));
+        final d = await FakeDaemon([
+          chat('a', 'claude', 'Wire the ledger', folder: '/Users/me/ledger'),
+          chat(
+            'b',
+            'codex',
+            'Cap the rates',
+            folder: '/Users/me/ledger',
+            age: 1,
+          ),
+        ]).connect(tester);
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: NushiTheme(tokens).toThemeData(),
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 260,
+                  height: 500,
+                  child: ListenableBuilder(
+                    listenable: d,
+                    builder: (context, _) => Sidebar(daemon: d),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(
+          find.text('Wire the ledger'),
+          buttons: kSecondaryButton,
+        );
+        await tester.pumpAndSettle();
+
+        final rows = find.byType(MenuItemButton);
+        expect(rows, findsWidgets);
+        for (final e in rows.evaluate()) {
+          expect(tester.getSize(find.byWidget(e.widget)).height, 30);
+        }
+        expect(find.byType(Divider), findsWidgets);
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('goldens/chat_menu_$name.png'),
+        );
+        d.dispose();
+      },
+    );
+  }
+}

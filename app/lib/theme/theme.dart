@@ -147,7 +147,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
           elevation: const WidgetStatePropertyAll(3),
           shadowColor: WidgetStatePropertyAll(t.shadow),
-          padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(5)),
+          minimumSize: const WidgetStatePropertyAll(Size(200, 0)),
           side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(
@@ -158,9 +159,11 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
       ),
       menuButtonTheme: MenuButtonThemeData(
         style: MenuItemButton.styleFrom(
-          minimumSize: const Size(0, 28),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          visualDensity: VisualDensity.compact,
+          // Roomy enough to hit without aiming: the app's compact density
+          // would take a menu row down to 20.
+          minimumSize: const Size(0, 30),
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          visualDensity: VisualDensity.standard,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(control)),
           ),

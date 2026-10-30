@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
 
-/// One row of a [Menu]: [label], then [detail] dimmed on the same line, and
-/// a check on the right when [checked]. Picking it runs [onPick]; with
+/// One row of a [Menu]: [icon] (if any), [label], then [detail] dimmed on
+/// the same line, its key [shortcut] and a check on the right when
+/// [checked]; in red when it
+/// is [danger] (it deletes or loses something). Picking it runs [onPick]; with
 /// [submenu] it opens those rows beside it instead. Without either it
 /// shows unavailable. [tooltip] shows on hover. [action] is a small
 /// control at its right end (a pin), built knowing whether the row is
@@ -21,6 +23,9 @@ class MenuEntry {
     this.submenu,
     this.tooltip = '',
     this.action,
+    this.icon,
+    this.danger = false,
+    this.shortcut = '',
   }) : heading = false;
 
   /// A group's name over its rows.
@@ -31,6 +36,9 @@ class MenuEntry {
       submenu = null,
       tooltip = '',
       action = null,
+      icon = null,
+      danger = false,
+      shortcut = '',
       heading = true;
 
   /// The line between groups of rows.
@@ -44,6 +52,9 @@ class MenuEntry {
   final String tooltip;
   final bool heading;
   final Widget Function({required bool hover})? action;
+  final IconData? icon;
+  final bool danger;
+  final String shortcut;
 
   bool get _pickable => onPick != null && submenu == null;
 }
@@ -142,20 +153,24 @@ List<Widget> _rows(
   final theme = NushiTheme.of(context);
   final t = theme.t;
   var n = 0;
+  // Rows without an icon keep its room when others have one, so the
+  // labels line up.
+  final icons = entries.any((e) => e.icon != null);
   return [
     for (final e in entries)
       if (identical(e, MenuEntry.divider))
-        const Divider(height: 9)
+        const Divider(height: 11, indent: 6, endIndent: 6)
       else if (e.heading)
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
-          child: Text(e.label, style: theme.ui(t.textMuted, size: 11.5)),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
+          child: Text(e.label, style: theme.ui(t.textMuted, size: 12)),
         )
       else
         _row(
           context,
           e,
           close,
+          icons: icons,
           digit: !digits
               ? null
               : e._pickable && n < 9
@@ -173,11 +188,29 @@ Widget _row(
   VoidCallback close, {
   String? digit,
   bool lit = false,
+  bool icons = false,
   Key? key,
 }) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
   final on = e.onPick != null || e.submenu != null;
+  final color = !on
+      ? t.textMuted
+      : e.danger
+      ? t.crashed
+      : t.text;
+  final icon = icons
+      ? SizedBox(
+          width: 16,
+          child: e.icon == null
+              ? null
+              : Icon(
+                  e.icon,
+                  size: 16,
+                  color: e.danger && on ? t.crashed : t.textSecondary,
+                ),
+        )
+      : null;
   Widget label = ConstrainedBox(
     constraints: const BoxConstraints(maxWidth: 380),
     child: Text.rich(
@@ -185,12 +218,12 @@ Widget _row(
         children: [
           TextSpan(
             text: e.label,
-            style: theme.ui(on ? t.text : t.textMuted, weight: FontWeight.w400),
+            style: theme.ui(color, size: 13.5, weight: FontWeight.w400),
           ),
           if (e.detail.isNotEmpty)
             TextSpan(
               text: '   ${e.detail}',
-              style: theme.ui(t.textMuted, size: 12),
+              style: theme.ui(t.textMuted, size: 12.5),
             ),
         ],
       ),
@@ -202,6 +235,7 @@ Widget _row(
   if (e.submenu case final sub?) {
     return SubmenuButton(
       key: key,
+      leadingIcon: icon,
       menuChildren: _rows(context, sub, close),
       child: label,
     );
@@ -216,13 +250,14 @@ Widget _row(
             label,
             digit: digit,
             lit: lit,
+            icon: icon,
             action: action(hover: hover),
             onHover: onHover,
             onFocus: onFocus,
           ),
     );
   }
-  return _button(theme, e, label, digit: digit, lit: lit, key: key);
+  return _button(theme, e, label, digit: digit, lit: lit, icon: icon, key: key);
 }
 
 Widget _button(
@@ -231,6 +266,7 @@ Widget _button(
   Widget label, {
   required String? digit,
   required bool lit,
+  Widget? icon,
   Widget? action,
   ValueChanged<bool>? onHover,
   ValueChanged<bool>? onFocus,
@@ -242,11 +278,17 @@ Widget _button(
     onPressed: e.onPick,
     onHover: onHover,
     onFocusChange: onFocus,
+    leadingIcon: icon,
     style: lit ? MenuItemButton.styleFrom(backgroundColor: t.hover) : null,
     trailingIcon: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         ?action,
+        if (e.shortcut.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 4),
+            child: Text(e.shortcut, style: theme.code(t.textMuted, size: 12)),
+          ),
         SizedBox(
           width: 14,
           child: e.checked ? Icon(Icons.check, size: 14, color: t.text) : null,
@@ -257,7 +299,7 @@ Widget _button(
             child: Text(
               digit,
               textAlign: TextAlign.right,
-              style: theme.ui(t.textMuted, size: 12),
+              style: theme.ui(t.textMuted, size: 12.5),
             ),
           ),
       ],
