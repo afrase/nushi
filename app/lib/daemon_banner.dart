@@ -7,10 +7,13 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// The banner over the app while the connection to the daemon is lost: only
-/// after [grace] without it, so a restart or a blip shows nothing. It
-/// slides down over 200 ms, "reconnecting…" shining; once the daemon is
-/// back it turns green and says "Reconnected" for [backFor], then slides
-/// up. With Reduce Motion the same, without the slides.
+/// after [grace] without it, so a blip shows nothing. It slides down over
+/// 200 ms, "reconnecting…" shining; once the daemon is back it turns green
+/// and says "Reconnected" for [backFor], then slides up. A restart the user
+/// asked for (Daemon.restarting) shows at once, wherever it was asked from,
+/// and says "Daemon restarted" once the new one answers; one that failed
+/// just goes (its caller says why). With Reduce Motion the same, without
+/// the slides.
 class DaemonBanner extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -30,6 +33,8 @@ class _DaemonBannerState extends State<DaemonBanner> with ClockRun {
   bool _lost = false; // it shows the lost connection
   bool _reconnected = false; // it shows the green "Reconnected"
   bool _opening = false; // the slide's way: down, or up
+  bool _restart = false; // a restart asked for: what it says
+  bool _restarted = false; // the green line is a restart's
 
   bool get _shows => _lost || _reconnected;
 
@@ -49,12 +54,51 @@ class _DaemonBannerState extends State<DaemonBanner> with ClockRun {
   }
 
   void _changed() {
-    if (!widget.daemon.connected) {
+    final d = widget.daemon;
+    if (d.restarting && !_restart) {
+      _restart = true;
+      _grace?.cancel();
+      _grace = null;
       _back?.cancel();
-      if (_lost) return;
+      if (_lost || _reconnected) {
+        setState(() {
+          _lost = true;
+          _reconnected = _restarted = false;
+        });
+      } else {
+        _slide(open: true, then: () => _lost = true);
+      }
+      return;
+    }
+    if (_restart && !d.restarting) {
+      _restart = false;
+      if (d.restartFailed && d.connected) {
+        // It didn't stop: nothing was lost; the caller says why.
+        _slide(open: false, then: () => _lost = false);
+        return;
+      }
+      if (_lost && d.connected) {
+        setState(() {
+          _lost = false;
+          _reconnected = true;
+          _restarted = true;
+        });
+        _back = Timer(DaemonBanner.backFor, () {
+          _slide(open: false, then: () => _reconnected = _restarted = false);
+        });
+        return;
+      }
+    }
+    if (d.restarting) return;
+    if (!d.connected) {
+      _back?.cancel();
+      if (_lost) {
+        setState(() {}); // what it says may have changed
+        return;
+      }
       if (_reconnected) {
         // Lost again while it said so: amber again, open (or opening).
-        _reconnected = false;
+        _reconnected = _restarted = false;
         if (_opening) {
           setState(() => _lost = true);
         } else {
@@ -114,7 +158,9 @@ class _DaemonBannerState extends State<DaemonBanner> with ClockRun {
         color: color,
         child: Text(
           back
-              ? 'Reconnected'
+              ? (_restarted ? 'Daemon restarted' : 'Reconnected')
+              : _restart
+              ? 'Restarting the daemon…'
               : widget.daemon.updating
               ? 'Starting the new daemon…'
               : 'Lost the connection to the daemon; reconnecting…',

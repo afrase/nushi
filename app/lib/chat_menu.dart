@@ -131,16 +131,27 @@ Future<bool> stopsBackground(
 }
 
 /// Reloads [chat]'s agent, so it picks up changed MCP servers, asking
-/// first when that stops subagents running in the background.
+/// first when that stops subagents running in the background; [say]: a
+/// toast says it runs and when it is done (nothing else shows a reload).
 Future<void> reloadChat(
   BuildContext context,
   ChatState chat,
-  Daemon daemon,
-) async {
-  if (await stopsBackground(context, chat, 'Reload the chat?', 'Reload') &&
-      context.mounted) {
-    await daemon.client.reloadChat(ReloadChatRequest(chatId: chat.id));
+  Daemon daemon, {
+  bool say = false,
+}) async {
+  if (!await stopsBackground(context, chat, 'Reload the chat?', 'Reload') ||
+      !context.mounted) {
+    return;
   }
+  Future<void> reload() =>
+      daemon.client.reloadChat(ReloadChatRequest(chatId: chat.id));
+  if (!say) return await reload();
+  await runAndSay(
+    context,
+    reload,
+    running: 'Reloading ${chat.shownTitle}…',
+    done: 'Reloaded ${chat.shownTitle}',
+  );
 }
 
 /// Archives (or unarchives) a chat. Archiving ends its terminals: when a

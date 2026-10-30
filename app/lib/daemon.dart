@@ -450,10 +450,16 @@ class Daemon extends ChangeNotifier {
   /// stop would stop the new daemon).
   Future<void> restartDaemon() {
     if (_restarting case final run?) return run;
-    final run = _restarting = _restart().whenComplete(() {
-      _restarting = null;
-      notifyListeners();
-    });
+    restartFailed = false;
+    final run = _restarting = _restart()
+        .catchError((Object e, StackTrace s) {
+          restartFailed = true;
+          Error.throwWithStackTrace(e, s);
+        })
+        .whenComplete(() {
+          _restarting = null;
+          notifyListeners();
+        });
     notifyListeners();
     return run;
   }
@@ -462,6 +468,9 @@ class Daemon extends ChangeNotifier {
 
   /// Whether [restartDaemon] runs.
   bool get restarting => _restarting != null;
+
+  /// Whether the last [restartDaemon] failed (its caller shows why).
+  bool restartFailed = false;
 
   Future<void> _restart() async {
     await appLog.write(

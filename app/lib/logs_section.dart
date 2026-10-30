@@ -96,8 +96,10 @@ class LogsSection extends StatelessWidget {
                 control: bundledDaemon == null
                     ? null
                     : Button(
-                        label: 'Restart…',
-                        onPressed: () => _restart(context),
+                        label: daemon.restarting ? 'Restarting…' : 'Restart…',
+                        onPressed: daemon.restarting
+                            ? null
+                            : () => _restart(context),
                       ),
               ),
               if (appVersion.isNotEmpty)

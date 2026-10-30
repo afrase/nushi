@@ -212,8 +212,21 @@ class _UpdateToastState extends State<UpdateToast> {
 /// otherwise a note says the app is up to date.
 Future<void> checkForUpdates(BuildContext context, Daemon d) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
+  // From the menu bar or the palette: nothing else shows it's asking.
+  final slow = Timer(
+    const Duration(milliseconds: 300),
+    () => messenger?.showSnackBar(
+      const SnackBar(
+        content: Text('Checking for updates…'),
+        duration: Duration(minutes: 1),
+      ),
+    ),
+  );
   await tryOrShow(context, () async {
-    final u = await d.checkForUpdates();
+    final u = await d.checkForUpdates().whenComplete(() {
+      slow.cancel();
+      messenger?.hideCurrentSnackBar();
+    });
     if (u.version.isNotEmpty && dismissedUpdate.value == u.version) {
       dismissedUpdate.value = null;
     }
