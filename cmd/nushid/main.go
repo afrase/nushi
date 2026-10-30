@@ -59,7 +59,7 @@ func main() {
 		pig.Main()
 		return
 	}
-	if len(os.Args) > 1 && os.Args[1] == claudeacp.Command { // and Claude, when NUSHI_CLAUDE_ADAPTER=go
+	if len(os.Args) > 1 && os.Args[1] == claudeacp.Command { // and Claude, when its Go agent is on (ADR 0066)
 		claudeacp.Main()
 		return
 	}

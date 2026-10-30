@@ -10,6 +10,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Harness** | The agent's own program and rules (Claude Code, Codex…). Prose only: the UI says agent. It owns permissions and history. | | 0007, 0008 |
 | **Adapter** | The ACP program Nushi sets up for an agent that needs one (Claude's, Codex's), from Nushi's own lockfile, into the data folder. Set up, Update, Remove. | `Adapter`, `SetUpAgent`, `internal/claude/adapter` | 0037 |
 | **Bridge** | Nushi's own ACP translator for an agent without ACP: `nushid ante-acp`, `nushid pig-acp`. | `internal/ante`, `internal/pig` | 0030, 0039 |
+| **Go agent** | Nushi's own ACP agent for Claude, run in place of its adapter on your `claude`, with no Node and nothing to set up: Settings › Agents' "Use Nushi's Go agent". | `claudeacp`, `nushid claude-acp`, `claude_go_agent`, `agents.Agent.Own` | 0066 |
 | **ACP** | The Agent Client Protocol, how the daemon talks to agents. | `github.com/afrase/acp-go` | 0041 |
 | **Chat** | A conversation with an agent as Nushi shows it: the agent's session plus what Nushi keeps (title, folder, worktree, picks). | `model.ChatRecord` (the record), `model.Chat` (a snapshot), proto `Chat` | 0008 |
 | **Session** | The agent's own record of a conversation, which it keeps and resumes. A chat is on one at a time; a move or a rewind starts another. | `SessionID`, `AgentSession`, ACP `session/*` | 0008 |

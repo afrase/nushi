@@ -22,6 +22,8 @@ Agents start with your login shell's environment, as a new terminal has it, howe
 
 Nushi runs your `claude` through Claude Code's ACP adapter, `@agentclientprotocol/claude-agent-acp` 0.94.0. **Set up** installs it into `~/Library/Application Support/Nushi/agents/claude` (about 9 MB from npm, from the lockfile in `internal/claude/adapter`). It uses Claude Code's own login and settings.
 
+Or turn on **Use Nushi's Go agent**, under Claude in Settings › Agents: Nushi then runs your `claude` through its own ACP agent, with no Node and nothing to set up ([ADR 0066](adr/0066-claude-through-nushis-go-agent.md)). New chats, and chats as they reopen or wake, use it; a chat already running keeps its agent until then. It's off by default while it's new.
+
 - **Code review.** Claude's `/code-review` reports its findings as a card in the transcript (Nushi sets `CLAUDE_CODE_REPORT_FINDINGS` for Claude Code). A review that writes them as JSON gets the same card, with Show JSON. A row opens to how the finding fails; its `file:line` opens the chat's Changes at that line, or the file as it is when it isn't changed.
 - **Ultracode**, in the ⋯ menu under the box, turns on Claude Code's standing multi-agent workflows for the chat. It's off by default; "Ultracode" shows beside the model while it's on. Changing it reopens the chat's session (a second or so), so it waits for a turn to end. The word "ultracode" in a message opts just that turn in, as in the terminal.
 
