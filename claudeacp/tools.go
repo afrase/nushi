@@ -1,6 +1,7 @@
 package claudeacp
 
 import (
+	"bytes"
 	"cmp"
 	"encoding/json"
 	"maps"
@@ -28,7 +29,8 @@ type tool struct {
 	fields   int  // top-level fields of its input sent as it streamed
 	whole    bool // its input came whole: claude runs it (or asks first)
 	ended    bool
-	sent     map[string]string // each field's JSON as last sent
+	shown    bool   // the client has its tool_call
+	last     report // each field as the client last had it
 }
 
 // tools are a session's tool calls. Their updates go out under mu, so
@@ -67,70 +69,71 @@ type report struct {
 }
 
 // sendLocked tells the client of t: the whole call the first time, then
-// an update with what changed. An update that changes nothing and adds
-// no _meta isn't sent.
+// an update with the fields of r that changed. An update that changes
+// nothing and brings no toolResponse isn't sent.
 func (s *session) sendLocked(t *tool, r report) {
-	fields := map[string]any{}
-	set := func(k string, v any, ok bool) {
-		if ok {
-			fields[k] = v
-		}
-	}
-	set("status", r.status, r.status != "")
-	set("title", r.title, r.title != "")
-	set("kind", r.kind, r.kind != "")
-	set("content", r.content, r.content != nil)
-	set("locations", r.locations, r.locations != nil)
-	set("rawInput", r.rawInput, r.rawInput != nil)
-	set("rawOutput", r.rawOutput, r.rawOutput != nil)
-	first := t.sent == nil
-	if first {
-		t.sent = map[string]string{}
-	}
-	for _, k := range slices.Sorted(maps.Keys(fields)) {
-		b, err := json.Marshal(fields[k])
-		if err != nil || t.sent[k] == string(b) { // unchanged, or nothing a client could read
-			delete(fields, k)
-			continue
-		}
-		t.sent[k] = string(b)
-	}
-	if !first && len(fields) == 0 && r.response == nil {
-		return
-	}
 	meta := claudeCodeMeta{ToolName: t.name, ParentToolUseID: t.parent, ToolResponse: r.response}.meta()
-	has := func(k string) bool { _, ok := fields[k]; return ok }
-	pick := func(ok bool, v json.RawMessage) json.RawMessage {
-		if ok {
-			return v
-		}
-		return nil
-	}
-	if first {
+	if !t.shown {
+		t.shown, t.last = true, r
 		s.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 			ToolCallID: acp.ToolCallID(t.id), Name: t.name, Status: orPending(r.status), Title: r.title, Kind: r.kind,
 			Content: r.content, Locations: r.locations, RawInput: r.rawInput, RawOutput: r.rawOutput, Meta: meta,
 		}})
 		return
 	}
-	u := &acp.ToolCallUpdate{ToolCallID: acp.ToolCallID(t.id), Meta: meta,
-		RawInput: pick(has("rawInput"), r.rawInput), RawOutput: pick(has("rawOutput"), r.rawOutput)}
-	if has("status") {
-		u.Status = r.status
+	u, changed := t.last.update(r)
+	if !changed && r.response == nil {
+		return
 	}
-	if has("title") {
-		u.Title = r.title
-	}
-	if has("kind") {
-		u.Kind = r.kind
-	}
-	if has("content") {
-		u.Content = r.content
-	}
-	if has("locations") {
-		u.Locations = r.locations
-	}
+	u.ToolCallID, u.Meta = acp.ToolCallID(t.id), meta
 	s.emit(t.parent, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: u})
+}
+
+// update is the update that tells a client which has last of what r
+// changes, and last becomes what it then has; changed is false when r
+// changes nothing. A field r leaves empty says nothing.
+func (last *report) update(r report) (u *acp.ToolCallUpdate, changed bool) {
+	u = &acp.ToolCallUpdate{}
+	if r.status != "" && r.status != last.status {
+		u.Status, last.status, changed = r.status, r.status, true
+	}
+	if r.title != "" && r.title != last.title {
+		u.Title, last.title, changed = r.title, r.title, true
+	}
+	if r.kind != "" && r.kind != last.kind {
+		u.Kind, last.kind, changed = r.kind, r.kind, true
+	}
+	if news(r.content, last.content) {
+		u.Content, last.content, changed = r.content, r.content, true
+	}
+	if news(r.locations, last.locations) {
+		u.Locations, last.locations, changed = r.locations, r.locations, true
+	}
+	if news(r.rawInput, last.rawInput) {
+		u.RawInput, last.rawInput, changed = r.rawInput, r.rawInput, true
+	}
+	if news(r.rawOutput, last.rawOutput) {
+		u.RawOutput, last.rawOutput, changed = r.rawOutput, r.rawOutput, true
+	}
+	return u, changed
+}
+
+// news says whether v (nil: nothing said) is news to a client that has
+// last (nil: never sent): its JSON differs. v that doesn't encode (raw
+// JSON that isn't) is never news, as the client couldn't read it.
+func news[S ~[]E, E any](v, last S) bool {
+	if v == nil {
+		return false
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return false
+	}
+	if last == nil {
+		return true
+	}
+	was, err := json.Marshal(last)
+	return err != nil || !bytes.Equal(b, was)
 }
 
 func orPending(st acp.ToolCallStatus) acp.ToolCallStatus {
@@ -169,7 +172,7 @@ func (s *session) toolStart(stream string, index int, b *claudeagent.Block) {
 		ts.streaming[stream] = map[int]*tool{}
 	}
 	ts.streaming[stream][index] = t
-	if t.sent != nil {
+	if t.shown {
 		return // a permission request showed it whole already
 	}
 	v := toolView(t.name, nil, ts.cwd)

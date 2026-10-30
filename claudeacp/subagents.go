@@ -165,7 +165,7 @@ func (s *session) callInput(id string) (in launch, stream string) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	if t := ts.byID[id]; t != nil {
-		_ = json.Unmarshal([]byte(t.sent["rawInput"]), &in)
+		_ = json.Unmarshal(t.last.rawInput, &in)
 		return in, t.parent
 	}
 	return in, ""
