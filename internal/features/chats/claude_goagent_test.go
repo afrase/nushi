@@ -2,6 +2,7 @@ package chats
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -159,8 +160,10 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		}
 	}()
 	var events []event
-	var marks []string // each kept update's mark, in order
-	var whole []any    // every message of the Go agent's, whole, for waitLast
+	var marks []string             // each kept update's mark, in order
+	updated := map[string]bool{}   // the live sessions the Go agent has sent an update
+	goMeters := map[string]meter{} // the Go agent's last usage, by live session
+	var whole []any                // every message of the Go agent's, whole, for waitLast
 	keep := func(m rpc) bool {
 		whole = append(whole, m.whole)
 		if m.Method != sessionUpdate {
@@ -170,44 +173,46 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
 		events = append(events, event{note: &n})
 		marks = append(marks, mark(m.Params))
+		updated[string(n.SessionID)] = true
+		if u, ok := meterOf(&n); ok {
+			goMeters[string(n.SessionID)] = u
+		}
 		return true
 	}
-	var held []rpc // what sent read past, other than session updates, for next
-	// next is the Go agent's next message other than a session update,
-	// which it keeps.
-	next := func(what string) rpc {
-		if len(held) > 0 {
-			m := held[0]
-			held = held[1:]
+	var held []rpc // what was read past, other than session updates, for next
+	// next is the Go agent's next message other than a session update that
+	// is what is says; the updates it reads past are kept, the rest held.
+	next := func(what string, is func(rpc) bool) rpc {
+		if i := slices.IndexFunc(held, is); i >= 0 {
+			m := held[i]
+			held = slices.Delete(held, i, i+1)
 			return m
 		}
+		guard := time.After(5 * time.Second) // bounds a hang, orders nothing
 		for {
 			select {
 			case m, ok := <-msgs:
 				if !ok {
 					t.Fatalf("the Go agent ended before %s (claude's script: %v)", what, fake.Err())
 				}
-				if !keep(m) {
+				switch {
+				case keep(m):
+				case is(m):
 					return m
+				default:
+					held = append(held, m)
 				}
-			case <-time.After(5 * time.Second): // bounds a hang, orders nothing
+			case <-guard:
 				t.Fatalf("the Go agent never sent %s", what)
 			}
 		}
 	}
-	// sent waits until the Go agent has sent the update marked want after
-	// the last one waited for: the adapter had sent it before the client's
-	// next line, which may count on it (a cancel once a subagent runs).
-	// If the Go agent never sends it, the chats compared say how it
-	// differs.
-	seen := 0 // the marks waited past
-	sent := func(want string) {
+	// readUntil reads the Go agent's messages until done says so, for 2 s at
+	// most: what it waits for is what the adapter had sent, and if the Go
+	// agent never sends it, the chats compared say how it differs.
+	readUntil := func(done func() bool) {
 		deadline := time.After(2 * time.Second)
-		for {
-			if i := slices.Index(marks[seen:], want); i >= 0 {
-				seen += i + 1
-				return
-			}
+		for !done() {
 			select {
 			case m, ok := <-msgs:
 				if !ok {
@@ -220,6 +225,19 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 				return
 			}
 		}
+	}
+	// sent waits until the Go agent has sent the update marked want after
+	// the last one waited for: the adapter had sent it before the client's
+	// next line, which may count on it (a cancel once a subagent runs).
+	seen := 0 // the marks waited past
+	sent := func(want string) {
+		readUntil(func() bool {
+			i := slices.Index(marks[seen:], want)
+			if i >= 0 {
+				seen += i + 1
+			}
+			return i >= 0
+		})
 	}
 	// until reads the Go agent's messages until ch is closed, as sent
 	// does, so it goes on meanwhile.
@@ -240,8 +258,32 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			}
 		}
 	}
-	pending := ""              // the mark of the adapter's last marked update since the client's last line
-	ids := map[string]string{} // the recorded sessions' ids to the live ones
+	pending := ""                       // the mark of the adapter's last marked update since the client's last line
+	ids := map[string]string{}          // the recorded sessions' ids to the live ones
+	adapterUpdated := map[string]bool{} // the recorded sessions the adapter has sent an update
+	var opened []string                 // those whose first update came since the client's last line
+	// heard waits until the Go agent has sent each of opened an update, as
+	// the adapter had: a session's first update makes its chat. sent
+	// doesn't wait for it: a new session's first is its commands, unmarked,
+	// which the Go agent sends on a goroutine once its answer is written.
+	heard := func() {
+		for _, sid := range opened {
+			live := cmp.Or(ids[sid], sid) // a subagent's session has claude's id
+			readUntil(func() bool { return updated[live] })
+		}
+		opened = nil
+	}
+	adapterMeters := map[string]meter{} // the adapter's last usage, by recorded session
+	// metered waits until the Go agent's last usage is the adapter's in
+	// each session, as the client goes: the Go agent sends a usage again
+	// once claude's answer says the context window, on a goroutine of its
+	// own (claudeacp's askWindow), so it may come after the next update.
+	metered := func() {
+		for sid, want := range adapterMeters {
+			live := cmp.Or(ids[sid], sid)
+			readUntil(func() bool { return goMeters[live] == want })
+		}
+	}
 	// sessions is a recorded message with the live sessions' ids.
 	sessions := func(msg json.RawMessage) string { return liveIDs(ids).Replace(string(msg)) }
 	agentReqs := map[string]agentReq{} // the agent's requests, by the recorded id
@@ -280,6 +322,7 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		testcheck.NoErr(t, json.Unmarshal(l.Msg, &m))
 		switch {
 		case l.Dir == "in":
+			heard()
 			if pending != "" {
 				sent(pending)
 				pending = ""
@@ -318,9 +361,19 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			if k := mark(m.Params); k != "" {
 				pending = k
 			}
+			var n acp.SessionNotification
+			testcheck.NoErr(t, json.Unmarshal(m.Params, &n))
+			sid := string(n.SessionID)
+			if !adapterUpdated[sid] {
+				adapterUpdated[sid] = true
+				opened = append(opened, sid)
+			}
+			if u, ok := meterOf(&n); ok {
+				adapterMeters[sid] = u
+			}
 		case m.Method != "" && m.ID == nil: // another notification (the adapter's _auth/status_update): Nushi reads none
 		case m.Method != "": // a request of the agent's
-			got := next(m.Method)
+			got := next(m.Method, func(g rpc) bool { return g.Method != "" })
 			if got.Method != m.Method {
 				t.Fatalf("the Go agent sent %s %s, the adapter %s", got.Method, got.Params, m.Method)
 			}
@@ -328,7 +381,10 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 			params := recordedIDs(ids).Replace(string(got.Params))
 			events = append(events, event{ask: got.Method, params: json.RawMessage(params), id: string(m.ID)})
 		default: // the agent's answer to the request with this id
-			got := next("the answer to " + string(m.ID))
+			// Answers to requests open together come in no order: each is
+			// written as its handler returns (a prompt queued during a turn
+			// can end before the turn's answer is written).
+			got := next("the answer to "+string(m.ID), func(g rpc) bool { return g.Method == "" && string(g.ID) == string(m.ID) })
 			if string(got.ID) != string(m.ID) || (got.Error == nil) != (m.Error == nil) {
 				t.Fatalf("the Go agent answered %s with %s %s, the adapter with %s %s (claude's script: %v)", m.ID, got.Result, got.Error, m.Result, m.Error, fake.Err())
 			}
@@ -349,8 +405,12 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 	if len(more) == 0 {
 		waitLast()
 	}
+	heard()
 	if pending != "" { // the adapter's last word came before its client went
 		sent(pending)
+	}
+	if len(more) == 0 { // the chats compared are the recording's
+		metered()
 	}
 	_ = toAgentW.Close() // the client goes: the agent closes its sessions, and claude ends
 	for m := range msgs {
@@ -373,6 +433,18 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 		}
 	}
 	return events
+}
+
+// meter is what a usage_update says that a chat shows.
+type meter struct{ used, size uint64 }
+
+// meterOf is n's meter, if n is a usage_update.
+func meterOf(n *acp.SessionNotification) (meter, bool) {
+	u := n.Update.UsageUpdate
+	if u == nil {
+		return meter{}, false
+	}
+	return meter{u.Used, u.Size}, true
 }
 
 // agentReq is a request of the Go agent's: its id, and what it and the
