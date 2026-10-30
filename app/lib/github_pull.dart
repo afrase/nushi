@@ -27,6 +27,15 @@ import 'package:nushi/widgets.dart';
 /// GitHub view.
 const pullPoll = Duration(seconds: 30);
 
+/// Each pull request's tab (Activity, Checks, Files) as left, while the
+/// app runs: a look at a chat comes back to it, and to what was being
+/// written there.
+final _tabLeft = <String, PullSection>{};
+
+/// No pull request's tab left (tests: each starts afresh).
+@visibleForTesting
+void forgetPullTabs() => _tabLeft.clear();
+
 /// A pull request's page: its head ([PullHeader]: state, title, branches,
 /// whose move it is, the status lights), then its activity (the
 /// description, comments and reviews), its checks, or its files with the
@@ -70,7 +79,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   bool _asking = true;
   String? _error;
   Timer? _poll;
-  PullSection _tab = PullSection.activity;
+  late PullSection _tab = _tabLeft[_refKey] ?? PullSection.activity;
+  String get _refKey =>
+      '${widget.ref.host} ${widget.ref.repo} ${widget.ref.number}';
   final _scroll = ScrollController();
   final GlobalKey _tabs = GlobalKey();
   final GlobalKey _todo = GlobalKey();
@@ -115,6 +126,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
 
   @override
   void dispose() {
+    _tabLeft[_refKey] = _tab;
     widget.source?.removeListener(_sourceChanged);
     _redraw.removeListener(_changed);
     _poll?.cancel();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
@@ -12,6 +13,11 @@ final _drafts = <String, List<GitHubDraft>>{};
 final ValueNotifier<int> draftsChanged = ValueNotifier(0);
 
 String _key(GitHubRef r) => '${r.host} ${r.repo} ${r.number}';
+
+/// The key of the box on [r] for [what] (`comment`, `review`,
+/// `thread <id>`, `line <path>…`), whose text is kept until posted
+/// ([CommentBox.draft]).
+String githubDraft(GitHubRef r, String what) => 'github ${_key(r)} $what';
 
 /// A pull request's drafts.
 List<GitHubDraft> reviewDrafts(GitHubRef r) => _drafts[_key(r)] ?? const [];
@@ -60,9 +66,14 @@ class _ReviewDialog extends StatefulWidget {
 
 class _ReviewDialogState extends State<_ReviewDialog> {
   var _event = 'comment';
-  final _body = TextEditingController();
   bool _busy = false;
   String? _error;
+
+  /// What the review says, kept (Cancel too) until it's submitted.
+  late final String _draft = githubDraft(widget.pull.item.ref, 'review');
+  late final TextEditingController _body = TextEditingController(
+    text: commentDraft(_draft),
+  )..addListener(() => keepCommentDraft(_draft, _body.text));
 
   @override
   void dispose() {
@@ -88,6 +99,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           drafts: reviewDrafts(p.item.ref),
         ),
       );
+      keepCommentDraft(_draft, '');
       if (mounted) Navigator.pop(context, true);
     } on Object catch (e) {
       if (mounted) setState(() => _error = errorText(e));

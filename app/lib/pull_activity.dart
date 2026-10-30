@@ -5,6 +5,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/github_review.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/pull_activity_parts.dart';
@@ -86,6 +87,7 @@ class PullActivity extends StatelessWidget {
           _Gutter(
             login: me,
             child: CommentBox(
+              draft: githubDraft(p.item.ref, 'comment'),
               hint: 'Comment on the pull request',
               note: me.isEmpty
                   ? 'Markdown'

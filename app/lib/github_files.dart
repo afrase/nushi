@@ -49,6 +49,15 @@ class GitHubFiles extends StatefulWidget {
 final _read = <String, List<FileChange>>{};
 const _readMost = 20;
 
+/// Where each pull request's Files tab was left, while the app runs: the
+/// file picked and the lines a comment was being written for, so a look
+/// at a chat finds them (and the comment's text, kept by its box) again.
+final _left = <String, (String?, LineSelection?)>{};
+
+/// No Files tab left anywhere (tests: each starts afresh).
+@visibleForTesting
+void forgetFilesLeft() => _left.clear();
+
 class _GitHubFilesState extends State<GitHubFiles> {
   List<FileChange>? _files;
   String? _error;
@@ -58,12 +67,16 @@ class _GitHubFilesState extends State<GitHubFiles> {
   LineSelection? _writing;
 
   GitHubRef get _ref => widget.pull.item.ref;
-  String get _key =>
-      '${_ref.host} ${_ref.repo} ${_ref.number} ${widget.pull.headOid}';
+  String get _pullKey => '${_ref.host} ${_ref.repo} ${_ref.number}';
+  String get _key => '$_pullKey ${widget.pull.headOid}';
 
   @override
   void initState() {
     super.initState();
+    if (_left[_pullKey] case (final path, final writing)) {
+      _path = path;
+      _writing = writing;
+    }
     draftsChanged.addListener(_redraw);
     unawaited(_load());
   }
@@ -76,6 +89,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
 
   @override
   void dispose() {
+    _left[_pullKey] = (_path, _writing);
     draftsChanged.removeListener(_redraw);
     super.dispose();
   }
@@ -113,6 +127,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
     _files = files;
     if (!files.any((f) => f.path == _path)) {
       _path = _ordered(files).firstOrNull?.path;
+      _writing = null;
     }
   }
 
@@ -273,7 +288,7 @@ class _GitHubFilesState extends State<GitHubFiles> {
             : ThreadCard(
                 key: ValueKey(x.id),
                 daemon: widget.daemon,
-                host: _ref.host,
+                ref: _ref,
                 thread: x,
                 now: widget.now,
                 onChanged: widget.onChanged,
@@ -286,6 +301,11 @@ class _GitHubFilesState extends State<GitHubFiles> {
     final s = w.span;
     return _Inlay(
       child: CommentBox(
+        draft: githubDraft(
+          _ref,
+          'line ${f.path} ${w.side.name} ${s.start}'
+          '-${s.end}',
+        ),
         hint: s.length == 1
             ? 'Line ${s.end}: a comment of your review'
             : 'Lines ${s.start + 1}–${s.end}: a comment of your review',
@@ -374,7 +394,7 @@ class _DraftCard extends StatelessWidget {
 class ThreadCard extends StatefulWidget {
   const new({
     required this.daemon,
-    required this.host,
+    required this.ref,
     required this.thread,
     required this.onChanged,
     super.key,
@@ -382,7 +402,9 @@ class ThreadCard extends StatefulWidget {
   });
 
   final Daemon daemon;
-  final String host;
+
+  /// The pull request it's on.
+  final GitHubRef ref;
   final GitHubThread thread;
   final DateTime? now;
   final Future<void> Function() onChanged;
@@ -392,8 +414,15 @@ class ThreadCard extends StatefulWidget {
 }
 
 class _ThreadCardState extends State<ThreadCard> {
-  late bool _open = !widget.thread.resolved;
-  bool _replying = false;
+  /// The key of its reply box: To do's too.
+  late final String _draft = githubDraft(
+    widget.ref,
+    'thread ${widget.thread.id}',
+  );
+
+  /// The reply box shows: opened, or a reply written there not posted yet.
+  late bool _replying = commentDraft(_draft).isNotEmpty;
+  late bool _open = !widget.thread.resolved || _replying;
   bool _busy = false;
 
   Future<void> _resolve(bool resolve) async {
@@ -401,7 +430,7 @@ class _ThreadCardState extends State<ThreadCard> {
     await tryOrShow(context, () async {
       await widget.daemon.client.resolveGitHubThread(
         ResolveGitHubThreadRequest(
-          host: widget.host,
+          host: widget.ref.host,
           thread: widget.thread.id,
           resolve: resolve,
         ),
@@ -468,6 +497,7 @@ class _ThreadCardState extends State<ThreadCard> {
             const SizedBox(height: 8),
             if (_replying)
               CommentBox(
+                draft: _draft,
                 hint: 'Reply (Markdown; ⌘⏎ posts it)',
                 label: 'Reply',
                 autofocus: true,
@@ -475,7 +505,7 @@ class _ThreadCardState extends State<ThreadCard> {
                 onPost: (text) async {
                   await widget.daemon.client.replyGitHubThread(
                     ReplyGitHubThreadRequest(
-                      host: widget.host,
+                      host: widget.ref.host,
                       thread: x.id,
                       body: text,
                     ),
