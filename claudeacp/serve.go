@@ -3,6 +3,7 @@ package claudeacp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -65,8 +66,12 @@ type clientCaps struct {
 }
 
 // Serve runs the agent on r and w, the client's streams, until the client
-// goes; then it closes every session, and each claude exits.
-func Serve(r io.Reader, w io.Writer, cfg Config) { newAgent(cfg).serve(r, w) }
+// goes or ctx ends; then it closes every session, and each claude exits.
+// It returns nil once the client has gone (r ended), ctx's error when ctx
+// ended first, and otherwise what broke the connection.
+func Serve(ctx context.Context, r io.Reader, w io.Writer, cfg Config) error {
+	return newAgent(cfg).serve(ctx, r, w)
+}
 
 func newAgent(cfg Config) *agent {
 	log := cfg.Log
@@ -76,16 +81,24 @@ func newAgent(cfg Config) *agent {
 	return &agent{cfg: cfg, log: log, after: time.After, newID: newUUID, sessions: map[string]*session{}}
 }
 
-func (a *agent) serve(r io.Reader, w io.Writer) {
-	ctx, cancel := context.WithCancel(context.Background())
+// serve runs the agent as Serve says. The agent's own context outlives
+// ctx until the sessions are closed, so closing them still interrupts
+// claude.
+func (a *agent) serve(ctx context.Context, r io.Reader, w io.Writer) error {
+	actx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	defer cancel()
-	a.ctx = ctx
+	a.ctx = actx
 	a.out = &afterAnswer{w: w}
 	conn := acp.NewClientConn(r, a.out, func(c *acp.ClientConn) acp.Agent {
 		a.client = c
 		return a
 	}, acp.WithReadLimit(readLimit), acp.WithLogger(a.log))
-	<-conn.Done()
+	select {
+	case <-conn.Done():
+	case <-ctx.Done():
+		_ = conn.Close()
+		<-conn.Done()
+	}
 	a.mu.Lock()
 	open := make([]*session, 0, len(a.sessions))
 	for _, s := range a.sessions {
@@ -97,6 +110,13 @@ func (a *agent) serve(r io.Reader, w io.Writer) {
 		wg.Go(s.close)
 	}
 	wg.Wait()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := errors.Unwrap(conn.Err()); err != nil && !errors.Is(err, io.EOF) {
+		return fmt.Errorf("claudeacp: the client's connection: %w", err)
+	}
+	return nil
 }
 
 func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.InitializeResponse, error) {

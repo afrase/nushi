@@ -142,7 +142,7 @@ func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 	served := make(chan struct{})
 	configDir, cwd := t.TempDir(), t.TempDir()
 	go func() {
-		claudeacp.Serve(toAgentR, fromAgentW, claudeacp.Config{CLIPath: "/claude", ConfigDir: configDir, Spawn: fake.Spawn})
+		_ = claudeacp.Serve(context.Background(), toAgentR, fromAgentW, claudeacp.Config{CLIPath: "/claude", ConfigDir: configDir, Spawn: fake.Spawn})
 		_ = fromAgentW.Close()
 		close(served)
 	}()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -218,5 +219,22 @@ func TestDeath(t *testing.T) {
 	}
 	if got := stopReason(p.prompt(t, sid, "again")); !strings.Contains(got, "no open session") {
 		t.Errorf("a prompt after death: %s", got)
+	}
+}
+
+// Serve returns nil once the client has gone, and ctx's error when ctx
+// ends first, which ends the connection.
+func TestServeReturns(t *testing.T) {
+	r, w := io.Pipe()
+	_ = w.Close()
+	if err := Serve(context.Background(), r, io.Discard, Config{}); err != nil {
+		t.Errorf("the client gone: %v", err)
+	}
+	r, w = io.Pipe()
+	defer func() { _ = w.Close() }()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := Serve(ctx, r, io.Discard, Config{}); !errors.Is(err, context.Canceled) {
+		t.Errorf("ctx ended: %v", err)
 	}
 }

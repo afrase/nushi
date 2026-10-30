@@ -109,7 +109,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	cls := &claudes{}
 	launches := map[string]chats.Launch{
 		"claude": launch(func(r io.Reader, w io.Writer) {
-			claudeacp.Serve(r, w, claudeacp.Config{CLIPath: "/fake/claude", ConfigDir: filepath.Join(dataDir, "claude"), Spawn: cls.spawn})
+			_ = claudeacp.Serve(context.Background(), r, w, claudeacp.Config{CLIPath: "/fake/claude", ConfigDir: filepath.Join(dataDir, "claude"), Spawn: cls.spawn})
 		}),
 		"codex": fake(true, false),
 		"ante": launch(func(r io.Reader, w io.Writer) {

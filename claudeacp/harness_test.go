@@ -170,7 +170,7 @@ func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake
 	fromAgentR, fromAgentW := io.Pipe()
 	done := make(chan struct{})
 	go func() {
-		a.serve(toAgentR, fromAgentW)
+		_ = a.serve(context.Background(), toAgentR, fromAgentW)
 		_ = fromAgentW.Close()
 		close(done)
 	}()
