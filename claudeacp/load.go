@@ -59,9 +59,8 @@ func (a *agent) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	s.cfg.mu.Lock()
-	defer s.cfg.mu.Unlock()
-	return &acp.LoadSessionResponse{Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
+	modes, opts := s.cfg.state()
+	return &acp.LoadSessionResponse{Modes: modes, ConfigOptions: opts}, nil
 }
 
 func (a *agent) ResumeSession(ctx context.Context, req *acp.ResumeSessionRequest) (*acp.ResumeSessionResponse, error) {
@@ -70,9 +69,8 @@ func (a *agent) ResumeSession(ctx context.Context, req *acp.ResumeSessionRequest
 	if err != nil {
 		return nil, err
 	}
-	s.cfg.mu.Lock()
-	defer s.cfg.mu.Unlock()
-	return &acp.ResumeSessionResponse{Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
+	modes, opts := s.cfg.state()
+	return &acp.ResumeSessionResponse{Modes: modes, ConfigOptions: opts}, nil
 }
 
 // reopen has session id open, set up as su: claude resumes it unless it
@@ -170,9 +168,8 @@ func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*
 		return nil, err
 	}
 	a.out.after(s.id, s.cmds.sendAll)
-	s.cfg.mu.Lock()
-	defer s.cfg.mu.Unlock()
-	return &acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
+	modes, opts := s.cfg.state()
+	return &acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes, ConfigOptions: opts}, nil
 }
 
 // forkAt is the message a fork is cut after, from

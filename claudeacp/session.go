@@ -41,12 +41,11 @@ type session struct {
 	tools tools     // the tool calls shown
 	kids  subagents // its subagents, through which every update of a stream goes
 
-	cwd     string
-	cfg     config     // its modes and options
-	setting sync.Mutex // one change of them at a time
-	cmds    commands
-	title   titles
-	plan    plan
+	cwd   string
+	cfg   config // its modes and options
+	cmds  commands
+	title titles
+	plan  plan
 
 	win  window        // the context window's size
 	st   stream        // the reader's own
@@ -69,9 +68,8 @@ func (a *agent) NewSession(ctx context.Context, req *acp.NewSessionRequest) (*ac
 		return nil, err
 	}
 	a.out.after(s.id, s.cmds.sendAll)
-	s.cfg.mu.Lock()
-	defer s.cfg.mu.Unlock()
-	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: s.cfg.modeStateLocked(), ConfigOptions: s.cfg.optionsLocked()}, nil
+	modes, opts := s.cfg.state()
+	return &acp.NewSessionResponse{SessionID: acp.SessionID(s.id), Modes: modes, ConfigOptions: opts}, nil
 }
 
 // start runs claude for session id and opens the session once claude has
@@ -94,6 +92,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 		return nil, a.startError(o.Resume, o.Cwd, err)
 	}
 	s.cs = cs
+	s.cfg.send, s.cfg.log = s.update, s.log
 	s.cfg.init(o, cs.Init(), a.clientCaps().booleans)
 	if ir := cs.Init(); ir != nil {
 		s.cmds.list = ir.Commands

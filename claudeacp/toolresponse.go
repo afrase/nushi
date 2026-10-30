@@ -22,7 +22,7 @@ func (s *session) postToolUse(ctx context.Context, in claudeagent.HookInput) (cl
 	case isPlanTool("", in.ToolName): // the plan, not a call the client sees
 		return claudeagent.HookOutput{}, nil
 	case in.ToolName == "EnterPlanMode": // claude is in plan mode now
-		s.modeChanged(claudeagent.Plan)
+		s.cfg.modeChanged(claudeagent.Plan)
 	}
 	if json.Valid(in.ToolResponse) {
 		s.tools.responded(in)

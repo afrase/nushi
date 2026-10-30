@@ -32,11 +32,9 @@ var enterPlanOptions = []acp.PermissionOption{
 
 // exitPlanOptions are ExitPlanMode's: Auto mode only on a model that has
 // it.
-func (s *session) exitPlanOptions() []acp.PermissionOption {
-	s.cfg.mu.Lock()
-	m := s.cfg.modelInfo()
+func (c *config) exitPlanOptions() []acp.PermissionOption {
+	m, _ := c.currentModel()
 	auto := m == nil || m.SupportsAutoMode
-	s.cfg.mu.Unlock()
 	var opts []acp.PermissionOption
 	if auto {
 		opts = append(opts, acp.PermissionOption{OptionID: optPlanAuto, Name: "Yes, in Auto mode", Kind: acp.PermissionOptionKindAllowAlways})
@@ -53,7 +51,7 @@ func (s *session) exitPlanOptions() []acp.PermissionOption {
 // stops the turn, which ends cancelled.
 func (s *session) exitPlan(option string) claudeagent.PermissionResult {
 	if mode, ok := planModes[option]; ok {
-		s.modeChanged(mode)
+		s.cfg.modeChanged(mode)
 		return claudeagent.Allow{Classification: claudeagent.UserTemporary,
 			UpdatedPermissions: []claudeagent.PermissionUpdate{{Type: claudeagent.UpdateSetMode, Mode: mode, Destination: claudeagent.DestinationSession}}}
 	}

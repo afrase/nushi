@@ -16,7 +16,7 @@ func (a *agent) SetSessionMode(ctx context.Context, req *acp.SetSessionModeReque
 	if err != nil {
 		return nil, err
 	}
-	if err := s.setMode(ctx, claudeagent.PermissionMode(req.ModeID)); err != nil {
+	if err := s.cfg.setMode(ctx, s.cs, claudeagent.PermissionMode(req.ModeID)); err != nil {
 		return nil, err
 	}
 	return &acp.SetSessionModeResponse{}, nil
@@ -40,28 +40,34 @@ func (a *agent) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionC
 	}
 	switch id := string(req.ConfigID); id {
 	case optMode:
-		err = s.setMode(ctx, claudeagent.PermissionMode(value))
+		err = s.cfg.setMode(ctx, s.cs, claudeagent.PermissionMode(value))
 	case optModel:
-		err = s.setModel(ctx, value)
+		// The window is the new model's: asked for last, as
+		// claude-agent-acp asks, so the change's own requests come first.
+		err = s.cfg.setModel(ctx, s.cs, value, func() { s.seedWindow(ctx, 200_000) })
 	case optEffort, optFast, optAgent:
-		err = s.setFlag(ctx, id, value)
+		err = s.cfg.setFlag(ctx, s.cs, id, value)
 	default:
 		err = invalidParams("no config option %q", id)
 	}
 	if err != nil {
 		return nil, err
 	}
-	s.cfg.mu.Lock()
-	defer s.cfg.mu.Unlock()
-	return &acp.SetSessionConfigOptionResponse{ConfigOptions: s.cfg.optionsLocked()}, nil
+	return &acp.SetSessionConfigOptionResponse{ConfigOptions: s.cfg.options()}, nil
+}
+
+// claudeSettings are what changes claude's modes and options: its session.
+type claudeSettings interface {
+	SetPermissionMode(ctx context.Context, m claudeagent.PermissionMode) error
+	SetModel(ctx context.Context, model string) error
+	ApplyFlagSettings(ctx context.Context, settings map[string]any) error
 }
 
 // setMode switches claude's permission mode. A claude that refuses to
 // bypass permissions (it started without leave to) no longer offers it.
-func (s *session) setMode(ctx context.Context, mode claudeagent.PermissionMode) error {
-	s.setting.Lock()
-	defer s.setting.Unlock()
-	c := &s.cfg
+func (c *config) setMode(ctx context.Context, claude claudeSettings, mode claudeagent.PermissionMode) error {
+	c.changing.Lock()
+	defer c.changing.Unlock()
 	c.mu.Lock()
 	offered := slices.ContainsFunc(c.modesLocked(), func(m acp.SessionMode) bool { return m.ID == acp.SessionModeID(mode) })
 	same := mode == c.mode
@@ -72,26 +78,26 @@ func (s *session) setMode(ctx context.Context, mode claudeagent.PermissionMode) 
 	case same:
 		return nil
 	}
-	if err := s.cs.SetPermissionMode(ctx, mode); err != nil {
+	if err := claude.SetPermissionMode(ctx, mode); err != nil {
 		if ce := (*claudeagent.ControlError)(nil); errors.As(err, &ce) && ce.Code == "bypass_disabled" {
 			c.mu.Lock()
 			c.bypass = false
 			c.mu.Unlock()
-			s.sendOptions()
+			c.sendOptions()
 			return invalidParams("Bypass permissions isn't available in this session")
 		}
 		return refused("the mode", err)
 	}
-	s.modeChanged(mode)
+	c.modeChanged(mode)
 	return nil
 }
 
-// setModel switches claude's model. An effort the new model doesn't have
-// goes back to the default.
-func (s *session) setModel(ctx context.Context, value string) error {
-	s.setting.Lock()
-	defer s.setting.Unlock()
-	c := &s.cfg
+// setModel switches claude's model, then runs changed, still one change
+// at a time. An effort the new model doesn't have goes back to the
+// default.
+func (c *config) setModel(ctx context.Context, claude claudeSettings, value string, changed func()) error {
+	c.changing.Lock()
+	defer c.changing.Unlock()
 	c.mu.Lock()
 	v, ok := c.lookup(value, c.model, true)
 	same := v == c.model
@@ -106,7 +112,7 @@ func (s *session) setModel(ctx context.Context, value string) error {
 	if v == defaultValue {
 		model = "" // claude's default model
 	}
-	if err := s.cs.SetModel(ctx, model); err != nil {
+	if err := claude.SetModel(ctx, model); err != nil {
 		return refused("the model", err)
 	}
 	c.mu.Lock()
@@ -117,11 +123,10 @@ func (s *session) setModel(ctx context.Context, value string) error {
 		c.effort = defaultValue
 	}
 	c.mu.Unlock()
-	// Last, as claude-agent-acp asks, so the change's own requests come first.
-	defer s.seedWindow(ctx, 200_000)
+	defer changed()
 	if unpin {
-		if err := s.cs.ApplyFlagSettings(ctx, s.effortSettings(defaultValue)); err != nil {
-			s.log.Info("putting the effort back to the default", "err", err)
+		if err := claude.ApplyFlagSettings(ctx, c.effortSettings(defaultValue)); err != nil {
+			c.log.Info("putting the effort back to the default", "err", err)
 		}
 	}
 	return nil
@@ -129,10 +134,9 @@ func (s *session) setModel(ctx context.Context, value string) error {
 
 // setFlag sets the effort, fast mode or the agent, each a flag setting of
 // claude's. The option must be offered, and the value one of its own.
-func (s *session) setFlag(ctx context.Context, id, value string) error {
-	s.setting.Lock()
-	defer s.setting.Unlock()
-	c := &s.cfg
+func (c *config) setFlag(ctx context.Context, claude claudeSettings, id, value string) error {
+	c.changing.Lock()
+	defer c.changing.Unlock()
 	c.mu.Lock()
 	i := slices.IndexFunc(c.optionsLocked(), func(o acp.SessionConfigOption) bool { return string(o.ID) == id })
 	var valid, same bool
@@ -157,16 +161,16 @@ func (s *session) setFlag(ctx context.Context, id, value string) error {
 	case same:
 		return nil
 	}
-	var settings map[string]any
+	var flags map[string]any
 	switch id {
 	case optEffort:
-		settings = s.effortSettings(value)
+		flags = c.effortSettings(value)
 	case optFast:
-		settings = map[string]any{"fastMode": value == "on"}
+		flags = map[string]any{"fastMode": value == "on"}
 	case optAgent:
-		settings = map[string]any{"agent": orNull(value)}
+		flags = map[string]any{"agent": orNull(value)}
 	}
-	if err := s.cs.ApplyFlagSettings(ctx, settings); err != nil {
+	if err := claude.ApplyFlagSettings(ctx, flags); err != nil {
 		return refused("the "+id, err)
 	}
 	c.mu.Lock()
@@ -186,14 +190,14 @@ func (s *session) setFlag(ctx context.Context, id, value string) error {
 // ultracode when the session's settings turned it on: since claude
 // 2.1.284 an effort change without it turns ultracode off (docs/facts,
 // Ultracode).
-func (s *session) effortSettings(level string) map[string]any {
-	settings := map[string]any{"effortLevel": orNull(level)}
-	s.cfg.mu.Lock()
-	if s.cfg.ultracode {
-		settings["ultracode"] = true
+func (c *config) effortSettings(level string) map[string]any {
+	flags := map[string]any{"effortLevel": orNull(level)}
+	c.mu.Lock()
+	if c.ultracode {
+		flags["ultracode"] = true
 	}
-	s.cfg.mu.Unlock()
-	return settings
+	c.mu.Unlock()
+	return flags
 }
 
 // orNull is a value for claude's settings: null for the default, which
