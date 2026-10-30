@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -43,7 +45,11 @@ func (p *player) chatOf(sid string) (*Service, *chat, acp.SessionID) {
 		return p.svcs[parent], p.chats[parent], acp.SessionID(sid)
 	}
 	if p.chats[sid] == nil {
-		p.svcs[sid], _, p.chats[sid] = newChat(p.t, claudeSession, &memModes{})
+		svc, _, c := newChat(p.t, claudeSession, &memModes{})
+		c.mu.Lock()
+		c.dialect.ReadBackgroundCommand = noOutputFile
+		c.mu.Unlock()
+		p.svcs[sid], p.chats[sid] = svc, c
 		p.order = append(p.order, sid)
 	}
 	return p.svcs[sid], p.chats[sid], "s1"
@@ -225,7 +231,16 @@ func views(t *testing.T, events []event) []parity {
 	p.end()
 	out := make([]parity, 0, len(p.order))
 	for _, sid := range p.order {
-		v := view(p.chats[sid])
+		// A background command shows as running until its chat has read
+		// its output file once, on a goroutine of its own; the file is
+		// gone (noOutputFile), so then it shows as started.
+		c := p.chats[sid]
+		eventually(t, c, func() bool {
+			return !slices.ContainsFunc(c.items, func(it model.Item) bool {
+				return it.BackgroundCommand != nil && it.BackgroundCommand.State == "running"
+			})
+		})
+		v := view(c)
 		v.Session = sid
 		out = append(out, v)
 	}
@@ -249,14 +264,6 @@ func view(c *chat) parity {
 		if before, _, ok := strings.Cut(it.Text, modelFallback); ok {
 			it.Text = before + modelFallback
 		}
-		// Nushi reads a background command's output from the file claude
-		// writes, not from the agent; the run's file is gone, or another
-		// run's, so neither agent has a say in it.
-		if it.BackgroundCommand != nil {
-			sh := *it.BackgroundCommand
-			sh.Output = ""
-			it.BackgroundCommand = &sh
-		}
 		if it.Kind == model.Permission {
 			opts := make([]model.Option, 0, len(it.Options))
 			for _, o := range it.Options {
@@ -272,6 +279,12 @@ func view(c *chat) parity {
 	}
 	return p
 }
+
+// noOutputFile reads a background command's output file as the run's is:
+// gone. Nushi reads that output from the file claude writes, not from the
+// agent, so neither agent has a say in it, and a file another run left in
+// claude's temp folder mustn't count.
+func noOutputFile(string, string) (output, end string, err error) { return "", "", fs.ErrNotExist }
 
 // modelFallback is the label both agents give claude's notice that it
 // answered on another model after a refusal (docs/facts/claude.md).
