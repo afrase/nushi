@@ -59,15 +59,13 @@ func Start(ctx context.Context, o Options) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(hooks) > 0 {
-		body["hooks"] = hooks
-	}
+	body.ask, body.Hooks = ask{"initialize"}, hooks
 	t, err := startTransport(ctx, o)
 	if err != nil {
 		return nil, err
 	}
 	s := newSession(ctx, t, o, byID)
-	raw, err := s.request(ctx, "initialize", body, false)
+	raw, err := s.request(ctx, body, false)
 	if err != nil {
 		_ = s.Close()
 		if !errors.Is(err, ErrClosed) {

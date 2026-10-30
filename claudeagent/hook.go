@@ -96,11 +96,19 @@ type HookOutput struct {
 // official SDKs make them.
 func hookCallbackID(n int) string { return "hook_" + strconv.Itoa(n) }
 
+// hookRegistration is a HookMatcher as initialize registers it: by its
+// callback's id. Timeout is in seconds.
+type hookRegistration struct {
+	HookCallbackIDs []string `json:"hookCallbackIds"`
+	Matcher         string   `json:"matcher,omitempty"`
+	Timeout         float64  `json:"timeout,omitempty"`
+}
+
 // registerHooks is initialize's hooks field for hooks, and the hooks by
 // the ids it gives them. Events go in name order, so the ids are the same
 // from run to run.
-func registerHooks(hooks map[HookEvent][]HookMatcher) (map[HookEvent][]map[string]any, map[string]HookFunc, error) {
-	wire := map[HookEvent][]map[string]any{}
+func registerHooks(hooks map[HookEvent][]HookMatcher) (map[HookEvent][]hookRegistration, map[string]HookFunc, error) {
+	wire := map[HookEvent][]hookRegistration{}
 	byID := map[string]HookFunc{}
 	for _, event := range slices.Sorted(maps.Keys(hooks)) {
 		for _, m := range hooks[event] {
@@ -109,14 +117,9 @@ func registerHooks(hooks map[HookEvent][]HookMatcher) (map[HookEvent][]map[strin
 			}
 			id := hookCallbackID(len(byID))
 			byID[id] = m.Fn
-			c := map[string]any{"hookCallbackIds": []string{id}}
-			if m.Matcher != "" {
-				c["matcher"] = m.Matcher
-			}
-			if m.Timeout > 0 {
-				c["timeout"] = m.Timeout.Seconds()
-			}
-			wire[event] = append(wire[event], c)
+			wire[event] = append(wire[event], hookRegistration{
+				HookCallbackIDs: []string{id}, Matcher: m.Matcher, Timeout: max(m.Timeout, 0).Seconds(),
+			})
 		}
 	}
 	return wire, byID, nil

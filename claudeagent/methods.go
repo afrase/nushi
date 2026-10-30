@@ -89,7 +89,7 @@ type InterruptReceipt struct {
 // Interrupt stops the turn under way.
 func (s *Session) Interrupt(ctx context.Context) (InterruptReceipt, error) {
 	var r InterruptReceipt
-	payload, err := s.request(ctx, "interrupt", nil, true)
+	payload, err := s.request(ctx, ask{"interrupt"}, true)
 	if err != nil {
 		return r, err
 	}
@@ -108,33 +108,48 @@ func (s *Session) Interrupt(ctx context.Context) (InterruptReceipt, error) {
 // refuses BypassPermissions unless the session started with AllowBypass
 // (code "bypass_disabled").
 func (s *Session) SetPermissionMode(ctx context.Context, m PermissionMode) error {
-	return s.Request(ctx, "set_permission_mode", map[string]any{"mode": m}, nil)
+	return s.do(ctx, struct {
+		ask
+		Mode PermissionMode `json:"mode"`
+	}{ask{"set_permission_mode"}, m}, nil)
 }
 
 // SetModel switches the session's model; "" = the default.
 func (s *Session) SetModel(ctx context.Context, model string) error {
-	var v any
+	var m *string // null: the default
 	if model != "" {
-		v = model
+		m = &model
 	}
-	return s.Request(ctx, "set_model", map[string]any{"model": v}, nil)
+	return s.do(ctx, struct {
+		ask
+		Model *string `json:"model"`
+	}{ask{"set_model"}, m}, nil)
 }
 
 // ApplyFlagSettings changes settings for the rest of the session, as
 // --settings would have set them (effortLevel, fastMode, agent…).
 func (s *Session) ApplyFlagSettings(ctx context.Context, settings map[string]any) error {
-	return s.Request(ctx, "apply_flag_settings", map[string]any{"settings": settings}, nil)
+	return s.do(ctx, struct {
+		ask
+		Settings map[string]any `json:"settings"`
+	}{ask{"apply_flag_settings"}, settings}, nil)
 }
 
 // StopTask stops a background task: a command or a subagent.
 func (s *Session) StopTask(ctx context.Context, taskID string) error {
-	return s.Request(ctx, "stop_task", map[string]any{"task_id": taskID}, nil)
+	return s.do(ctx, struct {
+		ask
+		TaskID string `json:"task_id"`
+	}{ask{"stop_task"}, taskID}, nil)
 }
 
 // CancelAsyncMessage drops a user message claude has queued and not yet
 // taken, by its uuid.
 func (s *Session) CancelAsyncMessage(ctx context.Context, uuid string) error {
-	return s.Request(ctx, "cancel_async_message", map[string]any{"message_uuid": uuid}, nil)
+	return s.do(ctx, struct {
+		ask
+		MessageUUID string `json:"message_uuid"`
+	}{ask{"cancel_async_message"}, uuid}, nil)
 }
 
 // ContextUsage is how the context window is spent.
@@ -159,11 +174,10 @@ type ContextCategory struct {
 // ContextUsage asks how the context window is spent; detail is "summary",
 // "full" or "" (claude's default).
 func (s *Session) ContextUsage(ctx context.Context, detail string) (*ContextUsage, error) {
-	req := map[string]any{}
-	if detail != "" {
-		req["detail"] = detail
-	}
-	payload, err := s.request(ctx, "get_context_usage", req, true)
+	payload, err := s.request(ctx, struct {
+		ask
+		Detail string `json:"detail,omitempty"`
+	}{ask{"get_context_usage"}, detail}, true)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +213,7 @@ func (s *Session) MCPStatus(ctx context.Context) ([]MCPServerStatus, error) {
 	var r struct {
 		MCPServers []MCPServerStatus `json:"mcpServers"`
 	}
-	if err := s.Request(ctx, "mcp_status", nil, &r); err != nil {
+	if err := s.do(ctx, ask{"mcp_status"}, &r); err != nil {
 		return nil, err
 	}
 	return r.MCPServers, nil
@@ -207,12 +221,19 @@ func (s *Session) MCPStatus(ctx context.Context) ([]MCPServerStatus, error) {
 
 // MCPToggle turns an MCP server on or off for the session.
 func (s *Session) MCPToggle(ctx context.Context, name string, on bool) error {
-	return s.Request(ctx, "mcp_toggle", map[string]any{"serverName": name, "enabled": on}, nil)
+	return s.do(ctx, struct {
+		ask
+		ServerName string `json:"serverName"`
+		Enabled    bool   `json:"enabled"`
+	}{ask{"mcp_toggle"}, name, on}, nil)
 }
 
 // MCPReconnect reconnects an MCP server.
 func (s *Session) MCPReconnect(ctx context.Context, name string) error {
-	return s.Request(ctx, "mcp_reconnect", map[string]any{"serverName": name}, nil)
+	return s.do(ctx, struct {
+		ask
+		ServerName string `json:"serverName"`
+	}{ask{"mcp_reconnect"}, name}, nil)
 }
 
 // RewindResult is what rewinding files did, or with a dry run would do.
@@ -228,7 +249,11 @@ type RewindResult struct {
 // RewindFiles puts the files claude changed back as they were when the
 // user message userMessageID was sent.
 func (s *Session) RewindFiles(ctx context.Context, userMessageID string, dryRun bool) (*RewindResult, error) {
-	payload, err := s.request(ctx, "rewind_files", map[string]any{"user_message_id": userMessageID, "dry_run": dryRun}, true)
+	payload, err := s.request(ctx, struct {
+		ask
+		UserMessageID string `json:"user_message_id"`
+		DryRun        bool   `json:"dry_run"`
+	}{ask{"rewind_files"}, userMessageID, dryRun}, true)
 	if err != nil {
 		return nil, err
 	}
