@@ -261,9 +261,13 @@ List<AppAction> chatActions(
   return [
     AppAction(
       .sideChat,
-      'Side chat',
-      enabled: live && chat.canFork,
-      run: () => unawaited(askAside(context, d, chat!)),
+      switch (chat?.side.value) {
+        null => 'Side chat',
+        _ when chat!.sideHidden.value => 'Show the side chat',
+        _ => 'Hide the side chat',
+      },
+      enabled: live && (chat.canFork || chat.side.value != null),
+      run: () => unawaited(toggleSide(context, d, chat!)),
     ),
     AppAction(
       .sendComments,

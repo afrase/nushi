@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -159,6 +161,7 @@ class _ChatViewState extends State<ChatView> {
           chat.pane,
           chat.preview,
           chat.side,
+          chat.sideHidden,
           subagentWide,
         ]),
         builder: (context, _) => _beside(transcript),
@@ -172,7 +175,9 @@ class _ChatViewState extends State<ChatView> {
   /// when open, at its own remembered width, each closed on its own.
   Widget _beside(Widget transcript) {
     final chat = widget.chat;
-    final side = chat.archived ? null : chat.side.value;
+    final side = chat.archived || chat.sideHidden.value
+        ? null
+        : chat.side.value;
     final id = chat.pane.value;
     final preview = id == null ? chat.preview.value : null;
     final wide = id != null && subagentWide.value || preview != null;
@@ -191,7 +196,8 @@ class _ChatViewState extends State<ChatView> {
               key: ValueKey(side.id),
               side: side,
               daemon: widget.daemon,
-              onClose: () => widget.daemon.closeSide(chat),
+              onHide: () => chat.sideHidden.value = true,
+              onClose: () => unawaited(endSide(context, widget.daemon, chat)),
             ),
           ),
         if (id != null)

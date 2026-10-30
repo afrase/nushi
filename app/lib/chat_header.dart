@@ -14,6 +14,7 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/side_chat.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -94,19 +95,25 @@ class _ChatHeaderState extends State<ChatHeader> {
     // (its mark stays), the details button while the panel can't show,
     // the tabs into a menu field, the status word (the dot's tooltip says
     // it), then the terminal's and the details' buttons into ⋯. Changes
-    // counts the review comments not sent yet (14 points more).
-    return ValueListenableBuilder(
-      valueListenable: reviews,
-      builder: (context, _, _) => LayoutBuilder(
+    // counts the review comments not sent yet (14 points more); a hidden
+    // side chat's chip takes its own room.
+    return ListenableBuilder(
+      listenable: Listenable.merge([reviews, chat.side, chat.sideHidden]),
+      builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
           final comments = unsentComments(chat.id).isNotEmpty;
-          final more = (chat.pull == null ? 0 : 88) + (comments ? 14 : 0);
+          final side = chat.side.value != null && chat.sideHidden.value;
+          final more =
+              (chat.pull == null ? 0 : 88) +
+              (comments ? 14 : 0) +
+              (side ? SideChip.width : 0);
           final folds = headerFolds(
             box.maxWidth,
             pull: chat.pull != null,
             panel: widget.onPanel != null,
             model: modelName != null,
             comments: comments,
+            side: side,
           );
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
@@ -239,6 +246,10 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ),
           const SizedBox(width: 12),
+          if (chat.side.value != null && chat.sideHidden.value) ...[
+            SideChip(chat),
+            const SizedBox(width: 8),
+          ],
           if (folds.tabs)
             MenuField(
               compact: true,
@@ -335,19 +346,26 @@ typedef HeaderFolds = ({
 /// The parts of the header that fold in [width] (see [ChatHeader]): each
 /// in turn until the title has its 80 points. [pull]: the chat has the
 /// Pull request tab; [panel]: the details panel can show; [model]: the
-/// header names a model (40 points at least, and its gap).
+/// header names a model (40 points at least, and its gap); [side]: a
+/// hidden side chat's chip shows.
 HeaderFolds headerFolds(
   double width, {
   required bool pull,
   required bool panel,
   bool model = false,
   bool comments = false,
+  bool side = false,
 }) {
   // Measured: the row without its title and model takes about 455
   // points (oh-my-pi's name, "in background"), the Pull request tab 88
   // more.
   final need =
-      455.0 + (pull ? 88 : 0) + (comments ? 14 : 0) + 80 + (model ? 50 : 0);
+      455.0 +
+      (pull ? 88 : 0) +
+      (comments ? 14 : 0) +
+      (side ? SideChip.width : 0) +
+      80 +
+      (model ? 50 : 0);
   var saved = 0.0;
   final folds = <String>{};
   // Each part and about how much folding it frees.
