@@ -127,9 +127,9 @@ func run() error {
 		"log_level", logs.Level.Level())
 
 	hub := &events.Hub{}
-	known := knownagents.All(projects)
-	agentSvc := newAgents(dir, known)
 	st := store.New(dir)
+	known := knownagents.All(projects, st.ClaudeGoAgent)
+	agentSvc := newAgents(dir, known)
 	st.HadMessages = func(s model.ChatRecord) bool { return claudehistory.Has(projects, s.SessionID, s.Folder) }
 	copies, err := transcripts.Open(filepath.Join(dir, "transcripts"))
 	if err != nil {
@@ -160,6 +160,7 @@ func run() error {
 		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc}
 	sv.GitHub = newGitHub(st, dev)
 	sv.Updates = startUpdates(st, hub.Publish)
+	sv.ClaudeGo = st
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {
 		return err
 	}

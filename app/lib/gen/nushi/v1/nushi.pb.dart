@@ -5854,6 +5854,7 @@ class Settings extends $pb.GeneratedMessage {
     $core.bool? keepTranscripts,
     $core.int? transcriptDays,
     $core.bool? checkUpdates,
+    $core.bool? claudeGoAgent,
   }) {
     final result = Settings._();
     if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
@@ -5861,6 +5862,7 @@ class Settings extends $pb.GeneratedMessage {
     if (keepTranscripts != null) result.keepTranscripts = keepTranscripts;
     if (transcriptDays != null) result.transcriptDays = transcriptDays;
     if (checkUpdates != null) result.checkUpdates = checkUpdates;
+    if (claudeGoAgent != null) result.claudeGoAgent = claudeGoAgent;
     return result;
   }
 
@@ -5882,6 +5884,7 @@ class Settings extends $pb.GeneratedMessage {
     ..aOB(3, _omitFieldNames ? '' : 'keepTranscripts')
     ..aI(4, _omitFieldNames ? '' : 'transcriptDays')
     ..aOB(5, _omitFieldNames ? '' : 'checkUpdates')
+    ..aOB(6, _omitFieldNames ? '' : 'claudeGoAgent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -5959,6 +5962,21 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasCheckUpdates() => $_has(4);
   @$pb.TagNumber(5)
   void clearCheckUpdates() => $_clearField(5);
+
+  /// Claude's chats run through Nushi's Go agent (claudeacp, ADR 0066), which
+  /// needs no Node and nothing set up, instead of the adapter
+  /// (claude-agent-acp); off by default. A Claude chat's agent reads it each
+  /// time it starts (a new chat, a reopened or woken one), so chats already
+  /// running keep theirs until then. SetSettings leaves it as it is when not
+  /// given (API 93).
+  @$pb.TagNumber(6)
+  $core.bool get claudeGoAgent => $_getBF(5);
+  @$pb.TagNumber(6)
+  set claudeGoAgent($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasClaudeGoAgent() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearClaudeGoAgent() => $_clearField(6);
 }
 
 class ListTranscriptsRequest extends $pb.GeneratedMessage {

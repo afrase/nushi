@@ -109,13 +109,12 @@ func (s *Service) Remove(name string) error {
 func (s *Service) folder(name string) string { return filepath.Join(s.dir, name) }
 
 func (s *Service) adapter(name string) (Agent, error) {
-	for _, a := range s.agents {
-		if a.Name == name && a.Adapter != nil {
-			return a, nil
-		}
-		if a.Name == name {
-			return a, fmt.Errorf("%s needs nothing set up", a.Title)
-		}
+	a, ok := s.agent(name)
+	switch {
+	case !ok:
+		return a, fmt.Errorf("Nushi doesn't know the agent %q", name)
+	case a.Adapter == nil:
+		return a, fmt.Errorf("%s needs nothing set up", a.Title)
 	}
-	return Agent{}, fmt.Errorf("Nushi doesn't know the agent %q", name)
+	return a, nil
 }

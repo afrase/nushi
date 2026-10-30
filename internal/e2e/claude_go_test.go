@@ -44,14 +44,27 @@ func (c *claudes) spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 	return f.Spawn(ctx, s)
 }
 
+// useGoAgent turns Settings › Agents' "Use Nushi's Go agent" on or off.
+func useGoAgent(t *testing.T, a *app, on bool) {
+	t.Helper()
+	ctx := context.Background()
+	set := must(a.c.GetSettings(ctx, connect.NewRequest(&nushiv1.GetSettingsRequest{}))).Settings
+	set.ClaudeGoAgent = &on
+	must(a.c.SetSettings(ctx, connect.NewRequest(&nushiv1.SetSettingsRequest{Settings: set})))
+	if got := must(a.c.GetSettings(ctx, connect.NewRequest(&nushiv1.GetSettingsRequest{}))).Settings; got.ClaudeGoAgent == nil || *got.ClaudeGoAgent != on {
+		t.Fatalf("claude_go_agent %v after setting it %v", got.ClaudeGoAgent, on)
+	}
+}
+
 // A Claude chat through Nushi's Go agent (claudeacp) on a fake claude,
-// with no Node and no adapter: two prompts, each answer streamed and its
-// turn ended at claude's result, with the cost; the daemon's stop ends
-// claude.
+// with no Node and no adapter, once the setting is on: two prompts, each
+// answer streamed and its turn ended at claude's result, with the cost;
+// the daemon's stop ends claude.
 func TestAClaudeChatThroughTheGoAgent(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
 	a := open(t, d)
+	useGoAgent(t, a, true)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: t.TempDir()}))).ChatId
 	get := func() *nushiv1.GetChatResponse {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
@@ -84,5 +97,50 @@ func TestAClaudeChatThroughTheGoAgent(t *testing.T) {
 	}
 	if err := fakes[0].Err(); err != nil {
 		t.Errorf("claude's script: %v", err)
+	}
+}
+
+// The setting is read when a Claude chat's agent starts: off by default (the
+// adapter), on for the next chat (the Go agent), and turned off again, a
+// new chat has the adapter while the running one keeps its Go agent.
+func TestTheGoAgentSettingTakesTheNextStart(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	a := open(t, d)
+	if set := must(a.c.GetSettings(ctx, connect.NewRequest(&nushiv1.GetSettingsRequest{}))).Settings; set.GetClaudeGoAgent() {
+		t.Fatal("the Go agent is on by default")
+	}
+	answer := func(id, text, want string) {
+		t.Helper()
+		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
+		until(t, "the answer to "+text, func() bool {
+			snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+			return !snap.Status.Busy && strings.Contains(transcript(snap.Items), "AGENT_MESSAGE:"+want)
+		})
+	}
+	claudesRun := func() int {
+		d.claudes.mu.Lock()
+		defer d.claudes.mu.Unlock()
+		return len(d.claudes.fakes)
+	}
+	start := func() string {
+		return must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: t.TempDir()}))).ChatId
+	}
+	adapter := start()
+	answer(adapter, "hello", "You said: hello")
+	if n := claudesRun(); n != 0 {
+		t.Fatalf("%d claudes through the Go agent with the setting off", n)
+	}
+	useGoAgent(t, a, true)
+	goes := start()
+	answer(goes, "hi", "Hello from claude")
+	if n := claudesRun(); n != 1 {
+		t.Fatalf("%d claudes once the setting is on", n)
+	}
+	useGoAgent(t, a, false)
+	answer(start(), "again", "You said: again")
+	answer(goes, "still", "Hello from claude")
+	if n := claudesRun(); n != 1 {
+		t.Errorf("%d claudes: the running chat's Go agent should have stayed", n)
 	}
 }

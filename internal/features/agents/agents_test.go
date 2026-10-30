@@ -196,6 +196,41 @@ func TestSetUp(t *testing.T) {
 	}
 }
 
+// An agent whose Own says so runs without its adapter: ready with no Set
+// up or Node, no adapter listed, no versions told, nothing to set up; and
+// each List and Run asks again, so turning it off brings the adapter's
+// needs back for the next start.
+func TestOwnSkipsTheAdapter(t *testing.T) {
+	bin := t.TempDir()
+	fakeCLI(t, bin, "claude", "2.1.400")
+	t.Setenv("PATH", bin+":/usr/bin:/bin") // no node
+	own := true
+	chats := &fakeChats{}
+	svc := newService([]Agent{{Name: "claude", Title: "Claude", CLI: "claude", Tested: []string{"2.1.310"},
+		Adapter: &Adapter{Lock: fstest.MapFS{}, Package: "adapter", Bin: "adapter"}, Own: func() bool { return own }}}, t.TempDir(), &fakeInstaller{}, chats)
+	st := svc.List(context.Background())[0]
+	if !st.Ready || st.Problem != "" || st.Adapter != nil || st.Pinned != "" || st.Folder != "" || !slices.Equal(chats.ready, []string{"claude"}) {
+		t.Fatalf("own: %+v, ready told %q", st, chats.ready)
+	}
+	if r, err := svc.Run("claude"); err != nil || !r.Own || r.CLI != filepath.Join(bin, "claude") || r.Node != "" || r.Program != "" {
+		t.Errorf("own Run: %+v, %v", r, err)
+	}
+	failed := errors.New("initialize: it quit")
+	if got := svc.Explain("claude")(failed); got != failed { //nolint:errorlint // the same error, nothing added
+		t.Errorf("own Explain: %v", got)
+	}
+	if err := svc.SetUp(context.Background(), "claude"); err == nil || err.Error() != "Claude needs nothing set up" {
+		t.Errorf("own SetUp: %v", err)
+	}
+	own = false
+	if st := svc.List(context.Background())[0]; st.Ready || st.Problem != "Needs Node" || st.Adapter == nil {
+		t.Errorf("adapter: %+v", st)
+	}
+	if r, err := svc.Run("claude"); err == nil || r.Own {
+		t.Errorf("adapter Run: %+v, %v", r, err)
+	}
+}
+
 // A failed start of a CLI version Nushi wasn't tested with says which it
 // was tested with; a tested one, or one that isn't set up, doesn't.
 func TestExplain(t *testing.T) {
