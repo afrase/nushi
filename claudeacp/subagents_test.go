@@ -218,9 +218,9 @@ func TestSubagentAsks(t *testing.T) {
 		// The request's answer and stop_task go apart, in either order.
 		f := fake(user("id2"), echo("id2"), agentCall(false), taskStarted(""), ask,
 			answers("toolu_s", `{"behavior":"deny","interrupt":true}`), taskEnd("stopped"), agentDone,
-			result(names("id2")), claudetest.Send(idle)).
-			Respond(`{"type":"control_request","request":{"subtype":"stop_task"}}`,
-				`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)
+			result(names("id2")), claudetest.Send(idle))
+		f.Respond(`{"type":"control_request","request":{"subtype":"stop_task"}}`,
+			`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`)
 		p := start(t, withSubagents, f)
 		opened := make(chan struct{})
 		p.permit = func(ctx context.Context, _ *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {

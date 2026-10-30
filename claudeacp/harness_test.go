@@ -252,17 +252,18 @@ func fake(steps ...claudetest.Step) *claudetest.Fake { return started(`{}`, `nul
 func started(init, title string, steps ...claudetest.Step) *claudetest.Fake {
 	ok := `{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`
 	initOK := `{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":` + init + `}}`
-	f := claudetest.New(append([]claudetest.Step{claudetest.Expect(initRequest), claudetest.Send(initOK)}, steps...)...).
-		Respond(`{"type":"control_request","request":{"subtype":"interrupt"}}`, ok).
-		Respond(`{"type":"control_request","request":{"subtype":"cancel_async_message"}}`, ok)
+	f := claudetest.New(append([]claudetest.Step{claudetest.Expect(initRequest), claudetest.Send(initOK)}, steps...)...)
+	f.Respond(`{"type":"control_request","request":{"subtype":"interrupt"}}`, ok)
+	f.Respond(`{"type":"control_request","request":{"subtype":"cancel_async_message"}}`, ok)
 	return withTitle(f, title)
 }
 
 // withTitle has f answer asks for a title with title (JSON), whenever they
 // come: after any turn of the user's.
 func withTitle(f *claudetest.Fake, title string) *claudetest.Fake {
-	return f.Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
+	f.Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
 		`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":`+title+`}}}`)
+	return f
 }
 
 // asked are the requests f answered of its own, but for asks for a

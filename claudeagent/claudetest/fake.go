@@ -83,13 +83,12 @@ func New(steps ...Step) *Fake {
 // reach the script. It is for what a client sends in an order it doesn't
 // promise, such as requests made from goroutines of their own. Call it
 // before the fake starts.
-func (f *Fake) Respond(match, reply string) *Fake {
+func (f *Fake) Respond(match, reply string) {
 	var m any
 	if err := json.Unmarshal([]byte(match), &m); err != nil {
 		panic("claudetest: Respond's match isn't JSON: " + match)
 	}
 	f.responders = append(f.responders, responder{m, reply})
-	return f
 }
 
 // Responded are the stdin lines Respond answered, in order.

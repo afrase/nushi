@@ -19,8 +19,9 @@ const windowInit = `{"models":[{"value":"default","resolvedModel":"claude-x","di
 
 // windowAnswer has a fake answer get_context_usage with size.
 func windowAnswer(f *claudetest.Fake, size string) *claudetest.Fake {
-	return f.Respond(`{"type":"control_request","request":{"subtype":"get_context_usage"}}`,
+	f.Respond(`{"type":"control_request","request":{"subtype":"get_context_usage"}}`,
 		`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"rawMaxTokens":`+size+`}}}`)
+	return f
 }
 
 // windowAsks counts f's asks for the context window.
@@ -53,8 +54,8 @@ func TestWindow(t *testing.T) {
 	f1 := windowAnswer(started(windowInit, `null`, user("id2"), echo("id2"),
 		event(`{"type":"message_start","message":{"id":"msg_1","model":"claude-x","usage":{"input_tokens":10}}}`),
 		result(names("id2")+`,"modelUsage":{"claude-x":{"contextWindow":950000}}`),
-		claudetest.Send(idle)), "1000000").
-		Respond(`{"type":"control_request","request":{"subtype":"set_model"}}`, ok)
+		claudetest.Send(idle)), "1000000")
+	f1.Respond(`{"type":"control_request","request":{"subtype":"set_model"}}`, ok)
 	f2 := windowAnswer(started(windowInit, `null`), "1000000")
 	p := start(t, nil, f1, f2)
 	sid := p.open(t)

@@ -60,8 +60,10 @@ func readReplays(t *testing.T, dir string) *replays {
 		// goroutine of its own, so when it asks isn't in a cassette's
 		// order: it is answered (with none) whenever it comes, and a
 		// recording's ask isn't expected.
-		r.fakes = append(r.fakes, claudetest.Replay(forGoAgent(c)).Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
-			`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":null}}}`))
+		fake := claudetest.Replay(forGoAgent(c))
+		fake.Respond(`{"type":"control_request","request":{"subtype":"generate_session_title"}}`,
+			`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{"title":null}}}`)
+		r.fakes = append(r.fakes, fake)
 	}
 }
 
