@@ -40,7 +40,7 @@ func (s *session) notice(level, content string) {
 	}
 	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: &acp.ContentChunk{
 		Content: acp.ContentBlock{Text: &acp.TextContent{Text: text}},
-		Meta:    map[string]any{"claudeCode": map[string]any{"kind": "informational", "level": level}},
+		Meta:    claudeCodeMeta{Kind: "informational", Level: &level}.meta(),
 	}})
 }
 

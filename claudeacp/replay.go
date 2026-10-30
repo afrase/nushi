@@ -119,7 +119,7 @@ func (r *replayer) user(stream string, m sessions.Message, msg claudeagent.APIMe
 func (r *replayer) chunk(kind, stream, id string, c acp.ContentBlock) {
 	ch := &acp.ContentChunk{Content: c, MessageID: acp.MessageID(id)}
 	if stream != "" {
-		ch.Meta = map[string]any{"claudeCode": map[string]any{"parentToolUseId": stream}}
+		ch.Meta = claudeCodeMeta{ParentToolUseID: stream}.meta()
 	}
 	u := acp.SessionUpdate{SessionUpdate: kind}
 	switch kind {

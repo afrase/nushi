@@ -127,7 +127,9 @@ func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.
 		caps.notices = c.Session != nil && c.Session.Notices != nil
 		caps.booleans = c.Session != nil && c.Session.ConfigOptions != nil && c.Session.ConfigOptions.Boolean != nil
 		caps.subagents = c.Subagents != nil
-		caps.subagentText, _ = c.Meta["subagent-transcript"].(bool)
+		caps.subagentText = readMeta[struct {
+			SubagentTranscript bool `json:"subagent-transcript"`
+		}](c.Meta).SubagentTranscript
 	}
 	a.mu.Lock()
 	a.caps = caps
@@ -153,7 +155,7 @@ func (a *agent) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.
 				},
 			},
 			// Prompts sent during a turn are queued, as claude queues them.
-			Meta: map[string]any{"claudeCode": map[string]any{"promptQueueing": true}},
+			Meta: claudeCodeMeta{PromptQueueing: true}.meta(),
 		},
 		Meta: steering.Advertise(nil),
 	}, nil

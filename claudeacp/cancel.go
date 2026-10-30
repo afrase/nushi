@@ -107,8 +107,13 @@ func (a *agent) steer(ctx context.Context, params json.RawMessage) (*steering.Re
 	if len(req.Prompt) == 0 {
 		return nil, invalidParams("steering: an empty prompt")
 	}
-	if sm, _ := req.Meta["steering"].(map[string]any); sm["idleBehavior"] != nil && !req.PromptRequired() {
-		return nil, invalidParams("steering: no idle behaviour %v", sm["idleBehavior"])
+	m := readMeta[struct {
+		Steering struct {
+			IdleBehavior any `json:"idleBehavior"`
+		} `json:"steering"`
+	}](req.Meta)
+	if idle := m.Steering.IdleBehavior; idle != nil && !req.PromptRequired() {
+		return nil, invalidParams("steering: no idle behaviour %v", idle)
 	}
 	s, err := a.session(acp.SessionID(req.SessionID))
 	if err != nil {

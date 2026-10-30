@@ -299,7 +299,7 @@ func (s *session) chunk(kind, parent, msgID string, c acp.ContentBlock) {
 	}
 	ch := &acp.ContentChunk{Content: c, MessageID: acp.MessageID(msgID)}
 	if parent != "" {
-		ch.Meta = map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
+		ch.Meta = claudeCodeMeta{ParentToolUseID: parent}.meta()
 	}
 	u := acp.SessionUpdate{SessionUpdate: kind}
 	if kind == "agent_thought_chunk" {

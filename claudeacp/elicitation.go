@@ -26,7 +26,7 @@ func (s *session) elicit(ctx context.Context, r claudeagent.ElicitationRequest) 
 	if r.ServerName != "" {
 		// Which server asks, as a permission request names it, so the
 		// user can tell who sends them where.
-		req.Meta = map[string]any{"mcpServer": map[string]any{"name": r.ServerName}}
+		req.Meta = map[string]any{"mcpServer": serverName{r.ServerName}}
 	}
 	switch r.Mode {
 	case claudeagent.ElicitationURL:

@@ -108,8 +108,11 @@ func (a *agent) options(su setup) (claudeagent.Options, error) {
 
 // applyOptions applies _meta.claudeCode.options to o.
 func (a *agent) applyOptions(o *claudeagent.Options, meta map[string]any) error {
-	cc, _ := meta["claudeCode"].(map[string]any)
-	raw, _ := cc["options"].(map[string]any)
+	raw := readMeta[struct {
+		ClaudeCode struct {
+			Options map[string]json.RawMessage `json:"options"`
+		} `json:"claudeCode"`
+	}](meta).ClaudeCode.Options
 	if len(raw) == 0 {
 		return nil
 	}
