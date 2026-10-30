@@ -263,6 +263,9 @@ func TestTransportExitError(t *testing.T) {
 func stall(t *testing.T, idle clock, d time.Duration) {
 	t.Helper()
 	fired := false
+	// One bound for the whole wait: the other pipe's timers can come
+	// forever once this one is given up on.
+	guard := time.After(5 * time.Second)
 	for {
 		select {
 		case tm := <-idle:
@@ -271,7 +274,7 @@ func stall(t *testing.T, idle clock, d time.Duration) {
 			}
 			fired = fired || tm.d == d
 			tm.fire <- time.Time{}
-		case <-time.After(5 * time.Second):
+		case <-guard:
 			t.Fatal("gave up on a pipe whose reader was behind")
 		}
 	}
@@ -304,13 +307,21 @@ func TestTransportSlowConsumer(t *testing.T) {
 // A stderr callback that's behind when claude exits still gets every line,
 // and the exit error has the end of stderr.
 func TestTransportSlowStderr(t *testing.T) {
-	release := make(chan struct{})
+	release, reading := make(chan struct{}), make(chan struct{}, 1)
 	var lines []string
 	tr, _, idle := helper(t, "fail", Options{Stderr: func(l string) {
+		select {
+		case reading <- struct{}{}:
+		default:
+		}
 		<-release
 		lines = append(lines, l)
 	}})
 	<-tr.exited
+	// The reader is past its first Read, held by the callback: until then
+	// a Read under way can't be told from one waiting on an empty pipe, and
+	// the fake clock's 200 ms pass at once.
+	<-reading
 	stall(t, idle, 200*time.Millisecond)
 	close(release)
 	for range tr.messages() {
