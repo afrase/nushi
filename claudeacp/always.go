@@ -125,13 +125,13 @@ func cmpTrim(s, or string) string {
 // localRule is a rule allowing tool (with content, when given) kept in
 // the project's local settings.
 func localRule(tool, content string) []claudeagent.PermissionUpdate {
-	return []claudeagent.PermissionUpdate{{Type: "addRules", Behavior: "allow", Destination: "localSettings",
+	return []claudeagent.PermissionUpdate{{Type: claudeagent.UpdateAddRules, Behavior: claudeagent.BehaviorAllow, Destination: claudeagent.DestinationLocalSettings,
 		Rules: []claudeagent.PermissionRule{{ToolName: tool, RuleContent: content}}}}
 }
 
 // changesMode says whether updates set the session's mode.
 func changesMode(updates []claudeagent.PermissionUpdate) bool {
-	return slices.ContainsFunc(updates, func(u claudeagent.PermissionUpdate) bool { return u.Type == "setMode" })
+	return slices.ContainsFunc(updates, func(u claudeagent.PermissionUpdate) bool { return u.Type == claudeagent.UpdateSetMode })
 }
 
 // suggested is claude's suggestions when they are all updates claude
@@ -152,13 +152,14 @@ func suggested(us []claudeagent.PermissionUpdate) []claudeagent.PermissionUpdate
 // known says whether u is an update of a kind claude takes, well formed.
 func known(u claudeagent.PermissionUpdate) bool {
 	switch u.Destination {
-	case "session", "cliArg", "userSettings", "projectSettings", "localSettings":
+	case claudeagent.DestinationSession, claudeagent.DestinationCLIArg, claudeagent.DestinationUserSettings,
+		claudeagent.DestinationProjectSettings, claudeagent.DestinationLocalSettings:
 	default:
 		return false
 	}
 	switch u.Type {
-	case "addRules", "replaceRules", "removeRules":
-		if len(u.Rules) > 100 || u.Type != "replaceRules" && len(u.Rules) == 0 {
+	case claudeagent.UpdateAddRules, claudeagent.UpdateReplaceRules, claudeagent.UpdateRemoveRules:
+		if len(u.Rules) > 100 || u.Type != claudeagent.UpdateReplaceRules && len(u.Rules) == 0 {
 			return false
 		}
 		for _, r := range u.Rules {
@@ -166,14 +167,15 @@ func known(u claudeagent.PermissionUpdate) bool {
 				return false
 			}
 		}
-		return u.Behavior == "allow" || u.Behavior == "deny" || u.Behavior == "ask"
-	case "setMode":
+		return u.Behavior == claudeagent.BehaviorAllow || u.Behavior == claudeagent.BehaviorDeny || u.Behavior == claudeagent.BehaviorAsk
+	case claudeagent.UpdateSetMode:
 		switch u.Mode {
-		case "default", "acceptEdits", "bypassPermissions", "plan", "dontAsk", "auto":
+		case claudeagent.PermissionDefault, claudeagent.AcceptEdits, claudeagent.BypassPermissions, claudeagent.Plan,
+			claudeagent.DontAsk, claudeagent.Auto:
 			return true
 		}
 		return false
-	case "addDirectories", "removeDirectories":
+	case claudeagent.UpdateAddDirectories, claudeagent.UpdateRemoveDirectories:
 		if len(u.Directories) == 0 || len(u.Directories) > 100 {
 			return false
 		}
@@ -205,7 +207,7 @@ func mcpAllows(updates []claudeagent.PermissionUpdate, tool string) bool {
 		return false
 	}
 	for _, u := range updates {
-		if u.Type != "addRules" || u.Behavior != "allow" || len(u.Rules) == 0 {
+		if u.Type != claudeagent.UpdateAddRules || u.Behavior != claudeagent.BehaviorAllow || len(u.Rules) == 0 {
 			return false
 		}
 		for _, r := range u.Rules {
@@ -224,7 +226,7 @@ func exactLocalRule(updates []claudeagent.PermissionUpdate, tool, content string
 		return false
 	}
 	u := updates[0]
-	return u.Type == "addRules" && u.Behavior == "allow" && u.Destination == "localSettings" && len(u.Rules) == 1 &&
+	return u.Type == claudeagent.UpdateAddRules && u.Behavior == claudeagent.BehaviorAllow && u.Destination == claudeagent.DestinationLocalSettings && len(u.Rules) == 1 &&
 		u.Rules[0].ToolName == tool && strings.TrimSpace(u.Rules[0].RuleContent) == content
 }
 
@@ -236,9 +238,9 @@ func shellLabel(tool string, updates []claudeagent.PermissionUpdate) string {
 	var commands, reads, dirs []string
 	for _, u := range updates {
 		switch {
-		case u.Type == "addDirectories" && u.Destination == "session":
+		case u.Type == claudeagent.UpdateAddDirectories && u.Destination == claudeagent.DestinationSession:
 			dirs = append(dirs, u.Directories...)
-		case u.Type == "addRules" && u.Behavior == "allow":
+		case u.Type == claudeagent.UpdateAddRules && u.Behavior == claudeagent.BehaviorAllow:
 			for _, r := range u.Rules {
 				content := strings.TrimSpace(r.RuleContent)
 				switch {
@@ -349,11 +351,11 @@ func readGrant(updates []claudeagent.PermissionUpdate, tool, cwd string, write b
 	var reached []string
 	for _, u := range updates {
 		switch {
-		case u.Destination != "session":
+		case u.Destination != claudeagent.DestinationSession:
 			return g, false
-		case u.Type == "addDirectories" && write:
+		case u.Type == claudeagent.UpdateAddDirectories && write:
 			reached = append(reached, u.Directories...)
-		case u.Type == "addRules" && u.Behavior == "allow":
+		case u.Type == claudeagent.UpdateAddRules && u.Behavior == claudeagent.BehaviorAllow:
 			for _, r := range u.Rules {
 				content := strings.TrimSpace(r.RuleContent)
 				switch {

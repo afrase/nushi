@@ -35,7 +35,7 @@ const defaultValue = "default"
 // config is a session's modes and options as the client was last told.
 type config struct {
 	mu        sync.Mutex
-	mode      string
+	mode      claudeagent.PermissionMode
 	bypass    bool // bypassPermissions may be picked
 	models    []claudeagent.ModelInfo
 	model     string // a value of models
@@ -66,7 +66,7 @@ func (c *config) init(o claudeagent.Options, ir *claudeagent.InitResponse, boole
 	if ir == nil {
 		ir = &claudeagent.InitResponse{}
 	}
-	c.mode = string(cmp.Or(ir.CurrentPermissionMode, o.PermissionMode, claudeagent.PermissionDefault))
+	c.mode = cmp.Or(ir.CurrentPermissionMode, o.PermissionMode, claudeagent.PermissionDefault)
 	c.bypass, c.models, c.booleans = o.AllowBypass, ir.Models, booleans
 	c.effort, c.agent = cmp.Or(set.EffortLevel, defaultValue), cmp.Or(set.Agent, defaultValue)
 	c.fast = ir.FastModeState == "on" || ir.FastModeState == "" && set.FastMode
@@ -141,11 +141,11 @@ func (c *config) modelInfo() *claudeagent.ModelInfo {
 
 // The permission modes a session offers, in order.
 var modes = []acp.SessionMode{
-	{ID: "default", Name: "Manual", Description: "Asks before changing anything"},
-	{ID: "acceptEdits", Name: "Accept edits", Description: "Edits files without asking"},
-	{ID: "plan", Name: "Plan", Description: "Plans first, changing nothing"},
-	{ID: "auto", Name: "Auto", Description: "Claude decides what to ask"},
-	{ID: "bypassPermissions", Name: "Bypass permissions", Description: "Asks nothing"},
+	{ID: acp.SessionModeID(claudeagent.PermissionDefault), Name: "Manual", Description: "Asks before changing anything"},
+	{ID: acp.SessionModeID(claudeagent.AcceptEdits), Name: "Accept edits", Description: "Edits files without asking"},
+	{ID: acp.SessionModeID(claudeagent.Plan), Name: "Plan", Description: "Plans first, changing nothing"},
+	{ID: acp.SessionModeID(claudeagent.Auto), Name: "Auto", Description: "Claude decides what to ask"},
+	{ID: acp.SessionModeID(claudeagent.BypassPermissions), Name: "Bypass permissions", Description: "Asks nothing"},
 }
 
 // modesLocked are the modes the session offers.
@@ -166,7 +166,7 @@ func (c *config) optionsLocked() []acp.SessionConfigOption {
 	for _, m := range c.modesLocked() {
 		mode = append(mode, acp.SessionConfigSelectOption{Value: acp.SessionConfigValueID(m.ID), Name: m.Name, Description: m.Description})
 	}
-	opts := []acp.SessionConfigOption{selectOption(optMode, "Mode", acp.SessionConfigOptionCategoryMode, c.mode, mode)}
+	opts := []acp.SessionConfigOption{selectOption(optMode, "Mode", acp.SessionConfigOptionCategoryMode, string(c.mode), mode)}
 	if len(c.models) > 0 {
 		var vs []acp.SessionConfigSelectOption
 		for _, m := range c.models {
@@ -217,13 +217,13 @@ func (s *session) sendOptions() {
 }
 
 // sendMode tells the client the current mode.
-func (s *session) sendMode(mode string) {
+func (s *session) sendMode(mode claudeagent.PermissionMode) {
 	s.a.update(s.id, acp.SessionUpdate{SessionUpdate: "current_mode_update", CurrentModeUpdate: &acp.CurrentModeUpdate{CurrentModeID: acp.SessionModeID(mode)}})
 }
 
 // modeChanged is claude in another mode, by its own doing or a plan's
 // approval: the client is told when it is news.
-func (s *session) modeChanged(mode string) {
+func (s *session) modeChanged(mode claudeagent.PermissionMode) {
 	s.cfg.mu.Lock()
 	news := mode != "" && mode != s.cfg.mode
 	if news {
@@ -239,7 +239,7 @@ func (s *session) modeChanged(mode string) {
 // followInit follows what a turn's system/init says of the model, mode
 // and fast mode; the client is told of what changed.
 func (s *session) followInit(m *claudeagent.SystemInit) {
-	s.modeChanged(string(m.PermissionMode))
+	s.modeChanged(m.PermissionMode)
 	c := &s.cfg
 	c.mu.Lock()
 	news := false
