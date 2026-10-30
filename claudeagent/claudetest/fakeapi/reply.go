@@ -91,26 +91,117 @@ func fill(b *Block, vals map[string]string) {
 	}
 }
 
+// apiMessage is an assistant message as the API sends it: whole, or
+// empty in message_start.
+type apiMessage struct {
+	ID           string  `json:"id"`
+	Type         string  `json:"type"` // "message"
+	Role         string  `json:"role"` // "assistant"
+	Model        string  `json:"model"`
+	Content      []any   `json:"content"`       // textBlock, thinkingBlock, toolUseBlock
+	StopReason   *string `json:"stop_reason"`   // null until message_delta
+	StopSequence *string `json:"stop_sequence"` // always null: the fake has none
+	Usage        Usage   `json:"usage"`
+}
+
+// The content blocks, whole or (empty) in content_block_start.
+type (
+	textBlock struct {
+		Type string `json:"type"` // "text"
+		Text string `json:"text"`
+	}
+	thinkingBlock struct {
+		Type      string `json:"type"` // "thinking"
+		Thinking  string `json:"thinking"`
+		Signature string `json:"signature"`
+	}
+	toolUseBlock struct {
+		Type  string          `json:"type"` // "tool_use"
+		ID    string          `json:"id"`
+		Name  string          `json:"name"`
+		Input json.RawMessage `json:"input"`
+	}
+)
+
+// The server-sent events' data, each named by its Type.
+type (
+	messageStart struct {
+		Type    string     `json:"type"` // "message_start"
+		Message apiMessage `json:"message"`
+	}
+	ping struct {
+		Type string `json:"type"` // "ping"
+	}
+	blockStart struct {
+		Type         string `json:"type"` // "content_block_start"
+		Index        int    `json:"index"`
+		ContentBlock any    `json:"content_block"` // an empty block
+	}
+	blockDelta struct {
+		Type  string `json:"type"` // "content_block_delta"
+		Index int    `json:"index"`
+		Delta any    `json:"delta"` // textDelta, thinkingDelta, inputDelta or signatureDelta
+	}
+	blockStop struct {
+		Type  string `json:"type"` // "content_block_stop"
+		Index int    `json:"index"`
+	}
+	messageDelta struct {
+		Type  string    `json:"type"` // "message_delta"
+		Delta stopDelta `json:"delta"`
+		Usage Usage     `json:"usage"`
+	}
+	messageStop struct {
+		Type string `json:"type"` // "message_stop"
+	}
+)
+
+// The deltas: a piece of a block, or its signature.
+type (
+	textDelta struct {
+		Type string `json:"type"` // "text_delta"
+		Text string `json:"text"`
+	}
+	thinkingDelta struct {
+		Type     string `json:"type"` // "thinking_delta"
+		Thinking string `json:"thinking"`
+	}
+	inputDelta struct {
+		Type        string `json:"type"` // "input_json_delta"
+		PartialJSON string `json:"partial_json"`
+	}
+	signatureDelta struct {
+		Type      string `json:"type"` // "signature_delta"
+		Signature string `json:"signature"`
+	}
+)
+
+// stopDelta is message_delta's: why the reply stopped.
+type stopDelta struct {
+	StopReason   string          `json:"stop_reason"`
+	StopSequence *string         `json:"stop_sequence"` // always null
+	StopDetails  json.RawMessage `json:"stop_details,omitempty"`
+}
+
 // message is the whole reply as an API message, as a request without
 // stream gets it.
-func (r *reply) message() map[string]any {
-	content := make([]map[string]any, 0, len(r.blocks))
+func (r *reply) message() apiMessage {
+	content := make([]any, 0, len(r.blocks))
 	for _, b := range r.blocks {
 		content = append(content, whole(b))
 	}
-	return map[string]any{"id": r.id, "type": "message", "role": "assistant", "model": r.model, "content": content,
-		"stop_reason": r.stop, "stop_sequence": nil, "usage": r.usage}
+	return apiMessage{ID: r.id, Type: "message", Role: "assistant", Model: r.model, Content: content, StopReason: &r.stop, Usage: r.usage}
 }
 
 // whole is b complete, as the API's message has it.
-func whole(b Block) map[string]any {
+func whole(b Block) any {
 	switch b.Type {
 	case "thinking":
-		return map[string]any{"type": "thinking", "thinking": b.Thinking, "signature": b.Signature}
+		return thinkingBlock{Type: "thinking", Thinking: b.Thinking, Signature: b.Signature}
 	case "tool_use":
-		return map[string]any{"type": "tool_use", "id": b.ID, "name": b.Name, "input": b.Input}
+		return toolUseBlock{Type: "tool_use", ID: b.ID, Name: b.Name, Input: b.Input}
 	default:
-		return map[string]any{"type": "text", "text": b.Text}
+		return textBlock{Type: "text", Text: b.Text}
 	}
 }
 
@@ -126,41 +217,32 @@ func (r *reply) events() (body, end []event) {
 	start := r.usage
 	start.OutputTokens = 1
 	body = []event{
-		{"message_start", map[string]any{"type": "message_start", "message": map[string]any{
-			"id": r.id, "type": "message", "role": "assistant", "model": r.model, "content": []any{},
-			"stop_reason": nil, "stop_sequence": nil, "usage": start,
+		{"message_start", messageStart{Type: "message_start", Message: apiMessage{
+			ID: r.id, Type: "message", Role: "assistant", Model: r.model, Content: []any{}, Usage: start,
 		}}},
-		{"ping", map[string]any{"type": "ping"}},
+		{"ping", ping{Type: "ping"}},
 	}
 	for i, b := range r.blocks {
 		body = append(body, blockEvents(i, b)...)
 	}
-	delta := map[string]any{"stop_reason": r.stop, "stop_sequence": nil}
-	if len(r.turn.StopDetails) > 0 {
-		delta["stop_details"] = r.turn.StopDetails
-	}
 	end = []event{
-		{"message_delta", map[string]any{"type": "message_delta", "delta": delta, "usage": r.usage}},
-		{"message_stop", map[string]any{"type": "message_stop"}},
+		{"message_delta", messageDelta{Type: "message_delta", Delta: stopDelta{StopReason: r.stop, StopDetails: r.turn.StopDetails}, Usage: r.usage}},
+		{"message_stop", messageStop{Type: "message_stop"}},
 	}
 	return body, end
 }
 
 // blockEvents are block i's start, deltas and stop.
 func blockEvents(i int, b Block) []event {
-	var start map[string]any
-	var kind, key string
+	var start any
 	var whole string
 	switch b.Type {
 	case "thinking":
-		start = map[string]any{"type": "thinking", "thinking": "", "signature": ""}
-		kind, key, whole = "thinking_delta", "thinking", b.Thinking
+		start, whole = thinkingBlock{Type: "thinking"}, b.Thinking
 	case "tool_use":
-		start = map[string]any{"type": "tool_use", "id": b.ID, "name": b.Name, "input": map[string]any{}}
-		kind, key, whole = "input_json_delta", "partial_json", string(b.Input)
+		start, whole = toolUseBlock{Type: "tool_use", ID: b.ID, Name: b.Name, Input: json.RawMessage(`{}`)}, string(b.Input)
 	default:
-		start = map[string]any{"type": "text", "text": ""}
-		kind, key, whole = "text_delta", "text", b.Text
+		start, whole = textBlock{Type: "text"}, b.Text
 	}
 	pieces := b.Deltas
 	switch {
@@ -170,16 +252,28 @@ func blockEvents(i int, b Block) []event {
 	default:
 		pieces = []string{whole}
 	}
-	evs := []event{{"content_block_start", map[string]any{"type": "content_block_start", "index": i, "content_block": start}}}
+	evs := []event{{"content_block_start", blockStart{Type: "content_block_start", Index: i, ContentBlock: start}}}
 	for _, p := range pieces {
-		evs = append(evs, event{"content_block_delta", map[string]any{"type": "content_block_delta", "index": i,
-			"delta": map[string]any{"type": kind, key: p}}})
+		evs = append(evs, event{"content_block_delta", blockDelta{Type: "content_block_delta", Index: i, Delta: piece(b.Type, p)}})
 	}
 	if b.Type == "thinking" {
-		evs = append(evs, event{"content_block_delta", map[string]any{"type": "content_block_delta", "index": i,
-			"delta": map[string]any{"type": "signature_delta", "signature": b.Signature}}})
+		evs = append(evs, event{"content_block_delta", blockDelta{Type: "content_block_delta", Index: i,
+			Delta: signatureDelta{Type: "signature_delta", Signature: b.Signature}}})
 	}
-	return append(evs, event{"content_block_stop", map[string]any{"type": "content_block_stop", "index": i}})
+	return append(evs, event{"content_block_stop", blockStop{Type: "content_block_stop", Index: i}})
+}
+
+// piece is a delta of a block of type blockType: p, a piece of its text,
+// thinking or input JSON.
+func piece(blockType, p string) any {
+	switch blockType {
+	case "thinking":
+		return thinkingDelta{Type: "thinking_delta", Thinking: p}
+	case "tool_use":
+		return inputDelta{Type: "input_json_delta", PartialJSON: p}
+	default:
+		return textDelta{Type: "text_delta", Text: p}
+	}
 }
 
 // halves is s in two pieces, cut at a rune's start, so a client sees
