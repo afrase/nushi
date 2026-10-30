@@ -42,6 +42,7 @@ type Fake struct {
 	signals   []os.Signal
 	err       error
 	exitErr   error
+	ending    chan struct{} // closed as the fake starts to exit, before its pipes close
 	exited    chan struct{}
 	played    chan struct{}
 	end       sync.Once
@@ -74,7 +75,7 @@ type responder struct {
 
 // New makes a fake that plays steps.
 func New(steps ...Step) *Fake {
-	return &Fake{steps: steps, exited: make(chan struct{}), played: make(chan struct{}), lines: make(chan stdinLine)}
+	return &Fake{steps: steps, ending: make(chan struct{}), exited: make(chan struct{}), played: make(chan struct{}), lines: make(chan stdinLine)}
 }
 
 // Respond has the fake answer every stdin line that matches match (as
@@ -178,7 +179,7 @@ func (f *Fake) play() {
 			return
 		}
 		select {
-		case <-f.exited: // a signal ended it
+		case <-f.ending: // a signal ended it
 			return
 		default:
 		}
@@ -234,10 +235,14 @@ func (f *Fake) playing(st Step) {
 	})
 }
 
-// exit ends the fake once: its pipes close and Wait returns err.
+// exit ends the fake once: its pipes close and Wait returns err. ending
+// is closed first, so a step that fails on the closed pipes sees the fake
+// has ended and doesn't count as the script's failure; exited last, so
+// what Wait's caller writes after fails, as it would to a claude gone.
 func (f *Fake) exit(err error) {
 	f.end.Do(func() {
 		f.exitErr = err
+		close(f.ending)
 		_ = f.stdout.Close()
 		_ = f.stderr.Close()
 		_ = f.stdin.CloseWithError(io.ErrClosedPipe) // what writes to it now fails
