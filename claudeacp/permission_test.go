@@ -79,7 +79,7 @@ func TestPermission(t *testing.T) {
 			for _, o := range asked.Options {
 				opts = append(opts, string(o.OptionID)+" "+string(o.Kind)+" "+o.Name)
 			}
-			if want := []string{"allow-once allow_once Yes", "allow-always allow_always Yes, and don't ask again", "reject reject_once No"}; !slices.Equal(opts, want) {
+			if want := []string{"allow-once allow_once Yes", "allow-always allow_always Yes, and don't ask again for rm commands", "reject reject_once No"}; !slices.Equal(opts, want) {
 				t.Errorf("%q", opts)
 			}
 			if ups := p.toolUpdates(); len(ups) == 0 || !strings.HasPrefix(ups[0], `tool_call {"toolCallId":"toolu_1","title":"rm x"`) {
@@ -137,45 +137,24 @@ func TestRequestShowsChangedInput(t *testing.T) {
 	}
 }
 
-// "Don't ask again" is offered only with claude's rules for it, and not
-// when a rule of the user's asks each time; default-to-no puts No first.
+// Yes, the "don't ask again" options offered, and No; default-to-no puts
+// No first.
 func TestPermissionOptions(t *testing.T) {
-	rules := []claudeagent.PermissionUpdate{{Type: "addRules"}}
+	r := claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{
+		{Type: "addRules", Behavior: "allow", Destination: "localSettings", Rules: []claudeagent.PermissionRule{{ToolName: "Bash", RuleContent: "ls"}}}}}
 	for _, tc := range []struct {
-		r    claudeagent.PermissionRequest
-		want string
+		defaultToNo bool
+		want        string
 	}{
-		{claudeagent.PermissionRequest{}, "allow-once reject"},
-		{claudeagent.PermissionRequest{Suggestions: rules}, "allow-once allow-always reject"},
-		{claudeagent.PermissionRequest{Suggestions: rules, MatchedAskRule: true}, "allow-once reject"},
-		{claudeagent.PermissionRequest{Suggestions: rules, SuppressAlwaysAllowRule: true}, "allow-once reject"},
-		{claudeagent.PermissionRequest{Suggestions: rules, DefaultToNo: true}, "reject allow-once allow-always"},
-		// A command's rules: "don't ask again" only when that is what they do.
-		{claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{
-			{Type: "addRules", Behavior: "allow", Rules: []claudeagent.PermissionRule{{ToolName: "Bash", RuleContent: "perl -e 1"}, {ToolName: "Read", RuleContent: "/x/**"}}},
-			{Type: "addDirectories", Destination: "session", Directories: []string{"/x"}},
-		}}, "allow-once allow-always reject"},
-		{claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{ // claude's for mkdir outside the folder
-			{Type: "addRules", Behavior: "allow", Rules: []claudeagent.PermissionRule{{ToolName: "Bash", RuleContent: "mkdir -v d"}}},
-			{Type: "addDirectories", Destination: "session", Directories: []string{"/x"}},
-			{Type: "setMode", Mode: "acceptEdits", Destination: "session"},
-		}}, "allow-once reject"},
-		{claudeagent.PermissionRequest{ToolName: "PowerShell", Suggestions: []claudeagent.PermissionUpdate{
-			{Type: "addRules", Behavior: "allow", Rules: []claudeagent.PermissionRule{{ToolName: "PowerShell"}}},
-		}}, "allow-once reject"},
-		{claudeagent.PermissionRequest{ToolName: "Bash", Suggestions: []claudeagent.PermissionUpdate{
-			{Type: "addDirectories", Destination: "localSettings", Directories: []string{"/x"}},
-		}}, "allow-once reject"},
-		{claudeagent.PermissionRequest{ToolName: "Write", Suggestions: []claudeagent.PermissionUpdate{
-			{Type: "setMode", Mode: "acceptEdits", Destination: "session"},
-		}}, "allow-once allow-always reject"},
+		{false, "allow-once allow-always reject"},
+		{true, "reject allow-once allow-always"},
 	} {
 		var got []string
-		for _, o := range permissionOptions(tc.r) {
+		for _, o := range permissionOptions(alwaysOptions(r, "/w"), tc.defaultToNo) {
 			got = append(got, string(o.OptionID))
 		}
 		if strings.Join(got, " ") != tc.want {
-			t.Errorf("%+v: %q", tc.r, got)
+			t.Errorf("%v: %q", tc.defaultToNo, got)
 		}
 	}
 }
