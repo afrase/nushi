@@ -6,7 +6,6 @@ import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
-import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/pull_states.dart';
@@ -233,8 +232,9 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// A chat in the list: click opens it, double-click renames it, a
-/// right-click opens its menu, and dragged ([movable]) it moves within
+/// A chat in the list: click opens it, a right-click opens its menu
+/// (Rename among it: a second click on a chat slow to open must not
+/// start a rename), and dragged ([movable]) it moves within
 /// its list. A pinned chat's ([project]) says its project after its title,
 /// muted, in the place of its branch or Jira key.
 class _ChatRow extends StatefulWidget {
@@ -261,12 +261,6 @@ class _ChatRow extends StatefulWidget {
 
 class _ChatRowState extends State<_ChatRow> {
   bool _renaming = false;
-  final _double = DoubleClick();
-
-  void _tap() {
-    if (_double()) setState(() => _renaming = true);
-    widget.daemon.select(widget.chat.id);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -290,7 +284,7 @@ class _ChatRowState extends State<_ChatRow> {
               onRename: () => setState(() => _renaming = true),
             ),
             builder: (context, open) => Tap(
-              onTap: _tap,
+              onTap: () => daemon.select(chat.id),
               onSecondaryTapUp: (d) => open(d.localPosition),
               selected: daemon.selectedId == chat.id,
               padding: EdgeInsets.symmetric(
