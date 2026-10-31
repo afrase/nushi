@@ -8,7 +8,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
@@ -23,10 +22,10 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
-/// model and status, the folder while the details panel is hidden, the
-/// Chat | Changes (| Pull request, while it has one) switch, the
-/// terminal's and the panel's buttons and the chat's menu. (The files it
-/// wrote are in the details panel's Artifacts widget.)
+/// model and status, the Chat | Changes (| Pull request, while it has one)
+/// switch, the terminal's and the panel's buttons and the chat's menu. (Its
+/// folder is in the sidebar and the details panel's Environment widget; the
+/// files it wrote are in Artifacts.)
 class ChatHeader extends StatefulWidget {
   const new(
     this.chat,
@@ -42,7 +41,7 @@ class ChatHeader extends StatefulWidget {
   final Daemon daemon;
   final ChatTab tab;
   final ValueChanged<ChatTab> onTab;
-  final bool panel; // the details panel shows, with the folder in it
+  final bool panel; // the details panel shows
   final VoidCallback? onPanel; // shows or hides it; null when it can't show
 
   @override
@@ -156,7 +155,7 @@ class _ChatHeaderState extends State<ChatHeader> {
     final t = NushiTheme.of(context).t;
     final theme = NushiTheme.of(context);
     final chat = widget.chat;
-    // Controls and groups of them, and what's around the Expanded folder;
+    // Controls and groups of them, and what's around the row's free space;
     // with no room to spare, what the row has always taken, in the gutters
     // the transcript has (its fold's numbers are the same either way).
     final roomy = folds.roomy;
@@ -247,19 +246,7 @@ class _ChatHeaderState extends State<ChatHeader> {
             ChatStatusWord(chat, style: meta),
           ],
           SizedBox(width: around),
-          Expanded(
-            // The folder, unless the panel has it or there's no room: it
-            // goes before anything folds.
-            child: LayoutBuilder(
-              builder: (context, box) =>
-                  widget.panel || box.maxWidth < 90 || folds.any
-                  ? const SizedBox.shrink()
-                  : Align(
-                      alignment: Alignment.centerRight,
-                      child: FolderButton(chat: chat, daemon: widget.daemon),
-                    ),
-            ),
-          ),
+          const Spacer(),
           SizedBox(width: around),
           if (chat.side.value != null && chat.sideHidden.value) ...[
             SideChip(chat),
