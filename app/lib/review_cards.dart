@@ -228,6 +228,7 @@ class UnsentReview extends StatelessWidget {
             children: [
               Flexible(
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   spacing: 6,
                   children: [
                     Icon(
