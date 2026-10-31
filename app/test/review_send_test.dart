@@ -6,6 +6,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -85,6 +86,12 @@ void main() {
     await expectLater(
       find.byType(NushiApp),
       matchesGoldenFile('goldens/review_unsent_1700_dark.png'),
+    );
+    // Its links follow the words, not the bar's far end.
+    expect(
+      tester.getTopLeft(find.text('Send to agent')).dx -
+          tester.getTopRight(find.textContaining('review comments in')).dx,
+      lessThanOrEqualTo(NushiTheme.barGap),
     );
 
     await tester.tap(find.text('Send to agent'));
