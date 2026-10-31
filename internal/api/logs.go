@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
+	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/logs"
 )
 
@@ -65,12 +67,21 @@ func (l logCalls) ended(procedure string, took time.Duration, err error) {
 	case err != nil && (errors.Is(err, context.Canceled) || connect.CodeOf(err) == connect.CodeCanceled):
 		log.Debug("api call cancelled")
 	case err != nil:
-		log.Warn("api call failed", "code", connect.CodeOf(err).String(), "err", err)
+		log.Warn("api call failed", "code", connect.CodeOf(err).String(), "err", loggable(err))
 	case took >= SlowCall:
 		log.Warn("api call slow")
 	default:
 		log.Debug("api call")
 	}
+}
+
+// loggable is err as the log says it: GitHub's refusal by its status, never
+// its words, which can quote what someone else wrote or what was sent.
+func loggable(err error) any {
+	if api, ok := errors.AsType[*githubapi.APIError](err); ok {
+		return "GitHub answered " + strconv.Itoa(api.Status)
+	}
+	return err
 }
 
 // LogPrefs keeps the debug setting (internal/store).
