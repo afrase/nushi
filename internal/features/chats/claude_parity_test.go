@@ -54,6 +54,36 @@ func TestClaudeParity(t *testing.T) {
 	}
 }
 
+// After a refusal's fallback both agents leave the model option on the
+// fallback model, which claude's list doesn't name: the chats above don't
+// compare options.
+func TestClaudeFallbackModel(t *testing.T) {
+	dir := filepath.Join("testdata", "claude-parity", "refusal")
+	skipUnrecorded(t, dir)
+	node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
+	want, got := lastModel(node), lastModel(runGoAgent(t, dir, sent, nil))
+	if want != "claude-opus-4-8" || got != want {
+		t.Errorf("the model option: the Go agent's %q, the adapter's %q", got, want)
+	}
+}
+
+// lastModel is the model option's value in the last config_option_update
+// of events.
+func lastModel(events []event) string {
+	v := ""
+	for _, e := range events {
+		if e.note == nil || e.note.Update.ConfigOptionUpdate == nil {
+			continue
+		}
+		for _, o := range e.note.Update.ConfigOptionUpdate.ConfigOptions {
+			if o.ID == "model" && o.Select != nil {
+				v = string(o.Select.CurrentValue)
+			}
+		}
+	}
+	return v
+}
+
 // differences says where the Go agent's chats (got) differ from the
 // adapter's (want): each item, usage or status that does, as JSON.
 func differences(got, want []parity) string {

@@ -103,3 +103,30 @@ func TestHookDeadline(t *testing.T) {
 		t.Errorf("deadlines seen: with deadline_ms %v, without %v", a, b)
 	}
 }
+
+// A hook's ctx ends once its answer is written, with a deadline or
+// without: what a context.AfterFunc of it writes reaches claude after the
+// answer.
+func TestHookContextEndsAfterAnswer(t *testing.T) {
+	session := make(chan *claudeagent.Session, 1)
+	ask := func(ctx context.Context, _ claudeagent.HookInput) (claudeagent.HookOutput, error) {
+		context.AfterFunc(ctx, func() {
+			s := <-session
+			session <- s
+			_, _ = s.Begin(context.WithoutCancel(ctx), "get_context_usage", struct{}{})
+		})
+		return claudeagent.HookOutput{}, nil
+	}
+	call := func(id, deadline string) []claudetest.Step {
+		return []claudetest.Step{
+			claudetest.Send(`{"type":"control_request","request_id":"` + id + `","request":{"subtype":"hook_callback","callback_id":"hook_0"` + deadline + `,"input":{}}}`),
+			claudetest.Expect(`{"type":"control_response","response":{"subtype":"success","request_id":"` + id + `"}}`),
+			claudetest.Expect(`{"type":"control_request","request":{"subtype":"get_context_usage"}}`),
+		}
+	}
+	s, f := start(t, claudeagent.Options{Hooks: map[claudeagent.HookEvent][]claudeagent.HookMatcher{
+		claudeagent.HookPostModelSwitch: {{Fn: ask}},
+	}}, append(call("c1", ""), call("c2", `,"deadline_ms":600000`)...)...)
+	session <- s
+	finish(t, s, f)
+}

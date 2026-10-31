@@ -99,7 +99,8 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 	s.plan.init(s.update)
 	s.cmds.send = s.update
 	o.Hooks = map[claudeagent.HookEvent][]claudeagent.HookMatcher{
-		claudeagent.HookPostToolUse: {{Fn: s.postToolUse}},
+		claudeagent.HookPostToolUse:     {{Fn: s.postToolUse}},
+		claudeagent.HookPostModelSwitch: {{Fn: s.postModelSwitch}},
 	}
 	o.CanUseTool, o.OnElicitation = s.canUseTool, s.elicit
 	s.stderr = newStderrLog(s.log, time.Now)

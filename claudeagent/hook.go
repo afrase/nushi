@@ -31,6 +31,7 @@ const (
 	HookSubagentStop       HookEvent = "SubagentStop"
 	HookPreCompact         HookEvent = "PreCompact"
 	HookPostCompact        HookEvent = "PostCompact"
+	HookPostModelSwitch    HookEvent = "PostModelSwitch"
 	HookNotification       HookEvent = "Notification"
 	HookPermissionRequest  HookEvent = "PermissionRequest"
 )
@@ -38,7 +39,8 @@ const (
 // HookFunc is a hook. Its ctx ends when claude withdraws the call, when
 // the call's deadline passes, if claude gave one, or when the session
 // closes. An answer returned after that isn't sent: claude has gone on
-// without it.
+// without it. Otherwise ctx ends once the answer is written, so what must
+// reach claude after the answer goes in a context.AfterFunc of ctx.
 type HookFunc func(ctx context.Context, in HookInput) (HookOutput, error)
 
 // HookMatcher is a hook and when it runs.
@@ -165,7 +167,7 @@ func (s *Session) hookCallback(ctx context.Context, raw json.RawMessage) (any, e
 	if r.DeadlineMS > 0 {
 		var cancel context.CancelFunc
 		hctx, cancel = context.WithTimeout(ctx, time.Duration(r.DeadlineMS)*time.Millisecond)
-		defer cancel()
+		context.AfterFunc(ctx, cancel) // not before the answer is written: ctx ends then
 	}
 	out, err := fn(hctx, in)
 	if hctx.Err() != nil && ctx.Err() == nil {

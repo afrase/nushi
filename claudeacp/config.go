@@ -2,8 +2,10 @@ package claudeacp
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -18,7 +20,7 @@ import (
 // mode, when the model has them; and the custom agent, when there are
 // some. They come from claude's answer to initialize, change when the
 // client sets them, and follow claude when it changes one itself (a
-// /model typed as a prompt, a plan approved).
+// /model typed as a prompt, a refusal's fallback, a plan approved).
 
 // The config options' ids, which clients key on.
 const (
@@ -262,6 +264,24 @@ func (c *config) modelChanged(model string) bool {
 	return false
 }
 
+// modelSwitched follows a switch claude reports, to the model id, and
+// says whether that changed the option. Unlike a turn's system/init, the
+// id is for sure the session's model: one the list doesn't name (a
+// refusal's fallback) is the option's value as it stands, as
+// claude-agent-acp leaves it, so a client shows it, and the model's
+// effort and fast options go until a listed model is back.
+func (c *config) modelSwitched(id string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	v, ok := c.lookup(id, c.model, false)
+	if !ok {
+		v = id
+	}
+	news := v != c.model
+	c.model = v
+	return news
+}
+
 // fastChanged follows claude's word on fast mode, "on" or "off"
 // ("cooldown" is a pause, not a change), and says whether it changed.
 func (c *config) fastChanged(state string) bool {
@@ -292,6 +312,46 @@ func (s *session) followInit(m *claudeagent.SystemInit) {
 	if s.fastState(m.FastModeState, "") || news {
 		s.cfg.sendOptions()
 	}
+}
+
+// modelName is a model's id as it may go to the client: the hook's is
+// claude's word, so one of another shape is passed over.
+var modelName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@/\[\]-]{0,199}$`)
+
+// postModelSwitch is claude's PostModelSwitch hook, called after the
+// session's model changes for any cause (docs/facts/claude.md): the
+// client's option and the window follow, the turn not waiting for its
+// next system/init or result. A switch the client asked for (sdk) is
+// known already, and one a resume restores says nothing new. The window
+// is asked for once claude has the hook's answer, as claude-agent-acp
+// asks, so the answer is the new model's.
+func (s *session) postModelSwitch(ctx context.Context, in claudeagent.HookInput) (claudeagent.HookOutput, error) {
+	s.caughtUp(ctx)
+	if sw, ok := readSwitch(in.Raw); ok && s.cfg.modelSwitched(sw.To) {
+		s.cfg.sendOptions()
+		m, value := s.cfg.currentModel()
+		gen, sure := s.win.seed(&s.a.windows, m, value, 200_000)
+		s.win.left(sw.From)
+		if !sure {
+			context.AfterFunc(ctx, func() { s.askWindow(ctx, gen) })
+		}
+	}
+	return claudeagent.HookOutput{}, nil
+}
+
+// switched is what the PostModelSwitch hook says of a switch.
+type switched struct {
+	From   string `json:"from_model"`
+	To     string `json:"to_model"`
+	Source string `json:"source"`
+}
+
+// readSwitch reads the hook's input, and says whether it is a switch to
+// follow.
+func readSwitch(raw json.RawMessage) (switched, bool) {
+	var sw switched
+	err := json.Unmarshal(raw, &sw)
+	return sw, err == nil && sw.Source != "sdk" && sw.Source != "resume" && modelName.MatchString(sw.To)
 }
 
 // fastState follows claude's word on fast mode (config.fastChanged).
