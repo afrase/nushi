@@ -8,6 +8,8 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'fake_daemon.dart';
+
 const _flow = 'graph TD\n  A[Start] --> B[End]';
 
 /// A 1×1 PNG.
@@ -38,28 +40,48 @@ Future<DrawnDiagram> _draw(
   return DrawnDiagram(png: Uint8List.fromList(_png), width: 300, height: 120);
 }
 
-Future<void> _show(WidgetTester tester, String text, {bool live = false}) =>
-    tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SizedBox(
-            width: 600,
-            child: SingleChildScrollView(
-              child: AgentMarkdown(text, live: live),
-            ),
-          ),
-        ),
+Future<void> _show(
+  WidgetTester tester,
+  String text, {
+  bool live = false,
+  Tokens tokens = Tokens.dark,
+}) => tester.pumpWidget(
+  MaterialApp(
+    theme: NushiTheme(tokens).toThemeData(),
+    home: Scaffold(
+      body: SizedBox(
+        width: 600,
+        child: SingleChildScrollView(child: AgentMarkdown(text, live: live)),
       ),
-    );
+    ),
+  ),
+);
 
 void main() {
+  setUpAll(loadFonts);
+
   setUp(() {
     _asked.clear();
     _hold = null;
     forgetDiagrams();
     drawDiagram = _draw;
   });
+
+  for (final (name, tokens) in [
+    ('dark', Tokens.dark),
+    ('light', Tokens.light),
+  ]) {
+    testWidgets('golden: the block’s tabs, $name', (tester) async {
+      await _show(tester, 'Here:\n\n```mermaid\n$_flow\n```\n', tokens: tokens);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Source'));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(AgentMarkdown),
+        matchesGoldenFile('goldens/mermaid_tabs_$name.png'),
+      );
+    });
+  }
 
   testWidgets('a mermaid block: drawing, then the diagram, and its Source', (
     tester,

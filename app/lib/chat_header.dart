@@ -12,6 +12,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
@@ -266,10 +267,11 @@ class _ChatHeaderState extends State<ChatHeader> {
               label: Text(_tabs(chat).firstWhere((s) => s.$1 == widget.tab).$2),
             )
           else
-            Segmented(
+            PlainTabs(
               value: widget.tab,
-              segments: _tabs(chat),
+              tabs: _tabs(chat),
               onChanged: widget.onTab,
+              fill: true,
               tooltip: (t) =>
                   '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
                   'before',

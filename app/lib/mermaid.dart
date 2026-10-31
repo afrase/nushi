@@ -7,8 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:markdown_view/markdown_view.dart';
 
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
 
 /// A Mermaid diagram as the Mac drew it: a PNG of [width] by [height]
 /// points, or the [error] that stopped it; with [retry] when that was the
@@ -177,10 +177,11 @@ class _MermaidBlockState extends State<MermaidBlock> {
       code: code,
       style: style,
       actions: [
-        Segmented(
+        PlainTabs(
           value: _source,
-          segments: const [(false, 'Diagram'), (true, 'Source')],
+          tabs: const [(false, 'Diagram'), (true, 'Source')],
           onChanged: (v) => setState(() => _source = v),
+          fill: true,
         ),
         const SizedBox(width: 2),
       ],

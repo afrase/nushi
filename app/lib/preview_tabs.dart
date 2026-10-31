@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -202,60 +203,46 @@ class _Tab extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return Hover(
-      builder: (context, {required hover}) => Stack(
-        fit: StackFit.expand,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Pressable(
-                  onTap: () => chat.openPreview(file),
-                  tooltip: file,
-                  builder: (context, look) => Container(
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.only(left: _nameInset),
-                    foregroundDecoration: focusRing(t, look),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.code(
-                        showing
-                            ? t.text
-                            : hover
-                            ? t.textSecondary
-                            : t.textMuted,
-                        size: 12,
-                      ),
+      builder: (context, {required hover}) => TabFace(
+        showing: showing,
+        child: Row(
+          children: [
+            Expanded(
+              child: Pressable(
+                onTap: () => chat.openPreview(file),
+                tooltip: file,
+                builder: (context, look) => Container(
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.only(left: _nameInset),
+                  foregroundDecoration: focusRing(t, look),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.code(
+                      tabText(t, showing: showing, hover: hover),
+                      size: 12,
                     ),
                   ),
                 ),
               ),
-              SizedBox(
-                width: _closeRoom,
-                child: Opacity(
-                  opacity: hover || showing ? 1 : 0,
-                  child: IconTap(
-                    Icons.close,
-                    size: 12,
-                    padding: 3,
-                    tooltip: 'Close tab',
-                    onTap: () => chat.closePreviewFile(file),
-                  ),
+            ),
+            SizedBox(
+              width: _closeRoom,
+              child: Opacity(
+                opacity: hover || showing ? 1 : 0,
+                child: IconTap(
+                  Icons.close,
+                  size: 12,
+                  padding: 3,
+                  tooltip: 'Close tab',
+                  onTap: () => chat.closePreviewFile(file),
                 ),
               ),
-            ],
-          ),
-          if (showing)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 2,
-              child: ColoredBox(color: t.textMuted),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

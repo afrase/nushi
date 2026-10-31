@@ -10,7 +10,7 @@ The owner couldn't tell what was clickable: Settings › General's terminal font
   - **LinkText**: the link color, underlined under the pointer; for going somewhere from within text ("Settings › Agents"), never for an action.
   - **IconTap**: an icon with a hover tint and a tooltip, only where the icon alone is clear in its place (close, back, open in the browser, a refresh beside "Updated 3m ago").
   - **DragGrip**: six dots on a draggable card's title row under the pointer, with the open hand (the closed hand while dragged).
-- **Plain text is never clickable.** `Menu` has no face of its own: it opens from one of the controls above or a row's right-click. `Tap` stays for list rows and tabs (a hover tint and the pointing hand, often a selected tint) and disclosures with their triangle.
+- **Plain text is never clickable.** `Menu` has no face of its own: it opens from one of the controls above or a row's right-click. `Tap` stays for list rows and tabs (a hover tint and the pointing hand, often a selected tint) and disclosures with their triangle. Amended (2026-10-31): a view's tabs are `PlainTabs`, labels with a line (ADR 0071), the one kind of plain text that's clickable, as the pane's file tabs already were.
 - **⌘ keys**: ⌘1–⌘9, ⌘[ and ⌘] switch chats everywhere (holding ⌘ numbers them in the sidebar); a terminal's tabs and the Jira view's lists, which had ⌘1–9, take ⌥⌘1–9.
 
 ## Consequences
