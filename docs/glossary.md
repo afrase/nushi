@@ -81,6 +81,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell`, `CardList` (`card_list.dart`) | 0009 |
 | **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_widget.dart`, `FileRows`, the phone's `ArtifactsScreen` | |
 | **Preview** | An artifact shown in the side pane (or full screen on the phone), kept current as it changes; Preview and Source. | `preview.dart`, `WatchChatFile`, `internal/filewatch` | 0057 |
+| **Preview tab** | One of the files open in the preview, when two or more are: names in the side pane's title row, in place of the file's. In memory, and gone with the pane. Only the one showing has a view. | `ChatState.previewFiles`, `preview_tabs.dart` | 0070 |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Read-only toward git. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |

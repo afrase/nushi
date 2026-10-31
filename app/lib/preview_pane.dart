@@ -9,15 +9,17 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
+import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart';
 
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
-/// its name (a menu of the chat's other files), Live while the daemon
-/// keeps it current, Preview or Source (a file that renders), Reload and
-/// Open in browser (a page, not a diagram), Show in Finder and Close.
-/// Read-only.
+/// its name (a menu of the chat's other files; with several files open, the
+/// tabs of them all, [PreviewTabs]), Live while the daemon keeps it current,
+/// Preview or Source (a file that renders), Reload and Open in browser (a
+/// page, not a diagram), Show in Finder and Close, which closes every tab.
+/// Read-only. It's one file's view, made again as its tab shows.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -25,12 +27,17 @@ class PreviewPane extends StatefulWidget {
     required this.path,
     required this.onClose,
     super.key,
+    this.tabsKey,
   });
 
   final ChatState chat;
   final Daemon daemon;
   final String path; // as the tool row names it
   final VoidCallback onClose;
+
+  /// The key of its [PreviewTabs], from outside a view that's keyed by file,
+  /// so the tabs' row outlives it.
+  final Key? tabsKey;
 
   @override
   State<PreviewPane> createState() => _PreviewPaneState();
@@ -49,7 +56,7 @@ class _PreviewPaneState extends State<PreviewPane> {
   late final DiagramHost? _diagram = _kind == PreviewKind.mermaid
       ? newDiagramHost()
       : null;
-  bool _source = false;
+  late bool _source = widget.chat.previewSources.contains(widget.path);
 
   @override
   void dispose() {
@@ -66,6 +73,16 @@ class _PreviewPaneState extends State<PreviewPane> {
   }
 
   void _reveal() => revealInFinder(_abs).ignore();
+
+  void _showSource(bool source) {
+    setState(() => _source = source);
+    final sources = widget.chat.previewSources;
+    if (source) {
+      sources.add(widget.path);
+    } else {
+      sources.remove(widget.path);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,73 +110,92 @@ class _PreviewPaneState extends State<PreviewPane> {
           inset: 12,
           child: LayoutBuilder(
             builder: (context, box) => ListenableBuilder(
-              listenable: _watch,
-              builder: (context, _) => Row(
-                spacing: 8,
-                children: [
-                  Icon(
-                    switch (kind) {
-                      PreviewKind.image => Icons.image_outlined,
-                      PreviewKind.html || PreviewKind.svg => Icons.web_outlined,
-                      PreviewKind.mermaid => Icons.account_tree_outlined,
-                      PreviewKind.code => Icons.code,
-                      _ => Icons.description_outlined,
-                    },
-                    size: 14,
-                    color: t.textSecondary,
-                  ),
-                  // The name opens the chat's other files.
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: FilesMenu(
-                        chat: widget.chat,
-                        current: widget.path,
-                        tooltip: (_) => _watch.file?.path ?? widget.path,
-                        label: (_) => Text(
-                          baseName(widget.path),
-                          style: theme.code(t.text, size: 12),
+              listenable: Listenable.merge([_watch, widget.chat.previewFiles]),
+              builder: (context, _) {
+                final files = widget.chat.previewFiles.value;
+                final tabs = files.length > 1;
+                // A tab's file on its way keeps Live's room: a pick would
+                // otherwise widen the tabs' row for a moment, and move it.
+                final coming =
+                    tabs && _watch.file == null && _watch.error.isEmpty;
+                return Row(
+                  spacing: 8,
+                  children: [
+                    Icon(
+                      switch (kind) {
+                        PreviewKind.image => Icons.image_outlined,
+                        PreviewKind.html ||
+                        PreviewKind.svg => Icons.web_outlined,
+                        PreviewKind.mermaid => Icons.account_tree_outlined,
+                        PreviewKind.code => Icons.code,
+                        _ => Icons.description_outlined,
+                      },
+                      size: 14,
+                      color: t.textSecondary,
+                    ),
+                    // The name opens the chat's other files; several open,
+                    // their tabs take its place.
+                    Expanded(
+                      child: tabs
+                          ? PreviewTabs(
+                              key: widget.tabsKey,
+                              chat: widget.chat,
+                              files: files,
+                              current: widget.path,
+                            )
+                          : Align(
+                              alignment: Alignment.centerLeft,
+                              child: FilesMenu(
+                                chat: widget.chat,
+                                current: widget.path,
+                                tooltip: (_) =>
+                                    _watch.file?.path ?? widget.path,
+                                label: (_) => Text(
+                                  baseName(widget.path),
+                                  style: theme.code(t.text, size: 12),
+                                ),
+                              ),
+                            ),
+                    ),
+                    if (_watch.live || coming)
+                      Visibility.maintain(
+                        visible: _watch.live,
+                        child: LiveMark(version: _watch.file),
+                      ),
+                    if (kind.rendered)
+                      SourceSwitch(source: _source, onChanged: _showSource),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (box.maxWidth < _foldsBelow)
+                          MenuIcon(
+                            Icons.more_horiz,
+                            tooltip: 'More',
+                            filter: false,
+                            entries: [
+                              for (final (icon, tooltip, _, onTap) in actions)
+                                MenuEntry(tooltip, icon: icon, onPick: onTap),
+                            ],
+                          )
+                        else
+                          for (final (icon, tooltip, size, onTap) in actions)
+                            IconTap(
+                              icon,
+                              tooltip: tooltip,
+                              size: size,
+                              onTap: onTap,
+                            ),
+                        IconTap(
+                          Icons.close,
+                          tooltip: 'Close',
+                          size: 15,
+                          onTap: widget.onClose,
                         ),
-                      ),
+                      ],
                     ),
-                  ),
-                  if (_watch.live) LiveMark(version: _watch.file),
-                  if (kind.rendered)
-                    SourceSwitch(
-                      source: _source,
-                      onChanged: (v) => setState(() => _source = v),
-                    ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (box.maxWidth < _foldsBelow)
-                        MenuIcon(
-                          Icons.more_horiz,
-                          tooltip: 'More',
-                          filter: false,
-                          entries: [
-                            for (final (icon, tooltip, _, onTap) in actions)
-                              MenuEntry(tooltip, icon: icon, onPick: onTap),
-                          ],
-                        )
-                      else
-                        for (final (icon, tooltip, size, onTap) in actions)
-                          IconTap(
-                            icon,
-                            tooltip: tooltip,
-                            size: size,
-                            onTap: onTap,
-                          ),
-                      IconTap(
-                        Icons.close,
-                        tooltip: 'Close',
-                        size: 15,
-                        onTap: widget.onClose,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
         ),

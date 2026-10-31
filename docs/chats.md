@@ -35,7 +35,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 | ⌘[ and ⌘] | The chat before or after (View › Previous Chat, Next Chat). |
 | ⌃Tab, ⌃⇧Tab | Go through Chat, Changes and Pull request (when the chat has one). |
 | ⌃⌘1, ⌃⌘2, ⌃⌘3 | Show Chat, Changes or Pull Request (View menu). |
-| ⌘W | Close the preview showing (File › Close Tab). A focused terminal keeps it, to close itself. |
+| ⌘W | Close the preview tab showing, and with the last the pane (File › Close Tab). A focused terminal keeps it, to close itself. |
 | ⌘K, ⌘⇧P | The command palette. |
 | ⌘F | Find. |
 | ⌘P | Open file. |
@@ -102,7 +102,7 @@ Markdown, HTML, SVG and CSV have Preview and Source.
 
 - its tool row's Preview;
 - the Artifacts widget in the details panel, the open one marked. The palette's Artifacts… shows the panel and the widget, or lists them in a window too narrow for the panel;
-- the preview's own name.
+- the preview's own name, while one file is open.
 
 Each list shows the files the chat wrote that way, each with its folder and when it changed, in the same order:
 
@@ -113,6 +113,8 @@ Each list shows the files the chat wrote that way, each with its folder and when
 The widget, collapsed, counts the pinned and recent; with none of either, the three newest show. The phone's Artifacts list the same way, without pins.
 
 **An agent can open a preview itself.** Claude and Codex have a `show` tool, for a finished page, document or image. Their own permission prompt asks first, as for any MCP tool, and names the file; opening an HTML page runs it, so allowing the tool for good means pages open unasked. The file opens beside the chat if that chat's transcript is showing. If you're in another chat, in Changes or in a view, nothing moves: the latest file opens when you next come back to the transcript, and the row ("Showed report.html") keeps its Preview button either way. The phone doesn't open anything by itself; use the row's Preview. A file can be shown only if Preview could open it: an artifact inside the chat's folder or worktree, or one the chat wrote.
+
+**Preview tabs.** A second file opens beside the first: with two or more, the pane's title row shows their names as tabs in place of the file name, and nothing else moves. Every way of opening a file does this, the agent's `show` too, and a file already open goes to its tab. Click a name to show it. Its ✕ closes it, on the tab showing or under the pointer; the next one shows, and closing the last closes the pane, as the pane's own Close does with all of them. Names too long for the row shrink, then the row scrolls. Tabs aren't kept: they go with the pane. Only the tab showing has a view, so an HTML page starts again when you come back to it. The phone has no tabs: it opens previews full screen.
 
 **Open file** (⌘P, File › Open File…) opens any file that previews (code and text too) in the chat's folder that git doesn't ignore, matched as you type.
 

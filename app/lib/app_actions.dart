@@ -176,7 +176,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
           shown?.preview.value != null &&
           shown?.shownTab == ChatTab.chat &&
           !(Navigator.maybeOf(context)?.canPop() ?? false),
-      run: () => shown!.preview.value = null,
+      run: () => shown!.closePreviewFile(shown.preview.value!),
     ),
     AppAction(
       .artifacts,
