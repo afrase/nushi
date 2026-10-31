@@ -24339,6 +24339,7 @@ class GitHubPull extends $pb.GeneratedMessage {
     $core.String? pendingReview,
     $core.int? pendingComments,
     $core.int? commits,
+    GitHubMerge? merge,
   }) {
     final result = GitHubPull._();
     if (item != null) result.item = item;
@@ -24363,6 +24364,7 @@ class GitHubPull extends $pb.GeneratedMessage {
     if (pendingReview != null) result.pendingReview = pendingReview;
     if (pendingComments != null) result.pendingComments = pendingComments;
     if (commits != null) result.commits = commits;
+    if (merge != null) result.merge = merge;
     return result;
   }
 
@@ -24406,6 +24408,8 @@ class GitHubPull extends $pb.GeneratedMessage {
     ..aOS(20, _omitFieldNames ? '' : 'pendingReview')
     ..aI(21, _omitFieldNames ? '' : 'pendingComments')
     ..aI(22, _omitFieldNames ? '' : 'commits')
+    ..aOM<GitHubMerge>(23, _omitFieldNames ? '' : 'merge',
+        subBuilder: GitHubMerge.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -24611,6 +24615,407 @@ class GitHubPull extends $pb.GeneratedMessage {
   $core.bool hasCommits() => $_has(21);
   @$pb.TagNumber(22)
   void clearCommits() => $_clearField(22);
+
+  /// What merging it may do. Unset from a daemon before API 96.
+  @$pb.TagNumber(23)
+  GitHubMerge get merge => $_getN(22);
+  @$pb.TagNumber(23)
+  set merge(GitHubMerge value) => $_setField(23, value);
+  @$pb.TagNumber(23)
+  $core.bool hasMerge() => $_has(22);
+  @$pb.TagNumber(23)
+  void clearMerge() => $_clearField(23);
+  @$pb.TagNumber(23)
+  GitHubMerge ensureMerge() => $_ensure(22);
+}
+
+/// What merging an open pull request may do, as GitHub says for the viewer.
+class GitHubMerge extends $pb.GeneratedMessage {
+  factory GitHubMerge({
+    $core.Iterable<$core.String>? methods,
+    $core.String? defaultMethod,
+    $core.bool? canMerge,
+    $core.bool? canRebase,
+    $core.Iterable<$core.String>? blocks,
+    $core.bool? autoAllowed,
+    $core.bool? canEnableAuto,
+    $core.bool? canDisableAuto,
+    GitHubAutoMerge? auto,
+    $core.bool? queue,
+    $core.String? queueMethod,
+    GitHubQueueEntry? entry,
+    $core.bool? deleteBranch,
+  }) {
+    final result = GitHubMerge._();
+    if (methods != null) result.methods.addAll(methods);
+    if (defaultMethod != null) result.defaultMethod = defaultMethod;
+    if (canMerge != null) result.canMerge = canMerge;
+    if (canRebase != null) result.canRebase = canRebase;
+    if (blocks != null) result.blocks.addAll(blocks);
+    if (autoAllowed != null) result.autoAllowed = autoAllowed;
+    if (canEnableAuto != null) result.canEnableAuto = canEnableAuto;
+    if (canDisableAuto != null) result.canDisableAuto = canDisableAuto;
+    if (auto != null) result.auto = auto;
+    if (queue != null) result.queue = queue;
+    if (queueMethod != null) result.queueMethod = queueMethod;
+    if (entry != null) result.entry = entry;
+    if (deleteBranch != null) result.deleteBranch = deleteBranch;
+    return result;
+  }
+
+  GitHubMerge._();
+
+  factory GitHubMerge.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubMerge()..mergeFromBuffer(data, registry);
+  factory GitHubMerge.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubMerge()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubMerge',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubMerge.$_createMessage)
+    ..pPS(1, _omitFieldNames ? '' : 'methods')
+    ..aOS(2, _omitFieldNames ? '' : 'defaultMethod')
+    ..aOB(3, _omitFieldNames ? '' : 'canMerge')
+    ..aOB(4, _omitFieldNames ? '' : 'canRebase')
+    ..pPS(5, _omitFieldNames ? '' : 'blocks')
+    ..aOB(6, _omitFieldNames ? '' : 'autoAllowed')
+    ..aOB(7, _omitFieldNames ? '' : 'canEnableAuto')
+    ..aOB(8, _omitFieldNames ? '' : 'canDisableAuto')
+    ..aOM<GitHubAutoMerge>(9, _omitFieldNames ? '' : 'auto',
+        subBuilder: GitHubAutoMerge.$_createMessage)
+    ..aOB(10, _omitFieldNames ? '' : 'queue')
+    ..aOS(11, _omitFieldNames ? '' : 'queueMethod')
+    ..aOM<GitHubQueueEntry>(12, _omitFieldNames ? '' : 'entry',
+        subBuilder: GitHubQueueEntry.$_createMessage)
+    ..aOB(13, _omitFieldNames ? '' : 'deleteBranch')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubMerge clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubMerge copyWith(void Function(GitHubMerge) updates) =>
+      super.copyWith((message) => updates(message as GitHubMerge))
+          as GitHubMerge;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubMerge() / GitHubMerge.new instead')
+  static GitHubMerge create() => GitHubMerge._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubMerge._();
+  @$core.override
+  GitHubMerge createEmptyInstance() => GitHubMerge._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubMerge getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubMerge>(
+          GitHubMerge.$_createMessage);
+  static GitHubMerge? _defaultInstance;
+
+  /// The repository's methods, of merge, squash, rebase, without what
+  /// its base's rules forbid.
+  @$pb.TagNumber(1)
+  $pb.PbList<$core.String> get methods => $_getList(0);
+
+  /// The method the viewer used last, or the repository's.
+  @$pb.TagNumber(2)
+  $core.String get defaultMethod => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set defaultMethod($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDefaultMethod() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDefaultMethod() => $_clearField(2);
+
+  /// The viewer may merge here: write access or better.
+  @$pb.TagNumber(3)
+  $core.bool get canMerge => $_getBF(2);
+  @$pb.TagNumber(3)
+  set canMerge($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCanMerge() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCanMerge() => $_clearField(3);
+
+  /// GitHub could rebase it now.
+  @$pb.TagNumber(4)
+  $core.bool get canRebase => $_getBF(3);
+  @$pb.TagNumber(4)
+  set canRebase($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCanRebase() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCanRebase() => $_clearField(4);
+
+  /// What keeps it from merging now, none when ready: draft, conflicts,
+  /// checks_failing, checks_running, changes_requested,
+  /// review_required, threads, behind, rules (a rule GitHub doesn't
+  /// name), unknown (GitHub is working it out).
+  @$pb.TagNumber(5)
+  $pb.PbList<$core.String> get blocks => $_getList(4);
+
+  /// The repository allows auto-merge.
+  @$pb.TagNumber(6)
+  $core.bool get autoAllowed => $_getBF(5);
+  @$pb.TagNumber(6)
+  set autoAllowed($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasAutoAllowed() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearAutoAllowed() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.bool get canEnableAuto => $_getBF(6);
+  @$pb.TagNumber(7)
+  set canEnableAuto($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCanEnableAuto() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCanEnableAuto() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get canDisableAuto => $_getBF(7);
+  @$pb.TagNumber(8)
+  set canDisableAuto($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasCanDisableAuto() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearCanDisableAuto() => $_clearField(8);
+
+  /// Auto-merge turned on; unset when it's off.
+  @$pb.TagNumber(9)
+  GitHubAutoMerge get auto => $_getN(8);
+  @$pb.TagNumber(9)
+  set auto(GitHubAutoMerge value) => $_setField(9, value);
+  @$pb.TagNumber(9)
+  $core.bool hasAuto() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearAuto() => $_clearField(9);
+  @$pb.TagNumber(9)
+  GitHubAutoMerge ensureAuto() => $_ensure(8);
+
+  /// Its base has a merge queue, which merges by queue_method ( when
+  /// GitHub doesn't say): no direct merge then.
+  @$pb.TagNumber(10)
+  $core.bool get queue => $_getBF(9);
+  @$pb.TagNumber(10)
+  set queue($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasQueue() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearQueue() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get queueMethod => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set queueMethod($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasQueueMethod() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearQueueMethod() => $_clearField(11);
+
+  /// Its place in the queue; unset when it's not in it.
+  @$pb.TagNumber(12)
+  GitHubQueueEntry get entry => $_getN(11);
+  @$pb.TagNumber(12)
+  set entry(GitHubQueueEntry value) => $_setField(12, value);
+  @$pb.TagNumber(12)
+  $core.bool hasEntry() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearEntry() => $_clearField(12);
+  @$pb.TagNumber(12)
+  GitHubQueueEntry ensureEntry() => $_ensure(11);
+
+  /// The repository deletes a merged head branch itself.
+  @$pb.TagNumber(13)
+  $core.bool get deleteBranch => $_getBF(12);
+  @$pb.TagNumber(13)
+  set deleteBranch($core.bool value) => $_setBool(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasDeleteBranch() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearDeleteBranch() => $_clearField(13);
+}
+
+class GitHubAutoMerge extends $pb.GeneratedMessage {
+  factory GitHubAutoMerge({
+    $core.String? by,
+    $core.String? method,
+    $fixnum.Int64? enabledMs,
+  }) {
+    final result = GitHubAutoMerge._();
+    if (by != null) result.by = by;
+    if (method != null) result.method = method;
+    if (enabledMs != null) result.enabledMs = enabledMs;
+    return result;
+  }
+
+  GitHubAutoMerge._();
+
+  factory GitHubAutoMerge.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubAutoMerge()..mergeFromBuffer(data, registry);
+  factory GitHubAutoMerge.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubAutoMerge()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubAutoMerge',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubAutoMerge.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'by')
+    ..aOS(2, _omitFieldNames ? '' : 'method')
+    ..aInt64(3, _omitFieldNames ? '' : 'enabledMs')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubAutoMerge clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubAutoMerge copyWith(void Function(GitHubAutoMerge) updates) =>
+      super.copyWith((message) => updates(message as GitHubAutoMerge))
+          as GitHubAutoMerge;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubAutoMerge() / GitHubAutoMerge.new instead')
+  static GitHubAutoMerge create() => GitHubAutoMerge._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubAutoMerge._();
+  @$core.override
+  GitHubAutoMerge createEmptyInstance() => GitHubAutoMerge._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubAutoMerge getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubAutoMerge>(
+          GitHubAutoMerge.$_createMessage);
+  static GitHubAutoMerge? _defaultInstance;
+
+  /// A login, or someone.
+  @$pb.TagNumber(1)
+  $core.String get by => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set by($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasBy() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearBy() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get method => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set method($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMethod() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMethod() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get enabledMs => $_getI64(2);
+  @$pb.TagNumber(3)
+  set enabledMs($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasEnabledMs() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearEnabledMs() => $_clearField(3);
+}
+
+class GitHubQueueEntry extends $pb.GeneratedMessage {
+  factory GitHubQueueEntry({
+    $core.int? position,
+    $core.String? state,
+    $core.String? by,
+    $core.int? etaSeconds,
+  }) {
+    final result = GitHubQueueEntry._();
+    if (position != null) result.position = position;
+    if (state != null) result.state = state;
+    if (by != null) result.by = by;
+    if (etaSeconds != null) result.etaSeconds = etaSeconds;
+    return result;
+  }
+
+  GitHubQueueEntry._();
+
+  factory GitHubQueueEntry.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubQueueEntry()..mergeFromBuffer(data, registry);
+  factory GitHubQueueEntry.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GitHubQueueEntry()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GitHubQueueEntry',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GitHubQueueEntry.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'position')
+    ..aOS(2, _omitFieldNames ? '' : 'state')
+    ..aOS(3, _omitFieldNames ? '' : 'by')
+    ..aI(4, _omitFieldNames ? '' : 'etaSeconds')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubQueueEntry clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GitHubQueueEntry copyWith(void Function(GitHubQueueEntry) updates) =>
+      super.copyWith((message) => updates(message as GitHubQueueEntry))
+          as GitHubQueueEntry;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GitHubQueueEntry() / GitHubQueueEntry.new instead')
+  static GitHubQueueEntry create() => GitHubQueueEntry._();
+  static $pb.GeneratedMessage $_createMessage() => GitHubQueueEntry._();
+  @$core.override
+  GitHubQueueEntry createEmptyInstance() => GitHubQueueEntry._();
+  @$core.pragma('dart2js:noInline')
+  static GitHubQueueEntry getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GitHubQueueEntry>(
+          GitHubQueueEntry.$_createMessage);
+  static GitHubQueueEntry? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get position => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set position($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPosition() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPosition() => $_clearField(1);
+
+  /// queued, awaiting_checks, mergeable, unmergeable, locked.
+  @$pb.TagNumber(2)
+  $core.String get state => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set state($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasState() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearState() => $_clearField(2);
+
+  /// A login, or someone.
+  @$pb.TagNumber(3)
+  $core.String get by => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set by($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBy() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBy() => $_clearField(3);
+
+  /// GitHub's estimate of the wait, in seconds; 0 for none.
+  @$pb.TagNumber(4)
+  $core.int get etaSeconds => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set etaSeconds($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasEtaSeconds() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEtaSeconds() => $_clearField(4);
 }
 
 class GetGitHubPullRequest extends $pb.GeneratedMessage {
@@ -25624,6 +26029,831 @@ class RerunGitHubChecksRequest extends $pb.GeneratedMessage {
   /// The failed checks' ids (Actions jobs').
   @$pb.TagNumber(2)
   $pb.PbList<$fixnum.Int64> get jobs => $_getList(1);
+}
+
+class GetGitHubMergeTextRequest extends $pb.GeneratedMessage {
+  factory GetGitHubMergeTextRequest({
+    GitHubRef? ref,
+  }) {
+    final result = GetGitHubMergeTextRequest._();
+    if (ref != null) result.ref = ref;
+    return result;
+  }
+
+  GetGitHubMergeTextRequest._();
+
+  factory GetGitHubMergeTextRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubMergeTextRequest()..mergeFromBuffer(data, registry);
+  factory GetGitHubMergeTextRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubMergeTextRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubMergeTextRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubMergeTextRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubMergeTextRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubMergeTextRequest copyWith(
+          void Function(GetGitHubMergeTextRequest) updates) =>
+      super.copyWith((message) => updates(message as GetGitHubMergeTextRequest))
+          as GetGitHubMergeTextRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubMergeTextRequest() / GetGitHubMergeTextRequest.new instead')
+  static GetGitHubMergeTextRequest create() => GetGitHubMergeTextRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetGitHubMergeTextRequest._();
+  @$core.override
+  GetGitHubMergeTextRequest createEmptyInstance() =>
+      GetGitHubMergeTextRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubMergeTextRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubMergeTextRequest>(
+          GetGitHubMergeTextRequest.$_createMessage);
+  static GetGitHubMergeTextRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+}
+
+/// What GitHub would write on the commit, plain and bounded.
+class GetGitHubMergeTextResponse extends $pb.GeneratedMessage {
+  factory GetGitHubMergeTextResponse({
+    $core.String? mergeTitle,
+    $core.String? mergeBody,
+    $core.String? squashTitle,
+    $core.String? squashBody,
+  }) {
+    final result = GetGitHubMergeTextResponse._();
+    if (mergeTitle != null) result.mergeTitle = mergeTitle;
+    if (mergeBody != null) result.mergeBody = mergeBody;
+    if (squashTitle != null) result.squashTitle = squashTitle;
+    if (squashBody != null) result.squashBody = squashBody;
+    return result;
+  }
+
+  GetGitHubMergeTextResponse._();
+
+  factory GetGitHubMergeTextResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubMergeTextResponse()..mergeFromBuffer(data, registry);
+  factory GetGitHubMergeTextResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetGitHubMergeTextResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetGitHubMergeTextResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetGitHubMergeTextResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'mergeTitle')
+    ..aOS(2, _omitFieldNames ? '' : 'mergeBody')
+    ..aOS(3, _omitFieldNames ? '' : 'squashTitle')
+    ..aOS(4, _omitFieldNames ? '' : 'squashBody')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubMergeTextResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetGitHubMergeTextResponse copyWith(
+          void Function(GetGitHubMergeTextResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetGitHubMergeTextResponse))
+          as GetGitHubMergeTextResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetGitHubMergeTextResponse() / GetGitHubMergeTextResponse.new instead')
+  static GetGitHubMergeTextResponse create() => GetGitHubMergeTextResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetGitHubMergeTextResponse._();
+  @$core.override
+  GetGitHubMergeTextResponse createEmptyInstance() =>
+      GetGitHubMergeTextResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetGitHubMergeTextResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetGitHubMergeTextResponse>(
+          GetGitHubMergeTextResponse.$_createMessage);
+  static GetGitHubMergeTextResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get mergeTitle => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set mergeTitle($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMergeTitle() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMergeTitle() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get mergeBody => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set mergeBody($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMergeBody() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMergeBody() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get squashTitle => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set squashTitle($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSquashTitle() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSquashTitle() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get squashBody => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set squashBody($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSquashBody() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSquashBody() => $_clearField(4);
+}
+
+class MergeGitHubPullRequest extends $pb.GeneratedMessage {
+  factory MergeGitHubPullRequest({
+    GitHubRef? ref,
+    $core.String? headOid,
+    $core.String? method,
+    $core.String? title,
+    $core.String? body,
+  }) {
+    final result = MergeGitHubPullRequest._();
+    if (ref != null) result.ref = ref;
+    if (headOid != null) result.headOid = headOid;
+    if (method != null) result.method = method;
+    if (title != null) result.title = title;
+    if (body != null) result.body = body;
+    return result;
+  }
+
+  MergeGitHubPullRequest._();
+
+  factory MergeGitHubPullRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MergeGitHubPullRequest()..mergeFromBuffer(data, registry);
+  factory MergeGitHubPullRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MergeGitHubPullRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MergeGitHubPullRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: MergeGitHubPullRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'headOid')
+    ..aOS(3, _omitFieldNames ? '' : 'method')
+    ..aOS(4, _omitFieldNames ? '' : 'title')
+    ..aOS(5, _omitFieldNames ? '' : 'body')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MergeGitHubPullRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MergeGitHubPullRequest copyWith(
+          void Function(MergeGitHubPullRequest) updates) =>
+      super.copyWith((message) => updates(message as MergeGitHubPullRequest))
+          as MergeGitHubPullRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use MergeGitHubPullRequest() / MergeGitHubPullRequest.new instead')
+  static MergeGitHubPullRequest create() => MergeGitHubPullRequest._();
+  static $pb.GeneratedMessage $_createMessage() => MergeGitHubPullRequest._();
+  @$core.override
+  MergeGitHubPullRequest createEmptyInstance() => MergeGitHubPullRequest._();
+  @$core.pragma('dart2js:noInline')
+  static MergeGitHubPullRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<MergeGitHubPullRequest>(
+          MergeGitHubPullRequest.$_createMessage);
+  static MergeGitHubPullRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// The head the user was shown: another one is refused (Aborted, reason
+  /// head_moved).
+  @$pb.TagNumber(2)
+  $core.String get headOid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set headOid($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasHeadOid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearHeadOid() => $_clearField(2);
+
+  /// merge, squash or rebase.
+  @$pb.TagNumber(3)
+  $core.String get method => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set method($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMethod() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMethod() => $_clearField(3);
+
+  /// The commit's, for merge and squash.
+  @$pb.TagNumber(4)
+  $core.String get title => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set title($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTitle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTitle() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get body => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set body($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasBody() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearBody() => $_clearField(5);
+}
+
+class MergeGitHubPullResponse extends $pb.GeneratedMessage {
+  factory MergeGitHubPullResponse() => MergeGitHubPullResponse._();
+
+  MergeGitHubPullResponse._();
+
+  factory MergeGitHubPullResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MergeGitHubPullResponse()..mergeFromBuffer(data, registry);
+  factory MergeGitHubPullResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MergeGitHubPullResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MergeGitHubPullResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: MergeGitHubPullResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MergeGitHubPullResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MergeGitHubPullResponse copyWith(
+          void Function(MergeGitHubPullResponse) updates) =>
+      super.copyWith((message) => updates(message as MergeGitHubPullResponse))
+          as MergeGitHubPullResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use MergeGitHubPullResponse() / MergeGitHubPullResponse.new instead')
+  static MergeGitHubPullResponse create() => MergeGitHubPullResponse._();
+  static $pb.GeneratedMessage $_createMessage() => MergeGitHubPullResponse._();
+  @$core.override
+  MergeGitHubPullResponse createEmptyInstance() => MergeGitHubPullResponse._();
+  @$core.pragma('dart2js:noInline')
+  static MergeGitHubPullResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<MergeGitHubPullResponse>(
+          MergeGitHubPullResponse.$_createMessage);
+  static MergeGitHubPullResponse? _defaultInstance;
+}
+
+class EnableGitHubAutoMergeRequest extends $pb.GeneratedMessage {
+  factory EnableGitHubAutoMergeRequest({
+    GitHubRef? ref,
+    $core.String? headOid,
+    $core.String? method,
+    $core.String? title,
+    $core.String? body,
+  }) {
+    final result = EnableGitHubAutoMergeRequest._();
+    if (ref != null) result.ref = ref;
+    if (headOid != null) result.headOid = headOid;
+    if (method != null) result.method = method;
+    if (title != null) result.title = title;
+    if (body != null) result.body = body;
+    return result;
+  }
+
+  EnableGitHubAutoMergeRequest._();
+
+  factory EnableGitHubAutoMergeRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnableGitHubAutoMergeRequest()..mergeFromBuffer(data, registry);
+  factory EnableGitHubAutoMergeRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnableGitHubAutoMergeRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'EnableGitHubAutoMergeRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: EnableGitHubAutoMergeRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'headOid')
+    ..aOS(3, _omitFieldNames ? '' : 'method')
+    ..aOS(4, _omitFieldNames ? '' : 'title')
+    ..aOS(5, _omitFieldNames ? '' : 'body')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnableGitHubAutoMergeRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnableGitHubAutoMergeRequest copyWith(
+          void Function(EnableGitHubAutoMergeRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as EnableGitHubAutoMergeRequest))
+          as EnableGitHubAutoMergeRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use EnableGitHubAutoMergeRequest() / EnableGitHubAutoMergeRequest.new instead')
+  static EnableGitHubAutoMergeRequest create() =>
+      EnableGitHubAutoMergeRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      EnableGitHubAutoMergeRequest._();
+  @$core.override
+  EnableGitHubAutoMergeRequest createEmptyInstance() =>
+      EnableGitHubAutoMergeRequest._();
+  @$core.pragma('dart2js:noInline')
+  static EnableGitHubAutoMergeRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<EnableGitHubAutoMergeRequest>(
+          EnableGitHubAutoMergeRequest.$_createMessage);
+  static EnableGitHubAutoMergeRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// As MergeGitHubPullRequest; a merge queue's method and text are its own.
+  @$pb.TagNumber(2)
+  $core.String get headOid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set headOid($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasHeadOid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearHeadOid() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get method => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set method($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMethod() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMethod() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get title => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set title($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTitle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTitle() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get body => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set body($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasBody() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearBody() => $_clearField(5);
+}
+
+class EnableGitHubAutoMergeResponse extends $pb.GeneratedMessage {
+  factory EnableGitHubAutoMergeResponse() => EnableGitHubAutoMergeResponse._();
+
+  EnableGitHubAutoMergeResponse._();
+
+  factory EnableGitHubAutoMergeResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnableGitHubAutoMergeResponse()..mergeFromBuffer(data, registry);
+  factory EnableGitHubAutoMergeResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnableGitHubAutoMergeResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'EnableGitHubAutoMergeResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: EnableGitHubAutoMergeResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnableGitHubAutoMergeResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnableGitHubAutoMergeResponse copyWith(
+          void Function(EnableGitHubAutoMergeResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as EnableGitHubAutoMergeResponse))
+          as EnableGitHubAutoMergeResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use EnableGitHubAutoMergeResponse() / EnableGitHubAutoMergeResponse.new instead')
+  static EnableGitHubAutoMergeResponse create() =>
+      EnableGitHubAutoMergeResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      EnableGitHubAutoMergeResponse._();
+  @$core.override
+  EnableGitHubAutoMergeResponse createEmptyInstance() =>
+      EnableGitHubAutoMergeResponse._();
+  @$core.pragma('dart2js:noInline')
+  static EnableGitHubAutoMergeResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<EnableGitHubAutoMergeResponse>(
+          EnableGitHubAutoMergeResponse.$_createMessage);
+  static EnableGitHubAutoMergeResponse? _defaultInstance;
+}
+
+class DisableGitHubAutoMergeRequest extends $pb.GeneratedMessage {
+  factory DisableGitHubAutoMergeRequest({
+    GitHubRef? ref,
+  }) {
+    final result = DisableGitHubAutoMergeRequest._();
+    if (ref != null) result.ref = ref;
+    return result;
+  }
+
+  DisableGitHubAutoMergeRequest._();
+
+  factory DisableGitHubAutoMergeRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableGitHubAutoMergeRequest()..mergeFromBuffer(data, registry);
+  factory DisableGitHubAutoMergeRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableGitHubAutoMergeRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DisableGitHubAutoMergeRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DisableGitHubAutoMergeRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableGitHubAutoMergeRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableGitHubAutoMergeRequest copyWith(
+          void Function(DisableGitHubAutoMergeRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as DisableGitHubAutoMergeRequest))
+          as DisableGitHubAutoMergeRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DisableGitHubAutoMergeRequest() / DisableGitHubAutoMergeRequest.new instead')
+  static DisableGitHubAutoMergeRequest create() =>
+      DisableGitHubAutoMergeRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DisableGitHubAutoMergeRequest._();
+  @$core.override
+  DisableGitHubAutoMergeRequest createEmptyInstance() =>
+      DisableGitHubAutoMergeRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DisableGitHubAutoMergeRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DisableGitHubAutoMergeRequest>(
+          DisableGitHubAutoMergeRequest.$_createMessage);
+  static DisableGitHubAutoMergeRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+}
+
+class DisableGitHubAutoMergeResponse extends $pb.GeneratedMessage {
+  factory DisableGitHubAutoMergeResponse() =>
+      DisableGitHubAutoMergeResponse._();
+
+  DisableGitHubAutoMergeResponse._();
+
+  factory DisableGitHubAutoMergeResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableGitHubAutoMergeResponse()..mergeFromBuffer(data, registry);
+  factory DisableGitHubAutoMergeResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableGitHubAutoMergeResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DisableGitHubAutoMergeResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DisableGitHubAutoMergeResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableGitHubAutoMergeResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableGitHubAutoMergeResponse copyWith(
+          void Function(DisableGitHubAutoMergeResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as DisableGitHubAutoMergeResponse))
+          as DisableGitHubAutoMergeResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DisableGitHubAutoMergeResponse() / DisableGitHubAutoMergeResponse.new instead')
+  static DisableGitHubAutoMergeResponse create() =>
+      DisableGitHubAutoMergeResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DisableGitHubAutoMergeResponse._();
+  @$core.override
+  DisableGitHubAutoMergeResponse createEmptyInstance() =>
+      DisableGitHubAutoMergeResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DisableGitHubAutoMergeResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DisableGitHubAutoMergeResponse>(
+          DisableGitHubAutoMergeResponse.$_createMessage);
+  static DisableGitHubAutoMergeResponse? _defaultInstance;
+}
+
+class EnqueueGitHubPullRequest extends $pb.GeneratedMessage {
+  factory EnqueueGitHubPullRequest({
+    GitHubRef? ref,
+    $core.String? headOid,
+  }) {
+    final result = EnqueueGitHubPullRequest._();
+    if (ref != null) result.ref = ref;
+    if (headOid != null) result.headOid = headOid;
+    return result;
+  }
+
+  EnqueueGitHubPullRequest._();
+
+  factory EnqueueGitHubPullRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnqueueGitHubPullRequest()..mergeFromBuffer(data, registry);
+  factory EnqueueGitHubPullRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnqueueGitHubPullRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'EnqueueGitHubPullRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: EnqueueGitHubPullRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'headOid')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnqueueGitHubPullRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnqueueGitHubPullRequest copyWith(
+          void Function(EnqueueGitHubPullRequest) updates) =>
+      super.copyWith((message) => updates(message as EnqueueGitHubPullRequest))
+          as EnqueueGitHubPullRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use EnqueueGitHubPullRequest() / EnqueueGitHubPullRequest.new instead')
+  static EnqueueGitHubPullRequest create() => EnqueueGitHubPullRequest._();
+  static $pb.GeneratedMessage $_createMessage() => EnqueueGitHubPullRequest._();
+  @$core.override
+  EnqueueGitHubPullRequest createEmptyInstance() =>
+      EnqueueGitHubPullRequest._();
+  @$core.pragma('dart2js:noInline')
+  static EnqueueGitHubPullRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<EnqueueGitHubPullRequest>(
+          EnqueueGitHubPullRequest.$_createMessage);
+  static EnqueueGitHubPullRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+
+  /// As MergeGitHubPullRequest.
+  @$pb.TagNumber(2)
+  $core.String get headOid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set headOid($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasHeadOid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearHeadOid() => $_clearField(2);
+}
+
+class EnqueueGitHubPullResponse extends $pb.GeneratedMessage {
+  factory EnqueueGitHubPullResponse() => EnqueueGitHubPullResponse._();
+
+  EnqueueGitHubPullResponse._();
+
+  factory EnqueueGitHubPullResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnqueueGitHubPullResponse()..mergeFromBuffer(data, registry);
+  factory EnqueueGitHubPullResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      EnqueueGitHubPullResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'EnqueueGitHubPullResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: EnqueueGitHubPullResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnqueueGitHubPullResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  EnqueueGitHubPullResponse copyWith(
+          void Function(EnqueueGitHubPullResponse) updates) =>
+      super.copyWith((message) => updates(message as EnqueueGitHubPullResponse))
+          as EnqueueGitHubPullResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use EnqueueGitHubPullResponse() / EnqueueGitHubPullResponse.new instead')
+  static EnqueueGitHubPullResponse create() => EnqueueGitHubPullResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      EnqueueGitHubPullResponse._();
+  @$core.override
+  EnqueueGitHubPullResponse createEmptyInstance() =>
+      EnqueueGitHubPullResponse._();
+  @$core.pragma('dart2js:noInline')
+  static EnqueueGitHubPullResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<EnqueueGitHubPullResponse>(
+          EnqueueGitHubPullResponse.$_createMessage);
+  static EnqueueGitHubPullResponse? _defaultInstance;
+}
+
+class DequeueGitHubPullRequest extends $pb.GeneratedMessage {
+  factory DequeueGitHubPullRequest({
+    GitHubRef? ref,
+  }) {
+    final result = DequeueGitHubPullRequest._();
+    if (ref != null) result.ref = ref;
+    return result;
+  }
+
+  DequeueGitHubPullRequest._();
+
+  factory DequeueGitHubPullRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DequeueGitHubPullRequest()..mergeFromBuffer(data, registry);
+  factory DequeueGitHubPullRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DequeueGitHubPullRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DequeueGitHubPullRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DequeueGitHubPullRequest.$_createMessage)
+    ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
+        subBuilder: GitHubRef.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DequeueGitHubPullRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DequeueGitHubPullRequest copyWith(
+          void Function(DequeueGitHubPullRequest) updates) =>
+      super.copyWith((message) => updates(message as DequeueGitHubPullRequest))
+          as DequeueGitHubPullRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DequeueGitHubPullRequest() / DequeueGitHubPullRequest.new instead')
+  static DequeueGitHubPullRequest create() => DequeueGitHubPullRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DequeueGitHubPullRequest._();
+  @$core.override
+  DequeueGitHubPullRequest createEmptyInstance() =>
+      DequeueGitHubPullRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DequeueGitHubPullRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DequeueGitHubPullRequest>(
+          DequeueGitHubPullRequest.$_createMessage);
+  static DequeueGitHubPullRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  GitHubRef get ref => $_getN(0);
+  @$pb.TagNumber(1)
+  set ref(GitHubRef value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRef() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRef() => $_clearField(1);
+  @$pb.TagNumber(1)
+  GitHubRef ensureRef() => $_ensure(0);
+}
+
+class DequeueGitHubPullResponse extends $pb.GeneratedMessage {
+  factory DequeueGitHubPullResponse() => DequeueGitHubPullResponse._();
+
+  DequeueGitHubPullResponse._();
+
+  factory DequeueGitHubPullResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DequeueGitHubPullResponse()..mergeFromBuffer(data, registry);
+  factory DequeueGitHubPullResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DequeueGitHubPullResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DequeueGitHubPullResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DequeueGitHubPullResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DequeueGitHubPullResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DequeueGitHubPullResponse copyWith(
+          void Function(DequeueGitHubPullResponse) updates) =>
+      super.copyWith((message) => updates(message as DequeueGitHubPullResponse))
+          as DequeueGitHubPullResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DequeueGitHubPullResponse() / DequeueGitHubPullResponse.new instead')
+  static DequeueGitHubPullResponse create() => DequeueGitHubPullResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DequeueGitHubPullResponse._();
+  @$core.override
+  DequeueGitHubPullResponse createEmptyInstance() =>
+      DequeueGitHubPullResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DequeueGitHubPullResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DequeueGitHubPullResponse>(
+          DequeueGitHubPullResponse.$_createMessage);
+  static DequeueGitHubPullResponse? _defaultInstance;
 }
 
 class GetCleanUpRequest extends $pb.GeneratedMessage {
@@ -27732,6 +28962,44 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, RerunGitHubChecksRequest request) =>
       _client.invoke<RerunGitHubChecksResponse>(ctx, 'NushiService',
           'RerunGitHubChecks', request, RerunGitHubChecksResponse());
+
+  /// Merging a pull request (ADR 0069), each from the user's confirmation;
+  /// a paired phone may, as it may post a review. No MCP tool reaches them.
+  /// The commit text GitHub would use, for the confirmation. API 96.
+  $async.Future<GetGitHubMergeTextResponse> getGitHubMergeText(
+          $pb.ClientContext? ctx, GetGitHubMergeTextRequest request) =>
+      _client.invoke<GetGitHubMergeTextResponse>(ctx, 'NushiService',
+          'GetGitHubMergeText', request, GetGitHubMergeTextResponse());
+
+  /// Only at the head the user was shown, only while GitHub says it can
+  /// merge now without passing a rule of its base's: never an admin's
+  /// bypass. API 96.
+  $async.Future<MergeGitHubPullResponse> mergeGitHubPull(
+          $pb.ClientContext? ctx, MergeGitHubPullRequest request) =>
+      _client.invoke<MergeGitHubPullResponse>(ctx, 'NushiService',
+          'MergeGitHubPull', request, MergeGitHubPullResponse());
+
+  /// GitHub merges it (or adds it to its merge queue) once it can, only at
+  /// that head. API 96.
+  $async.Future<EnableGitHubAutoMergeResponse> enableGitHubAutoMerge(
+          $pb.ClientContext? ctx, EnableGitHubAutoMergeRequest request) =>
+      _client.invoke<EnableGitHubAutoMergeResponse>(ctx, 'NushiService',
+          'EnableGitHubAutoMerge', request, EnableGitHubAutoMergeResponse());
+  $async.Future<DisableGitHubAutoMergeResponse> disableGitHubAutoMerge(
+          $pb.ClientContext? ctx, DisableGitHubAutoMergeRequest request) =>
+      _client.invoke<DisableGitHubAutoMergeResponse>(ctx, 'NushiService',
+          'DisableGitHubAutoMerge', request, DisableGitHubAutoMergeResponse());
+
+  /// Adds it to the end of its base's merge queue, only at that head; takes
+  /// it out. API 96.
+  $async.Future<EnqueueGitHubPullResponse> enqueueGitHubPull(
+          $pb.ClientContext? ctx, EnqueueGitHubPullRequest request) =>
+      _client.invoke<EnqueueGitHubPullResponse>(ctx, 'NushiService',
+          'EnqueueGitHubPull', request, EnqueueGitHubPullResponse());
+  $async.Future<DequeueGitHubPullResponse> dequeueGitHubPull(
+          $pb.ClientContext? ctx, DequeueGitHubPullRequest request) =>
+      _client.invoke<DequeueGitHubPullResponse>(ctx, 'NushiService',
+          'DequeueGitHubPull', request, DequeueGitHubPullResponse());
 
   /// Cleaning up after a chat's pull request: what the chat's worktree and
   /// branch would lose (GetCleanUp), removing the worktree, deleting its

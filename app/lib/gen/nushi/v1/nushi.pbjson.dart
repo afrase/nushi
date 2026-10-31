@@ -5629,6 +5629,14 @@ const GitHubPull$json = {
     {'1': 'pending_review', '3': 20, '4': 1, '5': 9, '10': 'pendingReview'},
     {'1': 'pending_comments', '3': 21, '4': 1, '5': 5, '10': 'pendingComments'},
     {'1': 'commits', '3': 22, '4': 1, '5': 5, '10': 'commits'},
+    {
+      '1': 'merge',
+      '3': 23,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubMerge',
+      '10': 'merge'
+    },
   ],
 };
 
@@ -5647,7 +5655,86 @@ final $typed_data.Uint8List gitHubPullDescriptor = $convert.base64Decode(
     'bnZlcnNhdGlvbhIwCgd0aHJlYWRzGBIgAygLMhYubnVzaGkudjEuR2l0SHViVGhyZWFkUgd0aH'
     'JlYWRzEi0KBmNoZWNrcxgTIAMoCzIVLm51c2hpLnYxLkdpdEh1YkNoZWNrUgZjaGVja3MSJQoO'
     'cGVuZGluZ19yZXZpZXcYFCABKAlSDXBlbmRpbmdSZXZpZXcSKQoQcGVuZGluZ19jb21tZW50cx'
-    'gVIAEoBVIPcGVuZGluZ0NvbW1lbnRzEhgKB2NvbW1pdHMYFiABKAVSB2NvbW1pdHM=');
+    'gVIAEoBVIPcGVuZGluZ0NvbW1lbnRzEhgKB2NvbW1pdHMYFiABKAVSB2NvbW1pdHMSKwoFbWVy'
+    'Z2UYFyABKAsyFS5udXNoaS52MS5HaXRIdWJNZXJnZVIFbWVyZ2U=');
+
+@$core.Deprecated('Use gitHubMergeDescriptor instead')
+const GitHubMerge$json = {
+  '1': 'GitHubMerge',
+  '2': [
+    {'1': 'methods', '3': 1, '4': 3, '5': 9, '10': 'methods'},
+    {'1': 'default_method', '3': 2, '4': 1, '5': 9, '10': 'defaultMethod'},
+    {'1': 'can_merge', '3': 3, '4': 1, '5': 8, '10': 'canMerge'},
+    {'1': 'can_rebase', '3': 4, '4': 1, '5': 8, '10': 'canRebase'},
+    {'1': 'blocks', '3': 5, '4': 3, '5': 9, '10': 'blocks'},
+    {'1': 'auto_allowed', '3': 6, '4': 1, '5': 8, '10': 'autoAllowed'},
+    {'1': 'can_enable_auto', '3': 7, '4': 1, '5': 8, '10': 'canEnableAuto'},
+    {'1': 'can_disable_auto', '3': 8, '4': 1, '5': 8, '10': 'canDisableAuto'},
+    {
+      '1': 'auto',
+      '3': 9,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubAutoMerge',
+      '10': 'auto'
+    },
+    {'1': 'queue', '3': 10, '4': 1, '5': 8, '10': 'queue'},
+    {'1': 'queue_method', '3': 11, '4': 1, '5': 9, '10': 'queueMethod'},
+    {
+      '1': 'entry',
+      '3': 12,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubQueueEntry',
+      '10': 'entry'
+    },
+    {'1': 'delete_branch', '3': 13, '4': 1, '5': 8, '10': 'deleteBranch'},
+  ],
+};
+
+/// Descriptor for `GitHubMerge`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubMergeDescriptor = $convert.base64Decode(
+    'CgtHaXRIdWJNZXJnZRIYCgdtZXRob2RzGAEgAygJUgdtZXRob2RzEiUKDmRlZmF1bHRfbWV0aG'
+    '9kGAIgASgJUg1kZWZhdWx0TWV0aG9kEhsKCWNhbl9tZXJnZRgDIAEoCFIIY2FuTWVyZ2USHQoK'
+    'Y2FuX3JlYmFzZRgEIAEoCFIJY2FuUmViYXNlEhYKBmJsb2NrcxgFIAMoCVIGYmxvY2tzEiEKDG'
+    'F1dG9fYWxsb3dlZBgGIAEoCFILYXV0b0FsbG93ZWQSJgoPY2FuX2VuYWJsZV9hdXRvGAcgASgI'
+    'Ug1jYW5FbmFibGVBdXRvEigKEGNhbl9kaXNhYmxlX2F1dG8YCCABKAhSDmNhbkRpc2FibGVBdX'
+    'RvEi0KBGF1dG8YCSABKAsyGS5udXNoaS52MS5HaXRIdWJBdXRvTWVyZ2VSBGF1dG8SFAoFcXVl'
+    'dWUYCiABKAhSBXF1ZXVlEiEKDHF1ZXVlX21ldGhvZBgLIAEoCVILcXVldWVNZXRob2QSMAoFZW'
+    '50cnkYDCABKAsyGi5udXNoaS52MS5HaXRIdWJRdWV1ZUVudHJ5UgVlbnRyeRIjCg1kZWxldGVf'
+    'YnJhbmNoGA0gASgIUgxkZWxldGVCcmFuY2g=');
+
+@$core.Deprecated('Use gitHubAutoMergeDescriptor instead')
+const GitHubAutoMerge$json = {
+  '1': 'GitHubAutoMerge',
+  '2': [
+    {'1': 'by', '3': 1, '4': 1, '5': 9, '10': 'by'},
+    {'1': 'method', '3': 2, '4': 1, '5': 9, '10': 'method'},
+    {'1': 'enabled_ms', '3': 3, '4': 1, '5': 3, '10': 'enabledMs'},
+  ],
+};
+
+/// Descriptor for `GitHubAutoMerge`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubAutoMergeDescriptor = $convert.base64Decode(
+    'Cg9HaXRIdWJBdXRvTWVyZ2USDgoCYnkYASABKAlSAmJ5EhYKBm1ldGhvZBgCIAEoCVIGbWV0aG'
+    '9kEh0KCmVuYWJsZWRfbXMYAyABKANSCWVuYWJsZWRNcw==');
+
+@$core.Deprecated('Use gitHubQueueEntryDescriptor instead')
+const GitHubQueueEntry$json = {
+  '1': 'GitHubQueueEntry',
+  '2': [
+    {'1': 'position', '3': 1, '4': 1, '5': 5, '10': 'position'},
+    {'1': 'state', '3': 2, '4': 1, '5': 9, '10': 'state'},
+    {'1': 'by', '3': 3, '4': 1, '5': 9, '10': 'by'},
+    {'1': 'eta_seconds', '3': 4, '4': 1, '5': 5, '10': 'etaSeconds'},
+  ],
+};
+
+/// Descriptor for `GitHubQueueEntry`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List gitHubQueueEntryDescriptor = $convert.base64Decode(
+    'ChBHaXRIdWJRdWV1ZUVudHJ5EhoKCHBvc2l0aW9uGAEgASgFUghwb3NpdGlvbhIUCgVzdGF0ZR'
+    'gCIAEoCVIFc3RhdGUSDgoCYnkYAyABKAlSAmJ5Eh8KC2V0YV9zZWNvbmRzGAQgASgFUgpldGFT'
+    'ZWNvbmRz');
 
 @$core.Deprecated('Use getGitHubPullRequestDescriptor instead')
 const GetGitHubPullRequest$json = {
@@ -5930,6 +6017,205 @@ final $typed_data.Uint8List rerunGitHubChecksRequestDescriptor =
     $convert.base64Decode(
         'ChhSZXJ1bkdpdEh1YkNoZWNrc1JlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SH'
         'ViUmVmUgNyZWYSEgoEam9icxgCIAMoA1IEam9icw==');
+
+@$core.Deprecated('Use getGitHubMergeTextRequestDescriptor instead')
+const GetGitHubMergeTextRequest$json = {
+  '1': 'GetGitHubMergeTextRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+  ],
+};
+
+/// Descriptor for `GetGitHubMergeTextRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubMergeTextRequestDescriptor =
+    $convert.base64Decode(
+        'ChlHZXRHaXRIdWJNZXJnZVRleHRSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdE'
+        'h1YlJlZlIDcmVm');
+
+@$core.Deprecated('Use getGitHubMergeTextResponseDescriptor instead')
+const GetGitHubMergeTextResponse$json = {
+  '1': 'GetGitHubMergeTextResponse',
+  '2': [
+    {'1': 'merge_title', '3': 1, '4': 1, '5': 9, '10': 'mergeTitle'},
+    {'1': 'merge_body', '3': 2, '4': 1, '5': 9, '10': 'mergeBody'},
+    {'1': 'squash_title', '3': 3, '4': 1, '5': 9, '10': 'squashTitle'},
+    {'1': 'squash_body', '3': 4, '4': 1, '5': 9, '10': 'squashBody'},
+  ],
+};
+
+/// Descriptor for `GetGitHubMergeTextResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getGitHubMergeTextResponseDescriptor =
+    $convert.base64Decode(
+        'ChpHZXRHaXRIdWJNZXJnZVRleHRSZXNwb25zZRIfCgttZXJnZV90aXRsZRgBIAEoCVIKbWVyZ2'
+        'VUaXRsZRIdCgptZXJnZV9ib2R5GAIgASgJUgltZXJnZUJvZHkSIQoMc3F1YXNoX3RpdGxlGAMg'
+        'ASgJUgtzcXVhc2hUaXRsZRIfCgtzcXVhc2hfYm9keRgEIAEoCVIKc3F1YXNoQm9keQ==');
+
+@$core.Deprecated('Use mergeGitHubPullRequestDescriptor instead')
+const MergeGitHubPullRequest$json = {
+  '1': 'MergeGitHubPullRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'head_oid', '3': 2, '4': 1, '5': 9, '10': 'headOid'},
+    {'1': 'method', '3': 3, '4': 1, '5': 9, '10': 'method'},
+    {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'body', '3': 5, '4': 1, '5': 9, '10': 'body'},
+  ],
+};
+
+/// Descriptor for `MergeGitHubPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List mergeGitHubPullRequestDescriptor = $convert.base64Decode(
+    'ChZNZXJnZUdpdEh1YlB1bGxSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdEh1Yl'
+    'JlZlIDcmVmEhkKCGhlYWRfb2lkGAIgASgJUgdoZWFkT2lkEhYKBm1ldGhvZBgDIAEoCVIGbWV0'
+    'aG9kEhQKBXRpdGxlGAQgASgJUgV0aXRsZRISCgRib2R5GAUgASgJUgRib2R5');
+
+@$core.Deprecated('Use mergeGitHubPullResponseDescriptor instead')
+const MergeGitHubPullResponse$json = {
+  '1': 'MergeGitHubPullResponse',
+};
+
+/// Descriptor for `MergeGitHubPullResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List mergeGitHubPullResponseDescriptor =
+    $convert.base64Decode('ChdNZXJnZUdpdEh1YlB1bGxSZXNwb25zZQ==');
+
+@$core.Deprecated('Use enableGitHubAutoMergeRequestDescriptor instead')
+const EnableGitHubAutoMergeRequest$json = {
+  '1': 'EnableGitHubAutoMergeRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'head_oid', '3': 2, '4': 1, '5': 9, '10': 'headOid'},
+    {'1': 'method', '3': 3, '4': 1, '5': 9, '10': 'method'},
+    {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
+    {'1': 'body', '3': 5, '4': 1, '5': 9, '10': 'body'},
+  ],
+};
+
+/// Descriptor for `EnableGitHubAutoMergeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List enableGitHubAutoMergeRequestDescriptor =
+    $convert.base64Decode(
+        'ChxFbmFibGVHaXRIdWJBdXRvTWVyZ2VSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLk'
+        'dpdEh1YlJlZlIDcmVmEhkKCGhlYWRfb2lkGAIgASgJUgdoZWFkT2lkEhYKBm1ldGhvZBgDIAEo'
+        'CVIGbWV0aG9kEhQKBXRpdGxlGAQgASgJUgV0aXRsZRISCgRib2R5GAUgASgJUgRib2R5');
+
+@$core.Deprecated('Use enableGitHubAutoMergeResponseDescriptor instead')
+const EnableGitHubAutoMergeResponse$json = {
+  '1': 'EnableGitHubAutoMergeResponse',
+};
+
+/// Descriptor for `EnableGitHubAutoMergeResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List enableGitHubAutoMergeResponseDescriptor =
+    $convert.base64Decode('Ch1FbmFibGVHaXRIdWJBdXRvTWVyZ2VSZXNwb25zZQ==');
+
+@$core.Deprecated('Use disableGitHubAutoMergeRequestDescriptor instead')
+const DisableGitHubAutoMergeRequest$json = {
+  '1': 'DisableGitHubAutoMergeRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+  ],
+};
+
+/// Descriptor for `DisableGitHubAutoMergeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List disableGitHubAutoMergeRequestDescriptor =
+    $convert.base64Decode(
+        'Ch1EaXNhYmxlR2l0SHViQXV0b01lcmdlUmVxdWVzdBIlCgNyZWYYASABKAsyEy5udXNoaS52MS'
+        '5HaXRIdWJSZWZSA3JlZg==');
+
+@$core.Deprecated('Use disableGitHubAutoMergeResponseDescriptor instead')
+const DisableGitHubAutoMergeResponse$json = {
+  '1': 'DisableGitHubAutoMergeResponse',
+};
+
+/// Descriptor for `DisableGitHubAutoMergeResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List disableGitHubAutoMergeResponseDescriptor =
+    $convert.base64Decode('Ch5EaXNhYmxlR2l0SHViQXV0b01lcmdlUmVzcG9uc2U=');
+
+@$core.Deprecated('Use enqueueGitHubPullRequestDescriptor instead')
+const EnqueueGitHubPullRequest$json = {
+  '1': 'EnqueueGitHubPullRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+    {'1': 'head_oid', '3': 2, '4': 1, '5': 9, '10': 'headOid'},
+  ],
+};
+
+/// Descriptor for `EnqueueGitHubPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List enqueueGitHubPullRequestDescriptor =
+    $convert.base64Decode(
+        'ChhFbnF1ZXVlR2l0SHViUHVsbFJlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SH'
+        'ViUmVmUgNyZWYSGQoIaGVhZF9vaWQYAiABKAlSB2hlYWRPaWQ=');
+
+@$core.Deprecated('Use enqueueGitHubPullResponseDescriptor instead')
+const EnqueueGitHubPullResponse$json = {
+  '1': 'EnqueueGitHubPullResponse',
+};
+
+/// Descriptor for `EnqueueGitHubPullResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List enqueueGitHubPullResponseDescriptor =
+    $convert.base64Decode('ChlFbnF1ZXVlR2l0SHViUHVsbFJlc3BvbnNl');
+
+@$core.Deprecated('Use dequeueGitHubPullRequestDescriptor instead')
+const DequeueGitHubPullRequest$json = {
+  '1': 'DequeueGitHubPullRequest',
+  '2': [
+    {
+      '1': 'ref',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.nushi.v1.GitHubRef',
+      '10': 'ref'
+    },
+  ],
+};
+
+/// Descriptor for `DequeueGitHubPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List dequeueGitHubPullRequestDescriptor =
+    $convert.base64Decode(
+        'ChhEZXF1ZXVlR2l0SHViUHVsbFJlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SH'
+        'ViUmVmUgNyZWY=');
+
+@$core.Deprecated('Use dequeueGitHubPullResponseDescriptor instead')
+const DequeueGitHubPullResponse$json = {
+  '1': 'DequeueGitHubPullResponse',
+};
+
+/// Descriptor for `DequeueGitHubPullResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List dequeueGitHubPullResponseDescriptor =
+    $convert.base64Decode('ChlEZXF1ZXVlR2l0SHViUHVsbFJlc3BvbnNl');
 
 @$core.Deprecated('Use getCleanUpRequestDescriptor instead')
 const GetCleanUpRequest$json = {
@@ -6821,6 +7107,36 @@ const $core.Map<$core.String, $core.dynamic> NushiServiceBase$json = {
       '3': '.nushi.v1.RerunGitHubChecksResponse'
     },
     {
+      '1': 'GetGitHubMergeText',
+      '2': '.nushi.v1.GetGitHubMergeTextRequest',
+      '3': '.nushi.v1.GetGitHubMergeTextResponse'
+    },
+    {
+      '1': 'MergeGitHubPull',
+      '2': '.nushi.v1.MergeGitHubPullRequest',
+      '3': '.nushi.v1.MergeGitHubPullResponse'
+    },
+    {
+      '1': 'EnableGitHubAutoMerge',
+      '2': '.nushi.v1.EnableGitHubAutoMergeRequest',
+      '3': '.nushi.v1.EnableGitHubAutoMergeResponse'
+    },
+    {
+      '1': 'DisableGitHubAutoMerge',
+      '2': '.nushi.v1.DisableGitHubAutoMergeRequest',
+      '3': '.nushi.v1.DisableGitHubAutoMergeResponse'
+    },
+    {
+      '1': 'EnqueueGitHubPull',
+      '2': '.nushi.v1.EnqueueGitHubPullRequest',
+      '3': '.nushi.v1.EnqueueGitHubPullResponse'
+    },
+    {
+      '1': 'DequeueGitHubPull',
+      '2': '.nushi.v1.DequeueGitHubPullRequest',
+      '3': '.nushi.v1.DequeueGitHubPullResponse'
+    },
+    {
       '1': 'GetCleanUp',
       '2': '.nushi.v1.GetCleanUpRequest',
       '3': '.nushi.v1.GetCleanUpResponse'
@@ -7164,6 +7480,9 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GitHubThread': GitHubThread$json,
   '.nushi.v1.GitHubCheck': GitHubCheck$json,
   '.nushi.v1.GitHubAnnotation': GitHubAnnotation$json,
+  '.nushi.v1.GitHubMerge': GitHubMerge$json,
+  '.nushi.v1.GitHubAutoMerge': GitHubAutoMerge$json,
+  '.nushi.v1.GitHubQueueEntry': GitHubQueueEntry$json,
   '.nushi.v1.GetGitHubIssueRequest': GetGitHubIssueRequest$json,
   '.nushi.v1.GetGitHubIssueResponse': GetGitHubIssueResponse$json,
   '.nushi.v1.GitHubIssue': GitHubIssue$json,
@@ -7184,6 +7503,19 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.SubmitGitHubReviewResponse': SubmitGitHubReviewResponse$json,
   '.nushi.v1.RerunGitHubChecksRequest': RerunGitHubChecksRequest$json,
   '.nushi.v1.RerunGitHubChecksResponse': RerunGitHubChecksResponse$json,
+  '.nushi.v1.GetGitHubMergeTextRequest': GetGitHubMergeTextRequest$json,
+  '.nushi.v1.GetGitHubMergeTextResponse': GetGitHubMergeTextResponse$json,
+  '.nushi.v1.MergeGitHubPullRequest': MergeGitHubPullRequest$json,
+  '.nushi.v1.MergeGitHubPullResponse': MergeGitHubPullResponse$json,
+  '.nushi.v1.EnableGitHubAutoMergeRequest': EnableGitHubAutoMergeRequest$json,
+  '.nushi.v1.EnableGitHubAutoMergeResponse': EnableGitHubAutoMergeResponse$json,
+  '.nushi.v1.DisableGitHubAutoMergeRequest': DisableGitHubAutoMergeRequest$json,
+  '.nushi.v1.DisableGitHubAutoMergeResponse':
+      DisableGitHubAutoMergeResponse$json,
+  '.nushi.v1.EnqueueGitHubPullRequest': EnqueueGitHubPullRequest$json,
+  '.nushi.v1.EnqueueGitHubPullResponse': EnqueueGitHubPullResponse$json,
+  '.nushi.v1.DequeueGitHubPullRequest': DequeueGitHubPullRequest$json,
+  '.nushi.v1.DequeueGitHubPullResponse': DequeueGitHubPullResponse$json,
   '.nushi.v1.GetCleanUpRequest': GetCleanUpRequest$json,
   '.nushi.v1.GetCleanUpResponse': GetCleanUpResponse$json,
   '.nushi.v1.RemoveChatWorktreeRequest': RemoveChatWorktreeRequest$json,
@@ -7382,17 +7714,27 @@ final $typed_data.Uint8List nushiServiceDescriptor = $convert.base64Decode(
     'djEuQWRkR2l0SHViQ29tbWVudFJlc3BvbnNlEl8KElN1Ym1pdEdpdEh1YlJldmlldxIjLm51c2'
     'hpLnYxLlN1Ym1pdEdpdEh1YlJldmlld1JlcXVlc3QaJC5udXNoaS52MS5TdWJtaXRHaXRIdWJS'
     'ZXZpZXdSZXNwb25zZRJcChFSZXJ1bkdpdEh1YkNoZWNrcxIiLm51c2hpLnYxLlJlcnVuR2l0SH'
-    'ViQ2hlY2tzUmVxdWVzdBojLm51c2hpLnYxLlJlcnVuR2l0SHViQ2hlY2tzUmVzcG9uc2USRwoK'
-    'R2V0Q2xlYW5VcBIbLm51c2hpLnYxLkdldENsZWFuVXBSZXF1ZXN0GhwubnVzaGkudjEuR2V0Q2'
-    'xlYW5VcFJlc3BvbnNlEl8KElJlbW92ZUNoYXRXb3JrdHJlZRIjLm51c2hpLnYxLlJlbW92ZUNo'
-    'YXRXb3JrdHJlZVJlcXVlc3QaJC5udXNoaS52MS5SZW1vdmVDaGF0V29ya3RyZWVSZXNwb25zZR'
-    'JZChBEZWxldGVDaGF0QnJhbmNoEiEubnVzaGkudjEuRGVsZXRlQ2hhdEJyYW5jaFJlcXVlc3Qa'
-    'Ii5udXNoaS52MS5EZWxldGVDaGF0QnJhbmNoUmVzcG9uc2USXwoSRGVsZXRlR2l0SHViQnJhbm'
-    'NoEiMubnVzaGkudjEuRGVsZXRlR2l0SHViQnJhbmNoUmVxdWVzdBokLm51c2hpLnYxLkRlbGV0'
-    'ZUdpdEh1YkJyYW5jaFJlc3BvbnNlEmIKE1Jlc3RvcmVHaXRIdWJCcmFuY2gSJC5udXNoaS52MS'
-    '5SZXN0b3JlR2l0SHViQnJhbmNoUmVxdWVzdBolLm51c2hpLnYxLlJlc3RvcmVHaXRIdWJCcmFu'
-    'Y2hSZXNwb25zZRJNCgxGaW5kQ2hhdFB1bGwSHS5udXNoaS52MS5GaW5kQ2hhdFB1bGxSZXF1ZX'
-    'N0Gh4ubnVzaGkudjEuRmluZENoYXRQdWxsUmVzcG9uc2USTQoMTGlua0NoYXRQdWxsEh0ubnVz'
-    'aGkudjEuTGlua0NoYXRQdWxsUmVxdWVzdBoeLm51c2hpLnYxLkxpbmtDaGF0UHVsbFJlc3Bvbn'
-    'NlEj0KBkV2ZW50cxIXLm51c2hpLnYxLkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNS'
-    'ZXNwb25zZTAB');
+    'ViQ2hlY2tzUmVxdWVzdBojLm51c2hpLnYxLlJlcnVuR2l0SHViQ2hlY2tzUmVzcG9uc2USXwoS'
+    'R2V0R2l0SHViTWVyZ2VUZXh0EiMubnVzaGkudjEuR2V0R2l0SHViTWVyZ2VUZXh0UmVxdWVzdB'
+    'okLm51c2hpLnYxLkdldEdpdEh1Yk1lcmdlVGV4dFJlc3BvbnNlElYKD01lcmdlR2l0SHViUHVs'
+    'bBIgLm51c2hpLnYxLk1lcmdlR2l0SHViUHVsbFJlcXVlc3QaIS5udXNoaS52MS5NZXJnZUdpdE'
+    'h1YlB1bGxSZXNwb25zZRJoChVFbmFibGVHaXRIdWJBdXRvTWVyZ2USJi5udXNoaS52MS5FbmFi'
+    'bGVHaXRIdWJBdXRvTWVyZ2VSZXF1ZXN0GicubnVzaGkudjEuRW5hYmxlR2l0SHViQXV0b01lcm'
+    'dlUmVzcG9uc2USawoWRGlzYWJsZUdpdEh1YkF1dG9NZXJnZRInLm51c2hpLnYxLkRpc2FibGVH'
+    'aXRIdWJBdXRvTWVyZ2VSZXF1ZXN0GigubnVzaGkudjEuRGlzYWJsZUdpdEh1YkF1dG9NZXJnZV'
+    'Jlc3BvbnNlElwKEUVucXVldWVHaXRIdWJQdWxsEiIubnVzaGkudjEuRW5xdWV1ZUdpdEh1YlB1'
+    'bGxSZXF1ZXN0GiMubnVzaGkudjEuRW5xdWV1ZUdpdEh1YlB1bGxSZXNwb25zZRJcChFEZXF1ZX'
+    'VlR2l0SHViUHVsbBIiLm51c2hpLnYxLkRlcXVldWVHaXRIdWJQdWxsUmVxdWVzdBojLm51c2hp'
+    'LnYxLkRlcXVldWVHaXRIdWJQdWxsUmVzcG9uc2USRwoKR2V0Q2xlYW5VcBIbLm51c2hpLnYxLk'
+    'dldENsZWFuVXBSZXF1ZXN0GhwubnVzaGkudjEuR2V0Q2xlYW5VcFJlc3BvbnNlEl8KElJlbW92'
+    'ZUNoYXRXb3JrdHJlZRIjLm51c2hpLnYxLlJlbW92ZUNoYXRXb3JrdHJlZVJlcXVlc3QaJC5udX'
+    'NoaS52MS5SZW1vdmVDaGF0V29ya3RyZWVSZXNwb25zZRJZChBEZWxldGVDaGF0QnJhbmNoEiEu'
+    'bnVzaGkudjEuRGVsZXRlQ2hhdEJyYW5jaFJlcXVlc3QaIi5udXNoaS52MS5EZWxldGVDaGF0Qn'
+    'JhbmNoUmVzcG9uc2USXwoSRGVsZXRlR2l0SHViQnJhbmNoEiMubnVzaGkudjEuRGVsZXRlR2l0'
+    'SHViQnJhbmNoUmVxdWVzdBokLm51c2hpLnYxLkRlbGV0ZUdpdEh1YkJyYW5jaFJlc3BvbnNlEm'
+    'IKE1Jlc3RvcmVHaXRIdWJCcmFuY2gSJC5udXNoaS52MS5SZXN0b3JlR2l0SHViQnJhbmNoUmVx'
+    'dWVzdBolLm51c2hpLnYxLlJlc3RvcmVHaXRIdWJCcmFuY2hSZXNwb25zZRJNCgxGaW5kQ2hhdF'
+    'B1bGwSHS5udXNoaS52MS5GaW5kQ2hhdFB1bGxSZXF1ZXN0Gh4ubnVzaGkudjEuRmluZENoYXRQ'
+    'dWxsUmVzcG9uc2USTQoMTGlua0NoYXRQdWxsEh0ubnVzaGkudjEuTGlua0NoYXRQdWxsUmVxdW'
+    'VzdBoeLm51c2hpLnYxLkxpbmtDaGF0UHVsbFJlc3BvbnNlEj0KBkV2ZW50cxIXLm51c2hpLnYx'
+    'LkV2ZW50c1JlcXVlc3QaGC5udXNoaS52MS5FdmVudHNSZXNwb25zZTAB');

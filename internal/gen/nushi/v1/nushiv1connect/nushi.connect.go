@@ -357,6 +357,24 @@ const (
 	// NushiServiceRerunGitHubChecksProcedure is the fully-qualified name of the NushiService's
 	// RerunGitHubChecks RPC.
 	NushiServiceRerunGitHubChecksProcedure = "/nushi.v1.NushiService/RerunGitHubChecks"
+	// NushiServiceGetGitHubMergeTextProcedure is the fully-qualified name of the NushiService's
+	// GetGitHubMergeText RPC.
+	NushiServiceGetGitHubMergeTextProcedure = "/nushi.v1.NushiService/GetGitHubMergeText"
+	// NushiServiceMergeGitHubPullProcedure is the fully-qualified name of the NushiService's
+	// MergeGitHubPull RPC.
+	NushiServiceMergeGitHubPullProcedure = "/nushi.v1.NushiService/MergeGitHubPull"
+	// NushiServiceEnableGitHubAutoMergeProcedure is the fully-qualified name of the NushiService's
+	// EnableGitHubAutoMerge RPC.
+	NushiServiceEnableGitHubAutoMergeProcedure = "/nushi.v1.NushiService/EnableGitHubAutoMerge"
+	// NushiServiceDisableGitHubAutoMergeProcedure is the fully-qualified name of the NushiService's
+	// DisableGitHubAutoMerge RPC.
+	NushiServiceDisableGitHubAutoMergeProcedure = "/nushi.v1.NushiService/DisableGitHubAutoMerge"
+	// NushiServiceEnqueueGitHubPullProcedure is the fully-qualified name of the NushiService's
+	// EnqueueGitHubPull RPC.
+	NushiServiceEnqueueGitHubPullProcedure = "/nushi.v1.NushiService/EnqueueGitHubPull"
+	// NushiServiceDequeueGitHubPullProcedure is the fully-qualified name of the NushiService's
+	// DequeueGitHubPull RPC.
+	NushiServiceDequeueGitHubPullProcedure = "/nushi.v1.NushiService/DequeueGitHubPull"
 	// NushiServiceGetCleanUpProcedure is the fully-qualified name of the NushiService's GetCleanUp RPC.
 	NushiServiceGetCleanUpProcedure = "/nushi.v1.NushiService/GetCleanUp"
 	// NushiServiceRemoveChatWorktreeProcedure is the fully-qualified name of the NushiService's
@@ -761,6 +779,22 @@ type NushiServiceClient interface {
 	// Re-runs the failed jobs of the workflow runs that a pull request's
 	// failed Actions jobs belong to. API 88.
 	RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error)
+	// Merging a pull request (ADR 0069), each from the user's confirmation;
+	// a paired phone may, as it may post a review. No MCP tool reaches them.
+	// The commit text GitHub would use, for the confirmation. API 96.
+	GetGitHubMergeText(context.Context, *connect.Request[v1.GetGitHubMergeTextRequest]) (*connect.Response[v1.GetGitHubMergeTextResponse], error)
+	// Only at the head the user was shown, only while GitHub says it can
+	// merge now without passing a rule of its base's: never an admin's
+	// bypass. API 96.
+	MergeGitHubPull(context.Context, *connect.Request[v1.MergeGitHubPullRequest]) (*connect.Response[v1.MergeGitHubPullResponse], error)
+	// GitHub merges it (or adds it to its merge queue) once it can, only at
+	// that head. API 96.
+	EnableGitHubAutoMerge(context.Context, *connect.Request[v1.EnableGitHubAutoMergeRequest]) (*connect.Response[v1.EnableGitHubAutoMergeResponse], error)
+	DisableGitHubAutoMerge(context.Context, *connect.Request[v1.DisableGitHubAutoMergeRequest]) (*connect.Response[v1.DisableGitHubAutoMergeResponse], error)
+	// Adds it to the end of its base's merge queue, only at that head; takes
+	// it out. API 96.
+	EnqueueGitHubPull(context.Context, *connect.Request[v1.EnqueueGitHubPullRequest]) (*connect.Response[v1.EnqueueGitHubPullResponse], error)
+	DequeueGitHubPull(context.Context, *connect.Request[v1.DequeueGitHubPullRequest]) (*connect.Response[v1.DequeueGitHubPullResponse], error)
 	// Cleaning up after a chat's pull request: what the chat's worktree and
 	// branch would lose (GetCleanUp), removing the worktree, deleting its
 	// branch, and the pull request's branch on GitHub deleted or made again.
@@ -1514,6 +1548,42 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("RerunGitHubChecks")),
 			connect.WithClientOptions(opts...),
 		),
+		getGitHubMergeText: connect.NewClient[v1.GetGitHubMergeTextRequest, v1.GetGitHubMergeTextResponse](
+			httpClient,
+			baseURL+NushiServiceGetGitHubMergeTextProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetGitHubMergeText")),
+			connect.WithClientOptions(opts...),
+		),
+		mergeGitHubPull: connect.NewClient[v1.MergeGitHubPullRequest, v1.MergeGitHubPullResponse](
+			httpClient,
+			baseURL+NushiServiceMergeGitHubPullProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("MergeGitHubPull")),
+			connect.WithClientOptions(opts...),
+		),
+		enableGitHubAutoMerge: connect.NewClient[v1.EnableGitHubAutoMergeRequest, v1.EnableGitHubAutoMergeResponse](
+			httpClient,
+			baseURL+NushiServiceEnableGitHubAutoMergeProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("EnableGitHubAutoMerge")),
+			connect.WithClientOptions(opts...),
+		),
+		disableGitHubAutoMerge: connect.NewClient[v1.DisableGitHubAutoMergeRequest, v1.DisableGitHubAutoMergeResponse](
+			httpClient,
+			baseURL+NushiServiceDisableGitHubAutoMergeProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("DisableGitHubAutoMerge")),
+			connect.WithClientOptions(opts...),
+		),
+		enqueueGitHubPull: connect.NewClient[v1.EnqueueGitHubPullRequest, v1.EnqueueGitHubPullResponse](
+			httpClient,
+			baseURL+NushiServiceEnqueueGitHubPullProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("EnqueueGitHubPull")),
+			connect.WithClientOptions(opts...),
+		),
+		dequeueGitHubPull: connect.NewClient[v1.DequeueGitHubPullRequest, v1.DequeueGitHubPullResponse](
+			httpClient,
+			baseURL+NushiServiceDequeueGitHubPullProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("DequeueGitHubPull")),
+			connect.WithClientOptions(opts...),
+		),
 		getCleanUp: connect.NewClient[v1.GetCleanUpRequest, v1.GetCleanUpResponse](
 			httpClient,
 			baseURL+NushiServiceGetCleanUpProcedure,
@@ -1567,133 +1637,139 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // nushiServiceClient implements NushiServiceClient.
 type nushiServiceClient struct {
-	ping                *connect.Client[v1.PingRequest, v1.PingResponse]
-	restartWhenIdle     *connect.Client[v1.RestartWhenIdleRequest, v1.RestartWhenIdleResponse]
-	checkForUpdates     *connect.Client[v1.CheckForUpdatesRequest, v1.CheckForUpdatesResponse]
-	listChats           *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
-	getChat             *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
-	getChatItems        *connect.Client[v1.GetChatItemsRequest, v1.GetChatItemsResponse]
-	startChat           *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
-	listAgents          *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
-	setUpAgent          *connect.Client[v1.SetUpAgentRequest, v1.SetUpAgentResponse]
-	removeAgent         *connect.Client[v1.RemoveAgentRequest, v1.RemoveAgentResponse]
-	listAgentSessions   *connect.Client[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse]
-	openAgentSession    *connect.Client[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse]
-	moveChat            *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
-	sendPrompt          *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
-	rewindChat          *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
-	unqueue             *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
-	cancelTurn          *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
-	stopTask            *connect.Client[v1.StopTaskRequest, v1.StopTaskResponse]
-	forkChat            *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
-	closeSideChat       *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
-	forkAsChat          *connect.Client[v1.ForkAsChatRequest, v1.ForkAsChatResponse]
-	keepSideChat        *connect.Client[v1.KeepSideChatRequest, v1.KeepSideChatResponse]
-	renameChat          *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
-	pinChats            *connect.Client[v1.PinChatsRequest, v1.PinChatsResponse]
-	renameBranch        *connect.Client[v1.RenameBranchRequest, v1.RenameBranchResponse]
-	switchBranch        *connect.Client[v1.SwitchBranchRequest, v1.SwitchBranchResponse]
-	archiveChat         *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
-	sleepChat           *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
-	reopenChat          *connect.Client[v1.ReopenChatRequest, v1.ReopenChatResponse]
-	getMemory           *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
-	getSettings         *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
-	setSettings         *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
-	listTranscripts     *connect.Client[v1.ListTranscriptsRequest, v1.ListTranscriptsResponse]
-	clearTranscripts    *connect.Client[v1.ClearTranscriptsRequest, v1.ClearTranscriptsResponse]
-	planDeleteChat      *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
-	deleteChat          *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
-	dismissRemovedChats *connect.Client[v1.DismissRemovedChatsRequest, v1.DismissRemovedChatsResponse]
-	answerPermission    *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
-	answerQuestion      *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
-	setConfigOption     *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
-	getDiff             *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
-	getFile             *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
-	watchChatFile       *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
-	findChatFiles       *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
-	listCommits         *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
-	getFolderStatus     *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
-	listBranches        *connect.Client[v1.ListBranchesRequest, v1.ListBranchesResponse]
-	listFiles           *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
-	getContextUsage     *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
-	listMcpServers      *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
-	addMcpServer        *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
-	editMcpServer       *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
-	removeMcpServer     *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
-	setMcpServerOn      *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
-	loginMcpServer      *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
-	logoutMcpServer     *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
-	listSkills          *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
-	setSkillOn          *connect.Client[v1.SetSkillOnRequest, v1.SetSkillOnResponse]
-	setPluginOn         *connect.Client[v1.SetPluginOnRequest, v1.SetPluginOnResponse]
-	uninstallPlugin     *connect.Client[v1.UninstallPluginRequest, v1.UninstallPluginResponse]
-	trashSkill          *connect.Client[v1.TrashSkillRequest, v1.TrashSkillResponse]
-	linkSkill           *connect.Client[v1.LinkSkillRequest, v1.LinkSkillResponse]
-	reloadChat          *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
-	openTerminal        *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
-	listTerminals       *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
-	attachTerminal      *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
-	writeTerminal       *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
-	resizeTerminal      *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
-	renameTerminal      *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
-	arrangeTerminals    *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
-	restartTerminal     *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
-	closeTerminal       *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
-	checkFolder         *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
-	trustFolder         *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
-	getRemote           *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
-	setRemote           *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
-	startPairing        *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
-	confirmPairing      *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
-	revokeDevice        *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
-	getPushKey          *connect.Client[v1.GetPushKeyRequest, v1.GetPushKeyResponse]
-	setPushSubscription *connect.Client[v1.SetPushSubscriptionRequest, v1.SetPushSubscriptionResponse]
-	setDeviceView       *connect.Client[v1.SetDeviceViewRequest, v1.SetDeviceViewResponse]
-	sendTestPush        *connect.Client[v1.SendTestPushRequest, v1.SendTestPushResponse]
-	unpairThisDevice    *connect.Client[v1.UnpairThisDeviceRequest, v1.UnpairThisDeviceResponse]
-	log                 *connect.Client[v1.LogRequest, v1.LogResponse]
-	listJiraSites       *connect.Client[v1.ListJiraSitesRequest, v1.ListJiraSitesResponse]
-	addJiraSite         *connect.Client[v1.AddJiraSiteRequest, v1.AddJiraSiteResponse]
-	removeJiraSite      *connect.Client[v1.RemoveJiraSiteRequest, v1.RemoveJiraSiteResponse]
-	checkJiraSite       *connect.Client[v1.CheckJiraSiteRequest, v1.CheckJiraSiteResponse]
-	allowJiraToken      *connect.Client[v1.AllowJiraTokenRequest, v1.AllowJiraTokenResponse]
-	listJiraBoards      *connect.Client[v1.ListJiraBoardsRequest, v1.ListJiraBoardsResponse]
-	setJiraBoard        *connect.Client[v1.SetJiraBoardRequest, v1.SetJiraBoardResponse]
-	setJiraSearches     *connect.Client[v1.SetJiraSearchesRequest, v1.SetJiraSearchesResponse]
-	listJiraIssues      *connect.Client[v1.ListJiraIssuesRequest, v1.ListJiraIssuesResponse]
-	getJiraJql          *connect.Client[v1.GetJiraJqlRequest, v1.GetJiraJqlResponse]
-	suggestJiraJql      *connect.Client[v1.SuggestJiraJqlRequest, v1.SuggestJiraJqlResponse]
-	getJiraIssue        *connect.Client[v1.GetJiraIssueRequest, v1.GetJiraIssueResponse]
-	listJiraTransitions *connect.Client[v1.ListJiraTransitionsRequest, v1.ListJiraTransitionsResponse]
-	transitionJiraIssue *connect.Client[v1.TransitionJiraIssueRequest, v1.TransitionJiraIssueResponse]
-	addJiraComment      *connect.Client[v1.AddJiraCommentRequest, v1.AddJiraCommentResponse]
-	findJiraIssues      *connect.Client[v1.FindJiraIssuesRequest, v1.FindJiraIssuesResponse]
-	getJiraAttachment   *connect.Client[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse]
-	listGitHubHosts     *connect.Client[v1.ListGitHubHostsRequest, v1.ListGitHubHostsResponse]
-	addGitHubToken      *connect.Client[v1.AddGitHubTokenRequest, v1.AddGitHubTokenResponse]
-	removeGitHubToken   *connect.Client[v1.RemoveGitHubTokenRequest, v1.RemoveGitHubTokenResponse]
-	allowGitHubToken    *connect.Client[v1.AllowGitHubTokenRequest, v1.AllowGitHubTokenResponse]
-	listGitHubRepos     *connect.Client[v1.ListGitHubReposRequest, v1.ListGitHubReposResponse]
-	listGitHubInbox     *connect.Client[v1.ListGitHubInboxRequest, v1.ListGitHubInboxResponse]
-	getGitHubStates     *connect.Client[v1.GetGitHubStatesRequest, v1.GetGitHubStatesResponse]
-	getGitHubPull       *connect.Client[v1.GetGitHubPullRequest, v1.GetGitHubPullResponse]
-	getGitHubIssue      *connect.Client[v1.GetGitHubIssueRequest, v1.GetGitHubIssueResponse]
-	getGitHubFiles      *connect.Client[v1.GetGitHubFilesRequest, v1.GetGitHubFilesResponse]
-	getGitHubJobLog     *connect.Client[v1.GetGitHubJobLogRequest, v1.GetGitHubJobLogResponse]
-	getGitHubPrompt     *connect.Client[v1.GetGitHubPromptRequest, v1.GetGitHubPromptResponse]
-	replyGitHubThread   *connect.Client[v1.ReplyGitHubThreadRequest, v1.ReplyGitHubThreadResponse]
-	resolveGitHubThread *connect.Client[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse]
-	addGitHubComment    *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
-	submitGitHubReview  *connect.Client[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse]
-	rerunGitHubChecks   *connect.Client[v1.RerunGitHubChecksRequest, v1.RerunGitHubChecksResponse]
-	getCleanUp          *connect.Client[v1.GetCleanUpRequest, v1.GetCleanUpResponse]
-	removeChatWorktree  *connect.Client[v1.RemoveChatWorktreeRequest, v1.RemoveChatWorktreeResponse]
-	deleteChatBranch    *connect.Client[v1.DeleteChatBranchRequest, v1.DeleteChatBranchResponse]
-	deleteGitHubBranch  *connect.Client[v1.DeleteGitHubBranchRequest, v1.DeleteGitHubBranchResponse]
-	restoreGitHubBranch *connect.Client[v1.RestoreGitHubBranchRequest, v1.RestoreGitHubBranchResponse]
-	findChatPull        *connect.Client[v1.FindChatPullRequest, v1.FindChatPullResponse]
-	linkChatPull        *connect.Client[v1.LinkChatPullRequest, v1.LinkChatPullResponse]
-	events              *connect.Client[v1.EventsRequest, v1.EventsResponse]
+	ping                   *connect.Client[v1.PingRequest, v1.PingResponse]
+	restartWhenIdle        *connect.Client[v1.RestartWhenIdleRequest, v1.RestartWhenIdleResponse]
+	checkForUpdates        *connect.Client[v1.CheckForUpdatesRequest, v1.CheckForUpdatesResponse]
+	listChats              *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
+	getChat                *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
+	getChatItems           *connect.Client[v1.GetChatItemsRequest, v1.GetChatItemsResponse]
+	startChat              *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
+	listAgents             *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
+	setUpAgent             *connect.Client[v1.SetUpAgentRequest, v1.SetUpAgentResponse]
+	removeAgent            *connect.Client[v1.RemoveAgentRequest, v1.RemoveAgentResponse]
+	listAgentSessions      *connect.Client[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse]
+	openAgentSession       *connect.Client[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse]
+	moveChat               *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
+	sendPrompt             *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
+	rewindChat             *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
+	unqueue                *connect.Client[v1.UnqueueRequest, v1.UnqueueResponse]
+	cancelTurn             *connect.Client[v1.CancelTurnRequest, v1.CancelTurnResponse]
+	stopTask               *connect.Client[v1.StopTaskRequest, v1.StopTaskResponse]
+	forkChat               *connect.Client[v1.ForkChatRequest, v1.ForkChatResponse]
+	closeSideChat          *connect.Client[v1.CloseSideChatRequest, v1.CloseSideChatResponse]
+	forkAsChat             *connect.Client[v1.ForkAsChatRequest, v1.ForkAsChatResponse]
+	keepSideChat           *connect.Client[v1.KeepSideChatRequest, v1.KeepSideChatResponse]
+	renameChat             *connect.Client[v1.RenameChatRequest, v1.RenameChatResponse]
+	pinChats               *connect.Client[v1.PinChatsRequest, v1.PinChatsResponse]
+	renameBranch           *connect.Client[v1.RenameBranchRequest, v1.RenameBranchResponse]
+	switchBranch           *connect.Client[v1.SwitchBranchRequest, v1.SwitchBranchResponse]
+	archiveChat            *connect.Client[v1.ArchiveChatRequest, v1.ArchiveChatResponse]
+	sleepChat              *connect.Client[v1.SleepChatRequest, v1.SleepChatResponse]
+	reopenChat             *connect.Client[v1.ReopenChatRequest, v1.ReopenChatResponse]
+	getMemory              *connect.Client[v1.GetMemoryRequest, v1.GetMemoryResponse]
+	getSettings            *connect.Client[v1.GetSettingsRequest, v1.GetSettingsResponse]
+	setSettings            *connect.Client[v1.SetSettingsRequest, v1.SetSettingsResponse]
+	listTranscripts        *connect.Client[v1.ListTranscriptsRequest, v1.ListTranscriptsResponse]
+	clearTranscripts       *connect.Client[v1.ClearTranscriptsRequest, v1.ClearTranscriptsResponse]
+	planDeleteChat         *connect.Client[v1.PlanDeleteChatRequest, v1.PlanDeleteChatResponse]
+	deleteChat             *connect.Client[v1.DeleteChatRequest, v1.DeleteChatResponse]
+	dismissRemovedChats    *connect.Client[v1.DismissRemovedChatsRequest, v1.DismissRemovedChatsResponse]
+	answerPermission       *connect.Client[v1.AnswerPermissionRequest, v1.AnswerPermissionResponse]
+	answerQuestion         *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
+	setConfigOption        *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
+	getDiff                *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	getFile                *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
+	watchChatFile          *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
+	findChatFiles          *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
+	listCommits            *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
+	getFolderStatus        *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
+	listBranches           *connect.Client[v1.ListBranchesRequest, v1.ListBranchesResponse]
+	listFiles              *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
+	getContextUsage        *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
+	listMcpServers         *connect.Client[v1.ListMcpServersRequest, v1.ListMcpServersResponse]
+	addMcpServer           *connect.Client[v1.AddMcpServerRequest, v1.AddMcpServerResponse]
+	editMcpServer          *connect.Client[v1.EditMcpServerRequest, v1.EditMcpServerResponse]
+	removeMcpServer        *connect.Client[v1.RemoveMcpServerRequest, v1.RemoveMcpServerResponse]
+	setMcpServerOn         *connect.Client[v1.SetMcpServerOnRequest, v1.SetMcpServerOnResponse]
+	loginMcpServer         *connect.Client[v1.LoginMcpServerRequest, v1.LoginMcpServerResponse]
+	logoutMcpServer        *connect.Client[v1.LogoutMcpServerRequest, v1.LogoutMcpServerResponse]
+	listSkills             *connect.Client[v1.ListSkillsRequest, v1.ListSkillsResponse]
+	setSkillOn             *connect.Client[v1.SetSkillOnRequest, v1.SetSkillOnResponse]
+	setPluginOn            *connect.Client[v1.SetPluginOnRequest, v1.SetPluginOnResponse]
+	uninstallPlugin        *connect.Client[v1.UninstallPluginRequest, v1.UninstallPluginResponse]
+	trashSkill             *connect.Client[v1.TrashSkillRequest, v1.TrashSkillResponse]
+	linkSkill              *connect.Client[v1.LinkSkillRequest, v1.LinkSkillResponse]
+	reloadChat             *connect.Client[v1.ReloadChatRequest, v1.ReloadChatResponse]
+	openTerminal           *connect.Client[v1.OpenTerminalRequest, v1.OpenTerminalResponse]
+	listTerminals          *connect.Client[v1.ListTerminalsRequest, v1.ListTerminalsResponse]
+	attachTerminal         *connect.Client[v1.AttachTerminalRequest, v1.AttachTerminalResponse]
+	writeTerminal          *connect.Client[v1.WriteTerminalRequest, v1.WriteTerminalResponse]
+	resizeTerminal         *connect.Client[v1.ResizeTerminalRequest, v1.ResizeTerminalResponse]
+	renameTerminal         *connect.Client[v1.RenameTerminalRequest, v1.RenameTerminalResponse]
+	arrangeTerminals       *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
+	restartTerminal        *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
+	closeTerminal          *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
+	checkFolder            *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
+	trustFolder            *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
+	getRemote              *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
+	setRemote              *connect.Client[v1.SetRemoteRequest, v1.SetRemoteResponse]
+	startPairing           *connect.Client[v1.StartPairingRequest, v1.StartPairingResponse]
+	confirmPairing         *connect.Client[v1.ConfirmPairingRequest, v1.ConfirmPairingResponse]
+	revokeDevice           *connect.Client[v1.RevokeDeviceRequest, v1.RevokeDeviceResponse]
+	getPushKey             *connect.Client[v1.GetPushKeyRequest, v1.GetPushKeyResponse]
+	setPushSubscription    *connect.Client[v1.SetPushSubscriptionRequest, v1.SetPushSubscriptionResponse]
+	setDeviceView          *connect.Client[v1.SetDeviceViewRequest, v1.SetDeviceViewResponse]
+	sendTestPush           *connect.Client[v1.SendTestPushRequest, v1.SendTestPushResponse]
+	unpairThisDevice       *connect.Client[v1.UnpairThisDeviceRequest, v1.UnpairThisDeviceResponse]
+	log                    *connect.Client[v1.LogRequest, v1.LogResponse]
+	listJiraSites          *connect.Client[v1.ListJiraSitesRequest, v1.ListJiraSitesResponse]
+	addJiraSite            *connect.Client[v1.AddJiraSiteRequest, v1.AddJiraSiteResponse]
+	removeJiraSite         *connect.Client[v1.RemoveJiraSiteRequest, v1.RemoveJiraSiteResponse]
+	checkJiraSite          *connect.Client[v1.CheckJiraSiteRequest, v1.CheckJiraSiteResponse]
+	allowJiraToken         *connect.Client[v1.AllowJiraTokenRequest, v1.AllowJiraTokenResponse]
+	listJiraBoards         *connect.Client[v1.ListJiraBoardsRequest, v1.ListJiraBoardsResponse]
+	setJiraBoard           *connect.Client[v1.SetJiraBoardRequest, v1.SetJiraBoardResponse]
+	setJiraSearches        *connect.Client[v1.SetJiraSearchesRequest, v1.SetJiraSearchesResponse]
+	listJiraIssues         *connect.Client[v1.ListJiraIssuesRequest, v1.ListJiraIssuesResponse]
+	getJiraJql             *connect.Client[v1.GetJiraJqlRequest, v1.GetJiraJqlResponse]
+	suggestJiraJql         *connect.Client[v1.SuggestJiraJqlRequest, v1.SuggestJiraJqlResponse]
+	getJiraIssue           *connect.Client[v1.GetJiraIssueRequest, v1.GetJiraIssueResponse]
+	listJiraTransitions    *connect.Client[v1.ListJiraTransitionsRequest, v1.ListJiraTransitionsResponse]
+	transitionJiraIssue    *connect.Client[v1.TransitionJiraIssueRequest, v1.TransitionJiraIssueResponse]
+	addJiraComment         *connect.Client[v1.AddJiraCommentRequest, v1.AddJiraCommentResponse]
+	findJiraIssues         *connect.Client[v1.FindJiraIssuesRequest, v1.FindJiraIssuesResponse]
+	getJiraAttachment      *connect.Client[v1.GetJiraAttachmentRequest, v1.GetJiraAttachmentResponse]
+	listGitHubHosts        *connect.Client[v1.ListGitHubHostsRequest, v1.ListGitHubHostsResponse]
+	addGitHubToken         *connect.Client[v1.AddGitHubTokenRequest, v1.AddGitHubTokenResponse]
+	removeGitHubToken      *connect.Client[v1.RemoveGitHubTokenRequest, v1.RemoveGitHubTokenResponse]
+	allowGitHubToken       *connect.Client[v1.AllowGitHubTokenRequest, v1.AllowGitHubTokenResponse]
+	listGitHubRepos        *connect.Client[v1.ListGitHubReposRequest, v1.ListGitHubReposResponse]
+	listGitHubInbox        *connect.Client[v1.ListGitHubInboxRequest, v1.ListGitHubInboxResponse]
+	getGitHubStates        *connect.Client[v1.GetGitHubStatesRequest, v1.GetGitHubStatesResponse]
+	getGitHubPull          *connect.Client[v1.GetGitHubPullRequest, v1.GetGitHubPullResponse]
+	getGitHubIssue         *connect.Client[v1.GetGitHubIssueRequest, v1.GetGitHubIssueResponse]
+	getGitHubFiles         *connect.Client[v1.GetGitHubFilesRequest, v1.GetGitHubFilesResponse]
+	getGitHubJobLog        *connect.Client[v1.GetGitHubJobLogRequest, v1.GetGitHubJobLogResponse]
+	getGitHubPrompt        *connect.Client[v1.GetGitHubPromptRequest, v1.GetGitHubPromptResponse]
+	replyGitHubThread      *connect.Client[v1.ReplyGitHubThreadRequest, v1.ReplyGitHubThreadResponse]
+	resolveGitHubThread    *connect.Client[v1.ResolveGitHubThreadRequest, v1.ResolveGitHubThreadResponse]
+	addGitHubComment       *connect.Client[v1.AddGitHubCommentRequest, v1.AddGitHubCommentResponse]
+	submitGitHubReview     *connect.Client[v1.SubmitGitHubReviewRequest, v1.SubmitGitHubReviewResponse]
+	rerunGitHubChecks      *connect.Client[v1.RerunGitHubChecksRequest, v1.RerunGitHubChecksResponse]
+	getGitHubMergeText     *connect.Client[v1.GetGitHubMergeTextRequest, v1.GetGitHubMergeTextResponse]
+	mergeGitHubPull        *connect.Client[v1.MergeGitHubPullRequest, v1.MergeGitHubPullResponse]
+	enableGitHubAutoMerge  *connect.Client[v1.EnableGitHubAutoMergeRequest, v1.EnableGitHubAutoMergeResponse]
+	disableGitHubAutoMerge *connect.Client[v1.DisableGitHubAutoMergeRequest, v1.DisableGitHubAutoMergeResponse]
+	enqueueGitHubPull      *connect.Client[v1.EnqueueGitHubPullRequest, v1.EnqueueGitHubPullResponse]
+	dequeueGitHubPull      *connect.Client[v1.DequeueGitHubPullRequest, v1.DequeueGitHubPullResponse]
+	getCleanUp             *connect.Client[v1.GetCleanUpRequest, v1.GetCleanUpResponse]
+	removeChatWorktree     *connect.Client[v1.RemoveChatWorktreeRequest, v1.RemoveChatWorktreeResponse]
+	deleteChatBranch       *connect.Client[v1.DeleteChatBranchRequest, v1.DeleteChatBranchResponse]
+	deleteGitHubBranch     *connect.Client[v1.DeleteGitHubBranchRequest, v1.DeleteGitHubBranchResponse]
+	restoreGitHubBranch    *connect.Client[v1.RestoreGitHubBranchRequest, v1.RestoreGitHubBranchResponse]
+	findChatPull           *connect.Client[v1.FindChatPullRequest, v1.FindChatPullResponse]
+	linkChatPull           *connect.Client[v1.LinkChatPullRequest, v1.LinkChatPullResponse]
+	events                 *connect.Client[v1.EventsRequest, v1.EventsResponse]
 }
 
 // Ping calls nushi.v1.NushiService.Ping.
@@ -2291,6 +2367,36 @@ func (c *nushiServiceClient) RerunGitHubChecks(ctx context.Context, req *connect
 	return c.rerunGitHubChecks.CallUnary(ctx, req)
 }
 
+// GetGitHubMergeText calls nushi.v1.NushiService.GetGitHubMergeText.
+func (c *nushiServiceClient) GetGitHubMergeText(ctx context.Context, req *connect.Request[v1.GetGitHubMergeTextRequest]) (*connect.Response[v1.GetGitHubMergeTextResponse], error) {
+	return c.getGitHubMergeText.CallUnary(ctx, req)
+}
+
+// MergeGitHubPull calls nushi.v1.NushiService.MergeGitHubPull.
+func (c *nushiServiceClient) MergeGitHubPull(ctx context.Context, req *connect.Request[v1.MergeGitHubPullRequest]) (*connect.Response[v1.MergeGitHubPullResponse], error) {
+	return c.mergeGitHubPull.CallUnary(ctx, req)
+}
+
+// EnableGitHubAutoMerge calls nushi.v1.NushiService.EnableGitHubAutoMerge.
+func (c *nushiServiceClient) EnableGitHubAutoMerge(ctx context.Context, req *connect.Request[v1.EnableGitHubAutoMergeRequest]) (*connect.Response[v1.EnableGitHubAutoMergeResponse], error) {
+	return c.enableGitHubAutoMerge.CallUnary(ctx, req)
+}
+
+// DisableGitHubAutoMerge calls nushi.v1.NushiService.DisableGitHubAutoMerge.
+func (c *nushiServiceClient) DisableGitHubAutoMerge(ctx context.Context, req *connect.Request[v1.DisableGitHubAutoMergeRequest]) (*connect.Response[v1.DisableGitHubAutoMergeResponse], error) {
+	return c.disableGitHubAutoMerge.CallUnary(ctx, req)
+}
+
+// EnqueueGitHubPull calls nushi.v1.NushiService.EnqueueGitHubPull.
+func (c *nushiServiceClient) EnqueueGitHubPull(ctx context.Context, req *connect.Request[v1.EnqueueGitHubPullRequest]) (*connect.Response[v1.EnqueueGitHubPullResponse], error) {
+	return c.enqueueGitHubPull.CallUnary(ctx, req)
+}
+
+// DequeueGitHubPull calls nushi.v1.NushiService.DequeueGitHubPull.
+func (c *nushiServiceClient) DequeueGitHubPull(ctx context.Context, req *connect.Request[v1.DequeueGitHubPullRequest]) (*connect.Response[v1.DequeueGitHubPullResponse], error) {
+	return c.dequeueGitHubPull.CallUnary(ctx, req)
+}
+
 // GetCleanUp calls nushi.v1.NushiService.GetCleanUp.
 func (c *nushiServiceClient) GetCleanUp(ctx context.Context, req *connect.Request[v1.GetCleanUpRequest]) (*connect.Response[v1.GetCleanUpResponse], error) {
 	return c.getCleanUp.CallUnary(ctx, req)
@@ -2711,6 +2817,22 @@ type NushiServiceHandler interface {
 	// Re-runs the failed jobs of the workflow runs that a pull request's
 	// failed Actions jobs belong to. API 88.
 	RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error)
+	// Merging a pull request (ADR 0069), each from the user's confirmation;
+	// a paired phone may, as it may post a review. No MCP tool reaches them.
+	// The commit text GitHub would use, for the confirmation. API 96.
+	GetGitHubMergeText(context.Context, *connect.Request[v1.GetGitHubMergeTextRequest]) (*connect.Response[v1.GetGitHubMergeTextResponse], error)
+	// Only at the head the user was shown, only while GitHub says it can
+	// merge now without passing a rule of its base's: never an admin's
+	// bypass. API 96.
+	MergeGitHubPull(context.Context, *connect.Request[v1.MergeGitHubPullRequest]) (*connect.Response[v1.MergeGitHubPullResponse], error)
+	// GitHub merges it (or adds it to its merge queue) once it can, only at
+	// that head. API 96.
+	EnableGitHubAutoMerge(context.Context, *connect.Request[v1.EnableGitHubAutoMergeRequest]) (*connect.Response[v1.EnableGitHubAutoMergeResponse], error)
+	DisableGitHubAutoMerge(context.Context, *connect.Request[v1.DisableGitHubAutoMergeRequest]) (*connect.Response[v1.DisableGitHubAutoMergeResponse], error)
+	// Adds it to the end of its base's merge queue, only at that head; takes
+	// it out. API 96.
+	EnqueueGitHubPull(context.Context, *connect.Request[v1.EnqueueGitHubPullRequest]) (*connect.Response[v1.EnqueueGitHubPullResponse], error)
+	DequeueGitHubPull(context.Context, *connect.Request[v1.DequeueGitHubPullRequest]) (*connect.Response[v1.DequeueGitHubPullResponse], error)
 	// Cleaning up after a chat's pull request: what the chat's worktree and
 	// branch would lose (GetCleanUp), removing the worktree, deleting its
 	// branch, and the pull request's branch on GitHub deleted or made again.
@@ -3460,6 +3582,42 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("RerunGitHubChecks")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceGetGitHubMergeTextHandler := connect.NewUnaryHandler(
+		NushiServiceGetGitHubMergeTextProcedure,
+		svc.GetGitHubMergeText,
+		connect.WithSchema(nushiServiceMethods.ByName("GetGitHubMergeText")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceMergeGitHubPullHandler := connect.NewUnaryHandler(
+		NushiServiceMergeGitHubPullProcedure,
+		svc.MergeGitHubPull,
+		connect.WithSchema(nushiServiceMethods.ByName("MergeGitHubPull")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceEnableGitHubAutoMergeHandler := connect.NewUnaryHandler(
+		NushiServiceEnableGitHubAutoMergeProcedure,
+		svc.EnableGitHubAutoMerge,
+		connect.WithSchema(nushiServiceMethods.ByName("EnableGitHubAutoMerge")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceDisableGitHubAutoMergeHandler := connect.NewUnaryHandler(
+		NushiServiceDisableGitHubAutoMergeProcedure,
+		svc.DisableGitHubAutoMerge,
+		connect.WithSchema(nushiServiceMethods.ByName("DisableGitHubAutoMerge")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceEnqueueGitHubPullHandler := connect.NewUnaryHandler(
+		NushiServiceEnqueueGitHubPullProcedure,
+		svc.EnqueueGitHubPull,
+		connect.WithSchema(nushiServiceMethods.ByName("EnqueueGitHubPull")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceDequeueGitHubPullHandler := connect.NewUnaryHandler(
+		NushiServiceDequeueGitHubPullProcedure,
+		svc.DequeueGitHubPull,
+		connect.WithSchema(nushiServiceMethods.ByName("DequeueGitHubPull")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceGetCleanUpHandler := connect.NewUnaryHandler(
 		NushiServiceGetCleanUpProcedure,
 		svc.GetCleanUp,
@@ -3748,6 +3906,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSubmitGitHubReviewHandler.ServeHTTP(w, r)
 		case NushiServiceRerunGitHubChecksProcedure:
 			nushiServiceRerunGitHubChecksHandler.ServeHTTP(w, r)
+		case NushiServiceGetGitHubMergeTextProcedure:
+			nushiServiceGetGitHubMergeTextHandler.ServeHTTP(w, r)
+		case NushiServiceMergeGitHubPullProcedure:
+			nushiServiceMergeGitHubPullHandler.ServeHTTP(w, r)
+		case NushiServiceEnableGitHubAutoMergeProcedure:
+			nushiServiceEnableGitHubAutoMergeHandler.ServeHTTP(w, r)
+		case NushiServiceDisableGitHubAutoMergeProcedure:
+			nushiServiceDisableGitHubAutoMergeHandler.ServeHTTP(w, r)
+		case NushiServiceEnqueueGitHubPullProcedure:
+			nushiServiceEnqueueGitHubPullHandler.ServeHTTP(w, r)
+		case NushiServiceDequeueGitHubPullProcedure:
+			nushiServiceDequeueGitHubPullHandler.ServeHTTP(w, r)
 		case NushiServiceGetCleanUpProcedure:
 			nushiServiceGetCleanUpHandler.ServeHTTP(w, r)
 		case NushiServiceRemoveChatWorktreeProcedure:
@@ -4247,6 +4417,30 @@ func (UnimplementedNushiServiceHandler) SubmitGitHubReview(context.Context, *con
 
 func (UnimplementedNushiServiceHandler) RerunGitHubChecks(context.Context, *connect.Request[v1.RerunGitHubChecksRequest]) (*connect.Response[v1.RerunGitHubChecksResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.RerunGitHubChecks is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetGitHubMergeText(context.Context, *connect.Request[v1.GetGitHubMergeTextRequest]) (*connect.Response[v1.GetGitHubMergeTextResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetGitHubMergeText is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) MergeGitHubPull(context.Context, *connect.Request[v1.MergeGitHubPullRequest]) (*connect.Response[v1.MergeGitHubPullResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.MergeGitHubPull is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) EnableGitHubAutoMerge(context.Context, *connect.Request[v1.EnableGitHubAutoMergeRequest]) (*connect.Response[v1.EnableGitHubAutoMergeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.EnableGitHubAutoMerge is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) DisableGitHubAutoMerge(context.Context, *connect.Request[v1.DisableGitHubAutoMergeRequest]) (*connect.Response[v1.DisableGitHubAutoMergeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.DisableGitHubAutoMerge is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) EnqueueGitHubPull(context.Context, *connect.Request[v1.EnqueueGitHubPullRequest]) (*connect.Response[v1.EnqueueGitHubPullResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.EnqueueGitHubPull is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) DequeueGitHubPull(context.Context, *connect.Request[v1.DequeueGitHubPullRequest]) (*connect.Response[v1.DequeueGitHubPullResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.DequeueGitHubPull is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetCleanUp(context.Context, *connect.Request[v1.GetCleanUpRequest]) (*connect.Response[v1.GetCleanUpResponse], error) {

@@ -2291,6 +2291,118 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Merging a pull request (ADR 0069), each from the user's confirmation;
+  /// a paired phone may, as it may post a review. No MCP tool reaches them.
+  /// The commit text GitHub would use, for the confirmation. API 96.
+  Future<nushiv1nushi.GetGitHubMergeTextResponse> getGitHubMergeText(
+    nushiv1nushi.GetGitHubMergeTextRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getGitHubMergeText,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Only at the head the user was shown, only while GitHub says it can
+  /// merge now without passing a rule of its base's: never an admin's
+  /// bypass. API 96.
+  Future<nushiv1nushi.MergeGitHubPullResponse> mergeGitHubPull(
+    nushiv1nushi.MergeGitHubPullRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.mergeGitHubPull,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// GitHub merges it (or adds it to its merge queue) once it can, only at
+  /// that head. API 96.
+  Future<nushiv1nushi.EnableGitHubAutoMergeResponse> enableGitHubAutoMerge(
+    nushiv1nushi.EnableGitHubAutoMergeRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.enableGitHubAutoMerge,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.DisableGitHubAutoMergeResponse> disableGitHubAutoMerge(
+    nushiv1nushi.DisableGitHubAutoMergeRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.disableGitHubAutoMerge,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Adds it to the end of its base's merge queue, only at that head; takes
+  /// it out. API 96.
+  Future<nushiv1nushi.EnqueueGitHubPullResponse> enqueueGitHubPull(
+    nushiv1nushi.EnqueueGitHubPullRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.enqueueGitHubPull,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.DequeueGitHubPullResponse> dequeueGitHubPull(
+    nushiv1nushi.DequeueGitHubPullRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.dequeueGitHubPull,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Cleaning up after a chat's pull request: what the chat's worktree and
   /// branch would lose (GetCleanUp), removing the worktree, deleting its
   /// branch, and the pull request's branch on GitHub deleted or made again.

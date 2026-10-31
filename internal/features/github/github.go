@@ -44,6 +44,12 @@ type Client interface { //nolint:interfacebloat // the GitHub calls the feature 
 	Resolve(ctx context.Context, thread string, resolve bool) error
 	Comment(ctx context.Context, subject, body string) (model.GitHubComment, error)
 	SubmitReview(ctx context.Context, r githubapi.Review) error
+	MergeText(ctx context.Context, repo string, number int) (githubapi.MergeText, error)
+	Merge(ctx context.Context, m githubapi.MergeInput) error
+	EnableAutoMerge(ctx context.Context, m githubapi.MergeInput) error
+	DisableAutoMerge(ctx context.Context, pull string) error
+	Enqueue(ctx context.Context, pull, head string) error
+	Dequeue(ctx context.Context, pull string) error
 }
 
 // Gh is the gh CLI's login, read in this process through go-gh: a host's
