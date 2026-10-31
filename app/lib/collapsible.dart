@@ -23,10 +23,6 @@ class Collapsible extends StatefulWidget {
   final bool failed;
   final List<String> ids;
 
-  /// The header's side padding: a transcript sets the row out by this much,
-  /// so the chevron is on the gutter and a failed row's box round it.
-  static const inset = 10.0;
-
   /// The ids of what the user opened.
   static final opened = <String>{};
 
@@ -93,9 +89,9 @@ class _CollapsibleState extends State<Collapsible>
             child: Tap(
               onTap: body == null ? null : _toggle,
               radius: 0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: Collapsible.inset,
-              ),
+              // A row is on the text column, the box of a failed one too,
+              // so its chevron doesn't move as it fails (ADR 0072).
+              padding: EdgeInsets.symmetric(horizontal: card ? 10 : 0),
               child: SizedBox(
                 height: 28,
                 child: Row(

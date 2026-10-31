@@ -5,11 +5,11 @@ import 'dart:math';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_text.dart';
@@ -20,6 +20,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -223,18 +224,35 @@ void main() {
       }, variant: _mac);
     }
 
-    testWidgets('a tool row’s chevron is on the gutter, its box round it', (
-      tester,
-    ) async {
+    testWidgets('a failed row’s box and the permission card are on the text '
+        'column; its chevron and icon don’t move', (tester) async {
       final d = await _app(tester, width: 1700);
       final view = tester.getRect(find.byType(ChatView));
-      final failed = find.ancestor(
-        of: find.textContaining('go test', findRichText: true).first,
+      final left = view.left + NushiTheme.gutter;
+      Finder row(String words) => find.ancestor(
+        of: find.textContaining(words, findRichText: true).first,
         matching: find.byType(Collapsible),
       );
+      Rect in_(Finder r, Finder f) =>
+          tester.getRect(find.descendant(of: r, matching: f).first);
+      final failed = row('go test');
+      final fine = row('make check');
+      expect(tester.getRect(failed).left, left);
+      expect(tester.getRect(failed).right, left + readableWidth);
+      final card = tester.getRect(find.byType(WaitingCard));
+      expect(card.left, left);
+      expect(card.right, left + readableWidth);
       expect(
-        tester.getRect(failed).left,
-        view.left + NushiTheme.gutter - Collapsible.inset,
+        in_(failed, find.byType(Chevron)).left,
+        in_(fine, find.byType(Chevron)).left,
+      );
+      expect(
+        in_(failed, find.byIcon(Icons.terminal)).left,
+        in_(fine, find.byIcon(Icons.terminal)).left,
+      );
+      expect(
+        in_(failed, find.text('failed')).right,
+        tester.getRect(find.byType(PreviewButton)).right,
       );
       await closeView(tester, d);
     }, variant: _mac);
