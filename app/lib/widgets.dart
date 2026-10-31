@@ -328,7 +328,9 @@ Future<bool> confirm(
     ) ??
     false;
 
-/// One choice of a few (`Chat | Changes`).
+/// One choice of a few (`Chat | Changes`). A segment [onClose] gives a
+/// callback has a close button and a label cut at [closableLabel]; [after]
+/// sits in the box after the segments.
 class Segmented<T> extends StatelessWidget {
   const new({
     required this.value,
@@ -336,12 +338,22 @@ class Segmented<T> extends StatelessWidget {
     required this.onChanged,
     super.key,
     this.tooltip,
+    this.onClose,
+    this.after,
   });
 
   final T value;
   final List<(T, String)> segments;
   final ValueChanged<T> onChanged;
   final String Function(T)? tooltip; // a segment's, such as its key
+  final VoidCallback? Function(T)? onClose;
+  final Widget? after;
+
+  /// How much of a closable segment's label shows.
+  static const closableLabel = 130.0;
+
+  /// What a closable segment takes but its label: padding, gap, button.
+  static const closableRest = 30.0;
 
   @override
   Widget build(BuildContext context) {
@@ -353,22 +365,51 @@ class Segmented<T> extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final (v, text) in segments)
-            Tap(
-              onTap: () => onChanged(v),
-              selected: v == value,
-              tooltip: tooltip?.call(v) ?? '',
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-              child: Text(
-                text,
-                style: theme.ui(
-                  v == value ? t.text : t.textSecondary,
-                  size: 12,
-                ),
-              ),
-            ),
+          for (final (v, text) in segments) _segment(theme, v, text),
+          ?after,
         ],
       ),
+    );
+  }
+
+  Widget _segment(NushiTheme theme, T v, String text) {
+    final close = onClose?.call(v);
+    final style = theme.ui(
+      v == value ? theme.t.text : theme.t.textSecondary,
+      size: 12,
+    );
+    return Tap(
+      onTap: () => onChanged(v),
+      selected: v == value,
+      tooltip: tooltip?.call(v) ?? '',
+      padding: close == null
+          ? const EdgeInsets.symmetric(horizontal: 10, vertical: 1)
+          : const EdgeInsets.fromLTRB(10, 1, 3, 1),
+      child: close == null
+          ? Text(text, style: style)
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 3,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: closableLabel),
+                  child: Text(
+                    text,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: style,
+                  ),
+                ),
+                IconTap(
+                  Icons.close,
+                  size: 12,
+                  padding: 1,
+                  tooltip: 'Close tab',
+                  onTap: close,
+                ),
+              ],
+            ),
     );
   }
 }
