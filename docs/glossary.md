@@ -71,7 +71,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Worktree** | A git worktree a chat runs in, `.worktrees/<two words>` on `nushi/<two words>`: New worktree, Move. | `Worktree`, `GitWorktree` | 0016 |
 | **Branch** | The branch a chat's folder has out: Rename branch… for a worktree's, the Branch row's menu to switch. | `RenameBranch`, `SwitchBranch`, `GitBranch` | 0016 |
 | **Chat header** | The top bar: title, agent, model, the tabs, the terminal and details buttons, ⋯. | `ChatHeader` | |
-| **Tabs** | Chat, Changes, Pull request (when the chat has one), in the header. | `chat_keys.dart` | |
+| **Tabs** | Chat, Changes, Pull request (when the chat has one) and its preview tabs, in the header. | `chat_keys.dart`, `ChatTab` | |
 | **Composer** | The message box and its pickers under the transcript. "The box" is its text field. | `Composer` | |
 | **Draft** | What you've written in a chat and not sent: the box's text, mentioned files, reply cards and images, and the subagents' boxes. Kept on disk until sent, so a crash or restart doesn't lose it. A comment box's (GitHub's, Jira's) is kept too, by what it answers, while the app runs. | `Draft`, `Drafts`, `drafts.json`, `commentDraft` | 0062, 0027 |
 | **Reply card** | A quote put into the box to send with your message: a review thread, a comment, a failed check. | `ReplyCards`, `QuoteBlock` | 0059 |
@@ -81,6 +81,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Card** | A box in a flow or a list: a question, permission, trust, findings or reply card; the GitHub inbox's and Jira's task list's groups. Never the details panel's parts. | `cards.dart`, `CardShell`, `CardList` (`card_list.dart`) | 0009 |
 | **Artifact** | A file the agent wrote that's made to be looked at (Markdown, an image, HTML, SVG, PDF, CSV, a Mermaid diagram). Listed in the Artifacts widget and Artifacts…; pinned per chat (the app's, unlike a chat's pin). | `artifacts_widget.dart`, `FileRows`, the phone's `ArtifactsScreen` | |
 | **Preview** | An artifact shown in the side pane (or full screen on the phone), kept current as it changes; Preview and Source. | `preview.dart`, `WatchChatFile`, `internal/filewatch` | 0057 |
+| **Preview tab** | A file's preview as a tab of its own, in the chat's whole main area; kept per chat. Only the one showing has a view. | `ChatState.tabFiles`, `preview_tabs.dart`, `PreviewPane` | |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Read-only toward git. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |
