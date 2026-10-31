@@ -149,12 +149,15 @@ func chain(entries []*entry) []*entry {
 	return recoverParallel(byUUID, order, out, seen)
 }
 
-// linear is a subagent's chain: its transcript has no branches, so the
-// walk starts at its last message.
+// linear is a subagent's chain: nothing rewinds its transcript, so the walk
+// starts at its last message. Its parallel calls branch it all the same.
 func linear(entries []*entry) []*entry {
-	byUUID := map[string]*entry{}
+	byUUID, order := map[string]*entry{}, []string{}
 	var leaf *entry
 	for _, e := range entries {
+		if _, ok := byUUID[e.uuid]; !ok {
+			order = append(order, e.uuid)
+		}
 		byUUID[e.uuid] = e
 		if e.typ == "user" || e.typ == "assistant" {
 			leaf = e
@@ -171,5 +174,5 @@ func linear(entries []*entry) []*entry {
 		cur = byUUID[cur.parent]
 	}
 	slices.Reverse(out)
-	return out
+	return recoverParallel(byUUID, order, out, seen)
 }

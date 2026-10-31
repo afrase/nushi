@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -91,6 +92,32 @@ func TestMessagesMissing(t *testing.T) {
 	writeLines(t, dir, corrupt, "{oops", `{"type":"user","uuid":"u","message":{"content":"hi"}}`, "nope")
 	if got, err := (Store{ConfigDir: config}).Messages(corrupt, cwd); err != nil || messageUUIDs(got) != "u" {
 		t.Errorf("Messages past corrupt lines = %s, %v", messageUUIDs(got), err)
+	}
+}
+
+func TestSubagentMessagesParallelCalls(t *testing.T) {
+	config, cwd, dir := project(t)
+	id := newUUID()
+	transcript(t, dir, id, text("user", "u", "", "go"))
+	calls, results := parallelTurn("task", 2, 0, 1)
+	var records []record
+	records = append(records, text("user", "task", "", "look"))
+	records = append(records, calls...)
+	records = append(records, results...)
+	records = append(records, text("assistant", "end", "result-1", "done"))
+	transcript(t, filepath.Join(dir, id, "subagents"), "agent-a1", records...)
+
+	got, err := Store{ConfigDir: config}.SubagentMessages(id, cwd, "a1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var uuids []string
+	for _, m := range got {
+		uuids = append(uuids, m.UUID)
+	}
+	want := []string{"task", "call-0", "call-1", "result-0", "result-1", "end"}
+	if !slices.Equal(uuids, want) {
+		t.Errorf("messages = %v, want %v", uuids, want)
 	}
 }
 
