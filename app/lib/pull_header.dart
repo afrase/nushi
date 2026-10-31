@@ -3,6 +3,7 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/pull_lights.dart';
+import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -49,8 +50,8 @@ class StatePill extends StatelessWidget {
 /// The page's head: the state pill, `repo#n`, who opened it and when, the
 /// title, head › base, commits and the diff's size; [actions] at the
 /// right of the first line; then whose move it is ([todo] things block the
-/// merge) and the four status lights, each jumping ([onJump]) to its
-/// section.
+/// merge), unless the Merge control says the same, and the four status
+/// lights, each jumping ([onJump]) to its section.
 class PullHeader extends StatelessWidget {
   const new({
     required this.pull,
@@ -97,6 +98,9 @@ class PullHeader extends StatelessWidget {
     final it = p.item;
     final small = theme.ui(t.textSecondary, size: 12);
     final move = moveWords(p, todo);
+    // The Merge control under the lights says it, with the button that acts
+    // on it: said once.
+    final said = mergeView(p)?.lead == move.lead;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -192,35 +196,41 @@ class PullHeader extends StatelessWidget {
           Wrap(spacing: 6, runSpacing: 6, children: actions),
         ],
         const SizedBox(height: 14),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(move.icon, size: 15, color: moodColor(t, move.mood)),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: move.lead,
-                      style: theme.ui(
-                        t.text,
-                        size: 13.5,
-                        weight: FontWeight.w600,
-                      ),
-                    ),
-                    if (move.rest.isNotEmpty) TextSpan(text: ' ${move.rest}'),
-                  ],
+        if (!said) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  move.icon,
+                  size: 15,
+                  color: moodColor(t, move.mood),
                 ),
-                style: theme.ui(t.textSecondary, size: 13.5),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: move.lead,
+                        style: theme.ui(
+                          t.text,
+                          size: 13.5,
+                          weight: FontWeight.w600,
+                        ),
+                      ),
+                      if (move.rest.isNotEmpty) TextSpan(text: ' ${move.rest}'),
+                    ],
+                  ),
+                  style: theme.ui(t.textSecondary, size: 13.5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
         LayoutBuilder(
           builder: (context, box) {
             final lights = [

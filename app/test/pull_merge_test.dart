@@ -519,4 +519,33 @@ void main() {
     expect(find.text('Merge blocked'), findsNothing);
     d.dispose();
   }, variant: _mac);
+
+  testWidgets('the page says ready once, beside the button that acts on it', (
+    tester,
+  ) async {
+    final (d, _) = await openPullTab(tester, mergePull('ready'));
+    expect(
+      find.textContaining('Ready to merge', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('merge-words')), findsOneWidget);
+    expect(find.textContaining('nothing blocks'), findsNothing);
+    expect(find.textContaining('Nothing else waits'), findsNothing);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('a move the control doesn’t say stays in the head', (
+    tester,
+  ) async {
+    final (d, _) = await openPullTab(tester, mergePull('blocked'));
+    expect(
+      find.textContaining('Your move', findRichText: true),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining("Can't merge yet", findRichText: true),
+      findsOneWidget,
+    );
+    d.dispose();
+  }, variant: _mac);
 }

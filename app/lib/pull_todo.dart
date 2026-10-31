@@ -4,6 +4,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/pull_lights.dart';
+import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/pull_todo_row.dart';
 import 'package:nushi/replies.dart';
@@ -145,9 +146,7 @@ class _PullTodoState extends State<PullTodo> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    items.isEmpty
-                        ? 'nothing blocks the merge'
-                        : 'what blocks the merge, first',
+                    items.isEmpty ? '' : 'what blocks the merge, first',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.ui(t.textMuted, size: 12),
@@ -291,6 +290,7 @@ class _Next extends StatelessWidget {
     final waiting = waitingOn(p);
     final running = countChecks(p).running;
     final then = after ? 'Then waiting on ' : 'Waiting on ';
+    final ready = mergeView(p)?.lead == readyWords; // the Merge control's words
     final (String? lead, String? who, String rest) = waiting.isNotEmpty
         ? (
             then,
@@ -301,7 +301,7 @@ class _Next extends StatelessWidget {
           )
         : running > 0
         ? (then, null, 'checks: $running running.')
-        : after
+        : after || ready
         ? (null, null, '')
         : (null, null, 'Nothing else waits: it can merge once its rules pass.');
     if (lead == null && rest.isEmpty) return const SizedBox.shrink();

@@ -96,6 +96,9 @@ String _queueState(GitHubQueueEntry e) => switch (e.state) {
 String _eta(int seconds) =>
     seconds <= 0 ? '' : ' About ${(seconds / 60).ceil()} min left.';
 
+/// What the Merge control says of a pull request that can merge.
+const readyWords = 'Ready to merge.';
+
 /// What the Merge control shows of [p]; null when it has none: merged,
 /// closed, or from a daemon before the control.
 MergeView? mergeView(GitHubPull p) {
@@ -143,13 +146,7 @@ MergeView? mergeView(GitHubPull p) {
         : mergeMethodsOf(p).isEmpty
         ? MergeStep.words
         : MergeStep.merge;
-    return say(
-      step,
-      'Ready to merge.',
-      Mood.ok,
-      Icons.check_circle_outline,
-      note,
-    );
+    return say(step, readyWords, Mood.ok, Icons.check_circle_outline, note);
   }
   if (blocks.length == 1 && blocks.first == 'unknown') {
     return say(
