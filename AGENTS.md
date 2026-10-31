@@ -69,5 +69,5 @@ Nushi is an agentic development environment for macOS: coding agents (Claude, Co
 - **Commit messages**: a `Co-Authored-By` line is fine; never a `Claude-Session:` trailer or a session URL, in commits, PR titles or PR bodies.
 - **The owner's data and credentials**: never touch the real data folder (`~/Library/Application Support/Nushi`) from a test or a dev run; never use the owner's credentials in tests (fakes instead) unless a task's prompt allows it; never print, log or store a token; never erase or set the owner's fish variables (`env -u` keeps one out of a child).
 - **No synthetic input**: never send clicks, keystrokes or mouse events to a running app, the installed Nushi or a dev build, idle or not. Test through the daemon's API, widget tests and goldens.
-- **Security-sensitive changes** (what reads, writes, runs or sends on the user's behalf) get their entry under NOTES.md's Security notes in the same commit.
+- **Security-sensitive changes** (what reads, writes, runs or sends on the user's behalf) get their entry in [`docs/security.md`](docs/security.md) in the same commit.
 - **Stop what you start** (dev daemons, apps, simulators, relays) before you report, and remove its temp folders.

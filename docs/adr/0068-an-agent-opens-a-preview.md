@@ -3,7 +3,7 @@
 Status: accepted, 2026-10-31.
 
 ## Context
-The owner wants what Claude Code's artifacts give: the agent finishes a page or a document and it appears beside the chat. Until now a file opened in the preview only from a click: a tool row's Preview, Artifacts, a link in a message, ⌘P. On the Mac a preview of HTML or SVG runs the page, scripts and network on (NOTES.md's Security notes), so that click was the one thing standing before an agent's page running.
+The owner wants what Claude Code's artifacts give: the agent finishes a page or a document and it appears beside the chat. Until now a file opened in the preview only from a click: a tool row's Preview, Artifacts, a link in a message, ⌘P. On the Mac a preview of HTML or SVG runs the page, scripts and network on ([docs/security.md](../security.md)), so that click was the one thing standing before an agent's page running.
 
 ## Decision
 - **A tool set for every chat that can take one** (`internal/features/preview`, `show` with one argument, `path`), on Nushi's MCP server ([0043](0043-an-mcp-server-of-nushis-own-for-a-chats-tools.md)). Claude and Codex get it (`chats.Kind.ClientMCP`, in `knownagents`); Ante, oh-my-pi and PiG take no client MCP servers, so they get no server at all. This amends 0043's "a chat without an issue gets no server".

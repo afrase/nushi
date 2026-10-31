@@ -176,7 +176,7 @@ linters:
         linters: [gosec]
         text: "^G115:"
       # internal/git runs git in the folder it's given (hardened in run:
-      # no hooks, fsmonitor or filters; NOTES.md's security notes) and reads
+      # no hooks, fsmonitor or filters; docs/security.md) and reads
       # files in the repository;
       - path: ^internal/git/
         linters: [gosec]
