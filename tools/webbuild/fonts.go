@@ -276,28 +276,30 @@ func sumOf(b []byte) string {
 	return hex.EncodeToString(h[:])
 }
 
-// plex is IBM Plex Sans and its italic cut for the web app (make web-plex):
-// Latin and the punctuation and symbols the app uses, which the fallback
-// fonts complete; source.sha256 names the fonts they were cut from.
+// cutFonts are the web app's fonts cut for size (make web-cut): IBM Plex
+// Sans and its italic to Latin and the punctuation and symbols the app uses,
+// which the fallback fonts complete; JetBrains Mono to every character it
+// has (a fallback font would leave code's grid) without its ligatures, which
+// theme.code turns off; source.sha256 names the fonts they were cut from.
 //
-//go:embed plex
-var plex embed.FS
+//go:embed cut
+var cutFonts embed.FS
 
-// subsetPlex puts the cut IBM Plex Sans in the place of the whole one,
-// if the build's is the one it was cut from.
-func subsetPlex(dir string) {
-	sums, err := plex.ReadFile("plex/source.sha256")
+// subsetFonts puts the cut fonts in the place of the whole ones, if the
+// build's are the ones they were cut from.
+func subsetFonts(dir string) {
+	sums, err := cutFonts.ReadFile("cut/source.sha256")
 	check(err)
 	for line := range strings.Lines(string(sums)) {
 		sum, name, ok := strings.Cut(strings.TrimSpace(line), "  ")
 		if !ok {
-			fatalf("webbuild: plex/source.sha256: a bad line %q", line)
+			fatalf("webbuild: cut/source.sha256: a bad line %q", line)
 		}
 		out := filepath.Join(dir, "assets", "fonts", name)
 		if sumOf([]byte(read(out))) != sum {
-			fatalf("webbuild: app/fonts/%s isn't the font tools/webbuild/plex was cut from: run make web-plex and commit it", name)
+			fatalf("webbuild: app/fonts/%s isn't the font tools/webbuild/cut was cut from: run make web-cut and commit it", name)
 		}
-		cut, err := plex.ReadFile("plex/" + name)
+		cut, err := cutFonts.ReadFile("cut/" + name)
 		check(err)
 		check(os.WriteFile(out, cut, 0o644))
 	}

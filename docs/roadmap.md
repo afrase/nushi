@@ -46,7 +46,7 @@ What isn't built yet and the decisions still open, each checked against the code
 
 ### The phone
 
-- **Mobile, next**: an `Events` filter for cellular; tool output and diffs fetched on expanding them (the API would need an item's own call); JetBrains Mono cut as Plex was (79 KB with Brotli, loaded at start); renaming the device after pairing; a native iOS app with the Keychain and Face ID if the developer program ever works out.
+- **Mobile, next**: an `Events` filter for cellular; tool output and diffs fetched on expanding them (the API would need an item's own call); renaming the device after pairing; a native iOS app with the Keychain and Face ID if the developer program ever works out.
 
 ## Decisions to revisit
 

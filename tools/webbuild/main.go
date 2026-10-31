@@ -6,8 +6,8 @@
 // for again), writes the build's files and version into sw.js, and puts a
 // Brotli copy beside each file that compresses (name.br; the relay serves
 // it to a browser that takes br). It mirrors the engine's fallback fonts
-// into the app and puts in IBM Plex Sans cut to what the app needs
-// (fonts.go).
+// into the app and puts in IBM Plex Sans and JetBrains Mono cut to what
+// the app needs (fonts.go).
 //
 // With -lock-fonts it writes fonts.lock anew for an app built by flutter
 // build web (make web-fonts) and does nothing else.
@@ -51,7 +51,7 @@ func main() {
 	check(os.RemoveAll(filepath.Join(dir, ".last_build_id")))
 	check(os.RemoveAll(filepath.Join(dir, "flutter.js"))) // flutter_bootstrap.js carries it
 	dropFont(dir, "Symbols Nerd Font Mono")               // the terminal's, which the phone hasn't
-	subsetPlex(dir)
+	subsetFonts(dir)
 
 	boot := read(filepath.Join(dir, "flutter_bootstrap.js"))
 	fonts, fontsSize := mirrorFonts(dir, read(filepath.Join(dir, "main.dart.js")), boot)
