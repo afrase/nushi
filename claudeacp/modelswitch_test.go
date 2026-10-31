@@ -57,8 +57,10 @@ func TestModelSwitchFollowed(t *testing.T) {
 	for _, u := range p.of("usage_update") {
 		sizes = append(sizes, u.UsageUpdate.Size)
 	}
-	if !slices.Contains(sizes, 500_000) || sizes[len(sizes)-1] != 400_000 {
-		t.Errorf("sizes %v: want the asked window, then the result's", sizes)
+	// The script's Expect shows the window was asked for. Its answer may
+	// come after the result, which a guess doesn't replace.
+	if len(sizes) == 0 || sizes[len(sizes)-1] != 400_000 {
+		t.Errorf("sizes %v: want the result's window last", sizes)
 	}
 }
 
