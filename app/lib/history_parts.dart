@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/history_table.dart';
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -46,9 +47,9 @@ class HistoryToolbar extends StatelessWidget {
         ),
       ),
     );
-    final filters = Segmented(
+    final filters = PlainTabs(
       value: filter,
-      segments: [
+      tabs: [
         for (final f in HistoryFilter.values)
           if (f != HistoryFilter.leftover || counts[f]! > 0)
             (f, '${_labels[f]}  ${counts[f]}'),

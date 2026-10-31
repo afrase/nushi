@@ -11,6 +11,7 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
@@ -472,10 +473,11 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         spacing: 10,
         children: [
           if (scopes.length > 1)
-            Segmented(
+            PlainTabs(
               value: scope,
-              segments: [for (final s in scopes) (s, s.label)],
+              tabs: [for (final s in scopes) (s, s.label)],
               onChanged: (s) => chat.scope = s.name,
+              fill: true,
             ),
           if (_stale)
             const SizedBox.square(

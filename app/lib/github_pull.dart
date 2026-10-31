@@ -9,6 +9,7 @@ import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/pull_activity.dart';
 import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_chats.dart';
@@ -286,9 +287,9 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
               Row(
                 key: _tabs,
                 children: [
-                  Segmented(
+                  PlainTabs(
                     value: _tab,
-                    segments: [
+                    tabs: [
                       (
                         PullSection.activity,
                         'Activity ${p.conversation.length + 1}',
