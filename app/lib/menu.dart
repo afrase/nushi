@@ -24,6 +24,7 @@ class MenuEntry {
     this.tooltip = '',
     this.action,
     this.icon,
+    this.line,
     this.danger = false,
     this.shortcut = '',
   }) : heading = false;
@@ -37,6 +38,7 @@ class MenuEntry {
       tooltip = '',
       action = null,
       icon = null,
+      line = null,
       danger = false,
       shortcut = '',
       heading = true;
@@ -53,10 +55,15 @@ class MenuEntry {
   final bool heading;
   final Widget Function({required bool hover})? action;
   final IconData? icon;
+
+  /// A drawn icon, in [icon]'s place.
+  final LineIcon? line;
   final bool danger;
   final String shortcut;
 
   bool get _pickable => onPick != null && submenu == null;
+
+  bool get _hasIcon => icon != null || line != null;
 }
 
 /// Opens the menu: under (or over) the button, or at [at] in it.
@@ -162,7 +169,7 @@ List<Widget> _rows(
   // Rows without an icon keep its room when others have one, so the
   // labels line up; the check's room only where a row can have one, so a
   // key sits at the right edge, as macOS draws it.
-  final icons = entries.any((e) => e.icon != null);
+  final icons = entries.any((e) => e._hasIcon);
   final checks = entries.any((e) => e.checked);
   return [
     for (final e in entries)
@@ -209,16 +216,15 @@ Widget _row(
       : e.danger
       ? t.crashed
       : t.text;
+  final iconColor = e.danger && on ? t.crashed : t.textSecondary;
   final icon = icons
       ? SizedBox(
           width: 16,
-          child: e.icon == null
-              ? null
-              : Icon(
-                  e.icon,
-                  size: 16,
-                  color: e.danger && on ? t.crashed : t.textSecondary,
-                ),
+          child:
+              e.line?.view(size: 16, color: iconColor) ??
+              (e.icon == null
+                  ? null
+                  : Icon(e.icon, size: 16, color: iconColor)),
         )
       : null;
   Widget label = ConstrainedBox(
@@ -463,7 +469,7 @@ class _FilteredState extends State<_Filtered> {
                     context,
                     e,
                     widget.close,
-                    icons: widget.entries.any((e) => e.icon != null),
+                    icons: widget.entries.any((e) => e._hasIcon),
                     lit: i == _at,
                     key: i == _at ? _lit : null,
                   ),

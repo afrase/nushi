@@ -375,6 +375,111 @@ void main() {
     }, variant: _mac);
   });
 
+  group('the header’s drawn icons', () {
+    for (final (name, tokens) in [
+      ('dark', Tokens.dark),
+      ('light', Tokens.light),
+    ]) {
+      testWidgets('close up, 2×, $name', (tester) async {
+        viewport(tester, const Size(260, 44), ratio: 2);
+        final t = tokens;
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: NushiTheme(tokens).toThemeData(),
+            home: Scaffold(
+              body: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: NushiTheme.iconGap,
+                  children: [
+                    IconTap.line(
+                      LineIcon.terminal,
+                      tooltip: 'Show terminal',
+                      onTap: () {},
+                    ),
+                    IconTap.line(
+                      LineIcon.details,
+                      tooltip: 'Show details',
+                      onTap: () {},
+                    ),
+                    IconTap.line(
+                      LineIcon.details,
+                      tooltip: 'Hide details',
+                      color: t.text,
+                      onTap: () {},
+                    ),
+                    IconTap(
+                      Icons.more_horiz,
+                      tooltip: 'Chat menu',
+                      onTap: () {},
+                    ),
+                    const SizedBox(width: NushiTheme.groupGap),
+                    IconTap.line(
+                      LineIcon.folderOpen,
+                      tooltip: 'Show in Finder',
+                      size: 14,
+                      onTap: () {},
+                    ),
+                    IconTap.line(
+                      LineIcon.close,
+                      tooltip: 'Close',
+                      size: 15,
+                      onTap: () {},
+                    ),
+                    IconTap.line(
+                      LineIcon.close,
+                      tooltip: 'Close tab',
+                      size: 12,
+                      padding: 3,
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('goldens/header_icons_$name.png'),
+        );
+      }, variant: _mac);
+    }
+
+    testWidgets('the same room as a Material icon, and the look of its state', (
+      tester,
+    ) async {
+      final d = await _app(tester, width: 1700);
+      final t = NushiTheme.of(tester.element(find.byType(ChatView))).t;
+      final terminal = find.byType(TerminalButton);
+      final details = find.byTooltip('Show details');
+      expect(tester.getSize(terminal), const Size(26, 26));
+      expect(tester.getSize(details), const Size(26, 26));
+      expect(
+        find.descendant(of: terminal, matching: find.byType(Icon)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: details, matching: find.byType(CustomPaint)),
+        findsWidgets,
+      );
+      showDetails.value = true;
+      await tester.pumpAndSettle();
+      final open = tester.widget<IconTap>(
+        find
+            .ancestor(
+              of: find.byTooltip('Hide details'),
+              matching: find.byType(IconTap),
+            )
+            .first,
+      );
+      expect(open.line, LineIcon.details);
+      expect(open.color, t.text);
+      await closeView(tester, d);
+    }, variant: _mac);
+  });
+
   group('goldens', () {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),

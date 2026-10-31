@@ -52,8 +52,8 @@ class TerminalButton extends StatelessWidget {
     builder: (context, open, _) {
       final t = NushiTheme.of(context).t;
       final on = open.contains(chat.id);
-      return IconTap(
-        Icons.terminal,
+      return IconTap.line(
+        LineIcon.terminal,
         tooltip: chat.archived
             ? 'An archived chat has no terminals'
             : on

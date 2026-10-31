@@ -110,7 +110,6 @@ class _PreviewPaneState extends State<PreviewPane> {
           () => openInBrowser(Uri.file(_abs)).ignore(),
         ),
       ],
-      (Icons.folder_open_outlined, 'Show in Finder', 14, _reveal),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -227,9 +226,14 @@ class _PreviewPaneState extends State<PreviewPane> {
                                         icon: icon,
                                         onPick: onTap,
                                       ),
+                                    MenuEntry(
+                                      'Show in Finder',
+                                      line: LineIcon.folderOpen,
+                                      onPick: _reveal,
+                                    ),
                                   ],
                                 )
-                              else
+                              else ...[
                                 for (final (icon, tooltip, size, onTap)
                                     in actions)
                                   IconTap(
@@ -238,8 +242,15 @@ class _PreviewPaneState extends State<PreviewPane> {
                                     size: size,
                                     onTap: onTap,
                                   ),
-                              IconTap(
-                                Icons.close,
+                                IconTap.line(
+                                  LineIcon.folderOpen,
+                                  tooltip: 'Show in Finder',
+                                  size: 14,
+                                  onTap: _reveal,
+                                ),
+                              ],
+                              IconTap.line(
+                                LineIcon.close,
                                 tooltip: 'Close',
                                 size: 15,
                                 onTap: widget.onClose,
