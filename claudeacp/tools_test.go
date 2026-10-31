@@ -40,7 +40,7 @@ func sendf(frame string) claudetest.Step { return claudetest.Send(frame) }
 // its answer.
 func hookCall(id, name, response string) []claudetest.Step {
 	return []claudetest.Step{
-		sendf(`{"type":"control_request","request_id":"h_` + id + `","request":{"subtype":"hook_callback","callback_id":"hook_0","tool_use_id":"` + id +
+		sendf(`{"type":"control_request","request_id":"h_` + id + `","request":{"subtype":"hook_callback","callback_id":"hook_1","tool_use_id":"` + id +
 			`","input":{"hook_event_name":"PostToolUse","tool_name":"` + name + `","tool_use_id":"` + id + `","tool_response":` + response + `}}}`),
 		claudetest.Expect(`{"type":"control_response","response":{"subtype":"success","request_id":"h_` + id + `"}}`),
 	}
@@ -65,7 +65,7 @@ func TestToolLifecycle(t *testing.T) {
 		sendf(`{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_1","content":[{"type":"text","text":"Found.\n<usage>tokens: 5</usage>"}]}]}}`),
 		result(names("id2")), claudetest.Send(idle))
 	f := withTitle(claudetest.New(append([]claudetest.Step{
-		claudetest.Expect(`{"type":"control_request","request":{"subtype":"initialize","hooks":{"PostToolUse":[{"hookCallbackIds":["hook_0"]}]}}}`),
+		claudetest.Expect(`{"type":"control_request","request":{"subtype":"initialize","hooks":{"PostModelSwitch":[{"hookCallbackIds":["hook_0"]}],"PostToolUse":[{"hookCallbackIds":["hook_1"]}]}}}`),
 		claudetest.Send(`{"type":"control_response","response":{"subtype":"success","request_id":"$req","response":{}}}`),
 	}, steps...)...), `null`)
 	p := start(t, nil, f)

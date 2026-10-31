@@ -30,6 +30,7 @@ type window struct {
 	size     int        // 0 until known or guessed from the model's names
 	sure     bool       // from a result or the cache: claude's answer doesn't replace it
 	gen      int        // one more at each model change, so an answer for the last model goes
+	from     string     // the model claude switched from: a result's counts for it aren't this model's
 	provider string     // the backend's key (providerKey), for the cache
 	shown    shownUsage // the last usage_update sent
 }
@@ -137,6 +138,7 @@ func (w *window) seed(cache *windows, m *claudeagent.ModelInfo, value string, fa
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.gen++
+	w.from = ""
 	size, sure := cache.find(w.provider, modelID(m, value))
 	if !sure {
 		size = guessWindow(m, value)
@@ -146,6 +148,13 @@ func (w *window) seed(cache *windows, m *claudeagent.ModelInfo, value string, fa
 	}
 	w.size, w.sure = size, sure
 	return w.gen, sure
+}
+
+// left says the window, just seeded, follows a switch from model.
+func (w *window) left(model string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.from = model
 }
 
 // askWindow asks claude for the window and waits for its answer on a
@@ -191,8 +200,13 @@ func (w *window) answered(gen, size int) {
 
 // resultWindow takes the window a result says: its model's (model, the
 // last top-level message's), else the largest it names. It is sure, and
-// kept for the agent's next sessions on the same backend.
+// kept for the agent's next sessions on the same backend. A result with
+// no message since a switch says nothing of the new model: its modelUsage
+// counts the whole session, and the last message is the old model's.
 func (s *session) resultWindow(r *claudeagent.Result, model string) {
+	if s.win.isFrom(model) {
+		return
+	}
 	size, id := 0, model
 	if mu, ok := r.ModelUsage[model]; ok && mu.ContextWindow > 0 {
 		size = mu.ContextWindow
@@ -211,6 +225,13 @@ func (s *session) resultWindow(r *claudeagent.Result, model string) {
 	if id != model {
 		s.a.windows.keep(provider, model, size)
 	}
+}
+
+// isFrom says model is the one a switch left.
+func (w *window) isFrom(model string) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.from != "" && w.from == model
 }
 
 // measured is the window's size as a result says it, for sure; it

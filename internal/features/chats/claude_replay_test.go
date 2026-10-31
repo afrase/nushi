@@ -10,10 +10,10 @@ import (
 	"github.com/afrase/nushi/claudeagent/claudetest"
 )
 
-// goAgentHook is the callback id the Go agent gives its one hook,
-// PostToolUse (claudeacp's session start; claudeagent numbers hooks in
-// the order of their events' names).
-const goAgentHook = "hook_0"
+// goAgentHooks are the callback ids the Go agent gives its hooks
+// (claudeacp's session start; claudeagent numbers hooks in the order of
+// their events' names).
+var goAgentHooks = map[string]string{"PostModelSwitch": "hook_0", "PostToolUse": "hook_1"}
 
 // forGoAgent is c as the Go agent's claude plays it: what the adapter
 // wrote claude that the Go agent doesn't, or not at a fixed point, goes
@@ -21,13 +21,8 @@ const goAgentHook = "hook_0"
 //   - claude's asks for a title: the Go agent asks on a goroutine of its
 //     own, answered whenever it comes (readReplays).
 //   - Hooks: the adapter registers more (PostCompact, TaskCreated…) under
-//     ids of its own, so claude's calls of the others go, and a
-//     PostToolUse call takes the Go agent's id.
-//   - get_context_usage after a model switch claude made itself (a
-//     refusal's fallback), which the adapter hears of by its
-//     PostModelSwitch hook: the Go agent registers no such hook. Both ask
-//     as a session starts and as the client changes the model
-//     (claudeacp/window.go), and those asks stay.
+//     ids of its own, so claude's calls of the others go, and a call of
+//     one of the Go agent's takes its id.
 //   - The interrupt the adapter sends as it closes a session claude isn't
 //     running: the Go agent interrupts only a running turn and otherwise
 //     just ends stdin (claudeacp's close). See idleTeardown.
@@ -39,8 +34,7 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 	dropped := map[string]bool{} // claude's requests and the adapter's whose answers go too
 	out := *c
 	out.Frames = nil
-	pending := ""     // the adapter's last interrupt, until claude answers it
-	switched := false // claude called the PostModelSwitch hook, and the adapter hasn't yet asked for the window
+	pending := "" // the adapter's last interrupt, until claude answers it
 	for _, f := range c.Frames[:idleTeardown(c)] {
 		fr := readFrame(f)
 		again := pending != "" && f.Dir == "in" && fr.Request.Subtype == "interrupt"
@@ -55,13 +49,8 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 		case again:
 			dropped[fr.RequestID] = true
 			continue
-		case f.Dir == "in" && fr.Request.Subtype == "get_context_usage" && switched:
-			switched = false
-			dropped[fr.RequestID] = true
-			continue
 		case f.Dir == "in" && fr.Request.Subtype == "generate_session_title",
-			f.Dir == "out" && fr.Request.Subtype == "hook_callback" && fr.Request.Input.Event != "PostToolUse":
-			switched = switched || fr.Request.Input.Event == "PostModelSwitch"
+			f.Dir == "out" && fr.Request.Subtype == "hook_callback" && goAgentHooks[fr.Request.Input.Event] == "":
 			dropped[fr.RequestID] = true
 			continue
 		case fr.Response.RequestID != "" && dropped[fr.Response.RequestID]:
@@ -69,7 +58,7 @@ func forGoAgent(c *claudetest.Cassette) *claudetest.Cassette {
 		case fr.Request.Subtype == "hook_callback":
 			var m map[string]any
 			if json.Unmarshal(f.Frame, &m) == nil {
-				m["request"].(map[string]any)["callback_id"] = goAgentHook
+				m["request"].(map[string]any)["callback_id"] = goAgentHooks[fr.Request.Input.Event]
 				f.Frame, _ = json.Marshal(m)
 			}
 		}
@@ -150,9 +139,9 @@ func TestForGoAgent(t *testing.T) {
 		prompt       = `{"type":"user","message":{"role":"user","content":"hi"}}`
 		result       = `{"type":"result","subtype":"success"}`
 		keepAlive    = `{"type":"keep_alive"}`
-		// claude's call of the adapter's PostModelSwitch hook, and its answer
-		modelSwitch    = `{"type":"control_request","request_id":"ms","request":{"subtype":"hook_callback","callback_id":"hook_1","input":{"hook_event_name":"PostModelSwitch"}}}`
-		modelSwitchAck = `{"type":"control_response","response":{"subtype":"success","request_id":"ms","response":{"continue":true}}}`
+		// claude's call of a hook the Go agent doesn't register, and its answer
+		compacted    = `{"type":"control_request","request_id":"pc","request":{"subtype":"hook_callback","callback_id":"hook_2","input":{"hook_event_name":"PostCompact"}}}`
+		compactedAck = `{"type":"control_response","response":{"subtype":"success","request_id":"pc","response":{"continue":true}}}`
 		// the adapter's second interrupt as its client goes mid-turn
 		interrupt2Ask = `{"type":"control_request","request_id":"int2","request":{"subtype":"interrupt"}}`
 		interrupt2Ack = `{"type":"control_response","response":{"subtype":"success","request_id":"int2","response":{"still_queued":[]}}}`
@@ -164,7 +153,7 @@ func TestForGoAgent(t *testing.T) {
 		wantDrop []int // the indexes of frames that go
 	}{
 		{"context usage after initialize", []string{in(initAsk), out(initAnswer), in(contextAsk), in(prompt), out(contextAnswer), out(result)}, nil},
-		{"context usage after a model switch claude made", []string{in(initAsk), out(initAnswer), in(prompt), out(modelSwitch), in(modelSwitchAck), in(contextAsk), out(contextAnswer), out(result)}, []int{3, 4, 5, 6}},
+		{"a hook only the adapter registers", []string{in(initAsk), out(initAnswer), in(prompt), out(compacted), in(compactedAck), out(result)}, []int{3, 4}},
 		{"interrupt closing an idle session", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(interruptAsk), out(interruptAck)}, []int{6, 7}},
 		{"interrupt closing a session after the result, before claude says idle", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), in(interruptAsk), out(stateIdle), out(interruptAck)}, []int{5, 6, 7}},
 		{"interrupt after a prompt claude hasn't started", []string{in(initAsk), out(initAnswer), in(prompt), out(stateRunning), out(result), out(stateIdle), in(prompt), in(interruptAsk), out(interruptAck)}, nil},
