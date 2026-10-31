@@ -49,6 +49,26 @@ enum PreviewKind {
   bool get artifact => this != code;
 }
 
+/// The extensions of artifacts ([PreviewKind.artifact]), which the daemon
+/// knows too: the show tool takes these (`filewatch.Artifact`). Both sides'
+/// tests read `internal/filewatch/testdata/artifacts.json`.
+const Map<String, PreviewKind> artifactKinds = {
+  'md': PreviewKind.markdown,
+  'markdown': PreviewKind.markdown,
+  'png': PreviewKind.image,
+  'jpg': PreviewKind.image,
+  'jpeg': PreviewKind.image,
+  'gif': PreviewKind.image,
+  'webp': PreviewKind.image,
+  'html': PreviewKind.html,
+  'htm': PreviewKind.html,
+  'svg': PreviewKind.svg,
+  'pdf': PreviewKind.pdf,
+  'csv': PreviewKind.csv,
+  'mmd': PreviewKind.mermaid,
+  'mermaid': PreviewKind.mermaid,
+};
+
 /// Extensions of code and text files a preview shows as source.
 const _code = {
   'json', 'jsonl', 'yaml', 'yml', 'toml', 'txt', 'log', 'ini', 'cfg', //
@@ -70,17 +90,8 @@ PreviewKind? previewKind(String path) {
   if (_codeNames.contains(name)) return PreviewKind.code;
   final dot = name.lastIndexOf('.');
   if (dot < 0) return null;
-  return switch (name.substring(dot + 1).toLowerCase()) {
-    'md' || 'markdown' => PreviewKind.markdown,
-    'png' || 'jpg' || 'jpeg' || 'gif' || 'webp' => PreviewKind.image,
-    'html' || 'htm' => PreviewKind.html,
-    'svg' => PreviewKind.svg,
-    'pdf' => PreviewKind.pdf,
-    'csv' => PreviewKind.csv,
-    'mmd' || 'mermaid' => PreviewKind.mermaid,
-    final e when _code.contains(e) => PreviewKind.code,
-    _ => null,
-  };
+  final ext = name.substring(dot + 1).toLowerCase();
+  return artifactKinds[ext] ?? (_code.contains(ext) ? PreviewKind.code : null);
 }
 
 /// Whether [path] is an artifact: a file of a kind that renders
