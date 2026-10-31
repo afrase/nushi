@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"connectrpc.com/connect"
@@ -36,19 +35,10 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 	return refused(err)
 }
 
-// chatFile is where the preview may read path from: inside one of the
-// chat's roots, or, outside them, a file one of its tool calls worked on
-// (an agent's notes in its own folder).
+// chatFile is where the preview may read path from (filewatch.Allowed):
+// the answer the agent's show tool gets too.
 func (s *server) chatFile(chatID string, roots []string, path string) (root, rel string, err error) {
-	root, rel, err = filewatch.Locate(roots, path)
-	if err != nil {
-		p := filepath.Clean(path)
-		if !filepath.IsAbs(p) || !s.chats.Wrote(chatID, p) {
-			return "", "", err
-		}
-		root, rel = filepath.Dir(p), filepath.Base(p)
-	}
-	return root, rel, nil
+	return filewatch.Allowed(roots, path, func(p string) bool { return s.chats.Wrote(chatID, p) })
 }
 
 // maxFindFiles is how many paths FindChatFiles takes at once.

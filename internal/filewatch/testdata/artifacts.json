@@ -1,0 +1,4 @@
+{
+  "artifacts": ["md", "markdown", "png", "jpg", "jpeg", "gif", "webp", "html", "htm", "svg", "pdf", "csv", "mmd", "mermaid"],
+  "others": ["go", "txt", "json", "exe", "zip", "docx", "command", ""]
+}

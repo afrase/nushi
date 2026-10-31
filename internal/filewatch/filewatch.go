@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/afrase/nushi/internal/regularfile"
@@ -55,17 +56,62 @@ func Locate(roots []string, path string) (root, rel string, err error) {
 	return "", "", fmt.Errorf("%s is outside the chat's folder", path)
 }
 
-// Exists says rel inside root is a regular file, reached without leaving
-// root.
-func Exists(root, rel string) bool {
+// Allowed is where a chat's preview may read path from: inside one of
+// roots, as Locate finds it, or, outside them, a file wrote says one of
+// the chat's tool calls worked on (an agent's notes in its own folder),
+// which it is asked with the path absolute. Links are checked when the
+// file is read.
+func Allowed(roots []string, path string, wrote func(path string) bool) (root, rel string, err error) {
+	root, rel, err = Locate(roots, path)
+	if err != nil {
+		p := filepath.Clean(path)
+		if !filepath.IsAbs(p) || !wrote(p) {
+			return "", "", err
+		}
+		root, rel = filepath.Dir(p), filepath.Base(p)
+	}
+	return root, rel, nil
+}
+
+// artifacts are the extensions of files made to be looked at: those the
+// app's isArtifact takes (app/lib/preview.dart), which offer Preview on a
+// tool row. Both sides' tests read testdata/artifacts.json, so a type
+// added to one and not the other fails.
+var artifacts = map[string]bool{
+	"md": true, "markdown": true,
+	"png": true, "jpg": true, "jpeg": true, "gif": true, "webp": true,
+	"html": true, "htm": true, "svg": true, "pdf": true, "csv": true,
+	"mmd": true, "mermaid": true,
+}
+
+// Artifact says path is of a type the preview shows as an artifact.
+func Artifact(path string) bool {
+	return artifacts[strings.ToLower(strings.TrimPrefix(filepath.Ext(path), "."))]
+}
+
+// Check says rel inside root can show: nil for a regular file reached,
+// links followed, without leaving root; fs.ErrNotExist when it isn't
+// there, regularfile.ErrNotRegular for a folder, a fifo or a device, and
+// another error for a link leading out.
+func Check(root, rel string) error {
 	r, err := os.OpenRoot(root)
 	if err != nil {
-		return false
+		return err
 	}
 	defer r.Close() //nolint:errcheck // read-only
 	fi, err := r.Stat(rel)
-	return err == nil && fi.Mode().IsRegular()
+	if err != nil {
+		return err
+	}
+	if !fi.Mode().IsRegular() {
+		return regularfile.ErrNotRegular
+	}
+	return nil
 }
+
+// Exists says rel inside root is a regular file, reached without leaving
+// root.
+func Exists(root, rel string) bool { return Check(root, rel) == nil }
 
 // Read reads rel inside root. A missing file or one that isn't a regular
 // file is Missing; a path that leads outside root is an error.

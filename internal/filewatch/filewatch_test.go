@@ -3,8 +3,10 @@ package filewatch
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,6 +34,48 @@ func TestLocate(t *testing.T) {
 		if root, rel, err := Locate(roots, path); err == nil {
 			t.Errorf("Locate(%q) = %q, %q; want refused", path, root, rel)
 		}
+	}
+}
+
+func TestAllowedAsksWroteOnlyOutsideTheRoots(t *testing.T) {
+	dir := t.TempDir()
+	folder, notes := filepath.Join(dir, "app"), filepath.Join(dir, "notes", "plan.md")
+	wrote := func(p string) bool { return p == notes }
+	if root, rel, err := Allowed([]string{folder}, "a.md", wrote); err != nil || root != folder || rel != "a.md" {
+		t.Errorf("inside: %q, %q, %v", root, rel, err)
+	}
+	if root, rel, err := Allowed([]string{folder}, notes, wrote); err != nil || root != filepath.Dir(notes) || rel != "plan.md" {
+		t.Errorf("written: %q, %q, %v", root, rel, err)
+	}
+	for _, path := range []string{filepath.Join(dir, "other.md"), "../notes/plan.md"} {
+		if root, rel, err := Allowed([]string{folder}, path, wrote); err == nil {
+			t.Errorf("Allowed(%q) = %q, %q; want refused", path, root, rel)
+		}
+	}
+}
+
+// Go's table and the app's (artifactKinds in app/lib/preview.dart) are one
+// list: app/test/show_tool_test.dart reads the same file.
+func TestArtifactsAreTheAppsList(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("testdata", "artifacts.json"))
+	testcheck.NoErr(t, err)
+	var list struct{ Artifacts, Others []string }
+	testcheck.NoErr(t, json.Unmarshal(b, &list))
+	for _, e := range list.Artifacts {
+		if !Artifact("a/b."+e) || !Artifact("B."+strings.ToUpper(e)) {
+			t.Errorf(".%s isn't an artifact", e)
+		}
+	}
+	for _, e := range list.Others {
+		if Artifact("a/b." + e) {
+			t.Errorf(".%s is an artifact", e)
+		}
+	}
+	if len(artifacts) != len(list.Artifacts) {
+		t.Errorf("%d artifact types here, %d in the list", len(artifacts), len(list.Artifacts))
+	}
+	if Artifact("Makefile") || Artifact("a.md/b") {
+		t.Error("a name without an artifact's extension passed")
 	}
 }
 
