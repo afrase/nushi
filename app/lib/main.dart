@@ -388,13 +388,15 @@ class _ChatPaneState extends State<_ChatPane> {
   /// A file its agent asked to show opens while the transcript shows. This
   /// pane lives only while its chat is the one showing, so another chat or
   /// a view in its place leaves the ask waiting, and on Changes it waits
-  /// too: the agent never moves the user (ADR 0068).
+  /// too: the agent never moves the user (ADR 0068). In a window too narrow
+  /// for the pane beside the transcript it stays closed, or it would lie
+  /// over the box and any card waiting; the row's Preview opens it.
   void _showAsked() {
     final chat = widget.chat;
     final path = chat.showAsked.value;
     if (path == null || chat.shownTab != ChatTab.chat) return;
     chat.showAsked.value = null;
-    chat.openPreview(path);
+    if (chat.previewFits) chat.openPreview(path);
   }
 
   /// A file to show (ChatState.showFile, from a review's finding) shows in
@@ -417,6 +419,11 @@ class _ChatPaneState extends State<_ChatPane> {
         // The pull request's tab goes with its link.
         final tab = widget.chat.shownTab;
         final panel = show && fits && tab == ChatTab.chat;
+        widget.chat.previewFits =
+            box.maxWidth -
+                (panel ? paneWidth('details', DetailsPanel.width) : 0) -
+                ChatView.previewWidth >=
+            ChatView.leastBesideWide;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

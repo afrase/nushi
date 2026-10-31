@@ -47,6 +47,13 @@ class ChatView extends StatefulWidget {
   /// The narrowest the transcript gets beside a panel.
   static const minWidth = 556.0;
 
+  /// The narrowest the transcript gets beside a wide pane.
+  static const leastBesideWide = 360.0;
+
+  /// The preview pane's width, as dragged.
+  static double get previewWidth =>
+      paneWidth('preview', 560).clamp(300, double.infinity);
+
   @override
   State<ChatView> createState() => _ChatViewState();
 }
@@ -185,7 +192,7 @@ class _ChatViewState extends State<ChatView> {
     final details = widget.details;
     return Beside(
       main: transcript,
-      least: wide ? 360 : ChatView.minWidth,
+      least: wide ? ChatView.leastBesideWide : ChatView.minWidth,
       panes: [
         if (side != null)
           SidePane(

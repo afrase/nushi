@@ -254,6 +254,23 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
+    testWidgets('a narrow window keeps the transcript; the row opens it', (
+      tester,
+    ) async {
+      final (fake, d) = await _app(
+        tester,
+        size: const Size(720, 900),
+        items: [_show('a', 'docs/report.md', text: 'Shown.')],
+      );
+      await _shows(tester, fake, 'docs/report.md');
+      expect(find.byType(PreviewPane), findsNothing);
+      expect(_chat(d).showAsked.value, isNull);
+      await tester.tap(find.text('Preview'));
+      await tester.pumpAndSettle();
+      expect(find.byType(PreviewPane), findsOneWidget);
+      d.dispose();
+    }, variant: _mac);
+
     testWidgets('leaves another chat alone; the latest opens on coming back', (
       tester,
     ) async {
@@ -403,11 +420,11 @@ void main() {
         addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
         await _shows(tester, fake, 'docs/report.md');
         // Header buttons at the pane's edge, nothing past the window.
-        expect(tester.getTopRight(find.byTooltip('Close')).dx, lessThan(width));
-        expect(
-          tester.getTopRight(find.byTooltip('Close')).dx,
-          greaterThan(width - 40),
-        );
+        if (name == 'wide') {
+          final close = tester.getTopRight(find.byTooltip('Close')).dx;
+          expect(close, lessThan(width));
+          expect(close, greaterThan(width - 40));
+        }
         await expectLater(
           find.byType(NushiApp),
           matchesGoldenFile('goldens/show_${name}_${brightness.name}.png'),

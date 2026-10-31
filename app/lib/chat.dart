@@ -214,6 +214,10 @@ class ChatState extends ChangeNotifier {
   /// Whether its pane, as last laid out, has room for the details panel.
   bool panelFits = true;
 
+  /// Whether its pane, as last laid out, has room for a preview beside the
+  /// transcript.
+  bool previewFits = true;
+
   /// The tabs it has: Pull request only while it has one.
   List<ChatTab> get tabs => [.chat, .changes, if (pull != null) .pull];
 
