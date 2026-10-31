@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/paced.dart';
@@ -34,12 +35,17 @@ class AgentMarkdown extends StatelessWidget {
     this.files,
     this.onTapFile,
     this.shown,
+    this.transcript = false,
   });
 
   final String text;
 
   /// While it's paced ([Paced]): what shows, faded in, and the caret.
   final Shown? shown;
+
+  /// It's a message in a transcript: on the Mac, a size and a line up from
+  /// other Markdown (ADR 0072).
+  final bool transcript;
 
   /// What an image shows as (Jira's text: only its attachments).
   final Widget Function(Uri uri, String? alt) images;
@@ -65,10 +71,12 @@ class AgentMarkdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final large = transcript && !TouchTargets.of(context);
+    final size = large ? 14.0 : 13.5;
     final style = MarkdownStyle(
-      body: typed
-          ? theme.ui(t.userBandText, size: 13.5).copyWith(height: 1.5)
-          : theme.ui(t.agentText, size: 13.5).copyWith(height: 1.5),
+      body: theme
+          .ui(typed ? t.userBandText : t.agentText, size: size)
+          .copyWith(height: large ? 22 / 14 : 1.5),
       code: theme.code(typed ? t.userBandText : t.agentText, size: 12.5),
       codeBackground: typed ? t.userBandCodeBlock : t.codeBlock,
       inlineCode: typed ? t.userBandCode : t.inlineCode,

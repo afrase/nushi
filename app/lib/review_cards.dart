@@ -219,17 +219,31 @@ class UnsentReview extends StatelessWidget {
         final n = unsentComments(chat.id).length;
         if (n == 0) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: NushiTheme.gutter,
+            vertical: 4,
+          ),
           child: Row(
-            spacing: 6,
+            spacing: NushiTheme.barGap,
             children: [
-              Icon(Icons.rate_review_outlined, size: 13, color: t.textMuted),
               Flexible(
-                child: Text(
-                  n == 1
-                      ? '1 review comment in Changes isn’t sent.'
-                      : '$n review comments in Changes aren’t sent.',
-                  style: theme.ui(t.textSecondary, size: 12),
+                child: Row(
+                  spacing: 6,
+                  children: [
+                    Icon(
+                      Icons.rate_review_outlined,
+                      size: 13,
+                      color: t.textMuted,
+                    ),
+                    Flexible(
+                      child: Text(
+                        n == 1
+                            ? '1 review comment in Changes isn’t sent.'
+                            : '$n review comments in Changes aren’t sent.',
+                        style: theme.ui(t.textSecondary, size: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               LinkText(

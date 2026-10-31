@@ -134,9 +134,9 @@ class _ChatViewState extends State<ChatView> {
                                 alignment: Alignment.topRight,
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(
-                                    16,
+                                    NushiTheme.gutter,
                                     8,
-                                    16,
+                                    NushiTheme.gutter,
                                     0,
                                   ),
                                   child: FindBar(chat.find),
@@ -292,8 +292,12 @@ class _Archived extends StatelessWidget {
         color: t.raised,
         border: Border(top: BorderSide(color: t.borderSubtle)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: NushiTheme.gutter,
+        vertical: 10,
+      ),
       child: Row(
+        spacing: NushiTheme.barGap,
         children: [
           Expanded(
             child: Text(
@@ -328,7 +332,10 @@ class _McpChanged extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: NushiTheme.gutter,
+        vertical: 4,
+      ),
       child: Row(
         children: [
           Icon(Icons.hub_outlined, size: 13, color: t.textMuted),
@@ -337,7 +344,7 @@ class _McpChanged extends StatelessWidget {
             'MCP servers changed. Reload to use them.',
             style: theme.ui(t.textSecondary, size: 12),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: NushiTheme.barGap),
           ReloadButton(chat, daemon),
         ],
       ),
@@ -381,9 +388,12 @@ class _Expired extends StatelessWidget {
         color: t.raised,
         border: Border(top: BorderSide(color: t.borderSubtle)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: NushiTheme.gutter,
+        vertical: 10,
+      ),
       child: Row(
-        spacing: 8,
+        spacing: NushiTheme.barGap,
         children: [
           Icon(Icons.history_toggle_off, size: 15, color: t.textMuted),
           Expanded(

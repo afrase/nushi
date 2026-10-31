@@ -1,14 +1,17 @@
+import 'package:nushi/theme/theme.dart';
+
 // GitHub's text as the pull request's parts show it: its first words,
 // its start, plain, its tables' empty columns gone; and the column it
 // reads in.
 
 /// The widest a pull request's or an issue's text reads at: wider, it's
-/// centred in the room.
+/// centred in the room. On the Mac a transcript's text keeps it too, at the
+/// left, under the chat's title (ADR 0072).
 const readableWidth = 860.0;
 
 /// Horizontal padding that centres [readableWidth] in [width], [least] at
 /// least on each side.
-double readablePad(double width, {double least = 20}) =>
+double readablePad(double width, {double least = NushiTheme.gutter}) =>
     width - 2 * least > readableWidth ? (width - readableWidth) / 2 : least;
 
 /// [body] from its first text: a heading it starts with ("## Summary")

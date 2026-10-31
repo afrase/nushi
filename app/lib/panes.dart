@@ -272,26 +272,44 @@ class _Beside extends MultiChildLayoutDelegate {
   bool shouldRelayout(_Beside old) => old.least != least;
 }
 
-/// A side pane's header: a raised bar 34 high with a hairline under it,
-/// [child] its row (a side chat's, a subagent's, a command's, a preview's),
-/// [inset] from the left.
+/// A side pane's header: a raised bar as high as the chat header
+/// ([PaneHeader.height]) with a hairline under it, [child] its row (a side
+/// chat's, a subagent's, a command's, a preview's), [inset] from the left and
+/// [end] from the right: by default the gutters, or what the row has always
+/// had in a pane too narrow for them.
 class PaneHeader extends StatelessWidget {
-  const new({required this.child, super.key, this.inset = 14});
+  const new({required this.child, super.key, this.inset, this.end});
+
+  /// The chat header's height too (ADR 0072).
+  static const height = 44.0;
+
+  /// Below this a pane's header keeps its row's room over the gutters: a side
+  /// chat's title and buttons take most of the narrowest pane.
+  static const gutterFrom = 320.0;
 
   final Widget child;
-  final double inset;
+  final double? inset;
+  final double? end;
 
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return Container(
-      height: 34,
-      padding: EdgeInsets.only(left: inset, right: 4),
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
-      ),
-      child: child,
+    return LayoutBuilder(
+      builder: (context, box) {
+        final room = box.maxWidth >= gutterFrom;
+        return Container(
+          height: height,
+          padding: EdgeInsets.only(
+            left: inset ?? (room ? NushiTheme.gutter : 14),
+            right: end ?? (room ? NushiTheme.gutter : 4),
+          ),
+          decoration: BoxDecoration(
+            color: t.raised,
+            border: Border(bottom: BorderSide(color: t.borderSubtle)),
+          ),
+          child: child,
+        );
+      },
     );
   }
 }

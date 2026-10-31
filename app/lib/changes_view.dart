@@ -22,6 +22,9 @@ import 'package:nushi/widgets.dart';
 /// The chat folder's changes in a [Scope]: a toolbar, the changed files
 /// (under the branch's commits in Commits) and the picked one side by
 /// side. It reloads when the agent finishes a turn.
+/// From this wide the Changes bar has the bar's gaps and gutters.
+const double _roomyFrom = 560;
+
 class ChangesView extends StatefulWidget {
   const new({required this.chat, required this.daemon, super.key});
 
@@ -463,75 +466,94 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         Scope.uncommitted;
     final files = _error == null && !_stale ? _files : const <FileChange>[];
     final n = files.length;
-    return Container(
-      height: 36,
-      padding: const EdgeInsets.only(left: 8, right: 6),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
-      ),
-      child: Row(
-        spacing: 10,
-        children: [
-          if (scopes.length > 1)
-            PlainTabs(
-              value: scope,
-              tabs: [for (final s in scopes) (s, s.label)],
-              onChanged: (s) => chat.scope = s.name,
-              fill: true,
-            ),
-          if (_stale)
-            const SizedBox.square(
-              dimension: 12,
-              child: CircularProgressIndicator(strokeWidth: 1.5),
-            ),
-          if (n > 0)
-            Text(
-              '$n file${n == 1 ? '' : 's'}',
-              style: theme.ui(t.textSecondary, size: 12),
-            ),
-          Expanded(
-            child: LineCounts(
-              files.fold(0, (n, f) => n + f.added),
-              files.fold(0, (n, f) => n + f.removed),
-            ),
+    return LayoutBuilder(
+      builder: (context, box) {
+        // The bar's gaps and gutters while the row has room for them; a narrow
+        // window's Send to agent needs it (ADR 0072).
+        final roomy = box.maxWidth >= _roomyFrom;
+        return Container(
+          height: 36,
+          // The tabs' own 3 points bring their line to the gutter.
+          padding: roomy
+              ? const EdgeInsets.only(
+                  left: NushiTheme.gutter - 3,
+                  right: NushiTheme.gutter,
+                )
+              : const EdgeInsets.only(left: 8, right: 6),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: t.borderSubtle)),
           ),
-          ListenableBuilder(
-            listenable: Listenable.merge([reviews, chat]),
-            builder: (context, _) {
-              final n = unsentComments(chat.id).length;
-              if (n == 0) return const SizedBox.shrink();
-              // As the Pull request tab's Send to agent: reply cards in
-              // the chat's box, to go with the next message.
-              return Button(
-                label: 'Send to agent ($n)',
-                icon: Icons.subdirectory_arrow_right,
-                kind: ButtonKind.primary,
-                tooltip:
-                    "Each comment as a reply card in the chat's box, to "
-                    'send with your next message',
-                onPressed: chat.archived || chat.sessionGone
-                    ? null
-                    : () => reviewToBox(chat),
-              );
-            },
+          child: Row(
+            spacing: roomy ? NushiTheme.barGap : 10,
+            children: [
+              if (scopes.length > 1)
+                PlainTabs(
+                  value: scope,
+                  tabs: [for (final s in scopes) (s, s.label)],
+                  onChanged: (s) => chat.scope = s.name,
+                  fill: true,
+                ),
+              if (_stale)
+                const SizedBox.square(
+                  dimension: 12,
+                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                ),
+              if (n > 0)
+                Text(
+                  '$n file${n == 1 ? '' : 's'}',
+                  style: theme.ui(t.textSecondary, size: 12),
+                ),
+              Expanded(
+                child: LineCounts(
+                  files.fold(0, (n, f) => n + f.added),
+                  files.fold(0, (n, f) => n + f.removed),
+                ),
+              ),
+              ListenableBuilder(
+                listenable: Listenable.merge([reviews, chat]),
+                builder: (context, _) {
+                  final n = unsentComments(chat.id).length;
+                  if (n == 0) return const SizedBox.shrink();
+                  // As the Pull request tab's Send to agent: reply cards in
+                  // the chat's box, to go with the next message.
+                  return Button(
+                    label: 'Send to agent ($n)',
+                    icon: Icons.subdirectory_arrow_right,
+                    kind: ButtonKind.primary,
+                    tooltip:
+                        "Each comment as a reply card in the chat's box, to "
+                        'send with your next message',
+                    onPressed: chat.archived || chat.sessionGone
+                        ? null
+                        : () => reviewToBox(chat),
+                  );
+                },
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: roomy ? NushiTheme.iconGap : 10,
+                children: [
+                  ValueListenableBuilder(
+                    valueListenable: changesFlat,
+                    builder: (context, flat, _) => IconTap(
+                      flat ? Icons.account_tree_outlined : Icons.list,
+                      tooltip: flat ? 'Show as a tree' : 'Show as a list',
+                      size: 15,
+                      onTap: () => changesFlat.value = !flat,
+                    ),
+                  ),
+                  IconTap(
+                    Icons.refresh,
+                    tooltip: 'Reload',
+                    size: 15,
+                    onTap: _reloading ? null : reload,
+                  ),
+                ],
+              ),
+            ],
           ),
-          ValueListenableBuilder(
-            valueListenable: changesFlat,
-            builder: (context, flat, _) => IconTap(
-              flat ? Icons.account_tree_outlined : Icons.list,
-              tooltip: flat ? 'Show as a tree' : 'Show as a list',
-              size: 15,
-              onTap: () => changesFlat.value = !flat,
-            ),
-          ),
-          IconTap(
-            Icons.refresh,
-            tooltip: 'Reload',
-            size: 15,
-            onTap: _reloading ? null : reload,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -6,10 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -148,8 +150,12 @@ void main() {
     await _hover(tester, find.text('Done.'));
     expect(_forkHere, findsNothing); // no messageId: no fork point
     await _hover(tester, find.textContaining('So the page you asked'));
-    // At the message's right end, by the transcript's edge.
-    expect(tester.getRect(_forkHere).right, greaterThan(1400 - 32));
+    // At the right end of the message, whose text stops at the readable
+    // width.
+    expect(
+      tester.getRect(_forkHere).right,
+      greaterThan(260 + NushiTheme.gutter + readableWidth - 12),
+    );
     await tester.tap(_forkHere);
     await tester.pumpAndSettle();
     expect(_forks(fake), ['c:m1']);
@@ -177,7 +183,7 @@ void main() {
     );
     expect(
       tester.getRect(find.byIcon(Icons.close)).right,
-      greaterThan(1400 - 24),
+      greaterThan(1400 - NushiTheme.gutter - 8),
     );
     // Not during its turn.
     fake.emit(_sideStatus(1, busy: true));

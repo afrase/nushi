@@ -108,7 +108,7 @@ void main() {
             final why = '$width wide, pull $pull, panel $panel';
             expect(tester.takeException(), isNull, reason: why);
             final menu = tester.getRect(find.byTooltip('Chat menu'));
-            expect(menu.right, closeTo(width - 8, 1), reason: why);
+            expect(menu.right, width - NushiTheme.gutter, reason: why);
           }
         }
       }

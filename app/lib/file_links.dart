@@ -148,14 +148,14 @@ class _LinkedMarkdownState extends State<LinkedMarkdown> {
     widget.text,
     live: widget.live,
     builder: (context, shown) => shown != null
-        ? AgentMarkdown(widget.text, live: true, shown: shown)
+        ? AgentMarkdown(widget.text, live: true, shown: shown, transcript: true)
         : _linked(context),
   );
 
   Widget _linked(BuildContext context) {
     final open = Previews.of(context)?.open;
     if (open == null || _named.isEmpty) {
-      return AgentMarkdown(widget.text, live: widget.live);
+      return AgentMarkdown(widget.text, live: widget.live, transcript: true);
     }
     final links = widget.chat.fileLinks;
     return ListenableBuilder(

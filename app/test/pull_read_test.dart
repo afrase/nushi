@@ -53,7 +53,7 @@ void main() {
 
   test('the readable column: 860 centred, else the least padding', () {
     expect(readablePad(1440 - 260), (1180 - 860) / 2);
-    expect(readablePad(700), 20);
+    expect(readablePad(700), 24);
   });
 
   testWidgets("a bot's comment folds to one line; a long review shows its "

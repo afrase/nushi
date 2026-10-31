@@ -115,7 +115,9 @@ class Pickers extends StatelessWidget {
         if (leading != null) const SizedBox(width: 12),
         if (ultracode?.current == 'true')
           Padding(
-            padding: const EdgeInsets.only(right: 10),
+            padding: EdgeInsets.only(
+              right: TouchTargets.of(context) ? 10 : NushiTheme.barGap,
+            ),
             child: Tooltip(
               message: ultracode!.description,
               child: Text('Ultracode', style: theme.ui(t.accentInk, size: 12)),

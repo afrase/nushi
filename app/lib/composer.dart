@@ -286,7 +286,14 @@ class _ComposerState extends State<Composer> {
         _images.value.isNotEmpty ||
         _draft.replies.value.isNotEmpty;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: touch
+          ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
+          : const EdgeInsets.fromLTRB(
+              NushiTheme.gutter,
+              4,
+              NushiTheme.gutter,
+              12,
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -320,7 +327,10 @@ class _ComposerState extends State<Composer> {
                   color: _focus.hasFocus ? t.textMuted : t.borderStrong,
                 ),
               ),
-              padding: const EdgeInsets.all(6),
+              // 48 high on the Mac with one line, the buttons 28 (ADR 0072).
+              padding: touch
+                  ? const EdgeInsets.all(6)
+                  : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               child: child,
             ),
             child: Column(
@@ -446,7 +456,7 @@ class _ComposerState extends State<Composer> {
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: touch ? 4 : 8),
           Pickers(
             leading: widget.folder && chat.fresh && !chat.archived
                 ? NewChatBar(chat: chat, daemon: widget.daemon)

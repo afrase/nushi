@@ -18,11 +18,13 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/web_page.dart';
@@ -213,6 +215,8 @@ Map<String, Rect> _marks(WidgetTester tester) {
     'body': at(_inPane(find.byType(PreviewBody))),
     'transcript': at(find.byType(Transcript)),
     'chat header': at(find.byType(ChatHeader)),
+    'header’s tabs': at(find.byType(PlainTabs<ChatTab>)),
+    'chat menu': at(find.byTooltip('Chat menu')),
     'Chat': at(
       find.descendant(of: find.byType(ChatHeader), matching: find.text('Chat')),
     ),
@@ -339,6 +343,33 @@ void main() {
         final first = tester.getRect(_inPane(find.text('report.md')));
         expect(first.left, name.left);
         expect(first.center.dy, name.center.dy);
+        d.dispose();
+      }, variant: _mac);
+    }
+
+    // The pane lies under the chat header, not beside it: the two rows share
+    // a height and an edge, and each row's lines stop on its own border.
+    for (final count in [1, 3]) {
+      testWidgets('the title row is the header’s height, right under it, '
+          '$count open', (tester) async {
+        final d = await _app(tester, files: _three.take(count).toList());
+        final header = tester.getRect(find.byType(ChatHeader));
+        final row = tester.getRect(_inPane(find.byType(PaneHeader)));
+        expect(header.height, 44);
+        expect(row.height, 44);
+        expect(row.top, header.bottom);
+        expect(row.bottom, header.bottom + 44);
+        final lines = find.descendant(
+          of: find.byType(TabFace),
+          matching: find.byType(Positioned),
+        );
+        // Chat, Preview and, with three open, the file showing.
+        expect(lines, findsNWidgets(count == 1 ? 2 : 3));
+        for (final line in lines.evaluate()) {
+          final box = line.renderObject! as RenderBox;
+          final bottom = box.localToGlobal(box.size.bottomLeft(Offset.zero)).dy;
+          expect(bottom, anyOf(header.bottom - 1, row.bottom - 1));
+        }
         d.dispose();
       }, variant: _mac);
     }
@@ -618,6 +649,20 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
+    testWidgets('three short names fit the pane as it starts', (tester) async {
+      final d = await _app(tester, files: _three);
+      for (final name in ['report.md', 'plan.md', 'notes.md']) {
+        expect(
+          tester
+              .renderObject<RenderParagraph>(_inPane(find.text(name)).first)
+              .didExceedMaxLines,
+          isFalse,
+          reason: name,
+        );
+      }
+      d.dispose();
+    }, variant: _mac);
+
     testWidgets('picking a tab keeps the row where it is', (tester) async {
       final d = await _app(tester, files: _many, last: true);
       final before = tester.state(find.byType(PreviewTabs));
@@ -683,7 +728,7 @@ void main() {
             final right = tester.getRect(find.byType(NushiApp)).right;
             expect(
               tester.getTopRight(find.byTooltip('Close')).dx,
-              greaterThan(right - 14),
+              greaterThan(right - NushiTheme.gutter - 1),
             );
             await expectLater(
               find.byType(NushiApp),

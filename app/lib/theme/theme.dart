@@ -54,6 +54,13 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   static const control = 4.0;
   static const card = 6.0;
 
+  // The Mac's chat area's spacing (ADR 0072). The phone keeps its own values,
+  // decided where the two share a widget (TouchTargets).
+  static const gutter = 24.0; // a side gutter
+  static const barGap = 12.0; // between controls in a bar
+  static const groupGap = 24.0; // between groups of them
+  static const iconGap = 2.0; // between icon buttons, already padded
+
   static NushiTheme of(BuildContext context) =>
       Theme.of(context).extension<NushiTheme>()!;
 
