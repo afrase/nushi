@@ -23,6 +23,9 @@ func TestEveryAgentIsWhole(t *testing.T) {
 		if a.Start == nil || a.Skills == nil || a.Trust == nil || a.Chats.Resume == "" {
 			t.Errorf("%s isn't whole: %+v", n, a)
 		}
+		if takes := n == "claude" || n == "codex"; a.Chats.ClientMCP != takes {
+			t.Errorf("%s: Chats.ClientMCP %v, want %v (ADR 0043)", n, a.Chats.ClientMCP, takes)
+		}
 		if a.Chats.MCP != (a.MCP != nil) {
 			t.Errorf("%s: Chats.MCP %v with MCP %v", n, a.Chats.MCP, a.MCP != nil)
 		}

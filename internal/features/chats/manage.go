@@ -312,7 +312,9 @@ func (s *Service) Roots(chatID string) ([]string, error) {
 
 // Wrote reports whether one of a chat's tool calls (a subagent's too)
 // worked on the file at path (absolute), wherever it is: an agent's notes
-// outside the chat's folder can be previewed too.
+// outside the chat's folder can be previewed too. A show call doesn't
+// count, whatever its agent says it touched: asking to show a file can't
+// be what allows it (ADR 0068).
 func (s *Service) Wrote(chatID, path string) bool {
 	c, err := s.lookup(chatID)
 	if err != nil {
@@ -328,7 +330,7 @@ func (s *Service) Wrote(chatID, path string) bool {
 		return filepath.Clean(p)
 	}
 	for _, it := range c.items {
-		if it.Kind != model.ToolCall {
+		if it.Kind != model.ToolCall || isShow(it.Title) {
 			continue
 		}
 		for _, p := range it.Paths {

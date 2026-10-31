@@ -31,8 +31,10 @@ import (
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/memory"
+	"github.com/afrase/nushi/internal/features/preview"
 	"github.com/afrase/nushi/internal/features/restart"
 	"github.com/afrase/nushi/internal/features/terminals"
+	"github.com/afrase/nushi/internal/features/tools"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
@@ -55,6 +57,8 @@ type daemon struct {
 	kill    func() // ends the last agent started, as if its process died
 	restart *restart.Service
 	claudes *claudes // the fake claudes Claude's Go agent ran
+	tools   *tools.Service
+	toolAPI string // the tools' endpoint, as the daemon's socket serves it
 }
 
 // pipeAgent is a fake agent "process" over pipes.
@@ -151,6 +155,9 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// Sleep and the copies as main has them: the settings are the daemon's.
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(dataDir, "scratch"),
 		Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts, Sleep: st})
+	shows := preview.New(hub.Publish)
+	shows.UseChats(svc)
+	toolSvc := tools.New(shows)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
 	follow, unfollow := context.WithCancel(context.Background())
@@ -162,16 +169,17 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts, ClaudeGo: st}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))
+	toolAPI := httptest.NewServer(api.Tools(toolSvc))
 	stop := func() {
 		unfollow()
-		for _, s := range []*httptest.Server{srv, devices} {
+		for _, s := range []*httptest.Server{srv, devices, toolAPI} {
 			s.CloseClientConnections()
 			s.Close()
 		}
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, kill: func() {
+	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, tools: toolSvc, toolAPI: toolAPI.URL, kill: func() {
 		mu.Lock()
 		defer mu.Unlock()
 		kill()

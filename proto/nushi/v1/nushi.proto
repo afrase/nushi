@@ -1654,6 +1654,10 @@ message EventsResponse {
     // What the check for a newer release found, when that changed
     // (chat_id is empty; API 86).
     UpdateCheck update = 16;
+    // A file the chat's agent asked to show in the preview pane, as it
+    // named it (its show tool, ADR 0068); these events have no seq, and
+    // only the Mac's app acts on them (API 95).
+    string show = 17;
   }
 }
 

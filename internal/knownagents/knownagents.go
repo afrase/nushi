@@ -77,7 +77,7 @@ func All(projects string, claudeGo func() bool) []Agent {
 				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk},
 				// The Go agent needs no Node, nothing set up and no version pinned.
 				Own: func() bool { return claude.GoForced() || claudeGo() }},
-			Chats: chats.Kind{Resume: "claude --resume", Gone: chats.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
+			Chats: chats.Kind{ClientMCP: true, Resume: "claude --resume", Gone: chats.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
 				Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice, Interrupted: claude.Interrupted,
 					Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
 					BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
@@ -103,7 +103,7 @@ func All(projects string, claudeGo func() bool) []Agent {
 		{
 			Agent: agents.Agent{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
 				Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
-			Chats: chats.Kind{Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives, Gone: codex.Gone, OneWriter: true,
+			Chats: chats.Kind{ClientMCP: true, Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives, Gone: codex.Gone, OneWriter: true,
 				Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}},
 			Local: func(k *chats.Kind) { k.OpenElsewhere, k.Forked = codex.OpenElsewhere, codex.Forked },
 			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {

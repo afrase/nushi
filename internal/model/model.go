@@ -401,7 +401,7 @@ type ToSubagent struct {
 // Event is a change to one chat, or, with ChatID "", to remote access, the
 // chats removed or the update check. Exactly one of Record, Item, Status,
 // Config, Commands, Removed, Usage, Queue, Cut, Dropped, Terminals, Remote,
-// RemovedChats and Update is set.
+// RemovedChats, Update and Show is set.
 type Event struct {
 	ChatID string
 	// Seq numbers the chat's events from 1; a Chat snapshot says which
@@ -431,6 +431,10 @@ type Event struct {
 	// Terminals, when not nil, are the chat's terminals, all of them. These
 	// events aren't numbered (Seq is 0).
 	Terminals *[]Terminal
+	// Show is a file the chat's agent asked to show in the preview pane
+	// (its show tool, ADR 0068), as the agent named it. These events aren't
+	// numbered (Seq is 0).
+	Show string
 	// Remote, when not nil, is remote access as it stands; ChatID is "".
 	Remote *Remote
 	// RemovedChats, when not nil, are all the chats removed because their

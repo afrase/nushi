@@ -139,7 +139,7 @@ type Tools func(chat, agent string, issue *model.ChatIssue) []acp.MCPServer
 // mcpServers are the MCP servers of Nushi's own tools for the chat, if
 // any; the agent's own come from its config.
 func (c *chat) mcpServers() []acp.MCPServer {
-	if c.kind.tools == nil {
+	if c.kind.tools == nil || !c.kind.ClientMCP {
 		return nil
 	}
 	return c.kind.tools(c.id, c.kind.Name, c.issue)

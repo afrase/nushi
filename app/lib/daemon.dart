@@ -40,7 +40,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 94;
+const apiVersion = 95;
 
 /// The API from which the daemon keeps which chats are pinned, in order
 /// (Chat.pin, PinChats).
@@ -552,6 +552,9 @@ class Daemon extends ChangeNotifier {
       notifyListeners();
     } else if (e.hasTerminals()) {
       terminals.apply(e.chatId, e.terminals.terminals);
+    } else if (e.hasShow()) {
+      // The phone offers Preview on the tool row; it opens nothing itself.
+      if (!remote) chats[e.chatId]?.showAsked.value = e.show;
     } else if (sides[e.chatId] case final side?) {
       e.removed ? _sideGone(side) : _applySide(side, e);
     } else if (e.hasChat()) {

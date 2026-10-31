@@ -9551,6 +9551,7 @@ type EventsResponse struct {
 	//	*EventsResponse_Remote
 	//	*EventsResponse_RemovedChats
 	//	*EventsResponse_Update
+	//	*EventsResponse_Show
 	Kind          isEventsResponse_Kind `protobuf_oneof:"kind"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -9733,6 +9734,15 @@ func (x *EventsResponse) GetUpdate() *UpdateCheck {
 	return nil
 }
 
+func (x *EventsResponse) GetShow() string {
+	if x != nil {
+		if x, ok := x.Kind.(*EventsResponse_Show); ok {
+			return x.Show
+		}
+	}
+	return ""
+}
+
 type isEventsResponse_Kind interface {
 	isEventsResponse_Kind()
 }
@@ -9808,6 +9818,13 @@ type EventsResponse_Update struct {
 	Update *UpdateCheck `protobuf:"bytes,16,opt,name=update,proto3,oneof"`
 }
 
+type EventsResponse_Show struct {
+	// A file the chat's agent asked to show in the preview pane, as it
+	// named it (its show tool, ADR 0068); these events have no seq, and
+	// only the Mac's app acts on them (API 95).
+	Show string `protobuf:"bytes,17,opt,name=show,proto3,oneof"`
+}
+
 func (*EventsResponse_Item) isEventsResponse_Kind() {}
 
 func (*EventsResponse_Status) isEventsResponse_Kind() {}
@@ -9835,6 +9852,8 @@ func (*EventsResponse_Remote) isEventsResponse_Kind() {}
 func (*EventsResponse_RemovedChats) isEventsResponse_Kind() {}
 
 func (*EventsResponse_Update) isEventsResponse_Kind() {}
+
+func (*EventsResponse_Show) isEventsResponse_Kind() {}
 
 // A chat's config options, all of them.
 type ChatConfig struct {
@@ -21237,7 +21256,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\funix_seconds\x18\x04 \x01(\x03R\vunixSeconds\x12\x14\n" +
 	"\x05added\x18\x05 \x01(\x05R\x05added\x12\x18\n" +
 	"\aremoved\x18\x06 \x01(\x05R\aremoved\"\x0f\n" +
-	"\rEventsRequest\"\xa1\x05\n" +
+	"\rEventsRequest\"\xb7\x05\n" +
 	"\x0eEventsResponse\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x10\n" +
 	"\x03seq\x18\x06 \x01(\x03R\x03seq\x12)\n" +
@@ -21255,7 +21274,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\adropped\x18\r \x01(\tH\x00R\adropped\x12*\n" +
 	"\x06remote\x18\x0e \x01(\v2\x10.nushi.v1.RemoteH\x00R\x06remote\x12=\n" +
 	"\rremoved_chats\x18\x0f \x01(\v2\x16.nushi.v1.RemovedChatsH\x00R\fremovedChats\x12/\n" +
-	"\x06update\x18\x10 \x01(\v2\x15.nushi.v1.UpdateCheckH\x00R\x06updateB\x06\n" +
+	"\x06update\x18\x10 \x01(\v2\x15.nushi.v1.UpdateCheckH\x00R\x06update\x12\x14\n" +
+	"\x04show\x18\x11 \x01(\tH\x00R\x04showB\x06\n" +
 	"\x04kind\">\n" +
 	"\n" +
 	"ChatConfig\x120\n" +
@@ -22974,6 +22994,7 @@ func file_nushi_v1_nushi_proto_init() {
 		(*EventsResponse_Remote)(nil),
 		(*EventsResponse_RemovedChats)(nil),
 		(*EventsResponse_Update)(nil),
+		(*EventsResponse_Show)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

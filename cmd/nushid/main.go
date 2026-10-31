@@ -32,6 +32,7 @@ import (
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/memory"
+	"github.com/afrase/nushi/internal/features/preview"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/restart"
 	"github.com/afrase/nushi/internal/features/terminals"
@@ -137,7 +138,8 @@ func run() error {
 	}
 	dev := os.Getenv("NUSHI_DATA") != ""
 	jiraSvc := newJira(st, dev)
-	toolSvc := tools.New(jiraSvc.Tools())
+	shows := preview.New(hub.Publish)
+	toolSvc := tools.New(jiraSvc.Tools(), shows)
 	channels := newChannels()
 	remoteSvc, err := remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish)
 	if err != nil {
@@ -147,6 +149,7 @@ func run() error {
 	chatSvc := chats.New(context.Background(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
 		Scratch: filepath.Join(dir, "scratch"), Publish: hub.Publish, Tools: mcpTools(toolSvc, filepath.Join(dir, "nushid.sock")),
 		Viewers: remoteSvc, Processes: proctree.Tree{}, Copies: copies, CopiesOn: st.KeepTranscripts, CopyDays: st.TranscriptDays, Sleep: st})
+	shows.UseChats(chatSvc)
 	go chatSvc.EndStalePrompts() // what a daemon that stopped left pending
 	termSvc := terminals.New(startShell, filepath.Base(loginShell()), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
