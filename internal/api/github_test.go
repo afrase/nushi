@@ -131,10 +131,8 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 			t.Errorf("a request went to %s", h)
 		}
 	}
-	// The API's own failure line may quote GitHub's error; the feature's doesn't.
-	for line := range strings.Lines(out) {
-		if strings.Contains(line, text) && !strings.Contains(line, "api call failed") {
-			t.Errorf("what was written is in the log: %s", line)
-		}
+	// GitHub's refusal quoted it; neither the feature's line nor the API's does.
+	if strings.Contains(out, text) {
+		t.Errorf("what was written is in the log:\n%s", out)
 	}
 }
