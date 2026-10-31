@@ -135,15 +135,10 @@ func (a *Subagent) readMeta() {
 // An error matching fs.ErrNotExist says the session or the subagent isn't
 // there.
 func (s Store) SubagentMessages(id, cwd, agentID string) ([]Message, error) {
-	agents, err := s.Subagents(id, cwd)
+	a, err := s.subagent(id, cwd, agentID)
 	if err != nil {
 		return nil, err
 	}
-	i := slices.IndexFunc(agents, func(a Subagent) bool { return a.ID == agentID })
-	if agentID == "" || i < 0 {
-		return nil, notFound("subagent " + agentID + " of session " + id)
-	}
-	a := agents[i]
 	data, err := os.ReadFile(a.path)
 	if err != nil {
 		return nil, err
@@ -157,4 +152,18 @@ func (s Store) SubagentMessages(id, cwd, agentID string) ([]Message, error) {
 		}
 	}
 	return out, nil
+}
+
+// subagent is session id's subagent agentID. It is found among the
+// session's files, so an id never names a path.
+func (s Store) subagent(id, cwd, agentID string) (Subagent, error) {
+	agents, err := s.Subagents(id, cwd)
+	if err != nil {
+		return Subagent{}, err
+	}
+	i := slices.IndexFunc(agents, func(a Subagent) bool { return a.ID == agentID })
+	if agentID == "" || i < 0 {
+		return Subagent{}, notFound("subagent " + agentID + " of session " + id)
+	}
+	return agents[i], nil
 }

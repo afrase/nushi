@@ -15,7 +15,8 @@ import (
 // session's, so a SendMessage after the load runs it again on the same
 // session. Its end goes once the whole history is out: what the last
 // task notification about it said (a user message, or a prompt claude
-// queued: findQueued); else stopped, when the main agent
+// queued, in whichever transcript started it: findQueued); else stopped,
+// when the main agent
 // stopped it; else, for one in the foreground, how its call ended; else
 // idle with no reason, as nothing says (a background subagent that was
 // running when claude last exited).
@@ -34,19 +35,25 @@ type replayedKid struct {
 
 // findAgents finds the subagents' transcripts and the calls that started
 // them: each one's sidecar names its call; else the call's result names
-// the subagent (an Agent call's toolUseResult.agentId).
+// the subagent (linkResults).
 func (r *replayer) findAgents(ms []sessions.Message) {
 	list, err := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}.Subagents(r.s.id, r.cwd)
 	if err != nil {
 		return
 	}
-	byID := map[string]sessions.Subagent{}
 	for _, a := range list {
-		byID[a.ID] = a
+		r.byAgent[a.ID] = a
 		if a.ParentToolUseID != "" {
 			r.agents[a.ParentToolUseID] = a
 		}
 	}
+	r.linkResults(ms)
+}
+
+// linkResults finds the calls in ms, the main agent's or a subagent's
+// messages, whose result names a subagent with no sidecar to name its
+// call (an Agent call's toolUseResult.agentId).
+func (r *replayer) linkResults(ms []sessions.Message) {
 	for _, m := range ms {
 		var rec struct {
 			Message struct {
@@ -60,7 +67,7 @@ func (r *replayer) findAgents(ms []sessions.Message) {
 			continue
 		}
 		call := rec.Message.Content[0].ToolUseID
-		if a, ok := byID[rec.Result.AgentID]; ok && call != "" && a.ParentToolUseID == "" {
+		if a, ok := r.byAgent[rec.Result.AgentID]; ok && call != "" && a.ParentToolUseID == "" {
 			r.agents[call] = a
 		}
 	}
@@ -79,10 +86,15 @@ func (r *replayer) subagent(stream, call string, a sessions.Subagent, in launch)
 	kid := &replayedKid{sa: sa, background: in.Background}
 	r.kids = append(r.kids, kid)
 	r.byID[sa.id] = kid
-	ms, err := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}.SubagentMessages(r.s.id, r.cwd, a.ID)
+	store := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}
+	ms, err := store.SubagentMessages(r.s.id, r.cwd, a.ID)
 	if err != nil {
 		r.s.log.Info("replaying a subagent", "agent", a.ID, "err", err)
 		return
+	}
+	r.linkResults(ms)
+	if qs, err := store.SubagentQueuedPrompts(r.s.id, r.cwd, a.ID); err == nil {
+		r.place(qs, ms)
 	}
 	r.messages(ms, call)
 }
@@ -132,21 +144,26 @@ func (r *replayer) launchOf(call string) *replayedKid {
 // findQueued reads the prompts claude kept other than as user messages
 // (sessions.Store.QueuedPrompts): a task notification delivered into a
 // running turn is only an attachment, and one still queued when claude
-// closed only a queue-operation (docs/facts/claude.md). Each is read
-// after the message before it, or first when that message isn't
-// replayed; one still queued comes after them all. claude-agent-acp
-// reads neither, so its replay leaves such a subagent idle with no
-// reason.
+// closed only a queue-operation (docs/facts/claude.md). The end of a
+// subagent started by a subagent goes to the one that started it, in that
+// one's transcript (subagent). claude-agent-acp reads neither, so its
+// replay leaves such a subagent idle with no reason.
 func (r *replayer) findQueued(ms []sessions.Message) {
 	qs, err := sessions.Store{ConfigDir: r.s.a.cfg.ConfigDir}.QueuedPrompts(r.s.id, r.cwd)
 	if err != nil {
 		return
 	}
+	r.place(qs, ms)
+}
+
+// place sets the prompts qs of a transcript whose messages are ms to be
+// read after the message before each, or first when that message isn't
+// replayed; one still queued comes after them all.
+func (r *replayer) place(qs []sessions.Queued, ms []sessions.Message) {
 	known := map[string]bool{}
 	for _, m := range ms {
 		known[m.UUID] = true
 	}
-	r.queued = map[string][]string{}
 	for _, q := range qs {
 		after := q.After
 		if !known[after] {

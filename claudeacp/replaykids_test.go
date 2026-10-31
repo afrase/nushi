@@ -2,11 +2,15 @@ package claudeacp
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
+
+	"github.com/afrase/nushi/claudeagent/sessions"
 )
 
 // To a client of subagents, a load announces each subagent after the
@@ -121,19 +125,6 @@ func TestLoadReplaysSubagents(t *testing.T) {
 func TestLoadSubagentsQueuedEnds(t *testing.T) {
 	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, fake())
 	cwd, sid := t.TempDir(), nthUUID(1)
-	note := func(id, status, summary string) string {
-		return "<task-notification>\n<task-id>" + id + "</task-id>\n<status>" + status + "</status>\n<summary>" + summary + "</summary>\n</task-notification>"
-	}
-	queued := func(uuid, prompt string) rec {
-		return rec{"type": "attachment", "uuid": uuid, "attachment": map[string]any{"type": "queued_command", "prompt": prompt}}
-	}
-	queueOp := func(op, content string) rec {
-		r := rec{"type": "queue-operation", "operation": op}
-		if content != "" {
-			r["content"] = content
-		}
-		return r
-	}
 	var recs []rec
 	recs = append(recs, userRec("u1", "Go"))
 	for _, id := range []string{"B", "C", "D"} {
@@ -143,14 +134,14 @@ func TestLoadSubagentsQueuedEnds(t *testing.T) {
 		recs = append(recs, userRec("r"+id, resultBlocks("toolu_"+id, "Async agent launched", false)))
 	}
 	recs = append(recs,
-		userRec("n1", note("agentD", "completed", "D finished")),
+		userRec("n1", endNote("agentD", "completed", "D finished")),
 		asstRec("a5", "msg_2", useBlock("toolu_X", "Bash", `{"command":"true"}`)),
-		queueOp("enqueue", note("agentB", "completed", "B finished")),
+		queueOp("enqueue", endNote("agentB", "completed", "B finished")),
 		userRec("r5", resultBlocks("toolu_X", "", false)),
-		queued("q1", note("agentB", "completed", "B finished")+note("agentD", "failed", "D broke")),
-		queueOp("remove", note("agentB", "completed", "B finished")),
+		queued("q1", endNote("agentB", "completed", "B finished")+endNote("agentD", "failed", "D broke")),
+		queueOp("remove", endNote("agentB", "completed", "B finished")),
 		asstRec("a6", "msg_3", textBlock("Done.")),
-		queueOp("enqueue", note("agentC", "killed", "C was stopped")),
+		queueOp("enqueue", endNote("agentC", "killed", "C was stopped")),
 	)
 	p.writeHistory(t, cwd, sid, recs...)
 	for _, id := range []string{"B", "C", "D"} {
@@ -175,6 +166,118 @@ func TestLoadSubagentsQueuedEnds(t *testing.T) {
 	}
 	if !slices.Equal(ends, want) {
 		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(ends, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// endNote is a task notification, queued a queued_command attachment, and
+// queueOp a queue-operation record, as claude keeps them.
+func endNote(id, status, summary string) string {
+	return "<task-notification>\n<task-id>" + id + "</task-id>\n<status>" + status + "</status>\n<summary>" + summary + "</summary>\n</task-notification>"
+}
+
+func queued(uuid, prompt string) rec {
+	return rec{"type": "attachment", "uuid": uuid, "attachment": map[string]any{"type": "queued_command", "prompt": prompt}}
+}
+
+func queueOp(op, content string) rec {
+	r := rec{"type": "queue-operation", "operation": op}
+	if content != "" {
+		r["content"] = content
+	}
+	return r
+}
+
+// A subagent started by a subagent ends with a notification to the one
+// that started it: a load reads the attachment on that one's transcript,
+// or what the session's queue left, and finds a call whose result alone
+// names the subagent in that transcript too. The notification about one
+// subagent doesn't end another's.
+func TestLoadNestedSubagentEnds(t *testing.T) {
+	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, fake())
+	cwd, sid := t.TempDir(), nthUUID(1)
+	background := func(desc string) string {
+		return `{"description":"` + desc + `","prompt":"go","run_in_background":true}`
+	}
+	launched := func(call string) []any { return resultBlocks(call, "Async agent launched", false) }
+	p.writeHistory(t, cwd, sid,
+		userRec("u1", "Go"),
+		asstRec("a1", "msg_1", useBlock("toolu_O", "Agent", background("Outer"))),
+		userRec("r1", launched("toolu_O")),
+		asstRec("a2", "msg_2", textBlock("Done.")),
+		queueOp("enqueue", endNote("agentJ", "killed", "J was stopped")),
+	)
+	p.writeSubagent(t, cwd, sid, "agentO", "toolu_O",
+		userRec("s1", "go"),
+		asstRec("s2", "msg_O1", useBlock("toolu_I", "Agent", background("Inner"))),
+		userRec("s3", launched("toolu_I"), "toolUseResult", map[string]any{"agentId": "agentI"}),
+		asstRec("s4", "msg_O2", useBlock("toolu_J", "Agent", background("Other"))),
+		userRec("s5", launched("toolu_J")),
+		asstRec("s6", "msg_O3", useBlock("toolu_K", "Agent", background("Never told"))),
+		userRec("s7", launched("toolu_K")),
+		queued("s8", endNote("agentI", "failed", "I broke")),
+		asstRec("s9", "msg_O4", textBlock("Outer done.")),
+	)
+	p.writeSubagent(t, cwd, sid, "agentI", "", asstRec("i1", "msg_I", textBlock("on it")))
+	p.writeSubagent(t, cwd, sid, "agentJ", "toolu_J", asstRec("j1", "msg_J", textBlock("on it")))
+	p.writeSubagent(t, cwd, sid, "agentK", "toolu_K", asstRec("k1", "msg_K", textBlock("on it")))
+	if _, err := p.load(sid, cwd); err != nil {
+		t.Fatal(err)
+	}
+	var ends []string
+	for _, l := range p.replayed() {
+		if strings.Contains(l, `"state":{"state":"idle"`) {
+			ends = append(ends, l)
+		}
+	}
+	ended := func(on, id, state string) string {
+		return on + " subagent " + `{"sessionId":"agent` + id + `","state":` + state + `}`
+	}
+	want := []string{
+		ended(sid, "O", `{"state":"idle"}`),
+		ended("agentO", "I", `{"state":"idle","stopReason":"error","error":{"code":-32603,"message":"I broke"}}`),
+		ended("agentO", "J", `{"state":"idle","stopReason":"cancelled"}`),
+		ended("agentO", "K", `{"state":"idle"}`),
+	}
+	if !slices.Equal(ends, want) {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(ends, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// On claude's own transcripts (the subagent-nested parity scenario), a
+// load finds the end of the subagent a subagent started, delivered into
+// the turn of the one that started it, and that one's own.
+func TestLoadRecordedNestedSubagent(t *testing.T) {
+	history := filepath.Join("..", "internal", "features", "chats", "testdata", "claude-parity", "subagent-nested", "history", "end")
+	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, fake())
+	cwd := t.TempDir()
+	project := sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd)
+	if err := os.MkdirAll(filepath.Dir(project), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.CopyFS(project, os.DirFS(history)); err != nil {
+		t.Fatal(err)
+	}
+	found, err := filepath.Glob(filepath.Join(history, "*.jsonl"))
+	if err != nil || len(found) != 1 {
+		t.Fatalf("the recording's session: %v %v", found, err)
+	}
+	sid := strings.TrimSuffix(filepath.Base(found[0]), ".jsonl")
+	if _, err := p.load(sid, cwd); err != nil {
+		t.Fatal(err)
+	}
+	var ends []string
+	for _, l := range p.replayed() {
+		if strings.Contains(l, `"state":{"state":"idle"`) {
+			ends = append(ends, l)
+		}
+	}
+	if len(ends) != 2 {
+		t.Fatalf("the ends: %q", ends)
+	}
+	for _, l := range ends {
+		if !strings.Contains(l, `"stopReason":"end_turn"`) {
+			t.Errorf("an end with no reason: %s", l)
+		}
 	}
 }
 

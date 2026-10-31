@@ -1,0 +1,9 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "TaskStop", "SendMessage", "Bash"]}}}}}},
+    {"prompt": "start a nested helper", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "usage_update", "_meta": {"_claude/origin": {"kind": "task-notification"}}}}}},
+    {"await": "p1"}
+  ]
+}

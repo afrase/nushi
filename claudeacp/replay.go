@@ -22,32 +22,33 @@ import (
 
 // replayer is one replay of a session's history.
 type replayer struct {
-	s      *session
-	cwd    string                       // where the transcript was found
-	agents map[string]sessions.Subagent // subagents' transcripts, by the call that started each
-	calls  map[string]*tool             // calls shown, until their results
-	inputs map[string]launch            // what the calls that start, message or stop a subagent said
-	kids   []*replayedKid               // the subagents announced, in order
-	byID   map[string]*replayedKid      // the same, by id
-	queued map[string][]string          // prompts claude kept other than as user messages, by the message before each
+	s       *session
+	cwd     string                       // where the transcript was found
+	agents  map[string]sessions.Subagent // subagents' transcripts, by the call that started each
+	calls   map[string]*tool             // calls shown, until their results
+	inputs  map[string]launch            // what the calls that start, message or stop a subagent said
+	kids    []*replayedKid               // the subagents announced, in order
+	byID    map[string]*replayedKid      // the same, by id
+	byAgent map[string]sessions.Subagent // the same transcripts, by subagent
+	queued  map[string][]string          // prompts claude kept other than as user messages, by the message before each
 }
 
 // replay sends the client the session's history, ms, found in cwd's
 // history folder ("" for any).
 func (s *session) replay(ms []sessions.Message, cwd string) {
 	r := &replayer{s: s, cwd: cwd, agents: map[string]sessions.Subagent{}, calls: map[string]*tool{},
-		inputs: map[string]launch{}, byID: map[string]*replayedKid{}}
+		inputs: map[string]launch{}, byID: map[string]*replayedKid{}, byAgent: map[string]sessions.Subagent{}, queued: map[string][]string{}}
 	if s.kids.children {
 		r.findAgents(ms)
 		r.findQueued(ms)
 	}
-	r.notifiedAfter("")
 	r.messages(ms, "")
 	r.ends()
 }
 
 // messages replays ms, of the stream of the call stream ("" at the top).
 func (r *replayer) messages(ms []sessions.Message, stream string) {
+	r.notifiedAfter("")
 	for _, m := range ms {
 		var msg claudeagent.APIMessage
 		if json.Unmarshal(m.Message, &msg) == nil {
@@ -58,9 +59,7 @@ func (r *replayer) messages(ms []sessions.Message, stream string) {
 				r.user(stream, m, msg)
 			}
 		}
-		if stream == "" {
-			r.notifiedAfter(m.UUID)
-		}
+		r.notifiedAfter(m.UUID)
 	}
 }
 
