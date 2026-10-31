@@ -28,11 +28,11 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 <td><a href="docs/images/changes.png"><img src="docs/images/changes.png" width="440" alt="The Changes tab: a file tree and a side-by-side diff with two review comments"></a></td>
 </tr>
 <tr>
-<td><b>Artifacts and previews.</b> Markdown, HTML, images, PDFs, CSVs and Mermaid diagrams the agent writes preview beside the chat, live as it rewrites them.</td>
+<td><b>Artifacts and previews.</b> Markdown, HTML, images, PDFs, CSVs and Mermaid diagrams the agent writes preview beside the chat, live as it rewrites them. An agent can open one itself, and several files sit in tabs.</td>
 <td><a href="docs/images/preview.png"><img src="docs/images/preview.png" width="440" alt="A Markdown design note previewed beside the chat that wrote it"></a></td>
 </tr>
 <tr>
-<td><b>The Pull request tab.</b> Checks, reviews and threads in one place, what blocks the merge first, each a click from the agent's box.</td>
+<td><b>The Pull request tab.</b> Checks, reviews and threads in one place, what blocks the merge first, each a click from the agent's box. Merge from the same tab when it's ready.</td>
 <td><a href="docs/images/pull-request.png"><img src="docs/images/pull-request.png" width="440" alt="The Pull request tab: status lights and the To do list of a failing check and review threads"></a></td>
 </tr>
 <tr>
@@ -52,7 +52,7 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 ## Requirements
 
 - A Mac with Apple silicon and macOS 13 or later.
-- An agent's CLI: `claude`, `codex`, `ante`, `omp` or `pig`; Claude and Codex also need Node and npm.
+- An agent's CLI: `claude`, `codex`, `ante`, `omp` or `pig`. Codex also needs Node and npm, and so does Claude unless you turn on Nushi's Go agent in Settings › Agents.
 
 ## Docs
 
