@@ -39,12 +39,38 @@ func (s Store) QueuedPrompts(id, cwd string) ([]Queued, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out []Queued
-	last := ""
-	for _, e := range chain(parseEntries(data)) {
-		if e.sidechain || e.team {
-			continue
-		}
+	main := slices.DeleteFunc(chain(parseEntries(data)), func(e *entry) bool { return e.sidechain || e.team })
+	out, last := queuedOn(main)
+	for _, p := range stillQueued(data) {
+		out = append(out, Queued{Prompt: p, After: last, Pending: true})
+	}
+	return out, nil
+}
+
+// SubagentQueuedPrompts returns what claude queued for session id's
+// subagent agentID and took into its running turn, oldest first: a task
+// notification about a subagent it started, among others. Such a
+// notification is a queued_command attachment on the subagent's own
+// chain, while its queue-operation records are in the session's
+// transcript (QueuedPrompts), so what is still queued is there. An error
+// matching fs.ErrNotExist says the session or the subagent isn't there.
+func (s Store) SubagentQueuedPrompts(id, cwd, agentID string) ([]Queued, error) {
+	a, err := s.subagent(id, cwd, agentID)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(a.path)
+	if err != nil {
+		return nil, err
+	}
+	out, _ := queuedOn(linear(parseEntries(data)))
+	return out, nil
+}
+
+// queuedOn reads the queued_command attachments of a conversation's
+// chain, and the uuid of its last message.
+func queuedOn(chain []*entry) (out []Queued, last string) {
+	for _, e := range chain {
 		switch {
 		case (e.typ == "user" || e.typ == "assistant") && !e.meta:
 			last = e.uuid
@@ -62,10 +88,7 @@ func (s Store) QueuedPrompts(id, cwd string) ([]Queued, error) {
 			}
 		}
 	}
-	for _, p := range stillQueued(data) {
-		out = append(out, Queued{Prompt: p, After: last, Pending: true})
-	}
-	return out, nil
+	return out, last
 }
 
 // stillQueued plays a transcript's queue-operation records, a queue in

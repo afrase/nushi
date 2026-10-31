@@ -1,6 +1,10 @@
 package sessions
 
 import (
+	"errors"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 )
@@ -47,5 +51,43 @@ func TestQueuedPrompts(t *testing.T) {
 	want := []Queued{{Prompt: "taken", After: "a1"}, {Prompt: "in blocks", After: "a1"}, {Prompt: "left", After: "a2", Pending: true}}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("QueuedPrompts = %+v\nwant %+v", got, want)
+	}
+}
+
+// SubagentQueuedPrompts reads the attachments on a subagent's own
+// transcript, all of it a sidechain, each after the message before it.
+// A subagent that isn't there is fs.ErrNotExist.
+func TestSubagentQueuedPrompts(t *testing.T) {
+	config, cwd, dir := project(t)
+	id := newUUID()
+	transcript(t, dir, id, text("user", "u1", "", "go"))
+	queued := func(uuid, parent, prompt string) record {
+		return rec("attachment", uuid, parent, "isSidechain", true, "attachment", record{"type": "queued_command", "prompt": prompt})
+	}
+	agents := filepath.Join(dir, id, "subagents")
+	if err := os.MkdirAll(agents, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(agents, "agent-outer.jsonl"), jsonl(t,
+		rec("user", "s1", "", "isSidechain", true, "message", record{"content": "start"}),
+		queued("q0", "s1", "early"),
+		rec("assistant", "s2", "q0", "isSidechain", true, "message", record{"content": []any{}}),
+		rec("attachment", "env", "s2", "isSidechain", true, "attachment", record{"type": "environment"}),
+		queued("q1", "env", "inner ended"),
+		rec("assistant", "s3", "q1", "isSidechain", true, "message", record{"content": []any{}}),
+	), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store := Store{ConfigDir: config}
+	got, err := store.SubagentQueuedPrompts(id, cwd, "outer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Queued{{Prompt: "early", After: "s1"}, {Prompt: "inner ended", After: "s2"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("SubagentQueuedPrompts = %+v\nwant %+v", got, want)
+	}
+	if _, err := store.SubagentQueuedPrompts(id, cwd, "../outer"); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("a subagent that isn't there: %v", err)
 	}
 }

@@ -58,6 +58,7 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `bash-background-taskstop` | a background command stopped by Claude's `TaskStop` | |
 | `subagent-foreground` | a foreground subagent | |
 | `subagent-background` | a background subagent that ends; the held turn | `session_state_changed: idle` only once no subagent runs |
+| `subagent-nested` | a background subagent that starts another, whose end reaches it mid-turn | where a nested subagent's notification is kept |
 | `subagent-stop-taskstop` | a background subagent stopped by `TaskStop` | |
 | `subagent-stop-cancel` | a background subagent stopped by `session/cancel` on its session (Nushi's Stop) | |
 | `subagent-stop-turn` | a foreground subagent stopped with the turn | |

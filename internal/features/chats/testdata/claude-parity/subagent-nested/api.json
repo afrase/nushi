@@ -1,0 +1,16 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "start a nested helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Outer", "subagent_type": "general-purpose", "prompt": "OUTER: start the inner helper.", "run_in_background": true}}]},
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "It runs in the background."}]}
+  ],
+  "side": [
+    {"match": {"lastUserText": "OUTER: start the inner helper."}, "content": [
+      {"type": "tool_use", "name": "Agent", "input": {"description": "Inner", "subagent_type": "general-purpose", "prompt": "INNER: reply.", "run_in_background": true}},
+      {"type": "tool_use", "name": "Bash", "input": {"command": "sleep 3", "description": "Wait"}}
+    ]},
+    {"match": {"lastUserText": "INNER: reply."}, "content": [{"type": "text", "text": "inner done"}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "outer done"}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "Noted the helper."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}
