@@ -14,6 +14,8 @@ import 'package:nushi/pull_cache.dart';
 import 'package:nushi/pull_chats.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_merge.dart';
+import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/pull_skeleton.dart';
 import 'package:nushi/pull_todo.dart';
 import 'package:nushi/pull_todo_items.dart';
@@ -135,13 +137,11 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
   }
 
   /// Asks for the pull request again (it changed here): the chat's, or
-  /// the pane's own. An ask of the chat's under way may have started
-  /// before the change, so another follows it.
+  /// the pane's own.
   Future<void> _refresh() async {
     final s = widget.source;
     if (s == null) return await _load();
-    if (s.asking) await s.refresh();
-    await s.refresh();
+    await s.again();
   }
 
   Future<void> _load({bool quiet = false}) async {
@@ -252,6 +252,16 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
               ),
               top: keptAt == null ? 14 : 2,
             ),
+            if (mergeView(p) != null)
+              column(
+                MergeControl(
+                  daemon: widget.daemon,
+                  pull: p,
+                  stale: keptAt != null,
+                  onChanged: _refresh,
+                ),
+                top: 10,
+              ),
             if (open)
               column(
                 PullTodo(

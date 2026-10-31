@@ -247,6 +247,55 @@ GitHubPull fixturePull() => GitHubPull(
   ],
 );
 
+/// [fixturePull] in a state its Merge control can show: "ready" (nothing in
+/// the way), "blocked" (as it is, a rule's reasons), "auto" (auto-merge on) or
+/// "queue" (third in its merge queue). The viewer has write access; the
+/// repository allows all three methods, and squash was used last.
+GitHubPull mergePull(String state) {
+  final merge = GitHubMerge(
+    methods: ['merge', 'squash', 'rebase'],
+    defaultMethod: 'squash',
+    canMerge: true,
+    canRebase: true,
+    autoAllowed: true,
+  );
+  final p = fixturePull()..merge = merge;
+  if (state == 'blocked') {
+    return p
+      ..merge.blocks.addAll(['checks_failing', 'changes_requested', 'threads'])
+      ..merge.canEnableAuto = true;
+  }
+  p
+    ..mergeState = 'clean'
+    ..checks.clear()
+    ..checks.addAll([check('rspec', required: true), check('rubocop')])
+    ..reviewers.clear()
+    ..reviewers.add(GitHubReviewer(login: 'mona', state: 'approved'))
+    ..threads.clear()
+    ..item.checks = 'success'
+    ..item.review = 'approved'
+    ..item.unresolved = 0;
+  switch (state) {
+    case 'auto':
+      p
+        ..mergeState = 'blocked'
+        ..merge.blocks.add('rules')
+        ..merge.canDisableAuto = true
+        ..merge.auto = GitHubAutoMerge(by: 'mona', method: 'squash');
+    case 'queue':
+      p
+        ..merge.queue = true
+        ..merge.queueMethod = 'squash'
+        ..merge.entry = GitHubQueueEntry(
+          position: 3,
+          state: 'awaiting_checks',
+          by: 'afrase',
+          etaSeconds: 840,
+        );
+  }
+  return p;
+}
+
 final fixtureLink = GitHubLink(
   host: 'github.com',
   repo: fixtureRepo,
