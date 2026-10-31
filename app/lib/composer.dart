@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pickers.dart';
@@ -294,185 +295,205 @@ class _ComposerState extends State<Composer> {
               NushiTheme.gutter,
               12,
             ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (turnPlan(chat.items) case final plan? when chat.busy)
-            PlanStatus(plan),
-          if (chat.queue.isNotEmpty)
-            QueuePills(
-              chat,
-              onEdit: _unqueue,
-              onRemove: (m) => _unqueue(m, drop: true),
-              onSendNow: _sendNow,
-            ),
-          if (chat.error.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(chat.error, style: theme.ui(t.crashed, size: 12)),
-            ),
-          if (_completions.choices.isNotEmpty)
-            ChoiceList(
-              _completions.choices,
-              _completions.picked,
-              onPick: _completions.accept,
-            ),
-          AnimatedBuilder(
-            animation: _focus,
-            builder: (context, child) => Container(
-              decoration: BoxDecoration(
-                color: t.base,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _focus.hasFocus ? t.textMuted : t.borderStrong,
-                ),
+      child: _capped(
+        touch,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (turnPlan(chat.items) case final plan? when chat.busy)
+              PlanStatus(plan),
+            if (chat.queue.isNotEmpty)
+              QueuePills(
+                chat,
+                onEdit: _unqueue,
+                onRemove: (m) => _unqueue(m, drop: true),
+                onSendNow: _sendNow,
               ),
-              // 48 high on the Mac with one line, the buttons 28 (ADR 0072).
-              padding: touch
-                  ? const EdgeInsets.all(6)
-                  : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              child: child,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_images.value.isNotEmpty ||
-                    _draft.replies.value.isNotEmpty ||
-                    _draft.toSubagent.value != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        if (_draft.toSubagent.value case (_, final agent)?)
-                          Chip(
-                            label: Text('To $agent, through ${chat.agentName}'),
-                            onDeleted: () => _draft.toSubagent.value = null,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ReplyCards(_draft.replies, onDone: _focus.requestFocus),
-                        Thumbnails(_images.value, onRemove: _images.removeAt),
-                      ],
-                    ),
+            if (chat.error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(chat.error, style: theme.ui(t.crashed, size: 12)),
+              ),
+            if (_completions.choices.isNotEmpty)
+              ChoiceList(
+                _completions.choices,
+                _completions.picked,
+                onPick: _completions.accept,
+              ),
+            AnimatedBuilder(
+              animation: _focus,
+              builder: (context, child) => Container(
+                decoration: BoxDecoration(
+                  color: t.base,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _focus.hasFocus ? t.textMuted : t.borderStrong,
                   ),
-                Row(
-                  children: [
-                    Menu(
-                      entries: [
-                        MenuEntry(
-                          'Mention a file',
-                          onPick: () {
-                            _completions.mention();
-                            _focus.requestFocus();
-                          },
-                        ),
-                        MenuEntry(
-                          'Image…',
-                          onPick: chat.canImages
-                              ? () => tryOrShow(context, _images.pick)
-                              : null,
-                          tooltip: chat.canImages
-                              ? ''
-                              : '${chat.agentName} doesn’t take images '
-                                    'in this chat',
-                        ),
-                      ],
-                      builder: (context, open) => boxButton(
-                        'Add a file or image',
-                        open,
-                        Icon(Icons.add, size: 18, color: t.textSecondary),
+                ),
+                // 48 high on the Mac with one line, the buttons 28 (ADR 0072).
+                padding: touch
+                    ? const EdgeInsets.all(6)
+                    : const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                child: child,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_images.value.isNotEmpty ||
+                      _draft.replies.value.isNotEmpty ||
+                      _draft.toSubagent.value != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (_draft.toSubagent.value case (_, final agent)?)
+                            Chip(
+                              label: Text(
+                                'To $agent, through ${chat.agentName}',
+                              ),
+                              onDeleted: () => _draft.toSubagent.value = null,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ReplyCards(
+                            _draft.replies,
+                            onDone: _focus.requestFocus,
+                          ),
+                          Thumbnails(_images.value, onRemove: _images.removeAt),
+                        ],
                       ),
                     ),
-                    Expanded(
-                      child: Focus(
-                        onKeyEvent: _onKey,
-                        skipTraversal: true,
-                        child: TextField(
-                          controller: _text,
-                          focusNode: _focus,
-                          autofocus: !touch, // no keyboard popping up
-                          minLines: 1,
-                          // A phone's keyboard leaves the transcript little
-                          // room: past six lines the field scrolls.
-                          maxLines: touch ? 6 : 10,
-                          style: theme.ui(t.text),
-                          textAlignVertical: TextAlignVertical.center,
-                          decoration: InputDecoration(
-                            hintText: !chat.busy
-                                ? widget.hint
-                                : touch
-                                ? 'Queue a message, or stop and send'
-                                : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
-                                      'and sends',
-                            border: InputBorder.none,
-                            // One line (18.2) is as tall as the buttons.
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 5,
+                  Row(
+                    children: [
+                      Menu(
+                        entries: [
+                          MenuEntry(
+                            'Mention a file',
+                            onPick: () {
+                              _completions.mention();
+                              _focus.requestFocus();
+                            },
+                          ),
+                          MenuEntry(
+                            'Image…',
+                            onPick: chat.canImages
+                                ? () => tryOrShow(context, _images.pick)
+                                : null,
+                            tooltip: chat.canImages
+                                ? ''
+                                : '${chat.agentName} doesn’t take images '
+                                      'in this chat',
+                          ),
+                        ],
+                        builder: (context, open) => boxButton(
+                          'Add a file or image',
+                          open,
+                          Icon(Icons.add, size: 18, color: t.textSecondary),
+                        ),
+                      ),
+                      Expanded(
+                        child: Focus(
+                          onKeyEvent: _onKey,
+                          skipTraversal: true,
+                          child: TextField(
+                            controller: _text,
+                            focusNode: _focus,
+                            autofocus: !touch, // no keyboard popping up
+                            minLines: 1,
+                            // A phone's keyboard leaves the transcript little
+                            // room: past six lines the field scrolls.
+                            maxLines: touch ? 6 : 10,
+                            style: theme.ui(t.text),
+                            textAlignVertical: TextAlignVertical.center,
+                            decoration: InputDecoration(
+                              hintText: !chat.busy
+                                  ? widget.hint
+                                  : touch
+                                  ? 'Queue a message, or stop and send'
+                                  : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
+                                        'and sends',
+                              border: InputBorder.none,
+                              // One line (18.2) is as tall as the buttons.
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 5,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    // Queue (after this turn) and Stop and send (stop it,
-                    // and this goes now): a phone's only way, the Mac's ⏎
-                    // and ⌘⏎ as buttons.
-                    if (written && chat.busy) ...[
-                      boxButton(
-                        touch ? 'Queue' : 'Queue (⏎)',
-                        _send,
-                        Icon(Icons.queue, size: 16, color: t.textSecondary),
-                      ),
+                      // Queue (after this turn) and Stop and send (stop it,
+                      // and this goes now): a phone's only way, the Mac's ⏎
+                      // and ⌘⏎ as buttons.
+                      if (written && chat.busy) ...[
+                        boxButton(
+                          touch ? 'Queue' : 'Queue (⏎)',
+                          _send,
+                          Icon(Icons.queue, size: 16, color: t.textSecondary),
+                        ),
+                        if (chat.started != null)
+                          boxButton(
+                            touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
+                            () => _send(now: true),
+                            Icon(
+                              Icons.fast_forward,
+                              size: 16,
+                              color: t.textSecondary,
+                            ),
+                          ),
+                      ],
                       if (chat.started != null)
                         boxButton(
-                          touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
-                          () => _send(now: true),
+                          'Stop (esc)',
+                          () => stopTurn(context, chat, widget.daemon),
+                          stopIcon(t.textSecondary),
+                        )
+                      else if (written && !chat.busy)
+                        boxButton(
+                          'Send (⏎)',
+                          _send,
                           Icon(
-                            Icons.fast_forward,
+                            Icons.keyboard_return,
                             size: 16,
                             color: t.textSecondary,
                           ),
                         ),
                     ],
-                    if (chat.started != null)
-                      boxButton(
-                        'Stop (esc)',
-                        () => stopTurn(context, chat, widget.daemon),
-                        stopIcon(t.textSecondary),
-                      )
-                    else if (written && !chat.busy)
-                      boxButton(
-                        'Send (⏎)',
-                        _send,
-                        Icon(
-                          Icons.keyboard_return,
-                          size: 16,
-                          color: t.textSecondary,
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: touch ? 4 : 8),
-          Pickers(
-            leading: widget.folder && chat.fresh && !chat.archived
-                ? NewChatBar(chat: chat, daemon: widget.daemon)
-                : null,
-            options: chat.config,
-            onPick: (id, value) => widget.daemon.client.setConfigOption(
-              SetConfigOptionRequest(
-                chatId: chat.id,
-                configId: id,
-                value: value,
+                  ),
+                ],
               ),
             ),
-            onClose: _focus.requestFocus,
-          ),
-        ],
+            SizedBox(height: touch ? 4 : 8),
+            Pickers(
+              leading: widget.folder && chat.fresh && !chat.archived
+                  ? NewChatBar(chat: chat, daemon: widget.daemon)
+                  : null,
+              options: chat.config,
+              onPick: (id, value) => widget.daemon.client.setConfigOption(
+                SetConfigOptionRequest(
+                  chatId: chat.id,
+                  configId: id,
+                  value: value,
+                ),
+              ),
+              onClose: _focus.requestFocus,
+            ),
+          ],
+        ),
       ),
     );
   }
+
+  /// [box], on the Mac no wider than the transcript's text and at its left
+  /// (ADR 0072).
+  Widget _capped(bool touch, Widget box) => touch
+      ? box
+      : Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: readableWidth),
+            child: box,
+          ),
+        );
 }
