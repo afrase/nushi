@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check golden-diff lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -216,6 +216,15 @@ test-web:
 # make test (the file's name doesn't end in _test.dart).
 screenshots:
 	cd app && flutter test --update-goldens test/screenshots/readme_shots.dart
+
+# What changed in the goldens against BASE (a ref, HEAD by default), new and
+# removed ones included: each file's size, changed box and pixel count, with
+# identical boxes grouped. TO=<ref> compares that ref instead of the working
+# tree. ROWS=0-44 fails on a change outside those pixel rows; a golden that
+# changed size always fails.
+BASE ?= HEAD
+golden-diff:
+	@go run ./tools/golden-diff -base '$(BASE)' -to '$(TO)' -rows '$(ROWS)'
 
 # Hand-written lines, without tests or generated code (the size limits).
 lines:
