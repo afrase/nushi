@@ -11,10 +11,10 @@ The owner dislikes the segmented pill (`Segmented`): a rounded box with a filled
 - **The same measure as the pill.** `PlainTabs` is exactly as wide and as high as `Segmented` for the same labels, with the labels where they were, so nothing moves and the fold's numbers stand. A test holds it to that.
 - **In a bordered row the line lies on the border.** `fill` takes the row's height, so the line ends where the border starts, as the file tabs' does (the chat header, the pane's title row, Changes' bar, a code block's). Elsewhere it's under the label, in the pill's height.
 - **A form's values stay `Segmented`**: a review's verdict and an MCP server's scope and transport. They aren't places to go: the pick is saved or sent, and as tabs Approve looks like a page of the dialog, and the muted options like text under a field's label.
-- **The phone stays as it was.** Under `TouchTargets`, `SourceSwitch` draws the pill: the phone's Preview and Source, its only one, is unchanged until its web app takes this look.
+- **The phone too.** Its Preview and Source, its only one, is the same tabs: the header's row gives them a full touch target.
 
 ## Consequences
-- The pill remains in the app's three form fields, and on the phone.
+- The pill remains in the app's three form fields.
 - These tabs can take the keyboard's focus, which the pill's segments never could: one Tab stop each.
 - With a rendered file open and several tabs, the pane's title row has two sets of tabs, each with its line.
 - Tabs that aren't `Segmented` (the terminal's, a question card's) keep their own look.

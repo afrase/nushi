@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
 
-/// The Preview and Source tabs over a file that renders, the phone's still
-/// the pill (ADR 0071).
+/// The Preview and Source tabs over a file that renders.
 class SourceSwitch extends StatelessWidget {
   const new({required this.source, required this.onChanged, super.key});
 
@@ -14,17 +12,12 @@ class SourceSwitch extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    const tabs = [(false, 'Preview'), (true, 'Source')];
-    return TouchTargets.of(context)
-        ? Segmented(value: source, segments: tabs, onChanged: onChanged)
-        : PlainTabs(
-            value: source,
-            tabs: tabs,
-            onChanged: onChanged,
-            fill: true,
-          );
-  }
+  Widget build(BuildContext context) => PlainTabs(
+    value: source,
+    tabs: const [(false, 'Preview'), (true, 'Source')],
+    onChanged: onChanged,
+    fill: true,
+  );
 }
 
 /// The green mark of a preview the daemon keeps current; its dot pulses
