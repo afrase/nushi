@@ -310,6 +310,123 @@ class Button extends StatelessWidget {
   }
 }
 
+/// A button with a second part beside it, a ▾ that opens a menu of how it
+/// goes ("Squash and merge" and the other methods): [label] is the way
+/// picked, and pressing it does that.
+class SplitButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.onPressed,
+    required this.entries,
+    super.key,
+    this.kind = ButtonKind.primary,
+    this.tooltip = '',
+    this.menuTooltip = '',
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final List<MenuEntry> entries;
+  final ButtonKind kind;
+  final String tooltip;
+  final String menuTooltip;
+
+  /// One part: rounded on its outer side only.
+  Widget _part(
+    BuildContext context,
+    ControlLook look,
+    BorderRadius r,
+    Widget child,
+  ) {
+    final t = NushiTheme.of(context).t;
+    final primary = kind == ButtonKind.primary;
+    return _faded(
+      look,
+      Container(
+        height: controlHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: primary
+              ? (look.pressed
+                    ? t.accentPressed
+                    : look.hover
+                    ? Color.alphaBlend(
+                        t.onAccent.withValues(alpha: 0.12),
+                        t.accent,
+                      )
+                    : t.accent)
+              : (look.hover
+                    ? Color.alphaBlend(_tint(t, look), t.fieldFill)
+                    : t.fieldFill),
+          border: primary
+              ? null
+              : Border.all(
+                  color: look.hover ? t.fieldBorderHover : t.fieldBorder,
+                ),
+          borderRadius: r,
+        ),
+        foregroundDecoration: look.focus
+            ? BoxDecoration(
+                border: Border.all(color: t.focus, width: 2),
+                borderRadius: r,
+              )
+            : null,
+        // As wide as its content, whatever room it's given.
+        child: Center(widthFactor: 1, child: child),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final primary = kind == ButtonKind.primary;
+    final fg = switch (kind) {
+      ButtonKind.primary => t.onAccent,
+      ButtonKind.secondary => t.text,
+      ButtonKind.destructive => t.crashed,
+    };
+    const round = Radius.circular(NushiTheme.control);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Pressable(
+            onTap: onPressed,
+            tooltip: tooltip,
+            builder: (context, look) => _part(
+              context,
+              look,
+              const BorderRadius.horizontal(left: round),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.ui(fg, weight: primary ? FontWeight.w500 : null),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 1),
+        Menu(
+          entries: entries,
+          builder: (context, open) => Pressable(
+            onTap: entries.isEmpty ? null : open,
+            tooltip: menuTooltip,
+            builder: (context, look) => _part(
+              context,
+              look,
+              const BorderRadius.horizontal(right: round),
+              Icon(Icons.keyboard_arrow_down, size: 15, color: fg),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Send to agent's button, wherever something goes into the chat's box
 /// as a reply card (Send, Fix checks, Address): its arrow and [label] in
 /// the accent's ink on its tint; [primary], the accent's fill (Send all).
