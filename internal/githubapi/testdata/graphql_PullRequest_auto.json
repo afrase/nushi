@@ -1,0 +1,42 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_auto",
+        "number": 16,
+        "title": "Live test: auto-merge on",
+        "url": "https://github.com/afrase/nushi-gh-test/pull/16",
+        "state": "OPEN",
+        "isDraft": false,
+        "updatedAt": "2026-10-31T05:25:18Z",
+        "author": { "login": "afrase" },
+        "repository": { "nameWithOwner": "afrase/nushi-gh-test" },
+        "reviewDecision": null,
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "BLOCKED",
+        "canBeRebased": true,
+        "viewerCanMergeAsAdmin": true,
+        "viewerCanEnableAutoMerge": false,
+        "viewerCanDisableAutoMerge": true,
+        "isMergeQueueEnabled": false,
+        "autoMergeRequest": {
+          "enabledAt": "2026-10-31T05:25:18Z",
+          "mergeMethod": "SQUASH",
+          "enabledBy": { "login": "afrase" }
+        },
+        "mergeQueueEntry": null,
+        "mergeQueue": null,
+        "baseRef": { "refUpdateRule": { "requiresConversationResolution": false, "requiresLinearHistory": false } },
+        "repo": {
+          "mergeCommitAllowed": true,
+          "squashMergeAllowed": true,
+          "rebaseMergeAllowed": true,
+          "autoMergeAllowed": true,
+          "deleteBranchOnMerge": false,
+          "viewerDefaultMergeMethod": "MERGE",
+          "viewerPermission": "ADMIN"
+        }
+      }
+    }
+  }
+}

@@ -93,6 +93,15 @@ type APIError struct {
 
 func (e *APIError) Error() string { return "GitHub: " + e.Message }
 
+// maxMessage is the most of GitHub's refusal that's kept: the app shows it.
+const maxMessage = 1 << 10
+
+// refusal is GitHub's words as an APIError, bounded and plain: they can
+// quote what someone else wrote (a branch's name, a commit's title).
+func refusal(status int, message string) *APIError {
+	return &APIError{Status: status, Message: plain(message, maxMessage)}
+}
+
 // get is a REST GET of path, a template whose {} are filled with args
 // (escaped). It sends the ETag of the last answer and takes a 304 as that
 // answer again. It returns the answer's headers. A repository that moved
@@ -162,13 +171,13 @@ func (c *Client) graphql(ctx context.Context, doc string, vars map[string]any, o
 		if len(answer.Errors) == 0 {
 			return nil, errors.New("GitHub answered no data")
 		}
-		return nil, &APIError{Status: a.status, Message: messages(answer.Errors)}
+		return nil, refusal(a.status, messages(answer.Errors))
 	}
 	if err := json.Unmarshal(answer.Data, out); err != nil {
 		return nil, err
 	}
 	if m[1] == "mutation" && len(answer.Errors) > 0 {
-		return nil, &APIError{Status: a.status, Message: messages(answer.Errors)}
+		return nil, refusal(a.status, messages(answer.Errors))
 	}
 	return answer.Errors, nil
 }
@@ -268,7 +277,7 @@ func (c *Client) failure(resp *http.Response, bucket string, body []byte) error 
 	for _, x := range e.Errors {
 		msgs = append(msgs, cmp.Or(x.Message, x.Code))
 	}
-	return &APIError{Status: resp.StatusCode, Message: strings.Join(msgs, "; ")}
+	return refusal(resp.StatusCode, strings.Join(msgs, "; "))
 }
 
 func fill(path string, args []string) string {

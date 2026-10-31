@@ -24,6 +24,7 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
       body authorAssociation baseRefName headRefName baseRefOid headRefOid isCrossRepository
       headRepository { nameWithOwner }
       mergeable mergeStateStatus additions deletions changedFiles viewerCanUpdate
+      ` + mergeFields + `
       commitCount: commits { totalCount }
       reviewRequests(first: 30) { nodes { asCodeOwner requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
       latestReviews(first: 30) { nodes { author { login } state } }
@@ -213,7 +214,8 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 				Deletions        int    `json:"deletions"`
 				ChangedFiles     int    `json:"changedFiles"`
 				ViewerCanUpdate  bool   `json:"viewerCanUpdate"`
-				CommitCount      struct {
+				mergeNode
+				CommitCount struct {
 					TotalCount int `json:"totalCount"`
 				} `json:"commitCount"`
 				ReviewRequests struct {
@@ -268,7 +270,7 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 	out := model.GitHubPull{GitHubItem: p.item(c.Host), Body: Markdown(p.Body), Association: p.AuthorAssociation,
 		Base: p.BaseRefName, Head: p.HeadRefName, BaseOID: p.BaseRefOid, HeadOID: p.HeadRefOid, CrossRepo: p.IsCrossRepository,
 		Mergeable: strings.ToLower(p.Mergeable), MergeState: strings.ToLower(p.MergeStateStatus), Additions: p.Additions,
-		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Commits: p.CommitCount.TotalCount, CanComment: p.ViewerCanUpdate}
+		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Commits: p.CommitCount.TotalCount, CanComment: p.ViewerCanUpdate, Merge: p.merge()}
 	if p.HeadRepository != nil {
 		out.HeadRepo = p.HeadRepository.NameWithOwner
 	}
