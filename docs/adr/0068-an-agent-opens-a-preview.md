@@ -18,7 +18,7 @@ The owner wants what Claude Code's artifacts give: the agent finishes a page or 
 - A side chat is a fork of the chat's session and gets the chat's server (its key, its chat): its show opens beside the chat, under the chat's check, so a file only the side chat wrote outside the folder is refused. Subagents share their harness's tools, and their writes count in `Wrote`.
 - The preview's limits stay: the 5 MB cap for what the daemon sends, a web view's read access, no bridge from the page to Nushi. A file over the cap shows as it would from a click.
 - `Wrote` counts any tool call's locations, reads and refused calls too, so "wrote" is wider than it says: an agent can show an HTML file it only read outside the folder, if the harness allows it. Tightening it belongs to `Wrote`, for both paths.
-- In a window too narrow for the pane beside the transcript, the pane lies over it (`Beside`), hiding the box and any card until closed.
+- In a window too narrow for the pane beside the transcript, the pane doesn't open by itself: it would lie over the box and any card waiting (`Beside`). The row's Preview still opens it.
 - An extra `nushid tools-mcp` per Claude or Codex session, and MCP instructions of a sentence in each.
 - The app's title match (`mcp__nushi__show`, `mcp.nushi.show`) is the adapters' to change; a changed title shows a plain MCP row with no Preview.
 
