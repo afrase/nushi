@@ -1,6 +1,6 @@
 # AGENTS.md
 
-How to work in Nushi's code, for every agent (Claude Code reads it through `CLAUDE.md`). Open work, decisions to revisit, security notes, dependencies and working notes live in [`NOTES.md`](NOTES.md).
+How to work in Nushi's code, for every agent (Claude Code reads it through `CLAUDE.md`). Plans and decisions to revisit are in [`docs/roadmap.md`](docs/roadmap.md), security notes in [`docs/security.md`](docs/security.md), dependencies, releases and working notes in [`docs/development.md`](docs/development.md).
 
 ## Architecture
 
@@ -23,7 +23,7 @@ Nushi is an agentic development environment for macOS: coding agents (Claude, Co
 - `app/lib/`: one file per view or part (`chat_view`, `transcript`, `composer`, `changes_view`, `jira_*`, `github_*`, `settings_*`, `history_*`…). `theme/tokens.dart` holds every color; `controls.dart` every button, menu field, link, icon button and grip (ADR 0049), `widgets.dart` `RunButton`, `revealRow` (and `errors.dart`'s `errorText`, which it exports); `app_actions.dart` every action (the ⌘K palette, keys, menu bar); `chat_keys.dart` the chat keys; `motion.dart` motion and Reduce Motion; `settings.dart` the app's `app.json`.
 - `packages/`: `markdown` (streaming Markdown), `uds_transport`, `noise`, `remote_transport`, `svg_path`. `diff_view` is a pub package of the owner's.
 - `tools/`: `lint` (pinned lint tools), `webbuild`, `mermaid`, `icongen`, `claude-record` (the Claude parity scenarios' recorder), `adapters.sh`, `check-bundle.sh`, `release.sh`.
-- `docs/`: `adr/` (every decision and why; `README.md` indexes them), `glossary.md`, `facts/` (what each vendor does, as seen), the user docs the README links (`install.md`, `chats.md`, `agent-setup.md`, `mcp-and-skills.md`, `jira.md`, `github.md`, `remote.md`, `development.md`), `images/` (the README's screenshots, `make screenshots` from `app/test/screenshots/`'s made-up data), `user/`, `history/` (`steps.md`, `summaries.md`, `demos.md`: the work until 2026-10-29, a frozen archive).
+- `docs/`: `adr/` (every decision and why; `README.md` indexes them), `glossary.md`, `facts/` (what each vendor does, as seen), `roadmap.md` (what isn't built, decisions to revisit), `security.md` (what Nushi reads, writes, runs and sends, and what limits it), the user docs the README links (`install.md`, `chats.md`, `agent-setup.md`, `mcp-and-skills.md`, `jira.md`, `github.md`, `remote.md`, `development.md`, which also holds install, releases, dependencies and working notes), `images/` (the README's screenshots, `make screenshots` from `app/test/screenshots/`'s made-up data), `user/`, `history/` (`steps.md`, `summaries.md`, `demos.md`: the work until 2026-10-29; `decisions-2026-10.md`: the small decisions until 2026-10-31; a frozen archive).
 
 ## Build, run, check
 
@@ -50,7 +50,7 @@ Nushi is an agentic development environment for macOS: coding agents (Claude, Co
 - **Words**: [`docs/glossary.md`](docs/glossary.md) names Nushi's parts and ideas for the UI, the code and the docs (the details panel is made of widgets, a side pane isn't a side chat). A new user-facing term goes there first, and everything uses its word; an old word goes under its Synonyms, and code that still says it under Renames to do.
 - **Size tripwires**: about 500 changed lines a commit (tests included, generated code not) and about 400 lines a source file. Crossing one is allowed: say what pushed it in the commit's body, and split a file along its seams when it grows past. `make lines` counts the hand-written lines when you want to look.
 - **Lint exclusions** (ADR 0040): a report wrong for one line takes `//nolint:<linter> // <why>` on it (or on the function's line), a Dart one `// ignore: <rule>` under a comment saying why; a path exclusion in `.golangci.yml` or a rule off in `analysis_options.yaml` only with the reason beside it. The whole rule: `docs/development.md`'s Lint exclusions.
-- **Docs**: an ADR for a decision someone might undo (`docs/adr/`, a page at most, one line in its README), never restated elsewhere; a vendor's behaviour in `docs/facts/`; a security-sensitive change under NOTES.md's Security notes, a new dependency under its Dependencies.
+- **Docs**: an ADR for a decision someone might undo (`docs/adr/`, a page at most, one line in its README), never restated elsewhere; a vendor's behaviour in `docs/facts/`; a security-sensitive change in `docs/security.md`, a new dependency under `docs/development.md`'s Dependencies; a plan or an open decision in [`docs/roadmap.md`](docs/roadmap.md), nowhere else. A gap is checked against the code before it's written down there, and a roadmap entry goes when its work ships, in the same commit.
 
 ## Testing
 
