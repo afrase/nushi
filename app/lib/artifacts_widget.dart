@@ -160,7 +160,7 @@ class _FileRow extends StatelessWidget {
     final detail = fileDetail(f, changed);
     return Hover(
       builder: (context, {required hover}) => Tap(
-        onTap: () => chat.openPreview(f),
+        onTap: () => pickFile(chat, f),
         selected: open,
         tooltip: f,
         padding: const EdgeInsets.fromLTRB(_inset, 3, 0, 3),

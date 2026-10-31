@@ -221,7 +221,10 @@ class PreviewButton extends StatelessWidget {
     final t = theme.t;
     Widget pill({required bool on}) => Pressable(
       onTap: () => open(path),
-      tooltip: 'Preview ${baseName(path)}',
+      tooltip: [
+        'Preview ${baseName(path)}',
+        if (previews?.tabs ?? false) '⌘-click: in a tab',
+      ].join('\n'),
       builder: (context, look) => Container(
         height: 20,
         padding: const EdgeInsets.symmetric(horizontal: 7),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
@@ -162,8 +163,9 @@ class _ChatViewState extends State<ChatView> {
       ),
     );
     return Previews(
-      open: chat.openPreview,
+      open: (path) => pickFile(chat, path),
       current: chat.preview,
+      tabs: true,
       child: ListenableBuilder(
         listenable: Listenable.merge([
           chat.pane,
@@ -231,6 +233,7 @@ class _ChatViewState extends State<ChatView> {
                 daemon: widget.daemon,
                 path: preview,
                 onClose: () => chat.preview.value = null,
+                onTab: () => chat.openTab(preview),
               ),
             ),
           ),

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
@@ -185,6 +186,17 @@ String folderOf(String path) {
   return path.startsWith('/') ? tildePath(dir.isEmpty ? '/' : dir) : dir;
 }
 
+/// Opens the file the user picked in [chat]: its preview tab if it has one,
+/// a new one with ⌘ held, else the side pane. The agent's `show` opens the
+/// pane instead, whatever is held or open (ADR 0068).
+void pickFile(ChatState chat, String path) {
+  if (HardwareKeyboard.instance.isMetaPressed || chat.tabOf(path) != null) {
+    chat.openTab(path);
+  } else {
+    chat.openPreview(path);
+  }
+}
+
 /// [path] (relative to [folder], or absolute) as an absolute path.
 String absoluteIn(String folder, String path) =>
     path.startsWith('/') ? path : '$folder/$path';
@@ -243,7 +255,7 @@ class _FilesMenuState extends State<FilesMenu> {
     detail: fileDetail(f, _changed[f]),
     checked: f == widget.current,
     tooltip: f,
-    onPick: () => widget.chat.openPreview(f),
+    onPick: () => pickFile(widget.chat, f),
     action: ({required hover}) => ListenableBuilder(
       listenable: pinnedFiles,
       builder: (context, _) => pinMark(widget.chat, f, hover: hover),
