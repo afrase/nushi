@@ -14,7 +14,10 @@ enum LineIcon {
   folderOpen,
 
   /// Close.
-  close;
+  close,
+
+  /// More: three dots, as heavy as the others' strokes.
+  more;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -59,7 +62,16 @@ enum LineIcon {
         ..lineTo(18, 18)
         ..moveTo(18, 6)
         ..lineTo(6, 18),
+    more =>
+      Path()
+        ..addOval(_dot(6))
+        ..addOval(_dot(12))
+        ..addOval(_dot(18)),
   };
+
+  /// A dot at [x], closed up by the stroke.
+  static Rect _dot(double x) =>
+      Rect.fromCircle(center: Offset(x, 12), radius: 0.4);
 
   /// The icon, [size] square, in the room an [Icon] of that size takes.
   Widget view({required double size, required Color color}) => SizedBox.square(

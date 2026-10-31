@@ -308,8 +308,8 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
             if (roomy) const SizedBox(width: NushiTheme.iconGap),
           ],
-          MenuIcon(
-            Icons.more_horiz,
+          MenuIcon.line(
+            LineIcon.more,
             tooltip: 'Chat menu',
             filter: false,
             entries: [

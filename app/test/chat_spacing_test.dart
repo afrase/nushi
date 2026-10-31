@@ -101,17 +101,19 @@ final _items = <Item>[
   ),
 ];
 
-/// The app on a chat with [_items], its preview open with [file].
+/// The app on a chat with [_items], its preview open with [file], [pane]
+/// wide if given.
 Future<Daemon> _app(
   WidgetTester tester, {
   required double width,
   Brightness? brightness,
   double height = 1000,
   String? file,
+  double? pane,
 }) async {
   viewport(tester, Size(width, height), brightness: brightness);
   showDetails.value = false;
-  paneWidths.value = {};
+  paneWidths.value = {'preview': ?pane};
   final c = chat('c', 'claude', 'Fix the login redirect after it expires');
   final fake = FakeDaemon([c])
     ..answer = ((input) => input is GetChatRequest
@@ -438,8 +440,8 @@ void main() {
                       color: t.text,
                       onTap: () {},
                     ),
-                    IconTap(
-                      Icons.more_horiz,
+                    IconTap.line(
+                      LineIcon.more,
                       tooltip: 'Chat menu',
                       onTap: () {},
                     ),
@@ -507,6 +509,76 @@ void main() {
       expect(open.color, t.text);
       await closeView(tester, d);
     }, variant: _mac);
+  });
+
+  group('the menus’ drawn icons', () {
+    for (final (name, brightness, tokens) in [
+      ('dark', Brightness.dark, Tokens.dark),
+      ('light', Brightness.light, Tokens.light),
+    ]) {
+      testWidgets('the header’s ⋯ with its buttons folded in, $name', (
+        tester,
+      ) async {
+        viewport(tester, const Size(420, 420), ratio: 2);
+        final d = await FakeDaemon([]).connect(tester);
+        final c = ChatState('c', '/Users/me/repo')
+          ..agent = 'omp'
+          ..title = 'Fix the login redirect after the session expires'
+          ..pull = GitHubLink(number: 12, pull: true);
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: NushiTheme(tokens).toThemeData(),
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: 330,
+                  child: ChatHeader(
+                    c,
+                    d,
+                    tab: ChatTab.chat,
+                    onTab: (_) {},
+                    panel: false,
+                    onPanel: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.byTooltip('Chat menu'));
+        await tester.pumpAndSettle();
+        expect(find.text('Show terminal', findRichText: true), findsOne);
+        expect(find.text('Show details', findRichText: true), findsOne);
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile('goldens/header_menu_$name.png'),
+        );
+        await closeView(tester, d);
+      }, variant: _mac);
+
+      testWidgets('the preview’s folded ⋯, at the narrowest pane, $name', (
+        tester,
+      ) async {
+        final d = await _app(
+          tester,
+          width: 720,
+          height: 600,
+          brightness: brightness,
+          file: 'docs/login-report.md',
+          pane: 300,
+        );
+        await tester.tap(find.byTooltip('More'));
+        await tester.pumpAndSettle();
+        expect(find.text('Show in Finder', findRichText: true), findsOne);
+        await expectLater(
+          find.byType(NushiApp),
+          matchesGoldenFile('goldens/preview_menu_720_$name.png'),
+        );
+        d.dispose();
+      }, variant: _mac);
+    }
   });
 
   group('goldens', () {

@@ -214,8 +214,8 @@ class _PreviewPaneState extends State<PreviewPane> {
                             spacing: wide ? NushiTheme.iconGap : 0,
                             children: [
                               if (box.maxWidth < _foldsBelow)
-                                MenuIcon(
-                                  Icons.more_horiz,
+                                MenuIcon.line(
+                                  LineIcon.more,
                                   tooltip: 'More',
                                   filter: false,
                                   entries: [
