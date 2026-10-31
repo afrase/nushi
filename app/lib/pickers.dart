@@ -124,8 +124,8 @@ class Pickers extends StatelessWidget {
             ),
           ),
         if (rest.isNotEmpty)
-          MenuIcon(
-            Icons.more_horiz,
+          MenuIcon.line(
+            LineIcon.more,
             tooltip: [for (final o in rest) o.name].join(', '),
             onClose: onClose,
             entries: [for (final o in rest) submenu(o.name, o)],

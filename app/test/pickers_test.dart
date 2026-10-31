@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/settings.dart';
@@ -42,7 +43,7 @@ void main() {
     expect(find.text('Ultracode'), findsNothing);
     await pick('true');
     expect(find.text('Ultracode'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.more_horiz));
+    await tester.tap(find.byType(MenuIcon));
     await tester.pumpAndSettle();
     // Its row: the option, and its value dimmed.
     expect(find.text('Ultracode   On', findRichText: true), findsOneWidget);

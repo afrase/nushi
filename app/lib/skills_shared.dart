@@ -190,10 +190,10 @@ class _SharedRow extends StatelessWidget {
             why: switchWhy(list, mine.setIn),
             onChanged: ({required on}) => setSkillOn(list, skill, on: on),
           ),
-        MenuIcon(
-          Icons.more_horiz,
-          tooltip: 'More',
+        MenuIcon.line(
+          LineIcon.more,
           size: 15,
+          tooltip: 'More',
           entries: [
             MenuEntry('Open SKILL.md', onPick: () => openSkillFile(skill)),
             MenuEntry(

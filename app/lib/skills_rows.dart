@@ -196,10 +196,10 @@ class _SkillRow extends StatelessWidget {
             why: switchWhy(list, skill.setIn),
             onChanged: ({required on}) => setSkillOn(list, skill, on: on),
           ),
-        MenuIcon(
-          Icons.more_horiz,
-          tooltip: 'More',
+        MenuIcon.line(
+          LineIcon.more,
           size: 15,
+          tooltip: 'More',
           entries: [
             MenuEntry('Open SKILL.md', onPick: () => openSkillFile(skill)),
             MenuEntry(
@@ -369,10 +369,10 @@ class _PluginRow extends StatelessWidget {
             await list.changed();
           },
         ),
-        MenuIcon(
-          Icons.more_horiz,
-          tooltip: 'More',
+        MenuIcon.line(
+          LineIcon.more,
           size: 15,
+          tooltip: 'More',
           entries: [
             MenuEntry(
               'Show in Finder',

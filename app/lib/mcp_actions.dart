@@ -134,7 +134,12 @@ class _McpActionsState extends State<McpActions> {
         ] else
           McpSwitch(list, server),
         if (menu.isNotEmpty)
-          MenuIcon(Icons.more_horiz, tooltip: 'More', size: 15, entries: menu),
+          MenuIcon.line(
+            LineIcon.more,
+            size: 15,
+            tooltip: 'More',
+            entries: menu,
+          ),
       ],
     );
   }

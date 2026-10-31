@@ -147,8 +147,8 @@ class _Menu extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = cp.link;
     final url = cp.pull?.item.url ?? '';
-    return MenuIcon(
-      Icons.more_horiz,
+    return MenuIcon.line(
+      LineIcon.more,
       size: 14,
       tooltip: 'Pull request',
       entries: [
