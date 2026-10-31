@@ -215,7 +215,7 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE &&
         canForkAt(widget.daemon, widget.chat, e, live: live);
-    final sides = _sides(context, width, row: _isToolRow(e));
+    final sides = _sides(context, width);
     final from = [
       live,
       still,
@@ -579,18 +579,15 @@ class _TranscriptState extends State<Transcript> {
 }
 
 /// The room beside a transcript [width] wide: on the Mac the gutter, and on
-/// the right what's past [readableWidth]; on the phone its own 20. A tool
-/// [row] is set out by its own padding, so its chevron is on the gutter
-/// (ADR 0072).
-EdgeInsets _sides(BuildContext context, double width, {bool row = false}) {
+/// the right what's past [readableWidth]; on the phone its own 20 (ADR 0072).
+EdgeInsets _sides(BuildContext context, double width) {
   if (TouchTargets.of(context)) {
     return const EdgeInsets.symmetric(horizontal: 20);
   }
   const gutter = NushiTheme.gutter;
-  final out = row ? Collapsible.inset : 0.0;
   return EdgeInsets.only(
-    left: gutter - out,
-    right: max(gutter, width - gutter - readableWidth) - out,
+    left: gutter,
+    right: max(gutter, width - gutter - readableWidth),
   );
 }
 
@@ -604,9 +601,6 @@ String _keyOf(Object e) => switch (e) {
 
 bool _isBand(Object e) =>
     e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
-
-/// Whether [e] shows as a tool row, or a run of them.
-bool _isToolRow(Object e) => e is List<Item> || _row(e);
 
 /// A user message's band, the agent starting on its own, or where a
 /// reopened chat's history comes from changes.

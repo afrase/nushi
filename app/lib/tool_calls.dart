@@ -165,9 +165,22 @@ String groupLabel(List<Item> calls) {
   return label[0].toUpperCase() + label.substring(1);
 }
 
-/// The end of a tool call's header: [failed] in red.
-Widget _failed(NushiTheme theme, String failed) =>
-    Text(failed, style: theme.ui(theme.t.crashed, size: 12));
+/// The end of a tool call's header: [failed] in red, on the Mac kept off the
+/// box's edge, under where a Preview button ends.
+class _Failed extends StatelessWidget {
+  const new(this.failed);
+
+  final String failed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final text = Text(failed, style: theme.ui(theme.t.crashed, size: 12));
+    return failed.isEmpty || TouchTargets.of(context)
+        ? text
+        : Padding(padding: const EdgeInsets.only(right: 8), child: text);
+  }
+}
 
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
@@ -280,7 +293,7 @@ class ToolCallView extends StatelessWidget {
                 ),
               ),
             const SizedBox(width: 8),
-            _failed(theme, failed ? 'failed' : ''),
+            _Failed(failed ? 'failed' : ''),
           ],
         ),
         // A call with nothing to show only has its title.
@@ -359,7 +372,7 @@ class RunView extends StatelessWidget {
             Expanded(child: _groupTitle(theme, calls, still: still)),
             if (preview != null) PreviewButton(preview),
             const SizedBox(width: 8),
-            _failed(theme, failed == 0 ? '' : '$failed failed'),
+            _Failed(failed == 0 ? '' : '$failed failed'),
           ],
         ),
         body: Padding(
