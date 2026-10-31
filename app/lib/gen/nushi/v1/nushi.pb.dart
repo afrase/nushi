@@ -26201,6 +26201,7 @@ class MergeGitHubPullRequest extends $pb.GeneratedMessage {
     $core.String? method,
     $core.String? title,
     $core.String? body,
+    $core.String? base,
   }) {
     final result = MergeGitHubPullRequest._();
     if (ref != null) result.ref = ref;
@@ -26208,6 +26209,7 @@ class MergeGitHubPullRequest extends $pb.GeneratedMessage {
     if (method != null) result.method = method;
     if (title != null) result.title = title;
     if (body != null) result.body = body;
+    if (base != null) result.base = base;
     return result;
   }
 
@@ -26230,6 +26232,7 @@ class MergeGitHubPullRequest extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'method')
     ..aOS(4, _omitFieldNames ? '' : 'title')
     ..aOS(5, _omitFieldNames ? '' : 'body')
+    ..aOS(6, _omitFieldNames ? '' : 'base')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -26306,6 +26309,17 @@ class MergeGitHubPullRequest extends $pb.GeneratedMessage {
   $core.bool hasBody() => $_has(4);
   @$pb.TagNumber(5)
   void clearBody() => $_clearField(5);
+
+  /// The base branch the user was shown: a pull request retargeted since is
+  /// refused as a moved head is.
+  @$pb.TagNumber(6)
+  $core.String get base => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set base($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasBase() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearBase() => $_clearField(6);
 }
 
 class MergeGitHubPullResponse extends $pb.GeneratedMessage {
@@ -26358,6 +26372,7 @@ class EnableGitHubAutoMergeRequest extends $pb.GeneratedMessage {
     $core.String? method,
     $core.String? title,
     $core.String? body,
+    $core.String? base,
   }) {
     final result = EnableGitHubAutoMergeRequest._();
     if (ref != null) result.ref = ref;
@@ -26365,6 +26380,7 @@ class EnableGitHubAutoMergeRequest extends $pb.GeneratedMessage {
     if (method != null) result.method = method;
     if (title != null) result.title = title;
     if (body != null) result.body = body;
+    if (base != null) result.base = base;
     return result;
   }
 
@@ -26387,6 +26403,7 @@ class EnableGitHubAutoMergeRequest extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'method')
     ..aOS(4, _omitFieldNames ? '' : 'title')
     ..aOS(5, _omitFieldNames ? '' : 'body')
+    ..aOS(6, _omitFieldNames ? '' : 'base')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -26464,6 +26481,15 @@ class EnableGitHubAutoMergeRequest extends $pb.GeneratedMessage {
   $core.bool hasBody() => $_has(4);
   @$pb.TagNumber(5)
   void clearBody() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get base => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set base($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasBase() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearBase() => $_clearField(6);
 }
 
 class EnableGitHubAutoMergeResponse extends $pb.GeneratedMessage {
@@ -26631,10 +26657,12 @@ class EnqueueGitHubPullRequest extends $pb.GeneratedMessage {
   factory EnqueueGitHubPullRequest({
     GitHubRef? ref,
     $core.String? headOid,
+    $core.String? base,
   }) {
     final result = EnqueueGitHubPullRequest._();
     if (ref != null) result.ref = ref;
     if (headOid != null) result.headOid = headOid;
+    if (base != null) result.base = base;
     return result;
   }
 
@@ -26654,6 +26682,7 @@ class EnqueueGitHubPullRequest extends $pb.GeneratedMessage {
     ..aOM<GitHubRef>(1, _omitFieldNames ? '' : 'ref',
         subBuilder: GitHubRef.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'headOid')
+    ..aOS(3, _omitFieldNames ? '' : 'base')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -26701,6 +26730,15 @@ class EnqueueGitHubPullRequest extends $pb.GeneratedMessage {
   $core.bool hasHeadOid() => $_has(1);
   @$pb.TagNumber(2)
   void clearHeadOid() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get base => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set base($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBase() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBase() => $_clearField(3);
 }
 
 class EnqueueGitHubPullResponse extends $pb.GeneratedMessage {

@@ -20122,8 +20122,11 @@ type MergeGitHubPullRequest struct {
 	// merge, squash or rebase.
 	Method string `protobuf:"bytes,3,opt,name=method,proto3" json:"method,omitempty"`
 	// The commit's, for merge and squash.
-	Title         string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	Body          string `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Title string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Body  string `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	// The base branch the user was shown: a pull request retargeted since is
+	// refused as a moved head is.
+	Base          string `protobuf:"bytes,6,opt,name=base,proto3" json:"base,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -20193,6 +20196,13 @@ func (x *MergeGitHubPullRequest) GetBody() string {
 	return ""
 }
 
+func (x *MergeGitHubPullRequest) GetBase() string {
+	if x != nil {
+		return x.Base
+	}
+	return ""
+}
+
 type MergeGitHubPullResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -20237,6 +20247,7 @@ type EnableGitHubAutoMergeRequest struct {
 	Method        string `protobuf:"bytes,3,opt,name=method,proto3" json:"method,omitempty"`
 	Title         string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
 	Body          string `protobuf:"bytes,5,opt,name=body,proto3" json:"body,omitempty"`
+	Base          string `protobuf:"bytes,6,opt,name=base,proto3" json:"base,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -20302,6 +20313,13 @@ func (x *EnableGitHubAutoMergeRequest) GetTitle() string {
 func (x *EnableGitHubAutoMergeRequest) GetBody() string {
 	if x != nil {
 		return x.Body
+	}
+	return ""
+}
+
+func (x *EnableGitHubAutoMergeRequest) GetBase() string {
+	if x != nil {
+		return x.Base
 	}
 	return ""
 }
@@ -20427,6 +20445,7 @@ type EnqueueGitHubPullRequest struct {
 	Ref   *GitHubRef             `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
 	// As MergeGitHubPullRequest.
 	HeadOid       string `protobuf:"bytes,2,opt,name=head_oid,json=headOid,proto3" json:"head_oid,omitempty"`
+	Base          string `protobuf:"bytes,3,opt,name=base,proto3" json:"base,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -20471,6 +20490,13 @@ func (x *EnqueueGitHubPullRequest) GetRef() *GitHubRef {
 func (x *EnqueueGitHubPullRequest) GetHeadOid() string {
 	if x != nil {
 		return x.HeadOid
+	}
+	return ""
+}
+
+func (x *EnqueueGitHubPullRequest) GetBase() string {
+	if x != nil {
+		return x.Base
 	}
 	return ""
 }
@@ -22918,27 +22944,30 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"merge_body\x18\x02 \x01(\tR\tmergeBody\x12!\n" +
 	"\fsquash_title\x18\x03 \x01(\tR\vsquashTitle\x12\x1f\n" +
 	"\vsquash_body\x18\x04 \x01(\tR\n" +
-	"squashBody\"\x9c\x01\n" +
+	"squashBody\"\xb0\x01\n" +
 	"\x16MergeGitHubPullRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x19\n" +
 	"\bhead_oid\x18\x02 \x01(\tR\aheadOid\x12\x16\n" +
 	"\x06method\x18\x03 \x01(\tR\x06method\x12\x14\n" +
 	"\x05title\x18\x04 \x01(\tR\x05title\x12\x12\n" +
-	"\x04body\x18\x05 \x01(\tR\x04body\"\x19\n" +
-	"\x17MergeGitHubPullResponse\"\xa2\x01\n" +
+	"\x04body\x18\x05 \x01(\tR\x04body\x12\x12\n" +
+	"\x04base\x18\x06 \x01(\tR\x04base\"\x19\n" +
+	"\x17MergeGitHubPullResponse\"\xb6\x01\n" +
 	"\x1cEnableGitHubAutoMergeRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x19\n" +
 	"\bhead_oid\x18\x02 \x01(\tR\aheadOid\x12\x16\n" +
 	"\x06method\x18\x03 \x01(\tR\x06method\x12\x14\n" +
 	"\x05title\x18\x04 \x01(\tR\x05title\x12\x12\n" +
-	"\x04body\x18\x05 \x01(\tR\x04body\"\x1f\n" +
+	"\x04body\x18\x05 \x01(\tR\x04body\x12\x12\n" +
+	"\x04base\x18\x06 \x01(\tR\x04base\"\x1f\n" +
 	"\x1dEnableGitHubAutoMergeResponse\"F\n" +
 	"\x1dDisableGitHubAutoMergeRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\" \n" +
-	"\x1eDisableGitHubAutoMergeResponse\"\\\n" +
+	"\x1eDisableGitHubAutoMergeResponse\"p\n" +
 	"\x18EnqueueGitHubPullRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x19\n" +
-	"\bhead_oid\x18\x02 \x01(\tR\aheadOid\"\x1b\n" +
+	"\bhead_oid\x18\x02 \x01(\tR\aheadOid\x12\x12\n" +
+	"\x04base\x18\x03 \x01(\tR\x04base\"\x1b\n" +
 	"\x19EnqueueGitHubPullResponse\"A\n" +
 	"\x18DequeueGitHubPullRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\"\x1b\n" +

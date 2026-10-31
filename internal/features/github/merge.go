@@ -10,9 +10,9 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// ErrHeadMoved is a merge refused because the pull request's head isn't the
-// one the user was shown: nothing was merged.
-var ErrHeadMoved = errors.New("the pull request moved on since this view, so nothing was merged: look at its new commits, then try again")
+// ErrHeadMoved is a merge refused because the pull request's head or base
+// branch isn't the one the user was shown: nothing was merged.
+var ErrHeadMoved = errors.New("the pull request changed since this view, so nothing was merged: look at it again, then try again")
 
 // ErrMergeRefused is a merge Nushi won't send: what GitHub says now doesn't
 // allow it, whatever the view showed (ADR 0069).
@@ -76,11 +76,11 @@ func MergeBlocks(p model.GitHubPull) []string {
 	return out
 }
 
-// Merging is what the user confirmed: the head they were shown, the method
-// (for auto-merge and a merge), and the commit's text for "merge" and
-// "squash".
+// Merging is what the user confirmed: the head and base branch they were
+// shown, the method (for auto-merge and a merge), and the commit's text for
+// "merge" and "squash".
 type Merging struct {
-	Head, Method, Title, Body string
+	Head, Base, Method, Title, Body string
 }
 
 // checkText refuses a confirmation that can't be what the dialog sent.
@@ -124,13 +124,13 @@ func (s *Service) open(ctx context.Context, c Client, ref model.GitHubRef) (mode
 	return p, nil
 }
 
-// at is open, only at the head the user was shown.
-func (s *Service) at(ctx context.Context, c Client, ref model.GitHubRef, head string) (model.GitHubPull, error) {
-	if !oidRE.MatchString(head) {
+// at is open, only at the head and into the base the user was shown.
+func (s *Service) at(ctx context.Context, c Client, ref model.GitHubRef, m Merging) (model.GitHubPull, error) {
+	if !oidRE.MatchString(m.Head) {
 		return model.GitHubPull{}, errors.New("head is a commit's id")
 	}
 	p, err := s.open(ctx, c, ref)
-	if err == nil && p.HeadOID != head {
+	if err == nil && (p.HeadOID != m.Head || p.Base != m.Base) {
 		return p, ErrHeadMoved
 	}
 	return p, err
@@ -158,7 +158,7 @@ func (s *Service) Merge(ctx context.Context, ref model.GitHubRef, m Merging) err
 	if err := m.checkText(); err != nil {
 		return err
 	}
-	p, err := s.at(ctx, c, ref, m.Head)
+	p, err := s.at(ctx, c, ref, m)
 	if err != nil {
 		return err
 	}
@@ -185,16 +185,27 @@ func (s *Service) EnableAutoMerge(ctx context.Context, ref model.GitHubRef, m Me
 	if err != nil {
 		return err
 	}
-	p, err := s.at(ctx, c, ref, m.Head)
+	p, err := s.at(ctx, c, ref, m)
 	if err != nil {
 		return err
+	}
+	// Waiting is for what can come right by itself: not a draft or a
+	// conflict, and not what could merge now, which takes the direct path
+	// and its guard (ADR 0069).
+	if blocks := MergeBlocks(p); slices.Contains(blocks, "draft") || slices.Contains(blocks, "conflicts") {
+		return ErrMergeRefused
 	}
 	in := githubapi.MergeInput{Pull: p.ID, HeadOID: m.Head, Queue: p.Merge.Queue}
 	if !p.Merge.Queue {
 		if err := m.checkText(); err != nil {
 			return err
 		}
-		if !slices.Contains(p.Merge.Methods, m.Method) {
+		switch {
+		case clearToMerge(p):
+			return ErrMergeRefused
+		case !slices.Contains(p.Merge.Methods, m.Method):
+			return ErrMergeRefused
+		case m.Method == "rebase" && !p.Merge.CanRebase:
 			return ErrMergeRefused
 		}
 		in.Method, in.Title, in.Body = m.Method, m.Title, m.Body
@@ -229,19 +240,19 @@ func (s *Service) DisableAutoMerge(ctx context.Context, ref model.GitHubRef) err
 
 // Enqueue adds a pull request the user confirmed to its base's merge queue,
 // at the head they saw, once it could merge.
-func (s *Service) Enqueue(ctx context.Context, ref model.GitHubRef, head string) error {
+func (s *Service) Enqueue(ctx context.Context, ref model.GitHubRef, m Merging) error {
 	c, err := s.writer(ctx, ref.Host)
 	if err != nil {
 		return err
 	}
-	p, err := s.at(ctx, c, ref, head)
+	p, err := s.at(ctx, c, ref, m)
 	if err != nil {
 		return err
 	}
 	if !p.Merge.Queue || p.Merge.Entry != nil || len(MergeBlocks(p)) > 0 {
 		return ErrMergeRefused
 	}
-	err = moved(c.Enqueue(ctx, p.ID, head))
+	err = moved(c.Enqueue(ctx, p.ID, m.Head))
 	s.wrote(ref.Host, "enqueue", err)
 	return err
 }

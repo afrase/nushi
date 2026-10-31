@@ -195,6 +195,7 @@ void main() {
         await tester.pumpAndSettle();
         final sent = fake.calls.whereType<MergeGitHubPullRequest>().single;
         expect(sent.headOid, 'b' * 40);
+        expect(sent.base, 'main');
         expect(sent.method, 'squash');
         expect(sent.title, 'My title');
         expect(sent.body, '* One\n* Two');

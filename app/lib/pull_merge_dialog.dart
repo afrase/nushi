@@ -100,11 +100,13 @@ class _MergeDialogState extends State<_MergeDialog> {
   Future<void> _send() {
     final client = widget.daemon.client;
     final head = _pull.headOid;
+    final base = _pull.base;
     return switch (widget.act) {
       MergeAct.merge => client.mergeGitHubPull(
         MergeGitHubPullRequest(
           ref: _ref,
           headOid: head,
+          base: base,
           method: widget.method,
           title: _title.text,
           body: _body.text,
@@ -114,13 +116,14 @@ class _MergeDialogState extends State<_MergeDialog> {
         EnableGitHubAutoMergeRequest(
           ref: _ref,
           headOid: head,
+          base: base,
           method: widget.method,
           title: _title.text,
           body: _body.text,
         ),
       ),
       MergeAct.enqueue => client.enqueueGitHubPull(
-        EnqueueGitHubPullRequest(ref: _ref, headOid: head),
+        EnqueueGitHubPullRequest(ref: _ref, headOid: head, base: base),
       ),
     };
   }
