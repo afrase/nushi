@@ -109,7 +109,7 @@ Future<void> showArtifacts(BuildContext context, ChatState chat) async {
   PaletteRow row(String f) => PaletteRow(
     'file:$f',
     baseName(f),
-    () => pickFile(chat, f),
+    () => chat.openPreview(f),
     detail: fileDetail(f, fileChanged(absoluteIn(chat.folder, f))),
     icon: Icons.description_outlined,
   );
