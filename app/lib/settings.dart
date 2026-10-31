@@ -16,8 +16,9 @@ import 'package:nushi/file_mode.dart';
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
 /// collapsed, each project's chats' order, whether Pinned is collapsed,
-/// the models picked last, each chat's pinned artifacts and preview tabs,
-/// and the Mac's notifications and Dock badge, the appearance, and the newer
+/// the models picked last, each repository's merge method, each chat's
+/// pinned artifacts and preview tabs, and the Mac's notifications and Dock
+/// badge, the appearance, and the newer
 /// release whose toast was dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
@@ -89,6 +90,14 @@ final Pref<String> githubFindingHeadings = _plain(
   findingHeadingsDefault,
 );
 const findingHeadingsDefault = 'Key findings, Must address';
+
+/// The merge method picked last, by host and repository (`host owner/name`):
+/// it comes before what GitHub says the viewer used last, for as long as the
+/// repository allows it.
+final Pref<Map<String, String>> mergeMethods = Pref(
+  'mergeMethods',
+  (v) => _entries(v, (m) => m is String ? m : null),
+);
 
 /// The sidebar's project groups, by folder path: the order they were
 /// dragged into (folders it doesn't name go first), and those collapsed.
