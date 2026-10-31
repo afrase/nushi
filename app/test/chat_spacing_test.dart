@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plain_tabs.dart';
@@ -185,7 +187,14 @@ void main() {
         final view = tester.getRect(find.byType(ChatView));
         final box = _box(tester);
         expect(box.left, view.left + NushiTheme.gutter);
-        expect(box.right, view.right - NushiTheme.gutter);
+        // The transcript's cap on a wide window, the gutter on a narrow one.
+        expect(
+          box.right,
+          min(
+            view.left + NushiTheme.gutter + readableWidth,
+            view.right - NushiTheme.gutter,
+          ),
+        );
         expect(
           _text(tester, 'I’ll start from').left,
           view.left + NushiTheme.gutter,
@@ -282,6 +291,8 @@ void main() {
         expect(box.height, closeTo(48, 0.5));
         final footer = tester.getRect(find.byType(Pickers));
         expect(footer.top - box.bottom, 8);
+        expect(footer.left, box.left);
+        expect(footer.right, box.right);
         expect(
           tester.getRect(find.byType(Composer)).bottom - footer.bottom,
           12,
