@@ -1,6 +1,8 @@
 package chats
 
 import (
+	"bytes"
+	"encoding/json"
 	"reflect"
 	"slices"
 	"strconv"
@@ -119,7 +121,7 @@ func (c *chat) restoreLocked(replayed []model.Item) {
 // differs on are cut, and sent again.
 func (c *chat) showLocked(items []model.Item) {
 	same := 0
-	for same < len(c.items) && same < len(items) && reflect.DeepEqual(c.items[same], items[same]) {
+	for same < len(c.items) && same < len(items) && sameItem(c.items[same], items[same]) {
 		same++
 	}
 	if same < len(c.items) {
@@ -129,6 +131,24 @@ func (c *chat) showLocked(items []model.Item) {
 	for _, it := range items[same:] {
 		c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 	}
+}
+
+// sameItem says a and b are the same item, one perhaps as the copy has it.
+// A copy's item has been through JSON, so a time in it is the same instant
+// with no monotonic reading and another location, which reflect.DeepEqual
+// tells apart: every message sent since the daemon started would count as
+// changed, and a reload would take the transcript down from the first of
+// them and send it all again.
+func sameItem(a, b model.Item) bool {
+	if reflect.DeepEqual(a, b) {
+		return true
+	}
+	ja, err := json.Marshal(a)
+	if err != nil {
+		return false
+	}
+	jb, err := json.Marshal(b)
+	return err == nil && bytes.Equal(ja, jb)
 }
 
 // saveCopyLocked makes the copy (it had copied) what the chat shows, but
