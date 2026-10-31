@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_text.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/motion.dart';
@@ -15,6 +17,7 @@ import 'package:nushi/paced.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript_find.dart';
 
@@ -196,6 +199,7 @@ class _TranscriptState extends State<Transcript> {
     required bool live,
     required bool still,
     required double top,
+    required double width,
     bool rise = false,
     int mark = 0, // 1: a find's hit, 2: its current one
   }) {
@@ -211,7 +215,18 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE &&
         canForkAt(widget.daemon, widget.chat, e, live: live);
-    final from = [live, still, rewindable, forkable, top, mark, ...items];
+    final sides = _sides(context, width, row: _isToolRow(e));
+    final from = [
+      live,
+      still,
+      rewindable,
+      forkable,
+      top,
+      mark,
+      sides.left,
+      sides.right,
+      ...items,
+    ];
     final was = before[key];
     final same =
         was != null &&
@@ -228,7 +243,7 @@ class _TranscriptState extends State<Transcript> {
                   // A user message's band goes edge to edge.
                   padding: _isBand(e)
                       ? EdgeInsets.only(top: top)
-                      : _sides.copyWith(top: top),
+                      : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
                   // New while the chat is open, it rises in, once.
                   child: Hit(
                     mark: mark,
@@ -490,7 +505,10 @@ class _TranscriptState extends State<Transcript> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (widget.header case final h?)
-                          Padding(padding: _sides, child: h),
+                          Padding(
+                            padding: _sides(context, box.maxWidth),
+                            child: h,
+                          ),
                         for (final (i, e) in entries.indexed.skip(from))
                           _entry(
                             before,
@@ -501,7 +519,9 @@ class _TranscriptState extends State<Transcript> {
                               entries,
                               i,
                               header: widget.header != null,
+                              phone: TouchTargets.of(context),
                             ),
+                            width: box.maxWidth,
                             rise: arrived.contains(_keyOf(e)),
                             mark: _keyOf(e) == current
                                 ? 2
@@ -510,7 +530,10 @@ class _TranscriptState extends State<Transcript> {
                                 : 0,
                           ),
                         if (widget.footer case final f?)
-                          Padding(padding: _sides, child: f),
+                          Padding(
+                            padding: _sides(context, box.maxWidth),
+                            child: f,
+                          ),
                       ],
                     ),
                   ),
@@ -540,7 +563,7 @@ class _TranscriptState extends State<Transcript> {
             builder: (context, _) => _follower.following
                 ? const SizedBox.shrink()
                 : Positioned(
-                    right: 20,
+                    right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
                     bottom: 12,
                     child: JumpChip(
                       // A prompt waits below: the chip says so.
@@ -555,7 +578,21 @@ class _TranscriptState extends State<Transcript> {
   }
 }
 
-const _sides = EdgeInsets.symmetric(horizontal: 20);
+/// The room beside a transcript [width] wide: on the Mac the gutter, and on
+/// the right what's past [readableWidth]; on the phone its own 20. A tool
+/// [row] is set out by its own padding, so its chevron is on the gutter
+/// (ADR 0072).
+EdgeInsets _sides(BuildContext context, double width, {bool row = false}) {
+  if (TouchTargets.of(context)) {
+    return const EdgeInsets.symmetric(horizontal: 20);
+  }
+  const gutter = NushiTheme.gutter;
+  final out = row ? Collapsible.inset : 0.0;
+  return EdgeInsets.only(
+    left: gutter - out,
+    right: max(gutter, width - gutter - readableWidth) - out,
+  );
+}
 
 /// An entry's key: a call and the group it becomes keep their place (and
 /// state).
@@ -568,6 +605,9 @@ String _keyOf(Object e) => switch (e) {
 bool _isBand(Object e) =>
     e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
 
+/// Whether [e] shows as a tool row, or a run of them.
+bool _isToolRow(Object e) => e is List<Item> || _row(e);
+
 /// A user message's band, the agent starting on its own, or where a
 /// reopened chat's history comes from changes.
 bool _opens(Object e) =>
@@ -578,10 +618,22 @@ bool _opens(Object e) =>
 
 /// The room above entry [i]: more around what opens a chapter than between
 /// the agent's steps, so each exchange reads as one.
-double _gap(List<Object> entries, int i, {required bool header}) =>
-    _opens(entries[i])
-    ? (i == 0 && !header ? 8 : 28)
-    : (i > 0 && _opens(entries[i - 1]) ? 18 : 12);
+double _gap(
+  List<Object> entries,
+  int i, {
+  required bool header,
+  required bool phone,
+}) => _opens(entries[i])
+    ? (i == 0 && !header
+          ? 8
+          : phone
+          ? 28
+          : 32)
+    : (!phone
+          ? 16
+          : i > 0 && _opens(entries[i - 1])
+          ? 18
+          : 12);
 
 /// Where a reply box's bottom edge went when it opened: it stays there as
 /// the box grows a line at a time, so the box grows upward, as Claude's.

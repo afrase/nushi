@@ -45,7 +45,6 @@ class SubagentPane extends StatelessWidget {
             PaneHeader(
               child: Row(
                 children: [
-                  const SizedBox(width: 4),
                   Expanded(
                     child: s == null
                         ? const SizedBox.shrink()

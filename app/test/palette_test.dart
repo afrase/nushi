@@ -108,6 +108,8 @@ Future<void> _type(WidgetTester tester, String text) async {
 }
 
 void main() {
+  setUpAll(loadFonts);
+
   final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 
   testWidgets('⌃Tab and ⌃⇧Tab cycle the tabs, Pull request only with one', (
@@ -357,7 +359,6 @@ void main() {
   }, variant: macOS);
 
   testWidgets('golden: the palette with a few matches, dark', (tester) async {
-    await loadFonts();
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await _app(tester, select: 'b');

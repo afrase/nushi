@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/status.dart';
@@ -126,7 +127,9 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
   }
 
   Widget _row(Widget mark, Widget text, [Widget? end]) => Padding(
-    padding: const EdgeInsets.fromLTRB(22, 4, 20, 2),
+    padding: TouchTargets.of(context)
+        ? const EdgeInsets.fromLTRB(22, 4, 20, 2)
+        : const EdgeInsets.fromLTRB(NushiTheme.gutter, 4, NushiTheme.gutter, 2),
     child: Row(
       spacing: 8,
       children: [

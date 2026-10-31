@@ -125,7 +125,10 @@ class RepliesWaiting extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 6, 12, 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: NushiTheme.gutter,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         color: t.accentSoft,
         border: Border(top: BorderSide(color: t.borderSubtle)),

@@ -47,6 +47,15 @@ class PreviewPane extends StatefulWidget {
 /// has three and Close, beside Live and the switch): they fold into a ⋯.
 const double _foldsBelow = 380;
 
+/// From this wide the pane's header has the gutters and leaves the name about
+/// what it had: a page's has two more buttons.
+const double _roomyFrom = 460;
+const double _roomyWithPageFrom = 520;
+
+/// From this wide it has 24 between groups too. Below, at the pane's 560 to
+/// start with, that room is three short names' tabs (ADR 0072).
+const double _gapsFrom = 640;
+
 class _PreviewPaneState extends State<PreviewPane> {
   late final _watch = FileWatch(widget.daemon, widget.chat.id, widget.path);
   late final PreviewKind _kind = previewKind(widget.path) ?? PreviewKind.code;
@@ -106,98 +115,145 @@ class _PreviewPaneState extends State<PreviewPane> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PaneHeader(
-          inset: 12,
-          child: LayoutBuilder(
-            builder: (context, box) => ListenableBuilder(
-              listenable: Listenable.merge([_watch, widget.chat.previewFiles]),
-              builder: (context, _) {
-                final files = widget.chat.previewFiles.value;
-                final tabs = files.length > 1;
-                // A tab's file on its way keeps Live's room: a pick would
-                // otherwise widen the tabs' row for a moment, and move it.
-                final coming =
-                    tabs && _watch.file == null && _watch.error.isEmpty;
-                return Row(
-                  spacing: 8,
-                  children: [
-                    Icon(
-                      switch (kind) {
-                        PreviewKind.image => Icons.image_outlined,
-                        PreviewKind.html ||
-                        PreviewKind.svg => Icons.web_outlined,
-                        PreviewKind.mermaid => Icons.account_tree_outlined,
-                        PreviewKind.code => Icons.code,
-                        _ => Icons.description_outlined,
-                      },
-                      size: 14,
-                      color: t.textSecondary,
-                    ),
-                    // The name opens the chat's other files; several open,
-                    // their tabs take its place.
-                    Expanded(
-                      child: tabs
-                          ? PreviewTabs(
-                              key: widget.tabsKey,
-                              chat: widget.chat,
-                              files: files,
-                              current: widget.path,
-                            )
-                          : Align(
-                              alignment: Alignment.centerLeft,
-                              child: FilesMenu(
-                                chat: widget.chat,
-                                current: widget.path,
-                                tooltip: (_) =>
-                                    _watch.file?.path ?? widget.path,
-                                label: (_) => Text(
-                                  baseName(widget.path),
-                                  style: theme.code(t.text, size: 12),
-                                ),
-                              ),
-                            ),
-                    ),
-                    if (_watch.live || coming)
-                      Visibility.maintain(
-                        visible: _watch.live,
-                        child: LiveMark(version: _watch.file),
-                      ),
-                    if (kind.rendered)
-                      SourceSwitch(source: _source, onChanged: _showSource),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+        LayoutBuilder(
+          builder: (context, pane) {
+            // The gutters where the row has room for them, and the bar's
+            // full gaps where it has more (ADR 0072). Narrower, what it has
+            // always had, so it keeps the name's room and folds where it did.
+            final roomy =
+                pane.maxWidth >=
+                (page == null ? _roomyFrom : _roomyWithPageFrom);
+            final wide = pane.maxWidth >= _gapsFrom;
+            // What a group adds to the row's 8. The tabs' end needs none
+            // short of wide: a last tab keeps a ✕'s room.
+            final group = wide
+                ? NushiTheme.groupGap - 8
+                : roomy
+                ? NushiTheme.barGap - 8
+                : 0.0;
+            return PaneHeader(
+              inset: roomy ? NushiTheme.gutter : 12,
+              end: roomy ? NushiTheme.gutter : 4,
+              child: LayoutBuilder(
+                builder: (context, box) => ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _watch,
+                    widget.chat.previewFiles,
+                  ]),
+                  builder: (context, _) {
+                    final files = widget.chat.previewFiles.value;
+                    final tabs = files.length > 1;
+                    // A tab's file on its way keeps Live's room: a pick would
+                    // otherwise widen the tabs' row for a moment, and move it.
+                    final coming =
+                        tabs && _watch.file == null && _watch.error.isEmpty;
+                    return Row(
+                      spacing: 8,
                       children: [
-                        if (box.maxWidth < _foldsBelow)
-                          MenuIcon(
-                            Icons.more_horiz,
-                            tooltip: 'More',
-                            filter: false,
-                            entries: [
-                              for (final (icon, tooltip, _, onTap) in actions)
-                                MenuEntry(tooltip, icon: icon, onPick: onTap),
-                            ],
-                          )
-                        else
-                          for (final (icon, tooltip, size, onTap) in actions)
-                            IconTap(
-                              icon,
-                              tooltip: tooltip,
-                              size: size,
-                              onTap: onTap,
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(right: wide ? group : 0),
+                            child: Row(
+                              spacing: roomy ? 6 : 8,
+                              children: [
+                                Icon(
+                                  switch (kind) {
+                                    PreviewKind.image => Icons.image_outlined,
+                                    PreviewKind.html ||
+                                    PreviewKind.svg => Icons.web_outlined,
+                                    PreviewKind.mermaid =>
+                                      Icons.account_tree_outlined,
+                                    PreviewKind.code => Icons.code,
+                                    _ => Icons.description_outlined,
+                                  },
+                                  size: 14,
+                                  color: t.textSecondary,
+                                ),
+                                // The name opens the chat's other files;
+                                // several open, their tabs take its place.
+                                Expanded(
+                                  child: tabs
+                                      ? PreviewTabs(
+                                          key: widget.tabsKey,
+                                          chat: widget.chat,
+                                          files: files,
+                                          current: widget.path,
+                                        )
+                                      : Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: FilesMenu(
+                                            chat: widget.chat,
+                                            current: widget.path,
+                                            tooltip: (_) =>
+                                                _watch.file?.path ??
+                                                widget.path,
+                                            label: (_) => Text(
+                                              baseName(widget.path),
+                                              style: theme.code(
+                                                t.text,
+                                                size: 12,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                              ],
                             ),
-                        IconTap(
-                          Icons.close,
-                          tooltip: 'Close',
-                          size: 15,
-                          onTap: widget.onClose,
+                          ),
+                        ),
+                        if (_watch.live || coming)
+                          Visibility.maintain(
+                            visible: _watch.live,
+                            child: LiveMark(version: _watch.file),
+                          ),
+                        if (kind.rendered)
+                          SourceSwitch(source: _source, onChanged: _showSource),
+                        Padding(
+                          padding: EdgeInsets.only(left: group),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            spacing: wide ? NushiTheme.iconGap : 0,
+                            children: [
+                              if (box.maxWidth < _foldsBelow)
+                                MenuIcon(
+                                  Icons.more_horiz,
+                                  tooltip: 'More',
+                                  filter: false,
+                                  entries: [
+                                    for (final (icon, tooltip, _, onTap)
+                                        in actions)
+                                      MenuEntry(
+                                        tooltip,
+                                        icon: icon,
+                                        onPick: onTap,
+                                      ),
+                                  ],
+                                )
+                              else
+                                for (final (icon, tooltip, size, onTap)
+                                    in actions)
+                                  IconTap(
+                                    icon,
+                                    tooltip: tooltip,
+                                    size: size,
+                                    onTap: onTap,
+                                  ),
+                              IconTap(
+                                Icons.close,
+                                tooltip: 'Close',
+                                size: 15,
+                                onTap: widget.onClose,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
         ),
         Expanded(
           child: ColoredBox(

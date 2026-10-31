@@ -12,6 +12,7 @@ import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -102,9 +103,9 @@ void main() {
       expect(tester.takeException(), isNull);
       final header = tester.getRect(find.byType(ChatHeader));
       final menu = tester.getRect(find.byTooltip('Chat menu'));
-      expect(menu.right, closeTo(header.right - 8, 1));
+      expect(menu.right, header.right - NushiTheme.gutter);
       expect(header.right, width);
-      expect(header.height, 34);
+      expect(header.height, 44);
       // The tabs in full, with the line on the header's border; at 720 this
       // chat's fold has made them a menu field.
       final tabs = find.descendant(

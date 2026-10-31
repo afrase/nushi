@@ -158,11 +158,16 @@ class UserMessageText extends StatelessWidget {
                       .ui(NushiTheme.of(context).t.userBandMuted, size: 12),
                 ),
               if (r.quote.isNotEmpty)
-                QuoteBlock(r.quote, size: 13.5, band: true),
-              if (r.text.isNotEmpty) AgentMarkdown(r.text, typed: true),
+                QuoteBlock(
+                  r.quote,
+                  size: TouchTargets.of(context) ? 13.5 : 14,
+                  band: true,
+                ),
+              if (r.text.isNotEmpty)
+                AgentMarkdown(r.text, typed: true, transcript: true),
             ],
           ),
-        if (rest.isNotEmpty) AgentMarkdown(rest, typed: true),
+        if (rest.isNotEmpty) AgentMarkdown(rest, typed: true, transcript: true),
       ],
     );
   }

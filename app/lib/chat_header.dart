@@ -12,6 +12,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
@@ -91,13 +92,14 @@ class _ChatHeaderState extends State<ChatHeader> {
     // The title and the model (a Codex model id is long) share what the
     // rest of the row leaves (it takes about 455 points, the Pull request
     // tab 88 more), so a narrow window cuts them short rather than
-    // overflow. Narrower still, the least needed parts fold, so the
-    // chat's menu (⋯) stays at the row's end: the model, the agent's name
-    // (its mark stays), the details button while the panel can't show,
-    // the tabs into a menu field, the status word (the dot's tooltip says
-    // it), then the terminal's and the details' buttons into ⋯. Changes
-    // counts the review comments not sent yet (14 points more); a hidden
-    // side chat's chip takes its own room.
+    // overflow. Where all of it fits with room over, the row opens up to
+    // the bar's gaps (ADR 0072). Narrower still, the least needed parts
+    // fold, so the chat's menu (⋯) stays at the row's end: the model, the
+    // agent's name (its mark stays), the details button while the panel
+    // can't show, the tabs into a menu field, the status word (the dot's
+    // tooltip says it), then the terminal's and the details' buttons into
+    // ⋯. Changes counts the review comments not sent yet (14 points more);
+    // a hidden side chat's chip takes its own room.
     return ListenableBuilder(
       listenable: Listenable.merge([reviews, chat.side, chat.sideHidden]),
       builder: (context, _) => LayoutBuilder(
@@ -119,7 +121,12 @@ class _ChatHeaderState extends State<ChatHeader> {
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
           final room =
-              box.maxWidth - 455 - more + folds.saved - (shown ? 10 : 0);
+              box.maxWidth -
+              headerRow -
+              (folds.roomy ? headerGaps : 0) -
+              more +
+              folds.saved -
+              (shown ? (folds.roomy ? NushiTheme.barGap : 8) : 0);
           const least = 80.0;
           var title = (room * 0.6).clamp(least, 320.0);
           if (shown) title = min(title, max(least, room - 40));
@@ -149,9 +156,16 @@ class _ChatHeaderState extends State<ChatHeader> {
     final t = NushiTheme.of(context).t;
     final theme = NushiTheme.of(context);
     final chat = widget.chat;
+    // Controls and groups of them, and what's around the Expanded folder;
+    // with no room to spare, what the row has always taken, in the gutters
+    // the transcript has (its fold's numbers are the same either way).
+    final roomy = folds.roomy;
+    final gap = roomy ? NushiTheme.barGap : 8.0;
+    final group = roomy ? NushiTheme.groupGap : NushiTheme.barGap;
+    final around = roomy ? NushiTheme.groupGap : 6.0;
     return Container(
-      height: 34,
-      padding: const EdgeInsets.only(left: 20, right: 8),
+      height: PaneHeader.height,
+      padding: const EdgeInsets.symmetric(horizontal: NushiTheme.gutter),
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: t.borderSubtle)),
       ),
@@ -177,7 +191,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                   ),
           ),
           if (chat.jiraKey.isNotEmpty) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: gap),
             LinkText(
               chat.jiraKey,
               mono: true,
@@ -188,14 +202,14 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ],
           if (chat.github case final link?) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: gap),
             GitHubChip(
               key: ValueKey(link.id),
               daemon: widget.daemon,
               link: link,
             ),
           ],
-          const SizedBox(width: 14),
+          SizedBox(width: group),
           Tooltip(
             message: folds.name ? chat.agentName : '',
             child: AgentMark(chat.agent, size: 16, color: t.text),
@@ -208,7 +222,7 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
           ],
           if (modelName != null && !folds.model) ...[
-            const SizedBox(width: 10),
+            SizedBox(width: gap),
             ConstrainedBox(
               constraints: BoxConstraints(maxWidth: modelMax),
               child: Text(
@@ -219,7 +233,7 @@ class _ChatHeaderState extends State<ChatHeader> {
               ),
             ),
           ],
-          const SizedBox(width: 10),
+          SizedBox(width: gap),
           if (chat.archived)
             Text('archived', style: meta)
           else if (folds.word)
@@ -232,7 +246,7 @@ class _ChatHeaderState extends State<ChatHeader> {
             const SizedBox(width: 5),
             ChatStatusWord(chat, style: meta),
           ],
-          const SizedBox(width: 16),
+          SizedBox(width: around),
           Expanded(
             // The folder, unless the panel has it or there's no room: it
             // goes before anything folds.
@@ -246,10 +260,10 @@ class _ChatHeaderState extends State<ChatHeader> {
                     ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: around),
           if (chat.side.value != null && chat.sideHidden.value) ...[
             SideChip(chat),
-            const SizedBox(width: 8),
+            SizedBox(width: gap),
           ],
           if (folds.tabs)
             MenuField(
@@ -276,9 +290,12 @@ class _ChatHeaderState extends State<ChatHeader> {
                   '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
                   'before',
             ),
-          const SizedBox(width: 4),
-          if (!folds.buttons) TerminalButton(chat: chat, daemon: widget.daemon),
-          if (!folds.buttons && !folds.panel)
+          SizedBox(width: roomy ? NushiTheme.groupGap : 4),
+          if (!folds.buttons) ...[
+            TerminalButton(chat: chat, daemon: widget.daemon),
+            if (roomy) const SizedBox(width: NushiTheme.iconGap),
+          ],
+          if (!folds.buttons && !folds.panel) ...[
             IconTap(
               Icons.view_sidebar_outlined,
               tooltip: widget.onPanel == null
@@ -289,6 +306,8 @@ class _ChatHeaderState extends State<ChatHeader> {
               color: widget.panel ? t.text : t.textSecondary,
               onTap: widget.onPanel,
             ),
+            if (roomy) const SizedBox(width: NushiTheme.iconGap),
+          ],
           MenuIcon(
             Icons.more_horiz,
             tooltip: 'Chat menu',
@@ -335,9 +354,19 @@ class _ChatHeaderState extends State<ChatHeader> {
   ];
 }
 
-/// What of the chat's header folds at a width, the least needed first,
-/// and the points that frees of the row's 455 (the model's aren't in it).
+/// Measured: the header's row without its title and model takes about this
+/// (oh-my-pi's name, "in background"), with what it has always spent on gaps.
+const headerRow = 455.0;
+
+/// What the bar's full gaps add to [headerRow] (ADR 0072): the row without
+/// the title takes 76 more, a model's gap 2, a hidden side chat's 4.
+const headerGaps = 82.0;
+
+/// What of the chat's header folds at a width, the least needed first, the
+/// points that frees of the row's [headerRow] (the model's aren't in it), and
+/// whether nothing is near folding, so the row has the bar's gaps.
 typedef HeaderFolds = ({
+  bool roomy,
   bool model,
   bool name,
   bool word,
@@ -349,7 +378,8 @@ typedef HeaderFolds = ({
 });
 
 /// The parts of the header that fold in [width] (see [ChatHeader]): each
-/// in turn until the title has its 80 points. [pull]: the chat has the
+/// in turn until the title has its 80 points. The bar's gaps only come out of
+/// room over, so they never make a part fold. [pull]: the chat has the
 /// Pull request tab; [panel]: the details panel can show; [model]: the
 /// header names a model (40 points at least, and its gap); [side]: a
 /// hidden side chat's chip shows.
@@ -361,11 +391,9 @@ HeaderFolds headerFolds(
   bool comments = false,
   bool side = false,
 }) {
-  // Measured: the row without its title and model takes about 455
-  // points (oh-my-pi's name, "in background"), the Pull request tab 88
-  // more.
+  // The Pull request tab is 88 more.
   final need =
-      455.0 +
+      headerRow +
       (pull ? 88 : 0) +
       (comments ? 14 : 0) +
       (side ? SideChip.width : 0) +
@@ -387,6 +415,7 @@ HeaderFolds headerFolds(
     saved += points;
   }
   return (
+    roomy: width >= need + headerGaps,
     model: folds.contains('model'),
     name: folds.contains('name'),
     word: folds.contains('word'),

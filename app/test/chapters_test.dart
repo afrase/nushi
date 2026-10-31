@@ -7,6 +7,7 @@ import 'package:nushi/chat_view.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
@@ -221,7 +222,7 @@ void main() {
     final prose = tester.getRect(
       find.textContaining('Logout clears', findRichText: true),
     );
-    expect(prose.left, view.left + 20);
+    expect(prose.left, view.left + NushiTheme.gutter);
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

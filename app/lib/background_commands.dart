@@ -100,7 +100,6 @@ class BackgroundCommandPane extends StatelessWidget {
             PaneHeader(
               child: Row(
                 children: [
-                  const SizedBox(width: 4),
                   Icon(Icons.terminal, size: 14, color: t.textSecondary),
                   const SizedBox(width: 6),
                   Expanded(

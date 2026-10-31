@@ -10,6 +10,7 @@ import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/marks.dart';
 import 'package:nushi/question_card.dart';
@@ -58,24 +59,37 @@ class ItemView extends StatelessWidget {
       case ItemKind.ITEM_KIND_USER_MESSAGE:
         // A band across the transcript, the heading of the agent's work
         // that follows it; the right keeps room for Rewind.
+        final phone = TouchTargets.of(context);
         return RewindTarget(
           onRewind: onRewind,
           child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 12, 36, 12),
+            padding: EdgeInsets.fromLTRB(
+              phone ? 20 : NushiTheme.gutter,
+              12,
+              36,
+              12,
+            ),
+            alignment: Alignment.topLeft,
             decoration: BoxDecoration(
               color: t.userBand,
               border: Border.symmetric(
                 horizontal: BorderSide(color: t.userBandBorder),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 6,
-              children: [
-                if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
-                if (item.images.isNotEmpty) Thumbnails(item.images),
-                if (item.text.isNotEmpty) UserMessageText(item.text),
-              ],
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: phone ? double.infinity : readableWidth,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 6,
+                children: [
+                  if (item.toSubagentName.isNotEmpty)
+                    _ToSubagentMark(item, chat),
+                  if (item.images.isNotEmpty) Thumbnails(item.images),
+                  if (item.text.isNotEmpty) UserMessageText(item.text),
+                ],
+              ),
             ),
           ),
         );
