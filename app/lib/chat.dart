@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -37,6 +38,10 @@ class ChatState extends ChangeNotifier {
     // A subagent's pane takes the preview's place.
     pane.addListener(() {
       if (pane.value != null) preview.value = null;
+    });
+    // However the preview closes, its tabs go with it.
+    preview.addListener(() {
+      if (preview.value == null) previewFiles.value = const [];
     });
   }
 
@@ -207,6 +212,15 @@ class ChatState extends ChangeNotifier {
   /// place: one or the other.
   final preview = ValueNotifier<String?>(null);
 
+  /// The files open in the preview, in the order opened, [preview] the one
+  /// showing: with two or more the pane shows tabs (ADR 0070). In the app's
+  /// memory, as [preview] is, and empty when it's null.
+  final previewFiles = ValueNotifier<List<String>>(const []);
+
+  /// The files whose preview shows its Source, while the app runs: a file's
+  /// view is made again each time it shows.
+  final previewSources = <String>{};
+
   /// The tab its pane shows on the Mac (Chat whenever the pane opens):
   /// here so the app's keys and the palette reach it wherever the focus is.
   final tab = ValueNotifier<ChatTab>(ChatTab.chat);
@@ -233,10 +247,37 @@ class ChatState extends ChangeNotifier {
   /// Mac's app sets it, and it lasts while the app runs.
   final showAsked = ValueNotifier<String?>(null);
 
+  /// Shows [path] in the preview: the tab of the same file if it has one,
+  /// however each is named (relative to the folder, or absolute), or a new
+  /// one last.
   void openPreview(String path) {
     pane.value = null;
-    preview.value = path;
+    final file = _absolute(path);
+    final open = previewFiles.value
+        .where((f) => _absolute(f) == file)
+        .firstOrNull;
+    if (open == null) previewFiles.value = [...previewFiles.value, path];
+    preview.value = open ?? path;
     sawFile(path);
+  }
+
+  String _absolute(String path) =>
+      Uri.file(path.startsWith('/') ? path : '$folder/$path')
+          .normalizePath()
+          .path;
+
+  /// Closes [file]'s tab. If it showed, the one after it shows, or the last;
+  /// with none left the preview closes.
+  void closePreviewFile(String file) {
+    final at = previewFiles.value.indexOf(file);
+    if (at < 0) return;
+    final rest = [...previewFiles.value]..removeAt(at);
+    if (rest.isEmpty) {
+      preview.value = null;
+      return;
+    }
+    previewFiles.value = rest;
+    if (preview.value == file) preview.value = rest[min(at, rest.length - 1)];
   }
 
   /// When the user last opened each file (as [preview] names it), while

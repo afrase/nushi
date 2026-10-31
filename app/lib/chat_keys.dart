@@ -178,8 +178,8 @@ const pullTabKey = SingleActivator(
   meta: true,
 );
 
-/// ⌘W: closes the preview showing. A focused terminal keeps it, to close
-/// itself.
+/// ⌘W: closes the preview tab showing, and with the last the pane. A focused
+/// terminal keeps it, to close itself.
 const closeTabKey = SingleActivator(LogicalKeyboardKey.keyW, meta: true);
 
 SingleActivator tabKey(ChatTab tab) => switch (tab) {

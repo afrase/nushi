@@ -322,6 +322,38 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
+    testWidgets('adds a tab to what’s open, or shows the one it has', (
+      tester,
+    ) async {
+      final (fake, d) = await _app(tester);
+      final c = _chat(d)..openPreview('docs/first.md');
+      await tester.pumpAndSettle();
+      await _shows(tester, fake, 'docs/report.md');
+      expect(c.previewFiles.value, ['docs/first.md', 'docs/report.md']);
+      expect(c.preview.value, 'docs/report.md');
+      await _shows(tester, fake, '/Users/me/nushi/docs/first.md');
+      expect(c.previewFiles.value, ['docs/first.md', 'docs/report.md']);
+      expect(c.preview.value, 'docs/first.md');
+      d.dispose();
+    }, variant: _mac);
+
+    testWidgets('waits on Changes with tabs open, and adds none in a narrow '
+        'window', (tester) async {
+      final (fake, d) = await _app(tester, size: const Size(720, 900));
+      final c = _chat(d)
+        ..openPreview('docs/first.md')
+        ..tab.value = ChatTab.changes;
+      await tester.pumpAndSettle();
+      await _shows(tester, fake, 'docs/report.md');
+      expect(c.previewFiles.value, ['docs/first.md']);
+      c.tab.value = ChatTab.chat;
+      await tester.pumpAndSettle();
+      expect(c.previewFits, isFalse);
+      expect(c.showAsked.value, isNull, reason: 'the ask is spent');
+      expect(c.previewFiles.value, ['docs/first.md']);
+      d.dispose();
+    }, variant: _mac);
+
     testWidgets('leaves Changes alone, until the transcript shows again', (
       tester,
     ) async {

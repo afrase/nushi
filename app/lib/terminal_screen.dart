@@ -39,7 +39,7 @@ class TerminalScreen extends StatelessWidget {
     return {
       // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–3…) and ⌘⇧P, the palette,
       // passed on; ⌘K clears here, as in Terminal, ⌘F finds here and ⌘W
-      // closes this terminal, not a preview.
+      // closes this terminal, not a preview tab.
       for (final MapEntry(:key, :value) in actKeys.entries)
         if (!identical(key, findKey) && !identical(key, closeTabKey))
           key: value,

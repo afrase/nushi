@@ -61,6 +61,10 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   bool _dragging = false; // files are dragged over the chat
 
+  /// The preview's tabs: each file's view is made again as it shows, and
+  /// the row moves to the new one with its place kept.
+  final GlobalKey<State> _previewTabs = GlobalKey();
+
   Future<void> _ask(String selection) =>
       askAside(context, widget.daemon, widget.chat, selection);
 
@@ -230,6 +234,7 @@ class _ChatViewState extends State<ChatView> {
                 chat: chat,
                 daemon: widget.daemon,
                 path: preview,
+                tabsKey: _previewTabs,
                 onClose: () => chat.preview.value = null,
               ),
             ),
