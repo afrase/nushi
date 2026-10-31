@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-plex mermaid screenshots claude-record
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -95,12 +95,16 @@ web: mermaid
 # The web app's IBM Plex Sans cut to Latin and the punctuation and symbols
 # the app uses, its width fixed and its hinting dropped (0.5 MB less at
 # start; the engine's fallback fonts draw the rest): after app/fonts
-# changes (make web stops). Needs HarfBuzz's hb-subset (brew install harfbuzz).
+# changes (make web stops). JetBrains Mono keeps every character, as a
+# fallback font would leave code's grid, and loses its hinting and its
+# ligatures, which theme.code turns off (79 to 54 KB with Brotli). Needs
+# HarfBuzz's hb-subset (brew install harfbuzz).
 PLEX_UNICODES = 20-7E,A0-17F,192,2C6,2C7,2D8-2DD,300-36F,3C0,2000-206F,20AC,20B9,20BD,2113,2116,2122,2126,212E,2190-2193,2202,2206,220F,2211,2212,2215,2219,221A,221E,222B,2248,2260,2264,2265,25CA,FB01,FB02
-web-plex:
+web-cut:
 	for f in IBMPlexSans IBMPlexSans-Italic; do \
-		hb-subset app/fonts/$$f.ttf --unicodes="$(PLEX_UNICODES)" --instance=wdth=100 --no-hinting -o tools/webbuild/plex/$$f.ttf || exit 1; done
-	cd app/fonts && shasum -a 256 IBMPlexSans.ttf IBMPlexSans-Italic.ttf > ../../tools/webbuild/plex/source.sha256
+		hb-subset app/fonts/$$f.ttf --unicodes="$(PLEX_UNICODES)" --instance=wdth=100 --no-hinting -o tools/webbuild/cut/$$f.ttf || exit 1; done
+	hb-subset app/fonts/JetBrainsMono.ttf --unicodes='*' --no-hinting --layout-features-=calt -o tools/webbuild/cut/JetBrainsMono.ttf
+	cd app/fonts && shasum -a 256 IBMPlexSans.ttf IBMPlexSans-Italic.ttf JetBrainsMono.ttf > ../../tools/webbuild/cut/source.sha256
 
 # After a Flutter upgrade (make web stops): the engine's fallback fonts
 # anew in tools/webbuild/fonts.lock. Check the diff before committing it.
