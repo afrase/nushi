@@ -35,6 +35,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/internal/atomicfile"
 )
 
 // Store holds the saved sessions, by id, and writes their meta.json in Home.
@@ -371,11 +373,14 @@ func (h *Host) run(turn, text string) {
 	}
 	h.emit(turn, map[string]any{"UsageUpdate": map[string]any{"usage": map[string]any{"input_tokens": 10, "output_tokens": 2},
 		"context": map[string]any{"used_tokens": 12, "limit_tokens": 1000}}}, true)
-	h.emit(turn, map[string]any{"TurnEnd": map[string]any{"turn_id": turn, "status": status, "steps": 1}}, true)
 	h.store.save(h.id, h.s)
+	h.emit(turn, map[string]any{"TurnEnd": map[string]any{"turn_id": turn, "status": status, "steps": 1}}, true)
 }
 
-// save writes a session's meta.json, as Ante does.
+// save writes a session's meta.json whole, as Ante does (a new file renamed
+// over it, docs/facts/ante.md): the bridge's list reads it at any moment and
+// skips what it can't parse. A turn saves before its TurnEnd, so nothing
+// writes behind a test that has seen the turn end.
 func (st *Store) save(id string, s *saved) {
 	if st.Home == "" {
 		return
@@ -383,7 +388,7 @@ func (st *Store) save(id string, s *saved) {
 	dir := filepath.Join(st.Home, "sessions", id)
 	_ = os.MkdirAll(dir, 0o700)
 	b, _ := json.Marshal(map[string]any{"id": id, "dir": s.cwd, "first_user_message": "hi", "last_active_time": time.Now().UTC()})
-	_ = os.WriteFile(filepath.Join(dir, "meta.json"), b, 0o600)
+	_ = atomicfile.Replace(filepath.Join(dir, "meta.json"), b, 0o600)
 }
 
 // Saved says whether a session is still in the home folder.

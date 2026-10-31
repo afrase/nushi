@@ -206,7 +206,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 		t.Errorf("result %+v", r)
 	}
 	prompt(t, c, sid, "please write")
-	if len(c.asked) != 1 || !strings.Contains(c.kinds(sid), "tool_call tool_call_update") {
+	if len(c.asked) != 1 || !strings.Contains(strings.ReplaceAll(c.kinds(sid), "available_commands_update ", ""), "tool_call tool_call_update") {
 		t.Errorf("asked %v, updates %s", c.asked, c.kinds(sid))
 	}
 	if _, err := c.SetSessionMode(ctx, &acp.SetSessionModeRequest{SessionID: sid, ModeID: "auto"}); err != nil {
