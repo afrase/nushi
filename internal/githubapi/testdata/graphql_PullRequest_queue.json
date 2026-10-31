@@ -1,0 +1,43 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "id": "PR_queue",
+        "number": 30,
+        "title": "In a merge queue",
+        "url": "https://github.com/acme/app/pull/30",
+        "state": "OPEN",
+        "isDraft": false,
+        "updatedAt": "2026-10-31T05:25:18Z",
+        "author": { "login": "octo" },
+        "repository": { "nameWithOwner": "acme/app" },
+        "reviewDecision": "APPROVED",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "canBeRebased": true,
+        "viewerCanMergeAsAdmin": false,
+        "viewerCanEnableAutoMerge": false,
+        "viewerCanDisableAutoMerge": false,
+        "isMergeQueueEnabled": true,
+        "autoMergeRequest": null,
+        "mergeQueueEntry": {
+          "position": 3,
+          "state": "AWAITING_CHECKS",
+          "estimatedTimeToMerge": 840,
+          "enqueuer": { "login": "mona‮" }
+        },
+        "mergeQueue": { "configuration": { "mergeMethod": "SQUASH" } },
+        "baseRef": { "refUpdateRule": { "requiresConversationResolution": true, "requiresLinearHistory": true } },
+        "repo": {
+          "mergeCommitAllowed": true,
+          "squashMergeAllowed": true,
+          "rebaseMergeAllowed": false,
+          "autoMergeAllowed": true,
+          "deleteBranchOnMerge": true,
+          "viewerDefaultMergeMethod": "SQUASH",
+          "viewerPermission": "TRIAGE"
+        }
+      }
+    }
+  }
+}

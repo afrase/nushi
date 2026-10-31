@@ -110,6 +110,53 @@ type GitHubPull struct {
 	PendingReview   string
 	PendingComments int
 	CanComment      bool
+	Merge           GitHubMerge
+}
+
+// GitHubMerge is what merging a pull request may do, as GitHub says for
+// the viewer (ADR 0069).
+type GitHubMerge struct {
+	// Methods are the repository's, of "merge", "squash" and "rebase",
+	// without what the base's rules forbid.
+	Methods []string
+	// Default is the method the viewer used last, or the repository's.
+	Default string
+	// Can says the viewer may merge here: write access or better.
+	Can bool
+	// Bypass says GitHub would let the viewer past the base's rules. Nushi
+	// never offers that; it only trusts a clean state less (MergeBlocks).
+	Bypass    bool
+	CanRebase bool
+	// AutoAllowed says the repository allows auto-merge.
+	AutoAllowed                   bool
+	CanEnableAuto, CanDisableAuto bool
+	Auto                          *GitHubAutoMerge
+	// Queue says the base branch has a merge queue, QueueMethod the method
+	// it merges with ("" when GitHub doesn't say).
+	Queue       bool
+	QueueMethod string
+	Entry       *GitHubQueueEntry
+	// DeleteBranch says the repository deletes a merged head branch itself.
+	DeleteBranch bool
+	// Conversations says the base requires review threads resolved.
+	Conversations bool
+}
+
+// GitHubAutoMerge is auto-merge turned on: by whom, when, with which method.
+type GitHubAutoMerge struct {
+	By      string
+	Method  string
+	Enabled time.Time
+}
+
+// GitHubQueueEntry is a pull request's place in its base's merge queue;
+// State is "queued", "awaiting_checks", "mergeable", "unmergeable" or
+// "locked". Eta is GitHub's estimate of the wait in seconds, 0 for none.
+type GitHubQueueEntry struct {
+	Position int
+	State    string
+	By       string
+	Eta      int
 }
 
 // GitHubIssue is an issue whole.

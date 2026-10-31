@@ -1,0 +1,12 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "mergeTitle": "Merge pull request #1 from afrase/subtract",
+        "mergeBody": "Add Sub and Neg",
+        "squashTitle": "Add Sub and Neg (#1)",
+        "squashBody": "* Sub and Neg, and a FAIL file\n\n* Neg is -a‮\u0000\n\n* Neg is 0 - a"
+      }
+    }
+  }
+}
