@@ -25,7 +25,6 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/nothing_open.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
-import 'package:nushi/preview_pane.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/remote.dart';
@@ -152,15 +151,7 @@ class _NushiAppState extends State<NushiApp> {
               showPalette(_navigator.currentContext!, widget.daemon),
             ),
           ),
-          PlatformMenuItemGroup(
-            members: [
-              ..._items(ActMenu.view),
-              PlatformMenu(
-                label: 'Preview Tabs',
-                menus: _items(ActMenu.previewTabs),
-              ),
-            ],
-          ),
+          PlatformMenuItemGroup(members: _items(ActMenu.view)),
           PlatformMenuItemGroup(
             members: [
               PlatformMenuItem(
@@ -417,12 +408,7 @@ class _ChatPaneState extends State<_ChatPane> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) => ListenableBuilder(
-      listenable: Listenable.merge([
-        showDetails,
-        _tab,
-        widget.chat.tabFile,
-        previewTabs,
-      ]),
+      listenable: Listenable.merge([showDetails, _tab]),
       builder: (context, _) {
         final show = showDetails.value;
         // The panel goes when the chat would get too narrow.
@@ -468,15 +454,6 @@ class _ChatPaneState extends State<_ChatPane> {
                     chat: widget.chat,
                     daemon: widget.daemon,
                     onChat: () => _tab.value = ChatTab.chat,
-                  ),
-                  ChatTab.preview => PreviewPane(
-                    key: ValueKey(widget.chat.tabFile.value),
-                    tab: true,
-                    chat: widget.chat,
-                    daemon: widget.daemon,
-                    path: widget.chat.tabFile.value!,
-                    onClose: () =>
-                        widget.chat.closeTab(widget.chat.tabFile.value!),
                   ),
                   ChatTab.chat => ChatView(
                     chat: widget.chat,

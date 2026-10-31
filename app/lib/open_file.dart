@@ -27,7 +27,7 @@ Future<void> openFile(BuildContext context, Daemon daemon) async {
       chat: chatFilesOf(chat),
     ),
   );
-  if (path != null) pickFile(chat, path);
+  if (path != null) chat.openPreview(path);
 }
 
 /// The quick-open box: a field, and under it the files of [folder] a

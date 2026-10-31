@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
@@ -28,12 +27,8 @@ enum ChatPhase {
 }
 
 /// What shows in a chat's place on the Mac: its transcript, its changes,
-/// its pull request, or a file in a preview tab ([ChatState.tabFile] says
-/// which).
-enum ChatTab { chat, changes, pull, preview }
-
-/// One tab of a chat's: its file for a preview tab, else null.
-typedef TabStop = ({ChatTab tab, String? file});
+/// or its pull request.
+enum ChatTab { chat, changes, pull }
 
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
@@ -223,92 +218,11 @@ class ChatState extends ChangeNotifier {
   /// transcript.
   bool previewFits = true;
 
-  /// The tabs it has but its preview tabs: Pull request only while it has
-  /// one.
+  /// The tabs it has: Pull request only while it has one.
   List<ChatTab> get tabs => [.chat, .changes, if (pull != null) .pull];
 
-  /// [tab] as it shows: Chat in place of a pull request it no longer has,
-  /// or a preview tab that's closed.
-  ChatTab get shownTab => switch (tab.value) {
-    .preview => tabFiles.contains(tabFile.value) ? .preview : .chat,
-    final t => tabs.contains(t) ? t : .chat,
-  };
-
-  /// Its preview tabs' files, in order, as they were opened (as [preview]
-  /// names them); remembered.
-  List<String> get tabFiles => previewTabs.value[id] ?? const [];
-
-  void _setTabFiles(List<String> files) => previewTabs.value = {
-    for (final MapEntry(:key, :value) in previewTabs.value.entries)
-      if (key != id) key: value,
-    if (files.isNotEmpty) id: files,
-  };
-
-  /// The preview tab showing, or shown last, of [tabFiles]. In the app's
-  /// memory, as [tab] is: a chat reopens on Chat, so no page of an old tab
-  /// runs until it's clicked.
-  final tabFile = ValueNotifier<String?>(null);
-
-  /// The preview tabs showing their Source: a tab's view is made again each
-  /// time it shows.
-  final tabSources = <String>{};
-
-  /// Every tab it has, in the header's order.
-  List<TabStop> get tabStops => [
-    for (final t in tabs) (tab: t, file: null),
-    for (final f in tabFiles) (tab: ChatTab.preview, file: f),
-  ];
-
-  /// The tab that shows.
-  TabStop get shownStop => switch (shownTab) {
-    .preview => (tab: ChatTab.preview, file: tabFile.value),
-    final t => (tab: t, file: null),
-  };
-
-  /// Shows [stop].
-  void showStop(TabStop stop) {
-    tabFile.value = stop.file ?? tabFile.value;
-    tab.value = stop.tab;
-  }
-
-  /// The file a preview tab shows that's the same one as [path], however
-  /// each is named (relative to the folder, or absolute).
-  String? tabOf(String path) {
-    final file = _absolute(path);
-    return tabFiles.where((f) => _absolute(f) == file).firstOrNull;
-  }
-
-  String _absolute(String path) =>
-      Uri.file(path.startsWith('/') ? path : '$folder/$path')
-          .normalizePath()
-          .path;
-
-  /// Shows [path] in its preview tab, opened last if it has none. The side
-  /// pane closes if it's the file there. The agent's `show` never comes
-  /// here (ADR 0068): that's [openPreview]'s.
-  void openTab(String path) {
-    final file = tabOf(path) ?? path;
-    if (tabOf(path) == null) _setTabFiles([...tabFiles, path]);
-    if (preview.value case final p? when _absolute(p) == _absolute(file)) {
-      preview.value = null;
-    }
-    sawFile(file);
-    showStop((tab: .preview, file: file));
-  }
-
-  /// Closes [file]'s preview tab. If it showed, the one after it shows, or
-  /// the last, or with none left Chat.
-  void closeTab(String file) {
-    final at = tabFiles.indexOf(file);
-    if (at < 0) return;
-    final rest = [...tabFiles]..removeAt(at);
-    tabSources.remove(file);
-    if (tabFile.value == file) {
-      tabFile.value = rest.isEmpty ? null : rest[min(at, rest.length - 1)];
-    }
-    _setTabFiles(rest);
-    if (rest.isEmpty && tab.value == .preview) tab.value = .chat;
-  }
+  /// [tab] as it shows: Chat in place of a pull request it no longer has.
+  ChatTab get shownTab => tabs.contains(tab.value) ? tab.value : .chat;
 
   /// Which files its messages name are there (links to their preview).
   final fileLinks = FileLinks();

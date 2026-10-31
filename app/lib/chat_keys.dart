@@ -178,65 +178,21 @@ const pullTabKey = SingleActivator(
   meta: true,
 );
 
-/// ⌃⌘4–⌃⌘9 show the first six preview tabs, the same keys with a pull
-/// request or without.
-const previewTab1Key = SingleActivator(
-  LogicalKeyboardKey.digit4,
-  control: true,
-  meta: true,
-);
-const previewTab2Key = SingleActivator(
-  LogicalKeyboardKey.digit5,
-  control: true,
-  meta: true,
-);
-const previewTab3Key = SingleActivator(
-  LogicalKeyboardKey.digit6,
-  control: true,
-  meta: true,
-);
-const previewTab4Key = SingleActivator(
-  LogicalKeyboardKey.digit7,
-  control: true,
-  meta: true,
-);
-const previewTab5Key = SingleActivator(
-  LogicalKeyboardKey.digit8,
-  control: true,
-  meta: true,
-);
-const previewTab6Key = SingleActivator(
-  LogicalKeyboardKey.digit9,
-  control: true,
-  meta: true,
-);
-
-/// ⌘W: closes the preview tab showing. A focused terminal keeps it, to
-/// close itself.
+/// ⌘W: closes the preview showing. A focused terminal keeps it, to close
+/// itself.
 const closeTabKey = SingleActivator(LogicalKeyboardKey.keyW, meta: true);
 
-/// The key of [tab], if it has one: a preview tab's goes by its place
-/// ([file]) among [ChatState.tabFiles].
-SingleActivator? tabKey(ChatTab tab, {int file = 0}) => switch (tab) {
+SingleActivator tabKey(ChatTab tab) => switch (tab) {
   .chat => chatTabKey,
   .changes => changesTabKey,
   .pull => pullTabKey,
-  .preview => const [
-    previewTab1Key,
-    previewTab2Key,
-    previewTab3Key,
-    previewTab4Key,
-    previewTab5Key,
-    previewTab6Key,
-  ].elementAtOrNull(file),
 };
 
 /// Shows the tab of [chat] [step] places after the one shown (before,
-/// negative), wrapping: Chat, Changes, Pull request while it has one, then
-/// its preview tabs.
+/// negative), wrapping: Chat, Changes, then Pull request while it has one.
 void stepTab(ChatState chat, int step) {
-  final stops = chat.tabStops;
-  chat.showStop(stops[(stops.indexOf(chat.shownStop) + step) % stops.length]);
+  final tabs = chat.tabs;
+  chat.tab.value = tabs[(tabs.indexOf(chat.shownTab) + step) % tabs.length];
 }
 
 /// ⌘1–⌘9, ⌘[ and ⌘] that switch chats, ⌃Tab and ⌃⇧Tab that switch its

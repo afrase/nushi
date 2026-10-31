@@ -37,9 +37,9 @@ class TerminalScreen extends StatelessWidget {
     SingleActivator cmd(LogicalKeyboardKey key) =>
         SingleActivator(key, meta: true);
     return {
-      // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–9…) and ⌘⇧P, the palette,
+      // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–3…) and ⌘⇧P, the palette,
       // passed on; ⌘K clears here, as in Terminal, ⌘F finds here and ⌘W
-      // closes this terminal, not a preview tab.
+      // closes this terminal, not a preview.
       for (final MapEntry(:key, :value) in actKeys.entries)
         if (!identical(key, findKey) && !identical(key, closeTabKey))
           key: value,
