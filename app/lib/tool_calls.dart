@@ -58,18 +58,29 @@ const _kinds = {
   'fetch': ToolKind(Icons.public, 'fetched', 'page', null, 'Fetching'),
 };
 
+/// A show call, whatever kind its agent gives it (Codex's are `execute`).
+const _showKind = ToolKind(
+  Icons.visibility_outlined,
+  'showed',
+  'file',
+  'Showed',
+  'Showing',
+);
+
 /// The kind of tool call [it] is.
-ToolKind kindOf(Item it) =>
-    _kinds[it.toolKind] ?? const ToolKind(Icons.build_outlined, 'used', 'tool');
+ToolKind kindOf(Item it) => isShow(it)
+    ? _showKind
+    : _kinds[it.toolKind] ??
+          const ToolKind(Icons.build_outlined, 'used', 'tool');
 
 bool _running(Item it) => it.status == 'pending' || it.status == 'in_progress';
 
 /// What a running call is doing: "Reading notes.md", "Running make test".
 String doingOf(Item it) {
-  final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
+  final path = _named(it);
   final verb = kindOf(it).doing;
   return switch ((verb, path)) {
-    _ when it.toolKind == 'execute' => 'Running ${it.title}',
+    _ when isCommand(it) => 'Running ${it.title}',
     (final v?, final p?) => '$v $p',
     (final v?, null) => v,
     _ => toolTitle(it),
@@ -110,9 +121,25 @@ final _counted = Expando<(int, int)>();
   );
 }
 
+/// What a call's title names: its file, a show call's by its name alone.
+String? _named(Item it) => isShow(it)
+    ? switch (showPath(it)) {
+        final p? => baseName(p),
+        null => null,
+      }
+    : it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
+
 /// The file a tool call wrote or edited, when it's an artifact
-/// ([isArtifact]): code gets no Preview button.
+/// ([isArtifact]): code gets no Preview button. Or the one a show call
+/// opened, once it did: the daemon refused any other, and a call still
+/// waiting to be allowed offers nothing.
 String? previewPath(Item it) {
+  if (isShow(it)) {
+    final shown = showPath(it);
+    return it.status == 'completed' && shown != null && isArtifact(shown)
+        ? shown
+        : null;
+  }
   final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
   final wrote = it.toolKind == 'edit' || it.diffs.isNotEmpty;
   return wrote && it.status != 'failed' && path != null && isArtifact(path)
@@ -161,10 +188,19 @@ class ToolCallView extends StatelessWidget {
     final t = theme.t;
     final it = item;
     final code = theme.code(t.text, size: 12).copyWith(height: 1.2);
-    final path = it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
-    final verb = kindOf(it).verb;
-    final pathed = it.toolKind != 'execute' && verb != null && path != null;
-    final title = it.toolKind == 'execute'
+    final show = isShow(it);
+    final failed = it.status == 'failed';
+    final path = _named(it);
+    final verb = !show
+        ? kindOf(it).verb
+        : failed
+        ? 'Show'
+        : _running(it)
+        ? kindOf(it).doing
+        : kindOf(it).verb;
+    final pathed =
+        (show || it.toolKind != 'execute') && verb != null && path != null;
+    final title = isCommand(it)
         ? TextSpan(text: '\$ ${it.title}', style: code)
         : pathed
         ? TextSpan(
@@ -175,14 +211,17 @@ class ToolCallView extends StatelessWidget {
           )
         : TextSpan(text: toolTitle(it), style: theme.ui(t.textSecondary));
     // An MCP call's title is its server and tool; its raw name on hover.
-    final rawName = mcpName(it.title) == null ? null : it.title;
+    final rawName = show
+        ? showPath(it)
+        : mcpName(it.title) == null
+        ? null
+        : it.title;
     var (added, removed) = (0, 0);
     for (final d in it.diffs) {
       final (a, r) = lineCounts(d);
       added += a;
       removed += r;
     }
-    final failed = it.status == 'failed';
     final command = isCommand(it);
     final preview = previewPath(it);
     final input = showsInput(it);

@@ -4,7 +4,9 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart';
 import 'package:nushi/widgets.dart';
 
 /// A card for something the agent waits on: amber while it waits, with a
@@ -133,17 +135,24 @@ class _PermissionCardState extends State<PermissionCard> {
     final theme = NushiTheme.of(context);
     final pending = item.status == 'pending';
     final picked = item.options.where((o) => o.id == item.answer).firstOrNull;
+    // A show call asks about a file: its raw tool name wouldn't say which.
+    final shown = showPath(item);
+    final title = shown == null ? item.title : 'Show $shown';
+    final runs =
+        shown != null &&
+        const {PreviewKind.html, PreviewKind.svg}.contains(previewKind(shown));
     return WaitingCard(
       waiting: pending,
       children: [
         // Pending, what it asks for shows whole (a long command could hide
         // its end past one line), wrapped.
-        CardTitle(
-          'Permission',
-          detail: pending ? '' : item.title,
-          waiting: pending,
-        ),
-        if (pending && item.title.isNotEmpty) FullTitle(item.title),
+        CardTitle('Permission', detail: pending ? '' : title, waiting: pending),
+        if (pending && title.isNotEmpty) FullTitle(title),
+        if (pending && runs)
+          Text(
+            'A page runs as it opens in the preview.',
+            style: theme.ui(theme.t.textMuted, size: 12),
+          ),
         for (final d in item.diffs) DiffBox(d),
         if (item.text.isNotEmpty) AgentMarkdown(item.text),
         if (pending)

@@ -361,6 +361,12 @@ class _ChatPaneState extends State<_ChatPane> {
     if (widget.chat.phase == ChatPhase.waiting) _tab.value = ChatTab.chat;
     widget.chat.addListener(_showFile);
     widget.chat.preview.addListener(_showPreview);
+    widget.chat.showAsked.addListener(_showAsked);
+    _tab.addListener(_showAsked);
+    // After this frame: the panes beside the transcript aren't built yet.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showAsked();
+    });
     _pull = ChatPull.of(widget.daemon, widget.chat)..follow();
   }
 
@@ -368,6 +374,8 @@ class _ChatPaneState extends State<_ChatPane> {
   void dispose() {
     widget.chat.removeListener(_showFile);
     widget.chat.preview.removeListener(_showPreview);
+    widget.chat.showAsked.removeListener(_showAsked);
+    _tab.removeListener(_showAsked);
     _pull.unfollow();
     super.dispose();
   }
@@ -375,6 +383,18 @@ class _ChatPaneState extends State<_ChatPane> {
   /// A file's preview opened (from Artifacts, or ⌘P) shows beside the chat.
   void _showPreview() {
     if (widget.chat.preview.value != null) _tab.value = ChatTab.chat;
+  }
+
+  /// A file its agent asked to show opens while the transcript shows. This
+  /// pane lives only while its chat is the one showing, so another chat or
+  /// a view in its place leaves the ask waiting, and on Changes it waits
+  /// too: the agent never moves the user (ADR 0068).
+  void _showAsked() {
+    final chat = widget.chat;
+    final path = chat.showAsked.value;
+    if (path == null || chat.shownTab != ChatTab.chat) return;
+    chat.showAsked.value = null;
+    chat.openPreview(path);
   }
 
   /// A file to show (ChatState.showFile, from a review's finding) shows in

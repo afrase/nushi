@@ -13,6 +13,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_calls.dart';
 
 /// The artifacts ([isArtifact]) [items] wrote or edited (a subagent's
 /// calls too), each once, the one changed last first; a file deleted
@@ -24,7 +25,13 @@ List<String> chatFiles(Iterable<Item> items) {
     if (it.kind != ItemKind.ITEM_KIND_TOOL_CALL || it.status == 'failed') {
       continue;
     }
-    if (it.toolKind == 'delete') {
+    if (isShow(it)) {
+      if (previewPath(it) case final p?) {
+        files
+          ..remove(p)
+          ..add(p);
+      }
+    } else if (it.toolKind == 'delete') {
       files.removeAll(it.paths);
     } else if (it.toolKind == 'edit' || it.diffs.isNotEmpty) {
       for (final p in {...it.paths, for (final d in it.diffs) d.path}) {
