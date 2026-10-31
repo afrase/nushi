@@ -16,8 +16,8 @@ import 'package:nushi/file_mode.dart';
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
 /// collapsed, each project's chats' order, whether Pinned is collapsed,
-/// the models picked last, each chat's pinned artifacts, and
-/// the Mac's notifications and Dock badge, the appearance, and the newer
+/// the models picked last, each chat's pinned artifacts and preview tabs,
+/// and the Mac's notifications and Dock badge, the appearance, and the newer
 /// release whose toast was dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
@@ -126,6 +126,14 @@ final Pref<Map<String, int>> chatOpened = _byChat(
 /// in the order pinned.
 final Pref<Map<String, List<String>>> pinnedFiles = _byChat('pins', _strings);
 
+/// Each chat's preview tabs (the files, as `ChatState.tabFiles` names them),
+/// by chat id, in the tabs' order. The daemon checks each again when its
+/// tab shows (`WatchChatFile`).
+final Pref<Map<String, List<String>>> previewTabs = _byChat(
+  'previewTabs',
+  _strings,
+);
+
 /// The pins kept in [saved] (`app.json` read whole, as [readSaved] does).
 Map<String, List<String>> savedPins(Map<String, Object?> saved) =>
     _byPlace(saved['pins']);
@@ -188,6 +196,7 @@ List<Pref<Object?>> get _chatPrefs => [
   sidebarChats,
   chatOpened,
   pinnedFiles,
+  previewTabs,
   pullSeen,
   cleanUpLater,
 ];

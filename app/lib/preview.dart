@@ -103,17 +103,19 @@ String baseName(String path) => path.substring(path.lastIndexOf('/') + 1);
 
 /// Opens a file's preview from the tool rows below it, the one open
 /// ([current]) marked. With no [open] (an older daemon) there's no
-/// Preview button.
+/// Preview button. [tabs]: ⌘-click opens a preview tab (the Mac).
 class Previews extends InheritedWidget {
   const new({
     required this.open,
     required super.child,
     super.key,
     this.current,
+    this.tabs = false,
   });
 
   final void Function(String path)? open;
   final ValueListenable<String?>? current;
+  final bool tabs;
 
   static Previews? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<Previews>();
@@ -121,7 +123,8 @@ class Previews extends InheritedWidget {
   @override
   bool updateShouldNotify(Previews oldWidget) =>
       (oldWidget.open == null) != (open == null) ||
-      oldWidget.current != current;
+      oldWidget.current != current ||
+      oldWidget.tabs != tabs;
 }
 
 /// A file of a chat's as the daemon sends it: again each time it changes,
@@ -268,6 +271,7 @@ class PreviewBody extends StatelessWidget {
     this.onReveal,
     this.page,
     this.padding = const EdgeInsets.fromLTRB(28, 22, 28, 28),
+    this.center = false,
   });
 
   final FileWatch watch;
@@ -275,6 +279,9 @@ class PreviewBody extends StatelessWidget {
   final VoidCallback? onReveal;
   final Widget Function(FileWatch watch)? page;
   final EdgeInsets padding;
+
+  /// Markdown's column sits in the middle (a preview tab's width).
+  final bool center;
 
   @override
   Widget build(BuildContext context) {
@@ -330,9 +337,12 @@ class PreviewBody extends StatelessWidget {
           child: SingleChildScrollView(
             padding: padding,
             child: Align(
-              alignment: Alignment.topLeft,
+              alignment: center ? Alignment.topCenter : Alignment.topLeft,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
+                constraints: BoxConstraints(
+                  minWidth: center ? 760 : 0,
+                  maxWidth: 760,
+                ),
                 child: AgentMarkdown(
                   text,
                   images: (uri, alt) => _image(f.path, uri, alt),

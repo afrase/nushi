@@ -19,6 +19,7 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
+import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/review.dart';
@@ -37,7 +38,7 @@ import 'package:nushi/widgets.dart';
 
 /// The menus an action can be in; the Chat menu's are the chat's ⋯ menu
 /// too.
-enum ActMenu { nushi, file, view, chat }
+enum ActMenu { nushi, file, view, previewTabs, chat }
 
 /// ⌘F: find in the chat's transcript, or its changed files. A focused
 /// terminal keeps it for its own find.
@@ -57,11 +58,42 @@ const pinKey = SingleActivator(LogicalKeyboardKey.keyD, meta: true);
 enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
   openFile(key: openFileKey, menu: ActMenu.file, menuLabel: 'Open File…'),
+  closeTab(key: closeTabKey, menu: ActMenu.file, menuLabel: 'Close Tab'),
   artifacts,
   find(key: findKey, menu: ActMenu.view, menuLabel: 'Find…'),
   chat(key: chatTabKey, menu: ActMenu.view, menuLabel: 'Chat'),
   changes(key: changesTabKey, menu: ActMenu.view, menuLabel: 'Changes'),
   pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
+  previewTab1(
+    key: previewTab1Key,
+    menu: ActMenu.previewTabs,
+    menuLabel: 'First',
+  ),
+  previewTab2(
+    key: previewTab2Key,
+    menu: ActMenu.previewTabs,
+    menuLabel: 'Second',
+  ),
+  previewTab3(
+    key: previewTab3Key,
+    menu: ActMenu.previewTabs,
+    menuLabel: 'Third',
+  ),
+  previewTab4(
+    key: previewTab4Key,
+    menu: ActMenu.previewTabs,
+    menuLabel: 'Fourth',
+  ),
+  previewTab5(
+    key: previewTab5Key,
+    menu: ActMenu.previewTabs,
+    menuLabel: 'Fifth',
+  ),
+  previewTab6(
+    key: previewTab6Key,
+    menu: ActMenu.previewTabs,
+    menuLabel: 'Sixth',
+  ),
   details,
   terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
   rewind(keyText: 'Esc Esc'), // the composer's
@@ -145,6 +177,16 @@ const paletteKeyToo = SingleActivator(
   shift: true,
 );
 
+/// The actions that show the first preview tabs, in order.
+const List<Act> _previewTabActs = [
+  Act.previewTab1,
+  Act.previewTab2,
+  Act.previewTab3,
+  Act.previewTab4,
+  Act.previewTab5,
+  Act.previewTab6,
+];
+
 /// The keys of the actions that have one, as the intents that run them.
 final Map<ShortcutActivator, Intent> actKeys = {
   for (final a in Act.values) ?a.key: RunActIntent(a),
@@ -156,6 +198,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
   final chat = d.selected;
   final shown = d.chatShows ? chat : null;
   void tab(ChatTab t) => shown?.tab.value = t;
+  final files = shown?.tabFiles ?? const <String>[];
   final details = showDetails.value;
   final terminal = shown != null && terminalChats.value.contains(shown.id);
   return [
@@ -165,6 +208,16 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       'Open file…',
       enabled: shown != null,
       run: () => unawaited(openFile(context, d)),
+    ),
+    AppAction(
+      .closeTab,
+      'Close tab',
+      // Never under a dialog: its ⌘W, which Flutter's keys don't reach,
+      // comes here from the menu bar.
+      enabled:
+          shown?.shownTab == ChatTab.preview &&
+          !(Navigator.maybeOf(context)?.canPop() ?? false),
+      run: () => shown!.closeTab(shown.tabFile.value!),
     ),
     AppAction(
       .artifacts,
@@ -202,6 +255,14 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       enabled: shown?.pull != null,
       run: () => tab(.pull),
     ),
+    for (final (i, act) in _previewTabActs.indexed)
+      if (files.elementAtOrNull(i) case final file)
+        AppAction(
+          act,
+          file == null ? 'Show a preview tab' : 'Show ${tabLabel(file, files)}',
+          enabled: file != null,
+          run: () => shown!.showStop((tab: .preview, file: file)),
+        ),
     AppAction(
       .details,
       details ? 'Hide details' : 'Show details',

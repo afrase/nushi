@@ -12,6 +12,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
@@ -22,9 +23,10 @@ import 'package:nushi/widgets.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the folder while the details panel is hidden, the
-/// Chat | Changes (| Pull request, while it has one) switch, the
-/// terminal's and the panel's buttons and the chat's menu. (The files it
-/// wrote are in the details panel's Artifacts widget.)
+/// Chat | Changes (| Pull request, while it has one) switch with the
+/// preview tabs that fit in it, the rest in its overflow, the terminal's
+/// and the panel's buttons and the chat's menu. (The files it wrote are in
+/// the details panel's Artifacts widget.)
 class ChatHeader extends StatefulWidget {
   const new(
     this.chat,
@@ -96,11 +98,15 @@ class _ChatHeaderState extends State<ChatHeader> {
     // the tabs into a menu field, the status word (the dot's tooltip says
     // it), then the terminal's and the details' buttons into ⋯. Changes
     // counts the review comments not sent yet (14 points more); a hidden
-    // side chat's chip takes its own room.
+    // side chat's chip takes its own room. Preview tabs only take what
+    // the row can spare (past a first [previewTabsLeast] that folds what
+    // it must), the title's next 120 points before them, and the rest go
+    // in the overflow.
     return ListenableBuilder(
       listenable: Listenable.merge([reviews, chat.side, chat.sideHidden]),
       builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
+          final files = chat.tabFiles;
           final comments = unsentComments(chat.id).isNotEmpty;
           final side = chat.side.value != null && chat.sideHidden.value;
           final more =
@@ -114,12 +120,29 @@ class _ChatHeaderState extends State<ChatHeader> {
             model: modelName != null,
             comments: comments,
             side: side,
+            files: files.isNotEmpty,
           );
           final shown = modelName != null && !folds.model;
-          // What the title and the model (its gap taken out) share.
-          final room =
+          // What the title, the model (its gap taken out) and the tabs
+          // share.
+          final spare =
               box.maxWidth - 455 - more + folds.saved - (shown ? 10 : 0);
           const least = 80.0;
+          final fit = folds.tabs
+              ? noTabs
+              : fitTabs(
+                  files,
+                  chat.shownStop.file,
+                  (f) => tabWidth(context, tabLabel(f, files)),
+                  max(
+                    min(spare - least, previewTabsLeast),
+                    spare - least - 120 - (shown ? 40 : 0),
+                  ),
+                );
+          final room =
+              spare -
+              fit.width -
+              (folds.tabs && files.isNotEmpty ? _foldedFile : 0);
           var title = (room * 0.6).clamp(least, 320.0);
           if (shown) title = min(title, max(least, room - 40));
           return _row(
@@ -128,6 +151,7 @@ class _ChatHeaderState extends State<ChatHeader> {
             meta,
             modelName,
             folds,
+            fit,
             titleMax: title,
             modelMax: (room - title).clamp(40.0, 200.0),
           );
@@ -141,7 +165,8 @@ class _ChatHeaderState extends State<ChatHeader> {
     TextStyle titleStyle,
     TextStyle meta,
     String? modelName,
-    HeaderFolds folds, {
+    HeaderFolds folds,
+    FittedTabs fit, {
     required double titleMax,
     required double modelMax,
   }) {
@@ -255,24 +280,46 @@ class _ChatHeaderState extends State<ChatHeader> {
               compact: true,
               tooltip: '⌃⇥ the next tab, ⌃⇧⇥ the one before',
               entries: [
-                for (final (tab, label) in _tabs(chat))
-                  MenuEntry(
-                    label,
-                    detail: keyLabel(tabKey(tab)),
-                    checked: tab == widget.tab,
-                    onPick: () => widget.onTab(tab),
-                  ),
+                for (final (stop, label) in _tabs(chat, chat.tabFiles))
+                  _entry(chat, stop, label),
               ],
-              label: Text(_tabs(chat).firstWhere((s) => s.$1 == widget.tab).$2),
+              label: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 45.0 + _foldedFile),
+                child: Text(
+                  _tabs(
+                    chat,
+                    chat.tabFiles,
+                  ).firstWhere((s) => s.$1 == _stop).$2,
+                ),
+              ),
             )
           else
             Segmented(
-              value: widget.tab,
-              segments: _tabs(chat),
-              onChanged: widget.onTab,
-              tooltip: (t) =>
-                  '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
-                  'before',
+              value: _stop,
+              segments: _tabs(chat, fit.shown),
+              onChanged: _pick,
+              tooltip: (stop) => [
+                _keyOf(chat, stop),
+                stop.file ?? '⌃⇥ the next tab, ⌃⇧⇥ the one before',
+              ].where((part) => part.isNotEmpty).join('   '),
+              onClose: (stop) => switch (stop.file) {
+                final file? => () => chat.closeTab(file),
+                null => null,
+              },
+              after: fit.over.isEmpty
+                  ? null
+                  : MenuField(
+                      compact: true,
+                      tooltip: 'More preview tabs',
+                      label: Text('+${fit.over.length}'),
+                      entries: [
+                        for (final f in fit.over)
+                          _entry(chat, (
+                            tab: ChatTab.preview,
+                            file: f,
+                          ), tabLabel(f, chat.tabFiles)),
+                      ],
+                    ),
             ),
           const SizedBox(width: 4),
           if (!folds.buttons) TerminalButton(chat: chat, daemon: widget.daemon),
@@ -323,15 +370,56 @@ class _ChatHeaderState extends State<ChatHeader> {
     );
   }
 
-  List<(ChatTab, String)> _tabs(ChatState chat) => [
-    (ChatTab.chat, 'Chat'),
-    switch (unsentComments(chat.id).length) {
-      0 => (ChatTab.changes, 'Changes'),
-      final n => (ChatTab.changes, 'Changes $n'),
+  /// The tab showing, as the row marks it.
+  TabStop get _stop => (
+    tab: widget.tab,
+    file: widget.tab == ChatTab.preview ? widget.chat.tabFile.value : null,
+  );
+
+  void _pick(TabStop stop) =>
+      stop.file == null ? widget.onTab(stop.tab) : widget.chat.showStop(stop);
+
+  String _keyOf(ChatState chat, TabStop stop) =>
+      switch (tabKey(stop.tab, file: chat.tabFiles.indexOf(stop.file ?? ''))) {
+        final key? => keyLabel(key),
+        null => '',
+      };
+
+  /// A tab as a menu's row: a preview tab's has its close button.
+  MenuEntry _entry(ChatState chat, TabStop stop, String label) => MenuEntry(
+    label,
+    detail: _keyOf(chat, stop),
+    checked: stop == _stop,
+    tooltip: stop.file ?? '',
+    onPick: () => _pick(stop),
+    action: switch (stop.file) {
+      final file? => ({required hover}) => closeTabMark(chat, file),
+      null => null,
     },
-    if (chat.pull != null) (ChatTab.pull, 'Pull request'),
+  );
+
+  /// Chat, Changes, Pull request while it has one, then [files]' preview
+  /// tabs.
+  List<(TabStop, String)> _tabs(ChatState chat, List<String> files) => [
+    ((tab: ChatTab.chat, file: null), 'Chat'),
+    switch (unsentComments(chat.id).length) {
+      0 => ((tab: ChatTab.changes, file: null), 'Changes'),
+      final n => ((tab: ChatTab.changes, file: null), 'Changes $n'),
+    },
+    if (chat.pull != null) ((tab: ChatTab.pull, file: null), 'Pull request'),
+    for (final f in files)
+      ((tab: ChatTab.preview, file: f), tabLabel(f, chat.tabFiles)),
   ];
 }
+
+/// The header's room for preview tabs at the least: one at its widest,
+/// and the overflow. Less, and the tabs fold.
+const double previewTabsLeast =
+    Segmented.closableLabel + Segmented.closableRest + tabOverflowWidth;
+
+/// How much more the folded tabs' field takes with a file in it, cut short
+/// if it must be, than with "Changes".
+const _foldedFile = 60.0;
 
 /// What of the chat's header folds at a width, the least needed first,
 /// and the points that frees of the row's 455 (the model's aren't in it).
@@ -350,7 +438,7 @@ typedef HeaderFolds = ({
 /// in turn until the title has its 80 points. [pull]: the chat has the
 /// Pull request tab; [panel]: the details panel can show; [model]: the
 /// header names a model (40 points at least, and its gap); [side]: a
-/// hidden side chat's chip shows.
+/// hidden side chat's chip shows; [files]: it has preview tabs.
 HeaderFolds headerFolds(
   double width, {
   required bool pull,
@@ -358,6 +446,7 @@ HeaderFolds headerFolds(
   bool model = false,
   bool comments = false,
   bool side = false,
+  bool files = false,
 }) {
   // Measured: the row without its title and model takes about 455
   // points (oh-my-pi's name, "in background"), the Pull request tab 88
@@ -368,7 +457,8 @@ HeaderFolds headerFolds(
       (comments ? 14 : 0) +
       (side ? SideChip.width : 0) +
       80 +
-      (model ? 50 : 0);
+      (model ? 50 : 0) +
+      (files ? previewTabsLeast : 0);
   var saved = 0.0;
   final folds = <String>{};
   // Each part and about how much folding it frees.
@@ -376,7 +466,12 @@ HeaderFolds headerFolds(
     if (model) ('model', 50.0),
     ('name', 48.0),
     if (!panel) ('panel', 26.0),
-    ('tabs', (pull ? 115.0 : 50.0) + (comments ? 14 : 0)),
+    (
+      'tabs',
+      (pull ? 115.0 : 50.0) +
+          (comments ? 14 : 0) +
+          (files ? previewTabsLeast - _foldedFile : 0),
+    ),
     ('word', 45.0),
     ('buttons', panel ? 52.0 : 26.0),
   ]) {
@@ -392,7 +487,10 @@ HeaderFolds headerFolds(
     tabs: folds.contains('tabs'),
     buttons: folds.contains('buttons'),
     any: folds.isNotEmpty,
-    // The model's points were never in the row's 455.
-    saved: saved - (folds.contains('model') ? 50 : 0),
+    // The model's points were never in the row's 455, nor the tabs'.
+    saved:
+        saved -
+        (folds.contains('model') ? 50 : 0) -
+        (files && folds.contains('tabs') ? previewTabsLeast - _foldedFile : 0),
   );
 }
