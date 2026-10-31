@@ -93,7 +93,7 @@ class GeneralSection extends StatelessWidget {
 }
 
 /// The appearance: Light, Dark, or as the system is; remembered (the View
-/// menu's items set it too).
+/// menu's items set it too). And the chat's width (ADR 0074).
 class _Appearance extends StatelessWidget {
   const new();
 
@@ -120,6 +120,27 @@ class _Appearance extends StatelessWidget {
                 ),
             ],
             label: Text(_names[mode]!),
+          ),
+        ),
+        ValueListenableBuilder(
+          valueListenable: chatFullWidth,
+          builder: (context, full, _) => SettingsRow(
+            'Chat width',
+            control: MenuField(
+              entries: [
+                MenuEntry(
+                  'Centered',
+                  checked: !full,
+                  onPick: () => chatFullWidth.value = false,
+                ),
+                MenuEntry(
+                  'Full width',
+                  checked: full,
+                  onPick: () => chatFullWidth.value = true,
+                ),
+              ],
+              label: Text(full ? 'Full width' : 'Centered'),
+            ),
           ),
         ),
       ],

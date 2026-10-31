@@ -64,6 +64,7 @@ enum Act {
   changes(key: changesTabKey, menu: ActMenu.view, menuLabel: 'Changes'),
   pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
   details,
+  chatWidth,
   terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
   rewind(keyText: 'Esc Esc'), // the composer's
   sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
@@ -219,6 +220,11 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       details ? 'Hide details' : 'Show details',
       enabled: shown?.shownTab == ChatTab.chat,
       run: () => showDetails.value = !details,
+    ),
+    AppAction(
+      .chatWidth,
+      chatFullWidth.value ? 'Center the chat' : 'Show the chat at full width',
+      run: () => chatFullWidth.value = !chatFullWidth.value,
     ),
     AppAction(
       .terminal,

@@ -13,6 +13,7 @@ import 'package:nushi/file_mode.dart';
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// panes' widths, whether changed files show flat, which chats show their
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
+/// whether the chat takes the whole width,
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
 /// collapsed, each project's chats' order, whether Pinned is collapsed,
@@ -158,6 +159,10 @@ final paneWidths = Pref<Map<String, double>>(
 
 /// Whether a subagent's pane shows wide.
 final Pref<bool> subagentWide = _plain('subagentWide', false);
+
+/// Whether the chat takes the pane's whole width rather than a column in
+/// its middle (ADR 0074).
+final Pref<bool> chatFullWidth = _plain('chatFullWidth', false);
 
 /// The terminal's font family (null: the bundled JetBrains Mono) and size.
 final Pref<String?> terminalFont = _plain('termFont', null);

@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_column.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pickers.dart';
@@ -286,18 +286,17 @@ class _ComposerState extends State<Composer> {
         _text.text.trim().isNotEmpty ||
         _images.value.isNotEmpty ||
         _draft.replies.value.isNotEmpty;
-    return Padding(
-      padding: touch
-          ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
-          : const EdgeInsets.fromLTRB(
-              NushiTheme.gutter,
-              4,
-              NushiTheme.gutter,
-              12,
-            ),
-      child: _capped(
-        touch,
-        Column(
+    return ChatColumn(
+      child: Padding(
+        padding: touch
+            ? const EdgeInsets.fromLTRB(16, 4, 16, 8)
+            : const EdgeInsets.fromLTRB(
+                NushiTheme.gutter,
+                4,
+                NushiTheme.gutter,
+                12,
+              ),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (turnPlan(chat.items) case final plan? when chat.busy)
@@ -484,16 +483,4 @@ class _ComposerState extends State<Composer> {
       ),
     );
   }
-
-  /// [box], on the Mac no wider than the transcript's text and at its left
-  /// (ADR 0072).
-  Widget _capped(bool touch, Widget box) => touch
-      ? box
-      : Align(
-          alignment: Alignment.centerLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: readableWidth),
-            child: box,
-          ),
-        );
 }

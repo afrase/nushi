@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
@@ -16,6 +17,7 @@ import 'package:nushi/marks.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
@@ -62,33 +64,37 @@ class ItemView extends StatelessWidget {
         final phone = TouchTargets.of(context);
         return RewindTarget(
           onRewind: onRewind,
-          child: Container(
-            padding: EdgeInsets.fromLTRB(
-              phone ? 20 : NushiTheme.gutter,
-              12,
-              36,
-              12,
-            ),
-            alignment: Alignment.topLeft,
-            decoration: BoxDecoration(
-              color: t.userBand,
-              border: Border.symmetric(
-                horizontal: BorderSide(color: t.userBandBorder),
+          child: LayoutBuilder(
+            builder: (context, box) => Container(
+              padding: EdgeInsets.fromLTRB(
+                chatSides(context, box.maxWidth).left,
+                12,
+                36,
+                12,
               ),
-            ),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: phone ? double.infinity : readableWidth,
+              alignment: Alignment.topLeft,
+              decoration: BoxDecoration(
+                color: t.userBand,
+                border: Border.symmetric(
+                  horizontal: BorderSide(color: t.userBandBorder),
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 6,
-                children: [
-                  if (item.toSubagentName.isNotEmpty)
-                    _ToSubagentMark(item, chat),
-                  if (item.images.isNotEmpty) Thumbnails(item.images),
-                  if (item.text.isNotEmpty) UserMessageText(item.text),
-                ],
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: phone || chatFullWidth.value
+                      ? double.infinity
+                      : readableWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 6,
+                  children: [
+                    if (item.toSubagentName.isNotEmpty)
+                      _ToSubagentMark(item, chat),
+                    if (item.images.isNotEmpty) Thumbnails(item.images),
+                    if (item.text.isNotEmpty) UserMessageText(item.text),
+                  ],
+                ),
               ),
             ),
           ),

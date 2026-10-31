@@ -24,3 +24,6 @@ The owner: "I kind of don't like how crammed a lot of the ui is." An audit found
 - Folding the header sooner to keep 12 and 24 everywhere: folds are what the owner sees as things jumping.
 - The audit's three layouts (a side column, a tab strip, a rail): rejected by the owner.
 - Putting the pane's title row beside the header, so their bottoms line up: it moves the header and the pane, which is a layout change.
+
+## Amendment (2026-11-01)
+The column is centred or takes the whole width, by choice, rather than kept at the left ([ADR 0074](0074-the-chats-width-is-a-choice.md)).

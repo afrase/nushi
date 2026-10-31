@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_column.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
@@ -106,7 +107,7 @@ class _ChatViewState extends State<ChatView> {
                 stopTurn(context, chat, widget.daemon),
           },
           child: ListenableBuilder(
-            listenable: Listenable.merge([chat, chat.forking]),
+            listenable: Listenable.merge([chat, chat.forking, chatFullWidth]),
             builder: (context, _) => Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -331,22 +332,24 @@ class _McpChanged extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: NushiTheme.gutter,
-        vertical: 4,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.hub_outlined, size: 13, color: t.textMuted),
-          const SizedBox(width: 6),
-          Text(
-            'MCP servers changed. Reload to use them.',
-            style: theme.ui(t.textSecondary, size: 12),
-          ),
-          const SizedBox(width: NushiTheme.barGap),
-          ReloadButton(chat, daemon),
-        ],
+    return ChatColumn(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: NushiTheme.gutter,
+          vertical: 4,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.hub_outlined, size: 13, color: t.textMuted),
+            const SizedBox(width: 6),
+            Text(
+              'MCP servers changed. Reload to use them.',
+              style: theme.ui(t.textSecondary, size: 12),
+            ),
+            const SizedBox(width: NushiTheme.barGap),
+            ReloadButton(chat, daemon),
+          ],
+        ),
       ),
     );
   }

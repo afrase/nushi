@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
@@ -189,19 +188,11 @@ void main() {
         final d = await _app(tester, width: width);
         final view = tester.getRect(find.byType(ChatView));
         final box = _box(tester);
-        expect(box.left, view.left + NushiTheme.gutter);
-        // The transcript's cap on a wide window, the gutter on a narrow one.
-        expect(
-          box.right,
-          min(
-            view.left + NushiTheme.gutter + readableWidth,
-            view.right - NushiTheme.gutter,
-          ),
-        );
-        expect(
-          _text(tester, 'I’ll start from').left,
-          view.left + NushiTheme.gutter,
-        );
+        // The column's middle on a wide window, the gutter on a narrow one.
+        final left = view.left + readablePad(view.width);
+        expect(box.left, left);
+        expect(box.right, view.right - readablePad(view.width));
+        expect(_text(tester, 'I’ll start from').left, left);
         expect(
           tester
               .getRect(
@@ -218,19 +209,31 @@ void main() {
           view.right - NushiTheme.gutter,
         );
         // A band's text too, though its fill goes edge to edge.
-        expect(
-          _text(tester, 'Good. Run the whole suite.').left,
-          view.left + NushiTheme.gutter,
-        );
+        expect(_text(tester, 'Good. Run the whole suite.').left, left);
         await closeView(tester, d);
       }, variant: _mac);
     }
+
+    testWidgets('at full width everything takes the pane, to the gutters', (
+      tester,
+    ) async {
+      chatFullWidth.value = true;
+      final d = await _app(tester, width: 1700);
+      final view = tester.getRect(find.byType(ChatView));
+      final left = view.left + NushiTheme.gutter;
+      final box = _box(tester);
+      expect(box.left, left);
+      expect(box.right, view.right - NushiTheme.gutter);
+      expect(_text(tester, 'I’ll start from').left, left);
+      expect(_text(tester, 'Good. Run the whole suite.').left, left);
+      await closeView(tester, d);
+    }, variant: _mac);
 
     testWidgets('a failed row’s box and the permission card are on the text '
         'column; its chevron and icon don’t move', (tester) async {
       final d = await _app(tester, width: 1700);
       final view = tester.getRect(find.byType(ChatView));
-      final left = view.left + NushiTheme.gutter;
+      final left = view.left + readablePad(view.width);
       Finder row(String words) => find.ancestor(
         of: find.textContaining(words, findRichText: true).first,
         matching: find.byType(Collapsible),
@@ -325,7 +328,7 @@ void main() {
   });
 
   group('the transcript', () {
-    testWidgets('14 on 22, at most 860 wide at the left', (tester) async {
+    testWidgets('14 on 22, at most 860 wide in the middle', (tester) async {
       final d = await _app(tester, width: 1700);
       final line = _text(tester, 'I’ll start from');
       expect(line.height, 22);
@@ -333,7 +336,7 @@ void main() {
       expect(text.width, lessThanOrEqualTo(860));
       expect(text.height % 22, 0);
       final view = tester.getRect(find.byType(ChatView));
-      expect(text.left, view.left + NushiTheme.gutter);
+      expect(text.left, view.left + readablePad(view.width));
       await closeView(tester, d);
     }, variant: _mac);
 
@@ -598,6 +601,15 @@ void main() {
           d.dispose();
         }, variant: _mac);
       }
+      testWidgets('a turn at full width, $name', (tester) async {
+        chatFullWidth.value = true;
+        final d = await _app(tester, width: 1700, brightness: brightness);
+        await expectLater(
+          find.byType(NushiApp),
+          matchesGoldenFile('goldens/spacing_turn_full_1700_$name.png'),
+        );
+        d.dispose();
+      }, variant: _mac);
       testWidgets('a turn beside the preview, $name', (tester) async {
         final d = await _app(
           tester,

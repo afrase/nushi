@@ -236,12 +236,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Check for updates'), findsOneWidget);
     expect(find.textContaining('Last checked just now'), findsOneWidget);
-    await tester.tap(
-      find.descendant(
-        of: find.widgetWithText(SettingsRow, 'Check for updates'),
-        matching: find.byType(SettingsSwitch),
-      ),
+    final checks = find.descendant(
+      of: find.widgetWithText(SettingsRow, 'Check for updates'),
+      matching: find.byType(SettingsSwitch),
     );
+    await tester.ensureVisible(checks);
+    await tester.pumpAndSettle();
+    await tester.tap(checks);
     await tester.pumpAndSettle();
     expect(fake.setSettings.last.checkUpdates, false);
     found = UpdateCheck(latest: '0.1.17', checkedMs: found.checkedMs);

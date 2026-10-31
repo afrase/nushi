@@ -7,6 +7,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - **First run.** With no chat open, the pane offers New chat, Open a folder…, and the recent folders: the chats' folders, or before there are any, the folders Claude's sessions were found in. Each starts a new chat there.
 - **The sidebar** lists Pinned, then the projects and their chats. Its foot has Jira, GitHub and Settings.
 - **Settings** (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left. Esc or Close goes back ([ADR 0053](adr/0053-settings-is-a-view.md)). Settings › General's Appearance (Light, Dark, or as the system; also in the View menu) is remembered.
+- **Chat width.** Settings › General or the palette (⌘K): a centered column, or the whole width of the window.
 - **Tabs.** A chat opens on the tab it was left on (Chat, Changes, Pull request), and on Chat when it needs you.
 - **Trust.** Before an agent starts in a folder that brings code of its own (hooks, MCP servers, extensions), a trust card shows that code. Going elsewhere while it asks is a no, and a bar over the app says what didn't start ("Didn't start Claude in site: its code wasn't approved.").
 - **The status bar**, along the window's bottom, counts working, awake and sleeping agents and shows the memory Nushi takes. A click lists each awake chat's.

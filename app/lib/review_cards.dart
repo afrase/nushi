@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_column.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
@@ -218,47 +219,49 @@ class UnsentReview extends StatelessWidget {
       builder: (context, _, _) {
         final n = unsentComments(chat.id).length;
         if (n == 0) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: NushiTheme.gutter,
-            vertical: 4,
-          ),
-          child: Row(
-            spacing: NushiTheme.barGap,
-            children: [
-              Flexible(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 6,
-                  children: [
-                    Icon(
-                      Icons.rate_review_outlined,
-                      size: 13,
-                      color: t.textMuted,
-                    ),
-                    Flexible(
-                      child: Text(
-                        n == 1
-                            ? '1 review comment in Changes isn’t sent.'
-                            : '$n review comments in Changes aren’t sent.',
-                        style: theme.ui(t.textSecondary, size: 12),
+        return ChatColumn(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: NushiTheme.gutter,
+              vertical: 4,
+            ),
+            child: Row(
+              spacing: NushiTheme.barGap,
+              children: [
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 6,
+                    children: [
+                      Icon(
+                        Icons.rate_review_outlined,
+                        size: 13,
+                        color: t.textMuted,
                       ),
-                    ),
-                  ],
+                      Flexible(
+                        child: Text(
+                          n == 1
+                              ? '1 review comment in Changes isn’t sent.'
+                              : '$n review comments in Changes aren’t sent.',
+                          style: theme.ui(t.textSecondary, size: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              LinkText(
-                'Send to agent',
-                size: 12,
-                tooltip: 'Each as a reply card in the box, to send',
-                onTap: () => reviewToBox(chat),
-              ),
-              LinkText(
-                'Show',
-                size: 12,
-                onTap: () => chat.tab.value = ChatTab.changes,
-              ),
-            ],
+                LinkText(
+                  'Send to agent',
+                  size: 12,
+                  tooltip: 'Each as a reply card in the box, to send',
+                  onTap: () => reviewToBox(chat),
+                ),
+                LinkText(
+                  'Show',
+                  size: 12,
+                  onTap: () => chat.tab.value = ChatTab.changes,
+                ),
+              ],
+            ),
           ),
         );
       },

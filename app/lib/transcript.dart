@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_column.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_text.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/motion.dart';
@@ -215,7 +215,7 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE &&
         canForkAt(widget.daemon, widget.chat, e, live: live);
-    final sides = _sides(context, width);
+    final sides = chatSides(context, width);
     final from = [
       live,
       still,
@@ -506,7 +506,7 @@ class _TranscriptState extends State<Transcript> {
                       children: [
                         if (widget.header case final h?)
                           Padding(
-                            padding: _sides(context, box.maxWidth),
+                            padding: chatSides(context, box.maxWidth),
                             child: h,
                           ),
                         for (final (i, e) in entries.indexed.skip(from))
@@ -531,7 +531,7 @@ class _TranscriptState extends State<Transcript> {
                           ),
                         if (widget.footer case final f?)
                           Padding(
-                            padding: _sides(context, box.maxWidth),
+                            padding: chatSides(context, box.maxWidth),
                             child: f,
                           ),
                       ],
@@ -576,19 +576,6 @@ class _TranscriptState extends State<Transcript> {
       ),
     );
   }
-}
-
-/// The room beside a transcript [width] wide: on the Mac the gutter, and on
-/// the right what's past [readableWidth]; on the phone its own 20 (ADR 0072).
-EdgeInsets _sides(BuildContext context, double width) {
-  if (TouchTargets.of(context)) {
-    return const EdgeInsets.symmetric(horizontal: 20);
-  }
-  const gutter = NushiTheme.gutter;
-  return EdgeInsets.only(
-    left: gutter,
-    right: max(gutter, width - gutter - readableWidth),
-  );
 }
 
 /// An entry's key: a call and the group it becomes keep their place (and
