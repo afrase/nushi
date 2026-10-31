@@ -15,7 +15,7 @@ const headOID = "1111111111111111111111111111111111111111"
 // readyPull is an open pull request anyone with write access could merge.
 func readyPull() model.GitHubPull {
 	return model.GitHubPull{
-		ID: "PR_1", State: "open", HeadOID: headOID, Mergeable: "mergeable", MergeState: "clean",
+		ID: "PR_1", State: "open", HeadOID: headOID, Base: "main", Mergeable: "mergeable", MergeState: "clean",
 		Merge: model.GitHubMerge{Methods: []string{"merge", "squash", "rebase"}, Can: true, CanRebase: true, AutoAllowed: true},
 	}
 }
@@ -75,28 +75,28 @@ var pullRef = model.GitHubRef{Host: "github.com", Repo: "afrase/nushi-gh-test", 
 
 func TestMergeSends(t *testing.T) {
 	s, f := worldWith(t, readyPull())
-	if err := s.Merge(t.Context(), pullRef, Merging{Head: headOID, Method: "squash", Title: "T", Body: "B"}); err != nil {
+	if err := s.Merge(t.Context(), pullRef, Merging{Head: headOID, Base: "main", Method: "squash", Title: "T", Body: "B"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.merges) != 1 || f.merges[0] != (githubapi.MergeInput{Pull: "PR_1", HeadOID: headOID, Method: "squash", Title: "T", Body: "B"}) {
 		t.Fatalf("%+v", f.merges)
 	}
 	// A rebase has no commit text to require.
-	if err := s.Merge(t.Context(), pullRef, Merging{Head: headOID, Method: "rebase"}); err != nil || len(f.merges) != 2 {
+	if err := s.Merge(t.Context(), pullRef, Merging{Head: headOID, Base: "main", Method: "rebase"}); err != nil || len(f.merges) != 2 {
 		t.Fatalf("%v %+v", err, f.merges)
 	}
 }
 
 // Nothing reaches GitHub unless it says now what the confirmation showed.
 func TestMergeRefusesWithoutSending(t *testing.T) {
-	sure := Merging{Head: headOID, Method: "squash", Title: "T", Body: "B"}
+	sure := Merging{Head: headOID, Base: "main", Method: "squash", Title: "T", Body: "B"}
 	for _, c := range []struct {
 		name string
 		edit func(*model.GitHubPull)
 		m    Merging
 		want string
 	}{
-		{"a push since", func(p *model.GitHubPull) { p.HeadOID = "2222222222222222222222222222222222222222" }, sure, "moved on"},
+		{"a push since", func(p *model.GitHubPull) { p.HeadOID = "2222222222222222222222222222222222222222" }, sure, "changed since"},
 		{"merged since", func(p *model.GitHubPull) { p.State = "merged" }, sure, "no longer open"},
 		{"no write access", func(p *model.GitHubPull) { p.Merge.Can = false }, sure, "write access"},
 		{"an admin past a rule", func(p *model.GitHubPull) { p.MergeState, p.Merge.Bypass = "blocked", true }, sure, "can't merge"},
@@ -105,11 +105,11 @@ func TestMergeRefusesWithoutSending(t *testing.T) {
 		{"still computing", func(p *model.GitHubPull) { p.Mergeable = "unknown" }, sure, "can't merge"},
 		{"a queue", func(p *model.GitHubPull) { p.Merge.Queue = true }, sure, "can't merge"},
 		{"a method not allowed", func(p *model.GitHubPull) { p.Merge.Methods = []string{"merge"} }, sure, "can't merge"},
-		{"can't rebase", func(p *model.GitHubPull) { p.Merge.CanRebase = false }, Merging{Head: headOID, Method: "rebase"}, "can't merge"},
+		{"can't rebase", func(p *model.GitHubPull) { p.Merge.CanRebase = false }, Merging{Head: headOID, Base: "main", Method: "rebase"}, "can't merge"},
 		{"no head", func(*model.GitHubPull) {}, Merging{Method: "squash", Title: "T"}, "commit's id"},
 		{"a head that isn't one", func(*model.GitHubPull) {}, Merging{Head: "main", Method: "squash", Title: "T"}, "commit's id"},
-		{"no title", func(*model.GitHubPull) {}, Merging{Head: headOID, Method: "squash", Title: "  "}, "title"},
-		{"too long", func(*model.GitHubPull) {}, Merging{Head: headOID, Method: "merge", Title: strings.Repeat("t", githubapi.MaxCommitTitle+1)}, "too long"},
+		{"no title", func(*model.GitHubPull) {}, Merging{Head: headOID, Base: "main", Method: "squash", Title: "  "}, "title"},
+		{"too long", func(*model.GitHubPull) {}, Merging{Head: headOID, Base: "main", Method: "merge", Title: strings.Repeat("t", githubapi.MaxCommitTitle+1)}, "too long"},
 	} {
 		p := readyPull()
 		c.edit(&p)
@@ -134,10 +134,26 @@ func TestMergeHeadRefusedByGitHub(t *testing.T) {
 	} {
 		s, f := worldWith(t, readyPull())
 		f.mergeErr = &githubapi.APIError{Status: 200, Message: msg}
-		err := s.Merge(t.Context(), pullRef, Merging{Head: headOID, Method: "merge", Title: "T"})
+		err := s.Merge(t.Context(), pullRef, Merging{Head: headOID, Base: "main", Method: "merge", Title: "T"})
 		if errors.Is(err, ErrHeadMoved) != moved {
 			t.Errorf("%q: %v", msg, err)
 		}
+	}
+}
+
+// A pull request retargeted since the view is refused like a push, for
+// merge and enqueue; auto-merge's case is in TestAutoMerge.
+func TestMergeBaseRetargeted(t *testing.T) {
+	s, f := worldWith(t, readyPull())
+	m := Merging{Head: headOID, Base: "release", Method: "merge", Title: "T"}
+	if err := s.Merge(t.Context(), pullRef, m); !errors.Is(err, ErrHeadMoved) || len(f.merges) != 0 {
+		t.Errorf("merge: %v %+v", err, f.merges)
+	}
+	q := readyPull()
+	q.Merge.Queue = true
+	s, f = worldWith(t, q)
+	if err := s.Enqueue(t.Context(), pullRef, m); !errors.Is(err, ErrHeadMoved) || len(f.written) != 0 {
+		t.Errorf("enqueue: %v %v", err, f.written)
 	}
 }
 
@@ -145,7 +161,7 @@ func TestAutoMerge(t *testing.T) {
 	p := readyPull()
 	p.MergeState, p.Merge.CanEnableAuto = "blocked", true
 	s, f := worldWith(t, p)
-	if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID, Method: "squash", Title: "T", Body: "B"}); err != nil {
+	if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID, Base: "main", Method: "squash", Title: "T", Body: "B"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.autos) != 1 || f.autos[0].HeadOID != headOID || f.autos[0].Queue {
@@ -155,7 +171,7 @@ func TestAutoMerge(t *testing.T) {
 	q := p
 	q.Merge.Queue = true
 	s, f = worldWith(t, q)
-	if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID}); err != nil {
+	if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID, Base: "main"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.autos) != 1 || f.autos[0] != (githubapi.MergeInput{Pull: "PR_1", HeadOID: headOID, Queue: true}) {
@@ -165,13 +181,23 @@ func TestAutoMerge(t *testing.T) {
 		"the repository doesn't allow it": func(p *model.GitHubPull) { p.Merge.AutoAllowed = false },
 		"the viewer can't":                func(p *model.GitHubPull) { p.Merge.CanEnableAuto = false },
 		"a push since":                    func(p *model.GitHubPull) { p.HeadOID = strings.Repeat("3", 40) },
+		"retargeted since":                func(p *model.GitHubPull) { p.Base = "release" },
+		"a draft":                         func(p *model.GitHubPull) { p.Draft = true },
+		"a conflict":                      func(p *model.GitHubPull) { p.Mergeable = "conflicting" },
+		"it could merge now":              func(p *model.GitHubPull) { p.MergeState = "clean" },
 	} {
 		bad := p
 		edit(&bad)
 		s, f := worldWith(t, bad)
-		if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID, Method: "squash", Title: "T"}); err == nil || len(f.autos) != 0 {
+		if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID, Base: "main", Method: "squash", Title: "T"}); err == nil || len(f.autos) != 0 {
 			t.Errorf("%s: %v %+v", name, err, f.autos)
 		}
+	}
+	noRebase := p
+	noRebase.Merge.CanRebase = false
+	s, f = worldWith(t, noRebase)
+	if err := s.EnableAutoMerge(t.Context(), pullRef, Merging{Head: headOID, Base: "main", Method: "rebase"}); !errors.Is(err, ErrMergeRefused) || len(f.autos) != 0 {
+		t.Errorf("a rebase GitHub can't do: %v %+v", err, f.autos)
 	}
 	s, f = worldWith(t, p)
 	if err := s.DisableAutoMerge(t.Context(), pullRef); err == nil || len(f.written) != 0 {
@@ -188,10 +214,10 @@ func TestQueue(t *testing.T) {
 	p := readyPull()
 	p.Merge.Queue = true
 	s, f := worldWith(t, p)
-	if err := s.Enqueue(t.Context(), pullRef, headOID); err != nil || !slices.Contains(f.written, "enqueue "+headOID) {
+	if err := s.Enqueue(t.Context(), pullRef, Merging{Head: headOID, Base: "main"}); err != nil || !slices.Contains(f.written, "enqueue "+headOID) {
 		t.Fatalf("%v %v", err, f.written)
 	}
-	if err := s.Enqueue(t.Context(), pullRef, ""); err == nil {
+	if err := s.Enqueue(t.Context(), pullRef, Merging{Base: "main"}); err == nil {
 		t.Fatal("enqueued with no head")
 	}
 	for name, edit := range map[string]func(*model.GitHubPull){
@@ -203,7 +229,7 @@ func TestQueue(t *testing.T) {
 		bad := p
 		edit(&bad)
 		s, f := worldWith(t, bad)
-		if err := s.Enqueue(t.Context(), pullRef, headOID); err == nil || len(f.written) != 0 {
+		if err := s.Enqueue(t.Context(), pullRef, Merging{Head: headOID, Base: "main"}); err == nil || len(f.written) != 0 {
 			t.Errorf("%s: %v %v", name, err, f.written)
 		}
 	}

@@ -6073,6 +6073,7 @@ const MergeGitHubPullRequest$json = {
     {'1': 'method', '3': 3, '4': 1, '5': 9, '10': 'method'},
     {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
     {'1': 'body', '3': 5, '4': 1, '5': 9, '10': 'body'},
+    {'1': 'base', '3': 6, '4': 1, '5': 9, '10': 'base'},
   ],
 };
 
@@ -6080,7 +6081,8 @@ const MergeGitHubPullRequest$json = {
 final $typed_data.Uint8List mergeGitHubPullRequestDescriptor = $convert.base64Decode(
     'ChZNZXJnZUdpdEh1YlB1bGxSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLkdpdEh1Yl'
     'JlZlIDcmVmEhkKCGhlYWRfb2lkGAIgASgJUgdoZWFkT2lkEhYKBm1ldGhvZBgDIAEoCVIGbWV0'
-    'aG9kEhQKBXRpdGxlGAQgASgJUgV0aXRsZRISCgRib2R5GAUgASgJUgRib2R5');
+    'aG9kEhQKBXRpdGxlGAQgASgJUgV0aXRsZRISCgRib2R5GAUgASgJUgRib2R5EhIKBGJhc2UYBi'
+    'ABKAlSBGJhc2U=');
 
 @$core.Deprecated('Use mergeGitHubPullResponseDescriptor instead')
 const MergeGitHubPullResponse$json = {
@@ -6107,15 +6109,16 @@ const EnableGitHubAutoMergeRequest$json = {
     {'1': 'method', '3': 3, '4': 1, '5': 9, '10': 'method'},
     {'1': 'title', '3': 4, '4': 1, '5': 9, '10': 'title'},
     {'1': 'body', '3': 5, '4': 1, '5': 9, '10': 'body'},
+    {'1': 'base', '3': 6, '4': 1, '5': 9, '10': 'base'},
   ],
 };
 
 /// Descriptor for `EnableGitHubAutoMergeRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List enableGitHubAutoMergeRequestDescriptor =
-    $convert.base64Decode(
-        'ChxFbmFibGVHaXRIdWJBdXRvTWVyZ2VSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLk'
-        'dpdEh1YlJlZlIDcmVmEhkKCGhlYWRfb2lkGAIgASgJUgdoZWFkT2lkEhYKBm1ldGhvZBgDIAEo'
-        'CVIGbWV0aG9kEhQKBXRpdGxlGAQgASgJUgV0aXRsZRISCgRib2R5GAUgASgJUgRib2R5');
+final $typed_data.Uint8List enableGitHubAutoMergeRequestDescriptor = $convert.base64Decode(
+    'ChxFbmFibGVHaXRIdWJBdXRvTWVyZ2VSZXF1ZXN0EiUKA3JlZhgBIAEoCzITLm51c2hpLnYxLk'
+    'dpdEh1YlJlZlIDcmVmEhkKCGhlYWRfb2lkGAIgASgJUgdoZWFkT2lkEhYKBm1ldGhvZBgDIAEo'
+    'CVIGbWV0aG9kEhQKBXRpdGxlGAQgASgJUgV0aXRsZRISCgRib2R5GAUgASgJUgRib2R5EhIKBG'
+    'Jhc2UYBiABKAlSBGJhc2U=');
 
 @$core.Deprecated('Use enableGitHubAutoMergeResponseDescriptor instead')
 const EnableGitHubAutoMergeResponse$json = {
@@ -6169,14 +6172,15 @@ const EnqueueGitHubPullRequest$json = {
       '10': 'ref'
     },
     {'1': 'head_oid', '3': 2, '4': 1, '5': 9, '10': 'headOid'},
+    {'1': 'base', '3': 3, '4': 1, '5': 9, '10': 'base'},
   ],
 };
 
 /// Descriptor for `EnqueueGitHubPullRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List enqueueGitHubPullRequestDescriptor =
-    $convert.base64Decode(
-        'ChhFbnF1ZXVlR2l0SHViUHVsbFJlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SH'
-        'ViUmVmUgNyZWYSGQoIaGVhZF9vaWQYAiABKAlSB2hlYWRPaWQ=');
+final $typed_data.Uint8List enqueueGitHubPullRequestDescriptor = $convert.base64Decode(
+    'ChhFbnF1ZXVlR2l0SHViUHVsbFJlcXVlc3QSJQoDcmVmGAEgASgLMhMubnVzaGkudjEuR2l0SH'
+    'ViUmVmUgNyZWYSGQoIaGVhZF9vaWQYAiABKAlSB2hlYWRPaWQSEgoEYmFzZRgDIAEoCVIEYmFz'
+    'ZQ==');
 
 @$core.Deprecated('Use enqueueGitHubPullResponseDescriptor instead')
 const EnqueueGitHubPullResponse$json = {

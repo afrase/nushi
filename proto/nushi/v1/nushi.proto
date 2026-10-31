@@ -3001,6 +3001,9 @@ message MergeGitHubPullRequest {
   // The commit's, for merge and squash.
   string title = 4;
   string body = 5;
+  // The base branch the user was shown: a pull request retargeted since is
+  // refused as a moved head is.
+  string base = 6;
 }
 
 message MergeGitHubPullResponse {}
@@ -3012,6 +3015,7 @@ message EnableGitHubAutoMergeRequest {
   string method = 3;
   string title = 4;
   string body = 5;
+  string base = 6;
 }
 
 message EnableGitHubAutoMergeResponse {}
@@ -3026,6 +3030,7 @@ message EnqueueGitHubPullRequest {
   GitHubRef ref = 1;
   // As MergeGitHubPullRequest.
   string head_oid = 2;
+  string base = 3;
 }
 
 message EnqueueGitHubPullResponse {}
