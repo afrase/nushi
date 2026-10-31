@@ -228,7 +228,8 @@ class _TerminalSectionState extends State<TerminalSection> {
                   vertical: 12,
                 ),
                 // The terminal's style, its fallback too: ? boxes here are
-                // the terminal's (NOTES, [controls]).
+                // the terminal's (docs/history/decisions-2026-10.md,
+                // [controls]).
                 child: Text(
                   terminalPreview,
                   key: const ValueKey('terminal-preview'),

@@ -28,6 +28,7 @@ What the code depends on, and how the adapter behaves. Everything Nushi does abo
 
 - Listing (milestone X): codex-acp's `session/list` pages through every thread (`thread/list`, sources cli, vscode, exec, appServer, unknown: no subagents; unarchived only) and then keeps those whose cwd equals the request's exactly (no link resolved: `/tmp` finds nothing, `/private/tmp` does); the title is the first prompt. A fork's rollout starts with `session_meta.payload.forked_from_id`.
 - One writer at a time: whoever has a thread holds a lock on `$CODEX_HOME/thread-writer-locks/<id>.lock` (flock; F_GETLK sees it). The TUI then shows "This conversation is open in another app… press R" and is read-only; codex-acp's `session/load` fails "This Codex session is in use by another Codex client (the Codex app, the CLI or an IDE extension)". The TUI runs through a background app-server (`$CODEX_HOME/packages/app-server-daemon`), which keeps the thread, and its lock, after the TUI quits. A Nushi chat that sleeps lets go (the lock file goes).
+- `codex login status` says "Not logged in" when a provider key is all it needs, so Nushi shows signed in or not for Claude only.
 - The TUI asks to update itself at start: Enter there runs `npm install -g @openai/codex`. `check_for_update_on_startup = false` in `config.toml` stops it.
 
 **Skills (Codex 0.163.0, 2026-10-27; a throwaway CODEX_HOME and HOME, `codex app-server` over stdio)**

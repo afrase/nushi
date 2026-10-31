@@ -67,7 +67,8 @@ void main() {
   });
 
   // The preview draws its Nerd Font icons as the terminal does: through
-  // the bundled fallback, not the picked font's ?-box (NOTES, [controls]).
+  // the bundled fallback, not the picked font's ?-box
+  // (docs/history/decisions-2026-10.md, [controls]).
   testWidgets('the terminal preview draws its icons from the bundled Nerd '
       'Font', (tester) async {
     final (_, d) = await _open(tester, SettingsSection.terminal);

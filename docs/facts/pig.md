@@ -43,7 +43,7 @@ What the bridge (`internal/pig`) depends on, from driving `pig --mode rpc` (the 
 | `new_session`, `switch_session` | no use: a pig per session, started on its file |
 | `cycle_model`, `cycle_thinking_level` | no use: the pickers set them |
 | `set_steering_mode`, `set_follow_up_mode` | no use: they write PiG's global settings; Nushi steers one message at a time |
-| `set_auto_compaction` | no use: a global setting of PiG's (see NOTES.md, Decisions to revisit) |
+| `set_auto_compaction` | no use: a global setting of PiG's (why: [the archive](../history/decisions-2026-10.md)'s `[after AC]`) |
 | `set_auto_retry`, `abort_retry` | no use: PiG's default kept (retries on); `abort` ends a retry's wait |
 | `bash`, `abort_bash` | no use: a command you run yourself goes in Nushi's terminals; a shell inside the chat would be new UI for PiG alone |
 | `export_html` | no use: Nushi exports no agent's chat |
