@@ -15,7 +15,7 @@ import (
 // AdapterChoice is a dev override in the daemon's environment: "go" runs
 // Claude through Nushi's own agent (claudeacp, StartGo) whatever the
 // setting (Settings › Agents, store's claudeGoAgent) says, for a dev
-// daemon (NOTES.md's working notes). Nothing else reads it.
+// daemon (docs/development.md's Working notes). Nothing else reads it.
 const AdapterChoice = "NUSHI_CLAUDE_ADAPTER"
 
 // GoForced says the daemon's environment forces Nushi's Go agent
