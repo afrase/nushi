@@ -28,7 +28,6 @@ What isn't built yet and the decisions still open, each checked against the code
 
 ### GitHub
 
-- **Merge controls**, from the Pull request widget or tab (Orca has them; [ADR 0059](adr/0059-a-chats-pull-request.md)): the repository's methods, auto-merge, the merge queue.
 - **A found pull request's chip** in the chat's header: the header's chip shows only the pull request or issue a chat started from; a found one gets just its tab.
 - **The agent's own GitHub tools** on Nushi's MCP server ([ADR 0043](adr/0043-an-mcp-server-of-nushis-own-for-a-chats-tools.md)): a `tools.Set` scoped to the chat's pull request, as Jira's chats have for their issue.
 - **GitHub, next**: stacked pull requests, notifications as a source (If-Modified-Since, X-Poll-Interval), reactions, files marked viewed, Enterprise capabilities probed, a review's inline comments kept across app restarts (quitting loses them).

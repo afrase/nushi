@@ -34,7 +34,7 @@ The filters go into GitHub's searches, so what they leave out doesn't take the 5
 
 **Details.** ⏎ or a click shows an item's details:
 
-- a pull request's header: base ← head, author, reviewers and their states, whether it can merge;
+- a pull request's header: base ← head, author, reviewers and their states, whether it can merge, and the [Merge control](#merging);
 - its conversation, with a comment box;
 - its checks: a failed one opens to its annotations and the end of its job's log;
 - its files in Nushi's diff view, with the review threads at their lines (Reply, Resolve, Unresolve). Select lines to write an inline comment of your review, then Review… sends it with all of them (comment, approve, request changes).
@@ -43,7 +43,7 @@ The filters go into GitHub's searches, so what they leave out doesn't take the 5
 
 **Going back.** Esc or ← goes back to the inbox, and so does a swipe back, as in Safari: two fingers right on the trackpad (three if macOS's Swipe between pages says so), not while a diff or code block under them scrolls. An arrow at the left edge fills as the swipe gets far enough; short of it nothing happens. The mouse's back button goes back too, here, in Jira and in New chat's lists.
 
-**Freshness.** The inbox shows as GitHub gave it last while it's asked again. It's asked for again each minute while it shows, an open pull request every 30 s ([ADR 0046](adr/0046-the-github-inbox-and-polling.md)). Nothing reaches GitHub otherwise, and Nushi writes to it only what you send. Merging isn't offered yet.
+**Freshness.** The inbox shows as GitHub gave it last while it's asked again. It's asked for again each minute while it shows, an open pull request every 30 s ([ADR 0046](adr/0046-the-github-inbox-and-polling.md)). Nothing reaches GitHub otherwise, and Nushi writes to it only what you send.
 
 ## Starting work
 
@@ -112,6 +112,24 @@ Its text reads in a column of 860 points at most. A bot's comment is one line (i
 
 **Send to agent** on a comment, a thread or a failed check puts it into the chat's box as a reply card (a failed check with the failing part of its log), to send with the rest when you're ready.
 
+### Merging
+
+An open pull request has a **Merge control** under the tab's head and in the widget ([ADR 0069](adr/0069-merging-a-pull-request.md)). It says **Ready to merge**, or exactly why it can't yet: a draft, conflicts, required checks failing or running, changes requested, a review needed, threads to resolve, behind its base, or a rule of its base's that GitHub doesn't name. While GitHub works it out it says **Unknown, still checking**, and asks again in a few seconds.
+
+Ready, it's a split button: the ▾ lists the methods the repository allows (a merge commit, squash, rebase), starting on the one you used last, and your pick is remembered for the repository.
+
+**Pressing it asks first.** The dialog shows the method, the base branch and the head's commit, and for a merge commit or a squash the commit's title and message, GitHub's text first, for you to change. Nothing happens until you confirm, and merging can't be undone.
+
+**It merges only what you saw.** If a push moved the pull request since the view showed it, GitHub refuses, nothing merges, and Nushi says so and reads it again.
+
+**Rules stand.** Nushi offers no way past a rule, admin or not, and the daemon refuses again what the view didn't clear. A failure shows GitHub's message. You see only what your access allows; with no write access it just says so.
+
+**Auto-merge**, where the repository allows it: while it can't merge yet, **Enable auto-merge** (through the same dialog) has GitHub merge it by itself once it can. The control then says who turned it on and with which method, with Disable auto-merge.
+
+**A merge queue**, where its base has one, takes the place of merging directly: **Add to queue** once it's ready, **Merge when ready** before that. In the queue it shows its position and state, with Remove from queue. The queue's method and commit text are its own.
+
+Afterwards the view shows it merged. Nothing is deleted: the repository's own auto-delete still applies (the dialog says so), and Clean up… stays the way to tidy up.
+
 ### Cleaning up
 
 Once the pull request merged, the widget offers **Clean up…** ([ADR 0063](adr/0063-clean-up-after-a-pull-request.md)). Not now hides the offer; its ⋯ and the chat's ⋯ keep it (the chat's for any worktree chat).
@@ -130,4 +148,4 @@ The widget then shows each part as it goes and what it kept, with Restore branch
 ### Elsewhere
 
 - A chat's row in the sidebar gets a red dot while its pull request's checks fail, amber while they run.
-- The phone shows the widget's one-line summary in the chat's bar (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads; or Ready, Draft, Merged, Closed), asked each minute while the chat shows. A tap opens it on GitHub. The phone has no Pull request tab.
+- The phone shows the widget's one-line summary in the chat's bar (the number in its state's color, failing or running checks, changes requested or a reviewer waited on, open threads; or Ready, Draft, Merged, Closed), asked each minute while the chat shows. A tap opens it on GitHub. The phone has no Pull request tab, so no Merge control; the daemon lets a paired phone merge as it lets it post a review ([ADR 0069](adr/0069-merging-a-pull-request.md)).

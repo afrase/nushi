@@ -127,6 +127,7 @@ class ChatPull extends ChangeNotifier {
   final _seen = <String>{};
   Future<void>? _asking;
   DateTime? _asked;
+  int _rechecks = 0;
 
   /// The chat's link: the daemon's last word, else the chat's.
   GitHubLink? get link => chat.pull;
@@ -215,6 +216,13 @@ class ChatPull extends ChangeNotifier {
     });
   }
 
+  /// Asks again after a change made here: an ask under way may have started
+  /// before it, so another follows that one.
+  Future<void> again() async {
+    if (asking) await refresh();
+    await refresh();
+  }
+
   Future<void> _ask(bool quiet) async {
     if (daemon.daemonApi < chatPullApi) return;
     try {
@@ -237,11 +245,28 @@ class ChatPull extends ChangeNotifier {
         keptAt = null;
         keepPull(ref, r.pull);
         PullStates.of(daemon).put(r.pull.item);
+        _recheck(r.pull);
         // The comments there when the chat first saw it aren't new.
         if (!pullSeen.value.containsKey(chat.id)) markPullSeen(chat.id, r.pull);
       }
     } on Object catch (e) {
       error = errorText(e);
+    }
+  }
+
+  /// GitHub works out whether a pull request merges when it's asked, so
+  /// "unknown" usually lasts seconds, not until the next minute's ask: asked
+  /// again soon, three times at most in a row.
+  void _recheck(GitHubPull p) {
+    if (!p.merge.blocks.contains('unknown') || p.item.state != 'open') {
+      _rechecks = 0;
+    } else if (_followers > 0 && _rechecks < 3) {
+      _rechecks++;
+      _soon?.cancel();
+      _soon = Timer(
+        const Duration(seconds: 5),
+        () => unawaited(refresh(quiet: true)),
+      );
     }
   }
 

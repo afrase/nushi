@@ -9,6 +9,8 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_merge.dart';
+import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -181,7 +183,19 @@ class PullRows extends StatelessWidget {
             ),
           ),
         ),
-      if (!it.draft)
+      // The control, from a daemon that has it (API 96).
+      if (mergeView(p) != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: MergeControl(
+            daemon: cp.daemon,
+            pull: p,
+            compact: true,
+            stale: cp.keptAt != null,
+            onChanged: cp.again,
+          ),
+        )
+      else if (!it.draft)
         switch (p.mergeState) {
           _ when ready => WidgetRow(
             icon: Icon(Icons.merge_type, size: 14, color: t.done),
@@ -214,7 +228,7 @@ class PullRows extends StatelessWidget {
           ),
         },
       // Under Ready to merge, whole (it may wrap).
-      if (!it.draft && ready && unstable)
+      if (mergeView(p) == null && !it.draft && ready && unstable)
         Padding(
           padding: const EdgeInsets.only(left: 26, bottom: 4),
           child: Text(unstableWords, style: theme.ui(t.textMuted, size: 12)),
