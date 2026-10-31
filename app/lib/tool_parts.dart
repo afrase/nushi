@@ -22,10 +22,40 @@ import 'package:nushi/widgets.dart';
   return (rest.substring(0, sep), rest.substring(sep + 2));
 }
 
+/// Nushi's show tool (ADR 0068) as Claude's agents and Codex's adapter
+/// title its calls; the daemon's `isShow` knows them too.
+const showTitles = {'mcp__nushi__show', 'mcp.nushi.show'};
+
+/// Whether [it] is a show call, or the ask to run one.
+bool isShow(Item it) => showTitles.contains(it.title);
+
+/// The file a show call names, from its input: `path`, inside `arguments`
+/// on Codex. Null while its input hasn't come (Claude's comes just after
+/// the call), or when it was cut short.
+String? showPath(Item it) {
+  if (!isShow(it) || it.input.isEmpty) return null;
+  try {
+    final input = jsonDecode(it.input);
+    final args = input is Map ? input['arguments'] ?? input : null;
+    final path = args is Map ? args['path'] : null;
+    return path is String && path.isNotEmpty ? plainPath(path) : null;
+  } on FormatException {
+    return null;
+  }
+}
+
+final _unprintable = RegExp('[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]');
+
+/// [path], an agent's, with what could make it read as something else
+/// (new lines, bidi controls) marked. It only names the file: the daemon
+/// checks whatever the app asks for.
+String plainPath(String path) => path.replaceAll(_unprintable, '�');
+
 /// A tool call's title: the agent's, but an MCP call titled with its raw
 /// name reads "server · tool", and "· inner" when its input names the tool
 /// it runs (a gateway's `tool`, `tool_name` or `name`).
 String toolTitle(Item it) {
+  if (isShow(it)) return 'Showing a file';
   final mcp = mcpName(it.title);
   if (mcp == null) return it.title;
   final (server, tool) = mcp;
@@ -64,13 +94,16 @@ String? innerTool(String input) {
 }
 
 /// Whether a call runs a command: its title is the command.
-bool isCommand(Item it) => it.toolKind == 'execute' && it.title.isNotEmpty;
+bool isCommand(Item it) =>
+    it.toolKind == 'execute' && it.title.isNotEmpty && !isShow(it);
 
 /// Whether a call's input shows: it has one and no diff or command says
 /// what it did, and either nothing else shows or it's a tool ACP has no kind
-/// for (an MCP tool's), whose content is only its result.
+/// for (an MCP tool's), whose content is only its result. A show call's
+/// title says its input.
 bool showsInput(Item it) =>
     it.input.isNotEmpty &&
+    !isShow(it) &&
     it.diffs.isEmpty &&
     !isCommand(it) &&
     (it.text.trim().isEmpty || it.toolKind == 'other' || it.toolKind.isEmpty);

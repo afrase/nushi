@@ -111,6 +111,8 @@ Each list shows the files the chat wrote that way, each with its folder and when
 
 The widget, collapsed, counts the pinned and recent; with none of either, the three newest show. The phone's Artifacts list the same way, without pins.
 
+**An agent can open a preview itself.** Claude and Codex have a `show` tool, for a finished page, document or image. Their own permission prompt asks first, as for any MCP tool, and names the file; opening an HTML page runs it, so allowing the tool for good means pages open unasked. The file opens beside the chat if that chat's transcript is showing. If you're in another chat, in Changes or in a view, nothing moves: the latest file opens when you next come back to the transcript, and the row ("Showed report.html") keeps its Preview button either way. The phone doesn't open anything by itself; use the row's Preview. A file can be shown only if Preview could open it: an artifact inside the chat's folder or worktree, or one the chat wrote.
+
 **Open file** (⌘P, File › Open File…) opens any file that previews (code and text too) in the chat's folder that git doesn't ignore, matched as you type.
 
 **Paths in messages.** A path in an agent's message, in code or plain text (`lib/a.dart:12` too), that names a file that previews, in the chat's folder or one the chat wrote, opens it too. It's underlined when the pointer is over it; on the phone it opens the full-screen preview.
