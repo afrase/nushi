@@ -13,6 +13,10 @@ import (
 
 // requestPermission shows the agent's permission prompt and waits for the
 // user's answer. Nushi never answers one itself.
+// isShow says a call is Nushi's show tool, by the title Claude's agents
+// and Codex's adapter give it (docs/facts).
+func isShow(title string) bool { return title == "mcp__nushi__show" || title == "mcp.nushi.show" }
+
 func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title}
 	for _, o := range req.Options {
@@ -21,12 +25,19 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 	answer := make(chan string, 1)
 	c.mu.Lock()
 	c.setOutput(&item, req.ToolCall.Content) // under the lock: it reads the chat's folder
-	if call := c.itemLocked(string(req.ToolCall.ToolCallID)); call != nil {
+	call := c.itemLocked(string(req.ToolCall.ToolCallID))
+	if call != nil {
 		if item.Title == "" {
 			item.Title = call.Title
 		}
 		if item.Text == "" && item.Diffs == nil {
 			item.Text, item.Diffs = call.Text, call.Diffs
+		}
+	}
+	if isShow(item.Title) { // the card says which file: what's being allowed (ADR 0068)
+		item.Input = inputText(req.ToolCall.RawInput)
+		if item.Input == "" && call != nil {
+			item.Input = call.Input
 		}
 	}
 	id := c.addLocked(item)

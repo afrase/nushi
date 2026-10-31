@@ -223,6 +223,12 @@ class ChatState extends ChangeNotifier {
   /// Which files its messages name are there (links to their preview).
   final fileLinks = FileLinks();
 
+  /// The file its agent last asked to show (the show tool, ADR 0068) that
+  /// hasn't opened: the chat's pane opens it while its transcript shows,
+  /// or when it next does. A later ask takes its place; nothing but the
+  /// Mac's app sets it, and it lasts while the app runs.
+  final showAsked = ValueNotifier<String?>(null);
+
   void openPreview(String path) {
     pane.value = null;
     preview.value = path;
@@ -396,6 +402,7 @@ class ChatState extends ChangeNotifier {
         queue = e.queue.messages;
       case EventsResponse_Kind.cut:
         revision++;
+        showAsked.value = null; // the call may be what was cut
         final i = items.indexWhere((it) => it.id == e.cut);
         if (i > 0 || i == 0 && older == 0) {
           items.removeRange(i, items.length);
@@ -416,6 +423,7 @@ class ChatState extends ChangeNotifier {
           EventsResponse_Kind.remote ||
           EventsResponse_Kind.removedChats ||
           EventsResponse_Kind.update ||
+          EventsResponse_Kind.show ||
           EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }

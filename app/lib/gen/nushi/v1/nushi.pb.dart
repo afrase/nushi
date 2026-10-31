@@ -12254,6 +12254,7 @@ enum EventsResponse_Kind {
   remote,
   removedChats,
   update,
+  show,
   notSet
 }
 
@@ -12275,6 +12276,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     Remote? remote,
     RemovedChats? removedChats,
     UpdateCheck? update,
+    $core.String? show,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -12293,6 +12295,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (remote != null) result.remote = remote;
     if (removedChats != null) result.removedChats = removedChats;
     if (update != null) result.update = update;
+    if (show != null) result.show = show;
     return result;
   }
 
@@ -12321,13 +12324,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     14: EventsResponse_Kind.remote,
     15: EventsResponse_Kind.removedChats,
     16: EventsResponse_Kind.update,
+    17: EventsResponse_Kind.show,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -12355,6 +12359,7 @@ class EventsResponse extends $pb.GeneratedMessage {
         subBuilder: RemovedChats.$_createMessage)
     ..aOM<UpdateCheck>(16, _omitFieldNames ? '' : 'update',
         subBuilder: UpdateCheck.$_createMessage)
+    ..aOS(17, _omitFieldNames ? '' : 'show')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12393,6 +12398,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(14)
   @$pb.TagNumber(15)
   @$pb.TagNumber(16)
+  @$pb.TagNumber(17)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -12409,6 +12415,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(14)
   @$pb.TagNumber(15)
   @$pb.TagNumber(16)
+  @$pb.TagNumber(17)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -12592,6 +12599,18 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearUpdate() => $_clearField(16);
   @$pb.TagNumber(16)
   UpdateCheck ensureUpdate() => $_ensure(15);
+
+  /// A file the chat's agent asked to show in the preview pane, as it
+  /// named it (its show tool, ADR 0068); these events have no seq, and
+  /// only the Mac's app acts on them (API 95).
+  @$pb.TagNumber(17)
+  $core.String get show => $_getSZ(16);
+  @$pb.TagNumber(17)
+  set show($core.String value) => $_setString(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasShow() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearShow() => $_clearField(17);
 }
 
 /// A chat's config options, all of them.

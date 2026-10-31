@@ -23,6 +23,9 @@ type Kind struct {
 	// MCP says its MCP servers are the ones the mcp feature shows and
 	// changes.
 	MCP bool
+	// ClientMCP says it takes the MCP servers a client names in session/new,
+	// so its chats get Nushi's tools (ADR 0043).
+	ClientMCP bool
 	// DeleteArchives says its session/delete archives a session rather
 	// than deleting it.
 	DeleteArchives bool

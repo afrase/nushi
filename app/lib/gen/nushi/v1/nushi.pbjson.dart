@@ -2912,6 +2912,7 @@ const EventsResponse$json = {
       '9': 0,
       '10': 'update'
     },
+    {'1': 'show', '3': 17, '4': 1, '5': 9, '9': 0, '10': 'show'},
   ],
   '8': [
     {'1': 'kind'},
@@ -2931,8 +2932,8 @@ final $typed_data.Uint8List eventsResponseDescriptor = $convert.base64Decode(
     'Fy5udXNoaS52MS5DaGF0VGVybWluYWxzSABSCXRlcm1pbmFscxIaCgdkcm9wcGVkGA0gASgJSA'
     'BSB2Ryb3BwZWQSKgoGcmVtb3RlGA4gASgLMhAubnVzaGkudjEuUmVtb3RlSABSBnJlbW90ZRI9'
     'Cg1yZW1vdmVkX2NoYXRzGA8gASgLMhYubnVzaGkudjEuUmVtb3ZlZENoYXRzSABSDHJlbW92ZW'
-    'RDaGF0cxIvCgZ1cGRhdGUYECABKAsyFS5udXNoaS52MS5VcGRhdGVDaGVja0gAUgZ1cGRhdGVC'
-    'BgoEa2luZA==');
+    'RDaGF0cxIvCgZ1cGRhdGUYECABKAsyFS5udXNoaS52MS5VcGRhdGVDaGVja0gAUgZ1cGRhdGUS'
+    'FAoEc2hvdxgRIAEoCUgAUgRzaG93QgYKBGtpbmQ=');
 
 @$core.Deprecated('Use chatConfigDescriptor instead')
 const ChatConfig$json = {

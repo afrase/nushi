@@ -56,7 +56,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Findings** | A code review's result (`/code-review`), as a card in the transcript. | `Findings`, `Finding`, `FindingsCard` | |
 | **Trust card** | Before an agent starts in a folder that brings code of its own (hooks, MCP servers, extensions), it lists that code; Start anyway goes on. | `features/trust`, `CheckFolder`, `TrustFolder`, `FolderRun`, `TrustCard` | 0023, 0029, 0031 |
 | **Branch note** | Nushi's sentence before your next message when the worktree's branch was renamed or switched ("[Nushi] This worktree's branch was renamed from … to …"); the transcript's line then says "· told the agent". | `branchNote`, `branch_switched` | 0016 |
-| **Nushi's tools** | Tools a chat's agent gets from Nushi (a Jira issue's), through an MCP server of Nushi's own. | `features/tools`, `nushid tools-mcp` | 0043 |
+| **Nushi's tools** | Tools a chat's agent gets from Nushi (a Jira issue's; `show`, which opens a file in the preview), through an MCP server of Nushi's own. | `features/tools`, `features/preview`, `nushid tools-mcp` | 0043, 0068 |
 
 ## The app's parts
 

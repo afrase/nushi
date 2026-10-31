@@ -2,9 +2,11 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -89,6 +91,40 @@ func TestAPromptInTheAgentsOwnTurn(t *testing.T) {
 	c.mu.Unlock()
 	if id == "item-2" {
 		t.Errorf("a reused id %s", id)
+	}
+}
+
+// A show call's card keeps its input, the file being allowed: Claude's in
+// the request, Codex's only on the call it refers to. Another's doesn't,
+// which would keep a command's or a file's text twice.
+func TestAShowPromptSaysWhichFile(t *testing.T) {
+	_, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.mu.Lock()
+	c.addLocked(model.Item{ID: "codex", Kind: model.ToolCall, Title: "mcp.nushi.show", Input: `{"arguments":{"path":"b.md"}}`})
+	c.mu.Unlock()
+	asked := func(call acp.ToolCallUpdate) model.Item {
+		t.Helper()
+		ctx, cancel := context.WithCancel(t.Context())
+		go func() {
+			_, _ = c.RequestPermission(ctx, &acp.RequestPermissionRequest{SessionID: "s1", ToolCall: call,
+				Options: []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}}})
+		}()
+		eventually(t, c, func() bool { return len(c.waiting) == 1 })
+		c.mu.Lock()
+		it := c.items[len(c.items)-1]
+		c.mu.Unlock()
+		cancel()
+		eventually(t, c, func() bool { return len(c.waiting) == 0 })
+		return it
+	}
+	if it := asked(acp.ToolCallUpdate{ToolCallID: "claude", Title: "mcp__nushi__show", RawInput: json.RawMessage(`{"path":"a.md"}`)}); !strings.Contains(it.Input, "a.md") {
+		t.Errorf("Claude's card: %+v", it)
+	}
+	if it := asked(acp.ToolCallUpdate{ToolCallID: "codex"}); it.Title != "mcp.nushi.show" || !strings.Contains(it.Input, "b.md") {
+		t.Errorf("Codex's card: %+v", it)
+	}
+	if it := asked(acp.ToolCallUpdate{ToolCallID: "other", Title: "Bash", RawInput: json.RawMessage(`{"command":"ls"}`)}); it.Input != "" {
+		t.Errorf("another card: %+v", it)
 	}
 }
 

@@ -478,7 +478,7 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 		asked = append(asked, chat+" "+agent+" "+issue.Key)
 		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: "/bin/true"}}}
 	}
-	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Tools: tools})
+	svc := newService(t, []Kind{{Name: "fake", ClientMCP: true, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Tools: tools})
 	if _, err := svc.Start(t.Context(), "", t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -497,6 +497,22 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 	}
 }
 
+// An agent that takes no client MCP servers gets none of Nushi's, whatever
+// the tools would give (ADR 0043).
+func TestNoToolsForAnAgentThatTakesNone(t *testing.T) {
+	agent := &fakeAgent{}
+	tools := func(string, string, *model.ChatIssue) []acp.MCPServer {
+		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: "/bin/true"}}}
+	}
+	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Tools: tools})
+	if _, err := svc.Start(t.Context(), "", t.TempDir(), false); err != nil {
+		t.Fatal(err)
+	}
+	if len(agent.mcp) != 0 {
+		t.Errorf("session/new got %v", agent.mcp)
+	}
+}
+
 // A file a chat's tool call worked on counts as the chat's, inside its
 // folder or not (an agent's notes in its own folder); others don't.
 func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
@@ -505,9 +521,14 @@ func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
 		{ID: "w", Kind: model.ToolCall, Paths: []string{"docs/report.md"}},
 		{ID: "m", Kind: model.ToolCall, Parent: "a1", Diffs: []model.FileChange{{Path: "/home/me/.claude/memory/MEMORY.md"}}},
 		{ID: "u", Kind: model.UserMessage, Files: []string{"/etc/hosts"}},
+		// Naming a file to show can't be what allows showing it (ADR 0068).
+		{ID: "s", Kind: model.ToolCall, Title: "mcp__nushi__show", Paths: []string{"/home/me/secret.html"}},
+		{ID: "x", Kind: model.ToolCall, Title: "mcp.nushi.show", Paths: []string{"/home/me/secret.md"}},
 	}}}
 	for path, want := range map[string]bool{
 		"/work/app/docs/report.md":          true,
+		"/home/me/secret.html":              false,
+		"/home/me/secret.md":                false,
 		"/home/me/.claude/memory/MEMORY.md": true,
 		"/home/me/.claude/memory/../x.md":   false,
 		"/etc/hosts":                        false,
