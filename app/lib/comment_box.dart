@@ -6,14 +6,23 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// What's written in each comment box and not posted yet, by what it
-/// answers ([CommentBox.draft]), while the app runs (ADR 0027): the box
-/// goes with its view (a look at a chat, or at Settings), the text waits
-/// for it. Posted, emptied or cancelled, it goes.
+/// answers ([CommentBox.draft]): the box goes with its view (a look at a
+/// chat, or at Settings), the text waits for it, and on the Mac outlives a
+/// restart (ADR 0073). Posted, emptied or cancelled, it goes.
 final _drafts = <String, String>{};
 
 /// Says a draft changed, for the other boxes of its key (a thread's reply
-/// in To do and in Files): they show the same text.
-final ValueNotifier<int> _changed = ValueNotifier(0);
+/// in To do and in Files), which show the same text, and for the file
+/// that keeps them.
+final ValueNotifier<int> commentDraftsChanged = ValueNotifier(0);
+
+/// Every box's draft, by key.
+Map<String, String> get keptCommentDrafts => _drafts;
+
+/// Puts back the drafts read at start.
+void restoreCommentDrafts(Map<String, String> drafts) => _drafts
+  ..clear()
+  ..addAll(drafts);
 
 /// The text written in [key]'s box and not posted; '' when none.
 String commentDraft(String key) => _drafts[key] ?? '';
@@ -26,7 +35,7 @@ void keepCommentDraft(String key, String text) {
   } else {
     _drafts[key] = text;
   }
-  if (_drafts[key] != was) _changed.value++;
+  if (_drafts[key] != was) commentDraftsChanged.value++;
 }
 
 /// No box's draft (tests: each starts with none).
@@ -85,7 +94,7 @@ class _CommentBoxState extends State<CommentBox> {
     super.initState();
     _restore();
     _text.addListener(_keep);
-    _changed.addListener(_follow);
+    commentDraftsChanged.addListener(_follow);
   }
 
   @override
@@ -134,7 +143,7 @@ class _CommentBoxState extends State<CommentBox> {
 
   @override
   void dispose() {
-    _changed.removeListener(_follow);
+    commentDraftsChanged.removeListener(_follow);
     _text.dispose();
     super.dispose();
   }

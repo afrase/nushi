@@ -21,3 +21,6 @@ The app also keeps on disk, in the data folder, `context.json` (each chat's last
 
 ## Amendment (2026-10-30)
 The app also keeps in memory only what's written in a GitHub or Jira comment box and not posted (a thread's reply, a pull request's or issue's comment, an inline comment being written, a review's text), by what it answers (host, repository, number, and the thread or `comment`, `review`), with each pull request's tab and Files' file and lines as left: a look at a chat comes back to them. Posting, emptying the box or a reply's Cancel clears it; quitting loses it, as ADR 0062 leaves such boxes off disk.
+
+## Amendment (2026-11-01)
+GitHub's and Jira's drafts and a review's inline comments moved to disk ([ADR 0073](0073-comment-drafts-kept-on-disk.md)); a pull request's tab and Files' file and lines stay in memory.

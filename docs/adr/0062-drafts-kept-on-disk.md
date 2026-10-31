@@ -14,6 +14,9 @@
 - What you write sits on disk in clear until sent, as the transcripts' copies do (ADR 0047).
 - A crash loses at most the last 500 ms of typing.
 
+## Amendment (2026-11-01)
+GitHub's and Jira's comment boxes are kept too, in a file of their own: [ADR 0073](0073-comment-drafts-kept-on-disk.md).
+
 ## Alternatives considered
 - The daemon keeping drafts: one store for both, but a round trip per pause and a draft per device is what each wants.
 - `app.json`: rewritten whole on every setting; a 1 MB draft would ride along each time.

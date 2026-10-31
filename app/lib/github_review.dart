@@ -5,8 +5,9 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// My review's inline comments not sent yet, by pull request, while the
-/// app runs; they go to GitHub with the review (Review…), never before.
+/// My review's inline comments not sent yet, by pull request; on the Mac
+/// they outlive a restart (ADR 0073). They go to GitHub with the review
+/// (Review…), never before.
 final _drafts = <String, List<GitHubDraft>>{};
 
 /// Says the drafts changed, for the views that show them.
@@ -18,6 +19,14 @@ String _key(GitHubRef r) => '${r.host} ${r.repo} ${r.number}';
 /// `thread <id>`, `line <path>…`), whose text is kept until posted
 /// ([CommentBox.draft]).
 String githubDraft(GitHubRef r, String what) => 'github ${_key(r)} $what';
+
+/// Every pull request's drafts, by key.
+Map<String, List<GitHubDraft>> get keptReviewDrafts => _drafts;
+
+/// Puts back the drafts read at start.
+void restoreReviewDrafts(Map<String, List<GitHubDraft>> drafts) => _drafts
+  ..clear()
+  ..addAll(drafts);
 
 /// A pull request's drafts.
 List<GitHubDraft> reviewDrafts(GitHubRef r) => _drafts[_key(r)] ?? const [];

@@ -13,6 +13,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_view.dart';
+import 'package:nushi/comment_drafts_mac.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
@@ -41,13 +42,21 @@ import 'package:nushi/update_toast.dart';
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
   catchErrors();
-  runApp(NushiApp(daemon: Daemon(drafts: Drafts(DraftFiles(dataDir)))));
+  runApp(
+    NushiApp(
+      daemon: Daemon(drafts: Drafts(DraftFiles(dataDir))),
+      commentDrafts: CommentDraftFile(dataDir),
+    ),
+  );
 }, (e, s) => appLog.error('uncaught error', e, s));
 
 class NushiApp extends StatefulWidget {
-  const new({required this.daemon, super.key});
+  const new({required this.daemon, this.commentDrafts, super.key});
 
   final Daemon daemon;
+
+  /// Keeps GitHub's and Jira's drafts across a restart (none in tests).
+  final CommentDraftFile? commentDrafts;
 
   @override
   State<NushiApp> createState() => _NushiAppState();
@@ -69,11 +78,18 @@ class _NushiAppState extends State<NushiApp> {
     // notifications whether it's in front. Drafts are saved at once when
     // the app goes to the back or quits.
     final drafts = widget.daemon.drafts;
+    final comments = widget.commentDrafts;
+    void saveDrafts() {
+      comments?.flush();
+      unawaited(drafts?.flush());
+    }
+
     _lifecycle = AppLifecycleListener(
       onResume: widget.daemon.shown,
-      onInactive: () => unawaited(drafts?.flush()),
-      onHide: () => unawaited(drafts?.flush()),
+      onInactive: saveDrafts,
+      onHide: saveDrafts,
       onExitRequested: () async {
+        comments?.flush();
         try {
           await drafts?.flush().timeout(const Duration(seconds: 1));
         } on Object {
