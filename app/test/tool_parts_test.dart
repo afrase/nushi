@@ -8,7 +8,7 @@ import 'package:nushi/widgets.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-const _gateway = 'mcp__rumoju-mcp-gateway__invoke_tool';
+const _gateway = 'mcp__litellm-mcp-gateway__invoke_tool';
 
 Item _call(
   String id, {
@@ -51,15 +51,15 @@ void main() {
   tearDown(Collapsible.opened.clear);
 
   test("an MCP call's title is its server, tool and the tool it runs", () {
-    expect(mcpName(_gateway), ('rumoju-mcp-gateway', 'invoke_tool'));
+    expect(mcpName(_gateway), ('litellm-mcp-gateway', 'invoke_tool'));
     expect(mcpName('mcp__a__b__c'), ('a', 'b__c'));
     expect(mcpName('mcp__a__'), isNull);
     expect(mcpName('Read'), isNull);
     expect(
       toolTitle(_call('1', input: _input)),
-      'rumoju-mcp-gateway · invoke_tool · jira_search',
+      'litellm-mcp-gateway · invoke_tool · jira_search',
     );
-    expect(toolTitle(_call('2')), 'rumoju-mcp-gateway · invoke_tool');
+    expect(toolTitle(_call('2')), 'litellm-mcp-gateway · invoke_tool');
     // tool before name; a nested "tool" isn't the call's; a cut input
     // still names it.
     expect(
@@ -82,7 +82,7 @@ void main() {
   testWidgets('the MCP title, its raw name on hover', (tester) async {
     await tester.pumpWidget(_rows([_call('1', input: _input)]));
     expect(
-      find.text('rumoju-mcp-gateway · invoke_tool · jira_search'),
+      find.text('litellm-mcp-gateway · invoke_tool · jira_search'),
       findsOneWidget,
     );
     expect(find.byTooltip(_gateway), findsOneWidget);
