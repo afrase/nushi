@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/chats_screen.dart';
-import 'package:nushi/place.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';

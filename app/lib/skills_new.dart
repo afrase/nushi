@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/widgets.dart';
 

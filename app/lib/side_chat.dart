@@ -116,7 +116,7 @@ class SideChat extends StatelessWidget {
   }
 }
 
-/// Opens [chat]'s side chat ([Daemon.openSide]), with [selection] quoted
+/// Opens [chat]'s side chat ([DaemonSides.openSide]), with [selection] quoted
 /// in its box when given: from a selection's "Side chat", the palette or
 /// ⇧⌘B (Claude Code's /btw).
 Future<void> askAside(
@@ -156,7 +156,7 @@ void showSide(ChatState chat) {
   chat.side.value?.done = null;
 }
 
-/// Ends [chat]'s side chat ([Daemon.closeSide]): its ×, the one way the
+/// Ends [chat]'s side chat ([DaemonSides.closeSide]): its ×, the one way the
 /// user ends one. Ending deletes its session for good and nothing of it
 /// reaches the chat, so one with anything in it asks first; an empty one
 /// just goes.
