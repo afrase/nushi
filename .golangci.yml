@@ -41,7 +41,7 @@ linters:
     - funlen # length alone isn't a problem; gocognit counts what makes a function hard
     - nestif # gocognit counts nesting already
     # Linters that do nothing without configuration of their own.
-    - depguard # no import rules: dependencies are listed in NOTES.md and added on purpose
+    - depguard # no import rules: dependencies are listed in docs/development.md and added on purpose
     - gomodguard # the same (deprecated, replaced by gomodguard_v2)
     - gomodguard_v2 # the same
     - goheader # no license header in this repo
