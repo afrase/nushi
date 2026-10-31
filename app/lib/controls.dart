@@ -642,16 +642,28 @@ class MenuButton extends StatelessWidget {
 /// An icon that opens a menu ("More": ⋯).
 class MenuIcon extends StatelessWidget {
   const new(
-    this.icon, {
+    IconData this.icon, {
     required this.tooltip,
     required this.entries,
     super.key,
     this.size = 16,
     this.onClose,
     this.filter = true,
-  });
+  }) : line = null;
 
-  final IconData icon;
+  /// The same button with a drawn [LineIcon].
+  const new line(
+    LineIcon this.line, {
+    required this.tooltip,
+    required this.entries,
+    super.key,
+    this.size = 16,
+    this.onClose,
+    this.filter = true,
+  }) : icon = null;
+
+  final IconData? icon;
+  final LineIcon? line;
   final String tooltip;
   final List<MenuEntry> entries;
   final double size;
@@ -665,12 +677,18 @@ class MenuIcon extends StatelessWidget {
     entries: entries,
     onClose: onClose,
     filter: filter,
-    builder: (context, open) => IconTap(
-      icon,
-      tooltip: tooltip,
-      size: size,
-      onTap: entries.isEmpty ? null : open,
-    ),
+    builder: (context, open) {
+      final onTap = entries.isEmpty ? null : open;
+      return switch (line) {
+        final line? => IconTap.line(
+          line,
+          tooltip: tooltip,
+          size: size,
+          onTap: onTap,
+        ),
+        null => IconTap(icon!, tooltip: tooltip, size: size, onTap: onTap),
+      };
+    },
   );
 }
 
