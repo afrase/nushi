@@ -14,7 +14,7 @@ claude-agent-acp holds a turn's `session/prompt` open, for v1 clients, until the
 - A runaway background subagent can't be stopped from its row.
 
 ## Alternatives considered
-- Advertising the ACP subagents RFD (`subagents` client capability), which also spares subagents on cancel and gives each a session that can be cancelled: it changes how every subagent update arrives; a bigger move, in Later ideas.
+- Advertising the ACP subagents RFD (`subagents` client capability), which also spares subagents on cancel and gives each a session that can be cancelled: it changes how every subagent update arrives; a bigger move.
 - Treating any idle moment while only background tasks run as the turn's end: no signal says when that is.
 
 ## Amendment (2026-10-27): subagents are sessions of their own, and each has a Stop
