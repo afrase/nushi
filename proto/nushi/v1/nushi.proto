@@ -383,6 +383,22 @@ service NushiService {
   // Re-runs the failed jobs of the workflow runs that a pull request's
   // failed Actions jobs belong to. API 88.
   rpc RerunGitHubChecks(RerunGitHubChecksRequest) returns (RerunGitHubChecksResponse);
+  // Merging a pull request (ADR 0069), each from the user's confirmation;
+  // a paired phone may, as it may post a review. No MCP tool reaches them.
+  // The commit text GitHub would use, for the confirmation. API 96.
+  rpc GetGitHubMergeText(GetGitHubMergeTextRequest) returns (GetGitHubMergeTextResponse);
+  // Only at the head the user was shown, only while GitHub says it can
+  // merge now without passing a rule of its base's: never an admin's
+  // bypass. API 96.
+  rpc MergeGitHubPull(MergeGitHubPullRequest) returns (MergeGitHubPullResponse);
+  // GitHub merges it (or adds it to its merge queue) once it can, only at
+  // that head. API 96.
+  rpc EnableGitHubAutoMerge(EnableGitHubAutoMergeRequest) returns (EnableGitHubAutoMergeResponse);
+  rpc DisableGitHubAutoMerge(DisableGitHubAutoMergeRequest) returns (DisableGitHubAutoMergeResponse);
+  // Adds it to the end of its base's merge queue, only at that head; takes
+  // it out. API 96.
+  rpc EnqueueGitHubPull(EnqueueGitHubPullRequest) returns (EnqueueGitHubPullResponse);
+  rpc DequeueGitHubPull(DequeueGitHubPullRequest) returns (DequeueGitHubPullResponse);
   // Cleaning up after a chat's pull request: what the chat's worktree and
   // branch would lose (GetCleanUp), removing the worktree, deleting its
   // branch, and the pull request's branch on GitHub deleted or made again.
@@ -2836,6 +2852,57 @@ message GitHubPull {
   int32 pending_comments = 21;
   // Its commits.
   int32 commits = 22;
+  // What merging it may do. Unset from a daemon before API 96.
+  GitHubMerge merge = 23;
+}
+
+// What merging an open pull request may do, as GitHub says for the viewer.
+message GitHubMerge {
+  // The repository's methods, of merge, squash, rebase, without what
+  // its base's rules forbid.
+  repeated string methods = 1;
+  // The method the viewer used last, or the repository's.
+  string default_method = 2;
+  // The viewer may merge here: write access or better.
+  bool can_merge = 3;
+  // GitHub could rebase it now.
+  bool can_rebase = 4;
+  // What keeps it from merging now, none when ready: draft, conflicts,
+  // checks_failing, checks_running, changes_requested,
+  // review_required, threads, behind, rules (a rule GitHub doesn't
+  // name), unknown (GitHub is working it out).
+  repeated string blocks = 5;
+  // The repository allows auto-merge.
+  bool auto_allowed = 6;
+  bool can_enable_auto = 7;
+  bool can_disable_auto = 8;
+  // Auto-merge turned on; unset when it's off.
+  GitHubAutoMerge auto = 9;
+  // Its base has a merge queue, which merges by queue_method ( when
+  // GitHub doesn't say): no direct merge then.
+  bool queue = 10;
+  string queue_method = 11;
+  // Its place in the queue; unset when it's not in it.
+  GitHubQueueEntry entry = 12;
+  // The repository deletes a merged head branch itself.
+  bool delete_branch = 13;
+}
+
+message GitHubAutoMerge {
+  // A login, or someone.
+  string by = 1;
+  string method = 2;
+  int64 enabled_ms = 3;
+}
+
+message GitHubQueueEntry {
+  int32 position = 1;
+  // queued, awaiting_checks, mergeable, unmergeable, locked.
+  string state = 2;
+  // A login, or someone.
+  string by = 3;
+  // GitHub's estimate of the wait, in seconds; 0 for none.
+  int32 eta_seconds = 4;
 }
 
 message GetGitHubPullRequest {
@@ -2911,6 +2978,63 @@ message RerunGitHubChecksRequest {
   // The failed checks' ids (Actions jobs').
   repeated int64 jobs = 2;
 }
+
+message GetGitHubMergeTextRequest {
+  GitHubRef ref = 1;
+}
+
+// What GitHub would write on the commit, plain and bounded.
+message GetGitHubMergeTextResponse {
+  string merge_title = 1;
+  string merge_body = 2;
+  string squash_title = 3;
+  string squash_body = 4;
+}
+
+message MergeGitHubPullRequest {
+  GitHubRef ref = 1;
+  // The head the user was shown: another one is refused (Aborted, reason
+  // head_moved).
+  string head_oid = 2;
+  // merge, squash or rebase.
+  string method = 3;
+  // The commit's, for merge and squash.
+  string title = 4;
+  string body = 5;
+}
+
+message MergeGitHubPullResponse {}
+
+message EnableGitHubAutoMergeRequest {
+  GitHubRef ref = 1;
+  // As MergeGitHubPullRequest; a merge queue's method and text are its own.
+  string head_oid = 2;
+  string method = 3;
+  string title = 4;
+  string body = 5;
+}
+
+message EnableGitHubAutoMergeResponse {}
+
+message DisableGitHubAutoMergeRequest {
+  GitHubRef ref = 1;
+}
+
+message DisableGitHubAutoMergeResponse {}
+
+message EnqueueGitHubPullRequest {
+  GitHubRef ref = 1;
+  // As MergeGitHubPullRequest.
+  string head_oid = 2;
+}
+
+message EnqueueGitHubPullResponse {}
+
+message DequeueGitHubPullRequest {
+  GitHubRef ref = 1;
+}
+
+message DequeueGitHubPullResponse {}
 
 message GetCleanUpRequest {
   string chat_id = 1;

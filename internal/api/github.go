@@ -240,7 +240,7 @@ func pullProto(p model.GitHubPull) *nushiv1.GitHubPull {
 		Base: p.Base, Head: p.Head, HeadRepo: p.HeadRepo, CrossRepo: p.CrossRepo, BaseOid: p.BaseOID, HeadOid: p.HeadOID,
 		Mergeable: p.Mergeable, MergeState: p.MergeState, Additions: int32(p.Additions), Deletions: int32(p.Deletions),
 		ChangedFiles: int32(p.ChangedFiles), Conversation: ghCommentsProto(p.Conversation), PendingReview: p.PendingReview,
-		PendingComments: int32(p.PendingComments), Commits: int32(p.Commits)}
+		PendingComments: int32(p.PendingComments), Commits: int32(p.Commits), Merge: mergeProto(p)}
 	for _, r := range p.Reviewers {
 		out.Reviewers = append(out.Reviewers, &nushiv1.GitHubReviewer{Login: r.Login, State: r.State, Team: r.Team, CodeOwner: r.CodeOwner})
 	}

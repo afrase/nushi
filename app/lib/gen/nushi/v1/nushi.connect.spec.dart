@@ -1103,6 +1103,58 @@ abstract final class NushiService {
     nushiv1nushi.RerunGitHubChecksResponse.new,
   );
 
+  /// Merging a pull request (ADR 0069), each from the user's confirmation;
+  /// a paired phone may, as it may post a review. No MCP tool reaches them.
+  /// The commit text GitHub would use, for the confirmation. API 96.
+  static const getGitHubMergeText = connect.Spec(
+    '/$name/GetGitHubMergeText',
+    connect.StreamType.unary,
+    nushiv1nushi.GetGitHubMergeTextRequest.new,
+    nushiv1nushi.GetGitHubMergeTextResponse.new,
+  );
+
+  /// Only at the head the user was shown, only while GitHub says it can
+  /// merge now without passing a rule of its base's: never an admin's
+  /// bypass. API 96.
+  static const mergeGitHubPull = connect.Spec(
+    '/$name/MergeGitHubPull',
+    connect.StreamType.unary,
+    nushiv1nushi.MergeGitHubPullRequest.new,
+    nushiv1nushi.MergeGitHubPullResponse.new,
+  );
+
+  /// GitHub merges it (or adds it to its merge queue) once it can, only at
+  /// that head. API 96.
+  static const enableGitHubAutoMerge = connect.Spec(
+    '/$name/EnableGitHubAutoMerge',
+    connect.StreamType.unary,
+    nushiv1nushi.EnableGitHubAutoMergeRequest.new,
+    nushiv1nushi.EnableGitHubAutoMergeResponse.new,
+  );
+
+  static const disableGitHubAutoMerge = connect.Spec(
+    '/$name/DisableGitHubAutoMerge',
+    connect.StreamType.unary,
+    nushiv1nushi.DisableGitHubAutoMergeRequest.new,
+    nushiv1nushi.DisableGitHubAutoMergeResponse.new,
+  );
+
+  /// Adds it to the end of its base's merge queue, only at that head; takes
+  /// it out. API 96.
+  static const enqueueGitHubPull = connect.Spec(
+    '/$name/EnqueueGitHubPull',
+    connect.StreamType.unary,
+    nushiv1nushi.EnqueueGitHubPullRequest.new,
+    nushiv1nushi.EnqueueGitHubPullResponse.new,
+  );
+
+  static const dequeueGitHubPull = connect.Spec(
+    '/$name/DequeueGitHubPull',
+    connect.StreamType.unary,
+    nushiv1nushi.DequeueGitHubPullRequest.new,
+    nushiv1nushi.DequeueGitHubPullResponse.new,
+  );
+
   /// Cleaning up after a chat's pull request: what the chat's worktree and
   /// branch would lose (GetCleanUp), removing the worktree, deleting its
   /// branch, and the pull request's branch on GitHub deleted or made again.

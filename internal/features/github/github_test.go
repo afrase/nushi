@@ -29,6 +29,11 @@ type fakeClient struct {
 	heads    map[string][]githubapi.HeadPull // by repository and head
 	branches map[string]string               // a branch's head, by name
 	pull     *model.GitHubPull               // what Pull answers, when set
+
+	merges    []githubapi.MergeInput // Merge's calls
+	autos     []githubapi.MergeInput // EnableAutoMerge's
+	mergeErr  error                  // what Merge answers
+	mergeText githubapi.MergeText
 }
 
 func (f *fakeClient) note(s string) {
@@ -176,6 +181,35 @@ func (f *fakeClient) DefaultBranch(context.Context, string) (string, error) { re
 
 func (f *fakeClient) SubmitReview(context.Context, githubapi.Review) error {
 	f.written = append(f.written, "review")
+	return nil
+}
+
+func (f *fakeClient) MergeText(context.Context, string, int) (githubapi.MergeText, error) {
+	return f.mergeText, nil
+}
+
+func (f *fakeClient) Merge(_ context.Context, m githubapi.MergeInput) error {
+	f.merges = append(f.merges, m)
+	return f.mergeErr
+}
+
+func (f *fakeClient) EnableAutoMerge(_ context.Context, m githubapi.MergeInput) error {
+	f.autos = append(f.autos, m)
+	return nil
+}
+
+func (f *fakeClient) DisableAutoMerge(context.Context, string) error {
+	f.written = append(f.written, "disable auto-merge")
+	return nil
+}
+
+func (f *fakeClient) Enqueue(_ context.Context, _, head string) error {
+	f.written = append(f.written, "enqueue "+head)
+	return nil
+}
+
+func (f *fakeClient) Dequeue(context.Context, string) error {
+	f.written = append(f.written, "dequeue")
 	return nil
 }
 

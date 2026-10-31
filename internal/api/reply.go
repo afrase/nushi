@@ -38,7 +38,7 @@ func waitErr(ctx context.Context, err error) error {
 
 // ReasonHeader is the metadata a refusal the app acts on carries, so the
 // app needn't read its message (which an older daemon's it still reads):
-// ReasonRestarting or ReasonAgentStart.
+// ReasonRestarting, ReasonAgentStart or ReasonHeadMoved.
 const ReasonHeader = "Nushi-Reason"
 
 const (
@@ -50,6 +50,10 @@ const (
 	// ReasonAgentStart is a new chat whose agent didn't start
 	// (chats.ErrStart): the app marks the agent with why.
 	ReasonAgentStart = "agent_start"
+	// ReasonHeadMoved is a merge refused because the pull request isn't at
+	// the head the user was shown (github.ErrHeadMoved): the app says so
+	// and reads it again.
+	ReasonHeadMoved = "head_moved"
 )
 
 // because is err carrying reason (ReasonHeader).

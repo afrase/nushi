@@ -259,6 +259,18 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SubmitGitHubReviewRequest request);
   $async.Future<$0.RerunGitHubChecksResponse> rerunGitHubChecks(
       $pb.ServerContext ctx, $0.RerunGitHubChecksRequest request);
+  $async.Future<$0.GetGitHubMergeTextResponse> getGitHubMergeText(
+      $pb.ServerContext ctx, $0.GetGitHubMergeTextRequest request);
+  $async.Future<$0.MergeGitHubPullResponse> mergeGitHubPull(
+      $pb.ServerContext ctx, $0.MergeGitHubPullRequest request);
+  $async.Future<$0.EnableGitHubAutoMergeResponse> enableGitHubAutoMerge(
+      $pb.ServerContext ctx, $0.EnableGitHubAutoMergeRequest request);
+  $async.Future<$0.DisableGitHubAutoMergeResponse> disableGitHubAutoMerge(
+      $pb.ServerContext ctx, $0.DisableGitHubAutoMergeRequest request);
+  $async.Future<$0.EnqueueGitHubPullResponse> enqueueGitHubPull(
+      $pb.ServerContext ctx, $0.EnqueueGitHubPullRequest request);
+  $async.Future<$0.DequeueGitHubPullResponse> dequeueGitHubPull(
+      $pb.ServerContext ctx, $0.DequeueGitHubPullRequest request);
   $async.Future<$0.GetCleanUpResponse> getCleanUp(
       $pb.ServerContext ctx, $0.GetCleanUpRequest request);
   $async.Future<$0.RemoveChatWorktreeResponse> removeChatWorktree(
@@ -516,6 +528,18 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SubmitGitHubReviewRequest();
       case 'RerunGitHubChecks':
         return $0.RerunGitHubChecksRequest();
+      case 'GetGitHubMergeText':
+        return $0.GetGitHubMergeTextRequest();
+      case 'MergeGitHubPull':
+        return $0.MergeGitHubPullRequest();
+      case 'EnableGitHubAutoMerge':
+        return $0.EnableGitHubAutoMergeRequest();
+      case 'DisableGitHubAutoMerge':
+        return $0.DisableGitHubAutoMergeRequest();
+      case 'EnqueueGitHubPull':
+        return $0.EnqueueGitHubPullRequest();
+      case 'DequeueGitHubPull':
+        return $0.DequeueGitHubPullRequest();
       case 'GetCleanUp':
         return $0.GetCleanUpRequest();
       case 'RemoveChatWorktree':
@@ -783,6 +807,20 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return submitGitHubReview(ctx, request as $0.SubmitGitHubReviewRequest);
       case 'RerunGitHubChecks':
         return rerunGitHubChecks(ctx, request as $0.RerunGitHubChecksRequest);
+      case 'GetGitHubMergeText':
+        return getGitHubMergeText(ctx, request as $0.GetGitHubMergeTextRequest);
+      case 'MergeGitHubPull':
+        return mergeGitHubPull(ctx, request as $0.MergeGitHubPullRequest);
+      case 'EnableGitHubAutoMerge':
+        return enableGitHubAutoMerge(
+            ctx, request as $0.EnableGitHubAutoMergeRequest);
+      case 'DisableGitHubAutoMerge':
+        return disableGitHubAutoMerge(
+            ctx, request as $0.DisableGitHubAutoMergeRequest);
+      case 'EnqueueGitHubPull':
+        return enqueueGitHubPull(ctx, request as $0.EnqueueGitHubPullRequest);
+      case 'DequeueGitHubPull':
+        return dequeueGitHubPull(ctx, request as $0.DequeueGitHubPullRequest);
       case 'GetCleanUp':
         return getCleanUp(ctx, request as $0.GetCleanUpRequest);
       case 'RemoveChatWorktree':
