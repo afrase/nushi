@@ -296,8 +296,8 @@ class _ChatHeaderState extends State<ChatHeader> {
             if (roomy) const SizedBox(width: NushiTheme.iconGap),
           ],
           if (!folds.buttons && !folds.panel) ...[
-            IconTap(
-              Icons.view_sidebar_outlined,
+            IconTap.line(
+              LineIcon.details,
               tooltip: widget.onPanel == null
                   ? 'The window is too narrow'
                   : widget.panel
@@ -320,13 +320,13 @@ class _ChatHeaderState extends State<ChatHeader> {
                         ? 'Hide terminal'
                         : 'Show terminal',
                     shortcut: '⌃`',
-                    icon: Icons.terminal,
+                    line: LineIcon.terminal,
                     onPick: () => toggleTerminal(chat.id),
                   ),
                 if (widget.onPanel case final toggle?)
                   MenuEntry(
                     widget.panel ? 'Hide details' : 'Show details',
-                    icon: Icons.view_sidebar_outlined,
+                    line: LineIcon.details,
                     onPick: toggle,
                   ),
                 MenuEntry.divider,

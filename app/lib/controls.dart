@@ -1,8 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/line_icons.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
+
+export 'package:nushi/line_icons.dart';
 
 // The app's controls: one look for each kind of thing that can be
 // pressed, so what's clickable looks it. [Button] for an action,
@@ -719,16 +722,28 @@ class LinkText extends StatelessWidget {
 /// where the icon alone says what it does.
 class IconTap extends StatelessWidget {
   const new(
-    this.icon, {
+    IconData this.icon, {
     required this.tooltip,
     required this.onTap,
     super.key,
     this.size = 16,
     this.color,
     this.padding = 5,
-  });
+  }) : line = null;
 
-  final IconData icon;
+  /// The same button with a drawn [LineIcon].
+  const new line(
+    LineIcon this.line, {
+    required this.tooltip,
+    required this.onTap,
+    super.key,
+    this.size = 16,
+    this.color,
+    this.padding = 5,
+  }) : icon = null;
+
+  final IconData? icon;
+  final LineIcon? line;
   final String tooltip;
   final VoidCallback? onTap;
   final double size;
@@ -743,19 +758,20 @@ class IconTap extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       tooltip: tooltip,
-      builder: (context, look) => Container(
-        padding: EdgeInsets.all(padding),
-        decoration: BoxDecoration(
-          color: look.hover ? _tint(t, look) : null,
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        foregroundDecoration: focusRing(t, look),
-        child: Icon(
-          icon,
-          size: size,
-          color: look.enabled ? color ?? t.textSecondary : t.textMuted,
-        ),
-      ),
+      builder: (context, look) {
+        final tint = look.enabled ? color ?? t.textSecondary : t.textMuted;
+        return Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            color: look.hover ? _tint(t, look) : null,
+            borderRadius: BorderRadius.circular(NushiTheme.control),
+          ),
+          foregroundDecoration: focusRing(t, look),
+          child:
+              line?.view(size: size, color: tint) ??
+              Icon(icon, size: size, color: tint),
+        );
+      },
     );
   }
 }

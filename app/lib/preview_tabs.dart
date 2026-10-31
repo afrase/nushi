@@ -232,8 +232,8 @@ class _Tab extends StatelessWidget {
               width: _closeRoom,
               child: Opacity(
                 opacity: hover || showing ? 1 : 0,
-                child: IconTap(
-                  Icons.close,
+                child: IconTap.line(
+                  LineIcon.close,
                   size: 12,
                   padding: 3,
                   tooltip: 'Close tab',
