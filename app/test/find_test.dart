@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
+import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/diff_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
@@ -50,7 +54,13 @@ Future<Daemon> _app(WidgetTester tester) async {
       ),
       GetDiffRequest() => GetDiffResponse(
         files: [
-          FileChange(path: 'sub.go', newText: 'func Sub() {}\n', added: 1),
+          FileChange(
+            path: 'sub.go',
+            oldText: 'func Sub() {}\n\nfunc unchanged() {}\n',
+            newText: 'func Sub(n int) {}\n\nfunc unchanged() {}\n',
+            added: 1,
+            removed: 1,
+          ),
           FileChange(path: 'add.go', newText: 'func Add() {}\n', added: 1),
         ],
       ),
@@ -127,17 +137,17 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('⌘F in Changes: the files with the text, how many', (
+  testWidgets('⌘F in Changes: the files with the text, its hits in the diff', (
     tester,
   ) async {
     final d = await _app(tester);
-    d.chats['c']!.tab.value = ChatTab.changes;
+    final chat = d.chats['c']!..tab.value = ChatTab.changes;
     await tester.pumpAndSettle();
     await _cmdF(tester);
-    expect(find.byType(FilesFilterField), findsOne);
+    expect(find.byType(FindBar), findsOne);
     await tester.enterText(
       find.descendant(
-        of: find.byType(FilesFilterField),
+        of: find.byType(FindBar),
         matching: find.byType(EditableText),
       ),
       'sub(',
@@ -148,8 +158,88 @@ void main() {
     expect(find.textContaining('sub.go', findRichText: true), findsWidgets);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
-    expect(find.byType(FilesFilterField), findsNothing);
+    expect(find.byType(FindBar), findsNothing);
     expect(find.textContaining('add.go', findRichText: true), findsWidgets);
+    expect(chat.changesFind.query, isNull);
     d.dispose();
   }, variant: _mac);
+
+  testWidgets('⌘F in Changes: ⏎ goes on to the next file with the text, and '
+      '⇧⏎ back to the end of the one before', (tester) async {
+    final d = await _app(tester);
+    final chat = d.chats['c']!..tab.value = ChatTab.changes;
+    await tester.pumpAndSettle();
+    await _cmdF(tester);
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(FindBar),
+        matching: find.byType(EditableText),
+      ),
+      'func',
+    );
+    await tester.pumpAndSettle();
+    final find_ = chat.changesFind;
+    expect(find.text('1 of 3 · file 1 of 2'), findsOne);
+    for (final (mode, name) in [
+      (Brightness.dark, 'dark'),
+      (Brightness.light, 'light'),
+    ]) {
+      viewport(tester, const Size(1700, 700), brightness: mode);
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(NushiApp),
+        matchesGoldenFile('goldens/find_changes_$name.png'),
+      );
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find_.files, (1, 2));
+    expect(find.text('2 of 3 · file 1 of 2'), findsOne);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find_.files, (2, 2));
+    expect(find.text('1 of 1 · file 2 of 2'), findsOne);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find_.files, (1, 2));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+    expect(find_.files, (2, 2));
+    d.dispose();
+  }, variant: _mac);
+
+  test('a diff is found through top to bottom, an unchanged line once', () {
+    final diff = TextDiff.compute(
+      'keep a\ngone a\nend\n',
+      'keep a\nnew a\nend\n',
+      path: 'f',
+    );
+    final doc = diff.document;
+    final hits = findInDiff(
+      diff.lines,
+      doc.oldLineCount,
+      doc.newLineCount,
+      'A',
+    );
+    expect(
+      [for (final h in hits.steps) (h.side, h.line)],
+      [(PaneSide.neu, 0), (PaneSide.old, 1), (PaneSide.neu, 1)],
+    );
+    expect([for (final h in hits.also) (h.side, h.line)], [(PaneSide.old, 0)]);
+  });
+
+  test('a hit takes the place of the syntax under it', () {
+    final line = DiffLine(
+      line: 0,
+      text: 'return value',
+      syntax: Uint32List.fromList([0, 6, 1, 7, 5, 2]),
+    );
+    const hit = (side: PaneSide.neu, line: 0, start: 3, length: 6);
+    final marked = markHits(line, [hit], hit, mark: 8, markNow: 9);
+    expect(marked.syntax, [0, 3, 1, 3, 6, 9, 9, 3, 2]);
+    expect(marked.inner, [3, 6, innerChanged]);
+  });
 }

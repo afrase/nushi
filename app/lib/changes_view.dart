@@ -66,16 +66,29 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   bool _stale = false;
   Timer? _slow;
 
+  // The list's last answer to the find: its text, of which files, the files.
+  (String, List<FileChange>, List<FileChange>) _shown = (
+    '',
+    const [],
+    const [],
+  );
+
   @override
   void initState() {
     _take();
     super.initState();
     chat.addListener(_open);
+    chat.changesFind
+      ..roll = _roll
+      ..addListener(_findChanged);
   }
 
   @override
   void dispose() {
     chat.removeListener(_open);
+    chat.changesFind
+      ..roll = null
+      ..removeListener(_findChanged);
     _slow?.cancel();
     super.dispose();
   }
@@ -345,27 +358,16 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                               padding: const EdgeInsets.all(14),
                               child: Text(empty, style: theme.ui(t.textMuted)),
                             ),
-                          // ⌘F: the files with a text.
-                          ValueListenableBuilder(
-                            valueListenable: chat.filesFilter,
-                            builder: (context, q, _) => q == null
-                                ? const SizedBox.shrink()
-                                : FilesFilterField(
-                                    chat.filesFilter,
-                                    shown: _shownFiles(q).length,
-                                    total: _files.length,
-                                  ),
-                          ),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: ListenableBuilder(
                                 listenable: Listenable.merge([
                                   reviews,
-                                  chat.filesFilter,
+                                  chat.changesFind,
                                 ]),
                                 builder: (context, _) => FileList(
-                                  files: _shownFiles(chat.filesFilter.value),
+                                  files: _shownFiles(),
                                   selected: _plain == null ? _path : null,
                                   onSelect: (p) => setState(() {
                                     _path = p;
@@ -381,45 +383,26 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                     ),
                   ),
                   Expanded(
-                    child: file != null && file.skipped.isEmpty
-                        ? Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (_plain != null)
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    12,
-                                    6,
-                                    12,
-                                    6,
-                                  ),
-                                  child: Text(
-                                    '${file.path} has no changes here',
-                                    style: theme.ui(t.textMuted, size: 12),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: _shownFile(file, notShown)),
+                        // ⌘F, as over the transcript.
+                        ListenableBuilder(
+                          listenable: chat.changesFind,
+                          builder: (context, _) =>
+                              chat.changesFind.query == null
+                              ? const SizedBox.shrink()
+                              : Positioned(
+                                  top: 8,
+                                  right: NushiTheme.gutter,
+                                  child: FindBar(
+                                    chat.changesFind,
+                                    hint: 'Find in the changes',
                                   ),
                                 ),
-                              Expanded(
-                                child: DiffBox(
-                                  file,
-                                  key: ValueKey((file.path, _jumps)),
-                                  fit: false,
-                                  line: _line,
-                                  // Comments go with changes, not with a
-                                  // file shown as it is.
-                                  review: _plain == null
-                                      ? (
-                                          chat: chat.id,
-                                          where: _where,
-                                          agent: chat.agentName,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Text(notShown, style: theme.ui(t.textMuted)),
-                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -430,14 +413,99 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     );
   }
 
-  /// The scope, what the files add up to, and the list's controls.
-  /// The files the list shows: those with [query] (⌘F), else all.
-  List<FileChange> _shownFiles(String? query) => query == null || query.isEmpty
-      ? _files
-      : [
-          for (final f in _files)
-            if (fileHas(f, query)) f,
-        ];
+  /// The file picked, or why it isn't shown.
+  Widget _shownFile(FileChange? file, String notShown) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final find = chat.changesFind;
+    if (file?.skipped.isEmpty != true && find.hits.isNotEmpty) {
+      // No diff to find in, so none says the last file's hits are gone.
+      WidgetsBinding.instance.addPostFrameCallback((_) => find.found(const []));
+    }
+    return file != null && file.skipped.isEmpty
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_plain != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                  child: Text(
+                    '${file.path} has no changes here',
+                    style: theme.ui(t.textMuted, size: 12),
+                  ),
+                ),
+              Expanded(
+                child: DiffBox(
+                  file,
+                  key: ValueKey((file.path, _jumps)),
+                  fit: false,
+                  line: _line,
+                  find: chat.changesFind,
+                  // Comments go with changes, not with a
+                  // file shown as it is.
+                  review: _plain == null
+                      ? (chat: chat.id, where: _where, agent: chat.agentName)
+                      : null,
+                ),
+              ),
+            ],
+          )
+        : Center(child: Text(notShown, style: theme.ui(t.textMuted)));
+  }
+
+  /// The files the list shows: those with the find's text, else all.
+  List<FileChange> _shownFiles() {
+    final query = chat.changesFind.query ?? '';
+    if (query.isEmpty) return _files;
+    final (q, of, shown) = _shown;
+    if (q == query && identical(of, _files)) return shown;
+    final files = [
+      for (final f in _files)
+        if (fileHas(f, query)) f,
+    ];
+    _shown = (query, _files, files);
+    return files;
+  }
+
+  /// The find changed: the file shown is among those listed, and the bar
+  /// says which.
+  void _findChanged() {
+    final find = chat.changesFind;
+    final paths = _inOrder();
+    if (paths.isEmpty || find.query == null) {
+      find.files = (0, 0);
+      return;
+    }
+    find.files = (paths.indexOf(_path ?? '') + 1, paths.length);
+    if (paths.contains(_path) || _plain != null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _path = paths.first);
+      find.files = (1, paths.length);
+    });
+  }
+
+  /// The paths the list shows, in its order.
+  List<String> _inOrder() => [
+    for (final r in changeRows(_shownFiles(), flat: changesFlat.value))
+      ?r.file?.path,
+  ];
+
+  /// ⏎ went past the file's first or last hit: the next file listed.
+  void _roll(int by) {
+    final paths = _inOrder();
+    if (paths.isEmpty) return;
+    final i = paths.indexOf(_path ?? '');
+    final next = paths[(i + by) % paths.length];
+    chat.changesFind.arrive(by);
+    setState(() {
+      _path = next;
+      _noPlain();
+      _line = 0;
+      _jumps++; // a new box, even for the file it was (one file listed)
+    });
+    _findChanged();
+  }
 
   /// The reply cards waiting in the chat's box (the review's, sent from
   /// here), with the way to the chat.

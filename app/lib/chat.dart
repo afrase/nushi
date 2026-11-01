@@ -189,8 +189,8 @@ class ChatState extends ChangeNotifier {
   /// ⌘F in its transcript (the Mac's).
   final find = TranscriptFind();
 
-  /// ⌘F in its Changes view: the files' filter, null while closed.
-  final filesFilter = ValueNotifier<String?>(null);
+  /// ⌘F in its Changes view.
+  final changesFind = ChangesFind();
 
   /// A side chat is starting (its fork is on its way).
   final forking = ValueNotifier<bool>(false);

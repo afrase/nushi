@@ -25,6 +25,16 @@ class TranscriptFind extends ChangeNotifier {
   String? get current =>
       _hits.isEmpty ? null : _hits[_at.clamp(0, _hits.length - 1)];
 
+  /// Whether ⏎ goes anywhere.
+  bool get canStep => _hits.isNotEmpty;
+
+  /// How far it's come, for the bar.
+  String get count => (_query ?? '').isEmpty
+      ? ''
+      : _hits.isEmpty
+      ? 'None'
+      : '${_at + 1} of ${_hits.length}';
+
   /// Opens the bar (or takes the focus back to it).
   void open() {
     _query ??= '';
@@ -74,6 +84,58 @@ class TranscriptFind extends ChangeNotifier {
       [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
 }
 
+/// ⌘F in a chat's Changes view. The files with the text are listed and the
+/// hits counted are those of the file shown (a diff isn't read for a file
+/// that isn't); going past either end of them goes on to the next file with
+/// [roll], which the view sets.
+class ChangesFind extends TranscriptFind {
+  /// Goes to the next file listed (given 1) or the one before (-1), round.
+  ValueChanged<int>? roll;
+
+  /// Which file of how many the view lists, for the bar.
+  (int, int) files = (0, 0);
+  int _arriving = 0; // the way a roll came, till the file's hits are in
+
+  @override
+  bool get canStep => files.$2 > 1 || super.canStep;
+
+  @override
+  String get count {
+    final (at, of) = files;
+    return of > 1 && (query ?? '').isNotEmpty
+        ? '${super.count} · file $at of $of'
+        : super.count;
+  }
+
+  @override
+  void step(int by) {
+    final next = _at + by;
+    if (files.$2 > 1 && (next < 0 || next >= _hits.length)) {
+      roll?.call(by);
+    } else {
+      super.step(by);
+    }
+  }
+
+  /// Another file comes: its hits start at the end the step came to.
+  void arrive(int by) {
+    _arriving = by;
+    _hits = const [];
+    _at = 0;
+  }
+
+  @override
+  void found(List<String> hits) {
+    final from = _arriving;
+    _arriving = 0;
+    super.found(hits);
+    if (from < 0 && hits.isNotEmpty) {
+      _at = hits.length - 1;
+      notifyListeners();
+    }
+  }
+}
+
 /// Each item's text and title lowered, once: the find runs over the whole
 /// transcript on every build while it's open, a build per streamed chunk
 /// (a chunk makes a new item, so what's kept is never stale).
@@ -103,9 +165,10 @@ bool entryHas(Object entry, String query) {
 /// The find bar over the transcript: the field, "2 of 7", ↑ and ↓ (or ⏎
 /// and ⇧⏎), and × (or Esc) to close.
 class FindBar extends StatefulWidget {
-  const new(this.find, {super.key});
+  const new(this.find, {super.key, this.hint = 'Find in the chat'});
 
   final TranscriptFind find;
+  final String hint;
 
   @override
   State<FindBar> createState() => _FindBarState();
@@ -128,12 +191,6 @@ class _FindBarState extends State<FindBar> {
     return ListenableBuilder(
       listenable: f,
       builder: (context, _) {
-        final n = f.hits.length;
-        final count = (f.query ?? '').isEmpty
-            ? ''
-            : n == 0
-            ? 'None'
-            : '${f.at + 1} of $n';
         return Container(
           width: 340,
           padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
@@ -164,24 +221,24 @@ class _FindBarState extends State<FindBar> {
                     autofocus: true,
                     style: theme.ui(t.text),
                     onChanged: (q) => f.query = q,
-                    decoration: const InputDecoration(
-                      hintText: 'Find in the chat',
+                    decoration: InputDecoration(
+                      hintText: widget.hint,
                       isDense: true,
                       border: InputBorder.none,
                     ),
                   ),
                 ),
               ),
-              Text(count, style: theme.ui(t.textMuted, size: 12)),
+              Text(f.count, style: theme.ui(t.textMuted, size: 12)),
               IconTap(
                 Icons.keyboard_arrow_up,
                 tooltip: 'Previous (⇧⏎)',
-                onTap: n == 0 ? null : () => f.step(-1),
+                onTap: f.canStep ? () => f.step(-1) : null,
               ),
               IconTap(
                 Icons.keyboard_arrow_down,
                 tooltip: 'Next (⏎)',
-                onTap: n == 0 ? null : () => f.step(1),
+                onTap: f.canStep ? () => f.step(1) : null,
               ),
               IconTap(Icons.close, tooltip: 'Close (esc)', onTap: f.close),
             ],
@@ -246,74 +303,4 @@ bool fileHas(FileChange f, String query) {
   return f.path.toLowerCase().contains(q) ||
       f.newText.toLowerCase().contains(q) ||
       f.oldText.toLowerCase().contains(q);
-}
-
-/// ⌘F in the Changes view, over its files: a field that keeps the files
-/// with the text in their path or either side, and how many; Esc or ×
-/// closes it, every file back.
-class FilesFilterField extends StatefulWidget {
-  const new(this.filter, {required this.shown, required this.total, super.key});
-
-  final ValueNotifier<String?> filter;
-  final int shown;
-  final int total;
-
-  @override
-  State<FilesFilterField> createState() => _FilesFilterFieldState();
-}
-
-class _FilesFilterFieldState extends State<FilesFilterField> {
-  late final _text = TextEditingController(text: widget.filter.value);
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final q = widget.filter.value ?? '';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 6, 4, 2),
-      child: Row(
-        children: [
-          Icon(Icons.search, size: 13, color: t.textMuted),
-          const SizedBox(width: 4),
-          Expanded(
-            child: CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.escape): () =>
-                    widget.filter.value = null,
-              },
-              child: TextField(
-                controller: _text,
-                autofocus: true,
-                style: theme.ui(t.text, size: 12.5),
-                onChanged: (v) => widget.filter.value = v,
-                decoration: const InputDecoration(
-                  hintText: 'Files with…',
-                  isDense: true,
-                  border: InputBorder.none,
-                ),
-              ),
-            ),
-          ),
-          if (q.isNotEmpty)
-            Text(
-              '${widget.shown} of ${widget.total}',
-              style: theme.ui(t.textMuted, size: 11.5),
-            ),
-          IconTap(
-            Icons.close,
-            size: 13,
-            tooltip: 'Close (esc)',
-            onTap: () => widget.filter.value = null,
-          ),
-        ],
-      ),
-    );
-  }
 }

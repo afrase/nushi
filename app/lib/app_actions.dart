@@ -194,7 +194,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
           shown != null &&
           (shown.shownTab == ChatTab.chat || shown.shownTab == ChatTab.changes),
       run: () => shown!.shownTab == ChatTab.changes
-          ? shown.filesFilter.value ??= ''
+          ? shown.changesFind.open()
           : shown.find.open(),
     ),
     AppAction(

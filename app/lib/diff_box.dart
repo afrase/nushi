@@ -5,11 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/back_swipe.dart';
+import 'package:nushi/diff_find.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/review_cards.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript_find.dart';
 
 /// Above this many lines on a side a diff isn't computed: Myers' diff
 /// keeps memory for every step, lines times edits, and a regenerated
@@ -51,6 +53,7 @@ class DiffBox extends StatefulWidget {
     this.note,
     this.onLines,
     this.line = 0,
+    this.find,
   });
 
   final FileChange change;
@@ -63,6 +66,9 @@ class DiffBox extends StatefulWidget {
   /// A line of the new side (from 1) to go to and select once the diff is
   /// in; 0 for none.
   final int line;
+
+  /// ⌘F: its hits in this file are marked, and this box finds them.
+  final TranscriptFind? find;
 
   @override
   State<DiffBox> createState() => _DiffBoxState();
@@ -83,12 +89,54 @@ class _DiffBoxState extends State<DiffBox> {
   LineSelection? _draft; // the lines a comment is being written for
   ReviewComment? _editing; // the comment being changed, if one is
   final _comment = TextEditingController(); // its text; outlives a reload
+  SyntaxLines? _source; // the lines of _controller
+  // What was found: for which text in which lines, each hit by its key.
+  (String, SyntaxLines)? _foundFor;
+  List<DiffHit> _also = const [];
+  Map<String, DiffHit> _hits = const {};
+  String? _shown; // the hit last gone to
 
   @override
   void initState() {
     super.initState();
     reviews.addListener(_showComments);
+    widget.find?.addListener(_showFind);
     _takeDraft();
+  }
+
+  /// Finds and marks what the find asks for, and goes to its current hit.
+  void _showFind() {
+    final (lines, c, f) = (_source, _controller, widget.find);
+    if (lines == null || c == null || f == null) return;
+    final q = f.query ?? '';
+    // Not while building: telling the bar rebuilds it.
+    void tell(List<String> keys) =>
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) f.found(keys);
+        });
+    if (q.isEmpty) {
+      if (_foundFor != null) {
+        lines.mark(const [], null);
+        tell(const []);
+      }
+      _foundFor = _shown = null;
+      _hits = const {};
+      return;
+    }
+    if (_foundFor != (q, lines)) {
+      _foundFor = (q, lines);
+      final doc = c.document;
+      final hits = findInDiff(lines, doc.oldLineCount, doc.newLineCount, q);
+      _also = hits.also;
+      _hits = {for (final h in hits.steps) hitKey(h): h};
+      tell(_hits.keys.toList());
+    }
+    final now = _hits[f.current];
+    lines.mark([..._hits.values, ..._also], now);
+    if (now != null && f.current != _shown) {
+      _shown = f.current;
+      c.jumpToLine(now.side, now.line);
+    }
   }
 
   void _takeDraft() {
@@ -167,7 +215,11 @@ class _DiffBoxState extends State<DiffBox> {
     final d = widget.change;
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final doc = diff.document;
-    final lines = SyntaxLines(diff.lines, doc.oldLineCount, doc.newLineCount);
+    final lines = _source = SyntaxLines(
+      diff.lines,
+      doc.oldLineCount,
+      doc.newLineCount,
+    );
     _controller?.dispose();
     _controller = DiffViewController(
       document: doc,
@@ -205,6 +257,7 @@ class _DiffBoxState extends State<DiffBox> {
         ..selection.start(PaneSide.neu, at);
       _selecting = false; // selected here, not by a click
     }
+    _showFind();
     // Plain until the colors are in (a moment, off the UI thread).
     final controller = _controller;
     if (languageOf(d.path) case final language?) {
@@ -218,6 +271,7 @@ class _DiffBoxState extends State<DiffBox> {
   void dispose() {
     _keepDraft(widget.review);
     reviews.removeListener(_showComments);
+    widget.find?.removeListener(_showFind);
     _controller?.dispose();
     _comment.dispose();
     super.dispose();

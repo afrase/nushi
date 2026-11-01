@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/widgets.dart';
+import 'package:nushi/diff_find.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:re_highlight/languages/all.dart';
 import 'package:re_highlight/re_highlight.dart';
@@ -59,7 +60,15 @@ const Map<String, Capture?> _scopes = {
 };
 
 /// diff_view's capture names, by capture id ([Capture.index]).
-final List<String> syntaxCaptures = [for (final c in Capture.values) c.name];
+final List<String> syntaxCaptures = [
+  for (final c in Capture.values) c.name,
+  _findCapture,
+  _findNowCapture,
+];
+
+/// The captures of a find's hits in a diff, past the syntax's own.
+const _findCapture = 'find';
+const _findNowCapture = 'findNow';
 
 /// Whether [scope] is listed (itself or a parent), and its capture.
 (bool, Capture?) _lookup(String scope) {
@@ -231,6 +240,41 @@ class SyntaxLines implements DiffLineSource {
 
   final List<List<DiffLine>> _sides;
   final _listeners = <void Function()>[];
+  List<DiffHit> _hits = const [];
+  DiffHit? _now;
+  // The lines with hits on them, as drawn, by side and line.
+  Map<(PaneSide, int), DiffLine> _marked = const {};
+
+  /// Marks a find's [hits], [now] the current one (none clears them).
+  void mark(List<DiffHit> hits, DiffHit? now) {
+    _hits = hits;
+    _now = now;
+    _mark();
+    _tell();
+  }
+
+  void _mark() {
+    final byLine = <(PaneSide, int), List<DiffHit>>{};
+    for (final h in _hits) {
+      (byLine[(h.side, h.line)] ??= []).add(h);
+    }
+    _marked = {
+      for (final MapEntry(key: (side, line), value: hits) in byLine.entries)
+        (side, line): markHits(
+          _sides[side.index][line],
+          hits,
+          _now,
+          mark: Capture.values.length,
+          markNow: Capture.values.length + 1,
+        ),
+    };
+  }
+
+  void _tell() {
+    for (final l in List.of(_listeners)) {
+      l();
+    }
+  }
 
   /// Gives the lines their spans, by side (null leaves a side plain).
   void highlight(List<List<Uint32List?>?> spans) {
@@ -253,21 +297,21 @@ class SyntaxLines implements DiffLineSource {
             l,
       ];
     }
-    for (final l in List.of(_listeners)) {
-      l();
-    }
+    _mark();
+    _tell();
   }
 
   @override
   DiffLine? lineAt(PaneSide side, int line) =>
-      _sides[side.index].elementAtOrNull(line);
+      _marked[(side, line)] ?? _sides[side.index].elementAtOrNull(line);
 
   @override
   void prefetch(PaneSide side, ModelSpan span) {}
 
   @override
-  Future<List<DiffLine>> load(PaneSide side, ModelSpan span) =>
-      Future.value(_sides[side.index].sublist(span.start, span.end));
+  Future<List<DiffLine>> load(PaneSide side, ModelSpan span) => Future.value([
+    for (var i = span.start; i < span.end; i++) lineAt(side, i)!,
+  ]);
 
   @override
   void addListener(void Function() listener) => _listeners.add(listener);
@@ -308,6 +352,8 @@ DiffThemeData diffTheme(Tokens t) {
     syntax: {
       for (final MapEntry(key: c, value: ink) in t.syntax.entries)
         c.name: SyntaxStyle(ink.color, italic: ink.italic, bold: ink.bold),
+      _findCapture: SyntaxStyle(t.needs, bold: true),
+      _findNowCapture: SyntaxStyle(t.accentInk, bold: true),
     },
   );
 }
