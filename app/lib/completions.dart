@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
@@ -37,7 +38,10 @@ class Completions extends ChangeNotifier {
     var found = <Choice>[];
     _token = null;
     if (RegExp(r'^/(\S*)$').firstMatch(before) case final m?) {
-      final names = {for (final c in chat().commands) c.name: c};
+      final names = {
+        for (final c in chat().commands) c.name: c,
+        copyCommand.name: copyCommand,
+      };
       found = [
         for (final n in rankChoices(names.keys, m[1]!))
           (label: '/$n', detail: names[n]!.description, insert: '/$n '),

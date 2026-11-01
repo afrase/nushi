@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
+import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
@@ -234,6 +235,12 @@ class _ComposerState extends State<Composer> {
   /// Sends the box's message; while the agent works it waits in the
   /// chat's queue, or with [now] stops the turn and goes at once.
   Future<void> _send({bool now = false}) async {
+    // Before any wait: a browser copies only straight from the tap.
+    if (copyAsked(_text.text.trim()) case final n?) {
+      _text.clear();
+      await copyMessage(context, widget.chat, n);
+      return;
+    }
     await _images.ready(); // an image pasted a moment ago goes with it
     final text = _text.text.trim();
     final images = _images.value;
