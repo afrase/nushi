@@ -17,6 +17,10 @@ import (
 type silentRun struct {
 	ids  []string
 	text map[string]string
+	// tool, if set, ends the run at the agent's first tool call
+	// (commit_message.go).
+	tool       func()
+	toolCalled bool
 }
 
 // ContextUsage runs the agent's command that says what fills its context

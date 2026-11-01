@@ -140,8 +140,9 @@ var macOnly = map[string]bool{
 	// The phone shows nothing of updates.
 	nushiv1connect.NushiServiceCheckForUpdatesProcedure: true,
 	// The phone has no Changes view, and a commit's hooks run on the Mac.
-	nushiv1connect.NushiServiceStageFilesProcedure:   true,
-	nushiv1connect.NushiServiceCommitStagedProcedure: true,
+	nushiv1connect.NushiServiceStageFilesProcedure:         true,
+	nushiv1connect.NushiServiceCommitStagedProcedure:       true,
+	nushiv1connect.NushiServiceWriteCommitMessageProcedure: true,
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -428,5 +429,98 @@ func TestCommitRefusesWhatTheFolderDoesntShow(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if _, err := CommitStaged(ctx, sub, "m", index, ownConfig()); err == nil || !strings.Contains(err.Error(), "nothing is staged") {
 		t.Fatalf("an empty commit: %v", err)
+	}
+}
+
+// signedRepo is a repository with one staged file and a commit identity,
+// ready for its signing settings.
+func signedRepo(t *testing.T) string {
+	t.Helper()
+	repo := t.TempDir()
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "config", "user.name", "Test")
+	testcheck.Git(t, repo, "config", "user.email", "test@example.com")
+	write(t, filepath.Join(repo, "f.txt"), "x\n")
+	testcheck.NoErr(t, Stage(context.Background(), repo, []string{"f.txt"}, true))
+	return repo
+}
+
+func commitThere(t *testing.T, repo string, env []string) (string, error) {
+	t.Helper()
+	index, err := IndexState(context.Background(), repo)
+	testcheck.NoErr(t, err)
+	return CommitStaged(context.Background(), repo, "signed", index, env)
+}
+
+// A commit signs as the repository's git says, with the keys the
+// environment's tools find (ADR 0079).
+func TestCommitSignsWithGPG(t *testing.T) {
+	gpg, err := exec.LookPath("gpg")
+	if err != nil {
+		t.Skip("no gpg here")
+	}
+	// A short path: gpg-agent's socket has a length limit.
+	home, err := os.MkdirTemp("", "ngpg") //nolint:usetesting // t.TempDir's path is past that limit
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() {
+		_ = exec.Command("gpgconf", "--homedir", home, "--kill", "gpg-agent").Run()
+		_ = os.RemoveAll(home)
+	})
+	testcheck.NoErr(t, os.Chmod(home, 0o700))
+	env := append(ownConfig(), "GNUPGHOME="+home)
+	cmd := exec.Command(gpg, "--batch", "--passphrase", "", "--quick-generate-key", "Test <test@example.com>", "ed25519", "sign", "never")
+	cmd.Env = env
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Skipf("gpg can't make a key here: %v: %s", err, out)
+	}
+	repo := signedRepo(t)
+	testcheck.Git(t, repo, "config", "commit.gpgsign", "true")
+	testcheck.Git(t, repo, "config", "user.signingkey", "test@example.com")
+	testcheck.Git(t, repo, "config", "gpg.program", gpg)
+	if _, err := commitThere(t, repo, env); err != nil {
+		t.Fatal(err)
+	}
+	show := exec.Command("git", "-C", repo, "log", "-1", "--format=%G?")
+	show.Env = env
+	out, err := show.Output()
+	testcheck.NoErr(t, err)
+	if got := strings.TrimSpace(string(out)); got != "G" && got != "U" { // U: good, its key not marked trusted
+		t.Errorf("signature = %q", got)
+	}
+}
+
+func TestCommitSignsWithSSH(t *testing.T) {
+	keygen, err := exec.LookPath("ssh-keygen")
+	if err != nil {
+		t.Skip("no ssh-keygen here")
+	}
+	key := filepath.Join(t.TempDir(), "key")
+	if out, err := exec.Command(keygen, "-q", "-t", "ed25519", "-N", "", "-f", key).CombinedOutput(); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	repo := signedRepo(t)
+	testcheck.Git(t, repo, "config", "commit.gpgsign", "true")
+	testcheck.Git(t, repo, "config", "gpg.format", "ssh")
+	testcheck.Git(t, repo, "config", "user.signingkey", key)
+	if _, err := commitThere(t, repo, ownConfig()); err != nil {
+		t.Fatal(err)
+	}
+	if got := testcheck.Git(t, repo, "cat-file", "commit", "HEAD"); !strings.Contains(got, "gpgsig -----BEGIN SSH SIGNATURE") {
+		t.Errorf("no signature: %s", got)
+	}
+}
+
+func TestCommitThatCantSignFails(t *testing.T) {
+	repo := signedRepo(t)
+	fails := filepath.Join(t.TempDir(), "gpg")
+	testcheck.NoErr(t, os.WriteFile(fails, []byte("#!/bin/sh\necho 'no secret key' >&2\nexit 2\n"), 0o755))
+	testcheck.Git(t, repo, "config", "commit.gpgsign", "true")
+	testcheck.Git(t, repo, "config", "gpg.program", fails)
+	_, err := commitThere(t, repo, ownConfig())
+	if err == nil || !strings.Contains(err.Error(), "no secret key") {
+		t.Fatalf("a signing failure: %v", err)
+	}
+	if got := testcheck.Git(t, repo, "rev-list", "--all", "--count"); got != "0" {
+		t.Errorf("committed unsigned: %s commits", got)
 	}
 }

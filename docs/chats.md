@@ -86,6 +86,8 @@ A chat whose agent can rewind goes back to just before one of your messages. Rew
 
 - Each file and folder has a checkbox to stage it whole. A dash means part of it is staged, by a terminal or because it changed since: a click stages all of it.
 - Under the files, write a message and press Commit (⌘⏎). It commits what's staged, as `git commit` does: hooks and signing run, and what a failing hook says shows there.
+- The ✨ button asks the chat's agent to write the message from what's staged and why the chat did it, for Claude and Codex while the chat is idle. Nothing commits until you press Commit, and the chat shows no trace of it.
+- A commit follows your git: your identity, signing (GPG or SSH), hooks and `commit.*` settings. If signing fails, nothing is committed.
 - If what's staged changed since it was shown, or files outside the chat's folder are staged, Commit refuses. While the agent is working it warns that files may change ([ADR 0079](adr/0079-stage-and-commit-from-changes.md)).
 
 - Select lines to write a review comment for the agent.

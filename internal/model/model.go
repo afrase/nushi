@@ -528,7 +528,9 @@ type Status struct {
 	Started time.Time // when the running turn started
 	Waiting bool      // a permission prompt or question waits on the user
 	CanFork bool      // the agent can fork the chat into side chats
-	Images  bool      // the agent takes images in prompts
+	// CanWriteCommit: the agent can write a commit message for it.
+	CanWriteCommit bool
+	Images         bool // the agent takes images in prompts
 	// CanRewind says the agent can rewind the chat to a user message.
 	CanRewind bool
 	// MCPChanged says MCP servers changed since the agent started; a reload

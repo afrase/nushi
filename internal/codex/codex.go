@@ -73,6 +73,9 @@ const (
 // milestone Z), then the user's.
 var Tested = []string{"0.160.1", "0.163.0"}
 
+// ReadOnlyMode is Codex's read-only sandbox (docs/facts/codex.md).
+func (Harness) ReadOnlyMode() string { return "read-only" }
+
 // Gone says a session/load error means Codex has no rollout of the
 // session (deleted, or never written): codex-acp 2.2.2 answers Internal
 // error (-32603) with data.details "no rollout found for thread id <id>".

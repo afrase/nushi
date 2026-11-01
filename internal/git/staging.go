@@ -17,6 +17,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/secrets"
 )
 
 // The git writes a user asks for in Changes (ADR 0079). Nothing here runs on
@@ -25,8 +26,9 @@ import (
 const (
 	// A commit's hooks may lint and test, but a signing prompt nobody
 	// answers mustn't hold it for ever.
-	commitTimeout = 5 * time.Minute
-	maxCommitSays = 4 << 10 // what's shown of a commit that failed, its end
+	commitTimeout   = 5 * time.Minute
+	maxCommitSays   = 4 << 10 // what's shown of a commit that failed, its end
+	maxDiffForAgent = 64 << 10
 )
 
 // ErrIndexMoved is a commit refused because what's staged isn't what the
@@ -61,6 +63,23 @@ func Stage(ctx context.Context, folder string, paths []string, on bool) error {
 		return err
 	}
 	return nil
+}
+
+// StagedDiff is what's staged in folder as a patch, for an agent to read:
+// secrets' shapes masked, and cut short past what a message needs.
+func StagedDiff(ctx context.Context, folder string) (string, error) {
+	var out capped
+	if _, err := runTo(ctx, folder, nil, &out, "diff", "--cached", "--relative", "--no-color", "--no-ext-diff", "--no-textconv", "--ignore-submodules=dirty"); err != nil {
+		return "", err
+	}
+	if len(out.b) == 0 {
+		return "", errors.New("nothing is staged")
+	}
+	s := secrets.Mask(strings.ToValidUTF8(string(out.b), ""), "[hidden]", nil)
+	if len(s) > maxDiffForAgent {
+		s = strings.ToValidUTF8(s[:maxDiffForAgent], "") + "\n[the rest of the diff is left out]"
+	}
+	return s, nil
 }
 
 // IndexState names what's staged in folder's repository against HEAD, every

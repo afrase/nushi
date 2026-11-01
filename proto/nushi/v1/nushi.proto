@@ -163,6 +163,10 @@ service NushiService {
   // Stages files as they are in the work tree, or unstages them. Only the
   // user's own ask: nothing else writes the index (ADR 0079). (API 98)
   rpc StageFiles(StageFilesRequest) returns (StageFilesResponse);
+  // Asks the chat's agent, unseen, for a commit message for what's staged,
+  // in a throwaway read-only fork of its session, while the chat is idle.
+  // Refused when ChatStatus.can_write_commit is false. (API 98)
+  rpc WriteCommitMessage(WriteCommitMessageRequest) returns (WriteCommitMessageResponse);
   // Commits what's staged as the user's git commit would, hooks and signing
   // included, if it's still what GetDiff said (index). (API 98)
   rpc CommitStaged(CommitStagedRequest) returns (CommitStagedResponse);
@@ -1577,6 +1581,14 @@ message StageFilesRequest {
 
 message StageFilesResponse {}
 
+message WriteCommitMessageRequest {
+  string chat_id = 1;
+}
+
+message WriteCommitMessageResponse {
+  string message = 1;
+}
+
 message CommitStagedRequest {
   // An absolute path.
   string folder = 1;
@@ -1987,6 +1999,8 @@ message ItemEvent {
 }
 
 message ChatStatus {
+  // The agent can write a commit message for it (WriteCommitMessage).
+  bool can_write_commit = 15;
   bool busy = 1;
   reserved 2;
   reserved "error";

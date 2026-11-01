@@ -138,6 +138,7 @@ class ChatState extends ChangeNotifier {
   bool busy = false;
   bool waiting = false; // on the user: a permission prompt or a question
   bool canFork = false; // the agent can fork it into side chats
+  bool canWriteCommit = false; // the agent can write a commit message
   bool canImages = false; // the agent takes images in prompts
   bool canRewind = false; // the agent rewinds to a user message
   bool mcpChanged = false; // MCP servers changed since the agent started
@@ -430,6 +431,7 @@ class ChatState extends ChangeNotifier {
     busy = s.busy;
     waiting = s.waiting;
     canFork = s.canFork;
+    canWriteCommit = s.canWriteCommit;
     canImages = s.images;
     canRewind = s.canRewind;
     mcpChanged = s.mcpChanged;

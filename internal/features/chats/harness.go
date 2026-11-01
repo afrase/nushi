@@ -125,6 +125,12 @@ type BackgroundTasks interface {
 	Stopped(call model.Item) string
 }
 
+// ReadOnly is an agent with a mode that can't change anything. Its name is
+// the value of its mode option.
+type ReadOnly interface {
+	ReadOnlyMode() string
+}
+
 // ContextCommander has a slash command that says what fills the context:
 // ContextCommand, run unseen in a throwaway fork; ReadContext reads its reply
 // (the reply's messages, in order, at least one).

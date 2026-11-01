@@ -25,6 +25,7 @@ var (
 	_ chats.Subagents        = claude.Harness{}
 	_ chats.BackgroundTasks  = claude.Harness{}
 	_ chats.ContextCommander = claude.Harness{}
+	_ chats.ReadOnly         = claude.Harness{}
 	_ chats.GoneReader       = claude.Harness{}
 
 	_ chats.HistoryCopier  = claudehistory.Local{}
@@ -34,6 +35,7 @@ var (
 	_ chats.MessageDater   = claudehistory.Local{}
 
 	_ chats.Forker        = codex.Harness{}
+	_ chats.ReadOnly      = codex.Harness{}
 	_ chats.ToolReader    = codex.Harness{}
 	_ chats.OtherReader   = codex.Harness{}
 	_ chats.GoneReader    = codex.Harness{}

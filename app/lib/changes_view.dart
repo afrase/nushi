@@ -390,6 +390,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                               files: _files,
                               onStage: _stage,
                               onCommit: _commit,
+                              onWrite: _writeMessage,
                             ),
                         ],
                       ),
@@ -545,6 +546,16 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       }
       if (--_stages == 0 && mounted) await reload();
     });
+  }
+
+  /// The chat's agent's message for what's staged, once staging under way
+  /// is in.
+  Future<String> _writeMessage() async {
+    await _staging;
+    final got = await daemon.client.writeCommitMessage(
+      WriteCommitMessageRequest(chatId: chat.id),
+    );
+    return got.message;
   }
 
   /// Commits what's staged, once any staging under way is in and read.

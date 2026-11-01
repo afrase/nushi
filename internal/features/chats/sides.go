@@ -48,10 +48,24 @@ func (c *chat) probe(n *acp.SessionNotification) bool {
 	if m := n.Update.AgentMessageChunk; m != nil && m.Content.Text != nil {
 		run.add(m)
 	}
+	if n.Update.ToolCall != nil && run.tool != nil {
+		run.toolCalled = true
+		run.tool()
+	}
 	return true
 }
 
+// probing says whether sid is a throwaway fork's.
+func (c *chat) probing(sid acp.SessionID) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.probes[string(sid)] != nil
+}
+
 func (c *chat) RequestPermission(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
+	if c.probing(req.SessionID) { // nobody sees a throwaway fork to answer
+		return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{Cancelled: true}}, nil
+	}
 	to := c.route(req.SessionID)
 	if to == nil {
 		return nil, fmt.Errorf("no session %q", req.SessionID)

@@ -59,6 +59,7 @@ class CommitBox extends StatefulWidget {
     required this.files,
     required this.onStage,
     required this.onCommit,
+    required this.onWrite,
     super.key,
   });
 
@@ -69,6 +70,9 @@ class CommitBox extends StatefulWidget {
   /// Commits with this message; what it throws shows here.
   final Future<void> Function(String message) onCommit;
 
+  /// Asks the chat's agent for a message, for what's staged.
+  final Future<String> Function() onWrite;
+
   @override
   State<CommitBox> createState() => _CommitBoxState();
 }
@@ -76,6 +80,7 @@ class CommitBox extends StatefulWidget {
 class _CommitBoxState extends State<CommitBox> {
   String? _error;
   bool _running = false;
+  bool _writing = false;
 
   int get _staged => widget.files.where((f) => f.staged.isNotEmpty).length;
 
@@ -83,6 +88,21 @@ class _CommitBoxState extends State<CommitBox> {
       !_running &&
       _staged > 0 &&
       widget.chat.commitMessage.text.trim().isNotEmpty;
+
+  /// Puts the agent's message in the field, where it can be edited.
+  Future<void> _write() async {
+    setState(() {
+      _writing = true;
+      _error = null;
+    });
+    try {
+      widget.chat.commitMessage.text = await widget.onWrite();
+    } on Object catch (e) {
+      _error = errorText(e);
+    } finally {
+      if (mounted) setState(() => _writing = false);
+    }
+  }
 
   Future<void> _commit() async {
     if (!_ready) return;
@@ -124,10 +144,26 @@ class _CommitBoxState extends State<CommitBox> {
               children: [
                 if (files.isNotEmpty)
                   StageCheck(files, onStage: widget.onStage),
-                Text(
-                  '$n of ${widget.files.length} staged',
-                  style: theme.ui(t.textSecondary, size: 12),
+                Expanded(
+                  child: Text(
+                    '$n of ${widget.files.length} staged',
+                    style: theme.ui(t.textSecondary, size: 12),
+                  ),
                 ),
+                if (_writing)
+                  const SizedBox.square(
+                    dimension: 12,
+                    child: CircularProgressIndicator(strokeWidth: 1.5),
+                  )
+                else if (chat.canWriteCommit)
+                  IconTap(
+                    Icons.auto_awesome_outlined,
+                    size: 14,
+                    tooltip: chat.busy
+                        ? '${chat.agentName} is working'
+                        : 'Write the message with ${chat.agentName}',
+                    onTap: n == 0 || chat.busy ? null : _write,
+                  ),
               ],
             ),
             CallbackShortcuts(

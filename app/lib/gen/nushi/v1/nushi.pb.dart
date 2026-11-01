@@ -11499,6 +11499,129 @@ class StageFilesResponse extends $pb.GeneratedMessage {
   static StageFilesResponse? _defaultInstance;
 }
 
+class WriteCommitMessageRequest extends $pb.GeneratedMessage {
+  factory WriteCommitMessageRequest({
+    $core.String? chatId,
+  }) {
+    final result = WriteCommitMessageRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  WriteCommitMessageRequest._();
+
+  factory WriteCommitMessageRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteCommitMessageRequest()..mergeFromBuffer(data, registry);
+  factory WriteCommitMessageRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteCommitMessageRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WriteCommitMessageRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WriteCommitMessageRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteCommitMessageRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteCommitMessageRequest copyWith(
+          void Function(WriteCommitMessageRequest) updates) =>
+      super.copyWith((message) => updates(message as WriteCommitMessageRequest))
+          as WriteCommitMessageRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WriteCommitMessageRequest() / WriteCommitMessageRequest.new instead')
+  static WriteCommitMessageRequest create() => WriteCommitMessageRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      WriteCommitMessageRequest._();
+  @$core.override
+  WriteCommitMessageRequest createEmptyInstance() =>
+      WriteCommitMessageRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WriteCommitMessageRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WriteCommitMessageRequest>(
+          WriteCommitMessageRequest.$_createMessage);
+  static WriteCommitMessageRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class WriteCommitMessageResponse extends $pb.GeneratedMessage {
+  factory WriteCommitMessageResponse({
+    $core.String? message,
+  }) {
+    final result = WriteCommitMessageResponse._();
+    if (message != null) result.message = message;
+    return result;
+  }
+
+  WriteCommitMessageResponse._();
+
+  factory WriteCommitMessageResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteCommitMessageResponse()..mergeFromBuffer(data, registry);
+  factory WriteCommitMessageResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteCommitMessageResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WriteCommitMessageResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WriteCommitMessageResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'message')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteCommitMessageResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteCommitMessageResponse copyWith(
+          void Function(WriteCommitMessageResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as WriteCommitMessageResponse))
+          as WriteCommitMessageResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WriteCommitMessageResponse() / WriteCommitMessageResponse.new instead')
+  static WriteCommitMessageResponse create() => WriteCommitMessageResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      WriteCommitMessageResponse._();
+  @$core.override
+  WriteCommitMessageResponse createEmptyInstance() =>
+      WriteCommitMessageResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WriteCommitMessageResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WriteCommitMessageResponse>(
+          WriteCommitMessageResponse.$_createMessage);
+  static WriteCommitMessageResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get message => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set message($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMessage() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMessage() => $_clearField(1);
+}
+
 class CommitStagedRequest extends $pb.GeneratedMessage {
   factory CommitStagedRequest({
     $core.String? folder,
@@ -14591,6 +14714,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? reopenFailed,
     $core.bool? sessionGone,
     $core.int? background,
+    $core.bool? canWriteCommit,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -14606,6 +14730,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (reopenFailed != null) result.reopenFailed = reopenFailed;
     if (sessionGone != null) result.sessionGone = sessionGone;
     if (background != null) result.background = background;
+    if (canWriteCommit != null) result.canWriteCommit = canWriteCommit;
     return result;
   }
 
@@ -14635,6 +14760,7 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(12, _omitFieldNames ? '' : 'reopenFailed')
     ..aOB(13, _omitFieldNames ? '' : 'sessionGone')
     ..aI(14, _omitFieldNames ? '' : 'background')
+    ..aOB(15, _omitFieldNames ? '' : 'canWriteCommit')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14794,6 +14920,16 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasBackground() => $_has(12);
   @$pb.TagNumber(14)
   void clearBackground() => $_clearField(14);
+
+  /// The agent can write a commit message for it (WriteCommitMessage).
+  @$pb.TagNumber(15)
+  $core.bool get canWriteCommit => $_getBF(13);
+  @$pb.TagNumber(15)
+  set canWriteCommit($core.bool value) => $_setBool(13, value);
+  @$pb.TagNumber(15)
+  $core.bool hasCanWriteCommit() => $_has(13);
+  @$pb.TagNumber(15)
+  void clearCanWriteCommit() => $_clearField(15);
 }
 
 /// A shell the user runs beside a chat, in the daemon.
@@ -28837,6 +28973,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, StageFilesRequest request) =>
       _client.invoke<StageFilesResponse>(
           ctx, 'NushiService', 'StageFiles', request, StageFilesResponse());
+
+  /// Asks the chat's agent, unseen, for a commit message for what's staged,
+  /// in a throwaway read-only fork of its session, while the chat is idle.
+  /// Refused when ChatStatus.can_write_commit is false. (API 98)
+  $async.Future<WriteCommitMessageResponse> writeCommitMessage(
+          $pb.ClientContext? ctx, WriteCommitMessageRequest request) =>
+      _client.invoke<WriteCommitMessageResponse>(ctx, 'NushiService',
+          'WriteCommitMessage', request, WriteCommitMessageResponse());
 
   /// Commits what's staged as the user's git commit would, hooks and signing
   /// included, if it's still what GetDiff said (index). (API 98)

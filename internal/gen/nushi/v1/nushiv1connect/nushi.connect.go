@@ -137,6 +137,9 @@ const (
 	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
 	// NushiServiceStageFilesProcedure is the fully-qualified name of the NushiService's StageFiles RPC.
 	NushiServiceStageFilesProcedure = "/nushi.v1.NushiService/StageFiles"
+	// NushiServiceWriteCommitMessageProcedure is the fully-qualified name of the NushiService's
+	// WriteCommitMessage RPC.
+	NushiServiceWriteCommitMessageProcedure = "/nushi.v1.NushiService/WriteCommitMessage"
 	// NushiServiceCommitStagedProcedure is the fully-qualified name of the NushiService's CommitStaged
 	// RPC.
 	NushiServiceCommitStagedProcedure = "/nushi.v1.NushiService/CommitStaged"
@@ -564,6 +567,10 @@ type NushiServiceClient interface {
 	// Stages files as they are in the work tree, or unstages them. Only the
 	// user's own ask: nothing else writes the index (ADR 0079). (API 98)
 	StageFiles(context.Context, *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error)
+	// Asks the chat's agent, unseen, for a commit message for what's staged,
+	// in a throwaway read-only fork of its session, while the chat is idle.
+	// Refused when ChatStatus.can_write_commit is false. (API 98)
+	WriteCommitMessage(context.Context, *connect.Request[v1.WriteCommitMessageRequest]) (*connect.Response[v1.WriteCommitMessageResponse], error)
 	// Commits what's staged as the user's git commit would, hooks and signing
 	// included, if it's still what GetDiff said (index). (API 98)
 	CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error)
@@ -1095,6 +1102,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceStageFilesProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("StageFiles")),
+			connect.WithClientOptions(opts...),
+		),
+		writeCommitMessage: connect.NewClient[v1.WriteCommitMessageRequest, v1.WriteCommitMessageResponse](
+			httpClient,
+			baseURL+NushiServiceWriteCommitMessageProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("WriteCommitMessage")),
 			connect.WithClientOptions(opts...),
 		),
 		commitStaged: connect.NewClient[v1.CommitStagedRequest, v1.CommitStagedResponse](
@@ -1702,6 +1715,7 @@ type nushiServiceClient struct {
 	setConfigOption        *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	getDiff                *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
 	stageFiles             *connect.Client[v1.StageFilesRequest, v1.StageFilesResponse]
+	writeCommitMessage     *connect.Client[v1.WriteCommitMessageRequest, v1.WriteCommitMessageResponse]
 	commitStaged           *connect.Client[v1.CommitStagedRequest, v1.CommitStagedResponse]
 	getFile                *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	watchChatFile          *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
@@ -2005,6 +2019,11 @@ func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v
 // StageFiles calls nushi.v1.NushiService.StageFiles.
 func (c *nushiServiceClient) StageFiles(ctx context.Context, req *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error) {
 	return c.stageFiles.CallUnary(ctx, req)
+}
+
+// WriteCommitMessage calls nushi.v1.NushiService.WriteCommitMessage.
+func (c *nushiServiceClient) WriteCommitMessage(ctx context.Context, req *connect.Request[v1.WriteCommitMessageRequest]) (*connect.Response[v1.WriteCommitMessageResponse], error) {
+	return c.writeCommitMessage.CallUnary(ctx, req)
 }
 
 // CommitStaged calls nushi.v1.NushiService.CommitStaged.
@@ -2632,6 +2651,10 @@ type NushiServiceHandler interface {
 	// Stages files as they are in the work tree, or unstages them. Only the
 	// user's own ask: nothing else writes the index (ADR 0079). (API 98)
 	StageFiles(context.Context, *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error)
+	// Asks the chat's agent, unseen, for a commit message for what's staged,
+	// in a throwaway read-only fork of its session, while the chat is idle.
+	// Refused when ChatStatus.can_write_commit is false. (API 98)
+	WriteCommitMessage(context.Context, *connect.Request[v1.WriteCommitMessageRequest]) (*connect.Response[v1.WriteCommitMessageResponse], error)
 	// Commits what's staged as the user's git commit would, hooks and signing
 	// included, if it's still what GetDiff said (index). (API 98)
 	CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error)
@@ -3159,6 +3182,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceStageFilesProcedure,
 		svc.StageFiles,
 		connect.WithSchema(nushiServiceMethods.ByName("StageFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceWriteCommitMessageHandler := connect.NewUnaryHandler(
+		NushiServiceWriteCommitMessageProcedure,
+		svc.WriteCommitMessage,
+		connect.WithSchema(nushiServiceMethods.ByName("WriteCommitMessage")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceCommitStagedHandler := connect.NewUnaryHandler(
@@ -3805,6 +3834,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetDiffHandler.ServeHTTP(w, r)
 		case NushiServiceStageFilesProcedure:
 			nushiServiceStageFilesHandler.ServeHTTP(w, r)
+		case NushiServiceWriteCommitMessageProcedure:
+			nushiServiceWriteCommitMessageHandler.ServeHTTP(w, r)
 		case NushiServiceCommitStagedProcedure:
 			nushiServiceCommitStagedHandler.ServeHTTP(w, r)
 		case NushiServiceGetFileProcedure:
@@ -4166,6 +4197,10 @@ func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Reques
 
 func (UnimplementedNushiServiceHandler) StageFiles(context.Context, *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StageFiles is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) WriteCommitMessage(context.Context, *connect.Request[v1.WriteCommitMessageRequest]) (*connect.Response[v1.WriteCommitMessageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WriteCommitMessage is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error) {

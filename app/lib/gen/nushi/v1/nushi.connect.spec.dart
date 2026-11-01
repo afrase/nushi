@@ -421,6 +421,16 @@ abstract final class NushiService {
     nushiv1nushi.StageFilesResponse.new,
   );
 
+  /// Asks the chat's agent, unseen, for a commit message for what's staged,
+  /// in a throwaway read-only fork of its session, while the chat is idle.
+  /// Refused when ChatStatus.can_write_commit is false. (API 98)
+  static const writeCommitMessage = connect.Spec(
+    '/$name/WriteCommitMessage',
+    connect.StreamType.unary,
+    nushiv1nushi.WriteCommitMessageRequest.new,
+    nushiv1nushi.WriteCommitMessageResponse.new,
+  );
+
   /// Commits what's staged as the user's git commit would, hooks and signing
   /// included, if it's still what GetDiff said (index). (API 98)
   static const commitStaged = connect.Spec(

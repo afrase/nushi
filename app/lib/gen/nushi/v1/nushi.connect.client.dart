@@ -839,6 +839,26 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Asks the chat's agent, unseen, for a commit message for what's staged,
+  /// in a throwaway read-only fork of its session, while the chat is idle.
+  /// Refused when ChatStatus.can_write_commit is false. (API 98)
+  Future<nushiv1nushi.WriteCommitMessageResponse> writeCommitMessage(
+    nushiv1nushi.WriteCommitMessageRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.writeCommitMessage,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Commits what's staged as the user's git commit would, hooks and signing
   /// included, if it's still what GetDiff said (index). (API 98)
   Future<nushiv1nushi.CommitStagedResponse> commitStaged(

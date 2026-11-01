@@ -105,6 +105,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetDiffRequest request);
   $async.Future<$0.StageFilesResponse> stageFiles(
       $pb.ServerContext ctx, $0.StageFilesRequest request);
+  $async.Future<$0.WriteCommitMessageResponse> writeCommitMessage(
+      $pb.ServerContext ctx, $0.WriteCommitMessageRequest request);
   $async.Future<$0.CommitStagedResponse> commitStaged(
       $pb.ServerContext ctx, $0.CommitStagedRequest request);
   $async.Future<$0.GetFileResponse> getFile(
@@ -378,6 +380,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetDiffRequest();
       case 'StageFiles':
         return $0.StageFilesRequest();
+      case 'WriteCommitMessage':
+        return $0.WriteCommitMessageRequest();
       case 'CommitStaged':
         return $0.CommitStagedRequest();
       case 'GetFile':
@@ -657,6 +661,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return getDiff(ctx, request as $0.GetDiffRequest);
       case 'StageFiles':
         return stageFiles(ctx, request as $0.StageFilesRequest);
+      case 'WriteCommitMessage':
+        return writeCommitMessage(ctx, request as $0.WriteCommitMessageRequest);
       case 'CommitStaged':
         return commitStaged(ctx, request as $0.CommitStagedRequest);
       case 'GetFile':

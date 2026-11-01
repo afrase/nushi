@@ -397,7 +397,7 @@ func (c *chat) noticeLocked(reason, text string) {
 func (c *chat) statusLocked() model.Status {
 	idle := c.agent == nil && !c.busy && c.parent == nil && !c.record.Archived
 	return model.Status{Busy: c.busy, Started: c.started, Waiting: len(c.waiting)+len(c.questions) > 0, CanFork: c.canFork, Images: c.canImage,
-		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil,
+		CanRewind: c.forkAt != nil, MCPChanged: c.mcpChanged, CanAskContext: !idle && c.canAskContextLocked() == nil, CanWriteCommit: !idle && c.canWriteCommitLocked() == nil,
 		Asleep: idle && !c.reopenFailed, ReopenFailed: idle && c.reopenFailed, SessionGone: idle && c.reopenFailed && c.sessionGone, CanSleep: c.parent == nil && c.canSleepLocked() == nil,
 		Background: c.runningLocked()}
 }

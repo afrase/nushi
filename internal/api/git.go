@@ -71,6 +71,14 @@ func (s *server) StageFiles(ctx context.Context, req *connect.Request[nushiv1.St
 	return connect.NewResponse(&nushiv1.StageFilesResponse{}), nil
 }
 
+func (s *server) WriteCommitMessage(ctx context.Context, req *connect.Request[nushiv1.WriteCommitMessageRequest]) (*connect.Response[nushiv1.WriteCommitMessageResponse], error) {
+	message, err := s.chats.CommitMessage(ctx, req.Msg.ChatId, git.StagedDiff)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.WriteCommitMessageResponse{Message: message}), nil
+}
+
 // maxCommitMessage is what a commit's message may be, as a merge's.
 const maxCommitMessage = 64 << 10
 

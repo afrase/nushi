@@ -152,6 +152,9 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 	return "no"
 }
 
+// ReadOnlyMode is Claude's plan mode (docs/facts/claude.md).
+func (Harness) ReadOnlyMode() string { return "plan" }
+
 // TurnDone says a usage update is the result of the user's turn: the one
 // with the cost, from a model cycle the user started
 // (`_claude/origin.kind` "human", not a task notification or a

@@ -56,6 +56,9 @@ Future<(Daemon, ChatState, List<Object?>)> _view(
         ),
         GetDiffRequest() => GetDiffResponse(files: files, index: _shown),
         StageFilesRequest() => StageFilesResponse(),
+        WriteCommitMessageRequest() => WriteCommitMessageResponse(
+          message: 'Shorten the relay wait',
+        ),
         CommitStagedRequest() =>
           commit == null
               ? CommitStagedResponse(short: 'abc1234')
@@ -167,6 +170,32 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('the agent writes the message, into the field', (tester) async {
+    final (d, state, asked) = await _view(tester, _changes());
+    expect(find.byIcon(Icons.auto_awesome_outlined), findsNothing);
+    state.canWriteCommit = true;
+    state.commitMessage.text = 'x'; // rebuilds the box
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.auto_awesome_outlined));
+    await tester.pumpAndSettle();
+    expect(state.commitMessage.text, 'Shorten the relay wait');
+    expect(asked.whereType<WriteCommitMessageRequest>().single.chatId, 'c');
+    expect(asked.whereType<CommitStagedRequest>(), isEmpty);
+    // It's the user's to change: what commits is what the field says then.
+    await tester.enterText(
+      find.byType(TextField),
+      'Shorten the relay wait to 2s',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Commit 2 files'));
+    await tester.pumpAndSettle();
+    expect(
+      asked.whereType<CommitStagedRequest>().single.message,
+      'Shorten the relay wait to 2s',
+    );
+    d.dispose();
+  });
+
   testWidgets('no commit box outside Uncommitted', (tester) async {
     final (d, state, _) = await _view(tester, _changes());
     expect(find.byType(CommitBox), findsOne);
@@ -192,7 +221,9 @@ void main() {
           size: size,
           brightness: mode,
         );
-        state.commitMessage.text = 'Shorten the relay wait';
+        state
+          ..canWriteCommit = true
+          ..commitMessage.text = 'Shorten the relay wait';
         await tester.pumpAndSettle();
         await expectLater(
           find.byType(ChangesView),
