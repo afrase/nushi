@@ -251,6 +251,9 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 		return
 	}
 	item := model.Item{ID: id, Kind: kind, Text: text, Images: images, Parent: parent}
+	if s, ok := m.Meta[model.SentMeta].(string); ok && c.quiet && kind != model.Thought {
+		item.Sent, _ = time.Parse(time.RFC3339Nano, s) // a zero time if it isn't one: not known
+	}
 	c.unnotedLocked(&item)
 	c.readToSubagentLocked(&item)
 	c.addLocked(item)

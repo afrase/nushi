@@ -148,6 +148,24 @@ func TestReopenDatesMessagesFromTheAgentsFiles(t *testing.T) {
 	}
 }
 
+// A replay's own time for a message (model.SentMeta) is kept.
+func TestReplayTellsWhenAMessageWasSent(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	dated := chunk("m0", "older")
+	dated.AgentMessageChunk.Meta = map[string]any{model.SentMeta: "2026-10-25T01:02:03Z"}
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+
+	agent.history = []acp.SessionUpdate{dated}
+	back := reopened(t, restarted(t, agent, c, store), c.id)
+	back.mu.Lock()
+	defer back.mu.Unlock()
+	i := back.indexLocked("m0")
+	if i < 0 || !back.items[i].Sent.Equal(time.Date(2026, 10, 25, 1, 2, 3, 0, time.UTC)) {
+		t.Errorf("replayed items %s, m0 at index %d", describe(back.items), i)
+	}
+}
+
 func TestReopenAfterACompaction(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turn := func(text string, updates ...acp.SessionUpdate) {

@@ -116,7 +116,10 @@ func All(projects string, claudeGo func() bool) []Agent {
 		{
 			Agent: agents.Agent{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
 			Chats: chats.Kind{Resume: ante.Resume, Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}},
-			Local: func(k *chats.Kind) { k.OpenElsewhere = ante.OpenElsewhere },
+			Local: func(k *chats.Kind) {
+				k.OpenElsewhere = ante.OpenElsewhere
+				k.MessageTimes = func(sid, _ string) map[string]time.Time { return ante.Times(sid) }
+			},
 			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 				return ante.Start(dir, r.Env, h, log)
 			},

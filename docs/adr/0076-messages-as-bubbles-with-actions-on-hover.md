@@ -7,11 +7,11 @@ The owner, after ADR 0072 took the box off tool rows: "I like that they were mor
 - **On the Mac a user message is a bubble** at the column's right, 640 at most, in the band's colors. The phone keeps its band.
 - **A message's actions** are a row under it, on hover: on the user's the Read mark, its time, Copy and Rewind, on the agent's Copy, Fork from here and its time. They replace the buttons at the message's top right. Their 28 is kept while they don't show, so nothing moves as the pointer passes, and comes out of the gap below.
 - **A tool row is in the tool rows' tint and outline again**, reversing ADR 0072's "no box until it fails".
-- **The time** is `Item.sent`, now also set as an agent's message begins to arrive; a replay says nothing of when, so a message only the agent replayed takes its time from the agent's own files where Nushi can read them (Claude's session file, `Kind.MessageTimes`), and has none elsewhere. The tooltip has the date and time.
+- **The time** is `Item.sent`, now also set as an agent's message begins to arrive; a replay says nothing of when, so a message only the agent replayed takes its time from the agent's own files where Nushi can read them (Claude's and Ante's, `Kind.MessageTimes`) or from the replay when Nushi's bridge can say (PiG, `model.SentMeta`), and has none elsewhere. The tooltip has the date and time.
 - **Read** is two checks once something of the agent's own follows the message, one until then: the app works it out from the transcript, and nothing is stored.
 
 ## Consequences
-- With Codex, Ante, omp and PiG, messages from before this have no time unless they're the user's and Nushi's copy has it.
+- With Codex and omp, messages from before this have no time unless they're the user's and Nushi's copy has it.
 - Read means the agent answered, not that it took the message in.
 - A run of tool rows is busier than a line of text. That's the prominence asked for.
 

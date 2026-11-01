@@ -177,6 +177,10 @@ const (
 // it before, which the agent drops from its history.
 const StoppedBySafeguards = "stopped_by_safeguards"
 
+// SentMeta is the _meta key of a replayed message's first chunk that says
+// when it was sent (RFC 3339), from a bridge of Nushi's that can tell.
+const SentMeta = "nushi.sent"
+
 // AgentNotice is a notice of the agent's own that it sends as message
 // text (Claude Code's, as agent text to a client without ACP's notices):
 // Text without its label; Warning says it warns; Stopped says the model's
@@ -265,8 +269,8 @@ type Item struct {
 	ForkAt     string
 	Rewindable bool
 	// Sent is when a message was sent: a user message through Nushi, an
-	// agent's as it began to arrive, else what the agent's own files say
-	// (Kind.MessageTimes). Zero when not known.
+	// agent's as it began to arrive, else what the replay (SentMeta) or
+	// the agent's own files (Kind.MessageTimes) say. Zero when not known.
 	Sent time.Time `json:",omitzero"`
 	// Subagent is how the subagent a tool call starts goes.
 	Subagent *Subagent

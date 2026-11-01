@@ -16,6 +16,7 @@ import (
 	"github.com/afrase/acp-go/steering"
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pig/pigtest"
 	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/toolcall"
@@ -371,6 +372,12 @@ func TestSessions(t *testing.T) {
 	}
 	if got, want := strings.Join(load(s.SessionID), " | "), "user::first | "+live[0]+" | user::second | "+live[1]; got != want {
 		t.Errorf("replay = %s, want %s", got, want)
+	}
+	if u := c2.find(t, s.SessionID, "user_message_chunk", nil).UserMessageChunk; u == nil || u.Meta[model.SentMeta] == nil {
+		t.Errorf("a replayed message of the user's has no time: %+v", u)
+	}
+	if u := c2.find(t, s.SessionID, "agent_message_chunk", nil).AgentMessageChunk; u == nil || u.Meta[model.SentMeta] == nil {
+		t.Errorf("a replayed message has no time: %+v", u)
 	}
 	if got := strings.Join(load(f.SessionID), " | "); got != "user::first | "+live[0] {
 		t.Errorf("fork after the first turn = %s", got)

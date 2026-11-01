@@ -19,6 +19,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/toolcall"
 )
@@ -210,6 +211,11 @@ func branch(ctx context.Context, p *proc) ([]entry, error) {
 	return out, nil
 }
 
+// sentMeta is a replayed message's _meta: when pig saved it (model.SentMeta).
+func sentMeta(m *message) map[string]any {
+	return map[string]any{model.SentMeta: time.UnixMilli(m.Timestamp).UTC().Format(time.RFC3339Nano)}
+}
+
 // replay sends the client the conversation of the session pig opened:
 // the user's messages, the model's (its thinking, text and calls), the
 // calls' results.
@@ -239,7 +245,7 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 				b.WriteString(block.Text)
 			}
 			if text := b.String(); text != "" {
-				out = append(out, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{
+				out = append(out, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{Meta: sentMeta(m),
 					Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: text}}}})
 			}
 		case "assistant":
@@ -247,7 +253,11 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 				switch b.Type {
 				case "thinking", "text":
 					if t := b.Text + b.Thinking; t != "" {
-						out = append(out, chunk(b.Type == "thinking", t, messageID(m)))
+						u := chunk(b.Type == "thinking", t, messageID(m))
+						if u.AgentMessageChunk != nil {
+							u.AgentMessageChunk.Meta = sentMeta(m)
+						}
+						out = append(out, u)
 					}
 				case "toolCall":
 					call := s.toolCall(b.ID, b.Name, b.Arguments, "in_progress", toolcall.Old{})
