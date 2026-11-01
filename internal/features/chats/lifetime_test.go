@@ -84,9 +84,7 @@ func TestAFailedReopenIsntRetriedOnEveryCall(t *testing.T) {
 // fresh agent's: else Claude's stub of it would stay.
 func TestARedeleteAfterTheAgentWent(t *testing.T) {
 	agent := &fakeAgent{deletes: true}
-	dialect := testDialect
-	dialect.Redelete = 20 * time.Millisecond
-	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", redelete: 20 * time.Millisecond}, Launch: agent.launch}}, Options{})
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	side, err := svc.Fork(ctx, id)
@@ -104,9 +102,7 @@ func TestARedeleteAfterTheAgentWent(t *testing.T) {
 // on a dead agent.
 func TestAForkAsTheAgentEnds(t *testing.T) {
 	agent := &fakeAgent{deletes: true}
-	dialect := testDialect
-	dialect.Redelete = 0
-	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", once: true}, Launch: agent.launch}}, Options{})
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)
 	c := svc.chats[id]
@@ -146,8 +142,7 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	defer func(d time.Duration) { commandPoll = d }(commandPoll)
 	commandPoll = time.Millisecond
 	reads := make(chan struct{}, 1)
-	dialect := testDialect
-	dialect.ReadBackgroundCommand = func(string, string) (string, string, error) {
+	read := func(string, string) (string, string, error) {
 		select {
 		case reads <- struct{}{}:
 		default:
@@ -156,7 +151,7 @@ func TestTheServicesOwnWorkEndsWithIt(t *testing.T) {
 	}
 	agent := &fakeAgent{}
 	life, end := context.WithCancel(t.Context())
-	svc := New(life, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
+	svc := New(life, []Kind{{Harness: testHarness{Name: "fake", read: read}, Launch: agent.launch}}, Options{Remembered: &memModes{}, Sessions: &memSessions{}})
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]

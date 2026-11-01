@@ -158,7 +158,7 @@ func TestPageStart(t *testing.T) {
 func TestStartFailureReason(t *testing.T) {
 	launch := func(acp.Client, *slog.Logger) (chats.Agent, error) { return nil, errors.New("it quit") }
 	st := store.New(t.TempDir())
-	svc := chats.New(t.Context(), []chats.Kind{{Name: "a", Title: "A", Launch: launch}}, chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
+	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}, Launch: launch}}, chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
 	srv := httptest.NewServer(New(Services{Chats: svc}))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)

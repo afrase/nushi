@@ -233,7 +233,7 @@ type Item struct {
 	// RanModel the model it ran on, once the agent says.
 	Agent, Prompt, Model, Effort, RanModel string
 	// AgentID is the agent's id for the subagent, when it can pass it
-	// messages; for a call that passes one a message (Dialect.PassesToSubagent),
+	// messages; for a call that passes one a message (Subagents.PassesToSubagent in chats),
 	// that subagent's.
 	AgentID string
 	// A message to a subagent is a user message the agent was asked to pass

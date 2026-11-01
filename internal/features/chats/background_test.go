@@ -78,7 +78,7 @@ func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixtu
 	agent := &fakeAgent{pid: agentPid}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	procs := &fakeProcesses{below: map[int][]model.Process{agentPid: below}}
-	svc := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Processes: procs})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Processes: procs})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)

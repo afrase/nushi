@@ -19,7 +19,7 @@ func restarted(t *testing.T, agent *fakeAgent, c *chat, store *transcripts.Store
 	c.mu.Lock()
 	sess := c.record
 	c.mu.Unlock()
-	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}, Scratch: t.TempDir(), Copies: store})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}, Scratch: t.TempDir(), Copies: store})
 	return svc
 }
 
@@ -113,7 +113,10 @@ func TestReopenDatesMessagesFromTheAgentsFiles(t *testing.T) {
 		asked <- sid
 		return map[string]time.Time{"u0": at, "m0": at.Add(time.Minute), "u1": at.Add(2 * time.Minute), "m1": at}
 	}
-	again := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect, MessageTimes: times}},
+	again := newService(t, []Kind{{Harness: struct {
+		testHarness
+		messageTimes
+	}{testHarness{Name: "claude", Title: "Claude"}, times}, Launch: agent.launch}},
 		Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}, Scratch: t.TempDir(), Copies: store})
 	t.Cleanup(again.Close)
 	back := reopened(t, again, c.id)
@@ -245,7 +248,7 @@ func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 	testcheck.NoErr(t, store.Append("slow", []model.Item{{ID: "m1", Kind: model.AgentMessage, Text: "kept"}}, []string{""}))
 	copies := &slowCopies{Copies: store, chat: "slow", reading: make(chan struct{}), held: make(chan struct{})}
 	stored := []model.ChatRecord{{ID: "slow", Agent: "claude", Archived: true}, {ID: "fast", Agent: "claude", Archived: true}}
-	svc := newService(t, []Kind{{Name: "claude", Dialect: testDialect}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir(), Copies: copies})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir(), Copies: copies})
 	first := make(chan *chat)
 	go func() {
 		c, _ := svc.lookup("slow")
@@ -282,7 +285,7 @@ func TestRecordOpensNothing(t *testing.T) {
 	folder := t.TempDir()
 	wt := &model.Worktree{Repo: folder, Path: folder, Branch: "nushi/a"} // stored before Told
 	stored := []model.ChatRecord{{ID: "c1", SessionID: "s1", Agent: "claude", Folder: folder, Worktree: wt}, {ID: "c2", Agent: "claude", Archived: true}}
-	svc := newService(t, []Kind{{Name: "claude", Dialect: testDialect}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir()})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}}}, Options{Sessions: &memSessions{stored: stored}, Scratch: t.TempDir()})
 	sess, err := svc.Session("c1")
 	testcheck.NoErr(t, err)
 	if sess.Worktree.Told != "nushi/a" || sess.SessionID != "s1" {

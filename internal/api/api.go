@@ -336,8 +336,9 @@ func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.Li
 	}
 	resp := &nushiv1.ListAgentsResponse{Environment: env}
 	for _, k := range s.chats.Agents() {
-		st := found[k.Name]
-		a := &nushiv1.Agent{Name: k.Name, Title: k.Title, Resume: k.Resume, Mcp: k.MCP, DeleteArchives: k.DeleteArchives,
+		info := k.Info()
+		st := found[info.Name]
+		a := &nushiv1.Agent{Name: info.Name, Title: info.Title, Resume: info.Resume, Mcp: k.MCP, DeleteArchives: info.DeleteArchives,
 			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake)}
 		if ad := st.Adapter; ad != nil {
 			a.Adapter = &nushiv1.Adapter{Package: ad.Package, Pinned: st.Pinned, Installed: st.Installed, Packages: int32(st.Packages),
@@ -383,7 +384,7 @@ func (s *server) OpenAgentSession(ctx context.Context, req *connect.Request[nush
 }
 
 // agent names the agent a request names, or the default for "".
-func (s *server) agent(name string) string { return cmp.Or(name, s.chats.Agents()[0].Name) }
+func (s *server) agent(name string) string { return cmp.Or(name, s.chats.Agents()[0].Info().Name) }
 
 func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.MoveChatRequest]) (*connect.Response[nushiv1.MoveChatResponse], error) {
 	return done[nushiv1.MoveChatResponse](s.chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder, req.Msg.Worktree), refused)

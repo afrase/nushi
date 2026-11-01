@@ -23,7 +23,7 @@ func backgroundSubagent() []acp.SessionUpdate {
 }
 
 // result is Claude's usage report at the end of a model cycle the user
-// started (Dialect.TurnDone).
+// started (Transcript.TurnDone).
 func result() acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "usage_update", UsageUpdate: &acp.UsageUpdate{Used: 1, Size: 2,
 		Cost: &acp.Cost{Amount: 0.1, Currency: "USD"}, Meta: map[string]any{"_claude/origin": map[string]any{"kind": "human"}}}}

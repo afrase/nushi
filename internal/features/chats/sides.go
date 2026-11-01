@@ -219,7 +219,7 @@ var throwAwayWait = 30 * time.Second
 // throwAway has the chat's agent delete a session forked from the chat that
 // nobody will see again (a side chat, a /context fork), and again a moment
 // later for an agent that writes a little of it back as it ends
-// (Dialect.Redelete); then the chat forgets it. If the agent can't (it
+// (model.HarnessInfo.Redelete); then the chat forgets it. If the agent can't (it
 // went, or is going, meanwhile), the chat keeps it, and a fresh agent
 // deletes it once that one has stopped (see discard).
 //
@@ -247,14 +247,14 @@ func (s *Service) throwAway(c *chat, agent Agent, sid string) {
 			s.discard(c, []string{sid})
 		}
 	}
-	if c.dialect.Redelete == 0 {
+	if c.kind.Redelete == 0 {
 		last()
 		return
 	}
 	_ = del() // logged; last tries again
 	go func() {
 		select {
-		case <-time.After(c.dialect.Redelete):
+		case <-time.After(c.kind.Redelete):
 			last()
 		case <-s.ctx.Done(): // the chat keeps it (Close's doc)
 		}

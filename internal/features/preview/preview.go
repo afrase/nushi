@@ -32,7 +32,7 @@ type Chats interface {
 }
 
 // Set is the tool set, for every grant: only agents that take client MCP
-// servers ever get one (chats.Kind.ClientMCP).
+// servers ever get one (model.HarnessInfo.ClientMCP).
 type Set struct {
 	publish func(model.Event)
 	chats   Chats

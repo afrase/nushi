@@ -47,7 +47,7 @@ func (p *player) chatOf(sid string) (*Service, *chat, acp.SessionID) {
 	if p.chats[sid] == nil {
 		svc, _, c := newChat(p.t, claudeSession, &memModes{})
 		c.mu.Lock()
-		c.dialect.ReadBackgroundCommand = noOutputFile
+		c.kind.background = noOutputFile{c.kind.background}
 		c.mu.Unlock()
 		p.svcs[sid], p.chats[sid] = svc, c
 		p.order = append(p.order, sid)
@@ -284,7 +284,11 @@ func view(c *chat) parity {
 // gone. Nushi reads that output from the file claude writes, not from the
 // agent, so neither agent has a say in it, and a file another run left in
 // claude's temp folder mustn't count.
-func noOutputFile(string, string) (output, end string, err error) { return "", "", fs.ErrNotExist }
+type noOutputFile struct{ BackgroundTasks }
+
+func (noOutputFile) ReadBackgroundCommand(string, string) (output, end string, err error) {
+	return "", "", fs.ErrNotExist
+}
 
 // modelFallback is the label both agents give claude's notice that it
 // answered on another model after a refusal (docs/facts/claude.md).

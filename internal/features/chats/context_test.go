@@ -13,7 +13,7 @@ import (
 func TestContextUsageLeavesNoTrace(t *testing.T) {
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "## Context"), chunk("m2", "## Context Usage")}}
 	var events int
-	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Publish: func(model.Event) { events++ }})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }}}, Options{Publish: func(model.Event) { events++ }})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)

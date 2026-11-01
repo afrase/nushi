@@ -61,12 +61,36 @@ type daemon struct {
 	toolAPI string // the tools' endpoint, as the daemon's socket serves it
 }
 
+// copyFunc copies a session's history to another folder (chats.HistoryCopier).
+type copyFunc func(sessionID, from, to string) (remove func() error, err error)
+
+// fakeHarness is the "fake" agent's: Claude's notices, as startDaemon says,
+// and copyFunc's history.
+type fakeHarness struct{ copyFunc }
+
+func (fakeHarness) Info() model.HarnessInfo {
+	return model.HarnessInfo{Name: "fake", NamesSessions: true}
+}
+
+func (h fakeHarness) History(id, from, to string) (func() error, error) {
+	return h.copyFunc(id, from, to)
+}
+
+func (fakeHarness) Notice(meta map[string]any, text string) (model.AgentNotice, bool) {
+	return claude.Harness{}.Notice(meta, text)
+}
+
+func (fakeHarness) TurnDone(*acp.UsageUpdate) bool { return false }
+func (fakeHarness) Interrupted(string) bool        { return false }
+func (fakeHarness) Compacted(model.Item) bool      { return false }
+func (fakeHarness) ForkTitle(string, string) bool  { return false }
+
 // pipeAgent is a fake agent "process" over pipes.
 type pipeAgent struct{ *agentproc.Agent }
 
 func (p pipeAgent) Stop(time.Duration) error { return p.Close() }
 
-func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHistory chats.CopyHistory) *daemon {
+func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHistory copyFunc) *daemon {
 	t.Helper()
 	var mu sync.Mutex
 	var kill func()
@@ -104,12 +128,12 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// The default agent is "fake", shaped like Claude's adapter as far as
 	// these tests need: it names its sessions, and its notices read as
 	// Claude's (the fake isn't Claude's adapter, so the rest of Claude's
-	// dialect stays out). The others are main's (knownagents), each on a
+	// harness stays out). The others are main's (knownagents), each on a
 	// fake: Codex and omp as the fake agent shaped like them, Ante and PiG
 	// as their bridges on a fake Ante and PiG, Claude as Nushi's Go agent
 	// on fake claudes, or, as its setting says when a chat's agent starts
 	// (agents.Agent.Own), as the fake agent for the adapter. What reads an
-	// agent's own files on this Mac (Local) is left out.
+	// agent's own files on this Mac (Agent.Local) is left out.
 	pigs := pigStores(dataDir)
 	cls := &claudes{}
 	launches := map[string]chats.Launch{
@@ -132,11 +156,10 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
 		}),
 	}
-	kinds := []chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Harness{}.Notice}}}
-	for _, a := range knownagents.All("", st.ClaudeGoAgent) { // no projects folder: Local isn't called
+	kinds := []chats.Kind{{Harness: fakeHarness{copyHistory}, Launch: fake(false, false)}}
+	for _, a := range knownagents.All("", st.ClaudeGoAgent) { // no projects folder: Local isn't used
 		if l := launches[a.Agent.Name]; l != nil {
-			k := a.Chats
-			k.Launch = l
+			k := chats.Kind{Harness: a.Harness, Launch: l, MCP: a.MCP != nil}
 			if own := a.Agent.Own; own != nil {
 				k.Launch = func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
 					if own() {

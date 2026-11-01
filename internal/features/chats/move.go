@@ -163,10 +163,10 @@ func within(folder, dir string) bool {
 
 // fork starts an agent with a fork of session sid in folder to.
 func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (opened, error) {
-	if c.kind.History == nil {
+	if c.kind.historyCopier == nil {
 		return opened{}, errors.New("moving this agent's sessions isn't supported")
 	}
-	remove, err := c.kind.History(sid, from, to)
+	remove, err := c.kind.historyCopier.History(sid, from, to)
 	if err != nil {
 		return opened{}, err
 	}

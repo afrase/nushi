@@ -21,8 +21,8 @@ func (c *chat) createElicitation(ctx context.Context, req *acp.CreateElicitation
 	if err != nil {
 		return nil, err
 	}
-	for i := 1; i < len(fields) && c.dialect.Other != nil; i++ {
-		if c.dialect.Other(fields[i], fields[i-1]) {
+	for i := 1; i < len(fields) && c.kind.otherReader != nil; i++ {
+		if c.kind.otherReader.Other(fields[i], fields[i-1]) {
 			fields[i].OtherFor = fields[i-1].ID
 		}
 	}

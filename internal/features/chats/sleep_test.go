@@ -60,7 +60,7 @@ func TestForkWakes(t *testing.T) {
 // An agent that can't reopen sessions never sleeps.
 func TestNoSleepWithoutLoad(t *testing.T) {
 	agent := &fakeAgent{noLoad: true}
-	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch}}, Options{})
+	svc := newService(t, []Kind{{Harness: model.HarnessInfo{Name: "fake"}, Launch: agent.launch}}, Options{})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestAutoSleep(t *testing.T) {
 	const after = 30 * time.Millisecond
 	agent := &fakeAgent{}
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
-	svc := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sleep: &memPrefs{after: after}})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sleep: &memPrefs{after: after}})
 	defer svc.Close()
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)

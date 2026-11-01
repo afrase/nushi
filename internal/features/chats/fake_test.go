@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -20,17 +21,60 @@ import (
 
 var claudeHarness claude.Harness
 
-// testDialect is Claude's hooks, as main fills them, but for NamesSessions,
-// left off on purpose: the fake never titles a session, so a worktree's
-// branch is named after the first turn instead of waiting one more for a
-// title (branch.go). A test of another agent's shape sets its own.
-var testDialect = Dialect{InitMeta: claudeHarness.InitMeta(), SessionMeta: claudeHarness.SessionMeta(), UltracodeMeta: claudeHarness.UltracodeMeta(), TurnDone: claudeHarness.TurnDone, ForkAt: claudeHarness.ForkAt, Parent: claudeHarness.Parent, ToolCall: claudeHarness.ToolCall, Notice: claudeHarness.Notice, Interrupted: claudeHarness.Interrupted,
-	Background: claudeHarness.Background, ReportElsewhere: claudeHarness.ReportElsewhere,
-	BackgroundCommand: claudeHarness.BackgroundCommand, ReadBackgroundCommand: claudeHarness.ReadBackgroundCommand,
-	SubagentID: claudeHarness.SubagentID, ToSubagent: claudeHarness.ToSubagent, ReadToSubagent: claudeHarness.ReadToSubagent, PassesToSubagent: claudeHarness.PassesToSubagent,
-	Subagents: true, StopTask: claudeHarness.StopTask, ReadStopTask: claudeHarness.ReadStopTask, Stopped: claudeHarness.Stopped, RunsBackgroundCommand: claudeHarness.RunsBackgroundCommand,
-	Other: claudeHarness.Other, Default: claudeHarness.Default, ForkTitle: claudeHarness.ForkTitle, Compacted: claudeHarness.Compacted,
-	ContextCommand: claudeHarness.ContextCommand(), ReadContext: claudeHarness.ReadContext, Redelete: claudeHarness.Info().Redelete}
+// testHarness is Claude's harness, as main runs it, under a name of the
+// test's and with none of Claude's other facts or the claude-only Gone, but
+// for NamesSessions, left off on purpose: the fake never titles a session,
+// so a worktree's branch is named after the first turn instead of waiting
+// one more for a title (branch.go). Those a test wants it asks for. A test
+// of another agent's shape uses a model.HarnessInfo, alone or in a struct
+// with the fakes below, each of one capability.
+type testHarness struct {
+	claude.Harness
+	Name, Title, Expires string
+	ClientMCP            bool
+	redelete             time.Duration // 0: Claude's
+	once                 bool          // it deletes a session once
+	gone                 bool          // Gone is Claude's, else it never says
+	// read reads a background command's output, in Claude's place.
+	read func(id, file string) (output, end string, err error)
+}
+
+func (h testHarness) Info() model.HarnessInfo {
+	info := h.Harness.Info()
+	out := model.HarnessInfo{Name: h.Name, Title: h.Title, Expires: h.Expires, ClientMCP: h.ClientMCP, Subagents: info.Subagents, Redelete: cmp.Or(h.redelete, info.Redelete)}
+	if h.once {
+		out.Redelete = 0
+	}
+	return out
+}
+
+func (h testHarness) Gone(err error) bool { return h.gone && h.Harness.Gone(err) }
+
+func (h testHarness) ReadBackgroundCommand(id, file string) (output, end string, err error) {
+	if h.read != nil {
+		return h.read(id, file)
+	}
+	return h.Harness.ReadBackgroundCommand(id, file)
+}
+
+// Fakes of a capability each, to embed in a test's harness: a double with
+// every method would have every capability.
+type (
+	openElsewhere func(ids []string) map[string]string
+	forked        func(ids []string) map[string]bool
+	historyGone   func(sid, folder string) bool
+	messageTimes  func(sid, folder string) map[string]time.Time
+)
+
+func (f openElsewhere) OpenElsewhere(ids []string) map[string]string { return f(ids) }
+func (f forked) Forked(ids []string) map[string]bool                 { return f(ids) }
+func (f historyGone) HistoryGone(sid, folder string) bool            { return f(sid, folder) }
+func (f messageTimes) MessageTimes(sid, folder string) map[string]time.Time {
+	return f(sid, folder)
+}
+
+// testKind is a kind of h, for a chat a test makes itself.
+func testKind(h Harness) *kind { return newKind(Kind{Harness: h}) }
 
 // newService is New for a test: nothing remembered and no stored chats
 // unless o says, and what it starts on its own ends with the test.

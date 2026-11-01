@@ -35,7 +35,7 @@ func (Harness) Info() model.HarnessInfo {
 // PATH. omp reads its own config and keys (~/.omp, the environment); Nushi
 // never does.
 func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	cmd := exec.Command(r.CLI, "--mode", "acp") //nolint:noctx // lives until Stop or Close, not a context
+	cmd := exec.Command(r.CLI, "--mode", "acp") //nolint:gosec,noctx // lives until Stop or Close, not a context; the omp found on PATH
 	cmd.Dir, cmd.Env = dir, r.Env
 	return agentproc.Start(cmd, client, log)
 }

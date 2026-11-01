@@ -94,7 +94,7 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 	case "usage_update":
 		c.ownTurn, c.ownNoted = false, false
 		u := u.UsageUpdate
-		if c.dialect.TurnDone != nil && !c.started.IsZero() && !c.stopped && c.dialect.TurnDone(u) {
+		if c.kind.transcript != nil && !c.started.IsZero() && !c.stopped && c.kind.transcript.TurnDone(u) {
 			switch {
 			case c.steered > 0: // the result of the work a steered message cut short: the turn goes on
 				c.steered = 0
@@ -115,7 +115,7 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 		if v := u.SessionInfoUpdate.Title.Value; v != nil {
 			t = *v
 		}
-		forkTitle := c.dialect.ForkTitle != nil && c.dialect.ForkTitle(t, c.record.Title)
+		forkTitle := c.kind.transcript != nil && c.kind.transcript.ForkTitle(t, c.record.Title)
 		if t != "" && !forkTitle {
 			c.saveLocked(func(s *model.ChatRecord) { s.Title = t })
 			c.titled = true
@@ -173,23 +173,24 @@ func (c *chat) stepOfLocked(n *acp.SessionNotification, from *child) (parent str
 }
 
 // parentLocked is the subagent tool call an update comes from, if one
-// does (see Dialect.Parent).
+// does (see Subagents.Parent).
 func (c *chat) parentLocked(u acp.SessionUpdate) string {
-	if c.dialect.Parent == nil {
+	sub := c.kind.subagents
+	if sub == nil {
 		return ""
 	}
 	switch {
 	case u.AgentMessageChunk != nil:
-		return c.dialect.Parent(u.AgentMessageChunk.Meta)
+		return sub.Parent(u.AgentMessageChunk.Meta)
 	case u.AgentThoughtChunk != nil:
-		return c.dialect.Parent(u.AgentThoughtChunk.Meta)
+		return sub.Parent(u.AgentThoughtChunk.Meta)
 	case u.ToolCall != nil:
-		return c.dialect.Parent(u.ToolCall.Meta)
+		return sub.Parent(u.ToolCall.Meta)
 	case u.ToolCallUpdate != nil:
 		if it := c.itemLocked(string(u.ToolCallUpdate.ToolCallID)); it != nil {
 			return it.Parent
 		}
-		return c.dialect.Parent(u.ToolCallUpdate.Meta)
+		return sub.Parent(u.ToolCallUpdate.Meta)
 	}
 	return ""
 }
@@ -213,20 +214,22 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	default:
 		return
 	}
-	if kind == model.UserMessage && c.dialect.Interrupted != nil && c.dialect.Interrupted(text) {
-		return
-	}
 	id := string(m.MessageID)
 	if kind == model.Thought && id != "" {
 		id = "thought-" + id // a thought may share its message's id
 	}
-	if c.dialect.Parent != nil && parent == "" {
-		parent = c.dialect.Parent(m.Meta)
+	if c.kind.subagents != nil && parent == "" {
+		parent = c.kind.subagents.Parent(m.Meta)
 	}
-	if kind == model.AgentMessage && parent == "" && text != "" && c.dialect.Notice != nil {
-		if n, ok := c.dialect.Notice(m.Meta, text); ok {
-			c.agentNoticeLocked(n)
+	if t := c.kind.transcript; t != nil {
+		if kind == model.UserMessage && t.Interrupted(text) {
 			return
+		}
+		if kind == model.AgentMessage && parent == "" && text != "" {
+			if n, ok := t.Notice(m.Meta, text); ok {
+				c.agentNoticeLocked(n)
+				return
+			}
 		}
 	}
 	it := c.itemLocked(id)
@@ -259,7 +262,7 @@ func (c *chat) chunkLocked(kind model.ItemKind, m *acp.ContentChunk, parent stri
 	c.addLocked(item)
 }
 
-// agentNoticeLocked adds a notice of the agent's own (Dialect.Notice). One
+// agentNoticeLocked adds a notice of the agent's own (Transcript.Notice). One
 // that says the model's safeguards stopped the response before it marks
 // what streamed of that response, the message just before, if any.
 func (c *chat) agentNoticeLocked(n model.AgentNotice) {
@@ -273,9 +276,9 @@ func (c *chat) agentNoticeLocked(n model.AgentNotice) {
 }
 
 // toolCallLocked adds what the agent tells of a tool call beyond ACP (see
-// Dialect.ToolCall).
+// ToolReader).
 func (c *chat) toolCallLocked(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
-	return c.dialect.ToolCall != nil && c.dialect.ToolCall(it, meta, input)
+	return c.kind.toolReader != nil && c.kind.toolReader.ToolCall(it, meta, input)
 }
 
 // subagentLocked brings the subagent that call (a tool call) starts, if
@@ -292,8 +295,12 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 		sa = *call.Subagent
 	}
 	old := sa
-	if call.AgentID == "" && c.dialect.SubagentID != nil {
-		call.AgentID = c.dialect.SubagentID(call.Text)
+	var background, elsewhere bool
+	if sub := c.kind.subagents; sub != nil {
+		if call.AgentID == "" {
+			call.AgentID = sub.SubagentID(call.Text)
+		}
+		background, elsewhere = sub.Background(call.Text), sub.ReportElsewhere(call.Text)
 	}
 	r, last, said := -1, -1, -1 // its last report, its last item, and its last message
 	for i := range c.items {
@@ -307,8 +314,6 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 			}
 		}
 	}
-	background := c.dialect.Background != nil && c.dialect.Background(call.Text)
-	elsewhere := c.dialect.ReportElsewhere != nil && c.dialect.ReportElsewhere(call.Text)
 	switch {
 	case sa.Said != "": // the agent said, of its session (children.go)
 		sa.State = sa.Said
@@ -382,7 +387,7 @@ func (c *chat) publishLocked(it model.Item) {
 // setOutput sets a tool call's output from its content: the text as
 // markdown, its diffs and images apart. A terminal shows nothing: Nushi
 // offers agents none, so a command's output comes in the agent's _meta
-// (Dialect.ToolCall).
+// (ToolReader).
 func (c *chat) setOutput(it *model.Item, content []acp.ToolCallContent) {
 	var parts []string
 	var diffs []model.FileChange

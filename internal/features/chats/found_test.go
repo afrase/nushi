@@ -18,7 +18,7 @@ import (
 // An agent that can't list has no list, and stops once asked.
 func TestFindWithoutList(t *testing.T) {
 	f := &fakeAgent{}
-	svc := newService(t, []Kind{{Name: "a", Launch: f.launch}}, Options{})
+	svc := newService(t, []Kind{{Harness: model.HarnessInfo{Name: "a"}, Launch: f.launch}}, Options{})
 	page, err := svc.Find(context.Background(), "a", t.TempDir(), "")
 	if err != nil || page.CanList || len(page.Sessions) > 0 || len(f.listed1) > 0 {
 		t.Errorf("page %+v, %v after %d lists; want no list", page, err, len(f.listed1))
@@ -51,8 +51,12 @@ func TestFindLeavesOutNushisOwn(t *testing.T) {
 	}}
 	sessions := &memSessions{stored: []model.ChatRecord{{ID: "c0", SessionID: "x", Earlier: []model.AgentSession{{ID: "before-move"}}, Throwaway: []string{"fork"}}}}
 	f.listed = append(f.listed, acp.SessionInfo{SessionID: "a-fork", Cwd: resolved, UpdatedAt: "2026-10-05T10:00:00Z"})
-	k := Kind{Name: "a", Launch: f.launch, OpenElsewhere: func([]string) map[string]string { return map[string]string{"old": "a terminal"} },
-		Forked: func([]string) map[string]bool { return map[string]bool{"a-fork": true} }}
+	k := Kind{Launch: f.launch, Harness: struct {
+		model.HarnessInfo
+		openElsewhere
+		forked
+	}{model.HarnessInfo{Name: "a"}, func([]string) map[string]string { return map[string]string{"old": "a terminal"} },
+		func([]string) map[string]bool { return map[string]bool{"a-fork": true} }}}
 	svc := newService(t, []Kind{k}, Options{Sessions: sessions})
 	ctx := context.Background()
 	if _, err := svc.Start(ctx, "a", dir, false); err != nil { // its session is s1
@@ -97,7 +101,7 @@ func TestFindPages(t *testing.T) {
 		}
 		f.listed = append(f.listed, acp.SessionInfo{SessionID: acp.SessionID(strconv.Itoa(i)), Cwd: cwd})
 	}
-	svc := newService(t, []Kind{{Name: "a", Launch: f.launch}}, Options{})
+	svc := newService(t, []Kind{{Harness: model.HarnessInfo{Name: "a"}, Launch: f.launch}}, Options{})
 	first, err := svc.Find(context.Background(), "a", dir, "")
 	if err != nil || len(first.Sessions) != 20*2 || first.Next != "60" {
 		t.Fatalf("first page: %d sessions, next %q, %v; want 40 over 20 calls, then 60", len(first.Sessions), first.Next, err)
@@ -121,7 +125,7 @@ func ids(found []Found) string {
 func TestOpenRefuses(t *testing.T) {
 	f := &fakeAgent{lists: true, loadErr: errors.New("no such session")}
 	sessions := &memSessions{stored: []model.ChatRecord{{ID: "c0", SessionID: "x", Agent: "a", Throwaway: []string{"fork"}}}}
-	svc := newService(t, []Kind{{Name: "a", Launch: f.launch}}, Options{Sessions: sessions})
+	svc := newService(t, []Kind{{Harness: model.HarnessInfo{Name: "a"}, Launch: f.launch}}, Options{Sessions: sessions})
 	ctx, dir := context.Background(), t.TempDir()
 	if _, err := svc.Open(ctx, "a", dir, "gone", "Gone"); err == nil || len(svc.chats) > 0 || len(sessions.saved) > 0 {
 		t.Errorf("opened %v (%d chats, %d saved); want an error and nothing kept", err, len(svc.chats), len(sessions.saved))

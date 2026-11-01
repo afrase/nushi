@@ -28,11 +28,11 @@ import (
 // last: what only one has; when both go on, differently (a rewind or an
 // edit in a terminal), the agent's replay wins from there, after a divider.
 //
-// compaction says an item is part of a compaction (Dialect.Compacted).
-// The marks come without ids; the chat gives them theirs.
-func merge(copied, replay []model.Item, compaction func(model.Item) bool) []model.Item {
+// t says what's part of a compaction (Transcript.Compacted); nil: nothing
+// is. The marks come without ids; the chat gives them theirs.
+func merge(copied, replay []model.Item, t Transcript) []model.Item {
 	var summary *model.Item
-	if len(replay) > 0 && replay[0].Kind == model.UserMessage && compaction != nil && compaction(replay[0]) {
+	if len(replay) > 0 && replay[0].Kind == model.UserMessage && t != nil && t.Compacted(replay[0]) {
 		summary, replay = &replay[0], replay[1:]
 	}
 	mark := func(differs bool) model.Item {
@@ -42,7 +42,7 @@ func merge(copied, replay []model.Item, compaction func(model.Item) bool) []mode
 		return model.Item{Kind: model.Notice, Status: differsNotice}
 	}
 	substantive := func(items []model.Item) int {
-		return slices.IndexFunc(items, func(it model.Item) bool { return conversation(it, compaction) })
+		return slices.IndexFunc(items, func(it model.Item) bool { return conversation(it, t) })
 	}
 	pairs := align(copied, replay)
 	var out []model.Item
@@ -95,8 +95,8 @@ func merge(copied, replay []model.Item, compaction func(model.Item) bool) []mode
 // and replays: a message or tool call of its own, a user message that
 // isn't a command (the agent may answer one itself and keep nothing), not
 // a compaction.
-func conversation(it model.Item, compaction func(model.Item) bool) bool {
-	if it.Parent != "" || compaction != nil && compaction(it) {
+func conversation(it model.Item, t Transcript) bool {
+	if it.Parent != "" || t != nil && t.Compacted(it) {
 		return false
 	}
 	switch it.Kind {

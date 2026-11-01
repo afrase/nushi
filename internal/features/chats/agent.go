@@ -27,20 +27,20 @@ type opened struct {
 // openSession launches an agent and opens a session in folder: a new one,
 // or, given its id, an existing one, replayed through session/load, or with
 // fork a new one that starts with a copy of it (session/fork): all of it,
-// or up to and with the agent's message at (Dialect.ForkAt). The agent
+// or up to and with the agent's message at (Forker). The agent
 // stops if that fails.
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool, at string) (opened, error) {
 	c.mu.Lock()
 	clear(c.children) // the last agent's: a replay announces them again
 	c.mu.Unlock()
 	// The agent's lines name the sessions it opens (see internal/agentproc).
-	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect, c.logger("", folder))
+	agent, init, err := initialize(ctx, c.kind, c, c.logger("", folder))
 	if err != nil {
 		return opened{}, c.kind.explain(err)
 	}
 	o := opened{agent: agent, sid: sid}
-	if c.dialect.ForkAt != nil && agent.CanFork() {
-		o.forkAt = c.dialect.ForkAt(init)
+	if c.kind.forker != nil && agent.CanFork() {
+		o.forkAt = c.kind.forker.ForkAt(init)
 	}
 	if caps := init.AgentCapabilities; caps != nil {
 		o.load = caps.LoadSession
@@ -84,7 +84,7 @@ func (c *chat) newSession(ctx context.Context, agent Agent, folder string) (stri
 }
 
 // forkSession has agent fork session sid with folder as the fork's cwd:
-// a copy of the whole conversation, or as meta asks (see Dialect.ForkAt).
+// a copy of the whole conversation, or as meta asks (see Forker).
 // It goes on when ctx ends (the app went): a fork the agent made would be
 // a copy of the conversation nobody knows of.
 func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string, meta map[string]any) (string, []model.ConfigOption, error) {
@@ -97,13 +97,13 @@ func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string,
 	return string(resp.SessionID), c.configFrom(resp.ConfigOptions, resp.Modes), nil
 }
 
-// sessionMeta is a session request's _meta: the dialect's (SessionMeta,
+// sessionMeta is a session request's _meta: the harness's (SessionMeta,
 // and UltracodeMeta merged in when the chat has Ultracode on), with also's
 // keys.
 func (c *chat) sessionMeta(also map[string]any) map[string]any {
-	meta := c.dialect.SessionMeta
+	meta := c.kind.sessionMeta
 	if c.ultracode.Load() {
-		meta = merged(meta, c.dialect.UltracodeMeta)
+		meta = merged(meta, c.kind.ultracodeMeta)
 	}
 	if meta == nil {
 		return also
@@ -145,20 +145,19 @@ func (c *chat) mcpServers() []acp.MCPServer {
 	return c.kind.tools(c.id, c.kind.Name, c.issue)
 }
 
-// initialize launches an agent and initializes the connection, with what
-// the agent's dialect asks of the client's capabilities; the agent stops if
-// that fails.
-func initialize(ctx context.Context, launch Launch, h acp.Client, d Dialect, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
-	agent, err := launch(h, log)
+// initialize launches k and initializes the connection, with what its
+// harness asks of the client's capabilities; the agent stops if that fails.
+func initialize(ctx context.Context, k *kind, h acp.Client, log *slog.Logger) (Agent, *acp.InitializeResponse, error) {
+	agent, err := k.launch(h, log)
 	if err != nil {
 		log.Warn("agent not started", "err", err)
 		return nil, nil, fmt.Errorf("start agent: %w", err)
 	}
 	caps := &acp.ClientCapabilities{
 		Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
-		Meta:        d.InitMeta,
+		Meta:        k.initMeta,
 	}
-	if d.Subagents {
+	if k.Subagents {
 		caps.Subagents = &acp.SubagentCapabilities{}
 	}
 	init, err := agent.Initialize(ctx, &acp.InitializeRequest{

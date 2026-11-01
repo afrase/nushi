@@ -167,7 +167,7 @@ func TestKeepSideChat(t *testing.T) {
 func TestAForkKeepsTheScratchFolder(t *testing.T) {
 	agent := &fakeAgent{}
 	sessions := &memSessions{}
-	svc := newService(t, []Kind{{Name: "claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: sessions, Scratch: t.TempDir()})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: sessions, Scratch: t.TempDir()})
 	t.Cleanup(svc.Close)
 	ctx := t.Context()
 	id, err := svc.Start(ctx, "", "", false)

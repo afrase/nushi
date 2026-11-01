@@ -1,16 +1,15 @@
 // Package knownagents is the one table of the agents Nushi runs: each
-// agent's facts, as every feature takes them (finding and setting it up,
-// its chats, its skills, its trust, its MCP servers). It is wiring, as
-// cmd/nushid is: main builds the features from it, and the e2e tests run
-// its chats' kinds on fake agents. What each agent does is in its own
-// packages: internal/claude*, internal/codex*, internal/ante* (Ante's
-// bridge too, ADR 0030), internal/omp* and internal/pig (PiG's bridge,
-// ADR 0039).
+// agent's harness (capabilities.go lists what each has) and its facts, as
+// every feature takes them (finding and setting it up, its skills, its
+// trust, its MCP servers). It is wiring, as cmd/nushid is: main builds the
+// features from it, and the e2e tests run its harnesses on fake agents. What
+// each agent does is in its own packages: internal/claude*, internal/codex*,
+// internal/ante* (Ante's bridge too, ADR 0030), internal/omp* and
+// internal/pig (PiG's bridge, ADR 0039).
 package knownagents
 
 import (
 	"log/slog"
-	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -39,29 +38,32 @@ import (
 	"github.com/afrase/nushi/internal/pigskills"
 )
 
+// Harness is what chats run of an agent, and how it starts.
+type Harness interface {
+	chats.Harness
+	// Start starts it for a chat, as Run says, from dir (the daemon's
+	// folder).
+	Start(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error)
+}
+
 // Agent is one agent Nushi runs.
 type Agent struct {
 	// Agent is how it is found and set up (features/agents); its Name and
-	// Title are its chats' too.
+	// Title are its harness's.
 	Agent agents.Agent
-	// Chats is what its chats do (features/chats), as far as that is the
-	// agent's own: no Launch, Explain or Ready, which main makes from Start
-	// and the agents feature, and nothing that reads the agent's files or
-	// processes on this Mac, which Local adds.
-	Chats chats.Kind
-	// Local adds to a Kind what reads the agent's own files and processes
-	// on this Mac: its history, its sessions open elsewhere, its forks;
-	// nil: nothing. The e2e tests leave it out, so they never read the
-	// owner's.
-	Local func(*chats.Kind)
-	// Start starts it for a chat, as Run says, from dir (the daemon's
-	// folder).
-	Start  func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error)
+	// Harness is what its chats do, as far as that is the agent's own:
+	// nothing that reads the agent's files or processes on this Mac. It's
+	// what the e2e tests run, so they never read the owner's.
+	Harness Harness
+	// Local is Harness with what reads the agent's own files and processes
+	// on this Mac (its history, its sessions open elsewhere, its forks),
+	// which main runs: Harness itself when there's nothing to read.
+	Local  Harness
 	Skills skills.Reader
 	Trust  trust.Agent
-	// MCP is its MCP servers' config, which Settings shows and changes
-	// (Chats.MCP says so); nil: none. run is how a chat would start it,
-	// for a check that runs the agent.
+	// MCP is its MCP servers' config, which Settings shows and changes;
+	// nil: none. run is how a chat would start it, for a check that runs
+	// the agent.
 	MCP func(run func() (agents.Run, error)) mcp.Config
 }
 
@@ -74,46 +76,23 @@ type Agent struct {
 func All(projects string, claudeGo func() bool) []Agent {
 	all := []Agent{
 		{
-			Agent: agents.Agent{Name: "claude", Title: "Claude", CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
+			Harness: claude.Harness{}, Local: claudehistory.Local{Projects: projects},
+			Agent: agents.Agent{CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
 				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk},
 				// The Go agent needs no Node, nothing set up and no version pinned.
 				Own: func() bool { return claude.GoForced() || claudeGo() }},
-			Chats: chats.Kind{ClientMCP: true, Resume: "claude --resume", Gone: agentproc.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
-				Dialect: chats.Dialect{InitMeta: claude.Harness{}.InitMeta(), SessionMeta: claude.Harness{}.SessionMeta(), UltracodeMeta: claude.Harness{}.UltracodeMeta(), TurnDone: claude.Harness{}.TurnDone, ForkAt: claude.Harness{}.ForkAt, Parent: claude.Harness{}.Parent, ToolCall: claude.Harness{}.ToolCall, Notice: claude.Harness{}.Notice, Interrupted: claude.Harness{}.Interrupted,
-					Background: claude.Harness{}.Background, ReportElsewhere: claude.Harness{}.ReportElsewhere,
-					BackgroundCommand: claude.Harness{}.BackgroundCommand, ReadBackgroundCommand: claude.Harness{}.ReadBackgroundCommand,
-					SubagentID: claude.Harness{}.SubagentID, ToSubagent: claude.Harness{}.ToSubagent, ReadToSubagent: claude.Harness{}.ReadToSubagent, PassesToSubagent: claude.Harness{}.PassesToSubagent,
-					Subagents: true, StopTask: claude.Harness{}.StopTask, ReadStopTask: claude.Harness{}.ReadStopTask, Stopped: claude.Harness{}.Stopped, RunsBackgroundCommand: claude.Harness{}.RunsBackgroundCommand,
-					Other: claude.Harness{}.Other, Default: claude.Harness{}.Default, ForkTitle: claude.Harness{}.ForkTitle, Compacted: claude.Harness{}.Compacted,
-					ContextCommand: claude.Harness{}.ContextCommand(), ReadContext: claude.Harness{}.ReadContext, Redelete: claude.Harness{}.Info().Redelete, NamesSessions: true}},
-			Local: func(k *chats.Kind) {
-				k.History = claudehistory.Local{Projects: projects}.History
-				k.OpenElsewhere = claudehistory.Local{}.OpenElsewhere
-				k.Forked = claudehistory.Local{Projects: projects}.Forked
-				k.HistoryGone = claudehistory.Local{Projects: projects}.HistoryGone
-				k.MessageTimes = claudehistory.Local{Projects: projects}.MessageTimes
-			},
-			Start:  claude.Harness{}.Start,
 			Skills: claudeskills.Claude{}, Trust: claudetrust.Trust{},
 			MCP: func(func() (agents.Run, error)) mcp.Config { return claudemcp.Claude{} },
 		},
 		{
-			Agent: agents.Agent{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
+			Harness: codex.Harness{}, Local: codex.Local{},
+			Agent: agents.Agent{CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
 				Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
-			Chats: chats.Kind{ClientMCP: true, Resume: codex.Harness{}.Info().Resume, History: codex.Harness{}.History, DeleteArchives: true, Gone: codex.Harness{}.Gone, OneWriter: true,
-				Dialect: chats.Dialect{ForkAt: codex.Harness{}.ForkAt, ToolCall: codex.Harness{}.ToolCall, Other: codex.Harness{}.Other}},
-			Local:  func(k *chats.Kind) { k.OpenElsewhere, k.Forked = codex.Local{}.OpenElsewhere, codex.Local{}.Forked },
-			Start:  codex.Harness{}.Start,
 			Skills: codexskills.Codex{}, Trust: codextrust.Trust{},
 		},
 		{
-			Agent: agents.Agent{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
-			Chats: chats.Kind{Resume: ante.Harness{}.Info().Resume, Dialect: chats.Dialect{ForkAt: ante.Harness{}.ForkAt, Other: ante.Harness{}.Other, Context: ante.Harness{}.Context}},
-			Local: func(k *chats.Kind) {
-				k.OpenElsewhere = ante.Local{}.OpenElsewhere
-				k.MessageTimes = func(sid, _ string) map[string]time.Time { return ante.Local{}.MessageTimes(sid, "") }
-			},
-			Start:  ante.Harness{}.Start,
+			Harness: ante.Harness{}, Local: ante.Local{},
+			Agent:  agents.Agent{CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
 			Skills: anteskills.Ante{}, Trust: antetrust.Trust{},
 			// Its servers are checked by a throwaway `ante serve`, run as a
 			// chat's would be.
@@ -128,22 +107,19 @@ func All(projects string, claudeGo func() bool) []Agent {
 			},
 		},
 		{
-			Agent:  agents.Agent{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
-			Chats:  chats.Kind{Resume: omp.Harness{}.Info().Resume, OneWriter: true, Dialect: chats.Dialect{Other: omp.Harness{}.Other, ToolCall: omp.Harness{}.ToolCall}},
-			Local:  func(k *chats.Kind) { k.OpenElsewhere, k.Forked = omp.Local{}.OpenElsewhere, omp.Local{}.Forked },
-			Start:  omp.Harness{}.Start,
+			Harness: omp.Harness{}, Local: omp.Local{},
+			Agent:  agents.Agent{CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
 			Skills: ompskills.OMP{}, Trust: omptrust.Trust{},
 		},
 		{
-			Agent:  agents.Agent{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
-			Chats:  chats.Kind{Resume: pig.Harness{}.Info().Resume, Gone: agentproc.NotFound, Dialect: chats.Dialect{ForkAt: pig.Harness{}.ForkAt, Context: pig.Harness{}.Context}},
-			Start:  pig.Harness{}.Start,
+			Harness: pig.Harness{}, Local: pig.Harness{},
+			Agent:  agents.Agent{CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
 			Skills: pigskills.PiG{}, Trust: pig.Trust{},
 		},
 	}
 	for i := range all {
-		a := &all[i]
-		a.Chats.Name, a.Chats.Title, a.Chats.MCP = a.Agent.Name, a.Agent.Title, a.MCP != nil
+		info := all[i].Harness.Info()
+		all[i].Agent.Name, all[i].Agent.Title = info.Name, info.Title
 	}
 	return all
 }

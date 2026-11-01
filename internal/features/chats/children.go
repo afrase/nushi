@@ -11,7 +11,7 @@ import (
 )
 
 // An agent that shows its subagents as sessions of their own (ACP's
-// subagents RFD; Dialect.Subagents) announces each on the session that
+// subagents RFD; model.HarnessInfo.Subagents) announces each on the session that
 // started it (subagent_update), sends the subagent's work on the child's
 // session, and says when it runs and when it ends, and why. The child's
 // first message names the tool call that started it. Its updates are the
@@ -155,7 +155,7 @@ func (c *chat) childrenSaidLocked() {
 }
 
 // childOfLocked is the subagent call a child session's updates are steps of,
-// "" when it isn't known yet (Dialect.Parent may say).
+// "" when it isn't known yet (Subagents.Parent may say).
 func (c *chat) childOfLocked(ch *child, sid string) string {
 	if ch == nil {
 		return ""
@@ -171,7 +171,7 @@ func (c *chat) childOfLocked(ch *child, sid string) string {
 // as a session of its own stops when that session is cancelled; a command
 // Nushi can find among the agent's processes, by its process group
 // (stopCommand); any other is stopped by asking the agent
-// (Dialect.StopTask), as a message of the user's that waits for the
+// (BackgroundTasks.StopTask), as a message of the user's that waits for the
 // agent's next chance. Either way it shows as stopped only once the agent
 // says so.
 func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
@@ -213,7 +213,7 @@ func (s *Service) StopTask(ctx context.Context, chatID, callID string) error {
 func (c *chat) stopTaskLocked(callID string) (*model.ToSubagent, error) {
 	call := c.itemLocked(callID)
 	switch {
-	case c.dialect.StopTask == nil:
+	case c.kind.background == nil:
 		return nil, errors.New("the agent can't be asked to stop its tasks")
 	case call == nil:
 		return nil, errors.New("that task is no longer in the chat")
@@ -226,13 +226,13 @@ func (c *chat) stopTaskLocked(callID string) (*model.ToSubagent, error) {
 }
 
 // stoppedLocked takes a tool call that stopped one of the agent's tasks, or
-// found it already ended (Dialect.Stopped): a subagent the agent never said
+// found it already ended (BackgroundTasks.Stopped): a subagent the agent never said
 // ended has.
 func (c *chat) stoppedLocked(call model.Item) {
-	if c.dialect.Stopped == nil || call.Parent != "" {
+	if c.kind.background == nil || call.Parent != "" {
 		return
 	}
-	id := c.dialect.Stopped(call)
+	id := c.kind.background.Stopped(call)
 	i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Agent != "" && it.AgentID == id })
 	if id == "" || i < 0 || c.items[i].Subagent == nil || c.items[i].Subagent.State != "running" {
 		return

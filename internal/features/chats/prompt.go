@@ -185,7 +185,7 @@ func (c *chat) startLocked(prompt []acp.ContentBlock) {
 
 // releaseLocked ends the running turn for the chat while the agent still
 // holds its prompt open for subagents the turn left running in the
-// background (see Dialect.TurnDone): the chat is idle, a message goes as
+// background (see Transcript.TurnDone): the chat is idle, a message goes as
 // the next prompt (which the agent takes at once, answering the held one),
 // and the subagents' steps and the agent's answer to their reports come as
 // its own work. The held prompt's answer then changes nothing (run).
@@ -212,9 +212,9 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	text := m.Text
 	switch r := m.ToSubagent; {
 	case r != nil && r.Stop:
-		text = c.dialect.StopTask(r.AgentID)
+		text = c.kind.background.StopTask(r.AgentID)
 	case r != nil:
-		text = c.dialect.ToSubagent(r.Agent, r.AgentID, text)
+		text = c.kind.subagents.ToSubagent(r.Agent, r.AgentID, text)
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range m.Files {

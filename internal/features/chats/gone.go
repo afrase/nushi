@@ -37,12 +37,12 @@ func detail(err error) string {
 }
 
 // isGone says the chat's reopen failed with err because its agent no
-// longer has the session, for certain: the agent said so (Kind.Gone), the
+// longer has the session, for certain: the agent said so (GoneReader), the
 // session had messages (one without may never have been written), its
-// folder is there, and, where the agent's files tell (Kind.HistoryGone),
+// folder is there, and, where the agent's files tell (HistoryChecker),
 // they agree.
 func (c *chat) isGone(err error) bool {
-	if c.kind.Gone == nil || !c.kind.Gone(err) {
+	if c.kind.goneReader == nil || !c.kind.goneReader.Gone(err) {
 		return false
 	}
 	c.mu.Lock()
@@ -51,7 +51,7 @@ func (c *chat) isGone(err error) bool {
 	if !sess.HasMessages || sid == "" || folderGone(sess) != nil {
 		return false
 	}
-	return c.kind.HistoryGone == nil || c.kind.HistoryGone(sid, sess.Folder)
+	return c.kind.historyChecker == nil || c.kind.historyChecker.HistoryGone(sid, sess.Folder)
 }
 
 // goneText says the agent no longer has the session, and why it may not.
@@ -185,7 +185,7 @@ func (s *Service) Sweep(ctx context.Context) {
 	}
 	for _, sess := range stored {
 		k, err := s.kindOf(sess.Agent)
-		if err != nil || k.HistoryGone == nil || !sess.HasMessages || sess.SessionID == "" || folderGone(sess) != nil {
+		if err != nil || k.historyChecker == nil || !sess.HasMessages || sess.SessionID == "" || folderGone(sess) != nil {
 			continue
 		}
 		s.mu.Lock()
@@ -199,7 +199,7 @@ func (s *Service) Sweep(ctx context.Context) {
 				continue
 			}
 		}
-		if !k.HistoryGone(sess.SessionID, sess.Folder) {
+		if !k.historyChecker.HistoryGone(sess.SessionID, sess.Folder) {
 			continue
 		}
 		if c, err = s.stored(sess.ID); err == nil {

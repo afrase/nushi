@@ -21,7 +21,4 @@ func TestACommandsTitle(t *testing.T) {
 	}
 }
 
-var (
-	harness Harness
-	local   Local
-)
+var harness Harness

@@ -74,13 +74,13 @@ func (c *chat) noteID(id string) {
 }
 
 // messageTimes is when the agent's own files say a session's messages were
-// sent (Kind.MessageTimes), for restoreLocked. Those files can be long: it
+// sent (MessageDater), for restoreLocked. Those files can be long: it
 // runs without the chat's lock.
 func (c *chat) messageTimes(sid, folder string) map[string]time.Time {
-	if c.kind.MessageTimes == nil {
+	if c.kind.messageDater == nil {
 		return nil
 	}
-	return c.kind.MessageTimes(sid, folder)
+	return c.kind.messageDater.MessageTimes(sid, folder)
 }
 
 // restoreLocked makes the chat's transcript from its copy and the agent's
@@ -102,7 +102,7 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 	for i := range replayed {
 		date(&replayed[i]) // the copy's may go by an id of Nushi's: pick takes it from here
 	}
-	items := merge(copied, replayed, c.dialect.Compacted)
+	items := merge(copied, replayed, c.kind.transcript)
 	var compacted, differs bool
 	for i := range items {
 		it := &items[i]

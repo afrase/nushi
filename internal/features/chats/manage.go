@@ -242,7 +242,7 @@ func (s *Service) dropSides(c *chat) []string {
 // discard has a new agent delete sessions nobody will see again (side
 // chats, throwaway forks) from its history, once the agent they ran on has
 // stopped: one that still runs would write a little of a session back as it
-// ends it (see Dialect.Redelete). The chat then forgets them.
+// ends it (see model.HarnessInfo.Redelete). The chat then forgets them.
 //
 //nolint:contextcheck // runs on its own, after the request that let the sessions go
 func (s *Service) discard(c *chat, ids []string) {

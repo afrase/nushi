@@ -32,7 +32,8 @@ func usePush(st *store.Store, r *remote.Service, chatSvc *chats.Service, kinds [
 	keys := webpush.Keys{Private: k.Private, Public: k.Public}
 	titles := map[string]string{}
 	for _, kind := range kinds {
-		titles[kind.Name] = kind.Title
+		info := kind.Info()
+		titles[info.Name] = info.Title
 	}
 	// Through the Mac's proxy, as the relay link goes (a company network).
 	client := &http.Client{Timeout: webpush.Timeout, Transport: proxiedTransport(),

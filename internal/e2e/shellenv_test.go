@@ -20,6 +20,7 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
@@ -134,7 +135,7 @@ func TestTheAppGetsNothingOfTheEnvironment(t *testing.T) {
 	agentSvc.UseEnv(env)
 	data := t.TempDir()
 	st := store.New(data)
-	svc := chats.New(t.Context(), []chats.Kind{{Name: "fake", Title: "Fake"}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
+	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "fake", Title: "Fake"}}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
 	agentSvc.UseChats(svc)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, Transcripts: st})))
 	defer srv.Close()

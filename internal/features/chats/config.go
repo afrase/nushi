@@ -35,11 +35,11 @@ func (c *chat) configFrom(opts []acp.SessionConfigOption, modes *acp.SessionMode
 	for _, o := range opts {
 		co := configOption(o)
 		for i, v := range co.Values {
-			co.Values[i].Default = c.dialect.Default != nil && c.dialect.Default(co, v)
+			co.Values[i].Default = c.kind.defaultReader != nil && c.kind.defaultReader.Default(co, v)
 		}
 		out = append(out, co)
 	}
-	if c.dialect.UltracodeMeta != nil {
+	if c.kind.ultracodeMeta != nil {
 		out = append(out, c.ultracodeOption())
 	}
 	if modes != nil && modeIndex(out) < 0 {
@@ -340,7 +340,7 @@ func (c *chat) startMode(ctx context.Context, agent Agent, sid, mode string) err
 func (s *Service) setUltracode(ctx context.Context, c *chat, on bool) error {
 	c.mu.Lock()
 	switch {
-	case c.dialect.UltracodeMeta == nil:
+	case c.kind.ultracodeMeta == nil:
 		c.mu.Unlock()
 		return errors.New("the agent has no ultracode")
 	case c.ultracode.Load() == on:

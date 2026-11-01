@@ -206,7 +206,7 @@ func TestSubagentsEndOnReopenAfterTheDaemonWent(t *testing.T) {
 	on := &atomic.Bool{}
 	on.Store(true)
 	sessions := &memSessions{}
-	kinds := []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}
+	kinds := []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}
 	svc := newService(t, kinds, Options{Sessions: sessions, Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)

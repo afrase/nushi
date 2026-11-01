@@ -16,7 +16,7 @@ import (
 func TestSideChatKeepsToItself(t *testing.T) {
 	agent := &fakeAgent{}
 	sessions := &memSessions{}
-	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Sessions: sessions})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }}}, Options{Sessions: sessions})
 	ctx := context.Background()
 	id, err := svc.Start(ctx, "", t.TempDir(), false)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestSideChatKeepsToItself(t *testing.T) {
 func TestASideChatThatEndsSaysSo(t *testing.T) {
 	agent := &fakeAgent{}
 	removed := make(chan string, 10)
-	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch, Dialect: testDialect}}, Options{Publish: func(e model.Event) {
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: agent.launch}}, Options{Publish: func(e model.Event) {
 		if e.Removed {
 			removed <- e.ChatID
 		}
@@ -114,9 +114,8 @@ func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
 	t.Cleanup(func() { throwAwayWait, stopGrace = wait, grace })
 	throwAwayWait, stopGrace = 10*time.Millisecond, 10*time.Millisecond
 	agent := &fakeAgent{}
-	dialect := testDialect
-	dialect.Redelete = 20 * time.Millisecond // the second delete, done before Cleanup puts the tunables back
-	svc := newService(t, []Kind{{Name: "fake", Launch: agent.launch, Dialect: dialect}}, Options{})
+	// The second delete is done before Cleanup puts the tunables back.
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", redelete: 20 * time.Millisecond}, Launch: agent.launch}}, Options{})
 	t.Cleanup(svc.Close)
 	ctx := context.Background()
 	id, _ := svc.Start(ctx, "", t.TempDir(), false)

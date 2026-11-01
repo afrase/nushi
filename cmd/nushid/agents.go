@@ -45,28 +45,28 @@ func newAgents(dir string, known []knownagents.Agent) *agents.Service {
 // chatKinds are the agents as chats run them, from dir (the daemon's
 // folder): each started through the agents feature (ADR 0037), which says
 // whether it could start (Ready) and adds to why it failed what may help
-// (Explain), with what reads its own files on this Mac.
+// (Explain), its harness the one that reads its own files on this Mac.
 func chatKinds(dir string, known []knownagents.Agent, agentSvc *agents.Service) []chats.Kind {
 	var kinds []chats.Kind
 	for _, a := range known {
-		k, name, start := a.Chats, a.Agent.Name, a.Start
-		if a.Local != nil {
-			a.Local(&k)
-		}
-		k.Explain = agentSvc.Explain(name)
-		k.Ready = func() error { _, err := agentSvc.Run(name); return err }
-		k.Launch = func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
-			run, err := agentSvc.Run(name)
-			if err != nil {
-				return nil, err
-			}
-			agent, err := start(dir, run, h, log)
-			if err != nil {
-				return nil, err // not a nil *agentproc.Agent in a chats.Agent
-			}
-			return agent, nil
-		}
-		kinds = append(kinds, k)
+		name, harness := a.Agent.Name, a.Local
+		kinds = append(kinds, chats.Kind{
+			Harness: harness,
+			MCP:     a.MCP != nil,
+			Explain: agentSvc.Explain(name),
+			Ready:   func() error { _, err := agentSvc.Run(name); return err },
+			Launch: func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
+				run, err := agentSvc.Run(name)
+				if err != nil {
+					return nil, err
+				}
+				agent, err := harness.Start(dir, run, h, log)
+				if err != nil {
+					return nil, err // not a nil *agentproc.Agent in a chats.Agent
+				}
+				return agent, nil
+			},
+		})
 	}
 	return kinds
 }

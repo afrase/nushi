@@ -121,11 +121,6 @@ type Terminals interface {
 // to be made first.
 func (s *Service) UseTerminals(t Terminals) { s.terminals = t }
 
-// CopyHistory copies the agent's own record of a session from one folder's
-// history into another's, where the agent can fork it with the other folder
-// as its cwd, and returns a function that removes the copy again.
-type CopyHistory func(sessionID, from, to string) (remove func() error, err error)
-
 type chat struct {
 	acp.UnimplementedClient // what the agent asks of a chat, beyond sides.go's
 
@@ -133,7 +128,6 @@ type chat struct {
 	sid      string // the agent's session id
 	kind     *kind  // the agent it runs, for good
 	agent    Agent
-	dialect  Dialect // kind's
 	publish  func(model.Event)
 	sessions Sessions
 	// worktrees are the service's, for naming the chat's branch (branch.go).
@@ -153,7 +147,7 @@ type chat struct {
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too
 	ownTurn      bool                            // the agent works on its own, outside a turn of Nushi's
 	ownNoted     bool                            // the transcript says so, since the last user message or usage report
-	released     bool                            // the running turn's work ended, but the agent holds its prompt (Dialect.TurnDone)
+	released     bool                            // the running turn's work ended, but the agent holds its prompt (Transcript.TurnDone)
 	steered      int                             // messages steered into the running turn since the agent's last result
 	turnFrom     int                             // the running turn's first item, about (items may go)
 	stopped      bool                            // the running turn was told to stop: it ends with the agent's answer
@@ -185,7 +179,7 @@ type chat struct {
 	queue        []model.Message       // waiting for the agent's next chance
 	steer        bool                  // the agent takes messages into a running turn
 	// forkAt is session/fork's meta to fork at a message, when the agent
-	// can (see Dialect).
+	// can (see Forker).
 	forkAt func(messageID string) map[string]any
 	// mcpChanged says the MCP servers changed since the agent started.
 	mcpChanged bool
@@ -337,7 +331,7 @@ func CheckFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, dialect: k.Dialect, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
+	return &chat{kind: k, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 

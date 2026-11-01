@@ -13,8 +13,12 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// noCopy is a CopyHistory with nothing to copy.
-func noCopy(string, string, string) (func() error, error) { return func() error { return nil }, nil }
+// noCopy is a HistoryCopier with nothing to copy.
+type noCopy struct{}
+
+func (noCopy) History(string, string, string) (func() error, error) {
+	return func() error { return nil }, nil
+}
 
 // texts lists a transcript's items as kind:text.
 func texts(c *chat) []string {
@@ -39,7 +43,7 @@ func turn(t *testing.T, svc *Service, c *chat, text string) {
 // replies show.
 func TestMoveAfterTheAgentQuit(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	c.kind.History = noCopy
+	c.kind.historyCopier = noCopy{}
 	agent.updates = []acp.SessionUpdate{chunk("m1", "first")}
 	turn(t, svc, c, "one")
 	agent.quit()
@@ -57,7 +61,7 @@ func TestMoveAfterTheAgentQuit(t *testing.T) {
 // A chat whose reopen failed has an empty transcript: moved, it is replayed.
 func TestMoveAChatThatNeverReopened(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	c.kind.History = noCopy
+	c.kind.historyCopier = noCopy{}
 	agent.updates = []acp.SessionUpdate{chunk("m1", "first")}
 	turn(t, svc, c, "one")
 	c.mu.Lock() // as after a daemon restart, when its folder was gone
@@ -93,7 +97,7 @@ func TestAFailedDeleteThenAReopen(t *testing.T) {
 // A chat whose first message is taken back, moved, or reopened keeps its mode.
 func TestTheModeSurvivesANewSession(t *testing.T) {
 	svc, agent, c := newChat(t, claudeSession, &memModes{})
-	c.kind.History = noCopy
+	c.kind.historyCopier = noCopy{}
 	ctx := context.Background()
 	if err := svc.SetConfig(ctx, c.id, "mode", "plan"); err != nil {
 		t.Fatal(err)
@@ -129,7 +133,7 @@ func TestTheModeSurvivesANewSession(t *testing.T) {
 
 func TestNoMoveWhileTheChatGoesOrTheAgentWorks(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
-	c.kind.History = noCopy
+	c.kind.historyCopier = noCopy{}
 	turn(t, svc, c, "one")
 	c.mu.Lock()
 	c.halting = true

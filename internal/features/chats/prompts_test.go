@@ -112,7 +112,7 @@ func TestAStuckStoreLoadsClean(t *testing.T) {
 	testcheck.NoErr(t, store.Append(c.id, []model.Item{{ID: "item-8", Kind: model.Permission, Status: "pending"}}, []string{"m1"}))
 	var mu sync.Mutex
 	var events []model.Event
-	svc3 := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{c.record}}, Scratch: t.TempDir(), Copies: store, Publish: func(e model.Event) {
+	svc3 := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{stored: []model.ChatRecord{c.record}}, Scratch: t.TempDir(), Copies: store, Publish: func(e model.Event) {
 		mu.Lock()
 		defer mu.Unlock()
 		events = append(events, e)

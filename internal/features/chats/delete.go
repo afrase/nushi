@@ -98,7 +98,7 @@ func (s *Service) othersWorkIn(c *chat, dir string) bool {
 // startDeleter starts the chat's agent with no session, to delete sessions
 // with, and remembers whether it can.
 func (s *Service) startDeleter(ctx context.Context, c *chat) (Agent, bool, error) {
-	agent, init, err := initialize(ctx, c.kind.launch, c, c.dialect, c.log().With("for", "deleting"))
+	agent, init, err := initialize(ctx, c.kind, c, c.log().With("for", "deleting"))
 	if err != nil {
 		return nil, false, err
 	}

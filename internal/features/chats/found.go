@@ -67,7 +67,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
-	a, init, err := initialize(ctx, k.launch, quiet{}, k.Dialect, slog.With("agent", k.Name, "for", "listing"))
+	a, init, err := initialize(ctx, k, quiet{}, slog.With("agent", k.Name, "for", "listing"))
 	if err != nil {
 		return FoundPage{}, fmt.Errorf("couldn't start %s: %w", k.Title, k.explain(err))
 	}
@@ -81,7 +81,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	}
 	resolved := git.RealPath(folder)
 	paths := map[string]string{} // a cwd's real path, once looked up
-	page := FoundPage{CanList: true, SeesOpen: k.OpenElsewhere != nil, OneWriter: k.OneWriter}
+	page := FoundPage{CanList: true, SeesOpen: k.openFinder != nil, OneWriter: k.OneWriter}
 	for calls := 1; ; calls++ {
 		resp, err := a.ListSessions(ctx, &acp.ListSessionsRequest{Cwd: resolved, Cursor: cursor})
 		if err != nil {
@@ -107,12 +107,12 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 	for i, f := range page.Sessions {
 		ids[i] = f.SessionID
 	}
-	if k.Forked != nil {
-		forks := k.Forked(ids)
+	if k.forkFinder != nil {
+		forks := k.forkFinder.Forked(ids)
 		page.Sessions = slices.DeleteFunc(page.Sessions, func(f Found) bool { return forks[f.SessionID] })
 	}
-	if k.OpenElsewhere != nil {
-		open := k.OpenElsewhere(ids)
+	if k.openFinder != nil {
+		open := k.openFinder.OpenElsewhere(ids)
 		for i := range page.Sessions {
 			page.Sessions[i].OpenIn = open[page.Sessions[i].SessionID]
 		}

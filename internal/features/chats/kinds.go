@@ -3,77 +3,74 @@ package chats
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Kind is an agent Nushi can run: how to start it, and what it does beyond
-// ACP.
+// Kind is an agent Nushi can run: its harness, and what main wires in to
+// run it here.
 type Kind struct {
-	Name    string // as chats keep it, such as "claude"
-	Title   string // as people read it, such as "Claude"
-	Launch  Launch
-	Dialect Dialect
-	// History copies a session to another folder's history for a move; nil
-	// when the agent's sessions can't move.
-	History CopyHistory
-	// Resume is the terminal command that opens one of its sessions, given
-	// the session id.
-	Resume string
+	Harness
+	Launch Launch
 	// MCP says its MCP servers are the ones the mcp feature shows and
 	// changes.
 	MCP bool
-	// ClientMCP says it takes the MCP servers a client names in session/new,
-	// so its chats get Nushi's tools (ADR 0043).
-	ClientMCP bool
-	// DeleteArchives says its session/delete archives a session rather
-	// than deleting it.
-	DeleteArchives bool
-	// OpenElsewhere says which of sessions ids a process of the agent's
-	// holds open now, one this daemon didn't start (a terminal's): by
-	// session id, where ("a terminal", "another app"). nil when that can't
-	// be told.
-	OpenElsewhere func(ids []string) map[string]string
-	// Forked says which of sessions ids are forks of another session, so
-	// Find leaves them out (only top-level sessions are listed; subagents'
-	// the agents leave out themselves). nil when that can't be told.
-	Forked func(ids []string) map[string]bool
-	// OneWriter says the agent lets one process at a time write to a
-	// session, so one open elsewhere isn't offered: Codex refuses a second
-	// one, omp moves it to a new session.
-	OneWriter bool
 	// Explain adds to why the agent failed to start what may help: that
 	// its CLI is a version it wasn't tested with. nil: nothing to add.
 	Explain func(error) error
 	// Ready says, quickly, why the agent can't start now (it isn't
 	// installed or set up); nil when it can. nil: it always can.
 	Ready func() error
-	// Gone says a session/load error means the agent no longer has the
-	// session (it deleted it). nil: never said.
-	Gone func(error) bool
-	// HistoryGone says, from the agent's own files alone, that it no
-	// longer has session sid of folder, for certain: false whenever that
-	// can't be told (its files for the folder missing or unreadable). nil:
-	// its files aren't read; a chat's sessions are then found gone only by
-	// reopening them (Gone).
-	HistoryGone func(sid, folder string) bool
-	// MessageTimes says when the agent's own files say session sid's
-	// messages of folder were sent, by item id: a replay doesn't tell, so
-	// a message Nushi never saw gets its time from here. nil: nothing does.
-	MessageTimes func(sid, folder string) map[string]time.Time
-	// Expires says what deletes the agent's sessions on its own, such as
-	// "Claude Code deletes sessions after 30 days by default"; "" if
-	// nothing does.
-	Expires string
 }
 
-// kind is a Kind the service runs.
+// kind is a Kind the service runs, with what its harness can do resolved
+// once by newKind. A nil field means it can't.
 type kind struct {
 	Kind
+	model.HarnessInfo
 	launch  Launch // Launch, refused once the service closes
 	tools   Tools  // Nushi's own tools for its chats' sessions; nil: none
 	deletes *bool  // whether the agent deletes sessions, once known (under Service.mu)
+
+	initMeta, sessionMeta, ultracodeMeta map[string]any // Meta's
+
+	forker         Forker
+	toolReader     ToolReader
+	otherReader    OtherReader
+	defaultReader  DefaultReader
+	transcript     Transcript
+	subagents      Subagents
+	background     BackgroundTasks
+	contextCommand ContextCommander
+	contextAsker   ContextAsker
+	goneReader     GoneReader
+	historyCopier  HistoryCopier
+	openFinder     OpenFinder
+	forkFinder     ForkFinder
+	historyChecker HistoryChecker
+	messageDater   MessageDater
+}
+
+// newKind asks k's harness what it can do, once: nothing else in this
+// package asserts an interface of a harness.
+func newKind(k Kind) *kind {
+	h := k.Harness
+	out := &kind{Kind: k, HarnessInfo: h.Info(), forker: can[Forker](h), toolReader: can[ToolReader](h),
+		otherReader: can[OtherReader](h), defaultReader: can[DefaultReader](h), transcript: can[Transcript](h), subagents: can[Subagents](h),
+		background: can[BackgroundTasks](h), contextCommand: can[ContextCommander](h), contextAsker: can[ContextAsker](h), goneReader: can[GoneReader](h),
+		historyCopier: can[HistoryCopier](h), openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), historyChecker: can[HistoryChecker](h),
+		messageDater: can[MessageDater](h)}
+	if m, ok := h.(Meta); ok {
+		out.initMeta, out.sessionMeta, out.ultracodeMeta = m.InitMeta(), m.SessionMeta(), m.UltracodeMeta()
+	}
+	return out
+}
+
+// can is h as a capability, a nil T when h hasn't it. Harnesses are values,
+// so no nil pointer can pass for one that has it.
+func can[T any](h Harness) T {
+	t, _ := h.(T)
+	return t
 }
 
 // explain is Explain's, for a failed start.
@@ -129,7 +126,9 @@ func New(ctx context.Context, agents []Kind, o Options) *Service {
 		s.copiesOn = func() bool { return true }
 	}
 	for _, k := range agents {
-		s.kinds = append(s.kinds, &kind{Kind: k, launch: s.started(k.Launch), tools: o.Tools})
+		kn := newKind(k)
+		kn.launch, kn.tools = s.started(k.Launch), o.Tools
+		s.kinds = append(s.kinds, kn)
 	}
 	if o.Sleep != nil {
 		go s.autoSleep()

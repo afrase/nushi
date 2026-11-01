@@ -62,8 +62,8 @@ func (e *events) removed() (ids, gone []string) {
 var errNotFound = &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "Resource not found: s1"}
 
 // goneService has one stored chat, "c", whose agent answers session/load
-// with loadErr; historyGone is Kind.HistoryGone, o the rest of its Options.
-func goneService(t *testing.T, loadErr error, historyGone func(sid, folder string) bool, sess model.ChatRecord, o Options) (*Service, *fakeAgent, *memSessions, *events) {
+// with loadErr; gone is its HistoryChecker, o the rest of its Options.
+func goneService(t *testing.T, loadErr error, gone func(sid, folder string) bool, sess model.ChatRecord, o Options) (*Service, *fakeAgent, *memSessions, *events) {
 	t.Helper()
 	agent := &fakeAgent{loadErr: loadErr}
 	sess.ID, sess.SessionID, sess.Agent = "c", "s1", "fake"
@@ -73,8 +73,10 @@ func goneService(t *testing.T, loadErr error, historyGone func(sid, folder strin
 	sess.HasMessages = true
 	sessions := &memSessions{stored: []model.ChatRecord{sess}}
 	ev := &events{}
-	k := Kind{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect,
-		Gone: claudeHarness.Gone, HistoryGone: historyGone, Expires: "it deletes old ones"}
+	k := Kind{Launch: agent.launch, Harness: struct {
+		testHarness
+		historyGone
+	}{testHarness{Name: "fake", Title: "Fake", gone: true, Expires: "it deletes old ones"}, gone}}
 	o.Sessions, o.Worktrees, o.Scratch, o.Publish = sessions, stateWorktrees{}, t.TempDir(), ev.publish
 	svc := newService(t, []Kind{k}, o)
 	t.Cleanup(svc.Close)
@@ -214,10 +216,12 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 		{ID: "untold", SessionID: "s-untold", Agent: "other", Folder: t.TempDir(), HasMessages: true},
 	}}
 	ev := &events{}
-	historyGone := func(sid, _ string) bool { return gone[sid] }
 	svc := newService(t, []Kind{
-		{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect, Gone: claudeHarness.Gone, HistoryGone: historyGone},
-		{Name: "other", Title: "Other", Launch: agent.launch, Dialect: testDialect, Gone: claudeHarness.Gone},
+		{Launch: agent.launch, Harness: struct {
+			testHarness
+			historyGone
+		}{testHarness{Name: "fake", Title: "Fake", gone: true}, func(sid, _ string) bool { return gone[sid] }}},
+		{Harness: testHarness{Name: "other", Title: "Other", gone: true}, Launch: agent.launch},
 	}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
 	svc.Sweep(context.Background())
 	if !slices.Equal(sessions.deleted, []string{"gone"}) {

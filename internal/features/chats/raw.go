@@ -15,7 +15,7 @@ const rawCap = 8 << 10
 // keepRaw keeps what the agent gave of a tool call beyond its content: its
 // input (rawInput) as indented JSON unless the call has diffs, and its result (rawOutput) as text or
 // indented JSON, but only while the content shows nothing (no text, diff or
-// image) and the call isn't a command (whose output comes in the dialect's
+// image) and the call isn't a command (whose output comes in the harness's
 // _meta). An update without them leaves them as they were. Neither is
 // masked or indented only to be dropped.
 func keepRaw(it *model.Item, input, output json.RawMessage) {

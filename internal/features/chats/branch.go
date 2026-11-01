@@ -35,7 +35,7 @@ func (c *chat) nameBranchLocked() {
 	if wt == nil || !wt.AutoName || c.parent != nil || c.worktrees == nil || c.busy || c.ownTurn || c.backgroundLocked(0) {
 		return
 	}
-	if c.dialect.NamesSessions && !c.titled && c.record.Name == "" && !c.waitedTitle {
+	if c.kind.NamesSessions && !c.titled && c.record.Name == "" && !c.waitedTitle {
 		c.waitedTitle = true // its title comes soon (or after the next turn, without it)
 		return
 	}

@@ -20,7 +20,7 @@ type silentRun struct {
 }
 
 // ContextUsage runs the agent's command that says what fills its context
-// (Dialect.ContextCommand, Claude's /context) without a trace, and returns
+// (ContextCommander, Claude's /context) without a trace, and returns
 // what it answers. It runs while the chat is idle, in a throwaway fork of
 // the session (same history, so the same numbers), which is deleted after:
 // the agent may keep the answer in a conversation. An agent that can't
@@ -38,15 +38,15 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	if err == nil && (c.busy || c.agent == nil) {
 		err = errors.New("the chat is busy")
 	}
-	agent, sid, folder, cmd := c.agent, c.sid, c.record.Folder, c.dialect.ContextCommand
+	agent, sid, folder := c.agent, c.sid, c.record.Folder
 	c.mu.Unlock()
 	if err != nil {
 		return model.ContextUsage{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Minute) // an agent alive but silent
 	defer cancel()
-	if c.dialect.Context != nil {
-		return c.dialect.Context(ctx, agent.Call, sid)
+	if c.kind.contextAsker != nil {
+		return c.kind.contextAsker.Context(ctx, agent.Call, sid)
 	}
 	fork, _, err := c.forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
@@ -62,7 +62,7 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 		delete(c.probes, fork)
 		c.mu.Unlock()
 	}()
-	if err := prompt(ctx, agent, acp.SessionID(fork), "/"+cmd); err != nil {
+	if err := prompt(ctx, agent, acp.SessionID(fork), "/"+c.kind.contextCommand.ContextCommand()); err != nil {
 		return model.ContextUsage{}, err
 	}
 	c.mu.Lock()
@@ -74,19 +74,19 @@ func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.Contex
 	for _, id := range run.ids {
 		messages = append(messages, run.text[id])
 	}
-	return c.dialect.ReadContext(messages), nil
+	return c.kind.contextCommand.ReadContext(messages), nil
 }
 
 // canAskContextLocked says why the agent can't be asked what fills the
-// chat's context, or nil: it needs a way to ask of its own (Dialect.Context),
+// chat's context, or nil: it needs a way to ask of its own (ContextAsker),
 // or the command, a fork, and a chat with messages (Claude would name a new
 // chat after /context).
 func (c *chat) canAskContextLocked() error {
-	cmd := c.dialect.ContextCommand
+	cmd := c.kind.contextCommand
 	switch {
-	case c.dialect.Context != nil:
+	case c.kind.contextAsker != nil:
 		return nil
-	case cmd == "" || !slices.ContainsFunc(c.commands, func(m model.Command) bool { return m.Name == cmd }):
+	case cmd == nil || !slices.ContainsFunc(c.commands, func(m model.Command) bool { return m.Name == cmd.ContextCommand() }):
 		return errors.New("the agent can't say what fills its context")
 	case !c.canFork || c.parent != nil:
 		return errors.New("the agent can't fork this chat to ask")

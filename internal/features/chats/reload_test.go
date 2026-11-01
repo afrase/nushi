@@ -64,7 +64,7 @@ func watchedChat(t *testing.T) (*Service, *fakeAgent, *chat, *watcher) {
 	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
 	store, err := transcripts.Open(filepath.Join(t.TempDir(), "transcripts"))
 	testcheck.NoErr(t, err)
-	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}},
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}},
 		Options{Scratch: t.TempDir(), Copies: store, Publish: w.event})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)

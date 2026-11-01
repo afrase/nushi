@@ -30,7 +30,7 @@ func newCopyingChat(t *testing.T) (*Service, *fakeAgent, *chat, *transcripts.Sto
 	testcheck.NoErr(t, err)
 	on := &atomic.Bool{}
 	on.Store(true)
-	svc := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect}}, Options{Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Scratch: t.TempDir(), Copies: store, CopiesOn: on.Load})
 	t.Cleanup(svc.Close)
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)

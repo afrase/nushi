@@ -33,7 +33,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		}
 	}
 	agent := &fakeAgent{updates: []acp.SessionUpdate{chunk("m1", "Hel"), chunk("m1", "lo"), chunk("", "!"), chunk("m2", "Bye")}}
-	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Publish: publish})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }}}, Options{Publish: publish})
 
 	folder := t.TempDir()
 	id, err := svc.Start(context.Background(), "", folder, false)
@@ -97,7 +97,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 	text := func(s string) []acp.ToolCallContent {
 		return []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: s}}}}}
 	}
-	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", kind: &kind{}, publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
 	for _, u := range []acp.SessionUpdate{
 		{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "Terminal", Kind: "execute", Status: "pending"}},
 		{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Title: "ls -la", Content: text("List files")}},
@@ -121,7 +121,7 @@ func TestToolCallUpdatesMergeIntoOneItem(t *testing.T) {
 func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
 	text := []acp.ToolCallContent{{Type: "content", Content: &acp.Content{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "found 1"}}}}}
 	long := `{"jql": "` + strings.Repeat("é", 6000) + `"}`
-	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", kind: &kind{}, publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
 	for _, u := range []acp.SessionUpdate{
 		// Claude's MCP call: an empty input first, then the whole of it; its
 		// result both as content and as rawOutput.
@@ -165,7 +165,7 @@ func TestToolCallKeepsItsRawInputAndOutput(t *testing.T) {
 
 func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 	events := make(chan model.Event, 100)
-	c := &chat{id: "s1", sid: "s1", agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
+	c := &chat{id: "s1", sid: "s1", kind: &kind{}, agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, waiting: map[string]chan<- string{}}
 	svc := &Service{chats: map[string]*chat{"s1": c}}
 	c.addLocked(model.Item{ID: "t1", Kind: model.ToolCall, Title: "rm -rf build"})
 
@@ -229,7 +229,7 @@ func TestPermissionWaitsForTheUsersPick(t *testing.T) {
 }
 
 func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
-	c := &chat{id: "s1", sid: "s1", publish: func(model.Event) {}}
+	c := &chat{id: "s1", sid: "s1", kind: &kind{}, publish: func(model.Event) {}}
 	plan := func(statuses ...string) acp.SessionUpdate {
 		var entries []acp.PlanEntry
 		for _, s := range statuses {
@@ -277,7 +277,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 		updates: []acp.SessionUpdate{usage(100, &acp.Cost{Amount: 0.5, Currency: "USD"}), usage(120, nil)},
 		usage:   &acp.Usage{InputTokens: 3, OutputTokens: 4, CachedReadTokens: new(uint64(5)), TotalTokens: 12},
 	}
-	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Publish: publish})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }}}, Options{Publish: publish})
 	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
 	if err != nil {
 		t.Fatal(err)
@@ -295,7 +295,7 @@ func TestUsageIsWhatTheAgentReported(t *testing.T) {
 }
 
 func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
-	c := &chat{id: "s1", sid: "s1", busy: true, publish: func(model.Event) {}}
+	c := &chat{id: "s1", sid: "s1", kind: &kind{}, busy: true, publish: func(model.Event) {}}
 	img := &acp.ImageContent{MimeType: "image/png", Data: "iVBORw=="}
 	for _, u := range []acp.SessionUpdate{ // as session/load replays a prompt with an image
 		{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: "look"}}}},
@@ -312,7 +312,7 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 }
 
 func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
-	c := &chat{id: "s1", sid: "s1", dialect: testDialect, publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
+	c := &chat{id: "s1", sid: "s1", kind: testKind(testHarness{}), publish: func(model.Event) {}, record: model.ChatRecord{Folder: "/w"}}
 	under := func(parent string) map[string]any {
 		return map[string]any{"claudeCode": map[string]any{"parentToolUseId": parent}}
 	}
@@ -386,7 +386,7 @@ func TestBackgroundCommandsAreFollowed(t *testing.T) {
 	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	var counts []int // how many run in the background, as each status said (under c.mu)
-	c := &chat{id: "s1", sid: "s1", dialect: testDialect, agent: &fakeAgent{}, ctx: t.Context(), record: model.ChatRecord{Folder: "/w"},
+	c := &chat{id: "s1", sid: "s1", kind: testKind(testHarness{}), agent: &fakeAgent{}, ctx: t.Context(), record: model.ChatRecord{Folder: "/w"},
 		publish: func(e model.Event) {
 			if e.Status != nil {
 				counts = append(counts, e.Status.Background)
@@ -456,12 +456,11 @@ func TestAnEndLineTheCommandPrintedIsntItsEnd(t *testing.T) {
 	commandPoll = time.Millisecond
 	reads := [][2]string{{"[killed]", "killed"}, {"[killed] and on", ""}, {"[killed] and on", "exited with code 0"}, {"[killed] and on", "exited with code 0"}}
 	var states []string
-	dialect := testDialect
-	dialect.ReadBackgroundCommand = func(string, string) (string, string, error) {
+	read := func(string, string) (string, string, error) {
 		r := reads[min(len(states), len(reads)-1)]
 		return r[0], r[1], nil
 	}
-	c := &chat{id: "s1", dialect: dialect, publish: func(e model.Event) {
+	c := &chat{id: "s1", kind: testKind(testHarness{read: read}), publish: func(e model.Event) {
 		if e.Item != nil && e.Item.BackgroundCommand != nil {
 			states = append(states, e.Item.BackgroundCommand.State)
 		}
@@ -484,7 +483,7 @@ func TestToolsForAChatOnAnIssue(t *testing.T) {
 		asked = append(asked, chat+" "+agent+" "+issue.Key)
 		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: "/bin/true"}}}
 	}
-	svc := newService(t, []Kind{{Name: "fake", ClientMCP: true, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Tools: tools})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake", ClientMCP: true}, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }}}, Options{Tools: tools})
 	if _, err := svc.Start(t.Context(), "", t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -510,7 +509,7 @@ func TestNoToolsForAnAgentThatTakesNone(t *testing.T) {
 	tools := func(string, string, *model.ChatIssue) []acp.MCPServer {
 		return []acp.MCPServer{{Stdio: &acp.MCPServerStdio{Name: "nushi", Command: "/bin/true"}}}
 	}
-	svc := newService(t, []Kind{{Name: "fake", Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }, Dialect: testDialect}}, Options{Tools: tools})
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: func(h acp.Client, _ *slog.Logger) (Agent, error) { agent.h = h; return agent, nil }}}, Options{Tools: tools})
 	if _, err := svc.Start(t.Context(), "", t.TempDir(), false); err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +550,7 @@ func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
 // A replay says nothing of when a message came: it isn't given the time
 // of the replay, and merging keeps the copy's.
 func TestReplayedAgentMessageHasNoTime(t *testing.T) {
-	c := &chat{quiet: true}
+	c := &chat{kind: &kind{}, quiet: true}
 	c.addLocked(model.Item{ID: "m1", Kind: model.AgentMessage, Text: "Hello"})
 	if !c.items[0].Sent.IsZero() {
 		t.Errorf("replayed message sent at %v", c.items[0].Sent)

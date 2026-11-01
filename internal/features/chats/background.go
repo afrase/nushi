@@ -11,10 +11,10 @@ import (
 // background (see model.BackgroundCommand) and follows it: through its output file
 // while the agent that runs it lives, else once, for how it ended.
 func (c *chat) backgroundCommandLocked(it *model.Item) {
-	if it.BackgroundCommand != nil || it.Status != "completed" || c.dialect.BackgroundCommand == nil {
+	if it.BackgroundCommand != nil || it.Status != "completed" || c.kind.background == nil {
 		return
 	}
-	id, file, ok := c.dialect.BackgroundCommand(*it)
+	id, file, ok := c.kind.background.BackgroundCommand(*it)
 	if !ok {
 		return
 	}
@@ -35,7 +35,7 @@ var commandPoll = time.Second
 func (c *chat) followCommand(callID, id, file string, agent Agent) {
 	var endAt *string // the output an end was first seen after
 	for {
-		out, end, err := c.dialect.ReadBackgroundCommand(id, file)
+		out, end, err := c.kind.background.ReadBackgroundCommand(id, file)
 		c.mu.Lock()
 		it := c.itemLocked(callID)
 		if it == nil || it.BackgroundCommand == nil {
@@ -100,16 +100,16 @@ type Processes interface {
 // stopCommand stops a command the agent left running in the background
 // itself, without a turn or a word to the agent: the one process below the
 // agent's that leads a process group and is the shell running the call's
-// command (Dialect.RunsBackgroundCommand), by its group. Its row ends "stopped" once
+// command (BackgroundTasks.RunsBackgroundCommand), by its group. Its row ends "stopped" once
 // the agent's own record says it ended (followCommand); the agent hears it
 // failed, and the next prompt tells it why (stopNote). False when that one
 // process can't be told (none, two alike, a command line Nushi can't read
 // whole): the agent is asked instead.
 func (s *Service) stopCommand(c *chat, callID string) bool {
 	c.mu.Lock()
-	agent, runs, log := c.agent, c.dialect.RunsBackgroundCommand, c.logLocked()
+	agent, tasks, log := c.agent, c.kind.background, c.logLocked()
 	call := c.itemLocked(callID)
-	if s.procs == nil || runs == nil || agent == nil || agent.Pid() <= 0 || call == nil || call.BackgroundCommand == nil {
+	if s.procs == nil || tasks == nil || agent == nil || agent.Pid() <= 0 || call == nil || call.BackgroundCommand == nil {
 		c.mu.Unlock()
 		return false
 	}
@@ -119,7 +119,7 @@ func (s *Service) stopCommand(c *chat, callID string) bool {
 	procs, err := s.procs.Under(root)
 	var found []model.Process
 	for _, p := range procs {
-		if p.Pid == p.Pgid && runs(cp, p.Args) {
+		if p.Pid == p.Pgid && tasks.RunsBackgroundCommand(cp, p.Args) {
 			found = append(found, p)
 		}
 	}

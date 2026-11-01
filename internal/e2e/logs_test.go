@@ -81,7 +81,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	hub, st := &events.Hub{}, store.New(data)
 	copies, err := transcripts.Open(filepath.Join(data, "transcripts"))
 	testcheck.NoErr(t, err)
-	svc := chats.New(t.Context(), []chats.Kind{{Name: "fake", Launch: launch}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
+	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "fake"}, Launch: launch}}, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{},
 		Scratch: filepath.Join(data, "scratch"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts})
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
