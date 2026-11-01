@@ -3,6 +3,7 @@ package chats
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -57,6 +58,10 @@ type Kind struct {
 	// its files aren't read; a chat's sessions are then found gone only by
 	// reopening them (Gone).
 	HistoryGone func(sid, folder string) bool
+	// MessageTimes says when the agent's own files say session sid's
+	// messages of folder were sent, by item id: a replay doesn't tell, so
+	// a message Nushi never saw gets its time from here. nil: nothing does.
+	MessageTimes func(sid, folder string) map[string]time.Time
 	// Expires says what deletes the agent's sessions on its own, such as
 	// "Claude Code deletes sessions after 30 days by default"; "" if
 	// nothing does.

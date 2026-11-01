@@ -10,6 +10,7 @@ package knownagents
 
 import (
 	"log/slog"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -90,6 +91,7 @@ func All(projects string, claudeGo func() bool) []Agent {
 				k.OpenElsewhere = claudehistory.Open
 				k.Forked = func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }
 				k.HistoryGone = func(sid, folder string) bool { return claudehistory.Gone(projects, sid, folder) }
+				k.MessageTimes = func(sid, folder string) map[string]time.Time { return claudehistory.Times(projects, sid, folder) }
 			},
 			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 				if r.Own {

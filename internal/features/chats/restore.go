@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -72,9 +73,20 @@ func (c *chat) noteID(id string) {
 	}
 }
 
+// messageTimes is when the agent's own files say a session's messages were
+// sent (Kind.MessageTimes), for restoreLocked. Those files can be long: it
+// runs without the chat's lock.
+func (c *chat) messageTimes(sid, folder string) map[string]time.Time {
+	if c.kind.MessageTimes == nil {
+		return nil
+	}
+	return c.kind.MessageTimes(sid, folder)
+}
+
 // restoreLocked makes the chat's transcript from its copy and the agent's
 // replay, tells the app what changed, and keeps the copy to what it shows.
-func (c *chat) restoreLocked(replayed []model.Item) {
+// times is what messageTimes read.
+func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) {
 	var copied []model.Item
 	if c.copies != nil {
 		var err error
@@ -82,11 +94,20 @@ func (c *chat) restoreLocked(replayed []model.Item) {
 			c.logLocked().Warn("transcript copy not read", "err", err)
 		}
 	}
+	date := func(it *model.Item) {
+		if (it.Kind == model.UserMessage || it.Kind == model.AgentMessage) && it.Sent.IsZero() {
+			it.Sent = times[it.ID]
+		}
+	}
+	for i := range replayed {
+		date(&replayed[i]) // the copy's may go by an id of Nushi's: pick takes it from here
+	}
 	items := merge(copied, replayed, c.dialect.Compacted)
 	var compacted, differs bool
 	for i := range items {
 		it := &items[i]
 		c.noteID(it.ID)
+		date(it)
 		if it.ID != "" {
 			continue
 		}

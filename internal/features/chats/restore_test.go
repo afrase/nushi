@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -88,6 +89,65 @@ func TestReopenShowsWhatBothHaveOnce(t *testing.T) {
 
 // Claude replays only what follows its last compaction: the copy has the
 // rest, and a mark says where the agent's history starts again.
+// A message Nushi never saw gets its time from the agent's own files, and
+// the copy keeps it; one Nushi saw keeps its own.
+func TestReopenDatesMessagesFromTheAgentsFiles(t *testing.T) {
+	svc, agent, c, store, _ := newCopyingChat(t)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+	c.mu.Lock()
+	c.items[slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })].Sent = time.Time{} // as from before Nushi kept times
+	c.unsaved[c.items[0].ID] = true
+	c.copyLocked(true)
+	c.mu.Unlock()
+
+	at := time.Date(2026, 10, 25, 1, 2, 3, 0, time.UTC)
+	agent.history = []acp.SessionUpdate{userChunk("u0", "before"), chunk("m0", "older"), userChunk("u1", "one"), chunk("m1", "a")}
+	c.mu.Lock()
+	sess := c.record
+	own := c.items[slices.IndexFunc(c.items, func(it model.Item) bool { return it.ID == "m1" })].Sent
+	c.mu.Unlock()
+	asked := make(chan string, 1)
+	times := func(sid, _ string) map[string]time.Time {
+		asked <- sid
+		return map[string]time.Time{"u0": at, "m0": at.Add(time.Minute), "u1": at.Add(2 * time.Minute), "m1": at}
+	}
+	again := newService(t, []Kind{{Name: "claude", Title: "Claude", Launch: agent.launch, Dialect: testDialect, MessageTimes: times}},
+		Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}, Scratch: t.TempDir(), Copies: store})
+	t.Cleanup(again.Close)
+	back := reopened(t, again, c.id)
+	if got := <-asked; got != sess.SessionID {
+		t.Errorf("asked of %s, want %s", got, sess.SessionID)
+	}
+	byID, byText := map[string]time.Time{}, map[string]time.Time{}
+	back.mu.Lock()
+	for _, it := range back.items {
+		byID[it.ID], byText[it.Text] = it.Sent, it.Sent
+	}
+	back.mu.Unlock()
+	if !byText["one"].Equal(at.Add(2 * time.Minute)) { // the copy has it by an id of Nushi's
+		t.Errorf("a message with Nushi's id at %v", byText["one"])
+	}
+	if !byID["u0"].Equal(at) || !byID["m0"].Equal(at.Add(time.Minute)) {
+		t.Errorf("replayed messages at %v, %v", byID["u0"], byID["m0"])
+	}
+	if !byID["m1"].Equal(own) {
+		t.Errorf("a message Nushi saw is at %v, want its own %v", byID["m1"], own)
+	}
+	copied, err := store.Read(c.id)
+	testcheck.NoErr(t, err)
+	kept := 0
+	for _, it := range copied {
+		if it.ID == "m0" && it.Sent.Equal(at.Add(time.Minute)) {
+			kept++
+		}
+	}
+	if kept != 1 {
+		t.Errorf("the copy has m0's time %d times, want 1", kept)
+	}
+}
+
 func TestReopenAfterACompaction(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turn := func(text string, updates ...acp.SessionUpdate) {
@@ -123,6 +183,11 @@ func TestArchivedChatShowsItsCopy(t *testing.T) {
 	agent.updates = []acp.SessionUpdate{chunk("m1", "a")}
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	eventually(t, c, func() bool { return !c.busy })
+	c.mu.Lock()
+	c.items[slices.IndexFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })].Sent = time.Time{} // as from before Nushi kept times
+	c.unsaved[c.items[0].ID] = true
+	c.copyLocked(true)
+	c.mu.Unlock()
 	testcheck.NoErr(t, svc.Archive(c.id, true))
 	launches, _, _ := agent.count()
 

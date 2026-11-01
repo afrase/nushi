@@ -235,12 +235,16 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	if err != nil {
 		return err
 	}
+	var times map[string]time.Time
+	if replay {
+		times = c.messageTimes(o.sid, folder)
+	}
 	c.mu.Lock()
 	held := c.held // a queue held before (an archived chat's) stays held
 	s.useLocked(c, o)
 	c.held = held
 	if replay {
-		c.restoreLocked(replayed)
+		c.restoreLocked(replayed, times)
 		c.childrenSaidLocked()
 	}
 	c.orphanLocked(false) // replayed calls whose agent died before their results

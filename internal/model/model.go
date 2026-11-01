@@ -265,8 +265,8 @@ type Item struct {
 	ForkAt     string
 	Rewindable bool
 	// Sent is when a message was sent: a user message through Nushi, an
-	// agent's as it began to arrive. Zero when not known (one the agent
-	// replayed).
+	// agent's as it began to arrive, else what the agent's own files say
+	// (Kind.MessageTimes). Zero when not known.
 	Sent time.Time `json:",omitzero"`
 	// Subagent is how the subagent a tool call starts goes.
 	Subagent *Subagent

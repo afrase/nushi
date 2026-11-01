@@ -111,11 +111,15 @@ func conversation(it model.Item, compaction func(model.Item) bool) bool {
 
 // pick is the item to show of one both have: the copy's (it has what the
 // replay doesn't: a subagent's steps and report, findings), unless the copy
-// has it still running and the agent has it ended.
+// has it still running and the agent has it ended. A time only the replay
+// has joins the copy's.
 func pick(copied, replayed model.Item) model.Item {
 	ended := func(s string) bool { return s == "completed" || s == "failed" }
 	if copied.Kind == model.ToolCall && !ended(copied.Status) && ended(replayed.Status) {
 		return replayed
+	}
+	if copied.Sent.IsZero() {
+		copied.Sent = replayed.Sent
 	}
 	return copied
 }
