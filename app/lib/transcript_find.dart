@@ -194,28 +194,47 @@ class _FindBarState extends State<FindBar> {
 
 /// A transcript entry as a find marks it ([mark] 1: a hit, tinted amber
 /// with a bar on its left; 2: the current one, in the accent); as it is
-/// with 0.
+/// with 0. The mark stops [below] short of its bottom: a message's actions
+/// aren't part of it.
 class Hit extends StatelessWidget {
-  const new({required this.mark, required this.child, super.key});
+  const new({
+    required this.mark,
+    required this.child,
+    super.key,
+    this.below = 0,
+  });
 
   final int mark;
   final Widget child;
+  final double below;
 
   @override
   Widget build(BuildContext context) {
     if (mark == 0) return child;
     final t = NushiTheme.of(context).t;
-    return DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: BoxDecoration(
-        color: mark == 2
-            ? t.accentSoft.withValues(alpha: 0.35)
-            : t.needsSoft.withValues(alpha: 0.25),
-        border: Border(
-          left: BorderSide(color: mark == 2 ? t.accent : t.needs, width: 3),
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        child,
+        Positioned.fill(
+          bottom: below,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: mark == 2
+                    ? t.accentSoft.withValues(alpha: 0.35)
+                    : t.needsSoft.withValues(alpha: 0.25),
+                border: Border(
+                  left: BorderSide(
+                    color: mark == 2 ? t.accent : t.needs,
+                    width: 3,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-      child: child,
+      ],
     );
   }
 }

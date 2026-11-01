@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 // Forks (ADR 0067): a new chat from a chat's conversation, all of it (Fork
@@ -80,40 +79,4 @@ Future<void> keepSide(BuildContext context, Daemon d, ChatState chat) async {
         ),
       );
   });
-}
-
-/// One of the agent's messages with "Fork from here" on hover (top right),
-/// when [onFork] is set. Only on hover: a right-click on a message is the
-/// selection's (Copy).
-class ForkTarget extends StatelessWidget {
-  const new({required this.child, super.key, this.onFork});
-
-  final Widget child;
-  final VoidCallback? onFork;
-
-  @override
-  Widget build(BuildContext context) {
-    final run = onFork;
-    if (run == null) return child;
-    return Hover(
-      builder: (context, {required hover}) => Stack(
-        fit: StackFit.passthrough,
-        children: [
-          child,
-          if (hover)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconTap(
-                Icons.call_split,
-                size: 15,
-                color: NushiTheme.of(context).t.textMuted,
-                tooltip: 'Fork from here: a new chat up to this message',
-                onTap: run,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }

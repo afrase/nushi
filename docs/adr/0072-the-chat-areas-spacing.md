@@ -27,3 +27,5 @@ The owner: "I kind of don't like how crammed a lot of the ui is." An audit found
 
 ## Amendment (2026-11-01)
 The column is centred or takes the whole width, by choice, rather than kept at the left ([ADR 0074](0074-the-chats-width-is-a-choice.md)).
+
+Tool rows have their box back ([ADR 0076](0076-messages-as-bubbles-with-actions-on-hover.md)).

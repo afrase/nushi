@@ -75,3 +75,4 @@
 - [0073](0073-comment-drafts-kept-on-disk.md) GitHub's and Jira's drafts kept on disk: the comment boxes' text and a review's inline comments in `comment_drafts.json` (0600), saved 500 ms after they stop changing and when the app goes to the back or quits
 - [0074](0074-the-chats-width-is-a-choice.md) The chat is a centred column of 860 or takes the whole width: Chat width in Settings › General (replaces 0072's left-hand column)
 - [0075](0075-copy-is-nushis-own-command.md) `/copy` is Nushi's own command: the agent's latest message as Markdown on the clipboard, `/copy N` further back; the agent never sees it
+- [0076](0076-messages-as-bubbles-with-actions-on-hover.md) On the Mac a user message is a bubble at the right and a message's actions a row under it on hover (Read, time, Copy, Rewind or Fork); tool rows in their tint again (reverses 0072's no box)

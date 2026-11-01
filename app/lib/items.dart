@@ -9,11 +9,11 @@ import 'package:nushi/file_links.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
-import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/marks.dart';
+import 'package:nushi/message_actions.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
@@ -25,6 +25,9 @@ import 'package:nushi/tool_calls.dart';
 import 'package:nushi/widgets.dart';
 
 /// One item of a transcript, by its kind.
+/// The widest a user message's bubble goes (ADR 0076).
+const _bubbleWidth = 640.0;
+
 class ItemView extends StatelessWidget {
   const new(
     this.item,
@@ -59,9 +62,10 @@ class ItemView extends StatelessWidget {
     final t = theme.t;
     switch (item.kind) {
       case ItemKind.ITEM_KIND_USER_MESSAGE:
-        // A band across the transcript, the heading of the agent's work
-        // that follows it; the right keeps room for Rewind.
         final phone = TouchTargets.of(context);
+        if (!phone) return _bubble(context);
+        // On the phone a band across the transcript, the heading of the
+        // agent's work that follows it.
         return RewindTarget(
           onRewind: onRewind,
           child: LayoutBuilder(
@@ -206,37 +210,101 @@ class ItemView extends StatelessWidget {
                   findingsShownBefore(chat.items, chat.items.indexOf(item)),
                 )
                 .isEmpty;
-        return ForkTarget(
-          onFork: onFork,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 4,
-            children: [
-              if (found == null)
-                LinkedMarkdown(item.text, chat, daemon, live: live)
-              else ...[
-                if (found.before.isNotEmpty)
-                  LinkedMarkdown(found.before, chat, daemon, live: false),
-                if (again)
-                  FindingsAgain(found.json)
-                else
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: FindingsCard(
-                      found.findings,
-                      chat,
-                      json: found.json,
-                      key: const ValueKey('findings'),
-                    ),
+        final message = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 4,
+          children: [
+            if (found == null)
+              LinkedMarkdown(item.text, chat, daemon, live: live)
+            else ...[
+              if (found.before.isNotEmpty)
+                LinkedMarkdown(found.before, chat, daemon, live: false),
+              if (again)
+                FindingsAgain(found.json)
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: FindingsCard(
+                    found.findings,
+                    chat,
+                    json: found.json,
+                    key: const ValueKey('findings'),
                   ),
-                if (found.after.isNotEmpty)
-                  LinkedMarkdown(found.after, chat, daemon, live: live),
-              ],
-              if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
+                ),
+              if (found.after.isNotEmpty)
+                LinkedMarkdown(found.after, chat, daemon, live: live),
             ],
-          ),
+            if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
+          ],
+        );
+        if (TouchTargets.of(context)) return message;
+        return MessageActions(
+          actions: () => [
+            CopyAction(item.text),
+            if (onFork case final fork?)
+              IconTap(
+                Icons.call_split,
+                size: 15,
+                color: t.textMuted,
+                tooltip: 'Fork from here: a new chat up to this message',
+                onTap: fork,
+              ),
+            if (item.sent != 0) MessageTime(item.sent.toInt()),
+          ],
+          child: message,
         );
     }
+  }
+
+  /// Whether something of the agent's follows this message: it read it.
+  bool get _answered => chat.items
+      .skip(chat.items.indexOf(item) + 1)
+      .any(
+        (i) => i.kind != ItemKind.ITEM_KIND_USER_MESSAGE && i.parent.isEmpty,
+      );
+
+  /// A user message on the Mac: a bubble at the column's right, its actions
+  /// under it on hover.
+  Widget _bubble(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return MessageActions(
+      end: true,
+      actions: () => [
+        ReadMark(read: _answered, agent: chat.agentName),
+        if (item.sent != 0) MessageTime(item.sent.toInt()),
+        CopyAction(item.text),
+        if (onRewind case final rewind?)
+          IconTap(
+            Icons.history,
+            size: 15,
+            color: t.textMuted,
+            tooltip: 'Rewind to here (Esc Esc)',
+            onTap: rewind,
+          ),
+      ],
+      child: RewindTarget(
+        onRewind: onRewind,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _bubbleWidth),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: t.userBand,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6,
+              children: [
+                if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
+                if (item.images.isNotEmpty) Thumbnails(item.images),
+                if (item.text.isNotEmpty) UserMessageText(item.text),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
@@ -150,11 +149,12 @@ void main() {
     await _hover(tester, find.text('Done.'));
     expect(_forkHere, findsNothing); // no messageId: no fork point
     await _hover(tester, find.textContaining('So the page you asked'));
-    // At the right end of the message, whose text stops at the readable
-    // width.
+    // In the row under the message.
     expect(
-      tester.getRect(_forkHere).right,
-      greaterThan(260 + NushiTheme.gutter + readableWidth - 12),
+      tester.getRect(_forkHere).top,
+      greaterThanOrEqualTo(
+        tester.getRect(find.textContaining('So the page you asked')).bottom,
+      ),
     );
     await tester.tap(_forkHere);
     await tester.pumpAndSettle();

@@ -8,6 +8,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - **The sidebar** lists Pinned, then the projects and their chats. Its foot has Jira, GitHub and Settings.
 - **Settings** (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left. Esc or Close goes back ([ADR 0053](adr/0053-settings-is-a-view.md)). Settings › General's Appearance (Light, Dark, or as the system; also in the View menu) is remembered.
 - **Chat width.** Settings › General or the palette (⌘K): a centered column, or the whole width of the window.
+- **Under a message**, on hover: Copy, Rewind or Fork from here, and its time; on yours, one check when it's sent and two once the agent has answered ([ADR 0076](adr/0076-messages-as-bubbles-with-actions-on-hover.md)).
 - **`/copy`** puts the agent's last message on the clipboard as Markdown; `/copy 2` the one before ([ADR 0075](adr/0075-copy-is-nushis-own-command.md)).
 - **Tabs.** A chat opens on the tab it was left on (Chat, Changes, Pull request), and on Chat when it needs you.
 - **Trust.** Before an agent starts in a folder that brings code of its own (hooks, MCP servers, extensions), a trust card shows that code. Going elsewhere while it asks is a no, and a bar over the app says what didn't start ("Didn't start Claude in site: its code wasn't approved.").

@@ -4,11 +4,10 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A tool call's row: a one-line header that opens to show [body], its height
-/// easing open and its chevron turning. On the Mac it has no box until
-/// [failed], when it's outlined in red on a red tint (ADR 0072); on the phone
-/// it's always a card, in the tool rows' tint. Given [ids] (its call's, or its
-/// group's and its first call's), it opens as it was left, rebuilt or not.
+/// A tool call's row: a one-line header in the tool rows' tint that opens
+/// to show [body], its height easing open and its chevron turning; outlined
+/// in red when [failed] (ADR 0076). Given [ids] (its call's, or its group's
+/// and its first call's), it opens as it was left, rebuilt or not.
 class Collapsible extends StatefulWidget {
   const new({
     required this.header,
@@ -70,28 +69,17 @@ class _CollapsibleState extends State<Collapsible>
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final body = widget.body;
-    final card = TouchTargets.of(context);
     return framed(
-      border: widget.failed
-          ? t.crashed
-          : card
-          ? t.toolBorder
-          : Colors.transparent,
+      border: widget.failed ? t.crashed : t.toolBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ColoredBox(
-            color: widget.failed
-                ? t.crashedSoft
-                : card
-                ? t.toolTint
-                : Colors.transparent,
+            color: widget.failed ? t.crashedSoft : t.toolTint,
             child: Tap(
               onTap: body == null ? null : _toggle,
               radius: 0,
-              // A row is on the text column, the box of a failed one too,
-              // so its chevron doesn't move as it fails (ADR 0072).
-              padding: EdgeInsets.symmetric(horizontal: card ? 10 : 0),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: SizedBox(
                 height: 28,
                 child: Row(

@@ -144,7 +144,7 @@ void main() {
       const path =
           '/Users/me/Developer/a-long-project-name/work/out/'
           'export-records-0123456789-raw.json';
-      viewport(tester, Size(width, 200));
+      viewport(tester, Size(width, 230));
       final fake = FakeDaemon([])
         ..answer = (input) => switch (input) {
           FindChatFilesRequest() => FindChatFilesResponse(found: [path]),

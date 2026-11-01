@@ -44,7 +44,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Move** | The chat goes on in another folder or worktree; its session forks there. | `MoveChat` | 0014 |
 | **Delete** | Remove a chat, the agent's history of it, and its worktree and branch if you say so. | `PlanDeleteChat`, `DeleteChat` | 0015 |
 | **Expired** | A chat whose agent deleted its session: read-only, on Nushi's copy, with Start a new chat here. | `session_gone`, `RemovedChat` | 0015, 0047 |
-| **Transcript** | The conversation as shown: your messages as chapter bands, tool rows, subagents, plans. | `transcript.dart`, `items.dart` | 0026 |
+| **Transcript** | The conversation as shown: your messages as bubbles (bands on the phone), tool rows, subagents, plans. | `transcript.dart`, `items.dart` | 0026 |
 | **Nushi's copy** | Nushi's own read-only copy of each transcript as shown, for what the agent no longer replays. Settings › Chat history. | `internal/transcripts`, `TranscriptCopy` | 0047 |
 | **Mode** | The agent's own permission mode (Auto, Plan…): the only permission control. The picker on the left under the box. | `ConfigOption` category `mode`, `ChatRecord.Mode` | 0007 |
 | **Model**, **Effort** | The model the agent runs and how hard it thinks; the model menu under the box (Effort ▸, More models ▸). | `ConfigOption` categories `model`, `thought_level` | 0060 |

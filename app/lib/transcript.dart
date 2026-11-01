@@ -12,6 +12,7 @@ import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
+import 'package:nushi/message_actions.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/paced.dart';
 import 'package:nushi/replies.dart';
@@ -240,14 +241,17 @@ class _TranscriptState extends State<Transcript> {
                 // Keyed, the item's state follows it as items arrive.
                 Padding(
                   key: ValueKey(key),
-                  // A user message's band goes edge to edge.
-                  padding: _isBand(e)
+                  // On the phone a user message's band goes edge to edge.
+                  padding: _isBand(e) && TouchTargets.of(context)
                       ? EdgeInsets.only(top: top)
                       : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
                   // New while the chat is open, it rises in, once.
                   child: Hit(
                     mark: mark,
                     key: mark == 2 ? _currentHit : null,
+                    below: _hasActions(e) && !TouchTargets.of(context)
+                        ? messageActionsHeight
+                        : 0,
                     child: Enter.rise(
                       play: rise,
                       child: RepaintBoundary(
@@ -604,17 +608,27 @@ double _gap(
   int i, {
   required bool header,
   required bool phone,
-}) => _opens(entries[i])
-    ? (i == 0 && !header
-          ? 8
-          : phone
-          ? 28
-          : 32)
-    : (!phone
-          ? 16
-          : i > 0 && _opens(entries[i - 1])
-          ? 18
-          : 12);
+}) {
+  final gap = _opens(entries[i])
+      ? (i == 0 && !header
+            ? 8.0
+            : phone
+            ? 28.0
+            : 32.0)
+      : (!phone
+            ? 16.0
+            : i > 0 && _opens(entries[i - 1])
+            ? 18.0
+            : 12.0);
+  // A message's actions keep their room under it.
+  final after = !phone && i > 0 && _hasActions(entries[i - 1]);
+  return after ? max(0, gap - messageActionsHeight) : gap;
+}
+
+bool _hasActions(Object e) =>
+    e is Item &&
+    (e.kind == ItemKind.ITEM_KIND_USER_MESSAGE ||
+        e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE);
 
 /// Where a reply box's bottom edge went when it opened: it stays there as
 /// the box grows a line at a time, so the box grows upward, as Claude's.

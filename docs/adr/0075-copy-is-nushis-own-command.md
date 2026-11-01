@@ -12,6 +12,8 @@ The owner: selecting text and copying "sometimes doesn't copy it correctly", so 
 - Only messages loaded in the chat count: a long chat's older pages aren't reached.
 - A `/copy` of the agent's own can't be run from Nushi.
 
+## Amendment (2026-11-01)
+Each message's hover row has a Copy too ([ADR 0076](0076-messages-as-bubbles-with-actions-on-hover.md)).
+
 ## Alternatives considered
-- A Copy button on each message: it reaches any message, but the owner asked for the command, and this needs no room in the transcript.
 - Copying rendered text: it loses the formatting this is for.

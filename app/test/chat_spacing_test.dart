@@ -13,6 +13,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/message_actions.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/settings.dart';
@@ -208,8 +209,11 @@ void main() {
           tester.getRect(find.byTooltip('Chat menu')).right,
           view.right - NushiTheme.gutter,
         );
-        // A band's text too, though its fill goes edge to edge.
-        expect(_text(tester, 'Good. Run the whole suite.').left, left);
+        // A message's bubble ends at the column's right.
+        expect(
+          _text(tester, 'Good. Run the whole suite.').right,
+          box.right - 14,
+        );
         await closeView(tester, d);
       }, variant: _mac);
     }
@@ -225,7 +229,7 @@ void main() {
       expect(box.left, left);
       expect(box.right, view.right - NushiTheme.gutter);
       expect(_text(tester, 'I’ll start from').left, left);
-      expect(_text(tester, 'Good. Run the whole suite.').left, left);
+      expect(_text(tester, 'Good. Run the whole suite.').right, box.right - 14);
       await closeView(tester, d);
     }, variant: _mac);
 
@@ -340,12 +344,13 @@ void main() {
       await closeView(tester, d);
     }, variant: _mac);
 
-    testWidgets('items 16 apart, 32 before a user message', (tester) async {
+    testWidgets('items 16 apart, 28 after a message for its actions, 32 '
+        'before a user message', (tester) async {
       final d = await _app(tester, width: 1700);
       final first = _text(tester, 'I’ll start from');
       final next = _text(tester, 'The redirect read the session');
       final run = tester.getRect(find.byType(RunView));
-      expect(run.top - first.bottom, 16);
+      expect(run.top - first.bottom, messageActionsHeight);
       expect(next.top - run.bottom, 16);
       final band = find
           .ancestor(
@@ -370,14 +375,13 @@ void main() {
       matching: find.byType(Collapsible),
     );
 
-    testWidgets('no box until one fails, which keeps its row', (tester) async {
+    testWidgets('each in the tool rows’ tint, a failed one in red', (
+      tester,
+    ) async {
       final d = await _app(tester, width: 1700);
       final t = NushiTheme.of(tester.element(find.byType(ChatView))).t;
       for (final words in ['docs/login-report.md', 'make check']) {
-        expect(_look(tester, call(words)), (
-          Colors.transparent,
-          Colors.transparent,
-        ));
+        expect(_look(tester, call(words)), (t.toolTint, t.toolBorder));
       }
       expect(_look(tester, call('go test')), (t.crashedSoft, t.crashed));
       final failed = call('go test');

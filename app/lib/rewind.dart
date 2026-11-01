@@ -4,7 +4,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Whether the chat can be rewound to just before [item], a user message,
@@ -48,9 +47,9 @@ Future<void> rewindTo(
   chat.takeBack.value = r.message;
 });
 
-/// A user message with "Rewind to here" on hover (top right) and in its
-/// context menu, when [onRewind] is set; Esc Esc in the box lists them all
-/// (`rewind_picker.dart`).
+/// A user message with "Rewind to here" in its context menu, when
+/// [onRewind] is set; its hover row has it too, and Esc Esc in the box
+/// lists them all (`rewind_picker.dart`).
 class RewindTarget extends StatelessWidget {
   const new({required this.child, super.key, this.onRewind});
 
@@ -63,30 +62,9 @@ class RewindTarget extends StatelessWidget {
     if (run == null) return child;
     return Menu(
       entries: [MenuEntry('Rewind to here', onPick: run)],
-      builder: (context, open) => Hover(
-        builder: (context, {required hover}) => GestureDetector(
-          onSecondaryTapUp: (d) => open(d.localPosition),
-          // Passthrough: the message keeps its row's width (a band spans
-          // the transcript) rather than shrinking to its text.
-          child: Stack(
-            fit: StackFit.passthrough,
-            children: [
-              child,
-              if (hover)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: IconTap(
-                    Icons.history,
-                    size: 15,
-                    color: NushiTheme.of(context).t.textMuted,
-                    tooltip: 'Rewind to here (Esc Esc)',
-                    onTap: run,
-                  ),
-                ),
-            ],
-          ),
-        ),
+      builder: (context, open) => GestureDetector(
+        onSecondaryTapUp: (d) => open(d.localPosition),
+        child: child,
       ),
     );
   }
