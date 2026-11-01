@@ -173,9 +173,13 @@ class _CommitBoxState extends State<CommitBox> {
               },
               child: TextField(
                 controller: chat.commitMessage,
-                minLines: 2,
-                maxLines: 6,
-                style: theme.ui(t.text, size: 12.5),
+                // Room to read a whole message; a window's short side keeps
+                // room for the files.
+                minLines: 5,
+                maxLines: (MediaQuery.sizeOf(context).height / 50)
+                    .floor()
+                    .clamp(5, 14),
+                style: theme.ui(t.text),
                 decoration: const InputDecoration(
                   hintText: 'Commit message',
                   isDense: true,
