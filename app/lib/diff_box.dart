@@ -31,6 +31,11 @@ bool tooLongToDiff(FileChange d) =>
 TextDiff _diff((String, String, String) d) =>
     TextDiff.compute(d.$1, d.$2, path: d.$3);
 
+/// Whether two changes draw the same diff: what's staged isn't part of it,
+/// and staging a file mustn't lose the place in it.
+bool _sameDiff(FileChange a, FileChange b) =>
+    a.path == b.path && a.oldText == b.oldText && a.newText == b.newText;
+
 /// A note of someone else's under a line of a diff (a GitHub review
 /// thread): its id, its side (old: the left), its line (from 1; 0 above
 /// the file).
@@ -169,7 +174,7 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void didUpdateWidget(DiffBox old) {
     super.didUpdateWidget(old);
-    if (old.change != widget.change) {
+    if (!_sameDiff(old.change, widget.change)) {
       _build();
     } else if (old.notes != widget.notes) {
       _showComments();
@@ -190,7 +195,7 @@ class _DiffBoxState extends State<DiffBox> {
     final rows = max(_lines(d.oldText), _lines(d.newText)).clamp(1, 15);
     _height =
         _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) * rows + 6;
-    if (_of == d) {
+    if (_of case final of? when _sameDiff(of, d)) {
       if (_diffed case final diff?) _view(diff);
       return;
     }

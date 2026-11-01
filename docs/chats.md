@@ -82,7 +82,11 @@ A chat whose agent can rewind goes back to just before one of your messages. Rew
 
 ## Changes and review comments
 
-**Changes**, beside Chat, is the chat's diff viewer: its folder's uncommitted changes, or its branch's for a worktree chat (Uncommitted, Branch and Commits pick which). It only reads: Nushi doesn't stage, commit or push ([ADR 0019](adr/0019-changes-read-only-toward-git.md)).
+**Changes**, beside Chat, is the chat's diff viewer: its folder's uncommitted changes, or its branch's for a worktree chat (Uncommitted, Branch and Commits pick which). In Uncommitted you can stage and commit; Branch and Commits only read, and Nushi doesn't push.
+
+- Each file and folder has a checkbox to stage it whole. A dash means part of it is staged, by a terminal or because it changed since: a click stages all of it.
+- Under the files, write a message and press Commit (⌘⏎). It commits what's staged, as `git commit` does: hooks and signing run, and what a failing hook says shows there.
+- If what's staged changed since it was shown, or files outside the chat's folder are staged, Commit refuses. While the agent is working it warns that files may change ([ADR 0079](adr/0079-stage-and-commit-from-changes.md)).
 
 - Select lines to write a review comment for the agent.
 - **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message.

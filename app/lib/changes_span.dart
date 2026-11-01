@@ -32,6 +32,9 @@ class ChangeSpan {
   final GetFolderStatusResponse status;
   final List<Commit> commits;
 
+  /// What's staged, as the last [files] read it; Uncommitted's only.
+  String index = '';
+
   /// Whether HEAD is on the base branch itself: its commits are then the
   /// last ones, not the branch's own.
   bool get onBase =>
@@ -105,7 +108,9 @@ class ChangeSpan {
           ? null
           : commits[picked.$2].hash,
     );
-    return (await daemon.client.getDiff(req)).files;
+    final got = await daemon.client.getDiff(req);
+    index = got.index;
+    return got.files;
   }
 
   /// What GetDiff lists for the scope; in Commits, what the commits from
@@ -130,14 +135,15 @@ class ChangeSpan {
   return i < 0 || j < 0 ? null : (min(i, j), max(i, j));
 }
 
-/// Reloads (`reload`) a chat's changes when its turn ends, it moves, or its
-/// scope is changed.
+/// Reloads (`reload`) a chat's changes when its turn ends, it moves, its
+/// scope is changed, or a commit is made in it.
 mixin FollowsChanges<T extends StatefulWidget> on State<T> {
   ChatState get chat;
   Daemon get daemon;
   late String _folder;
   String? _scope;
   bool _wasBusy = false;
+  int _commits = 0;
 
   Future<void> reload();
 
@@ -146,6 +152,7 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
     super.initState();
     _folder = chat.folder;
     _scope = chat.scope;
+    _commits = chat.commits;
     chat.addListener(_changed);
     unawaited(reload());
   }
@@ -159,7 +166,9 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
   void _changed() {
     if (_wasBusy && !chat.busy ||
         _folder != chat.folder ||
-        _scope != chat.scope) {
+        _scope != chat.scope ||
+        _commits != chat.commits) {
+      _commits = chat.commits;
       _folder = chat.folder;
       _scope = chat.scope;
       unawaited(reload());

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/commit_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -10,12 +11,19 @@ import 'package:nushi/widgets.dart';
 
 /// A row of the changed files: a folder (no [file]) or a file.
 class ChangeRow {
-  new folder(this.path, this.name, this.depth, this.added, this.removed)
-    : file = null;
+  new folder(
+    this.path,
+    this.name,
+    this.depth,
+    this.added,
+    this.removed,
+    this.files,
+  ) : file = null;
   new file(FileChange this.file, this.name, this.depth)
     : path = file.path,
       added = file.added,
-      removed = file.removed;
+      removed = file.removed,
+      files = [file];
 
   final String path;
   final String name; // a file's name (its path when flat), or folders
@@ -23,11 +31,20 @@ class ChangeRow {
   final FileChange? file;
   final int added;
   final int removed;
+
+  /// The file, or every file under the folder.
+  final List<FileChange> files;
 }
 
 class _Folder {
   final folders = <String, _Folder>{};
   final files = <FileChange>[];
+
+  /// Every file under it.
+  List<FileChange> get all => [
+    ...files,
+    for (final d in folders.values) ...d.all,
+  ];
 
   (int, int) get totals {
     var (a, r) = (0, 0);
@@ -70,7 +87,7 @@ List<ChangeRow> changeRows(
       }
       final path = '$parent$label';
       final (a, r) = sub.totals;
-      rows.add(ChangeRow.folder(path, label, depth, a, r));
+      rows.add(ChangeRow.folder(path, label, depth, a, r, sub.all));
       if (!collapsed.contains(path)) walk(sub, '$path/', depth + 1);
     }
     for (final f in d.files) {
@@ -93,12 +110,16 @@ class FileList extends StatefulWidget {
     required this.onSelect,
     super.key,
     this.marks = const {},
+    this.onStage,
   });
 
   final List<FileChange> files;
   final String? selected;
   final ValueChanged<String> onSelect;
   final Map<String, int> marks; // review comments, by file
+
+  /// Staging from a checkbox on each row; none in a view of what's committed.
+  final void Function(List<FileChange>, {required bool on})? onStage;
 
   @override
   State<FileList> createState() => _FileListState();
@@ -180,7 +201,8 @@ class _FileListState extends State<FileList> {
           textDirection: TextDirection.ltr,
           textScaler: scaler,
         )..layout();
-        final w = _Row.indent(r) + _Row.lead + p.width + _Row.end;
+        final check = widget.onStage == null ? 0.0 : StageCheck.size;
+        final w = _Row.indent(r) + check + _Row.lead + p.width + _Row.end;
         p.dispose();
         return w.ceilToDouble();
       }();
@@ -238,6 +260,7 @@ class _FileListState extends State<FileList> {
         selected: row.file != null && row.path == widget.selected,
         open: !_collapsed.contains(row.path),
         comments: widget.marks[row.file?.path] ?? 0,
+        onStage: widget.onStage,
         onTap: () {
           _focus.requestFocus();
           if (row.file == null) {
@@ -302,6 +325,7 @@ class _Row extends StatelessWidget {
     required this.open,
     required this.comments,
     required this.onTap,
+    this.onStage,
   });
 
   final ChangeRow row;
@@ -310,6 +334,7 @@ class _Row extends StatelessWidget {
   final bool open;
   final int comments;
   final VoidCallback onTap;
+  final void Function(List<FileChange>, {required bool on})? onStage;
 
   /// Before the text: the indent, then the chevron or status letter's
   /// column; after it, the end's padding.
@@ -343,6 +368,11 @@ class _Row extends StatelessWidget {
       padding: EdgeInsets.only(left: indent(row), right: end),
       child: Row(
         children: [
+          if (onStage case final stage?)
+            if (row.files.every(stageable))
+              StageCheck(row.files, onStage: stage)
+            else
+              const SizedBox(width: StageCheck.size),
           SizedBox(
             width: lead,
             child: file == null

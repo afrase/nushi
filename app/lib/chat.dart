@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show TextEditingController;
 
 import 'package:nushi/agents.dart';
 import 'package:nushi/clock.dart';
@@ -191,6 +192,18 @@ class ChatState extends ChangeNotifier {
 
   /// ⌘F in its Changes view.
   final changesFind = ChangesFind();
+
+  /// The message being written in its Changes view. In the app's memory
+  /// only.
+  final TextEditingController commitMessage = TextEditingController();
+
+  /// Commits made in its Changes view: its folder's views read again.
+  int get commits => _commits;
+  int _commits = 0;
+  void committed() {
+    _commits++;
+    notifyListeners();
+  }
 
   /// A side chat is starting (its fork is on its way).
   final forking = ValueNotifier<bool>(false);

@@ -76,8 +76,9 @@ void main() {
 
   bool spinning() =>
       find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
-  double opacity(WidgetTester tester) =>
-      tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
+  double opacity(WidgetTester tester) => tester
+      .widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first)
+      .opacity;
 
   testWidgets('a quick switch neither dims nor spins', (tester) async {
     await open(tester);
@@ -115,7 +116,7 @@ void main() {
           .widget<IgnorePointer>(
             find
                 .ancestor(
-                  of: find.byType(AnimatedOpacity),
+                  of: find.byType(AnimatedOpacity).first,
                   matching: find.byType(IgnorePointer),
                 )
                 .first,

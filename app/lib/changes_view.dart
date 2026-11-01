@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/commit_box.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
@@ -66,6 +67,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   bool _stale = false;
   Timer? _slow;
 
+  // Staging asked for and not yet done, in order.
+  Future<void> _staging = Future.value();
+  int _stages = 0;
   // The list's last answer to the find: its text, of which files, the files.
   (String, List<FileChange>, List<FileChange>) _shown = (
     '',
@@ -306,6 +310,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         ? ''
         : 'Not shown: ${file.path} is ${file.skipped}.';
     final commits = _span?.scope == Scope.commits;
+    final staging = _span?.scope == Scope.uncommitted;
     final empty = _reloading
         ? ''
         : commits && _commits.isEmpty
@@ -374,10 +379,18 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                                     _noPlain();
                                   }),
                                   marks: _marks(),
+                                  onStage: staging ? _stage : null,
                                 ),
                               ),
                             ),
                           ),
+                          if (staging && _files.isNotEmpty)
+                            CommitBox(
+                              chat: chat,
+                              files: _files,
+                              onStage: _stage,
+                              onCommit: _commit,
+                            ),
                         ],
                       ),
                     ),
@@ -505,6 +518,53 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       _jumps++; // a new box, even for the file it was (one file listed)
     });
     _findChanged();
+  }
+
+  /// Stages [files] or takes them out, at once on screen, in order with
+  /// any others asked for, reading the folder again after the last.
+  void _stage(List<FileChange> files, {required bool on}) {
+    final ask = StageFilesRequest(
+      folder: chat.folder,
+      staged: on,
+      paths: [
+        for (final f in files.where(stageable)) ...[
+          f.path,
+          if (f.oldPath.isNotEmpty) f.oldPath,
+        ],
+      ],
+    );
+    setState(() {
+      for (final f in files.where(stageable)) {
+        f.staged = on ? 'all' : '';
+      }
+    });
+    _stages++;
+    _staging = _staging.then((_) async {
+      if (mounted) {
+        await tryOrShow(context, () => daemon.client.stageFiles(ask));
+      }
+      if (--_stages == 0 && mounted) await reload();
+    });
+  }
+
+  /// Commits what's staged, once any staging under way is in and read.
+  Future<void> _commit(String message) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await _staging;
+    try {
+      final done = await daemon.client.commitStaged(
+        CommitStagedRequest(
+          folder: chat.folder,
+          message: message,
+          index: _span?.index,
+        ),
+      );
+      messenger?.showSnackBar(
+        SnackBar(content: Text('Committed ${done.short}')),
+      );
+    } finally {
+      chat.committed();
+    }
   }
 
   /// The reply cards waiting in the chat's box (the review's, sent from
