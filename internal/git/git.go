@@ -35,8 +35,8 @@ type Span struct{ Base, Commit, Since string }
 
 // Changes returns the folder's changes in span, untracked files included
 // when they are uncommitted ones, with paths relative to the folder and
-// each file's lines added and removed. The folder may be anywhere inside a
-// repository.
+// each file's lines added and removed, and uncommitted ones say how much is
+// staged. The folder may be anywhere inside a repository.
 func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange, error) { //nolint:gocognit,gocyclo // each span's git commands, then one pass over their output
 	from, to, err := ends(ctx, folder, span)
 	if err != nil {
@@ -140,6 +140,11 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 			if c.Status == "added" || c.Status == "untracked" {
 				c.Added = lines(cur)
 			}
+		}
+	}
+	if span == (Span{}) {
+		if err := markStaged(ctx, folder, changes); err != nil {
+			return nil, err
 		}
 	}
 	return changes, nil

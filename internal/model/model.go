@@ -584,7 +584,16 @@ type RemovedChat struct {
 type FileChange struct {
 	Path, OldPath, Status, Old, New, Skipped string
 	Added, Removed                           int
+	// Staged is how much of an uncommitted change is in the index: "", or
+	// StagedPart or StagedAll.
+	Staged string
 }
+
+// FileChange.Staged's values.
+const (
+	StagedPart = "part" // staged, and changed again or staged in part since
+	StagedAll  = "all"
+)
 
 // FolderStatus sums up a git folder's uncommitted changes. Branch is the
 // branch checked out, or the commit when none is.

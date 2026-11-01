@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"connectrpc.com/connect"
 
@@ -14,7 +15,8 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// The handlers that read a folder with git.
+// The handlers that read a folder with git, and the two that write it
+// (ADR 0079).
 
 // absolute refuses a folder that isn't an absolute path.
 func absolute(folder string) error {
@@ -39,7 +41,8 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	if err := absolute(req.Msg.Folder); err != nil {
 		return nil, err
 	}
-	changes, err := git.Changes(ctx, req.Msg.Folder, git.Span{Base: req.Msg.Base, Commit: req.Msg.Commit, Since: req.Msg.Since})
+	span := git.Span{Base: req.Msg.Base, Commit: req.Msg.Commit, Since: req.Msg.Since}
+	changes, err := git.Changes(ctx, req.Msg.Folder, span)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -47,7 +50,45 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	for _, c := range changes {
 		resp.Files = append(resp.Files, fileChangeProto(c))
 	}
+	if span == (git.Span{}) {
+		if resp.Index, err = git.IndexState(ctx, req.Msg.Folder); err != nil {
+			return nil, refused(err)
+		}
+	}
 	return connect.NewResponse(resp), nil
+}
+
+func (s *server) StageFiles(ctx context.Context, req *connect.Request[nushiv1.StageFilesRequest]) (*connect.Response[nushiv1.StageFilesResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	if len(req.Msg.Paths) == 0 {
+		return nil, invalid(errors.New("no files"))
+	}
+	if err := git.Stage(ctx, req.Msg.Folder, req.Msg.Paths, req.Msg.Staged); err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.StageFilesResponse{}), nil
+}
+
+// maxCommitMessage is what a commit's message may be, as a merge's.
+const maxCommitMessage = 64 << 10
+
+func (s *server) CommitStaged(ctx context.Context, req *connect.Request[nushiv1.CommitStagedRequest]) (*connect.Response[nushiv1.CommitStagedResponse], error) {
+	if err := absolute(req.Msg.Folder); err != nil {
+		return nil, err
+	}
+	switch m := req.Msg.Message; {
+	case strings.TrimSpace(m) == "":
+		return nil, invalid(errors.New("a commit needs a message"))
+	case len(m) > maxCommitMessage:
+		return nil, invalid(errors.New("the commit's message is too long"))
+	}
+	short, err := git.CommitStaged(ctx, req.Msg.Folder, req.Msg.Message, req.Msg.Index, s.agents.Environ())
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.CommitStagedResponse{Short: short}), nil
 }
 
 func (s *server) GetFile(_ context.Context, req *connect.Request[nushiv1.GetFileRequest]) (*connect.Response[nushiv1.GetFileResponse], error) {
@@ -63,7 +104,7 @@ func (s *server) GetFile(_ context.Context, req *connect.Request[nushiv1.GetFile
 
 func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
 	return &nushiv1.FileChange{Path: c.Path, Status: c.Status, OldText: c.Old, NewText: c.New, Skipped: c.Skipped,
-		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed)}
+		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed), Staged: c.Staged}
 }
 
 func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushiv1.GetFolderStatusRequest]) (*connect.Response[nushiv1.GetFolderStatusResponse], error) {

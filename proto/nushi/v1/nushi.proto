@@ -160,6 +160,12 @@ service NushiService {
   // included, or everything since its branch left a base, or what commits
   // changed.
   rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+  // Stages files as they are in the work tree, or unstages them. Only the
+  // user's own ask: nothing else writes the index (ADR 0079). (API 98)
+  rpc StageFiles(StageFilesRequest) returns (StageFilesResponse);
+  // Commits what's staged as the user's git commit would, hooks and signing
+  // included, if it's still what GetDiff said (index). (API 98)
+  rpc CommitStaged(CommitStagedRequest) returns (CommitStagedResponse);
   // Reads one of a folder's files as it is now, as a change that changes
   // nothing (status "unchanged", the text on both sides): a file a review
   // names that isn't among the changes. Only a regular file inside the
@@ -1560,6 +1566,31 @@ message GetDiffRequest {
   string since = 4;
 }
 
+message StageFilesRequest {
+  // An absolute path.
+  string folder = 1;
+  // Relative to folder. A rename is two: both its paths.
+  repeated string paths = 2;
+  // Whether they go in the index or out of it.
+  bool staged = 3;
+}
+
+message StageFilesResponse {}
+
+message CommitStagedRequest {
+  // An absolute path.
+  string folder = 1;
+  // 64 KiB at most.
+  string message = 2;
+  // GetDiffResponse.index: what's staged must still be this.
+  string index = 3;
+}
+
+message CommitStagedResponse {
+  // The commit's short hash.
+  string short = 1;
+}
+
 message GetFileRequest {
   // An absolute path.
   string folder = 1;
@@ -1604,6 +1635,8 @@ message GetFileResponse {
 message GetDiffResponse {
   // Sorted by path.
   repeated FileChange files = 1;
+  // Uncommitted changes only: names what's staged, for CommitStaged.
+  string index = 2;
 }
 
 // One file's change: its text at HEAD and now.
@@ -1622,6 +1655,9 @@ message FileChange {
   // Lines added and removed; a binary file counts none.
   int32 added = 7;
   int32 removed = 8;
+  // An uncommitted change only: how much is in the index, "", "part" or
+  // "all".
+  string staged = 9;
 }
 
 message ListCommitsRequest {

@@ -412,6 +412,24 @@ abstract final class NushiService {
     nushiv1nushi.GetDiffResponse.new,
   );
 
+  /// Stages files as they are in the work tree, or unstages them. Only the
+  /// user's own ask: nothing else writes the index (ADR 0079). (API 98)
+  static const stageFiles = connect.Spec(
+    '/$name/StageFiles',
+    connect.StreamType.unary,
+    nushiv1nushi.StageFilesRequest.new,
+    nushiv1nushi.StageFilesResponse.new,
+  );
+
+  /// Commits what's staged as the user's git commit would, hooks and signing
+  /// included, if it's still what GetDiff said (index). (API 98)
+  static const commitStaged = connect.Spec(
+    '/$name/CommitStaged',
+    connect.StreamType.unary,
+    nushiv1nushi.CommitStagedRequest.new,
+    nushiv1nushi.CommitStagedResponse.new,
+  );
+
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review
   /// names that isn't among the changes. Only a regular file inside the

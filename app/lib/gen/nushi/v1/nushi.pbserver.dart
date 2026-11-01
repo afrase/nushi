@@ -103,6 +103,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.SetConfigOptionRequest request);
   $async.Future<$0.GetDiffResponse> getDiff(
       $pb.ServerContext ctx, $0.GetDiffRequest request);
+  $async.Future<$0.StageFilesResponse> stageFiles(
+      $pb.ServerContext ctx, $0.StageFilesRequest request);
+  $async.Future<$0.CommitStagedResponse> commitStaged(
+      $pb.ServerContext ctx, $0.CommitStagedRequest request);
   $async.Future<$0.GetFileResponse> getFile(
       $pb.ServerContext ctx, $0.GetFileRequest request);
   $async.Future<$0.WatchChatFileResponse> watchChatFile(
@@ -372,6 +376,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.SetConfigOptionRequest();
       case 'GetDiff':
         return $0.GetDiffRequest();
+      case 'StageFiles':
+        return $0.StageFilesRequest();
+      case 'CommitStaged':
+        return $0.CommitStagedRequest();
       case 'GetFile':
         return $0.GetFileRequest();
       case 'WatchChatFile':
@@ -647,6 +655,10 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return setConfigOption(ctx, request as $0.SetConfigOptionRequest);
       case 'GetDiff':
         return getDiff(ctx, request as $0.GetDiffRequest);
+      case 'StageFiles':
+        return stageFiles(ctx, request as $0.StageFilesRequest);
+      case 'CommitStaged':
+        return commitStaged(ctx, request as $0.CommitStagedRequest);
       case 'GetFile':
         return getFile(ctx, request as $0.GetFileRequest);
       case 'WatchChatFile':

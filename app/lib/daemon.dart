@@ -49,7 +49,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 97;
+const apiVersion = 98;
 
 /// The API from which the daemon says what an agent has (Agent.go_agent and
 /// mcp_user_only, ListSkillsResponse.has_built_in and has_plugins), which

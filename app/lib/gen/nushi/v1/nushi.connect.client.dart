@@ -820,6 +820,44 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Stages files as they are in the work tree, or unstages them. Only the
+  /// user's own ask: nothing else writes the index (ADR 0079). (API 98)
+  Future<nushiv1nushi.StageFilesResponse> stageFiles(
+    nushiv1nushi.StageFilesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.stageFiles,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Commits what's staged as the user's git commit would, hooks and signing
+  /// included, if it's still what GetDiff said (index). (API 98)
+  Future<nushiv1nushi.CommitStagedResponse> commitStaged(
+    nushiv1nushi.CommitStagedRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.commitStaged,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review
   /// names that isn't among the changes. Only a regular file inside the

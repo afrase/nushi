@@ -135,6 +135,11 @@ const (
 	NushiServiceSetConfigOptionProcedure = "/nushi.v1.NushiService/SetConfigOption"
 	// NushiServiceGetDiffProcedure is the fully-qualified name of the NushiService's GetDiff RPC.
 	NushiServiceGetDiffProcedure = "/nushi.v1.NushiService/GetDiff"
+	// NushiServiceStageFilesProcedure is the fully-qualified name of the NushiService's StageFiles RPC.
+	NushiServiceStageFilesProcedure = "/nushi.v1.NushiService/StageFiles"
+	// NushiServiceCommitStagedProcedure is the fully-qualified name of the NushiService's CommitStaged
+	// RPC.
+	NushiServiceCommitStagedProcedure = "/nushi.v1.NushiService/CommitStaged"
 	// NushiServiceGetFileProcedure is the fully-qualified name of the NushiService's GetFile RPC.
 	NushiServiceGetFileProcedure = "/nushi.v1.NushiService/GetFile"
 	// NushiServiceWatchChatFileProcedure is the fully-qualified name of the NushiService's
@@ -556,6 +561,12 @@ type NushiServiceClient interface {
 	// included, or everything since its branch left a base, or what commits
 	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Stages files as they are in the work tree, or unstages them. Only the
+	// user's own ask: nothing else writes the index (ADR 0079). (API 98)
+	StageFiles(context.Context, *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error)
+	// Commits what's staged as the user's git commit would, hooks and signing
+	// included, if it's still what GetDiff said (index). (API 98)
+	CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error)
 	// Reads one of a folder's files as it is now, as a change that changes
 	// nothing (status "unchanged", the text on both sides): a file a review
 	// names that isn't among the changes. Only a regular file inside the
@@ -1078,6 +1089,18 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetDiffProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
+			connect.WithClientOptions(opts...),
+		),
+		stageFiles: connect.NewClient[v1.StageFilesRequest, v1.StageFilesResponse](
+			httpClient,
+			baseURL+NushiServiceStageFilesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StageFiles")),
+			connect.WithClientOptions(opts...),
+		),
+		commitStaged: connect.NewClient[v1.CommitStagedRequest, v1.CommitStagedResponse](
+			httpClient,
+			baseURL+NushiServiceCommitStagedProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("CommitStaged")),
 			connect.WithClientOptions(opts...),
 		),
 		getFile: connect.NewClient[v1.GetFileRequest, v1.GetFileResponse](
@@ -1678,6 +1701,8 @@ type nushiServiceClient struct {
 	answerQuestion         *connect.Client[v1.AnswerQuestionRequest, v1.AnswerQuestionResponse]
 	setConfigOption        *connect.Client[v1.SetConfigOptionRequest, v1.SetConfigOptionResponse]
 	getDiff                *connect.Client[v1.GetDiffRequest, v1.GetDiffResponse]
+	stageFiles             *connect.Client[v1.StageFilesRequest, v1.StageFilesResponse]
+	commitStaged           *connect.Client[v1.CommitStagedRequest, v1.CommitStagedResponse]
 	getFile                *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	watchChatFile          *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
 	findChatFiles          *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
@@ -1975,6 +2000,16 @@ func (c *nushiServiceClient) SetConfigOption(ctx context.Context, req *connect.R
 // GetDiff calls nushi.v1.NushiService.GetDiff.
 func (c *nushiServiceClient) GetDiff(ctx context.Context, req *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
 	return c.getDiff.CallUnary(ctx, req)
+}
+
+// StageFiles calls nushi.v1.NushiService.StageFiles.
+func (c *nushiServiceClient) StageFiles(ctx context.Context, req *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error) {
+	return c.stageFiles.CallUnary(ctx, req)
+}
+
+// CommitStaged calls nushi.v1.NushiService.CommitStaged.
+func (c *nushiServiceClient) CommitStaged(ctx context.Context, req *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error) {
+	return c.commitStaged.CallUnary(ctx, req)
 }
 
 // GetFile calls nushi.v1.NushiService.GetFile.
@@ -2594,6 +2629,12 @@ type NushiServiceHandler interface {
 	// included, or everything since its branch left a base, or what commits
 	// changed.
 	GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error)
+	// Stages files as they are in the work tree, or unstages them. Only the
+	// user's own ask: nothing else writes the index (ADR 0079). (API 98)
+	StageFiles(context.Context, *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error)
+	// Commits what's staged as the user's git commit would, hooks and signing
+	// included, if it's still what GetDiff said (index). (API 98)
+	CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error)
 	// Reads one of a folder's files as it is now, as a change that changes
 	// nothing (status "unchanged", the text on both sides): a file a review
 	// names that isn't among the changes. Only a regular file inside the
@@ -3112,6 +3153,18 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetDiffProcedure,
 		svc.GetDiff,
 		connect.WithSchema(nushiServiceMethods.ByName("GetDiff")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStageFilesHandler := connect.NewUnaryHandler(
+		NushiServiceStageFilesProcedure,
+		svc.StageFiles,
+		connect.WithSchema(nushiServiceMethods.ByName("StageFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceCommitStagedHandler := connect.NewUnaryHandler(
+		NushiServiceCommitStagedProcedure,
+		svc.CommitStaged,
+		connect.WithSchema(nushiServiceMethods.ByName("CommitStaged")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceGetFileHandler := connect.NewUnaryHandler(
@@ -3750,6 +3803,10 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceSetConfigOptionHandler.ServeHTTP(w, r)
 		case NushiServiceGetDiffProcedure:
 			nushiServiceGetDiffHandler.ServeHTTP(w, r)
+		case NushiServiceStageFilesProcedure:
+			nushiServiceStageFilesHandler.ServeHTTP(w, r)
+		case NushiServiceCommitStagedProcedure:
+			nushiServiceCommitStagedHandler.ServeHTTP(w, r)
 		case NushiServiceGetFileProcedure:
 			nushiServiceGetFileHandler.ServeHTTP(w, r)
 		case NushiServiceWatchChatFileProcedure:
@@ -4105,6 +4162,14 @@ func (UnimplementedNushiServiceHandler) SetConfigOption(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) GetDiff(context.Context, *connect.Request[v1.GetDiffRequest]) (*connect.Response[v1.GetDiffResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetDiff is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StageFiles(context.Context, *connect.Request[v1.StageFilesRequest]) (*connect.Response[v1.StageFilesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StageFiles is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) CommitStaged(context.Context, *connect.Request[v1.CommitStagedRequest]) (*connect.Response[v1.CommitStagedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CommitStaged is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) GetFile(context.Context, *connect.Request[v1.GetFileRequest]) (*connect.Response[v1.GetFileResponse], error) {

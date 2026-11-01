@@ -11380,6 +11380,269 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   void clearSince() => $_clearField(4);
 }
 
+class StageFilesRequest extends $pb.GeneratedMessage {
+  factory StageFilesRequest({
+    $core.String? folder,
+    $core.Iterable<$core.String>? paths,
+    $core.bool? staged,
+  }) {
+    final result = StageFilesRequest._();
+    if (folder != null) result.folder = folder;
+    if (paths != null) result.paths.addAll(paths);
+    if (staged != null) result.staged = staged;
+    return result;
+  }
+
+  StageFilesRequest._();
+
+  factory StageFilesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageFilesRequest()..mergeFromBuffer(data, registry);
+  factory StageFilesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageFilesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StageFilesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StageFilesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..pPS(2, _omitFieldNames ? '' : 'paths')
+    ..aOB(3, _omitFieldNames ? '' : 'staged')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageFilesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageFilesRequest copyWith(void Function(StageFilesRequest) updates) =>
+      super.copyWith((message) => updates(message as StageFilesRequest))
+          as StageFilesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StageFilesRequest() / StageFilesRequest.new instead')
+  static StageFilesRequest create() => StageFilesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StageFilesRequest._();
+  @$core.override
+  StageFilesRequest createEmptyInstance() => StageFilesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StageFilesRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<StageFilesRequest>(
+          StageFilesRequest.$_createMessage);
+  static StageFilesRequest? _defaultInstance;
+
+  /// An absolute path.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// Relative to folder. A rename is two: both its paths.
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get paths => $_getList(1);
+
+  /// Whether they go in the index or out of it.
+  @$pb.TagNumber(3)
+  $core.bool get staged => $_getBF(2);
+  @$pb.TagNumber(3)
+  set staged($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasStaged() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearStaged() => $_clearField(3);
+}
+
+class StageFilesResponse extends $pb.GeneratedMessage {
+  factory StageFilesResponse() => StageFilesResponse._();
+
+  StageFilesResponse._();
+
+  factory StageFilesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageFilesResponse()..mergeFromBuffer(data, registry);
+  factory StageFilesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StageFilesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StageFilesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StageFilesResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageFilesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StageFilesResponse copyWith(void Function(StageFilesResponse) updates) =>
+      super.copyWith((message) => updates(message as StageFilesResponse))
+          as StageFilesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StageFilesResponse() / StageFilesResponse.new instead')
+  static StageFilesResponse create() => StageFilesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StageFilesResponse._();
+  @$core.override
+  StageFilesResponse createEmptyInstance() => StageFilesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StageFilesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StageFilesResponse>(
+          StageFilesResponse.$_createMessage);
+  static StageFilesResponse? _defaultInstance;
+}
+
+class CommitStagedRequest extends $pb.GeneratedMessage {
+  factory CommitStagedRequest({
+    $core.String? folder,
+    $core.String? message,
+    $core.String? index,
+  }) {
+    final result = CommitStagedRequest._();
+    if (folder != null) result.folder = folder;
+    if (message != null) result.message = message;
+    if (index != null) result.index = index;
+    return result;
+  }
+
+  CommitStagedRequest._();
+
+  factory CommitStagedRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CommitStagedRequest()..mergeFromBuffer(data, registry);
+  factory CommitStagedRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CommitStagedRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CommitStagedRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CommitStagedRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..aOS(3, _omitFieldNames ? '' : 'index')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CommitStagedRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CommitStagedRequest copyWith(void Function(CommitStagedRequest) updates) =>
+      super.copyWith((message) => updates(message as CommitStagedRequest))
+          as CommitStagedRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use CommitStagedRequest() / CommitStagedRequest.new instead')
+  static CommitStagedRequest create() => CommitStagedRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CommitStagedRequest._();
+  @$core.override
+  CommitStagedRequest createEmptyInstance() => CommitStagedRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CommitStagedRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CommitStagedRequest>(
+          CommitStagedRequest.$_createMessage);
+  static CommitStagedRequest? _defaultInstance;
+
+  /// An absolute path.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  /// 64 KiB at most.
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+
+  /// GetDiffResponse.index: what's staged must still be this.
+  @$pb.TagNumber(3)
+  $core.String get index => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set index($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasIndex() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearIndex() => $_clearField(3);
+}
+
+class CommitStagedResponse extends $pb.GeneratedMessage {
+  factory CommitStagedResponse({
+    $core.String? short,
+  }) {
+    final result = CommitStagedResponse._();
+    if (short != null) result.short = short;
+    return result;
+  }
+
+  CommitStagedResponse._();
+
+  factory CommitStagedResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CommitStagedResponse()..mergeFromBuffer(data, registry);
+  factory CommitStagedResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CommitStagedResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CommitStagedResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: CommitStagedResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'short')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CommitStagedResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CommitStagedResponse copyWith(void Function(CommitStagedResponse) updates) =>
+      super.copyWith((message) => updates(message as CommitStagedResponse))
+          as CommitStagedResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CommitStagedResponse() / CommitStagedResponse.new instead')
+  static CommitStagedResponse create() => CommitStagedResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CommitStagedResponse._();
+  @$core.override
+  CommitStagedResponse createEmptyInstance() => CommitStagedResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CommitStagedResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CommitStagedResponse>(
+          CommitStagedResponse.$_createMessage);
+  static CommitStagedResponse? _defaultInstance;
+
+  /// The commit's short hash.
+  @$pb.TagNumber(1)
+  $core.String get short => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set short($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasShort() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearShort() => $_clearField(1);
+}
+
 class GetFileRequest extends $pb.GeneratedMessage {
   factory GetFileRequest({
     $core.String? folder,
@@ -11817,9 +12080,11 @@ class GetFileResponse extends $pb.GeneratedMessage {
 class GetDiffResponse extends $pb.GeneratedMessage {
   factory GetDiffResponse({
     $core.Iterable<FileChange>? files,
+    $core.String? index,
   }) {
     final result = GetDiffResponse._();
     if (files != null) result.files.addAll(files);
+    if (index != null) result.index = index;
     return result;
   }
 
@@ -11838,6 +12103,7 @@ class GetDiffResponse extends $pb.GeneratedMessage {
       createEmptyInstance: GetDiffResponse.$_createMessage)
     ..pPM<FileChange>(1, _omitFieldNames ? '' : 'files',
         subBuilder: FileChange.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'index')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11865,6 +12131,16 @@ class GetDiffResponse extends $pb.GeneratedMessage {
   /// Sorted by path.
   @$pb.TagNumber(1)
   $pb.PbList<FileChange> get files => $_getList(0);
+
+  /// Uncommitted changes only: names what's staged, for CommitStaged.
+  @$pb.TagNumber(2)
+  $core.String get index => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set index($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIndex() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIndex() => $_clearField(2);
 }
 
 /// One file's change: its text at HEAD and now.
@@ -11878,6 +12154,7 @@ class FileChange extends $pb.GeneratedMessage {
     $core.String? oldPath,
     $core.int? added,
     $core.int? removed,
+    $core.String? staged,
   }) {
     final result = FileChange._();
     if (path != null) result.path = path;
@@ -11888,6 +12165,7 @@ class FileChange extends $pb.GeneratedMessage {
     if (oldPath != null) result.oldPath = oldPath;
     if (added != null) result.added = added;
     if (removed != null) result.removed = removed;
+    if (staged != null) result.staged = staged;
     return result;
   }
 
@@ -11912,6 +12190,7 @@ class FileChange extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'oldPath')
     ..aI(7, _omitFieldNames ? '' : 'added')
     ..aI(8, _omitFieldNames ? '' : 'removed')
+    ..aOS(9, _omitFieldNames ? '' : 'staged')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12011,6 +12290,17 @@ class FileChange extends $pb.GeneratedMessage {
   $core.bool hasRemoved() => $_has(7);
   @$pb.TagNumber(8)
   void clearRemoved() => $_clearField(8);
+
+  /// An uncommitted change only: how much is in the index, "", "part" or
+  /// "all".
+  @$pb.TagNumber(9)
+  $core.String get staged => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set staged($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasStaged() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearStaged() => $_clearField(9);
 }
 
 class ListCommitsRequest extends $pb.GeneratedMessage {
@@ -28540,6 +28830,20 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetDiffRequest request) =>
       _client.invoke<GetDiffResponse>(
           ctx, 'NushiService', 'GetDiff', request, GetDiffResponse());
+
+  /// Stages files as they are in the work tree, or unstages them. Only the
+  /// user's own ask: nothing else writes the index (ADR 0079). (API 98)
+  $async.Future<StageFilesResponse> stageFiles(
+          $pb.ClientContext? ctx, StageFilesRequest request) =>
+      _client.invoke<StageFilesResponse>(
+          ctx, 'NushiService', 'StageFiles', request, StageFilesResponse());
+
+  /// Commits what's staged as the user's git commit would, hooks and signing
+  /// included, if it's still what GetDiff said (index). (API 98)
+  $async.Future<CommitStagedResponse> commitStaged(
+          $pb.ClientContext? ctx, CommitStagedRequest request) =>
+      _client.invoke<CommitStagedResponse>(
+          ctx, 'NushiService', 'CommitStaged', request, CommitStagedResponse());
 
   /// Reads one of a folder's files as it is now, as a change that changes
   /// nothing (status "unchanged", the text on both sides): a file a review

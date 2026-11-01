@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -70,7 +71,7 @@ func TestChanges(t *testing.T) {
 	testcheck.Git(t, repo, "mv", "sub/kept.txt", "sub/moved.txt")
 	write(t, filepath.Join(repo, "sub", "moved.txt"), "one\ntwo\nthree\n")
 	got, err = Changes(ctx, filepath.Join(repo, "sub"), Span{})
-	want = []model.FileChange{{Path: "moved.txt", OldPath: "kept.txt", Status: "renamed", Old: "one\ntwo\n", New: "one\ntwo\nthree\n", Added: 1}}
+	want = []model.FileChange{{Path: "moved.txt", OldPath: "kept.txt", Status: "renamed", Old: "one\ntwo\n", New: "one\ntwo\nthree\n", Added: 1, Staged: model.StagedPart}}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("renamed: %+v, %v", got, err)
 	}
@@ -314,5 +315,118 @@ func TestFileReadsOnlyInsideTheFolder(t *testing.T) {
 		if c, err := File(dir, p); err == nil {
 			t.Errorf("File(%q) read %+v", p, c)
 		}
+	}
+}
+
+// ownConfig is the environment of a commit without the owner's git config:
+// their hooks and signing aren't a test's to run.
+func ownConfig() []string {
+	return append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_NOSYSTEM=1")
+}
+
+func stagedOf(t *testing.T, folder string) map[string]string {
+	t.Helper()
+	got, err := Changes(context.Background(), folder, Span{})
+	testcheck.NoErr(t, err)
+	states := map[string]string{}
+	for _, c := range got {
+		states[c.Path] = c.Staged
+	}
+	return states
+}
+
+func TestStageAndCommit(t *testing.T) {
+	ctx := context.Background()
+	repo := t.TempDir()
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "config", "user.name", "Test")
+	testcheck.Git(t, repo, "config", "user.email", "test@example.com")
+	write(t, filepath.Join(repo, "one.txt"), "one\n")
+	write(t, filepath.Join(repo, "gone.txt"), "bye\n")
+	write(t, filepath.Join(repo, "a*b.txt"), "star\n") // a pathspec's wildcard, if it weren't literal
+	write(t, filepath.Join(repo, "ab.txt"), "plain\n")
+
+	// Before the first commit too: reset has no HEAD to go back to.
+	testcheck.NoErr(t, Stage(ctx, repo, []string{"one.txt", "gone.txt"}, true))
+	testcheck.NoErr(t, Stage(ctx, repo, []string{"gone.txt"}, false))
+	testcheck.NoErr(t, Stage(ctx, repo, []string{"gone.txt", "a*b.txt", "ab.txt"}, true))
+	index, err := IndexState(ctx, repo)
+	testcheck.NoErr(t, err)
+	if _, err := CommitStaged(ctx, repo, "first\n", index, ownConfig()); err != nil {
+		t.Fatal(err)
+	}
+
+	write(t, filepath.Join(repo, "one.txt"), "one\ntwo\n")
+	testcheck.NoErr(t, os.Remove(filepath.Join(repo, "gone.txt")))
+	write(t, filepath.Join(repo, "new file.txt"), "new\n")
+	write(t, filepath.Join(repo, "a*b.txt"), "star 2\n")
+	write(t, filepath.Join(repo, "ab.txt"), "plain 2\n")
+	testcheck.NoErr(t, Stage(ctx, repo, []string{"one.txt", "gone.txt", "new file.txt", "a*b.txt"}, true))
+	write(t, filepath.Join(repo, "one.txt"), "one\ntwo\nthree\n")
+	want := map[string]string{"one.txt": "part", "gone.txt": "all", "new file.txt": "all", "a*b.txt": "all", "ab.txt": ""}
+	if got := stagedOf(t, repo); !reflect.DeepEqual(got, want) {
+		t.Errorf("staged = %v, want %v", got, want)
+	}
+
+	index, err = IndexState(ctx, repo)
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, Stage(ctx, repo, []string{"one.txt"}, true)) // as an agent might, after the app looked
+	if _, err := CommitStaged(ctx, repo, "second", index, ownConfig()); !errors.Is(err, ErrIndexMoved) {
+		t.Fatalf("a commit of something else: %v", err)
+	}
+	index, err = IndexState(ctx, repo)
+	testcheck.NoErr(t, err)
+	short, err := CommitStaged(ctx, repo, "second", index, ownConfig())
+	testcheck.NoErr(t, err)
+	log := testcheck.Git(t, repo, "log", "-1", "--format=%h %s")
+	if strings.TrimSpace(log) != short+" second" {
+		t.Errorf("log = %q, short = %q", log, short)
+	}
+	want = map[string]string{"ab.txt": ""}
+	if got := stagedOf(t, repo); !reflect.DeepEqual(got, want) {
+		t.Errorf("after the commit = %v", got)
+	}
+	if err := Stage(ctx, repo, []string{"../out"}, true); err == nil {
+		t.Error("staged a path outside the folder")
+	}
+}
+
+func TestCommitRunsHooksAndSaysWhyNot(t *testing.T) {
+	ctx := context.Background()
+	repo := t.TempDir()
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "config", "user.name", "Test")
+	testcheck.Git(t, repo, "config", "user.email", "test@example.com")
+	hook := filepath.Join(repo, ".git", "hooks", "pre-commit")
+	testcheck.NoErr(t, os.MkdirAll(filepath.Dir(hook), 0o755))
+	script := "#!/bin/sh\nprintf '\\033[31mlint: bad file\\033[0m\\n' >&2\nexit 1\n"
+	testcheck.NoErr(t, os.WriteFile(hook, []byte(script), 0o755))
+	write(t, filepath.Join(repo, "f.txt"), "x\n")
+	testcheck.NoErr(t, Stage(ctx, repo, []string{"f.txt"}, true))
+	index, err := IndexState(ctx, repo)
+	testcheck.NoErr(t, err)
+	if _, err = CommitStaged(ctx, repo, "m", index, ownConfig()); err == nil || !strings.Contains(err.Error(), "git commit: lint: bad file") {
+		t.Fatalf("a failing hook: %v", err)
+	}
+}
+
+func TestCommitRefusesWhatTheFolderDoesntShow(t *testing.T) {
+	ctx := context.Background()
+	repo := t.TempDir()
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "sub", "in.txt"), "in\n")
+	write(t, filepath.Join(repo, "out.txt"), "out\n")
+	testcheck.Git(t, repo, "add", ".")
+	sub := filepath.Join(repo, "sub")
+	index, err := IndexState(ctx, sub)
+	testcheck.NoErr(t, err)
+	if _, err := CommitStaged(ctx, sub, "m", index, ownConfig()); err == nil || !strings.Contains(err.Error(), "outside this folder") {
+		t.Fatalf("a commit past the folder: %v", err)
+	}
+	testcheck.Git(t, repo, "reset", "-q")
+	index, err = IndexState(ctx, sub)
+	testcheck.NoErr(t, err)
+	if _, err := CommitStaged(ctx, sub, "m", index, ownConfig()); err == nil || !strings.Contains(err.Error(), "nothing is staged") {
+		t.Fatalf("an empty commit: %v", err)
 	}
 }
