@@ -18,3 +18,5 @@ A side chat is a fork that ends when closed; rewind ([0020](0020-rewind-through-
 ## Alternatives considered
 - Forking on the original chat's agent process and handing the session over: needs a close and a load anyway, and ties the fork to the original's process.
 - A new worktree for every fork: the owner asked for the same folder; Move does the rest.
+
+**Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.

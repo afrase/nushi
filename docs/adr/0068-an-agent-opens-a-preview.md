@@ -27,3 +27,5 @@ The owner wants what Claude Code's artifacts give: the agent finishes a page or 
 - The event opening the file wherever the user is: an agent would take the window from whoever's reading.
 - A per-chat "latest show" kept by the daemon: durable, but more state for what the row's Preview already covers.
 - Replaying the ask from the transcript when a chat opens: an old call would reopen a file on every visit.
+
+**Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.

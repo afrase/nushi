@@ -25,3 +25,5 @@ Claude runs through claude-agent-acp 0.94.0 under the user's Node ([0037](0037-a
 - Staying on the adapter: Node, a Set up, a Node process a chat, and behaviour inside a bundle we can't read.
 - Speaking claude's protocol from the chats feature itself: the Dialect, the transcript code and the tests would all change, and the result would serve Nushi alone; an ACP agent keeps Nushi as it is and serves any ACP client.
 - One-shot `claude -p` per prompt: no live permissions, questions, steering or cancel.
+
+**Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.

@@ -270,7 +270,7 @@ type Item struct {
 	Rewindable bool
 	// Sent is when a message was sent: a user message through Nushi, an
 	// agent's as it began to arrive, else what the replay (SentMeta) or
-	// the agent's own files (Kind.MessageTimes) say. Zero when not known.
+	// the agent's own files (chats' MessageDater) say. Zero when not known.
 	Sent time.Time `json:",omitzero"`
 	// Subagent is how the subagent a tool call starts goes.
 	Subagent *Subagent
@@ -283,7 +283,7 @@ type Item struct {
 	// Findings is a code review's result, for a tool call that reports one.
 	Findings *Findings
 	// Output is a command's output as the agent streams it in its _meta,
-	// from which the dialect makes Text; only the daemon has it.
+	// from which the harness makes Text; only the daemon has it.
 	Output string `json:"-"`
 }
 

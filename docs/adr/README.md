@@ -24,7 +24,7 @@
 - [0022](0022-the-daemon-owns-terminals.md) The daemon owns terminals; they are local-only until remote access decides otherwise
 - [0023](0023-warn-before-a-folder-runs-code.md) Warn before a folder's own code runs (hooks, helpers, `.mcp.json` servers) unless Claude or Nushi trusts it; never refuse
 - [0024](0024-the-agent-can-read-the-token.md) The agent can read Nushi's token file; no same-user protection is worth its cost (amends 0005)
-- [0025](0025-claude-rules-in-one-place.md) Claude's rules live in `internal/claude*`; the chats feature takes a `Dialect` that `main` fills
+- [0025](0025-claude-rules-in-one-place.md) Claude's rules live in `internal/claude*`; the chats feature takes a `Dialect` that `main` fills (since 0077 a harness type per agent)
 - [0026](0026-the-transcript-lays-out-every-item.md) The transcript lays out every item, not a lazy list
 - [0027](0027-what-lives-only-in-memory.md) What lives only in memory, in the daemon and the app
 - [0028](0028-agents-get-the-login-shells-environment.md) Agents get the login shell's environment, through the daemon's; Nushi doesn't read or filter it (superseded by 0048)
@@ -76,3 +76,4 @@
 - [0074](0074-the-chats-width-is-a-choice.md) The chat is a centred column of 860 or takes the whole width: Chat width in Settings › General (replaces 0072's left-hand column)
 - [0075](0075-copy-is-nushis-own-command.md) `/copy` is Nushi's own command: the agent's latest message as Markdown on the clipboard, `/copy N` further back; the agent never sees it
 - [0076](0076-messages-as-bubbles-with-actions-on-hover.md) On the Mac a user message is a bubble at the right and a message's actions a row under it on hover (Read, time, Copy, Rewind or Fork); tool rows in their tint again (reverses 0072's no box)
+- [0077](0077-each-harness-is-a-type.md) Each harness is a concrete type (`claude.Harness`…) behind small interfaces in `features/chats/harness.go`, asked once by the service; what reads the Mac is a `Local` type around it, which tests never run (replaces 0025's `Dialect`)

@@ -163,7 +163,7 @@ func (s *Service) keeps(ctx context.Context, sess model.ChatRecord) string {
 var sweepEvery = time.Hour
 
 // Sweep forgets the chats whose sessions their agent deleted, found from
-// the agent's files alone (Kind.HistoryGone), at most once in sweepEvery;
+// the agent's files alone (HistoryChecker), at most once in sweepEvery;
 // no agent starts. A chat whose agent runs, or whose folder is gone, is
 // left as it is.
 func (s *Service) Sweep(ctx context.Context) {

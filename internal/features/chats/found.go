@@ -25,7 +25,7 @@ type Found struct {
 	Updated   time.Time // its last activity; zero when the agent doesn't say
 	Messages  int       // how many messages it has, when the agent says (_meta.messageCount)
 	// OpenIn says where it is open now, outside this daemon ("a terminal"),
-	// when the agent's Kind can tell (Kind.OpenElsewhere).
+	// when the agent's harness can tell (OpenFinder).
 	OpenIn     string
 	FolderGone bool // its folder no longer exists: it can't be opened
 }
@@ -38,7 +38,7 @@ type FoundPage struct {
 	// (session/list and session/load); without, there's no list.
 	CanList bool
 	// SeesOpen says the agent's Kind can tell a session open elsewhere;
-	// OneWriter that such a session can't be opened (Kind.OneWriter).
+	// OneWriter that such a session can't be opened (model.HarnessInfo.OneWriter).
 	SeesOpen, OneWriter bool
 }
 

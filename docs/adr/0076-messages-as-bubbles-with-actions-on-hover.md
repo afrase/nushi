@@ -18,3 +18,5 @@ The owner, after ADR 0072 took the box off tool rows: "I like that they were mor
 ## Alternatives considered
 - Showing the row's room only on hover: the transcript would move under the pointer.
 - Tool rows with brighter text and no box: less crowded, but it isn't what the owner liked.
+
+**Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.

@@ -15,3 +15,5 @@
 
 ## Alternatives considered
 - Rewriting Claude's transcript file: more of Claude's private format than [0014](0014-moving-a-chat-forks-it.md)'s copy, and the session id would stay the same while its content changed under any terminal that has it open.
+
+**Note (ADR [0077](0077-each-harness-is-a-type.md)):** `Dialect` and `Kind`'s function fields are now the interfaces of `features/chats/harness.go`, met by each agent's `Harness` type.

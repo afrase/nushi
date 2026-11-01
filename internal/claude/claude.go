@@ -4,7 +4,7 @@
 // Claude, takes that through its interfaces. Claude's files are read in
 // claudehistory (whose Local is this Harness with them), claudemcp and
 // claudetrust. Nushi's Go agent (claudeacp, `nushid claude-acp`)
-// speaks the same dialect and runs instead of the adapter when the daemon
+// speaks the same _meta and runs instead of the adapter when the daemon
 // is told to (goagent.go).
 package claude
 
