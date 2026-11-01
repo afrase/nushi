@@ -198,12 +198,11 @@ class _SkillsViewState extends State<SkillsView> {
     final muted = theme.ui(t.textMuted, size: 12);
     final r = list.list;
     final agent = list.agent;
-    final claude = agent == 'claude';
     final plugins = {for (final p in r.plugins) p.id: p};
     final groups = list.groups(r.skills.where((s) => skillMatches(s, query)));
     final shownPlugins = r.plugins.where((p) => pluginMatches(p, query));
     final builtIn =
-        claude &&
+        r.hasBuiltIn &&
         skillMatches(
           Skill(name: 'built-in', description: 'Claude Code’s own skills'),
           query,
@@ -241,7 +240,9 @@ class _SkillsViewState extends State<SkillsView> {
                 skills: skills,
               ),
         if (list.loaded && builtIn) BuiltInGroup(list),
-        if (list.loaded && claude && (shownPlugins.isNotEmpty || query.isEmpty))
+        if (list.loaded &&
+            r.hasPlugins &&
+            (shownPlugins.isNotEmpty || query.isEmpty))
           PluginsGroup(list, shownPlugins.toList()),
       ],
     ];

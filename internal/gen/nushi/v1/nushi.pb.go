@@ -1879,7 +1879,13 @@ type Agent struct {
 	// (if any) is set up.
 	Ready bool `protobuf:"varint,12,opt,name=ready,proto3" json:"ready,omitempty"`
 	// Its chats whose agent runs (they sleep when the adapter changes).
-	Awake         int32 `protobuf:"varint,13,opt,name=awake,proto3" json:"awake,omitempty"`
+	Awake int32 `protobuf:"varint,13,opt,name=awake,proto3" json:"awake,omitempty"`
+	// Nushi's Go agent can run it in place of its adapter, as the setting
+	// claude_go_agent picks (API 97, ADR 0066).
+	GoAgent bool `protobuf:"varint,14,opt,name=go_agent,json=goAgent,proto3" json:"go_agent,omitempty"`
+	// Its MCP servers are only yours, the user scope, with no off switch,
+	// sign-in or legacy SSE; others have Claude's scopes and those (API 97).
+	McpUserOnly   bool `protobuf:"varint,15,opt,name=mcp_user_only,json=mcpUserOnly,proto3" json:"mcp_user_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2003,6 +2009,20 @@ func (x *Agent) GetAwake() int32 {
 		return x.Awake
 	}
 	return 0
+}
+
+func (x *Agent) GetGoAgent() bool {
+	if x != nil {
+		return x.GoAgent
+	}
+	return false
+}
+
+func (x *Agent) GetMcpUserOnly() bool {
+	if x != nil {
+		return x.McpUserOnly
+	}
+	return false
 }
 
 // An agent's adapter.
@@ -7260,8 +7280,13 @@ type ListSkillsResponse struct {
 	// Why the agent has no skills to show, or no switches ("" when it has).
 	NoSkills string `protobuf:"bytes,6,opt,name=no_skills,json=noSkills,proto3" json:"no_skills,omitempty"`
 	NoSwitch string `protobuf:"bytes,7,opt,name=no_switch,json=noSwitch,proto3" json:"no_switch,omitempty"`
-	// The agent reads the project's .agents/skills (shared skills).
-	ReadsShared   bool `protobuf:"varint,8,opt,name=reads_shared,json=readsShared,proto3" json:"reads_shared,omitempty"`
+	// The agent reads the project's .agents/skills (shared skills); one
+	// that doesn't takes a shared skill through a link (LinkSkill).
+	ReadsShared bool `protobuf:"varint,8,opt,name=reads_shared,json=readsShared,proto3" json:"reads_shared,omitempty"`
+	// The agent has built-in skills that go on and off together, and
+	// plugins, even with none installed (API 97).
+	HasBuiltIn    bool `protobuf:"varint,9,opt,name=has_built_in,json=hasBuiltIn,proto3" json:"has_built_in,omitempty"`
+	HasPlugins    bool `protobuf:"varint,10,opt,name=has_plugins,json=hasPlugins,proto3" json:"has_plugins,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7348,6 +7373,20 @@ func (x *ListSkillsResponse) GetNoSwitch() string {
 func (x *ListSkillsResponse) GetReadsShared() bool {
 	if x != nil {
 		return x.ReadsShared
+	}
+	return false
+}
+
+func (x *ListSkillsResponse) GetHasBuiltIn() bool {
+	if x != nil {
+		return x.HasBuiltIn
+	}
+	return false
+}
+
+func (x *ListSkillsResponse) GetHasPlugins() bool {
+	if x != nil {
+		return x.HasPlugins
 	}
 	return false
 }
@@ -21672,7 +21711,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05shell\x18\x01 \x01(\tR\x05shell\x12 \n" +
 	"\fread_unix_ms\x18\x02 \x01(\x03R\n" +
 	"readUnixMs\x12\x18\n" +
-	"\aproblem\x18\x03 \x01(\tR\aproblem\"\xd6\x02\n" +
+	"\aproblem\x18\x03 \x01(\tR\aproblem\"\x95\x03\n" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -21687,7 +21726,9 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	" \x01(\tR\bsignedIn\x12+\n" +
 	"\aadapter\x18\v \x01(\v2\x11.nushi.v1.AdapterR\aadapter\x12\x14\n" +
 	"\x05ready\x18\f \x01(\bR\x05ready\x12\x14\n" +
-	"\x05awake\x18\r \x01(\x05R\x05awake\"\xd3\x01\n" +
+	"\x05awake\x18\r \x01(\x05R\x05awake\x12\x19\n" +
+	"\bgo_agent\x18\x0e \x01(\bR\agoAgent\x12\"\n" +
+	"\rmcp_user_only\x18\x0f \x01(\bR\vmcpUserOnly\"\xd3\x01\n" +
 	"\aAdapter\x12\x18\n" +
 	"\apackage\x18\x01 \x01(\tR\apackage\x12\x16\n" +
 	"\x06pinned\x18\x02 \x01(\tR\x06pinned\x12\x1c\n" +
@@ -22013,7 +22054,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x17LogoutMcpServerResponse\"A\n" +
 	"\x11ListSkillsRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
-	"\x05agent\x18\x02 \x01(\tR\x05agent\"\xb4\x02\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\"\xf7\x02\n" +
 	"\x12ListSkillsResponse\x12'\n" +
 	"\x06skills\x18\x01 \x03(\v2\x0f.nushi.v1.SkillR\x06skills\x12*\n" +
 	"\aplugins\x18\x02 \x03(\v2\x10.nushi.v1.PluginR\aplugins\x12#\n" +
@@ -22023,7 +22064,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x0fbuilt_in_set_in\x18\x05 \x01(\tR\fbuiltInSetIn\x12\x1b\n" +
 	"\tno_skills\x18\x06 \x01(\tR\bnoSkills\x12\x1b\n" +
 	"\tno_switch\x18\a \x01(\tR\bnoSwitch\x12!\n" +
-	"\freads_shared\x18\b \x01(\bR\vreadsShared\"\xac\x02\n" +
+	"\freads_shared\x18\b \x01(\bR\vreadsShared\x12 \n" +
+	"\fhas_built_in\x18\t \x01(\bR\n" +
+	"hasBuiltIn\x12\x1f\n" +
+	"\vhas_plugins\x18\n" +
+	" \x01(\bR\n" +
+	"hasPlugins\"\xac\x02\n" +
 	"\x05Skill\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x16\n" +

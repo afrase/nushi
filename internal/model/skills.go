@@ -21,6 +21,9 @@ type Skills struct {
 	// ReadsShared says the agent reads the project's .agents/skills (or
 	// will once the folder is trusted).
 	ReadsShared bool
+	// HasBuiltIn and HasPlugins say the agent has such a thing to show,
+	// even with no plugin installed.
+	HasBuiltIn, HasPlugins bool
 }
 
 // Find is the listed skill of source and name, the first if several.

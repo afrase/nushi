@@ -78,7 +78,12 @@ ListSkillsResponse _skills(String agent) => switch (agent) {
     ],
   ),
   'ante' => ListSkillsResponse(noSkills: 'Nushi doesn’t know where it is.'),
-  _ => ListSkillsResponse(skills: _shared()),
+  'claude' => ListSkillsResponse(
+    hasBuiltIn: true,
+    hasPlugins: true,
+    skills: _shared(),
+  ),
+  _ => ListSkillsResponse(readsShared: true, skills: _shared()),
 };
 
 Future<(FakeDaemon, Daemon)> _view(

@@ -115,6 +115,27 @@ func TestListMergesShared(t *testing.T) {
 	}
 }
 
+type fakePlugins struct{ fakeReader }
+
+func (*fakePlugins) SetPluginOn(context.Context, string, string, bool) error { return nil }
+func (*fakePlugins) Uninstall(context.Context, string, string) error         { return nil }
+func (*fakePlugins) PluginScope(string, model.Plugin) string                 { return "user" }
+
+// What an agent has comes from its reader, with nothing installed too.
+func TestListSaysWhatTheAgentHas(t *testing.T) {
+	svc, calls := fakes()
+	svc.readers["omp"] = &fakePlugins{fakeReader{name: "omp", calls: calls}}
+	for agent, want := range map[string][2]bool{"claude": {true, false}, "codex": {false, false}, "omp": {false, true}} {
+		got, err := svc.List(context.Background(), agent, "/r")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if [2]bool{got.HasBuiltIn, got.HasPlugins} != want {
+			t.Errorf("%s: built in %v, plugins %v, want %v", agent, got.HasBuiltIn, got.HasPlugins, want)
+		}
+	}
+}
+
 // A switch goes to the agent's reader by source; a plugin's and an
 // unknown source are refused; built in only for an agent that has them.
 func TestSetSkillOnGoesBySource(t *testing.T) {

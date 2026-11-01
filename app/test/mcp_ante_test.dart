@@ -75,7 +75,7 @@ void main() {
     expect(asked.map((r) => r.agent).toSet(), {'claude', 'ante'});
     expect(find.text('Claude'), findsOneWidget);
     expect(find.text('Ante'), findsOneWidget);
-    expect(find.text(McpView.anteAbout), findsOneWidget);
+    expect(find.text(McpView.userOnlyAbout('Ante')), findsOneWidget);
     for (final name in ['github', 'fs', 'web']) {
       expect(find.text(name), findsOneWidget);
     }

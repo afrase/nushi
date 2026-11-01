@@ -4,8 +4,10 @@ import (
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
+	"github.com/afrase/nushi/internal/claudeskills"
 	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/pig"
 )
@@ -66,4 +68,9 @@ var (
 	_ chats.Forker       = pig.Harness{}
 	_ chats.ContextAsker = pig.Harness{}
 	_ chats.GoneReader   = pig.Harness{}
+
+	// The app shows these by what the daemon says, not by the agent's name.
+	_ skills.BuiltIn = claudeskills.Claude{}
+	_ skills.Plugins = claudeskills.Claude{}
+	_ skills.Linker  = claudeskills.Claude{}
 )

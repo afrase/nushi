@@ -68,6 +68,9 @@ var ansi = regexp.MustCompile(`\x1b(\[[0-9;?]*[A-Za-z]|\][^\x07\x1b]*(\x07|\x1b\
 // Project is the folder Claude files folder's local servers under.
 func (Claude) Project(folder string) string { return Project(folder) }
 
+// UserOnly is false: Claude's is the whole model (mcp.Config).
+func (Claude) UserOnly() bool { return false }
+
 func run(ctx context.Context, folder string, args ...string) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()

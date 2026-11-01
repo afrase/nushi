@@ -193,4 +193,8 @@ func (Ante) Login(context.Context, string, string) error { return errSignIn }
 
 func (Ante) Logout(context.Context, string, string) error { return errSignIn }
 
+// UserOnly is true: yours are all it reads, and it has neither an off
+// switch nor a sign-in Nushi can start (mcp.Config).
+func (Ante) UserOnly() bool { return true }
+
 var errSignIn = errors.New("Nushi can't sign Ante in to a server: Ante 0.2.15 and later do it in a terminal")

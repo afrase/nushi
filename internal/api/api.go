@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 96
+const Version = 97
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -338,8 +338,10 @@ func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.Li
 	for _, k := range s.chats.Agents() {
 		info := k.Info()
 		st := found[info.Name]
+		m := s.mcp[info.Name]
 		a := &nushiv1.Agent{Name: info.Name, Title: info.Title, Resume: info.Resume, Mcp: k.MCP, DeleteArchives: info.DeleteArchives,
-			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake)}
+			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake),
+			GoAgent: st.Own != nil, McpUserOnly: m != nil && m.UserOnly()}
 		if ad := st.Adapter; ad != nil {
 			a.Adapter = &nushiv1.Adapter{Package: ad.Package, Pinned: st.Pinned, Installed: st.Installed, Packages: int32(st.Packages),
 				DownloadBytes: ad.Download, DiskBytes: ad.Disk, Folder: st.Folder}

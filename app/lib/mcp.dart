@@ -24,11 +24,12 @@ class McpView extends StatelessWidget {
   final Daemon daemon;
   final String folder;
 
-  /// What Ante's group says: it has yours only, and no off switch.
-  static const anteAbout =
-      'Yours, in every folder: Ante reads no project’s MCP servers. It has '
+  /// What the group of an agent with yours only says: it also has no off
+  /// switch.
+  static String userOnlyAbout(String title) =>
+      'Yours, in every folder: $title reads no project’s MCP servers. It has '
       'no off switch (remove a server instead), and a change applies to new '
-      'Ante sessions.';
+      '$title sessions.';
 
   Future<void> _pick() async {
     final f = await getDirectoryPath(confirmButtonText: 'Show');
@@ -132,8 +133,13 @@ class McpView extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Text(list.error, style: theme.ui(t.crashed, size: 12)),
                 ),
-              if (list.ante)
-                _Group(list, 'user', 'User', anteAbout)
+              if (list.userOnly)
+                _Group(
+                  list,
+                  'user',
+                  'User',
+                  userOnlyAbout(agentTitle(list.agent)),
+                )
               else
                 for (final MapEntry(key: scope, value: (title, about))
                     in scopes.entries)

@@ -103,7 +103,7 @@ class _AgentsPageState extends State<AgentsPage> {
                       ? null
                       : () => _remove(a),
                 ),
-                if (a.name == 'claude') ?_goAgent(),
+                if (a.goAgent) ?_goAgent(),
               ],
             ],
           ),

@@ -124,6 +124,8 @@ FakeDaemon settingsFake({List<TranscriptCopy>? copies}) {
         ],
       ),
       ListSkillsRequest() => ListSkillsResponse(
+        hasBuiltIn: true,
+        hasPlugins: true,
         skills: [
           Skill(
             name: 'release-notes',

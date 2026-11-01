@@ -125,7 +125,7 @@ class _SharedRow extends StatelessWidget {
       for (final a in skill.agents)
         agentTitle(a.agent) + (a.via.isEmpty ? '' : ' (linked)'),
     ];
-    final canLink = mine == null && list.agent == 'claude';
+    final canLink = mine == null && !list.list.readsShared;
     return Row(
       children: [
         Expanded(

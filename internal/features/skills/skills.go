@@ -109,6 +109,8 @@ func (s *Service) List(ctx context.Context, agent, folder string) (model.Skills,
 	if err != nil {
 		return out, err
 	}
+	_, out.HasBuiltIn = r.(BuiltIn)
+	_, out.HasPlugins = r.(Plugins)
 	shared := s.shared(ctx, folder, map[string]model.Skills{cmp.Or(agent, "claude"): out})
 	vias := map[string]bool{}
 	for _, sk := range shared {

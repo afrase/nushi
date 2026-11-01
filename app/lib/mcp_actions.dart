@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_form.dart';
@@ -46,8 +47,9 @@ class _McpActionsState extends State<McpActions> {
     final ok = await confirm(
       context,
       'Remove ${server.name}?',
-      list.ante
-          ? 'It goes from your Ante settings (${tildePath(server.source)}).'
+      list.userOnly
+          ? 'It goes from your ${agentTitle(list.agent)} settings '
+                '(${tildePath(server.source)}).'
           : 'It goes from the $scope scope: ${about[0].toLowerCase()}'
                 '${about.substring(1)}',
       'Remove',
@@ -72,7 +74,7 @@ class _McpActionsState extends State<McpActions> {
     final t = theme.t;
     final daemon = list.daemon;
     final project = server.scope == 'project';
-    final remote = config(server)['url'] != null && !list.ante;
+    final remote = config(server)['url'] != null && !list.userOnly;
     final menu = [
       if ({'user', 'project', 'local'}.contains(server.scope)) ...[
         MenuEntry(
@@ -184,7 +186,7 @@ class McpSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final muted = theme.ui(theme.t.textMuted, size: 11);
-    if (list.ante) return const SizedBox.shrink(); // no off switch
+    if (list.userOnly) return const SizedBox.shrink(); // no off switch
     if (!switchable.contains(server.scope)) {
       return Tooltip(
         message:

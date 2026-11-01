@@ -45,6 +45,7 @@ func (f *fakeConfig) SetOn(_ context.Context, _, scope, name string, on bool) er
 }
 func (f *fakeConfig) Login(context.Context, string, string) error  { return nil }
 func (f *fakeConfig) Logout(context.Context, string, string) error { return nil }
+func (f *fakeConfig) UserOnly() bool                               { return false }
 
 func TestListMergesTheCheck(t *testing.T) {
 	svc := New("claude", &fakeConfig{

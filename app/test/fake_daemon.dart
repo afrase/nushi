@@ -19,7 +19,14 @@ List<Agent> readyAgents() => [
     ('omp', 'oh-my-pi'),
     ('pig', 'PiG'),
   ])
-    Agent(name: name, title: title, path: '/bin/$name', ready: true),
+    Agent(
+      name: name,
+      title: title,
+      path: '/bin/$name',
+      ready: true,
+      goAgent: name == 'claude',
+      mcpUserOnly: name == 'ante',
+    ),
 ];
 
 /// A daemon with [chats] and [agents] for widget tests; it records the
@@ -132,7 +139,7 @@ class FakeDaemon implements Transport {
 
   /// [a] as the daemon lists it now: Claude through the Go agent needs
   /// no adapter, so it's ready once found.
-  Agent _asRun(Agent a) => a.name == 'claude' && settings.claudeGoAgent
+  Agent _asRun(Agent a) => a.goAgent && settings.claudeGoAgent
       ? (a.deepCopy()
           ..clearAdapter()
           ..ready = a.path.isNotEmpty && a.problem.isEmpty)

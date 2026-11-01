@@ -11,6 +11,8 @@ import 'harness.dart';
 const _home = '/Users/me';
 
 ListSkillsResponse _skills() => ListSkillsResponse(
+  hasBuiltIn: true,
+  hasPlugins: true,
   skills: [
     Skill(
       name: 'release-notes',

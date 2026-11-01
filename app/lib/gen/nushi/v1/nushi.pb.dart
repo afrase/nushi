@@ -2240,6 +2240,8 @@ class Agent extends $pb.GeneratedMessage {
     Adapter? adapter,
     $core.bool? ready,
     $core.int? awake,
+    $core.bool? goAgent,
+    $core.bool? mcpUserOnly,
   }) {
     final result = Agent._();
     if (name != null) result.name = name;
@@ -2255,6 +2257,8 @@ class Agent extends $pb.GeneratedMessage {
     if (adapter != null) result.adapter = adapter;
     if (ready != null) result.ready = ready;
     if (awake != null) result.awake = awake;
+    if (goAgent != null) result.goAgent = goAgent;
+    if (mcpUserOnly != null) result.mcpUserOnly = mcpUserOnly;
     return result;
   }
 
@@ -2285,6 +2289,8 @@ class Agent extends $pb.GeneratedMessage {
         subBuilder: Adapter.$_createMessage)
     ..aOB(12, _omitFieldNames ? '' : 'ready')
     ..aI(13, _omitFieldNames ? '' : 'awake')
+    ..aOB(14, _omitFieldNames ? '' : 'goAgent')
+    ..aOB(15, _omitFieldNames ? '' : 'mcpUserOnly')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -2445,6 +2451,28 @@ class Agent extends $pb.GeneratedMessage {
   $core.bool hasAwake() => $_has(12);
   @$pb.TagNumber(13)
   void clearAwake() => $_clearField(13);
+
+  /// Nushi's Go agent can run it in place of its adapter, as the setting
+  /// claude_go_agent picks (API 97, ADR 0066).
+  @$pb.TagNumber(14)
+  $core.bool get goAgent => $_getBF(13);
+  @$pb.TagNumber(14)
+  set goAgent($core.bool value) => $_setBool(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasGoAgent() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearGoAgent() => $_clearField(14);
+
+  /// Its MCP servers are only yours, the user scope, with no off switch,
+  /// sign-in or legacy SSE; others have Claude's scopes and those (API 97).
+  @$pb.TagNumber(15)
+  $core.bool get mcpUserOnly => $_getBF(14);
+  @$pb.TagNumber(15)
+  set mcpUserOnly($core.bool value) => $_setBool(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasMcpUserOnly() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearMcpUserOnly() => $_clearField(15);
 }
 
 /// An agent's adapter.
@@ -9251,6 +9279,8 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
     $core.String? noSkills,
     $core.String? noSwitch,
     $core.bool? readsShared,
+    $core.bool? hasBuiltIn,
+    $core.bool? hasPlugins,
   }) {
     final result = ListSkillsResponse._();
     if (skills != null) result.skills.addAll(skills);
@@ -9261,6 +9291,8 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
     if (noSkills != null) result.noSkills = noSkills;
     if (noSwitch != null) result.noSwitch = noSwitch;
     if (readsShared != null) result.readsShared = readsShared;
+    if (hasBuiltIn != null) result.hasBuiltIn = hasBuiltIn;
+    if (hasPlugins != null) result.hasPlugins = hasPlugins;
     return result;
   }
 
@@ -9287,6 +9319,8 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'noSkills')
     ..aOS(7, _omitFieldNames ? '' : 'noSwitch')
     ..aOB(8, _omitFieldNames ? '' : 'readsShared')
+    ..aOB(9, _omitFieldNames ? '' : 'hasBuiltIn')
+    ..aOB(10, _omitFieldNames ? '' : 'hasPlugins')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -9366,7 +9400,8 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearNoSwitch() => $_clearField(7);
 
-  /// The agent reads the project's .agents/skills (shared skills).
+  /// The agent reads the project's .agents/skills (shared skills); one
+  /// that doesn't takes a shared skill through a link (LinkSkill).
   @$pb.TagNumber(8)
   $core.bool get readsShared => $_getBF(7);
   @$pb.TagNumber(8)
@@ -9375,6 +9410,26 @@ class ListSkillsResponse extends $pb.GeneratedMessage {
   $core.bool hasReadsShared() => $_has(7);
   @$pb.TagNumber(8)
   void clearReadsShared() => $_clearField(8);
+
+  /// The agent has built-in skills that go on and off together, and
+  /// plugins, even with none installed (API 97).
+  @$pb.TagNumber(9)
+  $core.bool get hasBuiltIn => $_getBF(8);
+  @$pb.TagNumber(9)
+  set hasBuiltIn($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasHasBuiltIn() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearHasBuiltIn() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.bool get hasPlugins => $_getBF(9);
+  @$pb.TagNumber(10)
+  set hasPlugins($core.bool value) => $_setBool(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasHasPlugins() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearHasPlugins() => $_clearField(10);
 }
 
 class Skill extends $pb.GeneratedMessage {

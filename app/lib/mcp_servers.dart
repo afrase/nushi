@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
@@ -42,8 +43,9 @@ class McpServers extends ChangeNotifier {
   /// Whose servers: "claude" or "ante".
   final String agent;
 
-  /// Ante's are only yours, with no off switch or sign-in.
-  bool get ante => agent == 'ante';
+  /// They are only yours, with no off switch, sign-in or legacy SSE, as
+  /// the daemon says of the agent (API 97).
+  bool get userOnly => knownAgents[agent]?.mcpUserOnly ?? false;
   List<McpServer> servers = [];
   bool loaded = false;
   bool checking = false;

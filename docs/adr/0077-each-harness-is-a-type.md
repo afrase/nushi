@@ -17,6 +17,7 @@ What each agent does beyond ACP was a `chats.Dialect` and more function fields o
 - `ForkTitle` went into `Transcript` and `Other` and `Default` stayed apart, as a group only holds what every harness in it has: no harness carries a stub to fit one.
 - Agent packages now import `features/agents`, for `Run`. It imports neither them nor chats.
 - Interfaces take more lines to declare than func fields; the logic in chats and the table take fewer.
+- The app goes by what the daemon says, not an agent's name, for what an agent has: `Agent.go_agent` and `Agent.mcp_user_only`, `ListSkillsResponse.has_built_in` and `has_plugins` (asked of the reader, beside `reads_shared`, which also decides who a shared skill can be linked for). Per-agent wording and marks stay keyed by name.
 
 ## Alternatives considered
 - One large `Harness` interface: every agent would stub what it hasn't, and "it has none" would no longer be seen by chats, which offers options by it.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/skills"
 )
 
 // Each agent is whole: named once, its setup named and titled as its
@@ -74,6 +75,29 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 		local := slices.Sorted(slices.Values(append(slices.Clone(w.harness), w.local...)))
 		if got := listed(a.Local); !slices.Equal(got, local) {
 			t.Errorf("%s's Local has %v, want %v", a.Agent.Name, got, local)
+		}
+	}
+}
+
+// What the app goes by instead of an agent's name is each agent's own:
+// Claude's built-in skills, plugins, links and Go agent, and Ante's plain
+// MCP servers.
+func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
+	for _, a := range All("", func() bool { return false }) {
+		claudes := a.Agent.Name == "claude"
+		_, builtIn := a.Skills.(skills.BuiltIn)
+		_, plugins := a.Skills.(skills.Plugins)
+		_, linker := a.Skills.(skills.Linker)
+		if builtIn != claudes || plugins != claudes || linker != claudes {
+			t.Errorf("%s: built in %v, plugins %v, links %v", a.Agent.Name, builtIn, plugins, linker)
+		}
+		if got := a.Agent.Own != nil; got != claudes {
+			t.Errorf("%s: has an Own: %v", a.Agent.Name, got)
+		}
+		if a.MCP != nil {
+			if got, want := a.MCP(nil).UserOnly(), a.Agent.Name == "ante"; got != want {
+				t.Errorf("%s: user only: %v", a.Agent.Name, got)
+			}
 		}
 	}
 }

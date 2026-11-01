@@ -705,6 +705,12 @@ message Agent {
   bool ready = 12;
   // Its chats whose agent runs (they sleep when the adapter changes).
   int32 awake = 13;
+  // Nushi's Go agent can run it in place of its adapter, as the setting
+  // claude_go_agent picks (API 97, ADR 0066).
+  bool go_agent = 14;
+  // Its MCP servers are only yours, the user scope, with no off switch,
+  // sign-in or legacy SSE; others have Claude's scopes and those (API 97).
+  bool mcp_user_only = 15;
 }
 
 // An agent's adapter.
@@ -1358,8 +1364,13 @@ message ListSkillsResponse {
   // Why the agent has no skills to show, or no switches ("" when it has).
   string no_skills = 6;
   string no_switch = 7;
-  // The agent reads the project's .agents/skills (shared skills).
+  // The agent reads the project's .agents/skills (shared skills); one
+  // that doesn't takes a shared skill through a link (LinkSkill).
   bool reads_shared = 8;
+  // The agent has built-in skills that go on and off together, and
+  // plugins, even with none installed (API 97).
+  bool has_built_in = 9;
+  bool has_plugins = 10;
 }
 
 message Skill {

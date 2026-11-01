@@ -35,6 +35,10 @@ type Config interface {
 	// is done; Logout forgets the sign-in.
 	Login(ctx context.Context, folder, name string) error
 	Logout(ctx context.Context, folder, name string) error
+	// UserOnly says the agent has less than Claude's model: only the
+	// user's servers, with no off switch, sign-in or legacy SSE. The rest
+	// is refused here; this is what tells the app not to offer it.
+	UserOnly() bool
 }
 
 // Changed tells the chats that agent's servers changed for its chats in
@@ -51,6 +55,9 @@ type Service struct {
 func New(agent string, config Config, changed Changed) *Service {
 	return &Service{agent: agent, config: config, changed: changed}
 }
+
+// UserOnly says the agent's servers are only the user's (Config.UserOnly).
+func (s *Service) UserOnly() bool { return s.config.UserOnly() }
 
 // rank orders scopes as the agent picks between servers of the same name:
 // local wins, then project, user, plugins and claude.ai.

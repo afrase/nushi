@@ -651,6 +651,8 @@ const Agent$json = {
     },
     {'1': 'ready', '3': 12, '4': 1, '5': 8, '10': 'ready'},
     {'1': 'awake', '3': 13, '4': 1, '5': 5, '10': 'awake'},
+    {'1': 'go_agent', '3': 14, '4': 1, '5': 8, '10': 'goAgent'},
+    {'1': 'mcp_user_only', '3': 15, '4': 1, '5': 8, '10': 'mcpUserOnly'},
   ],
 };
 
@@ -662,7 +664,8 @@ final $typed_data.Uint8List agentDescriptor = $convert.base64Decode(
     'EoCVIHdmVyc2lvbhISCgRwYWdlGAggASgJUgRwYWdlEhgKB3Byb2JsZW0YCSABKAlSB3Byb2Js'
     'ZW0SGwoJc2lnbmVkX2luGAogASgJUghzaWduZWRJbhIrCgdhZGFwdGVyGAsgASgLMhEubnVzaG'
     'kudjEuQWRhcHRlclIHYWRhcHRlchIUCgVyZWFkeRgMIAEoCFIFcmVhZHkSFAoFYXdha2UYDSAB'
-    'KAVSBWF3YWtl');
+    'KAVSBWF3YWtlEhkKCGdvX2FnZW50GA4gASgIUgdnb0FnZW50EiIKDW1jcF91c2VyX29ubHkYDy'
+    'ABKAhSC21jcFVzZXJPbmx5');
 
 @$core.Deprecated('Use adapterDescriptor instead')
 const Adapter$json = {
@@ -2227,6 +2230,8 @@ const ListSkillsResponse$json = {
     {'1': 'no_skills', '3': 6, '4': 1, '5': 9, '10': 'noSkills'},
     {'1': 'no_switch', '3': 7, '4': 1, '5': 9, '10': 'noSwitch'},
     {'1': 'reads_shared', '3': 8, '4': 1, '5': 8, '10': 'readsShared'},
+    {'1': 'has_built_in', '3': 9, '4': 1, '5': 8, '10': 'hasBuiltIn'},
+    {'1': 'has_plugins', '3': 10, '4': 1, '5': 8, '10': 'hasPlugins'},
   ],
 };
 
@@ -2237,7 +2242,8 @@ final $typed_data.Uint8List listSkillsResponseDescriptor = $convert.base64Decode
     'dWdpbnNfZXJyb3IYAyABKAlSDHBsdWdpbnNFcnJvchIgCgxidWlsdF9pbl9vZmYYBCABKAhSCm'
     'J1aWx0SW5PZmYSJQoPYnVpbHRfaW5fc2V0X2luGAUgASgJUgxidWlsdEluU2V0SW4SGwoJbm9f'
     'c2tpbGxzGAYgASgJUghub1NraWxscxIbCglub19zd2l0Y2gYByABKAlSCG5vU3dpdGNoEiEKDH'
-    'JlYWRzX3NoYXJlZBgIIAEoCFILcmVhZHNTaGFyZWQ=');
+    'JlYWRzX3NoYXJlZBgIIAEoCFILcmVhZHNTaGFyZWQSIAoMaGFzX2J1aWx0X2luGAkgASgIUgpo'
+    'YXNCdWlsdEluEh8KC2hhc19wbHVnaW5zGAogASgIUgpoYXNQbHVnaW5z');
 
 @$core.Deprecated('Use skillDescriptor instead')
 const Skill$json = {

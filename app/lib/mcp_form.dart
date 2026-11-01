@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/agents.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp_pairs.dart';
@@ -204,10 +205,11 @@ class _FormState extends State<_Form> {
     final muted = theme.ui(t.textMuted, size: 12);
     final mono = theme.code(t.text, size: 12);
     final stdio = _transport == 'stdio';
-    final ante = widget.list.ante;
+    final userOnly = widget.list.userOnly;
+    final title = agentTitle(widget.list.agent);
     final where = switch (_scope) {
-      _ when ante =>
-        'Yours, in every folder: Ante reads no project’s MCP servers, so '
+      _ when userOnly =>
+        'Yours, in every folder: $title reads no project’s MCP servers, so '
             'there’s no other scope.',
       'user' => 'Yours, in every folder.',
       'project' => 'In the repository’s .mcp.json, shared with everyone on it.',
@@ -221,8 +223,8 @@ class _FormState extends State<_Form> {
       title: Text(
         _editing
             ? 'Edit ${widget.server!.name}'
-            : ante
-            ? 'Add an MCP server for Ante'
+            : userOnly
+            ? 'Add an MCP server for $title'
             : 'Add MCP server',
       ),
       content: SizedBox(
@@ -243,7 +245,7 @@ class _FormState extends State<_Form> {
               label('Scope'),
               Row(
                 children: [
-                  if (_editing || ante)
+                  if (_editing || userOnly)
                     Text(scopes[_scope]!.$1, style: theme.ui(t.text))
                   else
                     Segmented(
@@ -276,7 +278,7 @@ class _FormState extends State<_Form> {
                       segments: [
                         ('stdio', 'stdio'),
                         ('http', 'HTTP'),
-                        if (!ante || _transport == 'sse') ('sse', 'SSE'),
+                        if (!userOnly || _transport == 'sse') ('sse', 'SSE'),
                       ],
                       onChanged: (v) => setState(() => _transport = v),
                     ),
@@ -309,7 +311,8 @@ class _FormState extends State<_Form> {
                   ),
                   label('Headers'),
                   PairRows(_headers, 'Header', () => setState(() {})),
-                  if (ante)
+                  // A fact of Ante's versions, not of having only yours.
+                  if (widget.list.agent == 'ante')
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(

@@ -32,6 +32,7 @@ final _found = [
     path: '/opt/homebrew/bin/claude',
     version: '2.1.310',
     signedIn: 'no',
+    goAgent: true,
     adapter: _adapter('@agentclientprotocol/claude-agent-acp', '0.94.0', ''),
   ),
   Agent(
