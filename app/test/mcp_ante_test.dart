@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -199,4 +200,22 @@ void main() {
       await closeView(tester, d);
     });
   }
+
+  testWidgets('MCP says who can change the servers once the agents are known', (
+    tester,
+  ) async {
+    final (_, d) = await _daemon(tester);
+    final known = agentList.value;
+    addTearDown(() => agentList.value = known);
+    agentList.value = {};
+    final list = McpServers.of(d, '/late-agents', agent: 'ante');
+    await tester.pumpAndSettle();
+    var told = 0;
+    list.addListener(() => told++);
+    expect(list.userOnly, isFalse);
+    agentList.value = {'ante': Agent(name: 'ante', mcpUserOnly: true)};
+    expect(told, 1);
+    expect(list.userOnly, isTrue);
+    await closeView(tester, d);
+  });
 }

@@ -29,6 +29,7 @@ class McpServers extends ChangeNotifier {
     return list;
   }
   new _(this.daemon, this.folder, this.agent) {
+    agentList.addListener(notifyListeners); // userOnly is the agent's to say
     unawaited(refresh());
   }
 
