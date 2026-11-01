@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 )
 
-// uiRequest is an extension's request through pig's ctx.ui: a dialog
+// uiRequest is an extension's request through pi's ctx.ui: a dialog
 // (select, confirm, input, editor) that waits for an answer, or something
 // to show (notify) or not (status, widgets, the title, the editor's text).
 type uiRequest struct {
@@ -30,12 +30,12 @@ func uiOf(raw json.RawMessage) uiRequest {
 }
 
 // ask puts an extension's dialog to the client as a question (a form of
-// one field) and gives pig the answer (a notification is a message: the
+// one field) and gives pi the answer (a notification is a message: the
 // pump sends it).
 // Without a client that shows forms, or when it declines, the dialog is
-// cancelled. A dialog with a timeout is withdrawn when pig gives up on it.
+// cancelled. A dialog with a timeout is withdrawn when pi gives up on it.
 //
-//nolint:contextcheck // the question goes out on the bridge's connection, as long as pig waits
+//nolint:contextcheck // the question goes out on the bridge's connection, as long as pi waits
 func (s *session) ask(r uiRequest) {
 	field := &acp.StringPropertySchema{}
 	switch r.Method {
@@ -76,5 +76,5 @@ func (s *session) ask(r uiRequest) {
 			}
 		}
 	}
-	_ = s.p.write(answer) // a dead pig ends the turn, which the client hears
+	_ = s.p.write(answer) // a dead pi ends the turn, which the client hears
 }

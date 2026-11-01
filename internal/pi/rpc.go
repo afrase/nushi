@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"bufio"
@@ -15,26 +15,26 @@ import (
 	"github.com/afrase/nushi/internal/agentproc"
 )
 
-// Spawn starts `pig --mode rpc` with args in cwd.
-type Spawn func(cwd string, args ...string) (Pig, error)
+// Spawn starts `pi --mode rpc` with args in cwd.
+type Spawn func(cwd string, args ...string) (Program, error)
 
-// Pig is a pig started: its stdin and stdout, a way to kill it, and the
+// Program is a pi started: its stdin and stdout, a way to kill it, and the
 // last of what it wrote to stderr (nil: nothing kept), which says why it
 // stopped when it did.
-type Pig struct {
+type Program struct {
 	In   io.WriteCloser
 	Out  io.Reader
 	Kill func()
 	Said func() string
 }
 
-// proc is one `pig --mode rpc`: commands go in as JSON lines, responses
+// proc is one `pi --mode rpc`: commands go in as JSON lines, responses
 // (matched by id) and events (everything else) come out.
 type proc struct {
 	in     io.WriteCloser
 	kill   func()
 	said   func() string
-	events chan event    // in order; closed when pig's output ends
+	events chan event    // in order; closed when pi's output ends
 	exited chan struct{} // closed after events
 
 	writeMu sync.Mutex
@@ -44,7 +44,7 @@ type proc struct {
 	sent    int // events sent so far (on read's goroutine)
 }
 
-// event is one of pig's events, as it came, with its type.
+// event is one of pi's events, as it came, with its type.
 type event struct {
 	Type string
 	Raw  json.RawMessage
@@ -55,21 +55,21 @@ type response struct {
 	Success bool            `json:"success"`
 	Data    json.RawMessage `json:"data"`
 	Error   string          `json:"error"`
-	after   int             // how many events pig sent before it
+	after   int             // how many events pi sent before it
 }
 
 func startProc(spawn Spawn, cwd string, args ...string) (*proc, error) {
-	pig, err := spawn(cwd, append([]string{"--mode", "rpc"}, args...)...)
+	prog, err := spawn(cwd, append([]string{"--mode", "rpc"}, args...)...)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't start pig: %w", err)
+		return nil, fmt.Errorf("couldn't start the agent: %w", err)
 	}
-	p := &proc{in: pig.In, kill: pig.Kill, said: pig.Said, events: make(chan event, 256), exited: make(chan struct{}), waiting: map[string]chan response{}}
-	go p.read(pig.Out)
+	p := &proc{in: prog.In, kill: prog.Kill, said: prog.Said, events: make(chan event, 256), exited: make(chan struct{}), waiting: map[string]chan response{}}
+	go p.read(prog.Out)
 	return p, nil
 }
 
-// read reads pig's output until it ends, or pig sends a line over
-// agentproc.MaxRead (then pig is killed).
+// read reads pi's output until it ends, or pi sends a line over
+// agentproc.MaxRead (then pi is killed).
 func (p *proc) read(out io.Reader) {
 	defer close(p.exited)
 	defer close(p.events)
@@ -84,7 +84,7 @@ func (p *proc) read(out io.Reader) {
 		switch {
 		case len(line) == 0:
 		case json.Unmarshal(line, &head) != nil:
-			warnf("pig wrote a line that isn't JSON (%d bytes)", len(line))
+			warnf("the program wrote a line that isn't JSON (%d bytes)", len(line))
 		case head.Type == "response" && head.ID != nil:
 			var resp response
 			_ = json.Unmarshal(line, &resp)
@@ -99,14 +99,14 @@ func (p *proc) read(out io.Reader) {
 		case head.Type == "response":
 			var resp response
 			_ = json.Unmarshal(line, &resp)
-			warnf("pig refused a command: %s", resp.Error)
+			warnf("the program refused a command: %s", resp.Error)
 		default:
 			p.events <- event{Type: head.Type, Raw: line}
 			p.sent++
 		}
 	}
 	if err := r.Err(); err != nil {
-		warnf("stopped reading pig: %v", err) // bufio.Scanner: token too long
+		warnf("stopped reading the program: %v", err) // bufio.Scanner: token too long
 		p.kill()
 	}
 	p.mu.Lock()
@@ -117,14 +117,14 @@ func (p *proc) read(out io.Reader) {
 	p.mu.Unlock()
 }
 
-// errStopped says pig is gone.
-var errStopped = errors.New("pig has stopped")
+// errStopped says pi is gone.
+var errStopped = errors.New("the agent has stopped")
 
-// stopped says pig is gone, and why if it said.
+// stopped says pi is gone, and why if it said.
 func (p *proc) stopped() error {
 	if p.said != nil {
 		if why := p.said(); why != "" {
-			return fmt.Errorf("pig has stopped: %s", why)
+			return fmt.Errorf("the agent has stopped: %s", why)
 		}
 	}
 	return errStopped
@@ -137,7 +137,7 @@ func (p *proc) call(ctx context.Context, cmd map[string]any, out any) error {
 	return err
 }
 
-// callAfter is call, and says how many events pig sent before its
+// callAfter is call, and says how many events pi sent before its
 // response.
 func (p *proc) callAfter(ctx context.Context, cmd map[string]any, out any) (after int, err error) {
 	p.mu.Lock()
@@ -174,7 +174,7 @@ func (p *proc) callAfter(ctx context.Context, cmd map[string]any, out any) (afte
 	}
 }
 
-// write writes one line to pig.
+// write writes one line to pi.
 func (p *proc) write(v any) error {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -188,11 +188,11 @@ func (p *proc) write(v any) error {
 	return nil
 }
 
-// stop ends pig: its input closes, which ends RPC mode once pig has
+// stop ends pi: its input closes, which ends RPC mode once pi has
 // cancelled what runs; it is killed if its output hasn't ended after
 // grace. Its events must be read meanwhile.
 func (p *proc) stop(grace time.Duration) {
-	_ = p.in.Close() // closing stdin asks pig to end; it is killed if it doesn't
+	_ = p.in.Close() // closing stdin asks pi to end; it is killed if it doesn't
 	select {
 	case <-p.exited:
 	case <-time.After(grace):

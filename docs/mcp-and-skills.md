@@ -31,10 +31,11 @@ Settings › Skills (or ⋯ › Skills…, which opens that chat's agent) lists 
 |---|---|
 | Claude | "everywhere" or "in this project" (Claude's `skillOverrides`) |
 | Codex | "in config.toml" |
+| Pi | "in your settings" or "in .pi/settings.json" |
 | PiG | "in your settings" or "in .pig/settings.json" |
 | Ante, oh-my-pi | "by name, everywhere" |
 
-**Shared** is `.agents/skills` (the project's, as the agents walk it) and `~/.agents/skills`, which Codex, PiG, oh-my-pi and Ante read.
+**Shared** is `.agents/skills` (the project's, as the agents walk it) and `~/.agents/skills`, which Codex, Pi, PiG, oh-my-pi and Ante read.
 
 - Each shared skill says which agents load it ("Off for Codex", "PiG loads it once the folder is trusted"); its switch is the picked agent's.
 - Claude doesn't read `.agents/skills` yet. A shared skill's ⋯ › Link for Claude… makes `.claude/skills/<name>`, a relative link to it, so Claude loads it too.

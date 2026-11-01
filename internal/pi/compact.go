@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// ownCommands are PiG's terminal commands that RPC mode has as commands of
+// ownCommands are Pi's terminal commands that RPC mode has as commands of
 // its own, offered as slash commands: /compact (`compact`, what follows
 // being what the summary should keep) and /name (`set_session_name`).
 var ownCommands = []acp.AvailableCommand{
@@ -42,8 +42,8 @@ func ownCommand(text string) (name, arg string, ok bool) {
 	return "", "", false
 }
 
-// runOwn runs one of ownCommands as a turn, after the running one. pig
-// starts no run for it, so Stop ends it at once (and pig's abort cancels a
+// runOwn runs one of ownCommands as a turn, after the running one. pi
+// starts no run for it, so Stop ends it at once (and pi's abort cancels a
 // compaction). A compaction that fails says why in its tool call.
 func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResponse, error) {
 	t, err := s.nextTurn(ctx)
@@ -71,7 +71,7 @@ func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResp
 			err = s.p.call(ctx, map[string]any{"type": "set_session_name", "name": arg}, nil)
 		}
 		if err != nil && name == "compact" {
-			// pig writes compaction_end before its answer, but the answer
+			// pi writes compaction_end before its answer, but the answer
 			// comes back at once while events wait in line for the pump.
 			select {
 			case <-compacted:
@@ -95,9 +95,9 @@ func (s *session) runOwn(ctx context.Context, name, arg string) (*acp.PromptResp
 // compactTitle is how a compaction shows, as Claude's does: a tool call.
 const compactTitle = "Compact conversation"
 
-// compactionLocked shows a compaction, PiG's own or asked for, as a tool
+// compactionLocked shows a compaction, Pi's own or asked for, as a tool
 // call that holds the summary once it's done; after one, how full the
-// context is comes from PiG's estimate until the model answers again.
+// context is comes from Pi's estimate until the model answers again.
 func (s *session) compactionLocked(typ string, raw json.RawMessage) []acp.SessionUpdate {
 	if typ == "compaction_start" {
 		s.compaction = "compaction-" + strconv.FormatInt(time.Now().UnixMilli(), 10)

@@ -9,7 +9,7 @@ import (
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/omp"
-	"github.com/afrase/nushi/internal/pig"
+	"github.com/afrase/nushi/internal/pi"
 )
 
 // What each harness can do beyond ACP, written down and checked by the
@@ -55,9 +55,9 @@ var (
 	_ chats.OpenFinder = omp.Local{}
 	_ chats.ForkFinder = omp.Local{}
 
-	_ chats.Forker       = pig.Harness{}
-	_ chats.ContextAsker = pig.Harness{}
-	_ chats.GoneReader   = pig.Harness{}
+	_ chats.Forker       = pi.Harness{}
+	_ chats.ContextAsker = pi.Harness{}
+	_ chats.GoneReader   = pi.Harness{}
 
 	// The app shows these by what the daemon says, not by the agent's name.
 	_ skills.BuiltIn = claudeskills.Claude{}

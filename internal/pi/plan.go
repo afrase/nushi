@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"encoding/json"

@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"bufio"
@@ -24,7 +24,7 @@ import (
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// Dirs is where PiG keeps its sessions: one JSON Lines file each, a header
+// Dirs is where Pi keeps its sessions: one JSON Lines file each, a header
 // line ({"type":"session", id, cwd, parentSession for a fork}), then
 // entries that make a tree.
 // Trash is the program that moves a file to the Trash, if any.
@@ -52,7 +52,7 @@ func (d Dirs) all() []saved {
 		if err != nil || !e.Type().IsRegular() || !strings.HasSuffix(path, ".jsonl") {
 			return nil
 		}
-		f, err := os.Open(path) //nolint:gosec // a session file in PiG's sessions folder, read only
+		f, err := os.Open(path) //nolint:gosec // a session file in Pi's sessions folder, read only
 		if err != nil {
 			return nil
 		}
@@ -76,15 +76,15 @@ func (d Dirs) find(id, cwd string) (string, error) {
 			continue
 		}
 		if cwd != "" && git.RealPath(s.Cwd) != git.RealPath(cwd) {
-			return "", fmt.Errorf("PiG's session %s is in %s, not %s", id, s.Cwd, cwd)
+			return "", fmt.Errorf("session %s is in %s, not %s", id, s.Cwd, cwd)
 		}
 		return s.file, nil
 	}
 	// ACP's "Resource not found": the chat's session is gone (agentproc.NotFound).
-	return "", &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "PiG has no session " + id}
+	return "", &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "no session " + id}
 }
 
-// remove deletes the session id's file as PiG's /resume does: to the
+// remove deletes the session id's file as Pi's /resume does: to the
 // Trash (`trash`, macOS's), else for good.
 func (d Dirs) remove(ctx context.Context, id string) error {
 	file, err := d.find(id, "")
@@ -92,7 +92,7 @@ func (d Dirs) remove(ctx context.Context, id string) error {
 		return nil //nolint:nilerr // not found: gone already
 	}
 	if d.Trash != "" {
-		cmd := exec.CommandContext(ctx, d.Trash, file) //nolint:gosec // trash, on a session file PiG keeps; file is absolute
+		cmd := exec.CommandContext(ctx, d.Trash, file) //nolint:gosec // trash, on a session file Pi keeps; file is absolute
 		procgroup.Bound(cmd)
 		_ = cmd.Run() // whether it went is checked next
 		if _, err := os.Lstat(file); errors.Is(err, fs.ErrNotExist) {
@@ -134,7 +134,7 @@ func (d Dirs) list(cwd, cursor string) acp.ListSessionsResponse {
 // summary reads a session's title (the last name it was given, else its
 // first message's first line) and how many messages it has.
 func summary(file string) (title string, messages int) {
-	f, err := os.Open(file) //nolint:gosec // a session file found in PiG's sessions folder
+	f, err := os.Open(file) //nolint:gosec // a session file found in Pi's sessions folder
 	if err != nil {
 		return "", 0
 	}
@@ -211,12 +211,12 @@ func branch(ctx context.Context, p *proc) ([]entry, error) {
 	return out, nil
 }
 
-// sentMeta is a replayed message's _meta: when pig saved it (model.SentMeta).
+// sentMeta is a replayed message's _meta: when pi saved it (model.SentMeta).
 func sentMeta(m *message) map[string]any {
 	return map[string]any{model.SentMeta: time.UnixMilli(m.Timestamp).UTC().Format(time.RFC3339Nano)}
 }
 
-// replay sends the client the conversation of the session pig opened:
+// replay sends the client the conversation of the session pi opened:
 // the user's messages, the model's (its thinking, text and calls), the
 // calls' results.
 func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one case per kind of message and content block
@@ -277,7 +277,7 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 			if p := planOf(m.Details); p != nil {
 				out = append(out, *p)
 			}
-		case "bashExecution": // a command the user ran (`!` in PiG's editor)
+		case "bashExecution": // a command the user ran (`!` in Pi's editor)
 			id := "bash-" + e.ID
 			call := acp.ToolCall{ToolCallID: acp.ToolCallID(id), Title: m.Command, Kind: "execute", Status: "completed", Content: toolcall.Text(toolcall.Fence(m.Output))}
 			out = append(out, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &call})
@@ -289,9 +289,9 @@ func (s *session) replay(ctx context.Context) error { //nolint:gocognit // one c
 	return nil
 }
 
-// fork starts pig on the session id and forks it, whole, or after the
-// turn that has the model's message after (pig forks before a message of
-// the user's: the next one); pig then holds the fork, a new session.
+// fork starts pi on the session id and forks it, whole, or after the
+// turn that has the model's message after (pi forks before a message of
+// the user's: the next one); pi then holds the fork, a new session.
 func (b *bridge) fork(ctx context.Context, id acp.SessionID, cwd, after string) (*acp.ForkSessionResponse, error) {
 	file := ""
 	if s, err := b.session(id); err == nil {
@@ -329,7 +329,7 @@ func (b *bridge) forkOn(ctx context.Context, p *proc, cwd, after string) (*sessi
 			return e.Message != nil && e.Message.Role == "assistant" && messageID(e.Message) == after
 		})
 		if i < 0 {
-			return nil, nil, errors.New("PiG's session has no such message")
+			return nil, nil, errors.New("the session has no such message")
 		}
 		for _, e := range entries[i+1:] {
 			if e.Message != nil && e.Message.Role == "user" {
@@ -345,7 +345,7 @@ func (b *bridge) forkOn(ctx context.Context, p *proc, cwd, after string) (*sessi
 		return nil, nil, err
 	}
 	if r.Cancelled {
-		return nil, nil, errors.New("an extension of PiG's cancelled the fork")
+		return nil, nil, errors.New("an extension cancelled the fork")
 	}
 	return b.start(ctx, p, cwd, false)
 }

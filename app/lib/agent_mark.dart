@@ -77,13 +77,15 @@ class _Mark extends CustomPainter {
 /// Codex's from the ACP registry (`cdn.agentclientprotocol.com`, as
 /// `claude-acp.svg` and `codex-acp.svg`), Ante's from its docs' logo
 /// (`ante.png` in AntigmaLabs/ante), oh-my-pi's from its repository
-/// (`assets/icon.svg`), PiG's from its pig sprite, all in one color.
+/// (`assets/icon.svg`), Pi's from pi.dev's `logo.svg`, PiG's from its pig
+/// sprite, all in one color.
 /// docs/user/agent-marks.md has their terms.
 final Map<String, (Path, Rect)> _marks = {
   'claude': (parseSvgPath(_claude), const Rect.fromLTWH(0, 0, 1200, 1200)),
   'codex': (parseSvgPath(_codex), const Rect.fromLTWH(0, 0, 24, 24)),
   'ante': (_ante(), const Rect.fromLTRB(14, 32, 248, 235)),
   'omp': (_omp(), const Rect.fromLTRB(10, 8, 110, 82)),
+  'pi': (parseSvgPath(_pi), const Rect.fromLTRB(165, 165, 635, 635)),
   'pig': (_pig(), const Rect.fromLTRB(1, 0, 15, 12)),
 };
 
@@ -171,6 +173,12 @@ Path _pig() {
   }
   return path;
 }
+
+/// Pi's three pieces, in one color here.
+const _pi =
+    'M165.29 165.29H517.36V400H400V282.65H165.29Z'
+    'M165.29 282.65H282.65V400H400V517.36H282.65V634.72H165.29Z'
+    'M517.36 400H634.72V634.72H517.36Z';
 
 const _claude =
     'M234 800.2L468.6 668.5L472.6 657.1L468.6 650.7L457.2 650.7L418 648.3'

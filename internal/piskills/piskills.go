@@ -1,9 +1,10 @@
-// Package pigskills reads the skills PiG uses in a folder and turns them
-// on and off as PiG does (PiG 0.5.3; docs/facts/pig.md):
-//   - the project's: .pig/skills in the folder itself ("project") and
+// Package piskills reads the skills Pi or PiG uses in a folder and turns
+// them on and off as it does (PiG 0.5.3, Pi 1.4.0; docs/facts/pig.md,
+// docs/facts/pi.md):
+//   - the project's: .pi/skills in the folder itself ("project") and
 //     .agents/skills in the folder and each folder above it up to the
 //     repository's root, or to / outside git ("shared"); they load only
-//     once PiG trusts the folder (its trust.json, the nearest folder's
+//     once Pi trusts the folder (its trust.json, the nearest folder's
 //     decision, or defaultProjectTrust "always");
 //   - yours: <agent dir>/skills ("user") and ~/.agents/skills ("shared",
 //     everywhere);
@@ -12,15 +13,15 @@
 //     folder's;
 //   - off: a "-<skill folder>" entry in the skills list of the settings
 //     file of the skill's scope: <agent dir>/settings.json for yours, the
-//     folder's .pig/settings.json for the project's (each reaches only its
+//     folder's .pi/settings.json for the project's (each reaches only its
 //     own); a "!<glob>" entry there turns off every skill whose folder
 //     name matches.
 //
-// PiG also follows linked roots and searches skill folders' subfolders,
+// Pi also follows linked roots and searches skill folders' subfolders,
 // and reads skills named in settings and packages; Nushi lists one level
 // of real roots (ADR 0052's rule) and no settings' or packages' skills.
-// Nothing here runs PiG.
-package pigskills
+// Nothing here runs Pi.
+package piskills
 
 import (
 	"cmp"
@@ -37,12 +38,12 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/pig"
+	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/skillfile"
 )
 
-// PiG reads and changes PiG's skills.
-type PiG struct{}
+// Skills reads and changes a Flavor's skills.
+type Skills struct{ pi.Flavor }
 
 // root is a skills folder and what its skills are.
 type root struct {
@@ -51,12 +52,12 @@ type root struct {
 	everywhere   bool
 }
 
-// roots are the skills folders PiG reads for folder, in its order.
-func roots(folder string) []root {
+// roots are the skills folders Pi reads for folder, in its order.
+func (k Skills) roots(folder string) []root {
 	home, _ := os.UserHomeDir()
 	out := []root{}
-	if !skillfile.Linked(folder, ".pig/skills") {
-		out = append(out, root{path: filepath.Join(folder, ".pig", "skills"), source: "project", project: true})
+	if !skillfile.Linked(folder, k.Folder+"/skills") {
+		out = append(out, root{path: filepath.Join(folder, k.Folder, "skills"), source: "project", project: true})
 	}
 	top := skillfile.Top(git.RealPath(folder))
 	for _, r := range skillfile.Roots(folder, walkTop(folder, top), ".agents/skills") {
@@ -65,7 +66,7 @@ func roots(folder string) []root {
 		}
 	}
 	return append(out,
-		root{path: filepath.Join(pig.AgentDir(), "skills"), source: "user"},
+		root{path: filepath.Join(k.AgentDir(), "skills"), source: "user"},
 		root{path: filepath.Join(home, ".agents", "skills"), source: "shared", everywhere: true})
 }
 
@@ -85,15 +86,17 @@ func walkTop(folder, top string) string {
 	}
 }
 
-// settings is the part of a PiG settings file read here.
+// settings is the part of a Pi settings file read here.
 type settings struct {
 	Skills              []string `json:"skills"`
 	DefaultProjectTrust string   `json:"defaultProjectTrust"`
 }
 
-func userSettings() string { return filepath.Join(pig.AgentDir(), "settings.json") }
+func (k Skills) userSettings() string { return filepath.Join(k.AgentDir(), "settings.json") }
 
-func projectSettings(folder string) string { return filepath.Join(folder, ".pig", "settings.json") }
+func (k Skills) projectSettings(folder string) string {
+	return filepath.Join(folder, k.Folder, "settings.json")
+}
 
 // readSettings reads a settings file; a missing one is empty.
 func readSettings(file string) (settings, error) {
@@ -111,12 +114,12 @@ func readSettings(file string) (settings, error) {
 	return s, nil
 }
 
-// trusted says PiG loads folder's own skills: the nearest decision in its
+// trusted says Pi loads folder's own skills: the nearest decision in its
 // trust.json for the folder (its real path) or one above it, else your
 // settings' defaultProjectTrust "always".
-func trusted(folder string, user settings) bool {
+func (k Skills) trusted(folder string, user settings) bool {
 	var decisions map[string]bool
-	if b, err := jsonsettings.ReadFile(filepath.Join(pig.AgentDir(), "trust.json")); err == nil {
+	if b, err := jsonsettings.ReadFile(filepath.Join(k.AgentDir(), "trust.json")); err == nil {
 		_ = json.Unmarshal(b, &decisions) // unreadable: no decisions
 	}
 	for dir := git.RealPath(folder); ; dir = filepath.Dir(dir) {
@@ -130,8 +133,8 @@ func trusted(folder string, user settings) bool {
 }
 
 // off says a settings file's skills list turns off the skill in dir:
-// "-<dir>" or "-skills/<folder>" (relative to the root's base folder, .pig
-// or .agents, as PiG matches it) exactly, or a "!<glob>" on its folder's
+// "-<dir>" or "-skills/<folder>" (relative to the root's base folder, .pi
+// or .agents, as Pi matches it) exactly, or a "!<glob>" on its folder's
 // name; "+" with either keeps it on. by is the entry that does.
 func off(list []string, dir string) (bool, string) {
 	rel := "skills/" + filepath.Base(dir)
@@ -151,28 +154,28 @@ func off(list []string, dir string) (bool, string) {
 	return false, ""
 }
 
-// List returns PiG's skills in folder: the shared ones among them; the
-// project's marked "untrusted" when PiG doesn't trust the folder.
-func (PiG) List(_ context.Context, folder string) (model.Skills, error) {
+// List returns Pi's skills in folder: the shared ones among them; the
+// project's marked "untrusted" when Pi doesn't trust the folder.
+func (k Skills) List(_ context.Context, folder string) (model.Skills, error) {
 	out := model.Skills{ReadsShared: true}
-	user, uerr := readSettings(userSettings())
-	project, perr := readSettings(projectSettings(folder))
+	user, uerr := readSettings(k.userSettings())
+	project, perr := readSettings(k.projectSettings(folder))
 	if err := cmp.Or(uerr, perr); err != nil {
 		out.NoSwitch = err.Error()
 	}
-	trust := trusted(folder, user)
+	trust := k.trusted(folder, user)
 	seen := map[string]bool{}
-	for _, r := range roots(folder) {
+	for _, r := range k.roots(folder) {
 		for _, f := range skillfile.List(r.path) {
 			name := cmp.Or(f.Name, f.Entry)
 			if !f.Described || seen[name] && (trust || !r.project) {
-				continue // PiG skips one without a description, and a name already taken
+				continue // Pi skips one without a description, and a name already taken
 			}
 			s := model.Skill{Name: name, Description: f.Description, Source: r.source, Path: f.Dir, Linked: f.Linked,
 				Everywhere: r.everywhere, State: "on", Tokens: skillfile.Tokens(name + f.Description)}
-			list, file := user.Skills, userSettings()
+			list, file := user.Skills, k.userSettings()
 			if r.project {
-				list, file = project.Skills, projectSettings(folder)
+				list, file = project.Skills, k.projectSettings(folder)
 			}
 			if isOff, by := off(list, f.Dir); isOff {
 				s.State = "off"
@@ -192,23 +195,23 @@ func (PiG) List(_ context.Context, folder string) (model.Skills, error) {
 }
 
 // SetSkillOn turns a skill off with a "-<folder>" entry in its scope's
-// settings file, or on by dropping it. Refused for a project's skill PiG
+// settings file, or on by dropping it. Refused for a project's skill Pi
 // doesn't load (the folder isn't trusted), and where a "!" entry decides.
-func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
-	l, _ := p.List(ctx, folder)
+func (k Skills) SetSkillOn(ctx context.Context, folder, source, name string, on bool) error {
+	l, _ := k.List(ctx, folder)
 	s, ok := l.Find(source, name)
 	if !ok {
-		return fmt.Errorf("PiG has no %s skill %q here", source, name)
+		return fmt.Errorf("%s has no %s skill %q here", k.Title, source, name)
 	}
 	switch {
 	case s.State == "untrusted":
-		return errors.New("PiG loads this folder's skills only once you trust it (/trust in pig)")
+		return fmt.Errorf("%s loads this folder's skills only once you trust it (/trust in %s)", k.Title, k.CLI)
 	case s.SetIn != "":
 		return fmt.Errorf("a pattern in %s turns it off; change it there", s.SetIn)
 	}
 	// The entries this skill's switch writes and drops: yours by its
 	// folder's path (your own file); the project's relative to the root's
-	// base folder ("skills/<folder>", which PiG matches against .pig and
+	// base folder ("skills/<folder>", which Pi matches against .pi and
 	// each .agents alike), so no path of yours goes into a file the
 	// repository may commit.
 	entry := s.Path
@@ -233,7 +236,7 @@ func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 		return json.Marshal(list)
 	}
 	if !project {
-		_, err := jsonsettings.Edit(userSettings(), func(m map[string]json.RawMessage) error {
+		_, err := jsonsettings.Edit(k.userSettings(), func(m map[string]json.RawMessage) error {
 			b, err := change(m["skills"])
 			m["skills"] = b
 			if string(b) == "[]" {
@@ -243,22 +246,22 @@ func (p PiG) SetSkillOn(ctx context.Context, folder, source, name string, on boo
 		})
 		return err
 	}
-	file := projectSettings(folder)
+	file := k.projectSettings(folder)
 	for _, p := range []string{filepath.Dir(file), file} {
 		if fi, err := os.Lstat(p); err == nil && fi.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("%s is a symlink; not changing it", p)
 		}
 	}
 	// Only the skills key, every other byte kept, through the folder's
-	// root (a .pig swapped for a link meanwhile can't lead out of it).
-	return jsonsettings.SetKeyIn(folder, filepath.Join(".pig", "settings.json"), "skills", change)
+	// root (a .pi swapped for a link meanwhile can't lead out of it).
+	return jsonsettings.SetKeyIn(folder, filepath.Join(k.Folder, "settings.json"), "skills", change)
 }
 
-// Trash moves one of PiG's own skill folders to the Trash: right in your
-// skills folder or the folder's .pig/skills.
-func (PiG) Trash(ctx context.Context, folder, path string) error {
+// Trash moves one of Pi's own skill folders to the Trash: right in your
+// skills folder or the folder's .pi/skills.
+func (k Skills) Trash(ctx context.Context, folder, path string) error {
 	var project, yours []string
-	for _, r := range roots(folder) {
+	for _, r := range k.roots(folder) {
 		switch r.source {
 		case "user":
 			yours = append(yours, r.path)

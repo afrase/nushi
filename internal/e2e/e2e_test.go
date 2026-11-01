@@ -40,8 +40,8 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/pig"
-	"github.com/afrase/nushi/internal/pig/pigtest"
+	"github.com/afrase/nushi/internal/pi"
+	"github.com/afrase/nushi/internal/pi/pitest"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/transcripts"
 )
@@ -129,12 +129,23 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	// these tests need: it names its sessions, and its notices read as
 	// Claude's (the fake isn't Claude's adapter, so the rest of Claude's
 	// harness stays out). The others are main's (knownagents), each on a
-	// fake: Codex and omp as the fake agent shaped like them, Ante and PiG
-	// as their bridges on a fake Ante and PiG, Claude as Nushi's Go agent
+	// fake: Codex and omp as the fake agent shaped like them, Ante, Pi and
+	// PiG as their bridges on a fake Ante and Pi, Claude as Nushi's Go agent
 	// on fake claudes, or, as its setting says when a chat's agent starts
 	// (agents.Agent.Own), as the fake agent for the adapter. What reads an
 	// agent's own files on this Mac (Agent.Local) is left out.
-	pigs := pigStores(dataDir)
+	piStore := piStores(dataDir)
+	pis := func(f pi.Flavor) chats.Launch {
+		return launch(func(r io.Reader, w io.Writer) {
+			spawn := func(cwd string, args ...string) (pi.Program, error) {
+				inR, inW := io.Pipe()
+				outR, outW := io.Pipe()
+				go func() { piStore.Serve(inR, outW, cwd, args); _ = outW.Close() }()
+				return pi.Program{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
+			}
+			pi.Serve(r, w, pi.Config{Flavor: f, Spawn: spawn, Dirs: pi.Dirs{Sessions: piStore.Sessions}, Version: f.Version})
+		})
+	}
 	cls := &claudes{}
 	launches := map[string]chats.Launch{
 		"claude": launch(func(r io.Reader, w io.Writer) {
@@ -146,15 +157,8 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
 		}),
 		"omp": fake(false, true),
-		"pig": launch(func(r io.Reader, w io.Writer) {
-			spawn := func(cwd string, args ...string) (pig.Pig, error) {
-				inR, inW := io.Pipe()
-				outR, outW := io.Pipe()
-				go func() { pigs.Serve(inR, outW, cwd, args); _ = outW.Close() }()
-				return pig.Pig{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
-			}
-			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
-		}),
+		"pi":  pis(pi.Pi),
+		"pig": pis(pi.PiG),
 	}
 	kinds := []chats.Kind{{Harness: fakeHarness{copyHistory}, Launch: fake(false, false)}}
 	for _, a := range knownagents.All("", st.ClaudeGoAgent) { // no projects folder: Local isn't used
@@ -225,20 +229,20 @@ func anteStores(dataDir string) *antetest.Store {
 	return antes[dataDir]
 }
 
-var pigs = map[string]*pigtest.Store{}
+var piFakes = map[string]*pitest.Store{}
 
-// pigStores is the fake PiG's sessions for a data folder, as anteStores.
-func pigStores(dataDir string) *pigtest.Store {
+// piStores is the fake pi's sessions for a data folder, as anteStores.
+func piStores(dataDir string) *pitest.Store {
 	anteMu.Lock()
 	defer anteMu.Unlock()
-	if pigs[dataDir] == nil {
-		dir := filepath.Join(dataDir, "pig")
+	if piFakes[dataDir] == nil {
+		dir := filepath.Join(dataDir, "pi")
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			panic(err) // no t here; the panic fails the test
 		}
-		pigs[dataDir] = &pigtest.Store{Sessions: dir}
+		piFakes[dataDir] = &pitest.Store{Sessions: dir}
 	}
-	return pigs[dataDir]
+	return piFakes[dataDir]
 }
 
 type bearer struct{}

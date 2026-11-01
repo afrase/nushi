@@ -42,7 +42,7 @@ import (
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/mcpserver"
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/pig"
+	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/proctree"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
@@ -56,9 +56,11 @@ func main() {
 		ante.Main()
 		return
 	}
-	if len(os.Args) > 1 && os.Args[1] == pig.Command { // and PiG
-		pig.Main()
-		return
+	for _, f := range []pi.Flavor{pi.Pi, pi.PiG} { // and Pi and PiG
+		if len(os.Args) > 1 && os.Args[1] == f.Command() {
+			f.Main()
+			return
+		}
 	}
 	if len(os.Args) > 1 && os.Args[1] == claudeacp.Command { // and Claude, when its Go agent is on (ADR 0066)
 		claudeacp.Main()

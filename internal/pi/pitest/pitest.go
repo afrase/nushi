@@ -1,7 +1,7 @@
-// Package pigtest is a fake `pig --mode rpc` for tests, speaking PiG
+// Package pitest is a fake `pi --mode rpc` for tests, speaking Pi
 // 0.5.3's RPC mode as the real one was seen to: commands in, responses
-// (by id) and events out. Sessions are files in a folder, as PiG keeps
-// them (a header line, then entries that make a tree), so a pig started
+// (by id) and events out. Sessions are files in a folder, as Pi keeps
+// them (a header line, then entries that make a tree), so a pi started
 // later can open or fork them. Prompts are answered by script, keyed on
 // their text:
 //
@@ -23,7 +23,7 @@
 // One that waits ("/hang", "wait", a slow compact) says so on the Store's
 // Waiting once it does, so a test stops or steers it when it runs, not
 // after a sleep that may lose the race.
-package pigtest
+package pitest
 
 import (
 	"bufio"
@@ -38,7 +38,7 @@ import (
 	"time"
 )
 
-// Store is PiG's sessions folder.
+// Store is Pi's sessions folder.
 type Store struct {
 	Sessions string
 	// Waiting, when set, gets the text of each prompt or command that
@@ -50,8 +50,8 @@ type Store struct {
 	n  int
 }
 
-// Pig is one fake pig on a connection.
-type Pig struct {
+// Program is one fake pi on a connection.
+type Program struct {
 	st  *Store
 	w   io.Writer
 	wmu sync.Mutex
@@ -72,9 +72,9 @@ type Pig struct {
 	compacting chan struct{} // closed by abort
 }
 
-// Serve runs a pig with args in cwd on r and w until r ends.
+// Serve runs a pi with args in cwd on r and w until r ends.
 func (st *Store) Serve(r io.Reader, w io.Writer, cwd string, args []string) {
-	p := &Pig{st: st, w: w, cwd: cwd, model: "m1", level: "low", answers: map[string]chan map[string]any{}, leaf: nil}
+	p := &Program{st: st, w: w, cwd: cwd, model: "m1", level: "low", answers: map[string]chan map[string]any{}, leaf: nil}
 	p.id = st.newID()
 	p.file = filepath.Join(st.Sessions, p.id+".jsonl")
 	for i, a := range args {
@@ -118,7 +118,7 @@ func (st *Store) newID() string {
 }
 
 // load opens a session file.
-func (p *Pig) load(file string) {
+func (p *Program) load(file string) {
 	b, err := os.ReadFile(file) //nolint:gosec // the fake's session file in a test's folder
 	if err != nil {
 		return
@@ -136,14 +136,14 @@ func (p *Pig) load(file string) {
 	}
 }
 
-func (p *Pig) emit(v any) {
+func (p *Program) emit(v any) {
 	b, _ := json.Marshal(v)
 	p.wmu.Lock()
 	defer p.wmu.Unlock()
 	_, _ = p.w.Write(append(b, '\n'))
 }
 
-func (p *Pig) respond(cmd map[string]any, data any, err string) {
+func (p *Program) respond(cmd map[string]any, data any, err string) {
 	r := map[string]any{"type": "response", "id": cmd["id"], "command": cmd["type"], "success": err == ""}
 	if err != "" {
 		r["error"] = err
@@ -153,7 +153,7 @@ func (p *Pig) respond(cmd map[string]any, data any, err string) {
 	p.emit(r)
 }
 
-func (p *Pig) command(cmd map[string]any) {
+func (p *Program) command(cmd map[string]any) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	switch cmd["type"] {
@@ -235,7 +235,7 @@ func (p *Pig) command(cmd map[string]any) {
 }
 
 // ask asks a select dialog, then notifies the choice.
-func (p *Pig) ask(cmd map[string]any) {
+func (p *Program) ask(cmd map[string]any) {
 	ch := make(chan map[string]any, 1)
 	p.mu.Lock()
 	p.answers["ui1"] = ch
@@ -255,10 +255,12 @@ func stamp() int64 {
 }
 
 // append adds a message to the session's branch, and writes the file.
-func (p *Pig) append(msg map[string]any) { p.add(map[string]any{"type": "message", "message": msg}) }
+func (p *Program) append(msg map[string]any) {
+	p.add(map[string]any{"type": "message", "message": msg})
+}
 
 // add adds an entry to the session's branch, and writes the file.
-func (p *Pig) add(entry map[string]any) {
+func (p *Program) add(entry map[string]any) {
 	id := fmt.Sprintf("e%d", len(p.entries)+1)
 	entry["id"], entry["parentId"] = id, p.leaf
 	b, _ := json.Marshal(entry)
@@ -269,7 +271,7 @@ func (p *Pig) add(entry map[string]any) {
 	p.save()
 }
 
-func (p *Pig) save() {
+func (p *Program) save() {
 	h := map[string]any{"type": "session", "version": 3, "id": p.id, "cwd": p.cwd}
 	if p.parent != "" {
 		h["parentSession"] = p.parent
@@ -290,7 +292,7 @@ func assistant(blocks ...map[string]any) map[string]any {
 func textBlock(s string) map[string]any { return map[string]any{"type": "text", "text": s} }
 
 // run answers a prompt, by script.
-func (p *Pig) run(text string) {
+func (p *Program) run(text string) {
 	p.emit(map[string]any{"type": "agent_start"})
 	user := map[string]any{"role": "user", "content": []map[string]any{textBlock(text)}, "timestamp": stamp()}
 	p.emit(map[string]any{"type": "message_end", "message": user})
@@ -384,7 +386,7 @@ func (p *Pig) run(text string) {
 
 // fork switches to a new session: the branch up to before the user's
 // message entryId (fork), or all of it (clone).
-func (p *Pig) fork(cmd map[string]any) {
+func (p *Program) fork(cmd map[string]any) {
 	var keep []map[string]any
 	text := ""
 	for _, e := range p.entries {
@@ -410,8 +412,8 @@ func (p *Pig) fork(cmd map[string]any) {
 }
 
 // compact summarizes the session: "Summary: <instructions>"; with nothing
-// to summarize it fails as PiG does, and "slow" waits for an abort.
-func (p *Pig) compact(cmd map[string]any) {
+// to summarize it fails as Pi does, and "slow" waits for an abort.
+func (p *Program) compact(cmd map[string]any) {
 	p.emit(map[string]any{"type": "compaction_start", "reason": "manual"})
 	p.mu.Lock()
 	defer p.mu.Unlock()

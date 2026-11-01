@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 )
 
 // ContextMethod is the bridge's extension that says what a session holds:
-// PiG's session stats, and how many compactions its branch has had.
-const ContextMethod = "_pig/context"
+// Pi's session stats, and how many compactions its branch has had.
+const ContextMethod = "_pi/context"
 
 // stats is what ContextMethod answers.
 type stats struct {
@@ -43,7 +43,7 @@ func (s *session) stats(ctx context.Context) (stats, error) {
 }
 
 // Context asks the bridge what a session holds, for the Context widget:
-// PiG has no breakdown of its context, but counts the session's messages,
+// Pi has no breakdown of its context, but counts the session's messages,
 // tool calls and tokens.
 func (Harness) Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error) {
 	var st stats
@@ -52,7 +52,7 @@ func (Harness) Context(ctx context.Context, call func(ctx context.Context, metho
 	}
 	t := st.Tokens
 	lines := []string{
-		fmt.Sprintf("Messages: %d from you, %d from PiG", st.UserMessages, st.AssistantMessages),
+		fmt.Sprintf("Messages: %d from you, %d from Pi", st.UserMessages, st.AssistantMessages),
 		fmt.Sprintf("Tool calls: %d", st.ToolCalls),
 		fmt.Sprintf("Tokens: %s in · %s out", short(t.Input), short(t.Output)),
 	}

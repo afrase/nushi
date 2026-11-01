@@ -1,5 +1,5 @@
 // Package toolcall is what Nushi's own ACP bridges (internal/ante,
-// internal/pig) show of a tool call: a diff, output in a fence, and the
+// internal/pi) show of a tool call: a diff, output in a fence, and the
 // old text of a file a write replaces.
 package toolcall
 

@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"io"
@@ -12,15 +12,15 @@ type discard struct{ io.Writer }
 
 func (discard) Close() error { return nil }
 
-// A line over agentproc.MaxRead ends pig's output: what came before it
-// is read, and pig is killed.
+// A line over agentproc.MaxRead ends pi's output: what came before it
+// is read, and pi is killed.
 func TestReadLimit(t *testing.T) {
 	agentproc.MaxRead = 100
 	defer func() { agentproc.MaxRead = 256 << 20 }()
 	killed := make(chan struct{})
 	out := `{"type":"agent_start"}` + "\n" + strings.Repeat("x", 200) + "\n" + `{"type":"agent_end"}` + "\n"
-	p, err := startProc(func(string, ...string) (Pig, error) {
-		return Pig{In: discard{io.Discard}, Out: strings.NewReader(out), Kill: func() { close(killed) }}, nil
+	p, err := startProc(func(string, ...string) (Program, error) {
+		return Program{In: discard{io.Discard}, Out: strings.NewReader(out), Kill: func() { close(killed) }}, nil
 	}, t.TempDir())
 	if err != nil {
 		t.Fatal(err)

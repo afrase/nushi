@@ -5,7 +5,7 @@
 // features from it, and the e2e tests run its harnesses on fake agents. What
 // each agent does is in its own packages: internal/claude*, internal/codex*,
 // internal/ante* (Ante's bridge too, ADR 0030), internal/omp* and
-// internal/pig (PiG's bridge, ADR 0039).
+// internal/pi (Pi's and PiG's bridge, ADR 0039, 0078).
 package knownagents
 
 import (
@@ -35,8 +35,8 @@ import (
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/ompskills"
 	"github.com/afrase/nushi/internal/omptrust"
-	"github.com/afrase/nushi/internal/pig"
-	"github.com/afrase/nushi/internal/pigskills"
+	"github.com/afrase/nushi/internal/pi"
+	"github.com/afrase/nushi/internal/piskills"
 )
 
 // Harness is what chats run of an agent, and how it starts.
@@ -111,15 +111,22 @@ func All(projects string, claudeGo func() bool) []Agent {
 			Agent:  agents.Agent{CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
 			Skills: ompskills.OMP{}, Trust: omptrust.Trust{},
 		},
-		{
-			Harness: pig.Harness{}, Local: pig.Harness{},
-			Agent:  agents.Agent{CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
-			Skills: pigskills.PiG{}, Trust: pig.Trust{},
-		},
+		piFlavor(pi.Pi),
+		piFlavor(pi.PiG),
 	}
 	for i := range all {
 		info := all[i].Harness.Info()
 		all[i].Agent.Name, all[i].Agent.Title = info.Name, info.Title
 	}
 	return all
+}
+
+// piFlavor is an agent of Pi's RPC mode.
+func piFlavor(f pi.Flavor) Agent {
+	h := pi.Harness{Flavor: f}
+	return Agent{
+		Harness: h, Local: h,
+		Agent:  agents.Agent{CLI: f.CLI, Page: f.Page, Min: f.Min, Needs: f.Needs, Tested: []string{f.Version}},
+		Skills: piskills.Skills{Flavor: f}, Trust: pi.Trust{},
+	}
 }

@@ -17,6 +17,7 @@ List<Agent> readyAgents() => [
     ('codex', 'Codex'),
     ('ante', 'Ante'),
     ('omp', 'oh-my-pi'),
+    ('pi', 'Pi'),
     ('pig', 'PiG'),
   ])
     Agent(

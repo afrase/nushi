@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"bytes"
@@ -17,12 +17,12 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
-	"github.com/afrase/nushi/internal/pig/pigtest"
+	"github.com/afrase/nushi/internal/pi/pitest"
 	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// peer is the ACP client's side of a bridge running on a fake pig: the
+// peer is the ACP client's side of a bridge running on a fake pi: the
 // connection, and the client that records what the bridge sends.
 type peer struct {
 	*acp.AgentConn
@@ -117,9 +117,9 @@ func (c *client) find(t *testing.T, sid acp.SessionID, kind string, ok func(acp.
 	return found
 }
 
-// start runs a bridge on a fake pig whose sessions are in store, and
+// start runs a bridge on a fake pi whose sessions are in store, and
 // initializes it; the bridge's own lines go to log.
-func start(t *testing.T, store *pigtest.Store, log io.Writer) *peer {
+func start(t *testing.T, store *pitest.Store, log io.Writer) *peer {
 	t.Helper()
 	logMu.Lock()
 	logTo = log
@@ -131,15 +131,15 @@ func start(t *testing.T, store *pigtest.Store, log io.Writer) *peer {
 	})
 	toBridgeR, toBridgeW := io.Pipe()
 	fromBridgeR, fromBridgeW := io.Pipe()
-	spawn := func(cwd string, args ...string) (Pig, error) { //nolint:unparam // a Spawn, which can fail
+	spawn := func(cwd string, args ...string) (Program, error) { //nolint:unparam // a Spawn, which can fail
 		inR, inW := io.Pipe()
 		outR, outW := io.Pipe()
 		go func() { store.Serve(inR, outW, cwd, args); _ = outW.Close() }()
-		return Pig{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
+		return Program{In: inW, Out: outR, Kill: func() { _, _ = inR.Close(), outW.Close() }}, nil
 	}
 	done := make(chan struct{})
 	go func() {
-		Serve(toBridgeR, fromBridgeW, Config{Spawn: spawn, Dirs: Dirs{Sessions: store.Sessions}, Version: Version})
+		Serve(toBridgeR, fromBridgeW, Config{Flavor: PiG, Spawn: spawn, Dirs: Dirs{Sessions: store.Sessions}, Version: PiG.Version})
 		_ = fromBridgeW.Close()
 		close(done)
 	}()
@@ -171,7 +171,7 @@ func prompt(t *testing.T, c *peer, sid acp.SessionID, text string) *acp.PromptRe
 // begin starts a turn that waits (the fake's "wait", "/hang", a slow
 // compact) and returns once the fake waits in it, so a Cancel or a steer
 // finds it running; wait waits for its result.
-func begin(t *testing.T, c *peer, store *pigtest.Store, sid acp.SessionID, text string) (wait func() *acp.PromptResponse) {
+func begin(t *testing.T, c *peer, store *pitest.Store, sid acp.SessionID, text string) (wait func() *acp.PromptResponse) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
 	t.Cleanup(cancel)
@@ -215,7 +215,7 @@ func options(opts []acp.SessionConfigOption) string {
 // shows with its output, a thought that didn't stream comes with the
 // message's end, the usage follows; a failed model call fails the turn.
 func TestATurn(t *testing.T) {
-	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	c := start(t, &pitest.Store{Sessions: t.TempDir()}, io.Discard)
 	s := openNew(t, c, t.TempDir())
 	if got := options(s.ConfigOptions); got != "model/model=fake/m1 thinking/thought_level=low" {
 		t.Errorf("options = %s", got)
@@ -255,7 +255,7 @@ func TestATurn(t *testing.T) {
 // Stop ends a running turn as cancelled; a message sent meanwhile is
 // steered into it.
 func TestCancelAndSteer(t *testing.T) {
-	store := &pigtest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
+	store := &pitest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
 	c := start(t, store, io.Discard)
 	s := openNew(t, c, t.TempDir())
 	wait := begin(t, c, store, s.SessionID, "wait")
@@ -293,12 +293,12 @@ func TestCancelAndSteer(t *testing.T) {
 }
 
 // An extension's dialog is a question; its answer goes back, and its
-// notification is a message. pig's lines that aren't JSON, and events
+// notification is a message. pi's lines that aren't JSON, and events
 // nobody knows, are logged and passed over.
 func TestQuestionAndUnknownMessages(t *testing.T) {
 	var log bytes.Buffer
 	var mu sync.Mutex
-	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, writerFunc(func(p []byte) (int, error) {
+	c := start(t, &pitest.Store{Sessions: t.TempDir()}, writerFunc(func(p []byte) (int, error) {
 		mu.Lock()
 		defer mu.Unlock()
 		return log.Write(p)
@@ -317,7 +317,7 @@ func TestQuestionAndUnknownMessages(t *testing.T) {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	for _, want := range []string{"pig wrote a line that isn't JSON (8 bytes)", `an event the bridge doesn't know: "mystery"`, "DEBUG pig-acp: rpc prompt took="} {
+	for _, want := range []string{"the program wrote a line that isn't JSON (8 bytes)", `an event the bridge doesn't know: "mystery"`, "DEBUG pi-acp: rpc prompt took="} {
 		if !strings.Contains(log.String(), want) {
 			t.Errorf("log lacks %q:\n%s", want, log.String())
 		}
@@ -328,10 +328,10 @@ type writerFunc func([]byte) (int, error)
 
 func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
 
-// PiG's sessions: listed (not forks), loaded with their conversation
+// Pi's sessions: listed (not forks), loaded with their conversation
 // (the same message ids as live), forked after a turn or whole, deleted.
 func TestSessions(t *testing.T) {
-	store := &pigtest.Store{Sessions: t.TempDir()}
+	store := &pitest.Store{Sessions: t.TempDir()}
 	c := start(t, store, io.Discard)
 	cwd := t.TempDir()
 	s := openNew(t, c, cwd)
@@ -350,7 +350,7 @@ func TestSessions(t *testing.T) {
 	}
 
 	f, err := c.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: s.SessionID, Cwd: cwd,
-		Meta: harness.ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(firstReply)})
+		Meta: Harness{Flavor: PiG}.ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: PiG.AgentName()}})(firstReply)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,7 +395,7 @@ func TestSessions(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(store.Sessions, string(s.SessionID)+".jsonl")); !os.IsNotExist(err) {
 		t.Errorf("deleted session's file: %v", err)
 	}
-	// A session PiG doesn't have (any longer) is ACP's "Resource not found" (the chat's
+	// A session Pi doesn't have (any longer) is ACP's "Resource not found" (the chat's
 	// session is gone), unlike one in another folder.
 	var e *acp.Error
 	if _, err := c2.LoadSession(ctx, &acp.LoadSessionRequest{SessionID: "01a171d2-0000-7000-8000-00000000ffff", Cwd: cwd}); !errors.As(err, &e) || e.Code != acp.ErrorCodeResourceNotFound {
@@ -405,7 +405,7 @@ func TestSessions(t *testing.T) {
 
 // The model and thinking level change through config options.
 func TestOptions(t *testing.T) {
-	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	c := start(t, &pitest.Store{Sessions: t.TempDir()}, io.Discard)
 	s := openNew(t, c, t.TempDir())
 	r, err := c.SetSessionConfigOption(context.Background(), &acp.SetSessionConfigOptionRequest{SessionID: s.SessionID, ConfigID: "model", ValueID: &acp.SetSessionConfigOptionRequestValueID{Value: "fake/m2"}})
 	if err != nil || options(r.ConfigOptions) != "model/model=fake/m2 thinking/thought_level=low" {
@@ -417,7 +417,7 @@ func TestOptions(t *testing.T) {
 	}
 }
 
-// Calls as PiG's tools describe them: a command by itself, an edit's
+// Calls as Pi's tools describe them: a command by itself, an edit's
 // changes as diffs, a write's from what the file held.
 func TestToolCalls(t *testing.T) {
 	s := &session{cwd: "/repo"}
@@ -439,7 +439,7 @@ func TestToolCalls(t *testing.T) {
 // compact says so in its call, a stopped one ends at once. /name names
 // the session. Both are slash commands; neither is steered into a turn.
 func TestCompactAndName(t *testing.T) {
-	store := &pigtest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
+	store := &pitest.Store{Sessions: t.TempDir(), Waiting: make(chan string)}
 	c := start(t, store, io.Discard)
 	cwd := t.TempDir()
 	s := openNew(t, c, cwd)
@@ -496,7 +496,7 @@ func TestCompactAndName(t *testing.T) {
 		ok, _ := c.Steer(context.Background(), s.SessionID, []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "/compact"}}})
 		steered <- ok
 	}()
-	// Time for the steer to wait on the turn (it never reaches pig, so the
+	// Time for the steer to wait on the turn (it never reaches pi, so the
 	// fake can't say); one that comes after the stop isn't steered either.
 	time.Sleep(50 * time.Millisecond)
 	if err := c.Cancel(context.Background(), &acp.CancelNotification{SessionID: s.SessionID}); err != nil {
@@ -521,14 +521,14 @@ func TestCompactAndName(t *testing.T) {
 	}
 }
 
-// The Context widget's lines: PiG's session stats and the compactions.
+// The Context widget's lines: Pi's session stats and the compactions.
 func TestContext(t *testing.T) {
-	c := start(t, &pigtest.Store{Sessions: t.TempDir()}, io.Discard)
+	c := start(t, &pitest.Store{Sessions: t.TempDir()}, io.Discard)
 	s := openNew(t, c, t.TempDir())
 	prompt(t, c, s.SessionID, "hello")
 	prompt(t, c, s.SessionID, "/compact")
 	u, err := harness.Context(context.Background(), c.Call, string(s.SessionID))
-	want := "- Messages: 2 from you, 3 from PiG\n- Tool calls: 1\n- Tokens: 1.5k in · 250 out\n- Cache: 64 read\n- Compactions: 1\n"
+	want := "- Messages: 2 from you, 3 from Pi\n- Tool calls: 1\n- Tokens: 1.5k in · 250 out\n- Cache: 64 read\n- Compactions: 1\n"
 	if err != nil || u.Markdown != want || len(u.Categories) != 0 {
 		t.Errorf("context = %q, %v", u.Markdown, err)
 	}
@@ -540,7 +540,7 @@ func TestContext(t *testing.T) {
 // A todo list an extension keeps (in its tool's results, or its own
 // entries) is the agent's plan, live and after a reload.
 func TestPlans(t *testing.T) {
-	store := &pigtest.Store{Sessions: t.TempDir()}
+	store := &pitest.Store{Sessions: t.TempDir()}
 	c := start(t, store, io.Discard)
 	cwd := t.TempDir()
 	s := openNew(t, c, cwd)
@@ -597,5 +597,38 @@ func TestFlattenTexts(t *testing.T) {
 		{Type: "resource_link", ResourceLink: &acp.ResourceLink{URI: "file:///a/b.go", Name: "b.go"}}})
 	if text != "[Nushi] a note.\n\ngo on @/a/b.go" {
 		t.Errorf("flatten = %q", text)
+	}
+}
+
+// Each Flavor has its own folders and variables, and only a PiG moves its
+// home.
+func TestFlavorsFolders(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
+	if got, want := Pi.AgentDir(), filepath.Join(home, ".pi", "agent"); got != want {
+		t.Errorf("Pi's agent folder = %s, want %s", got, want)
+	}
+	if got, want := PiG.AgentDir(), filepath.Join(home, "xdg", "pig", "agent"); got != want {
+		t.Errorf("PiG's agent folder = %s, want %s", got, want)
+	}
+	t.Setenv("PI_CODING_AGENT_SESSION_DIR", filepath.Join(home, "pi-sessions"))
+	t.Setenv("PIG_CODING_AGENT_DIR", filepath.Join(home, "pig-agent"))
+	if got, want := Pi.DirsFromEnv().Sessions, filepath.Join(home, "pi-sessions"); got != want {
+		t.Errorf("Pi's sessions = %s, want %s", got, want)
+	}
+	if got, want := PiG.DirsFromEnv().Sessions, filepath.Join(home, "pig-agent", "sessions"); got != want {
+		t.Errorf("PiG's sessions = %s, want %s", got, want)
+	}
+}
+
+// ForkAt answers only the bridge of its own Flavor.
+func TestForkAtKnowsItsBridge(t *testing.T) {
+	init := &acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: Pi.AgentName()}}
+	if (Harness{Flavor: Pi}).ForkAt(init) == nil {
+		t.Error("Pi's harness doesn't know Pi's bridge")
+	}
+	if (Harness{Flavor: PiG}).ForkAt(init) != nil {
+		t.Error("PiG's harness took Pi's bridge")
 	}
 }

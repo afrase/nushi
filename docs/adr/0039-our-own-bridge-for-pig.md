@@ -1,5 +1,7 @@
 # 0039. PiG runs through a bridge of Nushi's own, on its RPC mode
 
+The bridge is `internal/pi` since [0078](0078-pi-and-pig-share-a-bridge.md), which also runs Pi.
+
 ## Context
 PiG (pi-in-go.dev, a Go port of the Pi coding agent, MIT) has no ACP in its core. Its RPC mode, `pig --mode rpc`, is Pi 1.4.0's protocol: JSON lines of commands (with ids) in, responses and events out, one session per process (`new_session`, `switch_session`, `fork` and `clone` replace it). It has what Nushi uses: prompts with images, streamed text and thinking, tool events, `abort`, `steer`, models and thinking levels, `get_session_stats` (context and cost), `get_commands`, `get_entries` (the session's tree), `fork` before a user's message and `clone`, and extensions' dialogs (`extension_ui_request`: select, confirm, input, editor; notify). Sessions are JSON Lines files under PiG's agent folder. PiG has no permissions or modes: its tools run without asking.
 

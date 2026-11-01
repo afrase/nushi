@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// session is one ACP session: a `pig --mode rpc` holding one of PiG's
+// session is one ACP session: a `pi --mode rpc` holding one of Pi's
 // sessions, whose events it turns into session updates.
 type session struct {
 	b   *bridge
@@ -24,29 +24,29 @@ type session struct {
 	p   *proc
 
 	mu    sync.Mutex
-	file  string // the session's file, once pig said
+	file  string // the session's file, once pi said
 	turn  *turn  // the running turn, if any
 	idle  chan struct{}
 	msgID string         // the assistant message under way
 	sent  map[int]string // what of its blocks went out, by content index
 	tools map[string]string
 	olds  map[string]toolcall.Old // what a write replaces, read before it runs
-	ended chan struct{}           // closed once pig is gone
-	// handled is how many of pig's events the pump has handled; caught
+	ended chan struct{}           // closed once pi is gone
+	// handled is how many of pi's events the pump has handled; caught
 	// (on mu) says when it grows.
 	handled int
 	caught  *sync.Cond
 
 	compaction string // the tool call of the compaction under way
-	estimate   int64  // the context's tokens after the last compaction, PiG's estimate
+	estimate   int64  // the context's tokens after the last compaction, Pi's estimate
 }
 
 // turn is a running turn: Nushi's prompt (result, which nobody reads for
-// a turn pig started itself), the tokens it used and how it ended.
+// a turn pi started itself), the tokens it used and how it ended.
 type turn struct {
 	result     chan turnResult
 	done       bool
-	ran        bool // pig started a run for it
+	ran        bool // pi started a run for it
 	usage      acp.Usage
 	stop       string // the last assistant message's stop reason
 	failed     string // and its error
@@ -66,7 +66,7 @@ func newSession(b *bridge, p *proc, id, cwd, file string) *session {
 	return s
 }
 
-// pump hands pig's events to the client until pig is gone.
+// pump hands pi's events to the client until pi is gone.
 func (s *session) pump() {
 	for ev := range s.p.events {
 		s.handle(ev)
@@ -86,7 +86,7 @@ func (s *session) pump() {
 	s.b.forget(s)
 }
 
-// message is one of PiG's agent messages (Pi's shape): the user's, the
+// message is one of Pi's agent messages (Pi's shape): the user's, the
 // model's, a tool's result, a shell command the user ran.
 type message struct {
 	Role         string          `json:"role"`
@@ -128,11 +128,11 @@ func (m *message) blocks() []block {
 	return out
 }
 
-// messageID names an assistant message by its timestamp, which pig puts
+// messageID names an assistant message by its timestamp, which pi puts
 // in its events and keeps in the session file: a fork at it finds it there.
 func messageID(m *message) string { return strconv.FormatInt(m.Timestamp, 10) }
 
-// pigEvent is what Nushi reads of pig's events.
+// pigEvent is what Nushi reads of pi's events.
 type pigEvent struct {
 	Message *message `json:"message"`
 	Update  *struct {
@@ -162,7 +162,7 @@ func (s *session) handle(ev event) {
 	var out []acp.SessionUpdate
 	switch ev.Type {
 	case "agent_start":
-		if s.turn == nil { // a run pig started itself
+		if s.turn == nil { // a run pi started itself
 			s.beginLocked(&turn{result: make(chan turnResult, 1)})
 		}
 		s.turn.ran = true
@@ -266,7 +266,7 @@ func chunk(thought bool, text, id string) acp.SessionUpdate {
 	return acp.SessionUpdate{SessionUpdate: "agent_message_chunk", AgentMessageChunk: c}
 }
 
-// settle ends a turn pig settled: how full the context is first, then the
+// settle ends a turn pi settled: how full the context is first, then the
 // prompt's answer. ACP has no stop reason for a failed turn, so that is
 // an error.
 func (s *session) settle(t *turn) {
@@ -303,7 +303,7 @@ func (s *session) endLocked(t *turn, resp *acp.PromptResponse, err error) {
 }
 
 // prompt runs a turn (after the running one, if any) and returns how it
-// ended. A prompt pig hands to an extension's command ("handled") ends
+// ended. A prompt pi hands to an extension's command ("handled") ends
 // when the command does.
 func (s *session) prompt(ctx context.Context, text string, images []image) (*acp.PromptResponse, error) {
 	if name, arg, ok := ownCommand(text); ok {
@@ -313,14 +313,14 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 	if err != nil {
 		return nil, err
 	}
-	go func() { // pig answers once it took the prompt, or once a command ran
+	go func() { // pi answers once it took the prompt, or once a command ran
 		var r struct {
 			Disposition string `json:"disposition"`
 		}
 		after, err := s.p.callAfter(ctx, map[string]any{"type": "prompt", "message": text, "images": images}, &r)
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		for s.handled < after { // the events pig sent first, before the turn ends
+		for s.handled < after { // the events pi sent first, before the turn ends
 			s.caught.Wait()
 		}
 		switch {
@@ -330,7 +330,7 @@ func (s *session) prompt(ctx context.Context, text string, images []image) (*acp
 			s.endLocked(t, &acp.PromptResponse{StopReason: "end_turn"}, nil)
 		}
 	}()
-	res := <-t.result // the turn ends, or pig does
+	res := <-t.result // the turn ends, or pi does
 	return res.resp, res.err
 }
 
@@ -357,7 +357,7 @@ func (s *session) nextTurn(ctx context.Context) (*turn, error) {
 	return t, nil
 }
 
-// cancel stops the running turn; pig answers once it settled. A turn
+// cancel stops the running turn; pi answers once it settled. A turn
 // with no run (an extension's command, which may wait on itself) ends at
 // once.
 //
@@ -371,7 +371,7 @@ func (s *session) cancel() {
 		}
 	}
 	s.mu.Unlock()
-	go func() { _ = s.p.call(context.Background(), map[string]any{"type": "abort"}, nil) }() // a dead pig has no run to abort
+	go func() { _ = s.p.call(context.Background(), map[string]any{"type": "abort"}, nil) }() // a dead pi has no run to abort
 }
 
 // steer hands text to the running turn, which takes it after the tools
@@ -396,7 +396,7 @@ func (s *session) steer(ctx context.Context, text string, images []image) (bool,
 	return err == nil, err
 }
 
-// stop ends pig, waiting until it has.
+// stop ends pi, waiting until it has.
 func (s *session) stop() {
 	s.p.stop(5 * time.Second)
 	<-s.ended

@@ -77,3 +77,4 @@
 - [0075](0075-copy-is-nushis-own-command.md) `/copy` is Nushi's own command: the agent's latest message as Markdown on the clipboard, `/copy N` further back; the agent never sees it
 - [0076](0076-messages-as-bubbles-with-actions-on-hover.md) On the Mac a user message is a bubble at the right and a message's actions a row under it on hover (Read, time, Copy, Rewind or Fork); tool rows in their tint again (reverses 0072's no box)
 - [0077](0077-each-harness-is-a-type.md) Each harness is a concrete type (`claude.Harness`…) behind small interfaces in `features/chats/harness.go`, asked once by the service; what reads the Mac is a `Local` type around it, which tests never run (replaces 0025's `Dialect`)
+- [0078](0078-pi-and-pig-share-a-bridge.md) Pi runs on PiG's bridge: `internal/pi` serves one RPC protocol, a `Flavor` says which program, its folders and its variables

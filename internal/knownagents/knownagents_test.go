@@ -31,7 +31,7 @@ func TestEveryAgentIsWhole(t *testing.T) {
 			t.Errorf("%s: _meta %v, %v, %v, only Claude's has any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
 		}
 	}
-	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "pig"}) {
+	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "pi", "pig"}) {
 		t.Errorf("agents %v", names)
 	}
 }
@@ -69,6 +69,7 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 		"codex": {[]string{"Forker", "GoneReader", "HistoryCopier", "OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
 		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader"}, []string{"MessageDater", "OpenFinder"}},
 		"omp":   {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
+		"pi":    {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 		"pig":   {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 	}
 	for _, a := range All("", func() bool { return false }) {

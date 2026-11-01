@@ -12,6 +12,7 @@ One mark per agent wherever a chat's agent shows (`app/lib/agent_mark.dart`), dr
 | Codex | the registry's `codex-acp.svg` (codex-acp is Apache-2.0) | The OpenAI Blossom, OpenAI's trademark, under OpenAI's brand guidelines (openai.com/brand; the page answered 403, so not read). |
 | Ante | `docs-site/static/assets/ante.png` in AntigmaLabs/ante (its docs' logo), redrawn as its rows of pixels | The repository is Apache-2.0, which grants no trademark rights (§6). |
 | oh-my-pi | `assets/icon.svg` in can1357/oh-my-pi (MIT): the π with a plug, its two decorative dots left out (they'd vanish in one color) | MIT for the file; the mark is the project's. |
+| Pi | `logo.svg` from pi.dev (the logo in earendil-works/pi's README), its three pieces in one color | The repository is MIT; no brand policy found. |
 | PiG | the pig head its terminal draws (`pigMascot`, a 16×14 sprite in `coding/piglogin/art.go` of MichaelKinsy/PiG), in one color with the eyes and snout cut out | MIT (the repository's `REUSE.toml` puts `coding/**` under MIT, Michael Kinsy and Mario Zechner); no brand policy found. The project banner (`docs/assets`) is MIT and CC-BY-4.0 (it holds the Go gopher) and isn't used. |
 
 Each mark only names the agent beside a chat (nominative use); none stands for Nushi. That's fine for a personal app; before Nushi is published, ask Anthropic and OpenAI, or drop their entries from `_marks` (each then shows its monogram).

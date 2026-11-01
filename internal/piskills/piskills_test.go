@@ -1,4 +1,4 @@
-package pigskills
+package piskills
 
 import (
 	"context"
@@ -9,9 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/testcheck"
 )
+
+var skills = Skills{Flavor: pi.Pi}
 
 func skill(t *testing.T, root, dir string) {
 	t.Helper()
@@ -31,13 +35,13 @@ func sharedOf(l model.Skills) []model.Skill {
 	return slices.DeleteFunc(l.Skills, func(s model.Skill) bool { return s.Source != "shared" })
 }
 
-// setup gives PiG a throwaway agent folder and HOME, and a repository
+// setup gives Pi a throwaway agent folder and HOME, and a repository
 // with a folder two levels down (real paths).
 func setup(t *testing.T) (agent, top, deeper string) {
 	t.Helper()
 	agent, _ = filepath.EvalSymlinks(t.TempDir())
 	home, _ := filepath.EvalSymlinks(t.TempDir())
-	t.Setenv("PIG_CODING_AGENT_DIR", agent)
+	t.Setenv("PI_CODING_AGENT_DIR", agent)
 	t.Setenv("HOME", home)
 	above, _ := filepath.EvalSymlinks(t.TempDir())
 	top = filepath.Join(above, "repo")
@@ -49,45 +53,45 @@ func setup(t *testing.T) (agent, top, deeper string) {
 	}
 	skill(t, filepath.Join(agent, "skills"), "mine")
 	skill(t, filepath.Join(home, ".agents", "skills"), "everyday")
-	skill(t, filepath.Join(deeper, ".pig", "skills"), "pigonly")
+	skill(t, filepath.Join(deeper, ".pi", "skills"), "pigonly")
 	skill(t, filepath.Join(top, ".agents", "skills"), "release")
-	skill(t, filepath.Join(top, ".agents", "skills"), "mine")       // the project's wins the name
-	skill(t, filepath.Join(above, ".agents", "skills"), "above")    // above the repository: not read
-	skill(t, filepath.Join(top, "sub", ".pig", "skills"), "notcwd") // .pig only in the folder itself
+	skill(t, filepath.Join(top, ".agents", "skills"), "mine")      // the project's wins the name
+	skill(t, filepath.Join(above, ".agents", "skills"), "above")   // above the repository: not read
+	skill(t, filepath.Join(top, "sub", ".pi", "skills"), "notcwd") // .pi only in the folder itself
 	testcheck.Write(t, filepath.Join(top, ".agents", "skills", "nodesc", "SKILL.md"), "plain text\n")
 	return agent, top, deeper
 }
 
-// The project's skills load only once PiG trusts the folder: until then
+// The project's skills load only once Pi trusts the folder: until then
 // they show as "untrusted", and yours keep their names.
 func TestTrust(t *testing.T) {
 	agent, top, deeper := setup(t)
 	ctx := context.Background()
-	l, _ := PiG{}.List(ctx, deeper)
+	l, _ := skills.List(ctx, deeper)
 	want := "project pigonly untrusted|shared mine untrusted|shared release untrusted|user mine on|shared everyday on"
 	if g := listed(l.Skills); g != want {
 		t.Errorf("untrusted:\n%s\nwant\n%s", g, want)
 	}
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
-		t.Error("a switch for a skill PiG doesn't load")
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
+		t.Error("a switch for a skill Pi doesn't load")
 	}
 	// The repository's root trusted covers the folder; its own false wins.
 	testcheck.Write(t, filepath.Join(agent, "trust.json"), `{"`+top+`": true}`)
-	l, _ = PiG{}.List(ctx, deeper)
+	l, _ = skills.List(ctx, deeper)
 	want = "project pigonly on|shared mine on|shared release on|shared everyday on"
 	if g := listed(l.Skills); g != want {
 		t.Errorf("trusted:\n%s\nwant\n%s", g, want)
 	}
 	testcheck.Write(t, filepath.Join(agent, "trust.json"), `{"`+top+`": true, "`+deeper+`": false}`)
-	if l, _ := (PiG{}).List(ctx, deeper); !strings.Contains(listed(l.Skills), "release untrusted") {
+	if l, _ := skills.List(ctx, deeper); !strings.Contains(listed(l.Skills), "release untrusted") {
 		t.Errorf("a nearer false: %s", listed(l.Skills))
 	}
 	testcheck.Write(t, filepath.Join(agent, "trust.json"), `{}`)
 	testcheck.Write(t, filepath.Join(agent, "settings.json"), `{"defaultProjectTrust": "always"}`)
-	if l, _ := (PiG{}).List(ctx, deeper); !strings.Contains(listed(l.Skills), "release on") {
+	if l, _ := skills.List(ctx, deeper); !strings.Contains(listed(l.Skills), "release on") {
 		t.Errorf("trusted by default: %s", listed(l.Skills))
 	}
-	if l, _ := (PiG{}).List(ctx, deeper); len(sharedOf(l)) != 3 {
+	if l, _ := skills.List(ctx, deeper); len(sharedOf(l)) != 3 {
 		t.Errorf("shared: %s", listed(sharedOf(l)))
 	}
 }
@@ -101,7 +105,7 @@ func TestLinkedRootsLeftOut(t *testing.T) {
 	if err := os.Symlink(elsewhere, filepath.Join(top, "sub", ".agents")); err != nil {
 		t.Fatal(err)
 	}
-	if l, _ := (PiG{}).List(context.Background(), deeper); strings.Contains(listed(l.Skills), "victim") {
+	if l, _ := skills.List(context.Background(), deeper); strings.Contains(listed(l.Skills), "victim") {
 		t.Errorf("listed through a link: %s", listed(l.Skills))
 	}
 }
@@ -114,67 +118,97 @@ func TestSetSkillOn(t *testing.T) {
 	testcheck.Write(t, filepath.Join(agent, "trust.json"), `{"`+top+`": true}`)
 	testcheck.Write(t, filepath.Join(agent, "settings.json"), `{"theme": "dark", "skills": ["!every*"]}`)
 	ctx := context.Background()
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err != nil {
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "release", false); err != nil {
 		t.Fatal(err)
 	}
-	b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json"))
+	b, _ := os.ReadFile(filepath.Join(deeper, ".pi", "settings.json"))
 	if want := "{\n  \"skills\": [\"-skills/release\"]\n}\n"; string(b) != want {
 		t.Errorf("project settings:\n%s", b)
 	}
-	l, _ := PiG{}.List(ctx, deeper)
+	l, _ := skills.List(ctx, deeper)
 	if g := listed(l.Skills); !strings.Contains(g, "shared release off") || !strings.Contains(g, "shared everyday off") {
 		t.Errorf("after: %s", g)
 	}
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "everyday", true); err == nil || !strings.Contains(err.Error(), "change it there") {
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "everyday", true); err == nil || !strings.Contains(err.Error(), "change it there") {
 		t.Errorf("a pattern decides: %v", err)
 	}
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != "{\n  \"skills\": []\n}\n" {
+	if b, _ := os.ReadFile(filepath.Join(deeper, ".pi", "settings.json")); string(b) != "{\n  \"skills\": []\n}\n" {
 		t.Errorf("on again: %s", b)
 	}
 
 	// A project file of its own shape: only the skills value changes, every
 	// other byte kept; an old absolute entry goes; no path of yours goes in.
 	own := "{\"theme\":\"light\",   \"skills\" : [\"!old*\", \"-" + filepath.Join(top, ".agents", "skills", "release") + "\"],\n\t\"z\": {\"a\": 1}\n}"
-	testcheck.Write(t, filepath.Join(deeper, ".pig", "settings.json"), own)
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
+	testcheck.Write(t, filepath.Join(deeper, ".pi", "settings.json"), own)
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "release", true); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != "{\"theme\":\"light\",   \"skills\" : [\"!old*\"],\n\t\"z\": {\"a\": 1}\n}" {
+	if b, _ := os.ReadFile(filepath.Join(deeper, ".pi", "settings.json")); string(b) != "{\"theme\":\"light\",   \"skills\" : [\"!old*\"],\n\t\"z\": {\"a\": 1}\n}" {
 		t.Errorf("kept:\n%s", b)
 	}
-	testcheck.Write(t, filepath.Join(deeper, ".pig", "settings.json"), "{\"theme\": \"light\"}")
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err != nil {
+	testcheck.Write(t, filepath.Join(deeper, ".pi", "settings.json"), "{\"theme\": \"light\"}")
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "release", false); err != nil {
 		t.Fatal(err)
 	}
-	b, _ = os.ReadFile(filepath.Join(deeper, ".pig", "settings.json"))
+	b, _ = os.ReadFile(filepath.Join(deeper, ".pi", "settings.json"))
 	if string(b) != "{\"theme\": \"light\",\n  \"skills\": [\"-skills/release\"]}" || strings.Contains(string(b), top) {
 		t.Errorf("added:\n%s", b)
 	}
 	for _, bad := range []string{"{\"skills\": [], \"skills\": []}", "[1]", "{\"skills\": \"x\"}"} {
-		testcheck.Write(t, filepath.Join(deeper, ".pig", "settings.json"), bad)
-		if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
+		testcheck.Write(t, filepath.Join(deeper, ".pi", "settings.json"), bad)
+		if err := skills.SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
 			t.Errorf("%s: not refused", bad)
 		}
-		if b, _ := os.ReadFile(filepath.Join(deeper, ".pig", "settings.json")); string(b) != bad {
+		if b, _ := os.ReadFile(filepath.Join(deeper, ".pi", "settings.json")); string(b) != bad {
 			t.Errorf("%s changed: %s", bad, b)
 		}
 	}
-	if err := os.Remove(filepath.Join(deeper, ".pig", "settings.json")); err != nil {
+	if err := os.Remove(filepath.Join(deeper, ".pi", "settings.json")); err != nil {
 		t.Fatal(err)
 	}
 
-	// A linked .pig is refused.
+	// A linked .pi is refused.
 	elsewhere := t.TempDir()
-	if err := os.RemoveAll(filepath.Join(deeper, ".pig")); err != nil {
+	if err := os.RemoveAll(filepath.Join(deeper, ".pi")); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(elsewhere, filepath.Join(deeper, ".pig")); err != nil {
+	if err := os.Symlink(elsewhere, filepath.Join(deeper, ".pi")); err != nil {
 		t.Fatal(err)
 	}
-	if err := (PiG{}).SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
-		t.Error("wrote through a linked .pig")
+	if err := skills.SetSkillOn(ctx, deeper, "shared", "release", false); err == nil {
+		t.Error("wrote through a linked .pi")
+	}
+}
+
+// PiG reads the same rules from its own folders and variable.
+func TestPiGHasItsOwnFolders(t *testing.T) {
+	agent, home, repo := t.TempDir(), t.TempDir(), git.RealPath(t.TempDir())
+	t.Setenv("PIG_CODING_AGENT_DIR", agent)
+	t.Setenv("HOME", home)
+	skill(t, filepath.Join(agent, "skills"), "mine")
+	skill(t, filepath.Join(repo, ".pig", "skills"), "theirs")
+	skill(t, filepath.Join(repo, ".pi", "skills"), "other")
+	p := Skills{Flavor: pi.PiG}
+	ctx := context.Background()
+	l, err := p.List(ctx, repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := listed(l.Skills), "project theirs untrusted|user mine on"; got != want {
+		t.Errorf("skills = %q, want %q", got, want)
+	}
+	if err := p.SetSkillOn(ctx, repo, "project", "theirs", false); err == nil || !strings.Contains(err.Error(), "/trust in pig") {
+		t.Errorf("switching an untrusted skill: %v", err)
+	}
+	testcheck.Write(t, filepath.Join(agent, "trust.json"), `{"`+repo+`": true}`)
+	if err := p.SetSkillOn(ctx, repo, "project", "theirs", false); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(repo, ".pig", "settings.json"))
+	if err != nil || !strings.Contains(string(b), "-skills/theirs") {
+		t.Errorf(".pig/settings.json = %s, %v", b, err)
 	}
 }

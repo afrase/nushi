@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"context"
@@ -13,15 +13,16 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 )
 
-// bridge is Nushi's ACP agent for PiG: it speaks ACP to the client and
-// runs each session on a `pig --mode rpc` of its own.
+// bridge is Nushi's ACP agent for Pi: it speaks ACP to the client and
+// runs each session on a `pi --mode rpc` of its own.
 type bridge struct {
 	acp.UnimplementedAgent
 	client  *acp.ClientConn
 	ctx     context.Context //nolint:containedctx // ends with the client's connection
 	spawn   Spawn
 	dirs    Dirs
-	version string // `pig --version`'s
+	flavor  Flavor
+	version string // `pi --version`'s
 	problem error
 
 	elicits atomic.Bool // the client shows forms (questions)
@@ -30,21 +31,22 @@ type bridge struct {
 	sessions map[string]*session
 }
 
-// Config is what the bridge needs of PiG: how to start it, where its
+// Config is what the bridge needs of Pi: how to start it, where its
 // sessions are, and its version.
 type Config struct {
+	Flavor  Flavor
 	Spawn   Spawn
 	Dirs    Dirs
 	Version string
-	// Problem, if set, is why PiG can't run (not installed, too old):
+	// Problem, if set, is why Pi can't run (not installed, too old):
 	// initialize fails with it.
 	Problem error
 }
 
 // Serve runs the bridge on r and w (the client's) until the client goes,
-// then stops every pig.
+// then stops every pi.
 func Serve(r io.Reader, w io.Writer, cfg Config) {
-	b := &bridge{spawn: cfg.Spawn, dirs: cfg.Dirs, version: cfg.Version, problem: cfg.Problem, sessions: map[string]*session{}}
+	b := &bridge{flavor: cfg.Flavor, spawn: cfg.Spawn, dirs: cfg.Dirs, version: cfg.Version, problem: cfg.Problem, sessions: map[string]*session{}}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	b.ctx = ctx
@@ -89,9 +91,6 @@ func (b *bridge) forget(s *session) {
 	}
 }
 
-// AgentName is the bridge's name in its initialize answer.
-const AgentName = "nushi-pig"
-
 func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp.InitializeResponse, error) {
 	if c := req.ClientCapabilities; c != nil && c.Elicitation != nil && c.Elicitation.Form != nil {
 		b.elicits.Store(true)
@@ -101,7 +100,7 @@ func (b *bridge) Initialize(_ context.Context, req *acp.InitializeRequest) (*acp
 	}
 	return &acp.InitializeResponse{
 		ProtocolVersion: acp.LatestProtocolVersion,
-		AgentInfo:       &acp.Implementation{Name: AgentName, Title: "PiG", Version: b.version},
+		AgentInfo:       &acp.Implementation{Name: b.flavor.AgentName(), Title: b.flavor.Title, Version: b.version},
 		AgentCapabilities: &acp.AgentCapabilities{
 			LoadSession:        true,
 			PromptCapabilities: &acp.PromptCapabilities{Image: true, EmbeddedContext: true},
@@ -138,8 +137,8 @@ func (b *bridge) LoadSession(ctx context.Context, req *acp.LoadSessionRequest) (
 }
 
 func (b *bridge) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
-	pig, _ := req.Meta["pig"].(map[string]any)
-	after, _ := pig["afterMessage"].(string)
+	pi, _ := req.Meta["pi"].(map[string]any)
+	after, _ := pi["afterMessage"].(string)
 	return b.fork(ctx, req.SessionID, req.Cwd, after)
 }
 
@@ -184,7 +183,7 @@ func (b *bridge) SetSessionConfigOption(ctx context.Context, req *acp.SetSession
 		return nil, err
 	}
 	if req.ValueID == nil {
-		return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: "PiG's options take a value"}
+		return nil, &acp.Error{Code: acp.ErrorCodeInvalidParams, Message: "options take a value"}
 	}
 	opts, err := s.setOption(ctx, string(req.ConfigID), string(req.ValueID.Value))
 	if err != nil {
@@ -230,14 +229,14 @@ func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMe
 	return b.UnimplementedAgent.ExtMethod(ctx, method, params)
 }
 
-// openTimeout bounds pig's start and a session's replay.
+// openTimeout bounds pi's start and a session's replay.
 var openTimeout = time.Minute
 
 // afterAnswer is about how long the client takes to know a session it got
 // in an answer, so it doesn't drop the session's first updates.
 const afterAnswer = 200 * time.Millisecond
 
-// open starts pig in cwd on a new session, or on the session in file,
+// open starts pi in cwd on a new session, or on the session in file,
 // whose conversation then goes to the client first (replay).
 func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*session, []acp.SessionConfigOption, error) {
 	var args []string
@@ -258,8 +257,8 @@ func (b *bridge) open(ctx context.Context, cwd, file string, replay bool) (*sess
 	return s, opts, nil
 }
 
-// start makes a session of the one pig holds: its options, and when
-// replay its conversation, before it hands the client pig's events. Its
+// start makes a session of the one pi holds: its options, and when
+// replay its conversation, before it hands the client pi's events. Its
 // commands and how full its context is follow.
 func (b *bridge) start(ctx context.Context, p *proc, cwd string, replay bool) (*session, []acp.SessionConfigOption, error) {
 	var st state

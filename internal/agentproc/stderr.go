@@ -89,7 +89,7 @@ func (s *stderrLines) emit() {
 		s.inKey = maxKeyLines
 	}
 	level := slog.LevelInfo
-	if rest, ok := strings.CutPrefix(line, DebugPrefix); ok { // a bridge of Nushi's own (internal/pig)
+	if rest, ok := strings.CutPrefix(line, DebugPrefix); ok { // a bridge of Nushi's own (internal/pi)
 		if !s.log.Enabled(context.Background(), slog.LevelDebug) {
 			return
 		}

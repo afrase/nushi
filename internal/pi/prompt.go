@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"fmt"
@@ -10,15 +10,15 @@ import (
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// image is an image as pig's prompt takes it: base64, with its type.
+// image is an image as pi's prompt takes it: base64, with its type.
 type image struct {
 	Type     string `json:"type"`
 	Data     string `json:"data"`
 	MimeType string `json:"mimeType"`
 }
 
-// flatten turns a prompt into pig's message and images: a file becomes an
-// `@path` mention, as in PiG's own editor, which the model reads with its
+// flatten turns a prompt into pi's message and images: a file becomes an
+// `@path` mention, as in Pi's own editor, which the model reads with its
 // tools; an embedded text is quoted.
 func flatten(blocks []acp.ContentBlock) (string, []image) {
 	var b strings.Builder

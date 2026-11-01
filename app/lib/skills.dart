@@ -270,6 +270,9 @@ String _about(String agent, String from) => switch ((agent, from)) {
     'In this folder: .omp/skills, Claude’s .claude/skills and .agent/skills '
         'here and above it, up to the repository’s root; the nearest '
         '.codex/skills; .github/skills.',
+  ('pi', 'user') => 'In every folder: skills in Pi’s agent folder.',
+  ('pi', 'project') =>
+    'In this folder only: .pi/skills, once Pi trusts the folder.',
   ('pig', 'user') => 'In every folder: skills in PiG’s agent folder.',
   ('pig', 'project') =>
     'In this folder only: .pig/skills, once PiG trusts the folder.',

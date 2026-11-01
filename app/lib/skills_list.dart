@@ -114,7 +114,8 @@ String switchWhere(String agent, Skill s) => switch (agent) {
   'claude' when s.source == 'user' => 'everywhere',
   'claude' => 'in this project',
   'codex' => 'in config.toml',
-  'pig' when s.source == 'user' || s.everywhere => 'in your settings',
+  'pi' || 'pig' when s.source == 'user' || s.everywhere => 'in your settings',
+  'pi' => 'in .pi/settings.json',
   'pig' => 'in .pig/settings.json',
   _ => 'by name, everywhere',
 };

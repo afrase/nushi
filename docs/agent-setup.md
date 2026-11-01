@@ -1,6 +1,6 @@
 # Agents
 
-Nushi runs five coding agents over the [Agent Client Protocol](https://agentclientprotocol.com): Claude, Codex, Ante, oh-my-pi and PiG. Each is your own CLI, with its own login, settings and history. Nushi never brings a copy of one ([ADR 0037](adr/0037-agents-you-set-up.md)).
+Nushi runs six coding agents over the [Agent Client Protocol](https://agentclientprotocol.com): Claude, Codex, Ante, oh-my-pi, Pi and PiG. Each is your own CLI, with its own login, settings and history. Nushi never brings a copy of one ([ADR 0037](adr/0037-agents-you-set-up.md)).
 
 ## Finding them
 
@@ -64,6 +64,21 @@ bun add -g @oh-my-pi/pi-coding-agent@18.12.6
 
 - An omp chat resumes in a terminal with `omp --resume <session id>`. Nushi can't delete an omp session's history.
 
+### Pi
+
+[Pi](https://pi.dev) runs through the same bridge as PiG, `nushid pi-acp`, which runs your `pi --mode rpc` per session ([ADR 0078](adr/0078-pi-and-pig-share-a-bridge.md)). It needs Node 22.19 or newer.
+
+```bash
+curl -fsSL https://pi.dev/install.sh | sh     # or: npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+```
+
+Nushi follows Pi 1.4.0 and needs 0.80.4 or newer; Settings › Agents then says Ready.
+
+- It uses Pi's own settings, providers and keys in `~/.pi/agent` (or `$PI_CODING_AGENT_DIR`).
+- **Pi has no permission prompts**: its tools run without asking.
+- A folder's `.pi` settings, extensions and MCP servers load only once you've trusted the folder in Pi (`/trust` in a terminal `pi`).
+- A Pi chat resumes in a terminal with `pi --session <session id>`. Delete moves its session file to the Trash, as Pi does.
+
 ### PiG
 
 [PiG](https://pi-in-go.dev) runs through Nushi's own bridge, `nushid pig-acp`, which runs your `pig --mode rpc` per session ([ADR 0039](adr/0039-our-own-bridge-for-pig.md)). Nothing to set up once `pig` is on your login shell's `PATH`:
@@ -102,4 +117,4 @@ New chat also opens a session started elsewhere, such as `claude` or `codex` in 
 
 - Press → (or "Sessions →" on the highlighted agent's row) to list the agent's sessions in the folder; from No folder, every folder's. Enter opens one as a chat.
 - The agent replays it, and Nushi keeps its own copy of what shows from then on, as for every chat. It goes on in the same history the terminal resumes.
-- A session still open elsewhere is marked. Claude and Ante let both write (Nushi asks first); Codex and oh-my-pi only one. PiG leaves no mark, and both write.
+- A session still open elsewhere is marked. Claude and Ante let both write (Nushi asks first); Codex and oh-my-pi only one. Pi and PiG leave no mark, and both write.

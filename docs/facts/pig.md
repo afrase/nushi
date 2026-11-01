@@ -4,7 +4,7 @@ What Nushi depends on, as seen when it was built against the versions named belo
 
 ## Agent facts (PiG 0.5.3, through the bridge)
 
-What the bridge (`internal/pig`) depends on, from driving `pig --mode rpc` (the darwin-arm64 release, checked against its `SHA256SUMS`, in a temp `HOME`) and from PiG's source and bundled docs (`pig docs`; `coding/cli/rpc_*.go`). RPC mode is Pi 1.4.0's protocol.
+What the bridge (`internal/pi`) depends on, from driving `pig --mode rpc` (the darwin-arm64 release, checked against its `SHA256SUMS`, in a temp `HOME`) and from PiG's source and bundled docs (`pig docs`; `coding/cli/rpc_*.go`). RPC mode is Pi 1.4.0's protocol.
 - `pig --version` prints `0.5.3+1.4.0.74f46864` (PiG, then the Pi it ports and Pi's commit) and writes nothing. Install: `curl -fsSL https://pi-in-go.dev/install.sh | sh`, `npm i -g @pi-in-go/pig`, or a GitHub release.
 - Framing: a command per line, with an `id` the response repeats (`{"type":"response","id","command","success","data"|"error"}`); events carry no id. Responses can come out of order. A line that isn't JSON answers `"command":"parse"` without an id; an unknown command `success:false`. Closing stdin ends RPC mode after it cancels what runs.
 - `prompt` (`message`, `images: [{type:"image", data, mimeType}]`) answers once accepted, before the run: `disposition` `started`, or `handled` when an extension's command took it (the answer comes after the command ends, its dialogs included). A run ends with `agent_settled {aborted}`; several `agent_end`s can come before it (retries, compaction). A second prompt during a run is refused without `streamingBehavior`.

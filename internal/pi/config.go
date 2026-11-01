@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 )
 
-// state is what pig's get_state says of the session it holds.
+// state is what pi's get_state says of the session it holds.
 type state struct {
 	SessionID   string `json:"sessionId"`
 	SessionFile string `json:"sessionFile"`
@@ -21,9 +21,9 @@ type state struct {
 	ThinkingLevel string `json:"thinkingLevel"`
 }
 
-// options are the session's model (every model pig has a key for, as
-// provider/id) and thinking level (the model's levels), as pig has them
-// now; st is pig's state if the caller has it.
+// options are the session's model (every model pi has a key for, as
+// provider/id) and thinking level (the model's levels), as pi has them
+// now; st is pi's state if the caller has it.
 func (s *session) options(ctx context.Context, st *state) ([]acp.SessionConfigOption, error) {
 	if st == nil {
 		st = &state{}
@@ -70,7 +70,7 @@ func (s *session) options(ctx context.Context, st *state) ([]acp.SessionConfigOp
 	return out, nil
 }
 
-// setOption changes the model or the thinking level, which pig keeps in
+// setOption changes the model or the thinking level, which pi keeps in
 // the session.
 func (s *session) setOption(ctx context.Context, id, value string) ([]acp.SessionConfigOption, error) {
 	switch id {
@@ -92,10 +92,10 @@ func (s *session) setOption(ctx context.Context, id, value string) ([]acp.Sessio
 	return s.options(ctx, nil)
 }
 
-// optionsChanged tells the client the session's options, which pig
+// optionsChanged tells the client the session's options, which pi
 // changed on its own.
 //
-//nolint:contextcheck // asked on the bridge's connection, after the change pig reported
+//nolint:contextcheck // asked on the bridge's connection, after the change pi reported
 func (b *bridge) optionsChanged(s *session) {
 	ctx, cancel := context.WithTimeout(b.ctx, 10*time.Second)
 	defer cancel()
@@ -105,7 +105,7 @@ func (b *bridge) optionsChanged(s *session) {
 }
 
 // usage tells the client how full the session's context is, and what it
-// cost so far (pig's session stats).
+// cost so far (pi's session stats).
 //
 //nolint:contextcheck // asked on the bridge's connection, after the turn that ended
 func (b *bridge) usage(s *session) {
@@ -122,7 +122,7 @@ func (b *bridge) usage(s *session) {
 		return
 	}
 	s.mu.Lock()
-	used := s.estimate // PiG has no count right after a compaction
+	used := s.estimate // Pi has no count right after a compaction
 	s.mu.Unlock()
 	if st.Context.Tokens != nil {
 		used = *st.Context.Tokens
@@ -135,7 +135,7 @@ func (b *bridge) usage(s *session) {
 
 // commands tells the client the session's slash commands: the bridge's
 // own (ownCommands), then extensions', prompt templates' and skills' (the
-// rest of pig's own, the terminal's, aren't commands in RPC mode).
+// rest of pi's own, the terminal's, aren't commands in RPC mode).
 //
 //nolint:contextcheck // asked on the bridge's connection, after the session's answer
 func (b *bridge) commands(s *session) {

@@ -6,10 +6,10 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 
 | Term | Meaning | Code | ADR |
 |---|---|---|---|
-| **Agent** | A coding agent Nushi runs: Claude, Codex, Ante, PiG or oh-my-pi, each your own CLI with its own login, settings and history. | `features/agents`, proto `Agent` | 0037 |
+| **Agent** | A coding agent Nushi runs: Claude, Codex, Ante, Pi, PiG or oh-my-pi, each your own CLI with its own login, settings and history. | `features/agents`, proto `Agent` | 0037 |
 | **Harness** | The agent's own program and rules (Claude Code, Codex…). Not in the UI, which says agent. It owns permissions and history. | `chats.Harness`, `claude.Harness`… | 0007, 0008, 0077 |
 | **Adapter** | The ACP program Nushi sets up for an agent that needs one (Claude's, Codex's), from Nushi's own lockfile, into the data folder. Set up, Update, Remove. | `Adapter`, `SetUpAgent`, `internal/claude/adapter` | 0037 |
-| **Bridge** | Nushi's own ACP translator for an agent without ACP: `nushid ante-acp`, `nushid pig-acp`. | `internal/ante`, `internal/pig` | 0030, 0039 |
+| **Bridge** | Nushi's own ACP translator for an agent without ACP: `nushid ante-acp`, `nushid pi-acp`, `nushid pig-acp`. | `internal/ante`, `internal/pi` | 0030, 0039, 0078 |
 | **Go agent** | Nushi's own ACP agent for Claude, run in place of its adapter on your `claude`, with no Node and nothing to set up: Settings › Agents' "Use Nushi's Go agent". | `claudeacp`, `nushid claude-acp`, `claude_go_agent`, `Agent.go_agent`, `agents.Agent.Own` | 0066 |
 | **ACP** | The Agent Client Protocol, how the daemon talks to agents. | `github.com/afrase/acp-go` | 0041 |
 | **Chat** | A conversation with an agent as Nushi shows it: the agent's session plus what Nushi keeps (title, folder, worktree, picks). | `model.ChatRecord` (the record), `model.Chat` (a snapshot), proto `Chat` | 0008 |

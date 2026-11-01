@@ -1,4 +1,4 @@
-package pig
+package pi
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// PiG's built-in tools are read, bash, edit, write, grep, find and ls;
+// Pi's built-in tools are read, bash, edit, write, grep, find and ls;
 // extensions and MCP servers add their own.
 func kindOf(name string) acp.ToolKind {
 	switch name {
