@@ -1,6 +1,7 @@
 package knownagents
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
@@ -17,7 +18,7 @@ func TestEveryAgentIsWhole(t *testing.T) {
 	for _, a := range all {
 		info, n := a.Harness.Info(), a.Agent.Name
 		names = append(names, n)
-		if info.Name != n || info.Title != a.Agent.Title || a.Agent.Title == "" || a.Local.Info() != info {
+		if info.Name != n || info.Title != a.Agent.Title || a.Agent.Title == "" || !reflect.DeepEqual(a.Local.Info(), info) {
 			t.Errorf("%s: harness %q %q, agent %q", n, info.Name, info.Title, a.Agent.Title)
 		}
 		if a.Skills == nil || a.Trust == nil || info.Resume == "" {
@@ -25,6 +26,9 @@ func TestEveryAgentIsWhole(t *testing.T) {
 		}
 		if takes := n == "claude" || n == "codex"; info.ClientMCP != takes {
 			t.Errorf("%s: ClientMCP %v, want %v (ADR 0043)", n, info.ClientMCP, takes)
+		}
+		if claudes := n == "claude"; (info.InitMeta != nil) != claudes || (info.SessionMeta != nil) != claudes || (info.UltracodeMeta != nil) != claudes {
+			t.Errorf("%s: _meta %v, %v, %v, only Claude's has any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
 		}
 	}
 	if !slices.Equal(names, []string{"claude", "codex", "ante", "omp", "pig"}) {
@@ -34,7 +38,7 @@ func TestEveryAgentIsWhole(t *testing.T) {
 
 // capabilities are the harness interfaces, by name.
 var capabilities = map[string]func(chats.Harness) bool{
-	"Meta": has[chats.Meta], "Forker": has[chats.Forker], "ToolReader": has[chats.ToolReader],
+	"Forker": has[chats.Forker], "ToolReader": has[chats.ToolReader],
 	"OtherReader": has[chats.OtherReader], "DefaultReader": has[chats.DefaultReader], "Transcript": has[chats.Transcript],
 	"Subagents": has[chats.Subagents], "BackgroundTasks": has[chats.BackgroundTasks], "ContextCommander": has[chats.ContextCommander],
 	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader], "HistoryCopier": has[chats.HistoryCopier],
@@ -60,7 +64,7 @@ func listed(h chats.Harness) []string {
 // tests run Harness, so they can never read the owner's files.
 func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
-		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "Meta", "OtherReader", "Subagents", "ToolReader", "Transcript"},
+		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "Subagents", "ToolReader", "Transcript"},
 			[]string{"ForkFinder", "HistoryChecker", "HistoryCopier", "MessageDater", "OpenFinder"}},
 		"codex": {[]string{"Forker", "GoneReader", "HistoryCopier", "OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
 		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader"}, []string{"MessageDater", "OpenFinder"}},

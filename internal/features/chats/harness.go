@@ -21,20 +21,6 @@ type Harness interface {
 	Info() model.HarnessInfo
 }
 
-// Meta is the agent's _meta beyond ACP.
-type Meta interface {
-	// InitMeta goes in initialize's client capabilities.
-	InitMeta() map[string]any
-	// SessionMeta goes in session/new's, session/load's and session/fork's
-	// _meta.
-	SessionMeta() map[string]any
-	// UltracodeMeta joins SessionMeta (merged, key by key) in the sessions
-	// of a chat with Ultracode on: the agent's standing multi-agent
-	// workflows (Claude Code's ultracode). Nil when the agent has none:
-	// the chat then has no Ultracode option.
-	UltracodeMeta() map[string]any
-}
-
 // Forker forks a session at a message: given the agent's initialize answer,
 // ForkAt returns session/fork's _meta to fork a session at one of the agent's
 // messages (its ACP messageId), the message included; nil when the agent
@@ -160,12 +146,12 @@ type GoneReader interface {
 	Gone(error) bool
 }
 
-// HistoryCopier can move sessions to another folder: History copies the
+// HistoryCopier can move sessions to another folder: CopyHistory copies the
 // agent's own record of a session from one folder's history into another's,
 // where the agent can fork it with the other folder as its cwd, and returns a
 // function that removes the copy again.
 type HistoryCopier interface {
-	History(sessionID, from, to string) (remove func() error, err error)
+	CopyHistory(sessionID, from, to string) (remove func() error, err error)
 }
 
 // The agent's own files and processes on this Mac: the interfaces below are

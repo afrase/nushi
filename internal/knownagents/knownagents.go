@@ -31,6 +31,7 @@ import (
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/features/trust"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/omp"
 	"github.com/afrase/nushi/internal/ompskills"
 	"github.com/afrase/nushi/internal/omptrust"
@@ -41,9 +42,8 @@ import (
 // Harness is what chats run of an agent, and how it starts.
 type Harness interface {
 	chats.Harness
-	// Start starts it for a chat, as Run says, from dir (the daemon's
-	// folder).
-	Start(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error)
+	// Start starts it for a chat, as r says, from dir (the daemon's folder).
+	Start(dir string, r model.AgentRun, h acp.Client, log *slog.Logger) (*agentproc.Agent, error)
 }
 
 // Agent is one agent Nushi runs.
@@ -64,7 +64,7 @@ type Agent struct {
 	// MCP is its MCP servers' config, which Settings shows and changes;
 	// nil: none. run is how a chat would start it, for a check that runs
 	// the agent.
-	MCP func(run func() (agents.Run, error)) mcp.Config
+	MCP func(run func() (model.AgentRun, error)) mcp.Config
 }
 
 // All is every agent, in the order they're listed, the default (Claude)
@@ -82,7 +82,7 @@ func All(projects string, claudeGo func() bool) []Agent {
 				// The Go agent needs no Node, nothing set up and no version pinned.
 				Own: func() bool { return claude.GoForced() || claudeGo() }},
 			Skills: claudeskills.Claude{}, Trust: claudetrust.Trust{},
-			MCP: func(func() (agents.Run, error)) mcp.Config { return claudemcp.Claude{} },
+			MCP: func(func() (model.AgentRun, error)) mcp.Config { return claudemcp.Claude{} },
 		},
 		{
 			Harness: codex.Harness{}, Local: codex.Local{},
@@ -96,7 +96,7 @@ func All(projects string, claudeGo func() bool) []Agent {
 			Skills: anteskills.Ante{}, Trust: antetrust.Trust{},
 			// Its servers are checked by a throwaway `ante serve`, run as a
 			// chat's would be.
-			MCP: func(run func() (agents.Run, error)) mcp.Config {
+			MCP: func(run func() (model.AgentRun, error)) mcp.Config {
 				return antemcp.Ante{Spawn: func() (ante.Spawn, error) {
 					r, err := run()
 					if err != nil {

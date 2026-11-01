@@ -72,7 +72,7 @@ func (fakeHarness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "fake", NamesSessions: true}
 }
 
-func (h fakeHarness) History(id, from, to string) (func() error, error) {
+func (h fakeHarness) CopyHistory(id, from, to string) (func() error, error) {
 	return h.copyFunc(id, from, to)
 }
 

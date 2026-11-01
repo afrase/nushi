@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_general.dart';
@@ -22,6 +23,7 @@ import 'package:url_launcher/url_launcher.dart';
 class AgentsPage extends StatefulWidget {
   const new(
     this.client, {
+    required this.daemonApi,
     super.key,
     this.marked,
     this.settings,
@@ -29,6 +31,9 @@ class AgentsPage extends StatefulWidget {
   });
 
   final NushiServiceClient client;
+
+  /// The daemon's API version.
+  final int daemonApi;
   final String? marked;
 
   /// The daemon's settings; null until it said.
@@ -103,7 +108,10 @@ class _AgentsPageState extends State<AgentsPage> {
                       ? null
                       : () => _remove(a),
                 ),
-                if (a.goAgent) ?_goAgent(),
+                if (widget.daemonApi < agentFactsApi
+                    ? a.name == 'claude'
+                    : a.goAgent)
+                  ?_goAgent(),
               ],
             ],
           ),

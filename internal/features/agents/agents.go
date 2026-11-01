@@ -242,27 +242,17 @@ func numbers(v string) [3]int {
 	return out
 }
 
-// Run is what starting an agent takes: its CLI, and with an adapter, the
-// adapter's program and the Node on PATH that runs it; the environment
-// it starts with; and whether it runs through Nushi's own agent instead
-// of its adapter (Agent.Own), decided once here so the start follows it.
-type Run struct {
-	CLI, Program, Node string
-	Env                []string
-	Own                bool
-}
-
 // Run finds what starting the agent named name takes, or says why it
 // can't start. It asks no CLI anything, so it's quick.
-func (s *Service) Run(name string) (Run, error) {
+func (s *Service) Run(name string) (model.AgentRun, error) {
 	a, ok := s.agent(name)
 	if !ok {
-		return Run{}, fmt.Errorf("Nushi doesn't know the agent %q", name)
+		return model.AgentRun{}, fmt.Errorf("Nushi doesn't know the agent %q", name)
 	}
 	// An agent with an Own has an adapter to run instead; none now means
 	// Own said so when agent asked it (asked once, so a change meanwhile
 	// can't split the decision).
-	r := Run{CLI: s.lookPath(a.CLI, a.Also), Env: s.Environ(), Own: a.Own != nil && a.Adapter == nil}
+	r := model.AgentRun{CLI: s.lookPath(a.CLI, a.Also), Env: s.Environ(), Own: a.Own != nil && a.Adapter == nil}
 	if a.Adapter != nil {
 		r.Node = s.lookPath("node", nil)
 	}

@@ -27,7 +27,6 @@ import (
 
 	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/agentproc"
-	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -41,9 +40,31 @@ type Harness struct{}
 // as it ends. The adapter shows subagents as sessions of their own (ACP's
 // subagents RFD) to a client that says it can take them: each subagent's
 // end, why it ended, and a stop of its own (session/cancel on its session).
+//
+// Its _meta: InitMeta has the adapter send a subagent's text and thinking too.
+// SessionMeta is the host options the adapter passes Claude Code:
+// perTaskStopAffordance, as Claude Code's terminal has it, makes stopping a
+// turn (session/cancel) stop only the turn, as without it Claude Code's
+// interrupt kills the background subagents too, which no update then tells;
+// CLAUDE_CODE_REPORT_FINDINGS in Claude Code's environment makes its
+// /code-review report through its ReportFindings tool, which the transcript
+// draws as a card, instead of printing JSON. UltracodeMeta is Claude Code's
+// ultracode (standing multi-agent workflow orchestration) for the session,
+// through host options' settings, which the adapter gives Claude Code as its
+// programmatic settings (as --settings would): it takes effect only with
+// workflows on and a model that supports it, and the adapter keeps it on
+// across effort changes.
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
-		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, Subagents: true, Redelete: 3 * time.Second}
+		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, SubagentSessions: true, Redelete: 3 * time.Second,
+		InitMeta: map[string]any{"subagent-transcript": true},
+		SessionMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+			"perTaskStopAffordance": true,
+			"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
+		}}},
+		UltracodeMeta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+			"settings": map[string]any{"ultracode": true},
+		}}}}
 }
 
 // Adapter is Claude Code's ACP adapter, as Nushi pins it: adapter/'s
@@ -68,7 +89,7 @@ var adapterFiles embed.FS
 // login shell's, ADR 0048). It runs in dir (the daemon's own folder); a
 // chat's folder reaches the agent only as the session's cwd. Its stderr
 // goes to log.
-func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	if r.Own {
 		return startGo(dir, r.CLI, r.Env, client, log)
 	}
@@ -129,36 +150,6 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 		return "yes"
 	}
 	return "no"
-}
-
-// InitMeta is initialize's client _meta: the adapter then sends a
-// subagent's text and thinking too.
-func (Harness) InitMeta() map[string]any { return map[string]any{"subagent-transcript": true} }
-
-// SessionMeta is the session requests' _meta, the host options the adapter
-// passes Claude Code. perTaskStopAffordance, as Claude Code's terminal has
-// it, makes stopping a turn (session/cancel) stop only the turn: without
-// it Claude Code's interrupt kills the background subagents too, which no
-// update then tells. CLAUDE_CODE_REPORT_FINDINGS in Claude Code's
-// environment makes its /code-review report through its ReportFindings
-// tool, which the transcript draws as a card, instead of printing JSON.
-func (Harness) SessionMeta() map[string]any {
-	return map[string]any{"claudeCode": map[string]any{"options": map[string]any{
-		"perTaskStopAffordance": true,
-		"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
-	}}}
-}
-
-// UltracodeMeta joins SessionMeta for a chat with Ultracode on: Claude
-// Code's ultracode (standing multi-agent workflow orchestration) for the
-// session, through host options' settings, which the adapter gives Claude
-// Code as its programmatic settings (as --settings would). It takes
-// effect only with workflows on and a model that supports it; the adapter
-// keeps it on across effort changes.
-func (Harness) UltracodeMeta() map[string]any {
-	return map[string]any{"claudeCode": map[string]any{"options": map[string]any{
-		"settings": map[string]any{"ultracode": true},
-	}}}
 }
 
 // TurnDone says a usage update is the result of the user's turn: the one

@@ -16,7 +16,7 @@ import (
 // noCopy is a HistoryCopier with nothing to copy.
 type noCopy struct{}
 
-func (noCopy) History(string, string, string) (func() error, error) {
+func (noCopy) CopyHistory(string, string, string) (func() error, error) {
 	return func() error { return nil }, nil
 }
 

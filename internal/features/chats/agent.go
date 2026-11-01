@@ -101,9 +101,9 @@ func (c *chat) forkSession(ctx context.Context, agent Agent, sid, folder string,
 // and UltracodeMeta merged in when the chat has Ultracode on), with also's
 // keys.
 func (c *chat) sessionMeta(also map[string]any) map[string]any {
-	meta := c.kind.sessionMeta
+	meta := c.kind.SessionMeta
 	if c.ultracode.Load() {
-		meta = merged(meta, c.kind.ultracodeMeta)
+		meta = merged(meta, c.kind.UltracodeMeta)
 	}
 	if meta == nil {
 		return also
@@ -155,9 +155,9 @@ func initialize(ctx context.Context, k *kind, h acp.Client, log *slog.Logger) (A
 	}
 	caps := &acp.ClientCapabilities{
 		Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
-		Meta:        k.initMeta,
+		Meta:        k.InitMeta,
 	}
-	if k.Subagents {
+	if k.SubagentSessions {
 		caps.Subagents = &acp.SubagentCapabilities{}
 	}
 	init, err := agent.Initialize(ctx, &acp.InitializeRequest{

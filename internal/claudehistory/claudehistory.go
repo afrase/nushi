@@ -40,14 +40,14 @@ func Projects() (string, error) {
 	return filepath.Join(claude.ConfigDir(), "projects"), nil
 }
 
-// History copies session id's transcript (<id>.jsonl) from folder from's
+// CopyHistory copies session id's transcript (<id>.jsonl) from folder from's
 // history into folder to's, and returns a function that removes the copy
 // again. The original stays. When both folders have the same history
 // folder there is nothing to copy (or remove); a transcript already in to's
 // history is never replaced, unless it is the start of this one: a copy a
 // move left when the daemon died before removing it. The copy is streamed,
 // and replaces at once (atomicfile).
-func (l Local) History(id, from, to string) (remove func() error, err error) {
+func (l Local) CopyHistory(id, from, to string) (remove func() error, err error) {
 	none := func() error { return nil }
 	src, dst, err := paths(l.Projects, id, from, to)
 	if err != nil || src == dst {

@@ -31,7 +31,6 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
-	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 )
@@ -65,7 +64,7 @@ func (Harness) Gone(err error) bool { return agentproc.NotFound(err) }
 // Start starts the bridge, as ante.Harness does Ante's: this executable's
 // Command, in dir (the daemon's folder) and r's environment, its stderr to
 // log.
-func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err

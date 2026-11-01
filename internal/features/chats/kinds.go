@@ -32,8 +32,6 @@ type kind struct {
 	tools   Tools  // Nushi's own tools for its chats' sessions; nil: none
 	deletes *bool  // whether the agent deletes sessions, once known (under Service.mu)
 
-	initMeta, sessionMeta, ultracodeMeta map[string]any // Meta's
-
 	forker         Forker
 	toolReader     ToolReader
 	otherReader    OtherReader
@@ -55,15 +53,11 @@ type kind struct {
 // package asserts an interface of a harness.
 func newKind(k Kind) *kind {
 	h := k.Harness
-	out := &kind{Kind: k, HarnessInfo: h.Info(), forker: can[Forker](h), toolReader: can[ToolReader](h),
+	return &kind{Kind: k, HarnessInfo: h.Info(), forker: can[Forker](h), toolReader: can[ToolReader](h),
 		otherReader: can[OtherReader](h), defaultReader: can[DefaultReader](h), transcript: can[Transcript](h), subagents: can[Subagents](h),
 		background: can[BackgroundTasks](h), contextCommand: can[ContextCommander](h), contextAsker: can[ContextAsker](h), goneReader: can[GoneReader](h),
 		historyCopier: can[HistoryCopier](h), openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), historyChecker: can[HistoryChecker](h),
 		messageDater: can[MessageDater](h)}
-	if m, ok := h.(Meta); ok {
-		out.initMeta, out.sessionMeta, out.ultracodeMeta = m.InitMeta(), m.SessionMeta(), m.UltracodeMeta()
-	}
-	return out
 }
 
 // can is h as a capability, a nil T when h hasn't it. Harnesses are values,

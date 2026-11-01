@@ -11,9 +11,9 @@ import (
 )
 
 // An agent that shows its subagents as sessions of their own (ACP's
-// subagents RFD; model.HarnessInfo.Subagents) announces each on the session that
-// started it (subagent_update), sends the subagent's work on the child's
-// session, and says when it runs and when it ends, and why. The child's
+// subagents RFD; model.HarnessInfo.SubagentSessions) announces each on the
+// session that started it (subagent_update), sends the subagent's work on the
+// child's session, and says when it runs and when it ends, and why. The child's
 // first message names the tool call that started it. Its updates are the
 // chat's, as the subagent's steps; its end is the subagent's state; and
 // cancelling the child's session stops the subagent alone.

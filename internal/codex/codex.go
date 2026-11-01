@@ -19,7 +19,6 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
-	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/toolcall"
 )
@@ -41,7 +40,7 @@ func (Harness) Info() model.HarnessInfo {
 // Start starts the adapter, as claude.Harness does Claude's (node, env),
 // running r's CLI, the user's Codex (codex-acp's CODEX_PATH). Codex reads
 // its own config and login ($CODEX_HOME, else ~/.codex); Nushi never does.
-func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	cmd := exec.Command(r.Node, r.Program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
 	cmd.Env = append(slices.Clone(r.Env), "CODEX_PATH="+r.CLI)
@@ -91,10 +90,10 @@ func (Harness) Gone(err error) bool {
 	return strings.HasPrefix(d.Details, "no rollout found for thread id ")
 }
 
-// History makes a session ready to fork into another folder: nothing to
+// CopyHistory makes a session ready to fork into another folder: nothing to
 // do, since Codex finds a session by its id whatever the folder, and forks
 // it with another cwd.
-func (Harness) History(_, _, _ string) (remove func() error, err error) {
+func (Harness) CopyHistory(_, _, _ string) (remove func() error, err error) {
 	return func() error { return nil }, nil
 }
 

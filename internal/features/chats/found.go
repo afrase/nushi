@@ -37,8 +37,9 @@ type FoundPage struct {
 	// CanList says the agent lists its sessions and reopens them
 	// (session/list and session/load); without, there's no list.
 	CanList bool
-	// SeesOpen says the agent's Kind can tell a session open elsewhere;
-	// OneWriter that such a session can't be opened (model.HarnessInfo.OneWriter).
+	// SeesOpen says the agent's harness can tell a session open elsewhere
+	// (OpenFinder); OneWriter that such a session can't be opened
+	// (model.HarnessInfo.OneWriter).
 	SeesOpen, OneWriter bool
 }
 

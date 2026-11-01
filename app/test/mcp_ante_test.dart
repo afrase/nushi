@@ -14,9 +14,13 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 /// Claude's servers and Ante's (API 80), by the agent asked about.
-Future<(FakeDaemon, Daemon)> _daemon(WidgetTester tester) async {
+Future<(FakeDaemon, Daemon)> _daemon(
+  WidgetTester tester, {
+  int api = apiVersion,
+}) async {
   final fake = FakeDaemon([])
     ..answer = (input) => switch (input) {
+      PingRequest() => PingResponse(apiVersion: api),
       ListMcpServersRequest(agent: 'ante') => ListMcpServersResponse(
         servers: [
           McpServer(
@@ -50,7 +54,9 @@ Future<(FakeDaemon, Daemon)> _daemon(WidgetTester tester) async {
       _ => null,
     };
   for (final a in fake.agents) {
-    a.mcp = a.name == 'claude' || a.name == 'ante';
+    a
+      ..mcp = a.name == 'claude' || a.name == 'ante'
+      ..mcpUserOnly = api >= agentFactsApi && a.name == 'ante';
   }
   return (fake, await fake.connect(tester));
 }
@@ -87,6 +93,24 @@ void main() {
       tester.getTopLeft(find.text('Ante')).dy,
       greaterThan(tester.getTopLeft(find.text('github')).dy),
     );
+    await closeView(tester, d);
+  });
+
+  testWidgets('a daemon too old to say still has Ante’s as yours only, by '
+      'its name', (tester) async {
+    final (_, d) = await _daemon(tester, api: agentFactsApi - 1);
+    await tester.binding.setSurfaceSize(const Size(1000, 900));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: McpView(daemon: d, folder: '/Users/me/old'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(McpView.userOnlyAbout('Ante')), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget); // Claude's alone
     await closeView(tester, d);
   });
 

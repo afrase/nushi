@@ -12,7 +12,6 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
-	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -34,7 +33,7 @@ func (Harness) Info() model.HarnessInfo {
 // stderr to log; its `#!/usr/bin/env bun` finds the user's Bun on that
 // PATH. omp reads its own config and keys (~/.omp, the environment); Nushi
 // never does.
-func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	cmd := exec.Command(r.CLI, "--mode", "acp") //nolint:gosec,noctx // lives until Stop or Close, not a context; the omp found on PATH
 	cmd.Dir, cmd.Env = dir, r.Env
 	return agentproc.Start(cmd, client, log)

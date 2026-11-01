@@ -41,7 +41,8 @@ type testHarness struct {
 
 func (h testHarness) Info() model.HarnessInfo {
 	info := h.Harness.Info()
-	out := model.HarnessInfo{Name: h.Name, Title: h.Title, Expires: h.Expires, ClientMCP: h.ClientMCP, Subagents: info.Subagents, Redelete: cmp.Or(h.redelete, info.Redelete)}
+	out := model.HarnessInfo{Name: h.Name, Title: h.Title, Expires: h.Expires, ClientMCP: h.ClientMCP, SubagentSessions: info.SubagentSessions, Redelete: cmp.Or(h.redelete, info.Redelete),
+		InitMeta: info.InitMeta, SessionMeta: info.SessionMeta, UltracodeMeta: info.UltracodeMeta}
 	if h.once {
 		out.Redelete = 0
 	}

@@ -73,9 +73,15 @@ Future<(FakeDaemon, Daemon)> _settings(
   ShellEnvironment? environment,
   bool goAgent = false,
   Size size = const Size(1000, 760),
+  int api = apiVersion,
 }) async {
   final fake = FakeDaemon([])
-    ..agents = _found
+    ..answer = ((input) =>
+        input is PingRequest ? PingResponse(apiVersion: api) : null)
+    ..agents = [
+      for (final a in _found)
+        a.deepCopy()..goAgent = api >= agentFactsApi && a.goAgent,
+    ]
     ..environment = environment;
   fake.settings.claudeGoAgent = goAgent;
   final d = await fake.connect(tester);
@@ -107,6 +113,13 @@ void main() {
           const MethodChannel('nushi/fonts'),
           (_) async => <String>[],
         );
+  });
+
+  testWidgets('a daemon too old to say still has Claude’s Go agent, by its '
+      'name', (tester) async {
+    final (_, d) = await _settings(tester, api: agentFactsApi - 1);
+    expect(_goSwitch, findsOneWidget);
+    d.dispose();
   });
 
   testWidgets('each agent as found, and what can be done', (tester) async {

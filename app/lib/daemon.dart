@@ -51,6 +51,12 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
 /// The API version this app was built with (`internal/api.Version`).
 const apiVersion = 97;
 
+/// The API from which the daemon says what an agent has (Agent.go_agent and
+/// mcp_user_only, ListSkillsResponse.has_built_in and has_plugins), which
+/// the app went by the agent's name for. While an older daemon waits to
+/// restart (ADR 0056) it still does, or Ante would offer what it refuses.
+const agentFactsApi = 97;
+
 /// The API from which the daemon keeps which chats are pinned, in order
 /// (Chat.pin, PinChats).
 const pinApi = 90;

@@ -4,6 +4,7 @@ import (
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/knownagents"
+	"github.com/afrase/nushi/internal/model"
 )
 
 // newMCP is the MCP servers of each agent whose config Nushi knows
@@ -16,7 +17,7 @@ func newMCP(known []knownagents.Agent, agentSvc *agents.Service, changed mcp.Cha
 			continue
 		}
 		name := a.Agent.Name
-		services[name] = mcp.New(name, a.MCP(func() (agents.Run, error) { return agentSvc.Run(name) }), changed)
+		services[name] = mcp.New(name, a.MCP(func() (model.AgentRun, error) { return agentSvc.Run(name) }), changed)
 	}
 	return services
 }

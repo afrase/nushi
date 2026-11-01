@@ -30,15 +30,36 @@ type HarnessInfo struct {
 	// a short first turn): a worktree's branch waits for that title, a
 	// turn at most, rather than take the prompt's line.
 	NamesSessions bool
-	// Subagents says the agent can show its subagents as sessions of
-	// their own (ACP's subagents RFD, which initialize advertises): it then
-	// says when each ends, and stops one when its session is cancelled.
-	Subagents bool
+	// SubagentSessions says the agent can show its subagents as sessions
+	// of their own (ACP's subagents RFD, which initialize advertises): it
+	// then says when each ends, and stops one when its session is
+	// cancelled.
+	SubagentSessions bool
 	// Redelete is how long after deleting a session nobody will see again
 	// to delete it once more, for an agent that writes a little of it back
 	// as it ends; 0 for once.
 	Redelete time.Duration
+	// InitMeta is its _meta beyond ACP in initialize's client capabilities.
+	InitMeta map[string]any
+	// SessionMeta is its _meta beyond ACP in session/new, session/load and
+	// session/fork.
+	SessionMeta map[string]any
+	// UltracodeMeta joins SessionMeta (merged, key by key) in the sessions
+	// of a chat with Ultracode on: the agent's standing multi-agent
+	// workflows (Claude Code's ultracode). Nil when the agent has none: the
+	// chat then has no Ultracode option.
+	UltracodeMeta map[string]any
 }
 
 // Info is i itself, so a HarnessInfo is a harness.
 func (i HarnessInfo) Info() HarnessInfo { return i }
+
+// AgentRun is what starting an agent takes: its CLI, and with an adapter, the
+// adapter's program and the Node on PATH that runs it; the environment it
+// starts with; and whether it runs through Nushi's own agent instead of its
+// adapter (agents.Agent.Own), decided once so the start follows it.
+type AgentRun struct {
+	CLI, Program, Node string
+	Env                []string
+	Own                bool
+}

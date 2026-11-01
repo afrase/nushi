@@ -202,7 +202,7 @@ class _SkillsViewState extends State<SkillsView> {
     final groups = list.groups(r.skills.where((s) => skillMatches(s, query)));
     final shownPlugins = r.plugins.where((p) => pluginMatches(p, query));
     final builtIn =
-        r.hasBuiltIn &&
+        list.hasBuiltIn &&
         skillMatches(
           Skill(name: 'built-in', description: 'Claude Code’s own skills'),
           query,
@@ -241,7 +241,7 @@ class _SkillsViewState extends State<SkillsView> {
               ),
         if (list.loaded && builtIn) BuiltInGroup(list),
         if (list.loaded &&
-            r.hasPlugins &&
+            list.hasPlugins &&
             (shownPlugins.isNotEmpty || query.isEmpty))
           PluginsGroup(list, shownPlugins.toList()),
       ],

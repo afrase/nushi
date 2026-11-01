@@ -28,6 +28,14 @@ class SkillsList extends ChangeNotifier {
   bool loading = false;
   String error = ''; // why listing failed
 
+  /// The agent has built-in skills that go on and off together.
+  bool get hasBuiltIn =>
+      daemon.daemonApi < agentFactsApi ? agent == 'claude' : list.hasBuiltIn;
+
+  /// The agent has plugins, even with none installed.
+  bool get hasPlugins =>
+      daemon.daemonApi < agentFactsApi ? agent == 'claude' : list.hasPlugins;
+
   bool _again = false; // refresh once the running one is done
 
   /// Lists them again; asked while a list is on its way (a switch changed

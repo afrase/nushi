@@ -126,6 +126,7 @@ class _SettingsViewState extends State<SettingsView> {
       children: [
         AgentsPage(
           daemon.client,
+          daemonApi: daemon.daemonApi,
           marked: switch (daemon.place) {
             SettingsPlace(:final agent) => agent,
             _ => null,
