@@ -486,6 +486,9 @@ func (c *chat) addLocked(it model.Item) string {
 		it.ForkAt = c.forkPointLocked()
 		it.Rewindable = it.ForkAt != "" || !slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.UserMessage })
 	}
+	if it.Kind == model.AgentMessage && !c.quiet {
+		it.Sent = time.Now() // a replay's say nothing of when; the copy's keep theirs
+	}
 	c.items = append(c.items, it)
 	c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 	c.copyLocked(false) // the items before it have settled

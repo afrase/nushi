@@ -56,6 +56,12 @@ func TestPromptStreamsTheReply(t *testing.T) {
 	if c.record.Title != "hi" || !c.record.HasMessages {
 		t.Errorf("title = %q, want the first prompt (has messages: %v)", c.record.Title, c.record.HasMessages)
 	}
+	for i := 1; i <= 2; i++ {
+		if c.items[i].Sent.IsZero() {
+			t.Errorf("the agent's message %d has no time", i)
+		}
+		c.items[i].Sent = time.Time{}
+	}
 	if c.items[0].Sent.IsZero() {
 		t.Error("the message has no time sent")
 	}
@@ -539,5 +545,15 @@ func TestWroteIsWhatTheChatsToolCallsWorkedOn(t *testing.T) {
 	}
 	if svc.Wrote("none", "/work/app/docs/report.md") {
 		t.Error("an unknown chat wrote something")
+	}
+}
+
+// A replay says nothing of when a message came: it isn't given the time
+// of the replay, and merging keeps the copy's.
+func TestReplayedAgentMessageHasNoTime(t *testing.T) {
+	c := &chat{quiet: true}
+	c.addLocked(model.Item{ID: "m1", Kind: model.AgentMessage, Text: "Hello"})
+	if !c.items[0].Sent.IsZero() {
+		t.Errorf("replayed message sent at %v", c.items[0].Sent)
 	}
 }

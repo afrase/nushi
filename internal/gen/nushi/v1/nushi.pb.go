@@ -10150,8 +10150,9 @@ type Item struct {
 	// background command to_subagent_name names (StopTask), not to pass
 	// anything on.
 	ToSubagentStop bool `protobuf:"varint,32,opt,name=to_subagent_stop,json=toSubagentStop,proto3" json:"to_subagent_stop,omitempty"`
-	// For a user message sent through Nushi: when, in Unix milliseconds; 0
-	// when not known (one the agent replayed). API 78.
+	// For a user message sent through Nushi, or the agent's as it began to
+	// arrive: when, in Unix milliseconds; 0 when not known (one the agent
+	// replayed). API 78; the agent's messages since v0.2.11.
 	Sent int64 `protobuf:"varint,33,opt,name=sent,proto3" json:"sent,omitempty"`
 	// A tool call's input as the agent gave it, as indented JSON, and its
 	// result as the agent gave it (text or indented JSON), only while its

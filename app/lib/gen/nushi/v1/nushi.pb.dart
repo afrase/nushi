@@ -13358,8 +13358,9 @@ class Item extends $pb.GeneratedMessage {
   @$pb.TagNumber(32)
   void clearToSubagentStop() => $_clearField(32);
 
-  /// For a user message sent through Nushi: when, in Unix milliseconds; 0
-  /// when not known (one the agent replayed). API 78.
+  /// For a user message sent through Nushi, or the agent's as it began to
+  /// arrive: when, in Unix milliseconds; 0 when not known (one the agent
+  /// replayed). API 78; the agent's messages since v0.2.11.
   @$pb.TagNumber(33)
   $fixnum.Int64 get sent => $_getI64(32);
   @$pb.TagNumber(33)
