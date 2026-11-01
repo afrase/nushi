@@ -6,7 +6,7 @@ PiG is a Go port of Pi, and its RPC mode is Pi 1.4.0's protocol, so the bridge o
 ## Decision
 - **One bridge.** `internal/pig` is now `internal/pi`, since the protocol is Pi's, and `internal/pigskills` is `internal/piskills`. `pi.Flavor` is plain data (program, version, folder, variable prefix, whether its home can move); `pi.Pi` and `pi.PiG` are its two values. `pi.Harness` and `piskills.Skills` hold a Flavor, so one type serves both, with the same capabilities.
 - **Each is its own agent**: `nushid pi-acp` and `nushid pig-acp`, with separate sessions, settings and marks. The bridge answers with the Flavor's name, and `ForkAt` takes only its own.
-- **Pi `Needs` Node** and has a `Min`, 0.80.4, the first with `agent_settled`; `get_entries` came one release before.
+- **Pi `Needs` Node** and has a `Min`, 0.80.4, the first with `agent_settled`; `get_entries` came one release before. The bridge refuses an older Pi or an unreadable version at initialize, as Ante's does: there's no trust card because Pi gates a folder's code itself (0039), which it does only since 0.79.0, so an older one must not run.
 - **The bridge's own wire names became Pi's** (`_pi/context`, `_meta.pi.afterMessage`). The daemon starts its own executable as the bridge, so the two never differ.
 - The bridge's errors and logs no longer name the program; "isn't installed" and the skills' messages do, from the Flavor.
 

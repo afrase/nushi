@@ -22,6 +22,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -39,7 +41,7 @@ type Flavor struct {
 	Name, Title string // as Nushi calls it
 	CLI         string // its program
 	Version     string // whose RPC mode the bridge follows; newer ones are tried, and say so in the log
-	Min         string // the oldest with the events and commands the bridge needs
+	Min         string // the oldest the bridge runs; see check
 	Page        string // where to get it
 	Needs       string // a program it runs under
 	Folder      string // its folder in your home and in a project
@@ -134,10 +136,50 @@ func (f Flavor) version(bin string) (string, error) {
 		return "", fmt.Errorf("couldn't run %s --version: %w", bin, err)
 	}
 	v, _, _ := strings.Cut(strings.TrimSpace(string(out)), "+")
+	if err := f.check(v); err != nil {
+		return "", err
+	}
 	if v != f.Version {
 		warnf("%s %s isn't %s, whose RPC mode the bridge follows", f.CLI, v, f.Version)
 	}
 	return v, nil
+}
+
+// check refuses a version older than Min, or one it can't read. Trust
+// shows no card because the program gates a folder's code itself, which
+// Pi does only since 0.79.0 (ADR 0078): an older one would run a folder's
+// extensions unasked, so saying so on the Agents page isn't enough.
+func (f Flavor) check(v string) error {
+	if f.Min == "" {
+		return nil
+	}
+	got, want := numbers(v), numbers(f.Min)
+	switch {
+	case got == nil:
+		return fmt.Errorf("couldn't read %s's version from %q", f.Title, v)
+	case slices.Compare(got, want) < 0:
+		return fmt.Errorf("%s %s is older than the %s Nushi needs", f.Title, v, f.Min)
+	}
+	return nil
+}
+
+// numbers reads a version's three numbers, a prerelease's tag left out;
+// nil if it hasn't three.
+func numbers(v string) []int {
+	v, _, _ = strings.Cut(v, "-")
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return nil
+	}
+	out := make([]int, 3)
+	for i, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return nil
+		}
+		out[i] = n
+	}
+	return out
 }
 
 // spawn starts the program with args in cwd, in a process group of its own, its

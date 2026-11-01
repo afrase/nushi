@@ -632,3 +632,16 @@ func TestForkAtKnowsItsBridge(t *testing.T) {
 		t.Error("PiG's harness took Pi's bridge")
 	}
 }
+
+// A Pi too old to gate a folder's code doesn't run, nor one whose version
+// doesn't read; PiG has no Min.
+func TestVersionCheck(t *testing.T) {
+	for v, ok := range map[string]bool{"1.4.0": true, "0.80.4": true, "2.0.0-rc1": true, "0.80.3": false, "0.78.9": false, "": false, "1.4": false, "v1.4.0": false} {
+		if err := Pi.check(v); (err == nil) != ok {
+			t.Errorf("Pi %q: %v", v, err)
+		}
+	}
+	if err := PiG.check("0.1.0"); err != nil {
+		t.Errorf("PiG: %v", err)
+	}
+}

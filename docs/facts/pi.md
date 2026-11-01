@@ -14,6 +14,6 @@ Seen from `@earendil-works/pi-coding-agent` 1.4.0 from npm (`--ignore-scripts`) 
 - Trust as PiG's: `<agent dir>/trust.json`, `defaultProjectTrust`; RPC mode can't ask.
 - Skills as PiG's, with `.pi` for `.pig`. Seen on get_commands: the project's only once trusted; a project's `-skills/<folder>` in the cwd's `.pi/settings.json` turns off `.agents/skills/<folder>`, from that folder only (from a subfolder, with no `.pi` of its own, it stays on); `!<glob>`; in your settings `-skills/<folder>` and `-<absolute path>`; a `SKILL.md` without a description isn't loaded.
 - A version check goes to `pi.dev` unless `PI_SKIP_VERSION_CHECK` is set, and install and update telemetry unless `PI_TELEMETRY` says no. Nushi sets neither: they're the user's settings.
-- `get_entries` came in 0.80.3, `agent_settled` in 0.80.4.
+- Project trust came in 0.79.0 (changelog), `get_entries` in 0.80.3, `agent_settled` in 0.80.4.
 
 **Not run:** extensions' dialogs, images, steering, a compaction that compacts, a real model. The protocol is PiG's, and those pass on the fake pi.

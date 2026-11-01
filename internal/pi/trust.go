@@ -10,7 +10,8 @@ import "github.com/afrase/nushi/internal/model"
 // ask, and loads none of them for a folder nobody decided on. What it
 // loads regardless is instructions (AGENTS.md, CLAUDE.md), which no card
 // shows. So a folder never has Pi run its code unless the user said so
-// in Pi.
+// in Pi. That holds only of a version with the gate, which Flavor.check
+// enforces.
 type Trust struct{}
 
 func (Trust) Runs(string) ([]model.FolderRun, string, error) { return nil, "", nil }
