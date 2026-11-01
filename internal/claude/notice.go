@@ -9,7 +9,7 @@ import (
 // Interrupted says a replayed user message's text is the mark Claude
 // Code writes into its history where the user stopped a turn, not the
 // user's words.
-func Interrupted(text string) bool {
+func (Harness) Interrupted(text string) bool {
 	switch strings.TrimSpace(text) {
 	case "[Request interrupted by user]", "[Request interrupted by user for tool use]":
 		return true
@@ -25,7 +25,7 @@ func Interrupted(text string) bool {
 // notice that Claude's safeguards stopped the response before it and
 // Claude goes on once: the stopped part, if any streamed, is the message
 // just before.
-func Notice(meta map[string]any, text string) (model.AgentNotice, bool) {
+func (Harness) Notice(meta map[string]any, text string) (model.AgentNotice, bool) {
 	if claudeCode(meta, "kind") != "informational" {
 		return model.AgentNotice{}, false
 	}

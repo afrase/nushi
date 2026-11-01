@@ -21,7 +21,7 @@ func TestForkAtIsTheAdaptersAndTheGoAgents(t *testing.T) {
 		{&acp.Implementation{Name: "@agentclientprotocol/codex-acp"}, false},
 		{nil, false},
 	} {
-		at := ForkAt(&acp.InitializeResponse{AgentInfo: tc.info})
+		at := harness.ForkAt(&acp.InitializeResponse{AgentInfo: tc.info})
 		if (at != nil) != tc.want {
 			t.Errorf("%+v: fork-at %v, want %v", tc.info, at != nil, tc.want)
 		}

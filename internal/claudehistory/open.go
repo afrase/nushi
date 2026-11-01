@@ -16,7 +16,7 @@ import (
 	"github.com/afrase/nushi/internal/claude"
 )
 
-// Open returns the sessions a running Claude Code holds open (any, not
+// OpenElsewhere returns the sessions a running Claude Code holds open (any, not
 // only ids), by session id: "a terminal" for the CLI run by hand, "another
 // app" for one a client such as another ACP client started. Each running
 // CLI writes <config>/sessions/<pid>.json (its session id, entrypoint, the
@@ -24,7 +24,7 @@ import (
 // too, by the same rules: the process is alive, and started when the record
 // says, so a pid used again doesn't count; a record without a start time
 // counts for a day.
-func Open(_ []string) map[string]string {
+func (Local) OpenElsewhere(_ []string) map[string]string {
 	if _, err := os.UserHomeDir(); err != nil {
 		return nil
 	}

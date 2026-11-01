@@ -26,7 +26,7 @@ func Home() string {
 // second app gets the thread read-only (the CLI) or refused (codex-acp's
 // session/load: "in use by another Codex client"). The lock is looked at
 // (F_GETLK), never taken.
-func OpenElsewhere(ids []string) map[string]string {
+func (Local) OpenElsewhere(ids []string) map[string]string {
 	return held(filepath.Join(Home(), "thread-writer-locks"), ids)
 }
 
@@ -45,7 +45,7 @@ func held(dir string, ids []string) map[string]string {
 // Forked says which of sessions ids are forks of another thread: a
 // rollout's first record (session_meta) names forked_from_id. Rollouts are
 // $CODEX_HOME/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl.
-func Forked(ids []string) map[string]bool {
+func (Local) Forked(ids []string) map[string]bool {
 	return forked(filepath.Join(Home(), "sessions"), ids)
 }
 

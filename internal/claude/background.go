@@ -21,7 +21,7 @@ var outputFile = regexp.MustCompile(`Output is being written to: (/\S+/tasks/[^\
 // structured marks such a call (the task id in its result, or its input
 // asking for the background): its text could be any command's output, a
 // README's say. The text gives only the file, of that task.
-func BackgroundCommand(it model.Item) (id, file string, ok bool) {
+func (Harness) BackgroundCommand(it model.Item) (id, file string, ok bool) {
 	if it.Tool != "Bash" || it.TaskID == "" && !it.InBackground {
 		return "", "", false
 	}
@@ -46,7 +46,7 @@ var endLine = regexp.MustCompile(`\n+\[(exited with code -?\d+|killed)\]\n$`)
 // own, "\n[exited with code N]\n" or "\n[killed]\n" (the command could
 // print such a line too: see chats' followCommand). Only a regular file named
 // for the task is read.
-func ReadBackgroundCommand(id, file string) (output, end string, err error) {
+func (Harness) ReadBackgroundCommand(id, file string) (output, end string, err error) {
 	if filepath.Base(file) != id+".output" {
 		return "", "", errors.New("not the task's output file")
 	}

@@ -1,6 +1,7 @@
 // Package codex knows what Codex's ACP adapter (codex-acp 2.2.2, which
-// runs Codex 0.160.1) does beyond ACP: how to start it, and its quirks.
-// `main` hands these to the chats feature, which knows nothing of Codex.
+// runs Codex 0.160.1) does beyond ACP: how to start it, and its quirks, as
+// its Harness; the chats feature, which knows nothing of Codex, takes that
+// through its interfaces.
 package codex
 
 import (
@@ -18,17 +19,32 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
+	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/toolcall"
 )
 
-// Start starts the adapter, as claude.Start does Claude's (node, env), running cli,
-// the user's Codex (codex-acp's CODEX_PATH). Codex reads its own config
-// and login ($CODEX_HOME, else ~/.codex); Nushi never does.
-func Start(dir, node, program, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	cmd := exec.Command(node, program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
+// Harness is Codex as Nushi runs it, for the chats feature's interfaces.
+// Nothing here reads Codex's files: Local adds that.
+type Harness struct{}
+
+// Local is Harness with what reads Codex's files on this Mac (sessions.go).
+// Tests use Harness alone.
+type Local struct{ Harness }
+
+// Info is what Harness is. The adapter's session/delete archives the thread
+// ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
+func (Harness) Info() model.HarnessInfo {
+	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true}
+}
+
+// Start starts the adapter, as claude.Harness does Claude's (node, env),
+// running r's CLI, the user's Codex (codex-acp's CODEX_PATH). Codex reads
+// its own config and login ($CODEX_HOME, else ~/.codex); Nushi never does.
+func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+	cmd := exec.Command(r.Node, r.Program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
-	cmd.Env = append(slices.Clone(env), "CODEX_PATH="+cli)
+	cmd.Env = append(slices.Clone(r.Env), "CODEX_PATH="+r.CLI)
 	return agentproc.Start(cmd, client, log)
 }
 
@@ -58,19 +74,12 @@ const (
 // milestone Z), then the user's.
 var Tested = []string{"0.160.1", "0.163.0"}
 
-// Resume is the terminal command that opens a Codex session by its id.
-const Resume = "codex resume"
-
-// DeleteArchives says the adapter's session/delete archives the thread
-// ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
-const DeleteArchives = true
-
 // Gone says a session/load error means Codex has no rollout of the
 // session (deleted, or never written): codex-acp 2.2.2 answers Internal
 // error (-32603) with data.details "no rollout found for thread id <id>".
 // An archived session ("session <id> is archived. Run `codex unarchive
 // <id>`…") is still Codex's, so it isn't gone.
-func Gone(err error) bool {
+func (Harness) Gone(err error) bool {
 	e, ok := errors.AsType[*acp.Error](err)
 	if !ok || e.Code != acp.ErrorCodeInternalError {
 		return false
@@ -85,7 +94,7 @@ func Gone(err error) bool {
 // History makes a session ready to fork into another folder: nothing to
 // do, since Codex finds a session by its id whatever the folder, and forks
 // it with another cwd.
-func History(_, _, _ string) (remove func() error, err error) {
+func (Harness) History(_, _, _ string) (remove func() error, err error) {
 	return func() error { return nil }, nil
 }
 
@@ -93,7 +102,7 @@ func History(_, _, _ string) (remove func() error, err error) {
 // adapter: the same vendor meta as Claude's adapter takes
 // (`_meta.jetbrains.air.fork`, ADR 0020), which codex-acp honors for any
 // client. Codex cuts the fork after the whole turn that has the message.
-func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
+func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
 	if init.AgentInfo == nil || init.AgentInfo.Name != "@agentclientprotocol/codex-acp" {
 		return nil
 	}
@@ -109,7 +118,7 @@ func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any 
 // a reference to a terminal: its text is the output in a fence, after
 // "Exit code N" when it failed. Only the output's last MiB is kept, said
 // so above it. A call without either is left as it is.
-func ToolCall(it *model.Item, meta map[string]any, _ json.RawMessage) (ownText bool) {
+func (Harness) ToolCall(it *model.Item, meta map[string]any, _ json.RawMessage) (ownText bool) {
 	out, _ := meta["terminal_output_delta"].(map[string]any)
 	exit, ok := meta["terminal_exit"].(map[string]any)
 	if out == nil && !ok {
@@ -159,6 +168,6 @@ func keep(output string) string {
 
 // Other says field is the free-text note that the adapter puts after a
 // question with choices: `<id>_note`, "Additional answer or note".
-func Other(field, before model.Field) bool {
+func (Harness) Other(field, before model.Field) bool {
 	return len(field.Options) == 0 && strings.HasPrefix(field.ID, before.ID+"_note")
 }

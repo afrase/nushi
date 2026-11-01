@@ -25,7 +25,7 @@ func TestTimes(t *testing.T) {
 {"timestamp":"2026-10-26T10:00:07Z","id":"e7","eve`
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "events.jsonl"), []byte(body), 0o600))
 
-	got := Times(id)
+	got := local.MessageTimes(id, "")
 	base := time.Date(2026, 10, 26, 10, 0, 0, 0, time.UTC)
 	want := map[string]time.Duration{"op_1": 0, "op_1.0": 2 * time.Second, "op_2.0": 5 * time.Second, "op_2.1": 6 * time.Second}
 	if len(got) != len(want) {
@@ -36,7 +36,9 @@ func TestTimes(t *testing.T) {
 			t.Errorf("%s at %v", k, got[k])
 		}
 	}
-	if got := Times("../x"); len(got) != 0 {
+	if got := local.MessageTimes("../x", ""); len(got) != 0 {
 		t.Errorf("not a session id: %v", got)
 	}
 }
+
+var local Local

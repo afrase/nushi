@@ -32,3 +32,5 @@ func TestATurnEndsOnce(t *testing.T) {
 		t.Errorf("the turn ended with %v", r.err)
 	}
 }
+
+var harness Harness

@@ -8,13 +8,13 @@ import (
 	"time"
 )
 
-// Times says when session id's messages were saved, from its events.jsonl,
+// MessageTimes says when session id's messages were saved, from its events.jsonl,
 // by the ids a replay gives them: its input's for the user's, the turn's
 // and its number in the turn for the agent's (messageID). Empty when the
 // file can't be read; what it could read of one that ends short. Not from
 // the replay: Ante's host streams those events, and nothing says it keeps
 // their times.
-func Times(id string) map[string]time.Time {
+func (Local) MessageTimes(id, _ string) map[string]time.Time {
 	if !isSessionID(id) {
 		return nil
 	}

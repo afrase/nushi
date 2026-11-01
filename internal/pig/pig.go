@@ -31,6 +31,8 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
+	"github.com/afrase/nushi/internal/features/agents"
+	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
@@ -48,18 +50,28 @@ const (
 // Tested are the PiG versions the bridge was run with.
 var Tested = []string{Version}
 
-// Resume is the terminal command that opens a PiG session by its id.
-const Resume = "pig --session"
+// Harness is PiG as Nushi runs it, for the chats feature's interfaces.
+type Harness struct{}
 
-// Start starts the bridge, as ante.Start does Ante's: this executable's
-// Command, in dir (the daemon's folder) and env, its stderr to log.
-func Start(dir string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+// Info is what Harness is.
+func (Harness) Info() model.HarnessInfo {
+	return model.HarnessInfo{Name: "pig", Title: "PiG", Resume: "pig --session"}
+}
+
+// Gone says a session/load error means PiG no longer has the session: the
+// bridge answers ACP's "Resource not found".
+func (Harness) Gone(err error) bool { return agentproc.NotFound(err) }
+
+// Start starts the bridge, as ante.Harness does Ante's: this executable's
+// Command, in dir (the daemon's folder) and r's environment, its stderr to
+// log.
+func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
-	cmd.Dir, cmd.Env = dir, env        // the bridge finds the CLI on env's PATH
+	cmd.Dir, cmd.Env = dir, r.Env      // the bridge finds the CLI on that PATH
 	return agentproc.Start(cmd, client, log)
 }
 
@@ -240,7 +252,7 @@ func tilde(p string) string {
 // ForkAt says how to fork a session at a message, if the agent is the
 // bridge: its own meta, which cuts after the turn that has the message
 // (pig forks before a message of the user's).
-func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
+func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
 	if init.AgentInfo == nil || init.AgentInfo.Name != AgentName {
 		return nil
 	}

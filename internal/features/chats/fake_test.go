@@ -18,17 +18,19 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
+var claudeHarness claude.Harness
+
 // testDialect is Claude's hooks, as main fills them, but for NamesSessions,
 // left off on purpose: the fake never titles a session, so a worktree's
 // branch is named after the first turn instead of waiting one more for a
 // title (branch.go). A test of another agent's shape sets its own.
-var testDialect = Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice, Interrupted: claude.Interrupted,
-	Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-	BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
-	SubagentID: claude.SubagentID, ToSubagent: claude.ToSubagent, ReadToSubagent: claude.ReadToSubagent, PassesToSubagent: claude.PassesToSubagent,
-	Subagents: claude.Subagents, StopTask: claude.StopTask, ReadStopTask: claude.ReadStopTask, Stopped: claude.Stopped, RunsBackgroundCommand: claude.RunsBackgroundCommand,
-	Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
-	ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete}
+var testDialect = Dialect{InitMeta: claudeHarness.InitMeta(), SessionMeta: claudeHarness.SessionMeta(), UltracodeMeta: claudeHarness.UltracodeMeta(), TurnDone: claudeHarness.TurnDone, ForkAt: claudeHarness.ForkAt, Parent: claudeHarness.Parent, ToolCall: claudeHarness.ToolCall, Notice: claudeHarness.Notice, Interrupted: claudeHarness.Interrupted,
+	Background: claudeHarness.Background, ReportElsewhere: claudeHarness.ReportElsewhere,
+	BackgroundCommand: claudeHarness.BackgroundCommand, ReadBackgroundCommand: claudeHarness.ReadBackgroundCommand,
+	SubagentID: claudeHarness.SubagentID, ToSubagent: claudeHarness.ToSubagent, ReadToSubagent: claudeHarness.ReadToSubagent, PassesToSubagent: claudeHarness.PassesToSubagent,
+	Subagents: true, StopTask: claudeHarness.StopTask, ReadStopTask: claudeHarness.ReadStopTask, Stopped: claudeHarness.Stopped, RunsBackgroundCommand: claudeHarness.RunsBackgroundCommand,
+	Other: claudeHarness.Other, Default: claudeHarness.Default, ForkTitle: claudeHarness.ForkTitle, Compacted: claudeHarness.Compacted,
+	ContextCommand: claudeHarness.ContextCommand(), ReadContext: claudeHarness.ReadContext, Redelete: claudeHarness.Info().Redelete}
 
 // newService is New for a test: nothing remembered and no stored chats
 // unless o says, and what it starts on its own ends with the test.

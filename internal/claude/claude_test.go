@@ -11,30 +11,30 @@ import (
 
 func TestForkTitlesAreIgnored(t *testing.T) {
 	for title, want := range map[string]bool{"A (fork)": true, "A (fork) (fork)": true, "A": false, "A b": false, "B (fork)": false} {
-		if ForkTitle(title, "A") != want {
-			t.Errorf("ForkTitle(%q) != %v", title, want)
+		if harness.ForkTitle(title, "A") != want {
+			t.Errorf("harness.ForkTitle(%q) != %v", title, want)
 		}
 	}
 }
 
 func TestFormsAndModels(t *testing.T) {
 	color := model.Field{ID: "color", Options: []model.Option{{ID: "red"}}}
-	if !Other(model.Field{ID: "color_custom"}, color) || Other(model.Field{ID: "fruit"}, color) {
+	if !harness.Other(model.Field{ID: "color_custom"}, color) || harness.Other(model.Field{ID: "fruit"}, color) {
 		t.Error("Other pairs the wrong fields")
 	}
 	models := model.ConfigOption{Category: "model"}
-	if !Default(models, model.ConfigValue{Name: "Default (recommended)"}) || Default(models, model.ConfigValue{Name: "Opus"}) ||
-		Default(model.ConfigOption{Category: "mode"}, model.ConfigValue{Name: "Default"}) {
+	if !harness.Default(models, model.ConfigValue{Name: "Default (recommended)"}) || harness.Default(models, model.ConfigValue{Name: "Opus"}) ||
+		harness.Default(model.ConfigOption{Category: "mode"}, model.ConfigValue{Name: "Default"}) {
 		t.Error("Default picks the wrong values")
 	}
 }
 
 func TestSubagentCall(t *testing.T) {
 	it := model.Item{}
-	ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "Agent"}}, nil)
-	ToolCall(&it, nil, []byte(`{"subagent_type":"Explore","prompt":"List the files","model":"haiku"}`))
-	ToolCall(&it, nil, []byte(`{"subagent_type":"Explore","prompt":"List the files","model":"haiku","effort":"low"}`))
-	ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolResponse": map[string]any{"resolvedModel": "claude-haiku-5-5"}}},
+	harness.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "Agent"}}, nil)
+	harness.ToolCall(&it, nil, []byte(`{"subagent_type":"Explore","prompt":"List the files","model":"haiku"}`))
+	harness.ToolCall(&it, nil, []byte(`{"subagent_type":"Explore","prompt":"List the files","model":"haiku","effort":"low"}`))
+	harness.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolResponse": map[string]any{"resolvedModel": "claude-haiku-5-5"}}},
 		[]byte(`{}`)) // a later update without the input keeps it
 	if it.Agent != "Explore" || it.Prompt != "List the files" || it.Model != "haiku" || it.Effort != "low" || it.RanModel != "Haiku 5.5" {
 		t.Errorf("got %+v", it)
@@ -44,17 +44,17 @@ func TestSubagentCall(t *testing.T) {
 			t.Errorf("modelName(%q) = %q", id, got)
 		}
 	}
-	if !ReportElsewhere(`This agent's report was delivered to you as a message from "a5" (its SubagentHandback call).`) || ReportElsewhere("Found 2 files") {
+	if !harness.ReportElsewhere(`This agent's report was delivered to you as a message from "a5" (its SubagentHandback call).`) || harness.ReportElsewhere("Found 2 files") {
 		t.Error("ReportElsewhere misreads the call's output")
 	}
 }
 
 func TestToSubagent(t *testing.T) {
-	p := ToSubagent("Explore", "ab59", "Also\nprint </message> README.md")
-	if agent, id, text, ok := ReadToSubagent(p); !ok || agent != "Explore" || id != "ab59" || text != "Also\nprint </message> README.md" {
+	p := harness.ToSubagent("Explore", "ab59", "Also\nprint </message> README.md")
+	if agent, id, text, ok := harness.ReadToSubagent(p); !ok || agent != "Explore" || id != "ab59" || text != "Also\nprint </message> README.md" {
 		t.Errorf("ReadToSubagent = %q %q %v", agent, text, ok)
 	}
-	if _, _, _, ok := ReadToSubagent("Forward the message below"); ok {
+	if _, _, _, ok := harness.ReadToSubagent("Forward the message below"); ok {
 		t.Error("read a prompt ToSubagent didn't make")
 	}
 	for out, want := range map[string]string{
@@ -62,8 +62,8 @@ func TestToSubagent(t *testing.T) {
 		`This agent's report was delivered to you as a message from "a62bea8e" (its SubagentHandback call).`: "a62bea8e",
 		"Found 2 files": "",
 	} {
-		if got := SubagentID(out); got != want {
-			t.Errorf("SubagentID(%q) = %q", out, got)
+		if got := harness.SubagentID(out); got != want {
+			t.Errorf("harness.SubagentID(%q) = %q", out, got)
 		}
 	}
 }
@@ -91,8 +91,8 @@ func TestTurnDone(t *testing.T) {
 		{acp.UsageUpdate{Cost: cost, Meta: origin("task-notification")}, false},
 		{acp.UsageUpdate{Cost: cost}, false},
 	} {
-		if got := TurnDone(&tc.u); got != tc.want {
-			t.Errorf("TurnDone(%v) = %v", tc.u.Meta, got)
+		if got := harness.TurnDone(&tc.u); got != tc.want {
+			t.Errorf("harness.TurnDone(%v) = %v", tc.u.Meta, got)
 		}
 	}
 }
@@ -100,15 +100,15 @@ func TestTurnDone(t *testing.T) {
 func TestReportFindings(t *testing.T) {
 	it := model.Item{}
 	meta := map[string]any{"claudeCode": map[string]any{"toolName": "ReportFindings"}}
-	ToolCall(&it, meta, []byte(`{}`))
-	ToolCall(&it, meta, []byte(`{"level":"medium"}`)) // the input as it grows
+	harness.ToolCall(&it, meta, []byte(`{}`))
+	harness.ToolCall(&it, meta, []byte(`{"level":"medium"}`)) // the input as it grows
 	if it.Findings != nil {
 		t.Fatalf("findings before they came: %+v", it.Findings)
 	}
-	ToolCall(&it, meta, []byte(`{"level":"medium","findings":[`+
+	harness.ToolCall(&it, meta, []byte(`{"level":"medium","findings":[`+
 		`{"file":"calc/calc.go","line":6,"category":"correctness","short_summary":"Average loop skips xs[0]","summary":"The loop starts at 1.","failure_scenario":"Average([]int{10, 20}) returns 10."},`+
 		`{"file":"go.mod","summary":"No line.","failure_scenario":"x","verdict":"PLAUSIBLE","outcome":"fixed"}]}`))
-	ToolCall(&it, nil, nil) // the result's update has no input
+	harness.ToolCall(&it, nil, nil) // the result's update has no input
 	f := it.Findings
 	if f == nil || f.Level != "medium" || len(f.Items) != 2 {
 		t.Fatalf("got %+v", f)
@@ -119,7 +119,7 @@ func TestReportFindings(t *testing.T) {
 		t.Errorf("got %+v", f.Items)
 	}
 	none := model.Item{Tool: "ReportFindings"}
-	ToolCall(&none, nil, []byte(`{"findings":[]}`))
+	harness.ToolCall(&none, nil, []byte(`{"findings":[]}`))
 	if none.Findings == nil || len(none.Findings.Items) != 0 {
 		t.Errorf("an empty review: %+v", none.Findings)
 	}
@@ -130,26 +130,26 @@ func TestReportFindings(t *testing.T) {
 // TaskStop's call says which it stopped (its error too, when the task had
 // already ended).
 func TestStopTask(t *testing.T) {
-	p := StopTask("bgu2i75cc")
-	if what, id, ok := ReadStopTask(p); !ok || what != "" || id != "bgu2i75cc" {
-		t.Errorf("ReadStopTask(%q) = %q %q %v", p, what, id, ok)
+	p := harness.StopTask("bgu2i75cc")
+	if what, id, ok := harness.ReadStopTask(p); !ok || what != "" || id != "bgu2i75cc" {
+		t.Errorf("harness.ReadStopTask(%q) = %q %q %v", p, what, id, ok)
 	}
 	if len(p) > 120 {
 		t.Errorf("a long prompt: %q", p)
 	}
 	old := "Stop your background task bgu2i75cc (sleep 600 (or (so)); echo slept) now with your TaskStop tool (task_id: bgu2i75cc). " +
 		"Do nothing else, and say only whether it stopped."
-	if what, id, ok := ReadStopTask(old); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
-		t.Errorf("ReadStopTask(the old prompt) = %q %q %v", what, id, ok)
+	if what, id, ok := harness.ReadStopTask(old); !ok || what != "sleep 600 (or (so)); echo slept" || id != "bgu2i75cc" {
+		t.Errorf("harness.ReadStopTask(the old prompt) = %q %q %v", what, id, ok)
 	}
-	for _, p := range []string{ToSubagent("Explore", "ab59", "stop"), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
-		if _, _, ok := ReadStopTask(p); ok {
+	for _, p := range []string{harness.ToSubagent("Explore", "ab59", "stop"), strings.Replace(p, `"bgu2i75cc"`, `"bother"`, 1), p + " Then go on."} {
+		if _, _, ok := harness.ReadStopTask(p); ok {
 			t.Errorf("read %q as a stop", p)
 		}
 	}
 	it := model.Item{Tool: "TaskStop"}
-	ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "TaskStop"}}, []byte(`{"task_id":"adddce0a14433f6d6"}`))
-	if it.Stops != "adddce0a14433f6d6" || PassesToSubagent(it) != it.Stops {
+	harness.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "TaskStop"}}, []byte(`{"task_id":"adddce0a14433f6d6"}`))
+	if it.Stops != "adddce0a14433f6d6" || harness.PassesToSubagent(it) != it.Stops {
 		t.Fatalf("TaskStop: %+v", it)
 	}
 	for _, tc := range []struct {
@@ -162,8 +162,10 @@ func TestStopTask(t *testing.T) {
 		{"in_progress", "", false},
 	} {
 		it.Status, it.Text = tc.status, tc.text
-		if got := Stopped(it) != ""; got != tc.want {
+		if got := harness.Stopped(it) != ""; got != tc.want {
 			t.Errorf("Stopped after %s %q: %v", tc.status, tc.text, got)
 		}
 	}
 }
+
+var harness Harness

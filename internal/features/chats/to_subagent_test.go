@@ -8,7 +8,6 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -26,7 +25,7 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 	}
 	eventually(t, c, func() bool { return !c.busy })
 	got, _ := agent.texts()
-	if len(got) != 1 || got[0] != claude.ToSubagent("Explore", "ab59", "and README.md") {
+	if len(got) != 1 || got[0] != claudeHarness.ToSubagent("Explore", "ab59", "and README.md") {
 		t.Errorf("prompts = %q", got)
 	}
 	c.mu.Lock()
@@ -104,7 +103,7 @@ func TestAMessageToASubagentFollowsTheAgentsCall(t *testing.T) {
 
 	// Replayed, the message names its subagent again.
 	update(c, acp.SessionUpdate{SessionUpdate: "user_message_chunk", UserMessageChunk: &acp.ContentChunk{MessageID: "u9",
-		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claude.ToSubagent("general-purpose", "ab59", "hi")}}}})
+		Content: acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: claudeHarness.ToSubagent("general-purpose", "ab59", "hi")}}}})
 	c.mu.Lock()
 	it := c.items[len(c.items)-1]
 	c.mu.Unlock()

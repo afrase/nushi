@@ -80,7 +80,7 @@ func (d Dirs) find(id, cwd string) (string, error) {
 		}
 		return s.file, nil
 	}
-	// ACP's "Resource not found": the chat's session is gone (chats.NotFound).
+	// ACP's "Resource not found": the chat's session is gone (agentproc.NotFound).
 	return "", &acp.Error{Code: acp.ErrorCodeResourceNotFound, Message: "PiG has no session " + id}
 }
 

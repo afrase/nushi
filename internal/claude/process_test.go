@@ -50,18 +50,18 @@ func TestRunsBackgroundCommand(t *testing.T) {
 		{"no command line", "sleep 300", nil, false},
 		{"a quote left open", "sleep 300", claudeShell("'sleep 300 < /dev/null"), false},
 	} {
-		if got := RunsBackgroundCommand(bashCall(t, tc.command), tc.args); got != tc.want {
+		if got := harness.RunsBackgroundCommand(bashCall(t, tc.command), tc.args); got != tc.want {
 			t.Errorf("%s: RunsBackgroundCommand = %v", tc.name, got)
 		}
 	}
 	cut := bashCall(t, loop)
 	cut.Input = cut.Input[:len(cut.Input)/2] + "…"
-	if RunsBackgroundCommand(cut, claudeShell("'"+loop+"' < /dev/null")) {
+	if harness.RunsBackgroundCommand(cut, claudeShell("'"+loop+"' < /dev/null")) {
 		t.Error("matched a cut input")
 	}
 	read := bashCall(t, loop)
 	read.Tool = "Read"
-	if RunsBackgroundCommand(read, claudeShell("'"+loop+"' < /dev/null")) {
+	if harness.RunsBackgroundCommand(read, claudeShell("'"+loop+"' < /dev/null")) {
 		t.Error("matched a call that isn't Bash")
 	}
 }

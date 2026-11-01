@@ -25,9 +25,9 @@ func TestNotice(t *testing.T) {
 		{nil, "**Notice:** Opus 5.5's safeguards stopped the response above", model.AgentNotice{}, false},
 		{map[string]any{"claudeCode": map[string]any{"parentToolUseId": "t1"}}, "text", model.AgentNotice{}, false},
 	} {
-		got, ok := Notice(c.meta, c.text)
+		got, ok := harness.Notice(c.meta, c.text)
 		if got != c.want || ok != c.ok {
-			t.Errorf("Notice(%v, %q) = %+v, %v; want %+v, %v", c.meta, c.text, got, ok, c.want, c.ok)
+			t.Errorf("harness.Notice(%v, %q) = %+v, %v; want %+v, %v", c.meta, c.text, got, ok, c.want, c.ok)
 		}
 	}
 }
@@ -41,8 +41,8 @@ func TestInterrupted(t *testing.T) {
 		"Why did you say [Request interrupted by user]?": false,
 		"Go on": false,
 	} {
-		if got := Interrupted(text); got != want {
-			t.Errorf("Interrupted(%q) = %v", text, got)
+		if got := harness.Interrupted(text); got != want {
+			t.Errorf("harness.Interrupted(%q) = %v", text, got)
 		}
 	}
 }

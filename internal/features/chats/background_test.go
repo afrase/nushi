@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -172,7 +171,7 @@ func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
 			procs.err = tc.err
 			testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, waitCall))
 			eventually(t, c, func() bool { return !c.busy })
-			if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claude.StopTask(waitTask) {
+			if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask(waitTask) {
 				t.Errorf("asked %q", prompts)
 			}
 			if len(procs.stopped) != 0 {
@@ -189,7 +188,7 @@ func TestABackgroundCommandFallsBackToTaskStop(t *testing.T) {
 // from before (with what it names), reads back as a stop of that call.
 func TestReplayedStopsReadBack(t *testing.T) {
 	c := commandChat(t, false).c
-	for _, text := range []string{claude.StopTask(waitTask),
+	for _, text := range []string{claudeHarness.StopTask(waitTask),
 		"Stop your background task " + waitTask + " (until test -f /tmp/made-up/ready; do) now with your TaskStop tool (task_id: " + waitTask + "). Do nothing else, and say only whether it stopped."} {
 		it := model.Item{Kind: model.UserMessage, Text: text}
 		c.mu.Lock()

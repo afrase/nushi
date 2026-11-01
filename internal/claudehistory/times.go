@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-// Times says when Claude wrote each message of session id's transcript in
+// MessageTimes says when Claude wrote each message of session id's transcript in
 // folder's history, by the id ACP gives it: the API's message id for its
 // own (the first of the records one is split into), the record's uuid for
 // the user's. Empty when the transcript can't be read; what it could read
 // of one that ends short.
-func Times(projects, id, folder string) map[string]time.Time {
-	src, _, err := paths(projects, id, folder, folder)
+func (l Local) MessageTimes(id, folder string) map[string]time.Time {
+	src, _, err := paths(l.Projects, id, folder, folder)
 	if err != nil {
 		return nil
 	}

@@ -16,7 +16,7 @@ import (
 // unquoting, so a quoting Nushi doesn't foresee matches all the same; a
 // command Claude Code changes before it runs (`>NUL` made `>/dev/null`),
 // or whose input Nushi kept cut or masked, matches nothing.
-func RunsBackgroundCommand(call model.Item, args []string) bool {
+func (Harness) RunsBackgroundCommand(call model.Item, args []string) bool {
 	var in struct {
 		Command string `json:"command"`
 	}

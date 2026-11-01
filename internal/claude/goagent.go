@@ -13,7 +13,7 @@ import (
 )
 
 // AdapterChoice is a dev override in the daemon's environment: "go" runs
-// Claude through Nushi's own agent (claudeacp, StartGo) whatever the
+// Claude through Nushi's own agent (claudeacp, startGo) whatever the
 // setting (Settings › Agents, store's claudeGoAgent) says, for a dev
 // daemon (docs/development.md's Working notes). Nothing else reads it.
 const AdapterChoice = "NUSHI_CLAUDE_ADAPTER"
@@ -22,11 +22,11 @@ const AdapterChoice = "NUSHI_CLAUDE_ADAPTER"
 // (AdapterChoice).
 func GoForced() bool { return os.Getenv(AdapterChoice) == "go" }
 
-// StartGo starts Nushi's Go agent for Claude, as Start does the adapter:
+// startGo starts Nushi's Go agent for Claude, as Start does the adapter:
 // this executable's claudeacp.Command, in dir (the daemon's folder) and
 // env, running cli, the user's Claude Code. It needs no Node and nothing
 // set up. Its stderr goes to log.
-func StartGo(dir, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+func startGo(dir, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ import (
 // has the session (its TUI, or a host of another bridge), so lsof finds
 // it, in about a tenth of a second. Two Antes on one session both append
 // to it.
-func OpenElsewhere(ids []string) map[string]string {
+func (Local) OpenElsewhere(ids []string) map[string]string {
 	var files []string
 	for _, id := range ids {
 		if isSessionID(id) {

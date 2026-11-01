@@ -257,7 +257,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 	if first != strings.SplitN(replayed[0], ":", 3)[1]+".0" {
 		t.Errorf("agent message id %s", first)
 	}
-	f, err := c2.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: sid, Cwd: "/work", Meta: ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(first)})
+	f, err := c2.ForkSession(ctx, &acp.ForkSessionRequest{SessionID: sid, Cwd: "/work", Meta: harness.ForkAt(&acp.InitializeResponse{AgentInfo: &acp.Implementation{Name: AgentName}})(first)})
 	if err != nil {
 		t.Fatal(err)
 	}

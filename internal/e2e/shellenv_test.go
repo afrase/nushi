@@ -72,14 +72,15 @@ exec /bin/sh -c "$4"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := omp.Start(t.TempDir(), r.CLI, r.Env, nil, nil); err != nil {
+	if _, err := (omp.Harness{}).Start(t.TempDir(), r, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	r, err = svc.Run("claude")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := claude.Start(t.TempDir(), r.Node, "adapter.js", r.CLI, r.Env, nil, nil); err != nil {
+	r.Program = "adapter.js"
+	if _, err := (claude.Harness{}).Start(t.TempDir(), r, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	for name, want := range map[string]string{"omp": "", "node": filepath.Join(bin, "claude")} {

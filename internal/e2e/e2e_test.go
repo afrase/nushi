@@ -132,7 +132,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 			pig.Serve(r, w, pig.Config{Spawn: spawn, Dirs: pig.Dirs{Sessions: pigs.Sessions}, Version: pig.Version})
 		}),
 	}
-	kinds := []chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Notice}}}
+	kinds := []chats.Kind{{Name: "fake", Launch: fake(false, false), History: copyHistory, Dialect: chats.Dialect{NamesSessions: true, Notice: claude.Harness{}.Notice}}}
 	for _, a := range knownagents.All("", st.ClaudeGoAgent) { // no projects folder: Local isn't called
 		if l := launches[a.Agent.Name]; l != nil {
 			k := a.Chats

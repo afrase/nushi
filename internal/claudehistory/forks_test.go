@@ -20,7 +20,7 @@ func TestForked(t *testing.T) {
 	write("-a", "fork", `{"type":"queue-operation"}`+"\n"+`{"type":"user","forkedFrom":{"sessionId":"x","messageUuid":"y"}}`+"\n")
 	write("-b", "plain", `{"type":"user","message":{"content":"\"forkedFrom\":{\"sessionId\":\"x\"}"}}`+"\n")
 	write("-b", "other", `{"type":"user","forkedFrom":{"sessionId":"x"}}`+"\n")
-	got := Forked(projects, []string{"fork", "plain", "missing"})
+	got := local(projects).Forked([]string{"fork", "plain", "missing"})
 	if want := map[string]bool{"fork": true}; !maps.Equal(got, want) {
 		t.Errorf("forked = %v, want %v", got, want)
 	}

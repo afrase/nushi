@@ -19,6 +19,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// NotFound says an agent's error is ACP's "Resource not found" (-32002),
+// which claude-agent-acp's session/load answers for a session Claude
+// doesn't have, as PiG's bridge does.
+func NotFound(err error) bool {
+	e, ok := errors.AsType[*acp.Error](err)
+	return ok && e.Code == acp.ErrorCodeResourceNotFound
+}
+
 // Agent is an agent's process and the connection to it.
 type Agent struct {
 	*acp.AgentConn

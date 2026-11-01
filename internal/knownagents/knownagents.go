@@ -78,51 +78,42 @@ func All(projects string, claudeGo func() bool) []Agent {
 				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk},
 				// The Go agent needs no Node, nothing set up and no version pinned.
 				Own: func() bool { return claude.GoForced() || claudeGo() }},
-			Chats: chats.Kind{ClientMCP: true, Resume: "claude --resume", Gone: chats.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
-				Dialect: chats.Dialect{InitMeta: claude.InitMeta, SessionMeta: claude.SessionMeta, UltracodeMeta: claude.UltracodeMeta, TurnDone: claude.TurnDone, ForkAt: claude.ForkAt, Parent: claude.Parent, ToolCall: claude.ToolCall, Notice: claude.Notice, Interrupted: claude.Interrupted,
-					Background: claude.Background, ReportElsewhere: claude.ReportElsewhere,
-					BackgroundCommand: claude.BackgroundCommand, ReadBackgroundCommand: claude.ReadBackgroundCommand,
-					SubagentID: claude.SubagentID, ToSubagent: claude.ToSubagent, ReadToSubagent: claude.ReadToSubagent, PassesToSubagent: claude.PassesToSubagent,
-					Subagents: claude.Subagents, StopTask: claude.StopTask, ReadStopTask: claude.ReadStopTask, Stopped: claude.Stopped, RunsBackgroundCommand: claude.RunsBackgroundCommand,
-					Other: claude.Other, Default: claude.Default, ForkTitle: claude.ForkTitle, Compacted: claude.Compacted,
-					ContextCommand: claude.ContextCommand, ReadContext: claude.ReadContext, Redelete: claude.Redelete, NamesSessions: true}},
+			Chats: chats.Kind{ClientMCP: true, Resume: "claude --resume", Gone: agentproc.NotFound, Expires: "Claude Code deletes sessions after 30 days by default",
+				Dialect: chats.Dialect{InitMeta: claude.Harness{}.InitMeta(), SessionMeta: claude.Harness{}.SessionMeta(), UltracodeMeta: claude.Harness{}.UltracodeMeta(), TurnDone: claude.Harness{}.TurnDone, ForkAt: claude.Harness{}.ForkAt, Parent: claude.Harness{}.Parent, ToolCall: claude.Harness{}.ToolCall, Notice: claude.Harness{}.Notice, Interrupted: claude.Harness{}.Interrupted,
+					Background: claude.Harness{}.Background, ReportElsewhere: claude.Harness{}.ReportElsewhere,
+					BackgroundCommand: claude.Harness{}.BackgroundCommand, ReadBackgroundCommand: claude.Harness{}.ReadBackgroundCommand,
+					SubagentID: claude.Harness{}.SubagentID, ToSubagent: claude.Harness{}.ToSubagent, ReadToSubagent: claude.Harness{}.ReadToSubagent, PassesToSubagent: claude.Harness{}.PassesToSubagent,
+					Subagents: true, StopTask: claude.Harness{}.StopTask, ReadStopTask: claude.Harness{}.ReadStopTask, Stopped: claude.Harness{}.Stopped, RunsBackgroundCommand: claude.Harness{}.RunsBackgroundCommand,
+					Other: claude.Harness{}.Other, Default: claude.Harness{}.Default, ForkTitle: claude.Harness{}.ForkTitle, Compacted: claude.Harness{}.Compacted,
+					ContextCommand: claude.Harness{}.ContextCommand(), ReadContext: claude.Harness{}.ReadContext, Redelete: claude.Harness{}.Info().Redelete, NamesSessions: true}},
 			Local: func(k *chats.Kind) {
-				k.History = func(id, from, to string) (func() error, error) { return claudehistory.Copy(projects, id, from, to) }
-				k.OpenElsewhere = claudehistory.Open
-				k.Forked = func(ids []string) map[string]bool { return claudehistory.Forked(projects, ids) }
-				k.HistoryGone = func(sid, folder string) bool { return claudehistory.Gone(projects, sid, folder) }
-				k.MessageTimes = func(sid, folder string) map[string]time.Time { return claudehistory.Times(projects, sid, folder) }
+				k.History = claudehistory.Local{Projects: projects}.History
+				k.OpenElsewhere = claudehistory.Local{}.OpenElsewhere
+				k.Forked = claudehistory.Local{Projects: projects}.Forked
+				k.HistoryGone = claudehistory.Local{Projects: projects}.HistoryGone
+				k.MessageTimes = claudehistory.Local{Projects: projects}.MessageTimes
 			},
-			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-				if r.Own {
-					return claude.StartGo(dir, r.CLI, r.Env, h, log)
-				}
-				return claude.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
-			},
+			Start:  claude.Harness{}.Start,
 			Skills: claudeskills.Claude{}, Trust: claudetrust.Trust{},
 			MCP: func(func() (agents.Run, error)) mcp.Config { return claudemcp.Claude{} },
 		},
 		{
 			Agent: agents.Agent{Name: "codex", Title: "Codex", CLI: codex.CLI, Page: codex.Page, Tested: codex.Tested,
 				Adapter: &agents.Adapter{Lock: codex.Adapter, Package: codex.AdapterPackage, Bin: codex.AdapterBin, Download: codex.AdapterDownload, Disk: codex.AdapterDisk}},
-			Chats: chats.Kind{ClientMCP: true, Resume: codex.Resume, History: codex.History, DeleteArchives: codex.DeleteArchives, Gone: codex.Gone, OneWriter: true,
-				Dialect: chats.Dialect{ForkAt: codex.ForkAt, ToolCall: codex.ToolCall, Other: codex.Other}},
-			Local: func(k *chats.Kind) { k.OpenElsewhere, k.Forked = codex.OpenElsewhere, codex.Forked },
-			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-				return codex.Start(dir, r.Node, r.Program, r.CLI, r.Env, h, log)
-			},
+			Chats: chats.Kind{ClientMCP: true, Resume: codex.Harness{}.Info().Resume, History: codex.Harness{}.History, DeleteArchives: true, Gone: codex.Harness{}.Gone, OneWriter: true,
+				Dialect: chats.Dialect{ForkAt: codex.Harness{}.ForkAt, ToolCall: codex.Harness{}.ToolCall, Other: codex.Harness{}.Other}},
+			Local:  func(k *chats.Kind) { k.OpenElsewhere, k.Forked = codex.Local{}.OpenElsewhere, codex.Local{}.Forked },
+			Start:  codex.Harness{}.Start,
 			Skills: codexskills.Codex{}, Trust: codextrust.Trust{},
 		},
 		{
 			Agent: agents.Agent{Name: "ante", Title: "Ante", CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
-			Chats: chats.Kind{Resume: ante.Resume, Dialect: chats.Dialect{ForkAt: ante.ForkAt, Other: ante.Other, Context: ante.Context}},
+			Chats: chats.Kind{Resume: ante.Harness{}.Info().Resume, Dialect: chats.Dialect{ForkAt: ante.Harness{}.ForkAt, Other: ante.Harness{}.Other, Context: ante.Harness{}.Context}},
 			Local: func(k *chats.Kind) {
-				k.OpenElsewhere = ante.OpenElsewhere
-				k.MessageTimes = func(sid, _ string) map[string]time.Time { return ante.Times(sid) }
+				k.OpenElsewhere = ante.Local{}.OpenElsewhere
+				k.MessageTimes = func(sid, _ string) map[string]time.Time { return ante.Local{}.MessageTimes(sid, "") }
 			},
-			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-				return ante.Start(dir, r.Env, h, log)
-			},
+			Start:  ante.Harness{}.Start,
 			Skills: anteskills.Ante{}, Trust: antetrust.Trust{},
 			// Its servers are checked by a throwaway `ante serve`, run as a
 			// chat's would be.
@@ -137,20 +128,16 @@ func All(projects string, claudeGo func() bool) []Agent {
 			},
 		},
 		{
-			Agent: agents.Agent{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
-			Chats: chats.Kind{Resume: omp.Resume, OneWriter: true, Dialect: chats.Dialect{Other: omp.Other, ToolCall: omp.ToolCall}},
-			Local: func(k *chats.Kind) { k.OpenElsewhere, k.Forked = omp.OpenElsewhere, omp.Forked },
-			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-				return omp.Start(dir, r.CLI, r.Env, h, log)
-			},
+			Agent:  agents.Agent{Name: "omp", Title: "oh-my-pi", CLI: omp.CLI, Page: omp.Page, Needs: omp.Needs, Tested: omp.Tested},
+			Chats:  chats.Kind{Resume: omp.Harness{}.Info().Resume, OneWriter: true, Dialect: chats.Dialect{Other: omp.Harness{}.Other, ToolCall: omp.Harness{}.ToolCall}},
+			Local:  func(k *chats.Kind) { k.OpenElsewhere, k.Forked = omp.Local{}.OpenElsewhere, omp.Local{}.Forked },
+			Start:  omp.Harness{}.Start,
 			Skills: ompskills.OMP{}, Trust: omptrust.Trust{},
 		},
 		{
-			Agent: agents.Agent{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
-			Chats: chats.Kind{Resume: pig.Resume, Gone: chats.NotFound, Dialect: chats.Dialect{ForkAt: pig.ForkAt, Context: pig.Context}},
-			Start: func(dir string, r agents.Run, h acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-				return pig.Start(dir, r.Env, h, log)
-			},
+			Agent:  agents.Agent{Name: "pig", Title: "PiG", CLI: pig.CLI, Page: pig.Page, Tested: pig.Tested},
+			Chats:  chats.Kind{Resume: pig.Harness{}.Info().Resume, Gone: agentproc.NotFound, Dialect: chats.Dialect{ForkAt: pig.Harness{}.ForkAt, Context: pig.Harness{}.Context}},
+			Start:  pig.Harness{}.Start,
 			Skills: pigskills.PiG{}, Trust: pig.Trust{},
 		},
 	}

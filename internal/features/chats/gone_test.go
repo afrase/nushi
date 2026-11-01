@@ -74,7 +74,7 @@ func goneService(t *testing.T, loadErr error, historyGone func(sid, folder strin
 	sessions := &memSessions{stored: []model.ChatRecord{sess}}
 	ev := &events{}
 	k := Kind{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect,
-		Gone: NotFound, HistoryGone: historyGone, Expires: "it deletes old ones"}
+		Gone: claudeHarness.Gone, HistoryGone: historyGone, Expires: "it deletes old ones"}
 	o.Sessions, o.Worktrees, o.Scratch, o.Publish = sessions, stateWorktrees{}, t.TempDir(), ev.publish
 	svc := newService(t, []Kind{k}, o)
 	t.Cleanup(svc.Close)
@@ -216,8 +216,8 @@ func TestSweepRemovesChatsWhoseHistoryIsGone(t *testing.T) {
 	ev := &events{}
 	historyGone := func(sid, _ string) bool { return gone[sid] }
 	svc := newService(t, []Kind{
-		{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect, Gone: NotFound, HistoryGone: historyGone},
-		{Name: "other", Title: "Other", Launch: agent.launch, Dialect: testDialect, Gone: NotFound},
+		{Name: "fake", Title: "Fake", Launch: agent.launch, Dialect: testDialect, Gone: claudeHarness.Gone, HistoryGone: historyGone},
+		{Name: "other", Title: "Other", Launch: agent.launch, Dialect: testDialect, Gone: claudeHarness.Gone},
 	}, Options{Sessions: sessions, Worktrees: stateWorktrees{}, Scratch: t.TempDir(), Publish: ev.publish})
 	svc.Sweep(context.Background())
 	if !slices.Equal(sessions.deleted, []string{"gone"}) {

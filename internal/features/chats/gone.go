@@ -22,14 +22,6 @@ import (
 // worktree or scratch folder holds work stays too, its session gone, with
 // Delete what's left (ADR 0015).
 
-// NotFound says an agent's error is ACP's "Resource not found" (-32002),
-// which claude-agent-acp's session/load answers for a session Claude
-// doesn't have, as PiG's bridge does.
-func NotFound(err error) bool {
-	e, ok := errors.AsType[*acp.Error](err)
-	return ok && e.Code == acp.ErrorCodeResourceNotFound
-}
-
 // detail is an agent's error with the details its data may carry (codex-acp
 // puts the reason there: "session … is archived. Run `codex unarchive …`").
 func detail(err error) string {

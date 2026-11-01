@@ -12,20 +12,20 @@ import (
 // first records carry forkedFrom, as Claude writes it for --fork-session
 // and an ACP session/fork), looking for each transcript in every folder's
 // history.
-func Forked(projects string, ids []string) map[string]bool {
+func (l Local) Forked(ids []string) map[string]bool {
 	want := map[string]bool{}
 	for _, id := range ids {
 		want[id+".jsonl"] = true
 	}
 	out := map[string]bool{}
-	dirs, _ := os.ReadDir(projects)
+	dirs, _ := os.ReadDir(l.Projects)
 	for _, d := range dirs {
 		if !d.IsDir() {
 			continue
 		}
-		files, _ := os.ReadDir(filepath.Join(projects, d.Name()))
+		files, _ := os.ReadDir(filepath.Join(l.Projects, d.Name()))
 		for _, f := range files {
-			if want[f.Name()] && f.Type().IsRegular() && forked(filepath.Join(projects, d.Name(), f.Name())) {
+			if want[f.Name()] && f.Type().IsRegular() && forked(filepath.Join(l.Projects, d.Name(), f.Name())) {
 				out[strings.TrimSuffix(f.Name(), ".jsonl")] = true
 			}
 		}

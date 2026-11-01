@@ -22,7 +22,7 @@ func AgentDir() string {
 // Forked says which of sessions ids are forks of another session: the
 // session record near a session file's start names parentSession. Files
 // are <agent dir>/sessions/<folder>/<time>_<id>.jsonl (AgentDir).
-func Forked(ids []string) map[string]bool {
+func (Local) Forked(ids []string) map[string]bool {
 	return forked(filepath.Join(AgentDir(), "sessions"), ids)
 }
 
@@ -66,7 +66,7 @@ func hasParent(path string) bool {
 // a new session of its own (a terminal's says so). The lock is looked at,
 // never taken. With omp's XDG layout the folder is elsewhere, and this
 // sees nothing.
-func OpenElsewhere(ids []string) map[string]string {
+func (Local) OpenElsewhere(ids []string) map[string]string {
 	home, _ := os.UserHomeDir()
 	return held(filepath.Join(home, ".omp", "run", "session-owners"), ids)
 }

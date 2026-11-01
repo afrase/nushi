@@ -1,8 +1,9 @@
 // Package claude knows what Claude Code's ACP adapter (claude-agent-acp
 // 0.94.0) does beyond ACP: how to start it, the _meta it reads and sends,
-// and its quirks. `main` hands these to the chats feature, which knows
-// nothing of Claude. Claude's files are read in claudehistory, claudemcp
-// and claudetrust. Nushi's Go agent (claudeacp, `nushid claude-acp`)
+// and its quirks, as its Harness; the chats feature, which knows nothing of
+// Claude, takes that through its interfaces. Claude's files are read in
+// claudehistory (whose Local is this Harness with them), claudemcp and
+// claudetrust. Nushi's Go agent (claudeacp, `nushid claude-acp`)
 // speaks the same dialect and runs instead of the adapter when the daemon
 // is told to (goagent.go).
 package claude
@@ -26,8 +27,24 @@ import (
 
 	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/agentproc"
+	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 )
+
+// Harness is Claude Code as Nushi runs it, for the chats feature's
+// interfaces. Nothing here reads Claude's files: claudehistory.Local adds
+// that.
+type Harness struct{}
+
+// Info is what Harness is. Claude deletes a session once more 3 seconds on:
+// deleting closes it first, but Claude writes a little of the session back
+// as it ends. The adapter shows subagents as sessions of their own (ACP's
+// subagents RFD) to a client that says it can take them: each subagent's
+// end, why it ended, and a stop of its own (session/cancel on its session).
+func (Harness) Info() model.HarnessInfo {
+	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
+		Expires: "Claude Code deletes sessions after 30 days by default", NamesSessions: true, Subagents: true, Redelete: 3 * time.Second}
+}
 
 // Adapter is Claude Code's ACP adapter, as Nushi pins it: adapter/'s
 // package.json names the version, its lockfile every package's (make
@@ -45,15 +62,19 @@ const (
 //go:embed adapter
 var adapterFiles embed.FS
 
-// Start starts the adapter set up in Nushi's data folder (its program,
-// under node, the Node on PATH), running cli, the user's Claude Code, in
-// env (the login shell's, ADR 0048). It runs in dir (the daemon's own
-// folder); a chat's folder reaches the agent only as the session's cwd.
-// Its stderr goes to log.
-func Start(dir, node, program, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	cmd := exec.Command(node, program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
+// Start starts Nushi's Go agent when r says (goagent.go), else the adapter
+// set up in Nushi's data folder (its program, under node, the Node on
+// PATH), running r's CLI, the user's Claude Code, in r's environment (the
+// login shell's, ADR 0048). It runs in dir (the daemon's own folder); a
+// chat's folder reaches the agent only as the session's cwd. Its stderr
+// goes to log.
+func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+	if r.Own {
+		return startGo(dir, r.CLI, r.Env, client, log)
+	}
+	cmd := exec.Command(r.Node, r.Program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
-	cmd.Env = append(slices.Clone(env), "CLAUDE_CODE_EXECUTABLE="+cli)
+	cmd.Env = append(slices.Clone(r.Env), "CLAUDE_CODE_EXECUTABLE="+r.CLI)
 	return agentproc.Start(cmd, client, log)
 }
 
@@ -112,13 +133,7 @@ func SignedIn(run func(args ...string) ([]byte, error)) string {
 
 // InitMeta is initialize's client _meta: the adapter then sends a
 // subagent's text and thinking too.
-var InitMeta = map[string]any{"subagent-transcript": true}
-
-// Subagents says the adapter shows subagents as sessions of their own
-// (ACP's subagents RFD) to a client that says it can take them: each
-// subagent's end, why it ended, and a stop of its own (session/cancel on
-// its session).
-const Subagents = true
+func (Harness) InitMeta() map[string]any { return map[string]any{"subagent-transcript": true} }
 
 // SessionMeta is the session requests' _meta, the host options the adapter
 // passes Claude Code. perTaskStopAffordance, as Claude Code's terminal has
@@ -127,10 +142,12 @@ const Subagents = true
 // update then tells. CLAUDE_CODE_REPORT_FINDINGS in Claude Code's
 // environment makes its /code-review report through its ReportFindings
 // tool, which the transcript draws as a card, instead of printing JSON.
-var SessionMeta = map[string]any{"claudeCode": map[string]any{"options": map[string]any{
-	"perTaskStopAffordance": true,
-	"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
-}}}
+func (Harness) SessionMeta() map[string]any {
+	return map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+		"perTaskStopAffordance": true,
+		"env":                   map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
+	}}}
+}
 
 // UltracodeMeta joins SessionMeta for a chat with Ultracode on: Claude
 // Code's ultracode (standing multi-agent workflow orchestration) for the
@@ -138,9 +155,11 @@ var SessionMeta = map[string]any{"claudeCode": map[string]any{"options": map[str
 // Code as its programmatic settings (as --settings would). It takes
 // effect only with workflows on and a model that supports it; the adapter
 // keeps it on across effort changes.
-var UltracodeMeta = map[string]any{"claudeCode": map[string]any{"options": map[string]any{
-	"settings": map[string]any{"ultracode": true},
-}}}
+func (Harness) UltracodeMeta() map[string]any {
+	return map[string]any{"claudeCode": map[string]any{"options": map[string]any{
+		"settings": map[string]any{"ultracode": true},
+	}}}
+}
 
 // TurnDone says a usage update is the result of the user's turn: the one
 // with the cost, from a model cycle the user started
@@ -148,7 +167,7 @@ var UltracodeMeta = map[string]any{"claudeCode": map[string]any{"options": map[s
 // subagent's report). The adapter answers the turn's prompt only once the
 // background subagents the turn started have ended, and their reports
 // have been answered.
-func TurnDone(u *acp.UsageUpdate) bool {
+func (Harness) TurnDone(u *acp.UsageUpdate) bool {
 	origin, _ := u.Meta["_claude/origin"].(map[string]any)
 	return u.Cost != nil && origin["kind"] == "human"
 }
@@ -159,7 +178,7 @@ func TurnDone(u *acp.UsageUpdate) bool {
 // messageId, the message included) only given a vendor extension meant for
 // JetBrains AIR, `_meta.jetbrains.air.fork` (ADR 0020), which the Go agent
 // reads too. Drop it when ACP has a standard way.
-func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
+func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
 	if init.AgentInfo == nil || init.AgentInfo.Name != AdapterPackage && init.AgentInfo.Name != claudeacp.Name {
 		return nil
 	}
@@ -171,7 +190,11 @@ func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any 
 
 // Parent reads the subagent tool call an update comes from (the subagent's
 // own tool calls, text and thinking), from _meta.claudeCode.
-func Parent(meta map[string]any) string { return claudeCode(meta, "parentToolUseId") }
+func (Harness) Parent(meta map[string]any) string { return claudeCode(meta, "parentToolUseId") }
+
+// Gone says a session/load error means Claude no longer has the session:
+// the adapter answers ACP's "Resource not found".
+func (Harness) Gone(err error) bool { return agentproc.NotFound(err) }
 
 func claudeCode(meta map[string]any, key string) string {
 	cc, _ := meta["claudeCode"].(map[string]any)
@@ -187,8 +210,8 @@ func claudeCode(meta map[string]any, key string) string {
 // call's own output is only an acknowledgement; for ReportFindings the
 // review's findings; for TaskStop the task it stops. Claude may send the
 // input in a later update than the name.
-func ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
-	it.Parent, it.Tool = cmp.Or(it.Parent, Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
+func (h Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMessage) (ownText bool) {
+	it.Parent, it.Tool = cmp.Or(it.Parent, h.Parent(meta)), cmp.Or(claudeCode(meta, "toolName"), it.Tool)
 	var in struct {
 		Type       string `json:"subagent_type"`
 		Prompt     string `json:"prompt"`
@@ -282,30 +305,32 @@ func modelName(id string) string {
 // Background says an Agent call's output tells that Claude started the
 // subagent in the background: it then completes the call at once, and the
 // subagent runs until its SubagentHandback.
-func Background(output string) bool { return strings.HasPrefix(output, "Async agent launched") }
+func (Harness) Background(output string) bool {
+	return strings.HasPrefix(output, "Async agent launched")
+}
 
 // ReportElsewhere says a subagent call's output only points at the
 // subagent's report, its SubagentHandback call, which session/load doesn't
 // replay.
-func ReportElsewhere(output string) bool {
+func (Harness) ReportElsewhere(output string) bool {
 	return strings.HasPrefix(strings.TrimSpace(output), "This agent's report was delivered to you")
 }
 
 // Other says field is the free-text "Other" answer that Claude's
 // AskUserQuestion form puts after a question: `<id>_custom`.
-func Other(field, before model.Field) bool {
+func (Harness) Other(field, before model.Field) bool {
 	return len(field.Options) == 0 && field.ID == before.ID+"_custom"
 }
 
 // Default says v is the model list's "Default (recommended)": Claude
 // picks the model then.
-func Default(o model.ConfigOption, v model.ConfigValue) bool {
+func (Harness) Default(o model.ConfigOption, v model.ConfigValue) bool {
 	return o.Category == "model" && strings.HasPrefix(strings.ToLower(v.Name), "default")
 }
 
 // ForkTitle says whether title is Claude's for a fork of a session titled
 // of: "<title> (fork)", for a fork of a fork "<title> (fork) (fork)".
-func ForkTitle(title, of string) bool {
+func (Harness) ForkTitle(title, of string) bool {
 	rest, ok := strings.CutPrefix(title, of)
 	return ok && rest != "" && strings.Trim(strings.ReplaceAll(rest, " (fork)", ""), " ") == ""
 }
@@ -318,7 +343,7 @@ const summaryStart = "This session is being continued from a previous conversati
 // Compacted says an item is part of a compaction of the conversation: its
 // call while it runs (/compact, or Claude's own), or the summary a replay
 // after one starts with. Neither call nor command is replayed.
-func Compacted(it model.Item) bool {
+func (Harness) Compacted(it model.Item) bool {
 	return it.Kind == model.ToolCall && it.Tool == "compact" ||
 		it.Kind == model.UserMessage && strings.HasPrefix(it.Text, summaryStart)
 }
@@ -326,17 +351,12 @@ func Compacted(it model.Item) bool {
 // ContextCommand says what fills the context. The adapter answers it
 // itself, without the model, but Claude keeps the answer in the
 // conversation (ADR 0017).
-const ContextCommand = "context"
+func (Harness) ContextCommand() string { return "context" }
 
 // ReadContext reads /context's reply: its last message, since the adapter
 // sends the output twice, as two messages.
-func ReadContext(messages []string) model.ContextUsage {
+func (Harness) ReadContext(messages []string) model.ContextUsage {
 	md := messages[len(messages)-1]
 	cats, _ := Parse(md) // the app shows the markdown when there are none
 	return model.ContextUsage{Markdown: md, Categories: cats}
 }
-
-// Redelete is how long after deleting a session that nobody will see again
-// it is deleted once more: deleting closes it first, but Claude writes a
-// little of the session back as it ends.
-const Redelete = 3 * time.Second

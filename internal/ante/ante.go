@@ -2,7 +2,7 @@
 // protocol (`ante serve`), not ACP, so Nushi brings an ACP agent for it,
 // the bridge: `nushid ante-acp` runs it, an `ante serve --stdio` per
 // session underneath (ADR 0030). Nothing outside this package knows Ante's
-// protocol; `main` hands the chats feature the launcher and dialect below.
+// protocol; the chats feature takes its Harness through its interfaces.
 // It follows Ante 0.2.14's protocol (crates/protocol-shape/src/msg.rs).
 package ante
 
@@ -22,6 +22,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/agentproc"
+	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 )
@@ -46,16 +47,29 @@ func Also() []string {
 	return []string{filepath.Join(Home(), "bin", "ante"), filepath.Join(home, ".ante", "bin", "ante")}
 }
 
-// Start starts the bridge, as claude.Start does Claude's adapter: this
-// executable's Command, in dir (the daemon's folder) and env (the login
-// shell's, ADR 0048), its stderr to log.
-func Start(dir string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
+// Harness is Ante as Nushi runs it, for the chats feature's interfaces.
+// Nothing here reads Ante's files: Local adds that.
+type Harness struct{}
+
+// Local is Harness with what reads Ante's files and processes on this Mac
+// (open.go, times.go). Tests use Harness alone.
+type Local struct{ Harness }
+
+// Info is what Harness is.
+func (Harness) Info() model.HarnessInfo {
+	return model.HarnessInfo{Name: "ante", Title: "Ante", Resume: "ante --resume"}
+}
+
+// Start starts the bridge, as claude.Harness does Claude's adapter: this
+// executable's Command, in dir (the daemon's folder) and r's environment
+// (the login shell's, ADR 0048), its stderr to log.
+func (Harness) Start(dir string, r agents.Run, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
-	cmd.Dir, cmd.Env = dir, env        // the bridge finds the CLI on env's PATH
+	cmd.Dir, cmd.Env = dir, r.Env      // the bridge finds the CLI on that PATH
 	return agentproc.Start(cmd, client, log)
 }
 
@@ -152,13 +166,10 @@ func catalog(bin string) ([]provider, error) {
 	return c.Providers, json.Unmarshal(out, &c)
 }
 
-// Resume is the terminal command that opens an Ante session by its id.
-const Resume = "ante --resume"
-
 // ForkAt says how to fork a session at a message, if the agent is the
 // bridge: its own meta, which cuts after the turn that has the message
 // (Ante forks at an input).
-func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
+func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
 	if init.AgentInfo == nil || init.AgentInfo.Name != AgentName {
 		return nil
 	}
@@ -169,11 +180,11 @@ func ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any 
 
 // Other says field is the free-text "Other" the bridge puts after a
 // question with choices.
-func Other(field, before model.Field) bool { return field.ID == before.ID+"_other" }
+func (Harness) Other(field, before model.Field) bool { return field.ID == before.ID+"_other" }
 
 // Context asks the bridge what fills a session's context (Ante's
 // ContextReport): no model call, nothing kept in the conversation.
-func Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error) {
+func (Harness) Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error) {
 	var r struct {
 		SystemPrompt int64  `json:"system_prompt_tokens"`
 		SystemTools  int64  `json:"system_tools_tokens"`

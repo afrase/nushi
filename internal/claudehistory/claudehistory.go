@@ -1,8 +1,10 @@
-// Package claudehistory puts a copy of a Claude Code session's transcript
-// into another folder's history, where claude-agent-acp's session/fork looks
-// for it. Claude keeps each session's transcript in its projects folder,
-// under a folder named after the session's cwd. This is Claude's private
-// layout (Claude Code 2.1.308, claude-agent-acp 0.94.0): see ADR 0014.
+// Package claudehistory reads and copies Claude Code's own record of its
+// sessions: Local is claude.Harness with that, for chats on this Mac. A copy
+// of a session's transcript in another folder's history is where
+// claude-agent-acp's session/fork looks for it. Claude keeps each session's
+// transcript in its projects folder, under a folder named after the
+// session's cwd. This is Claude's private layout (Claude Code 2.1.308,
+// claude-agent-acp 0.94.0): see ADR 0014.
 package claudehistory
 
 import (
@@ -21,6 +23,14 @@ import (
 	"github.com/afrase/nushi/internal/claude"
 )
 
+// Local is claude.Harness with what reads Claude's files and processes on
+// this Mac, its projects folder being Projects. It lives here as this
+// package needs claude, for its config folder. Tests use claude.Harness alone.
+type Local struct {
+	claude.Harness
+	Projects string
+}
+
 // Projects returns Claude's projects folder, in its config folder
 // (claude.ConfigDir); an error when there's no home folder.
 func Projects() (string, error) {
@@ -30,16 +40,16 @@ func Projects() (string, error) {
 	return filepath.Join(claude.ConfigDir(), "projects"), nil
 }
 
-// Copy copies session id's transcript (<id>.jsonl) from folder from's
+// History copies session id's transcript (<id>.jsonl) from folder from's
 // history into folder to's, and returns a function that removes the copy
 // again. The original stays. When both folders have the same history
 // folder there is nothing to copy (or remove); a transcript already in to's
 // history is never replaced, unless it is the start of this one: a copy a
 // move left when the daemon died before removing it. The copy is streamed,
 // and replaces at once (atomicfile).
-func Copy(projects, id, from, to string) (remove func() error, err error) {
+func (l Local) History(id, from, to string) (remove func() error, err error) {
 	none := func() error { return nil }
-	src, dst, err := paths(projects, id, from, to)
+	src, dst, err := paths(l.Projects, id, from, to)
 	if err != nil || src == dst {
 		return none, err
 	}
@@ -129,17 +139,17 @@ func Has(projects, id, folder string) bool {
 	return err == nil && fi.Size() > 0
 }
 
-// Gone reports that Claude no longer keeps session id's transcript in
+// HistoryGone reports that Claude no longer keeps session id's transcript in
 // folder's history, for certain: the folder's history folder is there and
 // can be read, and the transcript isn't in it (Claude Code deletes those
 // older than cleanupPeriodDays when it starts). A history folder that's
 // missing or can't be read says nothing: another CLAUDE_CONFIG_DIR, or a
 // folder whose name Claude spells otherwise (see dirName).
-func Gone(projects, id, folder string) bool {
-	if _, _, err := paths(projects, id, folder, folder); err != nil {
+func (l Local) HistoryGone(id, folder string) bool {
+	if _, _, err := paths(l.Projects, id, folder, folder); err != nil {
 		return false
 	}
-	dir := filepath.Join(projects, dirName(folder))
+	dir := filepath.Join(l.Projects, dirName(folder))
 	f, err := os.Open(dir)
 	if err != nil {
 		return false

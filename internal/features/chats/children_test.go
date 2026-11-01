@@ -12,7 +12,6 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
@@ -80,7 +79,7 @@ func steps(c *chat, notes []acp.SessionNotification, call string) (got, want int
 	}
 	c.mu.Unlock()
 	for _, n := range notes {
-		if tc := n.Update.ToolCall; tc != nil && claude.Parent(tc.Meta) == call {
+		if tc := n.Update.ToolCall; tc != nil && claudeHarness.Parent(tc.Meta) == call {
 			want++
 		}
 	}
@@ -184,7 +183,7 @@ func TestABackgroundCommandIsStoppedThroughClaude(t *testing.T) {
 	}
 	testcheck.NoErr(t, svc.StopTask(t.Context(), c.id, sleeping))
 	eventually(t, c, func() bool { return !c.busy })
-	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claude.StopTask("bgu2i75cc") {
+	if prompts, _ := agent.texts(); len(prompts) != 1 || prompts[0] != claudeHarness.StopTask("bgu2i75cc") {
 		t.Errorf("asked %q", prompts)
 	}
 	c.mu.Lock()

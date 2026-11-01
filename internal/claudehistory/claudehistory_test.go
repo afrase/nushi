@@ -48,7 +48,7 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	remove, err := Copy(projects, "s1", from, to)
+	remove, err := local(projects).History("s1", from, to)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,25 +57,25 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 			t.Errorf("%s = %q, %v", path, b, err)
 		}
 	}
-	if _, err := Copy(projects, "s1", from, to); err != nil {
+	if _, err := local(projects).History("s1", from, to); err != nil {
 		t.Errorf("a copy a move left (all of this one) wasn't replaced: %v", err)
 	}
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("trans"), 0o600))
-	if _, err := Copy(projects, "s1", from, to); err != nil {
+	if _, err := local(projects).History("s1", from, to); err != nil {
 		t.Errorf("a copy a move left (the start of this one) wasn't replaced: %v", err)
 	}
 	if b, _ := os.ReadFile(filepath.Join(dst, "s1.jsonl")); string(b) != "transcript" {
 		t.Errorf("copied again: %q", b)
 	}
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("transcript, and more"), 0o600))
-	if _, err := Copy(projects, "s1", from, to); err == nil {
+	if _, err := local(projects).History("s1", from, to); err == nil {
 		t.Error("a transcript there that goes on past this one was replaced")
 	}
 	if files, _ := os.ReadDir(dst); len(files) != 1 {
 		t.Errorf("left in the history: %v", files)
 	}
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("another"), 0o600))
-	if _, err := Copy(projects, "s1", from, to); err == nil {
+	if _, err := local(projects).History("s1", from, to); err == nil {
 		t.Error("another transcript already there was replaced")
 	}
 	if err := remove(); err != nil {
@@ -84,10 +84,10 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(src, "s1.jsonl")); err != nil {
 		t.Errorf("the original went with the copy: %v", err)
 	}
-	if _, err := Copy(projects, "missing", from, to); err == nil {
+	if _, err := local(projects).History("missing", from, to); err == nil {
 		t.Error("copying a session that isn't there worked")
 	}
-	if _, err := Copy(projects, "../s1", from, to); err == nil {
+	if _, err := local(projects).History("../s1", from, to); err == nil {
 		t.Error("a session id with a path in it was taken")
 	}
 }
@@ -96,30 +96,33 @@ func TestCopyKeepsTheOriginal(t *testing.T) {
 // transcript isn't in it.
 func TestGone(t *testing.T) {
 	projects, folder := t.TempDir(), t.TempDir()
-	if Gone(projects, "s1", folder) {
+	if local(projects).HistoryGone("s1", folder) {
 		t.Error("gone with no history folder")
 	}
 	dir := filepath.Join(projects, dirName(folder))
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if !Gone(projects, "s1", folder) {
+	if !local(projects).HistoryGone("s1", folder) {
 		t.Error("not gone from an empty history folder")
 	}
 	if err := os.WriteFile(filepath.Join(dir, "s1.jsonl"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if Gone(projects, "s1", folder) || !Gone(projects, "s2", folder) {
+	if local(projects).HistoryGone("s1", folder) || !local(projects).HistoryGone("s2", folder) {
 		t.Error("s1 is there, s2 isn't")
 	}
-	if Gone(projects, "../s2", folder) || Gone(projects, "", folder) {
+	if local(projects).HistoryGone("../s2", folder) || local(projects).HistoryGone("", folder) {
 		t.Error("gone for a bad id")
 	}
 	if err := os.Chmod(dir, 0); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Chmod(dir, 0o700) //nolint:errcheck // for the cleanup
-	if Gone(projects, "s2", folder) {
+	if local(projects).HistoryGone("s2", folder) {
 		t.Error("gone from a history folder that can't be read")
 	}
 }
+
+// local is the Local of a projects folder.
+func local(projects string) Local { return Local{Projects: projects} }

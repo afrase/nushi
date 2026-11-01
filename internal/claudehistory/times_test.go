@@ -21,7 +21,7 @@ func TestTimes(t *testing.T) {
 {"type":"assistant","uuid":"a3","timestamp":"2026-10-25T00:26:00Z","mess`
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(dir, "s1.jsonl"), []byte(body), 0o600))
 
-	got := Times(projects, "s1", folder)
+	got := local(projects).MessageTimes("s1", folder)
 	at := func(s string) time.Time {
 		w, err := time.Parse(time.RFC3339, s)
 		testcheck.NoErr(t, err)
@@ -36,10 +36,10 @@ func TestTimes(t *testing.T) {
 			t.Errorf("%s at %v, want %v", k, got[k], w)
 		}
 	}
-	if got := Times(projects, "missing", folder); len(got) != 0 {
+	if got := local(projects).MessageTimes("missing", folder); len(got) != 0 {
 		t.Errorf("no transcript: %v", got)
 	}
-	if got := Times(projects, "../s1", folder); len(got) != 0 {
+	if got := local(projects).MessageTimes("../s1", folder); len(got) != 0 {
 		t.Errorf("not a session id: %v", got)
 	}
 }

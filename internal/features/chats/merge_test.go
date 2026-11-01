@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -134,7 +133,7 @@ func TestMerge(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := merge(items(tc.copied), items(tc.replay), claude.Compacted)
+			got := merge(items(tc.copied), items(tc.replay), claudeHarness.Compacted)
 			if s := short(got); s != tc.want {
 				t.Errorf("got  %s\nwant %s", s, tc.want)
 			}
@@ -151,7 +150,7 @@ func TestMerge(t *testing.T) {
 
 // The compaction's mark holds the summary.
 func TestMergeKeepsTheSummary(t *testing.T) {
-	got := merge(items("u:one m:m1:a"), items("S m:m1:a"), claude.Compacted)
+	got := merge(items("u:one m:m1:a"), items("S m:m1:a"), claudeHarness.Compacted)
 	if got[1].Status != compactedNotice || !strings.HasPrefix(got[1].Text, "This session is being continued") {
 		t.Fatalf("%+v", got)
 	}

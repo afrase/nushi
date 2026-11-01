@@ -33,3 +33,5 @@ func TestReadLimit(t *testing.T) {
 	}
 	<-killed
 }
+
+var harness Harness

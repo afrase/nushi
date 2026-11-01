@@ -231,8 +231,8 @@ func (p *player) build(s *step) (string, any, error) {
 		if string(s.Initialize) != "{}" {
 			return "initialize", s.Initialize, nil
 		}
-		caps := &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}, Meta: claude.InitMeta}
-		if claude.Subagents {
+		caps := &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}, Meta: claude.Harness{}.InitMeta()}
+		if (claude.Harness{}).Info().Subagents {
 			caps.Subagents = &acp.SubagentCapabilities{}
 		}
 		return "initialize", acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion, ClientCapabilities: caps,
@@ -266,7 +266,7 @@ func (p *player) build(s *step) (string, any, error) {
 // meta is a session request's _meta: Nushi's for Claude, extra's keys
 // merged in, objects key by key.
 func (p *player) meta(extra json.RawMessage) (map[string]any, error) {
-	b, _ := json.Marshal(claude.SessionMeta) //nolint:errchkjson // plain values
+	b, _ := json.Marshal(claude.Harness{}.SessionMeta()) //nolint:errchkjson // plain values
 	var meta map[string]any
 	_ = json.Unmarshal(b, &meta)
 	if extra == nil {
