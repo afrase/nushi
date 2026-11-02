@@ -373,6 +373,7 @@ class _ComposerState extends State<Composer> {
                   Row(
                     children: [
                       Menu(
+                        above: true,
                         entries: [
                           MenuEntry(
                             'Mention a file',

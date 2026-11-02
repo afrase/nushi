@@ -76,7 +76,9 @@ typedef OpenMenu = void Function([Offset? at]);
 /// With [digits] the keys 1–9 pick its first rows, numbered on their right.
 /// A list of choices longer than ten gets a filter field; an action menu
 /// ([filter] false: a chat's) never does, keeping its groups and icons.
-/// [onOpen] runs as it opens, [onClose] once it has closed.
+/// [onOpen] runs as it opens, [onClose] once it has closed. With [above], a
+/// short menu of plain rows opens over its opener, though there's room under
+/// it: for what sits at the window's bottom.
 class Menu extends StatefulWidget {
   const new({
     required this.entries,
@@ -84,14 +86,22 @@ class Menu extends StatefulWidget {
     super.key,
     this.digits = false,
     this.filter = true,
+    this.above = false,
     this.onOpen,
     this.onClose,
   });
+
+  /// A row's height, a phone's taller, and the panel's padding and border,
+  /// in the theme's menu.
+  static const _row = 30.0;
+  static const _touchRow = 48.0;
+  static const _edges = 12.0;
 
   final List<MenuEntry> entries;
   final Widget Function(BuildContext context, OpenMenu open) builder;
   final bool digits;
   final bool filter;
+  final bool above;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
@@ -107,6 +117,13 @@ class _MenuState extends State<Menu> {
   void dispose() {
     _focus.dispose();
     super.dispose();
+  }
+
+  double _height(BuildContext context) {
+    final padded =
+        Theme.of(context).materialTapTargetSize == MaterialTapTargetSize.padded;
+    final row = padded ? Menu._touchRow : Menu._row;
+    return widget.entries.length * row + Menu._edges;
   }
 
   void _open([Offset? at]) =>
@@ -130,6 +147,13 @@ class _MenuState extends State<Menu> {
     onKeyEvent: _onKey,
     child: MenuAnchor(
       controller: _menu,
+      style: widget.above
+          ? const MenuStyle(alignment: AlignmentDirectional.topStart)
+          : null,
+      // Flutter only opens one upward when it wouldn't fit under.
+      alignmentOffset: widget.above
+          ? Offset(0, -_height(context) - 4)
+          : Offset.zero,
       menuChildren: _rows(
         context,
         widget.entries,
