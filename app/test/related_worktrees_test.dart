@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/commit_box.dart';
@@ -9,7 +10,9 @@ import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
+import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/worktrees_widget.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -31,6 +34,15 @@ RelatedWorktree _worktree(
   callId: call,
   state: state,
   merged: merged,
+);
+
+Item _subagent(String id, String state) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  agent: 'general-purpose',
+  title: 'Task $id',
+  status: 'completed',
+  subagent: Subagent(state: state),
 );
 
 /// The calls of type [T] the app made.
@@ -437,6 +449,126 @@ void main() {
       await pickFromMenu(tester, 'a');
       final diff = _calls<GetDiffRequest>(fake).single;
       expect((diff.folder, diff.after, diff.commit), ('/x', _base, _head));
+      await closeView(tester, daemon);
+    });
+  });
+
+  group('the Worktrees widget', () {
+    Future<void> showWidget(WidgetTester tester, {VoidCallback? onOpen}) async {
+      final w = worktreesWidget(chatState, onChanges: onOpen ?? () {})!;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
+          home: Scaffold(
+            body: SizedBox(
+              width: 240,
+              child: Column(children: [for (final r in w.rows) r.$2 as Widget]),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+    }
+
+    testWidgets('none without related worktrees', (tester) async {
+      await setUpChat(tester);
+      expect(worktreesWidget(chatState, onChanges: () {}), isNull);
+      await closeView(tester, daemon);
+    });
+
+    testWidgets('a row: branch, mark, work and end; a click opens it', (
+      tester,
+    ) async {
+      await setUpChat(tester);
+      final a = _worktree('a', call: 'x');
+      counted[a.path] = RelatedWorktreeStats(
+        path: a.path,
+        files: 4,
+        added: 12,
+        removed: 3,
+        ahead: 2,
+      );
+      chatState.items.add(_subagent('x', 'running'));
+      chatState.related.take([a]);
+      var opened = 0;
+      await showWidget(tester, onOpen: () => opened++);
+      expect(find.text('a'), findsOne);
+      expect(
+        find.text('+12 −3 · 4 files · 2 ahead', findRichText: true),
+        findsOne,
+      );
+      await tester.tap(find.text('a'));
+      expect(opened, 1);
+      expect(chatState.related.shown, a.path);
+      await closeView(tester, daemon);
+    });
+
+    testWidgets('merged is what git shows, and a squash reads as removed', (
+      tester,
+    ) async {
+      await setUpChat(tester);
+      chatState.related.take([
+        _worktree('kept'),
+        _worktree('squashed', state: 'removed'),
+        _worktree('merged', state: 'removed', merged: true),
+      ]);
+      await showWidget(tester);
+      expect(find.text('merged'), findsNWidgets(2)); // the branch and the end
+      expect(find.text('removed'), findsOne);
+      await closeView(tester, daemon);
+    });
+
+    testWidgets('rows folded away ask for nothing, until opened', (
+      tester,
+    ) async {
+      await setUpChat(tester);
+      chatState.related.take([for (var i = 0; i < 10; i++) _worktree('w$i')]);
+      await showWidget(tester);
+      final first = _calls<GetRelatedWorktreeStatsRequest>(fake).single;
+      expect(first.paths, hasLength(5));
+      expect(find.text('5 more'), findsOne);
+      await tester.tap(find.text('5 more'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(_calls<GetRelatedWorktreeStatsRequest>(fake), hasLength(2));
+      await closeView(tester, daemon);
+    });
+  });
+
+  group('a subagent', () {
+    testWidgets('tagged by call id, in the transcript and the widget', (
+      tester,
+    ) async {
+      await setUpChat(tester);
+      chatState.items
+        ..add(_subagent('x', 'done'))
+        ..add(_subagent('y', 'done'));
+      chatState.related.take([_worktree('a-branch', call: 'x')]);
+      final runs = subagentsOf(chatState.items);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
+          home: Scaffold(
+            body: Column(
+              children: [
+                SubagentLine(runs[0], chatState),
+                SubagentLine(runs[1], chatState),
+                for (final r in backgroundTasksWidget(chatState, daemon)!.rows)
+                  r.$2 as Widget,
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      // In the first line and the widget's first row, the other has none.
+      expect(find.text('a-branch'), findsNWidgets(2));
+      chatState.related.take([]);
+      await tester.pump();
+      expect(find.text('a-branch'), findsOneWidget); // the widget's rows are
       await closeView(tester, daemon);
     });
   });

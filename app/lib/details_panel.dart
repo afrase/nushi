@@ -18,11 +18,13 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
+import 'package:nushi/worktrees_widget.dart';
 
 /// The panel beside a chat: widgets for its environment (folder or
 /// repository, branch, worktree), its context and cost, and its folder's
 /// changes (uncommitted, or the branch's for a worktree chat), as the
-/// Changes view shows them, its background tasks, MCP servers and artifacts.
+/// Changes view shows them, its subagents' worktrees, its background tasks,
+/// MCP servers and artifacts.
 /// They reload when a turn ends or the chat moves.
 class DetailsPanel extends StatefulWidget {
   const new({
@@ -162,7 +164,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   // with its side chat coming and going (its line follows its usage).
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([chat, chat.side, _pull]),
+    listenable: Listenable.merge([chat, chat.side, _pull, chat.related]),
     builder: (context, _) => _panel(chat.side.value),
   );
 
@@ -358,6 +360,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         ],
       ),
       ?pullWidget(_pull, onShow: widget.onPull),
+      ?worktreesWidget(chat, onChanges: widget.onChanges),
       ?backgroundTasksWidget(chat, daemon),
       mcpWidget(chat, daemon),
       ?artifactsWidget(chat),

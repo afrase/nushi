@@ -48,7 +48,7 @@ PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
       if (rest.isNotEmpty)
         (
           null,
-          _Finished(more, rest, open: running.isEmpty && rest.length <= _shown),
+          MoreRows(more, rest, open: running.isEmpty && rest.length <= _shown),
         ),
     ],
   );
@@ -117,8 +117,8 @@ class _CommandRow extends StatelessWidget {
   }
 }
 
-/// A subagent: its type and task, and its state under them; a click opens
-/// its pane.
+/// A subagent: its type and task, its state under them with the branch of
+/// the worktree it works in, if it has one; a click opens its pane.
 class _AgentRow extends StatelessWidget {
   const new(this.chat, this.daemon, this.s);
 
@@ -167,7 +167,11 @@ class _AgentRow extends StatelessWidget {
                   ? stopButton(context, daemon, chat, s.call.id, size: 12)
                   : null,
             ),
-            SubagentState(s, style: theme.ui(t.textMuted, size: 11.5)),
+            subagentStateLine(
+              chat,
+              s,
+              SubagentState(s, style: theme.ui(t.textMuted, size: 11.5)),
+            ),
           ],
         ),
       ),
@@ -176,18 +180,18 @@ class _AgentRow extends StatelessWidget {
 }
 
 /// "n finished", which opens to list them, [open] to start with.
-class _Finished extends StatefulWidget {
-  const new(this.label, this.rows, {required this.open});
+class MoreRows extends StatefulWidget {
+  const new(this.label, this.rows, {required this.open, super.key});
 
   final String label;
   final List<Widget> rows;
   final bool open;
 
   @override
-  State<_Finished> createState() => _FinishedState();
+  State<MoreRows> createState() => _MoreRowsState();
 }
 
-class _FinishedState extends State<_Finished> {
+class _MoreRowsState extends State<MoreRows> {
   late bool _open = widget.open;
 
   @override

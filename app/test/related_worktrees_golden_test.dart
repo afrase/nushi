@@ -1,4 +1,5 @@
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -6,6 +7,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/subagents.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -166,6 +168,23 @@ void main() {
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
       Size size() => Size(width, 900);
+
+      testWidgets('golden: the widget and the tags, $w wide, $theme', (
+        tester,
+      ) async {
+        final d = await _app(tester, size(), brightness);
+        final chat = d.chats['c']!;
+        expect(chat.related.list, hasLength(5));
+        // Every line's end at the line's edge, tagged or not.
+        final ends = {
+          for (final e in find.byIcon(Icons.chevron_right).evaluate())
+            if (e.findAncestorWidgetOfExactType<SubagentLine>() != null)
+              tester.getTopRight(find.byElementPredicate((x) => x == e)).dx,
+        };
+        expect(ends, hasLength(1));
+        await shot(tester, 'related_chat_$w');
+        await closeView(tester, d);
+      }, variant: _mac);
 
       testWidgets('golden: a worktree in Changes, $w wide, $theme', (
         tester,
