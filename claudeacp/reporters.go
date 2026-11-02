@@ -164,7 +164,7 @@ func resultContent(name string, b claudeagent.Block) (content []acp.ToolCallCont
 			return []acp.ToolCallContent{textContent(fence("", text))}, true
 		}
 	case "Agent", "Task":
-		text = strings.TrimSpace(usageBlock.ReplaceAllString(text, ""))
+		text = handedBack(strings.TrimSpace(usageBlock.ReplaceAllString(text, "")))
 	}
 	if b.IsError && text != "" {
 		text = fence("", text)
@@ -174,6 +174,26 @@ func resultContent(name string, b claudeagent.Block) (content []acp.ToolCallCont
 		content = append(content, acp.ToolCallContent{Content: &acp.Content{Content: acp.ContentBlock{Image: &img}}})
 	}
 	return content, true
+}
+
+// handedBack is a foreground subagent's report out of the frame claude
+// puts around it for the model (docs/facts/claude.md), as the adapter
+// shows it: without the frame's words, the indent claude gives each line,
+// or what claude adds after it (the agent's id, its worktree). Any other
+// text comes back as it is.
+func handedBack(text string) string {
+	_, report, ok := strings.Cut(text, handBackEnd)
+	if !strings.HasPrefix(text, handBackStart) || !ok {
+		return text
+	}
+	if i := strings.LastIndex(report, "\nagentId: "); i >= 0 {
+		report = report[:i]
+	}
+	lines := strings.Split(report, "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimPrefix(l, "  ")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // resultParts reads a tool_result's content, a string or blocks: its
@@ -210,6 +230,12 @@ func resultParts(raw json.RawMessage) (string, []acp.ImageContent) {
 	}
 	return strings.Join(parts, "\n\n"), images
 }
+
+// handBackStart and handBackEnd open a foreground subagent's report.
+const (
+	handBackStart = "[Subagent hand-back] "
+	handBackEnd   = "The report follows:\n"
+)
 
 var (
 	// reminders are the notes claude adds to a file it read, for the

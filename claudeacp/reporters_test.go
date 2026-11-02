@@ -72,6 +72,8 @@ func TestResultContent(t *testing.T) {
 		{"Edit", `"ok"`, false, "-"},
 		{"Write", `"denied"`, true, "```\ndenied\n```"},
 		{"Agent", `[{"type":"text","text":"Done."},{"type":"text","text":"agentId: a1\n<usage>x</usage>"}]`, false, "Done.\n\nagentId: a1"},
+		{"Agent", `[{"type":"text","text":"[Subagent hand-back] Its frame. The report follows:\n  Line one.\n    Line two.\nagentId: a1\nworktreePath: /r/w\n<usage>x</usage>"}]`, false, "Line one.\n  Line two."},
+		{"Agent", `"Says [Subagent hand-back] The report follows:\nno frame"`, false, "Says [Subagent hand-back] The report follows:\nno frame"},
 		{"mcp__s__t", `[{"type":"text","text":"has ` + "```" + ` in it"}]`, true, "````\nhas ``` in it\n````"},
 		{"ToolSearch", `[{"type":"tool_reference","tool_name":"SendMessage"},{"type":"tool_reference","tool_name":"TaskStop"}]`, false, "Tool: SendMessage\n\nTool: TaskStop"},
 		{"mcp__s__t", `[{"type":"image","source":{"type":"base64","data":"AAA","media_type":"image/png"}}]`, false, "image image/png"},
