@@ -3,21 +3,32 @@ import 'package:flutter/widgets.dart';
 /// Keeps a list scrolled to its bottom ([following]) until the user
 /// scrolls up, however little, and again once it is back at the bottom (by
 /// a drag or a fling). The list's notifications go to
-/// [onNotification]; [stick] after a build.
+/// [onNotification]; [stick] after a build. [hold] keeps it somewhere else
+/// until the user goes back to the bottom.
 class BottomFollower extends ChangeNotifier {
   late final ScrollController scroll = _Controller(this);
   bool following = true;
   bool _jumping = false; // the scroll moves because of us
   bool _dragged = false; // the scroll going on began with a drag
+  bool _held = false; // [hold]: being at the bottom doesn't follow it again
 
   /// Follows the bottom again, from wherever the list is.
   void follow() {
+    _held = false;
     _set(true);
     stick();
   }
 
-  /// Stops following: the list was taken somewhere else.
-  void stop() => _set(false);
+  /// Stops following and takes the list [to] there, if given; it stays even
+  /// at the very bottom, until the user scrolls there or [follow]s.
+  void hold([double? to]) {
+    _held = true;
+    _set(false);
+    if (to == null) return;
+    _jumping = true;
+    scroll.position.jumpTo(to);
+    _jumping = false;
+  }
 
   void _set(bool v) {
     if (v == following) return;
@@ -45,7 +56,7 @@ class BottomFollower extends ChangeNotifier {
   bool onNotification(Notification n) {
     if (n is ScrollMetricsNotification && n.depth == 0) {
       // At the bottom (all of it fits, say): following again.
-      if (n.metrics.extentAfter == 0) _set(true);
+      if (n.metrics.extentAfter == 0 && !_held) _set(true);
       stick();
     } else if (n is ScrollStartNotification && n.depth == 0) {
       _dragged = n.dragDetails != null;
@@ -54,6 +65,7 @@ class BottomFollower extends ChangeNotifier {
       // A wheel's scroll (no drag), or a drag itself, not its fling.
       final user = n.dragDetails != null || !_dragged;
       if (m.pixels >= m.maxScrollExtent - 1) {
+        _held = false;
         _set(true);
       } else if ((n.scrollDelta ?? 0) < 0 && user) {
         _set(false);

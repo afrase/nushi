@@ -4,6 +4,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_find.dart';
@@ -80,28 +81,17 @@ Future<void> _cmdF(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-List<int> _marks(WidgetTester tester) => [
-  for (final h in tester.widgetList<Hit>(find.byType(Hit))) h.mark,
-];
+/// The marks of the find on the transcript.
+List<TextMark> _marks(WidgetTester tester) {
+  final scope = tester.widget<TextMarksScope>(find.byType(TextMarksScope));
+  return scope.marks.marks;
+}
 
 void main() {
-  test('find sees the text streamed in since it last looked', () {
-    final a = Item(
-      id: 'm',
-      kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-      text: 'Hello',
-    );
-    expect(entryHas(a, 'world'), isFalse);
-    final b = a.deepCopy()..text = '${a.text} World'; // as a chunk lands
-    expect(entryHas(b, 'world'), isTrue);
-    expect(entryHas(a, 'world'), isFalse);
-    expect(entryHas([a, b], 'WORLD'), isTrue);
-  });
-
   setUpAll(loadFonts);
 
-  testWidgets('⌘F in the chat: the entries that have it marked, ⏎ and ⇧⏎ '
-      'through them, Esc closes', (tester) async {
+  testWidgets('⌘F in the chat: its matches marked, ⏎ and ⇧⏎ through them, '
+      'Esc closes', (tester) async {
     final d = await _app(tester);
     final chat = d.chats['c']!;
     await _cmdF(tester);
@@ -115,25 +105,32 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('1 of 2'), findsOne);
-    expect(_marks(tester).where((m) => m > 0).toList(), [2, 1]);
-    expect(chat.find.current, 'u1');
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/find_chat_dark.png'),
-    );
+    expect(_marks(tester), hasLength(2));
+    expect(chat.find.current, 'u1 0');
+    for (final (mode, name) in [
+      (Brightness.dark, 'dark'),
+      (Brightness.light, 'light'),
+    ]) {
+      viewport(tester, const Size(1700, 700), brightness: mode);
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(NushiApp),
+        matchesGoldenFile('goldens/find_chat_$name.png'),
+      );
+    }
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('2 of 2'), findsOne);
-    expect(chat.find.current, 'a2');
+    expect(chat.find.current, 'a2 0');
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pumpAndSettle();
-    expect(chat.find.current, 'u1');
+    expect(chat.find.current, 'u1 0');
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(find.byType(FindBar), findsNothing);
-    expect(_marks(tester).where((m) => m > 0), isEmpty);
+    expect(_marks(tester), isEmpty);
     d.dispose();
   }, variant: _mac);
 

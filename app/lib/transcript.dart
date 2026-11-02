@@ -3,7 +3,9 @@ import 'dart:math';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
@@ -23,7 +25,6 @@ import 'package:nushi/selection_lines.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
-import 'package:nushi/transcript_find.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
 /// them (a review's findings show as a card of their own).
@@ -102,6 +103,10 @@ class Transcript extends StatefulWidget {
 
 /// How wide the scrollbar's strip is, at the transcript's right edge.
 const _scrollbarEdge = 16.0;
+
+/// What the find bar covers of the transcript's top right.
+const double _findBarWidth = 340.0 + NushiTheme.gutter;
+const double _findBarHeight = 48.0;
 
 class _TranscriptState extends State<Transcript> {
   final _follower = BottomFollower();
@@ -220,7 +225,6 @@ class _TranscriptState extends State<Transcript> {
     required double top,
     required double width,
     bool rise = false,
-    int mark = 0, // 1: a find's hit, 2: its current one
   }) {
     final key = _keyOf(e);
     final items = switch (e) {
@@ -241,7 +245,6 @@ class _TranscriptState extends State<Transcript> {
       rewindable,
       forkable,
       top,
-      mark,
       sides.left,
       sides.right,
       ...items,
@@ -264,15 +267,13 @@ class _TranscriptState extends State<Transcript> {
                       ? EdgeInsets.only(top: top)
                       : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
                   // New while the chat is open, it rises in, once.
-                  child: Hit(
-                    mark: mark,
-                    key: mark == 2 ? _currentHit : null,
-                    below: _hasActions(e) && !TouchTargets.of(context)
-                        ? messageActionsHeight
-                        : 0,
-                    child: Enter.rise(
-                      play: rise,
-                      child: RepaintBoundary(
+                  child: Enter.rise(
+                    play: rise,
+                    child: RepaintBoundary(
+                      // Always there, so that a find coming and going
+                      // leaves the entry's state alone.
+                      child: Marks(
+                        entry: key,
                         // A call's title types out as it comes, or as it
                         // joins a run; not what the chat opened with.
                         child: Arriving(
@@ -330,9 +331,20 @@ class _TranscriptState extends State<Transcript> {
     if (widget.items != null && !widget.live) _follower.following = false;
     if (_follower.following) _tail = Transcript.firstEntries;
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
+    _marks.onFound = (marks) {
+      widget.chat.find.found([for (final m in marks) m.key]);
+      _showCurrent();
+    };
   }
 
-  void _findChanged() => setState(() {});
+  void _findChanged() {
+    final q = (widget.chat.find.query ?? '').toLowerCase();
+    if (q == _marks.query) {
+      _showCurrent();
+    } else {
+      setState(() {}); // the build looks for it
+    }
+  }
 
   @override
   void didUpdateWidget(Transcript old) {
@@ -344,6 +356,7 @@ class _TranscriptState extends State<Transcript> {
     if (old.chat != widget.chat && _follower.following) {
       _tail = Transcript.firstEntries;
     }
+    _shownAsk = -1;
     old.chat.find.removeListener(_findChanged);
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
   }
@@ -351,6 +364,7 @@ class _TranscriptState extends State<Transcript> {
   @override
   void dispose() {
     widget.chat.find.removeListener(_findChanged);
+    _marks.dispose();
     _hold.dispose();
     _follower.dispose();
     _areaFocus.dispose();
@@ -459,51 +473,83 @@ class _TranscriptState extends State<Transcript> {
     if (_tail != null) setState(() {}); // it goes on filling in
   }
 
-  // The find's current hit (ChatState.find), to scroll to.
-  final GlobalKey _currentHit = GlobalKey(debugLabel: 'current hit');
-  String? _scrolledTo;
+  // A find's matches in the text as it's laid out (ChatState.find has their
+  // keys), and the last time the find asked for its current one to show.
+  final _marks = TextMarks();
+  int _shownAsk = -1;
+  bool _roomAbove = false; // the list starts below the find bar
 
-  /// The find's hits among [entries] (the chat's own transcript only), and
-  /// once laid out, its current one scrolled into view.
-  Set<String> _hits(List<Object> entries) {
+  /// Draws the find's current match as such and, if it was asked for,
+  /// brings it into view.
+  void _showCurrent() {
     final find = widget.chat.find;
-    final q = find.query ?? '';
-    if (widget.items != null || q.isEmpty) {
-      if (widget.items == null && find.hits.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback(
-          (_) => find.found(const []),
-        );
-      }
-      _scrolledTo = null;
-      return const {};
+    final marks = _marks.marks;
+    final mark = marks.isEmpty
+        ? null
+        : marks[find.at.clamp(0, marks.length - 1)];
+    _marks.pick(mark);
+    if (find.asked == _shownAsk) return;
+    _shownAsk = find.asked;
+    if (mark != null) _reveal(mark);
+  }
+
+  /// Takes the list to [mark], a third of the way down, unless it shows
+  /// already; either way the list stays there, whatever comes in, until the
+  /// user goes back to the bottom. A jump, not a glide: whatever is in
+  /// between isn't worth showing, and a glide is cut short by what moves
+  /// the list as it fills in.
+  void _reveal(TextMark mark) {
+    final scroll = _follower.scroll;
+    if (!scroll.hasClients) return;
+    final p = scroll.position;
+    final (box, rect) = mark.place;
+    if (!box.attached) return;
+    final list = RenderAbstractViewport.of(mark.entry);
+    final top = list.getOffsetToReveal(box, 0, rect: rect).offset;
+    final transcript = context.findRenderObject()! as RenderBox;
+    final right = MatrixUtils.transformRect(
+      box.getTransformTo(transcript),
+      rect,
+    ).right;
+    final covered = right > transcript.size.width - _findBarWidth
+        ? _findBarHeight
+        : 0;
+    // At the very top no scroll takes it out from under the bar (a chat's
+    // first message sits right there): room above it, while the bar's open.
+    if (top - p.minScrollExtent < covered && !_roomAbove) {
+      setState(() => _roomAbove = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reveal(mark);
+      });
+      return;
     }
-    final hits = [
-      for (final e in entries)
-        if (entryHas(e, q)) _keyOf(e),
-    ];
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      find.found(hits);
-      final current = find.current;
-      if (current == null || current == _scrolledTo) return;
-      if (_currentHit.currentContext case final c? when c.mounted) {
-        _scrolledTo = current;
-        _follower.stop();
-        Scrollable.ensureVisible(
-          c,
-          alignment: 0.3,
-          duration: const Duration(milliseconds: 150),
-        );
-      }
-    });
-    return hits.toSet();
+    if (p.maxScrollExtent <= 0) return; // all of it shows
+    final shows =
+        top >= p.pixels + covered &&
+        top + rect.height <= p.pixels + p.viewportDimension;
+    _follower.hold(
+      shows
+          ? null
+          : list
+                .getOffsetToReveal(box, 0.3, rect: rect)
+                .offset
+                .clamp(p.minScrollExtent, p.maxScrollExtent),
+    );
+    // In a code block, its own sideways scroll too.
+    if (!identical(RenderAbstractViewport.of(box), list)) {
+      box.showOnScreen(rect: rect);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
     final entries = _entries(widget.items ?? chat.items);
-    final hits = _hits(entries);
-    final current = hits.isEmpty ? null : chat.find.current;
+    final query = widget.items == null ? chat.find.query ?? '' : '';
+    // A find looks in all of it, and needs its place to go to it: what's
+    // still to come in comes now. Not under a press (_grow).
+    if (query.isNotEmpty && !_down) _tail = null;
+    if (chat.find.query == null) _roomAbove = false;
     // While it fills in, the entries above what's built wait.
     final tail = _tail;
     final from = tail == null ? 0 : max(0, entries.length - tail);
@@ -516,6 +562,14 @@ class _TranscriptState extends State<Transcript> {
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
+    final t = NushiTheme.of(context).t;
+    _marks.look(
+      tail == null ? query : '',
+      query.isEmpty ? const [] : [for (final e in entries) _keyOf(e)],
+      hit: t.needs.withValues(alpha: 0.3),
+      now: t.accent.withValues(alpha: 0.4),
+      edge: t.accent,
+    );
     final before = _built;
     _built = {};
     final onReply = widget.onReply;
@@ -528,7 +582,7 @@ class _TranscriptState extends State<Transcript> {
             onSide(selected);
           };
     final reply = onReply == null ? null : _openReply;
-    return LayoutBuilder(
+    final view = LayoutBuilder(
       builder: (context, box) => Stack(
         children: [
           NotificationListener(
@@ -565,7 +619,10 @@ class _TranscriptState extends State<Transcript> {
                   notifier: _hold,
                   child: SingleChildScrollView(
                     controller: _follower.scroll,
-                    padding: const EdgeInsets.only(top: 2, bottom: 14),
+                    padding: EdgeInsets.only(
+                      top: _roomAbove ? _findBarHeight + 8 : 2,
+                      bottom: 14,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -588,11 +645,6 @@ class _TranscriptState extends State<Transcript> {
                             ),
                             width: box.maxWidth,
                             rise: arrived.contains(_keyOf(e)),
-                            mark: _keyOf(e) == current
-                                ? 2
-                                : hits.contains(_keyOf(e))
-                                ? 1
-                                : 0,
                           ),
                         if (widget.footer case final f?)
                           Padding(
@@ -640,6 +692,7 @@ class _TranscriptState extends State<Transcript> {
         ],
       ),
     );
+    return TextMarksScope(marks: _marks, child: view);
   }
 }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
@@ -407,9 +408,11 @@ class FullTitle extends StatelessWidget {
         color: t.raised,
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
-      child: Text(
-        title,
-        style: theme.code(t.text, size: 12).copyWith(height: 1.35),
+      child: Marks(
+        child: Text(
+          title,
+          style: theme.code(t.text, size: 12).copyWith(height: 1.35),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/theme/theme.dart';
@@ -31,17 +32,20 @@ class MessageActions extends StatelessWidget {
           : CrossAxisAlignment.stretch,
       children: [
         child,
-        SizedBox(
-          height: messageActionsHeight,
-          child: hover
-              ? Row(
-                  mainAxisAlignment: end
-                      ? MainAxisAlignment.end
-                      : MainAxisAlignment.start,
-                  spacing: NushiTheme.iconGap,
-                  children: actions(),
-                )
-              : null,
+        // On hover only: a find's count doesn't change as the pointer passes.
+        Unmarked(
+          child: SizedBox(
+            height: messageActionsHeight,
+            child: hover
+                ? Row(
+                    mainAxisAlignment: end
+                        ? MainAxisAlignment.end
+                        : MainAxisAlignment.start,
+                    spacing: NushiTheme.iconGap,
+                    children: actions(),
+                  )
+                : null,
+          ),
         ),
       ],
     ),

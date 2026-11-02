@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -65,10 +66,12 @@ class _WaitingCardState extends State<WaitingCard> with ClockRun {
               ],
             )
           : decoration,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 8,
-        children: widget.children,
+      child: Marks(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: widget.children,
+        ),
       ),
     );
   }

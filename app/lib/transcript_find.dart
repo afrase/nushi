@@ -1,18 +1,20 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘F in a chat's transcript: what's looked for (null: the bar is closed),
-/// the entries that have it (by their keys, as the transcript last built
-/// them: the loaded items only) and which one is current.
+/// its matches as the transcript last laid them out ([TextMark.key]: each
+/// match in a text, each in what a row folds away) and which one is current.
 class TranscriptFind extends ChangeNotifier {
   String? _query;
   List<String> _hits = const [];
   int _at = 0;
+  int _asked = 0;
 
   /// The field takes the focus when the bar opens, or ⌘F again.
   final focus = FocusNode(debugLabel: 'find');
@@ -24,6 +26,10 @@ class TranscriptFind extends ChangeNotifier {
   /// The current hit's key, if any.
   String? get current =>
       _hits.isEmpty ? null : _hits[_at.clamp(0, _hits.length - 1)];
+
+  /// Counts the times the current match was asked to come into view: a
+  /// step, or the text typed. A match the agent's text brings doesn't.
+  int get asked => _asked;
 
   /// Whether ⏎ goes anywhere.
   bool get canStep => _hits.isNotEmpty;
@@ -53,12 +59,13 @@ class TranscriptFind extends ChangeNotifier {
     if (q == _query) return;
     _query = q;
     _at = 0;
+    _asked++;
     notifyListeners();
   }
 
   /// The transcript found [hits]: the current one stays if it's still a hit.
   void found(List<String> hits) {
-    if (_listEq(hits, _hits)) return;
+    if (listEquals(hits, _hits)) return;
     final was = current;
     _hits = hits;
     final i = was == null ? -1 : hits.indexOf(was);
@@ -70,6 +77,7 @@ class TranscriptFind extends ChangeNotifier {
   void step(int by) {
     if (_hits.isEmpty) return;
     _at = (_at + by) % _hits.length;
+    _asked++;
     notifyListeners();
   }
 
@@ -78,10 +86,6 @@ class TranscriptFind extends ChangeNotifier {
     focus.dispose();
     super.dispose();
   }
-
-  static bool _listEq(List<String> a, List<String> b) =>
-      a.length == b.length &&
-      [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
 }
 
 /// ⌘F in a chat's Changes view. The files with the text are listed and the
@@ -136,30 +140,37 @@ class ChangesFind extends TranscriptFind {
   }
 }
 
-/// Each item's text and title lowered, once: the find runs over the whole
-/// transcript on every build while it's open, a build per streamed chunk
-/// (a chunk makes a new item, so what's kept is never stale).
-final _lowered = Expando<(String, String)>();
+/// How many matches a row folds away, beside its title; nothing with none.
+/// It's no part of the text: neither selected nor looked in.
+class FoundCount extends StatelessWidget {
+  const new(this.found, {super.key});
 
-/// Whether an entry of the transcript (an item, a run of tool calls or a
-/// subagent with its steps) has [query] in what it shows: its text, its
-/// title (a command, a path); case aside.
-bool entryHas(Object entry, String query) {
-  final q = query.toLowerCase();
-  bool item(Item it) {
-    final (text, title) = _lowered[it] ??= (
-      it.text.toLowerCase(),
-      it.title.toLowerCase(),
+  final ValueListenable<int> found;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    return ValueListenableBuilder(
+      valueListenable: found,
+      builder: (context, n, _) => n == 0
+          ? const SizedBox.shrink()
+          : Unmarked(
+              child: SelectionContainer.disabled(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 4),
+                  child: Text(
+                    n == 1 ? '1 match' : '$n matches',
+                    style: theme.ui(
+                      theme.t.textSecondary,
+                      size: 11.5,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
     );
-    return text.contains(q) || title.contains(q);
   }
-
-  return switch (entry) {
-    final List<Item> run => run.any(item),
-    final SubagentRun s => item(s.call) || s.items.any(item),
-    final Item it => item(it),
-    _ => false,
-  };
 }
 
 /// The find bar over the transcript: the field, "2 of 7", ↑ and ↓ (or ⏎
@@ -245,53 +256,6 @@ class _FindBarState extends State<FindBar> {
           ),
         );
       },
-    );
-  }
-}
-
-/// A transcript entry as a find marks it ([mark] 1: a hit, tinted amber
-/// with a bar on its left; 2: the current one, in the accent); as it is
-/// with 0. The mark stops [below] short of its bottom: a message's actions
-/// aren't part of it.
-class Hit extends StatelessWidget {
-  const new({
-    required this.mark,
-    required this.child,
-    super.key,
-    this.below = 0,
-  });
-
-  final int mark;
-  final Widget child;
-  final double below;
-
-  @override
-  Widget build(BuildContext context) {
-    if (mark == 0) return child;
-    final t = NushiTheme.of(context).t;
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        child,
-        Positioned.fill(
-          bottom: below,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: mark == 2
-                    ? t.accentSoft.withValues(alpha: 0.35)
-                    : t.needsSoft.withValues(alpha: 0.25),
-                border: Border(
-                  left: BorderSide(
-                    color: mark == 2 ? t.accent : t.needs,
-                    width: 3,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -87,22 +87,25 @@ class AgentMarkdown extends StatelessWidget {
       languageName: languageName,
     );
     final shown = this.shown;
-    return StreamingMarkdown(
-      shown?.text ?? text,
-      streaming: live || shown != null,
-      fresh: shown?.fresh ?? const [],
-      caret: shown == null || shown.caret <= 0
-          ? null
-          : SoftCaret(opacity: shown.caret),
-      lineBreaks: typed,
-      onTapLink: _open,
-      imageBuilder: images,
-      style: style,
-      files: files,
-      onTapFile: onTapFile,
-      codeBlock: (language, code, {required open}) => language == 'mermaid'
-          ? MermaidBlock(code, style: style, open: open)
-          : null,
+    // Inside whatever it's on: a message's bubble.
+    return Marks(
+      child: StreamingMarkdown(
+        shown?.text ?? text,
+        streaming: live || shown != null,
+        fresh: shown?.fresh ?? const [],
+        caret: shown == null || shown.caret <= 0
+            ? null
+            : SoftCaret(opacity: shown.caret),
+        lineBreaks: typed,
+        onTapLink: _open,
+        imageBuilder: images,
+        style: style,
+        files: files,
+        onTapFile: onTapFile,
+        codeBlock: (language, code, {required open}) => language == 'mermaid'
+            ? MermaidBlock(code, style: style, open: open)
+            : null,
+      ),
     );
   }
 }

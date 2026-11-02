@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
@@ -117,24 +118,26 @@ class _FindingsCardState extends State<FindingsCard> {
       child: framed(
         border: t.findingsBorder,
         fill: t.findingsTint,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            header,
-            if (_json)
-              Container(
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-                decoration: BoxDecoration(border: Border(top: rule)),
-                child: AgentMarkdown(widget.json!),
-              )
-            else
-              for (final (i, f) in items.indexed)
-                DecoratedBox(
-                  key: ValueKey(ids[i]),
+        child: Marks(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              header,
+              if (_json)
+                Container(
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
                   decoration: BoxDecoration(border: Border(top: rule)),
-                  child: _row(i, f, ids[i]),
-                ),
-          ],
+                  child: AgentMarkdown(widget.json!),
+                )
+              else
+                for (final (i, f) in items.indexed)
+                  DecoratedBox(
+                    key: ValueKey(ids[i]),
+                    decoration: BoxDecoration(border: Border(top: rule)),
+                    child: _row(i, f, ids[i]),
+                  ),
+            ],
+          ),
         ),
       ),
     );

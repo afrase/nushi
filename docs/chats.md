@@ -67,7 +67,7 @@ The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and i
 
 ⌘F (View › Find…) finds in what's showing:
 
-- **In the chat**, the messages and tool rows with the text are marked. ⏎ and ⇧⏎ go through them; Esc closes.
+- **In the chat**, every match is marked in the text, the current one in the accent, and the chat goes to it and stays there, however much the agent writes, until you go back to the bottom. A match in something closed (a tool row, a thought, a subagent's steps) marks the row with how many it holds, and shows in place once you open it. ⏎ and ⇧⏎ go through the matches; Esc closes.
 - **In Changes**, it lists the files with the text in their path or either side and marks it in the diff. ⏎ and ⇧⏎ go through the file shown and on to the next file; Esc closes.
 - **In a focused terminal**, it finds in its scrollback.
 

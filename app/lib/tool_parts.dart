@@ -5,6 +5,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -170,36 +171,38 @@ class _RawTextState extends State<RawText> {
         color: t.raised,
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final painter = TextPainter(
-            text: TextSpan(text: widget.text, style: style),
-            maxLines: widget.folded,
-            textDirection: TextDirection.ltr,
-          )..layout(maxWidth: box.maxWidth);
-          final folds = painter.didExceedMaxLines;
-          painter.dispose();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.text,
-                style: style,
-                maxLines: _open || !folds ? null : widget.folded,
-                overflow: _open || !folds ? null : TextOverflow.fade,
-              ),
-              if (folds)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: LinkText(
-                    _open ? 'Show less' : 'Show all',
-                    size: 12,
-                    onTap: () => setState(() => _open = !_open),
-                  ),
+      child: Marks(
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final painter = TextPainter(
+              text: TextSpan(text: widget.text, style: style),
+              maxLines: widget.folded,
+              textDirection: TextDirection.ltr,
+            )..layout(maxWidth: box.maxWidth);
+            final folds = painter.didExceedMaxLines;
+            painter.dispose();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.text,
+                  style: style,
+                  maxLines: _open || !folds ? null : widget.folded,
+                  overflow: _open || !folds ? null : TextOverflow.fade,
                 ),
-            ],
-          );
-        },
+                if (folds)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: LinkText(
+                      _open ? 'Show less' : 'Show all',
+                      size: 12,
+                      onTap: () => setState(() => _open = !_open),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
