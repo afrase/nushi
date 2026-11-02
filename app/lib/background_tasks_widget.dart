@@ -11,9 +11,9 @@ import 'package:nushi/widgets.dart';
 
 /// The panel's Background tasks widget: the chat's running subagents, each
 /// with its state and current step, and its running background commands;
-/// then a quiet "n finished" line that opens the others. Under the pointer,
-/// a running one shows its Stop. Null (no widget) while none runs: those
-/// that ended are in the transcript.
+/// then a quiet "n finished" line that opens the others, the latest first:
+/// they stay, to go back into what one did. Under the pointer, a running one
+/// shows its Stop. Null (no widget) before the chat has any.
 PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
   final subs = subagentsOf(chat.items);
   final commands = backgroundCommandsOf(chat.items);
@@ -22,13 +22,13 @@ PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
     for (final it in commands.where(commandRunning))
       _CommandRow(chat, daemon, it),
   ];
-  if (running.isEmpty) return null;
   final rest = [
-    for (final s in subs.where((s) => !subagentRunning(s)))
+    for (final s in subs.reversed.where((s) => !subagentRunning(s)))
       _AgentRow(chat, daemon, s),
-    for (final it in commands.where((it) => !commandRunning(it)))
+    for (final it in commands.reversed.where((it) => !commandRunning(it)))
       _CommandRow(chat, daemon, it),
   ];
+  if (running.isEmpty && rest.isEmpty) return null;
   // A command whose end isn't known didn't finish, as far as Nushi knows.
   final unknown = commands.any((it) => it.backgroundCommand.state == 'started');
   final more = '${rest.length} ${unknown ? 'earlier' : 'finished'}';
@@ -45,10 +45,17 @@ PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
     ),
     rows: [
       for (final r in running) (null, r),
-      if (rest.isNotEmpty) (null, _Finished(more, rest)),
+      if (rest.isNotEmpty)
+        (
+          null,
+          _Finished(more, rest, open: running.isEmpty && rest.length <= _shown),
+        ),
     ],
   );
 }
+
+/// With nothing running, up to this many finished ones show without a click.
+const _shown = 5;
 
 /// A row's first line, [first], with a Stop at its end when [stop].
 Widget _line(Widget first, Widget? stop) => Row(
@@ -168,19 +175,20 @@ class _AgentRow extends StatelessWidget {
   }
 }
 
-/// "n finished", which opens to list them.
+/// "n finished", which opens to list them, [open] to start with.
 class _Finished extends StatefulWidget {
-  const new(this.label, this.rows);
+  const new(this.label, this.rows, {required this.open});
 
   final String label;
   final List<Widget> rows;
+  final bool open;
 
   @override
   State<_Finished> createState() => _FinishedState();
 }
 
 class _FinishedState extends State<_Finished> {
-  bool _open = false;
+  late bool _open = widget.open;
 
   @override
   Widget build(BuildContext context) {
