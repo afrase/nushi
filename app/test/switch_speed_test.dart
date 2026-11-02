@@ -140,6 +140,41 @@ void main() {
     }
   }
 
+  testWidgets('a long chat stays at its bottom in every frame it fills in', (
+    tester,
+  ) async {
+    final d = await _twoLongChats(tester);
+    await tester.tap(_row('Beta long chat'));
+    // After layout and paint, ahead of any callback that runs after a frame.
+    final painted = <double>[];
+    var watching = true;
+    tester.binding.addPersistentFrameCallback((_) {
+      if (!watching) return;
+      final p = tester
+          .state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(Transcript),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          )
+          .position;
+      painted.add(p.maxScrollExtent - p.pixels);
+    });
+    var was = 0;
+    while (true) {
+      await tester.pump();
+      final now = _items();
+      if (now == was) break;
+      was = now;
+    }
+    watching = false;
+    expect(painted.length, greaterThan(2), reason: 'it fills in over frames');
+    expect(painted, everyElement(moreOrLessEquals(0)));
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
   testWidgets('scrolled up while it fills in, what shows stays put', (
     tester,
   ) async {

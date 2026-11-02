@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 /// a drag or a fling). The list's notifications go to
 /// [onNotification]; [stick] after a build.
 class BottomFollower extends ChangeNotifier {
-  final scroll = ScrollController();
+  late final ScrollController scroll = _Controller(this);
   bool following = true;
   bool _jumping = false; // the scroll moves because of us
   bool _dragged = false; // the scroll going on began with a drag
@@ -24,7 +24,9 @@ class BottomFollower extends ChangeNotifier {
 
   /// Scrolls to the bottom after this frame's layout, if following. Lazily
   /// built items change the list's height as they come into view, so the
-  /// list's [ScrollMetricsNotification]s call it again.
+  /// list's [ScrollMetricsNotification]s call it again. The list's height
+  /// changing in a frame is met in that frame ([_Position]); this is for
+  /// [follow], which starts between frames.
   void stick() => WidgetsBinding.instance.addPostFrameCallback((_) {
     if (!following || !scroll.hasClients) return;
     final p = scroll.position;
@@ -61,5 +63,52 @@ class BottomFollower extends ChangeNotifier {
   void dispose() {
     scroll.dispose();
     super.dispose();
+  }
+}
+
+class _Controller extends ScrollController {
+  new(this.follower);
+
+  final BottomFollower follower;
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) => _Position(
+    follower: follower,
+    physics: physics,
+    context: context,
+    initialPixels: initialScrollOffset,
+    keepScrollOffset: keepScrollOffset,
+    oldPosition: oldPosition,
+    debugLabel: debugLabel,
+  );
+}
+
+/// Stays at the bottom in the layout that moved it. A jump after the frame
+/// comes after its paint: a transcript filling in from the bottom
+/// (ADR 0026) would show each frame what its new entries pushed into view,
+/// and seem to scroll through the whole chat.
+class _Position extends ScrollPositionWithSingleContext {
+  new({
+    required this.follower,
+    required super.physics,
+    required super.context,
+    super.initialPixels,
+    super.keepScrollOffset,
+    super.oldPosition,
+    super.debugLabel,
+  });
+
+  final BottomFollower follower;
+
+  @override
+  bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
+    if (follower.following && hasPixels && pixels < maxScrollExtent) {
+      correctPixels(maxScrollExtent);
+    }
+    return super.applyContentDimensions(minScrollExtent, maxScrollExtent);
   }
 }
