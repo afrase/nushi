@@ -1020,6 +1020,25 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// What the Worktrees widget says of some of a chat's related worktrees,
+  /// as last looked at: no look, and no filter or hook runs (API 100).
+  Future<nushiv1nushi.GetRelatedWorktreeStatsResponse> getRelatedWorktreeStats(
+    nushiv1nushi.GetRelatedWorktreeStatsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getRelatedWorktreeStats,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists a folder's repository's local branches, the newest commit first,
   /// and its worktrees, the main one first. (API 83)
   Future<nushiv1nushi.ListBranchesResponse> listBranches(

@@ -11059,6 +11059,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     $core.String? lastHead,
     $core.String? callId,
     $core.String? state,
+    $core.bool? merged,
   }) {
     final result = RelatedWorktree._();
     if (path != null) result.path = path;
@@ -11067,6 +11068,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     if (lastHead != null) result.lastHead = lastHead;
     if (callId != null) result.callId = callId;
     if (state != null) result.state = state;
+    if (merged != null) result.merged = merged;
     return result;
   }
 
@@ -11089,6 +11091,7 @@ class RelatedWorktree extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'lastHead')
     ..aOS(5, _omitFieldNames ? '' : 'callId')
     ..aOS(6, _omitFieldNames ? '' : 'state')
+    ..aOB(7, _omitFieldNames ? '' : 'merged')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11171,6 +11174,268 @@ class RelatedWorktree extends $pb.GeneratedMessage {
   $core.bool hasState() => $_has(5);
   @$pb.TagNumber(6)
   void clearState() => $_clearField(6);
+
+  /// last_head has commits of its own, and git shows it on the chat's
+  /// branch or its base. Not a squash merge's: git can't see those (API 100).
+  @$pb.TagNumber(7)
+  $core.bool get merged => $_getBF(6);
+  @$pb.TagNumber(7)
+  set merged($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasMerged() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearMerged() => $_clearField(7);
+}
+
+class GetRelatedWorktreeStatsRequest extends $pb.GeneratedMessage {
+  factory GetRelatedWorktreeStatsRequest({
+    $core.String? chatId,
+    $core.Iterable<$core.String>? paths,
+  }) {
+    final result = GetRelatedWorktreeStatsRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (paths != null) result.paths.addAll(paths);
+    return result;
+  }
+
+  GetRelatedWorktreeStatsRequest._();
+
+  factory GetRelatedWorktreeStatsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreeStatsRequest()..mergeFromBuffer(data, registry);
+  factory GetRelatedWorktreeStatsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreeStatsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetRelatedWorktreeStatsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetRelatedWorktreeStatsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..pPS(2, _omitFieldNames ? '' : 'paths')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreeStatsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreeStatsRequest copyWith(
+          void Function(GetRelatedWorktreeStatsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetRelatedWorktreeStatsRequest))
+          as GetRelatedWorktreeStatsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetRelatedWorktreeStatsRequest() / GetRelatedWorktreeStatsRequest.new instead')
+  static GetRelatedWorktreeStatsRequest create() =>
+      GetRelatedWorktreeStatsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetRelatedWorktreeStatsRequest._();
+  @$core.override
+  GetRelatedWorktreeStatsRequest createEmptyInstance() =>
+      GetRelatedWorktreeStatsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetRelatedWorktreeStatsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetRelatedWorktreeStatsRequest>(
+          GetRelatedWorktreeStatsRequest.$_createMessage);
+  static GetRelatedWorktreeStatsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Which, by path; a path that isn't one of the chat's is left out.
+  @$pb.TagNumber(2)
+  $pb.PbList<$core.String> get paths => $_getList(1);
+}
+
+class GetRelatedWorktreeStatsResponse extends $pb.GeneratedMessage {
+  factory GetRelatedWorktreeStatsResponse({
+    $core.Iterable<RelatedWorktreeStats>? stats,
+  }) {
+    final result = GetRelatedWorktreeStatsResponse._();
+    if (stats != null) result.stats.addAll(stats);
+    return result;
+  }
+
+  GetRelatedWorktreeStatsResponse._();
+
+  factory GetRelatedWorktreeStatsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreeStatsResponse()..mergeFromBuffer(data, registry);
+  factory GetRelatedWorktreeStatsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreeStatsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetRelatedWorktreeStatsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetRelatedWorktreeStatsResponse.$_createMessage)
+    ..pPM<RelatedWorktreeStats>(1, _omitFieldNames ? '' : 'stats',
+        subBuilder: RelatedWorktreeStats.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreeStatsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreeStatsResponse copyWith(
+          void Function(GetRelatedWorktreeStatsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetRelatedWorktreeStatsResponse))
+          as GetRelatedWorktreeStatsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetRelatedWorktreeStatsResponse() / GetRelatedWorktreeStatsResponse.new instead')
+  static GetRelatedWorktreeStatsResponse create() =>
+      GetRelatedWorktreeStatsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetRelatedWorktreeStatsResponse._();
+  @$core.override
+  GetRelatedWorktreeStatsResponse createEmptyInstance() =>
+      GetRelatedWorktreeStatsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetRelatedWorktreeStatsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetRelatedWorktreeStatsResponse>(
+          GetRelatedWorktreeStatsResponse.$_createMessage);
+  static GetRelatedWorktreeStatsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<RelatedWorktreeStats> get stats => $_getList(0);
+}
+
+/// Its work since base_commit: a present worktree's as it stands, uncommitted
+/// and untracked included; a removed one's up to last_head.
+class RelatedWorktreeStats extends $pb.GeneratedMessage {
+  factory RelatedWorktreeStats({
+    $core.String? path,
+    $core.int? files,
+    $core.int? added,
+    $core.int? removed,
+    $core.int? ahead,
+    $core.bool? commitsGone,
+  }) {
+    final result = RelatedWorktreeStats._();
+    if (path != null) result.path = path;
+    if (files != null) result.files = files;
+    if (added != null) result.added = added;
+    if (removed != null) result.removed = removed;
+    if (ahead != null) result.ahead = ahead;
+    if (commitsGone != null) result.commitsGone = commitsGone;
+    return result;
+  }
+
+  RelatedWorktreeStats._();
+
+  factory RelatedWorktreeStats.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RelatedWorktreeStats()..mergeFromBuffer(data, registry);
+  factory RelatedWorktreeStats.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RelatedWorktreeStats()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RelatedWorktreeStats',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RelatedWorktreeStats.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aI(2, _omitFieldNames ? '' : 'files')
+    ..aI(3, _omitFieldNames ? '' : 'added')
+    ..aI(4, _omitFieldNames ? '' : 'removed')
+    ..aI(5, _omitFieldNames ? '' : 'ahead')
+    ..aOB(6, _omitFieldNames ? '' : 'commitsGone')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RelatedWorktreeStats clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RelatedWorktreeStats copyWith(void Function(RelatedWorktreeStats) updates) =>
+      super.copyWith((message) => updates(message as RelatedWorktreeStats))
+          as RelatedWorktreeStats;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RelatedWorktreeStats() / RelatedWorktreeStats.new instead')
+  static RelatedWorktreeStats create() => RelatedWorktreeStats._();
+  static $pb.GeneratedMessage $_createMessage() => RelatedWorktreeStats._();
+  @$core.override
+  RelatedWorktreeStats createEmptyInstance() => RelatedWorktreeStats._();
+  @$core.pragma('dart2js:noInline')
+  static RelatedWorktreeStats getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RelatedWorktreeStats>(
+          RelatedWorktreeStats.$_createMessage);
+  static RelatedWorktreeStats? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get files => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set files($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFiles() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFiles() => $_clearField(2);
+
+  /// Lines added and removed; binary files count none.
+  @$pb.TagNumber(3)
+  $core.int get added => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set added($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAdded() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAdded() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get removed => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set removed($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRemoved() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRemoved() => $_clearField(4);
+
+  /// The commits it has that base_commit lacks.
+  @$pb.TagNumber(5)
+  $core.int get ahead => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set ahead($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAhead() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAhead() => $_clearField(5);
+
+  /// It's removed and git no longer has last_head: nothing is left to diff.
+  @$pb.TagNumber(6)
+  $core.bool get commitsGone => $_getBF(5);
+  @$pb.TagNumber(6)
+  set commitsGone($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCommitsGone() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCommitsGone() => $_clearField(6);
 }
 
 class GetFolderStatusRequest extends $pb.GeneratedMessage {
@@ -11712,12 +11977,14 @@ class GetDiffRequest extends $pb.GeneratedMessage {
     $core.String? base,
     $core.String? commit,
     $core.String? since,
+    $core.String? after,
   }) {
     final result = GetDiffRequest._();
     if (folder != null) result.folder = folder;
     if (base != null) result.base = base;
     if (commit != null) result.commit = commit;
     if (since != null) result.since = since;
+    if (after != null) result.after = after;
     return result;
   }
 
@@ -11738,6 +12005,7 @@ class GetDiffRequest extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'base')
     ..aOS(3, _omitFieldNames ? '' : 'commit')
     ..aOS(4, _omitFieldNames ? '' : 'since')
+    ..aOS(5, _omitFieldNames ? '' : 'after')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -11804,6 +12072,17 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   $core.bool hasSince() => $_has(3);
   @$pb.TagNumber(4)
   void clearSince() => $_clearField(4);
+
+  /// With commit, instead of since, an older commit: what changed after it,
+  /// its own change left out (API 100).
+  @$pb.TagNumber(5)
+  $core.String get after => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set after($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAfter() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAfter() => $_clearField(5);
 }
 
 class StageFilesRequest extends $pb.GeneratedMessage {
@@ -12856,10 +13135,12 @@ class ListCommitsRequest extends $pb.GeneratedMessage {
   factory ListCommitsRequest({
     $core.String? folder,
     $core.String? base,
+    $core.String? head,
   }) {
     final result = ListCommitsRequest._();
     if (folder != null) result.folder = folder;
     if (base != null) result.base = base;
+    if (head != null) result.head = head;
     return result;
   }
 
@@ -12878,6 +13159,7 @@ class ListCommitsRequest extends $pb.GeneratedMessage {
       createEmptyInstance: ListCommitsRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'folder')
     ..aOS(2, _omitFieldNames ? '' : 'base')
+    ..aOS(3, _omitFieldNames ? '' : 'head')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12920,6 +13202,16 @@ class ListCommitsRequest extends $pb.GeneratedMessage {
   $core.bool hasBase() => $_has(1);
   @$pb.TagNumber(2)
   void clearBase() => $_clearField(2);
+
+  /// Instead of HEAD, this commit's (API 100).
+  @$pb.TagNumber(3)
+  $core.String get head => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set head($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasHead() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearHead() => $_clearField(3);
 }
 
 class ListCommitsResponse extends $pb.GeneratedMessage {
@@ -29493,6 +29785,17 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetRelatedWorktreesRequest request) =>
       _client.invoke<GetRelatedWorktreesResponse>(ctx, 'NushiService',
           'GetRelatedWorktrees', request, GetRelatedWorktreesResponse());
+
+  /// What the Worktrees widget says of some of a chat's related worktrees,
+  /// as last looked at: no look, and no filter or hook runs (API 100).
+  $async.Future<GetRelatedWorktreeStatsResponse> getRelatedWorktreeStats(
+          $pb.ClientContext? ctx, GetRelatedWorktreeStatsRequest request) =>
+      _client.invoke<GetRelatedWorktreeStatsResponse>(
+          ctx,
+          'NushiService',
+          'GetRelatedWorktreeStats',
+          request,
+          GetRelatedWorktreeStatsResponse());
 
   /// Lists a folder's repository's local branches, the newest commit first,
   /// and its worktrees, the main one first. (API 83)

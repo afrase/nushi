@@ -1,11 +1,13 @@
 package git
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -138,6 +140,37 @@ func (Worktrees) MergeBase(ctx context.Context, folder, a, b string) (string, er
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// Merged returns those of tips (object ids) git shows on HEAD or base (""
+// for the repository's default branch), at two runs of git however many
+// there are. A tip git no longer has isn't among them: reachable from
+// nothing is not the same as on the branch.
+func (Worktrees) Merged(ctx context.Context, folder, base string, tips []string) ([]string, error) {
+	if len(tips) == 0 {
+		return nil, nil
+	}
+	if i := slices.IndexFunc(tips, func(s string) bool { return !ObjectID(s) }); i >= 0 {
+		return nil, fmt.Errorf("%q is not a commit", tips[i])
+	}
+	out, err := run(ctx, folder, append([]string{"rev-list", "--no-walk", "--ignore-missing"}, tips...)...)
+	if err != nil {
+		return nil, err
+	}
+	there := strings.Fields(string(out))
+	if len(there) == 0 {
+		return nil, nil
+	}
+	into := []string{"HEAD"}
+	if b := cmp.Or(base, DefaultBase(ctx, folder)); b != "" && !strings.HasPrefix(b, "-") {
+		into = append(into, b)
+	}
+	args := append(append([]string{"rev-list", "--ignore-missing"}, there...), "--not")
+	if out, err = run(ctx, folder, append(append(args, into...), "--")...); err != nil {
+		return nil, err
+	}
+	left := strings.Fields(string(out))
+	return slices.DeleteFunc(there, func(tip string) bool { return slices.Contains(left, tip) }), nil
 }
 
 // ObjectID says s is a whole object id, SHA-1's or SHA-256's.

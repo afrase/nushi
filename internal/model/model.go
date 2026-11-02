@@ -129,6 +129,9 @@ type RelatedWorktree struct {
 	// CallID is the tool call that started the subagent.
 	CallID string
 	State  RelatedState
+	// Merged says git shows LastHead on the chat's branch or its base, and
+	// it has commits of its own. git can't see a squash merge.
+	Merged bool `json:",omitempty"`
 }
 
 // RelatedState says whether a related worktree is still there.

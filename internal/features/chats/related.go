@@ -23,8 +23,8 @@ import (
 // included): a path counts only if git lists it and it is the top of a work
 // tree of the chat's repository, by real path (verified), and nothing
 // here adds to what a chat may read (Roots) or runs more of git than
-// rev-parse, worktree list and merge-base, so no look runs a filter or a
-// hook, whoever asks for it.
+// rev-parse, worktree list, merge-base and rev-list, so no look runs a
+// filter or a hook, whoever asks for it.
 
 const (
 	// maxRelated is the most worktrees a chat keeps: each costs a run of
@@ -52,6 +52,18 @@ func (s *Service) RelatedWorktrees(ctx context.Context, chatID string) ([]model.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return slices.Clone(c.record.RelatedWorktrees), nil
+}
+
+// KnownRelated is the chat's folder and its related worktrees as last
+// looked at: no run of git, for what asks often.
+func (s *Service) KnownRelated(chatID string) (string, []model.RelatedWorktree, error) {
+	c, err := s.lookup(chatID)
+	if err != nil {
+		return "", nil, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.record.Folder, slices.Clone(c.record.RelatedWorktrees), nil
 }
 
 // plainText says a worktree's path and branch are valid UTF-8. git takes
@@ -186,6 +198,10 @@ func (c *chat) lookRelated(ctx context.Context) {
 		return
 	}
 	folder, sid, known := c.record.Folder, c.sid, slices.Clone(c.record.RelatedWorktrees)
+	base := ""
+	if wt := c.record.Worktree; wt != nil {
+		base = wt.Base
+	}
 	steps := c.relatedStepsLocked()
 	c.mu.Unlock()
 	if len(known) == 0 && len(steps) == 0 {
@@ -200,6 +216,7 @@ func (c *chat) lookRelated(ctx context.Context) {
 		c.log().Debug("looking at related worktrees", "err", err)
 		return
 	}
+	c.markMerged(ctx, folder, base, next)
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.halting || slices.Equal(next, c.record.RelatedWorktrees) {
@@ -208,6 +225,28 @@ func (c *chat) lookRelated(ctx context.Context) {
 	c.saveLocked(func(r *model.ChatRecord) { r.RelatedWorktrees = next })
 	list := slices.Clone(next)
 	c.publish(model.Event{ChatID: c.id, Related: &list})
+}
+
+// markMerged says which of list git shows on the chat's branch or base
+// (base). A worktree with no commits of its own isn't merged, though its
+// head is on the branch: there was nothing to merge. If git can't say,
+// they stay as they were.
+func (c *chat) markMerged(ctx context.Context, folder, base string, list []model.RelatedWorktree) {
+	var tips []string
+	for _, k := range list {
+		if k.BaseCommit != "" && k.LastHead != k.BaseCommit && git.ObjectID(k.LastHead) {
+			tips = append(tips, k.LastHead)
+		}
+	}
+	merged, err := c.worktrees.Merged(ctx, folder, base, tips)
+	if err != nil {
+		c.log().Debug("looking at what's merged", "err", err)
+		return
+	}
+	for i := range list {
+		k := &list[i]
+		k.Merged = k.LastHead != k.BaseCommit && slices.Contains(merged, k.LastHead)
+	}
 }
 
 // relatedLook is one look's view of git.

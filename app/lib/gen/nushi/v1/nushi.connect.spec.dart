@@ -512,6 +512,15 @@ abstract final class NushiService {
     nushiv1nushi.GetRelatedWorktreesResponse.new,
   );
 
+  /// What the Worktrees widget says of some of a chat's related worktrees,
+  /// as last looked at: no look, and no filter or hook runs (API 100).
+  static const getRelatedWorktreeStats = connect.Spec(
+    '/$name/GetRelatedWorktreeStats',
+    connect.StreamType.unary,
+    nushiv1nushi.GetRelatedWorktreeStatsRequest.new,
+    nushiv1nushi.GetRelatedWorktreeStatsResponse.new,
+  );
+
   /// Lists a folder's repository's local branches, the newest commit first,
   /// and its worktrees, the main one first. (API 83)
   static const listBranches = connect.Spec(

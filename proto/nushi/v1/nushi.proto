@@ -200,6 +200,10 @@ service NushiService {
   // its base_commit; once it's removed, GetDiff in the chat's folder with
   // since and commit, while git keeps the commit. ADR 0081. API 99.
   rpc GetRelatedWorktrees(GetRelatedWorktreesRequest) returns (GetRelatedWorktreesResponse);
+
+  // What the Worktrees widget says of some of a chat's related worktrees,
+  // as last looked at: no look, and no filter or hook runs (API 100).
+  rpc GetRelatedWorktreeStats(GetRelatedWorktreeStatsRequest) returns (GetRelatedWorktreeStatsResponse);
   // Lists a folder's repository's local branches, the newest commit first,
   // and its worktrees, the main one first. (API 83)
   rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
@@ -1549,6 +1553,33 @@ message RelatedWorktree {
   string call_id = 5;
   // "present", or "removed" once git no longer lists it.
   string state = 6;
+  // last_head has commits of its own, and git shows it on the chat's
+  // branch or its base. Not a squash merge's: git can't see those (API 100).
+  bool merged = 7;
+}
+
+message GetRelatedWorktreeStatsRequest {
+  string chat_id = 1;
+  // Which, by path; a path that isn't one of the chat's is left out.
+  repeated string paths = 2;
+}
+
+message GetRelatedWorktreeStatsResponse {
+  repeated RelatedWorktreeStats stats = 1;
+}
+
+// Its work since base_commit: a present worktree's as it stands, uncommitted
+// and untracked included; a removed one's up to last_head.
+message RelatedWorktreeStats {
+  string path = 1;
+  int32 files = 2;
+  // Lines added and removed; binary files count none.
+  int32 added = 3;
+  int32 removed = 4;
+  // The commits it has that base_commit lacks.
+  int32 ahead = 5;
+  // It's removed and git no longer has last_head: nothing is left to diff.
+  bool commits_gone = 6;
 }
 
 message GetFolderStatusRequest {
@@ -1619,6 +1650,9 @@ message GetDiffRequest {
   // With commit, an older commit: what the commits from it to commit
   // changed, it included.
   string since = 4;
+  // With commit, instead of since, an older commit: what changed after it,
+  // its own change left out (API 100).
+  string after = 5;
 }
 
 message StageFilesRequest {
@@ -1727,6 +1761,8 @@ message ListCommitsRequest {
   string folder = 1;
   // HEAD's commits that base lacks (up to 500); without one the last 50.
   string base = 2;
+  // Instead of HEAD, this commit's (API 100).
+  string head = 3;
 }
 
 message ListCommitsResponse {

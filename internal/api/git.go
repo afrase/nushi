@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -41,7 +42,7 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	if err := absolute(req.Msg.Folder); err != nil {
 		return nil, err
 	}
-	span := git.Span{Base: req.Msg.Base, Commit: req.Msg.Commit, Since: req.Msg.Since}
+	span := git.Span{Base: req.Msg.Base, Commit: req.Msg.Commit, Since: req.Msg.Since, After: req.Msg.After}
 	changes, err := git.Changes(ctx, req.Msg.Folder, span)
 	if err != nil {
 		return nil, refused(err)
@@ -129,7 +130,58 @@ func relatedProto(list []model.RelatedWorktree) []*nushiv1.RelatedWorktree {
 	out := make([]*nushiv1.RelatedWorktree, 0, len(list))
 	for _, r := range list {
 		out = append(out, &nushiv1.RelatedWorktree{Path: r.Path, Branch: r.Branch, BaseCommit: r.BaseCommit,
-			LastHead: r.LastHead, CallId: r.CallID, State: string(r.State)})
+			LastHead: r.LastHead, CallId: r.CallID, State: string(r.State), Merged: r.Merged})
+	}
+	return out
+}
+
+func (s *server) GetRelatedWorktreeStats(ctx context.Context, req *connect.Request[nushiv1.GetRelatedWorktreeStatsRequest]) (*connect.Response[nushiv1.GetRelatedWorktreeStatsResponse], error) {
+	folder, list, err := s.chats.KnownRelated(req.Msg.ChatId)
+	if err != nil {
+		return nil, refused(err)
+	}
+	resp := &nushiv1.GetRelatedWorktreeStatsResponse{}
+	for _, r := range list {
+		if slices.Contains(req.Msg.Paths, r.Path) {
+			resp.Stats = append(resp.Stats, relatedStats(ctx, folder, r))
+		}
+	}
+	return connect.NewResponse(resp), nil
+}
+
+// relatedStats counts a related worktree's work. This runs with no click
+// behind it, so nothing here may run a filter: a present worktree is
+// counted as git.Status counts a folder, and a removed one (or one whose
+// folder went since the last look) from its commits alone, in the chat's
+// folder. What can't be counted stays zero.
+func relatedStats(ctx context.Context, folder string, r model.RelatedWorktree) *nushiv1.RelatedWorktreeStats {
+	out := &nushiv1.RelatedWorktreeStats{Path: r.Path}
+	fill := func(st model.FolderStatus) {
+		out.Files, out.Added, out.Removed = int32(st.Files), int32(st.Added), int32(st.Removed)
+	}
+	if r.State == model.RelatedPresent {
+		if st, err := git.WorkSince(ctx, r.Path, r.BaseCommit); err == nil {
+			fill(st)
+			if git.ObjectID(r.BaseCommit) {
+				if n, err := git.Ahead(ctx, r.Path, r.BaseCommit, ""); err == nil {
+					out.Ahead = int32(n)
+				}
+			}
+			return out
+		}
+	}
+	if !git.ObjectID(r.LastHead) || !git.HasCommit(ctx, folder, r.LastHead) {
+		out.CommitsGone = r.State != model.RelatedPresent
+		return out
+	}
+	if !git.ObjectID(r.BaseCommit) {
+		return out
+	}
+	if st, err := git.Between(ctx, folder, r.BaseCommit, r.LastHead); err == nil {
+		fill(st)
+	}
+	if n, err := git.Ahead(ctx, folder, r.BaseCommit, r.LastHead); err == nil {
+		out.Ahead = int32(n)
 	}
 	return out
 }
@@ -151,7 +203,7 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 		resp.DefaultBase = base
 	}
 	if base := cmp.Or(req.Msg.Base, resp.DefaultBase); base != "" {
-		ahead, err := git.Ahead(ctx, req.Msg.Folder, base)
+		ahead, err := git.Ahead(ctx, req.Msg.Folder, base, "")
 		if err != nil {
 			return nil, refused(err)
 		}
@@ -168,7 +220,7 @@ func (s *server) ListCommits(ctx context.Context, req *connect.Request[nushiv1.L
 	if req.Msg.Base == "" {
 		limit = 50
 	}
-	commits, err := git.Commits(ctx, req.Msg.Folder, req.Msg.Base, limit)
+	commits, err := git.Commits(ctx, req.Msg.Folder, req.Msg.Base, req.Msg.Head, limit)
 	if err != nil {
 		return nil, refused(err)
 	}

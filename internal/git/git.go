@@ -29,9 +29,9 @@ const (
 // Span says which changes Changes reads: the uncommitted ones, counted
 // from HEAD or, with Base, from where HEAD's branch left Base (their merge
 // base), so the branch's commits too; or with Commit what that commit
-// changed, and with Since as well what the commits from Since to Commit
-// changed.
-type Span struct{ Base, Commit, Since string }
+// changed, with Since as well what the commits from Since to Commit changed,
+// and with After instead what changed after After, up to Commit.
+type Span struct{ Base, Commit, Since, After string }
 
 // Changes returns the folder's changes in span, untracked files included
 // when they are uncommitted ones, with paths relative to the folder and
@@ -231,9 +231,12 @@ func ends(ctx context.Context, folder string, span Span) (from, to string, err e
 	if _, err := repo(ctx, folder); err != nil {
 		return "", "", err
 	}
-	since := cmp.Or(span.Since, span.Commit)
+	since := cmp.Or(span.After, span.Since, span.Commit)
 	if strings.HasPrefix(since, "-") || strings.HasPrefix(span.Commit, "-") {
 		return "", "", fmt.Errorf("%q is not a commit", since)
+	}
+	if span.After != "" {
+		return span.After, span.Commit, nil
 	}
 	from = since + "^"
 	if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", from); err != nil {
@@ -269,28 +272,33 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 	if err != nil {
 		return st, err
 	}
-	hasHead := from != ""
 	if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
 		st.Branch = strings.TrimSpace(string(out))
 	} else if out, err := run(ctx, folder, "rev-parse", "--short", "HEAD"); err == nil {
 		st.Branch = strings.TrimSpace(string(out))
 	}
+	err = count(ctx, folder, from, &st)
+	return st, err
+}
+
+// count adds folder's changes since from to st: tracked ones, from "" before
+// the first commit, and untracked ones.
+func count(ctx context.Context, folder, from string, st *model.FolderStatus) error {
+	hasHead := from != ""
 	if hasHead {
 		off, err := noFilters(ctx, folder)
 		if err != nil {
-			return st, err
+			return err
 		}
 		counts, err := numstat(ctx, folder, off, from)
 		if err != nil {
-			return st, err
+			return err
 		}
-		for _, n := range counts {
-			st.Files, st.Added, st.Removed = st.Files+1, st.Added+n[0], st.Removed+n[1]
-		}
+		add(st, counts)
 	}
 	added, err := untracked(ctx, folder, hasHead)
 	if err != nil {
-		return st, err
+		return err
 	}
 	for _, p := range added {
 		st.Files++
@@ -298,7 +306,14 @@ func Status(ctx context.Context, folder, base string) (model.FolderStatus, error
 			st.Added += lines(b)
 		}
 	}
-	return st, nil
+	return nil
+}
+
+// add adds numstat's counts to st.
+func add(st *model.FolderStatus, counts map[string][2]int) {
+	for _, n := range counts {
+		st.Files, st.Added, st.Removed = st.Files+1, st.Added+n[0], st.Removed+n[1]
+	}
 }
 
 // Files lists up to limit files under folder, relative to it: in a

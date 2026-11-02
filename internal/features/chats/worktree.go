@@ -52,6 +52,9 @@ type Checkouts interface {
 	Locate(ctx context.Context, folder string) (common, top string, err error)
 	// MergeBase is where commits a and b of folder's repository parted.
 	MergeBase(ctx context.Context, folder, a, b string) (string, error)
+	// Merged returns those of tips git shows on folder's HEAD or base (""
+	// for the repository's default branch).
+	Merged(ctx context.Context, folder, base string, tips []string) ([]string, error)
 	// Branch is the branch folder has checked out ("" when detached).
 	Branch(ctx context.Context, folder string) string
 	// Changed counts folder's uncommitted changes to tracked files.

@@ -123,6 +123,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetFolderStatusRequest request);
   $async.Future<$0.GetRelatedWorktreesResponse> getRelatedWorktrees(
       $pb.ServerContext ctx, $0.GetRelatedWorktreesRequest request);
+  $async.Future<$0.GetRelatedWorktreeStatsResponse> getRelatedWorktreeStats(
+      $pb.ServerContext ctx, $0.GetRelatedWorktreeStatsRequest request);
   $async.Future<$0.ListBranchesResponse> listBranches(
       $pb.ServerContext ctx, $0.ListBranchesRequest request);
   $async.Future<$0.ListFilesResponse> listFiles(
@@ -402,6 +404,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetFolderStatusRequest();
       case 'GetRelatedWorktrees':
         return $0.GetRelatedWorktreesRequest();
+      case 'GetRelatedWorktreeStats':
+        return $0.GetRelatedWorktreeStatsRequest();
       case 'ListBranches':
         return $0.ListBranchesRequest();
       case 'ListFiles':
@@ -688,6 +692,9 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       case 'GetRelatedWorktrees':
         return getRelatedWorktrees(
             ctx, request as $0.GetRelatedWorktreesRequest);
+      case 'GetRelatedWorktreeStats':
+        return getRelatedWorktreeStats(
+            ctx, request as $0.GetRelatedWorktreeStatsRequest);
       case 'ListBranches':
         return listBranches(ctx, request as $0.ListBranchesRequest);
       case 'ListFiles':

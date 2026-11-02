@@ -249,6 +249,48 @@ func TestRelatedHeadsAndRemoval(t *testing.T) {
 	}
 }
 
+// git says what's merged, only of what had commits of its own: a worktree
+// that made none has its head on the branch and merged nothing, and a
+// squash merge leaves nothing for git to see.
+func TestRelatedMerged(t *testing.T) {
+	repo := relatedRepo(t)
+	idle, _ := addWorktree(t, repo, "idle")
+	merged, _ := addWorktree(t, repo, "merged")
+	squashed, _ := addWorktree(t, repo, "squashed")
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, &memSessions{})
+	startSubagent(t, c, "a1")
+	step(t, c, "a1", "s1", shell(t, "ls "+idle))
+	step(t, c, "a1", "s2", shell(t, "ls "+merged))
+	step(t, c, "a1", "s3", shell(t, "ls "+squashed))
+	is := func(want map[string]bool) {
+		t.Helper()
+		got := related(t, svc, c)
+		if len(got) != len(want) {
+			t.Fatalf("%+v", got)
+		}
+		for _, r := range got {
+			if r.Merged != want[r.Branch] {
+				t.Errorf("%s: merged %v", r.Branch, r.Merged)
+			}
+		}
+	}
+	is(map[string]bool{"idle": false, "merged": false, "squashed": false})
+	testcheck.Write(t, filepath.Join(merged, "m.txt"), "m\n")
+	testcheck.Git(t, merged, "add", ".")
+	testcheck.Git(t, merged, "commit", "-q", "-m", "merged work")
+	testcheck.Write(t, filepath.Join(squashed, "s.txt"), "s\n")
+	testcheck.Git(t, squashed, "add", ".")
+	testcheck.Git(t, squashed, "commit", "-q", "-m", "squashed work")
+	is(map[string]bool{"idle": false, "merged": false, "squashed": false})
+	testcheck.Git(t, repo, "merge", "-q", "--no-ff", "-m", "merge", "merged")
+	testcheck.Git(t, repo, "merge", "-q", "--squash", "squashed")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "squash")
+	is(map[string]bool{"idle": false, "merged": true, "squashed": false})
+	testcheck.Git(t, repo, "worktree", "remove", "--force", merged)
+	testcheck.Git(t, repo, "branch", "-q", "-D", "merged")
+	is(map[string]bool{"idle": false, "merged": true, "squashed": false})
+}
+
 // A subagent's end is a look of its own, with no turn ending and no
 // client asking: the head it left is on record before an orchestrator
 // removes the worktree.

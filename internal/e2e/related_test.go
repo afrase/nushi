@@ -114,3 +114,65 @@ func TestFoundWorktreeNotUTF8(t *testing.T) {
 		t.Errorf("chats: %v", got.Chats)
 	}
 }
+
+// What the Changes tab reads of a related worktree: its stats while it's
+// there, and once it's gone what its commits changed, the commit it left
+// from not among them; then, git having dropped them, that they are gone.
+func TestRelatedWorktreeStatsAndDiffs(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	testcheck.Write(t, filepath.Join(repo, "main.txt"), "the chat's\n")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "the chat's")
+	base := testcheck.Git(t, repo, "rev-parse", "HEAD")
+	wt := filepath.Join(repo, ".claude", "worktrees", "agent-a1")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "worktree-agent-a1", wt)
+	wt = testcheck.Git(t, wt, "rev-parse", "--show-toplevel")
+	testcheck.Write(t, filepath.Join(wt, "work.txt"), "one\ntwo\n")
+	testcheck.Git(t, wt, "add", ".")
+	testcheck.Git(t, wt, "commit", "-q", "-m", "work")
+	head := testcheck.Git(t, wt, "rev-parse", "HEAD")
+	testcheck.Write(t, filepath.Join(wt, "wip.txt"), "wip\n")
+
+	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}, nil))
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: repo}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "subagent ls " + wt})))
+	settled(ctx, t, a, id)
+	stats := func(paths ...string) []*nushiv1.RelatedWorktreeStats {
+		t.Helper()
+		return must(a.c.GetRelatedWorktreeStats(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreeStatsRequest{ChatId: id, Paths: paths}))).Stats
+	}
+	look := func() []*nushiv1.RelatedWorktree {
+		t.Helper()
+		return must(a.c.GetRelatedWorktrees(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreesRequest{ChatId: id}))).Worktrees
+	}
+	if got := look(); len(got) != 1 || got[0].State != "present" {
+		t.Fatalf("found: %v", got)
+	}
+	if got := stats(wt, "/not/its/own"); len(got) != 1 || got[0].Files != 2 || got[0].Added != 3 || got[0].Ahead != 1 || got[0].CommitsGone {
+		t.Errorf("present: %v", got)
+	}
+
+	testcheck.Git(t, repo, "worktree", "remove", "--force", wt)
+	testcheck.Git(t, repo, "branch", "-q", "-D", "worktree-agent-a1")
+	if got := look(); len(got) != 1 || got[0].State != "removed" || got[0].LastHead != head {
+		t.Fatalf("removed: %v", got)
+	}
+	if got := stats(wt); len(got) != 1 || got[0].Files != 1 || got[0].Added != 2 || got[0].Ahead != 1 || got[0].CommitsGone {
+		t.Errorf("removed: %v", got)
+	}
+	diff := must(a.c.GetDiff(ctx, connect.NewRequest(&nushiv1.GetDiffRequest{Folder: repo, After: base, Commit: head})))
+	if len(diff.Files) != 1 || diff.Files[0].Path != "work.txt" {
+		t.Errorf("diff: %v", diff.Files)
+	}
+	commits := must(a.c.ListCommits(ctx, connect.NewRequest(&nushiv1.ListCommitsRequest{Folder: repo, Base: base, Head: head})))
+	if len(commits.Commits) != 1 || commits.Commits[0].Hash != head {
+		t.Errorf("commits: %v", commits.Commits)
+	}
+
+	testcheck.Git(t, repo, "reflog", "expire", "--expire=now", "--all")
+	testcheck.Git(t, repo, "gc", "-q", "--prune=now")
+	if got := stats(wt); len(got) != 1 || !got[0].CommitsGone || got[0].Files != 0 {
+		t.Errorf("collected: %v", got)
+	}
+}

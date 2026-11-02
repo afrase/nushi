@@ -39,6 +39,9 @@ func (stuckWorktrees) Locate(context.Context, string) (string, string, error) {
 func (stuckWorktrees) MergeBase(context.Context, string, string, string) (string, error) {
 	return "", nil
 }
+func (stuckWorktrees) Merged(context.Context, string, string, []string) ([]string, error) {
+	return nil, nil
+}
 func (stuckWorktrees) Branch(context.Context, string) string                  { return "" }
 func (stuckWorktrees) Changed(context.Context, string) (int, error)           { return 0, nil }
 func (stuckWorktrees) Changes(context.Context, string, int) ([]string, error) { return nil, nil }

@@ -1,6 +1,7 @@
 package git
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strconv"
@@ -29,28 +30,34 @@ func DefaultBase(ctx context.Context, folder string) string {
 	return ""
 }
 
-// Ahead counts the commits HEAD has that base doesn't.
-func Ahead(ctx context.Context, folder, base string) (int, error) {
+// Ahead counts the commits head ("" for HEAD) has that base doesn't.
+func Ahead(ctx context.Context, folder, base, head string) (int, error) {
 	if strings.HasPrefix(base, "-") {
 		return 0, fmt.Errorf("%q is not a branch", base)
 	}
-	out, err := run(ctx, folder, "rev-list", "--count", base+"..HEAD")
+	if strings.HasPrefix(head, "-") {
+		return 0, fmt.Errorf("%q is not a commit", head)
+	}
+	out, err := run(ctx, folder, "rev-list", "--count", base+".."+cmp.Or(head, "HEAD"))
 	if err != nil {
 		return 0, err
 	}
 	return strconv.Atoi(strings.TrimSpace(string(out)))
 }
 
-// Commits lists HEAD's commits that base doesn't have, newest first, or
-// without a base the last limit commits; the lines they changed are counted
-// in the folder only.
-func Commits(ctx context.Context, folder, base string, limit int) ([]Commit, error) {
+// Commits lists the commits of head ("" for HEAD) that base doesn't have,
+// newest first, or without a base its last limit commits; the lines they
+// changed are counted in the folder only.
+func Commits(ctx context.Context, folder, base, head string, limit int) ([]Commit, error) {
 	if strings.HasPrefix(base, "-") {
 		return nil, fmt.Errorf("%q is not a branch", base)
 	}
-	rev := "HEAD"
+	if strings.HasPrefix(head, "-") {
+		return nil, fmt.Errorf("%q is not a commit", head)
+	}
+	rev := cmp.Or(head, "HEAD")
 	if base != "" {
-		rev = base + "..HEAD"
+		rev = base + ".." + rev
 	}
 	// With -z, a NUL ends each commit's line and each of its numstat lines
 	// (added, removed, path). A commit's line is \x1e and its fields split

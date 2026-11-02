@@ -126,10 +126,10 @@ func TestBranchChanges(t *testing.T) {
 		t.Errorf("default base = %q", b)
 	}
 	testcheck.Git(t, repo, "commit", "-q", "-am", "second")
-	if n, err := Ahead(ctx, repo, "main"); n != 2 || err != nil {
+	if n, err := Ahead(ctx, repo, "main", ""); n != 2 || err != nil {
 		t.Errorf("ahead = %d, %v", n, err)
 	}
-	commits, err := Commits(ctx, repo, "main", 50)
+	commits, err := Commits(ctx, repo, "main", "", 50)
 	if err != nil || len(commits) != 2 || commits[0].Subject != "second" || commits[1].Added != 1 {
 		t.Fatalf("commits = %+v, %v", commits, err)
 	}
@@ -139,17 +139,17 @@ func TestBranchChanges(t *testing.T) {
 	if got, want := paths(Span{Commit: commits[0].Hash, Since: commits[1].Hash}), "a.txt:a\n>a\nmore\n b.txt:b\n>b2\n"; got != want {
 		t.Errorf("two commits' changes = %q, want %q", got, want)
 	}
-	if all, err := Commits(ctx, repo, "", 50); err != nil || len(all) != 3 {
+	if all, err := Commits(ctx, repo, "", "", 50); err != nil || len(all) != 3 {
 		t.Errorf("the last commits = %+v, %v", all, err)
 	}
-	first, _ := Commits(ctx, repo, "", 50)
+	first, _ := Commits(ctx, repo, "", "", 50)
 	if got, want := paths(Span{Commit: first[2].Hash}), "a.txt:>a\n b.txt:>b\n"; got != want {
 		t.Errorf("the first commit's changes = %q, want %q", got, want)
 	}
 	// A subject can't add a commit of its own.
 	fake := "x\x1e" + strings.Repeat("d", 40) + "\x1fddddddd\x1f0\x1fLooks legit"
 	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", fake)
-	if all, _ := Commits(ctx, repo, "", 50); len(all) != 4 || all[0].Subject != fake || all[1].Subject != "second" || all[1].Added != 1 {
+	if all, _ := Commits(ctx, repo, "", "", 50); len(all) != 4 || all[0].Subject != fake || all[1].Subject != "second" || all[1].Added != 1 {
 		t.Errorf("after a commit whose subject has the separators: %+v", all)
 	}
 }
@@ -224,7 +224,7 @@ func TestARepositorysOwnConfigRunsNothing(t *testing.T) {
 	// Changes runs the repository's own filters, as the user's git diff
 	// would (ADR 0023), and nothing else.
 	_, _ = Changes(ctx, repo, Span{}) // only what they run is tested
-	_, _ = Commits(ctx, repo, "", 10)
+	_, _ = Commits(ctx, repo, "", "", 10)
 	for _, name := range []string{"fsmonitor", "gpg", "lazy", "subfilter", "hook"} {
 		if _, err := os.Stat(filepath.Join(marks, name)); err == nil {
 			t.Errorf("ran the repository's %s", name)
