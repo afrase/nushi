@@ -34,7 +34,7 @@ func (s *server) ListFiles(ctx context.Context, req *connect.Request[nushiv1.Lis
 	if err != nil {
 		return nil, refused(err)
 	}
-	return connect.NewResponse(&nushiv1.ListFilesResponse{Paths: paths}), nil
+	return connect.NewResponse(&nushiv1.ListFilesResponse{Paths: sendablePaths(paths)}), nil
 }
 
 func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDiffRequest]) (*connect.Response[nushiv1.GetDiffResponse], error) {
@@ -48,7 +48,9 @@ func (s *server) GetDiff(ctx context.Context, req *connect.Request[nushiv1.GetDi
 	}
 	resp := &nushiv1.GetDiffResponse{}
 	for _, c := range changes {
-		resp.Files = append(resp.Files, fileChangeProto(c))
+		if sendable(c.Path, c.OldPath) { // its text is read by its path
+			resp.Files = append(resp.Files, fileChangeProto(c))
+		}
 	}
 	if span == (git.Span{}) {
 		if resp.Index, err = git.IndexState(ctx, req.Msg.Folder); err != nil {
@@ -144,8 +146,10 @@ func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushi
 		return nil, refused(err)
 	}
 	resp := &nushiv1.GetFolderStatusResponse{Git: true, Branch: st.Branch,
-		Files: int32(st.Files), Added: int32(st.Added), Removed: int32(st.Removed),
-		DefaultBase: git.DefaultBase(ctx, req.Msg.Folder)}
+		Files: int32(st.Files), Added: int32(st.Added), Removed: int32(st.Removed)}
+	if base := git.DefaultBase(ctx, req.Msg.Folder); sendable(base) { // the client asks for it by name
+		resp.DefaultBase = base
+	}
 	if base := cmp.Or(req.Msg.Base, resp.DefaultBase); base != "" {
 		ahead, err := git.Ahead(ctx, req.Msg.Folder, base)
 		if err != nil {
@@ -189,11 +193,16 @@ func (s *server) ListBranches(ctx context.Context, req *connect.Request[nushiv1.
 		return nil, refused(err)
 	}
 	resp := &nushiv1.ListBranchesResponse{}
+	// The client picks one of these and asks for it by name.
 	for _, b := range branches {
-		resp.Branches = append(resp.Branches, &nushiv1.GitBranch{Name: b.Name, UnixSeconds: b.Time, Worktree: b.Worktree})
+		if sendable(b.Name, b.Worktree) {
+			resp.Branches = append(resp.Branches, &nushiv1.GitBranch{Name: b.Name, UnixSeconds: b.Time, Worktree: b.Worktree})
+		}
 	}
 	for _, w := range wts {
-		resp.Worktrees = append(resp.Worktrees, &nushiv1.GitWorktree{Path: w.Path, Branch: w.Branch, Main: w.Main, Locked: w.Locked, Current: w.Current})
+		if sendable(w.Path, w.Branch) {
+			resp.Worktrees = append(resp.Worktrees, &nushiv1.GitWorktree{Path: w.Path, Branch: w.Branch, Main: w.Main, Locked: w.Locked, Current: w.Current})
+		}
 	}
 	return connect.NewResponse(resp), nil
 }

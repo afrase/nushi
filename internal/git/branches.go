@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -77,7 +78,8 @@ func Same(list []model.WorktreeEntry, a, b string) bool {
 
 // Found returns the worktree folder is in, as a chat's that was there
 // already, when it isn't its repository's own folder; nil otherwise
-// (outside git too).
+// (outside git too), and for one whose path or branch isn't valid UTF-8:
+// git takes any bytes, and a chat's worktree goes to its clients by name.
 func (w Worktrees) Found(ctx context.Context, folder string) *model.Worktree {
 	list, err := w.List(ctx, folder)
 	if err != nil {
@@ -97,7 +99,14 @@ func (w Worktrees) Found(ctx context.Context, folder string) *model.Worktree {
 			path = p
 		}
 	}
-	return &model.Worktree{Repo: list[0].Path, Path: path, Branch: e.Branch, Base: DefaultBase(ctx, folder),
+	if !utf8.ValidString(list[0].Path) || !utf8.ValidString(path) || !utf8.ValidString(e.Branch) {
+		return nil
+	}
+	base := DefaultBase(ctx, folder)
+	if !utf8.ValidString(base) {
+		base = ""
+	}
+	return &model.Worktree{Repo: list[0].Path, Path: path, Branch: e.Branch, Base: base,
 		BaseCommit: e.Head, Told: e.Branch, Found: true}
 }
 

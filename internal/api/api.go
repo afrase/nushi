@@ -114,7 +114,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates, claudeGo: sv.ClaudeGo}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}}, interceptors...)...),
+		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates, claudeGo: sv.ClaudeGo}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}, mended{}}, interceptors...)...),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
 		connect.WithCompressMinBytes(1024),

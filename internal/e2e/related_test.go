@@ -95,3 +95,22 @@ func TestRelatedWorktreeNotUTF8(t *testing.T) {
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
 	a.waitFor("a later event", func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && e.GetItem() != nil })
 }
+
+// A chat that opens on a found worktree whose branch git takes and proto3
+// doesn't still reaches the client: the Events stream goes on past it,
+// and the chat just has no worktree to speak of.
+func TestFoundWorktreeNotUTF8(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	bad := filepath.Join(repo, ".claude", "worktrees", "bad")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "bad", bad)
+	testcheck.PutBranch(t, repo, "bad", "bad\xff")
+	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}, nil))
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: bad}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+	a.waitFor("a later event", func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && e.GetItem() != nil })
+	got := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{})))
+	if len(got.Chats) != 1 || got.Chats[0].Worktree != nil {
+		t.Errorf("chats: %v", got.Chats)
+	}
+}

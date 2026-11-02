@@ -111,7 +111,7 @@ func itemProto(it *model.Item) *nushiv1.Item {
 		}
 	}
 	out.Options = optionsProto(it.Options)
-	out.Paths = it.Paths
+	out.Paths = sendablePaths(it.Paths)
 	for _, img := range it.Images {
 		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
 	}
@@ -119,7 +119,9 @@ func itemProto(it *model.Item) *nushiv1.Item {
 		out.Plan = append(out.Plan, &nushiv1.PlanEntry{Content: e.Content, Status: e.Status})
 	}
 	for _, d := range it.Diffs {
-		out.Diffs = append(out.Diffs, &nushiv1.FileChange{Path: d.Path, Status: d.Status, OldText: d.Old, NewText: d.New})
+		if sendable(d.Path) {
+			out.Diffs = append(out.Diffs, &nushiv1.FileChange{Path: d.Path, Status: d.Status, OldText: d.Old, NewText: d.New})
+		}
 	}
 	for _, f := range it.Fields {
 		out.Fields = append(out.Fields, &nushiv1.Field{Id: f.ID, Title: f.Title, Description: f.Description,
@@ -195,9 +197,12 @@ func chatProto(s model.ChatRecord) *nushiv1.Chat {
 	return out
 }
 
-// worktreeProto is wt, nil for none.
+// worktreeProto is wt, nil for none and for one that can't be sent as it
+// is: a client reads its folder and branch by name. git.Worktrees.Found
+// doesn't record such a worktree, so this is for one already stored, or a
+// branch an agent renamed under its chat.
 func worktreeProto(wt *model.Worktree) *nushiv1.Worktree {
-	if wt == nil {
+	if wt == nil || !sendable(wt.Repo, wt.Path, wt.Branch, wt.Base) {
 		return nil
 	}
 	return &nushiv1.Worktree{Repo: wt.Repo, Path: wt.Path, Branch: wt.Branch, Base: wt.Base, BaseCommit: wt.BaseCommit, Found: wt.Found}
