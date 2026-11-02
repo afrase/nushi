@@ -40,6 +40,8 @@ func (w *watcher) event(e model.Event) {
 			w.items[i].Text += e.Item.Text
 		case i >= 0:
 			w.items[i] = *e.Item
+		case e.Index > 0 && e.Index < len(w.items):
+			w.items = slices.Insert(w.items, e.Index, *e.Item)
 		default:
 			w.items = append(w.items, *e.Item)
 		}
@@ -131,8 +133,8 @@ func TestReloadDatesMessagesInPlace(t *testing.T) {
 	}
 }
 
-// What the replay does change goes from there on, the rest staying, and
-// a client never shows an item twice on the way.
+// What the replay adds goes where it belongs, the rest staying, and a
+// client never shows an item twice on the way.
 func TestReloadSendsOnlyWhatChanged(t *testing.T) {
 	svc, agent, c, w := watchedChat(t)
 	before := len(w.states)
@@ -140,13 +142,8 @@ func TestReloadSendsOnlyWhatChanged(t *testing.T) {
 		userChunk("r2", "two"), chunk("m2", "b")}
 	testcheck.NoErr(t, svc.Reload(c.id))
 	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
-	want := []string{
-		"user:one agent:m1 tool:t1",
-		"user:one agent:m1 tool:t1 tool:t2",
-		"user:one agent:m1 tool:t1 tool:t2 user:two",
-		"user:one agent:m1 tool:t1 tool:t2 user:two agent:m2",
-	}
-	if states, cuts := w.since(before); cuts != 1 || !slices.Equal(states, want) {
+	want := []string{"user:one agent:m1 tool:t1 tool:t2 user:two agent:m2"}
+	if states, cuts := w.since(before); cuts != 0 || !slices.Equal(states, want) {
 		t.Errorf("%d cuts, then %q", cuts, states)
 	}
 }

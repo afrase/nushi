@@ -324,6 +324,7 @@ class ChatState extends ChangeNotifier {
   /// Whether the snapshot is in; until then events wait in [_early].
   bool loaded = false;
   bool loading = false;
+  int loads = 0; // counts loads and unloads: an answer only the latest may use
 
   /// How many items come before [items] (the phone takes the recent part
   /// first, GetChatRequest.recent); 0 when it has them all.
@@ -398,6 +399,7 @@ class ChatState extends ChangeNotifier {
 
   /// Forgets the snapshot (the connection was lost): the next one replaces it.
   void unload() {
+    loads++;
     loaded = false;
     loading = false;
     _early.clear();
@@ -497,7 +499,12 @@ class ChatState extends ChangeNotifier {
       items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;
       return;
     } else if (i < 0) {
-      items.add(e.item);
+      final at = e.index - older;
+      if (at > 0 && at < items.length) {
+        items.insert(at, e.item); // a reopen's: a compaction's mark
+      } else {
+        items.add(e.item);
+      }
     } else {
       items[i] = e.item;
     }

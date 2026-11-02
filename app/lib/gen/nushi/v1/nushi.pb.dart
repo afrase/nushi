@@ -14688,7 +14688,7 @@ class ItemEvent extends $pb.GeneratedMessage {
 
   /// Where the item is in the chat, from 0 (not with append): a client that
   /// has only the recent part (GetChatRequest.recent) leaves out what is
-  /// before it.
+  /// before it, and a new item before the end goes there.
   @$pb.TagNumber(3)
   $core.int get index => $_getIZ(2);
   @$pb.TagNumber(3)

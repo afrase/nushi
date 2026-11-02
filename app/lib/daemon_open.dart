@@ -9,19 +9,20 @@ extension DaemonOpen on Daemon {
     chat
       ..loading = true
       ..stale = () => _reload(chat);
+    final load = ++chat.loads;
     try {
       // The phone takes the recent part first, older pages on scrolling
       // up: a long chat opens fast on a slow link.
-      chat.load(
-        await client.getChat(
-          // From API 71, whose events say where each item is.
-          GetChatRequest(
-            chatId: chat.id,
-            recent: remote && daemonApi >= 71 ? Daemon.recentItems : 0,
-          ),
+      final snapshot = await client.getChat(
+        // From API 71, whose events say where each item is.
+        GetChatRequest(
+          chatId: chat.id,
+          recent: remote && daemonApi >= 71 ? Daemon.recentItems : 0,
         ),
       );
+      if (load == chat.loads) chat.load(snapshot);
     } on Object catch (e) {
+      if (load != chat.loads) return; // a newer load has it now
       chat.unload();
       if (remote) {
         // The phone: no raw error, but tries again (and again once the link

@@ -1994,7 +1994,7 @@ message ItemEvent {
   bool append = 2;
   // Where the item is in the chat, from 0 (not with append): a client that
   // has only the recent part (GetChatRequest.recent) leaves out what is
-  // before it.
+  // before it, and a new item before the end goes there.
   int32 index = 3;
 }
 

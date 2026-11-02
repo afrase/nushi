@@ -11374,7 +11374,7 @@ type ItemEvent struct {
 	Append bool `protobuf:"varint,2,opt,name=append,proto3" json:"append,omitempty"`
 	// Where the item is in the chat, from 0 (not with append): a client that
 	// has only the recent part (GetChatRequest.recent) leaves out what is
-	// before it.
+	// before it, and a new item before the end goes there.
 	Index         int32 `protobuf:"varint,3,opt,name=index,proto3" json:"index,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

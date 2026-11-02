@@ -138,22 +138,35 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 	c.logLocked().Info("transcript restored", "copy", len(copied), "replay", len(replayed), "shown", len(items), "compacted", compacted, "differs", differs)
 }
 
-// showLocked makes items the transcript. An item still in its place that
-// changed is sent where it is; only from the first item out of place are
-// they cut and sent again, or a client would take down what it shows and
-// put it back one item at a time to, say, add the time to an old message.
+// showLocked makes items the transcript. What stays, in the order it was,
+// stays: a changed item is sent where it is and a new one is sent to where
+// it goes (a compaction's mark, which the copy doesn't keep). Only from the
+// first that went or moved are items cut and sent again, or a client would
+// take down what it shows and put it back one item at a time.
 func (c *chat) showLocked(items []model.Item) {
-	kept := 0
-	for kept < len(c.items) && kept < len(items) && c.items[kept].ID == items[kept].ID {
-		kept++
-	}
 	old := c.items
+	place := make(map[string]int, len(items))
+	for i, it := range items {
+		place[it.ID] = i
+	}
+	kept, last := 0, -1
+	for kept < len(old) {
+		i, ok := place[old[kept].ID]
+		if !ok || i < last {
+			break
+		}
+		kept, last = kept+1, i
+	}
 	if kept < len(old) {
 		c.emitLocked(model.Event{ChatID: c.id, Cut: old[kept].ID})
 	}
+	was := make(map[string]model.Item, kept)
+	for _, it := range old[:kept] {
+		was[it.ID] = it
+	}
 	c.items = items
-	for i, it := range items {
-		if i >= kept || !sameItem(old[i], it) {
+	for _, it := range items {
+		if prev, ok := was[it.ID]; !ok || !sameItem(prev, it) {
 			c.emitLocked(model.Event{ChatID: c.id, Item: &it})
 		}
 	}
