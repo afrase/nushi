@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"os"
+	"os/exec"
 	"slices"
 	"strings"
 	"time"
@@ -61,6 +63,23 @@ func (p *player) play(ctx context.Context, steps []step) error {
 	return nil
 }
 
+// makeRepo makes dir a git repository on main with one commit, without
+// the caller's git config, so a recording says nothing of the caller's.
+func makeRepo(ctx context.Context, dir string) error {
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"},
+		{"-c", "user.name=Recorder", "-c", "user.email=recorder@example.com", "commit", "-q", "--allow-empty", "-m", "start"},
+	} {
+		cmd := exec.CommandContext(ctx, "git", args...)
+		cmd.Dir = dir
+		cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "HOME=" + dir, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("git %s: %w: %s", args[0], err, out)
+		}
+	}
+	return nil
+}
+
 func (p *player) step(ctx context.Context, s *step) error {
 	switch s.verb() {
 	case "pause":
@@ -103,6 +122,8 @@ func (p *player) step(ctx context.Context, s *step) error {
 			return errors.New("this run can't stop processes")
 		}
 		return p.kill(ctx, s.Kill)
+	case "repo":
+		return makeRepo(ctx, p.cwd)
 	case "answer":
 		return p.answer(ctx, s)
 	case "cancel":

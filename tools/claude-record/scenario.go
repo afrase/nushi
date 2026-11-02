@@ -43,6 +43,7 @@ type step struct {
 	Pause      string          `json:"pause,omitempty"`      // a wait of this long (a duration)
 	Kill       string          `json:"kill,omitempty"`       // stop the process group below the agent whose command line has this, as Nushi stops a background command
 	End        json.RawMessage `json:"end,omitempty"`        // {}: the client goes here, waiting for no answer it hasn't had (stdin's end mid-turn)
+	Repo       json.RawMessage `json:"repo,omitempty"`       // {}: makes $cwd a git repository with one commit, for a scenario about worktrees
 
 	Session     string            `json:"session,omitempty"`     // Prompt's and Steer's session
 	As          string            `json:"as,omitempty"`          // Fork's name for the fork
@@ -63,7 +64,7 @@ func (s *step) verb() string {
 		"fork": s.Fork != "", "list": s.List != nil, "close": s.Close != "", "delete": s.Delete != "",
 		"prompt": s.Prompt != "", "steer": s.Steer != "", "cancel": s.Cancel != "", "request": s.Request != "",
 		"notify": s.Notify != "", "answer": s.Answer != "", "await": s.Await != "", "waitFor": s.WaitFor != nil,
-		"pause": s.Pause != "", "kill": s.Kill != "", "end": s.End != nil,
+		"pause": s.Pause != "", "kill": s.Kill != "", "end": s.End != nil, "repo": s.Repo != nil,
 	}
 	var out string
 	for _, v := range slices.Sorted(maps.Keys(verbs)) {

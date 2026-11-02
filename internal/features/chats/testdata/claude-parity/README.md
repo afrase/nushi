@@ -37,7 +37,7 @@ The replay's client goes only once the Go agent has sent what the recording's cl
 
 ## The scenarios
 
-Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
+Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`; the two `subagent-worktree` ones 2026-11-02, 2.1.314), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
 
 | Scenario | What it does | Also showed |
 |---|---|---|
@@ -62,6 +62,8 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `subagent-stop-taskstop` | a background subagent stopped by `TaskStop` | |
 | `subagent-stop-cancel` | a background subagent stopped by `session/cancel` on its session (Nushi's Stop) | |
 | `subagent-stop-turn` | a foreground subagent stopped with the turn | |
+| `subagent-worktree` | subagents with `isolation: "worktree"`: one that commits, one that changes nothing, a foreground one that leaves a file; what is left | what `.meta.json`, the lock and `toolResponse` hold (`docs/facts/claude.md`) |
+| `subagent-worktree-bash` | a subagent that runs `git worktree add` itself, and writes there by absolute path | its transcript's `cwd` stays the chat's folder |
 | `sendmessage` | a message to a finished background subagent, which runs again | |
 | `compaction` | `/compact`, then a prompt | |
 | `context` | `/context` in a throwaway fork, deleted after, as Nushi asks it | |
@@ -160,5 +162,6 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"kill": "sleep 37"}` | stops the process group below the agent whose command line has the text, as Nushi stops a background command (SIGTERM, then SIGKILL; ADR 0065), once one runs |
 | `{"pause": "500ms"}` | waits that long; prefer `waitFor` |
 | `{"end": {}}` | ends the script there: the client goes at once (stdin's end), waiting for no answer it hasn't had |
+| `{"repo": {}}` | makes the run's folder a git repository on `main` with one empty commit, without your git config; before `new`, for a scenario about worktrees |
 
 Every request the agent makes must be answered by a step, or the recording fails.

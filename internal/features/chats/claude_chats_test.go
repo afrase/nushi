@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -247,6 +248,11 @@ func views(t *testing.T, events []event) []parity {
 	return out
 }
 
+// recordedFolder is the recording's folder in a tool call's title: the
+// adapter titles a file inside it by its relative path, and the Go agent,
+// replayed in a folder of its own, by the whole one.
+var recordedFolder = regexp.MustCompile(`/\S*/claude-record-\d+/work/`)
+
 // view is a chat's items, usage and status, without the times of this
 // run and the ids an agent gives a permission prompt's options, which
 // Nushi only passes back: the kind of option picked stands for its id.
@@ -297,6 +303,7 @@ const modelFallback = "**Model fallback:** "
 // timeless is an item without the times of this run.
 func timeless(it model.Item) model.Item {
 	it.Sent = time.Time{}
+	it.Title = recordedFolder.ReplaceAllString(it.Title, "")
 	if it.Subagent != nil {
 		sa := *it.Subagent
 		sa.Started, sa.Ended = time.Time{}, time.Time{}

@@ -1,0 +1,18 @@
+{
+  "timeout": "90s",
+  "steps": [
+    {"repo": {}},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "Bash", "Write", "Edit", "TaskStop", "SendMessage"]}}}}}},
+    {"prompt": "first: a helper that commits in a worktree", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p1"},
+    {"prompt": "second: a helper that changes nothing in a worktree", "session": "s1", "async": "p2"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p2"},
+    {"prompt": "third: a foreground helper that leaves an uncommitted file in a worktree", "session": "s1", "async": "p3"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p3"},
+    {"prompt": "fourth: list what is left", "session": "s1"}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "ask a helper to make"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Make a worktree", "subagent_type": "general-purpose", "prompt": "Make a worktree yourself."}}]},
+    {"match": {"lastUserText": "Make a worktree yourself."}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Add a worktree", "command": "git worktree add -q .worktrees/handmade -b handmade && cd .worktrees/handmade && pwd"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Where am I", "command": "pwd; git branch --show-current"}}]},
+    {"match": {"toolResult": "Bash", "capture": {"wt": "(/\\S*/\\.worktrees/handmade)"}}, "content": [{"type": "tool_use", "name": "Write", "input": {"file_path": "${wt}/written.txt", "content": "written\n"}}]},
+    {"match": {"toolResult": "Write"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Commit", "command": "git -C .worktrees/handmade add written.txt && git -C .worktrees/handmade -c user.name=Sub -c user.email=sub@example.com commit -qm written && git -C .worktrees/handmade rev-parse HEAD"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Made it."}]},
+    {"match": {"lastUserText": "list what is left"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Worktrees", "command": "git worktree list --porcelain; git for-each-ref; find \"$CLAUDE_CONFIG_DIR\"/projects -mindepth 2 | sort; for f in \"$CLAUDE_CONFIG_DIR\"/projects/*/*/subagents/*.meta.json; do echo \"== $f\"; cat \"$f\"; echo; done"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Listed."}]}
+  ],
+  "side": [
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "It runs."}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "The helper is done."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

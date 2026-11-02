@@ -1,0 +1,24 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "first: a helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Commit a note", "subagent_type": "general-purpose", "prompt": "Commit a note in your worktree.", "isolation": "worktree"}}]},
+    {"match": {"lastUserText": "Commit a note in your worktree."}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Folder", "command": "pwd"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Common dir", "command": "git rev-parse --git-common-dir"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Branch", "command": "git branch --show-current"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Worktrees", "command": "git worktree list --porcelain"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Lock", "command": "cat ../../../.git/worktrees/*/locked"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Meta", "command": "for f in \"$CLAUDE_CONFIG_DIR\"/projects/*/*/subagents/*.meta.json; do echo \"== $f\"; cat \"$f\"; echo; done"}}]},
+    {"match": {"toolResult": "Bash", "capture": {"wt": "(/\\S*/\\.claude/worktrees/agent-\\w+)"}}, "content": [{"type": "tool_use", "name": "Write", "input": {"file_path": "${wt}/note.txt", "content": "note\n"}}]},
+    {"match": {"toolResult": "Write"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Stage", "command": "git add note.txt"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Commit", "command": "git -c user.name=Sub -c user.email=sub@example.com commit -qm note"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Head", "command": "git rev-parse HEAD"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Committed."}]},
+    {"match": {"lastUserText": "second: a helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Change nothing", "subagent_type": "general-purpose", "prompt": "Change nothing in your worktree.", "isolation": "worktree"}}]},
+    {"match": {"lastUserText": "Change nothing in your worktree."}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Folder", "command": "pwd"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Nothing changed."}]},
+    {"match": {"lastUserText": "third: a foreground helper"}, "content": [{"type": "tool_use", "name": "Agent", "input": {"description": "Leave a file", "subagent_type": "general-purpose", "prompt": "Leave a file in your worktree.", "isolation": "worktree", "run_in_background": false}}]},
+    {"match": {"lastUserText": "Leave a file in your worktree."}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Folder", "command": "pwd"}}]},
+    {"match": {"toolResult": "Bash", "capture": {"wt": "(/\\S*/\\.claude/worktrees/agent-\\w+)"}}, "content": [{"type": "tool_use", "name": "Write", "input": {"file_path": "${wt}/left.txt", "content": "left\n"}}]},
+    {"match": {"toolResult": "Write"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Status", "command": "git status --short"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Left a file."}]},
+    {"match": {"lastUserText": "fourth: list"}, "content": [{"type": "tool_use", "name": "Bash", "input": {"description": "Worktrees", "command": "git worktree list --porcelain"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Refs", "command": "git for-each-ref"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Locks", "command": "cat .git/worktrees/*/locked"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Files", "command": "find \"$CLAUDE_CONFIG_DIR\"/projects -mindepth 2 | sort"}}, {"type": "tool_use", "name": "Bash", "input": {"description": "Meta", "command": "for f in \"$CLAUDE_CONFIG_DIR\"/projects/*/*/subagents/*.meta.json; do echo \"== $f\"; cat \"$f\"; echo; done"}}]},
+    {"match": {"toolResult": "Bash"}, "content": [{"type": "text", "text": "Listed."}]}
+  ],
+  "side": [
+    {"match": {"toolResult": "Agent"}, "content": [{"type": "text", "text": "It runs."}]},
+    {"match": {"lastUserText": "task-notification"}, "content": [{"type": "text", "text": "The helper is done."}]},
+    {"match": {"lastUserText": "Subagent hand-back"}, "content": [{"type": "text", "text": "Noted."}]}
+  ]
+}

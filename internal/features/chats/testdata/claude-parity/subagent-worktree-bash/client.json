@@ -1,0 +1,12 @@
+{
+  "timeout": "90s",
+  "steps": [
+    {"repo": {}},
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["Agent", "Bash", "Write", "Edit", "TaskStop", "SendMessage"]}}}}}},
+    {"prompt": "ask a helper to make a worktree itself", "session": "s1", "async": "p1"},
+    {"waitFor": {"method": "session/update", "params": {"update": {"sessionUpdate": "subagent_update", "state": {"state": "idle"}}}}},
+    {"await": "p1"},
+    {"prompt": "list what is left", "session": "s1"}
+  ]
+}

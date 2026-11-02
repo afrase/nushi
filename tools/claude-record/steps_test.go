@@ -200,3 +200,25 @@ func TestStopBelow(t *testing.T) {
 		t.Error("stopped a process no one runs")
 	}
 }
+
+// The repo step makes the run's folder a repository with a commit, from
+// nothing of the caller's git config.
+func TestRepoStep(t *testing.T) {
+	dir := t.TempDir()
+	p := &player{cwd: dir}
+	var s step
+	if err := json.Unmarshal([]byte(`{"repo": {}}`), &s); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.step(t.Context(), &s); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(t.Context(), "git", "-C", dir, "log", "--format=%an %s %D")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(string(out)); got != "Recorder start HEAD -> main" {
+		t.Errorf("the repository's log: %q", got)
+	}
+}
