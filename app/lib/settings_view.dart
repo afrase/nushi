@@ -12,6 +12,7 @@ import 'package:nushi/history_section.dart';
 import 'package:nushi/jira_settings.dart';
 import 'package:nushi/logs_section.dart';
 import 'package:nushi/mcp.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
@@ -175,12 +176,10 @@ class _SettingsViewState extends State<SettingsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              height: 34,
-              padding: const EdgeInsets.only(left: 16, right: 8),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: t.borderSubtle)),
-              ),
+            PaneHeader(
+              plain: true,
+              inset: 16,
+              end: 8,
               child: Row(
                 children: [
                   Expanded(

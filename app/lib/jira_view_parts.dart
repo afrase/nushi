@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -117,12 +118,10 @@ class JiraBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    return Container(
-      height: 34,
-      padding: const EdgeInsets.only(left: 20, right: 8),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
-      ),
+    return PaneHeader(
+      plain: true,
+      inset: 20,
+      end: 8,
       child: Row(
         children: [
           Text('Jira', style: theme.ui(t.text, weight: FontWeight.w600)),

@@ -277,9 +277,17 @@ class _Beside extends MultiChildLayoutDelegate {
 /// ([PaneHeader.height]) with a hairline under it, [child] its row (a side
 /// chat's, a subagent's, a command's, a preview's), [inset] from the left and
 /// [end] from the right: by default the gutters, or what the row has always
-/// had in a pane too narrow for them.
+/// had in a pane too narrow for them. [plain] leaves it unraised: a view's
+/// header, at the window's top. Empty space in it moves the window, and its
+/// hairline runs on from the sidebar's (ADR 0080).
 class PaneHeader extends StatelessWidget {
-  const new({required this.child, super.key, this.inset, this.end});
+  const new({
+    required this.child,
+    super.key,
+    this.inset,
+    this.end,
+    this.plain = false,
+  });
 
   /// The chat header's height too (ADR 0072).
   static const height = 44.0;
@@ -291,6 +299,7 @@ class PaneHeader extends StatelessWidget {
   final Widget child;
   final double? inset;
   final double? end;
+  final bool plain;
 
   @override
   Widget build(BuildContext context) {
@@ -305,7 +314,7 @@ class PaneHeader extends StatelessWidget {
             children: [
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: t.raised,
+                  color: plain ? null : t.raised,
                   border: Border(bottom: BorderSide(color: t.borderSubtle)),
                 ),
               ),

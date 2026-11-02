@@ -309,6 +309,13 @@ class _Shell extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // What has no header of its own still keeps the top's line.
+                  // Always a child, so the banner under it keeps its state.
+                  if (daemon.trustAsk != null ||
+                      (daemon.place is ChatPlace && chat == null))
+                    const PaneHeader(plain: true, child: SizedBox.shrink())
+                  else
+                    const SizedBox.shrink(),
                   DaemonBanner(daemon),
                   if (daemon.connected && daemon.updatesWhenIdle)
                     DaemonUpdateBar(daemon),

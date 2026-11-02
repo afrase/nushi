@@ -13,9 +13,6 @@ const _channel = MethodChannel('nushi/window');
 class WindowDrag extends StatefulWidget {
   const new({super.key});
 
-  /// How much room the traffic lights take at the top of the window.
-  static const lights = 28.0;
-
   @override
   State<WindowDrag> createState() => _WindowDragState();
 }
