@@ -214,5 +214,4 @@ void main() {
   }
 }
 
-const _qr =
-    'nushi://pair?r=wss%3A%2F%2Frelay.example.com&i=id&k=key&s=secret';
+const _qr = 'nushi://pair?r=wss%3A%2F%2Frelay.example.com&i=id&k=key&s=secret';
