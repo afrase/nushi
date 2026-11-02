@@ -16,6 +16,7 @@ import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/side_chat.dart';
+import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -26,7 +27,9 @@ import 'package:nushi/window_drag.dart';
 /// model and status, the Chat | Changes (| Pull request, while it has one)
 /// switch, the terminal's and the panel's buttons and the chat's menu. (Its
 /// folder is in the sidebar and the details panel's Environment widget; the
-/// files it wrote are in Artifacts.)
+/// files it wrote are in Artifacts.) With the sidebar hidden it starts past
+/// the traffic lights and the button that shows the sidebar, and the chat's
+/// color, if it has one, is a dot before the title (ADR 0080).
 class ChatHeader extends StatefulWidget {
   const new(
     this.chat,
@@ -101,9 +104,20 @@ class _ChatHeaderState extends State<ChatHeader> {
     // ⋯. Changes counts the review comments not sent yet (14 points more);
     // a hidden side chat's chip takes its own room.
     return ListenableBuilder(
-      listenable: Listenable.merge([reviews, chat.side, chat.sideHidden]),
+      listenable: Listenable.merge([
+        reviews,
+        chat.side,
+        chat.sideHidden,
+        sidebarHidden,
+      ]),
       builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
+          final shut = sidebarShut;
+          // The row's room, less what a hidden sidebar's start and dot take.
+          final width =
+              box.maxWidth -
+              (shut ? hiddenHeaderStart - NushiTheme.gutter : 0) -
+              (shut && chat.color != null ? _dotRoom : 0);
           final comments = unsentComments(chat.id).isNotEmpty;
           final side = chat.side.value != null && chat.sideHidden.value;
           final more =
@@ -111,7 +125,7 @@ class _ChatHeaderState extends State<ChatHeader> {
               (comments ? 14 : 0) +
               (side ? SideChip.width : 0);
           final folds = headerFolds(
-            box.maxWidth,
+            width,
             pull: chat.pull != null,
             panel: widget.onPanel != null,
             model: modelName != null,
@@ -121,7 +135,7 @@ class _ChatHeaderState extends State<ChatHeader> {
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
           final room =
-              box.maxWidth -
+              width -
               headerRow -
               (folds.roomy ? headerGaps : 0) -
               more +
@@ -153,6 +167,7 @@ class _ChatHeaderState extends State<ChatHeader> {
     required double titleMax,
     required double modelMax,
   }) {
+    final shut = sidebarShut;
     final t = NushiTheme.of(context).t;
     final theme = NushiTheme.of(context);
     final chat = widget.chat;
@@ -175,14 +190,30 @@ class _ChatHeaderState extends State<ChatHeader> {
           ),
           const WindowDrag(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              NushiTheme.gutter,
+            padding: EdgeInsets.fromLTRB(
+              shut ? hiddenHeaderStart : NushiTheme.gutter,
               0,
               NushiTheme.gutter,
               1, // the border's
             ),
             child: Row(
               children: [
+                if (shut)
+                  if (chat.color case final color?) ...[
+                    Tooltip(
+                      message: color.label,
+                      child: Container(
+                        key: const Key('chat color'),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color.ink(t),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: _dotRoom - 8),
+                  ],
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: titleMax),
                   child: _renaming
@@ -344,6 +375,7 @@ class _ChatHeaderState extends State<ChatHeader> {
               ],
             ),
           ),
+          if (shut) const ShowSidebarButton(),
         ],
       ),
     );
@@ -358,6 +390,9 @@ class _ChatHeaderState extends State<ChatHeader> {
     if (chat.pull != null) (ChatTab.pull, 'Pull request'),
   ];
 }
+
+/// The room the chat's color's dot takes, its gap to the title in it.
+const _dotRoom = 16.0;
 
 /// Measured: the header's row without its title and model takes about this
 /// (oh-my-pi's name, "in background"), with what it has always spent on gaps.

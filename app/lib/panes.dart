@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/controls.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/window_drag.dart';
 
@@ -279,7 +280,9 @@ class _Beside extends MultiChildLayoutDelegate {
 /// chat's, a subagent's, a command's, a preview's), [inset] from the left and
 /// [end] from the right: by default the gutters, or what the row has always
 /// had in a pane too narrow for them. [plain] leaves it unraised: a view's
-/// header, at the window's top. Empty space in it moves the window, and its
+/// header, at the window's top; with the sidebar hidden such a header runs
+/// under the traffic lights, so its row starts past them and past the button
+/// that shows the sidebar. Empty space in it moves the window, and its
 /// hairline runs on from the sidebar's (ADR 0080).
 class PaneHeader extends StatelessWidget {
   const new({
@@ -305,33 +308,40 @@ class PaneHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return LayoutBuilder(
-      builder: (context, box) {
-        final room = box.maxWidth >= gutterFrom;
-        return SizedBox(
-          height: height,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: plain ? null : t.raised,
-                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
+    return ListenableBuilder(
+      listenable: sidebarHidden,
+      builder: (context, _) => LayoutBuilder(
+        builder: (context, box) {
+          final room = box.maxWidth >= gutterFrom;
+          final shut = plain && sidebarShut;
+          return SizedBox(
+            height: height,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: plain ? null : t.raised,
+                    border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                  ),
                 ),
-              ),
-              const WindowDrag(),
-              Padding(
-                padding: EdgeInsets.only(
-                  left: inset ?? (room ? NushiTheme.gutter : 14),
-                  right: end ?? (room ? NushiTheme.gutter : 4),
-                  bottom: 1, // the border's
+                const WindowDrag(),
+                Padding(
+                  padding: EdgeInsets.only(
+                    left: shut
+                        ? hiddenHeaderStart
+                        : inset ?? (room ? NushiTheme.gutter : 14),
+                    right: end ?? (room ? NushiTheme.gutter : 4),
+                    bottom: 1, // the border's
+                  ),
+                  child: child,
                 ),
-                child: child,
-              ),
-            ],
-          ),
-        );
-      },
+                if (shut) const ShowSidebarButton(),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

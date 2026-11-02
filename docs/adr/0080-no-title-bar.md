@@ -14,3 +14,5 @@ The owner: the bar with the traffic lights and the word Nushi is wasted space. m
 - The traffic lights sit a little above the header's middle: they stay where macOS puts them, since moving them means re-placing them on every resize.
 - A bar over the main area moves that area's hairline down, out of line with the sidebar's until it goes.
 - In full screen the sidebar's header stays, with no traffic lights in it.
+- The sidebar can be hidden (⌘\, `sidebarHidden`), and then nothing stands between the main area and the traffic lights. Every top header starts past them (`lightsInset`, 84 points), with the button that shows the sidebar there, and the bars, which then run across the window, start their text past them too. In full screen those insets stay, with no lights beside them.
+- A bar at the window's top doesn't move the window while the sidebar is hidden; the header under it does.

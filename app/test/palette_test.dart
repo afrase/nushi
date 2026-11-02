@@ -165,6 +165,22 @@ void main() {
     tester.daemonOf().dispose();
   }, variant: macOS);
 
+  testWidgets(r'⌘\ with the focus in the terminal hides the sidebar', (
+    tester,
+  ) async {
+    terminalChats.value = {'a'};
+    await _app(tester, select: 'a');
+    await tester.tap(find.byType(TerminalView));
+    await tester.pumpAndSettle();
+    await _keys(tester, LogicalKeyboardKey.backslash, meta: true);
+    expect(sidebarHidden.value, isTrue);
+    await tester.tap(find.byType(TerminalView));
+    await tester.pumpAndSettle();
+    await _keys(tester, LogicalKeyboardKey.backslash, meta: true);
+    expect(sidebarHidden.value, isFalse);
+    tester.daemonOf().dispose();
+  }, variant: macOS);
+
   testWidgets('⌘K opens the palette; typing filters, Enter runs', (
     tester,
   ) async {

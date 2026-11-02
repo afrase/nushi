@@ -5,7 +5,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 ## The window
 
 - **First run.** With no chat open, the pane offers New chat, Open a folder…, and the recent folders: the chats' folders, or before there are any, the folders Claude's sessions were found in. Each starts a new chat there.
-- **The sidebar** lists Pinned, then the projects and their chats. Its foot has Jira, GitHub and Settings.
+- **The sidebar** lists Pinned, then the projects and their chats. Its foot has Jira, GitHub and Settings. ⌘\ or the button at its top hides it, and the main area takes the window; the button at the start of each header, ⌘\, the palette or View › Show Sidebar brings it back. Nushi remembers which, and the sidebar's width. Hidden, ⌘K still goes to any chat, Jira, GitHub and Settings, and a chat's color is a dot in its header.
 - **Settings** (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left. Esc or Close goes back ([ADR 0053](adr/0053-settings-is-a-view.md)). Settings › General's Appearance (Light, Dark, or as the system; also in the View menu) is remembered.
 - **Chat width.** Settings › General or the palette (⌘K): a centered column, or the whole width of the window.
 - **Under a message**, on hover: Copy, Rewind or Fork from here, and its time; on yours, one check when it's sent and two once the agent has answered ([ADR 0076](adr/0076-messages-as-bubbles-with-actions-on-hover.md)).
@@ -36,6 +36,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 
 | Keys | What they do |
 |---|---|
+| ⌘\ | Hide or show the sidebar. |
 | ⌘1 – ⌘9 | Open one of the first nine chats. Hold ⌘ and the sidebar numbers them, top to bottom, Pinned first, archived left out. |
 | ⌘[ and ⌘] | The chat before or after (View › Previous Chat, Next Chat). |
 | ⌃Tab, ⌃⇧Tab | Go through Chat, Changes and Pull request (when the chat has one). |
@@ -54,7 +55,7 @@ The chat keys work in a terminal too.
 ⌘K (View › Command Palette…) opens the palette. In a terminal ⌘K clears it, so use ⌘⇧P there, which works everywhere.
 
 - **Go to a chat** by its title: the pinned first, then the last opened. Archived chats are listed last, marked.
-- **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the details and the terminal, Rewind…; the chat's own: Side chat, Fork chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
+- **Run an action**: New chat, Open file…, Artifacts…, Chat, Changes, Pull request, show or hide the sidebar, the details and the terminal, Rewind…; the chat's own: Side chat, Fork chat, Send review comments, Stop, Rename, Pin or Unpin, Sleep, Reload, Link pull request…, Archive or Unarchive, MCP servers, Skills, Delete…; and Settings, Jira, GitHub, Restart daemon.
 
 Rows match as you type, each with its key. Actions that don't apply now are left out, and what you picked lately comes first.
 

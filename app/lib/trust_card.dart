@@ -152,9 +152,12 @@ class _Block extends StatelessWidget {
 /// Over the app, once, what didn't happen ([Daemon.notice]): a start the
 /// user walked away from. Dismissed with ×.
 class NoticeBar extends StatelessWidget {
-  const new(this.daemon, {super.key});
+  const new(this.daemon, {super.key, this.start = 16});
 
   final Daemon daemon;
+
+  /// Where its text starts: past the traffic lights, with the sidebar hidden.
+  final double start;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +165,7 @@ class NoticeBar extends StatelessWidget {
     final t = theme.t;
     return Container(
       color: t.raised,
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      padding: EdgeInsets.fromLTRB(start, 4, 8, 4),
       child: Row(
         spacing: 10,
         children: [

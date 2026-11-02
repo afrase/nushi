@@ -13,7 +13,7 @@ import 'package:nushi/file_mode.dart';
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// panes' widths, whether changed files show flat, which chats show their
 /// terminals, the terminal's font, whether a subagent's pane shows wide,
-/// whether the chat takes the whole width,
+/// whether the chat takes the whole width, whether the sidebar is hidden,
 /// the Jira task list's groups and assignee filters, the GitHub view's
 /// cards and filters, the sidebar's project groups' order and which are
 /// collapsed, each project's chats' order, whether Pinned is collapsed,
@@ -117,6 +117,9 @@ final sidebarChats = Pref<Map<String, List<String>>>(
       key: [...value.where((id) => !gone.contains(id))],
   },
 );
+
+/// Whether the sidebar is hidden; its width stays in [paneWidths].
+final Pref<bool> sidebarHidden = _plain('sidebarHidden', false);
 
 /// Whether the sidebar's Pinned section is collapsed.
 final Pref<bool> pinnedCollapsed = _plain('pinnedCollapsed', false);

@@ -12,6 +12,7 @@ import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/status.dart';
@@ -25,7 +26,8 @@ import 'package:nushi/widgets.dart';
 /// and in each the chats as they were dragged, a new one first. Archived
 /// chats are in a collapsed group at the bottom. While ⌘ is held
 /// alone, the first nine chats shown (archived left out) show the number
-/// ⌘ opens them with.
+/// ⌘ opens them with. Its header's [SidebarButton] hides it ([sidebarHidden]);
+/// `main.dart` then doesn't build it, so it asks nothing while it's hidden.
 class Sidebar extends StatefulWidget {
   const new({required this.daemon, super.key});
 
@@ -82,8 +84,15 @@ class _SidebarState extends State<Sidebar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Under the traffic lights, its hairline the chat header's.
-          const PaneHeader(child: SizedBox.shrink()),
+          // Under the traffic lights, its hairline the chat header's. Its
+          // empty space moves the window; the button keeps its clicks.
+          const PaneHeader(
+            end: 10,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SidebarButton(),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(10),
             child: Button(
@@ -121,6 +130,8 @@ class _SidebarState extends State<Sidebar> {
                   project: pinned,
                 );
                 return ListView(
+                  // Hiding the sidebar takes it away: back where it was.
+                  key: const PageStorageKey('sidebar'),
                   padding: const EdgeInsets.only(bottom: 10),
                   children: [
                     PinnedSection(

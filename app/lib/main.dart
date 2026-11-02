@@ -33,6 +33,7 @@ import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -73,6 +74,7 @@ class _NushiAppState extends State<NushiApp> {
     watchPairings(_navigator, widget.daemon.client);
     _alerts = MacAlerts(widget.daemon);
     widget.daemon.addListener(_pinChanged);
+    sidebarHidden.addListener(_sidebarChanged);
     // The app coming to the front shows its chat again; the daemon knows
     // whether the window shows (focused or not) or is hidden, and the
     // notifications whether it's in front. Drafts are saved at once when
@@ -114,8 +116,12 @@ class _NushiAppState extends State<NushiApp> {
     if (pinned != _pinned) setState(() => _pinned = pinned);
   }
 
+  /// The View menu's Hide Sidebar says Show Sidebar while it's hidden.
+  void _sidebarChanged() => setState(() {});
+
   @override
   void dispose() {
+    sidebarHidden.removeListener(_sidebarChanged);
     widget.daemon.removeListener(_pinChanged);
     _alerts.dispose();
     _lifecycle.dispose();
@@ -128,7 +134,11 @@ class _NushiAppState extends State<NushiApp> {
   /// [act]'s item in the menu bar: its label and key; it runs as from
   /// the palette.
   PlatformMenuItem _item(Act act) => PlatformMenuItem(
-    label: act == Act.pin && _pinned ? 'Unpin Chat' : act.menuLabel!,
+    label: switch (act) {
+      Act.pin when _pinned => 'Unpin Chat',
+      Act.sidebar when sidebarShut => 'Show Sidebar',
+      _ => act.menuLabel!,
+    },
     shortcut: act.key,
     onSelected: () => runAct(_navigator.currentContext!, widget.daemon, act),
   );
@@ -269,7 +279,7 @@ class _Shell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: daemon,
+    listenable: Listenable.merge([daemon, sidebarHidden]),
     builder: (context, _) {
       final theme = NushiTheme.of(context);
       // Never connected yet: nothing to show. Once it was, a lost
@@ -291,20 +301,26 @@ class _Shell extends StatelessWidget {
         return OutdatedScreen(daemon);
       }
       final chat = daemon.selected;
+      final shut = sidebarShut;
+      // With the sidebar hidden the bars start at the window's left edge,
+      // under the traffic lights, so their text starts past them.
+      final barStart = shut ? lightsInset : 16.0;
       final app = LayoutBuilder(
         builder: (context, box) => Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Resizable(
-              name: 'sidebar',
-              initial: 260,
-              min: 200,
-              max: min(480, box.maxWidth - 560),
-              child: Sidebar(daemon: daemon),
-            ),
-            // Beside the sidebar, clear of the traffic lights. Always a
-            // column, the view its last child: a bar coming and going keeps
-            // the view's state.
+            if (!shut)
+              Resizable(
+                name: 'sidebar',
+                initial: 260,
+                min: 200,
+                max: min(480, box.maxWidth - 560),
+                child: Sidebar(daemon: daemon),
+              ),
+            // Beside the sidebar, clear of the traffic lights, or alone in
+            // the window. Always a column, the view its last child: a bar
+            // coming and going keeps the view's state. The row's last child
+            // too, so the sidebar going keeps it as well.
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -316,12 +332,12 @@ class _Shell extends StatelessWidget {
                     const PaneHeader(plain: true, child: SizedBox.shrink())
                   else
                     const SizedBox.shrink(),
-                  DaemonBanner(daemon),
+                  DaemonBanner(daemon, start: barStart),
                   if (daemon.connected && daemon.updatesWhenIdle)
-                    DaemonUpdateBar(daemon),
+                    DaemonUpdateBar(daemon, start: barStart),
                   if (daemon.connected && daemon.removedChats.isNotEmpty)
-                    RemovedChatsBar(daemon),
-                  if (daemon.notice != null) NoticeBar(daemon),
+                    RemovedChatsBar(daemon, start: barStart),
+                  if (daemon.notice != null) NoticeBar(daemon, start: barStart),
                   Expanded(
                     child: daemon.trustAsk != null
                         ? TrustCard(daemon.trustAsk!)

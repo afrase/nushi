@@ -15,9 +15,12 @@ import 'package:nushi/theme/theme.dart';
 /// just goes (its caller says why). With Reduce Motion the same, without
 /// the slides.
 class DaemonBanner extends StatefulWidget {
-  const new(this.daemon, {super.key});
+  const new(this.daemon, {super.key, this.start = 16});
 
   final Daemon daemon;
+
+  /// Where its text starts: past the traffic lights, with the sidebar hidden.
+  final double start;
 
   static const grace = Duration(milliseconds: 800);
   static const backFor = Duration(milliseconds: 1200);
@@ -151,7 +154,7 @@ class _DaemonBannerState extends State<DaemonBanner> with ClockRun {
     final color = back ? t.done : t.needs;
     final bar = Container(
       color: back ? t.doneSoft : t.needsSoft,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: EdgeInsets.fromLTRB(widget.start, 6, 16, 6),
       alignment: Alignment.centerLeft,
       child: Shine(
         on: !back,

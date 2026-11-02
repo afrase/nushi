@@ -26,6 +26,7 @@ import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/side_chat.dart';
+import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/update_toast.dart';
@@ -53,6 +54,9 @@ const sideChatKey = SingleActivator(
 /// ⌘D: pin the chat, or unpin it (Arc's key for pinning a tab).
 const pinKey = SingleActivator(LogicalKeyboardKey.keyD, meta: true);
 
+/// ⌘\: hide the sidebar, or show it.
+const sidebarKey = SingleActivator(LogicalKeyboardKey.backslash, meta: true);
+
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
@@ -63,6 +67,7 @@ enum Act {
   chat(key: chatTabKey, menu: ActMenu.view, menuLabel: 'Chat'),
   changes(key: changesTabKey, menu: ActMenu.view, menuLabel: 'Changes'),
   pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
+  sidebar(key: sidebarKey, menu: ActMenu.view, menuLabel: 'Hide Sidebar'),
   details,
   chatWidth,
   terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
@@ -214,6 +219,11 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       'Show pull request',
       enabled: shown?.pull != null,
       run: () => tab(.pull),
+    ),
+    AppAction(
+      .sidebar,
+      sidebarHidden.value ? 'Show the sidebar' : 'Hide the sidebar',
+      run: toggleSidebar,
     ),
     AppAction(
       .details,

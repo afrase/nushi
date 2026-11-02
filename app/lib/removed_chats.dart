@@ -15,9 +15,12 @@ const _expires = {
 /// Says, once, which chats the daemon removed because their agent no longer
 /// had their sessions; OK dismisses it (ADR 0015).
 class RemovedChatsBar extends StatelessWidget {
-  const new(this.daemon, {super.key});
+  const new(this.daemon, {super.key, this.start = 16});
 
   final Daemon daemon;
+
+  /// Where its text starts: past the traffic lights, with the sidebar hidden.
+  final double start;
 
   /// The bar's sentence for [removed].
   static String text(List<RemovedChat> removed) {
@@ -49,7 +52,7 @@ class RemovedChatsBar extends StatelessWidget {
     final removed = daemon.removedChats;
     return Container(
       color: t.raised,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: EdgeInsets.fromLTRB(start, 4, 16, 4),
       child: Row(
         spacing: 12,
         children: [

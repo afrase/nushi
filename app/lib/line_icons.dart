@@ -10,6 +10,9 @@ enum LineIcon {
   /// The details panel: the box, its right side marked off.
   details,
 
+  /// The sidebar: the box, its left side marked off.
+  sidebar,
+
   /// Show in Finder.
   folderOpen,
 
@@ -38,6 +41,11 @@ enum LineIcon {
         ..addRRect(_box)
         ..moveTo(15, 3)
         ..lineTo(15, 21),
+    sidebar =>
+      Path()
+        ..addRRect(_box)
+        ..moveTo(9, 3)
+        ..lineTo(9, 21),
     folderOpen =>
       Path()
         ..moveTo(3, 19)
