@@ -47,6 +47,11 @@ type Checkouts interface {
 	// Found returns the worktree folder is in when it isn't its
 	// repository's own folder, as one that was there (Found); else nil.
 	Found(ctx context.Context, folder string) *model.Worktree
+	// Locate says folder's repository's common folder and the top of its
+	// work tree, both real paths.
+	Locate(ctx context.Context, folder string) (common, top string, err error)
+	// MergeBase is where commits a and b of folder's repository parted.
+	MergeBase(ctx context.Context, folder, a, b string) (string, error)
 	// Branch is the branch folder has checked out ("" when detached).
 	Branch(ctx context.Context, folder string) string
 	// Changed counts folder's uncommitted changes to tracked files.

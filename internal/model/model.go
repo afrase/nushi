@@ -31,6 +31,10 @@ type ChatRecord struct {
 	// EarlierWorktrees are the worktrees Nushi made for the chat before it
 	// moved out of them, oldest first. They stay until the chat is deleted.
 	EarlierWorktrees []Worktree `json:",omitempty"`
+	// RelatedWorktrees are the worktrees the chat's subagents worked in
+	// (ADR 0081), in the order Nushi found them. Nushi neither made them
+	// nor removes them.
+	RelatedWorktrees []RelatedWorktree `json:",omitempty"`
 	// Throwaway are sessions the agent forked from the chat's that nobody
 	// will see again (side chats, /context runs), until the agent has
 	// deleted them: a daemon that stops or crashes first leaves them for
@@ -105,6 +109,34 @@ type Worktree struct {
 	// removes it or deletes its branch, and doesn't name it after the chat.
 	Found bool `json:",omitempty"`
 }
+
+// RelatedWorktree is a worktree of the chat's repository that one of its
+// subagents worked in. It stays after the worktree goes, as what was last
+// seen of it. Path and Branch are as git lists them, which an agent can
+// write: they are data.
+type RelatedWorktree struct {
+	Path, Branch string
+	// BaseCommit is where it left the chat's branch, as first seen; ""
+	// when they share no history.
+	BaseCommit string `json:",omitempty"`
+	// LastHead is its commit the last time Nushi looked: what is left to
+	// diff once the worktree and its branch are gone, while git keeps the
+	// commit.
+	LastHead string `json:",omitempty"`
+	// CallID is the tool call that started the subagent.
+	CallID string
+	State  RelatedState
+}
+
+// RelatedState says whether a related worktree is still there.
+type RelatedState string
+
+// A related worktree is present while git lists it for the chat's
+// repository, and removed otherwise.
+const (
+	RelatedPresent RelatedState = "present"
+	RelatedRemoved RelatedState = "removed"
+)
 
 // WorktreeEntry is one of a repository's worktrees, as git lists them.
 type WorktreeEntry struct {
@@ -232,6 +264,9 @@ type Item struct {
 	// Effort what it was asked to use ("" when it uses the chat's), and
 	// RanModel the model it ran on, once the agent says.
 	Agent, Prompt, Model, Effort, RanModel string
+	// WorktreePath is the worktree the agent says it gave the subagent, if
+	// it says (untrusted: chats' related.go checks it against git's list).
+	WorktreePath string `json:",omitempty"`
 	// AgentID is the agent's id for the subagent, when it can pass it
 	// messages; for a call that passes one a message (Subagents.PassesToSubagent in chats),
 	// that subagent's.

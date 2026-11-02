@@ -101,6 +101,9 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 			c.configChangedLocked()
 		}
 	case "usage_update":
+		if c.ownTurn {
+			c.lookRelatedLocked()
+		}
 		c.ownTurn, c.ownNoted = false, false
 		u := u.UsageUpdate
 		if c.kind.transcript != nil && !c.started.IsZero() && !c.stopped && c.kind.transcript.TurnDone(u) {
@@ -160,6 +163,9 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		if t.Status == "completed" || t.Status == "failed" {
 			c.stoppedLocked(*it)
 			c.copyLocked(false)
+			if it.Parent != "" {
+				c.relatedStepLocked()
+			}
 		}
 		if (t.Status == "completed" || t.Status == "failed") && it.Parent == "" && !c.started.IsZero() {
 			c.deliverLocked() // between tool calls: the agent's chance to take queued messages
@@ -361,6 +367,9 @@ func (c *chat) subagentLocked(call *model.Item) bool { //nolint:gocyclo // one t
 		sa.Result = call.Text
 	}
 	call.Subagent = &sa
+	if old.State == "running" && sa.State != "running" { // its own moment: the turn may be long over (ADR 0044)
+		c.lookRelatedLocked()
+	}
 	return sa != old
 }
 

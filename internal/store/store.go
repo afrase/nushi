@@ -280,6 +280,7 @@ func clone(sess model.ChatRecord) model.ChatRecord {
 	sess.Earlier = slices.Clone(sess.Earlier)
 	sess.Worktree = copyOf(sess.Worktree)
 	sess.EarlierWorktrees = slices.Clone(sess.EarlierWorktrees)
+	sess.RelatedWorktrees = slices.Clone(sess.RelatedWorktrees)
 	sess.Throwaway = slices.Clone(sess.Throwaway)
 	sess.Issue = copyOf(sess.Issue)
 	sess.GitHub = copyOf(sess.GitHub)

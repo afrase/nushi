@@ -5,6 +5,7 @@ package testcheck
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -55,4 +56,18 @@ func Git(t *testing.T, dir string, args ...string) string {
 		t.Fatalf("git %v: %v\n%s%s", args, err, out, stderr.Bytes())
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// PutBranch puts the worktree named name of repo on branch, at its commit,
+// by writing git's own files as an agent could: a branch of bytes that
+// aren't valid UTF-8 can't be made by git on a Mac, whose disks refuse
+// them for its ref's file, but git reads it from packed-refs.
+func PutBranch(t *testing.T, repo, name, branch string) {
+	t.Helper()
+	head := Git(t, filepath.Join(repo, ".git", "worktrees", name), "rev-parse", "HEAD")
+	f, err := os.OpenFile(filepath.Join(repo, ".git", "packed-refs"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	NoErr(t, err)
+	_, err = f.WriteString(head + " refs/heads/" + branch + "\n")
+	NoErr(t, errors.Join(err, f.Close()))
+	Write(t, filepath.Join(repo, ".git", "worktrees", name, "HEAD"), "ref: refs/heads/"+branch+"\n")
 }

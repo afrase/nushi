@@ -199,7 +199,7 @@ func claudeCode(meta map[string]any, key string) string {
 // ToolCall adds what Claude tells about a tool call: the subagent it comes
 // from, its tool's name, for one that starts a subagent (Agent, Task) the
 // subagent's type, prompt, model and effort (its input comes in pieces),
-// the model it ran on once it has ended, and for a subagent's SubagentHandback, which ends it,
+// the model it ran on and the worktree it had once it has ended, and for a subagent's SubagentHandback, which ends it,
 // the report it hands back as its text (Report): true then, since the
 // call's own output is only an acknowledgement; for ReportFindings the
 // review's findings; for TaskStop the task it stops. Claude may send the
@@ -233,6 +233,9 @@ func (h Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMes
 		}
 		if id, _ := resp["agentId"].(string); id != "" {
 			it.AgentID = id
+		}
+		if p, _ := resp["worktreePath"].(string); p != "" { // a foreground subagent's only (docs/facts/claude.md)
+			it.WorktreePath = p
 		}
 	case "SendMessage": // to a subagent, by the agent's id for it
 		it.AgentID = cmp.Or(in.To, it.AgentID)

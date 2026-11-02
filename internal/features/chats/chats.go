@@ -134,10 +134,13 @@ type chat struct {
 	sessions   Sessions
 	// worktrees are the service's, for naming the chat's branch (branch.go).
 	worktrees Worktrees
-	copies    Copies          // the service's
-	copiesOn  func() bool     // and whether it writes them
-	viewers   Viewers         // the service's
-	ctx       context.Context //nolint:containedctx // the service's life, which ends what the chat follows on its own
+	// owned lists the worktrees and folders that are a chat's own, for
+	// related.go.
+	owned    func(chatID string) ([]string, error)
+	copies   Copies          // the service's
+	copiesOn func() bool     // and whether it writes them
+	viewers  Viewers         // the service's
+	ctx      context.Context //nolint:containedctx // the service's life, which ends what the chat follows on its own
 
 	mu           sync.Mutex
 	items        []model.Item
@@ -198,6 +201,15 @@ type chat struct {
 	replaying  bool             // a session/load's replay goes to replay, not the transcript (restore.go)
 	replay     []model.Item
 	quiet      bool // a replayed update is being taken: its events aren't the app's
+
+	// One look at the related worktrees at a time (related.go): looking
+	// holds it across git's runs; relating says a look of the chat's own
+	// runs, relateAgain that another was asked for since, and relatedAt is
+	// when one last started.
+	looking     sync.Mutex
+	relating    bool
+	relateAgain bool
+	relatedAt   time.Time
 	// titled says the agent titled the session while the daemon ran, and
 	// waitedTitle that a turn ended without that title, for naming the
 	// chat's branch (branch.go).
@@ -345,7 +357,7 @@ func CheckFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
+	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 

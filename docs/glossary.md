@@ -69,6 +69,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Pinned** | The sidebar's section above the projects, shown while a chat is pinned: Pin chat and Unpin chat (⌘D). A pinned chat leaves its project's list; the daemon keeps which and in what order, so the phone has them too. Not an artifact's pin. | `Chat.pin`, `ChatRecord.Pin`, `PinChats`, `PinnedSection`, `chat_pins.dart` | 0064 |
 | **Folder** | Where a chat's agent works. A chat with No folder gets a scratch folder of its own. | `ChatRecord.Folder`, `ChatRecord.Scratch` | |
 | **Worktree** | A git worktree a chat runs in, `.worktrees/<two words>` on `nushi/<two words>`: New worktree, Move. | `Worktree`, `GitWorktree` | 0016 |
+| **Related worktree** | A worktree one of a chat's subagents works in, which the chat doesn't run in: found in git's list by what the subagent's tool calls name, and kept after it goes, with the last commit seen. Nushi neither makes nor removes it. | `RelatedWorktree`, `GetRelatedWorktrees`, `related.go` | 0081 |
 | **Branch** | The branch a chat's folder has out: Rename branch… for a worktree's, the Branch row's menu to switch. | `RenameBranch`, `SwitchBranch`, `GitBranch` | 0016 |
 | **Chat header** | The top bar: title, agent, model, the tabs, the terminal and details buttons, ⋯. | `ChatHeader` | |
 | **Tabs** | Chat, Changes, Pull request (when the chat has one), in the header. | `chat_keys.dart`, `PlainTabs` | 0071 |

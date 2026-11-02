@@ -33,6 +33,7 @@ var (
 	_ chats.ForkFinder     = claudehistory.Local{}
 	_ chats.HistoryChecker = claudehistory.Local{}
 	_ chats.MessageDater   = claudehistory.Local{}
+	_ chats.WorktreeFinder = claudehistory.Local{}
 
 	_ chats.Forker        = codex.Harness{}
 	_ chats.ReadOnly      = codex.Harness{}

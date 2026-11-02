@@ -178,6 +178,14 @@ type ForkFinder interface {
 	Forked(ids []string) map[string]bool
 }
 
+// WorktreeFinder says which worktree the agent's own files say each
+// subagent of session sid of folder has, by the tool call that started it.
+// Those files are the agent's to write: a path here only says whose a
+// worktree is, once git lists it (related.go).
+type WorktreeFinder interface {
+	SubagentWorktrees(sid, folder string) map[string]string
+}
+
 // HistoryChecker says, from the agent's own files alone, that it no longer
 // has session sid of folder, for certain: false whenever that can't be told
 // (its files for the folder missing or unreadable). Without one a chat's

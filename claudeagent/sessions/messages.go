@@ -8,10 +8,12 @@ package sessions
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 )
 
 // Message is one user or assistant message of a transcript.
@@ -76,6 +78,9 @@ type Subagent struct {
 	ParentToolUseID string
 	// ParentAgentID is the subagent that started this one, if one did.
 	ParentAgentID string
+	// WorktreePath is the worktree claude made for it (the Agent tool's
+	// isolation), while that worktree stands.
+	WorktreePath string
 
 	path string
 }
@@ -113,21 +118,36 @@ func walkAgents(dir string, out *[]Subagent) {
 	}
 }
 
+// maxMeta is the most of a sidecar read: claude's are a few hundred bytes.
+const maxMeta = 1 << 16
+
 // readMeta reads the sidecar beside a subagent's transcript; one that is
-// missing or isn't a JSON object tells nothing.
+// missing or isn't a JSON object tells nothing, nor does one that isn't a
+// regular file: the folder is the agent's to write, and a pipe there
+// would hold the read for good.
 func (a *Subagent) readMeta() {
-	data, err := os.ReadFile(strings.TrimSuffix(a.path, ".jsonl") + ".meta.json")
+	path := strings.TrimSuffix(a.path, ".jsonl") + ".meta.json"
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return
+	}
+	defer f.Close() //nolint:errcheck // read-only
+	if fi, err := f.Stat(); err != nil || !fi.Mode().IsRegular() {
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxMeta))
 	if err != nil {
 		return
 	}
 	var meta struct {
 		ToolUseID     str `json:"toolUseId"`
 		ParentAgentID str `json:"parentAgentId"`
+		WorktreePath  str `json:"worktreePath"`
 	}
 	if json.Unmarshal(data, &meta) != nil {
 		return
 	}
-	a.ParentToolUseID, a.ParentAgentID = string(meta.ToolUseID), string(meta.ParentAgentID)
+	a.ParentToolUseID, a.ParentAgentID, a.WorktreePath = string(meta.ToolUseID), string(meta.ParentAgentID), string(meta.WorktreePath)
 }
 
 // SubagentMessages returns the messages of session id's subagent agentID,

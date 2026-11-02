@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -133,7 +134,7 @@ func TestSubagents(t *testing.T) {
 		text("user", "c-u", "", "nested"), text("assistant", "c-a", "c-u", "ok"),
 		rec("progress", "c-p", "c-a"))
 	files := map[string]string{
-		"agent-b2.meta.json":                    `{"toolUseId":"toolu_b","agentType":"general-purpose"}`,
+		"agent-b2.meta.json":                    `{"toolUseId":"toolu_b","agentType":"general-purpose","worktreePath":"/r/w"}`,
 		"agent-a1.meta.json":                    `not json`,
 		"workflows/run-1/agent-c3.meta.json":    `{"toolUseId":"toolu_c","parentAgentId":"b2"}`,
 		"notes.txt":                             "x",
@@ -150,7 +151,7 @@ func TestSubagents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []Subagent{{ID: "a1"}, {ID: "b2", ParentToolUseID: "toolu_b"}, {ID: "c3", ParentToolUseID: "toolu_c", ParentAgentID: "b2"}}
+	want := []Subagent{{ID: "a1"}, {ID: "b2", ParentToolUseID: "toolu_b", WorktreePath: "/r/w"}, {ID: "c3", ParentToolUseID: "toolu_c", ParentAgentID: "b2"}}
 	if len(got) != len(want) {
 		t.Fatalf("Subagents = %+v", got)
 	}
@@ -175,5 +176,23 @@ func TestSubagents(t *testing.T) {
 		if _, err := (Store{ConfigDir: config}).SubagentMessages(id, cwd, agent); !errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("SubagentMessages(%q) = %v", agent, err)
 		}
+	}
+}
+
+// A sidecar is the agent's to write: a pipe in its place tells nothing and
+// holds nothing up.
+func TestSubagentMetaThatIsAPipe(t *testing.T) {
+	config, cwd := t.TempDir(), t.TempDir()
+	id := "00000000-0000-4000-8000-000000000001"
+	project := Store{ConfigDir: config}.ProjectDir(cwd)
+	agents := filepath.Join(project, id, "subagents")
+	transcript(t, project, id, text("user", "u", "", "hi"))
+	transcript(t, agents, "agent-a1", text("user", "a-u", "", "task"))
+	if err := syscall.Mkfifo(filepath.Join(agents, "agent-a1.meta.json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Store{ConfigDir: config}.Subagents(id, cwd)
+	if err != nil || len(got) != 1 || got[0].ParentToolUseID != "" {
+		t.Errorf("Subagents = %+v, %v", got, err)
 	}
 }

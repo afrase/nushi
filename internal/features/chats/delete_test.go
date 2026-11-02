@@ -33,10 +33,16 @@ func (stuckWorktrees) RenameBranch(context.Context, model.Worktree, string) erro
 func (stuckWorktrees) CheckBranch(context.Context, string, string) error           { return nil }
 func (stuckWorktrees) List(context.Context, string) ([]model.WorktreeEntry, error) { return nil, nil }
 func (stuckWorktrees) Found(context.Context, string) *model.Worktree               { return nil }
-func (stuckWorktrees) Branch(context.Context, string) string                       { return "" }
-func (stuckWorktrees) Changed(context.Context, string) (int, error)                { return 0, nil }
-func (stuckWorktrees) Changes(context.Context, string, int) ([]string, error)      { return nil, nil }
-func (stuckWorktrees) Switch(context.Context, string, string, bool) error          { return nil }
+func (stuckWorktrees) Locate(context.Context, string) (string, string, error) {
+	return "", "", nil
+}
+func (stuckWorktrees) MergeBase(context.Context, string, string, string) (string, error) {
+	return "", nil
+}
+func (stuckWorktrees) Branch(context.Context, string) string                  { return "" }
+func (stuckWorktrees) Changed(context.Context, string) (int, error)           { return 0, nil }
+func (stuckWorktrees) Changes(context.Context, string, int) ([]string, error) { return nil, nil }
+func (stuckWorktrees) Switch(context.Context, string, string, bool) error     { return nil }
 
 // removingWorktrees removes every worktree it's asked to, and says which.
 type removingWorktrees struct {

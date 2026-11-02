@@ -56,6 +56,7 @@ func (s *Service) storedSession(id string) (model.ChatRecord, *kind, error) {
 	}
 	sess := stored[i]
 	sess.Scratch = s.isScratch(sess.Folder)
+	sess.RelatedWorktrees = sendable(id, sess.RelatedWorktrees)
 	toldBefore(&sess)
 	return sess, k, nil
 }

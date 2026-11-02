@@ -34,6 +34,10 @@ func TestSubagentCall(t *testing.T) {
 	harness.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolName": "Agent"}}, nil)
 	harness.ToolCall(&it, nil, []byte(`{"subagent_type":"Explore","prompt":"List the files","model":"haiku"}`))
 	harness.ToolCall(&it, nil, []byte(`{"subagent_type":"Explore","prompt":"List the files","model":"haiku","effort":"low"}`))
+	harness.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolResponse": map[string]any{"worktreePath": "/r/w"}}}, nil)
+	if it.WorktreePath != "/r/w" {
+		t.Errorf("worktree: %q", it.WorktreePath)
+	}
 	harness.ToolCall(&it, map[string]any{"claudeCode": map[string]any{"toolResponse": map[string]any{"resolvedModel": "claude-haiku-5-5"}}},
 		[]byte(`{}`)) // a later update without the input keeps it
 	if it.Agent != "Explore" || it.Prompt != "List the files" || it.Model != "haiku" || it.Effort != "low" || it.RanModel != "Haiku 5.5" {
