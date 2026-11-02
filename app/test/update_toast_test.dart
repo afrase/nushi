@@ -290,6 +290,15 @@ void main() {
     await check();
     expect(_toast, findsNothing);
     expect(find.text('Nushi is up to date (0.1.16).'), findsOneWidget);
+    final note = find.descendant(
+      of: find.byType(SnackBar),
+      matching: find.byType(Material),
+    );
+    expect(tester.getSize(note.first).width, 420);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/up_to_date_dark.png'),
+    );
     d.dispose();
   }, variant: _macOS);
 

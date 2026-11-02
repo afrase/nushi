@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/theme/scrollbar.dart';
@@ -207,6 +208,8 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         backgroundColor: t.raised,
         contentTextStyle: ui(t.text),
         behavior: SnackBarBehavior.floating,
+        // Its own size on the Mac, not the window's; a phone's fills the width.
+        width: kIsWeb ? null : 420,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(card),
           side: BorderSide(color: t.borderStrong),
