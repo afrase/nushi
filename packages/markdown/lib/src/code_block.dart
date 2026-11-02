@@ -144,23 +144,37 @@ class CodeBlockView extends StatelessWidget {
     final codeStyle = style.code.copyWith(color: style.body.color);
     // Text draws a tab as one space.
     final text = code.replaceAll('\t', '    ');
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.all(10),
-      child: open
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final span in _Streaming.of(
-                  text,
-                  language,
-                  codeStyle,
-                  style,
-                ).spans(text))
-                  Text.rich(span, softWrap: false),
-              ],
-            )
-          : Text.rich(_highlighted(text, codeStyle), softWrap: false),
+    final body = open
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final span in _Streaming.of(
+                text,
+                language,
+                codeStyle,
+                style,
+              ).spans(text))
+                Text.rich(span, softWrap: false),
+            ],
+          )
+        : Text.rich(_highlighted(text, codeStyle), softWrap: false);
+    // A scroll view under a selection is a selection container of its own,
+    // which keeps edges of a selection between drags. Its text joins the
+    // selection around it directly instead.
+    return Builder(
+      builder: (context) {
+        final selection = SelectionContainer.maybeOf(context);
+        final scroll = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.all(10),
+          child: selection == null
+              ? body
+              : SelectionRegistrarScope(registrar: selection, child: body),
+        );
+        return selection == null
+            ? scroll
+            : SelectionContainer.disabled(child: scroll);
+      },
     );
   }
 }

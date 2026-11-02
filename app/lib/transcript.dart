@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
@@ -140,7 +141,9 @@ class _TranscriptState extends State<Transcript> {
     _growing = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _growing = false;
-      if (mounted && _tail != null) {
+      // Not under a press: a selection's edges are kept by the scroll
+      // offset, which each entry coming in above would move.
+      if (mounted && _tail != null && !_down) {
         setState(() => _tail = _tail! + Transcript.moreEntries);
       }
     });
@@ -398,6 +401,16 @@ class _TranscriptState extends State<Transcript> {
 
   void _closeToolbar() => setState(() => _at = _replyTo = null);
 
+  /// A press of the mouse starts a new selection, so the last one goes
+  /// first: its edges otherwise carry into the new one. Shift extends it.
+  void _startSelection(PointerDownEvent e) {
+    if (e.kind == PointerDeviceKind.mouse &&
+        e.buttons == kPrimaryButton &&
+        !HardwareKeyboard.instance.isShiftPressed) {
+      _area.currentState?.selectableRegion.clearSelection();
+    }
+  }
+
   // The find's current hit (ChatState.find), to scroll to.
   final GlobalKey _currentHit = GlobalKey(debugLabel: 'current hit');
   String? _scrolledTo;
@@ -476,15 +489,19 @@ class _TranscriptState extends State<Transcript> {
             // when a drag or double-click leaves text selected, the popover
             // shows where the pointer went up.
             child: Listener(
-              onPointerDown: (e) => setState(() {
-                _down = _hold.value = true;
-                _touch = e.kind != PointerDeviceKind.mouse;
-                _at = _replyTo = null;
-              }),
+              onPointerDown: (e) {
+                _startSelection(e);
+                setState(() {
+                  _down = _hold.value = true;
+                  _touch = e.kind != PointerDeviceKind.mouse;
+                  _at = _replyTo = null;
+                });
+              },
               onPointerUp: (_) {
                 _down = false;
                 _hold.value = _selected.isNotEmpty;
                 _offer();
+                if (_tail != null) setState(() {}); // it goes on filling in
               },
               child: SelectionArea(
                 key: _area,
