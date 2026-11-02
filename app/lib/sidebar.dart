@@ -16,6 +16,7 @@ import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+import 'package:nushi/window_drag.dart';
 
 /// The chats: the pinned ones first ([PinnedSection]), then grouped by
 /// folder (a chat in a worktree under its repository; [SidebarGroups]):
@@ -80,8 +81,9 @@ class _SidebarState extends State<Sidebar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: WindowDrag.lights, child: WindowDrag()),
           Padding(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
             child: Button(
               label: 'New chat',
               icon: Icons.add,

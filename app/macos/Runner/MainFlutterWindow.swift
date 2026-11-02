@@ -12,6 +12,10 @@ class MainFlutterWindow: NSWindow {
     self.setFrame(windowFrame, display: true)
     // macOS keeps the window's size and place across launches.
     self.setFrameAutosaveName("Nushi")
+    // No title bar: the content runs to the top, under the traffic lights.
+    self.titlebarAppearsTransparent = true
+    self.titleVisibility = .hidden
+    self.styleMask.insert(.fullSizeContentView)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
@@ -25,6 +29,20 @@ class MainFlutterWindow: NSWindow {
           else { return false }
           return NSFont(name: name, size: 12)?.isFixedPitch ?? false
         })
+      }
+
+    // What a title bar did (lib/window_drag.dart).
+    FlutterMethodChannel(name: "nushi/window", binaryMessenger: flutterViewController.engine.binaryMessenger)
+      .setMethodCallHandler { [weak self] call, result in
+        switch call.method {
+        case "drag":
+          if let event = self?.currentEvent { self?.performDrag(with: event) }
+          result(nil)
+        case "zoom":
+          self?.performZoom(nil)
+          result(nil)
+        default: result(FlutterMethodNotImplemented)
+        }
       }
 
     // Opens an address in the default browser (a preview's Open in browser and

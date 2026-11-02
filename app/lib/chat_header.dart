@@ -20,6 +20,7 @@ import 'package:nushi/status.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+import 'package:nushi/window_drag.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the Chat | Changes (| Pull request, while it has one)
@@ -162,169 +163,186 @@ class _ChatHeaderState extends State<ChatHeader> {
     final gap = roomy ? NushiTheme.barGap : 8.0;
     final group = roomy ? NushiTheme.groupGap : NushiTheme.barGap;
     final around = roomy ? NushiTheme.groupGap : 6.0;
-    return Container(
+    return SizedBox(
       height: PaneHeader.height,
-      padding: const EdgeInsets.symmetric(horizontal: NushiTheme.gutter),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: t.borderSubtle)),
-      ),
-      child: Row(
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: titleMax),
-            child: _renaming
-                ? RenameField(
-                    chat: chat,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: t.borderSubtle)),
+            ),
+          ),
+          const WindowDrag(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              NushiTheme.gutter,
+              0,
+              NushiTheme.gutter,
+              1, // the border's
+            ),
+            child: Row(
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: titleMax),
+                  child: _renaming
+                      ? RenameField(
+                          chat: chat,
+                          daemon: widget.daemon,
+                          style: titleStyle,
+                          onDone: () => _renaming = false,
+                        )
+                      : GestureDetector(
+                          onDoubleTap: () => _renaming = true,
+                          child: Text(
+                            chat.shownTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: titleStyle,
+                          ),
+                        ),
+                ),
+                if (chat.jiraKey.isNotEmpty) ...[
+                  SizedBox(width: gap),
+                  LinkText(
+                    chat.jiraKey,
+                    mono: true,
+                    size: 12,
+                    tooltip: 'Show ${chat.jiraKey} in Jira',
+                    onTap: () =>
+                        showIssue(widget.daemon, chat.jiraSite, chat.jiraKey),
+                  ),
+                ],
+                if (chat.github case final link?) ...[
+                  SizedBox(width: gap),
+                  GitHubChip(
+                    key: ValueKey(link.id),
                     daemon: widget.daemon,
-                    style: titleStyle,
-                    onDone: () => _renaming = false,
-                  )
-                : GestureDetector(
-                    onDoubleTap: () => _renaming = true,
+                    link: link,
+                  ),
+                ],
+                SizedBox(width: group),
+                Tooltip(
+                  message: folds.name ? chat.agentName : '',
+                  child: AgentMark(chat.agent, size: 16, color: t.text),
+                ),
+                if (!folds.name) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    chat.agentName,
+                    style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
+                  ),
+                ],
+                if (modelName != null && !folds.model) ...[
+                  SizedBox(width: gap),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: modelMax),
                     child: Text(
-                      chat.shownTitle,
+                      modelName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
+                      style: meta,
                     ),
                   ),
-          ),
-          if (chat.jiraKey.isNotEmpty) ...[
-            SizedBox(width: gap),
-            LinkText(
-              chat.jiraKey,
-              mono: true,
-              size: 12,
-              tooltip: 'Show ${chat.jiraKey} in Jira',
-              onTap: () =>
-                  showIssue(widget.daemon, chat.jiraSite, chat.jiraKey),
-            ),
-          ],
-          if (chat.github case final link?) ...[
-            SizedBox(width: gap),
-            GitHubChip(
-              key: ValueKey(link.id),
-              daemon: widget.daemon,
-              link: link,
-            ),
-          ],
-          SizedBox(width: group),
-          Tooltip(
-            message: folds.name ? chat.agentName : '',
-            child: AgentMark(chat.agent, size: 16, color: t.text),
-          ),
-          if (!folds.name) ...[
-            const SizedBox(width: 8),
-            Text(
-              chat.agentName,
-              style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
-            ),
-          ],
-          if (modelName != null && !folds.model) ...[
-            SizedBox(width: gap),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: modelMax),
-              child: Text(
-                modelName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: meta,
-              ),
-            ),
-          ],
-          SizedBox(width: gap),
-          if (chat.archived)
-            Text('archived', style: meta)
-          else if (folds.word)
-            Tooltip(
-              message: phaseWord(chat.phase, t).$1,
-              child: ChatDot(chat: chat),
-            )
-          else ...[
-            ChatDot(chat: chat),
-            const SizedBox(width: 5),
-            ChatStatusWord(chat, style: meta),
-          ],
-          SizedBox(width: around),
-          const Spacer(),
-          SizedBox(width: around),
-          if (chat.side.value != null && chat.sideHidden.value) ...[
-            SideChip(chat),
-            SizedBox(width: gap),
-          ],
-          if (folds.tabs)
-            MenuField(
-              compact: true,
-              tooltip: '⌃⇥ the next tab, ⌃⇧⇥ the one before',
-              entries: [
-                for (final (tab, label) in _tabs(chat))
-                  MenuEntry(
-                    label,
-                    detail: keyLabel(tabKey(tab)),
-                    checked: tab == widget.tab,
-                    onPick: () => widget.onTab(tab),
+                ],
+                SizedBox(width: gap),
+                if (chat.archived)
+                  Text('archived', style: meta)
+                else if (folds.word)
+                  Tooltip(
+                    message: phaseWord(chat.phase, t).$1,
+                    child: ChatDot(chat: chat),
+                  )
+                else ...[
+                  ChatDot(chat: chat),
+                  const SizedBox(width: 5),
+                  ChatStatusWord(chat, style: meta),
+                ],
+                SizedBox(width: around),
+                const Spacer(),
+                SizedBox(width: around),
+                if (chat.side.value != null && chat.sideHidden.value) ...[
+                  SideChip(chat),
+                  SizedBox(width: gap),
+                ],
+                if (folds.tabs)
+                  MenuField(
+                    compact: true,
+                    tooltip: '⌃⇥ the next tab, ⌃⇧⇥ the one before',
+                    entries: [
+                      for (final (tab, label) in _tabs(chat))
+                        MenuEntry(
+                          label,
+                          detail: keyLabel(tabKey(tab)),
+                          checked: tab == widget.tab,
+                          onPick: () => widget.onTab(tab),
+                        ),
+                    ],
+                    label: Text(
+                      _tabs(chat).firstWhere((s) => s.$1 == widget.tab).$2,
+                    ),
+                  )
+                else
+                  PlainTabs(
+                    value: widget.tab,
+                    tabs: _tabs(chat),
+                    onChanged: widget.onTab,
+                    fill: true,
+                    tooltip: (t) =>
+                        '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
+                        'before',
                   ),
+                SizedBox(width: roomy ? NushiTheme.groupGap : 4),
+                if (!folds.buttons) ...[
+                  TerminalButton(chat: chat, daemon: widget.daemon),
+                  if (roomy) const SizedBox(width: NushiTheme.iconGap),
+                ],
+                if (!folds.buttons && !folds.panel) ...[
+                  IconTap.line(
+                    LineIcon.details,
+                    tooltip: widget.onPanel == null
+                        ? 'The window is too narrow'
+                        : widget.panel
+                        ? 'Hide details'
+                        : 'Show details',
+                    color: widget.panel ? t.text : t.textSecondary,
+                    onTap: widget.onPanel,
+                  ),
+                  if (roomy) const SizedBox(width: NushiTheme.iconGap),
+                ],
+                MenuIcon.line(
+                  LineIcon.more,
+                  tooltip: 'Chat menu',
+                  filter: false,
+                  entries: [
+                    if (folds.buttons) ...[
+                      if (!chat.archived)
+                        MenuEntry(
+                          terminalChats.value.contains(chat.id)
+                              ? 'Hide terminal'
+                              : 'Show terminal',
+                          shortcut: '⌃`',
+                          line: LineIcon.terminal,
+                          onPick: () => toggleTerminal(chat.id),
+                        ),
+                      if (widget.onPanel case final toggle?)
+                        MenuEntry(
+                          widget.panel ? 'Hide details' : 'Show details',
+                          line: LineIcon.details,
+                          onPick: toggle,
+                        ),
+                      MenuEntry.divider,
+                    ],
+                    ...chatMenu(
+                      context,
+                      chat,
+                      widget.daemon,
+                      onRename: () => _renaming = true,
+                    ),
+                  ],
+                ),
               ],
-              label: Text(_tabs(chat).firstWhere((s) => s.$1 == widget.tab).$2),
-            )
-          else
-            PlainTabs(
-              value: widget.tab,
-              tabs: _tabs(chat),
-              onChanged: widget.onTab,
-              fill: true,
-              tooltip: (t) =>
-                  '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
-                  'before',
             ),
-          SizedBox(width: roomy ? NushiTheme.groupGap : 4),
-          if (!folds.buttons) ...[
-            TerminalButton(chat: chat, daemon: widget.daemon),
-            if (roomy) const SizedBox(width: NushiTheme.iconGap),
-          ],
-          if (!folds.buttons && !folds.panel) ...[
-            IconTap.line(
-              LineIcon.details,
-              tooltip: widget.onPanel == null
-                  ? 'The window is too narrow'
-                  : widget.panel
-                  ? 'Hide details'
-                  : 'Show details',
-              color: widget.panel ? t.text : t.textSecondary,
-              onTap: widget.onPanel,
-            ),
-            if (roomy) const SizedBox(width: NushiTheme.iconGap),
-          ],
-          MenuIcon.line(
-            LineIcon.more,
-            tooltip: 'Chat menu',
-            filter: false,
-            entries: [
-              if (folds.buttons) ...[
-                if (!chat.archived)
-                  MenuEntry(
-                    terminalChats.value.contains(chat.id)
-                        ? 'Hide terminal'
-                        : 'Show terminal',
-                    shortcut: '⌃`',
-                    line: LineIcon.terminal,
-                    onPick: () => toggleTerminal(chat.id),
-                  ),
-                if (widget.onPanel case final toggle?)
-                  MenuEntry(
-                    widget.panel ? 'Hide details' : 'Show details',
-                    line: LineIcon.details,
-                    onPick: toggle,
-                  ),
-                MenuEntry.divider,
-              ],
-              ...chatMenu(
-                context,
-                chat,
-                widget.daemon,
-                onRename: () => _renaming = true,
-              ),
-            ],
           ),
         ],
       ),

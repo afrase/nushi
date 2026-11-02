@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/window_drag.dart';
 
 /// A pane of a remembered width, with a draggable edge on its [left] or
 /// right side: a thin line that highlights under the pointer. Dragging it
@@ -297,17 +298,28 @@ class PaneHeader extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final room = box.maxWidth >= gutterFrom;
-        return Container(
+        return SizedBox(
           height: height,
-          padding: EdgeInsets.only(
-            left: inset ?? (room ? NushiTheme.gutter : 14),
-            right: end ?? (room ? NushiTheme.gutter : 4),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: t.raised,
+                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
+                ),
+              ),
+              const WindowDrag(),
+              Padding(
+                padding: EdgeInsets.only(
+                  left: inset ?? (room ? NushiTheme.gutter : 14),
+                  right: end ?? (room ? NushiTheme.gutter : 4),
+                  bottom: 1, // the border's
+                ),
+                child: child,
+              ),
+            ],
           ),
-          decoration: BoxDecoration(
-            color: t.raised,
-            border: Border(bottom: BorderSide(color: t.borderSubtle)),
-          ),
-          child: child,
         );
       },
     );
