@@ -298,6 +298,20 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('hovering a row moves nothing', (tester) async {
+    final (_, d) = await openView(tester);
+    final second = find.text('ACME-12');
+    final last = find.text('ACME-3');
+    final y = (tester.getTopLeft(second).dy, tester.getTopLeft(last).dy);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(second));
+    await tester.pump();
+    expect(find.byTooltip('Start work'), findsWidgets);
+    expect((tester.getTopLeft(second).dy, tester.getTopLeft(last).dy), y);
+    await mouse.removePointer();
+    await closeView(tester, d);
+  });
+
   testWidgets('every site’s issues, each row naming its site', (tester) async {
     final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
     final (fake, d) = await openView(tester, sites: [_site, other]);

@@ -357,8 +357,11 @@ class _TaskRowState extends State<TaskRow> {
                       child: Avatar(name: is_.assignee, id: is_.assigneeId),
                     ),
                   ),
+                // As tall as the row's avatar: the button coming on hover
+                // moves nothing.
                 SizedBox(
                   width: 30,
+                  height: 20,
                   child: _hover || widget.selected
                       ? Align(
                           alignment: Alignment.centerRight,
@@ -382,6 +385,7 @@ class _TaskRowState extends State<TaskRow> {
       return IconTap(
         Icons.play_arrow_outlined,
         size: 15,
+        padding: 2,
         tooltip: widget.selected ? 'Start work (⌘⏎)' : 'Start work',
         onTap: open,
       );
