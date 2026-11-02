@@ -1,3 +1,4 @@
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -118,6 +119,26 @@ void main() {
       find.textContaining('Copy the agent’s last message', findRichText: true),
       findsOneWidget,
     );
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('commands that come after `/` was typed are offered', (
+    tester,
+  ) async {
+    final chat = _chat();
+    final (_, d, _) = await _box(tester, chat);
+    await tester.enterText(find.byType(TextField), '/');
+    await tester.pump();
+    expect(find.textContaining('/compact', findRichText: true), findsNothing);
+    chat.apply(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(1),
+        commands: ChatCommands(commands: [Command(name: 'compact')]),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('/compact', findRichText: true), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 

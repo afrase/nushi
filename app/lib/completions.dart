@@ -17,6 +17,8 @@ import 'package:nushi/widgets.dart';
 class Completions extends ChangeNotifier {
   new(this.text, this.mentions, this.chat, this.daemon) {
     text.addListener(_update);
+    _heard = chat()..addListener(_chatChanged);
+    _commands = _heard.commands;
   }
 
   final TextEditingController text;
@@ -31,6 +33,15 @@ class Completions extends ChangeNotifier {
   (int, int)? _token; // where the text being completed starts and ends
   String _dismissed = ''; // the text Escape closed the choices for
   bool _disposed = false;
+  late final ChatState _heard; // the chat listened to
+  late List<Command> _commands; // its commands, as last offered
+
+  /// The agent's commands came: `/` typed before them offers them now.
+  void _chatChanged() {
+    if (identical(_commands, _heard.commands)) return;
+    _commands = _heard.commands;
+    if (text.text.startsWith('/')) _update();
+  }
 
   void _update() {
     final caret = text.selection.baseOffset;
@@ -132,6 +143,7 @@ class Completions extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     text.removeListener(_update);
+    _heard.removeListener(_chatChanged);
     super.dispose();
   }
 }
