@@ -314,11 +314,11 @@ Widget _button(
         if (e.shortcut.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 24),
-            child: Text(
+            child: keyText(
               e.shortcut,
               // The label's font; its keys' symbols from the code font,
               // which has them.
-              style: theme
+              theme
                   .ui(t.textMuted)
                   .copyWith(fontFamilyFallback: const [NushiTheme.codeFont]),
             ),

@@ -275,10 +275,7 @@ class _PaletteState extends State<Palette> {
                       message: 'The palette: ⌘K, or ⌘⇧P (in a terminal too)',
                       child: Padding(
                         padding: const EdgeInsets.only(right: 4),
-                        child: Text(
-                          '⌘K',
-                          style: theme.code(t.textMuted, size: 12),
-                        ),
+                        child: keyText('⌘K', theme.code(t.textMuted, size: 12)),
                       ),
                     ),
                     suffixIconConstraints: const BoxConstraints(),
@@ -342,13 +339,11 @@ class _PaletteState extends State<Palette> {
           ),
           if (r.detail.isNotEmpty) ...[
             const SizedBox(width: 12),
-            Text(
-              r.detail,
-              // A key in monospace, which has ⌘ and the other marks.
-              style: r.agent == null && r.icon == Icons.bolt
-                  ? theme.code(t.textMuted, size: 12)
-                  : theme.ui(t.textMuted, size: 12),
-            ),
+            // A key in monospace, which has ⌘ and the other marks.
+            if (r.agent == null && r.icon == Icons.bolt)
+              keyText(r.detail, theme.code(t.textMuted, size: 12))
+            else
+              Text(r.detail, style: theme.ui(t.textMuted, size: 12)),
           ],
         ],
       ),

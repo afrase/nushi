@@ -829,5 +829,24 @@ class _Dots extends CustomPainter {
 Widget keyHint(BuildContext context, String keys, {Color? color}) {
   if (TouchTargets.of(context)) return const SizedBox.shrink();
   final theme = NushiTheme.of(context);
-  return Text(keys, style: theme.code(color ?? theme.t.textMuted, size: 11));
+  return keyText(keys, theme.code(color ?? theme.t.textMuted, size: 11));
 }
+
+/// A shortcut's [keys] in [style], `⌘` a size up: the code font's stands on
+/// the baseline, shorter than a capital, and at this size it comes level
+/// with the letter beside it. The line stays as high as [style]'s.
+Widget keyText(String keys, TextStyle style) => Text.rich(
+  TextSpan(
+    children: [
+      for (final m in RegExp('⌘|[^⌘]+').allMatches(keys))
+        TextSpan(
+          text: m[0],
+          style: m[0] == '⌘'
+              ? TextStyle(fontSize: style.fontSize! * 1.3)
+              : null,
+        ),
+    ],
+  ),
+  style: style,
+  strutStyle: StrutStyle.fromTextStyle(style, forceStrutHeight: true),
+);

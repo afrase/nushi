@@ -371,9 +371,9 @@ class _ChatRowState extends State<_ChatRow> {
                         fill: t.fieldFill,
                         radius: NushiTheme.control,
                       ),
-                      child: Text(
+                      child: keyText(
                         '⌘$n',
-                        style: theme.code(t.textSecondary, size: 11),
+                        theme.code(t.textSecondary, size: 11),
                       ),
                     ),
                 ],

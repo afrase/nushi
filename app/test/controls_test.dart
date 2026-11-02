@@ -47,6 +47,28 @@ Widget _app(Tokens tokens, Widget child) => MaterialApp(
 );
 
 void main() {
+  testWidgets('a shortcut keeps its line as high with ⌘ a size up', (
+    tester,
+  ) async {
+    const style = TextStyle(fontFamily: NushiTheme.codeFont, fontSize: 11);
+    Future<double> height(Widget text) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: text),
+        ),
+      );
+      return tester.getSize(find.byType(RichText)).height;
+    }
+
+    final plain = await height(const Text('⌘N', style: style));
+    expect(await height(keyText('⌘N', style)), plain);
+    final span = tester.widget<Text>(find.byType(Text)).textSpan;
+    final marks = (span! as TextSpan).children!.cast<TextSpan>().toList();
+    expect(marks.map((m) => m.text), ['⌘', 'N']);
+    expect(marks.first.style!.fontSize, greaterThan(11));
+  });
+
   setUpAll(loadFonts);
 
   for (final (name, tokens) in [
