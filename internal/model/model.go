@@ -72,6 +72,9 @@ type ChatRecord struct {
 	// Pin is the chat's place among the pinned chats, from 1 (the top); 0
 	// when it isn't pinned. Archiving unpins.
 	Pin int `json:",omitempty"`
+	// Color is the name of the chat's color, "" for none: a stable name, so
+	// each theme draws it its own way (chats.SetColor).
+	Color string `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`

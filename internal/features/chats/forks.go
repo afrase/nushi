@@ -165,7 +165,7 @@ func (c *chat) forkedLocked(items []model.Item) {
 func forkRecord(id, sid string, of model.ChatRecord) model.ChatRecord {
 	r := model.ChatRecord{ID: id, SessionID: sid, Agent: of.Agent, Folder: of.Folder, Title: forkTitle(of.Title), Name: forkTitle(of.Name),
 		Mode: of.Mode, Created: time.Now(), HasMessages: true, Issue: of.Issue, GitHub: of.GitHub, Pull: of.Pull,
-		Ultracode: of.Ultracode, Picks: maps.Clone(of.Picks)}
+		Color: of.Color, Ultracode: of.Ultracode, Picks: maps.Clone(of.Picks)}
 	if of.Worktree != nil {
 		wt := *of.Worktree
 		wt.AutoName = false

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
@@ -239,7 +240,8 @@ class _Footer extends StatelessWidget {
 /// (Rename among it: a second click on a chat slow to open must not
 /// start a rename), and dragged ([movable]) it moves within
 /// its list. A pinned chat's ([project]) says its project after its title,
-/// muted, in the place of its branch or Jira key.
+/// muted, in the place of its branch or Jira key. A chat with a color has
+/// the whole row tinted with it, deeper when selected ([ChatColor.tint]).
 class _ChatRow extends StatefulWidget {
   const new(
     this.chat, {
@@ -271,6 +273,7 @@ class _ChatRowState extends State<_ChatRow> {
     final t = theme.t;
     final chat = widget.chat;
     final daemon = widget.daemon;
+    final selected = daemon.selectedId == chat.id;
     final movable =
         widget.movable ?? (Widget child, {required bool enabled}) => child;
     return ListenableBuilder(
@@ -290,7 +293,8 @@ class _ChatRowState extends State<_ChatRow> {
             builder: (context, open) => Tap(
               onTap: () => daemon.select(chat.id),
               onSecondaryTapUp: (d) => open(d.localPosition),
-              selected: daemon.selectedId == chat.id,
+              selected: selected,
+              fill: chat.color?.tint(t, selected: selected),
               padding: EdgeInsets.symmetric(
                 horizontal: 8,
                 vertical: _renaming ? 1 : 5,

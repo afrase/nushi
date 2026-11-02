@@ -208,7 +208,8 @@ class _Folder extends StatelessWidget {
 }
 
 /// A chat in the list: its state, its agent, its title, and its state in
-/// a word, as the Mac says it ([phaseWord]).
+/// a word, as the Mac says it ([phaseWord]); tinted with its color, as on
+/// the Mac, which is where one is set.
 class ChatRow extends StatelessWidget {
   const new(this.chat, {required this.onTap, super.key});
 
@@ -222,7 +223,7 @@ class ChatRow extends StatelessWidget {
       listenable: chat,
       builder: (context, _) {
         final (word, color) = phaseWord(chat.phase, t);
-        return InkWell(
+        final row = InkWell(
           onTap: onTap,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: touch + 8),
@@ -249,6 +250,10 @@ class ChatRow extends StatelessWidget {
             ),
           ),
         );
+        return switch (chat.color?.tint(t)) {
+          final tint? => Material(color: tint, child: row),
+          null => row,
+        };
       },
     );
   }

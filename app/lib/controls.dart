@@ -794,6 +794,70 @@ class IconTap extends StatelessWidget {
   }
 }
 
+/// A round color to pick: [color], or with none a hollow ring, the one
+/// picked ([selected]) ringed. [tooltip] names it; the ring and the name are
+/// there without a pointer, and Tab, Enter and Space work it like any
+/// control.
+class Swatch extends StatelessWidget {
+  const new({
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+    super.key,
+    this.selected = false,
+  });
+
+  /// How much room it takes, and the color's own size in it.
+  static const size = 18.0;
+  static const _dot = 12.0;
+
+  final Color? color;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return Semantics(
+      selected: selected,
+      child: Pressable(
+        onTap: onTap,
+        tooltip: tooltip,
+        builder: (context, look) => _faded(
+          look,
+          Container(
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: look.focus
+                  ? Border.all(color: t.focus, width: 2)
+                  : selected
+                  ? Border.all(color: t.text, width: 1.5)
+                  : look.hover
+                  ? Border.all(color: t.fieldBorderHover, width: 1.5)
+                  : null,
+            ),
+            child: Container(
+              width: _dot,
+              height: _dot,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color,
+                border: color == null
+                    ? Border.all(color: t.textSecondary, width: 1.5)
+                    : null,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Six dots in two columns of three: what can be dragged by here.
 class DragGrip extends StatelessWidget {
   const new({super.key});

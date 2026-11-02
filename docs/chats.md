@@ -30,6 +30,8 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - Unpin puts a chat back where it was in its project.
 - The daemon keeps the pins, so the phone has them too. Archiving unpins.
 
+**Colors.** With many chats, a color tells them apart when the titles no longer do. The swatches on the Color row of a chat's menu (its ⋯, its row's right-click) tint its whole row, more strongly while it's selected; No color takes it off. The daemon keeps it, so the phone's list shows it too, and a fork, or a side chat kept as a chat, starts with its chat's color.
+
 ## Keys
 
 | Keys | What they do |

@@ -186,7 +186,7 @@ func configProto(opts []model.ConfigOption) []*nushiv1.ConfigOption {
 
 func chatProto(s model.ChatRecord) *nushiv1.Chat {
 	out := &nushiv1.Chat{Id: s.ID, Agent: s.Agent, Folder: s.Folder, Title: cmp.Or(s.Name, s.Title), Mode: s.Mode,
-		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch, Done: s.Done, Pin: int32(s.Pin)}
+		CreatedUnixMs: s.Created.UnixMilli(), Archived: s.Archived, SessionId: s.SessionID, Scratch: s.Scratch, Done: s.Done, Pin: int32(s.Pin), Color: s.Color}
 	out.Worktree = worktreeProto(s.Worktree)
 	if is := s.Issue; is != nil {
 		out.JiraSite, out.JiraKey = is.Site, is.Key

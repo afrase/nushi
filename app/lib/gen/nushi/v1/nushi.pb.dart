@@ -954,6 +954,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.bool? done,
     GitHubLink? pull,
     $core.int? pin,
+    $core.String? color,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -973,6 +974,7 @@ class Chat extends $pb.GeneratedMessage {
     if (done != null) result.done = done;
     if (pull != null) result.pull = pull;
     if (pin != null) result.pin = pin;
+    if (color != null) result.color = color;
     return result;
   }
 
@@ -1010,6 +1012,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aOM<GitHubLink>(16, _omitFieldNames ? '' : 'pull',
         subBuilder: GitHubLink.$_createMessage)
     ..aI(17, _omitFieldNames ? '' : 'pin')
+    ..aOS(18, _omitFieldNames ? '' : 'color')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1211,6 +1214,19 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasPin() => $_has(16);
   @$pb.TagNumber(17)
   void clearPin() => $_clearField(17);
+
+  /// Its color's stable name (blue, teal, violet, amber, rust, magenta,
+  /// slate or green), never a hex, so each theme draws it its own way; empty
+  /// for none (SetChatColor). A client shows a name it doesn't know as none.
+  /// API 99.
+  @$pb.TagNumber(18)
+  $core.String get color => $_getSZ(17);
+  @$pb.TagNumber(18)
+  set color($core.String value) => $_setString(17, value);
+  @$pb.TagNumber(18)
+  $core.bool hasColor() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearColor() => $_clearField(18);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -5616,6 +5632,119 @@ class PinChatsResponse extends $pb.GeneratedMessage {
       _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PinChatsResponse>(
           PinChatsResponse.$_createMessage);
   static PinChatsResponse? _defaultInstance;
+}
+
+class SetChatColorRequest extends $pb.GeneratedMessage {
+  factory SetChatColorRequest({
+    $core.String? chatId,
+    $core.String? color,
+  }) {
+    final result = SetChatColorRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (color != null) result.color = color;
+    return result;
+  }
+
+  SetChatColorRequest._();
+
+  factory SetChatColorRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetChatColorRequest()..mergeFromBuffer(data, registry);
+  factory SetChatColorRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetChatColorRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetChatColorRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetChatColorRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'color')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetChatColorRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetChatColorRequest copyWith(void Function(SetChatColorRequest) updates) =>
+      super.copyWith((message) => updates(message as SetChatColorRequest))
+          as SetChatColorRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SetChatColorRequest() / SetChatColorRequest.new instead')
+  static SetChatColorRequest create() => SetChatColorRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetChatColorRequest._();
+  @$core.override
+  SetChatColorRequest createEmptyInstance() => SetChatColorRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetChatColorRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetChatColorRequest>(
+          SetChatColorRequest.$_createMessage);
+  static SetChatColorRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// One of the names of Chat.color; empty clears it.
+  @$pb.TagNumber(2)
+  $core.String get color => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set color($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasColor() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearColor() => $_clearField(2);
+}
+
+class SetChatColorResponse extends $pb.GeneratedMessage {
+  factory SetChatColorResponse() => SetChatColorResponse._();
+
+  SetChatColorResponse._();
+
+  factory SetChatColorResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetChatColorResponse()..mergeFromBuffer(data, registry);
+  factory SetChatColorResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetChatColorResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetChatColorResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SetChatColorResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetChatColorResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetChatColorResponse copyWith(void Function(SetChatColorResponse) updates) =>
+      super.copyWith((message) => updates(message as SetChatColorResponse))
+          as SetChatColorResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetChatColorResponse() / SetChatColorResponse.new instead')
+  static SetChatColorResponse create() => SetChatColorResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetChatColorResponse._();
+  @$core.override
+  SetChatColorResponse createEmptyInstance() => SetChatColorResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetChatColorResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetChatColorResponse>(
+          SetChatColorResponse.$_createMessage);
+  static SetChatColorResponse? _defaultInstance;
 }
 
 class ArchiveChatRequest extends $pb.GeneratedMessage {
@@ -29157,6 +29286,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, PinChatsRequest request) =>
       _client.invoke<PinChatsResponse>(
           ctx, 'NushiService', 'PinChats', request, PinChatsResponse());
+
+  /// Sets the chat's color (Chat.color), or clears it with an empty one. A
+  /// name that isn't one of the eight is refused (InvalidArgument). A
+  /// changed chat comes as an event. (API 99)
+  $async.Future<SetChatColorResponse> setChatColor(
+          $pb.ClientContext? ctx, SetChatColorRequest request) =>
+      _client.invoke<SetChatColorResponse>(
+          ctx, 'NushiService', 'SetChatColor', request, SetChatColorResponse());
 
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a

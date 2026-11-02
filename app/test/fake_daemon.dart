@@ -6,6 +6,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -93,6 +94,7 @@ class FakeDaemon implements Transport {
     if (input is RemoveAgentRequest) removed.add(input.agent);
     if (input is SetSettingsRequest) setSettings.add(settings = input.settings);
     if (input is PinChatsRequest) _pin(input.chatIds);
+    if (input is SetChatColorRequest) _color(input.chatId, input.color);
     if (input is ForkAsChatRequest) _fork(input.chatId, 'fork');
     if (input is KeepSideChatRequest) _fork(chats.first.id, 'kept');
     if (input is StartChatRequest) {
@@ -157,6 +159,7 @@ class FakeDaemon implements Transport {
       folder: c.folder,
       createdUnixMs: c.createdUnixMs,
       status: ChatStatus(asleep: id == 'kept'),
+      color: c.color,
     );
     chats.add(fork);
     emit(EventsResponse(chatId: id, chat: fork));
@@ -173,6 +176,18 @@ class FakeDaemon implements Transport {
     for (final c in chats) {
       final pin = live.indexOf(c.id) + 1;
       if (c.pin != pin) emit(EventsResponse(chatId: c.id, chat: c..pin = pin));
+    }
+  }
+
+  /// Colors chat [id] as the daemon does: a name that isn't one of the
+  /// eight is refused; a changed color comes as an event.
+  void _color(String id, String color) {
+    if (color.isNotEmpty && ChatColor.named(color) == null) {
+      throw ConnectException(Code.invalidArgument, 'not a chat color');
+    }
+    final c = chats.firstWhere((c) => c.id == id);
+    if (c.color != color) {
+      emit(EventsResponse(chatId: id, chat: c..color = color));
     }
   }
 

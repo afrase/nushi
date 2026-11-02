@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show TextEditingController;
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
@@ -115,6 +116,15 @@ class ChatState extends ChangeNotifier {
   set pin(int v) {
     if (v == _pin) return;
     _pin = v;
+    notifyListeners();
+  }
+
+  /// Its color, if it has one the app knows. The daemon keeps it (API 99).
+  ChatColor? get color => _color;
+  ChatColor? _color;
+  set color(ChatColor? v) {
+    if (v == _color) return;
+    _color = v;
     notifyListeners();
   }
 

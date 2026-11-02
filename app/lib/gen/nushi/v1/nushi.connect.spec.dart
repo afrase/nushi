@@ -249,6 +249,16 @@ abstract final class NushiService {
     nushiv1nushi.PinChatsResponse.new,
   );
 
+  /// Sets the chat's color (Chat.color), or clears it with an empty one. A
+  /// name that isn't one of the eight is refused (InvalidArgument). A
+  /// changed chat comes as an event. (API 99)
+  static const setChatColor = connect.Spec(
+    '/$name/SetChatColor',
+    connect.StreamType.unary,
+    nushiv1nushi.SetChatColorRequest.new,
+    nushiv1nushi.SetChatColorResponse.new,
+  );
+
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a
   /// turn, for a name git doesn't take or that's taken, and when the branch

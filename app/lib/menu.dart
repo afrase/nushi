@@ -13,7 +13,9 @@ import 'package:nushi/theme/theme.dart';
 /// [submenu] it opens those rows beside it instead. Without either it
 /// shows unavailable. [tooltip] shows on hover. [action] is a small
 /// control at its right end (a pin), built knowing whether the row is
-/// under the pointer or focused.
+/// under the pointer or focused. [controls], for a row that isn't one choice
+/// (a chat's color): what it holds after its [label], given what closes the
+/// menu; each picks for itself, and the row itself does nothing.
 class MenuEntry {
   const new(
     this.label, {
@@ -27,6 +29,7 @@ class MenuEntry {
     this.line,
     this.danger = false,
     this.shortcut = '',
+    this.controls,
   }) : heading = false;
 
   /// A group's name over its rows.
@@ -41,6 +44,7 @@ class MenuEntry {
       line = null,
       danger = false,
       shortcut = '',
+      controls = null,
       heading = true;
 
   /// The line between groups of rows.
@@ -60,6 +64,7 @@ class MenuEntry {
   final LineIcon? line;
   final bool danger;
   final String shortcut;
+  final Widget Function(VoidCallback close)? controls;
 
   bool get _pickable => onPick != null && submenu == null;
 
@@ -204,6 +209,8 @@ List<Widget> _rows(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
           child: Text(e.label, style: theme.ui(t.textMuted, size: 12)),
         )
+      else if (e.controls case final controls?)
+        _controlsRow(context, e, controls(close), icons: icons)
       else
         _row(
           context,
@@ -218,6 +225,43 @@ List<Widget> _rows(
               : '',
         ),
   ];
+}
+
+/// A row of [e]'s [controls] after its label, as high as the others and
+/// lined up with them; a menu's width grows to take it.
+Widget _controlsRow(
+  BuildContext context,
+  MenuEntry e,
+  Widget controls, {
+  required bool icons,
+}) {
+  final theme = NushiTheme.of(context);
+  final t = theme.t;
+  return ConstrainedBox(
+    constraints: const BoxConstraints(minHeight: Menu._row),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Row(
+        children: [
+          if (icons)
+            SizedBox(
+              width: 16,
+              child: e.icon == null
+                  ? null
+                  : Icon(e.icon, size: 16, color: t.textSecondary),
+            ),
+          if (icons) const SizedBox(width: 8),
+          Text(
+            e.label,
+            style: theme.ui(t.text, size: 13.5, weight: FontWeight.w400),
+          ),
+          const SizedBox(width: 12),
+          const Spacer(),
+          controls,
+        ],
+      ),
+    ),
+  );
 }
 
 /// A row: [digit] shows its key on the right; [lit] marks it as the one

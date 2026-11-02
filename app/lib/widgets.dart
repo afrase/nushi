@@ -201,12 +201,17 @@ class Tap extends StatefulWidget {
     this.tooltip = '',
     this.cursor,
     this.tint = true,
+    this.fill,
   });
 
   final VoidCallback? onTap;
   final GestureTapUpCallback? onSecondaryTapUp;
   final Widget child;
   final bool selected;
+
+  /// What it's filled with, selected or not, in the place of the selected
+  /// color and of nothing: the pointer's tints go over it (a chat's color).
+  final Color? fill;
   final EdgeInsetsGeometry padding;
   final double radius;
   final String tooltip;
@@ -233,6 +238,7 @@ class _TapState extends State<Tap> {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final on = widget.onTap != null;
+    final rest = widget.fill ?? (widget.selected ? t.selected : null);
     final tap = MouseRegion(
       cursor:
           widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
@@ -254,14 +260,12 @@ class _TapState extends State<Tap> {
                 : null,
             decoration: BoxDecoration(
               color: _down && on
-                  ? (widget.selected
-                        ? Color.alphaBlend(t.pressed, t.selected)
-                        : t.pressed)
-                  : widget.selected
-                  ? t.selected
-                  : _hover && on && widget.tint
-                  ? t.hover
-                  : null,
+                  ? (rest == null
+                        ? t.pressed
+                        : Color.alphaBlend(t.pressed, rest))
+                  : !widget.selected && _hover && on && widget.tint
+                  ? (rest == null ? t.hover : Color.alphaBlend(t.hover, rest))
+                  : rest,
               borderRadius: BorderRadius.circular(widget.radius),
             ),
             child: widget.child,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -21,7 +22,8 @@ import 'package:nushi/worktree.dart';
 /// question, Fork, Send review comments, Stop, Rename, Sleep, Reload, Link
 /// pull request…, Archive or Unarchive, MCP servers…, Skills…, Delete…), each
 /// with its icon, in groups ([_group]) with a line between them; Delete in
-/// red.
+/// red. The chat's own group ends with its Color, which isn't an action of
+/// the palette or the menu bar: it's the row of swatches, not one choice.
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
@@ -32,6 +34,9 @@ List<MenuEntry> chatMenu(
     for (final a in chatActions(context, daemon, chat, onRename: onRename))
       if (a.enabled) a,
   ]..sort((a, b) => _group(a.act).compareTo(_group(b.act)));
+  final color = daemon.daemonApi >= chatColorApi
+      ? shown.lastIndexWhere((a) => _group(a.act) <= 1)
+      : -1;
   return [
     for (final (i, a) in shown.indexed) ...[
       if (i > 0 && _group(a.act) != _group(shown[i - 1].act)) MenuEntry.divider,
@@ -42,6 +47,20 @@ List<MenuEntry> chatMenu(
         icon: _icon(a.act),
         danger: a.act == Act.delete,
       ),
+      if (i == color)
+        MenuEntry(
+          'Color',
+          icon: Icons.palette_outlined,
+          controls: (close) => ChatColorPicker(
+            chat,
+            onPick: (color) {
+              close();
+              unawaited(
+                tryOrShow(context, () => setChatColor(daemon, chat, color)),
+              );
+            },
+          ),
+        ),
     ],
   ];
 }

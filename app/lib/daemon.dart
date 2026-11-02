@@ -11,6 +11,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/errors.dart';
@@ -49,13 +50,17 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 99;
+const apiVersion = 100;
 
 /// The API from which the daemon says what an agent has (Agent.go_agent and
 /// mcp_user_only, ListSkillsResponse.has_built_in and has_plugins), which
 /// the app went by the agent's name for. While an older daemon waits to
 /// restart (ADR 0056) it still does, or Ante would offer what it refuses.
 const agentFactsApi = 97;
+
+/// The API from which the daemon keeps a chat's color (Chat.color,
+/// SetChatColor).
+const chatColorApi = 99;
 
 /// The API from which the daemon keeps which chats are pinned, in order
 /// (Chat.pin, PinChats).
