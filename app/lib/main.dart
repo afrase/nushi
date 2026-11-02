@@ -302,35 +302,45 @@ class _Shell extends StatelessWidget {
               max: min(480, box.maxWidth - 560),
               child: Sidebar(daemon: daemon),
             ),
+            // Beside the sidebar, clear of the traffic lights. Always a
+            // column, the view its last child: a bar coming and going keeps
+            // the view's state.
             Expanded(
-              child: daemon.trustAsk != null
-                  ? TrustCard(daemon.trustAsk!)
-                  : switch (daemon.place) {
-                      JiraPlace() => JiraView(daemon),
-                      GitHubPlace() => GitHubView(daemon),
-                      SettingsPlace() => SettingsView(daemon),
-                      ChatPlace() when chat == null => NothingOpen(daemon),
-                      ChatPlace() => _ChatPane(
-                        key: ValueKey(chat!.id),
-                        chat,
-                        daemon,
-                      ),
-                    },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DaemonBanner(daemon),
+                  if (daemon.connected && daemon.updatesWhenIdle)
+                    DaemonUpdateBar(daemon),
+                  if (daemon.connected && daemon.removedChats.isNotEmpty)
+                    RemovedChatsBar(daemon),
+                  if (daemon.notice != null) NoticeBar(daemon),
+                  Expanded(
+                    child: daemon.trustAsk != null
+                        ? TrustCard(daemon.trustAsk!)
+                        : switch (daemon.place) {
+                            JiraPlace() => JiraView(daemon),
+                            GitHubPlace() => GitHubView(daemon),
+                            SettingsPlace() => SettingsView(daemon),
+                            ChatPlace() when chat == null => NothingOpen(
+                              daemon,
+                            ),
+                            ChatPlace() => _ChatPane(
+                              key: ValueKey(chat!.id),
+                              chat,
+                              daemon,
+                            ),
+                          },
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       );
-      // Always a column, the app its last child: the banner coming and
-      // going keeps the app's state.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DaemonBanner(daemon),
-          if (daemon.connected && daemon.updatesWhenIdle)
-            DaemonUpdateBar(daemon),
-          if (daemon.connected && daemon.removedChats.isNotEmpty)
-            RemovedChatsBar(daemon),
-          if (daemon.notice != null) NoticeBar(daemon),
           // A newer release's toast, in the bottom right corner.
           Expanded(
             child: Stack(

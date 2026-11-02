@@ -85,6 +85,8 @@ void main() {
     await tester.pump(DaemonBanner.grace); // shown once it's not a blip
     expect(find.text('Starting the new daemon…'), findsOneWidget);
     expect(find.text(_bar), findsNothing);
+    final banner = tester.getRect(find.byType(DaemonBanner));
+    expect(banner.left, greaterThanOrEqualTo(200)); // clear of the lights
     running = '7-2000';
     await tester.pump(const Duration(seconds: 2));
     await tester.pump();
@@ -110,7 +112,8 @@ void main() {
         final d = await _open(tester, fake, width: width);
         final bar = tester.getRect(find.byType(DaemonUpdateBar));
         final button = tester.getRect(find.text('Restart now'));
-        expect((bar.left, bar.width), (0, width));
+        expect(bar.right, width);
+        expect(bar.left, greaterThanOrEqualTo(200)); // clear of the lights
         expect(button.right, greaterThan(width - 40)); // at the trailing edge
         await expectLater(
           find.byType(DaemonUpdateBar),
