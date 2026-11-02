@@ -7,6 +7,7 @@ The owner: the bar with the traffic lights and the word Nushi is wasted space. m
 - The Mac window has no title bar: its content reaches the top, the traffic lights over an empty header at the top of the sidebar, as high as the chat's. Its hairline runs on into the chat's, Jira's, GitHub's and Settings' headers (`PaneHeader`), so the top of the window reads as one band.
 - The bars that come and go at the top (the daemon's banner, its update, removed chats, notices) sit beside the sidebar, not across the window, or the traffic lights would cover them.
 - The empty parts of those headers and of a pane's do what a title bar did, through `nushi/window`: a drag moves the window, a double click zooms it (`WindowDrag`). It sits under what's in a header, so a button there keeps its clicks.
+- Moving the window takes the mouse's release from Flutter, which would go on dragging. The window tells it of a release it missed: after a move, and whenever the pointer moves with no button held after a press it saw no release for.
 
 ## Consequences
 - The sidebar loses 16 points to its header. A chat gains 28; Jira, GitHub and Settings gain 18, their headers growing from 34 to 44.

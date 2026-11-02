@@ -36,7 +36,13 @@ class MainFlutterWindow: NSWindow {
       .setMethodCallHandler { [weak self] call, result in
         switch call.method {
         case "drag":
-          if let event = self?.currentEvent { self?.performDrag(with: event) }
+          // The channel is late: only a press still held moves the window,
+          // or it would follow a pointer already let go.
+          if let self, let event = self.currentEvent, event.type == .leftMouseDragged || event.type == .leftMouseDown,
+            NSEvent.pressedMouseButtons & 1 != 0 {
+            self.performDrag(with: event)
+            self.letGoInFlutter()
+          }
           result(nil)
         case "zoom":
           self?.performZoom(nil)
@@ -122,10 +128,37 @@ class MainFlutterWindow: NSWindow {
       return nil
     }
 
+    // A press whose release Flutter never gets leaves it dragging: what
+    // moves the window takes the release, and a web view's own tracking can.
+    // The pointer then moves with no button held, which is the sign.
+    pressMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .mouseMoved]) { [weak self] event in
+      guard let self, event.window === self else { return event }
+      switch event.type {
+      case .leftMouseDown: self.pressed = true
+      case .leftMouseUp: self.pressed = false
+      default:
+        if NSEvent.pressedMouseButtons & 1 == 0 { self.letGoInFlutter() }
+      }
+      return event
+    }
+
     super.awakeFromNib()
   }
 
   private var swipeMonitor: Any?
+  private var pressMonitor: Any?
+  private var pressed = false
+
+  /// Tells Flutter of a release it missed, if it did.
+  private func letGoInFlutter() {
+    guard pressed else { return }
+    pressed = false
+    let up = NSEvent.mouseEvent(
+      with: .leftMouseUp, location: mouseLocationOutsideOfEventStream, modifierFlags: [],
+      timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: windowNumber, context: nil,
+      eventNumber: 0, clickCount: 1, pressure: 0)
+    if let up { contentViewController?.mouseUp(with: up) }
+  }
 }
 
 /// The Mac's notifications (macOS shows them; nothing leaves the Mac) and
