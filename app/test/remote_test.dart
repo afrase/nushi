@@ -86,8 +86,8 @@ void main() {
   test("the pairing link: the relay's web app, the code in the fragment", () {
     expect(
       pairingLink(_qr),
-      'https://nushi.aaronfrase.com/#pair?'
-      'r=wss%3A%2F%2Fnushi.aaronfrase.com&i=id&k=key&s=secret',
+      'https://relay.example.com/#pair?'
+      'r=wss%3A%2F%2Frelay.example.com&i=id&k=key&s=secret',
     );
     expect(
       pairingLink('nushi://pair?r=ws%3A%2F%2F127.0.0.1%3A8099&i=a'),
@@ -108,7 +108,7 @@ void main() {
     );
     remoteState.value = Remote(
       on: true,
-      relay: 'wss://nushi.aaronfrase.com',
+      relay: 'wss://relay.example.com',
       pairing: Pairing(),
     );
     await tester.pumpWidget(
@@ -145,7 +145,7 @@ void main() {
       final daemon = _Daemon();
       remoteState.value = Remote(
         on: true,
-        relay: 'wss://nushi.aaronfrase.com',
+        relay: 'wss://relay.example.com',
         state: 'connected',
         key: List.filled(32, 9),
         devices: [
@@ -215,4 +215,4 @@ void main() {
 }
 
 const _qr =
-    'nushi://pair?r=wss%3A%2F%2Fnushi.aaronfrase.com&i=id&k=key&s=secret';
+    'nushi://pair?r=wss%3A%2F%2Frelay.example.com&i=id&k=key&s=secret';

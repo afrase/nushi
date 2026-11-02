@@ -53,7 +53,7 @@ final class PhonePlatform {
   void applyUpdate() => updated = true;
 
   /// The page's origin's host.
-  String host = 'nushi.aaronfrase.com';
+  String host = 'relay.example.com';
 
   /// What [reset] and [closeNotifications] were asked.
   bool wasReset = false;

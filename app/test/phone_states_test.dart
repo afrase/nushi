@@ -216,7 +216,7 @@ void main() {
           platform: PhonePlatform()
             ..iPhone = true
             ..installed = false
-            ..openedWith = 'https://nushi.aaronfrase.com/#pair?r=x',
+            ..openedWith = 'https://relay.example.com/#pair?r=x',
         );
         expect(find.text('Open Nushi from your Home Screen'), findsOneWidget);
         expect(find.text('Copy link'), findsOneWidget);

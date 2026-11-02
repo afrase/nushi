@@ -16,7 +16,7 @@ Each milestone's demo script (what to run, what to see), newest first. An archiv
 
 ## Demo (the phone on a real iPhone, steps 327–332)
 
-1. On the Mac: Settings › Remote access, relay `wss://nushi.aaronfrase.com`: Connected. Pair a phone: the QR code.
+1. On the Mac: Settings › Remote access, relay `wss://nushi.example.com`: Connected. Pair a phone: the QR code.
 2. On the iPhone, the Camera app at the code: it opens Safari, which says "Open Nushi from your Home Screen" with Copy link.
 3. In Nushi on the Home Screen: Scan QR code, allow the camera, point it at the code: the six-digit code; Allow on the Mac. The Chats list, with no back button.
 4. Open a long chat: a skeleton for a moment, then its latest part; scroll up: "N earlier items", and older messages come in without the screen jumping.
@@ -26,8 +26,8 @@ Each milestone's demo script (what to run, what to see), newest first. An archiv
 
 ## Demo (the phone as a web app, steps 319–326)
 
-1. On the Mac: Settings › Remote access on, relay `wss://nushi.taile2d635.ts.net`: Connected, and "This Mac's key: xxxx xxxx xxxx xxxx".
-2. On the iPhone, Safari: `https://nushi.taile2d635.ts.net/` says to add Nushi to the Home Screen first. Share › Add to Home Screen; open Nushi from there: Pair with a Mac.
+1. On the Mac: Settings › Remote access on, relay `wss://nushi.example.ts.net`: Connected, and "This Mac's key: xxxx xxxx xxxx xxxx".
+2. On the iPhone, Safari: `https://nushi.example.ts.net/` says to add Nushi to the Home Screen first. Share › Add to Home Screen; open Nushi from there: Pair with a Mac.
 3. On the Mac: Pair a phone › Copy link. On the iPhone: paste into Pairing link, Pair: a six-digit code; the Mac asks "Pair iPhone?" with the same code: Allow. The Chats list shows, grouped by folder, each with running, needs you, done or asleep.
 4. Settings on the phone: the relay, the Mac's key (the same as the Mac shows), Notifications: turn on, Allow. On the Mac the device says "Web · notifications on · connected"; Send a test notification: "Nushi test notification" on the phone.
 5. Start a chat on the phone (+, a folder, Claude), ask something that needs a permission; lock the phone: "Claude needs you"; tap it: the chat opens at its card; Allow by tapping. Leave it; when the turn ends, "Claude finished" (none while the chat is open on the phone).

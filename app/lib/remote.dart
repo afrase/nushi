@@ -86,7 +86,7 @@ class _RemoteSectionState extends State<RemoteSection> {
               style: theme.code(t.text),
               decoration: const InputDecoration(
                 // The owner's, as an example of what goes here.
-                hintText: 'For example wss://nushi.aaronfrase.com',
+                hintText: 'For example wss://relay.example.com',
                 isDense: true,
               ),
               onSubmitted: (_) => r.on ? _set(true) : null,

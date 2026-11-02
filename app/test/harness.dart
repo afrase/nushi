@@ -49,7 +49,7 @@ Future<void> endPhone(
 Map<String, Object?> pairedRecord() => {
   'key': Uint8List(32)..[0] = 7,
   'name': 'iPhone',
-  'relay': 'wss://nushi.aaronfrase.com',
+  'relay': 'wss://relay.example.com',
   'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
   'daemonKey': Uint8List(32)..[0] = 9,
 };
