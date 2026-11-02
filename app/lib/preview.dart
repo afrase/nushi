@@ -78,10 +78,21 @@ const _code = {
   'sql', 'css', 'scss', 'less', 'proto', 'lua', 'php', 'pl', 'r', 'ex', //
   'exs', 'erl', 'hs', 'ml', 'clj', 'el', 'vim', 'tf', 'hcl', 'graphql', //
   'vue', 'svelte', 'zig', 'nix', 'gradle', 'diff', 'patch', 'mk', //
+  'jsonnet', 'libsonnet', 'tfvars', 'jsonc', 'json5', 'ndjson', 'htm', //
+  'astro', 'mdx', 'pyi', 'pyx', 'bzl', 'jl', 'env', 'j2', 'jinja2', //
+  'just', 'rake', 'cts', 'mts', 'cljs', 'mli', 'wgsl', //
 };
 
 /// Files named without an extension that are code.
-const _codeNames = {'Makefile', 'Dockerfile', 'Justfile', 'Gemfile'};
+const _codeNames = {
+  'Makefile',
+  'Dockerfile',
+  'Containerfile',
+  'Justfile',
+  'Gemfile',
+  'Rakefile', //
+  'Brewfile', 'Vagrantfile', 'Tiltfile', 'BUILD', 'WORKSPACE',
+};
 
 /// How [path] previews, or null for a file the preview can't show (a
 /// binary, an unknown type).

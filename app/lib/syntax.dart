@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/diff_find.dart';
+import 'package:nushi/syntax_languages.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:re_highlight/languages/all.dart';
 import 'package:re_highlight/re_highlight.dart';
 
 /// highlight.js's scopes, as the common languages emit them, to the
@@ -133,15 +133,24 @@ const _maxText = 200000;
 /// ```console a little more, 200,000 1.5 s).
 const maxBlock = 20000;
 
-final _highlight = Highlight()..registerLanguages(builtinAllLanguages);
+final Highlight _highlight = _highlighter();
 
-/// A code block's language by name ("Ruby" for `rb`), if highlight.js
-/// knows it; else the tag as written.
-String languageName(String tag) =>
-    tag == 'mermaid' ? 'Mermaid' : _highlight.getLanguage(tag)?.name ?? tag;
+Highlight _highlighter() {
+  final h = Highlight()..registerLanguages(syntaxLanguages);
+  syntaxAliases.forEach((language, tags) => h.registerAliases(tags, language));
+  return h;
+}
+
+/// A code block's language by name ("Ruby" for `rb`), if there's a grammar
+/// of its own; else the tag as written.
+String languageName(String tag) => switch (tag) {
+  'mermaid' => 'Mermaid',
+  _ when syntaxAliases.values.any((a) => a.contains(tag.toLowerCase())) => tag,
+  _ => _highlight.getLanguage(tag)?.name ?? tag,
+};
 
 /// The language of [path] by its extension (or name: `Makefile`), if
-/// highlight.js knows it.
+/// there's one for it.
 String? languageOf(String path) {
   final name = path.split('/').last;
   final dot = name.lastIndexOf('.');
@@ -159,7 +168,7 @@ Future<List<List<Uint32List?>?>> highlightSides(
   String old,
   String neu,
 ) => Isolate.run(() {
-  final h = Highlight()..registerLanguages(builtinAllLanguages);
+  final h = _highlighter();
   return [
     for (final text in [old, neu]) _lines(h, language, text),
   ];

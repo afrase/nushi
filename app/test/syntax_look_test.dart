@@ -46,6 +46,48 @@ export class Ledger extends Base {
 ''';
 
 /// A Ruby diff and a TypeScript code block, in both themes.
+const _others = r'''
+```jsonnet
+// The service, one per region.
+local service(name, port=8080) = {
+  apiVersion: 'v1',
+  kind: 'Service',
+  metadata+: { name: name, labels:: { app: name } },
+  spec: { ports: [{ port: port }] },
+};
+
+{
+  regions:: ['eu', 'us'],
+  note: |||
+    Rendered by the deploy job.
+  |||,
+  services: [service(r + '-api') for r in self.regions],
+  count: std.length(self.services),
+}
+```
+
+```tf
+# Where the logs go.
+resource "aws_s3_bucket" "logs" {
+  bucket = "${var.name}-logs"
+  tags   = { team = "infra" }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+```
+
+```zig
+const std = @import("std");
+
+/// Adds one.
+pub fn inc(x: u32) u32 {
+    return x + 1;
+}
+```
+''';
+
 void main() {
   setUpAll(loadFonts);
   for (final (name, tokens) in [
@@ -92,6 +134,27 @@ void main() {
       await expectLater(
         find.byType(Scaffold),
         matchesGoldenFile('goldens/syntax_$name.png'),
+      );
+    });
+
+    testWidgets('jsonnet, HCL and Zig ($name)', (tester) async {
+      viewport(tester, const Size(720, 760));
+      await tester.pumpWidget(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: NushiTheme(tokens).toThemeData(),
+          home: const Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(12),
+              child: SingleChildScrollView(child: AgentMarkdown(_others)),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await expectLater(
+        find.byType(Scaffold),
+        matchesGoldenFile('goldens/syntax_others_$name.png'),
       );
     });
   }

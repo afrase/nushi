@@ -27,6 +27,40 @@ void main() {
     expect(languageOf('notes.unknownext'), isNull);
   });
 
+  test('formats highlight.js has no grammar for', () {
+    expect(languageOf('deploy/app.jsonnet'), 'jsonnet');
+    expect(languageOf('lib/k.libsonnet'), 'libsonnet');
+    expect(languageOf('main.tf'), 'tf');
+    expect(languageOf('build.zig'), 'zig');
+    expect(languageOf('.zshrc.zsh'), 'zsh');
+    expect(languageOf('Gemfile'), 'gemfile');
+    expect(languageName('jsonnet'), 'Jsonnet');
+    expect(languageName('tf'), 'HCL');
+    expect(languageName('zsh'), 'zsh'); // borrows bash's, isn't called it
+  });
+
+  test('a jsonnet file comes out by what its parts are', () async {
+    const text =
+        '// a comment\nlocal app(name) = {\n  name: name,\n  ports:: [8080],\n'
+        "  text: |||\n    block\n  |||,\n  on: std.length('x') > 0,\n}\n";
+    expect(await runs('jsonnet', text), [
+      '// a comment: comment',
+      'local: keyword',
+      'app: declaration',
+      'name: field',
+      'ports: field',
+      '8080: number',
+      'text: field',
+      '|||: string',
+      '    block: string',
+      '  |||: string',
+      'on: field',
+      'std: keyword',
+      "'x': string",
+      '0: number',
+    ]);
+  });
+
   test('a whole side is highlighted, then split by line', () async {
     const text = 'int a = 1;\n/* one\n   two */\nvar s = "x";\n';
     final [old, neu] = await highlightSides('dart', '', text);
