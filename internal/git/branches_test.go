@@ -108,3 +108,66 @@ func TestWorktreeListBranchesAndSwitch(t *testing.T) {
 		t.Errorf("a branch in another worktree: %v", err)
 	}
 }
+
+// Locate says the same repository for a checkout's folder and a linked
+// worktree's, by real path. A folder listed as a worktree that isn't one
+// answers for the repository around it, which its top gives away, and
+// a folder of another repository answers for that one.
+func TestLocate(t *testing.T) {
+	ctx := t.Context()
+	base := RealPath(t.TempDir())
+	repo := filepath.Join(base, "repo")
+	testcheck.Git(t, base, "init", "-q", "-b", "main", repo)
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "one")
+	wt := filepath.Join(base, "wt")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "side", wt)
+	var w Worktrees
+	common, top, err := w.Locate(ctx, repo)
+	testcheck.NoErr(t, err)
+	if want := filepath.Join(repo, ".git"); common != want || top != repo {
+		t.Errorf("the repository: %q, %q", common, top)
+	}
+	link := filepath.Join(base, "link")
+	testcheck.NoErr(t, os.Symlink(wt, link))
+	if c, top, err := w.Locate(ctx, link); err != nil || c != common || top != wt {
+		t.Errorf("the worktree through a link: %q, %q, %v", c, top, err)
+	}
+	sub := filepath.Join(repo, "sub")
+	testcheck.NoErr(t, os.Mkdir(sub, 0o700))
+	if c, top, err := w.Locate(ctx, sub); err != nil || c != common || top == sub {
+		t.Errorf("a plain folder in the repository: %q, %q, %v", c, top, err)
+	}
+	other := filepath.Join(base, "other")
+	testcheck.Git(t, base, "init", "-q", other)
+	if c, _, err := w.Locate(ctx, other); err != nil || c == common {
+		t.Errorf("another repository: %q, %v", c, err)
+	}
+	if _, _, err := w.Locate(ctx, base); !errors.Is(err, ErrNotRepository) {
+		t.Errorf("outside git: %v", err)
+	}
+}
+
+// MergeBase finds where a worktree left, and takes only object ids: a
+// worktree's HEAD is the agent's to write.
+func TestMergeBase(t *testing.T) {
+	ctx := t.Context()
+	repo := t.TempDir()
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "one")
+	base := testcheck.Git(t, repo, "rev-parse", "HEAD")
+	testcheck.Git(t, repo, "switch", "-q", "-c", "side")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "side")
+	side := testcheck.Git(t, repo, "rev-parse", "HEAD")
+	testcheck.Git(t, repo, "switch", "-q", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "two")
+	main := testcheck.Git(t, repo, "rev-parse", "HEAD")
+	var w Worktrees
+	if got, err := w.MergeBase(ctx, repo, side, main); err != nil || got != base {
+		t.Errorf("merge base: %q, %v", got, err)
+	}
+	for _, bad := range []string{"--all", "main", "", "HEAD"} {
+		if _, err := w.MergeBase(ctx, repo, bad, main); err == nil {
+			t.Errorf("%q was taken for a commit", bad)
+		}
+	}
+}

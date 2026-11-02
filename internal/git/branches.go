@@ -101,6 +101,44 @@ func (w Worktrees) Found(ctx context.Context, folder string) *model.Worktree {
 		BaseCommit: e.Head, Told: e.Branch, Found: true}
 }
 
+// Locate says where folder is in git: its repository's common folder and
+// the top of its work tree, both real paths. A folder whose .git is gone
+// answers for the repository around it, if any, so what git lists as a
+// worktree is only one when top is that folder.
+func (Worktrees) Locate(ctx context.Context, folder string) (common, top string, err error) {
+	out, err := run(ctx, folder, "rev-parse", "--path-format=absolute", "--git-common-dir", "--show-toplevel")
+	if err != nil {
+		return "", "", fmt.Errorf("%s is %w", folder, ErrNotRepository)
+	}
+	lines := strings.Split(strings.TrimSuffix(string(out), "\n"), "\n")
+	if len(lines) != 2 { // a path with a newline in it: not one to read on
+		return "", "", fmt.Errorf("%s: can't read where git says it is", folder)
+	}
+	return RealPath(lines[0]), RealPath(lines[1]), nil
+}
+
+// MergeBase is the commit where two commits of folder's repository
+// parted. Both must be object ids: they may come from a worktree's HEAD,
+// which an agent can write.
+func (Worktrees) MergeBase(ctx context.Context, folder, a, b string) (string, error) {
+	if !ObjectID(a) || !ObjectID(b) {
+		return "", fmt.Errorf("%q and %q aren't both commits", a, b)
+	}
+	out, err := run(ctx, folder, "merge-base", a, b)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// ObjectID says s is a whole object id, SHA-1's or SHA-256's.
+func ObjectID(s string) bool {
+	if len(s) != 40 && len(s) != 64 {
+		return false
+	}
+	return strings.IndexFunc(s, func(r rune) bool { return (r < '0' || r > '9') && (r < 'a' || r > 'f') }) < 0
+}
+
 // Branches lists folder's repository's local branches, the newest commit
 // first, limit at most, each with the worktree that has it checked out.
 func Branches(ctx context.Context, folder string, limit int) ([]model.Branch, error) {
