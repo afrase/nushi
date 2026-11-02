@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -94,6 +95,39 @@ func TestReloadLeavesAnUnchangedTranscript(t *testing.T) {
 	}
 	if got, want := shown(c), "user:one agent:m1 tool:t1 user:two agent:m2"; got != want {
 		t.Errorf("shown %s", got)
+	}
+}
+
+// A reload that only dates old messages updates them where they are: a
+// client's transcript never comes down.
+func TestReloadDatesMessagesInPlace(t *testing.T) {
+	svc, agent, c, w := watchedChat(t)
+	at := time.Date(2026, 10, 25, 1, 2, 3, 0, time.UTC)
+	c.mu.Lock()
+	c.kind.messageDater = messageTimes(func(string, string) map[string]time.Time {
+		return map[string]time.Time{"r1": at, "m1": at, "r2": at, "m2": at}
+	})
+	for i := range c.items {
+		c.items[i].Sent = time.Time{} // as from before Nushi kept times
+	}
+	testcheck.NoErr(t, c.copies.Replace(c.id, c.items))
+	c.mu.Unlock()
+	before := len(w.states)
+	agent.history = []acp.SessionUpdate{userChunk("r1", "one"), chunk("m1", "a"), toolCall("t1", "completed"),
+		userChunk("r2", "two"), chunk("m2", "b")}
+	testcheck.NoErr(t, svc.Reload(c.id))
+	eventually(t, c, func() bool { return !c.busy && c.agent != nil })
+	const all = "user:one agent:m1 tool:t1 user:two agent:m2"
+	states, cuts := w.since(before)
+	if cuts != 0 || !slices.Equal(states, []string{all, all, all, all}) {
+		t.Errorf("%d cuts, then %q", cuts, states)
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, it := range w.items {
+		if it.Kind != model.ToolCall && !it.Sent.Equal(at) {
+			t.Errorf("%s at %v, want %v", it.ID, it.Sent, at)
+		}
 	}
 }
 

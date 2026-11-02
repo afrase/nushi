@@ -138,19 +138,24 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 	c.logLocked().Info("transcript restored", "copy", len(copied), "replay", len(replayed), "shown", len(items), "compacted", compacted, "differs", differs)
 }
 
-// showLocked makes items the transcript: the items from the first that
-// differs on are cut, and sent again.
+// showLocked makes items the transcript. An item still in its place that
+// changed is sent where it is; only from the first item out of place are
+// they cut and sent again, or a client would take down what it shows and
+// put it back one item at a time to, say, add the time to an old message.
 func (c *chat) showLocked(items []model.Item) {
-	same := 0
-	for same < len(c.items) && same < len(items) && sameItem(c.items[same], items[same]) {
-		same++
+	kept := 0
+	for kept < len(c.items) && kept < len(items) && c.items[kept].ID == items[kept].ID {
+		kept++
 	}
-	if same < len(c.items) {
-		c.emitLocked(model.Event{ChatID: c.id, Cut: c.items[same].ID})
+	old := c.items
+	if kept < len(old) {
+		c.emitLocked(model.Event{ChatID: c.id, Cut: old[kept].ID})
 	}
 	c.items = items
-	for _, it := range items[same:] {
-		c.emitLocked(model.Event{ChatID: c.id, Item: &it})
+	for i, it := range items {
+		if i >= kept || !sameItem(old[i], it) {
+			c.emitLocked(model.Event{ChatID: c.id, Item: &it})
+		}
 	}
 }
 
