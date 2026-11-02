@@ -79,13 +79,17 @@ class _InlineEditState extends State<InlineEdit> {
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             _finish(save: false),
       },
-      child: TextField(
-        controller: _text,
-        focusNode: _focus,
-        style: widget.style ?? theme.ui(theme.t.text),
-        onSubmitted: (_) => _finish(save: true),
-        onTapOutside: (_) => _finish(save: true),
-        decoration: widget.decoration,
+      // A menu around it (a sidebar row's) takes the arrow keys for itself:
+      // these come first, so the caret moves.
+      child: DefaultTextEditingShortcuts(
+        child: TextField(
+          controller: _text,
+          focusNode: _focus,
+          style: widget.style ?? theme.ui(theme.t.text),
+          onSubmitted: (_) => _finish(save: true),
+          onTapOutside: (_) => _finish(save: true),
+          decoration: widget.decoration,
+        ),
       ),
     );
   }
