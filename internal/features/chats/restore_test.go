@@ -1,6 +1,9 @@
 package chats
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -310,5 +313,57 @@ func TestRecordOpensNothing(t *testing.T) {
 	c.mu.Unlock()
 	if sess, err := svc.Session("c1"); err != nil || sess.Title != "open" {
 		t.Errorf("an open chat's record: %+v, %v", sess, err)
+	}
+}
+
+// A chat opened from the agent's sessions is the one found by its id while
+// it replays: its title can list it by then, and a second chat would start
+// a second agent.
+func TestAnOpeningChatIsFoundWhileItReplays(t *testing.T) {
+	agent := &fakeAgent{loadGate: make(chan struct{})}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Scratch: t.TempDir()})
+	t.Cleanup(svc.Close)
+	opened := make(chan string, 1)
+	go func() {
+		id, err := svc.Open(context.Background(), "claude", t.TempDir(), "s9", "Old")
+		if err != nil {
+			t.Error(err)
+		}
+		opened <- id
+	}()
+	if !testcheck.Eventually(func() bool {
+		svc.mu.Lock()
+		defer svc.mu.Unlock()
+		return len(svc.chats) == 1
+	}) {
+		t.Error("not among the chats as it replays")
+	}
+	close(agent.loadGate)
+	id := <-opened
+	if c, err := svc.lookup(id); err != nil || c != svc.chats[id] {
+		t.Errorf("found %v, %v", c, err)
+	}
+}
+
+// A folder that's gone leaves nothing waiting for a replay: what the chat's
+// next agent says shows.
+func TestAGoneFolderLeavesNoReplayGoing(t *testing.T) {
+	agent := &fakeAgent{}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Scratch: t.TempDir()})
+	t.Cleanup(svc.Close)
+	dir := t.TempDir()
+	folder := filepath.Join(dir, "gone")
+	testcheck.NoErr(t, os.Mkdir(folder, 0o700))
+	id, err := svc.Start(t.Context(), "", folder, false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	testcheck.NoErr(t, os.Remove(folder))
+	if err := svc.load(t.Context(), c); err == nil {
+		t.Fatal("loaded a chat whose folder is gone")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.replaying {
+		t.Error("still waiting for a replay")
 	}
 }

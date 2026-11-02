@@ -212,7 +212,7 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	replay := !c.kept
 	if replay {
 		c.copyLocked(true)
-		c.replaying, c.replay = true, nil
+		c.replaying, c.replay = gone == nil, nil // no agent will replay into a gone folder
 	}
 	c.mu.Unlock()
 	if gone != nil {

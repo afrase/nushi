@@ -182,7 +182,8 @@ func initialize(ctx context.Context, k *kind, h acp.Client, log *slog.Logger) (A
 	return agent, init, nil
 }
 
-// useLocked makes an opened session the chat's, on a new agent.
+// useLocked makes an opened session the chat's, on a new agent, whose
+// record it has by now: what came ahead of the session's id goes in first.
 // What the agent sends from then on is live, not a replay (kept).
 func (s *Service) useLocked(c *chat, o opened) {
 	c.agent, c.canFork, c.steer, c.canImage, c.sid, c.config = o.agent, o.agent.CanFork(), o.agent.CanSteer(), o.images, o.sid, o.config
@@ -194,14 +195,10 @@ func (s *Service) useLocked(c *chat, o opened) {
 	go s.watch(c, o.agent)
 	early := c.early
 	c.opening, c.early = false, nil
-	if len(early) > 0 {
-		go func() { // after the caller's lock, with the chat's record set
-			for _, n := range early {
-				if string(n.SessionID) == o.sid {
-					c.update(n, nil)
-				}
-			}
-		}()
+	for _, n := range early {
+		if string(n.SessionID) == o.sid {
+			c.updateLocked(n, nil)
+		}
 	}
 }
 

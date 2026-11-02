@@ -16,9 +16,13 @@ import (
 // update turns the agent's updates into transcript items. from is the
 // subagent's session they came on, if they did (children.go): only its
 // steps are taken, as the steps of the subagent call it works for.
-func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocognit,gocyclo,maintidx // one case per ACP update kind
+func (c *chat) update(n *acp.SessionNotification, from *child) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.updateLocked(n, from)
+}
+
+func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:gocognit,gocyclo,maintidx // one case per ACP update kind
 	replayed := slices.Contains(replayKinds, n.Update.SessionUpdate)
 	if c.kept && replayed {
 		return // session/load's replay of a transcript the chat still has

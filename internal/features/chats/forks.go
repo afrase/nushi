@@ -61,20 +61,20 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 		return "", fmt.Errorf("couldn't fork the chat: %w", err)
 	}
 	c.mu.Lock()
-	s.useLocked(c, o)
 	c.record = forkRecord(c.id, o.sid, of)
+	s.useLocked(c, o)
 	c.forkedLocked(items)
 	c.mu.Unlock()
 	if err := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks); err != nil {
 		c.log().Warn("mode after forking", "err", err)
 	}
+	s.mu.Lock() // before it's stored: found by id, it must be this one
+	s.chats[c.id] = c
+	s.mu.Unlock()
 	c.mu.Lock()
 	c.saveLocked(c.modeLocked)
 	c.storeLocked()
 	c.mu.Unlock()
-	s.mu.Lock()
-	s.chats[c.id] = c
-	s.mu.Unlock()
 	c.log().Info("chat forked", "from", p.id, "at_message", at != "")
 	return c.id, nil
 }
@@ -226,6 +226,14 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	side.mu.Lock()
 	_ = side.cancelLocked() // a turn begun since it was looked at: it was kept as it was
 	items := append(slices.Clone(side.base), kept(side.items)...)
+	// Its first message came with no agent's before it, in the side chat;
+	// kept, rewinding to it forks after the conversation it follows, or
+	// a new session would forget that.
+	if i := slices.IndexFunc(items[len(side.base):], func(it model.Item) bool { return it.Kind == model.UserMessage }); i >= 0 {
+		first := &items[len(side.base)+i]
+		first.ForkAt = forkPoint(side.base)
+		first.Rewindable = first.ForkAt != ""
+	}
 	agent, sid, lastItem := side.agent, side.sid, side.lastItem
 	// What was picked in the side chat wins over the chat's picks.
 	mode, picks := cmp.Or(side.record.Mode, of.Mode), maps.Clone(of.Picks)

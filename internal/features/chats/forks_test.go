@@ -142,6 +142,9 @@ func TestKeepSideChat(t *testing.T) {
 	testcheck.NoErr(t, err)
 	want := "user:one agent:m1 user:aside? agent:a1 user:more"
 	k := svc.chats[id]
+	if first := k.items[2]; first.ForkAt != "m1" || !first.Rewindable {
+		t.Errorf("rewinding to the side chat's first message forks at %q, rewindable %v; want after the chat's last", first.ForkAt, first.Rewindable)
+	}
 	if got := describe(k.items); got != want || copied(t, store, id) != want {
 		t.Errorf("kept chat's items %q, copy %q; want %q", got, copied(t, store, id), want)
 	}

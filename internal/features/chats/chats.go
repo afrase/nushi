@@ -242,7 +242,7 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 		Record:   c.record,
 		Items:    slices.Clone(c.items),
 		Config:   slices.Clone(c.config),
-		Commands: s.commandsLocked(c),
+		Commands: c.commandsLocked(),
 		Usage:    c.usage,
 		Status:   c.statusLocked(),
 		Queue:    slices.Clone(c.queue),
@@ -253,9 +253,9 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 // commandsLocked is what a chat's agent can be asked: what it listed, or
 // until it has (a reopen can take a while, and its commands come last)
 // what its kind listed last, so a chat offers them from the start.
-func (s *Service) commandsLocked(c *chat) []model.Command {
+func (c *chat) commandsLocked() []model.Command {
 	if len(c.commands) == 0 {
-		return s.remembered.Commands(c.kind.Name)
+		return c.remembered.Commands(c.kind.Name)
 	}
 	return slices.Clone(c.commands)
 }
@@ -318,19 +318,19 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 		return "", err
 	}
 	c.mu.Lock()
-	s.useLocked(c, o)
 	c.record = model.ChatRecord{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
+	s.useLocked(c, o)
 	c.mu.Unlock()
 	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
 	}
+	s.mu.Lock() // before it's stored: found by id, it must be this one
+	s.chats[c.id] = c
+	s.mu.Unlock()
 	c.mu.Lock()
 	c.saveLocked(c.modeLocked)
 	c.storeLocked()
 	c.mu.Unlock()
-	s.mu.Lock()
-	s.chats[c.id] = c
-	s.mu.Unlock()
 	c.log().Info("chat created", "scratch", scratch, "worktree", wt != nil)
 	return c.id, nil
 }

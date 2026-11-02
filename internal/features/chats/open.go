@@ -73,12 +73,20 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.replaying = true
 	c.record = model.ChatRecord{ID: c.id, SessionID: sessionID, Agent: k.Name, Folder: folder, Title: listed, Created: time.Now(), HasMessages: true}
 	c.mu.Unlock()
+	// Its title can store it during the replay: found by id, it must be this
+	// one, not a second agent's.
+	s.mu.Lock()
+	s.chats[c.id] = c
+	s.mu.Unlock()
 	o, err := c.openSession(ctx, sessionID, folder, false, "")
 	c.mu.Lock()
 	replayed := c.replay
 	c.replaying, c.replay = false, nil
 	c.mu.Unlock()
 	if err != nil {
+		s.mu.Lock()
+		delete(s.chats, c.id)
+		s.mu.Unlock()
 		c.mu.Lock()
 		if c.seq > 0 { // its title came, and with it the app heard of it
 			c.emitLocked(model.Event{ChatID: c.id, Removed: true})
@@ -110,9 +118,6 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	c.saveLocked(c.modeLocked)
 	c.statusChangedLocked()
 	c.mu.Unlock()
-	s.mu.Lock()
-	s.chats[c.id] = c
-	s.mu.Unlock()
 	c.log().Info("chat opened from the agent's session")
 	return c.id, nil
 }

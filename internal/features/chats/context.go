@@ -90,7 +90,7 @@ func (c *chat) canAskContextLocked() error {
 	switch {
 	case c.kind.contextAsker != nil:
 		return nil
-	case cmd == nil || !slices.ContainsFunc(c.commands, func(m model.Command) bool { return m.Name == cmd.ContextCommand() }):
+	case cmd == nil || !slices.ContainsFunc(c.commandsLocked(), func(m model.Command) bool { return m.Name == cmd.ContextCommand() }):
 		return errors.New("the agent can't say what fills its context")
 	case !c.canFork || c.parent != nil:
 		return errors.New("the agent can't fork this chat to ask")

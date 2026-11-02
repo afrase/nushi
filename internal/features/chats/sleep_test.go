@@ -114,7 +114,7 @@ func TestAutoSleep(t *testing.T) {
 			c.items = append(c.items, model.Item{ID: "sa", Subagent: &model.Subagent{State: "running"}})
 			return func() { c.items = c.items[:len(c.items)-1] }
 		},
-		"a side chat": func(c *chat) func() { c.sides["x"] = &chat{}; return func() { delete(c.sides, "x") } },
+		"a side chat": func(c *chat) func() { c.sides["x"] = &chat{remembered: &memModes{}, }; return func() { delete(c.sides, "x") } },
 	}
 	for name, block := range blockers {
 		c.mu.Lock()

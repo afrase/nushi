@@ -16,8 +16,11 @@ import (
 // if the agent named it; "" if there is none, or if a user message comes
 // after it (one the agent answered without words: a fork there would drop
 // it).
-func (c *chat) forkPointLocked() string {
-	for _, it := range slices.Backward(c.items) {
+func (c *chat) forkPointLocked() string { return forkPoint(c.items) }
+
+// forkPoint is what forkPointLocked says of items.
+func forkPoint(items []model.Item) string {
+	for _, it := range slices.Backward(items) {
 		if it.Kind == model.UserMessage {
 			return ""
 		} else if it.Kind == model.AgentMessage && it.Parent == "" && it.Status != model.StoppedBySafeguards { // the agent keeps nothing of a stopped one
