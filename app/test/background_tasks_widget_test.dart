@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/background_tasks_widget.dart';
@@ -5,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -43,6 +45,27 @@ void main() {
     await show(tester, chat, d);
     await tester.tap(find.textContaining('Task a'));
     expect(chat.pane.value, 'a');
+    await closeView(tester, d);
+  });
+
+  testWidgets('a running task holds still as the pointer crosses it', (
+    tester,
+  ) async {
+    final d = Daemon(transport: FakeDaemon([]));
+    final chat = ChatState('c', '/x');
+    chat.items.add(_subagent('a', 'running')..agentId = 'agent-a');
+    await show(tester, chat, d);
+    Rect row() => tester.getRect(find.textContaining('Task a'));
+    final before = row();
+    final height = tester.getSize(find.byType(Tap).first).height;
+    final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await pointer.addPointer(location: Offset.zero);
+    await pointer.moveTo(before.center);
+    await tester.pump();
+    expect(find.byTooltip('Stop'), findsOneWidget);
+    expect(row(), before);
+    expect(tester.getSize(find.byType(Tap).first).height, height);
+    await pointer.removePointer();
     await closeView(tester, d);
   });
 

@@ -57,13 +57,25 @@ PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
 /// With nothing running, up to this many finished ones show without a click.
 const _shown = 5;
 
-/// A row's first line, [first], with a Stop at its end when [stop].
-Widget _line(Widget first, Widget? stop) => Row(
-  spacing: 6,
-  children: [
-    Expanded(child: first),
-    ?stop,
-  ],
+/// How much a Stop takes, kept while it isn't shown so a row holds still
+/// under the pointer.
+const _stopRoom = 22.0;
+
+/// A row's first line, [first], as high as a Stop, with room for one at its
+/// end while the task [runs], and the Stop in it when [stop].
+Widget _line(Widget first, {required bool runs, Widget? stop}) => SizedBox(
+  height: _stopRoom,
+  child: Row(
+    spacing: 6,
+    children: [
+      Expanded(child: first),
+      if (runs)
+        SizedBox.square(
+          dimension: _stopRoom,
+          child: Center(child: stop),
+        ),
+    ],
+  ),
 );
 
 /// A background command: the command, its state, and the last line it
@@ -95,7 +107,8 @@ class _CommandRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: theme.code(t.text, size: 11.5),
               ),
-              hover && commandRunning(it)
+              runs: commandRunning(it),
+              stop: hover
                   ? stopButton(context, daemon, chat, it.id, size: 12)
                   : null,
             ),
@@ -163,7 +176,8 @@ class _AgentRow extends StatelessWidget {
                   ),
                 ],
               ),
-              hover && subagentStoppable(s)
+              runs: subagentStoppable(s),
+              stop: hover
                   ? stopButton(context, daemon, chat, s.call.id, size: 12)
                   : null,
             ),
