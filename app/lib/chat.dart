@@ -10,6 +10,7 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/transcript_find.dart';
 
@@ -58,6 +59,9 @@ class ChatState extends ChangeNotifier {
     changeScopes.value = {...changeScopes.value, id: ?v};
     notifyListeners();
   }
+
+  /// The worktrees its subagents work in (ADR 0081).
+  late final related = RelatedWorktrees(id);
 
   /// A file its Changes view is to show next (a terminal link to it, a
   /// review's finding); the chat shows its Changes then.
@@ -440,6 +444,7 @@ class ChatState extends ChangeNotifier {
 
   void status(ChatStatus? s) {
     if (s == null) return;
+    if (busy && !s.busy) related.turnEnded();
     busy = s.busy;
     waiting = s.waiting;
     canFork = s.canFork;

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/commit_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/jira_people.dart' show plainName;
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -13,20 +14,24 @@ import 'package:nushi/widgets.dart';
 class ChangeRow {
   new folder(
     this.path,
-    this.name,
+    String name,
     this.depth,
     this.added,
     this.removed,
     this.files,
-  ) : file = null;
-  new file(FileChange this.file, this.name, this.depth)
+  ) : name = plainName(name),
+      file = null;
+  new file(FileChange this.file, String name, this.depth)
     : path = file.path,
+      name = plainName(name),
       added = file.added,
       removed = file.removed,
       files = [file];
 
   final String path;
-  final String name; // a file's name (its path when flat), or folders
+  // A file's name (its path when flat), or folders; plain text, as an agent
+  // chooses them.
+  final String name;
   final int depth;
   final FileChange? file;
   final int added;

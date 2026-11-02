@@ -10,6 +10,10 @@ extension DaemonOpen on Daemon {
       ..loading = true
       ..stale = () => _reload(chat);
     final load = ++chat.loads;
+    if (!remote && daemonApi >= relatedApi) {
+      chat.related.client = client;
+      unawaited(chat.related.read());
+    }
     try {
       // The phone takes the recent part first, older pages on scrolling
       // up: a long chat opens fast on a slow link.

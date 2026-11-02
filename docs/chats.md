@@ -87,6 +87,8 @@ A chat whose agent can rewind goes back to just before one of your messages. Rew
 
 **Changes**, beside Chat, is the chat's diff viewer: its folder's uncommitted changes, or its branch's for a worktree chat (Uncommitted, Branch and Commits pick which). In Uncommitted you can stage and commit; Branch and Commits only read, and Nushi doesn't push.
 
+When a chat's subagents work in worktrees of their own, a menu at the left of the bar picks the chat's folder or one of those **related worktrees**. One of them only reads: no staging, commit box or comments ([ADR 0081](adr/0081-related-worktrees.md)). Its diff is read when you pick it, click a scope or press Reload, because that runs the repository's filters: after a turn ends the view says **Changed** and waits for you. Once a worktree is removed its commits can still be read, while git keeps them. Nushi doesn't keep them for you: when git has collected them, the view says they're gone.
+
 - Each file and folder has a checkbox to stage it whole. A dash means part of it is staged, by a terminal or because it changed since: a click stages all of it.
 - Under the files, write a message and press Commit (⌘⏎). It commits what's staged, as `git commit` does: hooks and signing run, and what a failing hook says shows there.
 - The ✨ button asks the chat's agent to write the message from what's staged and why the chat did it, for Claude and Codex while the chat is idle. Nothing commits until you press Commit, and the chat shows no trace of it.
@@ -149,6 +151,7 @@ A chat in a git repository can run in a worktree of its own, `.worktrees/<two wo
 - **New worktree**, under the box of a chat without messages, starts one. The details panel's Worktree row does too, and also moves a chat to the repository's other worktrees. This is per chat: every new chat starts in the folder itself.
 - **The branch's name.** Once a turn ends with the chat titled, the branch is named after the chat (`nushi/bump-go-1-27-3`), unless it was pushed or renamed. A quiet line in the transcript says so. The folder keeps its name.
 - **Rename branch…** (the pencil beside the branch in the details panel) names it yourself, between turns.
+- **The Worktrees widget** lists the worktrees the chat's subagents work in: each branch, its subagent's mark, what it changed, its commits ahead, and "merged" or "removed". A click opens it in Changes. "Merged" means git shows its commits on the chat's branch or base; a squash merge leaves nothing for git to see, so it reads "removed". The same branch shows on the subagent's line and in Background tasks.
 - **The agent is told** with your next message, in a sentence of Nushi's before yours (`[Nushi] This worktree's branch was renamed from … to …. Use the new name.`), and the line then says "· told the agent". The agent's history keeps that sentence as part of your message, so a terminal resume shows it.
 
 ## Terminals

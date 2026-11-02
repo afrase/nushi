@@ -52,6 +52,9 @@ extension DaemonEvents on Daemon {
       _changed();
     } else if (e.hasTerminals()) {
       terminals.apply(e.chatId, e.terminals.terminals);
+    } else if (e.hasRelatedWorktrees()) {
+      // Unnumbered, so not for ChatState.apply, and only the Mac shows them.
+      if (!remote) chats[e.chatId]?.related.take(e.relatedWorktrees.worktrees);
     } else if (e.hasShow()) {
       // The phone offers Preview on the tool row; it opens nothing itself.
       if (!remote) chats[e.chatId]?.showAsked.value = e.show;

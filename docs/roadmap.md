@@ -29,6 +29,8 @@ What isn't built yet and the decisions still open, each checked against the code
 - **Review comments by an agent** (from JetBrains AIR): a side chat reviews the changes and posts comments through a small MCP tool (`add_comment(file, line, text)`); they show in Changes, and those picked go to the main chat.
 - **Findings, picked** (after a finding opened the chat's Changes at its line, 2026-10-26): tick a review's findings in its card and send them back to the agent ("fix these"), or show them as comments in Changes. Each finding already has a stable id (`findingIds`: its file, line and summary).
 - **More git from Changes**: push, and staging by hunk ([ADR 0079](adr/0079-stage-and-commit-from-changes.md) has whole files; diff_view has no per-hunk controls yet).
+- **Review comments on a related worktree** (the owner, 2026-11-02): off for now. They'd go to the orchestrator, since the subagent has usually exited (ADR 0081).
+- **A related worktree's pull request**: its row says "merged" only from git, so a squash merge reads "removed". A pull request could say otherwise, but finding one by branch is a GitHub call for each row, which the row's refresh shouldn't make.
 
 ### GitHub
 

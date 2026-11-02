@@ -60,7 +60,10 @@ const agentFactsApi = 97;
 
 /// The API from which the daemon keeps a chat's color (Chat.color,
 /// SetChatColor).
-const chatColorApi = 99;
+const chatColorApi = 100;
+
+/// The API from which a chat's related worktrees can be read (ADR 0081).
+const relatedApi = 101;
 
 /// The API from which the daemon keeps which chats are pinned, in order
 /// (Chat.pin, PinChats).

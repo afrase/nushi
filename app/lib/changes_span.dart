@@ -19,18 +19,37 @@ enum Scope {
   final String label;
 }
 
-/// A chat's changes as its folder stands: the [scope] shown, the [base]
-/// branch they are counted from (a worktree's own base, else the
-/// repository's default branch; '' if there's none), the folder's [status]
-/// (its branch, and its changes counted as the scope shows them), and in
-/// Commits the branch's [commits].
+/// A chat's changes as its folder stands: the [folder] read, the [scope]
+/// shown, the [base] branch they are counted from (a worktree's own base,
+/// else the repository's default branch; '' if there's none), the folder's
+/// [status] (its branch, and its changes counted as the scope shows them),
+/// and in Commits the branch's [commits].
 class ChangeSpan {
-  new(this.scope, this.base, this.status, [this.commits = const []]);
+  new(
+    this.folder,
+    this.scope,
+    this.base,
+    this.status, {
+    this.commits = const [],
+    this.worktree,
+    this.head = '',
+  });
 
+  final String folder;
   final Scope scope;
   final String base;
   final GetFolderStatusResponse status;
   final List<Commit> commits;
+
+  /// The related worktree this is of, by path: it only reads (ADR 0081).
+  final String? worktree;
+
+  /// The commit a removed worktree last had: it has no folder, so its
+  /// commits are read in the chat's by this. '' for a folder's HEAD.
+  final String head;
+
+  /// Whether it can only be read: no staging, commits or comments.
+  bool get readOnly => worktree != null;
 
   /// What's staged, as the last [files] read it; Uncommitted's only.
   String index = '';
@@ -42,10 +61,12 @@ class ChangeSpan {
       base == status.branch ||
       base.endsWith('/${status.branch}');
 
-  /// The scopes there are: Branch needs a base.
+  /// The scopes there are: Branch needs a base, Uncommitted a work tree.
   List<Scope> get scopes => [
     for (final s in Scope.values)
-      if (s != Scope.branch || base.isNotEmpty) s,
+      if ((s != Scope.branch || base.isNotEmpty) &&
+          (s != Scope.uncommitted || head.isEmpty))
+        s,
   ];
 
   /// Reads [chat]'s folder. The scope is the one picked for the chat, else
@@ -69,7 +90,7 @@ class ChangeSpan {
       );
     }
     final base = wtBase.isNotEmpty ? wtBase : status.defaultBase;
-    final scopes = ChangeSpan(Scope.uncommitted, base, status).scopes;
+    final scopes = ChangeSpan(folder, Scope.uncommitted, base, status).scopes;
     final picked = Scope.values.where((s) => s.name == chat.scope).firstOrNull;
     final scope = scopes.contains(picked)
         ? picked!
@@ -82,12 +103,58 @@ class ChangeSpan {
         GetFolderStatusRequest(folder: folder, base: countFrom),
       );
     }
-    final span = ChangeSpan(scope, base, status);
+    final span = ChangeSpan(folder, scope, base, status);
     if (scope != Scope.commits || !status.git) return span;
     final commits = await client.listCommits(
       ListCommitsRequest(folder: folder, base: span.onBase ? '' : base),
     );
-    return ChangeSpan(scope, base, status, commits.commits);
+    return ChangeSpan(folder, scope, base, status, commits: commits.commits);
+  }
+
+  /// Reads related worktree [w] of [chat], only ever for a click: what shows
+  /// next runs a GetDiff (ADR 0081). A removed one, or one whose folder went
+  /// since the daemon looked, reads its commits in the chat's folder. The
+  /// scope is [picked] (a Scope's name), else Branch, as a subagent's work
+  /// is what's being looked at.
+  static Future<ChangeSpan> ofRelated(
+    Daemon daemon,
+    ChatState chat,
+    RelatedWorktree w,
+    String? picked,
+  ) async {
+    final client = daemon.client;
+    var status = GetFolderStatusResponse(git: true, branch: w.branch);
+    var head = w.lastHead;
+    if (w.state == 'present') {
+      final there = await client.getFolderStatus(
+        GetFolderStatusRequest(folder: w.path, base: w.baseCommit),
+      );
+      if (there.git) (status, head) = (there, '');
+    }
+    final folder = head.isEmpty ? w.path : chat.folder;
+    final base = w.baseCommit;
+    ChangeSpan span(Scope scope, [List<Commit> commits = const []]) =>
+        ChangeSpan(
+          folder,
+          scope,
+          base,
+          status,
+          commits: commits,
+          worktree: w.path,
+          head: head,
+        );
+    final scopes = span(Scope.branch).scopes;
+    final asked = Scope.values.where((s) => s.name == picked).firstOrNull;
+    final scope = scopes.contains(asked)
+        ? asked!
+        : scopes.contains(Scope.branch)
+        ? Scope.branch
+        : scopes.first;
+    if (scope != Scope.commits) return span(scope);
+    final commits = await client.listCommits(
+      ListCommitsRequest(folder: folder, base: base, head: head),
+    );
+    return span(scope, commits.commits);
   }
 
   /// The files of the scope; in Commits, of the commits picked ([first]
@@ -95,7 +162,6 @@ class ChangeSpan {
   /// none is.
   Future<List<FileChange>> files(
     Daemon daemon,
-    String folder,
     String? first,
     String? last,
   ) async {
@@ -118,6 +184,12 @@ class ChangeSpan {
   GetDiffRequest diff(String folder, {String? commit, String? since}) =>
       switch (scope) {
         Scope.uncommitted => GetDiffRequest(folder: folder),
+        // Its commits alone: `since` would count its base's own change.
+        Scope.branch when head.isNotEmpty => GetDiffRequest(
+          folder: folder,
+          after: base,
+          commit: head,
+        ),
         Scope.branch => GetDiffRequest(folder: folder, base: base),
         Scope.commits => GetDiffRequest(
           folder: folder,
