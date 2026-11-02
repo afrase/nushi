@@ -32,10 +32,12 @@ type opened struct {
 func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool, at string) (opened, error) {
 	c.mu.Lock()
 	clear(c.children) // the last agent's: a replay announces them again
+	c.opening = true
 	c.mu.Unlock()
 	// The agent's lines name the sessions it opens (see internal/agentproc).
 	agent, init, err := initialize(ctx, c.kind, c, c.logger("", folder))
 	if err != nil {
+		c.notOpeningLocked()
 		return opened{}, c.kind.explain(err)
 	}
 	o := opened{agent: agent, sid: sid}
@@ -69,9 +71,17 @@ func (c *chat) openSession(ctx context.Context, sid, folder string, fork bool, a
 	}
 	if err != nil {
 		_ = agent.Close() // its start failed; that error is the one to return
+		c.notOpeningLocked()
 		return opened{}, c.kind.explain(err)
 	}
 	return o, nil
+}
+
+// notOpeningLocked gives up on the session being opened, and what it sent.
+func (c *chat) notOpeningLocked() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.opening, c.early = false, nil
 }
 
 // newSession has agent start a session in folder.
@@ -182,6 +192,17 @@ func (s *Service) useLocked(c *chat, o opened) {
 	c.unsendLocked(c.failure)                               // it runs: why it couldn't is stale
 	c.emitLocked(model.Event{ChatID: c.id, Config: slices.Clone(c.config)})
 	go s.watch(c, o.agent)
+	early := c.early
+	c.opening, c.early = false, nil
+	if len(early) > 0 {
+		go func() { // after the caller's lock, with the chat's record set
+			for _, n := range early {
+				if string(n.SessionID) == o.sid {
+					c.update(n, nil)
+				}
+			}
+		}()
+	}
 }
 
 // watch notices the agent's process ending on its own: the chat lets go of

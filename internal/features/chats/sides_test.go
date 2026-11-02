@@ -11,6 +11,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestSideChatKeepsToItself(t *testing.T) {
@@ -137,4 +138,63 @@ func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
 	close(agent.deleteGate) // the second goes through
 	c := svc.chats[id]
 	eventually(t, c, func() bool { return !slices.Contains(c.record.Throwaway, side) })
+}
+
+// A new session's commands can reach the chat before the answer that names
+// the session does: they're kept, and another session's aren't taken.
+func TestCommandsAheadOfANewSessionsAnswerAreKept(t *testing.T) {
+	list := func(name string) acp.SessionUpdate {
+		return acp.SessionUpdate{SessionUpdate: "available_commands_update",
+			AvailableCommandsUpdate: &acp.AvailableCommandsUpdate{AvailableCommands: []acp.AvailableCommand{{Name: name}}}}
+	}
+	agent := &fakeAgent{early: []acp.SessionUpdate{list("review")}}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}, Options{Scratch: t.TempDir()})
+	t.Cleanup(svc.Close)
+	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	eventually(t, c, func() bool { return len(c.commands) == 1 && c.commands[0].Name == "review" })
+	if err := c.SessionUpdate(t.Context(), &acp.SessionNotification{SessionID: "other", Update: list("other")}); err != nil {
+		t.Fatal(err)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.early) != 0 || c.commands[0].Name != "review" {
+		t.Errorf("early %d, commands %v", len(c.early), c.commands)
+	}
+}
+
+// After a restart a chat offers what its agent listed last, before an agent
+// runs to say; once one does, its own list is the chat's.
+func TestAReopeningChatOffersTheCommandsListedLast(t *testing.T) {
+	list := func(name string) acp.SessionUpdate {
+		return acp.SessionUpdate{SessionUpdate: "available_commands_update",
+			AvailableCommandsUpdate: &acp.AvailableCommandsUpdate{AvailableCommands: []acp.AvailableCommand{{Name: name}}}}
+	}
+	agent := &fakeAgent{}
+	remembered := &memModes{}
+	kinds := []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}
+	svc := newService(t, kinds, Options{Scratch: t.TempDir(), Remembered: remembered})
+	t.Cleanup(svc.Close)
+	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	testcheck.NoErr(t, c.SessionUpdate(t.Context(), &acp.SessionNotification{SessionID: "s1", Update: list("review")}))
+	c.mu.Lock()
+	sess := c.record
+	c.mu.Unlock()
+	svc.Close()
+
+	agent.loadGate = make(chan struct{})
+	agent.history = []acp.SessionUpdate{list("fresh")}
+	again := newService(t, kinds, Options{Scratch: t.TempDir(), Remembered: remembered, Sessions: &memSessions{stored: []model.ChatRecord{sess}}})
+	t.Cleanup(again.Close)
+	shown, err := again.Get(id)
+	testcheck.NoErr(t, err)
+	if len(shown.Commands) != 1 || shown.Commands[0].Name != "review" {
+		t.Errorf("while it reopens, commands %v", shown.Commands)
+	}
+	close(agent.loadGate)
+	back := reopened(t, again, id)
+	eventually(t, back, func() bool { return len(back.commands) == 1 && back.commands[0].Name == "fresh" })
 }

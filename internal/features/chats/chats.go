@@ -124,12 +124,14 @@ func (s *Service) UseTerminals(t Terminals) { s.terminals = t }
 type chat struct {
 	acp.UnimplementedClient // what the agent asks of a chat, beyond sides.go's
 
-	id       string // Nushi's id for the chat
-	sid      string // the agent's session id
-	kind     *kind  // the agent it runs, for good
-	agent    Agent
-	publish  func(model.Event)
-	sessions Sessions
+	id      string // Nushi's id for the chat
+	sid     string // the agent's session id
+	kind    *kind  // the agent it runs, for good
+	agent   Agent
+	publish func(model.Event)
+	// remembered is the service's, for the commands the agent listed.
+	remembered Remembered
+	sessions   Sessions
 	// worktrees are the service's, for naming the chat's branch (branch.go).
 	worktrees Worktrees
 	copies    Copies          // the service's
@@ -159,6 +161,8 @@ type chat struct {
 	questions    map[string]chan<- []model.Field // questions by item id, for the answer (nil: declined)
 	config       []model.ConfigOption
 	commands     []model.Command
+	opening      bool                       // a session is being opened; its id isn't known yet
+	early        []*acp.SessionNotification // what came before its id did (SessionUpdate)
 	usage        model.Usage
 	record       model.ChatRecord
 	ultracode    atomic.Bool           // record.Ultracode, read where mu isn't held
@@ -238,12 +242,22 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 		Record:   c.record,
 		Items:    slices.Clone(c.items),
 		Config:   slices.Clone(c.config),
-		Commands: slices.Clone(c.commands),
+		Commands: s.commandsLocked(c),
 		Usage:    c.usage,
 		Status:   c.statusLocked(),
 		Queue:    slices.Clone(c.queue),
 		Seq:      c.seq,
 	}, nil
+}
+
+// commandsLocked is what a chat's agent can be asked: what it listed, or
+// until it has (a reopen can take a while, and its commands come last)
+// what its kind listed last, so a chat offers them from the start.
+func (s *Service) commandsLocked(c *chat) []model.Command {
+	if len(c.commands) == 0 {
+		return s.remembered.Commands(c.kind.Name)
+	}
+	return slices.Clone(c.commands)
 }
 
 // Start opens a chat with agent ("" for the default) in folder, or in a new
@@ -331,7 +345,7 @@ func CheckFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
+	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 

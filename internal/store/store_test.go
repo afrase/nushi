@@ -138,3 +138,22 @@ func TestSettingsKept(t *testing.T) {
 		t.Error("kept a change it couldn't write")
 	}
 }
+
+func TestCommandsAreRememberedByAgent(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	want := []model.Command{{Name: "review", Description: "Review it", Hint: "PR"}}
+	if err := s.SetCommands("claude", want); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetMode("claude", "plan"); err != nil { // keeps the commands
+		t.Fatal(err)
+	}
+	s = New(dir)
+	if got := s.Commands("claude"); !reflect.DeepEqual(got, want) {
+		t.Errorf("claude's commands %v, want %v", got, want)
+	}
+	if got := s.Commands("codex"); got != nil {
+		t.Errorf("codex's commands %v", got)
+	}
+}

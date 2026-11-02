@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -28,6 +29,12 @@ func (c *chat) SessionUpdate(_ context.Context, n *acp.SessionNotification) erro
 	var from *child
 	if ch != nil {
 		from = &child{launch: ch.launch}
+	}
+	// A new session's first updates (its commands) can pass the answer
+	// that names it: they wait for useLocked. A replay's only go by ids
+	// the chat knows.
+	if to == nil && c.opening && !slices.Contains(replayKinds, n.Update.SessionUpdate) {
+		c.early = append(c.early, n)
 	}
 	c.mu.Unlock()
 	if to != nil {
@@ -151,6 +158,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 		return "", errors.New("the agent stopped")
 	}
 	p.sides[side.id] = side
+	side.commands = slices.Clone(p.commands) // the agent's, which it told only the chat
 	p.mu.Unlock()
 	s.mu.Lock()
 	s.chats[side.id] = side

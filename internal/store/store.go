@@ -40,6 +40,8 @@ func New(dir string) *Store { return &Store{dir: dir} }
 type agentPrefs struct {
 	Mode  string            `json:"mode,omitempty"`
 	Picks map[string]string `json:"picks,omitempty"` // the model, the effort, ... by option ID
+	// Commands is the slash commands the agent last listed.
+	Commands []model.Command `json:"commands,omitempty"`
 }
 
 // Mode returns the mode last picked for agent, or "" for the agent's default.
@@ -72,6 +74,19 @@ func (s *Store) SetPick(agent, id, value string) error {
 		}
 		p.Picks[id] = value
 	})
+}
+
+// Commands returns the slash commands agent last listed.
+func (s *Store) Commands(agent string) []model.Command {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prefs, _ := s.agents()
+	return prefs[agent].Commands
+}
+
+// SetCommands remembers commands as the ones agent listed last.
+func (s *Store) SetCommands(agent string, commands []model.Command) error {
+	return s.changeAgent(agent, func(p *agentPrefs) { p.Commands = commands })
 }
 
 func (s *Store) changeAgent(agent string, change func(*agentPrefs)) error {

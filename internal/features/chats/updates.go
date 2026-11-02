@@ -83,6 +83,11 @@ func (c *chat) update(n *acp.SessionNotification, from *child) { //nolint:gocogn
 		}
 		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
 		c.statusChangedLocked() // CanAskContext
+		if len(c.commands) > 0 && !slices.Equal(c.commands, c.remembered.Commands(c.kind.Name)) {
+			if err := c.remembered.SetCommands(c.kind.Name, c.commands); err != nil {
+				c.logLocked().Warn("commands not remembered", "err", err)
+			}
+		}
 	case "config_option_update":
 		c.replaceConfigLocked(u.ConfigOptionUpdate.ConfigOptions)
 		c.configChangedLocked()

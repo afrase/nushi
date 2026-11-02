@@ -3,6 +3,7 @@ package chats
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -137,6 +138,7 @@ type fakeAgent struct {
 	wire         []string // prompts and cancels, in the order they reach the agent
 	forkMeta     map[string]any
 	history      []acp.SessionUpdate       // what session/load replays
+	early        []acp.SessionUpdate       // what a new session sends ahead of its answer
 	replay       []acp.SessionNotification // and then, on their sessions (s1 is the one loaded)
 	subagents    []acp.SessionID           // its subagents' sessions: a cancel stops only the one
 	cur          *proc                     // the last process launched
@@ -223,7 +225,11 @@ func (f *fakeAgent) NewSession(ctx context.Context, req *acp.NewSessionRequest) 
 	}
 	f.mu.Lock()
 	f.mcp, f.newMeta = req.MCPServers, req.Meta
+	early := slices.Clone(f.early)
 	f.mu.Unlock()
+	for _, u := range early {
+		_ = f.h.SessionUpdate(ctx, &acp.SessionNotification{SessionID: "s1", Update: u})
+	}
 	resp := f.session
 	resp.SessionID = "s1"
 	return &resp, nil
@@ -472,6 +478,20 @@ func (m *memModes) Picks(agent string) map[string]string {
 }
 
 func (m *memModes) SetPick(agent, id, value string) error { return m.SetMode(agent+"/"+id, value) }
+
+func (m *memModes) Commands(agent string) []model.Command {
+	var out []model.Command
+	_ = json.Unmarshal([]byte((*m)[agent+"#commands"]), &out)
+	return out
+}
+
+func (m *memModes) SetCommands(agent string, commands []model.Command) error {
+	b, err := json.Marshal(commands)
+	if err != nil {
+		return err
+	}
+	return m.SetMode(agent+"#commands", string(b))
+}
 
 func (m *memModes) SetMode(agent, mode string) error {
 	if *m == nil {

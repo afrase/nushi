@@ -25,6 +25,8 @@ type Remembered interface {
 	SetMode(agent, mode string) error
 	Picks(agent string) map[string]string
 	SetPick(agent, id, value string) error
+	Commands(agent string) []model.Command
+	SetCommands(agent string, commands []model.Command) error
 }
 
 // configFrom turns the agent's config options and legacy modes into options.
