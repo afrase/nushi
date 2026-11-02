@@ -205,14 +205,15 @@ class Beside extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Beside, a pane leaves [main] its least width; over
-                      // it, a strip of it.
+                      // it, a strip of it. One with no cap can be dragged
+                      // on over it.
                       for (final p in panes)
                         resizable(
                           p,
                           room -
                               detailsWidth -
                               (panesWidth - p.width) -
-                              (over ? 48 : least),
+                              (over || p.cap.isInfinite ? 48 : least),
                         ),
                     ],
                   ),
