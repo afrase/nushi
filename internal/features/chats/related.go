@@ -206,6 +206,8 @@ func (c *chat) lookRelated(ctx context.Context) {
 		return
 	}
 	c.saveLocked(func(r *model.ChatRecord) { r.RelatedWorktrees = next })
+	list := slices.Clone(next)
+	c.publish(model.Event{ChatID: c.id, Related: &list})
 }
 
 // relatedLook is one look's view of git.

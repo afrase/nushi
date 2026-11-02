@@ -157,6 +157,9 @@ const (
 	// NushiServiceGetFolderStatusProcedure is the fully-qualified name of the NushiService's
 	// GetFolderStatus RPC.
 	NushiServiceGetFolderStatusProcedure = "/nushi.v1.NushiService/GetFolderStatus"
+	// NushiServiceGetRelatedWorktreesProcedure is the fully-qualified name of the NushiService's
+	// GetRelatedWorktrees RPC.
+	NushiServiceGetRelatedWorktreesProcedure = "/nushi.v1.NushiService/GetRelatedWorktrees"
 	// NushiServiceListBranchesProcedure is the fully-qualified name of the NushiService's ListBranches
 	// RPC.
 	NushiServiceListBranchesProcedure = "/nushi.v1.NushiService/ListBranches"
@@ -594,6 +597,12 @@ type NushiServiceClient interface {
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
+	// The worktrees the chat's subagents work in, in the order found, each
+	// looked at now: its head is recorded, and one that went stays as
+	// "removed". GetDiff and GetFolderStatus read one by its path, against
+	// its base_commit; once it's removed, GetDiff in the chat's folder with
+	// since and commit, while git keeps the commit. ADR 0081. API 99.
+	GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error)
 	// Lists a folder's repository's local branches, the newest commit first,
 	// and its worktrees, the main one first. (API 83)
 	ListBranches(context.Context, *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error)
@@ -1144,6 +1153,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetFolderStatusProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		getRelatedWorktrees: connect.NewClient[v1.GetRelatedWorktreesRequest, v1.GetRelatedWorktreesResponse](
+			httpClient,
+			baseURL+NushiServiceGetRelatedWorktreesProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetRelatedWorktrees")),
 			connect.WithClientOptions(opts...),
 		),
 		listBranches: connect.NewClient[v1.ListBranchesRequest, v1.ListBranchesResponse](
@@ -1722,6 +1737,7 @@ type nushiServiceClient struct {
 	findChatFiles          *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
 	listCommits            *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus        *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
+	getRelatedWorktrees    *connect.Client[v1.GetRelatedWorktreesRequest, v1.GetRelatedWorktreesResponse]
 	listBranches           *connect.Client[v1.ListBranchesRequest, v1.ListBranchesResponse]
 	listFiles              *connect.Client[v1.ListFilesRequest, v1.ListFilesResponse]
 	getContextUsage        *connect.Client[v1.GetContextUsageRequest, v1.GetContextUsageResponse]
@@ -2054,6 +2070,11 @@ func (c *nushiServiceClient) ListCommits(ctx context.Context, req *connect.Reque
 // GetFolderStatus calls nushi.v1.NushiService.GetFolderStatus.
 func (c *nushiServiceClient) GetFolderStatus(ctx context.Context, req *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return c.getFolderStatus.CallUnary(ctx, req)
+}
+
+// GetRelatedWorktrees calls nushi.v1.NushiService.GetRelatedWorktrees.
+func (c *nushiServiceClient) GetRelatedWorktrees(ctx context.Context, req *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error) {
+	return c.getRelatedWorktrees.CallUnary(ctx, req)
 }
 
 // ListBranches calls nushi.v1.NushiService.ListBranches.
@@ -2678,6 +2699,12 @@ type NushiServiceHandler interface {
 	// Sums up a folder's changes (as GetDiff lists them) and names its
 	// branch.
 	GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error)
+	// The worktrees the chat's subagents work in, in the order found, each
+	// looked at now: its head is recorded, and one that went stays as
+	// "removed". GetDiff and GetFolderStatus read one by its path, against
+	// its base_commit; once it's removed, GetDiff in the chat's folder with
+	// since and commit, while git keeps the commit. ADR 0081. API 99.
+	GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error)
 	// Lists a folder's repository's local branches, the newest commit first,
 	// and its worktrees, the main one first. (API 83)
 	ListBranches(context.Context, *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error)
@@ -3224,6 +3251,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetFolderStatusProcedure,
 		svc.GetFolderStatus,
 		connect.WithSchema(nushiServiceMethods.ByName("GetFolderStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetRelatedWorktreesHandler := connect.NewUnaryHandler(
+		NushiServiceGetRelatedWorktreesProcedure,
+		svc.GetRelatedWorktrees,
+		connect.WithSchema(nushiServiceMethods.ByName("GetRelatedWorktrees")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceListBranchesHandler := connect.NewUnaryHandler(
@@ -3848,6 +3881,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceListCommitsHandler.ServeHTTP(w, r)
 		case NushiServiceGetFolderStatusProcedure:
 			nushiServiceGetFolderStatusHandler.ServeHTTP(w, r)
+		case NushiServiceGetRelatedWorktreesProcedure:
+			nushiServiceGetRelatedWorktreesHandler.ServeHTTP(w, r)
 		case NushiServiceListBranchesProcedure:
 			nushiServiceListBranchesHandler.ServeHTTP(w, r)
 		case NushiServiceListFilesProcedure:
@@ -4225,6 +4260,10 @@ func (UnimplementedNushiServiceHandler) ListCommits(context.Context, *connect.Re
 
 func (UnimplementedNushiServiceHandler) GetFolderStatus(context.Context, *connect.Request[v1.GetFolderStatusRequest]) (*connect.Response[v1.GetFolderStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetFolderStatus is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetRelatedWorktrees(context.Context, *connect.Request[v1.GetRelatedWorktreesRequest]) (*connect.Response[v1.GetRelatedWorktreesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetRelatedWorktrees is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) ListBranches(context.Context, *connect.Request[v1.ListBranchesRequest]) (*connect.Response[v1.ListBranchesResponse], error) {

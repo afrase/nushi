@@ -471,6 +471,9 @@ type Event struct {
 	// Terminals, when not nil, are the chat's terminals, all of them. These
 	// events aren't numbered (Seq is 0).
 	Terminals *[]Terminal
+	// Related, when not nil, are the chat's related worktrees, all of them.
+	// These events aren't numbered (Seq is 0).
+	Related *[]RelatedWorktree
 	// Show is a file the chat's agent asked to show in the preview pane
 	// (its show tool, ADR 0068), as the agent named it. These events aren't
 	// numbered (Seq is 0).

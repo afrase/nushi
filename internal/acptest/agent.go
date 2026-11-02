@@ -13,6 +13,8 @@
 //   - containing "many": 150 messages, each after a tool call, quickly;
 //   - containing "pwd": "cwd: <the session's cwd>";
 //   - containing "wait": nothing, until the turn is cancelled (10 s at most);
+//   - containing "subagent": a subagent, as Claude's adapter shows one
+//     without its own session, that runs the prompt as a command and ends;
 //   - containing "tool": a command run with the prompt as its input and
 //     output;
 //   - containing "garbage": a line that isn't JSON-RPC and an update that
@@ -373,6 +375,15 @@ func (a *Agent) prompt(session string, blocks []string) string { //nolint:gocogn
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+	case strings.Contains(text, "subagent"):
+		claudeCode := func(fields map[string]any) map[string]any { return map[string]any{"claudeCode": fields} }
+		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "a1", "title": "Agent", "kind": "think", "status": "in_progress",
+			"rawInput": map[string]any{"subagent_type": "general-purpose", "prompt": text}, "_meta": claudeCode(map[string]any{"toolName": "Agent"})})
+		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "a1-step", "title": "Run", "kind": "execute", "status": "completed",
+			"rawInput": map[string]any{"command": text}, "_meta": claudeCode(map[string]any{"toolName": "Bash", "parentToolUseId": "a1"})})
+		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "a1", "status": "completed",
+			"_meta": claudeCode(map[string]any{"toolName": "Agent"})})
+		a.say(session, "The subagent is done.")
 	case strings.Contains(text, "tool"):
 		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t2", "title": "Run " + text, "kind": "execute",
 			"status": "in_progress", "rawInput": map[string]any{"command": text}})

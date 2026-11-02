@@ -978,6 +978,28 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// The worktrees the chat's subagents work in, in the order found, each
+  /// looked at now: its head is recorded, and one that went stays as
+  /// "removed". GetDiff and GetFolderStatus read one by its path, against
+  /// its base_commit; once it's removed, GetDiff in the chat's folder with
+  /// since and commit, while git keeps the commit. ADR 0081. API 99.
+  Future<nushiv1nushi.GetRelatedWorktreesResponse> getRelatedWorktrees(
+    nushiv1nushi.GetRelatedWorktreesRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getRelatedWorktrees,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists a folder's repository's local branches, the newest commit first,
   /// and its worktrees, the main one first. (API 83)
   Future<nushiv1nushi.ListBranchesResponse> listBranches(

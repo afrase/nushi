@@ -83,6 +83,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Update{Update: updateProto(*e.Update)}
 	case e.Terminals != nil:
 		out.Kind = &nushiv1.EventsResponse_Terminals{Terminals: &nushiv1.ChatTerminals{Terminals: terminalsProto(*e.Terminals)}}
+	case e.Related != nil:
+		out.Kind = &nushiv1.EventsResponse_RelatedWorktrees{RelatedWorktrees: &nushiv1.ChatRelatedWorktrees{Worktrees: relatedProto(*e.Related)}}
 	}
 	return out
 }

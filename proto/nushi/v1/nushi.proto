@@ -190,6 +190,12 @@ service NushiService {
   // Sums up a folder's changes (as GetDiff lists them) and names its
   // branch.
   rpc GetFolderStatus(GetFolderStatusRequest) returns (GetFolderStatusResponse);
+  // The worktrees the chat's subagents work in, in the order found, each
+  // looked at now: its head is recorded, and one that went stays as
+  // "removed". GetDiff and GetFolderStatus read one by its path, against
+  // its base_commit; once it's removed, GetDiff in the chat's folder with
+  // since and commit, while git keeps the commit. ADR 0081. API 99.
+  rpc GetRelatedWorktrees(GetRelatedWorktreesRequest) returns (GetRelatedWorktreesResponse);
   // Lists a folder's repository's local branches, the newest commit first,
   // and its worktrees, the main one first. (API 83)
   rpc ListBranches(ListBranchesRequest) returns (ListBranchesResponse);
@@ -1500,6 +1506,34 @@ message ContextCategory {
   string kind = 4;
 }
 
+message GetRelatedWorktreesRequest {
+  string chat_id = 1;
+}
+
+message GetRelatedWorktreesResponse {
+  repeated RelatedWorktree worktrees = 1;
+}
+
+message ChatRelatedWorktrees {
+  repeated RelatedWorktree worktrees = 1;
+}
+
+// A worktree of the chat's repository that one of its subagents works in.
+// Paths and branches are as git lists them, which an agent can write.
+message RelatedWorktree {
+  string path = 1;
+  string branch = 2;
+  // Where it left the chat's branch, as first seen; empty when they share
+  // no history.
+  string base_commit = 3;
+  // Its commit the last time the daemon looked.
+  string last_head = 4;
+  // The tool call that started the subagent (Item.id).
+  string call_id = 5;
+  // "present", or "removed" once git no longer lists it.
+  string state = 6;
+}
+
 message GetFolderStatusRequest {
   string folder = 1;
   // As GetDiffRequest.base.
@@ -1733,6 +1767,9 @@ message EventsResponse {
     // named it (its show tool, ADR 0068); these events have no seq, and
     // only the Mac's app acts on them (API 95).
     string show = 17;
+    // The chat's related worktrees, all of them, when they changed; these
+    // events have no seq (API 99).
+    ChatRelatedWorktrees related_worktrees = 18;
   }
 }
 

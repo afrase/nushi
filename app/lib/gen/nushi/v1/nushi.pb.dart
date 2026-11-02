@@ -10747,6 +10747,303 @@ class ContextCategory extends $pb.GeneratedMessage {
   void clearKind() => $_clearField(4);
 }
 
+class GetRelatedWorktreesRequest extends $pb.GeneratedMessage {
+  factory GetRelatedWorktreesRequest({
+    $core.String? chatId,
+  }) {
+    final result = GetRelatedWorktreesRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  GetRelatedWorktreesRequest._();
+
+  factory GetRelatedWorktreesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreesRequest()..mergeFromBuffer(data, registry);
+  factory GetRelatedWorktreesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetRelatedWorktreesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetRelatedWorktreesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreesRequest copyWith(
+          void Function(GetRelatedWorktreesRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetRelatedWorktreesRequest))
+          as GetRelatedWorktreesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetRelatedWorktreesRequest() / GetRelatedWorktreesRequest.new instead')
+  static GetRelatedWorktreesRequest create() => GetRelatedWorktreesRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetRelatedWorktreesRequest._();
+  @$core.override
+  GetRelatedWorktreesRequest createEmptyInstance() =>
+      GetRelatedWorktreesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetRelatedWorktreesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetRelatedWorktreesRequest>(
+          GetRelatedWorktreesRequest.$_createMessage);
+  static GetRelatedWorktreesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class GetRelatedWorktreesResponse extends $pb.GeneratedMessage {
+  factory GetRelatedWorktreesResponse({
+    $core.Iterable<RelatedWorktree>? worktrees,
+  }) {
+    final result = GetRelatedWorktreesResponse._();
+    if (worktrees != null) result.worktrees.addAll(worktrees);
+    return result;
+  }
+
+  GetRelatedWorktreesResponse._();
+
+  factory GetRelatedWorktreesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreesResponse()..mergeFromBuffer(data, registry);
+  factory GetRelatedWorktreesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetRelatedWorktreesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetRelatedWorktreesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetRelatedWorktreesResponse.$_createMessage)
+    ..pPM<RelatedWorktree>(1, _omitFieldNames ? '' : 'worktrees',
+        subBuilder: RelatedWorktree.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetRelatedWorktreesResponse copyWith(
+          void Function(GetRelatedWorktreesResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetRelatedWorktreesResponse))
+          as GetRelatedWorktreesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetRelatedWorktreesResponse() / GetRelatedWorktreesResponse.new instead')
+  static GetRelatedWorktreesResponse create() =>
+      GetRelatedWorktreesResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetRelatedWorktreesResponse._();
+  @$core.override
+  GetRelatedWorktreesResponse createEmptyInstance() =>
+      GetRelatedWorktreesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetRelatedWorktreesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetRelatedWorktreesResponse>(
+          GetRelatedWorktreesResponse.$_createMessage);
+  static GetRelatedWorktreesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<RelatedWorktree> get worktrees => $_getList(0);
+}
+
+class ChatRelatedWorktrees extends $pb.GeneratedMessage {
+  factory ChatRelatedWorktrees({
+    $core.Iterable<RelatedWorktree>? worktrees,
+  }) {
+    final result = ChatRelatedWorktrees._();
+    if (worktrees != null) result.worktrees.addAll(worktrees);
+    return result;
+  }
+
+  ChatRelatedWorktrees._();
+
+  factory ChatRelatedWorktrees.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatRelatedWorktrees()..mergeFromBuffer(data, registry);
+  factory ChatRelatedWorktrees.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChatRelatedWorktrees()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChatRelatedWorktrees',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ChatRelatedWorktrees.$_createMessage)
+    ..pPM<RelatedWorktree>(1, _omitFieldNames ? '' : 'worktrees',
+        subBuilder: RelatedWorktree.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatRelatedWorktrees clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChatRelatedWorktrees copyWith(void Function(ChatRelatedWorktrees) updates) =>
+      super.copyWith((message) => updates(message as ChatRelatedWorktrees))
+          as ChatRelatedWorktrees;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ChatRelatedWorktrees() / ChatRelatedWorktrees.new instead')
+  static ChatRelatedWorktrees create() => ChatRelatedWorktrees._();
+  static $pb.GeneratedMessage $_createMessage() => ChatRelatedWorktrees._();
+  @$core.override
+  ChatRelatedWorktrees createEmptyInstance() => ChatRelatedWorktrees._();
+  @$core.pragma('dart2js:noInline')
+  static ChatRelatedWorktrees getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ChatRelatedWorktrees>(
+          ChatRelatedWorktrees.$_createMessage);
+  static ChatRelatedWorktrees? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<RelatedWorktree> get worktrees => $_getList(0);
+}
+
+/// A worktree of the chat's repository that one of its subagents works in.
+/// Paths and branches are as git lists them, which an agent can write.
+class RelatedWorktree extends $pb.GeneratedMessage {
+  factory RelatedWorktree({
+    $core.String? path,
+    $core.String? branch,
+    $core.String? baseCommit,
+    $core.String? lastHead,
+    $core.String? callId,
+    $core.String? state,
+  }) {
+    final result = RelatedWorktree._();
+    if (path != null) result.path = path;
+    if (branch != null) result.branch = branch;
+    if (baseCommit != null) result.baseCommit = baseCommit;
+    if (lastHead != null) result.lastHead = lastHead;
+    if (callId != null) result.callId = callId;
+    if (state != null) result.state = state;
+    return result;
+  }
+
+  RelatedWorktree._();
+
+  factory RelatedWorktree.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RelatedWorktree()..mergeFromBuffer(data, registry);
+  factory RelatedWorktree.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RelatedWorktree()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RelatedWorktree',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: RelatedWorktree.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOS(2, _omitFieldNames ? '' : 'branch')
+    ..aOS(3, _omitFieldNames ? '' : 'baseCommit')
+    ..aOS(4, _omitFieldNames ? '' : 'lastHead')
+    ..aOS(5, _omitFieldNames ? '' : 'callId')
+    ..aOS(6, _omitFieldNames ? '' : 'state')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RelatedWorktree clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RelatedWorktree copyWith(void Function(RelatedWorktree) updates) =>
+      super.copyWith((message) => updates(message as RelatedWorktree))
+          as RelatedWorktree;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use RelatedWorktree() / RelatedWorktree.new instead')
+  static RelatedWorktree create() => RelatedWorktree._();
+  static $pb.GeneratedMessage $_createMessage() => RelatedWorktree._();
+  @$core.override
+  RelatedWorktree createEmptyInstance() => RelatedWorktree._();
+  @$core.pragma('dart2js:noInline')
+  static RelatedWorktree getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<RelatedWorktree>(
+          RelatedWorktree.$_createMessage);
+  static RelatedWorktree? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get branch => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set branch($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBranch() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBranch() => $_clearField(2);
+
+  /// Where it left the chat's branch, as first seen; empty when they share
+  /// no history.
+  @$pb.TagNumber(3)
+  $core.String get baseCommit => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set baseCommit($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBaseCommit() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBaseCommit() => $_clearField(3);
+
+  /// Its commit the last time the daemon looked.
+  @$pb.TagNumber(4)
+  $core.String get lastHead => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set lastHead($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLastHead() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLastHead() => $_clearField(4);
+
+  /// The tool call that started the subagent (Item.id).
+  @$pb.TagNumber(5)
+  $core.String get callId => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set callId($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCallId() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCallId() => $_clearField(5);
+
+  /// "present", or "removed" once git no longer lists it.
+  @$pb.TagNumber(6)
+  $core.String get state => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set state($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasState() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearState() => $_clearField(6);
+}
+
 class GetFolderStatusRequest extends $pb.GeneratedMessage {
   factory GetFolderStatusRequest({
     $core.String? folder,
@@ -12723,6 +13020,7 @@ enum EventsResponse_Kind {
   removedChats,
   update,
   show,
+  relatedWorktrees,
   notSet
 }
 
@@ -12745,6 +13043,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     RemovedChats? removedChats,
     UpdateCheck? update,
     $core.String? show,
+    ChatRelatedWorktrees? relatedWorktrees,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -12764,6 +13063,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (removedChats != null) result.removedChats = removedChats;
     if (update != null) result.update = update;
     if (show != null) result.show = show;
+    if (relatedWorktrees != null) result.relatedWorktrees = relatedWorktrees;
     return result;
   }
 
@@ -12793,13 +13093,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     15: EventsResponse_Kind.removedChats,
     16: EventsResponse_Kind.update,
     17: EventsResponse_Kind.show,
+    18: EventsResponse_Kind.relatedWorktrees,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -12828,6 +13129,8 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOM<UpdateCheck>(16, _omitFieldNames ? '' : 'update',
         subBuilder: UpdateCheck.$_createMessage)
     ..aOS(17, _omitFieldNames ? '' : 'show')
+    ..aOM<ChatRelatedWorktrees>(18, _omitFieldNames ? '' : 'relatedWorktrees',
+        subBuilder: ChatRelatedWorktrees.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -12867,6 +13170,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(15)
   @$pb.TagNumber(16)
   @$pb.TagNumber(17)
+  @$pb.TagNumber(18)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -12884,6 +13188,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(15)
   @$pb.TagNumber(16)
   @$pb.TagNumber(17)
+  @$pb.TagNumber(18)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -13079,6 +13384,19 @@ class EventsResponse extends $pb.GeneratedMessage {
   $core.bool hasShow() => $_has(16);
   @$pb.TagNumber(17)
   void clearShow() => $_clearField(17);
+
+  /// The chat's related worktrees, all of them, when they changed; these
+  /// events have no seq (API 99).
+  @$pb.TagNumber(18)
+  ChatRelatedWorktrees get relatedWorktrees => $_getN(17);
+  @$pb.TagNumber(18)
+  set relatedWorktrees(ChatRelatedWorktrees value) => $_setField(18, value);
+  @$pb.TagNumber(18)
+  $core.bool hasRelatedWorktrees() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearRelatedWorktrees() => $_clearField(18);
+  @$pb.TagNumber(18)
+  ChatRelatedWorktrees ensureRelatedWorktrees() => $_ensure(17);
 }
 
 /// A chat's config options, all of them.
@@ -29028,6 +29346,16 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetFolderStatusRequest request) =>
       _client.invoke<GetFolderStatusResponse>(ctx, 'NushiService',
           'GetFolderStatus', request, GetFolderStatusResponse());
+
+  /// The worktrees the chat's subagents work in, in the order found, each
+  /// looked at now: its head is recorded, and one that went stays as
+  /// "removed". GetDiff and GetFolderStatus read one by its path, against
+  /// its base_commit; once it's removed, GetDiff in the chat's folder with
+  /// since and commit, while git keeps the commit. ADR 0081. API 99.
+  $async.Future<GetRelatedWorktreesResponse> getRelatedWorktrees(
+          $pb.ClientContext? ctx, GetRelatedWorktreesRequest request) =>
+      _client.invoke<GetRelatedWorktreesResponse>(ctx, 'NushiService',
+          'GetRelatedWorktrees', request, GetRelatedWorktreesResponse());
 
   /// Lists a folder's repository's local branches, the newest commit first,
   /// and its worktrees, the main one first. (API 83)

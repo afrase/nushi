@@ -115,6 +115,23 @@ func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
 		OldPath: c.OldPath, Added: int32(c.Added), Removed: int32(c.Removed), Staged: c.Staged}
 }
 
+func (s *server) GetRelatedWorktrees(ctx context.Context, req *connect.Request[nushiv1.GetRelatedWorktreesRequest]) (*connect.Response[nushiv1.GetRelatedWorktreesResponse], error) {
+	list, err := s.chats.RelatedWorktrees(ctx, req.Msg.ChatId)
+	if err != nil {
+		return nil, refused(err)
+	}
+	return connect.NewResponse(&nushiv1.GetRelatedWorktreesResponse{Worktrees: relatedProto(list)}), nil
+}
+
+func relatedProto(list []model.RelatedWorktree) []*nushiv1.RelatedWorktree {
+	out := make([]*nushiv1.RelatedWorktree, 0, len(list))
+	for _, r := range list {
+		out = append(out, &nushiv1.RelatedWorktree{Path: r.Path, Branch: r.Branch, BaseCommit: r.BaseCommit,
+			LastHead: r.LastHead, CallId: r.CallID, State: string(r.State)})
+	}
+	return out
+}
+
 func (s *server) GetFolderStatus(ctx context.Context, req *connect.Request[nushiv1.GetFolderStatusRequest]) (*connect.Response[nushiv1.GetFolderStatusResponse], error) {
 	if err := absolute(req.Msg.Folder); err != nil {
 		return nil, err
