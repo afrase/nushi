@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
@@ -9,6 +10,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_calls.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 
 /// A tool call that started a subagent, and what the subagent did.
@@ -239,6 +242,16 @@ Widget subagentShine(SubagentRun s, Widget child, {bool still = false}) =>
       child: Shine(on: subagentRunning(s) && !still, child: child),
     );
 
+/// What a subagent's pane shows that its row doesn't, for a find.
+String subagentFolded(SubagentRun s) => [
+  for (final it in s.items)
+    if (it.kind == ItemKind.ITEM_KIND_TOOL_CALL) ...[
+      callTitle(it),
+      callFolded(it),
+    ] else
+      it.text,
+].join('\n');
+
 /// A subagent in the transcript, on one line: its type and task ("Explore:
 /// find the scroll handling") and its state, live. A click opens its pane;
 /// under the pointer, a running one's mark becomes its Stop.
@@ -268,57 +281,67 @@ class SubagentLine extends StatelessWidget {
               ? t.focus
               : t.subagentBorder,
           fill: failed ? t.crashedSoft : t.subagentTint,
-          child: Tap(
-            onTap: () => chat.pane.value = s.call.id,
-            tooltip: 'Open its steps',
-            radius: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: SizedBox(
-              height: 28,
-              // Its tag comes and goes with the chat's related worktrees,
-              // and a line stays built (ADR 0026).
-              child: LayoutBuilder(
-                builder: (context, box) => ListenableBuilder(
-                  listenable: chat.related,
-                  builder: (context, _) => Row(
-                    spacing: 6,
-                    children: [
-                      Icon(
-                        Icons.smart_toy_outlined,
-                        size: 14,
-                        color: failed ? t.crashed : t.subagentAccent,
-                      ),
-                      Expanded(
-                        child: subagentShine(
-                          s,
-                          subagentName(context, s),
-                          still: still,
+          child: FoldedMarks(
+            text: subagentFolded(s),
+            builder: (context, found) => Tap(
+              onTap: () => chat.pane.value = s.call.id,
+              tooltip: 'Open its steps',
+              radius: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: SizedBox(
+                height: 28,
+                // Its tag comes and goes with the chat's related worktrees,
+                // and a line stays built (ADR 0026).
+                child: LayoutBuilder(
+                  builder: (context, box) => ListenableBuilder(
+                    listenable: chat.related,
+                    builder: (context, _) => Row(
+                      spacing: 6,
+                      children: [
+                        Icon(
+                          Icons.smart_toy_outlined,
+                          size: 14,
+                          color: failed ? t.crashed : t.subagentAccent,
                         ),
-                      ),
-                      if (chat.related.tagFor(s.call.id) case final tag
-                          when tag.isNotEmpty)
-                        // A cap, not Flexible, which would
-                        // take half the free width.
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: (box.maxWidth * 0.25).clamp(72, 160),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: subagentShine(
+                                  s,
+                                  subagentName(context, s),
+                                  still: still,
+                                ),
+                              ),
+                              FoundCount(found),
+                            ],
                           ),
-                          child: WorktreeTag(tag),
                         ),
-                      // The name takes the room; the state ends the line.
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 240),
-                        child: SubagentState(
-                          s,
-                          style: theme.ui(t.textMuted, size: 12),
+                        if (chat.related.tagFor(s.call.id) case final tag
+                            when tag.isNotEmpty)
+                          // A cap, not Flexible, which would
+                          // take half the free width.
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: (box.maxWidth * 0.25).clamp(72, 160),
+                            ),
+                            child: WorktreeTag(tag),
+                          ),
+                        // The name takes the room; the state ends the line.
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 240),
+                          child: SubagentState(
+                            s,
+                            style: theme.ui(t.textMuted, size: 12),
+                          ),
                         ),
-                      ),
-                      if (hover && daemon != null && subagentStoppable(s))
-                        stopButton(context, daemon, chat, s.call.id, size: 13)
-                      else
-                        subagentMark(s),
-                      Icon(Icons.chevron_right, size: 14, color: t.textMuted),
-                    ],
+                        if (hover && daemon != null && subagentStoppable(s))
+                          stopButton(context, daemon, chat, s.call.id, size: 13)
+                        else
+                          subagentMark(s),
+                        Icon(Icons.chevron_right, size: 14, color: t.textMuted),
+                      ],
+                    ),
                   ),
                 ),
               ),

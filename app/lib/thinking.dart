@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
@@ -6,6 +7,7 @@ import 'package:nushi/paced.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thought_line.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 
 /// The agent's thinking: a dim "Thinking…" line that opens to the
@@ -112,19 +114,28 @@ class _FoldedState extends State<Folded> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Tap(
-          onTap: () => setState(() => _open = !_open),
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              Chevron(open: _open),
-              Shine(
-                on: widget.live,
-                child: Text(widget.label, style: style),
-              ),
-            ],
+        FoldedMarks(
+          text: _open ? '' : widget.text,
+          builder: (context, found) => Tap(
+            onTap: () => setState(() => _open = !_open),
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                Chevron(open: _open),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Shine(
+                      on: widget.live,
+                      child: Text(widget.label, style: style),
+                    ),
+                    FoundCount(found),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
         if (!_open && widget.line != null)

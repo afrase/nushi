@@ -121,6 +121,45 @@ final _counted = Expando<(int, int)>();
   );
 }
 
+final _foldedTexts = Expando<String>();
+
+/// The words of a call's row: its verb and file, or its title.
+String callTitle(Item it) {
+  final (verb, path) = (_verbOf(it), _named(it));
+  return isCommand(it)
+      ? '\$ ${it.title}'
+      : _pathed(it, verb, path)
+      ? '$verb $path'
+      : toolTitle(it);
+}
+
+/// What opening a call shows beyond its row, for a find: a chunk makes a
+/// new item, so what's kept is never stale. Not its diffs, which a find
+/// doesn't look in.
+String callFolded(Item it) => _foldedTexts[it] ??= [
+  if (it.text.trim().isNotEmpty) it.text,
+  if (showsInput(it)) it.input,
+  if (showsRawOutput(it)) it.rawOutput,
+].join('\n');
+
+/// What a run of calls shows, all folded away while it's closed.
+String runFolded(List<Item> calls) => [
+  for (final c in calls) ...[callTitle(c), callFolded(c)],
+].join('\n');
+
+/// The verb before a call's file in its row, if it has one.
+String? _verbOf(Item it) => !isShow(it)
+    ? kindOf(it).verb
+    : it.status == 'failed'
+    ? 'Show'
+    : _running(it)
+    ? kindOf(it).doing
+    : kindOf(it).verb;
+
+/// Whether a call's row reads as [verb] and [path].
+bool _pathed(Item it, String? verb, String? path) =>
+    (isShow(it) || it.toolKind != 'execute') && verb != null && path != null;
+
 /// What a call's title names: its file, a show call's by its name alone.
 String? _named(Item it) => isShow(it)
     ? switch (showPath(it)) {
@@ -204,15 +243,8 @@ class ToolCallView extends StatelessWidget {
     final show = isShow(it);
     final failed = it.status == 'failed';
     final path = _named(it);
-    final verb = !show
-        ? kindOf(it).verb
-        : failed
-        ? 'Show'
-        : _running(it)
-        ? kindOf(it).doing
-        : kindOf(it).verb;
-    final pathed =
-        (show || it.toolKind != 'execute') && verb != null && path != null;
+    final verb = _verbOf(it);
+    final pathed = _pathed(it, verb, path);
     final title = isCommand(it)
         ? TextSpan(text: '\$ ${it.title}', style: code)
         : pathed
@@ -244,6 +276,7 @@ class ToolCallView extends StatelessWidget {
       Collapsible(
         ids: [it.id],
         failed: failed,
+        folded: callFolded(it),
         header: Row(
           children: [
             Icon(
@@ -262,7 +295,7 @@ class ToolCallView extends StatelessWidget {
                   rawName,
                   Typed(
                     title,
-                    keep: pathed ? verb.length + 1 : 0,
+                    keep: pathed ? verb!.length + 1 : 0,
                     shine: _running(it) && !still,
                   ),
                 ),
@@ -364,6 +397,7 @@ class RunView extends StatelessWidget {
       Collapsible(
         // Open when its first call was, before the next made it a group.
         ids: ['group ${calls.first.id}', calls.first.id],
+        folded: runFolded(calls),
         failed: false, // its failed calls stand out inside, and in the count
         header: Row(
           children: [

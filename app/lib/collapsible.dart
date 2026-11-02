@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 
 /// A tool call's row: a one-line header in the tool rows' tint that opens
 /// to show [body], its height easing open and its chevron turning; outlined
 /// in red when [failed] (ADR 0076). Given [ids] (its call's, or its group's
-/// and its first call's), it opens as it was left, rebuilt or not.
+/// and its first call's), it opens as it was left, rebuilt or not. While
+/// closed, a find's matches in [folded] (what the body shows) mark the row.
 class Collapsible extends StatefulWidget {
   const new({
     required this.header,
@@ -15,12 +18,14 @@ class Collapsible extends StatefulWidget {
     required this.failed,
     super.key,
     this.ids = const [],
+    this.folded = '',
   });
 
   final Widget header;
   final Widget? body;
   final bool failed;
   final List<String> ids;
+  final String folded;
 
   /// The ids of what the user opened.
   static final opened = <String>{};
@@ -76,31 +81,35 @@ class _CollapsibleState extends State<Collapsible>
         children: [
           ColoredBox(
             color: widget.failed ? t.crashedSoft : t.toolTint,
-            child: Tap(
-              onTap: body == null ? null : _toggle,
-              radius: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: SizedBox(
-                height: 28,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 18,
-                      child: body == null
-                          ? null
-                          : RotationTransition(
-                              turns: Tween(
-                                begin: 0.0,
-                                end: 0.25,
-                              ).animate(_eased),
-                              child: Chevron(
-                                open: false,
-                                color: t.textSecondary,
+            child: FoldedMarks(
+              text: _open ? '' : widget.folded,
+              builder: (context, found) => Tap(
+                onTap: body == null ? null : _toggle,
+                radius: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: SizedBox(
+                  height: 28,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        child: body == null
+                            ? null
+                            : RotationTransition(
+                                turns: Tween(
+                                  begin: 0.0,
+                                  end: 0.25,
+                                ).animate(_eased),
+                                child: Chevron(
+                                  open: false,
+                                  color: t.textSecondary,
+                                ),
                               ),
-                            ),
-                    ),
-                    Expanded(child: widget.header),
-                  ],
+                      ),
+                      Expanded(child: widget.header),
+                      FoundCount(found),
+                    ],
+                  ),
                 ),
               ),
             ),
