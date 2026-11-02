@@ -7,6 +7,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:markdown_view/src/blocks.dart';
 import 'package:markdown_view/src/heal.dart';
 import 'package:markdown_view/src/stream_marks.dart';
+import 'package:markdown_view/src/text_marks.dart';
 
 part 'code_block.dart';
 part 'file_link.dart';
@@ -33,12 +34,12 @@ class MarkdownStyle {
   /// Code, inline and in blocks.
   final TextStyle code;
 
-  /// Behind code blocks (and tables' heads).
+  /// Behind code blocks.
   final Color codeBackground;
 
-  /// Behind inline code: a tint, since a paragraph paints its selection
-  /// under the text and an opaque background would hide it. Null takes
-  /// the body's color, faintly.
+  /// Behind inline code and tables' heads: a tint, since a paragraph paints
+  /// its selection under the text and an opaque background would hide it.
+  /// Null takes the body's color, faintly.
   final Color? inlineCode;
 
   /// Around code blocks and tables, and a quote's bar.
@@ -208,6 +209,8 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
     final size = body.fontSize ?? 14;
     final onTapLink = w.onTapLink;
     final imageBuilder = w.imageBuilder;
+    final inlineCode =
+        s.inlineCode ?? (body.color ?? s.muted).withValues(alpha: 0.07);
     return MarkdownBody(
       // The body parses again only for new text or a new style sheet:
       // other links, another body.
@@ -251,8 +254,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         del: const TextStyle(decoration: TextDecoration.lineThrough),
         code: s.code.copyWith(
           fontSize: size * 0.92,
-          backgroundColor:
-              s.inlineCode ?? (body.color ?? s.muted).withValues(alpha: 0.07),
+          backgroundColor: inlineCode,
         ),
         h1: heading.copyWith(fontSize: size * 1.45),
         h2: heading.copyWith(fontSize: size * 1.25),
@@ -284,7 +286,9 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
           horizontal: 8,
           vertical: 4,
         ),
-        tableHeadCellsDecoration: BoxDecoration(color: s.codeBackground),
+        // A tint: as with inline code, nothing opaque between a find's
+        // marks and the text.
+        tableHeadCellsDecoration: BoxDecoration(color: inlineCode),
         horizontalRuleDecoration: BoxDecoration(
           border: Border(top: BorderSide(color: s.border)),
         ),
