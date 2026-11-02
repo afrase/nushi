@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/gestures.dart';
@@ -18,6 +19,7 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/paced.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/selection_lines.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
@@ -98,18 +100,21 @@ class Transcript extends StatefulWidget {
   State<Transcript> createState() => _TranscriptState();
 }
 
+/// How wide the scrollbar's strip is, at the transcript's right edge.
+const _scrollbarEdge = 16.0;
+
 class _TranscriptState extends State<Transcript> {
   final _follower = BottomFollower();
   final _area = GlobalKey<SelectionAreaState>();
   // A click outside (the composer) takes the focus and clears the
   // selection without reporting it: the toolbar goes with it. An open reply
   // box stays, its quote kept.
-  late final FocusNode _areaFocus = FocusNode(debugLabel: 'transcript')
-    ..addListener(() {
-      if (!_areaFocus.hasFocus && _at != null && _replyTo == null) {
-        _closeToolbar();
-      }
-    });
+  late final FocusNode _areaFocus =
+      FocusNode(debugLabel: 'transcript', onKeyEvent: _copy)..addListener(() {
+        if (!_areaFocus.hasFocus && _at != null && _replyTo == null) {
+          _closeToolbar();
+        }
+      });
   String _selected = '';
   bool _down = false; // a pointer is down on the transcript
   // Pacing holds while a pointer is down or text is selected.
@@ -176,6 +181,16 @@ class _TranscriptState extends State<Transcript> {
             (n.scrollDelta ?? 0) < 0 &&
             n.metrics.pixels < 800) {
       top();
+    }
+    // A code block's sideways scroll tells nobody where its text went: what
+    // shows of a selection there would sit where it was.
+    if (n is ScrollUpdateNotification &&
+        n.depth > 0 &&
+        n.metrics.axis == Axis.horizontal &&
+        _selected.isNotEmpty &&
+        _replyTo == null) {
+      _clearSelection();
+      if (_at != null) setState(() => _at = null);
     }
     return _follower.onNotification(n);
   }
@@ -363,7 +378,7 @@ class _TranscriptState extends State<Transcript> {
 
   void _openReply() => setState(() {
     _at ??= _anchors();
-    _replyTo = _selected;
+    _replyTo = _selectedText();
     _anchor = _Anchor();
   });
 
@@ -402,13 +417,46 @@ class _TranscriptState extends State<Transcript> {
   void _closeToolbar() => setState(() => _at = _replyTo = null);
 
   /// A press of the mouse starts a new selection, so the last one goes
-  /// first: its edges otherwise carry into the new one. Shift extends it.
-  void _startSelection(PointerDownEvent e) {
+  /// first: its edges otherwise carry into the new one. Shift extends it,
+  /// and one on the scrollbar, at the edge of [width], starts none.
+  void _startSelection(PointerDownEvent e, double width) {
     if (e.kind == PointerDeviceKind.mouse &&
         e.buttons == kPrimaryButton &&
+        e.localPosition.dx < width - _scrollbarEdge &&
         !HardwareKeyboard.instance.isShiftPressed) {
-      _area.currentState?.selectableRegion.clearSelection();
+      _clearSelection();
     }
+  }
+
+  /// The selection's text with its lines (selectionLines).
+  String _selectedText() {
+    final box = _area.currentContext?.findRenderObject();
+    final lines = box == null ? '' : selectionLines(box);
+    return lines.isEmpty ? _selected : lines;
+  }
+
+  /// ⌘C: the selection with its lines, not the run-together text the
+  /// selection area itself copies.
+  KeyEventResult _copy(FocusNode _, KeyEvent e) {
+    final keys = HardwareKeyboard.instance;
+    if (e is KeyUpEvent ||
+        e.logicalKey != LogicalKeyboardKey.keyC ||
+        !(keys.isMetaPressed || keys.isControlPressed) ||
+        _selected.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+    unawaited(Clipboard.setData(ClipboardData(text: _selectedText())));
+    return KeyEventResult.handled;
+  }
+
+  void _clearSelection() =>
+      _area.currentState?.selectableRegion.clearSelection();
+
+  void _pointerGone() {
+    _down = false;
+    _hold.value = _selected.isNotEmpty;
+    _offer();
+    if (_tail != null) setState(() {}); // it goes on filling in
   }
 
   // The find's current hit (ChatState.find), to scroll to.
@@ -439,7 +487,7 @@ class _TranscriptState extends State<Transcript> {
       if (current == null || current == _scrolledTo) return;
       if (_currentHit.currentContext case final c? when c.mounted) {
         _scrolledTo = current;
-        _follower.following = false;
+        _follower.stop();
         Scrollable.ensureVisible(
           c,
           alignment: 0.3,
@@ -475,7 +523,7 @@ class _TranscriptState extends State<Transcript> {
     final side = onSide == null
         ? null
         : () {
-            final selected = _selected;
+            final selected = _selectedText();
             _closeToolbar();
             onSide(selected);
           };
@@ -490,19 +538,15 @@ class _TranscriptState extends State<Transcript> {
             // shows where the pointer went up.
             child: Listener(
               onPointerDown: (e) {
-                _startSelection(e);
+                _startSelection(e, box.maxWidth);
                 setState(() {
                   _down = _hold.value = true;
                   _touch = e.kind != PointerDeviceKind.mouse;
                   _at = _replyTo = null;
                 });
               },
-              onPointerUp: (_) {
-                _down = false;
-                _hold.value = _selected.isNotEmpty;
-                _offer();
-                if (_tail != null) setState(() {}); // it goes on filling in
-              },
+              onPointerUp: (_) => _pointerGone(),
+              onPointerCancel: (_) => _pointerGone(),
               child: SelectionArea(
                 key: _area,
                 focusNode: _areaFocus,

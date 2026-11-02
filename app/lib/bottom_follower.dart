@@ -16,6 +16,9 @@ class BottomFollower extends ChangeNotifier {
     stick();
   }
 
+  /// Stops following: the list was taken somewhere else.
+  void stop() => _set(false);
+
   void _set(bool v) {
     if (v == following) return;
     following = v;

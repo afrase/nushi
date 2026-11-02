@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,6 +118,88 @@ void main() {
         await _drag(tester, from, to);
         expect(await _quoted(tester), word);
       }
+    }
+    await closeView(tester, d);
+  }, variant: mac);
+
+  testWidgets('a drag starting left of an old code block leaves it out, '
+      'wherever the block is', (tester) async {
+    const block = 'Fenced:\n\n```\nprose one\nprose two\n```';
+    final d = await _app(tester, {
+      'a': [
+        _agent('o', block),
+        Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: block),
+        _agent('n', 'First pick.'),
+      ],
+    });
+    final (from, to) = _ends(tester, 'First pick');
+    await _drag(tester, from - const Offset(8, 0), to);
+    expect(await _quoted(tester), 'First pick');
+    await closeView(tester, d);
+  }, variant: mac);
+
+  testWidgets('a selection keeps its lines', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    final d = await _app(tester, {
+      'a': [
+        _agent(
+          'o',
+          'Para one.\n\nPara two.\n\n- item one\n- item two\n\n'
+              '| Head | Other |\n|---|---|\n| left | right |\n\nLast words.',
+        ),
+      ],
+    });
+    await _drag(
+      tester,
+      _ends(tester, 'Para one').$1,
+      _ends(tester, 'Last words').$2,
+    );
+    final quote = await _quoted(tester);
+    expect(quote, startsWith('Para one.\n\nPara two.\n\n'));
+    expect(quote, contains('• item one\n• item two'));
+    expect(quote, contains('left\tright'));
+    expect(quote, endsWith('\n\nLast words'));
+
+    // ⌘C copies the same.
+    await _drag(
+      tester,
+      _ends(tester, 'Para one').$1,
+      _ends(tester, 'Para two').$2,
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(copied, 'Para one.\n\nPara two');
+    await closeView(tester, d);
+  }, variant: mac);
+
+  testWidgets('no text in the transcript sits under a scroll of its own', (
+    tester,
+  ) async {
+    final d = await _app(tester, {
+      'a': [...longChat('a'), _agent('c', '```\ncode\n```')],
+    });
+    await tester.pumpAndSettle();
+    final list = find.descendant(
+      of: find.byType(SelectionArea),
+      matching: find.byType(Scrollable),
+    );
+    for (final scroll in list.evaluate().skip(1)) {
+      expect(
+        SelectionContainer.maybeOf(scroll),
+        isNull,
+        reason: 'a nested scroll is a selection container of its own',
+      );
     }
     await closeView(tester, d);
   }, variant: mac);
