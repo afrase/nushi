@@ -185,11 +185,15 @@ class SelectionToolbar extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final fg = t.selectionBarText;
-    Widget action(String label, VoidCallback run) => Tap(
-      onTap: run,
-      radius: 14,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Text(label, style: theme.ui(fg, size: 12.5)),
+    Widget action(String label, VoidCallback run) => Theme(
+      // The pill is dark in both themes, so its hover is the dark theme's.
+      data: const NushiTheme(Tokens.dark).toThemeData(),
+      child: Tap(
+        onTap: run,
+        radius: 12, // a whole round end, inset evenly in the pill's
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        child: Text(label, style: theme.ui(fg, size: 12.5)),
+      ),
     );
     return DecoratedBox(
       decoration: ShapeDecoration(
@@ -197,21 +201,25 @@ class SelectionToolbar extends StatelessWidget {
         shape: StadiumBorder(side: BorderSide(color: t.selectionBarBorder)),
         shadows: [BoxShadow(color: t.shadow, blurRadius: 6)],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (onSide case final run?) action('Side chat', run),
-            if (onSide != null && onReply != null)
-              VerticalDivider(
-                width: 1,
-                thickness: 1,
-                indent: 6,
-                endIndent: 6,
-                color: t.selectionBarDivider,
-              ),
-            if (onReply case final run?) action('Reply', run),
-          ],
+      child: Padding(
+        padding: const EdgeInsets.all(3),
+        child: IntrinsicHeight(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 2,
+            children: [
+              if (onSide case final run?) action('Side chat', run),
+              if (onSide != null && onReply != null)
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  indent: 3,
+                  endIndent: 3,
+                  color: t.selectionBarDivider,
+                ),
+              if (onReply case final run?) action('Reply', run),
+            ],
+          ),
         ),
       ),
     );
