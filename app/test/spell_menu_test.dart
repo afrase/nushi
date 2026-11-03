@@ -244,6 +244,21 @@ void main() {
       expect(_selected(chat), const TextSelection.collapsed(offset: 12));
     });
 
+    spellTest("⏎ held after it's used doesn't send", (tester) async {
+      final chat = await opened(tester);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyRepeatEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(sentPrompts(), isEmpty);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter); // the next one does
+      await tester.pumpAndSettle();
+      expect(sentPrompts().single.text, 'please check this');
+      expect(chat.draft.text.text, isEmpty);
+    });
+
     for (final (key, fix) in [
       (LogicalKeyboardKey.digit1, 'check'),
       (LogicalKeyboardKey.digit2, 'Cheka'),
@@ -338,6 +353,13 @@ void main() {
       expect(flagged(chat), isEmpty);
       expect(speller.learned, ['chekc']);
       expect(speller.ignored, isEmpty);
+    });
+
+    spellTest('the setting turned off closes it', (tester) async {
+      final chat = await opened(tester);
+      checkSpelling.value = false;
+      await tester.pumpAndSettle();
+      expect(_open(tester, chat), isFalse);
     });
 
     spellTest('a checker that fails still clears the flag', (tester) async {

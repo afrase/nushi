@@ -156,6 +156,7 @@ class SpellCheck extends ChangeNotifier {
 
   void _changed() {
     if (!on) {
+      if (menu.word != null) menu.close();
       _pause?.cancel();
       _seen = null;
       _words = const [];

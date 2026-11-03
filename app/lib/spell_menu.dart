@@ -47,6 +47,7 @@ class SpellMenu extends ChangeNotifier {
   final GlobalKey _area = GlobalKey();
   final _guessed = <String, List<String>>{};
   Offset? _pressedAt;
+  bool _enterHeld = false;
   bool _disposed = false;
 
   ComposerText get _text => spell.text;
@@ -163,8 +164,12 @@ class SpellMenu extends ChangeNotifier {
 
   /// A key in the box while the menu is open: ⏎ takes the first suggestion
   /// and doesn't send, 1 to 4 take that one, Esc closes, and anything else
-  /// closes it and goes on to the box. Whether it's used up.
+  /// closes it and goes on to the box. The ⏎ that was used stays used while
+  /// it's held, or its repeats would send. Whether it's used up.
   bool onKey(KeyEvent e) {
+    if (_enterHeld && _isEnter(e)) {
+      return _enterHeld = e is! KeyUpEvent;
+    }
     final w = word;
     if (w == null || !controller.isOpen || e is KeyUpEvent) return false;
     final key = LogicalKeyboardKey.collapseSynonyms({e.logicalKey}).first;
@@ -174,6 +179,7 @@ class SpellMenu extends ChangeNotifier {
       return true;
     }
     if (isSendKey(e)) {
+      _enterHeld = true;
       fixes.isEmpty ? close() : take(w, fixes.first);
       return true;
     }
@@ -186,6 +192,10 @@ class SpellMenu extends ChangeNotifier {
     close();
     return false;
   }
+
+  bool _isEnter(KeyEvent e) =>
+      e.logicalKey == LogicalKeyboardKey.enter ||
+      e.logicalKey == LogicalKeyboardKey.numpadEnter;
 
   /// ⌘;: the first flagged word after the caret, or the first of all, with
   /// the word being typed judged too.

@@ -130,15 +130,16 @@ class _ComposerState extends State<Composer> {
   }
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
-    if (e is KeyUpEvent) return KeyEventResult.ignored;
     // Locked, ⏎ does nothing; the rest goes on to the read-only field and
     // the chat: moving, selecting, copying, Esc.
     if (_locked) {
+      if (e is KeyUpEvent) return KeyEventResult.ignored;
       return isSendKey(e) || isLineKey(e)
           ? KeyEventResult.handled
           : KeyEventResult.ignored;
     }
     if (_spell.menu.onKey(e)) return KeyEventResult.handled;
+    if (e is KeyUpEvent) return KeyEventResult.ignored;
     final key = e.logicalKey;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     final esc = key == LogicalKeyboardKey.escape;
