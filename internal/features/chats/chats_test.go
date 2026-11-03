@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -260,6 +261,59 @@ func TestPlanUpdatesInPlaceWithinATurn(t *testing.T) {
 	}
 	if c.items[0].ID == c.items[1].ID {
 		t.Errorf("the thought and the message share id %q", c.items[0].ID)
+	}
+}
+
+// Claude sends its plan again as each prompt starts: unchanged it adds no
+// card, so a long chat doesn't repeat it every turn; changed, its turn has
+// its own. The replay of a reopen ends with the same cards.
+func TestAPlanSentAgainUnchangedAddsNoCard(t *testing.T) {
+	plan := func(statuses ...string) acp.SessionUpdate {
+		var entries []acp.PlanEntry
+		for i, s := range statuses {
+			entries = append(entries, acp.PlanEntry{Content: "step " + strconv.Itoa(i), Status: acp.PlanEntryStatus(s)})
+		}
+		return acp.SessionUpdate{SessionUpdate: "plan", Plan: &acp.Plan{Entries: entries}}
+	}
+	agent := &fakeAgent{}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: agent.launch}}, Options{})
+	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	cards := func(c *chat) []string {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		var out []string
+		for _, it := range c.items {
+			if it.Kind == model.Plan {
+				var s []string
+				for _, e := range it.Plan {
+					s = append(s, e.Status)
+				}
+				out = append(out, strings.Join(s, ","))
+			}
+		}
+		return out
+	}
+
+	agent.updates = []acp.SessionUpdate{plan("pending", "pending"), plan("completed", "in_progress")}
+	turn(t, svc, c, "one")
+	agent.updates = []acp.SessionUpdate{plan("completed", "in_progress"), chunk("m2", "Still merging.")}
+	turn(t, svc, c, "two")
+	agent.updates = []acp.SessionUpdate{plan("completed", "in_progress"), plan("completed", "completed")}
+	turn(t, svc, c, "three")
+	want := []string{"completed,in_progress", "completed,completed"}
+	if got := cards(c); !slices.Equal(got, want) {
+		t.Errorf("live: plan cards %q, want %q", got, want)
+	}
+
+	// The session opened in another daemon: all of it from the replay.
+	replayer := &fakeAgent{history: agent.history}
+	other := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: replayer.launch}}, Options{})
+	loaded, err := other.Open(t.Context(), "fake", t.TempDir(), "s1", "")
+	testcheck.NoErr(t, err)
+	if got := cards(other.chats[loaded]); !slices.Equal(got, want) {
+		t.Errorf("loaded: plan cards %q, want %q", got, want)
 	}
 }
 

@@ -382,16 +382,30 @@ func (c *chat) reportedLocked(it model.Item) {
 }
 
 // planLocked shows the agent's plan: it replaces the plan of the current
-// turn (since the last user message), or starts one.
+// turn (since the last user message), or starts one, unless the plan is
+// the chat's latest unchanged. Claude sends its plan again as each prompt
+// starts (docs/facts/claude.md), which session/load doesn't replay: a
+// card for it would repeat the plan in every turn, and live and a reload
+// would differ.
 func (c *chat) planLocked(entries []acp.PlanEntry) {
 	plan := make([]model.PlanEntry, 0, len(entries))
 	for _, e := range entries {
 		plan = append(plan, model.PlanEntry{Content: e.Content, Status: string(e.Status)})
 	}
-	for i := len(c.items) - 1; i >= 0 && c.items[i].Kind != model.UserMessage; i-- {
-		if c.items[i].Kind == model.Plan {
-			c.items[i].Plan = plan
-			c.publishLocked(c.items[i])
+	turn := true // still in the current turn, going back
+	for i := len(c.items) - 1; i >= 0; i-- {
+		switch it := &c.items[i]; {
+		case it.Kind == model.UserMessage:
+			turn = false
+		case it.Kind == model.Plan && turn:
+			it.Plan = plan
+			c.publishLocked(*it)
+			return
+		case it.Kind == model.Plan:
+			if slices.Equal(it.Plan, plan) {
+				return
+			}
+			c.addLocked(model.Item{Kind: model.Plan, Plan: plan})
 			return
 		}
 	}
