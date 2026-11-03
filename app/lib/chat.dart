@@ -231,6 +231,12 @@ class ChatState extends ChangeNotifier {
   /// put back in the box.
   final takeBack = ValueNotifier<QueuedMessage?>(null);
 
+  /// This app waits on a rewind of the chat, or on a Stop that may take its
+  /// message back (`whileRewinding`): the composer is locked until the
+  /// answer is here, later than the daemon's status says the chat is free.
+  /// Only this app's own: a rewind from another device doesn't set it.
+  final rewinding = ValueNotifier<bool>(false);
+
   /// The subagent or background command (its call's id) whose pane shows
   /// beside the chat, left of the details panel (see SubagentPane,
   /// BackgroundCommandPane).

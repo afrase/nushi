@@ -31,7 +31,8 @@ import 'package:nushi/worktree.dart';
 /// while a turn runs), Shift-Enter starts a line ([isSendKey]); `/` completes the
 /// agent's commands and `@` the folder's files (sent as links); Up in an
 /// empty box brings back the last prompt; Esc Esc lists your messages to
-/// rewind to (on a Mac).
+/// rewind to (on a Mac). While a message is on its way back to the box
+/// ([ChatState.rewinding]) the box is read-only and sends nothing.
 class Composer extends StatefulWidget {
   const new({
     required this.chat,
@@ -78,11 +79,14 @@ class _ComposerState extends State<Composer> {
     _draft.toSubagent.addListener(_imagesChanged);
     _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
+    widget.chat.rewinding.addListener(_imagesChanged);
     widget.chat.takeBack.addListener(_takeBack);
     _takeBack(); // one taken back while the box wasn't there
   }
 
-  void _imagesChanged() => setState(() {}); // and completions
+  void _imagesChanged() => setState(() {}); // and completions, and the lock
+
+  bool get _locked => widget.chat.rewinding.value;
 
   int _replyCount = 0;
   void _repliesChanged() {
@@ -96,6 +100,7 @@ class _ComposerState extends State<Composer> {
     _draft.toSubagent.removeListener(_imagesChanged);
     _draft.replies.removeListener(_repliesChanged);
     _draft.quote.removeListener(_quote);
+    widget.chat.rewinding.removeListener(_imagesChanged);
     widget.chat.takeBack.removeListener(_takeBack);
     _esc?.cancel();
     _completions.dispose();
@@ -121,6 +126,13 @@ class _ComposerState extends State<Composer> {
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
+    // Locked, ⏎ does nothing; the rest goes on to the read-only field and
+    // the chat: moving, selecting, copying, Esc.
+    if (_locked) {
+      return isSendKey(e) || isLineKey(e)
+          ? KeyEventResult.handled
+          : KeyEventResult.ignored;
+    }
     final key = e.logicalKey;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     final esc = key == LogicalKeyboardKey.escape;
@@ -198,6 +210,13 @@ class _ComposerState extends State<Composer> {
     }
   }
 
+  /// [act] on a queued message; nothing while the box is locked.
+  void Function(QueuedMessage) _unlocked(
+    Future<void> Function(QueuedMessage) act,
+  ) => (m) {
+    if (!_locked) unawaited(act(m));
+  };
+
   /// Takes a queued message back from the daemon, to edit unless [drop].
   Future<void> _unqueue(QueuedMessage m, {bool drop = false}) =>
       tryOrShow(context, () async {
@@ -235,6 +254,7 @@ class _ComposerState extends State<Composer> {
   /// Sends the box's message; while the agent works it waits in the
   /// chat's queue, or with [now] stops the turn and goes at once.
   Future<void> _send({bool now = false}) async {
+    if (_locked) return;
     // Before any wait: a browser copies only straight from the tap.
     if (copyAsked(_text.text.trim()) case final n?) {
       _text.clear();
@@ -290,9 +310,10 @@ class _ComposerState extends State<Composer> {
     final chat = widget.chat;
     final touch = TouchTargets.of(context);
     final written =
-        _text.text.trim().isNotEmpty ||
-        _images.value.isNotEmpty ||
-        _draft.replies.value.isNotEmpty;
+        !_locked &&
+        (_text.text.trim().isNotEmpty ||
+            _images.value.isNotEmpty ||
+            _draft.replies.value.isNotEmpty);
     return ChatColumn(
       child: Padding(
         padding: touch
@@ -311,16 +332,16 @@ class _ComposerState extends State<Composer> {
             if (chat.queue.isNotEmpty)
               QueuePills(
                 chat,
-                onEdit: _unqueue,
-                onRemove: (m) => _unqueue(m, drop: true),
-                onSendNow: _sendNow,
+                onEdit: _unlocked(_unqueue),
+                onRemove: _unlocked((m) => _unqueue(m, drop: true)),
+                onSendNow: _unlocked(_sendNow),
               ),
             if (chat.error.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(chat.error, style: theme.ui(t.crashed, size: 12)),
               ),
-            if (_completions.choices.isNotEmpty)
+            if (_completions.choices.isNotEmpty && !_locked)
               ChoiceList(
                 _completions.choices,
                 _completions.picked,
@@ -395,7 +416,7 @@ class _ComposerState extends State<Composer> {
                         ],
                         builder: (context, open) => boxButton(
                           'Add a file or image',
-                          open,
+                          _locked ? () {} : open,
                           Icon(Icons.add, size: 18, color: t.textSecondary),
                         ),
                       ),
@@ -406,6 +427,7 @@ class _ComposerState extends State<Composer> {
                           child: TextField(
                             controller: _text,
                             focusNode: _focus,
+                            readOnly: _locked,
                             autofocus: !touch, // no keyboard popping up
                             minLines: 1,
                             // A phone's keyboard leaves the transcript little
@@ -414,7 +436,9 @@ class _ComposerState extends State<Composer> {
                             style: theme.ui(t.text),
                             textAlignVertical: TextAlignVertical.center,
                             decoration: InputDecoration(
-                              hintText: !chat.busy
+                              hintText: _locked
+                                  ? rewindHint(chat)
+                                  : !chat.busy
                                   ? widget.hint
                                   : touch
                                   ? 'Queue a message, or stop and send'

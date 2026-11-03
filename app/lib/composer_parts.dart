@@ -4,25 +4,37 @@ import 'package:flutter/services.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/rewind.dart';
 import 'package:nushi/widgets.dart';
 
 /// Stops the chat's running turn. If the agent hasn't answered the last
-/// message yet, the daemon takes it back too, for the composer.
+/// message yet, the daemon takes it back too, for the composer, which is
+/// locked until it's there.
 Future<void> stopTurn(
   BuildContext context,
   ChatState chat,
   Daemon daemon,
 ) async {
-  if (chat.started == null || chat.stopping) return;
+  if (chat.started == null || chat.stopping || chat.rewinding.value) return;
   chat.stopping = true;
-  await tryOrShow(context, () async {
+  Future<void> stop() async {
     final r = await daemon.client.cancelTurn(
       CancelTurnRequest(chatId: chat.id, takeBack: true),
     );
     if (r.hasMessage()) chat.takeBack.value = r.message;
-  });
+  }
+
+  await tryOrShow(
+    context,
+    () => unanswered(chat) ? whileRewinding(chat, stop) : stop(),
+  );
   chat.stopping = false;
 }
+
+/// What the locked box says ([ChatState.rewinding]), for a rewind or a Stop
+/// taking the message back.
+String rewindHint(ChatState chat) =>
+    chat.stopping ? 'Taking your message back…' : 'Rewinding…';
 
 /// A small round icon button inside the prompt box.
 Widget boxButton(String tooltip, VoidCallback onPressed, Widget child) => Tap(

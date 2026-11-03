@@ -257,7 +257,7 @@ class _ToSubagentBoxState extends State<_ToSubagentBox> {
 
   Future<void> _send() async {
     final text = _text.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending || widget.chat.rewinding.value) return;
     setState(() => _sending = true);
     await tryOrShow(context, () async {
       await widget.daemon.sendPrompt(

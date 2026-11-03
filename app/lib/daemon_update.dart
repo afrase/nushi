@@ -32,10 +32,12 @@ extension SendPrompt on Daemon {
 /// failed one in its history). Null unless the notice is the transcript's
 /// last item and the message can go again: not in an archived chat, not a
 /// subagent's task stopped (it has nothing to send), not a message for a
-/// subagent whose tool call a replay no longer tells.
+/// subagent whose tool call a replay no longer tells, nor while a rewind
+/// is on its way.
 SendPromptRequest? tryAgainRequest(ChatState chat, Item notice) {
   if (notice.status != 'turn_failed' ||
       chat.archived ||
+      chat.rewinding.value ||
       chat.items.lastOrNull?.id != notice.id) {
     return null;
   }

@@ -84,6 +84,7 @@ A chat whose agent can rewind goes back to just before one of your messages. Rew
 - Rewind shows on a message under the pointer, and in its right-click menu.
 - Esc twice quickly in the box lists your messages, newest first, with when each was sent. Type to filter; ↑↓ and ⏎ (or a click) rewind at once.
 - A single Esc stops a running turn. A turn must stop before a rewind.
+- While the message is on its way back, the box is read-only and sends nothing. The same goes for a turn stopped before the agent answered, which takes your message back. Text already in the box stays, and the message goes after it. This holds only on the device that asked: a rewind from your phone doesn't lock the Mac's box.
 
 ## Fork
 

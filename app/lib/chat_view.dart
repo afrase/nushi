@@ -73,7 +73,8 @@ class _ChatViewState extends State<ChatView> {
   Future<void> _drop(DropDoneDetails d) async {
     setState(() => _dragging = false);
     final paths = d.files.map((f) => f.path).where(isImageFile).toList();
-    if (paths.isEmpty || widget.chat.archived) return;
+    final locked = widget.chat.rewinding.value; // nothing joins the box
+    if (paths.isEmpty || widget.chat.archived || locked) return;
     if (!widget.chat.canImages) {
       showError(
         context,
