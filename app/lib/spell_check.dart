@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/composer_code.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ItemKind;
 import 'package:nushi/settings.dart';
 import 'package:nushi/spell_menu.dart';
@@ -29,7 +30,8 @@ String _checked(String text) {
 /// The composer's text, which draws its flagged words with a dotted
 /// underline. Flagged words come from the [SpellCheck] on it; a controller
 /// because they depend on the caret too, which `TextField`'s own spell check
-/// doesn't look at (ADR 0083). With none it builds what any controller does.
+/// doesn't look at (ADR 0083). It draws its code in the code font too
+/// ([codePaints]). With neither it builds what any controller does.
 class ComposerText extends TextEditingController {
   /// The spell check of the box showing this, if one does.
   SpellCheck? spell;
@@ -49,24 +51,37 @@ class ComposerText extends TextEditingController {
     return true;
   }
 
+  List<CodeRun> _code = const [];
+  String? _codeText;
+
+  /// The code in the text ([codeRuns]), found again only when it changes.
+  List<CodeRun> get code {
+    if (_codeText != text) {
+      _codeText = text;
+      _code = codeRuns(text);
+    }
+    return _code;
+  }
+
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
     required bool withComposing,
     TextStyle? style,
   }) {
-    if (marks.isEmpty) {
+    if (marks.isEmpty && code.isEmpty) {
       return super.buildTextSpan(
         context: context,
         style: style,
         withComposing: withComposing,
       );
     }
+    final theme = NushiTheme.of(context);
     final base = style ?? const TextStyle();
-    final flagged = base.copyWith(
+    final flagged = TextStyle(
       decoration: TextDecoration.underline,
       decorationStyle: TextDecorationStyle.dotted,
-      decorationColor: NushiTheme.of(context).t.crashed,
+      decorationColor: theme.t.crashed,
       decorationThickness: 1.5,
     );
     // What an input method is composing stays as Flutter draws it; a flagged
@@ -74,29 +89,24 @@ class ComposerText extends TextEditingController {
     final composing = withComposing && value.isComposingRangeValid
         ? value.composing
         : null;
-    final styled = <(int, int, TextStyle)>[
-      for (final m in marks)
-        if (composing == null ||
-            m.end <= composing.start ||
-            m.start >= composing.end)
-          (m.start, m.end, flagged),
+    return paintedSpan(text, style, [
+      codePaints(code, base, theme),
+      [
+        for (final m in marks)
+          if (composing == null ||
+              m.end <= composing.start ||
+              m.start >= composing.end)
+            (m.start, m.end, flagged),
+      ],
       if (composing != null)
-        (
-          composing.start,
-          composing.end,
-          base.copyWith(decoration: TextDecoration.underline),
-        ),
-    ]..sort((a, b) => a.$1.compareTo(b.$1));
-    final spans = <TextSpan>[];
-    var at = 0;
-    for (final (start, end, spanStyle) in styled) {
-      spans
-        ..add(TextSpan(text: text.substring(at, start)))
-        ..add(TextSpan(text: text.substring(start, end), style: spanStyle));
-      at = end;
-    }
-    spans.add(TextSpan(text: text.substring(at)));
-    return TextSpan(style: style, children: spans);
+        [
+          (
+            composing.start,
+            composing.end,
+            const TextStyle(decoration: TextDecoration.underline),
+          ),
+        ],
+    ]);
   }
 }
 

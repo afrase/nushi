@@ -1,0 +1,118 @@
+import 'package:flutter/painting.dart';
+import 'package:nushi/theme/theme.dart';
+
+/// Code in the composer's text, which shows in the code font: a closed pair
+/// of single backticks on one line, or a fenced block from its opening
+/// fence's line to its closing one. `open` and `close` are how long its
+/// markers are at each end: a backtick for inline code, a fence's line for
+/// a block.
+typedef CodeRun = ({int start, int end, int open, int close});
+
+/// A fenced block, as Markdown writes one: ``` at a line's start (three
+/// spaces in at most), and the next line that is only a fence.
+final _fence = RegExp(
+  r'^ {0,3}```[^`\n]*\n[\s\S]*?^ {0,3}```[ \t]*$',
+  multiLine: true,
+);
+
+/// Inline code: one backtick each side, not two or three (a fence's, or
+/// Markdown's longer inline delimiters, left as typed).
+final _inline = RegExp(r'(?<!`)`[^`\n]+`(?!`)');
+
+/// The code in [text], in order: fenced blocks, then the inline code outside
+/// them. An open backtick or fence isn't code yet, so typing one doesn't
+/// turn the rest of the box into code.
+List<CodeRun> codeRuns(String text) {
+  final runs = <CodeRun>[];
+  for (final m in _fence.allMatches(text)) {
+    final open = text.indexOf('\n', m.start) + 1 - m.start;
+    final close = m.end - text.lastIndexOf('\n', m.end - 1) - 1;
+    runs.add((start: m.start, end: m.end, open: open, close: close));
+  }
+  final blocks = runs.length;
+  var block = 0;
+  for (final m in _inline.allMatches(text)) {
+    while (block < blocks && runs[block].end <= m.start) {
+      block++;
+    }
+    if (block < blocks && runs[block].start < m.end) continue;
+    runs.add((start: m.start, end: m.end, open: 1, close: 1));
+  }
+  return runs..sort((a, b) => a.start.compareTo(b.start));
+}
+
+/// One style over part of a text, merged over what's under it.
+typedef SpanPaint = (int start, int end, TextStyle style);
+
+/// [code] painted as code in [base]'s place: the code font a size down, as
+/// the transcript's inline code is, on its tint, with the backticks muted;
+/// a block's lines without the tint, its fence lines muted. Only the font
+/// and its colors change: the box's line height is fixed by its strut (a
+/// `TextField`'s default), so a line of code is as tall as one of prose and
+/// the caret, the selection and the box's height are where they'd be.
+List<SpanPaint> codePaints(
+  List<CodeRun> code,
+  TextStyle base,
+  NushiTheme theme,
+) {
+  final t = theme.t;
+  final mono = TextStyle(
+    fontFamily: NushiTheme.codeFont,
+    fontSize: (base.fontSize ?? 13) * 0.92,
+    fontFeatures: const [
+      FontFeature.disable('liga'),
+      FontFeature.disable('calt'),
+    ],
+  );
+  final inline = mono.copyWith(backgroundColor: t.inlineCode);
+  final marker = inline.copyWith(color: t.textMuted);
+  final fence = mono.copyWith(color: t.textMuted);
+  return [
+    for (final c in code)
+      if (c.open == 1) ...[
+        (c.start, c.start + 1, marker),
+        (c.start + 1, c.end - 1, inline),
+        (c.end - 1, c.end, marker),
+      ] else ...[
+        (c.start, c.start + c.open, fence),
+        (c.start + c.open, c.end - c.close, mono),
+        (c.end - c.close, c.end, fence),
+      ],
+  ];
+}
+
+/// [text] as spans under [style], each of [layers]' paints merged over the
+/// layers before it. A layer's paints are in order and don't overlap.
+TextSpan paintedSpan(
+  String text,
+  TextStyle? style,
+  List<List<SpanPaint>> layers,
+) {
+  final cuts = <int>{0, text.length};
+  for (final layer in layers) {
+    for (final (start, end, _) in layer) {
+      cuts
+        ..add(start)
+        ..add(end);
+    }
+  }
+  final at = cuts.toList()..sort();
+  final next = List.filled(layers.length, 0);
+  final spans = <TextSpan>[];
+  for (var i = 0; i + 1 < at.length; i++) {
+    final (from, to) = (at[i], at[i + 1]);
+    if (from == to) continue;
+    TextStyle? painted;
+    for (var l = 0; l < layers.length; l++) {
+      final layer = layers[l];
+      while (next[l] < layer.length && layer[next[l]].$2 <= from) {
+        next[l]++;
+      }
+      if (next[l] < layer.length && layer[next[l]].$1 <= from) {
+        painted = painted?.merge(layer[next[l]].$3) ?? layer[next[l]].$3;
+      }
+    }
+    spans.add(TextSpan(text: text.substring(from, to), style: painted));
+  }
+  return TextSpan(style: style, children: spans);
+}

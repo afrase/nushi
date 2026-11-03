@@ -83,6 +83,7 @@ Messages waiting in the queue stay held after a failed turn. Try again, or any m
 ⏎ (or ⌘⏎) sends; ⇧⏎, ⌥⏎ or ⌃⏎ starts a line. The same goes for a reply, a review comment and a subagent's box.
 
 - **Lists continue.** A line started after a list item begins the next one, as in GitHub's and Slack's boxes: `2. ` after `1. `, the same `-` or `*` after a bullet, at the same indent. On an item with nothing in it yet, the marker goes instead and the line is left blank, which ends the list. ⌘Z takes a line and its marker back at once. Only the line key does this: pasted text and lines typed any other way stay as they are.
+- **Code shows as code.** In the composer, text between a pair of single backticks on one line is drawn in the code font on the tint the transcript gives inline code, its backticks muted; a fenced block (from a line starting ```` ``` ```` to the next) is in the code font, its fences muted. An open backtick or fence changes nothing until it's closed. Words in code aren't spell checked.
 
 ## Spell check
 
