@@ -10,14 +10,15 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// The shell's motion (the fluidity review's ideas 7 and 10): panes slide
-// in and out, the chat's text glides by a transform with the
+// The shell's motion (the fluidity review's ideas 7 and 10): panes and the
+// sidebar slide in and out, the chat's text glides by a transform with the
 // transcript laid out once at its new width, and the terminal slides up
 // laid out at its own height.
 
@@ -32,14 +33,15 @@ final _items = [
   ),
 ];
 
-/// The app 1700 wide on a chat, the details shown or not, its terminals
+/// The app [width] wide on a chat, the details shown or not, its terminals
 /// one shell's.
 Future<(Daemon, FakeDaemon)> _app(
   WidgetTester tester, {
   bool details = false,
   bool still = false,
+  double width = 1700,
 }) async {
-  viewport(tester, const Size(1700, 700));
+  viewport(tester, Size(width, 700));
   if (still) {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(reduceMotion: true);
@@ -196,6 +198,47 @@ void main() {
     showDetails.value = false;
     await tester.pump();
     expect(_details, findsNothing);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('the sidebar slides out over the view, which takes the window '
+      'at once, and back in; the text glides', (tester) async {
+    final (d, _) = await _app(tester);
+    final from = _x(tester, _text);
+    final width = tester.getSize(find.byType(Sidebar)).width;
+
+    sidebarHidden.value = true;
+    await tester.pump();
+    expect(_transcript(tester).width, 1700);
+    expect(_x(tester, find.byType(Sidebar)), moreOrLessEquals(0, epsilon: 1));
+    expect(_x(tester, _text), moreOrLessEquals(from, epsilon: 0.5));
+    await tester.pump(Motion.exit ~/ 2);
+    expect(_x(tester, find.byType(Sidebar)), inExclusiveRange(-width, 0));
+    await tester.pumpAndSettle();
+    expect(find.byType(Sidebar), findsNothing);
+    final to = _x(tester, _text);
+    expect(to, lessThan(from));
+
+    sidebarHidden.value = false;
+    await tester.pump();
+    expect(_transcript(tester).width, 1700 - width);
+    expect(_x(tester, find.byType(Sidebar)), -width);
+    expect(_x(tester, _text), moreOrLessEquals(to, epsilon: 0.5));
+    await tester.pumpAndSettle();
+    expect(_x(tester, find.byType(Sidebar)), 0);
+    expect(_x(tester, _text), from);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('in a narrow window the text re-wraps where it goes rather '
+      'than glide in from off the edge', (tester) async {
+    final (d, _) = await _app(tester, width: 720);
+    sidebarHidden.value = true;
+    await tester.pump();
+    final at = _x(tester, _text);
+    expect(find.byType(Sidebar), findsOneWidget); // still going
+    await tester.pumpAndSettle();
+    expect(_x(tester, _text), at);
     d.dispose();
   }, variant: _mac);
 

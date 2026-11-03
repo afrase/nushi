@@ -259,3 +259,65 @@ class _Beside extends MultiChildLayoutDelegate {
   @override
   bool shouldRelayout(_Beside old) => true; // cheap: a few panes
 }
+
+/// [main] with the [sidebar] at its left while there is one: the sidebar
+/// slides in from the window's edge as it comes and out as it goes, over
+/// [main], which is laid out at once where it goes and keeps its state
+/// either way. What's in [main] that should glide (the chat's column) does
+/// so itself ([Beside]).
+class SidebarBeside extends StatelessWidget {
+  const new({required this.sidebar, required this.main, super.key});
+
+  final Widget? sidebar;
+  final Widget main;
+
+  @override
+  Widget build(BuildContext context) {
+    final view = LayoutId(key: const ValueKey(#main), id: #main, child: main);
+    final side = LayoutId(
+      key: const ValueKey(#sidebar),
+      id: #sidebar,
+      child: Presence(
+        child: sidebar,
+        builder: (_, run, child) => paneSlide(run, child, left: true),
+      ),
+    );
+    // Keyed, so each keeps its state as they swap: the sidebar first, as it
+    // reads, while it shows; over the view as it goes.
+    return CustomMultiChildLayout(
+      delegate: _SidebarBeside(shut: sidebar == null),
+      children: sidebar == null ? [view, side] : [side, view],
+    );
+  }
+}
+
+class _SidebarBeside extends MultiChildLayoutDelegate {
+  new({required this.shut});
+
+  final bool shut;
+
+  @override
+  void performLayout(Size size) {
+    final width = layoutChild(
+      #sidebar,
+      BoxConstraints(
+        maxWidth: size.width,
+        minHeight: size.height,
+        maxHeight: size.height,
+      ),
+    ).width;
+    positionChild(#sidebar, Offset.zero);
+    final x = shut ? 0.0 : width;
+    layoutChild(
+      #main,
+      BoxConstraints.tightFor(
+        width: max(0, size.width - x),
+        height: size.height,
+      ),
+    );
+    positionChild(#main, Offset(x, 0));
+  }
+
+  @override
+  bool shouldRelayout(_SidebarBeside old) => old.shut != shut;
+}

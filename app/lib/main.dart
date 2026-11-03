@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/alerts.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/app_log.dart';
+import 'package:nushi/beside.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
@@ -307,71 +308,66 @@ class _Shell extends StatelessWidget {
       // under the traffic lights, so their text starts past them.
       final barStart = shut ? lightsInset : 16.0;
       final app = LayoutBuilder(
-        builder: (context, box) => Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (!shut)
-              Resizable(
-                name: 'sidebar',
-                initial: 260,
-                min: 200,
-                max: min(480, box.maxWidth - 560),
-                child: Sidebar(daemon: daemon),
+        // The sidebar slides in and out over the view, which keeps its
+        // state either way.
+        builder: (context, box) => SidebarBeside(
+          sidebar: shut
+              ? null
+              : Resizable(
+                  name: 'sidebar',
+                  initial: 260,
+                  min: 200,
+                  max: min(480, box.maxWidth - 560),
+                  child: Sidebar(daemon: daemon),
+                ),
+          // Beside the sidebar, clear of the traffic lights, or alone in
+          // the window. Always a column, the view its last child: a bar
+          // coming and going keeps the view's state.
+          main: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // What has no header of its own still keeps the top's line.
+              // Always a child, so the banner under it keeps its state.
+              if (daemon.trustAsk != null ||
+                  (daemon.place is ChatPlace && chat == null))
+                const PaneHeader(plain: true, child: SizedBox.shrink())
+              else
+                const SizedBox.shrink(),
+              DaemonBanner(daemon, start: barStart),
+              // Each slides down as it comes and up as it goes,
+              // saying what it said until it's gone.
+              BarSlide(
+                child: daemon.connected && daemon.updatesWhenIdle
+                    ? DaemonUpdateBar(daemon, start: barStart)
+                    : null,
               ),
-            // Beside the sidebar, clear of the traffic lights, or alone in
-            // the window. Always a column, the view its last child: a bar
-            // coming and going keeps the view's state. The row's last child
-            // too, so the sidebar going keeps it as well.
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // What has no header of its own still keeps the top's line.
-                  // Always a child, so the banner under it keeps its state.
-                  if (daemon.trustAsk != null ||
-                      (daemon.place is ChatPlace && chat == null))
-                    const PaneHeader(plain: true, child: SizedBox.shrink())
-                  else
-                    const SizedBox.shrink(),
-                  DaemonBanner(daemon, start: barStart),
-                  // Each slides down as it comes and up as it goes,
-                  // saying what it said until it's gone.
-                  BarSlide(
-                    child: daemon.connected && daemon.updatesWhenIdle
-                        ? DaemonUpdateBar(daemon, start: barStart)
-                        : null,
-                  ),
-                  BarSlide(
-                    child: daemon.connected && daemon.removedChats.isNotEmpty
-                        ? RemovedChatsBar(daemon, start: barStart)
-                        : null,
-                  ),
-                  BarSlide(
-                    child: daemon.notice != null
-                        ? NoticeBar(daemon, start: barStart)
-                        : null,
-                  ),
-                  Expanded(
-                    child: daemon.trustAsk != null
-                        ? TrustCard(daemon.trustAsk!)
-                        : switch (daemon.place) {
-                            JiraPlace() => JiraView(daemon),
-                            GitHubPlace() => GitHubView(daemon),
-                            SettingsPlace() => SettingsView(daemon),
-                            ChatPlace() when chat == null => NothingOpen(
-                              daemon,
-                            ),
-                            ChatPlace() => _ChatPane(
-                              key: ValueKey(chat!.id),
-                              chat,
-                              daemon,
-                            ),
-                          },
-                  ),
-                ],
+              BarSlide(
+                child: daemon.connected && daemon.removedChats.isNotEmpty
+                    ? RemovedChatsBar(daemon, start: barStart)
+                    : null,
               ),
-            ),
-          ],
+              BarSlide(
+                child: daemon.notice != null
+                    ? NoticeBar(daemon, start: barStart)
+                    : null,
+              ),
+              Expanded(
+                child: daemon.trustAsk != null
+                    ? TrustCard(daemon.trustAsk!)
+                    : switch (daemon.place) {
+                        JiraPlace() => JiraView(daemon),
+                        GitHubPlace() => GitHubView(daemon),
+                        SettingsPlace() => SettingsView(daemon),
+                        ChatPlace() when chat == null => NothingOpen(daemon),
+                        ChatPlace() => _ChatPane(
+                          key: ValueKey(chat!.id),
+                          chat,
+                          daemon,
+                        ),
+                      },
+              ),
+            ],
+          ),
         ),
       );
       return Column(
