@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/ui.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
@@ -22,20 +24,45 @@ class ConnectionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final link = phone.link;
     final daemon = phone.daemon;
-    if (link == null || daemon == null) return const SizedBox.shrink();
+    if (link == null || daemon == null) return const BarSlide(child: null);
     return ListenableBuilder(
       listenable: Listenable.merge([link, daemon]),
-      builder: (context, _) {
-        if (daemon.connected) return const SizedBox.shrink();
-        final t = NushiTheme.of(context).t;
-        final down = link.failures >= 2;
-        final small = phoneText(context, size: 14);
-        final muted = phoneText(context, size: 13, color: t.textSecondary);
-        return Semantics(
-          liveRegion: true,
-          child: ColoredBox(
-            color: down ? t.crashedSoft : t.raised,
+      builder: (context, _) =>
+          BarSlide(child: daemon.connected ? null : _bar(context, link)),
+    );
+  }
+
+  Widget _bar(BuildContext context, Link link) {
+    final t = NushiTheme.of(context).t;
+    final down = link.failures >= 2;
+    final small = phoneText(context, size: 14);
+    final muted = phoneText(context, size: 13, color: t.textSecondary);
+    final still = reduceMotion(context);
+    // "Reconnecting…" and "Can't reach your Mac" crossfade, the bar easing
+    // to the new one's height (at once under Reduce Motion: an AnimatedSize
+    // of no length can't settle).
+    Widget eased(Widget child) => still
+        ? child
+        : AnimatedSize(
+            duration: Motion.standard,
+            curve: Motion.size,
+            alignment: Alignment.topCenter,
+            child: child,
+          );
+    return Semantics(
+      liveRegion: true,
+      child: AnimatedContainer(
+        duration: still ? Duration.zero : Motion.quick,
+        color: down ? t.crashedSoft : t.raised,
+        child: eased(
+          AnimatedSwitcher(
+            duration: still ? Duration.zero : Motion.quick,
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.topCenter,
+              children: [...previous, ?current],
+            ),
             child: Padding(
+              key: ValueKey(down),
               padding: const EdgeInsets.fromLTRB(16, 6, 4, 6),
               child: !down
                   ? Row(
@@ -106,8 +133,8 @@ class ConnectionBar extends StatelessWidget {
                     ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -168,35 +195,37 @@ class UpdateBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: phone.platform.updateReady,
-    builder: (context, ready, _) {
-      if (!ready) return const SizedBox.shrink();
-      final t = NushiTheme.of(context).t;
-      return ColoredBox(
-        color: t.raised,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 4),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Nushi was updated',
-                  style: phoneText(context, size: 14),
-                ),
-              ),
-              TextButton(
-                onPressed: phone.platform.applyUpdate,
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(touch, touch),
-                ),
-                child: Text(
-                  'Reload',
-                  style: phoneText(context, color: t.link, size: 14),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
+    builder: (context, ready, _) =>
+        BarSlide(child: ready ? _bar(context) : null),
   );
+
+  Widget _bar(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return ColoredBox(
+      color: t.raised,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16, right: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Nushi was updated',
+                style: phoneText(context, size: 14),
+              ),
+            ),
+            TextButton(
+              onPressed: phone.platform.applyUpdate,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(touch, touch),
+              ),
+              child: Text(
+                'Reload',
+                style: phoneText(context, color: t.link, size: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

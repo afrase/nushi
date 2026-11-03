@@ -34,6 +34,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -333,11 +334,23 @@ class _Shell extends StatelessWidget {
                   else
                     const SizedBox.shrink(),
                   DaemonBanner(daemon, start: barStart),
-                  if (daemon.connected && daemon.updatesWhenIdle)
-                    DaemonUpdateBar(daemon, start: barStart),
-                  if (daemon.connected && daemon.removedChats.isNotEmpty)
-                    RemovedChatsBar(daemon, start: barStart),
-                  if (daemon.notice != null) NoticeBar(daemon, start: barStart),
+                  // Each slides down as it comes and up as it goes,
+                  // saying what it said until it's gone.
+                  BarSlide(
+                    child: daemon.connected && daemon.updatesWhenIdle
+                        ? DaemonUpdateBar(daemon, start: barStart)
+                        : null,
+                  ),
+                  BarSlide(
+                    child: daemon.connected && daemon.removedChats.isNotEmpty
+                        ? RemovedChatsBar(daemon, start: barStart)
+                        : null,
+                  ),
+                  BarSlide(
+                    child: daemon.notice != null
+                        ? NoticeBar(daemon, start: barStart)
+                        : null,
+                  ),
                   Expanded(
                     child: daemon.trustAsk != null
                         ? TrustCard(daemon.trustAsk!)

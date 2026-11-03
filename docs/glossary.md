@@ -95,7 +95,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Settings** | A view in the chat's place (⌘,), a nav of sections. | `settings_view.dart`, `SettingsSection` | 0053 |
 | **View in the chat's place** | Settings, Jira and GitHub: they take the chat's place beside the sidebar; Esc goes back. | `Place`, `Daemon.go`, `back` | 0053 |
 | **Toast** | A small card in the bottom right corner: the newer release's. | `UpdateToast` | 0061 |
-| **Bar** | A strip over the app or a view saying something (what didn't start, the daemon updating, the connection). | `NoticeBar`, `DaemonUpdateBar`, `ConnectionBar` | |
+| **Bar** | A strip over the app or a view saying something (what didn't start, the daemon updating, the connection). | `NoticeBar`, `DaemonUpdateBar`, `ConnectionBar`, `BarSlide` | |
 | **Jump chip** | "Jump to latest" over a transcript scrolled up; "Needs you ↓" when something below waits. | `JumpChip` | |
 | **Notifications** | The Mac's notices when a chat needs you or a turn ends or fails; the Dock badge counts chats that need you. | `alerts.dart` | |
 

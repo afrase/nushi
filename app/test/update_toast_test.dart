@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
@@ -200,6 +201,17 @@ void main() {
     final d = await _open(tester, _daemon(() => found));
     expect(_toast, findsOneWidget);
     await tester.tap(find.byTooltip('Dismiss: not again until a newer one'));
+    await tester.pump();
+    // It fades where it is, taking no clicks, then it's gone.
+    expect(_toast, findsOneWidget);
+    expect(
+      tester
+          .widgetList<IgnorePointer>(
+            find.ancestor(of: _toast, matching: find.byType(IgnorePointer)),
+          )
+          .any((w) => w.ignoring),
+      isTrue,
+    );
     await tester.pumpAndSettle();
     expect(_toast, findsNothing);
     expect(dismissedUpdate.value, '0.1.17');
@@ -223,6 +235,12 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(_toast, findsOneWidget);
+    // It rises up to 8 px as it fades in.
+    await tester.pump(Motion.enter ~/ 4);
+    final rising = tester.getRect(_toast).bottom;
+    await tester.pumpAndSettle();
+    final rest = tester.getRect(_toast).bottom;
+    expect(rising - rest, inExclusiveRange(0, 8));
     d.dispose();
   }, variant: _macOS);
 
@@ -252,6 +270,7 @@ void main() {
     expect(fake.setSettings.last.checkUpdates, false);
     found = UpdateCheck(latest: '0.1.17', checkedMs: found.checkedMs);
     await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle(); // it fades out
     expect(_toast, findsNothing);
     d.dispose();
   }, variant: _macOS);

@@ -8,6 +8,7 @@ import 'package:nushi/app_log.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -142,69 +143,86 @@ class _UpdateToastState extends State<UpdateToast> {
     listenable: Listenable.merge([widget.daemon, dismissedUpdate]),
     builder: (context, _) {
       final version = updateToShow(widget.daemon);
-      if (version == null) return const SizedBox.shrink();
-      final theme = NushiTheme.of(context);
-      final t = theme.t;
-      final d = widget.daemon;
-      return Container(
-        key: const ValueKey('update-toast'),
-        width: UpdateToast.width,
-        padding: const EdgeInsets.fromLTRB(12, 8, 6, 12),
-        decoration: box(
-          t.borderStrong,
-          fill: t.raised,
-        ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          spacing: 10,
-          children: [
-            Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.arrow_circle_up, size: 16, color: t.accent),
-                Expanded(
-                  child: Text(
-                    'Nushi $version is available.',
-                    style: theme.ui(t.text),
-                  ),
-                ),
-                IconTap(
-                  Icons.close,
-                  size: 14,
-                  tooltip: 'Dismiss: not again until a newer one',
-                  onTap: () => dismissedUpdate.value = version,
-                ),
-              ],
+      return Presence(
+        // It rises 8 px as it fades in, and only fades as it goes.
+        builder: (context, run, child) => AnimatedBuilder(
+          animation: run,
+          builder: (context, child) => Faded(
+            opacity: run.value,
+            child: Transform.translate(
+              offset: Offset(
+                0,
+                run.status == AnimationStatus.reverse ? 0 : 8 * (1 - run.value),
+              ),
+              child: child,
             ),
-            Row(
-              spacing: 8,
-              children: [
-                if (byHomebrew) ...[
-                  Button(
-                    label: _copied ? 'Copied' : 'Copy',
-                    kind: ButtonKind.primary,
-                    tooltip: 'Copy “$brewUpgrade”',
-                    onPressed: _copy,
-                  ),
-                  Button(
-                    label: 'Release notes',
-                    onPressed: () => openRelease(d),
-                  ),
-                ] else
-                  Button(
-                    label: 'Download',
-                    kind: ButtonKind.primary,
-                    tooltip: "Open the release's page",
-                    onPressed: () => openRelease(d),
-                  ),
-              ],
-            ),
-          ],
+          ),
+          child: child,
         ),
+        child: version == null ? null : _toast(version),
       );
     },
   );
+
+  Widget _toast(String version) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final d = widget.daemon;
+    return Container(
+      key: const ValueKey('update-toast'),
+      width: UpdateToast.width,
+      padding: const EdgeInsets.fromLTRB(12, 8, 6, 12),
+      decoration: box(
+        t.borderStrong,
+        fill: t.raised,
+      ).copyWith(boxShadow: [BoxShadow(color: t.shadow, blurRadius: 12)]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        spacing: 10,
+        children: [
+          Row(
+            spacing: 8,
+            children: [
+              Icon(Icons.arrow_circle_up, size: 16, color: t.accent),
+              Expanded(
+                child: Text(
+                  'Nushi $version is available.',
+                  style: theme.ui(t.text),
+                ),
+              ),
+              IconTap(
+                Icons.close,
+                size: 14,
+                tooltip: 'Dismiss: not again until a newer one',
+                onTap: () => dismissedUpdate.value = version,
+              ),
+            ],
+          ),
+          Row(
+            spacing: 8,
+            children: [
+              if (byHomebrew) ...[
+                Button(
+                  label: _copied ? 'Copied' : 'Copy',
+                  kind: ButtonKind.primary,
+                  tooltip: 'Copy “$brewUpgrade”',
+                  onPressed: _copy,
+                ),
+                Button(label: 'Release notes', onPressed: () => openRelease(d)),
+              ] else
+                Button(
+                  label: 'Download',
+                  kind: ButtonKind.primary,
+                  tooltip: "Open the release's page",
+                  onPressed: () => openRelease(d),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Asks the daemon for a newer release now (the palette's Check for
