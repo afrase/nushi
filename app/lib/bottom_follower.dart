@@ -1,4 +1,7 @@
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+
+import 'package:nushi/motion.dart';
 
 /// Keeps a list scrolled to its bottom ([following]) until the user
 /// scrolls up, however little, and again once it is back at the bottom (by
@@ -12,17 +15,73 @@ class BottomFollower extends ChangeNotifier {
   bool _dragged = false; // the scroll going on began with a drag
   bool _held = false; // [hold]: being at the bottom doesn't follow it again
 
-  /// Follows the bottom again, from wherever the list is.
-  void follow() {
+  /// How long [follow]'s glide takes, whatever the distance.
+  static const glideFor = Duration(milliseconds: 260);
+
+  Ticker? _glide;
+  double _glideFrom = 0; // how far from the bottom it set out
+
+  /// Whether [follow] glides to the bottom: it follows once there.
+  bool get gliding => _glide != null;
+
+  /// Follows the bottom again, from wherever the list is. With [glide], it
+  /// glides there over [glideFor] (Motion.settle), from at most one screen
+  /// up: further up, it first jumps to a screen above the bottom, so a
+  /// long chat takes no longer than a short one. What comes in meanwhile
+  /// moves the bottom it glides to; the user's wheel or drag stops it.
+  void follow({bool glide = false}) {
     _held = false;
+    _stopGlide();
+    if (glide && scroll.hasClients) {
+      final p = scroll.position;
+      final screen = p.viewportDimension;
+      if (p.maxScrollExtent - p.pixels > 1) {
+        if (p.maxScrollExtent - p.pixels > 2 * screen) {
+          _move(p.maxScrollExtent - screen);
+        }
+        _glideFrom = p.maxScrollExtent - p.pixels;
+        _glide = Ticker(_glided)..start();
+        notifyListeners();
+        return;
+      }
+    }
     _set(true);
     stick();
+  }
+
+  void _glided(Duration t) {
+    if (!scroll.hasClients) return _stopGlide();
+    final p = scroll.position;
+    final v = t.inMicroseconds / glideFor.inMicroseconds;
+    if (v >= 1) {
+      _stopGlide();
+      _move(p.maxScrollExtent);
+      _set(true);
+      return;
+    }
+    // By its distance from the bottom: what comes in above or below as it
+    // goes leaves it on time.
+    _move(p.maxScrollExtent - _glideFrom * (1 - Motion.settle.transform(v)));
+  }
+
+  void _move(double to) {
+    _jumping = true;
+    scroll.position.jumpTo(to);
+    _jumping = false;
+  }
+
+  void _stopGlide() {
+    if (_glide == null) return;
+    _glide!.dispose();
+    _glide = null;
+    notifyListeners();
   }
 
   /// Stops following and takes the list [to] there, if given; it stays even
   /// at the very bottom, until the user scrolls there or [follow]s.
   void hold([double? to]) {
     _held = true;
+    _stopGlide();
     _set(false);
     if (to == null) return;
     _jumping = true;
@@ -56,11 +115,13 @@ class BottomFollower extends ChangeNotifier {
   bool onNotification(Notification n) {
     if (n is ScrollMetricsNotification && n.depth == 0) {
       // At the bottom (all of it fits, say): following again.
-      if (n.metrics.extentAfter == 0 && !_held) _set(true);
+      if (n.metrics.extentAfter == 0 && !_held && !gliding) _set(true);
       stick();
     } else if (n is ScrollStartNotification && n.depth == 0) {
       _dragged = n.dragDetails != null;
+      if (_dragged) _stopGlide();
     } else if (n is ScrollUpdateNotification && n.depth == 0 && !_jumping) {
+      _stopGlide(); // the user's wheel or drag
       final m = n.metrics;
       // A wheel's scroll (no drag), or a drag itself, not its fling.
       final user = n.dragDetails != null || !_dragged;
@@ -76,6 +137,8 @@ class BottomFollower extends ChangeNotifier {
 
   @override
   void dispose() {
+    _glide?.dispose();
+    _glide = null;
     scroll.dispose();
     super.dispose();
   }

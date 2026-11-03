@@ -206,7 +206,12 @@ class _TranscriptState extends State<Transcript> {
     final was = _first;
     final first = _first = _keyOf(entries.first);
     if (was == null || was == first || !_follower.scroll.hasClients) return;
-    if (_follower.following || !entries.any((e) => _keyOf(e) == was)) return;
+    // A glide to the bottom keeps its own place, from the bottom.
+    if (_follower.following ||
+        _follower.gliding ||
+        !entries.any((e) => _keyOf(e) == was)) {
+      return;
+    }
     final max = _follower.scroll.position.maxScrollExtent;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_follower.scroll.hasClients) return;
@@ -679,19 +684,21 @@ class _TranscriptState extends State<Transcript> {
                 },
               ),
             ),
-          ListenableBuilder(
-            listenable: _follower,
-            builder: (context, _) => _follower.following
-                ? const SizedBox.shrink()
-                : Positioned(
-                    right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
-                    bottom: 12,
-                    child: JumpChip(
-                      // A prompt waits below: the chip says so.
-                      needs: widget.items == null && chat.waiting,
-                      onTap: _follower.follow,
-                    ),
-                  ),
+          Positioned(
+            right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
+            bottom: 12,
+            child: ListenableBuilder(
+              listenable: _follower,
+              builder: (context, _) => ChipFade(
+                // It goes as Jump to latest glides down.
+                show: !_follower.following && !_follower.gliding,
+                builder: (context) => JumpChip(
+                  // A prompt waits below: the chip says so.
+                  needs: widget.items == null && chat.waiting,
+                  onTap: () => _follower.follow(glide: !reduceMotion(context)),
+                ),
+              ),
+            ),
           ),
         ],
       ),
