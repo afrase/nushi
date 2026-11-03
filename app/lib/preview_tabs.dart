@@ -159,21 +159,24 @@ class _PreviewTabsState extends State<PreviewTabs> {
           child: SingleChildScrollView(
             controller: _scroll,
             scrollDirection: Axis.horizontal,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (i, f) in files.indexed)
-                  SizedBox(
-                    key: ValueKey(f),
-                    width: widths[i],
-                    child: _Tab(
-                      chat: widget.chat,
-                      file: f,
-                      label: labels[i],
-                      showing: f == widget.current,
+            child: TabLine(
+              value: widget.current,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final (i, f) in files.indexed)
+                    SizedBox(
+                      key: ValueKey(f),
+                      width: widths[i],
+                      child: _Tab(
+                        chat: widget.chat,
+                        file: f,
+                        label: labels[i],
+                        showing: f == widget.current,
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -205,6 +208,7 @@ class _Tab extends StatelessWidget {
     return Hover(
       builder: (context, {required hover}) => TabFace(
         showing: showing,
+        id: file,
         child: Row(
           children: [
             Expanded(
