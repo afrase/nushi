@@ -13,6 +13,7 @@ import 'package:nushi/phone/new_chat_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/settings_screen.dart';
 import 'package:nushi/phone/ui.dart';
+import 'package:nushi/slide_list.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -78,31 +79,30 @@ class ChatsScreen extends StatelessWidget {
                     : ListView(
                         padding: const EdgeInsets.only(bottom: 24),
                         children: [
-                          if (needs.isNotEmpty) ...[
-                            const PhoneHeading('Needs you'),
-                            for (final c in needs)
-                              ChatRow(
-                                c,
-                                onTap: () => openPhoneChat(context, phone, c),
-                              ),
-                          ],
-                          if (pinned.isNotEmpty) ...[
-                            const PhoneHeading('Pinned'),
-                            for (final c in pinned)
-                              ChatRow(
-                                c,
-                                onTap: () => openPhoneChat(context, phone, c),
-                              ),
-                          ],
-                          for (final MapEntry(key: folder, value: chats)
-                              in groups.entries) ...[
-                            _Folder(folder),
-                            for (final c in chats)
-                              ChatRow(
-                                c,
-                                onTap: () => openPhoneChat(context, phone, c),
-                              ),
-                          ],
+                          _Sections(
+                            [
+                              if (needs.isNotEmpty)
+                                (
+                                  const ValueKey(#needs),
+                                  const PhoneHeading('Needs you'),
+                                  needs,
+                                ),
+                              if (pinned.isNotEmpty)
+                                (
+                                  const ValueKey(#pinned),
+                                  const PhoneHeading('Pinned'),
+                                  pinned,
+                                ),
+                              for (final MapEntry(key: folder, value: chats)
+                                  in groups.entries)
+                                (ValueKey(folder), _Folder(folder), chats),
+                            ],
+                            row: (c) => ChatRow(
+                              c,
+                              key: ValueKey(c.id),
+                              onTap: () => openPhoneChat(context, phone, c),
+                            ),
+                          ),
                         ],
                       ),
               ),
@@ -191,6 +191,41 @@ Future<void> openPhoneChat(
       .push(MaterialPageRoute<void>(builder: (_) => ChatScreen(phone, chat)));
   if (phone.daemon?.selectedId == chat.id) phone.daemon?.selectedId = null;
   unawaited(phone.view(null));
+}
+
+/// The list's sections, each a heading and its chats' rows ([row]): a
+/// section or a row that comes grows in, one that goes fades and folds
+/// ([SlideList]), so a chat that starts needing you leaves its project
+/// and comes into "Needs you", which grows in with it and folds once
+/// none does. With Reduce Motion they come and go at once.
+class _Sections extends StatelessWidget {
+  const new(this.sections, {required this.row});
+
+  final List<(Key, Widget, List<ChatState>)> sections;
+  final Widget Function(ChatState chat) row;
+
+  @override
+  Widget build(BuildContext context) => SlideList<Object>(
+    count: sections.length,
+    accepts: (_) => false, // nothing drags here
+    onMove: (_, _) {},
+    item: (i, _) {
+      final (key, heading, chats) = sections[i];
+      return Column(
+        key: key,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          heading,
+          SlideList<Object>(
+            count: chats.length,
+            accepts: (_) => false,
+            onMove: (_, _) {},
+            item: (j, _) => row(chats[j]),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _Folder extends StatelessWidget {
