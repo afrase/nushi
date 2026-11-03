@@ -74,7 +74,14 @@ class Terminals extends ChangeNotifier {
         ..fresh = _opened.remove(t.id);
 
   /// Opens a terminal for a chat (in [folder], or the chat's) and shows it.
-  Future<void> open(String chatId, {String folder = ''}) async {
+  /// Without [show] it's only listed (a code block's run, which the panel
+  /// shows when asked), its emulator attached at once to answer the
+  /// shell's queries: fish waits on them before its first prompt.
+  Future<pb.Terminal> open(
+    String chatId, {
+    String folder = '',
+    bool show = true,
+  }) async {
     final resp = await client.openTerminal(
       pb.OpenTerminalRequest(
         chatId: chatId,
@@ -90,8 +97,16 @@ class Terminals extends ChangeNotifier {
     _opened.add(resp.terminal.id);
     // Its session may be made already, from the list's event.
     _sessions[resp.terminal.id]?.fresh = true;
-    active[chatId] = focusNext = resp.terminal.id;
+    if (show) {
+      active[chatId] = focusNext = resp.terminal.id;
+    } else {
+      active[chatId] ??= resp.terminal.id;
+      // Sized as it opened, which attaches it; the panel sizes it to its
+      // view once shown.
+      session(resp.terminal).terminal.resize(80, 24);
+    }
     notifyListeners();
+    return resp.terminal;
   }
 
   void show(String chatId, String id) {

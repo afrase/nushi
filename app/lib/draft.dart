@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
-
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
 import 'package:nushi/images.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/run_text.dart';
 import 'package:nushi/spell_check.dart';
 
 /// What the user is writing to a chat: the box's text, the files mentioned
@@ -12,7 +12,14 @@ import 'package:nushi/spell_check.dart';
 /// lose it; `Drafts` keeps it on disk too. It notifies on any change.
 class Draft extends ChangeNotifier {
   new() {
-    for (final l in <Listenable>[text, replies, images, quote, toSubagent]) {
+    for (final l in <Listenable>[
+      text,
+      replies,
+      outputs,
+      images,
+      quote,
+      toSubagent,
+    ]) {
       l.addListener(notifyListeners);
     }
   }
@@ -30,6 +37,10 @@ class Draft extends ChangeNotifier {
     replies.value = [...now, r];
     return true;
   }
+
+  /// The outputs of code block runs that ended, as cards, sent after the
+  /// next message's text; not saved.
+  final outputs = ValueNotifier<List<RunOutput>>(const []);
 
   /// Text to quote in the box (a side chat's start), taken by the box.
   final quote = ValueNotifier<String?>(null);

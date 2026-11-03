@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart' show TextEditingController;
 import 'package:nushi/agents.dart';
 import 'package:nushi/chat_colors.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/code_runs.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -190,6 +191,9 @@ class ChatState extends ChangeNotifier {
 
   /// What the user is writing to it.
   final draft = Draft();
+
+  /// Its code blocks' runs in its terminals, for the app's run.
+  late final runs = CodeRuns(id, draft.outputs);
 
   /// Its question forms' answers so far, by the question's item id, until
   /// sent.
