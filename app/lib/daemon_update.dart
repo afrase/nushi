@@ -1,5 +1,6 @@
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter/material.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status_bar.dart';
@@ -24,6 +25,35 @@ extension SendPrompt on Daemon {
       await client.sendPrompt(r);
     }
   }
+}
+
+/// What Try again sends from [notice], a failed turn's: the chat's last
+/// message once more, with its images, as a new one (the agent may have the
+/// failed one in its history). Null unless the notice is the transcript's
+/// last item and the message can go again: not in an archived chat, not a
+/// subagent's task stopped (it has nothing to send), not a message for a
+/// subagent whose tool call a replay no longer tells.
+SendPromptRequest? tryAgainRequest(ChatState chat, Item notice) {
+  if (notice.status != 'turn_failed' ||
+      chat.archived ||
+      chat.items.lastOrNull?.id != notice.id) {
+    return null;
+  }
+  final message = chat.items.reversed
+      .where((it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE)
+      .firstOrNull;
+  if (message == null ||
+      message.toSubagentStop ||
+      message.toSubagentName.isNotEmpty && message.toSubagent.isEmpty ||
+      message.text.isEmpty && message.images.isEmpty) {
+    return null;
+  }
+  return SendPromptRequest(
+    chatId: chat.id,
+    text: message.text,
+    images: message.images,
+    toSubagent: message.toSubagent,
+  );
 }
 
 /// Over the app while the daemon is older than the bundled one and

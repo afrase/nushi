@@ -132,7 +132,7 @@ void main() {
 
     fake
       ..emit(_status('b', running: true))
-      ..emit(_item('b', ItemKind.ITEM_KIND_NOTICE, 'error'))
+      ..emit(_item('b', ItemKind.ITEM_KIND_NOTICE, 'turn_failed'))
       ..emit(_status('b'));
     await tester.pump(const Duration(seconds: 3));
     expect(swift.posted(), ['Claude finished', "Codex's turn failed"]);

@@ -56,6 +56,7 @@ func TestAFailedSteerTakesTheMessageOut(t *testing.T) {
 	if got := texts(c); slices.Contains(got, "user:two") {
 		t.Errorf("transcript %q", got)
 	}
+	lastNoticeIs(t, c, "error", "Couldn't hand your message")
 	agent.release()
 }
 

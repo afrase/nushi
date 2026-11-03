@@ -127,6 +127,8 @@ type fakeAgent struct {
 	loadGate     chan struct{} // when set, session/load waits until it is closed
 	forkGate     chan struct{} // when set, session/fork waits until it is closed
 	loadErr      error
+	forkErr      error              // session/fork fails
+	turnErr      error              // a prompt's turn fails
 	lastWords    *acp.SessionUpdate // sent as it stops
 	launches     int
 	closed       int
@@ -306,6 +308,11 @@ func (f *fakeAgent) turn(ctx context.Context, req *acp.PromptRequest, gate chan 
 		}
 		f.mu.Unlock()
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.turnErr != nil {
+		return nil, f.turnErr
+	}
 	return &acp.PromptResponse{StopReason: stop, Usage: f.usage}, nil
 }
 
@@ -387,6 +394,9 @@ func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest
 	}
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
+	}
+	if f.forkErr != nil {
+		return nil, f.forkErr
 	}
 	f.forkMeta = req.Meta
 	return &acp.ForkSessionResponse{SessionID: "fork1", ConfigOptions: f.session.ConfigOptions, Modes: f.session.Modes}, nil

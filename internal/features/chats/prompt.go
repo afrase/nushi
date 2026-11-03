@@ -291,9 +291,12 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 		quit = true
 	default:
 	}
+	// Between turns, before the next one starts, and before how this one
+	// ended: Try again sits on a failed turn's notice while it is last.
+	c.nameBranchLocked()
 	switch {
 	case err != nil && !quit:
-		c.noticeLocked("error", "The turn failed: "+err.Error())
+		c.noticeLocked("turn_failed", "The turn failed: "+err.Error())
 	case err != nil:
 	case resp.StopReason == "cancelled":
 		c.noticeLocked("cancelled", "Stopped")
@@ -304,7 +307,6 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	case resp.StopReason == "max_turn_requests":
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
-	c.nameBranchLocked() // between turns, before the next one starts
 	c.lookRelatedLocked()
 	// Done unless stopped or the agent went (watch says so); marked
 	// before the status, so a client has it as the turn ends.

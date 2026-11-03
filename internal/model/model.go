@@ -205,7 +205,7 @@ const (
 	// Plan is the agent's plan as a checklist (Plan), updated in place.
 	Plan
 	// Notice says how a turn ended when it didn't end normally, or an error.
-	// Status is the reason ("cancelled", "refusal", "error", ...);
+	// Status is the reason ("cancelled", "refusal", "turn_failed", "error", ...);
 	// "agent_notice" and "agent_warning" are the agent's own (AgentNotice).
 	Notice
 )

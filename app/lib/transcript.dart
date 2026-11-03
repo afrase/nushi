@@ -12,6 +12,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_update.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
@@ -238,12 +239,15 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE &&
         canForkAt(widget.daemon, widget.chat, e, live: live);
+    // Try again goes by what follows its notice, not by the notice.
+    final again = e is Item && tryAgainRequest(widget.chat, e) != null;
     final sides = chatSides(context, width);
     final from = [
       live,
       still,
       rewindable,
       forkable,
+      again,
       top,
       sides.left,
       sides.right,

@@ -284,7 +284,11 @@ Widget _waitingDot(Tokens t) => Padding(
 /// Whether the turn that just ended failed: an error notice in it.
 bool turnFailed(List<Item> items) => items.reversed
     .takeWhile((it) => it.kind != ItemKind.ITEM_KIND_USER_MESSAGE)
-    .any((it) => it.kind == ItemKind.ITEM_KIND_NOTICE && it.status == 'error');
+    .any(
+      (it) =>
+          it.kind == ItemKind.ITEM_KIND_NOTICE &&
+          (it.status == 'error' || it.status == 'turn_failed'),
+    );
 
 /// The most urgent state among [chats], as a collapsed group shows it:
 /// waiting on the user, then working, then working in the background,

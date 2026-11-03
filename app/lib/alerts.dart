@@ -126,7 +126,7 @@ class MacAlerts {
           it.kind == ItemKind.ITEM_KIND_QUESTION;
       if (it.kind == ItemKind.ITEM_KIND_NOTICE && running) {
         if (it.status == 'cancelled') _stopped.add(id);
-        if (it.status == 'error') _failed.add(id);
+        if (it.status == 'error' || it.status == 'turn_failed') _failed.add(id);
       } else if (prompt &&
           it.status == 'pending' &&
           (_asked[id] ??= {}).add(it.id)) {

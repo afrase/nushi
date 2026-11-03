@@ -71,6 +71,12 @@ The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and i
 - **In Changes**, it lists the files with the text in their path or either side and marks it in the diff. ⏎ and ⇧⏎ go through the file shown and on to the next file; Esc closes.
 - **In a focused terminal**, it finds in its scrollback.
 
+## When a turn fails
+
+A turn that fails, say on the agent's API answering "overloaded" until it gives up, ends with a red notice saying why. **Try again** beside it sends your last message once more, with its images, as a new message: the agent may already have the failed one in its history, so nothing is rewound, and the box keeps what you've typed. It shows while the notice is the chat's last line and goes grey while the chat is busy. Nushi never tries again on its own.
+
+Messages waiting in the queue stay held after a failed turn. Try again, or any message you send, goes first, and the queue follows once that turn ends well. In a chat that's asleep it joins the queue instead, behind them.
+
 ## Rewind
 
 A chat whose agent can rewind goes back to just before one of your messages. Rewind forgets everything from that message on and puts the message back in the box. Files aren't rewound.

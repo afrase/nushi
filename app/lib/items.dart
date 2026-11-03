@@ -4,6 +4,7 @@ import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/findings.dart';
@@ -141,6 +142,7 @@ class ItemView extends StatelessWidget {
           'branch_renamed' ||
           'branch_switched' => (Icons.account_tree_outlined, t.textMuted),
           'error' ||
+          'turn_failed' ||
           'not_ready' ||
           'folder_gone' ||
           'reopen_failed' => (Icons.error_outline, t.crashed),
@@ -151,7 +153,8 @@ class ItemView extends StatelessWidget {
           'agent_warning' => (Icons.warning_amber_rounded, t.needs),
           _ => (Icons.info_outline, t.needs),
         };
-        // A reopen that failed: what helps.
+        // A reopen or a turn that failed: what helps.
+        final again = tryAgainRequest(chat, item);
         final fix = switch (item.status) {
           'not_ready' => (
             'Set up…',
@@ -165,6 +168,10 @@ class ItemView extends StatelessWidget {
             () => moveChat(context, daemon, chat, gone: true),
           ),
           'reopen_failed' => ('Try again', () => daemon.reopen(chat)),
+          'turn_failed' when again != null => (
+            'Try again',
+            () => tryOrShow(context, () => daemon.sendPrompt(again)),
+          ),
           // A session gone: the bar in the composer's place has Delete….
           _ => null,
         };

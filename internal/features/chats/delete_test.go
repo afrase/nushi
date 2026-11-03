@@ -105,6 +105,7 @@ func TestAFailedMoveKeepsAnEarlierWorktree(t *testing.T) {
 	if len(wts.removed) > 0 {
 		t.Errorf("a failed move removed %q", wts.removed)
 	}
+	lastNoticeIs(t, c, "error", "Couldn't move the chat")
 }
 
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {

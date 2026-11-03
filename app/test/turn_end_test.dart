@@ -114,12 +114,14 @@ void main() {
 
     await noReceipt(_working(const Duration(seconds: 4)));
     await noReceipt(_working(const Duration(seconds: 30)), stopped: true);
-    await noReceipt(
-      _working(const Duration(seconds: 30))
-        ..items.add(
-          Item(id: 'e', kind: ItemKind.ITEM_KIND_NOTICE, status: 'error'),
-        ),
-    );
+    for (final status in ['error', 'turn_failed']) {
+      await noReceipt(
+        _working(const Duration(seconds: 30))
+          ..items.add(
+            Item(id: 'e', kind: ItemKind.ITEM_KIND_NOTICE, status: status),
+          ),
+      );
+    }
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     addTearDown(
       () => tester.binding.handleAppLifecycleStateChanged(
