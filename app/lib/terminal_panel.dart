@@ -7,8 +7,10 @@ import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show GetDiffRequest;
+import 'package:nushi/motion.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/slides.dart';
 import 'package:nushi/terminal_screen.dart';
 import 'package:nushi/terminal_tabs.dart';
 import 'package:nushi/terminals.dart';
@@ -67,7 +69,7 @@ class TerminalButton extends StatelessWidget {
 }
 
 /// A chat's view with its terminal panel under it while open, its height a
-/// draggable edge. ⌃` shows or hides the panel.
+/// draggable edge. ⌃` shows or hides the panel, which slides up and down.
 class TerminalArea extends StatefulWidget {
   const new({
     required this.chat,
@@ -133,20 +135,30 @@ class _TerminalAreaState extends State<TerminalArea> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(child: widget.child),
-              if (open.contains(widget.chat.id) && !widget.chat.archived)
-                Resizable(
-                  name: 'terminal',
-                  initial: 260,
-                  min: 100,
-                  max: box.maxHeight - 160,
-                  top: true,
-                  child: TerminalPanel(
-                    chatId: widget.chat.id,
-                    terms: widget.daemon.terminals,
-                    onHide: _toggle,
-                    showChange: _showChange,
-                  ),
-                ),
+              // It slides up as it shows and down as it hides, laid out at
+              // its own height throughout: its terminal's size (the PTY's)
+              // changes once, not every frame. The chat above gets shorter
+              // as it rises, which costs only its viewport.
+              BarSlide(
+                down: false,
+                fade: false,
+                enter: Motion.enter,
+                child: open.contains(widget.chat.id) && !widget.chat.archived
+                    ? Resizable(
+                        name: 'terminal',
+                        initial: 260,
+                        min: 100,
+                        max: box.maxHeight - 160,
+                        top: true,
+                        child: TerminalPanel(
+                          chatId: widget.chat.id,
+                          terms: widget.daemon.terminals,
+                          onHide: _toggle,
+                          showChange: _showChange,
+                        ),
+                      )
+                    : null,
+              ),
             ],
           ),
         ),
