@@ -2479,8 +2479,8 @@ class Agent extends $pb.GeneratedMessage {
   @$pb.TagNumber(14)
   void clearGoAgent() => $_clearField(14);
 
-  /// Its MCP servers are only yours, the user scope, with no off switch,
-  /// sign-in or legacy SSE; others have Claude's scopes and those (API 97).
+  /// Its MCP servers are only yours, the user scope, with no off switch or
+  /// legacy SSE; others have Claude's scopes and those (API 97).
   @$pb.TagNumber(15)
   $core.bool get mcpUserOnly => $_getBF(14);
   @$pb.TagNumber(15)
@@ -29824,8 +29824,9 @@ class NushiServiceApi {
   /// agent connects to each and says how that went (Claude's `claude mcp list`,
   /// seconds), and servers only it knows (plugins', claude.ai connectors)
   /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
-  /// by a throwaway `ante serve`; it has no off switch nor sign-in, so
-  /// SetMcpServerOn and Login are refused for it.
+  /// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
+  /// refused for it. Login and Logout are refused only when that Ante has no
+  /// sign-in for MCP servers (before 0.2.15).
   $async.Future<ListMcpServersResponse> listMcpServers(
           $pb.ClientContext? ctx, ListMcpServersRequest request) =>
       _client.invoke<ListMcpServersResponse>(ctx, 'NushiService',

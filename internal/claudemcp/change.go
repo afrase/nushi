@@ -40,7 +40,7 @@ func (Claude) Login(ctx context.Context, folder, name string) error {
 	procgroup.Bound(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("signing in to %s didn't finish: %s", name, lastLine(string(out)))
+		return fmt.Errorf("signing in to %s didn't finish: %s", name, LastLine(string(out)))
 	}
 	return nil
 }
@@ -50,9 +50,9 @@ func (Claude) Logout(ctx context.Context, folder, name string) error {
 	return run(ctx, folder, "logout", "--", name)
 }
 
-// lastLine is the last line of a terminal's output with text, without its
+// LastLine is the last line of a terminal's output with text, without its
 // escape sequences.
-func lastLine(out string) string {
+func LastLine(out string) string {
 	out = ansi.ReplaceAllString(out, "")
 	lines := strings.FieldsFunc(out, func(r rune) bool { return r == '\n' || r == '\r' })
 	for _, line := range slices.Backward(lines) {

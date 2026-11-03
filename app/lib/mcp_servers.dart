@@ -44,8 +44,8 @@ class McpServers extends ChangeNotifier {
   /// Whose servers: "claude" or "ante".
   final String agent;
 
-  /// They are only yours, with no off switch, sign-in or legacy SSE, as
-  /// the daemon says of the agent.
+  /// They are only yours, with no off switch or legacy SSE, as the daemon
+  /// says of the agent.
   bool get userOnly => daemon.daemonApi < agentFactsApi
       ? agent == 'ante'
       : knownAgents[agent]?.mcpUserOnly ?? false;

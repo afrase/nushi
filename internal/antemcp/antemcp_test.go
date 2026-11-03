@@ -211,19 +211,8 @@ func TestCheck(t *testing.T) {
 		`{"event":{"InfoBlockAppend":{"id":"mcp-warmup-ses_1","detail":"MCP server 'web' failed: timed out connecting to MCP server 'web' after 15s"}}}`,
 		`{"event":{"InfoBlockAppend":{"id":"mcp-warmup-ses_1","detail":"MCP ready: 1/2 servers connected, 1 tools registered."}}}`,
 	}
-	var op string
-	var spawn ante.Spawn = func(string) (io.WriteCloser, io.Reader, func(), error) {
-		inR, inW := io.Pipe()
-		outR, outW := io.Pipe()
-		go func() {
-			line, _ := bufio.NewReader(inR).ReadString('\n')
-			op = line
-			for _, e := range events {
-				_, _ = io.WriteString(outW, e+"\n")
-			}
-		}()
-		return inW, outR, func() { _ = outW.Close(); _ = inR.Close() }, nil
-	}
+	in, out, kill, ops := hostOps(events...)
+	var spawn ante.Spawn = func(string) (io.WriteCloser, io.Reader, func(), error) { return in, out, kill, nil }
 	got, err := Ante{Spawn: func() (ante.Spawn, error) { return spawn, nil }}.Check(context.Background(), "/f")
 	if err != nil {
 		t.Fatal(err)
@@ -235,7 +224,30 @@ func TestCheck(t *testing.T) {
 	var m struct {
 		Op map[string]map[string]string `json:"op"`
 	}
+	op := <-ops
 	if json.Unmarshal([]byte(op), &m) != nil || m.Op["StartSession"]["cwd"] == "" || m.Op["StartSession"]["cwd"] == "/f" {
 		t.Errorf("op = %q, want StartSession in a temp folder", op)
 	}
+}
+
+// hostOps is a fake `ante serve` that takes one op, handed to ops, and
+// answers it with events.
+func hostOps(events ...string) (in io.WriteCloser, out io.Reader, kill func(), ops <-chan string) {
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	got := make(chan string, 1)
+	go func() {
+		line, _ := bufio.NewReader(inR).ReadString('\n')
+		got <- line
+		for _, e := range events {
+			_, _ = io.WriteString(outW, e+"\n")
+		}
+	}()
+	return inW, outR, func() { _ = outW.Close(); _ = inR.Close() }, got
+}
+
+// host is hostOps for a test that doesn't look at the op.
+func host(events ...string) (io.WriteCloser, io.Reader, func()) {
+	in, out, kill, _ := hostOps(events...)
+	return in, out, kill
 }

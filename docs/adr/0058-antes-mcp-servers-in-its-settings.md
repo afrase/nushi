@@ -7,7 +7,7 @@ The owner asked to edit Ante's MCP servers as Claude's are. ADR 0021 changes Cla
 
 ## Decision
 - Nushi writes `mcp_servers` itself (`internal/antemcp`): it takes Ante's lock (waiting up to 5 s), reads the file, changes that key alone (every other key kept, the file's mode kept), and replaces it atomically. A file that isn't JSON is refused and left alone. Skills' `exclude_skills` goes through the same lock.
-- Only your servers, Ante's only scope; the form says so where a scope would be picked. No off switch (Ante has none: a server is removed) and no sign-in (Ante 0.2.14 has none).
+- Only your servers, Ante's only scope; the form says so where a scope would be picked. No off switch (Ante has none: a server is removed) and no sign-in (Ante 0.2.14 has none; once Ante had one, Nushi runs Ante's command: `docs/facts/ante.md`).
 - Nushi's form says `type` as Claude does; it's dropped with `transport` when saved, Ante inferring it from the command or URL. SSE is refused (Ante doesn't speak it).
 - Check is a throwaway `ante serve` session in an empty temp folder, read from its MCP warm-up notice (no status elsewhere); nothing is saved.
 - A change reaches new and reloaded Ante sessions; running chats get the "MCP servers changed" Reload, as Claude's.

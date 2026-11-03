@@ -554,8 +554,9 @@ abstract final class NushiService {
   /// agent connects to each and says how that went (Claude's `claude mcp list`,
   /// seconds), and servers only it knows (plugins', claude.ai connectors)
   /// are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
-  /// by a throwaway `ante serve`; it has no off switch nor sign-in, so
-  /// SetMcpServerOn and Login are refused for it.
+  /// by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
+  /// refused for it. Login and Logout are refused only when that Ante has no
+  /// sign-in for MCP servers (before 0.2.15).
   static const listMcpServers = connect.Spec(
     '/$name/ListMcpServers',
     connect.StreamType.unary,

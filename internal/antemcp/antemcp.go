@@ -5,8 +5,8 @@
 // (stdio) or "url" (Streamable HTTP; "headers" from Ante 0.2.15), and
 // "transport" ("stdio", "streamable-http" or "http"; inferred when
 // missing) and "enabled_tools" (an allowlist). It has no off switch, no
-// legacy SSE, and no sign-in before 0.2.15. A running session keeps the
-// servers it started with; a new or resumed one reads them again.
+// legacy SSE, and no sign-in before 0.2.15 (login.go). A running session
+// keeps the servers it started with; a new or resumed one reads them again.
 package antemcp
 
 import (
@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/afrase/nushi/internal/ante"
@@ -29,6 +31,9 @@ type Ante struct {
 	// Spawn gives what starts `ante serve --stdio` for Check, or why Ante
 	// can't run.
 	Spawn func() (ante.Spawn, error)
+	// Run finds the ante the chats run and their environment, for what
+	// signs in; or why Ante can't run.
+	Run func() (model.AgentRun, error)
 }
 
 // checkFor is the longest a check waits: Ante gives a server 15 s to
@@ -73,7 +78,10 @@ func (Ante) Servers(string) ([]model.MCPServer, error) {
 
 // Check has a throwaway Ante host connect to your servers (ante.CheckMCP)
 // and returns each one's state: "connected", "failed" with Ante's words,
-// or "unknown" for one it didn't report on.
+// "unknown" for one it didn't report on, or "needs_auth" for one that
+// wants a sign-in this Ante can do (one that can't stays "failed", in
+// Ante's words). A new host reads what's stored each time, so a check
+// after a sign-in sees it; nothing here is kept between checks.
 func (a Ante) Check(ctx context.Context, folder string) ([]model.MCPServer, error) {
 	servers, err := a.Servers(folder)
 	if err != nil || len(servers) == 0 {
@@ -89,12 +97,17 @@ func (a Ante) Check(ctx context.Context, folder string) ([]model.MCPServer, erro
 	if err != nil {
 		return nil, err
 	}
+	canSignIn := sync.OnceValue(func() bool { _, _, err := a.signIn(ctx); return err == nil })
 	out := make([]model.MCPServer, len(servers))
 	for i, sv := range servers {
 		out[i] = model.MCPServer{Name: sv.Name, State: "unknown", Detail: "Ante didn't say"}
-		if why, ok := got[sv.Name]; ok && why == "" {
+		why, ok := got[sv.Name]
+		switch {
+		case ok && why == "":
 			out[i].State, out[i].Detail = "connected", ""
-		} else if ok {
+		case ok && strings.Contains(why, needsSignIn) && canSignIn():
+			out[i].State, out[i].Detail = "needs_auth", ""
+		case ok:
 			out[i].State, out[i].Detail = "failed", why
 		}
 	}
@@ -187,14 +200,6 @@ func (Ante) SetOn(context.Context, string, string, string, bool) error {
 	return errors.New("Ante can't turn a server off: remove it instead")
 }
 
-// Login and Logout are refused: Ante 0.2.14 has no MCP sign-in (0.2.15
-// adds one, in a terminal).
-func (Ante) Login(context.Context, string, string) error { return errSignIn }
-
-func (Ante) Logout(context.Context, string, string) error { return errSignIn }
-
-// UserOnly is true: yours are all it reads, and it has neither an off
-// switch nor a sign-in Nushi can start (mcp.Config).
+// UserOnly is true: yours are all it reads, and it has no off switch
+// (mcp.Config).
 func (Ante) UserOnly() bool { return true }
-
-var errSignIn = errors.New("Nushi can't sign Ante in to a server: Ante 0.2.15 and later do it in a terminal")

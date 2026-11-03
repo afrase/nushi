@@ -62,6 +62,37 @@ Future<(FakeDaemon, Daemon)> _daemon(
   return (fake, await fake.connect(tester));
 }
 
+/// Ante's one server, wanting a sign-in until it has had one.
+Future<(FakeDaemon, Daemon)> _signIn(WidgetTester tester) async {
+  var signedIn = false;
+  final fake = FakeDaemon([])
+    ..answer = (input) => switch (input) {
+      PingRequest() => PingResponse(apiVersion: apiVersion),
+      ListMcpServersRequest(agent: 'ante') => ListMcpServersResponse(
+        servers: [
+          McpServer(
+            name: 'example-gateway',
+            scope: 'user',
+            configJson: '{"url":"https://mcp.example.com/mcp"}',
+            state: signedIn ? 'connected' : 'needs_auth',
+          ),
+        ],
+      ),
+      ListMcpServersRequest() => ListMcpServersResponse(),
+      LoginMcpServerRequest() => () {
+        signedIn = true;
+        return LoginMcpServerResponse();
+      }(),
+      _ => null,
+    };
+  for (final a in fake.agents) {
+    a
+      ..mcp = a.name == 'claude' || a.name == 'ante'
+      ..mcpUserOnly = a.name == 'ante';
+  }
+  return (fake, await fake.connect(tester));
+}
+
 void main() {
   setUpAll(loadFonts);
 
@@ -94,6 +125,31 @@ void main() {
       tester.getTopLeft(find.text('Ante')).dy,
       greaterThan(tester.getTopLeft(find.text('github')).dy),
     );
+    await closeView(tester, d);
+  });
+
+  testWidgets('an Ante server that asks for a sign-in has Log in, and shows '
+      'its real state once that is done', (tester) async {
+    final (fake, d) = await _signIn(tester);
+    await tester.binding.setSurfaceSize(const Size(1000, 900));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: McpView(daemon: d, folder: '/Users/me/sign-in'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Needs login'), findsOneWidget);
+    expect(find.text('Failed to connect'), findsNothing);
+    await tester.tap(find.text('Log in'));
+    await tester.pumpAndSettle();
+    final login = fake.calls.whereType<LoginMcpServerRequest>().single;
+    expect((login.agent, login.name), ('ante', 'example-gateway'));
+    expect(find.text('Needs login'), findsNothing);
+    expect(find.text('Log in'), findsNothing);
+    expect(find.text('Connected'), findsOneWidget);
     await closeView(tester, d);
   });
 

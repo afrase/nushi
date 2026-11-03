@@ -219,8 +219,9 @@ service NushiService {
   // agent connects to each and says how that went (Claude's `claude mcp list`,
   // seconds), and servers only it knows (plugins', claude.ai connectors)
   // are added. Ante's (API 80): yours in $ANTE_HOME/settings.json, checked
-  // by a throwaway `ante serve`; it has no off switch nor sign-in, so
-  // SetMcpServerOn and Login are refused for it.
+  // by a throwaway `ante serve`; it has no off switch, so SetMcpServerOn is
+  // refused for it. Login and Logout are refused only when that Ante has no
+  // sign-in for MCP servers (before 0.2.15).
   rpc ListMcpServers(ListMcpServersRequest) returns (ListMcpServersResponse);
   // Add, edit and remove an MCP server in a scope ("user", "project",
   // "local"), through the agent's own CLI; the folder names the project.
@@ -737,8 +738,8 @@ message Agent {
   // Nushi's Go agent can run it in place of its adapter, as the setting
   // claude_go_agent picks (API 97, ADR 0066).
   bool go_agent = 14;
-  // Its MCP servers are only yours, the user scope, with no off switch,
-  // sign-in or legacy SSE; others have Claude's scopes and those (API 97).
+  // Its MCP servers are only yours, the user scope, with no off switch or
+  // legacy SSE; others have Claude's scopes and those (API 97).
   bool mcp_user_only = 15;
 }
 

@@ -13,8 +13,9 @@ import 'package:nushi/widgets.dart';
 /// What can be done to a server, on its row: its on/off switch for the
 /// project (a project server's Approve and Reject while it waits for
 /// approval), "Log in" when it needs a sign-in, and a menu with Edit…,
-/// Remove… and Log out. Ante's have Edit… and Remove… only: it has no off
-/// switch nor sign-in Nushi can use.
+/// Remove… and Log out. Ante's have "Log in" too, with Edit… and Remove…:
+/// it has no off switch, and only the daemon knows whether its version can
+/// sign in, which needs_auth says and a server signed in to doesn't.
 class McpActions extends StatefulWidget {
   const new(this.list, this.server, {super.key});
 

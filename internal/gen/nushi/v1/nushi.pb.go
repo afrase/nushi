@@ -1898,8 +1898,8 @@ type Agent struct {
 	// Nushi's Go agent can run it in place of its adapter, as the setting
 	// claude_go_agent picks (API 97, ADR 0066).
 	GoAgent bool `protobuf:"varint,14,opt,name=go_agent,json=goAgent,proto3" json:"go_agent,omitempty"`
-	// Its MCP servers are only yours, the user scope, with no off switch,
-	// sign-in or legacy SSE; others have Claude's scopes and those (API 97).
+	// Its MCP servers are only yours, the user scope, with no off switch or
+	// legacy SSE; others have Claude's scopes and those (API 97).
 	McpUserOnly   bool `protobuf:"varint,15,opt,name=mcp_user_only,json=mcpUserOnly,proto3" json:"mcp_user_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

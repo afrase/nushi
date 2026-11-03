@@ -36,8 +36,9 @@ type Config interface {
 	Login(ctx context.Context, folder, name string) error
 	Logout(ctx context.Context, folder, name string) error
 	// UserOnly says the agent has less than Claude's model: only the
-	// user's servers, with no off switch, sign-in or legacy SSE. The rest
-	// is refused here; this is what tells the app not to offer it.
+	// user's servers, with no off switch or legacy SSE. The rest is
+	// refused here; this is what tells the app not to offer it. A sign-in
+	// isn't part of it: a server in state needs_auth has one to offer.
 	UserOnly() bool
 }
 

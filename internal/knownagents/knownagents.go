@@ -94,10 +94,10 @@ func All(projects string, claudeGo func() bool) []Agent {
 			Harness: ante.Harness{}, Local: ante.Local{},
 			Agent:  agents.Agent{CLI: ante.CLI, Also: ante.Also(), Page: ante.Page, Min: ante.Min, Tested: ante.Tested},
 			Skills: anteskills.Ante{}, Trust: antetrust.Trust{},
-			// Its servers are checked by a throwaway `ante serve`, run as a
-			// chat's would be.
+			// Its servers are checked by a throwaway `ante serve` and signed
+			// in to by `ante` itself, each run as a chat's would be.
 			MCP: func(run func() (model.AgentRun, error)) mcp.Config {
-				return antemcp.Ante{Spawn: func() (ante.Spawn, error) {
+				return antemcp.Ante{Run: run, Spawn: func() (ante.Spawn, error) {
 					r, err := run()
 					if err != nil {
 						return nil, err
