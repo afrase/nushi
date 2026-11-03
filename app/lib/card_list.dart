@@ -13,7 +13,13 @@ class CardList extends StatelessWidget {
     super.key,
     this.padding = const EdgeInsets.all(12),
     this.buildAll = false,
+    this.keepScrollAs,
   });
+
+  /// A name, unique among the window's lists, to keep its scroll by while
+  /// the app runs: the list comes back where it was (the inbox, after an
+  /// item's details took its place).
+  final String? keepScrollAs;
 
   final List<Widget> children;
 
@@ -29,6 +35,7 @@ class CardList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ReorderableListView(
+    key: keepScrollAs == null ? null : PageStorageKey(keepScrollAs),
     padding: padding,
     buildDefaultDragHandles: false,
     // The card being dragged keeps its grip and the closed hand.

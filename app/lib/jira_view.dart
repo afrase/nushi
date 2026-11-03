@@ -356,9 +356,15 @@ class _JiraViewState extends State<JiraView> {
       }
       _details = null;
     });
-    // Once the list is back.
+    // Once the list is back, where it was scrolled (CardList.keepScrollAs),
+    // the picked row in view.
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _listFocus.requestFocus(),
+    );
+    revealRow(
+      _selectedRow,
+      down: true,
+      then: () => revealRow(_selectedRow, down: false),
     );
   }
 

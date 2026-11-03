@@ -579,6 +579,52 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('back from an item, the inbox is where it was scrolled, the '
+      'picked row in view', (tester) async {
+    final (_, d) = await openView(
+      tester,
+      inbox: ListGitHubInboxResponse(
+        mine: [for (var n = 1; n <= 60; n++) item(n, 'Pull request $n')],
+        mineTotal: 60,
+        atMs: Int64(testNow.millisecondsSinceEpoch),
+      ),
+    );
+    final view = tester.getRect(find.byType(GitHubView));
+    await tester.drag(
+      find.text('Pull request 10'),
+      const Offset(0, -800),
+      kind: PointerDeviceKind.trackpad,
+    );
+    await tester.pumpAndSettle();
+    final row = find.text('Pull request 22');
+    final at = tester.getRect(row);
+    expect(at.top, greaterThan(view.top));
+    expect(at.bottom, lessThan(view.bottom - 50));
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(row), at); // not back at the top
+
+    // Scrolled away from the picked row, ⏎ opens it: back brings it into
+    // view.
+    await tester.drag(
+      find.text('Pull request 20'),
+      const Offset(0, 3000),
+      kind: PointerDeviceKind.trackpad,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(row).top, greaterThan(view.bottom));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(row).bottom, lessThanOrEqualTo(view.bottom));
+    await closeView(tester, d);
+  });
+
   testWidgets('↓ keeps the selection in view; ⌘⏎ starts work on it', (
     tester,
   ) async {

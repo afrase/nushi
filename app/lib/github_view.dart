@@ -276,7 +276,16 @@ class _GitHubViewState extends State<GitHubView> {
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _listFocus.requestFocus(),
     );
+    _revealPicked();
   }
+
+  /// Brings the picked row into view once the list is back, where it was
+  /// scrolled (CardList.keepScrollAs): above or below it, whichever it is.
+  void _revealPicked() => revealRow(
+    _selectedRow,
+    down: true,
+    then: () => revealRow(_selectedRow, down: false),
+  );
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) {

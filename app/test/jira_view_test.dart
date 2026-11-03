@@ -234,6 +234,55 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('back from an issue, the list is where it was scrolled, the '
+      'picked row in view', (tester) async {
+    final many = [
+      for (var i = 1; i <= 40; i++)
+        issue('ACME-$i', 'Issue $i', 'To Do', 'new'),
+    ];
+    final (_, d) = await openView(
+      tester,
+      more: (input) => switch (input) {
+        ListJiraIssuesRequest(list: 'mine') => ListJiraIssuesResponse(
+          issues: many,
+        ),
+        _ => null,
+      },
+    );
+    final view = tester.getRect(find.byType(JiraView));
+    await tester.drag(
+      find.text('ACME-5'),
+      const Offset(0, -600),
+      kind: PointerDeviceKind.trackpad,
+    );
+    await tester.pumpAndSettle();
+    final row = find.text('ACME-20');
+    final at = tester.getRect(row);
+    expect(at.top, greaterThan(view.top + 100));
+    expect(at.bottom, lessThan(view.bottom - 100));
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.byType(JiraIssuePane), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(row), at); // not back at the top
+
+    // Scrolled away from it, ⏎ opens it: back brings it into view.
+    await tester.drag(
+      row,
+      const Offset(0, 3000),
+      kind: PointerDeviceKind.trackpad,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.getRect(row).top, greaterThan(view.bottom));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(row).bottom, lessThanOrEqualTo(view.bottom));
+    await closeView(tester, d);
+  });
+
   testWidgets('a row: its chats, its status, Start work', (tester) async {
     final (fake, d) = await openView(
       tester,

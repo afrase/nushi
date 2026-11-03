@@ -121,6 +121,7 @@ class InboxCards extends StatelessWidget {
     ].firstOrNull;
     final collapsed = githubCollapsed.value;
     return CardList(
+      keepScrollAs: 'github inbox',
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       buildAll: true,
       onReorder: (from, to) => githubCardOrder.value = reordered(
