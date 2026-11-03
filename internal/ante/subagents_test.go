@@ -79,9 +79,9 @@ func TestASubagentLiveAndReplayed(t *testing.T) {
 	const fence = "```"
 	want := []string{
 		"call_a||Agent|Find the handler|completed|" + antetest.Report,
-		"call_a.step1|call_a|Read|Read a.go|completed|" + fence + "\npackage a\n" + fence,
+		"call_a.step1|call_a|Read|Read /work/a.go|completed|" + fence + "\npackage a\n" + fence,
 		"call_a.step2|call_a|Grep|Grep handle|completed|a.go:3:func handle() {}",
-		"call_a.tool_3|call_a|Bash|Bash|failed|Tool call denied by policy and was not executed.",
+		"call_a.tool_3|call_a|Bash|Bash|failed|Tool call denied and not executed: it requires approval.",
 	}
 	live := c.calls(s.SessionID)
 	if !slices.Equal(live, want) {
@@ -127,7 +127,7 @@ func TestASubagentWithoutItsLog(t *testing.T) {
 	prompt(t, c, s.SessionID, "ask an unsaved subagent")
 	want := []string{
 		"call_a||Agent|Find the handler|completed|" + antetest.Report,
-		"call_a.step1|call_a|Read|Read a.go|completed|",
+		"call_a.step1|call_a|Read|Read /work/a.go|completed|",
 		"call_a.step2|call_a|Grep|Grep handle|completed|",
 	}
 	if got := c.calls(s.SessionID); !slices.Equal(got, want) {
@@ -148,7 +148,7 @@ func TestASubagentCancelled(t *testing.T) {
 	}
 	want := []string{
 		"call_a||Agent|Find the handler|in_progress|Looking for the handler.",
-		"call_a.step1|call_a|Read|Read a.go|completed|",
+		"call_a.step1|call_a|Read|Read /work/a.go|completed|",
 		"call_a.step2|call_a|Grep|Grep handle|in_progress|",
 	}
 	if got := c.calls(s.SessionID); !slices.Equal(got, want) {
@@ -158,23 +158,46 @@ func TestASubagentCancelled(t *testing.T) {
 	if r := wait(); r.StopReason != "cancelled" {
 		t.Errorf("stop reason %q", r.StopReason)
 	}
+	const fence = "```"
 	want = []string{
-		"call_a||Agent|Find the handler|failed|subagent cancelled",
-		"call_a.step1|call_a|Read|Read a.go|completed|",
-		"call_a.step2|call_a|Grep|Grep handle|failed|",
+		"call_a||Agent|Find the handler|failed|Tool call cancelled.",
+		"call_a.step1|call_a|Read|Read /work/a.go|completed|" + fence + "\npackage a\n" + fence,
+		"call_a.step2|call_a|Grep|Grep handle|failed|Tool call cancelled.",
 	}
-	if got := c.calls(s.SessionID); !slices.Equal(got, want) {
+	got := c.calls(s.SessionID)
+	if !slices.Equal(got, want) {
 		t.Errorf("stopped:\n%s", strings.Join(got, "\n"))
+	}
+	c2 := start(t, store)
+	_, err = c2.LoadSession(context.Background(), &acp.LoadSessionRequest{SessionID: s.SessionID, Cwd: "/work"})
+	testcheck.NoErr(t, err)
+	if replayed := c2.calls(s.SessionID); !slices.Equal(replayed, got) {
+		t.Errorf("replayed:\n%s\nlive:\n%s", strings.Join(replayed, "\n"), strings.Join(got, "\n"))
+	}
+}
+
+// Ante ends the call of a subagent whose model failed Completed, the
+// failure in its report: its log's turn says it failed.
+func TestASubagentThatFailed(t *testing.T) {
+	store := &antetest.Store{Home: t.TempDir()}
+	c := start(t, store)
+	s, err := c.NewSession(context.Background(), &acp.NewSessionRequest{Cwd: "/work"})
+	testcheck.NoErr(t, err)
+	prompt(t, c, s.SessionID, "ask a subagent to fail")
+	want := []string{"call_a||Agent|Find the handler|failed|...[interrupted] (invalid request: the model refused)"}
+	if got := c.calls(s.SessionID); !slices.Equal(got, want) {
+		t.Errorf("calls:\n%s", strings.Join(got, "\n"))
 	}
 }
 
 func TestReadStep(t *testing.T) {
 	for line, want := range map[string]string{
 		`Read(file_path="src/a.go")`:                 `Read {"file_path":"src/a.go"}`,
-		`Grep(path=".", pattern="a, b")`:             `Grep {"path":".","pattern":"a, b"}`,
+		`Grep(path=".", pattern="a, b=2 \"c\"…")`:    `Grep {"path":".","pattern":"a, b=2 \"c\"…"}`,
+		`Bash(command="go test\n./...")`:             `Bash {"command":"go test\n./..."}`,
+		`Edit(edits=[{"a":"b, c"}, 1], file="x")`:    `Edit {"edits":"[{\"a\":\"b, c\"}, 1]","file":"x"}`,
 		`Read(file_path="a.go", limit=20, offset=3)`: `Read {"file_path":"a.go","limit":"20","offset":"3"}`,
 		`mcp__docs__find(query="x")`:                 `mcp__docs__find {"query":"x"}`,
-		"Bash(command=\"go test\n./...\")":           `Bash {"command":"go test\n./..."}`,
 	} {
 		t.Run(line, func(t *testing.T) {
 			u, ok := readStep(line)
@@ -183,7 +206,7 @@ func TestReadStep(t *testing.T) {
 			}
 		})
 	}
-	for _, line := range []string{"Found it.", "waiting for a subagent slot", "Read", "lower(a=1)", "Done (all=3)", "Found(two) of them", "Fix(the bug)"} {
+	for _, line := range []string{"## Found", "Found it.", "xxx…", "waiting for a subagent slot", "Read", "lower(a=1)", "Done (all=3)", "Found(two) of them", "Fix(the bug)"} {
 		if u, ok := readStep(line); ok {
 			t.Errorf("%q read as a call: %+v", line, u)
 		}
@@ -191,7 +214,7 @@ func TestReadStep(t *testing.T) {
 }
 
 func TestReportIsTheCallsText(t *testing.T) {
-	if got := result(json.RawMessage(`{"report":"## Done","session_id":"ses_x","tool_use_count":2}`)); got != "## Done" {
+	if got := result(json.RawMessage(`{"report":"## Done","session_id":"suba_x","tool_use_count":2,"usage":{}}`)); got != "## Done" {
 		t.Errorf("result = %q", got)
 	}
 }

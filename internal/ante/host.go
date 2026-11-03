@@ -154,8 +154,13 @@ func ulid() string {
 }
 
 // isSessionID says id is one of Ante's session ids: "ses_" and a ULID.
-func isSessionID(id string) bool {
-	rest, ok := strings.CutPrefix(id, "ses_")
+func isSessionID(id string) bool { return isID("ses_", id) }
+
+// isSubagentID says id is Ante's id for a subagent: "suba_" and a ULID.
+func isSubagentID(id string) bool { return isID("suba_", id) }
+
+func isID(prefix, id string) bool {
+	rest, ok := strings.CutPrefix(id, prefix)
 	if !ok || len(rest) != 26 {
 		return false
 	}

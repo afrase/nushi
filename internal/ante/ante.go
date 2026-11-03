@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -37,8 +38,9 @@ const (
 	Page = "https://github.com/AntigmaLabs/ante"
 )
 
-// Tested are the Ante versions the bridge was run with.
-var Tested = []string{Min}
+// Tested are the Ante versions the bridge was run with (0.3.2 on a fake
+// model, docs/facts/ante.md).
+var Tested = []string{Min, "0.3.2"}
 
 // Also is where Ante's installer puts it, for when it isn't on PATH.
 func Also() []string {
@@ -130,8 +132,8 @@ func version(bin string) (string, error) {
 		return "", fmt.Errorf("couldn't read ante's version from %q", out)
 	case got[0] != want[0] || got[1] < want[1] || got[1] == want[1] && got[2] < want[2]:
 		return "", fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, Min)
-	case v != Min:
-		warnf("ante %s is newer than %s, whose protocol the bridge follows", v, Min)
+	case !slices.Contains(Tested, v):
+		warnf("ante %s isn't one the bridge was run with: %s", v, strings.Join(Tested, ", "))
 	}
 	return v, nil
 }

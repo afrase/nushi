@@ -165,6 +165,9 @@ func (s *session) toolLocked(ev event, olds map[string]toolcall.Old, log []event
 		_ = json.Unmarshal(ev.Payload, &p)
 		var out []acp.SessionUpdate
 		if p.Name == agentTool {
+			if subagentFailed(log) {
+				p.Status = "Failed"
+			}
 			out = s.subagentEndLocked(p.ID, log, p.status())
 		}
 		return append(out, s.toolEndLocked(p, "")...)

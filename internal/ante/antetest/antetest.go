@@ -1,5 +1,5 @@
-// Package antetest is a fake `ante serve --stdio` for tests, speaking Ante
-// 0.2.14's protocol as the real one was seen to: ops in, events out, each
+// Package antetest is a fake `ante serve --stdio` for tests, speaking Ante's
+// protocol as 0.2.14 and 0.3.2 were seen to: ops in, events out, each
 // event naming the op it answers. Sessions are kept in a Store, as Ante
 // keeps them in its home (each saved one also as sessions/<id>/meta.json),
 // so a host started later can resume or fork them. Inputs are answered by
@@ -16,7 +16,7 @@
 //     ToolUpdate lines, with its event log saved under the session (not
 //     when the text also has "unsaved"), then its report and a message;
 //     with "wait" in the text too, it waits after its lines, and an
-//     Interrupt cancels it;
+//     Interrupt cancels it; with "fail", its model fails;
 //   - anything else: "You said: <text>", as two deltas and the whole text.
 //
 // A session has the skill "review" (argument hint "<path>"); SlashCommand

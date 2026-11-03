@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,12 +28,14 @@ const agentTool = "Agent"
 const maxSubagentLog = 64 << 20
 
 // Ante passes a subagent's work to its parent only as ToolUpdate lines on
-// the Agent call: `Tool(key="value", n=3)` for a call the subagent starts,
-// a tool's own progress as it is, and the first line of what it says. The
-// tool names are capitalized (Ante's) or an MCP tool's.
+// the Agent call: `Tool(key="value", n=3)` for a call the subagent starts
+// (a string in JSON's quotes, cut short with "…"), and the first line of
+// what it says, its report's too, cut at 120. The tool names are capitalized
+// (Ante's) or an MCP tool's.
 var (
 	stepLine = regexp.MustCompile(`(?s)^([A-Z]\w*|mcp__[\w.-]+)\((.*)\)$`)
-	stepKey  = regexp.MustCompile(`(?:^|, )(\w+)=`)
+	stepKey  = regexp.MustCompile(`^\w+$`)
+	nextKey  = regexp.MustCompile(`, \w+=`)
 )
 
 // readStep reads a line about a call the subagent starts; its values are
@@ -40,20 +45,58 @@ func readStep(line string) (toolUse, bool) {
 	if m == nil {
 		return toolUse{}, false
 	}
-	keys := stepKey.FindAllStringSubmatchIndex(m[2], -1)
-	if len(keys) == 0 || keys[0][0] != 0 {
+	args, ok := stepArgs(m[2])
+	if !ok {
 		return toolUse{}, false
-	}
-	args := map[string]string{}
-	for i, k := range keys {
-		end := len(m[2])
-		if i+1 < len(keys) {
-			end = keys[i+1][0]
-		}
-		args[m[2][k[2]:k[3]]] = strings.Trim(m[2][k[1]:end], `"`)
 	}
 	raw, _ := json.Marshal(args)
 	return toolUse{Name: m[1], Args: raw}, true
+}
+
+// stepArgs reads a line's `key="value", n=3`.
+func stepArgs(s string) (map[string]string, bool) {
+	args := map[string]string{}
+	for s != "" {
+		key, rest, ok := strings.Cut(s, "=")
+		if !ok || !stepKey.MatchString(key) {
+			return nil, false
+		}
+		if end := stringEnd(rest); end > 0 {
+			var value string
+			if json.Unmarshal([]byte(rest[:end]), &value) != nil { // cut inside an escape
+				value = rest[1 : end-1]
+			}
+			args[key], rest = value, rest[end:]
+			if rest != "" && !strings.HasPrefix(rest, ", ") {
+				return nil, false
+			}
+			s = strings.TrimPrefix(rest, ", ")
+			continue
+		}
+		next := nextKey.FindStringIndex(rest)
+		if next == nil {
+			args[key], s = rest, ""
+			continue
+		}
+		args[key], s = rest[:next[0]], rest[next[0]+2:]
+	}
+	return args, len(args) > 0
+}
+
+// stringEnd is where a JSON string that starts s ends; 0 if none does.
+func stringEnd(s string) int {
+	if !strings.HasPrefix(s, `"`) {
+		return 0
+	}
+	for i := 1; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			i++
+		case '"':
+			return i + 1
+		}
+	}
+	return 0
 }
 
 // stepID names a subagent's nth tool call: Ante's lines don't carry the
@@ -116,35 +159,55 @@ func (s *session) subagentEndLocked(call string, log []event, status acp.ToolCal
 	return out
 }
 
-// subagentLog reads the event log of the subagent an Agent call's end names,
-// for the steps its parent's events don't hold: Ante keeps it under the
-// session that ran it, which a fork of that session isn't (nothing is read
-// for an id that isn't one of Ante's). It runs without the session's lock.
+// subagentLog reads the event log of the subagent of an Agent call that ends,
+// for the steps its parent's events don't hold. Its result names it, unless
+// it was cancelled: then its log's first line names the call. Ante keeps the
+// log under the session that ran it, which a fork of that session isn't.
+// Nothing is read for an id that isn't one of Ante's. It runs without the
+// session's lock.
 func (s *session) subagentLog(ev event) []event {
 	if ev.Name != "ToolEnd" {
 		return nil
 	}
 	var p struct {
+		ID     string `json:"tool_use_id"`
 		Name   string `json:"tool_name"`
 		Result struct {
 			SessionID string `json:"session_id"`
 		} `json:"result_json"`
 	}
 	_ = json.Unmarshal(ev.Payload, &p)
-	if p.Name != agentTool || !isSessionID(p.Result.SessionID) {
+	if p.Name != agentTool {
 		return nil
 	}
 	sessions := filepath.Join(s.b.home, "sessions")
-	raw, err := regularfile.Read(filepath.Join(sessions, s.id, "subagents", p.Result.SessionID, "events.jsonl"), maxSubagentLog)
+	if !isSubagentID(p.Result.SessionID) {
+		logs, _ := filepath.Glob(filepath.Join(sessions, s.id, "subagents", "*", "events.jsonl"))
+		for _, path := range logs {
+			if log := readLog(path); launchedBy(log, p.ID) {
+				return log
+			}
+		}
+		return nil
+	}
+	if log := readLog(filepath.Join(sessions, s.id, "subagents", p.Result.SessionID, "events.jsonl")); log != nil {
+		return log
+	}
+	logs, _ := filepath.Glob(filepath.Join(sessions, "*", "subagents", p.Result.SessionID, "events.jsonl"))
+	if len(logs) == 0 {
+		return nil
+	}
+	return readLog(logs[0])
+}
+
+// readLog reads a saved event log; nil if it can't.
+func readLog(path string) []event {
+	raw, err := regularfile.Read(path, maxSubagentLog)
 	if err != nil {
-		found, _ := filepath.Glob(filepath.Join(sessions, "*", "subagents", p.Result.SessionID, "events.jsonl"))
-		if len(found) == 0 {
-			return nil
-		}
-		if raw, err = regularfile.Read(found[0], maxSubagentLog); err != nil {
+		if !errors.Is(err, fs.ErrNotExist) {
 			warnf("couldn't read a subagent's log: %v", err)
-			return nil
 		}
+		return nil
 	}
 	var out []event
 	for line := range bytes.Lines(raw) {
@@ -153,6 +216,34 @@ func (s *session) subagentLog(ev event) []event {
 		}
 	}
 	return out
+}
+
+// launchedBy says a subagent's log is of the subagent of call: its first
+// event is Ante's Info "Subagent <id> launched by Agent call <call> in
+// session <session>.".
+func launchedBy(log []event, call string) bool {
+	if len(log) == 0 || log[0].Name != "Info" {
+		return false
+	}
+	var text string
+	_ = json.Unmarshal(log[0].Payload, &text)
+	return strings.Contains(text, " launched by Agent call "+call+" in session ")
+}
+
+// subagentFailed says a subagent's log ends in a failed turn: Ante then ends
+// its Agent call Completed all the same, the failure in its report.
+func subagentFailed(log []event) bool {
+	for _, ev := range slices.Backward(log) {
+		if ev.Name == "TurnEnd" {
+			var p struct {
+				Status json.RawMessage `json:"status"`
+			}
+			_ = json.Unmarshal(ev.Payload, &p)
+			name, _ := variant(p.Status)
+			return name != "Completed"
+		}
+	}
+	return false
 }
 
 // bridgeMeta reads a key of the bridge's _meta of a tool call.

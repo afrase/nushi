@@ -39,7 +39,7 @@ Nushi runs your `codex` through `@agentclientprotocol/codex-acp` 2.2.2, set up t
 
 Through Nushi's own bridge, `nushid ante-acp`, which runs an `ante serve --stdio` per session ([ADR 0030](adr/0030-our-own-bridge-for-ante.md)). Nothing to set up.
 
-- It needs Ante 0.2.14 or newer: the `ante` on `PATH`, else `~/.ante/bin/ante`. The bridge follows 0.2.14; 0.2.15 changed nothing in the protocol, per its notes.
+- It needs Ante 0.2.14 or newer: the `ante` on `PATH`, else `~/.ante/bin/ante`. The bridge follows 0.2.14 and was run on 0.3.2 too; the protocol's events didn't change between them.
 - It uses Ante's own settings, providers and sign-in (`~/.ante`, or `$ANTE_HOME`), so your default model until you pick another in the chat. A provider's key, such as `FIREWORKS_API_KEY`, comes from the environment.
 - An Ante chat resumes in a terminal with `ante --resume <session id>`.
 

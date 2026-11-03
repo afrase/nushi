@@ -129,10 +129,10 @@ func TestAnAnteSubagent(t *testing.T) {
 	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
 	live := subagentView(snap.Items)
 	const fence = "```"
-	want := "agent explore:Find the handler:done:" + antetest.Report + ":Find where errors are handled:\n" +
-		"step call_a:Read a.go:completed:" + fence + "\npackage a\n" + fence + "\n" +
+	want := "agent general:Find the handler:done:" + antetest.Report + ":Find where errors are handled:\n" +
+		"step call_a:Read /work/a.go:completed:" + fence + "\npackage a\n" + fence + "\n" +
 		"step call_a:Grep handle:completed:a.go:3:func handle() {}\n" +
-		"step call_a:Bash:failed:Tool call denied by policy and was not executed."
+		"step call_a:Bash:failed:Tool call denied and not executed: it requires approval."
 	if live != want {
 		t.Errorf("live:\n%s\nwant:\n%s", live, want)
 	}
