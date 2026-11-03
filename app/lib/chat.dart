@@ -255,6 +255,11 @@ class ChatState extends ChangeNotifier {
   /// view is made again each time it shows.
   final previewSources = <String>{};
 
+  /// How far from its bottom its transcript was left, scrolled up: it opens
+  /// there again (unless it needs you), with Jump to latest showing. Null
+  /// when it was left at its bottom. In the app's memory only.
+  double? kept;
+
   /// The tab its pane shows on the Mac (Chat whenever the pane opens):
   /// here so the app's keys and the palette reach it wherever the focus is.
   final tab = ValueNotifier<ChatTab>(ChatTab.chat);

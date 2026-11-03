@@ -9,6 +9,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - **Settings** (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left. Esc or Close goes back ([ADR 0053](adr/0053-settings-is-a-view.md)). Settings › General's Appearance (Light, Dark, or as the system; also in the View menu) is remembered.
 - **Chat width.** Settings › General or the palette (⌘K): a centered column, or the whole width of the window.
 - **Jump to latest.** Scrolled up, a chip over the transcript's bottom right takes you back down, and the chat follows the agent again. It glides the last screen, however far up you were, so a long chat is as quick as a short one; scroll to stop it. With Reduce Motion it jumps.
+- **A chat keeps its place.** Leave a chat scrolled up and it opens there again, with Jump to latest showing, until Nushi quits. One left at its bottom, or one that needs you, opens at its bottom.
 - **Under a message**, on hover: Copy, Rewind or Fork from here, and its time; on yours, one check when it's sent and two once the agent has answered ([ADR 0076](adr/0076-messages-as-bubbles-with-actions-on-hover.md)).
 - **`/copy`** puts the agent's last message on the clipboard as Markdown; `/copy 2` the one before ([ADR 0075](adr/0075-copy-is-nushis-own-command.md)).
 - **Tabs.** A chat opens on the tab it was left on (Chat, Changes, Pull request), and on Chat when it needs you.

@@ -333,12 +333,59 @@ class _TranscriptState extends State<Transcript> {
     ),
   };
 
+  /// How far from the bottom the list is to be put back, while it fills in
+  /// to there (the place the chat was left at, [ChatState.kept]).
+  double? _restore;
+
+  /// Opens the chat where it was left, scrolled up, unless it needs you.
+  void _openAtKept() {
+    final chat = widget.chat;
+    if (widget.items != null) return;
+    if (chat.kept case final kept? when !chat.waiting) {
+      _follower.hold();
+      _restore = kept;
+    } else {
+      chat.kept = null;
+    }
+  }
+
+  /// Keeps where the chat is left (see [ChatState.kept]).
+  void _keep(ChatState chat) {
+    if (widget.items != null || _restore != null) return; // not there yet
+    final s = _follower.scroll;
+    chat.kept = _follower.following || _follower.gliding || !s.hasClients
+        ? null
+        : s.position.extentAfter;
+  }
+
+  /// Puts the list back [_restore] from its bottom once that much is
+  /// built; until then as far up as it goes.
+  void _restoreAfterLayout() {
+    if (_restore == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final kept = _restore;
+      if (!mounted || kept == null || !_follower.scroll.hasClients) return;
+      final p = _follower.scroll.position;
+      final at = p.maxScrollExtent - kept;
+      final done = _tail == null && (widget.chat.loaded);
+      if (at < 0 && !done) {
+        if (p.pixels != 0) _follower.hold(0);
+        return;
+      }
+      _restore = null;
+      _follower.hold(at.clamp(0, p.maxScrollExtent));
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     // A finished subagent's steps open at the top, at its prompt.
     if (widget.items != null && !widget.live) _follower.following = false;
-    if (_follower.following) _tail = Transcript.firstEntries;
+    _openAtKept();
+    if (_follower.following || _restore != null) {
+      _tail = Transcript.firstEntries;
+    }
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
     _marks.onFound = (marks) {
       widget.chat.find.found([for (final m in marks) m.key]);
@@ -362,12 +409,25 @@ class _TranscriptState extends State<Transcript> {
         (old.items == null) == (widget.items == null)) {
       return;
     }
-    if (old.chat != widget.chat && _follower.following) {
-      _tail = Transcript.firstEntries;
+    if (old.chat != widget.chat) {
+      _keep(old.chat);
+      _restore = null;
+      if (widget.items == null) _follower.follow();
+      _openAtKept();
+      if (_follower.following || _restore != null) {
+        _tail = Transcript.firstEntries;
+      }
     }
     _shownAsk = -1;
     old.chat.find.removeListener(_findChanged);
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
+  }
+
+  // Not in dispose: by then the list has let go of its scroll.
+  @override
+  void deactivate() {
+    _keep(widget.chat);
+    super.deactivate();
   }
 
   @override
@@ -571,6 +631,7 @@ class _TranscriptState extends State<Transcript> {
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
+    _restoreAfterLayout();
     final t = NushiTheme.of(context).t;
     _marks.look(
       tail == null ? query : '',
