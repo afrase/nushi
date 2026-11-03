@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -59,9 +60,10 @@ class _Dragged extends InheritedWidget {
 
 /// A card's look: rounded, a [title] row that collapses it ([onToggle])
 /// and drags it in a [CardList] (as its [index]th), [trailing] on that
-/// row's right, then [body] while [open]. Under the pointer the title row
-/// shows the open hand and a six-dot grip on its right (in a collapsed
-/// card's [trailing] place, its summary); the closed hand while dragged.
+/// row's right, then [body] while [open] ([Disclosure]). Under the
+/// pointer the title row shows the open hand and a six-dot grip on its
+/// right (in a collapsed card's [trailing] place, its summary); the closed
+/// hand while dragged.
 class CardShell extends StatefulWidget {
   const new({
     required this.title,
@@ -122,7 +124,8 @@ class _CardShellState extends State<CardShell> {
                   children: [
                     widget.title,
                     const SizedBox(width: 2),
-                    if (widget.chevron) Chevron(open: widget.open, size: 15),
+                    if (widget.chevron)
+                      TurnChevron(open: widget.open, size: 15),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Align(
@@ -148,7 +151,7 @@ class _CardShellState extends State<CardShell> {
               ),
             ),
           ),
-          if (widget.open) widget.body,
+          Disclosure(open: widget.open, child: widget.body),
         ],
       ),
     );

@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/slide_list.dart';
 import 'package:nushi/status.dart';
@@ -33,7 +34,9 @@ class _MovingChat {
 /// folder decides its project, so a row of another list is refused): the
 /// others slide apart where the dragged one would land ([SlideList]), and
 /// [onMove] says it moved from one place to another. [row] builds each
-/// row, making it movable with what it's given.
+/// row, making it movable with what it's given. [collapsed], the rows
+/// other than [selectedId]'s fold away together ([Disclosure]), and none
+/// moves.
 class MovableRows extends StatelessWidget {
   const new({
     required this.group,
@@ -41,6 +44,8 @@ class MovableRows extends StatelessWidget {
     required this.row,
     required this.onMove,
     super.key,
+    this.collapsed = false,
+    this.selectedId,
   });
 
   /// Which list it is: a project's folder, or [pinnedGroup].
@@ -48,28 +53,33 @@ class MovableRows extends StatelessWidget {
   final List<ChatState> chats;
   final Widget Function(ChatState chat, Movable movable) row;
   final void Function(int from, int to) onMove;
+  final bool collapsed;
+  final String? selectedId;
 
   @override
   Widget build(BuildContext context) => SlideList<_MovingChat>(
     count: chats.length,
-    accepts: (m) => m.group == group,
+    accepts: (m) => m.group == group && !collapsed,
     onMove: onMove,
     item: (i, drag) {
       final c = chats[i];
       return KeyedSubtree(
         key: ValueKey(c.id),
-        child: row(
-          c,
-          (child, {required enabled}) => LayoutBuilder(
-            builder: (context, box) => drag.draggable(
-              data: _MovingChat(group, c.id),
-              enabled: enabled,
-              feedback: Lifted(
-                c.shownTitle,
-                width: box.maxWidth,
-                weight: FontWeight.w400,
+        child: Disclosure(
+          open: !collapsed || c.id == selectedId,
+          child: row(
+            c,
+            (child, {required enabled}) => LayoutBuilder(
+              builder: (context, box) => drag.draggable(
+                data: _MovingChat(group, c.id),
+                enabled: enabled && !collapsed,
+                feedback: Lifted(
+                  c.shownTitle,
+                  width: box.maxWidth,
+                  weight: FontWeight.w400,
+                ),
+                child: child,
               ),
-              child: child,
             ),
           ),
         ),
@@ -128,7 +138,8 @@ class Lifted extends StatelessWidget {
 
 /// The Pinned section, above the projects while a chat is pinned: its
 /// header, and its chats' rows ([row]), which move by dragging; with the
-/// section collapsed, only the selected chat's row, if it's pinned.
+/// section collapsed, only the selected chat's row, if it's pinned
+/// ([shownPinned]), the others folded away.
 class PinnedSection extends StatelessWidget {
   const new(this.daemon, {required this.row, super.key});
 
@@ -145,9 +156,11 @@ class PinnedSection extends StatelessWidget {
         PinnedHeader(chats: pinned),
         MovableRows(
           group: pinnedGroup,
-          chats: [...shownPinned(daemon)],
+          chats: pinned,
+          collapsed: pinnedCollapsed.value,
+          selectedId: daemon.selectedId,
           row: row,
-          // Two rows or more show only while it's open: all of them.
+          // Rows move only while it's open, when all of them show.
           onMove: (from, to) => unawaited(
             tryOrShow(
               context,
@@ -179,8 +192,9 @@ class PinnedHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
       child: Row(
         children: [
-          IconTap(
-            collapsed ? Icons.chevron_right : Icons.expand_more,
+          IconTap.drawn(
+            (size, color) =>
+                TurnChevron(open: !collapsed, size: size, color: color),
             tooltip: collapsed ? 'Expand' : 'Collapse',
             size: 12,
             padding: 6,

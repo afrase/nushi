@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
@@ -18,7 +19,8 @@ import 'package:nushi/widgets.dart';
 /// would go ([SlideList]; the order is kept in [sidebarOrder]); the
 /// header's chevron collapses it (kept in [sidebarCollapsed]). A collapsed
 /// group shows the most urgent of its chats' states as one dot beside its
-/// name, and of its rows only the selected chat's.
+/// name, and of its rows only the selected chat's ([shownChats]), the
+/// others folding away.
 class SidebarGroups extends StatelessWidget {
   const new({
     required this.groups,
@@ -60,7 +62,7 @@ class SidebarGroups extends StatelessWidget {
       ),
       item: (i, drag) {
         final MapEntry(key: folder, value: chats) = entries[i];
-        final shown = [...shownChats(folder, chats, selectedId)];
+        final collapsed = sidebarCollapsed.value.contains(folder);
         return Column(
           key: ValueKey(folder),
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,7 +71,7 @@ class SidebarGroups extends StatelessWidget {
               folder,
               twin: parents[folder] ?? '',
               chats: chats,
-              collapsed: sidebarCollapsed.value.contains(folder),
+              collapsed: collapsed,
               onNew: switch (onNew) {
                 final f? => () => f(folder),
                 null => null,
@@ -89,9 +91,11 @@ class SidebarGroups extends StatelessWidget {
               ),
             MovableRows(
               group: folder,
-              chats: shown,
+              chats: chats,
+              collapsed: collapsed,
+              selectedId: selectedId,
               row: row,
-              onMove: (from, to) => moveInProject(folder, shown, from, to),
+              onMove: (from, to) => moveInProject(folder, chats, from, to),
             ),
           ],
         );
@@ -205,10 +209,12 @@ class _HeaderState extends State<_Header> {
                 padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
                 child: Row(
                   children: [
-                    IconTap(
-                      widget.collapsed
-                          ? Icons.chevron_right
-                          : Icons.expand_more,
+                    IconTap.drawn(
+                      (size, color) => TurnChevron(
+                        open: !widget.collapsed,
+                        size: size,
+                        color: color,
+                      ),
                       tooltip: widget.collapsed ? 'Expand' : 'Collapse',
                       size: 12,
                       padding: 6,

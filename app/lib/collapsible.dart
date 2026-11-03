@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
-import 'package:nushi/motion.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 
 /// A tool call's row: a one-line header in the tool rows' tint that opens
-/// to show [body], its height easing open and its chevron turning; outlined
+/// to show [body] ([Disclosure], its chevron turning with it); outlined
 /// in red when [failed] (ADR 0076). Given [ids] (its call's, or its group's
 /// and its first call's), it opens as it was left, rebuilt or not. While
 /// closed, a find's matches in [folded] (what the body shows) mark the row.
@@ -34,41 +34,16 @@ class Collapsible extends StatefulWidget {
   State<Collapsible> createState() => _CollapsibleState();
 }
 
-class _CollapsibleState extends State<Collapsible>
-    with SingleTickerProviderStateMixin {
+class _CollapsibleState extends State<Collapsible> {
   late bool _open = widget.ids.any(Collapsible.opened.contains);
-  late final _opening =
-      AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 200),
-        value: _open ? 1 : 0,
-      )..addStatusListener((s) {
-        // Closed: the body goes.
-        if (s == AnimationStatus.dismissed) setState(() {});
-      });
-  late final _eased = CurvedAnimation(parent: _opening, curve: Curves.ease);
 
-  @override
-  void dispose() {
-    _eased.dispose();
-    _opening.dispose();
-    super.dispose();
-  }
-
-  void _toggle() {
-    setState(() {
-      _open = !_open;
-      if (widget.ids.isEmpty) return;
-      _open
-          ? Collapsible.opened.add(widget.ids.first)
-          : Collapsible.opened.removeAll(widget.ids);
-    });
-    if (reduceMotion(context)) {
-      _opening.value = _open ? 1 : 0;
-    } else {
-      (_open ? _opening.forward() : _opening.reverse()).ignore();
-    }
-  }
+  void _toggle() => setState(() {
+    _open = !_open;
+    if (widget.ids.isEmpty) return;
+    _open
+        ? Collapsible.opened.add(widget.ids.first)
+        : Collapsible.opened.removeAll(widget.ids);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -95,16 +70,7 @@ class _CollapsibleState extends State<Collapsible>
                         width: 18,
                         child: body == null
                             ? null
-                            : RotationTransition(
-                                turns: Tween(
-                                  begin: 0.0,
-                                  end: 0.25,
-                                ).animate(_eased),
-                                child: Chevron(
-                                  open: false,
-                                  color: t.textSecondary,
-                                ),
-                              ),
+                            : TurnChevron(open: _open, color: t.textSecondary),
                       ),
                       Expanded(child: widget.header),
                       FoundCount(found),
@@ -114,12 +80,7 @@ class _CollapsibleState extends State<Collapsible>
               ),
             ),
           ),
-          if (body != null && (_open || !_opening.isDismissed))
-            SizeTransition(
-              sizeFactor: _eased,
-              alignment: Alignment.topCenter,
-              child: body,
-            ),
+          if (body != null) Disclosure(open: _open, child: body),
         ],
       ),
     );

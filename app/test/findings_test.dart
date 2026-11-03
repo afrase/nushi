@@ -366,7 +366,7 @@ void main() {
         );
         if (open >= 0) {
           await tester.tap(find.text(findings.items[open].shortSummary));
-          await tester.pump();
+          await tester.pumpAndSettle(); // the row opens (a Disclosure)
         }
         await expectLater(
           find.byType(FindingsCard),

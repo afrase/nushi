@@ -747,7 +747,8 @@ class IconTap extends StatelessWidget {
     this.size = 16,
     this.color,
     this.padding = 5,
-  }) : line = null;
+  }) : line = null,
+       glyph = null;
 
   /// The same button with a drawn [LineIcon].
   const new line(
@@ -758,10 +759,25 @@ class IconTap extends StatelessWidget {
     this.size = 16,
     this.color,
     this.padding = 5,
-  }) : icon = null;
+  }) : icon = null,
+       glyph = null;
+
+  /// The same button with [glyph] drawn in the icon's place, at the
+  /// icon's size and in its color (a chevron that turns).
+  const new drawn(
+    Widget Function(double size, Color color) this.glyph, {
+    required this.tooltip,
+    required this.onTap,
+    super.key,
+    this.size = 16,
+    this.color,
+    this.padding = 5,
+  }) : icon = null,
+       line = null;
 
   final IconData? icon;
   final LineIcon? line;
+  final Widget Function(double size, Color color)? glyph;
   final String tooltip;
   final VoidCallback? onTap;
   final double size;
@@ -786,6 +802,7 @@ class IconTap extends StatelessWidget {
           ),
           foregroundDecoration: focusRing(t, look),
           child:
+              glyph?.call(size, tint) ??
               line?.view(size: size, color: tint) ??
               Icon(icon, size: size, color: tint),
         );

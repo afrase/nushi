@@ -6,6 +6,7 @@ import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
@@ -158,7 +159,7 @@ class _SidebarState extends State<Sidebar> {
                           ),
                           child: Row(
                             children: [
-                              Chevron(open: _showArchived, size: 16),
+                              TurnChevron(open: _showArchived, size: 16),
                               const SizedBox(width: 4),
                               Text(
                                 'Archived  ${archived.length}',
@@ -168,9 +169,16 @@ class _SidebarState extends State<Sidebar> {
                           ),
                         ),
                       ),
-                      if (_showArchived)
-                        for (final c in archived)
-                          _ChatRow(c, key: ValueKey(c.id), daemon: daemon),
+                      Disclosure(
+                        open: _showArchived,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final c in archived)
+                              _ChatRow(c, key: ValueKey(c.id), daemon: daemon),
+                          ],
+                        ),
+                      ),
                     ],
                   ],
                 );

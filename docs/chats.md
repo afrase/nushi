@@ -28,7 +28,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - It keeps the model, effort and other options you pick under the box, after it sleeps or the daemon restarts.
 - A new chat starts on the options last picked for its agent (where it still offers them), in the mode last picked.
 
-**Order.** Drag a chat within its project to reorder it; a new chat goes to the top. Drag a project by its header. A project's chevron collapses it.
+**Order.** Drag a chat within its project to reorder it; a new chat goes to the top. Drag a project by its header. A project's chevron collapses it, its chats folding away; every chevron in Nushi (Thinking, a tool's row, a finding, a details widget, Archived) opens and folds the same way, at once with Reduce Motion.
 
 **Pins.** Pin a chat with ⌘D (Chat › Pin Chat, its ⋯, its row's right-click, or the palette) and it moves to Pinned, above the projects, with its project's name beside it.
 

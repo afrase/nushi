@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/paced.dart';
@@ -123,7 +124,7 @@ class _FoldedState extends State<Folded> {
               mainAxisSize: MainAxisSize.min,
               spacing: 6,
               children: [
-                Chevron(open: _open),
+                TurnChevron(open: _open),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -138,13 +139,18 @@ class _FoldedState extends State<Folded> {
             ),
           ),
         ),
-        if (!_open && widget.line != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 18),
-            child: widget.line!(style),
+        // The newest sentence folds away as the thoughts open in its place.
+        if (widget.line case final line?)
+          Disclosure(
+            open: !_open,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 18),
+              child: line(style),
+            ),
           ),
-        if (_open)
-          Container(
+        Disclosure(
+          open: _open,
+          child: Container(
             margin: const EdgeInsets.only(left: 6, top: 4),
             padding: const EdgeInsets.only(left: 12),
             decoration: BoxDecoration(
@@ -157,6 +163,7 @@ class _FoldedState extends State<Folded> {
               null => Text(widget.text, style: style),
             },
           ),
+        ),
       ],
     );
   }

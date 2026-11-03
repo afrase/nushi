@@ -6,6 +6,7 @@ import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/disclosure.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
@@ -187,7 +188,6 @@ class _FindingsCardState extends State<FindingsCard> {
       padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 4,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,7 +195,7 @@ class _FindingsCardState extends State<FindingsCard> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Chevron(open: open),
+                child: TurnChevron(open: open),
               ),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 260),
@@ -215,9 +215,10 @@ class _FindingsCardState extends State<FindingsCard> {
                 if (c.isNotEmpty) _chip(c),
             ],
           ),
-          if (open)
-            Padding(
-              padding: const EdgeInsets.only(left: 22),
+          Disclosure(
+            open: open,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 22, top: 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 4,
@@ -249,6 +250,7 @@ class _FindingsCardState extends State<FindingsCard> {
                 ],
               ),
             ),
+          ),
         ],
       ),
     );

@@ -225,7 +225,7 @@ void main() {
         matching: find.byTooltip('Collapse'),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle(); // its rows fold (a Disclosure)
     expect(_in('Jot it down'), findsNothing);
     const headers = ['ledger-poc', 'cappy', 'garden', 'notes'];
     final before = _ys(tester, headers);
