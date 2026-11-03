@@ -5,6 +5,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -73,6 +74,7 @@ void main() {
       expect(find.byTooltip('Queue (⏎)'), findsOne);
       expect(find.byTooltip('Stop and send (⌘⏎)'), findsOne);
       expect(find.byTooltip('Stop (esc)'), findsOne);
+      await tester.pump(Motion.quick); // the buttons popped in
       await expectLater(
         find.byKey(const Key('box')),
         matchesGoldenFile('goldens/composer_turn_dark.png'),

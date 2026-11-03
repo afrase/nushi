@@ -11,6 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pickers.dart';
@@ -70,6 +71,7 @@ class _ComposerState extends State<Composer> {
   List<String> _lastFiles = []; // the last prompt's, for Up
   late final Attachments _images = _draft.images;
   Timer? _esc; // a first Esc's time to be followed by a second
+  bool _built = false; // the box has been built once
   late final _spell = SpellCheck(_draft.text, widget.chat, _focus);
 
   @override
@@ -316,6 +318,9 @@ class _ComposerState extends State<Composer> {
     final t = theme.t;
     final chat = widget.chat;
     final touch = TouchTargets.of(context);
+    // Buttons pop in once the box is there, not with it.
+    final pop = _built;
+    _built = true;
     final written =
         !_locked &&
         (_text.text.trim().isNotEmpty ||
@@ -334,26 +339,43 @@ class _ComposerState extends State<Composer> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (turnPlan(chat.items) case final plan? when chat.busy)
-              PlanStatus(plan),
-            if (chat.queue.isNotEmpty)
-              QueuePills(
-                chat,
-                onEdit: _unlocked(_unqueue),
-                onRemove: _unlocked((m) => _unqueue(m, drop: true)),
-                onSendNow: _unlocked(_sendNow),
-              ),
-            if (chat.error.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(chat.error, style: theme.ui(t.crashed, size: 12)),
-              ),
-            if (_completions.choices.isNotEmpty && !_locked)
-              ChoiceList(
-                _completions.choices,
-                _completions.picked,
-                onPick: _completions.accept,
-              ),
+            // The lines over the box grow in and fold away (grow.dart).
+            GrowLine(
+              child: switch (turnPlan(chat.items)) {
+                final plan? when chat.busy => PlanStatus(plan),
+                _ => null,
+              },
+            ),
+            GrowLine(
+              child: chat.queue.isEmpty
+                  ? null
+                  : QueuePills(
+                      chat,
+                      onEdit: _unlocked(_unqueue),
+                      onRemove: _unlocked((m) => _unqueue(m, drop: true)),
+                      onSendNow: _unlocked(_sendNow),
+                    ),
+            ),
+            GrowLine(
+              child: chat.error.isEmpty
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        chat.error,
+                        style: theme.ui(t.crashed, size: 12),
+                      ),
+                    ),
+            ),
+            GrowLine(
+              child: _completions.choices.isEmpty || _locked
+                  ? null
+                  : ChoiceList(
+                      _completions.choices,
+                      _completions.picked,
+                      onPick: _completions.accept,
+                    ),
+            ),
             AnimatedBuilder(
               animation: _focus,
               builder: (context, child) => Container(
@@ -373,31 +395,40 @@ class _ComposerState extends State<Composer> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_images.value.isNotEmpty ||
-                      _draft.replies.value.isNotEmpty ||
-                      _draft.toSubagent.value != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          if (_draft.toSubagent.value case (_, final agent)?)
-                            Chip(
-                              label: Text(
-                                'To $agent, through ${chat.agentName}',
-                              ),
-                              onDeleted: () => _draft.toSubagent.value = null,
-                              visualDensity: VisualDensity.compact,
+                  GrowLine(
+                    child:
+                        _images.value.isEmpty &&
+                            _draft.replies.value.isEmpty &&
+                            _draft.toSubagent.value == null
+                        ? null
+                        : Padding(
+                            padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                if (_draft.toSubagent.value
+                                    case (_, final agent)?)
+                                  Chip(
+                                    label: Text(
+                                      'To $agent, through ${chat.agentName}',
+                                    ),
+                                    onDeleted: () =>
+                                        _draft.toSubagent.value = null,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ReplyCards(
+                                  _draft.replies,
+                                  onDone: _focus.requestFocus,
+                                ),
+                                Thumbnails(
+                                  _images.value,
+                                  onRemove: _images.removeAt,
+                                ),
+                              ],
                             ),
-                          ReplyCards(
-                            _draft.replies,
-                            onDone: _focus.requestFocus,
                           ),
-                          Thumbnails(_images.value, onRemove: _images.removeAt),
-                        ],
-                      ),
-                    ),
+                  ),
                   Row(
                     children: [
                       Menu(
@@ -468,38 +499,54 @@ class _ComposerState extends State<Composer> {
                       ),
                       // Queue (after this turn) and Stop and send (stop it,
                       // and this goes now): a phone's only way, the Mac's ⏎
-                      // and ⌘⏎ as buttons.
+                      // and ⌘⏎ as buttons. One coming pops in (grow.dart).
                       if (written && chat.busy) ...[
-                        boxButton(
-                          touch ? 'Queue' : 'Queue (⏎)',
-                          _send,
-                          Icon(Icons.queue, size: 16, color: t.textSecondary),
+                        PopIn(
+                          key: const ValueKey('queue'),
+                          play: pop,
+                          child: boxButton(
+                            touch ? 'Queue' : 'Queue (⏎)',
+                            _send,
+                            Icon(Icons.queue, size: 16, color: t.textSecondary),
+                          ),
                         ),
                         if (chat.started != null)
-                          boxButton(
-                            touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
-                            () => _send(now: true),
-                            Icon(
-                              Icons.fast_forward,
-                              size: 16,
-                              color: t.textSecondary,
+                          PopIn(
+                            key: const ValueKey('now'),
+                            play: pop,
+                            child: boxButton(
+                              touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
+                              () => _send(now: true),
+                              Icon(
+                                Icons.fast_forward,
+                                size: 16,
+                                color: t.textSecondary,
+                              ),
                             ),
                           ),
                       ],
                       if (chat.started != null)
-                        boxButton(
-                          'Stop (esc)',
-                          () => stopTurn(context, chat, widget.daemon),
-                          stopIcon(t.textSecondary),
+                        PopIn(
+                          key: const ValueKey('stop'),
+                          play: pop,
+                          child: boxButton(
+                            'Stop (esc)',
+                            () => stopTurn(context, chat, widget.daemon),
+                            stopIcon(t.textSecondary),
+                          ),
                         )
                       else if (written && !chat.busy)
-                        boxButton(
-                          'Send (⏎)',
-                          _send,
-                          Icon(
-                            Icons.keyboard_return,
-                            size: 16,
-                            color: t.textSecondary,
+                        PopIn(
+                          key: const ValueKey('send'),
+                          play: pop,
+                          child: boxButton(
+                            'Send (⏎)',
+                            _send,
+                            Icon(
+                              Icons.keyboard_return,
+                              size: 16,
+                              color: t.textSecondary,
+                            ),
                           ),
                         ),
                     ],

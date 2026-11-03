@@ -18,8 +18,9 @@ import 'package:nushi/theme/theme.dart';
 /// in front) leaves a receipt for [receiptFor]: its mark draws into the
 /// green check, sparks leave it, and the text says "Done in 2m 30s". Then
 /// the line folds away over 200 ms, so the composer slides down rather
-/// than jumps. With Reduce Motion the receipt shows still and goes at
-/// once. Between turns it takes no room.
+/// than jumps; as a turn starts it grows in the same way, so the composer
+/// slides up. With Reduce Motion the receipt shows still and the line
+/// comes and goes at once. Between turns it takes no room.
 class TurnStatus extends StatefulWidget {
   const new(this.chat, {super.key, this.what});
 
@@ -40,6 +41,9 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
   bool _stopped = false; // someone stopped it
   String? _receipt; // "Done in 2m 30s", while it shows
   String _last = ''; // what the line said last, folding away
+  bool _growing = false; // the run is the line growing in
+  double _growFrom = 0; // how much of it showed as it began to
+  double _shows = 0; // how much of the line showed when last built
 
   @override
   void initState() {
@@ -75,7 +79,11 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
       if (!_busy) {
         _stopped = false;
         _receipt = null;
+        // From what shows of a line still folding, if one is.
+        _growFrom = running ? _shows : 0;
         stopRun();
+        _growing = !reduceMotion(context) && _growFrom < 1;
+        if (_growing) runFor(TurnStatus.foldFor);
       }
       _since = c.started ?? _since ?? DateTime.now();
       _stopped |= c.stopping;
@@ -90,6 +98,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     final c = widget.chat;
     final lasted = DateTime.now().difference(_since ?? DateTime.now());
     final still = reduceMotion(context);
+    _growing = false;
     _receipt =
         !_stopped && !c.waiting && !turnFailed(c.items) && sparksFor(lasted)
         ? 'Done in ${elapsed(lasted)}'
@@ -107,8 +116,24 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
-    if (chat.busy || widget.what != null) return _line(context);
-    if (!running) return const SizedBox.shrink();
+    if (widget.what != null) return _line(context);
+    if (chat.busy) {
+      final v = !running || !_growing
+          ? 1.0
+          : _growFrom +
+                (1 - _growFrom) *
+                    part(
+                      ranMs,
+                      0,
+                      TurnStatus.foldFor.inMilliseconds.toDouble(),
+                      Curves.ease,
+                    );
+      return _folded(_line(context), 1 - v);
+    }
+    if (!running) {
+      _shows = 0;
+      return const SizedBox.shrink();
+    }
     final ms = ranMs;
     final fold = part(
       ms,
@@ -117,6 +142,12 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
       Curves.ease,
     );
     final line = _receipt == null ? _line(context, folding: true) : _done(ms);
+    return _folded(line, fold);
+  }
+
+  /// [line] [fold] of the way folded away: its height and opacity.
+  Widget _folded(Widget line, double fold) {
+    _shows = 1 - fold;
     if (fold == 0) return line;
     return ClipRect(
       child: Align(
