@@ -37,7 +37,7 @@ The replay's client goes only once the Go agent has sent what the recording's cl
 
 ## The scenarios
 
-Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`; the two `subagent-worktree` ones 2026-11-02, 2.1.314), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
+Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent-acp 0.94.0, `make claude-record`; the two `subagent-worktree` ones 2026-11-02, 2.1.314, `plan` 2026-11-03, 2.1.314), and the Go agent matches the adapter on each (`go test -race -run 'ClaudeParity|ClaudeMerge' ./internal/features/chats`, green at `-count=20`). What the recordings showed is in `docs/facts/claude.md` (its Go-agent section). Scenarios that don't ask about a tool allow it in claude's session settings (`meta`), so only the scenarios about asking ask. `tools/claude-record`'s tests load every scenario, and play those a fake claude can take.
 
 | Scenario | What it does | Also showed |
 |---|---|---|
@@ -70,6 +70,7 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `safeguards` | a refusal: the notice, then claude's retry | |
 | `refusal` | a refusal of the retry too: the turn ends `refusal` | |
 | `findings` | a `ReportFindings` call | |
+| `plan` | three `TaskCreate`s, then `TaskUpdate`s through the steps; `session/close`, `session/load`, a prompt after | the `plan` updates (`docs/facts/claude.md`) |
 | `ultracode` | ultracode on, then an effort change | |
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
@@ -85,7 +86,7 @@ env CLAUDE_TEE_REAL=(command -v claude) make claude-record SCENARIOS=all    # or
 For each scenario, `tools/claude-record`:
 
 1. serves `api.json` on loopback;
-2. runs the adapter (`node`, the adapter set up once in a cache folder from `internal/claude/adapter`'s lockfile) with a throwaway `HOME`, `CLAUDE_CONFIG_DIR` and `TMPDIR`, `ANTHROPIC_BASE_URL` at the fake API, a dummy `ANTHROPIC_API_KEY`, the CLI's calls home off, nothing else of your environment but `PATH`, and `CLAUDE_CODE_EXECUTABLE` at `claude-tee`, which runs `CLAUDE_TEE_REAL`;
+2. runs the adapter (`node`, the adapter set up once in a cache folder from `internal/claude/adapter`'s lockfile) with a throwaway `HOME`, `CLAUDE_CONFIG_DIR` and `TMPDIR`, `ANTHROPIC_BASE_URL` at the fake API, a dummy `ANTHROPIC_API_KEY`, the CLI's calls home off, nothing else of your environment but `PATH`, and `CLAUDE_CODE_EXECUTABLE` at `claude-tee`, which runs `CLAUDE_TEE_REAL`, and what Nushi adds to an agent's environment (`claude.Environ`: the todo tools on);
 3. plays `client.json`;
 4. closes the agent's stdin, waits for it to end (then stops its process group), and checks that every turn of `api.json` was asked for, and nothing the scripts don't cover was.
 

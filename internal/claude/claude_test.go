@@ -17,6 +17,20 @@ func TestForkTitlesAreIgnored(t *testing.T) {
 	}
 }
 
+func TestTodoToolsOnUnlessTheUserSaysOtherwise(t *testing.T) {
+	user := []string{"PATH=/bin"}
+	if got := Environ(user); strings.Join(got, " ") != "PATH=/bin CLAUDE_CODE_ENABLE_TODO_TOOLS=1" {
+		t.Errorf("Environ = %q, want the todo tools on", got)
+	}
+	if len(user) != 1 {
+		t.Error("Environ changed its argument")
+	}
+	theirs := []string{"CLAUDE_CODE_ENABLE_TODO_TOOLS=0", "PATH=/bin"}
+	if got := Environ(theirs); strings.Join(got, " ") != strings.Join(theirs, " ") {
+		t.Errorf("Environ = %q, want the user's value to stand", got)
+	}
+}
+
 func TestFormsAndModels(t *testing.T) {
 	color := model.Field{ID: "color", Options: []model.Option{{ID: "red"}}}
 	if !harness.Other(model.Field{ID: "color_custom"}, color) || harness.Other(model.Field{ID: "fruit"}, color) {

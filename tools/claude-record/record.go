@@ -16,6 +16,7 @@ import (
 
 	"github.com/afrase/nushi/claudeagent/claudetest/fakeapi"
 	"github.com/afrase/nushi/claudeagent/sessions"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/proctree"
 )
 
@@ -158,9 +159,9 @@ func (r *recorder) run(ctx context.Context, scratch string, script *fakeapi.Scri
 
 // environ is the agent's environment: none of the caller's but PATH (for
 // node), throwaway folders, the fake API with a dummy key, claude-tee as
-// claude, and the CLI's calls home off.
+// claude, the CLI's calls home off, and what Nushi adds (claude.Environ).
 func (r *recorder) environ(dirs map[string]string, url string) []string {
-	return []string{
+	return claude.Environ([]string{
 		"PATH=" + os.Getenv("PATH"),
 		"HOME=" + dirs["home"],
 		"CLAUDE_CONFIG_DIR=" + dirs["config"],
@@ -175,7 +176,7 @@ func (r *recorder) environ(dirs map[string]string, url string) []string {
 		"DISABLE_AUTOUPDATER=1",
 		"DISABLE_TELEMETRY=1",
 		"DISABLE_ERROR_REPORTING=1",
-	}
+	})
 }
 
 // stop waits for the agent to end after its stdin closed, as it should,

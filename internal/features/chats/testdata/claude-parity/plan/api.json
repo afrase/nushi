@@ -1,0 +1,20 @@
+{
+  "turns": [
+    {"match": {"lastUserText": "tidy the notes"}, "content": [
+       {"type": "text", "text": "I'll plan it."},
+       {"type": "tool_use", "name": "TaskCreate", "input": {"subject": "Read the notes", "description": "Read every note in the folder.", "activeForm": "Reading the notes"}},
+       {"type": "tool_use", "name": "TaskCreate", "input": {"subject": "Merge the duplicates", "description": "Merge notes that say the same thing.", "activeForm": "Merging the duplicates"}},
+       {"type": "tool_use", "name": "TaskCreate", "input": {"subject": "Write an index", "description": "List every note left in index.md.", "activeForm": "Writing an index"}}
+     ]},
+    {"match": {"toolResult": "TaskCreate", "capture": {"read": "Task #(\\w+) created successfully: Read the notes"}}, "content": [
+       {"type": "tool_use", "name": "TaskUpdate", "input": {"taskId": "${read}", "status": "in_progress"}}
+     ]},
+    {"match": {"toolResult": "TaskUpdate", "capture": {"read": "Task #(\\w+) created successfully: Read the notes", "merge": "Task #(\\w+) created successfully: Merge the duplicates"}}, "content": [
+       {"type": "text", "text": "Read them."},
+       {"type": "tool_use", "name": "TaskUpdate", "input": {"taskId": "${read}", "status": "completed"}},
+       {"type": "tool_use", "name": "TaskUpdate", "input": {"taskId": "${merge}", "status": "in_progress"}}
+     ]},
+    {"match": {"toolResult": "TaskUpdate"}, "content": [{"type": "text", "text": "The notes are read; merging next."}]},
+    {"match": {"lastUserText": "what's left"}, "content": [{"type": "text", "text": "Merging the duplicates, then the index."}]}
+  ]
+}

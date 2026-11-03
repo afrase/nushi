@@ -1,0 +1,10 @@
+{
+  "steps": [
+    {"initialize": {}},
+    {"new": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["TaskCreate", "TaskUpdate"]}}}}}},
+    {"prompt": "tidy the notes", "session": "s1"},
+    {"close": "s1"},
+    {"load": "s1", "meta": {"claudeCode": {"options": {"settings": {"permissions": {"allow": ["TaskCreate", "TaskUpdate"]}}}}}},
+    {"prompt": "what's left?", "session": "s1"}
+  ]
+}

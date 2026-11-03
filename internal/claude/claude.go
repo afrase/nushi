@@ -91,12 +91,33 @@ var adapterFiles embed.FS
 // goes to log.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	if r.Own {
-		return startGo(dir, r.CLI, r.Env, client, log)
+		return startGo(dir, r.CLI, Environ(r.Env), client, log)
 	}
 	cmd := exec.Command(r.Node, r.Program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
 	cmd.Dir = dir
-	cmd.Env = append(slices.Clone(r.Env), "CLAUDE_CODE_EXECUTABLE="+r.CLI)
+	cmd.Env = append(Environ(r.Env), "CLAUDE_CODE_EXECUTABLE="+r.CLI)
 	return agentproc.Start(cmd, client, log)
+}
+
+// TodoTools is the variable that turns on Claude Code's to-do list (its
+// task tools, TaskCreate and the rest) for the current models: without it
+// Claude keeps no plan, so the adapter and the Go agent send none
+// (docs/facts/claude.md).
+const TodoTools = "CLAUDE_CODE_ENABLE_TODO_TOOLS"
+
+// Environ is env, the user's agent environment, with what Nushi adds for
+// Claude Code: TodoTools on, unless env sets it, so a user's own value
+// stands. It goes in the agent's process environment rather than the
+// session's _meta, whose env the adapter lays over its own: both agents
+// pass theirs on to claude.
+func Environ(env []string) []string {
+	env = slices.Clone(env)
+	for _, kv := range env {
+		if k, _, _ := strings.Cut(kv, "="); k == TodoTools {
+			return env
+		}
+	}
+	return append(env, TodoTools+"=1")
 }
 
 // CLI is Claude Code's program, and Page where to get it.
