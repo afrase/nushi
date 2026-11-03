@@ -81,42 +81,39 @@ class AnsweredQuestion extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final muted = theme.ui(theme.t.textMuted, size: 12);
-    final answered = item.fields.where((f) => f.values.isNotEmpty);
-    return WaitingCard(
-      waiting: false,
-      children: [
-        CardTitle(item.text, waiting: false),
-        if (item.status != 'answered')
-          Text(
-            item.status == 'declined' ? 'Skipped' : 'Cancelled',
-            style: muted,
-          )
-        else
-          for (final f in answered)
-            Text.rich(
-              TextSpan(
-                text: '${f.options.isEmpty ? f.title : f.description}  ',
-                style: muted,
-                children: [
-                  TextSpan(
-                    text: f.values
-                        .map(
-                          (v) =>
-                              f.options
-                                  .where((o) => o.id == v)
-                                  .firstOrNull
-                                  ?.name ??
-                              v,
-                        )
-                        .join(', '),
-                    style: theme.ui(theme.t.text, size: 12),
-                  ),
-                ],
-              ),
-            ),
-      ],
-    );
+    return WaitingCard(waiting: false, children: answeredLines(context, item));
   }
+}
+
+/// An answered question's lines: its title, and each answer, or that it
+/// was skipped or cancelled.
+List<Widget> answeredLines(BuildContext context, Item item) {
+  final theme = NushiTheme.of(context);
+  final muted = theme.ui(theme.t.textMuted, size: 12);
+  final answered = item.fields.where((f) => f.values.isNotEmpty);
+  return [
+    CardTitle(item.text, waiting: false),
+    if (item.status != 'answered')
+      Text(item.status == 'declined' ? 'Skipped' : 'Cancelled', style: muted)
+    else
+      for (final f in answered)
+        Text.rich(
+          TextSpan(
+            text: '${f.options.isEmpty ? f.title : f.description}  ',
+            style: muted,
+            children: [
+              TextSpan(
+                text: f.values
+                    .map(
+                      (v) =>
+                          f.options.where((o) => o.id == v).firstOrNull?.name ??
+                          v,
+                    )
+                    .join(', '),
+                style: theme.ui(theme.t.text, size: 12),
+              ),
+            ],
+          ),
+        ),
+  ];
 }

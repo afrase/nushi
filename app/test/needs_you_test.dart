@@ -69,9 +69,14 @@ void main() {
     );
     expect(_ring(tester), 2);
 
+    // Answered, the ring fades with the amber as the card settles.
     await tester.pumpWidget(
       _app(PermissionCard(_ask(status: 'answered'), onAnswer: (_) async {})),
     );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(_ring(tester), inExclusiveRange(0, 2));
+    await tester.pumpAndSettle();
     expect(_ring(tester), isNull);
   });
 

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/cards.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/question_parts.dart';
@@ -209,13 +210,24 @@ class _QuestionCardState extends State<QuestionCard> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final item = widget.item;
-    if (item.status != 'pending') return AnsweredQuestion(item);
-    return Focus(
-      focusNode: _focus,
-      onKeyEvent: _onKey,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: box(t.accent.withValues(alpha: 0.6)),
+    // Answered, it settles into its answered lines (SettleCard).
+    if (item.status != 'pending') {
+      return SettleCard(
+        state: false,
+        decoration: box(t.borderSubtle),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 8,
+          children: answeredLines(context, item),
+        ),
+      );
+    }
+    return SettleCard(
+      state: true,
+      decoration: box(t.accent.withValues(alpha: 0.6)),
+      child: Focus(
+        focusNode: _focus,
+        onKeyEvent: _onKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 8,

@@ -13,7 +13,7 @@ import 'package:nushi/widgets.dart';
 /// A card for something the agent waits on: amber while it waits, with a
 /// soft amber ring. As it comes ([Arriving]) the ring glows once: it grows
 /// to 6 px and settles at its 2 over 700 ms (with Reduce Motion it's there
-/// at once).
+/// at once). Answered, it settles into its answered line ([SettleCard]).
 class WaitingCard extends StatefulWidget {
   const new({required this.waiting, required this.children, super.key});
 
@@ -54,8 +54,8 @@ class _WaitingCardState extends State<WaitingCard> with ClockRun {
     final (spread, alpha) = v < 0.35
         ? (6 * v / 0.35, 0.28 * v / 0.35)
         : (6 - 4 * (v - 0.35) / 0.65, 0.28 - 0.1 * (v - 0.35) / 0.65);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return SettleCard(
+      state: waiting,
       decoration: waiting
           ? decoration.copyWith(
               boxShadow: [
@@ -66,12 +66,100 @@ class _WaitingCardState extends State<WaitingCard> with ClockRun {
               ],
             )
           : decoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: widget.children,
+      ),
+    );
+  }
+}
+
+/// A card's box that settles as what it holds changes [state] (a prompt
+/// answered): its border, fill and glow crossfade from what they were to
+/// [decoration] over [Motion.standard], its content crossfades over
+/// [Motion.quick] and its height eases over [Motion.standard], so the
+/// transcript under it slides rather than jumps. With Reduce Motion the
+/// colors and the height change at once.
+class SettleCard extends StatefulWidget {
+  const new({
+    required this.decoration,
+    required this.state,
+    required this.child,
+    super.key,
+  });
+
+  final BoxDecoration decoration;
+  final Object state;
+  final Widget child;
+
+  @override
+  State<SettleCard> createState() => _SettleCardState();
+}
+
+class _SettleCardState extends State<SettleCard> with ClockRun {
+  BoxDecoration? _from; // the box as the state changed
+
+  BoxDecoration _box(BoxDecoration to) {
+    final from = _from;
+    if (from == null || !running) return to;
+    final v = Motion.size.transform(
+      (ranMs / Motion.standard.inMilliseconds).clamp(0.0, 1.0),
+    );
+    return BoxDecoration.lerp(from, to, v)!;
+  }
+
+  @override
+  void didUpdateWidget(SettleCard old) {
+    super.didUpdateWidget(old);
+    if (old.state == widget.state) return;
+    if (reduceMotion(context)) {
+      _from = null;
+      stopRun();
+      return;
+    }
+    _from = _box(old.decoration);
+    runFor(Motion.standard);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final content = SizedBox(
+      key: ValueKey(widget.state),
+      width: double.infinity,
+      child: widget.child,
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: _box(widget.decoration),
+      // With Reduce Motion, no AnimatedSize (one of no length relays out
+      // as it lays out).
       child: Marks(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: widget.children,
-        ),
+        child: reduceMotion(context)
+            ? content
+            : AnimatedSize(
+                duration: Motion.standard,
+                curve: Motion.size,
+                alignment: AlignmentDirectional.topStart,
+                child: AnimatedSwitcher(
+                  duration: Motion.quick,
+                  // The new content sizes the card; the old fades over it,
+                  // clipped as the card eases to the new height.
+                  layoutBuilder: (current, previous) => Stack(
+                    children: [
+                      for (final p in previous)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          right: 0,
+                          child: IgnorePointer(child: ExcludeFocus(child: p)),
+                        ),
+                      ?current,
+                    ],
+                  ),
+                  child: content,
+                ),
+              ),
       ),
     );
   }
