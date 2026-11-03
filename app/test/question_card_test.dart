@@ -24,6 +24,44 @@ Field choice(
 );
 
 void main() {
+  testWidgets('an answered question too long for a line wraps in its card', (
+    tester,
+  ) async {
+    final question = 'I stopped the service. Its files are still there: ' * 6;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 500,
+              child: QuestionCard(
+                Item(
+                  id: 'q',
+                  kind: ItemKind.ITEM_KIND_QUESTION,
+                  status: 'answered',
+                  text: question,
+                  fields: [
+                    choice('question_0', 'Files', ['Delete all'])
+                      ..values.add('Delete all'),
+                  ],
+                ),
+                agent: 'Claude',
+                onAnswer: (_) async {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull); // no overflow
+    final title = tester.getRect(find.text(question));
+    final card = tester.getRect(find.byType(QuestionCard));
+    expect(title.right, lessThanOrEqualTo(card.right));
+    expect(title.height, greaterThan(40)); // more than one line
+  });
+
   testWidgets('questions one at a time, back and forth, then Submit', (
     tester,
   ) async {

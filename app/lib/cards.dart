@@ -155,7 +155,9 @@ class _SettleCardState extends State<SettleCard> with ClockRun {
   }
 }
 
-/// The card's first line: an icon and what it is about.
+/// The card's first line: an icon and what it is about. With no [detail],
+/// the title wraps (an answered question's is the question, however long),
+/// the icon beside its first line.
 class CardTitle extends StatelessWidget {
   const new(this.title, {super.key, this.detail = '', this.waiting = true});
 
@@ -167,15 +169,37 @@ class CardTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final icon = Icon(
+      waiting ? Icons.warning_amber_rounded : Icons.check,
+      size: 14,
+      color: waiting ? t.needs : t.textMuted,
+    );
+    final style = theme.ui(t.text, weight: FontWeight.w600);
+    if (detail.isEmpty) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Centred on the first line, as the row centres it on one line.
+          Padding(
+            padding: EdgeInsets.only(
+              top:
+                  (MediaQuery.textScalerOf(context).scale(style.fontSize!) *
+                          style.height! -
+                      14) /
+                  2,
+            ),
+            child: icon,
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(title, style: style)),
+        ],
+      );
+    }
     return Row(
       children: [
-        Icon(
-          waiting ? Icons.warning_amber_rounded : Icons.check,
-          size: 14,
-          color: waiting ? t.needs : t.textMuted,
-        ),
+        icon,
         const SizedBox(width: 8),
-        Text(title, style: theme.ui(t.text, weight: FontWeight.w600)),
+        Text(title, style: style),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
