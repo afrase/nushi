@@ -15,6 +15,7 @@ import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/marks.dart';
 import 'package:nushi/message_actions.dart';
+import 'package:nushi/plan_view.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
@@ -127,7 +128,7 @@ class ItemView extends StatelessWidget {
       case ItemKind.ITEM_KIND_THOUGHT:
         return ThoughtView(item, live: live);
       case ItemKind.ITEM_KIND_PLAN:
-        return PlanView(item);
+        return PlanView(item, chat);
       case ItemKind.ITEM_KIND_NOTICE
           when item.status == 'compacted' || item.status == 'history_differs':
         return HistoryMark(item, agent: chat.agentName);

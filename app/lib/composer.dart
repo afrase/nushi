@@ -16,6 +16,7 @@ import 'package:nushi/images.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pickers.dart';
+import 'package:nushi/plan_view.dart';
 import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
@@ -23,7 +24,6 @@ import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/spell_menu.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/thinking.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
