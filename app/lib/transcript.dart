@@ -155,7 +155,9 @@ class _TranscriptState extends State<Transcript> {
       // Not under a press: a selection's edges are kept by the scroll
       // offset, which each entry coming in above would move.
       if (mounted && _tail != null && !_down) {
-        setState(() => _tail = _tail! + Transcript.moreEntries);
+        // Filling in to a kept place, unseen (see build): more a frame.
+        final more = Transcript.moreEntries * (_restore == null ? 1 : 4);
+        setState(() => _tail = _tail! + more);
       }
     });
   }
@@ -391,12 +393,9 @@ class _TranscriptState extends State<Transcript> {
       if (!mounted || kept == null || !_follower.scroll.hasClients) return;
       final p = _follower.scroll.position;
       final at = p.maxScrollExtent - kept;
-      final done = _tail == null && (widget.chat.loaded);
-      if (at < 0 && !done) {
-        if (p.pixels != 0) _follower.hold(0);
-        return;
-      }
-      _restore = null;
+      final done = _tail == null && widget.chat.loaded;
+      if (at < 0 && !done) return;
+      setState(() => _restore = null);
       _follower.hold(at.clamp(0, p.maxScrollExtent));
     });
   }
@@ -712,41 +711,46 @@ class _TranscriptState extends State<Transcript> {
                 // widget, so a streamed chunk rebuilds only its message.
                 child: PacingHold(
                   notifier: _hold,
-                  child: SingleChildScrollView(
-                    controller: _follower.scroll,
-                    padding: EdgeInsets.only(
-                      top: _roomAbove ? _findBarHeight + 8 : 2,
-                      bottom: 14,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (widget.header case final h?)
-                          Padding(
-                            padding: chatSides(context, box.maxWidth),
-                            child: h,
-                          ),
-                        for (final (i, e) in entries.indexed.skip(from))
-                          _entry(
-                            before,
-                            e,
-                            live: live && i == entries.length - 1,
-                            still: chat.waiting,
-                            top: _gap(
-                              entries,
-                              i,
-                              header: widget.header != null,
-                              phone: TouchTargets.of(context),
+                  // Unseen while it fills in up to a kept place, rather
+                  // than showing each frame what came in above.
+                  child: Opacity(
+                    opacity: _restore == null ? 1 : 0,
+                    child: SingleChildScrollView(
+                      controller: _follower.scroll,
+                      padding: EdgeInsets.only(
+                        top: _roomAbove ? _findBarHeight + 8 : 2,
+                        bottom: 14,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (widget.header case final h?)
+                            Padding(
+                              padding: chatSides(context, box.maxWidth),
+                              child: h,
                             ),
-                            width: box.maxWidth,
-                            rise: arrived.contains(_key(e)),
-                          ),
-                        if (widget.footer case final f?)
-                          Padding(
-                            padding: chatSides(context, box.maxWidth),
-                            child: f,
-                          ),
-                      ],
+                          for (final (i, e) in entries.indexed.skip(from))
+                            _entry(
+                              before,
+                              e,
+                              live: live && i == entries.length - 1,
+                              still: chat.waiting,
+                              top: _gap(
+                                entries,
+                                i,
+                                header: widget.header != null,
+                                phone: TouchTargets.of(context),
+                              ),
+                              width: box.maxWidth,
+                              rise: arrived.contains(_key(e)),
+                            ),
+                          if (widget.footer case final f?)
+                            Padding(
+                              padding: chatSides(context, box.maxWidth),
+                              child: f,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

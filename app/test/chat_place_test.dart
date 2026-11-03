@@ -134,9 +134,21 @@ void main() {
     p = _list(tester);
     expect(p.pixels, p.maxScrollExtent); // b, never scrolled: its bottom
     d.select('a');
-    await tester.pump();
-    await tester.pumpAndSettle();
+    // Unseen while it fills in up to the place, a few frames, then there.
+    double shown() => tester
+        .widget<Opacity>(
+          find.ancestor(of: _scroll, matching: find.byType(Opacity)).first,
+        )
+        .opacity;
+    var frames = 0;
+    do {
+      await tester.pump(const Duration(milliseconds: 16));
+      frames++;
+    } while (shown() == 0 && frames < 60);
+    expect(frames, lessThan(10));
     p = _list(tester);
+    expect(p.extentAfter, closeTo(left, 1));
+    await tester.pumpAndSettle();
     expect(p.extentAfter, closeTo(left, 1));
     expect(find.text('Jump to latest'), findsOneWidget);
 
