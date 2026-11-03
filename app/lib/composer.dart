@@ -437,7 +437,7 @@ class _ComposerState extends State<Composer> {
                               controller: _text,
                               focusNode: _focus,
                               readOnly: _locked,
-                              onTap: _locked ? null : _spell.menu.tapped,
+                              onTap: _spell.menu.tapped,
                               contextMenuBuilder: _spell.menu.toolbar,
                               autofocus: !touch, // no keyboard popping up
                               minLines: 1,

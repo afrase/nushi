@@ -92,6 +92,21 @@ TextSelection _selected(ChatState chat) => chat.draft.text.selection;
 void main() {
   setUpAll(loadFonts);
 
+  spellTest('nothing fixes a word while a rewind has the box', (tester) async {
+    final (_, chat) = await spellBox(tester, _speller());
+    await typed(tester, 'please chekc this ');
+    chat.rewinding.value = true;
+    await tester.pump();
+    await _clickWord(tester, chat, 'chekc');
+    expect(_open(tester, chat), isFalse);
+    await _next(tester, chat);
+    expect(_open(tester, chat), isFalse);
+    chat.rewinding.value = false;
+    await tester.pump();
+    await _next(tester, chat);
+    expect(_open(tester, chat), isTrue);
+  });
+
   group('a click', () {
     spellTest('on a flagged word opens its menu above it', (tester) async {
       final (_, chat) = await spellBox(tester, _speller());

@@ -140,6 +140,10 @@ class SpellCheck extends ChangeNotifier {
   /// Whether spell check runs here now.
   bool get on => speller != null && checkSpelling.value;
 
+  /// Whether a flagged word may be fixed now: not while the box is locked
+  /// for a message coming back ([ChatState.rewinding]).
+  bool get fixable => on && !chat.rewinding.value;
+
   /// The caret, while it's still in the word it typed.
   int? get _typingAt {
     final s = text.selection;

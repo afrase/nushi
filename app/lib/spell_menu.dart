@@ -140,6 +140,7 @@ class SpellMenu extends ChangeNotifier {
   /// Replaces [w] with [fix], unless the text moved on; ⌘Z undoes it.
   void take(SpellWord w, String fix) {
     close();
+    if (!spell.fixable) return;
     final text = _text.text;
     if (w.end <= text.length && text.substring(w.start, w.end) == w.word) {
       _text.value = TextEditingValue(
@@ -200,7 +201,7 @@ class SpellMenu extends ChangeNotifier {
   /// ⌘;: the first flagged word after the caret, or the first of all, with
   /// the word being typed judged too.
   Future<void> next() async {
-    if (!spell.on) return;
+    if (!spell.fixable) return;
     close();
     await spell.judgeAll();
     final all = _text.marks;
@@ -221,7 +222,7 @@ class SpellMenu extends ChangeNotifier {
   /// A click in the box, after it put the caret there.
   void tapped() {
     final at = _pressedAt;
-    if (!spell.on || at == null || !_text.selection.isCollapsed) return;
+    if (!spell.fixable || at == null || !_text.selection.isCollapsed) return;
     if (_flaggedAt(at) case final w?) unawaited(open(w));
   }
 
@@ -248,7 +249,7 @@ class SpellMenu extends ChangeNotifier {
     final w = _text.marks
         .where((m) => m.start <= sel.start && sel.end <= m.end)
         .firstOrNull;
-    if (w == null || !spell.on) {
+    if (w == null || !spell.fixable) {
       return AdaptiveTextSelectionToolbar.editableText(
         editableTextState: field,
       );
