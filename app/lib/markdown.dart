@@ -36,9 +36,15 @@ class AgentMarkdown extends StatelessWidget {
     this.onTapFile,
     this.shown,
     this.transcript = false,
+    this.codeBlock,
   });
 
   final String text;
+
+  /// A whole fenced block other than a diagram as it shows instead, or
+  /// null for the usual one (an agent's shell block, which runs).
+  final Widget? Function(String language, String code, MarkdownStyle style)?
+  codeBlock;
 
   /// While it's paced ([Paced]): what shows, faded in, and the caret.
   final Shown? shown;
@@ -104,7 +110,9 @@ class AgentMarkdown extends StatelessWidget {
         onTapFile: onTapFile,
         codeBlock: (language, code, {required open}) => language == 'mermaid'
             ? MermaidBlock(code, style: style, open: open)
-            : null,
+            : open
+            ? null
+            : codeBlock?.call(language, code, style),
       ),
     );
   }

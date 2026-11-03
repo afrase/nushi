@@ -748,7 +748,8 @@ class IconTap extends StatelessWidget {
     this.color,
     this.padding = 5,
   }) : line = null,
-       glyph = null;
+       glyph = null,
+       _working = false;
 
   /// The same button with a drawn [LineIcon].
   const new line(
@@ -760,7 +761,8 @@ class IconTap extends StatelessWidget {
     this.color,
     this.padding = 5,
   }) : icon = null,
-       glyph = null;
+       glyph = null,
+       _working = false;
 
   /// The same button with [glyph] drawn in the icon's place, at the
   /// icon's size and in its color (a chevron that turns).
@@ -773,11 +775,27 @@ class IconTap extends StatelessWidget {
     this.color,
     this.padding = 5,
   }) : icon = null,
-       line = null;
+       line = null,
+       _working = false;
+
+  /// A button for something that runs: held down (tinted) with [glyph]
+  /// (a spinner) at rest, and [icon] (✕, to stop it) under the pointer.
+  const new working(
+    Widget Function(double size, Color color) this.glyph,
+    IconData this.icon, {
+    required this.tooltip,
+    required this.onTap,
+    super.key,
+    this.size = 16,
+    this.color,
+    this.padding = 5,
+  }) : line = null,
+       _working = true;
 
   final IconData? icon;
   final LineIcon? line;
   final Widget Function(double size, Color color)? glyph;
+  final bool _working;
   final String tooltip;
   final VoidCallback? onTap;
   final double size;
@@ -797,12 +815,16 @@ class IconTap extends StatelessWidget {
         return Container(
           padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
-            color: look.hover ? _tint(t, look) : null,
+            color: look.hover
+                ? _tint(t, look)
+                : _working
+                ? t.hover
+                : null,
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
           foregroundDecoration: focusRing(t, look),
           child:
-              glyph?.call(size, tint) ??
+              (_working && look.hover ? null : glyph?.call(size, tint)) ??
               line?.view(size: size, color: tint) ??
               Icon(icon, size: size, color: tint),
         );

@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:markdown_view/markdown_view.dart' show MarkdownStyle;
 import 'package:nushi/chat.dart';
+import 'package:nushi/code_run_view.dart';
+import 'package:nushi/controls.dart' show TouchTargets;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
@@ -101,6 +105,12 @@ class FileLinks extends ChangeNotifier {
   }
 }
 
+typedef _CodeBlock = Widget? Function(
+  String language,
+  String code,
+  MarkdownStyle style,
+);
+
 /// An agent's message whose paths of files the chat's preview shows are
 /// links to it ([namedFiles], [FileLinks]): on the Mac underlined on
 /// hover, on the phone its full-screen preview. Only once it has finished
@@ -143,25 +153,49 @@ class _LinkedMarkdownState extends State<LinkedMarkdown> {
     }
   }
 
+  // A shell block runs in a terminal of the chat's: on the Mac only, the
+  // phone has none.
+  Widget? _runnable(String language, String code, MarkdownStyle style) =>
+      runnableBlock(language, code, style, widget.chat, widget.daemon);
+
+  _CodeBlock? _block;
+
   @override
-  Widget build(BuildContext context) => Paced(
+  Widget build(BuildContext context) {
+    _block = kIsWeb || TouchTargets.of(context) ? null : _runnable;
+    return _paced(context);
+  }
+
+  Widget _paced(BuildContext context) => Paced(
     widget.text,
     live: widget.live,
     builder: (context, shown) => shown != null
-        ? AgentMarkdown(widget.text, live: true, shown: shown, transcript: true)
+        ? AgentMarkdown(
+            widget.text,
+            live: true,
+            shown: shown,
+            transcript: true,
+            codeBlock: _block,
+          )
         : _linked(context),
   );
 
   Widget _linked(BuildContext context) {
     final open = Previews.of(context)?.open;
     if (open == null || _named.isEmpty) {
-      return AgentMarkdown(widget.text, live: widget.live, transcript: true);
+      return AgentMarkdown(
+        widget.text,
+        live: widget.live,
+        transcript: true,
+        codeBlock: _block,
+      );
     }
     final links = widget.chat.fileLinks;
     return ListenableBuilder(
       listenable: links,
       builder: (context, _) => AgentMarkdown(
         widget.text,
+        codeBlock: _block,
         files: {
           for (final MapEntry(:key, :value) in _named.entries)
             if (links.there(value) ?? false) key: value,

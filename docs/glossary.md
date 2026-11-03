@@ -88,6 +88,8 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Stages and commits in Uncommitted. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019, 0079 |
 | **Commit box** | Under Uncommitted's files: what's staged, the message, Commit. | `CommitBox`, `StageCheck`, `StageFiles`, `CommitStaged` | 0079 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
+| **Run** (a code block's) | ▷ on an agent's shell block: the block typed into the chat's terminal, its newest output under the block, its exit once it ends. | `CodeRuns`, `CodeRun`, `RunnableBlock`, `ShellMarks` | 0084 |
+| **Output card** | A run's output in the box, sent after your next message's text: only from a run that ended on its own. | `OutputCard`, `Draft.outputs`, `RunOutput`, `withOutputs` | 0084 |
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |

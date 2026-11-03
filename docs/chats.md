@@ -197,6 +197,16 @@ A chat in a git repository can run in a worktree of its own, `.worktrees/<two wo
 - The shell is your login shell. Archiving or deleting the chat closes its terminals.
 - ⌘T opens another, ⌘W closes one, ⌥⌘1 – ⌥⌘9 pick one, and ⌘F finds in its scrollback.
 
+### Running a code block
+
+A shell block in the agent's message (` ```bash `, `sh`, `shell`, `zsh`, `console`, `terminal`) has ▷ beside Copy, on the Mac, once it has finished streaming ([ADR 0084](adr/0084-a-code-block-runs-in-your-terminal.md)).
+
+- **▷ types the block into the chat's terminal**, as if you had: the tab it ran in last or the one the panel shows, while its shell is at a prompt; if that tab is busy (or there's none), a new tab in the chat's folder. The panel stays as it is. A leading `$ ` or `% ` is taken off; in a `console` block the lines without one are output and are left out. Several lines go in as one paste, so the shell runs them together (into bash, one by one).
+- **While it runs**, ▷ is a spinner; under the pointer it's ✕ ("Running — click to cancel"), which sends ⌃C. A line under the block shows the newest line of its output, and `>_` opens the terminal on its tab. When it ends, the line keeps its last output and its exit (`exit 0`, or the code in red), and ▷ runs it again.
+- **Its output goes with your next message**: a run that ends on its own, failed or not, puts a card in the box ("Output of `make check` · exit 2 · 42 lines"); your message carries the last 400 lines (32 KB at most) as a fenced block after your text, or alone. ✕ on the card drops it; running the block again replaces it. Nothing is sent by itself. A run you stop (✕, or ⌃C in the terminal) sends nothing, nor does one still running, such as a server.
+- **Where it starts and ends** comes from the shell's marks (OSC 133), which fish 4 sends, and zsh or bash with shell integration. Without them the line under the block follows the terminal's newest output, ▷ shows running while the terminal runs a program, and no card comes: the end can't be told.
+- The line under each block stays while the app runs, across chats; it isn't saved.
+
 ## Sleep
 
 A chat whose agent isn't needed can sleep: its agent stops, the chat stays, and the next message wakes it (`session/load`). Chats sleep on their own after 30 idle minutes when nothing would be lost (Settings changes the time), or from a chat's menu ([ADR 0032](adr/0032-idle-chats-sleep.md)).

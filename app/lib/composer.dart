@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
+import 'package:nushi/code_run_view.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/copy_command.dart';
@@ -21,6 +22,7 @@ import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind_picker.dart';
+import 'package:nushi/run_text.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/spell_menu.dart';
 import 'package:nushi/theme/theme.dart';
@@ -79,6 +81,7 @@ class _ComposerState extends State<Composer> {
   void initState() {
     super.initState();
     _images.addListener(_imagesChanged);
+    _draft.outputs.addListener(_imagesChanged);
     _draft.replies.addListener(_repliesChanged);
     _replyCount = _draft.replies.value.length;
     _completions.addListener(_imagesChanged);
@@ -104,6 +107,7 @@ class _ComposerState extends State<Composer> {
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
+    _draft.outputs.removeListener(_imagesChanged);
     _draft.toSubagent.removeListener(_imagesChanged);
     _draft.replies.removeListener(_repliesChanged);
     _draft.quote.removeListener(_quote);
@@ -275,10 +279,13 @@ class _ComposerState extends State<Composer> {
     final text = _text.text.trim();
     final images = _images.value;
     final replies = _draft.replies.value;
+    final outputs = _draft.outputs.value;
     final mentions = {..._mentions};
     final toSubagent = _draft.toSubagent.value;
     final busy = widget.chat.busy;
-    if (text.isEmpty && images.isEmpty && replies.isEmpty) return;
+    if (text.isEmpty && images.isEmpty && replies.isEmpty && outputs.isEmpty) {
+      return;
+    }
     final files = [
       for (final f in _mentions)
         if (text.contains('@$f')) f,
@@ -286,11 +293,12 @@ class _ComposerState extends State<Composer> {
     _text.clear();
     _images.clear();
     _draft.replies.value = const [];
+    _draft.outputs.value = const [];
     _draft.toSubagent.value = null;
     _mentions.clear();
     _lastFiles = files;
     final chat = widget.chat;
-    final message = withReplies(replies, text);
+    final message = withOutputs(withReplies(replies, text), outputs);
     // To an idle chat it shows in the transcript at once, faint until the
     // daemon's echo; not a queued one (a pill) nor one for a subagent.
     final shown = !busy && toSubagent == null && !chat.asleep
@@ -320,6 +328,12 @@ class _ComposerState extends State<Composer> {
       _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
       _images.value = [...images, ..._images.value];
       _draft.replies.value = [...replies, ..._draft.replies.value];
+      _draft.outputs.value = [
+        ...outputs.where(
+          (o) => !_draft.outputs.value.any((n) => n.key == o.key),
+        ),
+        ..._draft.outputs.value,
+      ];
       _draft.toSubagent.value ??= toSubagent;
       _mentions.addAll(mentions);
       if (mounted) showError(context, e);
@@ -339,7 +353,8 @@ class _ComposerState extends State<Composer> {
         !_locked &&
         (_text.text.trim().isNotEmpty ||
             _images.value.isNotEmpty ||
-            _draft.replies.value.isNotEmpty);
+            _draft.replies.value.isNotEmpty ||
+            _draft.outputs.value.isNotEmpty);
     return ChatColumn(
       child: Padding(
         padding: touch
@@ -413,6 +428,7 @@ class _ComposerState extends State<Composer> {
                     child:
                         _images.value.isEmpty &&
                             _draft.replies.value.isEmpty &&
+                            _draft.outputs.value.isEmpty &&
                             _draft.toSubagent.value == null
                         ? null
                         : Padding(
@@ -435,6 +451,15 @@ class _ComposerState extends State<Composer> {
                                   _draft.replies,
                                   onDone: _focus.requestFocus,
                                 ),
+                                for (final o in _draft.outputs.value)
+                                  OutputCard(
+                                    o,
+                                    onRemove: () => _draft.outputs.value = [
+                                      ..._draft.outputs.value.where(
+                                        (n) => n != o,
+                                      ),
+                                    ],
+                                  ),
                                 Thumbnails(
                                   _images.value,
                                   onRemove: _images.removeAt,
