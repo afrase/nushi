@@ -9,6 +9,42 @@ bool reduceMotion(BuildContext context) =>
     MediaQuery.disableAnimationsOf(context) ||
     View.of(context).platformDispatcher.accessibilityFeatures.reduceMotion;
 
+/// Nushi's motion: a few durations and curves, so things that move alike
+/// move the same (the fluidity review, 2026-11). The rules:
+/// - input never waits: the state changes at once and motion is only
+///   drawn; what's coming is live from its first frame, what's leaving
+///   takes no pointer or focus, and a second press reverses from wherever
+///   the motion is;
+/// - exits are faster than entries, and nothing comes in for longer than
+///   [Motion.enter];
+/// - the transcript's width never eases (it lays out every entry): beside
+///   the chat, lay out once at the final width and glide by a transform;
+/// - under [reduceMotion], sizes and places jump; feedback such as a press
+///   tint stays;
+/// - nothing runs at rest: a one-shot run ends, loops are on [loopClock].
+abstract final class Motion {
+  /// Text and color crossfades, a button swapping: barely seen.
+  static const quick = Duration(milliseconds: 120);
+
+  /// Size: opening, folding, bars sliding, rows sliding apart.
+  static const standard = Duration(milliseconds: 200);
+
+  /// Coming in: panes, the toast.
+  static const enter = Duration(milliseconds: 240);
+
+  /// Going: two-thirds of coming in, so what leaves is out of the way.
+  static const exit = Duration(milliseconds: 160);
+
+  /// Entering and moving: quick off the mark, a long settle.
+  static const Cubic settle = Cubic(0.2, 0.8, 0.2, 1);
+
+  /// Heights and widths.
+  static const Curve size = Curves.ease;
+
+  /// Leaving: gathers speed as it goes.
+  static const Cubic leave = Cubic(0.4, 0, 1, 1);
+}
+
 /// One clock for everything that loops (a shine, a working chat's ring):
 /// it ticks only while something listens, so they move in step and stop
 /// together, and what listens repaints from it without its own controller.
