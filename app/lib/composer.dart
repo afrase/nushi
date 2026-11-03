@@ -18,6 +18,7 @@ import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind_picker.dart';
+import 'package:nushi/spell_check.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/widgets.dart';
@@ -68,6 +69,7 @@ class _ComposerState extends State<Composer> {
   List<String> _lastFiles = []; // the last prompt's, for Up
   late final Attachments _images = _draft.images;
   Timer? _esc; // a first Esc's time to be followed by a second
+  late final _spell = SpellCheck(_draft.text, widget.chat, _focus);
 
   @override
   void initState() {
@@ -76,6 +78,7 @@ class _ComposerState extends State<Composer> {
     _draft.replies.addListener(_repliesChanged);
     _replyCount = _draft.replies.value.length;
     _completions.addListener(_imagesChanged);
+    _spell.addListener(_imagesChanged); // marks that came without typing
     _draft.toSubagent.addListener(_imagesChanged);
     _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
@@ -104,6 +107,7 @@ class _ComposerState extends State<Composer> {
     widget.chat.takeBack.removeListener(_takeBack);
     _esc?.cancel();
     _completions.dispose();
+    _spell.dispose();
     _focus.dispose();
     super.dispose();
   }

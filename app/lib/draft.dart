@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
 import 'package:nushi/images.dart';
 import 'package:nushi/replies.dart';
+import 'package:nushi/spell_check.dart';
 
 /// What the user is writing to a chat: the box's text, the files mentioned
 /// with @, the reply cards and the images, and the boxes for messages to
@@ -16,7 +17,7 @@ class Draft extends ChangeNotifier {
     }
   }
 
-  final text = TextEditingController();
+  final text = PromptText();
   final mentions = <String>{};
   final Replies replies = ValueNotifier(const []);
   final images = Attachments();

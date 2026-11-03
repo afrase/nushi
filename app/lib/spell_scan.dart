@@ -1,5 +1,4 @@
-/// A word of the prompt that spell check looks at: [word], the text from
-/// [start] to [end].
+/// A word of the prompt that spell check looks at, and where it is in it.
 typedef SpellWord = ({int start, int end, String word});
 
 /// Code in backticks or fences, closed or not.
@@ -12,11 +11,13 @@ final _chunk = RegExp(r'[^\s,;!?()"\[\]{}<>]+');
 /// A path, a flag, a mention, a variable or a URL.
 final _notProse = RegExp(r'^[/@#~$\-]|://');
 
-final _leading = RegExp('^[^A-Za-z]+');
-final _trailing = RegExp(r'[^A-Za-z]+$');
+/// Punctuation at a word's ends. Digits stay, so `sha256` and `2nd` count as
+/// having digits, not as `sha` and `nd`.
+final _leading = RegExp('^[^A-Za-z0-9]+');
+final _trailing = RegExp(r'[^A-Za-z0-9]+$');
 final _notWord = RegExp(r"[^A-Za-z'’\-]");
 final _capital = RegExp('[A-Z]');
-final _agentWord = RegExp(r"[A-Za-z][A-Za-z'’]*");
+final _agentWord = RegExp("[A-Za-z][A-Za-z'’]*");
 
 /// The words of [text] worth checking, in order: not code, paths, flags,
 /// mentions, names or anything else that isn't prose. A prompt is full of

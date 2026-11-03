@@ -1,9 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/spell_scan.dart';
 
-List<String> _words(String text) => [
-  for (final w in scanWords(text)) w.word,
-];
+List<String> _words(String text) => [for (final w in scanWords(text)) w.word];
 
 void main() {
   test('plain words come with where they are', () {
@@ -43,7 +41,8 @@ void main() {
       ('a dash start', '-chekc'),
       ('two dashes', '--chekc'),
       ('digits inside', 'che2kc'),
-      ('digits at the end', 'chekc42x'),
+      ('digits at the end', 'chekc42'),
+      ('digits at the start', '2chekc'),
       ('a dot inside', 'chekc.thrid'),
       ('an underscore inside', 'chekc_thrid'),
       ('a colon inside', 'chekc:thrid'),
@@ -58,11 +57,7 @@ void main() {
     ]) {
       test(name, () {
         final skipped = {'chekc', 'thrid', 'Chekc', 'CHEKC', 'qz', 'q'};
-        expect(
-          _words(text).where(skipped.contains),
-          isEmpty,
-          reason: text,
-        );
+        expect(_words(text).where(skipped.contains), isEmpty, reason: text);
       });
     }
   });

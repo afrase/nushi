@@ -19,7 +19,7 @@ import 'package:nushi/file_mode.dart';
 /// collapsed, each project's chats' order, whether Pinned is collapsed,
 /// the models picked last, each repository's merge method, each chat's
 /// pinned artifacts, and the Mac's notifications and Dock badge, the
-/// appearance, and the newer
+/// appearance, whether the prompt box checks spelling, and the newer
 /// release whose toast was dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree: an older `worktrees` key is
 /// ignored, and dropped by the next save.
@@ -191,6 +191,10 @@ final Pref<bool> alertFinished = _plain('alertFinished', true);
 final Pref<bool> alertFailed = _plain('alertFailed', true);
 final Pref<bool> alertSound = _plain('alertSound', false);
 final Pref<bool> dockBadge = _plain('dockBadge', true);
+
+/// Whether the Mac's prompt box checks spelling (ADR 0083): off, it asks
+/// nothing and flags nothing.
+final Pref<bool> checkSpelling = _plain('checkSpelling', true);
 
 /// The newer release whose toast was dismissed ("0.1.17"): it shows again
 /// only for a newer one.
