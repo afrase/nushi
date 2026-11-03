@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'package:nushi/list_motion.dart';
 import 'package:nushi/motion.dart';
 
 // Lists whose items move by dragging, the others sliding apart to open
@@ -10,7 +11,8 @@ import 'package:nushi/motion.dart';
 // ReorderableListViews can't be: these are Columns that slide their items
 // by a transform, and work out where a drop lands from the items' places
 // as laid out, which the slide doesn't change (so the gap opening under
-// the pointer doesn't move the place it points at).
+// the pointer doesn't move the place it points at). Items also come and
+// go with motion (`list_motion.dart`).
 
 /// How long the others take to slide apart, or back.
 const _slideFor = Duration(milliseconds: 200);
@@ -21,6 +23,13 @@ const _slideFor = Duration(milliseconds: 200);
 /// and dropped there [onMove] says it moved from one place to another (its
 /// place once it's out). Dragged elsewhere, or onto a list that refuses
 /// it, everything slides back. Reduce Motion: the gap opens at once.
+///
+/// An item that comes grows in, one that goes fades and folds, and one
+/// that moved here from another list of the same [ListMotion] glides from
+/// where it was ([Presence]); none of it as the list is first built.
+/// [standIn], while given (keyed), shows at the top for an item on its
+/// way, and the first new item to come takes its place, with no jump;
+/// nothing drags meanwhile.
 class SlideList<T extends Object> extends StatefulWidget {
   const new({
     required this.count,
@@ -28,9 +37,11 @@ class SlideList<T extends Object> extends StatefulWidget {
     required this.accepts,
     required this.onMove,
     super.key,
+    this.standIn,
   });
 
   final int count;
+  final Widget? standIn;
 
   /// The item at an index, keyed; its [ItemDrag] makes the part that
   /// drags it.
@@ -58,7 +69,7 @@ class ItemDrag<T extends Object> {
     bool enabled = true,
   }) => Draggable<T>(
     data: data,
-    maxSimultaneousDrags: enabled ? null : 0,
+    maxSimultaneousDrags: enabled && !_list._standing ? null : 0,
     dragAnchorStrategy: pointerDragAnchorStrategy,
     feedback: feedback,
     onDragStarted: () => _list._start(_i),
@@ -82,6 +93,38 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
   /// slide put them, so they settle without sliding again.
   bool _dropped = false;
 
+  bool _built = false;
+  var _last = <Key, Widget>{}; // the items as last built, by key
+  var _order = <Key>[]; // the column's, as last built: items, stand-in, gone
+  final _gone = <Key, (Widget, Leaving)>{}; // items still leaving
+  Widget? _shownStandIn; // the stand-in, as last built, while it showed
+  bool _taken = false; // an item came in the stand-in's place
+  bool _justDropped = false; // the next order is a drop's: it settles
+  final _moves = <Key, int>{}; // how often each was put elsewhere
+
+  /// Counts a move for each item [live] puts elsewhere among those it
+  /// had before (not by a drop): each glides there ([Presence.moves]).
+  void _reordered(Map<Key, Widget> live, {required bool calm}) {
+    final dropped = _justDropped;
+    _justDropped = false;
+    if (dropped || calm) return;
+    final before = [
+      for (final k in _last.keys)
+        if (live.containsKey(k)) k,
+    ];
+    final now = [
+      for (final k in live.keys)
+        if (_last.containsKey(k)) k,
+    ];
+    for (final (i, k) in now.indexed) {
+      if (before[i] != k) _moves[k] = (_moves[k] ?? 0) + 1;
+    }
+    _moves.removeWhere((k, _) => !live.containsKey(k));
+  }
+
+  /// Whether the stand-in shows.
+  bool get _standing => _shownStandIn != null;
+
   int get _from => _moving == null ? -1 : _keys.indexOf(_moving!);
 
   /// Where the dragged item would land (its index once moved), if a drop
@@ -96,6 +139,7 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
   void _start(int i) {
     _measure();
     setState(() {
+      _gone.clear(); // the column is its items again, as it's measured
       _moving = _keys[i];
       _dropAt = null;
       _dropped = false;
@@ -134,6 +178,7 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
   void _drop() {
     if (_to case final to?) {
       _dropped = true;
+      _justDropped = true;
       widget.onMove(_from, to);
     }
     _end();
@@ -170,6 +215,70 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
     super.dispose();
   }
 
+  /// The column's keys, with how each new item arrives in [arrivals]: the
+  /// items, the stand-in on top, and those still leaving where they were.
+  List<Key> _arrange(
+    Map<Key, Widget> live,
+    Map<Key, Arrival> arrivals, {
+    required bool still,
+  }) {
+    final motion = ListMotion.of(context);
+    // With Reduce Motion, while dragging, and as first built, nothing grows
+    // in or leaves slowly; one moved from another list still glides.
+    final calm = still || !_built || _moving != null;
+    for (final k in live.keys) {
+      if (_last.containsKey(k) || _gone.remove(k) != null) continue;
+      arrivals[k] = still
+          ? Arrival.still
+          : motion?.seenAt(k) != null
+          ? Arrival.glide
+          : calm
+          ? Arrival.still
+          : Arrival.grow;
+    }
+    final standIn = widget.standIn;
+    final before = _shownStandIn;
+    // The first new item takes the stand-in's place, if it showed (going
+    // now or not: the start may end in the build its item comes in).
+    var took = false;
+    if (before != null && !_taken) {
+      final k = arrivals.entries
+          .where((e) => e.value == Arrival.grow)
+          .firstOrNull
+          ?.key;
+      if (k != null) {
+        arrivals[k] = Arrival.still;
+        took = true;
+      }
+    }
+    _taken = standIn != null && (_taken || took);
+    final standing = standIn != null && !_taken;
+    _shownStandIn = standing ? standIn : null;
+    if (standing && before == null) {
+      arrivals[standIn.key!] = calm ? Arrival.still : Arrival.grow;
+    }
+    if (!calm) {
+      for (final MapEntry(key: k, value: w) in _last.entries) {
+        if (live.containsKey(k)) continue;
+        final elsewhere = motion?.shown.contains(k) ?? false;
+        _gone[k] = (w, elsewhere ? Leaving.vacate : Leaving.fade);
+      }
+      if (before != null && !standing && !took && !_taken) {
+        _gone[before.key!] = (before, Leaving.fade);
+      }
+    } else {
+      _gone.clear();
+    }
+    final order = [if (standing) standIn.key!, ...live.keys];
+    // Each leaving item stays after what was above it.
+    for (final (i, k) in _order.indexed) {
+      if (!_gone.containsKey(k) || order.contains(k)) continue;
+      final above = _order.sublist(0, i).reversed.where(order.contains);
+      order.insert(above.isEmpty ? 0 : order.indexOf(above.first) + 1, k);
+    }
+    return order;
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = [
@@ -178,6 +287,53 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
     ];
     _keys = [for (final w in items) w.key!];
     final still = reduceMotion(context);
+    final live = {for (final w in items) w.key!: w};
+    final arrivals = <Key, Arrival>{};
+    final order = _arrange(live, arrivals, still: still);
+    _reordered(live, calm: still || _moving != null);
+    _last = live;
+    _order = order;
+    _built = true;
+    Widget slot(Key k, int i) {
+      if (live[k] case final item?) {
+        return _Slide(
+          key: k,
+          dy: _shift(i),
+          faded: k == _moving,
+          slideFor: still || _dropped ? Duration.zero : _slideFor,
+          fadeFor: still ? Duration.zero : _slideFor,
+          child: Presence(
+            id: k,
+            arrival: arrivals[k] ?? Arrival.still,
+            leaving: null,
+            moves: _moves[k] ?? 0,
+            onGone: () {},
+            child: item,
+          ),
+        );
+      }
+      final (child, leaving) = switch (_gone[k]) {
+        final gone? => (gone.$1, gone.$2 as Leaving?),
+        null => (_shownStandIn!, null),
+      };
+      return _Slide(
+        key: k,
+        dy: 0,
+        faded: false,
+        slideFor: Duration.zero,
+        fadeFor: Duration.zero,
+        child: Presence(
+          id: k,
+          arrival: arrivals[k] ?? Arrival.still,
+          leaving: leaving,
+          onGone: () {
+            if (mounted) setState(() => _gone.remove(k));
+          },
+          child: child,
+        ),
+      );
+    }
+
     return DragTarget<T>(
       onWillAcceptWithDetails: (d) => widget.accepts(d.data),
       onMove: (d) {
@@ -187,20 +343,10 @@ class _SlideListState<T extends Object> extends State<SlideList<T>> {
         if (d != null && widget.accepts(d)) setState(() => _dropAt = null);
       },
       onAcceptWithDetails: (_) => _drop(),
-      builder: (context, _, _) => Column(
+      builder: (context, _, _) => GlideColumn(
         key: _column,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final (i, item) in items.indexed)
-            _Slide(
-              key: item.key,
-              dy: _shift(i),
-              faded: item.key == _moving,
-              slideFor: still || _dropped ? Duration.zero : _slideFor,
-              fadeFor: still ? Duration.zero : _slideFor,
-              child: item,
-            ),
-        ],
+        motion: ListMotion.of(context),
+        children: [for (final k in order) slot(k, _keys.indexOf(k))],
       ),
     );
   }

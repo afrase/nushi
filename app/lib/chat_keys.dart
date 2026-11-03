@@ -36,17 +36,14 @@ Map<String, List<ChatState>> chatGroups(Daemon daemon) {
 /// The Mac sidebar's groups ([chatGroups]) in the order they were dragged
 /// into ([sidebarOrder]); a folder it doesn't name goes first, as one
 /// with the newest chat, and with [starting] (the folder a chat is
-/// starting in) a folder with no chats yet goes first too. In each, the
+/// starting in) that folder goes first too, as it will once its new chat
+/// is there, with chats or not yet. In each, the
 /// chats in the order they were dragged into ([sidebarChats]), a chat it
 /// doesn't name (a new one) first, the newest first. The phone keeps
 /// [chatGroups]' order.
 Map<String, List<ChatState>> sidebarGroups(Daemon daemon, {String? starting}) {
   final byFolder = chatGroups(daemon);
-  final groups = {
-    if (starting != null && !byFolder.containsKey(starting))
-      starting: <ChatState>[],
-    ...byFolder,
-  };
+  final groups = {?starting: byFolder[starting] ?? <ChatState>[], ...byFolder};
   final saved = sidebarOrder.value;
   final placed = saved.toSet();
   return {

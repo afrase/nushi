@@ -50,6 +50,7 @@ extension DaemonStart on Daemon {
     IssueChat? issue,
   }) async {
     starting = folder;
+    startingAgent = agent;
     _changed();
     try {
       if (!await _mayRun(folder, 'Start a chat', agent)) return null;
@@ -96,6 +97,7 @@ extension DaemonStart on Daemon {
       return resp.chatId;
     } finally {
       starting = null;
+      startingAgent = null;
       _changed();
     }
   }
@@ -109,6 +111,7 @@ extension DaemonStart on Daemon {
   ) async {
     final folder = asked.isEmpty ? session.folder : asked;
     starting = folder;
+    startingAgent = agent;
     _changed();
     try {
       if (!await _mayRun(folder, 'Open the session', agent)) return;
@@ -127,6 +130,7 @@ extension DaemonStart on Daemon {
       }
     } finally {
       starting = null;
+      startingAgent = null;
       _changed();
     }
   }

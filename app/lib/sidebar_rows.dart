@@ -46,6 +46,7 @@ class MovableRows extends StatelessWidget {
     super.key,
     this.collapsed = false,
     this.selectedId,
+    this.standIn,
   });
 
   /// Which list it is: a project's folder, or [pinnedGroup].
@@ -56,9 +57,14 @@ class MovableRows extends StatelessWidget {
   final bool collapsed;
   final String? selectedId;
 
+  /// A row-shaped placeholder at the top for a chat starting here, which
+  /// its row takes the place of ([SlideList.standIn]).
+  final Widget? standIn;
+
   @override
   Widget build(BuildContext context) => SlideList<_MovingChat>(
     count: chats.length,
+    standIn: standIn,
     accepts: (m) => m.group == group && !collapsed,
     onMove: onMove,
     item: (i, drag) {
@@ -86,6 +92,67 @@ class MovableRows extends StatelessWidget {
       );
     },
   );
+}
+
+/// The archived chats' rows ([row]), newest first, under a header that
+/// opens and folds them ([open], [onToggle]), at the sidebar's bottom
+/// while a chat is archived. They don't move by dragging.
+class ArchivedSection extends StatelessWidget {
+  const new(
+    this.archived, {
+    required this.open,
+    required this.onToggle,
+    required this.row,
+    super.key,
+  });
+
+  final List<ChatState> archived;
+  final bool open;
+  final VoidCallback onToggle;
+  final Widget Function(ChatState chat) row;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Disclosure(
+          open: archived.isNotEmpty,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
+            child: Tap(
+              onTap: onToggle,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                children: [
+                  TurnChevron(open: open, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Archived  ${archived.length}',
+                    style: theme.ui(t.textSecondary, size: 12),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Disclosure(
+          open: open && archived.isNotEmpty,
+          child: SlideList<_MovingChat>(
+            count: archived.length,
+            accepts: (_) => false,
+            onMove: (_, _) {},
+            item: (i, _) => KeyedSubtree(
+              key: ValueKey(archived[i].id),
+              child: row(archived[i]),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// [MovableRows.group] for the Pinned section.
@@ -149,11 +216,14 @@ class PinnedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pinned = pinnedChats(daemon);
-    if (pinned.isEmpty) return const SizedBox.shrink();
+    // Its header grows in with the first pin, its rows gliding there.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        PinnedHeader(chats: pinned),
+        Disclosure(
+          open: pinned.isNotEmpty,
+          child: PinnedHeader(chats: pinned),
+        ),
         MovableRows(
           group: pinnedGroup,
           chats: pinned,

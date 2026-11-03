@@ -296,8 +296,10 @@ class Daemon extends ChangeNotifier {
   /// The chats picked since launch, the last picked last.
   final _picked = <String>[];
 
-  /// The folder a chat is starting in ('' for none), while one is.
+  /// The folder a chat is starting in ('' for none), while one is, and
+  /// its agent (the sidebar's placeholder row shows it).
   String? starting;
+  String? startingAgent;
 
   /// Why each agent whose last start failed in this run didn't start, as
   /// the daemon said ("couldn't start Ante: …"); a start that works clears

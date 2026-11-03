@@ -6,8 +6,8 @@ import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/list_motion.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
@@ -41,6 +41,9 @@ class Sidebar extends StatefulWidget {
 class _SidebarState extends State<Sidebar> {
   bool _showArchived = false;
   final _hold = CommandHold();
+
+  /// The rows of its lists, so one that moves between them glides.
+  final _motion = ListMotion();
 
   /// The chats' pull requests' checks, for their rows' dots, asked while
   /// the list shows.
@@ -114,6 +117,21 @@ class _SidebarState extends State<Sidebar> {
               ]),
               builder: (context, _) {
                 final held = _hold.value;
+                final groups = sidebarGroups(daemon, starting: starting);
+                // Where each row is before the lists change, and what they
+                // show now: a row one loses and another shows moved.
+                _motion
+                  ..ground = t.raised
+                  ..shown = {
+                    for (final c in pinnedChats(daemon)) ValueKey(c.id),
+                    for (final MapEntry(:key, :value) in groups.entries) ...[
+                      ValueKey(key),
+                      for (final c in value) ValueKey(c.id),
+                    ],
+                    if (_showArchived)
+                      for (final c in archived) ValueKey(c.id),
+                  }
+                  ..snapshot();
                 final numbers = {
                   for (final (i, c) in chatOrder(daemon).take(9).indexed)
                     c.id: i + 1,
@@ -130,57 +148,45 @@ class _SidebarState extends State<Sidebar> {
                   movable: movable,
                   project: pinned,
                 );
-                return ListView(
-                  // Hiding the sidebar takes it away: back where it was.
-                  key: const PageStorageKey('sidebar'),
-                  padding: const EdgeInsets.only(bottom: 10),
-                  children: [
-                    PinnedSection(
-                      daemon,
-                      row: (c, movable) => row(c, movable, pinned: true),
-                    ),
-                    SidebarGroups(
-                      groups: sidebarGroups(daemon, starting: starting),
-                      selectedId: daemon.selectedId,
-                      starting: starting,
-                      onNew: starting == null ? _new : null,
-                      onTerminal: _terminal,
-                      row: row,
-                    ),
-                    if (archived.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 12, 6, 2),
-                        child: Tap(
-                          onTap: () =>
-                              setState(() => _showArchived = !_showArchived),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 4,
+                return ListMotionScope(
+                  motion: _motion,
+                  child: ListView(
+                    // Hiding the sidebar takes it away: back where it was.
+                    key: const PageStorageKey('sidebar'),
+                    padding: const EdgeInsets.only(bottom: 10),
+                    children: [
+                      Column(
+                        key: _motion.space,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          PinnedSection(
+                            daemon,
+                            row: (c, movable) => row(c, movable, pinned: true),
                           ),
-                          child: Row(
-                            children: [
-                              TurnChevron(open: _showArchived, size: 16),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Archived  ${archived.length}',
-                                style: theme.ui(t.textSecondary, size: 12),
-                              ),
-                            ],
+                          SidebarGroups(
+                            groups: groups,
+                            selectedId: daemon.selectedId,
+                            starting: starting,
+                            startingAgent: daemon.startingAgent,
+                            onNew: starting == null ? _new : null,
+                            onTerminal: _terminal,
+                            row: row,
                           ),
-                        ),
-                      ),
-                      Disclosure(
-                        open: _showArchived,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final c in archived)
-                              _ChatRow(c, key: ValueKey(c.id), daemon: daemon),
-                          ],
-                        ),
+                          ArchivedSection(
+                            archived,
+                            open: _showArchived,
+                            onToggle: () =>
+                                setState(() => _showArchived = !_showArchived),
+                            row: (c) => _ChatRow(
+                              c,
+                              key: ValueKey(c.id),
+                              daemon: daemon,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ],
+                  ),
                 );
               },
             ),

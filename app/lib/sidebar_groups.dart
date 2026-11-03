@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/agent_mark.dart';
+import 'package:nushi/agents.dart';
 import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/slide_list.dart';
@@ -26,6 +29,7 @@ class SidebarGroups extends StatelessWidget {
     required this.groups,
     required this.selectedId,
     required this.starting,
+    required this.startingAgent,
     required this.row,
     required this.onNew,
     required this.onTerminal,
@@ -35,8 +39,9 @@ class SidebarGroups extends StatelessWidget {
   final Map<String, List<ChatState>> groups;
   final String? selectedId;
 
-  /// The folder a chat is starting in, while one is.
+  /// The folder a chat is starting in, while one is, and its agent.
   final String? starting;
+  final String? startingAgent;
   final Widget Function(ChatState chat, Movable movable) row;
 
   /// A new chat in a folder ('' for none); null while one starts.
@@ -47,8 +52,6 @@ class SidebarGroups extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
     final entries = groups.entries.toList();
     final parents = twinParents(groups.keys);
     return SlideList<_Moving>(
@@ -81,15 +84,13 @@ class SidebarGroups extends StatelessWidget {
                   : () => onTerminal(folder, chats),
               drag: drag,
             ),
-            if (starting == folder)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 10, 4),
-                child: Text(
-                  'Starting…',
-                  style: theme.ui(t.textMuted, size: 12),
-                ),
-              ),
             MovableRows(
+              standIn: starting == folder
+                  ? StartingRow(
+                      key: const ValueKey(#starting),
+                      agent: startingAgent ?? '',
+                    )
+                  : null,
               group: folder,
               chats: chats,
               collapsed: collapsed,
@@ -287,6 +288,57 @@ class _HeaderState extends State<_Header> {
             },
           ),
       ],
+    );
+  }
+}
+
+/// Where a chat starting in a group will be, until its row takes the
+/// place: a row's shape, the working ring, the agent's mark and
+/// "Starting Claude…" shining.
+class StartingRow extends StatelessWidget {
+  const new({required this.agent, super.key});
+
+  final String agent; // '' when not known
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    // A chat row's room ([Tap]'s padding inside the row's own), so the
+    // row comes in its place with no jump.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        child: Row(
+          children: [
+            // A working chat's ring, still in a still frame ([loopRepaint]):
+            // a start may wait on a trust card for as long as it's up.
+            CustomPaint(
+              size: const Size.square(ChatDot.size * 1.6),
+              painter: StatusMark(
+                t.running,
+                ringing: !reduceMotion(context) && loopRepaint != null,
+              ),
+            ),
+            const SizedBox(width: 6),
+            if (agent.isEmpty) const SizedBox(width: 14) else AgentMark(agent),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Shine(
+                child: Text(
+                  agent.isEmpty
+                      ? 'Starting…'
+                      : 'Starting ${agentTitle(agent)}…',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.textSecondary),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

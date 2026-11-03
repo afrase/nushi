@@ -211,7 +211,8 @@ void main() {
       isTrue,
     );
     await tester.enterText(find.byType(TextField), '');
-    await tester.tap(find.text('Archived  11'));
+    // The filter's (the sidebar's Archived header says the same).
+    await tester.tap(find.text('Archived  11').last);
     await tester.pumpAndSettle();
     expect(_rows(tester).length, 11);
     expect(_rows(tester).every((r) => r.row.archived), isTrue);

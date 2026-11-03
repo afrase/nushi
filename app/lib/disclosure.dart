@@ -60,31 +60,44 @@ class _DisclosureState extends State<Disclosure>
     return AnimatedBuilder(
       animation: _eased,
       builder: (context, child) =>
-          _Fold(factor: _c.isCompleted ? 1 : _eased.value, child: child),
+          Fold(factor: _c.isCompleted ? 1 : _eased.value, child: child),
       child: widget.child,
     );
   }
 }
 
-/// [child] laid out as its parent lays it out, any height, and shown to
-/// [factor] of its height from the top (clipped while it's less than 1).
-/// Unlike a SizeTransition it doesn't loosen the width: a stretched child
-/// stays stretched.
-class _Fold extends SingleChildRenderObjectWidget {
-  const new({required this.factor, super.child});
+/// [child] laid out as its parent lays it out, any height, taking
+/// [factor] of its height from the top, and clipped to that while it's
+/// less than 1 (unless not [clip]). Unlike a SizeTransition it doesn't
+/// loosen the width: a stretched child stays stretched.
+class Fold extends SingleChildRenderObjectWidget {
+  const new({required this.factor, super.child, super.key, this.clip = true});
 
   final double factor;
+  final bool clip;
 
   @override
-  RenderObject createRenderObject(BuildContext context) => _RenderFold(factor);
+  RenderObject createRenderObject(BuildContext context) =>
+      RenderFold(factor)..clip = clip;
 
   @override
-  void updateRenderObject(BuildContext context, _RenderFold r) =>
-      r.factor = factor;
+  void updateRenderObject(BuildContext context, RenderFold renderObject) =>
+      renderObject
+        ..factor = factor
+        ..clip = clip;
 }
 
-class _RenderFold extends RenderProxyBox {
+/// [Fold]'s render object.
+class RenderFold extends RenderProxyBox {
   new(this._factor);
+
+  bool _clip = true;
+  bool get clip => _clip;
+  set clip(bool v) {
+    if (v == _clip) return;
+    _clip = v;
+    markNeedsPaint();
+  }
 
   double _factor;
   double get factor => _factor;
@@ -94,7 +107,7 @@ class _RenderFold extends RenderProxyBox {
     markNeedsLayout();
   }
 
-  final _clip = LayerHandle<ClipRectLayer>();
+  final _clipLayer = LayerHandle<ClipRectLayer>();
 
   BoxConstraints _inner(BoxConstraints c) =>
       _factor >= 1 ? c : c.copyWith(minHeight: 0, maxHeight: double.infinity);
@@ -137,31 +150,31 @@ class _RenderFold extends RenderProxyBox {
   void paint(PaintingContext context, Offset offset) {
     final c = child;
     if (c == null) return;
-    if (_factor >= 1) {
-      _clip.layer = null;
+    if (_factor >= 1 || !_clip) {
+      _clipLayer.layer = null;
       context.paintChild(c, offset);
       return;
     }
     if (size.isEmpty) {
-      _clip.layer = null;
+      _clipLayer.layer = null;
       return;
     }
-    _clip.layer = context.pushClipRect(
+    _clipLayer.layer = context.pushClipRect(
       needsCompositing,
       offset,
       Offset.zero & size,
       (context, offset) => context.paintChild(c, offset),
-      oldLayer: _clip.layer,
+      oldLayer: _clipLayer.layer,
     );
   }
 
   @override
   Rect? describeApproximatePaintClip(RenderObject child) =>
-      _factor >= 1 ? null : Offset.zero & size;
+      _factor >= 1 || !_clip ? null : Offset.zero & size;
 
   @override
   void dispose() {
-    _clip.layer = null;
+    _clipLayer.layer = null;
     super.dispose();
   }
 }

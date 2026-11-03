@@ -30,6 +30,8 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 
 **Order.** Drag a chat within its project to reorder it; a new chat goes to the top. Drag a project by its header. A project's chevron collapses it, its chats folding away; every chevron in Nushi (Thinking, a tool's row, a finding, a details widget, Archived) opens and folds the same way, at once with Reduce Motion.
 
+**Rows that come and go.** A new chat's row grows into its place, one archived or deleted fades and folds, and one pinned, unpinned or moved to another project glides from where it was to where it goes, as does a project that changes place. While a chat starts, a row-shaped placeholder ("Starting Claude…") holds the place its row will take, at the top of its project, its project moved to where the new chat will put it; the row takes its place with no jump. This happens only when the list changes, never on a chat's state, and with Reduce Motion rows come and go at once.
+
 **Pins.** Pin a chat with ⌘D (Chat › Pin Chat, its ⋯, its row's right-click, or the palette) and it moves to Pinned, above the projects, with its project's name beside it.
 
 - Drag pinned chats to reorder them.
