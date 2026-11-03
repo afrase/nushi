@@ -84,7 +84,7 @@ class GitHubBar extends StatelessWidget {
       plain: true,
       inset: 20,
       end: 8,
-      child: Row(
+      lead: Row(
         children: [
           Text('GitHub', style: theme.ui(t.text, weight: FontWeight.w600)),
           // The filters in a row of their own: a Flexible beside a Spacer would
@@ -140,6 +140,11 @@ class GitHubBar extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           if (updatedLine(updated, loading: loading, now: now) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),

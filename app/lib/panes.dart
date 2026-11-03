@@ -131,7 +131,9 @@ class _ResizableState extends State<Resizable> {
 /// header, at the window's top; with the sidebar hidden such a header runs
 /// under the traffic lights, so its row starts past them and past the button
 /// that shows the sidebar. Empty space in it moves the window, and its
-/// hairline runs on from the sidebar's (ADR 0080).
+/// hairline runs on from the sidebar's (ADR 0080). A plain header's [lead],
+/// before [child] and taking the room it leaves, moves with the sidebar's
+/// edge as the sidebar slides ([SidebarFollow]); [child] stays put.
 class PaneHeader extends StatelessWidget {
   const new({
     required this.child,
@@ -139,6 +141,7 @@ class PaneHeader extends StatelessWidget {
     this.inset,
     this.end,
     this.plain = false,
+    this.lead,
   });
 
   /// The chat header's height too (ADR 0072).
@@ -152,6 +155,7 @@ class PaneHeader extends StatelessWidget {
   final double? inset;
   final double? end;
   final bool plain;
+  final Widget? lead;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +186,21 @@ class PaneHeader extends StatelessWidget {
                     right: end ?? (room ? NushiTheme.gutter : 4),
                     bottom: 1, // the border's
                   ),
-                  child: child,
+                  child: switch (lead) {
+                    final lead? => Row(
+                      children: [
+                        Expanded(
+                          child: SidebarFollow(
+                            shut: shut,
+                            clip: true,
+                            child: lead,
+                          ),
+                        ),
+                        child,
+                      ],
+                    ),
+                    null => child,
+                  },
                 ),
                 if (shut) const ShowSidebarButton(),
               ],

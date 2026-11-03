@@ -122,7 +122,7 @@ class JiraBar extends StatelessWidget {
       plain: true,
       inset: 20,
       end: 8,
-      child: Row(
+      lead: Row(
         children: [
           Text('Jira', style: theme.ui(t.text, weight: FontWeight.w600)),
           const SizedBox(width: 12),
@@ -147,7 +147,11 @@ class JiraBar extends StatelessWidget {
               ],
               label: Text(site?.id ?? 'All sites'),
             ),
-          const Spacer(),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           if (updatedLine(updated, loading: loading, now: now) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),

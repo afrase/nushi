@@ -180,20 +180,14 @@ class _SettingsViewState extends State<SettingsView> {
               plain: true,
               inset: 16,
               end: 8,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Settings',
-                      style: theme.ui(t.text, weight: FontWeight.w600),
-                    ),
-                  ),
-                  IconTap(
-                    Icons.close,
-                    tooltip: 'Close (esc)',
-                    onTap: daemon.back,
-                  ),
-                ],
+              lead: Text(
+                'Settings',
+                style: theme.ui(t.text, weight: FontWeight.w600),
+              ),
+              child: IconTap(
+                Icons.close,
+                tooltip: 'Close (esc)',
+                onTap: daemon.back,
               ),
             ),
             Expanded(

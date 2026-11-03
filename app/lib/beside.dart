@@ -264,29 +264,52 @@ class _Beside extends MultiChildLayoutDelegate {
 /// slides in from the window's edge as it comes and out as it goes, over
 /// [main], which is laid out at once where it goes and keeps its state
 /// either way. What's in [main] that should glide (the chat's column) does
-/// so itself ([Beside]).
-class SidebarBeside extends StatelessWidget {
+/// so itself ([Beside]). The sidebar's button moves with the slide, drawn
+/// over both, between its place in the sidebar and its place past the
+/// lights ([SidebarGlide]).
+class SidebarBeside extends StatefulWidget {
   const new({required this.sidebar, required this.main, super.key});
 
   final Widget? sidebar;
   final Widget main;
 
   @override
+  State<SidebarBeside> createState() => _SidebarBesideState();
+}
+
+class _SidebarBesideState extends State<SidebarBeside> {
+  final _glide = SidebarGlide();
+
+  @override
   Widget build(BuildContext context) {
-    final view = LayoutId(key: const ValueKey(#main), id: #main, child: main);
+    final sidebar = widget.sidebar;
+    final view = LayoutId(
+      key: const ValueKey(#main),
+      id: #main,
+      child: widget.main,
+    );
     final side = LayoutId(
       key: const ValueKey(#sidebar),
       id: #sidebar,
       child: Presence(
         child: sidebar,
-        builder: (_, run, child) => paneSlide(run, child, left: true),
+        builder: (_, run, child) =>
+            paneSlide(run, _glide.origin(run, child), left: true),
       ),
     );
+    final button = LayoutId(
+      key: const ValueKey(#button),
+      id: #button,
+      child: MovingSidebarButton(glide: _glide),
+    );
     // Keyed, so each keeps its state as they swap: the sidebar first, as it
-    // reads, while it shows; over the view as it goes.
-    return CustomMultiChildLayout(
-      delegate: _SidebarBeside(shut: sidebar == null),
-      children: sidebar == null ? [view, side] : [side, view],
+    // reads, while it shows; over the view as it goes. The moving button
+    // over both.
+    return _glide.scope(
+      CustomMultiChildLayout(
+        delegate: _SidebarBeside(shut: sidebar == null),
+        children: sidebar == null ? [view, side, button] : [side, view, button],
+      ),
     );
   }
 }
@@ -316,6 +339,9 @@ class _SidebarBeside extends MultiChildLayoutDelegate {
       ),
     );
     positionChild(#main, Offset(x, 0));
+    // At the top left: it's drawn where it is in its move.
+    layoutChild(#button, BoxConstraints.loose(size));
+    positionChild(#button, Offset.zero);
   }
 
   @override

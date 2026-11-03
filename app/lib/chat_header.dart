@@ -198,97 +198,114 @@ class _ChatHeaderState extends State<ChatHeader> {
             ),
             child: Row(
               children: [
-                if (shut)
-                  if (chat.color case final color?) ...[
-                    Tooltip(
-                      message: color.label,
-                      child: Container(
-                        key: const Key('chat color'),
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: color.ink(t),
-                        ),
+                // What leads moves with the sidebar's edge as it slides;
+                // the rest stays put.
+                SidebarFollow(
+                  shut: shut,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (shut)
+                        if (chat.color case final color?) ...[
+                          Tooltip(
+                            message: color.label,
+                            child: Container(
+                              key: const Key('chat color'),
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: color.ink(t),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: _dotRoom - 8),
+                        ],
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: titleMax),
+                        child: _renaming
+                            ? RenameField(
+                                chat: chat,
+                                daemon: widget.daemon,
+                                style: titleStyle,
+                                onDone: () => _renaming = false,
+                              )
+                            : GestureDetector(
+                                onDoubleTap: () => _renaming = true,
+                                child: Text(
+                                  chat.shownTitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: titleStyle,
+                                ),
+                              ),
                       ),
-                    ),
-                    const SizedBox(width: _dotRoom - 8),
-                  ],
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: titleMax),
-                  child: _renaming
-                      ? RenameField(
-                          chat: chat,
-                          daemon: widget.daemon,
-                          style: titleStyle,
-                          onDone: () => _renaming = false,
-                        )
-                      : GestureDetector(
-                          onDoubleTap: () => _renaming = true,
-                          child: Text(
-                            chat.shownTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: titleStyle,
+                      if (chat.jiraKey.isNotEmpty) ...[
+                        SizedBox(width: gap),
+                        LinkText(
+                          chat.jiraKey,
+                          mono: true,
+                          size: 12,
+                          tooltip: 'Show ${chat.jiraKey} in Jira',
+                          onTap: () => showIssue(
+                            widget.daemon,
+                            chat.jiraSite,
+                            chat.jiraKey,
                           ),
                         ),
+                      ],
+                      if (chat.github case final link?) ...[
+                        SizedBox(width: gap),
+                        GitHubChip(
+                          key: ValueKey(link.id),
+                          daemon: widget.daemon,
+                          link: link,
+                        ),
+                      ],
+                      SizedBox(width: group),
+                      Tooltip(
+                        message: folds.name ? chat.agentName : '',
+                        child: AgentMark(chat.agent, size: 16, ink: t.text),
+                      ),
+                      if (!folds.name) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          chat.agentName,
+                          style: theme.ui(
+                            t.text,
+                            size: 12,
+                            weight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      if (modelName != null && !folds.model) ...[
+                        SizedBox(width: gap),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: modelMax),
+                          child: Text(
+                            modelName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: meta,
+                          ),
+                        ),
+                      ],
+                      SizedBox(width: gap),
+                      if (chat.archived)
+                        Text('archived', style: meta)
+                      else if (folds.word)
+                        Tooltip(
+                          message: phaseWord(chat.phase, t).$1,
+                          child: ChatDot(chat: chat),
+                        )
+                      else ...[
+                        ChatDot(chat: chat),
+                        const SizedBox(width: 5),
+                        ChatStatusWord(chat, style: meta),
+                      ],
+                    ],
+                  ),
                 ),
-                if (chat.jiraKey.isNotEmpty) ...[
-                  SizedBox(width: gap),
-                  LinkText(
-                    chat.jiraKey,
-                    mono: true,
-                    size: 12,
-                    tooltip: 'Show ${chat.jiraKey} in Jira',
-                    onTap: () =>
-                        showIssue(widget.daemon, chat.jiraSite, chat.jiraKey),
-                  ),
-                ],
-                if (chat.github case final link?) ...[
-                  SizedBox(width: gap),
-                  GitHubChip(
-                    key: ValueKey(link.id),
-                    daemon: widget.daemon,
-                    link: link,
-                  ),
-                ],
-                SizedBox(width: group),
-                Tooltip(
-                  message: folds.name ? chat.agentName : '',
-                  child: AgentMark(chat.agent, size: 16, ink: t.text),
-                ),
-                if (!folds.name) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    chat.agentName,
-                    style: theme.ui(t.text, size: 12, weight: FontWeight.w500),
-                  ),
-                ],
-                if (modelName != null && !folds.model) ...[
-                  SizedBox(width: gap),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: modelMax),
-                    child: Text(
-                      modelName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: meta,
-                    ),
-                  ),
-                ],
-                SizedBox(width: gap),
-                if (chat.archived)
-                  Text('archived', style: meta)
-                else if (folds.word)
-                  Tooltip(
-                    message: phaseWord(chat.phase, t).$1,
-                    child: ChatDot(chat: chat),
-                  )
-                else ...[
-                  ChatDot(chat: chat),
-                  const SizedBox(width: 5),
-                  ChatStatusWord(chat, style: meta),
-                ],
                 SizedBox(width: around),
                 const Spacer(),
                 SizedBox(width: around),
