@@ -29,6 +29,7 @@ type session struct {
 	idle    chan struct{}
 	waiters map[string]chan event // by op id: the events that answer it
 	tools   map[string]string     // calls the client knows of: their tool's name
+	steps   map[string]int        // running Agent calls: their subagents' calls so far
 	msg     int                   // the running turn's agent messages so far
 	deltas  bool                  // the message under way streamed as deltas
 	thinks  bool                  // and the thought
@@ -69,7 +70,7 @@ type turnResult struct {
 
 func newSession(b *bridge, h *host, in info) *session {
 	return &session{b: b, h: h, id: in.SessionID, cwd: in.Cwd, info: in, waiters: map[string]chan event{},
-		tools: map[string]string{}, ended: make(chan struct{})}
+		tools: map[string]string{}, steps: map[string]int{}, ended: make(chan struct{})}
 }
 
 // pump hands the host's events to the client until the host is gone.
@@ -121,7 +122,7 @@ func (s *session) await(ctx context.Context, op any, want ...string) (event, err
 }
 
 func (s *session) handle(ev event) {
-	olds := s.readOlds(ev) // before the lock: it reads files
+	olds, log := s.readOlds(ev), s.subagentLog(ev) // before the lock: they read files
 	s.mu.Lock()
 	if ch := s.waiters[ev.Parent]; ch != nil {
 		select {
@@ -145,7 +146,7 @@ func (s *session) handle(ev event) {
 	case "MessageDelta", "AgentMessage", "ThinkingDelta", "Thinking":
 		out = s.textLocked(ev)
 	case "ToolStart", "ToolUpdate", "ToolEnd":
-		out = s.toolLocked(ev, olds)
+		out = s.toolLocked(ev, olds, log)
 	case "TurnPause":
 		out = s.pauseLocked(ev, olds)
 	case "UsageUpdate":
@@ -259,7 +260,8 @@ func chunk(thought bool, text string, id acp.MessageID) acp.SessionUpdate {
 }
 
 // usageLocked adds a model call's tokens to the turn's, and reports how
-// full the context is when Ante says (not for a subagent's call).
+// full the context is when Ante says (not for a subagent's call, whose
+// tokens it counts in the parent's without a context).
 func (s *session) usageLocked(ev event) []acp.SessionUpdate {
 	var p struct {
 		Usage struct {

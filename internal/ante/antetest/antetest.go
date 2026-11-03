@@ -12,6 +12,11 @@
 //   - containing "wait": nothing, until Interrupt or a Steer;
 //   - containing "mcp": first an ExtensionRefreshed that adds the skill
 //     "late", as an MCP server coming online would;
+//   - containing "subagent": an Agent call whose subagent's work comes as
+//     ToolUpdate lines, with its event log saved under the session (not
+//     when the text also has "unsaved"), then its report and a message;
+//     with "wait" in the text too, it waits after its lines, and an
+//     Interrupt cancels it;
 //   - anything else: "You said: <text>", as two deltas and the whole text.
 //
 // A session has the skill "review" (argument hint "<path>"); SlashCommand
@@ -320,6 +325,8 @@ func (h *Host) run(turn, text string) {
 	h.emit(turn, map[string]any{"TurnStart": map[string]any{"turn_id": turn}}, true)
 	status := any("Completed")
 	switch {
+	case strings.Contains(text, "subagent"):
+		status = h.subagent(turn, text)
 	case strings.Contains(text, "write"):
 		call := map[string]any{"id": "call_w", "name": "Write", "args": map[string]any{"file_path": "x.txt", "content": "hi\n"}}
 		decision := "Accept"

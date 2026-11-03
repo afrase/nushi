@@ -47,7 +47,9 @@ var (
 	_ chats.ForkFinder = codex.Local{}
 
 	_ chats.Forker       = ante.Harness{}
+	_ chats.ToolReader   = ante.Harness{}
 	_ chats.OtherReader  = ante.Harness{}
+	_ chats.Subagents    = ante.Harness{}
 	_ chats.ContextAsker = ante.Harness{}
 
 	_ chats.OpenFinder   = ante.Local{}

@@ -67,7 +67,7 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "ReadOnly", "SubagentMessages", "Subagents", "ToolReader", "Transcript"},
 			[]string{"ForkFinder", "HistoryChecker", "HistoryCopier", "MessageDater", "OpenFinder"}},
 		"codex": {[]string{"Forker", "GoneReader", "HistoryCopier", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
-		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader"}, []string{"MessageDater", "OpenFinder"}},
+		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
 		"omp":   {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
 		"pi":    {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 		"pig":   {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},

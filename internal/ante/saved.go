@@ -85,7 +85,7 @@ func (b *bridge) start(ctx context.Context, h *host, op any, replay bool) (*sess
 			}
 			_ = json.Unmarshal(ev.Payload, &c)
 			s.mu.Lock()
-			s.turn, s.tools = nil, map[string]string{} // the saved turns are over
+			s.turn, s.tools, s.steps = nil, map[string]string{}, map[string]int{} // the saved turns are over
 			s.mu.Unlock()
 			b.mu.Lock()
 			b.sessions[s.id] = s
@@ -96,8 +96,12 @@ func (b *bridge) start(ctx context.Context, h *host, op any, replay bool) (*sess
 			go s.pump()
 			return s, nil
 		default:
+			var log []event
+			if replay { // before the lock: it reads a file
+				log = s.subagentLog(ev)
+			}
 			s.mu.Lock()
-			out := s.replayLocked(ev)
+			out := s.replayLocked(ev, log)
 			s.mu.Unlock()
 			for _, u := range out {
 				if replay {
@@ -110,8 +114,9 @@ func (b *bridge) start(ctx context.Context, h *host, op any, replay bool) (*sess
 
 // replayLocked turns a saved event into what the client shows of the
 // conversation: the user's inputs (each under its op's id), the replies,
-// the calls; not what was asked or reported along the way.
-func (s *session) replayLocked(ev event) []acp.SessionUpdate {
+// the calls, with a subagent's steps; not what was asked or reported along
+// the way. log is the event log of the subagent whose call ev ends.
+func (s *session) replayLocked(ev event, log []event) []acp.SessionUpdate {
 	switch ev.Name {
 	case "TurnStart":
 		var p struct {
@@ -138,7 +143,15 @@ func (s *session) replayLocked(ev event) []acp.SessionUpdate {
 	case "ExtensionRefreshed":
 		s.refreshedLocked(ev)
 	case "ToolStart", "ToolEnd":
-		return s.toolLocked(ev, nil)
+		return s.toolLocked(ev, nil, log)
+	case "ToolUpdate": // a subagent's steps, if Ante saved its lines; another call's progress is over
+		var p struct {
+			ID string `json:"tool_use_id"`
+		}
+		_ = json.Unmarshal(ev.Payload, &p)
+		if s.tools[p.ID] == agentTool {
+			return s.toolLocked(ev, nil, nil)
+		}
 	}
 	return nil
 }

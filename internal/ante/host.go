@@ -55,19 +55,27 @@ func (h *host) read(out io.Reader) {
 	r := bufio.NewScanner(out)
 	r.Buffer(nil, agentproc.MaxRead)
 	for r.Scan() {
-		var msg struct {
-			Event  json.RawMessage `json:"event"`
-			Parent string          `json:"parent"`
-		}
-		if json.Unmarshal(r.Bytes(), &msg) == nil && msg.Event != nil { // Unmarshal copies what it keeps
-			name, payload := variant(msg.Event)
-			h.events <- event{Name: name, Payload: payload, Parent: msg.Parent}
+		if ev, ok := readEvent(r.Bytes()); ok {
+			h.events <- ev
 		}
 	}
 	if err := r.Err(); err != nil {
 		warnf("stopped reading Ante's host: %v", err) // bufio.Scanner: token too long
 		h.kill()
 	}
+}
+
+// readEvent reads an event's line, of the host's output or a saved log.
+func readEvent(line []byte) (event, bool) {
+	var msg struct {
+		Event  json.RawMessage `json:"event"`
+		Parent string          `json:"parent"`
+	}
+	if json.Unmarshal(line, &msg) != nil || msg.Event == nil { // Unmarshal copies what it keeps
+		return event{}, false
+	}
+	name, payload := variant(msg.Event)
+	return event{Name: name, Payload: payload, Parent: msg.Parent}, true
 }
 
 // variant reads an externally tagged enum: "Name", or {"Name": payload}.
