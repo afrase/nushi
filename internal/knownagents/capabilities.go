@@ -23,6 +23,7 @@ var (
 	_ chats.DefaultReader    = claude.Harness{}
 	_ chats.Transcript       = claude.Harness{}
 	_ chats.Subagents        = claude.Harness{}
+	_ chats.SubagentMessages = claude.Harness{}
 	_ chats.BackgroundTasks  = claude.Harness{}
 	_ chats.ContextCommander = claude.Harness{}
 	_ chats.ReadOnly         = claude.Harness{}

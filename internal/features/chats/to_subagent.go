@@ -14,7 +14,7 @@ import (
 func (c *chat) toSubagentLocked(callID string) (*model.ToSubagent, error) {
 	call := c.itemLocked(callID)
 	switch {
-	case c.kind.subagents == nil:
+	case c.kind.toSubagents == nil:
 		return nil, errors.New("the agent can't pass messages to its subagents")
 	case call == nil || call.Agent == "":
 		return nil, errors.New("that subagent is no longer in the chat")
@@ -46,12 +46,12 @@ func messageOf(it model.Item) model.Message {
 
 // readToSubagentLocked reads a replayed user message that asked the agent
 // to pass a message to a subagent back into that message (see
-// Subagents.ReadToSubagent).
+// SubagentMessages.ReadToSubagent).
 func (c *chat) readToSubagentLocked(it *model.Item) bool {
-	if it.Kind != model.UserMessage || it.ToSubagentName != "" || c.kind.subagents == nil {
+	if it.Kind != model.UserMessage || it.ToSubagentName != "" || c.kind.toSubagents == nil {
 		return false
 	}
-	agent, id, text, ok := c.kind.subagents.ReadToSubagent(it.Text)
+	agent, id, text, ok := c.kind.toSubagents.ReadToSubagent(it.Text)
 	if !ok && c.kind.background != nil {
 		agent, id, ok = c.kind.background.ReadStopTask(it.Text)
 		text, it.ToSubagentStop = "", ok
@@ -82,14 +82,14 @@ func taskOf(call model.Item) string {
 }
 
 // passedOnLocked links a call of the agent's that passes a message on to a
-// subagent (Subagents.PassesToSubagent) to the user's message it passes, the
+// subagent (SubagentMessages.PassesToSubagent) to the user's message it passes, the
 // oldest one waiting, and keeps that message's ToSubagentState up to date
 // with it.
 func (c *chat) passedOnLocked(call model.Item) {
-	if c.kind.subagents == nil || call.Parent != "" {
+	if c.kind.toSubagents == nil || call.Parent != "" {
 		return
 	}
-	id := c.kind.subagents.PassesToSubagent(call)
+	id := c.kind.toSubagents.PassesToSubagent(call)
 	sub := slices.IndexFunc(c.items, func(it model.Item) bool { return taskOf(it) == id })
 	if id == "" || sub < 0 {
 		return

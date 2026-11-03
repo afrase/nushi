@@ -215,7 +215,7 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	case r != nil && r.Stop:
 		text = c.kind.background.StopTask(r.AgentID)
 	case r != nil:
-		text = c.kind.subagents.ToSubagent(r.Agent, r.AgentID, text)
+		text = c.kind.toSubagents.ToSubagent(r.Agent, r.AgentID, text)
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range m.Files {

@@ -72,7 +72,7 @@ type Transcript interface {
 	ForkTitle(title, of string) bool
 }
 
-// Subagents tells of the agent's subagents and reaches them.
+// Subagents tells of the agent's subagents.
 type Subagents interface {
 	// Parent reads the subagent tool call an update comes from, from its
 	// _meta.
@@ -88,6 +88,12 @@ type Subagents interface {
 	// (Claude's ToolCall sets it while the call runs; a replayed call has
 	// only its output).
 	SubagentID(output string) string
+}
+
+// SubagentMessages passes the user's messages on to the agent's subagents.
+// An agent meets it only with a real way to reach a subagent (Claude's
+// SendMessage); without it a subagent has no message box.
+type SubagentMessages interface {
 	// ToSubagent wraps a message to a subagent into a prompt that asks the
 	// agent to pass it on unchanged.
 	ToSubagent(agent, agentID, text string) string

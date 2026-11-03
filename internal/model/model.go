@@ -274,7 +274,7 @@ type Item struct {
 	// it says (untrusted: chats' related.go checks it against git's list).
 	WorktreePath string `json:",omitempty"`
 	// AgentID is the agent's id for the subagent, when it can pass it
-	// messages; for a call that passes one a message (Subagents.PassesToSubagent in chats),
+	// messages; for a call that passes one a message (SubagentMessages.PassesToSubagent in chats),
 	// that subagent's.
 	AgentID string
 	// A message to a subagent is a user message the agent was asked to pass
