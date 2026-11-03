@@ -75,6 +75,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Chat header** | The top bar: title, agent, model, the tabs, the terminal and details buttons, ⋯. | `ChatHeader` | |
 | **Tabs** | Chat, Changes, Pull request (when the chat has one), in the header. | `chat_keys.dart`, `PlainTabs` | 0071 |
 | **Composer** | The message box and its pickers under the transcript. "The box" is its text field. | `Composer` | |
+| **Spell check** | The composer's dotted underline under misspelled words, on the Mac, from macOS's own checker. A click on one, or ⌘; (**Next Typo**), opens its suggestions. The UI calls a flagged word a typo. | `SpellCheck`, `SpellMenu`, `Speller`, `ComposerText`, pref `checkSpelling` | 0083 |
 | **Draft** | What you've written in a chat and not sent: the box's text, mentioned files, reply cards and images, and the subagents' boxes. Kept on disk until sent, so a crash or restart doesn't lose it. A comment box's (GitHub's, Jira's) and your review's inline comments are kept on disk too, by what they answer. | `Draft`, `Drafts`, `drafts.json`, `commentDraft` | 0062, 0027 |
 | **Reply card** | A quote put into the box to send with your message: a review thread, a comment, a failed check. | `ReplyCards`, `QuoteBlock` | 0059 |
 | **Side pane** | What opens beside the transcript: a subagent's pane, or the preview of an artifact. A side chat opens beside it, apart. | `panes.dart`, `SubagentPane`, `PreviewPane` | |

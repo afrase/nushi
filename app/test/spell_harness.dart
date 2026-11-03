@@ -77,7 +77,7 @@ class FakeSpeller implements Speller {
   }
 }
 
-/// The prompt box of a new chat on [speller], at the bottom of a window
+/// The composer of a new chat on [speller], at the bottom of a window
 /// of [width] by [height], with [text] in it; a test's speller goes when the
 /// test ends.
 Future<(Daemon, ChatState)> spellBox(

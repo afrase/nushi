@@ -12,6 +12,7 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_updates.dart';
+import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
@@ -31,9 +32,10 @@ const _sleepAfter = {
 
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
-/// Settings › General: the appearance, when idle chats sleep, the Mac's
-/// notifications, whether the daemon checks for updates, and whether it
-/// starts at login (the packaged app's, for the usual data folder).
+/// Settings › General: the appearance, when idle chats sleep, whether the
+/// composer checks spelling, the Mac's notifications, whether the daemon
+/// checks for updates, and whether it starts at login (the packaged app's,
+/// for the usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
   const new({
@@ -82,6 +84,7 @@ class GeneralSection extends StatelessWidget {
             ),
           ],
         ),
+      if (speller != null) const _Spelling(),
       const NotificationsGroup(),
       if (settings case final s? when s.hasCheckUpdates())
         UpdatesGroup(daemon: daemon, settings: s, onChange: onChange),
@@ -141,6 +144,30 @@ class _Appearance extends StatelessWidget {
               ],
               label: Text(full ? 'Full width' : 'Centered'),
             ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Whether the composer checks spelling, where there's a checker: the app's
+/// own preference, not the daemon's (ADR 0083).
+class _Spelling extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: checkSpelling,
+    builder: (context, on, _) => SettingsGroup(
+      title: 'Composer',
+      children: [
+        SettingsRow(
+          'Check spelling while typing',
+          description: 'Typos get a dotted underline; click one to fix it.',
+          control: SettingsSwitch(
+            value: on,
+            onChanged: (v) => checkSpelling.value = v,
           ),
         ),
       ],

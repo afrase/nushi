@@ -17,7 +17,7 @@ class Draft extends ChangeNotifier {
     }
   }
 
-  final text = PromptText();
+  final text = ComposerText();
   final mentions = <String>{};
   final Replies replies = ValueNotifier(const []);
   final images = Attachments();

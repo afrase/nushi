@@ -234,6 +234,11 @@ void main() {
     expect(_toast, findsOneWidget);
     d.openSettings(section: SettingsSection.general);
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Check for updates'),
+      100,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Check for updates'), findsOneWidget);
     expect(find.textContaining('Last checked just now'), findsOneWidget);
     final checks = find.descendant(

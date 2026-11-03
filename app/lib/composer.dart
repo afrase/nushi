@@ -25,7 +25,7 @@ import 'package:nushi/thinking.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
-/// The prompt box: "+" on its left mentions a file or attaches images
+/// The composer: "+" on its left mentions a file or attaches images
 /// (⌘V and dropping work too), and on its right a send button once there
 /// is something to send, or a stop button while a turn runs. Reply cards
 /// and attached images show above the text; the replies go first in the

@@ -49,7 +49,7 @@ class SpellMenu extends ChangeNotifier {
   Offset? _pressedAt;
   bool _disposed = false;
 
-  PromptText get _text => spell.text;
+  ComposerText get _text => spell.text;
 
   /// The field: its focus node is attached under it.
   EditableTextState? get _field =>

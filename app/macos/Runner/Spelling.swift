@@ -1,7 +1,7 @@
 import Cocoa
 import FlutterMacOS
 
-/// Spell check for the prompt box (lib/spell_check.dart, ADR 0083): the Mac's
+/// Spell check for the composer (lib/spell_check.dart, ADR 0083): the Mac's
 /// own checker, with the languages and dictionary the user set. Nothing
 /// leaves the Mac. One document tag for the app's run, so Ignore lasts until
 /// it quits, across chats; `learn` writes the macOS user dictionary.

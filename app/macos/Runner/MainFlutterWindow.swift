@@ -89,7 +89,7 @@ class MainFlutterWindow: NSWindow {
     Alerts.shared.channel = alerts
     alerts.setMethodCallHandler { call, result in Alerts.shared.handle(call, result) }
 
-    // Spell check for the prompt box (lib/spell_check.dart, ADR 0083).
+    // Spell check for the composer (lib/spell_check.dart, ADR 0083).
     let spelling = Spelling()
     FlutterMethodChannel(name: "nushi/spelling", binaryMessenger: flutterViewController.engine.binaryMessenger)
       .setMethodCallHandler { call, result in spelling.handle(call, result) }

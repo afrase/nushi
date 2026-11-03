@@ -5,14 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_rows.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'settings_harness.dart';
 import 'spell_harness.dart';
 
 void main() {
@@ -344,6 +347,60 @@ void main() {
     expect(flagged(chat), isEmpty);
     expect(underlined(tester), isEmpty);
     await closeView(tester, d);
+  });
+
+  group('the setting', () {
+    spellTest('is on at first', (tester) async {
+      expect(checkSpelling.value, isTrue);
+    });
+
+    Future<Daemon> settings(WidgetTester tester, Tokens tokens) async {
+      testSpeller = FakeSpeller({});
+      addTearDown(() => testSpeller = null);
+      final d = await settingsFake().connect(tester);
+      await pumpSettings(tester, d, SettingsSection.general, tokens: tokens);
+      return d;
+    }
+
+    Finder row() => find.ancestor(
+      of: find.text('Check spelling while typing'),
+      matching: find.byType(SettingsRow),
+    );
+
+    spellTest('has its row on the Mac, and turns it off and on', (
+      tester,
+    ) async {
+      final d = await settings(tester, Tokens.dark);
+      expect(row(), findsOne);
+      expect(checkSpelling.value, isTrue);
+      await tester.tap(
+        find.descendant(of: row(), matching: find.byType(Switch)),
+      );
+      await tester.pumpAndSettle();
+      expect(checkSpelling.value, isFalse);
+      await closeView(tester, d);
+    });
+
+    testWidgets('has no row on a phone', (tester) async {
+      final d = await settingsFake().connect(tester);
+      await pumpSettings(tester, d, SettingsSection.general);
+      expect(find.text('Check spelling while typing'), findsNothing);
+      await closeView(tester, d);
+    });
+
+    for (final (name, tokens) in [
+      ('dark', Tokens.dark),
+      ('light', Tokens.light),
+    ]) {
+      spellTest('golden: its row, $name', (tester) async {
+        final d = await settings(tester, tokens);
+        await expectLater(
+          row(),
+          matchesGoldenFile('goldens/spell_setting_$name.png'),
+        );
+        await closeView(tester, d);
+      });
+    }
   });
 
   for (final (name, tokens) in [

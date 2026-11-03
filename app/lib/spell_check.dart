@@ -26,11 +26,11 @@ String _checked(String text) {
   return text.substring(0, end < 0 ? spellLimit : end);
 }
 
-/// The prompt box's text, which draws its flagged words with a dotted
+/// The composer's text, which draws its flagged words with a dotted
 /// underline. Flagged words come from the [SpellCheck] on it; a controller
 /// because they depend on the caret too, which `TextField`'s own spell check
 /// doesn't look at (ADR 0083). With none it builds what any controller does.
-class PromptText extends TextEditingController {
+class ComposerText extends TextEditingController {
   /// The spell check of the box showing this, if one does.
   SpellCheck? spell;
 
@@ -100,8 +100,8 @@ class PromptText extends TextEditingController {
   }
 }
 
-/// Spell check of one prompt box: which of [text]'s words are flagged, kept
-/// on it as [PromptText.marks], and notifying when they change. Words go to
+/// Spell check of one composer: which of [text]'s words are flagged, kept
+/// on it as [ComposerText.marks], and notifying when they change. Words go to
 /// the [speller] after a pause in typing, each once: the answers are kept by
 /// word, so one that comes late is still true, and the marks always come
 /// from the text as it is now. A word isn't judged while it's being typed:
@@ -118,7 +118,7 @@ class SpellCheck extends ChangeNotifier {
     _changed();
   }
 
-  final PromptText text;
+  final ComposerText text;
   final ChatState chat;
   final FocusNode focus;
 

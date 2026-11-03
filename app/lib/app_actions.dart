@@ -58,7 +58,7 @@ const pinKey = SingleActivator(LogicalKeyboardKey.keyD, meta: true);
 /// ⌘\: hide the sidebar, or show it.
 const sidebarKey = SingleActivator(LogicalKeyboardKey.backslash, meta: true);
 
-/// ⌘;: the next flagged word in the prompt box.
+/// ⌘;: the next flagged word in the composer.
 const nextTypoKey = SingleActivator(LogicalKeyboardKey.semicolon, meta: true);
 
 /// An action of the app, in the palette's order with an empty query.

@@ -44,6 +44,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 | ⌘W | Close the preview tab showing, and with the last the pane (File › Close Tab). A focused terminal keeps it, to close itself. |
 | ⌘K, ⌘⇧P | The command palette. |
 | ⌘F | Find. |
+| ⌘; | The next typo in the composer ([Spell check](#spell-check)). |
 | ⌘P | Open file. |
 | Esc | Stop a running turn. |
 | Esc Esc | Rewind: list your messages. |
@@ -76,6 +77,17 @@ The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and i
 A turn that fails, say on the agent's API answering "overloaded" until it gives up, ends with a red notice saying why. **Try again** beside it sends your last message once more, with its images, as a new message: the agent may already have the failed one in its history, so nothing is rewound, and the box keeps what you've typed. It shows while the notice is the chat's last line and goes grey while the chat is busy. Nushi never tries again on its own.
 
 Messages waiting in the queue stay held after a failed turn. Try again, or any message you send, goes first, and the queue follows once that turn ends well. In a chat that's asleep it joins the queue instead, behind them.
+
+## Spell check
+
+On the Mac the composer checks spelling as you type, with macOS's own checker, languages and dictionary (Settings › General's Check spelling while typing, on at first). A misspelled word gets a dotted underline once you've moved on from it, by a space, punctuation or the caret; a word isn't judged while the caret's in it. Typos never stop a message going.
+
+- **Click a flagged word**, or press ⌘; (Chat › Next Typo) to go to the next one after the caret: a menu opens above it with up to four suggestions, Ignore and Add to dictionary. ⏎ takes the first suggestion and 1–4 take that one; esc closes, and any other key closes it and carries on. ⌘Z undoes a suggestion, which keeps the word's capital.
+- **Right-click a flagged word** for the same, over Cut, Copy and Paste.
+- **Ignore** lasts until Nushi quits, in every chat. **Add to dictionary** goes in the macOS user dictionary, which every app shares.
+- **Left alone**: anything in backticks or fences, paths, URLs, words starting with `/ @ # ~ $ -`, anything with digits, dots, underscores or colons in it, camelCase and ALLCAPS, words under three letters, capitalized words mid-sentence (probably names; one starting a sentence is checked), and any word of the agent's messages in this chat, which covers the project's own. A hyphenated word is checked part by part. A prompt past 20,000 characters is checked up to there.
+
+A subagent's box, a reply box and a review comment aren't checked.
 
 ## Rewind
 
