@@ -321,3 +321,172 @@ class _RenderReveal extends RenderShiftedBox {
     super.dispose();
   }
 }
+
+/// A pane that slides its full width in from its edge (the left for the
+/// sidebar, otherwise the right) as [run] goes from 0 to 1, clipped to its
+/// own slot: one beside others seems to come out from under them.
+Widget paneSlide(Animation<double> run, Widget child, {bool left = false}) =>
+    AnimatedBuilder(
+      animation: run,
+      builder: (context, child) => ClipRect(
+        clipBehavior: run.value < 1 ? Clip.hardEdge : Clip.none,
+        child: FractionalTranslation(
+          translation: Offset((left ? -1 : 1) * (1 - run.value), 0),
+          child: child,
+        ),
+      ),
+      child: child,
+    );
+
+/// [child] laid out where it is, but drawn from where it was: when [token]
+/// changes (a pane opened or closed beside it, the sidebar came or went),
+/// it's drawn from where it showed until then and glides to where it is
+/// now over [Motion.enter] through [Motion.settle]. Only its drawing moves:
+/// it's laid out once, at its new width, so a transcript that lays out
+/// every entry does so once. With [sides] (its text's column's insets at a
+/// width: the chat's), that column is what's followed, and only while it
+/// keeps its width: a column that re-wraps (a narrow window) just shows
+/// where it is. Its pointer goes where it's drawn. A change mid-glide
+/// glides from where it is; under Reduce Motion it doesn't glide.
+class Glide extends StatefulWidget {
+  const new({required this.token, required this.child, super.key, this.sides});
+
+  final Object? token;
+  final EdgeInsets Function(double width)? sides;
+  final Widget child;
+
+  @override
+  State<Glide> createState() => _GlideState();
+}
+
+class _GlideState extends State<Glide> with SingleTickerProviderStateMixin {
+  late final _run = AnimationController(
+    vsync: this,
+    duration: Motion.enter,
+    value: 1,
+  );
+  late final _curved = CurvedAnimation(parent: _run, curve: Motion.settle);
+  int _armed = 0; // how many times it was told to glide
+
+  @override
+  void didUpdateWidget(Glide old) {
+    super.didUpdateWidget(old);
+    if (widget.token == old.token || reduceMotion(context)) return;
+    _armed++;
+    _run.forward(from: 0).ignore();
+  }
+
+  @override
+  void dispose() {
+    _curved.dispose();
+    _run.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _Glide(
+    run: _curved,
+    armed: _armed,
+    sides: widget.sides,
+    child: RepaintBoundary(child: widget.child),
+  );
+}
+
+class _Glide extends SingleChildRenderObjectWidget {
+  const new({
+    required this.run,
+    required this.armed,
+    required this.sides,
+    super.child,
+  });
+
+  final Animation<double> run;
+  final int armed;
+  final EdgeInsets Function(double width)? sides;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderGlide(run, armed, sides);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderGlide render) => render
+    ..sides = sides
+    ..armed = armed;
+}
+
+class _RenderGlide extends RenderProxyBox {
+  new(this._run, this._armed, this.sides);
+
+  final Animation<double> _run;
+  EdgeInsets Function(double width)? sides;
+
+  int _armed;
+  int get armed => _armed;
+  (double, double)? _was; // its column as drawn when told to glide
+  double _from = 0; // how far off it's drawn as the glide starts
+  double _drawn = 0; // how far off it was last drawn
+
+  set armed(int v) {
+    if (v == _armed) return;
+    _armed = v;
+    // Where it shows now: its last layout and its glide's offset. Not yet
+    // laid out again, so this is still the old place.
+    if (attached && hasSize) {
+      final (x, width) = _column();
+      _was = (x + _drawn, width);
+    }
+    markNeedsPaint();
+  }
+
+  /// Its column's x in the window, and its width.
+  (double, double) _column() {
+    final x = localToGlobal(Offset.zero).dx;
+    final s = sides?.call(size.width) ?? EdgeInsets.zero;
+    return (x + s.left, size.width - s.horizontal);
+  }
+
+  double get _dx => _from == 0 ? 0 : _from * (1 - _run.value);
+
+  @override
+  bool get isRepaintBoundary => true;
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _run.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _run.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (_was case (final x, final width)?) {
+      _was = null;
+      final (now, nowWidth) = _column();
+      final by = x - now;
+      _from = by.abs() < 0.5 || (width - nowWidth).abs() > 0.5 ? 0 : by;
+    }
+    if (_run.isCompleted) _from = 0;
+    _drawn = _dx;
+    if (child case final child?) {
+      context.paintChild(child, offset + Offset(_drawn, 0));
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      result.addWithPaintOffset(
+        offset: Offset(_drawn, 0),
+        position: position,
+        hitTest: (result, position) =>
+            child?.hitTest(result, position: position) ?? false,
+      );
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) =>
+      transform.translateByDouble(_drawn, 0, 0, 1);
+}

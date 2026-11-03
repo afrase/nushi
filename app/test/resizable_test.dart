@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/panes.dart';
+import 'package:nushi/beside.dart';
 import 'package:nushi/theme/theme.dart';
 
 void main() {

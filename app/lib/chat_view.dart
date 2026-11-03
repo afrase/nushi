@@ -4,6 +4,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/background_commands.dart';
+import 'package:nushi/beside.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/chat_menu.dart';
@@ -14,7 +15,6 @@ import 'package:nushi/details_panel.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
-import 'package:nushi/motion.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
@@ -185,8 +185,8 @@ class _ChatViewState extends State<ChatView> {
 
   /// The transcript, and beside it, left to right: the side chat, a
   /// subagent's or background command's pane (or a file's preview in its
-  /// place; either slides in as it opens), and [ChatView.details], each
-  /// when open, at its own remembered width, each closed on its own.
+  /// place), and [ChatView.details], each when open, at its own remembered
+  /// width, each closed on its own; each slides in and out ([Beside]).
   Widget _beside(Widget transcript) {
     final chat = widget.chat;
     final side = chat.archived || chat.sideHidden.value
@@ -198,6 +198,8 @@ class _ChatViewState extends State<ChatView> {
     final details = widget.details;
     return Beside(
       main: transcript,
+      // The text's column glides as a pane opens or closes beside it.
+      columnSides: (width) => chatSides(context, width),
       least: wide ? ChatView.leastBesideWide : ChatView.minWidth,
       panes: [
         if (side != null)
@@ -219,10 +221,11 @@ class _ChatViewState extends State<ChatView> {
           SidePane(
             // A wide pane has a width of its own.
             wide ? 'subagent' : 'pane',
+            slot: 'pane',
             initial: wide ? 640 : DetailsPanel.width,
             min: 220,
             cap: wide ? double.infinity : 480,
-            child: Enter.slide(child: _pane(id)),
+            child: _pane(id),
           ),
         if (preview != null)
           SidePane(
@@ -230,15 +233,13 @@ class _ChatViewState extends State<ChatView> {
             initial: 560,
             min: 300,
             cap: double.infinity,
-            child: Enter.slide(
-              child: PreviewPane(
-                key: ValueKey(preview),
-                chat: chat,
-                daemon: widget.daemon,
-                path: preview,
-                tabsKey: _previewTabs,
-                onClose: () => chat.preview.value = null,
-              ),
+            child: PreviewPane(
+              key: ValueKey(preview),
+              chat: chat,
+              daemon: widget.daemon,
+              path: preview,
+              tabsKey: _previewTabs,
+              onClose: () => chat.preview.value = null,
             ),
           ),
       ],

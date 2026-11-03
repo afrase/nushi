@@ -271,16 +271,6 @@ class Enter extends StatefulWidget {
         child: child,
       );
 
-  /// A side pane: it slides 24 px in from the right.
-  const new slide({required Widget child, Key? key})
-    : this(
-        key: key,
-        from: const Offset(24, 0),
-        duration: const Duration(milliseconds: 240),
-        curve: const Cubic(0.2, 0.8, 0.2, 1),
-        child: child,
-      );
-
   final Widget child;
   final Offset from;
   final Duration duration;
