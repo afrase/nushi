@@ -168,7 +168,7 @@ class _TranscriptState extends State<Transcript> {
   /// The keys of [entries] that are new since the last build, after the
   /// last of what was there; none on the first build or a load.
   Set<String> _arrived(List<Object> entries) {
-    final keys = [for (final e in entries) _keyOf(e)];
+    final keys = [for (final e in entries) _key(e)];
     final was = _shownChat == widget.chat ? _shown : null;
     final loaded = widget.items != null || widget.chat.loaded;
     _shown = loaded ? keys : null;
@@ -204,12 +204,12 @@ class _TranscriptState extends State<Transcript> {
   void _keepPlace(List<Object> entries, {required bool filling}) {
     if (widget.onTop == null && !filling || entries.isEmpty) return;
     final was = _first;
-    final first = _first = _keyOf(entries.first);
+    final first = _first = _key(entries.first);
     if (was == null || was == first || !_follower.scroll.hasClients) return;
     // A glide to the bottom keeps its own place, from the bottom.
     if (_follower.following ||
         _follower.gliding ||
-        !entries.any((e) => _keyOf(e) == was)) {
+        !entries.any((e) => _key(e) == was)) {
       return;
     }
     final max = _follower.scroll.position.maxScrollExtent;
@@ -222,6 +222,18 @@ class _TranscriptState extends State<Transcript> {
     });
   }
 
+  /// An entry's key; a message's echo keeps the key of the message shown
+  /// as it was on its way (ChatState.echoes).
+  String _key(Object e) =>
+      e is Item ? widget.chat.echoes[e.id] ?? e.id : _keyOf(e);
+
+  /// Where a message this app sent is: 0 shown by the daemon (or not a
+  /// message on its way), 1 on its way, 2 failed and going.
+  int _sendState(Object e) {
+    if (e is! Item || !widget.chat.sending.contains(e)) return 0;
+    return widget.chat.unsent.contains(e.id) ? 2 : 1;
+  }
+
   /// An entry's widget, the one built before if its items are the same.
   Widget _entry(
     Map<String, (List<Object>, Widget)> before,
@@ -232,7 +244,7 @@ class _TranscriptState extends State<Transcript> {
     required double width,
     bool rise = false,
   }) {
-    final key = _keyOf(e);
+    final key = _key(e);
     final items = switch (e) {
       final List<Item> run => run,
       final SubagentRun s => [s.call, ...s.items],
@@ -247,7 +259,9 @@ class _TranscriptState extends State<Transcript> {
     // Try again goes by what follows its notice, not by the notice.
     final again = e is Item && tryAgainRequest(widget.chat, e) != null;
     final sides = chatSides(context, width);
+    final sending = _sendState(e);
     final from = [
+      sending,
       live,
       still,
       rewindable,
@@ -287,13 +301,23 @@ class _TranscriptState extends State<Transcript> {
                         // joins a run; not what the chat opened with.
                         child: Arriving(
                           play: rise || was != null,
-                          child: _view(
-                            e,
-                            live: live,
-                            still: still,
-                            rewindable: rewindable,
-                            forkable: forkable,
-                          ),
+                          child: _isBand(e)
+                              ? _Sending(
+                                  state: sending,
+                                  child: _view(
+                                    e,
+                                    live: live,
+                                    still: still,
+                                    rewindable: rewindable,
+                                  ),
+                                )
+                              : _view(
+                                  e,
+                                  live: live,
+                                  still: still,
+                                  rewindable: rewindable,
+                                  forkable: forkable,
+                                ),
                         ),
                       ),
                     ),
@@ -613,7 +637,8 @@ class _TranscriptState extends State<Transcript> {
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
-    final entries = _entries(widget.items ?? chat.items);
+    // What this app sent shows at once, after the items, until its echo.
+    final entries = _entries(widget.items ?? [...chat.items, ...chat.sending]);
     final query = widget.items == null ? chat.find.query ?? '' : '';
     // A find looks in all of it, and needs its place to go to it: what's
     // still to come in comes now. Not under a press (_grow).
@@ -635,7 +660,7 @@ class _TranscriptState extends State<Transcript> {
     final t = NushiTheme.of(context).t;
     _marks.look(
       tail == null ? query : '',
-      query.isEmpty ? const [] : [for (final e in entries) _keyOf(e)],
+      query.isEmpty ? const [] : [for (final e in entries) _key(e)],
       hit: t.needs.withValues(alpha: 0.3),
       now: t.accent.withValues(alpha: 0.4),
       edge: t.accent,
@@ -714,7 +739,7 @@ class _TranscriptState extends State<Transcript> {
                               phone: TouchTargets.of(context),
                             ),
                             width: box.maxWidth,
-                            rise: arrived.contains(_keyOf(e)),
+                            rise: arrived.contains(_key(e)),
                           ),
                         if (widget.footer case final f?)
                           Padding(
@@ -775,6 +800,41 @@ String _keyOf(Object e) => switch (e) {
   final SubagentRun s => 'agent ${s.call.id}',
   _ => (e as Item).id,
 };
+
+/// A message of yours: faint while on its way ([state] 1), then whole over
+/// [Motion.quick] as the daemon shows it; one whose send failed (2) fades
+/// out and folds away over [Motion.exit] (the transcript then drops it).
+/// With Reduce Motion it's faint, then whole, and goes at once.
+class _Sending extends StatelessWidget {
+  const new({required this.state, required this.child});
+
+  final int state;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final still = reduceMotion(context);
+    final shown = AnimatedOpacity(
+      opacity: state == 1 ? 0.7 : 1,
+      duration: still ? Duration.zero : Motion.quick,
+      child: child,
+    );
+    if (state != 2 || still) return shown;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1, end: 0),
+      duration: Motion.exit,
+      curve: Motion.leave,
+      builder: (context, v, child) => ClipRect(
+        child: Align(
+          alignment: Alignment.topCenter,
+          heightFactor: v,
+          child: Opacity(opacity: 0.7 * v, child: child),
+        ),
+      ),
+      child: IgnorePointer(child: shown),
+    );
+  }
+}
 
 bool _isBand(Object e) =>
     e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;

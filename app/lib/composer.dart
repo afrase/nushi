@@ -14,6 +14,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/motion.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
@@ -288,11 +289,18 @@ class _ComposerState extends State<Composer> {
     _draft.toSubagent.value = null;
     _mentions.clear();
     _lastFiles = files;
+    final chat = widget.chat;
+    final message = withReplies(replies, text);
+    // To an idle chat it shows in the transcript at once, faint until the
+    // daemon's echo; not a queued one (a pill) nor one for a subagent.
+    final shown = !busy && toSubagent == null && !chat.asleep
+        ? chat.send(message, images)
+        : null;
     try {
       await widget.daemon.sendPrompt(
         SendPromptRequest(
           chatId: widget.chat.id,
-          text: withReplies(replies, text),
+          text: message,
           files: files,
           images: images,
           queue: busy,
@@ -300,7 +308,13 @@ class _ComposerState extends State<Composer> {
           toSubagent: toSubagent?.$1,
         ),
       );
+      if (shown != null) chat.sent(shown);
     } on Object catch (e) {
+      // It fades out of the transcript as it goes back in the box.
+      if (shown != null) {
+        final still = mounted && reduceMotion(context);
+        chat.unsend(shown, fade: still ? Duration.zero : Motion.exit);
+      }
       // Back in the draft (it outlives the box), before what was typed since.
       final since = _text.text.trim();
       _text.text = [text, if (since.isNotEmpty) since].join('\n\n');

@@ -255,6 +255,84 @@ class ChatState extends ChangeNotifier {
   /// view is made again each time it shows.
   final previewSources = <String>{};
 
+  /// Messages this app sent to the idle chat that the daemon hasn't shown
+  /// back yet: the transcript shows each at once, faint, after the items.
+  /// Each goes when its echo (the daemon's user message of the same text)
+  /// comes, which takes its place in the transcript ([echoes]); when its
+  /// send fails ([unsend]); or, sent, when the chat's status or queue says
+  /// the daemon has it without an echo. In the app's memory only.
+  final List<Item> sending = [];
+
+  /// The [sending] message (its id) each echo took the place of: the
+  /// transcript keeps its entry for the echo, so it doesn't rise in again.
+  final Map<String, String> echoes = {};
+
+  /// [sending] messages whose send failed, fading out of the transcript.
+  final Set<String> unsent = {};
+
+  final _sent = <String>{}; // sent, the echo still to come
+  int _sends = 0;
+
+  /// A message on its way: shown in the transcript until its echo.
+  Item send(String text, List<ImageData> images) {
+    final it = Item(
+      id: 'sending ${++_sends}',
+      kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+      text: text,
+      images: images,
+    );
+    sending.add(it);
+    notifyListeners();
+    return it;
+  }
+
+  /// [it]'s send went through: the daemon has it, and its echo comes
+  /// before the chat's next status.
+  void sent(Item it) {
+    if (sending.contains(it)) _sent.add(it.id);
+  }
+
+  /// [it]'s send failed: it fades out over [fade], then goes.
+  void unsend(Item it, {required Duration fade}) {
+    if (!sending.contains(it)) return;
+    if (fade == Duration.zero) {
+      _drop(it.id);
+    } else {
+      unsent.add(it.id);
+      Timer(fade, () => _drop(it.id));
+    }
+    notifyListeners();
+  }
+
+  void _drop(String id) {
+    final had = sending.length;
+    sending.removeWhere((it) => it.id == id);
+    unsent.remove(id);
+    _sent.remove(id);
+    if (sending.length != had) notifyListeners();
+  }
+
+  /// [echo], a user message the daemon shows, takes the place of the
+  /// message on its way with its text, if there is one.
+  void _adopt(Item echo) {
+    if (echo.kind != ItemKind.ITEM_KIND_USER_MESSAGE) return;
+    final it = sending
+        .where((s) => s.text == echo.text && !unsent.contains(s.id))
+        .firstOrNull;
+    if (it == null) return;
+    echoes[echo.id] = it.id;
+    sending.remove(it);
+    _sent.remove(it.id);
+  }
+
+  /// Sent messages the daemon has without an echo (they went into the
+  /// queue, say) go.
+  void _settleSent() {
+    if (_sent.isEmpty) return;
+    sending.removeWhere((it) => _sent.contains(it.id));
+    _sent.clear();
+  }
+
   /// How far from its bottom its transcript was left, scrolled up: it opens
   /// there again (unless it needs you), with Jump to latest showing. Null
   /// when it was left at its bottom. In the app's memory only.
@@ -385,6 +463,14 @@ class ChatState extends ChangeNotifier {
     loaded = true;
     loading = false;
     snapshots++;
+    // A message on its way that the snapshot has: its echo.
+    if (items.lastWhere(
+          (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE,
+          orElse: Item.new,
+        )
+        case final last when last.hasId()) {
+      _adopt(last);
+    }
     final early = [..._early];
     _early.clear();
     early.forEach(_apply);
@@ -418,6 +504,9 @@ class ChatState extends ChangeNotifier {
   void letGo() {
     unload();
     items.clear();
+    sending.clear();
+    unsent.clear();
+    _sent.clear();
     older = 0;
     revision++;
   }
@@ -488,6 +577,7 @@ class ChatState extends ChangeNotifier {
         usage = e.usage;
       case EventsResponse_Kind.queue:
         queue = e.queue.messages;
+        _settleSent();
       case EventsResponse_Kind.cut:
         revision++;
         showAsked.value = null; // the call may be what was cut
@@ -505,6 +595,7 @@ class ChatState extends ChangeNotifier {
         revision++;
       case EventsResponse_Kind.status:
         status(e.status);
+        _settleSent();
       case EventsResponse_Kind.chat ||
           EventsResponse_Kind.removed ||
           EventsResponse_Kind.terminals ||
@@ -526,6 +617,7 @@ class ChatState extends ChangeNotifier {
       items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;
       return;
     } else if (i < 0) {
+      _adopt(e.item);
       final at = e.index - older;
       if (at > 0 && at < items.length) {
         items.insert(at, e.item); // a reopen's: a compaction's mark
