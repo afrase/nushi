@@ -33,7 +33,7 @@ class PullChats extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                AgentMark(c.agent, size: 13, color: t.textSecondary),
+                AgentMark(c.agent, size: 13),
                 const SizedBox(width: 4),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 180),

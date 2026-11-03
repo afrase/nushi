@@ -88,6 +88,10 @@ class Tokens {
     required this.shadow,
     required this.scrim,
     required this.claude,
+    required this.ante,
+    required this.ompPlug,
+    required this.pi,
+    required this.pig,
     required this.monogramText,
     required this.avatars,
     required this.chatTints,
@@ -181,8 +185,19 @@ class Tokens {
   final Color shadow;
   final Color scrim;
 
-  // Claude's color, and the letter on an agent's monogram.
+  // The agents' marks' colors, from their own logos (`agent_mark.dart`,
+  // docs/user/agent-marks.md): Claude's, Anthropic's own; Ante's ghost,
+  // its gradient's gold; oh-my-pi's plug (its π is white, so the text's
+  // color); Pi's, the blue of its middle piece; PiG's pig, its pink. The
+  // dark ones are the logos' own, the light ones darker shades of them;
+  // each is at least 3:1 on base, raised and selected (`agent_mark_test`).
+  // Codex's Blossom has none: OpenAI draws it black or white. Then the
+  // letter on an agent's monogram.
   final Color claude;
+  final Color ante;
+  final Color ompPlug;
+  final Color pi;
+  final Color pig;
   final Color monogramText;
 
   /// People's colors (a Jira assignee's avatar), each under
@@ -271,6 +286,10 @@ class Tokens {
     shadow: Color(0x33000000),
     scrim: Color(0xDD000000),
     claude: Color(0xFFB0582B),
+    ante: Color(0xFF93640A),
+    ompPlug: Color(0xFFC2540A),
+    pi: Color(0xFF2F7DA6),
+    pig: Color(0xFFC24A64),
     monogramText: Color(0xFFFFFFFF),
     avatars: [
       Color(0xFF2A5CC8), // blue
@@ -367,6 +386,10 @@ class Tokens {
     shadow: Color(0x33000000),
     scrim: Color(0xDD000000),
     claude: Color(0xFFD98A5F),
+    ante: Color(0xFFE5A426),
+    ompPlug: Color(0xFFF97316),
+    pi: Color(0xFF4D9ABF),
+    pig: Color(0xFFFFA8B7),
     monogramText: Color(0xFF1E1F22),
     avatars: [
       Color(0xFF7AA3F9), // blue

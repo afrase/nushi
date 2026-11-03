@@ -331,7 +331,7 @@ class _ChatRowState extends State<_ChatRow> {
                     message: chat.agentName,
                     child: AgentMark(
                       chat.agent,
-                      color: chat.archived ? t.textMuted : t.textSecondary,
+                      color: chat.archived ? t.textMuted : null,
                     ),
                   ),
                   const SizedBox(width: 7),

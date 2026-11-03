@@ -513,7 +513,7 @@ void main() {
             .first,
       );
       expect(open.line, LineIcon.details);
-      expect(open.color, t.text);
+      expect(open.color, t.accentInk); // on: the accent, as the mock has it
       await closeView(tester, d);
     }, variant: _mac);
   });

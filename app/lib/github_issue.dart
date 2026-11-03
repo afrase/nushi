@@ -150,7 +150,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AgentMark(c.agent, size: 13, color: t.textSecondary),
+                      AgentMark(c.agent, size: 13),
                       const SizedBox(width: 4),
                       Text(c.shownTitle, style: theme.ui(t.link, size: 12)),
                     ],

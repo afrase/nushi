@@ -174,7 +174,7 @@ class AgentRow extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1),
-            child: AgentMark(a.name, size: 20, color: t.text),
+            child: AgentMark(a.name, size: 20, ink: t.text),
           ),
           const SizedBox(width: agentTextIndent - 20),
           Expanded(

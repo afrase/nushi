@@ -241,7 +241,7 @@ class ChatMarks extends StatelessWidget {
           for (final c in chats.take(3))
             Padding(
               padding: const EdgeInsets.only(right: 2),
-              child: AgentMark(c.agent, size: 13, color: t.textSecondary),
+              child: AgentMark(c.agent, size: 13),
             ),
           if (n > 3) Text('+${n - 3}', style: theme.ui(t.textMuted, size: 11)),
         ],

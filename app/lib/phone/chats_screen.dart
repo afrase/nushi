@@ -233,7 +233,7 @@ class ChatRow extends StatelessWidget {
                 children: [
                   ChatDot(chat: chat, sparks: true),
                   const SizedBox(width: 10),
-                  AgentMark(chat.agent, color: t.textSecondary),
+                  AgentMark(chat.agent),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(

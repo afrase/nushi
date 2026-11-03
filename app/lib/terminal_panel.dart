@@ -61,7 +61,7 @@ class TerminalButton extends StatelessWidget {
             : on
             ? 'Hide terminal  ⌃`'
             : 'Show terminal  ⌃`',
-        color: on ? t.text : t.textSecondary,
+        color: on ? t.accentInk : t.textSecondary,
         onTap: !chat.archived ? () => toggleTerminal(chat.id) : null,
       );
     },

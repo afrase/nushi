@@ -309,7 +309,12 @@ class _NewChatState extends State<_NewChat> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       child: Row(
         children: [
-          AgentMark(name, size: 18, color: color),
+          AgentMark(
+            name,
+            size: 18,
+            ink: t.text,
+            color: why == null ? null : t.textMuted,
+          ),
           const SizedBox(width: 10),
           Text(agentTitle(name), style: theme.ui(color)),
           const SizedBox(width: 10),

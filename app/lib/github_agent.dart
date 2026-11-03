@@ -142,7 +142,7 @@ class _PickChat extends StatelessWidget {
               padding: const EdgeInsets.all(6),
               child: Row(
                 children: [
-                  AgentMark(c.agent, color: t.textSecondary),
+                  AgentMark(c.agent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

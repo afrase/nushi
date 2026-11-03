@@ -2,37 +2,45 @@
 // commands need no space between them.
 // ignore_for_file: missing_whitespace_between_adjacent_strings
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:svg_path/svg_path.dart';
 
-/// An agent's mark, [size] square in [color] (the secondary text's if not
-/// given): the agent's own icon where Nushi bundles one, else its initial
-/// on a rounded square. One mark per agent wherever a chat's agent shows.
+/// An agent's mark, [size] square: the agent's own icon where Nushi
+/// bundles one, in the agent's own color ([agentColor]; oh-my-pi's plug in
+/// its orange), and what has no color of its own (Codex's Blossom,
+/// oh-my-pi's π) in [ink], the secondary text's if not given; else its
+/// initial on a rounded square of [ink]. [color], when given, draws it
+/// all in that one color instead (an archived chat's, muted). One mark per
+/// agent wherever a chat's agent shows.
 class AgentMark extends StatelessWidget {
-  const new(this.agent, {super.key, this.size = 14, this.color});
+  const new(this.agent, {super.key, this.size = 14, this.ink, this.color});
 
   final String agent; // as Agent.name, such as "claude"
   final double size;
+  final Color? ink;
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final color = this.color ?? t.textSecondary;
+    final ink = color ?? this.ink ?? t.textSecondary;
     if (_marks[agent] case (final path, final box)) {
-      return CustomPaint(
-        size: Size.square(size),
-        painter: _Mark(path, box, color),
-      );
+      final layers = switch ((agent, color)) {
+        (_, final one?) => [(path, one)],
+        ('omp', _) => [(_ompParts.$1, ink), (_ompParts.$2, t.ompPlug)],
+        _ => [(path, agentColor(agent, t) ?? ink)],
+      };
+      return CustomPaint(size: Size.square(size), painter: _Mark(layers, box));
     }
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color,
+        color: ink,
         borderRadius: BorderRadius.circular(size / 5),
       ),
       child: Text(
@@ -49,13 +57,24 @@ class AgentMark extends StatelessWidget {
   }
 }
 
-/// [path] drawn in [color], its [box] fitted and centred in the square.
-class _Mark extends CustomPainter {
-  new(this.path, this.box, this.color);
+/// The color an agent's mark is drawn in, from its own logo, if it has
+/// one: Claude's is Anthropic's; Codex's Blossom is black or white in
+/// OpenAI's use, so the text's color; oh-my-pi's is its plug's alone.
+Color? agentColor(String agent, Tokens t) => switch (agent) {
+  'claude' => t.claude,
+  'ante' => t.ante,
+  'pi' => t.pi,
+  'pig' => t.pig,
+  _ => null,
+};
 
-  final Path path;
+/// [layers], each a path in a color, their [box] fitted and centred in
+/// the square.
+class _Mark extends CustomPainter {
+  new(this.layers, this.box);
+
+  final List<(Path, Color)> layers;
   final Rect box;
-  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -65,12 +84,15 @@ class _Mark extends CustomPainter {
       ..translate(
         (side - box.width) / 2 - box.left,
         (side - box.height) / 2 - box.top,
-      )
-      ..drawPath(path, Paint()..color = color);
+      );
+    for (final (path, color) in layers) {
+      canvas.drawPath(path, Paint()..color = color);
+    }
   }
 
   @override
-  bool shouldRepaint(_Mark old) => old.path != path || old.color != color;
+  bool shouldRepaint(_Mark old) =>
+      old.box != box || !listEquals(old.layers, layers);
 }
 
 /// The agents' own icons, each with the box it's drawn in: Claude's and
@@ -121,8 +143,13 @@ Path _ante() {
 }
 
 /// oh-my-pi's π with a plug on its right leg (the plug's two pins cut
-/// out; the bar's two dots, in the bar's place in one color, left out).
-Path _omp() {
+/// out; the bar's two dots, in the bar's place in one color, left out),
+/// in one color.
+Path _omp() => Path.combine(PathOperation.union, _ompParts.$1, _ompParts.$2);
+
+/// oh-my-pi's mark in its two colors' parts: the π (white in its logo)
+/// without the plug, and the plug (orange) without its pins.
+final (Path, Path) _ompParts = () {
   RRect r(double x, double y, double w, double h, double radius) =>
       RRect.fromRectAndRadius(
         Rect.fromLTWH(x, y, w, h),
@@ -131,13 +158,16 @@ Path _omp() {
   final pi = Path()
     ..addRRect(r(10, 8, 100, 12, 2))
     ..addRRect(r(25, 20, 12, 62, 2))
-    ..addRRect(r(75, 20, 12, 45, 2))
-    ..addRRect(r(71, 55, 20, 16, 3));
+    ..addRRect(r(75, 20, 12, 45, 2));
+  final plug = Path()..addRRect(r(71, 55, 20, 16, 3));
   final pins = Path()
     ..addRRect(r(76, 59, 3, 8, 1))
     ..addRRect(r(82, 59, 3, 8, 1));
-  return Path.combine(PathOperation.difference, pi, pins);
-}
+  return (
+    Path.combine(PathOperation.difference, pi, plug),
+    Path.combine(PathOperation.difference, plug, pins),
+  );
+}();
 
 /// PiG's pig head: the 16×14 sprite its terminal draws (`pigMascot` in
 /// `coding/piglogin/art.go` of MichaelKinsy/PiG, MIT), its empty first and

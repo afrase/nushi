@@ -322,11 +322,7 @@ class _PaletteState extends State<Palette> {
                 ? Icon(r.icon, size: 14, color: t.textMuted)
                 : Align(
                     alignment: Alignment.centerLeft,
-                    child: AgentMark(
-                      r.agent!,
-                      size: 13,
-                      color: t.textSecondary,
-                    ),
+                    child: AgentMark(r.agent!, size: 13),
                   ),
           ),
           Expanded(

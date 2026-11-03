@@ -255,7 +255,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                 SizedBox(width: group),
                 Tooltip(
                   message: folds.name ? chat.agentName : '',
-                  child: AgentMark(chat.agent, size: 16, color: t.text),
+                  child: AgentMark(chat.agent, size: 16, ink: t.text),
                 ),
                 if (!folds.name) ...[
                   const SizedBox(width: 8),
@@ -336,7 +336,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                         : widget.panel
                         ? 'Hide details'
                         : 'Show details',
-                    color: widget.panel ? t.text : t.textSecondary,
+                    color: widget.panel ? t.accentInk : t.textSecondary,
                     onTap: widget.onPanel,
                   ),
                   if (roomy) const SizedBox(width: NushiTheme.iconGap),

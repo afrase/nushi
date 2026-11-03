@@ -24,7 +24,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 
 **New chat** (⌘N, or a folder's +) asks which agent to run, with the one used last picked; Enter starts it.
 
-- A chat keeps its agent, and shows its mark in the sidebar ([where the marks come from](user/agent-marks.md)).
+- A chat keeps its agent, and shows its mark, in the agent's own color, in the sidebar, its header and wherever its chats are listed ([where the marks and their colors come from](user/agent-marks.md)).
 - It keeps the model, effort and other options you pick under the box, after it sleeps or the daemon restarts.
 - A new chat starts on the options last picked for its agent (where it still offers them), in the mode last picked.
 

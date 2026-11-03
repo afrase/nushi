@@ -115,7 +115,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final t = NushiTheme.of(context).t;
     return ValueListenableBuilder(
       valueListenable: agentList,
       builder: (context, agents, _) => PhoneScreen(
@@ -151,7 +150,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
               _Choice(
                 a.title,
                 detail: a.ready ? '' : a.problem,
-                mark: AgentMark(a.name, color: t.textSecondary),
+                mark: AgentMark(a.name),
                 picked: _agent == a.name,
                 onTap: () => setState(() => _agent = a.name),
               ),
