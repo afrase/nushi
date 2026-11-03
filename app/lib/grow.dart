@@ -67,16 +67,19 @@ class _GrowLineState extends State<GrowLine>
       _last = null;
       return const SizedBox.shrink();
     }
-    final still = reduceMotion(context);
     final leaving = widget.child == null;
-    final line = AnimatedSize(
-      duration: still ? Duration.zero : Motion.standard,
-      curve: Motion.size,
-      alignment: AlignmentDirectional.topStart,
-      // The width it's given, as in a stretched column (the size eases
-      // only the height).
-      child: SizedBox(width: double.infinity, child: _last),
-    );
+    // The width it's given, as in a stretched column (the size eases only
+    // the height). With Reduce Motion, no AnimatedSize (one of no length
+    // relays out as it lays out).
+    final fill = SizedBox(width: double.infinity, child: _last);
+    final line = reduceMotion(context)
+        ? fill
+        : AnimatedSize(
+            duration: Motion.standard,
+            curve: Motion.size,
+            alignment: AlignmentDirectional.topStart,
+            child: fill,
+          );
     // The same widgets throughout, so the line keeps its state; at rest
     // the fade adds no layer.
     return IgnorePointer(
