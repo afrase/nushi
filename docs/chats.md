@@ -78,6 +78,12 @@ A turn that fails, say on the agent's API answering "overloaded" until it gives 
 
 Messages waiting in the queue stay held after a failed turn. Try again, or any message you send, goes first, and the queue follows once that turn ends well. In a chat that's asleep it joins the queue instead, behind them.
 
+## Writing a message
+
+⏎ (or ⌘⏎) sends; ⇧⏎, ⌥⏎ or ⌃⏎ starts a line. The same goes for a reply, a review comment and a subagent's box.
+
+- **Lists continue.** A line started after a list item begins the next one, as in GitHub's and Slack's boxes: `2. ` after `1. `, the same `-` or `*` after a bullet, at the same indent. On an item with nothing in it yet, the marker goes instead and the line is left blank, which ends the list. ⌘Z takes a line and its marker back at once. Only the line key does this: pasted text and lines typed any other way stay as they are.
+
 ## Spell check
 
 On the Mac the composer checks spelling as you type, with macOS's own checker, languages and dictionary (Settings › General's Check spelling while typing, on at first). A misspelled word gets a dotted underline once you've moved on from it, by a space, punctuation or the caret; a word isn't judged while the caret's in it. Typos never stop a message going.

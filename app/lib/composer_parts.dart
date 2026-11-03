@@ -80,18 +80,45 @@ bool get _lineModifier {
   return k.isShiftPressed || k.isAltPressed || k.isControlPressed;
 }
 
+/// A Markdown list item's start: its indent, and `1.`, `1)`, `-` or `*`
+/// with a space after.
+final _listItem = RegExp(r'^([ \t]*)(?:(\d{1,9})([.)])|([-*]))[ \t]+');
+
 /// Puts a line break in [text] at its selection, in place of what's
-/// selected, the cursor after it.
+/// selected, the cursor after it. A line that's a list item continues the
+/// list, as GitHub's and Slack's boxes do: the new line starts with the next
+/// number (`2. ` after `1. `) or the same bullet, at the same indent. On an
+/// item with nothing in it yet, the line break ends the list instead: the
+/// marker goes, and the line is left blank. One change to the text, so one
+/// undo takes the line and its marker back.
 void startLine(TextEditingController text) {
   final v = text.value;
   final s = v.selection.isValid
       ? v.selection
       : TextSelection.collapsed(offset: v.text.length);
+  final from = s.start == 0 ? 0 : v.text.lastIndexOf('\n', s.start - 1) + 1;
+  final to = v.text.indexOf('\n', s.end);
+  final end = to < 0 ? v.text.length : to;
+  final item = _listItem.firstMatch(v.text.substring(from, s.start));
+  final (String put, int start, int stop) = switch (item) {
+    null => ('\n', s.start, s.end),
+    final m
+        when m.end == s.start - from &&
+            v.text.substring(s.end, end).trim().isEmpty =>
+      ('', from, end),
+    final m => ('\n${m[1]}${_nextMarker(m)}', s.start, s.end),
+  };
   text.value = TextEditingValue(
-    text: v.text.replaceRange(s.start, s.end, '\n'),
-    selection: TextSelection.collapsed(offset: s.start + 1),
+    text: v.text.replaceRange(start, stop, put),
+    selection: TextSelection.collapsed(offset: start + put.length),
   );
 }
+
+/// The marker of the item after [item]: its number and one, or its bullet.
+String _nextMarker(RegExpMatch item) => switch (item[2]) {
+  final n? => '${int.parse(n) + 1}${item[3]} ',
+  null => '${item[4]} ',
+};
 
 /// Enter in a box that sends, by [isSendKey]'s rule: [send], or a line
 /// started in [text]; any other key is left to the field.
