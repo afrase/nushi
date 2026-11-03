@@ -77,7 +77,7 @@ class _WaitingCardState extends State<WaitingCard> with ClockRun {
 
 /// A card's box that settles as what it holds changes [state] (a prompt
 /// answered): its border, fill and glow crossfade from what they were to
-/// [decoration] over [Motion.standard], its content crossfades over
+/// [decoration] over [Motion.standard], its new content fades in over
 /// [Motion.quick] and its height eases over [Motion.standard], so the
 /// transcript under it slides rather than jumps. With Reduce Motion the
 /// colors and the height change at once.
@@ -143,20 +143,10 @@ class _SettleCardState extends State<SettleCard> with ClockRun {
                 alignment: AlignmentDirectional.topStart,
                 child: AnimatedSwitcher(
                   duration: Motion.quick,
-                  // The new content sizes the card; the old fades over it,
-                  // clipped as the card eases to the new height.
-                  layoutBuilder: (current, previous) => Stack(
-                    children: [
-                      for (final p in previous)
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          right: 0,
-                          child: IgnorePointer(child: ExcludeFocus(child: p)),
-                        ),
-                      ?current,
-                    ],
-                  ),
+                  // The old content goes at once and the new fades in, as
+                  // the card eases from the old height to its own: two
+                  // texts over each other read as a mess.
+                  layoutBuilder: (current, _) => current ?? const SizedBox(),
                   child: content,
                 ),
               ),
