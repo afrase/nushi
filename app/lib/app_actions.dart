@@ -27,6 +27,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/side_chat.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/spell_check.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/update_toast.dart';
@@ -57,6 +58,9 @@ const pinKey = SingleActivator(LogicalKeyboardKey.keyD, meta: true);
 /// ⌘\: hide the sidebar, or show it.
 const sidebarKey = SingleActivator(LogicalKeyboardKey.backslash, meta: true);
 
+/// ⌘;: the next flagged word in the prompt box.
+const nextTypoKey = SingleActivator(LogicalKeyboardKey.semicolon, meta: true);
+
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
@@ -80,6 +84,7 @@ enum Act {
   pin(key: pinKey, menu: ActMenu.chat, menuLabel: 'Pin Chat'),
   sleep(menu: ActMenu.chat, menuLabel: 'Sleep'),
   reload(menu: ActMenu.chat, menuLabel: 'Reload'),
+  nextTypo(key: nextTypoKey, menu: ActMenu.chat, menuLabel: 'Next Typo'),
   linkPull(menu: ActMenu.chat, menuLabel: 'Link Pull Request…'),
   cleanUp(menu: ActMenu.chat, menuLabel: 'Clean Up…'),
   archive(menu: ActMenu.chat, menuLabel: 'Archive'),
@@ -248,6 +253,12 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       enabled: shown != null && rewindChoices(shown).isNotEmpty,
       run: () => unawaited(pickRewind(context, d, shown!)),
     ),
+    AppAction(
+      .nextTypo,
+      'Next typo',
+      enabled: _spellOf(shown) != null,
+      run: () => unawaited(_spellOf(shown)!.menu.next()),
+    ),
     ...chatActions(context, d, shown),
     AppAction(.settings, 'Settings', run: d.openSettings),
     AppAction(
@@ -273,6 +284,16 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       run: () => unawaited(checkForUpdates(context, d)),
     ),
   ];
+}
+
+/// The spell check ⌘; goes through in [chat], while it runs: its prompt
+/// box's, or its side chat's if that one has the focus. The box must be in
+/// sight.
+SpellCheck? _spellOf(ChatState? chat) {
+  if (chat == null || chat.shownTab != ChatTab.chat) return null;
+  final side = chat.side.value?.draft.text.spell;
+  final spell = side?.focus.hasFocus ?? false ? side : chat.draft.text.spell;
+  return (spell?.on ?? false) ? spell : null;
 }
 
 /// What can be done to [chat] (the shown one, from the palette and the

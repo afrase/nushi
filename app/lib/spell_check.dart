@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ItemKind;
 import 'package:nushi/settings.dart';
+import 'package:nushi/spell_menu.dart';
 import 'package:nushi/spell_scan.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
@@ -121,6 +122,9 @@ class SpellCheck extends ChangeNotifier {
   final ChatState chat;
   final FocusNode focus;
 
+  /// The menu of a flagged word.
+  late final menu = SpellMenu(this);
+
   final _misspelled = <String, bool>{};
   final _allowed = <String>{}; // ignored or added here, in their known form
   var _agentWords = const <String>{};
@@ -160,6 +164,7 @@ class SpellCheck extends ChangeNotifier {
     }
     final v = text.value;
     if (v.text != _seen) {
+      if (menu.word != null) menu.close(); // typed, or something put text in
       _typing = _seen != null; // not what the box opened with
       _seen = v.text;
       _words = scanWords(_checked(v.text));
@@ -189,11 +194,10 @@ class SpellCheck extends ChangeNotifier {
   }
 
   /// The words not judged yet. None during an input method's composing: its
-  /// text isn't a word yet, and goes through here once committed. [all]
-  /// takes in the one being typed.
-  List<String> _unjudged({bool all = false}) {
+  /// text isn't a word yet, and goes through here once committed.
+  List<String> _unjudged() {
     if (!text.value.composing.isCollapsed) return const [];
-    final caret = all ? null : _typingAt;
+    final caret = _typingAt;
     return {
       for (final w in _words)
         if (!_misspelled.containsKey(w.word) &&
@@ -209,13 +213,12 @@ class SpellCheck extends ChangeNotifier {
   }
 
   /// Asks about the words not judged yet, one call at a time.
-  Future<void> _ask({bool all = false}) =>
-      _asking = _asking.then((_) => _askNow(all: all));
+  Future<void> _ask() => _asking = _asking.then((_) => _askNow());
 
-  Future<void> _askNow({required bool all}) async {
+  Future<void> _askNow() async {
     if (_disposed || !on) return;
     _readAgentWords();
-    final words = _unjudged(all: all);
+    final words = _unjudged();
     if (words.isEmpty) return _show();
     try {
       final wrong = (await speller!.misspelled(words)).toSet();
@@ -247,9 +250,39 @@ class SpellCheck extends ChangeNotifier {
     _agentWords = wordsOf(messages);
   }
 
+  /// Stops treating the caret's word as being typed, and judges every word
+  /// there is. For `⌘;`, which can't wait for the pause.
+  Future<void> judgeAll() async {
+    _pause?.cancel();
+    settle();
+    await _ask();
+  }
+
+  /// Text put in the box whole isn't typing: nothing waits for the caret.
+  void settle() {
+    _typing = false;
+    _show();
+  }
+
+  /// Stops flagging [word]: for good if [add], else until the app quits.
+  void allow(String word, {required bool add}) {
+    _allowed.add(knownForm(word));
+    _show();
+    unawaited(_tell(word, add: add));
+  }
+
+  Future<void> _tell(String word, {required bool add}) async {
+    try {
+      await (add ? speller?.learn(word) : speller?.ignore(word));
+    } on Object {
+      // The flag stays gone here; the checker just won't remember.
+    }
+  }
+
   @override
   void dispose() {
     _disposed = true;
+    menu.dispose();
     _pause?.cancel();
     text.removeListener(_changed);
     checkSpelling.removeListener(_changed);

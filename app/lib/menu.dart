@@ -30,6 +30,7 @@ class MenuEntry {
     this.danger = false,
     this.shortcut = '',
     this.controls,
+    this.lit = false,
   }) : heading = false;
 
   /// A group's name over its rows.
@@ -45,6 +46,7 @@ class MenuEntry {
       danger = false,
       shortcut = '',
       controls = null,
+      lit = false,
       heading = true;
 
   /// The line between groups of rows.
@@ -66,6 +68,9 @@ class MenuEntry {
   final String shortcut;
   final Widget Function(VoidCallback close)? controls;
 
+  /// Marked as the row Enter picks, when the keys are handled elsewhere.
+  final bool lit;
+
   bool get _pickable => onPick != null && submenu == null;
 
   bool get _hasIcon => icon != null || line != null;
@@ -83,7 +88,10 @@ typedef OpenMenu = void Function([Offset? at]);
 /// ([filter] false: a chat's) never does, keeping its groups and icons.
 /// [onOpen] runs as it opens, [onClose] once it has closed. With [above], a
 /// short menu of plain rows opens over its opener, though there's room under
-/// it: for what sits at the window's bottom.
+/// it: for what sits at the window's bottom. [controller], given, is what
+/// else opens and closes it. With [keepFocus] the pointer over a row leaves
+/// the focus where it is, for a menu whose keys are handled by the text field
+/// under it.
 class Menu extends StatefulWidget {
   const new({
     required this.entries,
@@ -92,6 +100,8 @@ class Menu extends StatefulWidget {
     this.digits = false,
     this.filter = true,
     this.above = false,
+    this.keepFocus = false,
+    this.controller,
     this.onOpen,
     this.onClose,
   });
@@ -107,6 +117,8 @@ class Menu extends StatefulWidget {
   final bool digits;
   final bool filter;
   final bool above;
+  final bool keepFocus;
+  final MenuController? controller;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
@@ -115,7 +127,7 @@ class Menu extends StatefulWidget {
 }
 
 class _MenuState extends State<Menu> {
-  final _menu = MenuController();
+  late final MenuController _menu = widget.controller ?? MenuController();
   final _focus = FocusNode(debugLabel: 'menu');
 
   @override
@@ -128,7 +140,10 @@ class _MenuState extends State<Menu> {
     final padded =
         Theme.of(context).materialTapTargetSize == MaterialTapTargetSize.padded;
     final row = padded ? Menu._touchRow : Menu._row;
-    return widget.entries.length * row + Menu._edges;
+    return widget.entries.fold(
+      Menu._edges,
+      (h, e) => h + (identical(e, MenuEntry.divider) ? _dividerHeight : row),
+    );
   }
 
   void _open([Offset? at]) =>
@@ -165,6 +180,7 @@ class _MenuState extends State<Menu> {
         _menu.close,
         digits: widget.digits,
         filter: widget.filter,
+        keepFocus: widget.keepFocus,
       ),
       onOpen: () {
         if (widget.digits) _focus.requestFocus();
@@ -182,12 +198,16 @@ class _MenuState extends State<Menu> {
 /// Lists longer than this get a filter field.
 const _filterPast = 10;
 
+/// The height of the line between a menu's groups.
+const _dividerHeight = 11.0;
+
 List<Widget> _rows(
   BuildContext context,
   List<MenuEntry> entries,
   VoidCallback close, {
   bool digits = false,
   bool filter = true,
+  bool keepFocus = false,
 }) {
   if (filter && entries.where((e) => e._pickable).length > _filterPast) {
     return [_Filtered(entries, close)];
@@ -203,7 +223,7 @@ List<Widget> _rows(
   return [
     for (final e in entries)
       if (identical(e, MenuEntry.divider))
-        const Divider(height: 11, indent: 6, endIndent: 6)
+        const Divider(height: _dividerHeight, indent: 6, endIndent: 6)
       else if (e.heading)
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
@@ -218,6 +238,7 @@ List<Widget> _rows(
           close,
           icons: icons,
           checks: checks,
+          keepFocus: keepFocus,
           digit: !digits
               ? null
               : e._pickable && n < 9
@@ -274,6 +295,7 @@ Widget _row(
   bool lit = false,
   bool icons = false,
   bool checks = true,
+  bool keepFocus = false,
   Key? key,
 }) {
   final theme = NushiTheme.of(context);
@@ -347,9 +369,10 @@ Widget _row(
     e,
     label,
     digit: digit,
-    lit: lit,
+    lit: lit || e.lit,
     icon: icon,
     checks: checks,
+    keepFocus: keepFocus,
     key: key,
   );
 }
@@ -361,6 +384,7 @@ Widget _button(
   required String? digit,
   required bool lit,
   required bool checks,
+  bool keepFocus = false,
   Widget? icon,
   Widget? action,
   ValueChanged<bool>? onHover,
@@ -371,6 +395,7 @@ Widget _button(
   return MenuItemButton(
     key: key,
     onPressed: e.onPick,
+    requestFocusOnHover: !keepFocus,
     onHover: onHover,
     onFocusChange: onFocus,
     leadingIcon: icon,

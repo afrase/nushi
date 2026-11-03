@@ -19,6 +19,7 @@ import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/spell_check.dart';
+import 'package:nushi/spell_menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/widgets.dart';
@@ -137,6 +138,7 @@ class _ComposerState extends State<Composer> {
           ? KeyEventResult.handled
           : KeyEventResult.ignored;
     }
+    if (_spell.menu.onKey(e)) return KeyEventResult.handled;
     final key = e.logicalKey;
     final shift = HardwareKeyboard.instance.isShiftPressed;
     final esc = key == LogicalKeyboardKey.escape;
@@ -425,34 +427,39 @@ class _ComposerState extends State<Composer> {
                         ),
                       ),
                       Expanded(
-                        child: Focus(
-                          onKeyEvent: _onKey,
-                          skipTraversal: true,
-                          child: TextField(
-                            controller: _text,
-                            focusNode: _focus,
-                            readOnly: _locked,
-                            autofocus: !touch, // no keyboard popping up
-                            minLines: 1,
-                            // A phone's keyboard leaves the transcript little
-                            // room: past six lines the field scrolls.
-                            maxLines: touch ? 6 : 10,
-                            style: theme.ui(t.text),
-                            textAlignVertical: TextAlignVertical.center,
-                            decoration: InputDecoration(
-                              hintText: _locked
-                                  ? rewindHint(chat)
-                                  : !chat.busy
-                                  ? widget.hint
-                                  : touch
-                                  ? 'Queue a message, or stop and send'
-                                  : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
-                                        'and sends',
-                              border: InputBorder.none,
-                              // One line (18.2) is as tall as the buttons.
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 5,
+                        child: SpellArea(
+                          _spell.menu,
+                          child: Focus(
+                            onKeyEvent: _onKey,
+                            skipTraversal: true,
+                            child: TextField(
+                              controller: _text,
+                              focusNode: _focus,
+                              readOnly: _locked,
+                              onTap: _locked ? null : _spell.menu.tapped,
+                              contextMenuBuilder: _spell.menu.toolbar,
+                              autofocus: !touch, // no keyboard popping up
+                              minLines: 1,
+                              // A phone's keyboard leaves the transcript little
+                              // room: past six lines the field scrolls.
+                              maxLines: touch ? 6 : 10,
+                              style: theme.ui(t.text),
+                              textAlignVertical: TextAlignVertical.center,
+                              decoration: InputDecoration(
+                                hintText: _locked
+                                    ? rewindHint(chat)
+                                    : !chat.busy
+                                    ? widget.hint
+                                    : touch
+                                    ? 'Queue a message, or stop and send'
+                                    : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
+                                          'and sends',
+                                border: InputBorder.none,
+                                // One line (18.2) is as tall as the buttons.
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 5,
+                                ),
                               ),
                             ),
                           ),

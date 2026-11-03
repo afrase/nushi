@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show SendPromptRequest;
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
@@ -14,6 +15,11 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 Daemon? _open;
+late FakeDaemon _fake;
+
+/// What the box sent.
+List<SendPromptRequest> sentPrompts() =>
+    _fake.calls.whereType<SendPromptRequest>().toList();
 
 /// A widget test on a fake Mac, where spell check runs, that ends the
 /// [spellBox] it opened.
@@ -84,7 +90,8 @@ Future<(Daemon, ChatState)> spellBox(
 }) async {
   testSpeller = speller;
   addTearDown(() => testSpeller = null);
-  final d = await FakeDaemon([]).connect(tester);
+  final fake = _fake = FakeDaemon([]);
+  final d = await fake.connect(tester);
   final chat = ChatState('c', '/Users/me/project')
     ..agent = 'claude'
     ..loaded = true;
@@ -96,6 +103,7 @@ Future<(Daemon, ChatState)> spellBox(
     RepaintBoundary(
       key: const Key('window'),
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         theme: NushiTheme(tokens).toThemeData(),
         home: Scaffold(
           body: Column(
