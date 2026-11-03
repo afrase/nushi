@@ -65,7 +65,7 @@ void main() {
     expect(find.byType(TrustCard), findsOne);
     d.select('a'); // walked away
     await tester.pumpAndSettle();
-    await start;
+    expect(await start, isNull);
     expect(fake.started, isEmpty);
     expect(
       find.text("Didn't start Claude in site: its code wasn't approved."),

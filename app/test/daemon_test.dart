@@ -265,7 +265,7 @@ void main() {
     await pumpEventQueue();
     d.select('a');
     fake.start!.complete(StartChatResponse(chatId: 'new'));
-    await started;
+    expect(await started, 'new'); // whether it shows or not
     expect(d.selectedId, 'a');
     expect(d.chats.containsKey('new'), isTrue);
   });

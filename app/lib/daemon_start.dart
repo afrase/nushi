@@ -42,8 +42,9 @@ extension DaemonStart on Daemon {
   /// own (''); never in a worktree unless asked, as nothing is remembered
   /// (the "New worktree" chip moves it). A chat on a Jira [issue] remembers
   /// it and takes its worktree choice; its box stays empty (the agent's
-  /// tools say which issue it is).
-  Future<void> startChat(
+  /// tools say which issue it is). Gives the new chat's id, shown or not,
+  /// or null when the trust card said no.
+  Future<String?> startChat(
     String folder,
     String agent, {
     IssueChat? issue,
@@ -51,7 +52,7 @@ extension DaemonStart on Daemon {
     starting = folder;
     _changed();
     try {
-      if (!await _mayRun(folder, 'Start a chat', agent)) return;
+      if (!await _mayRun(folder, 'Start a chat', agent)) return null;
       final before = _place;
       final StartChatResponse resp;
       try {
@@ -83,12 +84,16 @@ extension DaemonStart on Daemon {
         rethrow;
       }
       cantStart.remove(agent);
-      chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+      final chat = chats[resp.chatId] ??= ChatState(resp.chatId, folder);
+      // Now, not at its event, which may come later: what's written in its
+      // box from here on is kept.
+      drafts?.attach(chat);
       // Not if the user went elsewhere meanwhile: a trust card or another
       // chat they're on stays.
       if (_place == before && trustAsk == null) {
         select(resp.chatId);
       }
+      return resp.chatId;
     } finally {
       starting = null;
       _changed();

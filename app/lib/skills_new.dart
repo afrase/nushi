@@ -45,10 +45,15 @@ Future<void> newSkill(BuildContext context, SkillsList list) async {
     shared = choice;
   }
   if (!context.mounted) return;
-  final before = daemon.selectedId;
-  await tryOrShow(context, () => daemon.startChat(list.folder, list.agent));
-  final chat = daemon.selected; // the new chat, unless you went elsewhere
-  if (chat == null || chat.id == before || !chat.fresh) return;
+  String? started;
+  await tryOrShow(context, () async {
+    started = await daemon.startChat(list.folder, list.agent);
+  });
+  // By id: under a trust card, or when you went elsewhere, the new chat
+  // isn't the selected one. Its snapshot may be yet to come; that fills the
+  // transcript, not the box.
+  final chat = daemon.chats[started];
+  if (chat == null) return;
   chat.draft.text.text = shared
       ? 'Help me write a new skill shared by every agent that reads '
             '.agents/skills. First ask me what it should do, then write '
