@@ -2,13 +2,17 @@ package e2e
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
+	"github.com/afrase/nushi/internal/ante/antetest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func questionPending(e *nushiv1.EventsResponse) bool {
@@ -92,6 +96,68 @@ func TestAnAnteChat(t *testing.T) {
 	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id})))
 	if !plan.DeletesHistory || anteStores(dataDir).Saved(sid) {
 		t.Errorf("Delete left Ante's session (plan %v)", plan)
+	}
+}
+
+// subagentView is an Ante chat's subagent as the app gets it: its row (its
+// state and result), then its steps.
+func subagentView(items []*nushiv1.Item) string {
+	var lines []string
+	for _, it := range items {
+		switch {
+		case it.Agent != "":
+			lines = append(lines, "agent "+it.Agent+":"+it.Title+":"+it.Subagent.GetState()+":"+it.Subagent.GetResult()+":"+it.Prompt+":"+it.AgentId)
+		case it.Parent != "":
+			lines = append(lines, "step "+it.Parent+":"+it.Title+":"+it.Status+":"+it.Text)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// An Ante subagent in a chat: a row with its task and report, its steps
+// under it and out of the chat's flow, no id to message or stop it by; and
+// the same again after a restart, from Nushi's copy, and from the agent's
+// replay alone, as for a session Nushi never saw run.
+func TestAnAnteSubagent(t *testing.T) {
+	ctx := context.Background()
+	dataDir, history := t.TempDir(), &acptest.History{}
+	d := startDaemon(t, dataDir, history, nil)
+	a := open(t, d)
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "ante", Folder: t.TempDir()}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask a subagent"})))
+	a.waitFor("the reply", idle)
+	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	live := subagentView(snap.Items)
+	const fence = "```"
+	want := "agent explore:Find the handler:done:" + antetest.Report + ":Find where errors are handled:\n" +
+		"step call_a:Read a.go:completed:" + fence + "\npackage a\n" + fence + "\n" +
+		"step call_a:Grep handle:completed:a.go:3:func handle() {}\n" +
+		"step call_a:Bash:failed:Tool call denied by policy and was not executed."
+	if live != want {
+		t.Errorf("live:\n%s\nwant:\n%s", live, want)
+	}
+	if strings.Contains(transcript(snap.Items), `{"report"`) {
+		t.Errorf("the report shows as JSON:\n%s", transcript(snap.Items))
+	}
+	if snap.Status.Background != 0 {
+		t.Errorf("%d still running", snap.Status.Background)
+	}
+
+	d.stop()
+	d = startDaemon(t, dataDir, history, nil)
+	a = open(t, d)
+	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	if got := subagentView(a.follow(id, snap)); got != live {
+		t.Errorf("reopened:\n%s\nlive:\n%s", got, live)
+	}
+
+	d.stop()
+	testcheck.NoErr(t, os.RemoveAll(filepath.Join(dataDir, "transcripts")))
+	d = startDaemon(t, dataDir, history, nil)
+	a = open(t, d)
+	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	if got := subagentView(a.follow(id, snap)); got != live {
+		t.Errorf("from Ante's replay alone:\n%s\nlive:\n%s", got, live)
 	}
 }
 
