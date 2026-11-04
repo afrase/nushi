@@ -1,10 +1,11 @@
-// Package testcheck is what Go tests share: failing on an error, writing a
-// file, waiting for a condition, and running git without the owner's own
+// Package testcheck is what Go tests share: failing on an error, JSON,
+// writing a file, waiting for a condition, and running git without the owner's own
 // config. Only tests import it.
 package testcheck
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -20,6 +21,14 @@ func NoErr(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+// JSON is v as JSON; failing to marshal it fails the test.
+func JSON(t *testing.T, v any) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	NoErr(t, err)
+	return string(b)
 }
 
 // Write writes text to the file at path, private (0600), making its

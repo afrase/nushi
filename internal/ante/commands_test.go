@@ -78,7 +78,7 @@ func TestSlashCommands(t *testing.T) {
 		t.Errorf("messages:\n%q\nwant\n%q", got, want)
 	}
 	c.mu.Lock()
-	all := mustJSON(t, c.updates)
+	all := testcheck.JSON(t, c.updates)
 	c.mu.Unlock()
 	if !strings.Contains(c.kinds(sid), "tool_call tool_call_update") || !strings.Contains(all, `"title":"Compact conversation"`) || !strings.Contains(all, `"text":"the summary"`) {
 		t.Errorf("no compaction shown: %s", c.kinds(sid))

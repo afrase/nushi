@@ -70,7 +70,7 @@ func TestQuestionGetsExactlyWhatWasChosen(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp := <-got
-	if want := `{"question_0":"Green","question_1":["Apple","Plum"],"question_1_custom":"figs"}`; resp.Accept == nil || mustJSON(t, resp.Accept.Content) != want {
+	if want := `{"question_0":"Green","question_1":["Apple","Plum"],"question_1_custom":"figs"}`; resp.Accept == nil || testcheck.JSON(t, resp.Accept.Content) != want {
 		t.Errorf("agent got %+v, want accept %s", resp, want)
 	}
 
@@ -155,15 +155,6 @@ func TestAnsweringTwiceFails(t *testing.T) {
 			t.Fatal("a second answer blocked")
 		}
 	}
-}
-
-func mustJSON(t *testing.T, v any) string {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(b)
 }
 
 // A form with no fields (a plain confirmation), answered rather than

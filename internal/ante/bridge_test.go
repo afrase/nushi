@@ -213,7 +213,7 @@ func TestASessionThroughTheBridge(t *testing.T) {
 		t.Fatal(err)
 	}
 	prompt(t, c, sid, "ask me")
-	if len(c.forms) != 1 || c.forms[0].Form == nil || !strings.Contains(mustJSON(t, c.forms[0].Form.RequestedSchema.Properties), `"q0_other"`) {
+	if len(c.forms) != 1 || c.forms[0].Form == nil || !strings.Contains(testcheck.JSON(t, c.forms[0].Form.RequestedSchema.Properties), `"q0_other"`) {
 		t.Errorf("forms %+v", c.forms)
 	}
 
@@ -451,13 +451,4 @@ func TestWithoutFolder(t *testing.T) {
 			t.Errorf("withoutFolder(%q) = %q", in, got)
 		}
 	}
-}
-
-func mustJSON(t *testing.T, v any) string {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(b)
 }

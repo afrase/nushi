@@ -307,7 +307,7 @@ func TestQuestionAndUnknownMessages(t *testing.T) {
 	if r := prompt(t, c, s.SessionID, "/ask"); r.StopReason != "end_turn" {
 		t.Errorf("stop = %s", r.StopReason)
 	}
-	if len(c.forms) != 1 || c.forms[0].Message != "Pick a colour" || c.forms[0].Form == nil || !strings.Contains(mustJSON(t, c.forms[0].Form.RequestedSchema.Properties), `"const":"Blue"`) {
+	if len(c.forms) != 1 || c.forms[0].Message != "Pick a colour" || c.forms[0].Form == nil || !strings.Contains(testcheck.JSON(t, c.forms[0].Form.RequestedSchema.Properties), `"const":"Blue"`) {
 		t.Fatalf("forms = %+v", c.forms)
 	}
 	c.find(t, s.SessionID, "agent_message_chunk", func(u acp.SessionUpdate) bool { return u.AgentMessageChunk.Content.Text.Text == "Chose Blue" })
@@ -578,15 +578,6 @@ func TestPlans(t *testing.T) {
 	if planOf([]byte(`{"todos":[]}`)) != nil || planOf([]byte(`{"todos":[{"text":"no state"}]}`)) != nil {
 		t.Error("a plan of no todos, or of todos without a state")
 	}
-}
-
-func mustJSON(t *testing.T, v any) string {
-	t.Helper()
-	b, err := json.Marshal(v)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(b)
 }
 
 // Texts of their own (Nushi's note of a branch renamed, then the user's)
