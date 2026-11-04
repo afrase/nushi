@@ -125,9 +125,9 @@ class Tokens {
   // The accent: [accent] fills (a primary button, a switch that's on),
   // [accentSoft] behind it; [accentInk] where the accent is text or an
   // icon, or the focus ring: [accent] is too dark for that on the dark
-  // theme's surfaces (3.34:1 on base, 2.80 on raised). [accentInk] passes
-  // AA in both: light 6.06 on base, 5.71 on raised, 5.08 on selected,
-  // 5.15 on accentSoft; dark 6.62, 5.55, 4.93, 5.05.
+  // theme's surfaces (3.23:1 on base, 2.71 on raised). [accentInk] passes
+  // AA in both: light 6.13 on base, 5.77 on raised, 4.81 on selected,
+  // 4.90 on accentSoft; dark 6.70, 5.61, 4.76, 4.91 (`tokens_test`).
   final Color accent;
   final Color accentSoft;
   final Color accentInk;
@@ -169,10 +169,11 @@ class Tokens {
   // Inline code, in the agent's text, the user's band, a finding and the
   // composer, orange as Slack draws it: [inlineCodeText] on its chip,
   // [inlineCode] (or [userBandCode] in the band), a tint of the ink.
-  // AA on every fill it sits on (`code_ink_test`): light 4.61 at worst, on
-  // the findings card under the pointer, 4.65 on raised hovered or
-  // selected, 4.71 in the band, 5.50 on base; dark 4.63 on raised hovered,
-  // 4.81 selected, 5.21 in the band, 6.44 on base.
+  // AA on every fill it sits on (`code_ink_test`): light 4.56 at worst, on
+  // the findings card under the pointer, 4.91 on raised selected or
+  // hovered, 5.05 in the band, 6.21 on base; dark 4.64 on the findings card
+  // under the pointer, 4.72 on raised hovered, 4.86 selected, 5.15 in the
+  // band, 6.80 on base.
   final Color inlineCode;
   final Color inlineCodeText;
   final Color codeBlock;
@@ -212,8 +213,8 @@ class Tokens {
   /// dot, the bar at its row's left), which `ChatColor` takes by position.
   /// As a bar each must hold 3:1 on what a row can be: raised, [hover] on
   /// it, [selected], [accentSoft] (the open chat) and base (the phone's
-  /// list). Worst of the eight: light 4.91 on raised, 4.38 hovered, 4.38
-  /// selected, 4.44 open, 5.22 on base; dark 5.55, 4.74, 4.93, 5.05, 6.62
+  /// list). Worst of the eight: light 4.91 on raised, 4.12 hovered, 4.10
+  /// selected, 4.17 open, 5.22 on base; dark 5.55, 4.55, 4.71, 4.85, 6.62
   /// (`chat_colors_test`, which also holds a row's text to AA on each).
   final List<Color> avatars;
 
@@ -223,12 +224,16 @@ class Tokens {
   /// How [c] looks.
   CodeInk ink(Capture c) => syntax[c]!;
 
-  /// The tint of a row or button under the pointer.
-  Color get hover => text.withValues(alpha: 0.06);
+  /// The tint of a row or button under the pointer: lighter on the dark
+  /// theme, where every row's text and status color must still read AA on
+  /// it (`tokens_test`).
+  Color get hover =>
+      text.withValues(alpha: brightness == Brightness.dark ? 0.075 : 0.09);
 
   /// The tint of a row or button while the pointer is down on it: a click
   /// shows before what it does is done.
-  Color get pressed => text.withValues(alpha: 0.12);
+  Color get pressed =>
+      text.withValues(alpha: brightness == Brightness.dark ? 0.14 : 0.16);
 
   /// The accent's fill while a primary button is pressed: a shade darker.
   Color get accentPressed => Color.alphaBlend(const Color(0x2E000000), accent);
@@ -237,49 +242,49 @@ class Tokens {
     brightness: Brightness.light,
     base: Color(0xFFFFFFFF),
     raised: Color(0xFFF7F8FA),
-    selected: Color(0xFFE9EBF0),
-    borderSubtle: Color(0xFFEBECF0),
-    borderStrong: Color(0xFFC9CCD6),
+    selected: Color(0xFFE1E4EB),
+    borderSubtle: Color(0xFFE2E4E9),
+    borderStrong: Color(0xFFBBBFCB),
     text: Color(0xFF1E1F22),
     textSecondary: Color(0xFF494B57),
     textMuted: Color(0xFF5D6170),
-    link: Color(0xFF2A5CC8),
+    link: Color(0xFF2259D2),
     onAccent: Color(0xFFFFFFFF),
     fieldFill: Color(0xFFFFFFFF),
-    fieldBorder: Color(0xFFD3D6DE),
-    fieldBorderHover: Color(0xFFADB1BD),
+    fieldBorder: Color(0xFFC5C9D2),
+    fieldBorderHover: Color(0xFF9FA3AF),
     grip: Color(0xFF8A8E9B),
-    accent: Color(0xFF2F6AE0),
-    accentSoft: Color(0xFFE5EDFC),
-    accentInk: Color(0xFF2A5CC8),
-    running: Color(0xFF2A5CC8),
+    accent: Color(0xFF2365EA),
+    accentSoft: Color(0xFFD8E7FF),
+    accentInk: Color(0xFF2259D2),
+    running: Color(0xFF2259D2),
     needs: Color(0xFF8F5200),
-    needsSoft: Color(0xFFFBF0DC),
+    needsSoft: Color(0xFFFAE8C8),
     done: Color(0xFF1B7031),
-    doneSoft: Color(0xFFE3F0E6),
+    doneSoft: Color(0xFFD6EDDC),
     idle: Color(0xFF5D6170),
     crashed: Color(0xFFB62B39),
-    crashedSoft: Color(0xFFFCE8EA),
+    crashedSoft: Color(0xFFFFDEE2),
     shine: Color(0xFF6E727E),
     shineBand: Color(0xFF1E1F22),
-    userBand: Color(0xFFE5EDFC),
-    userBandBorder: Color(0xFFB8CCF4),
+    userBand: Color(0xFFDAE8FF),
+    userBandBorder: Color(0xFFA5BEF1),
     userBandText: Color(0xFF142A5C),
     userBandMuted: Color(0xFF3A5594),
-    userBandCode: Color(0x1A9A4700),
+    userBandCode: Color(0x1A8D4100),
     userBandCodeBlock: Color(0xFFF5F8FE),
     agentText: Color(0xFF1E1F22),
-    inlineCode: Color(0x1A9A4700),
-    inlineCodeText: Color(0xFF9A4700),
+    inlineCode: Color(0x1A8D4100),
+    inlineCodeText: Color(0xFF8D4100),
     codeBlock: Color(0xFFF7F8FA),
-    toolTint: Color(0xFFEAF6F4),
-    toolBorder: Color(0xFFBFE0DA),
+    toolTint: Color(0xFFDAF2EE),
+    toolBorder: Color(0xFFA5D6CE),
     toolAccent: Color(0xFF0E8577),
-    subagentTint: Color(0xFFF1ECFC),
-    subagentBorder: Color(0xFFD6C9F5),
+    subagentTint: Color(0xFFEDE4FE),
+    subagentBorder: Color(0xFFC9B7F1),
     subagentAccent: Color(0xFF4E1FA8),
-    findingsTint: Color(0xFFFCF6EC),
-    findingsBorder: Color(0xFFEDD9B4),
+    findingsTint: Color(0xFFFAEDD7),
+    findingsBorder: Color(0xFFE5CA98),
     findingsAccent: Color(0xFF8A5300),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),
@@ -326,49 +331,49 @@ class Tokens {
     brightness: Brightness.dark,
     base: Color(0xFF1E1F22),
     raised: Color(0xFF2B2D30),
-    selected: Color(0xFF33353A),
-    borderSubtle: Color(0xFF393B40),
-    borderStrong: Color(0xFF4E5157),
+    selected: Color(0xFF36383E),
+    borderSubtle: Color(0xFF41444A),
+    borderStrong: Color(0xFF585C64),
     text: Color(0xFFDFE1E5),
     textSecondary: Color(0xFFB4B8BF),
-    textMuted: Color(0xFFA2A6AE),
-    link: Color(0xFF7AA3F9),
+    textMuted: Color(0xFFA5A9B1),
+    link: Color(0xFF77A4FF),
     onAccent: Color(0xFFFFFFFF),
     fieldFill: Color(0xFF313338),
-    fieldBorder: Color(0xFF4A4D53),
-    fieldBorderHover: Color(0xFF686B72),
+    fieldBorder: Color(0xFF55585F),
+    fieldBorderHover: Color(0xFF71747C),
     grip: Color(0xFF80848C),
-    accent: Color(0xFF2F6AE0),
-    accentSoft: Color(0xFF26334F),
-    accentInk: Color(0xFF7AA3F9),
-    running: Color(0xFF7AA3F9),
+    accent: Color(0xFF2365EA),
+    accentSoft: Color(0xFF23355D),
+    accentInk: Color(0xFF77A4FF),
+    running: Color(0xFF77A4FF),
     needs: Color(0xFFE9AC4C),
-    needsSoft: Color(0xFF3A3121),
+    needsSoft: Color(0xFF43351A),
     done: Color(0xFF6CC271),
-    doneSoft: Color(0xFF29362D),
+    doneSoft: Color(0xFF263D2E),
     idle: Color(0xFFA2A6AE),
-    crashed: Color(0xFFFA7681),
-    crashedSoft: Color(0xFF3F2427),
+    crashed: Color(0xFFFF7F89),
+    crashedSoft: Color(0xFF4C242A),
     shine: Color(0xFF9DA1AA),
     shineBand: Color(0xFFF4F6FA),
-    userBand: Color(0xFF233049),
-    userBandBorder: Color(0xFF34497A),
+    userBand: Color(0xFF233457),
+    userBandBorder: Color(0xFF3A5491),
     userBandText: Color(0xFFE8EEFB),
     userBandMuted: Color(0xFF9DB8F5),
-    userBandCode: Color(0x1FF2A65A),
+    userBandCode: Color(0x1FF5AD66),
     userBandCodeBlock: Color(0xFF1A2338),
     agentText: Color(0xFFDFE1E5),
-    inlineCode: Color(0x1FF2A65A),
-    inlineCodeText: Color(0xFFF2A65A),
+    inlineCode: Color(0x1FF5AD66),
+    inlineCodeText: Color(0xFFF5AD66),
     codeBlock: Color(0xFF2B2D30),
-    toolTint: Color(0xFF1E2D2B),
-    toolBorder: Color(0xFF2F4A47),
+    toolTint: Color(0xFF193431),
+    toolBorder: Color(0xFF2B5753),
     toolAccent: Color(0xFF3AA597),
-    subagentTint: Color(0xFF29243D),
-    subagentBorder: Color(0xFF4B3F70),
+    subagentTint: Color(0xFF2E2749),
+    subagentBorder: Color(0xFF564684),
     subagentAccent: Color(0xFFD2BEFF),
-    findingsTint: Color(0xFF2B2720),
-    findingsBorder: Color(0xFF4C4231),
+    findingsTint: Color(0xFF342C1D),
+    findingsBorder: Color(0xFF5C4C2F),
     findingsAccent: Color(0xFFE6B062),
     selectionBar: Color(0xFF26272B),
     selectionBarText: Color(0xFFE8E9EC),
