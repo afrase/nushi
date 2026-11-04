@@ -256,7 +256,6 @@ class PullRows extends StatelessWidget {
     final (words, color) = switch (r.state) {
       'approved' => ('Approved', t.done),
       'changes_requested' => ('Changes requested', t.crashed),
-      'dismissed' => ('Dismissed', t.textMuted),
       _ => ('Commented', t.textMuted),
     };
     return WidgetRow(

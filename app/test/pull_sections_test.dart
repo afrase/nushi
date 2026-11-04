@@ -24,7 +24,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('2 findings to address · in To do'), findsOneWidget);
     expect(find.text('2 unresolved threads · in To do'), findsOneWidget);
-    expect(find.text('Requested changes'), findsOneWidget);
+    // The review's pill, in To do's words (its row's tag).
+    expect(find.text('Changes requested'), findsNWidgets(2));
     // The review's last line, its numbers, apart and muted.
     expect(find.text(r'claude-opus · $2.61 · 10m 31s'), findsOneWidget);
     expect(

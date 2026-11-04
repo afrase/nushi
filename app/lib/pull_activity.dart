@@ -228,7 +228,7 @@ class _EntryState extends State<_Entry> {
     final pill = switch (c.review) {
       'approved' => ('Approved', t.done, Icons.check_circle_outline),
       'changes_requested' => (
-        'Requested changes',
+        'Changes requested',
         t.crashed,
         Icons.cancel_outlined,
       ),
