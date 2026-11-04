@@ -689,7 +689,11 @@ class _TranscriptState extends State<Transcript> {
   // The pins' rail: its entries' ids after the start's, and which entry is
   // current (0, the start): the last whose message's top is above a line a
   // third down the transcript, so it changes as one scrolls up near a pin.
+  // One picked from the menu is current until the list scrolls from where
+  // the pick took it ('' for the start).
   List<String> _railIds = const [];
+  String? _picked;
+  double _pickedAt = 0;
   // Where each pinned message's entry is among the column's children, as
   // last laid out: found once a build, not on each scroll.
   Map<String, int> _railAt = const {};
@@ -713,11 +717,15 @@ class _TranscriptState extends State<Transcript> {
       return;
     }
     final p = _follower.scroll.position;
-    // At the bottom, what shows of a pin there counts: a short last answer
-    // never reaches the line.
-    final line = p.pixels >= p.maxScrollExtent - 1
-        ? p.pixels + p.viewportDimension - 24
-        : p.pixels + p.viewportDimension / 3;
+    if (_picked case final id?) {
+      final at = id.isEmpty ? 0 : _railIds.indexOf(id) + 1;
+      if ((id.isEmpty || at > 0) && (p.pixels - _pickedAt).abs() < 1) {
+        _pinAt.value = at;
+        return;
+      }
+      _picked = null; // scrolled since, or unpinned
+    }
+    final line = p.pixels + _pinLine(p);
     final boxes = _railBoxes;
     var current = 0;
     for (final (n, id) in ids.indexed) {
@@ -732,6 +740,20 @@ class _TranscriptState extends State<Transcript> {
       current = n + 1;
     }
     _pinAt.value = current;
+  }
+
+  /// Where the rail's line stands in the transcript at [p], from its top:
+  /// a third down, but sliding up to the top over the first third of a
+  /// screen's scroll and down to the bottom over the last two thirds, so
+  /// the start is current at the top, and every pin in the first and last
+  /// screens (a short last answer, two) is current somewhere.
+  static double _pinLine(ScrollPosition p) {
+    final third = p.viewportDimension / 3;
+    final low = p.viewportDimension - 24; // at the bottom, what shows counts
+    final top = (p.pixels - p.minScrollExtent).clamp(0, third).toDouble();
+    final toBottom = max(0, p.maxScrollExtent - p.pixels);
+    final bottom = low - toBottom * (low - third) / (2 * third);
+    return max(top, bottom);
   }
 
   /// Goes to the message of [id] from the pins' menu, or to the chat's
@@ -756,7 +778,10 @@ class _TranscriptState extends State<Transcript> {
     final p = _follower.scroll.position;
     if (id.isEmpty) {
       _goTo = null;
+      _pickedAt = p.minScrollExtent;
+      _picked = id;
       _follower.hold(p.minScrollExtent);
+      _findPinAt();
       return;
     }
     final i = _laidOut.indexWhere((e) => e is Item && e.id == id);
@@ -775,7 +800,10 @@ class _TranscriptState extends State<Transcript> {
     _goTo = null;
     final box = boxes[at];
     final to = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
-    _follower.hold((to - _pinGap).clamp(p.minScrollExtent, p.maxScrollExtent));
+    _pickedAt = (to - _pinGap).clamp(p.minScrollExtent, p.maxScrollExtent);
+    _picked = id;
+    _follower.hold(_pickedAt);
+    _findPinAt();
     _flashTimer?.cancel();
     setState(() => _flash = id);
     _flashTimer = Timer(_flashFor, () {

@@ -101,13 +101,14 @@ Future<(Daemon, FakeDaemon)> _window(
   double width = 1400,
   Brightness brightness = Brightness.dark,
   bool busy = false,
+  List<Item>? items,
 }) async {
   viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = false;
   final c = _chat(pins, busy: busy);
   final fake = FakeDaemon([c])
     ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items, status: c.status)
+        ? GetChatResponse(chat: c, items: items ?? _items, status: c.status)
         : null;
   final d = await fake.connect(tester);
   d.select('c');
@@ -318,11 +319,18 @@ void main() {
 
     // Opened at the bottom: the last pin, though its message is short.
     expect(_current(tester, 4), 3);
-    final railAt = tester.getRect(_railDashes.first);
+    final railAt = tester.getTopLeft(_railDashes.first);
 
     await _scrollTo(tester, 0);
-    expect(_current(tester, 4), 1, reason: 'a1 starts in the top third');
-    expect(tester.getRect(_railDashes.first), railAt, reason: 'it stays put');
+    expect(_current(tester, 4), 0, reason: 'the start, at the top');
+    expect(
+      tester.getTopLeft(_railDashes.first),
+      railAt,
+      reason: 'it stays put',
+    );
+    // a1, a little way down, is current a little way down.
+    await _scrollTo(tester, _topOf(tester, 'The relay, line 0'));
+    expect(_current(tester, 4), 1);
 
     // Scrolled up near a pin, it changes as the pin's top crosses the line
     // a third down.
@@ -332,6 +340,44 @@ void main() {
     expect(_current(tester, 4), 1);
     await _scrollTo(tester, a2 - third + 40);
     expect(_current(tester, 4), 2);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('two short answers at the end: each is current somewhere, '
+      'and a pick is current until the list scrolls', (tester) async {
+    final items = [
+      for (final it in _items)
+        it.id == 'a2' ? (it.deepCopy()..text = 'The tests pass.') : it,
+    ];
+    final (d, _) = await _window(
+      tester,
+      pins: ['a1', 'a2', 'a3'],
+      items: items,
+    );
+    final p = _scroll(tester);
+    final seen = <int>{};
+    for (var at = p.maxScrollExtent; at > -5; at -= 5) {
+      await _scrollTo(tester, at);
+      seen.add(_current(tester, 4));
+    }
+    expect(seen, {0, 1, 2, 3});
+
+    for (final (row, want) in [
+      ('The tests reasoned through', 2), // a2, near the bottom
+      ('Session start', 0),
+      ('Relay restart plan', 1),
+    ]) {
+      await _openMenu(tester);
+      await tester.tap(_row(row));
+      for (var i = 0; i < 4; i++) {
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      expect(_current(tester, 4), want, reason: row);
+    }
+    // Scrolled from there, it's found again.
+    await _scrollTo(tester, p.maxScrollExtent);
+    expect(_current(tester, 4), 3);
     await closeView(tester, d);
   }, variant: _mac);
 
