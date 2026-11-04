@@ -13,6 +13,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/github_view.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -167,7 +168,8 @@ FileChange _sub() => FileChange(
 );
 
 /// The GitHub view on a fake daemon: gh's login on github.com, an inbox,
-/// pull request 1 and issue 2 of the test repository.
+/// pull request 1 and issue 2 of the test repository. In the app's window
+/// with [window], else on its own.
 Future<(FakeDaemon, Daemon)> openView(
   WidgetTester tester, {
   List<Chat> chats = const [],
@@ -178,6 +180,7 @@ Future<(FakeDaemon, Daemon)> openView(
   bool? teams = false,
   bool keep = false,
   Object? Function(Object input)? more,
+  bool window = false,
 }) async {
   if (teams != null) githubTeamReviews.value = teams;
   // Another test file may have left its choices in the tests' app.json,
@@ -273,13 +276,25 @@ Future<(FakeDaemon, Daemon)> openView(
   final d = await fake.connect(tester);
   forgetGitHubView(); // it keeps what it had while the app runs
   await tester.binding.setSurfaceSize(size);
-  await tester.pumpWidget(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Scaffold(body: GitHubView(d, now: testNow)),
-    ),
-  );
+  if (window) {
+    // The window on the view, the sidebar hidden (it has its own goldens).
+    viewport(
+      tester,
+      size,
+      brightness: tokens == Tokens.dark ? Brightness.dark : Brightness.light,
+    );
+    sidebarHidden.value = true;
+    d.go(const GitHubPlace());
+    await tester.pumpWidget(NushiApp(daemon: d));
+  } else {
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: NushiTheme(tokens).toThemeData(),
+        home: Scaffold(body: GitHubView(d, now: testNow)),
+      ),
+    );
+  }
   await tester.pumpAndSettle();
   return (fake, d);
 }
@@ -816,5 +831,22 @@ void main() {
       );
       await closeView(tester, d);
     });
+
+    // GitHub's window golden.
+    testWidgets('the window, 1700 wide, $name', (tester) async {
+      final (_, d) = await openView(
+        tester,
+        tokens: tokens,
+        size: const Size(1700, 900),
+        window: true,
+      );
+      expect(find.text('Add Sub and Neg'), findsOne);
+      expectTextInside(tester, 1700);
+      await expectLater(
+        find.byType(NushiApp),
+        matchesGoldenFile('goldens/github_window_1700_$name.png'),
+      );
+      await closeView(tester, d);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
 }

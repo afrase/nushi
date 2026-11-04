@@ -8,6 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -34,7 +35,8 @@ JiraIssue issue(String key, String summary, String status, String cat) =>
       priority: 'Medium',
     );
 
-/// The Jira view on a fake daemon with one site; what each list holds.
+/// The Jira view on a fake daemon with one site; what each list holds. In
+/// the app's window with [window], else on its own.
 Future<(FakeDaemon, Daemon)> openView(
   WidgetTester tester, {
   List<JiraSite>? sites,
@@ -44,6 +46,7 @@ Future<(FakeDaemon, Daemon)> openView(
   Object? Function(Object input)? more,
   Map<String, List<String>> groups = const {},
   Map<String, List<String>> collapsed = const {},
+  bool window = false,
 }) async {
   // As app.json had them at launch.
   jiraGroupOrder.value = groups;
@@ -108,13 +111,25 @@ Future<(FakeDaemon, Daemon)> openView(
   final d = await fake.connect(tester);
   forgetJiraView(); // it keeps what it had while the app runs
   await tester.binding.setSurfaceSize(size);
-  await tester.pumpWidget(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Scaffold(body: JiraView(d, now: DateTime(2026, 10, 25, 12))),
-    ),
-  );
+  if (window) {
+    // The window on the view, the sidebar hidden (it has its own goldens).
+    viewport(
+      tester,
+      size,
+      brightness: tokens == Tokens.dark ? Brightness.dark : Brightness.light,
+    );
+    sidebarHidden.value = true;
+    d.go(const JiraPlace());
+    await tester.pumpWidget(NushiApp(daemon: d));
+  } else {
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: NushiTheme(tokens).toThemeData(),
+        home: Scaffold(body: JiraView(d, now: DateTime(2026, 10, 25, 12))),
+      ),
+    );
+  }
   await tester.pumpAndSettle();
   return (fake, d);
 }
@@ -592,5 +607,22 @@ void main() {
         await closeView(tester, d);
       });
     }
+
+    // Jira's window golden.
+    testWidgets('the window, 1700 wide, $name', (tester) async {
+      final (_, d) = await openView(
+        tester,
+        tokens: tokens,
+        size: const Size(1700, 900),
+        window: true,
+      );
+      expect(find.text('Log in with a passkey'), findsOne);
+      expectTextInside(tester, 1700);
+      await expectLater(
+        find.byType(NushiApp),
+        matchesGoldenFile('goldens/jira_window_1700_$name.png'),
+      );
+      await closeView(tester, d);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
 }
