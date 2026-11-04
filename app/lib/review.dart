@@ -268,7 +268,8 @@ List<ReviewComment> unsentComments(String chat) =>
 
 /// Puts [chat]'s unsent comments in its box as reply cards, to go with
 /// the next message, and marks them sent; one taken out of the box
-/// without being sent is removed ([_untilSent]).
+/// without being sent is removed ([_untilSent]). The chat then shows its
+/// transcript and box: the review is done by the time it's sent.
 void reviewToBox(ChatState chat) {
   final unsent = unsentComments(chat.id);
   if (unsent.isEmpty) return;
@@ -279,6 +280,7 @@ void reviewToBox(ChatState chat) {
   }
   setComments(chat.id, [...commentsOf(chat.id)]);
   _untilSent(chat, cards);
+  chat.tab.value = ChatTab.chat;
 }
 
 /// Whether [c]'s card waits to go to the agent ([_waiting]): its card as it

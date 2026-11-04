@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -113,6 +114,19 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
+  testWidgets('Send to agent in Changes goes back to the chat, its cards '
+      'in the box', (tester) async {
+    final d = await _app(tester, 1700);
+    final chat = d.chats['c']!;
+    chat.tab.value = ChatTab.changes;
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send to agent (2)'));
+    await tester.pumpAndSettle();
+    expect(chat.tab.value, ChatTab.chat);
+    expect(chat.draft.replies.value, hasLength(2));
+    d.dispose();
+  }, variant: _mac);
+
   testWidgets('a sent message takes its cards: they stay sent', (tester) async {
     final d = await _app(tester, 1700);
     final chat = d.chats['c']!;
@@ -145,6 +159,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Send to agent (2)'), findsOne);
     await tester.tap(find.text('Send to agent (2)'));
+    await tester.pumpAndSettle();
+    // Sending shows the chat; back in Changes, the cards wait there too.
+    expect(d.chats['c']!.tab.value.name, 'chat');
+    await tester.tap(_inHeader('Changes'));
     await tester.pumpAndSettle();
     expect(find.text('Send to agent (2)'), findsNothing);
     expect(

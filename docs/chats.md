@@ -151,7 +151,7 @@ When a chat's subagents work in worktrees of their own, a menu at the left of th
 - If what's staged changed since it was shown, or files outside the chat's folder are staged, Commit refuses. While the agent is working it warns that files may change ([ADR 0079](adr/0079-stage-and-commit-from-changes.md)).
 
 - Select lines to write a review comment for the agent.
-- **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message.
+- **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message, and takes you back to the chat.
 - Comments not sent yet show in the header ("Changes 2") and over the box, with Send to agent and Show.
 - Taking a comment's card out of the box (or its queued message out of the queue) removes the comment: it doesn't come back with the next Send to agent.
 - A comment on a file the view no longer shows (committed, reverted), or made in another view, shows above the list with the lines it was on, to remove, or to edit while not sent. A sent one goes once the turn that took it has ended and its lines or its file changed, or the file was committed.

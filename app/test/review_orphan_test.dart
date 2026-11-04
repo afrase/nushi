@@ -25,6 +25,9 @@ const _new = 'package sub\n\nfunc Sub(a, b int) int {\n\treturn a - b\n}\n';
 void main() {
   setUpAll(loadFonts);
 
+  // The chat the app shows: Send to agent takes it to its transcript.
+  late ChatState shown;
+
   // What the folder's Uncommitted scope has: sub.go until the agent
   // commits it.
   late List<FileChange> files;
@@ -81,6 +84,7 @@ void main() {
     await tester.pumpWidget(NushiApp(daemon: d));
     await tester.pumpAndSettle();
     final state = d.chats['c']!;
+    shown = state;
     state.tab.value = ChatTab.changes;
     await tester.pumpAndSettle();
     return (d, state);
@@ -92,6 +96,15 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 200));
     }
+  }
+
+  /// Send to agent, which shows the chat, then back to Changes to look.
+  Future<void> sendToAgent(WidgetTester tester) async {
+    await tester.tap(find.text('Send to agent (1)'));
+    await settle(tester);
+    expect(shown.tab.value, ChatTab.chat);
+    shown.tab.value = ChatTab.changes;
+    await settle(tester);
   }
 
   void busy(ChatState chat, {required bool on}) {
@@ -155,8 +168,7 @@ void main() {
       'message is answered', (tester) async {
     final (d, chat) = await open(tester);
     busy(chat, on: true);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     await queue(tester, chat);
     expect(commentsOf('c').single.sent, isTrue);
 
@@ -206,8 +218,7 @@ void main() {
   testWidgets('sent and answered, then a commit: dropped', (tester) async {
     final (d, chat) = await open(tester);
     busy(chat, on: true);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     await queue(tester, chat);
     await deliver(tester, chat);
     busy(chat, on: false);
@@ -223,8 +234,7 @@ void main() {
       'goes with it', (tester) async {
     final (d, chat) = await open(tester);
     busy(chat, on: true);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     await queue(tester, chat);
     await commit(tester, chat);
 
@@ -245,8 +255,7 @@ void main() {
   ) async {
     final (d, chat) = await open(tester);
     busy(chat, on: true);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     await queue(tester, chat);
     await commit(tester, chat);
 
@@ -279,8 +288,7 @@ void main() {
     final (d, chat) = await open(tester);
     await commit(tester, chat);
     expect(inHeader('Changes 1'), findsOne);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     expect(chat.draft.replies.value, hasLength(1));
     // The card taken out of the box (its ×, or the box cleared).
     chat.draft.replies.value = const [];
@@ -304,8 +312,7 @@ void main() {
       ),
     ]);
     await settle(tester);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     expect(chat.draft.replies.value.map((r) => r.text), ['Why a new package?']);
     await queue(tester, chat);
     expect(splitReplies(chat.queue.single.text).$1, hasLength(1));
@@ -365,8 +372,7 @@ void main() {
   testWidgets('sent, then the agent rewrote its lines: outdated once the '
       'turn ends, and dropped', (tester) async {
     final (d, chat) = await open(tester);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     busy(chat, on: true);
     await send(tester, chat);
     await answer(
@@ -383,8 +389,7 @@ void main() {
   testWidgets('sent, then the agent changed the file around its lines: '
       'dropped once the turn ends', (tester) async {
     final (d, chat) = await open(tester);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     busy(chat, on: true);
     await send(tester, chat);
     await answer(tester, chat, '// Package sub subtracts.\n$_new');
@@ -395,8 +400,7 @@ void main() {
   testWidgets('sent and answered with the file unchanged: it stays, dimmed, '
       'and Remove on hover takes it out', (tester) async {
     final (d, chat) = await open(tester);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     busy(chat, on: true);
     await send(tester, chat);
     await answer(tester, chat, _new);
@@ -414,8 +418,7 @@ void main() {
   testWidgets('sent and outdated above its file while the turn runs: '
       'Remove on hover takes it out', (tester) async {
     final (d, chat) = await open(tester);
-    await tester.tap(find.text('Send to agent (1)'));
-    await settle(tester);
+    await sendToAgent(tester);
     busy(chat, on: true);
     await send(tester, chat);
     files = [
