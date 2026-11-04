@@ -462,6 +462,28 @@ void main() {
     _end();
   }, variant: _mac);
 
+  testWidgets('Up brings the last message back with its files, uploads too', (
+    tester,
+  ) async {
+    final (_, _, chat) = await _box(tester);
+    const saved =
+        '/Users/me/Library/Application Support/Nushi/uploads/c/r/a.pdf';
+    chat.items.add(
+      Item(
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        text: 'see @lib/a.dart',
+        files: ['lib/a.dart', saved],
+      ),
+    );
+    await tester.tap(find.byType(TextField));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(find.byType(TextField), findsOne);
+    expect(chat.draft.mentions, {'lib/a.dart'});
+    expect([for (final f in chat.draft.files.value) f.path], [saved]);
+    _end();
+  }, variant: _mac);
+
   testWidgets('a sent message’s attached files are chips, its mentions not', (
     tester,
   ) async {

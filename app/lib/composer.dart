@@ -74,7 +74,6 @@ class _ComposerState extends State<Composer> {
     widget.daemon,
   );
   Set<String> get _mentions => _draft.mentions; // files picked with @
-  List<String> _lastFiles = []; // the last prompt's, for Up
   late final Attachments _images = _draft.images;
   Timer? _esc; // a first Esc's time to be followed by a second
   bool _built = false; // the box has been built once
@@ -185,7 +184,7 @@ class _ComposerState extends State<Composer> {
         (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE,
         orElse: Item.new,
       );
-      _restore(last.text, _lastFiles, const []);
+      _restore(last.text, last.files, const []); // the saved uploads too
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -355,7 +354,6 @@ class _ComposerState extends State<Composer> {
     _draft.outputs.value = const [];
     _draft.toSubagent.value = null;
     _mentions.clear();
-    _lastFiles = files;
     final chat = widget.chat;
     final message = withOutputs(withReplies(replies, text), outputs);
     // To an idle chat it shows in the transcript at once, faint until the
