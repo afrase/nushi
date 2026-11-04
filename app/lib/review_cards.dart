@@ -8,20 +8,23 @@ import 'package:nushi/review.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A comment under its lines in the diff: its lines and text, Edit and
-/// Remove on hover; dimmed once sent. An outdated one (its lines are gone)
-/// shows above the file with the lines it was on.
+/// A comment under its lines in the diff: its lines and text, Edit (while
+/// unsent) and Remove on hover; dimmed once sent. An outdated one (its
+/// lines are gone) shows above the file with the lines it was on, and one
+/// away from its file ([place]: where it was made) with them too.
 class CommentCard extends StatelessWidget {
   const new(
     this.comment, {
     required this.onEdit,
     required this.onRemove,
     super.key,
+    this.place,
   });
 
   final ReviewComment comment;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
+  final String? place;
 
   @override
   Widget build(BuildContext context) {
@@ -41,13 +44,14 @@ class CommentCard extends StatelessWidget {
                     child: Text(
                       [
                         if (c.outdated) 'Outdated',
+                        ?place,
                         c.lines,
                         if (c.sent) 'sent',
                       ].join(' · '),
                       style: theme.ui(t.textMuted, size: 11.5),
                     ),
                   ),
-                  if (hover && !c.sent && !c.outdated)
+                  if (hover && !c.sent)
                     IconTap(
                       Icons.edit_outlined,
                       tooltip: 'Edit',
@@ -63,7 +67,7 @@ class CommentCard extends StatelessWidget {
                     ),
                 ],
               ),
-              if (c.outdated)
+              if (c.outdated || place != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Text(

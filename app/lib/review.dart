@@ -16,9 +16,9 @@ import 'package:nushi/syntax.dart';
 /// the commits in Commits). [quote] is those lines as they were, and
 /// [before] and [after] the lines around them: when the file changes, the
 /// comment moves to where they are now ([anchor]), or is [outdated] when
-/// they're gone. Once [sent], it stays (dimmed) until the file changes
-/// after the agent's reply: [seen] is the file's text as the first look
-/// after it found it.
+/// they're gone. Once [sent], it stays (dimmed) until the turn that took
+/// it has ended and its lines are outdated or the side changed: [seen] is
+/// the side's text as last read before it was sent.
 class ReviewComment {
   new({
     required this.id,
@@ -126,6 +126,18 @@ class ReviewComment {
     return was != (start, end, outdated);
   }
 
+  /// Keeps [side] (its hash) as the text the comment is on: true if it
+  /// wasn't already.
+  bool see(String side) {
+    final h = _hash(side);
+    if (seen == h) return false;
+    seen = h;
+    return true;
+  }
+
+  /// Whether [side] is the text it was on when last seen.
+  bool saw(String side) => seen == _hash(side);
+
   String get lines => start == end ? 'Line $start' : 'Lines $start–$end';
 }
 
@@ -161,32 +173,58 @@ void setComments(String chat, List<ReviewComment> comments) {
 
 /// No chat's comments, in memory (tests: each starts with none).
 @visibleForTesting
-void forgetReviews() => reviews.value = {};
+void forgetReviews() {
+  reviews.value = {};
+  _sentAs.clear();
+}
 
 /// [chat]'s comments.
 List<ReviewComment> commentsOf(String chat) => reviews.value[chat] ?? const [];
 
-/// Drops [chat]'s sent comments on files whose side changed since the
-/// first look after the agent's reply ([files], as [where] shows them now;
-/// called only while the chat is idle).
-void forgetChanged(String chat, String where, List<FileChange> files) {
+/// Settles [chat]'s comments made in [where] with its files read
+/// ([files], as the view shows them now): each follows its lines
+/// ([ReviewComment.anchor]), and one whose file left the view (committed,
+/// reverted) is outdated. An unsent one keeps its side's text as read
+/// ([ReviewComment.see]). While the chat is [idle], a sent one whose card no
+/// message still waits to take (in the box or the queue) went with a turn
+/// that has ended: it's dropped once its lines are outdated, its file left
+/// the view, or its side changed since it was sent (the owner shouldn't
+/// have to clean these up).
+void filesRead(
+  ChatState chat,
+  String where,
+  List<FileChange> files, {
+  required bool idle,
+}) {
   var changed = false;
   final kept = <ReviewComment>[];
-  for (final c in commentsOf(chat)) {
+  for (final c in commentsOf(chat.id)) {
+    if (c.where != where) {
+      kept.add(c);
+      continue;
+    }
     final f = files.where((f) => f.path == c.path).firstOrNull;
-    if (c.sent && c.where == where && f != null) {
-      final h = _hash(c.old ? f.oldText : f.newText);
-      if (c.seen == null) {
-        c.seen = h;
+    final done = idle && c.sent && !_cardWaits(chat, c);
+    if (f == null) {
+      if (done) {
         changed = true;
-      } else if (c.seen != h) {
+        continue;
+      }
+      if (!c.outdated) changed = c.outdated = true;
+    } else {
+      final side = c.old ? f.oldText : f.newText;
+      if (c.anchor(side)) changed = true;
+      if (!c.sent || c.seen == null) {
+        // Unsent, or sent before Nushi kept the text it was sent on.
+        if (c.see(side)) changed = true;
+      } else if (done && (c.outdated || !c.saw(side))) {
         changed = true;
         continue;
       }
     }
     kept.add(c);
   }
-  if (changed) setComments(chat, kept);
+  if (changed) setComments(chat.id, kept);
 }
 
 /// FNV-1a over the text's code units: the same across launches.
@@ -234,7 +272,7 @@ List<ReviewComment> unsentComments(String chat) =>
 void reviewToBox(ChatState chat) {
   final unsent = unsentComments(chat.id);
   if (unsent.isEmpty) return;
-  final cards = {for (final c in unsent) c: reviewReply(c)};
+  final cards = {for (final c in unsent) c: _sentAs[c.id] = reviewReply(c)};
   cards.values.forEach(chat.draft.addReply);
   for (final c in unsent) {
     c.sent = true;
@@ -242,6 +280,21 @@ void reviewToBox(ChatState chat) {
   setComments(chat.id, [...commentsOf(chat.id)]);
   _untilSent(chat, cards);
 }
+
+/// Whether [c]'s card waits to go to the agent ([_waiting]): its card as it
+/// was put in the box, or (after a restart) any card on its file and lines'
+/// text; the comment may have moved or become outdated since.
+bool _cardWaits(ChatState chat, ReviewComment c) {
+  bool of(Reply x) =>
+      x.quote.startsWith('`${c.path}`, ') && x.quote.contains('\n${c.quote}\n');
+  if (_sentAs[c.id] case final r?) return _waiting(chat, r);
+  return chat.draft.replies.value.any(of) ||
+      chat.queue.any((m) => splitReplies(m.text).$1.any(of));
+}
+
+/// Each comment's card as it was put in the box, by the comment's id: the
+/// comment moves or becomes outdated after, and its card stays as it was.
+final _sentAs = <String, Reply>{};
 
 /// The texts of [chat]'s messages in its transcript, but for those in
 /// [before] (by id): an earlier message may quote the same lines.
@@ -294,6 +347,7 @@ void _untilSent(ChatState chat, Map<ReviewComment, Reply> cards) {
           if (!open.containsKey(c) || _waiting(chat, r)) return;
           settled(c);
           if (_carried(_said(chat, before), r)) return;
+          _sentAs.remove(c.id);
           setComments(chat.id, [
             for (final m in commentsOf(chat.id))
               if (m != c) m,

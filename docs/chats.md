@@ -154,6 +154,7 @@ When a chat's subagents work in worktrees of their own, a menu at the left of th
 - **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message.
 - Comments not sent yet show in the header ("Changes 2") and over the box, with Send to agent and Show.
 - Taking a comment's card out of the box (or its queued message out of the queue) removes the comment: it doesn't come back with the next Send to agent.
+- A comment on a file the view no longer shows (committed, reverted), or made in another view, shows above the list with the lines it was on, to remove, or to edit while not sent. A sent one goes once the turn that took it has ended and its lines or its file changed, or the file was committed.
 
 ## Previews and artifacts
 

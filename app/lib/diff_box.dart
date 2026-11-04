@@ -104,7 +104,7 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void initState() {
     super.initState();
-    reviews.addListener(_showComments);
+    reviews.addListener(_commentsChanged);
     widget.find?.addListener(_showFind);
     _takeDraft();
   }
@@ -275,7 +275,7 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void dispose() {
     _keepDraft(widget.review);
-    reviews.removeListener(_showComments);
+    reviews.removeListener(_commentsChanged);
     widget.find?.removeListener(_showFind);
     _controller?.dispose();
     _comment.dispose();
@@ -290,15 +290,21 @@ class _DiffBoxState extends State<DiffBox> {
     null => const [],
   };
 
+  /// Comments were made, changed or removed: they show as they are. Not
+  /// followed into this file again: the view may be about to show another
+  /// (the file left it, and is outdated there).
+  void _commentsChanged() => _showComments(anchor: false);
+
   /// Puts the comments, and the box being written in, under their lines:
-  /// where those lines are now, or above the file when they're gone.
-  void _showComments() {
+  /// where those lines are now ([anchor]), or above the file when they're
+  /// gone.
+  void _showComments({bool anchor = true}) {
     final c = _controller;
     if (c == null) return;
     final doc = c.document;
     final change = widget.change;
     var moved = false;
-    for (final m in _comments) {
+    for (final m in anchor ? _comments : const <ReviewComment>[]) {
       if (m.anchor(m.old ? change.oldText : change.newText)) moved = true;
     }
     if (moved) {
@@ -319,7 +325,13 @@ class _DiffBoxState extends State<DiffBox> {
             side: m.old ? PaneSide.old : PaneSide.neu,
             afterLine: m.outdated ? -1 : below(m.end, old: m.old),
           ),
-      if (d != null) InlaySpec(id: '', side: d.side, afterLine: d.span.end - 1),
+      if (d != null)
+        InlaySpec(
+          id: '',
+          side: d.side,
+          // An outdated one is changed where it shows: above the file.
+          afterLine: _editing?.outdated ?? false ? -1 : d.span.end - 1,
+        ),
       for (final n in widget.notes)
         InlaySpec(
           id: 'note:${n.id}',
@@ -370,18 +382,23 @@ class _DiffBoxState extends State<DiffBox> {
     edited?.text = comment;
     final made =
         edited ??
-        ReviewComment(
-          id: '${DateTime.now().microsecondsSinceEpoch}',
-          where: r.where,
-          path: widget.change.path,
-          old: side == PaneSide.old,
-          start: span.start + 1,
-          end: span.end,
-          quote: text(span.start, span.end),
-          before: text(span.start - 2, span.start),
-          after: text(span.end, span.end + 2),
-          text: comment,
-        );
+              ReviewComment(
+                id: '${DateTime.now().microsecondsSinceEpoch}',
+                where: r.where,
+                path: widget.change.path,
+                old: side == PaneSide.old,
+                start: span.start + 1,
+                end: span.end,
+                quote: text(span.start, span.end),
+                before: text(span.start - 2, span.start),
+                after: text(span.end, span.end + 2),
+                text: comment,
+              )
+          ..see(
+            side == PaneSide.old
+                ? widget.change.oldText
+                : widget.change.newText,
+          );
     _closeDraft();
     setComments(r.chat, [
       for (final c in commentsOf(r.chat))

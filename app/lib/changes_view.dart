@@ -18,6 +18,7 @@ import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
+import 'package:nushi/review_elsewhere.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
@@ -300,8 +301,8 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   /// setState.
   void _show(List<FileChange> files) {
     // Not on another folder's files, which would look like changed ones.
-    if (!chat.busy && !(_span?.readOnly ?? false)) {
-      forgetChanged(chat.id, _where, files);
+    if (!(_span?.readOnly ?? false)) {
+      filesRead(chat, _where, files, idle: !chat.busy);
     }
     _files = files;
     if (_plain case final p? when files.any((f) => f.path == p.path)) {
@@ -467,6 +468,13 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                                 picked: _picked,
                                 onPick: _pick,
                               ),
+                            ),
+                          if (_span != null && !_readOnly)
+                            CommentsElsewhere(
+                              chat: chat.id,
+                              where: _where,
+                              paths: {for (final f in _files) f.path},
+                              maxHeight: box.maxHeight * 0.4,
                             ),
                           if (empty.isNotEmpty)
                             Padding(
