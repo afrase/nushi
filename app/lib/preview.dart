@@ -48,6 +48,15 @@ enum PreviewKind {
   /// its tool row. Code and text show only through ⌘P's Open file
   /// (Changes shows what the agent did to them).
   bool get artifact => this != code;
+
+  /// Its icon, in the preview's header and the Files pane's rows.
+  IconData get icon => switch (this) {
+    image => Icons.image_outlined,
+    html || svg => Icons.web_outlined,
+    mermaid => Icons.account_tree_outlined,
+    code => Icons.code,
+    markdown || pdf || csv => Icons.description_outlined,
+  };
 }
 
 /// The extensions of artifacts ([PreviewKind.artifact]), which the daemon

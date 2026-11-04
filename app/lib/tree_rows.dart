@@ -129,14 +129,7 @@ class TreeRowView extends StatelessWidget {
               TreeRowKind.folder =>
                 r.open ? Icons.folder_open_outlined : Icons.folder_outlined,
               TreeRowKind.link => Icons.link_off,
-              _ => switch (kind) {
-                PreviewKind.image => Icons.image_outlined,
-                PreviewKind.html || PreviewKind.svg => Icons.web_outlined,
-                PreviewKind.mermaid => Icons.account_tree_outlined,
-                PreviewKind.code => Icons.code,
-                null => Icons.insert_drive_file_outlined,
-                _ => Icons.description_outlined,
-              },
+              _ => kind?.icon ?? Icons.insert_drive_file_outlined,
             },
             size: icon,
             color: dim ? t.textMuted : t.textSecondary,

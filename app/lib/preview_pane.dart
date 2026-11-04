@@ -153,15 +153,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                               spacing: roomy ? 6 : 8,
                               children: [
                                 Icon(
-                                  switch (kind) {
-                                    PreviewKind.image => Icons.image_outlined,
-                                    PreviewKind.html ||
-                                    PreviewKind.svg => Icons.web_outlined,
-                                    PreviewKind.mermaid =>
-                                      Icons.account_tree_outlined,
-                                    PreviewKind.code => Icons.code,
-                                    _ => Icons.description_outlined,
-                                  },
+                                  kind.icon,
                                   size: 14,
                                   color: t.textSecondary,
                                 ),
