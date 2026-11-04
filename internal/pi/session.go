@@ -75,11 +75,12 @@ func (s *session) pump() {
 		s.caught.Broadcast()
 		s.mu.Unlock()
 	}
+	stopped := s.p.stopped() // waits for the exit: not under the lock
 	s.mu.Lock()
 	s.handled = math.MaxInt // none will come
 	s.caught.Broadcast()
 	if t := s.turn; t != nil {
-		s.endLocked(t, nil, s.p.stopped())
+		s.endLocked(t, nil, stopped)
 	}
 	s.mu.Unlock()
 	close(s.ended)

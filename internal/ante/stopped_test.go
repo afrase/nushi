@@ -17,12 +17,8 @@ func TestStoppedSaysWhy(t *testing.T) {
 	h, err := startHost(Server(bin, nil, nil), t.TempDir())
 	testcheck.NoErr(t, err)
 	<-h.exited
-	var got error
-	if !testcheck.Eventually(func() bool {
-		got = h.send("Interrupt")
-		return got != nil && strings.HasSuffix(got.Error(), ": Error: settings.json is broken")
-	}) {
-		t.Errorf("got %v", got)
+	if err := h.send("Interrupt"); err == nil || !strings.HasSuffix(err.Error(), ": Error: settings.json is broken") {
+		t.Errorf("got %v", err)
 	}
 	h.kill()
 }

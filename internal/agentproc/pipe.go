@@ -75,8 +75,16 @@ func (p *Piped) Wait() error {
 
 // Said is the start of the last line it wrote to stderr that has anything
 // in it ("Error: Failed to load extension …"), past a "Hint:" after it:
-// what says why it stopped, when it did.
-func (p *Piped) Said() string { return p.said.String() }
+// what says why it stopped, when it did. It waits for the exit first (up
+// to twice waitDelay), as a stopped program's stdout can end before the
+// copy has its stderr's last line.
+func (p *Piped) Said() string {
+	select {
+	case <-p.exited:
+	case <-time.After(2 * waitDelay):
+	}
+	return p.said.String()
+}
 
 // lastLine keeps Said's line.
 type lastLine struct {

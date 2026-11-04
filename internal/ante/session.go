@@ -78,9 +78,10 @@ func (s *session) pump() {
 	for ev := range s.h.events {
 		s.handle(ev)
 	}
+	stopped := s.h.stopped("stopped before the turn ended") // waits for the exit: not under the lock
 	s.mu.Lock()
 	if t := s.turn; t != nil {
-		s.endLocked(t, nil, s.h.stopped("stopped before the turn ended"))
+		s.endLocked(t, nil, stopped)
 	}
 	s.mu.Unlock()
 	close(s.ended)

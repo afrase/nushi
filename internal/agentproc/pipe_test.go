@@ -2,6 +2,7 @@ package agentproc
 
 import (
 	"bufio"
+	"io"
 	"strconv"
 	"strings"
 	"syscall"
@@ -57,5 +58,16 @@ func TestKillOutlastsAnEscapedChild(t *testing.T) {
 	case <-killed:
 	case <-time.After(10 * time.Second):
 		t.Fatal("Kill is waiting for the child holding stderr")
+	}
+}
+
+// Said waits for the program to exit, so a line it wrote as it stopped is
+// in though its stdout ended first.
+func TestSaidWaitsForTheExit(t *testing.T) {
+	p, err := Pipe("/bin/sh", []string{"-c", `exec >&-; sleep 0.3; echo "Error: late" >&2`}, t.TempDir(), nil, nil)
+	testcheck.NoErr(t, err)
+	_, _ = io.ReadAll(p.Out)
+	if got := p.Said(); got != "Error: late" {
+		t.Errorf("said %q", got)
 	}
 }
