@@ -27,10 +27,6 @@ extension DaemonLink on Daemon {
       daemonApi >= restartWhenIdleApi &&
       (outdated || replaced);
 
-  static bool _sameHolds(List<RestartHold> a, List<RestartHold> b) =>
-      a.length == b.length &&
-      [for (var i = 0; i < a.length; i++) a[i] == b[i]].every((x) => x);
-
   void _sawUpdate(UpdateCheck u) {
     if (u == update) return;
     update = u;
@@ -114,7 +110,7 @@ extension DaemonLink on Daemon {
         client.restartWhenIdle(RestartWhenIdleRequest()).then((r) {
           // What it waits for, for the update bar (an older daemon says
           // nothing).
-          if (!_sameHolds(r.holds, restartHolds)) {
+          if (!listEquals(r.holds, restartHolds)) {
             restartHolds = r.holds;
             _changed();
           }
