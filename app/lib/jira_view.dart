@@ -409,8 +409,19 @@ class _JiraViewState extends State<JiraView> {
     final n = await askName(context);
     if (n == null || n.isEmpty) return;
     final search = JiraSearch(name: n, jql: _jql);
-    await _setSearches(site, [...site.searches, search]);
-    _pickList(Saved(search));
+    final searches = [...site.searches, search];
+    if (!mounted) {
+      // The view went while the name was asked (a chat picked from the
+      // menu bar): saved all the same, with nowhere to say it failed.
+      await widget.daemon.client
+          .setJiraSearches(
+            SetJiraSearchesRequest(site: site.id, searches: searches),
+          )
+          .then<void>((_) {}, onError: (Object _) {});
+      return;
+    }
+    await _setSearches(site, searches);
+    if (mounted) _pickList(Saved(search));
   }
 
   Future<void> _setSearches(JiraSite site, List<JiraSearch> searches) =>

@@ -623,6 +623,40 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a search named after the view went is saved, without the '
+      'view', (tester) async {
+    final (fake, d) = await openView(
+      tester,
+      more: (input) =>
+          input is SetJiraSearchesRequest ? SetJiraSearchesResponse() : null,
+    );
+    await tester.tap(find.text('JQL'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'project = ACME');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save…'));
+    await tester.pumpAndSettle();
+    // The view goes under the dialog (a chat picked from the menu bar).
+    await tester.pumpWidget(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: const Scaffold(body: Text('A chat')),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(JiraView), findsNothing);
+    await tester.enterText(find.byType(TextField).last, 'ACME');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(
+      fake.calls.whereType<SetJiraSearchesRequest>().single.searches.last.name,
+      'ACME',
+    );
+    await closeView(tester, d);
+  });
+
   testWidgets('no site yet', (tester) async {
     final (_, d) = await openView(tester, sites: []);
     expect(
