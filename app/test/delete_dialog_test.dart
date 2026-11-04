@@ -95,16 +95,16 @@ void main() {
     ('dark', Brightness.dark),
     ('light', Brightness.light),
   ]) {
-    testWidgets('golden: deleting a chat whose worktree two others work in, '
+    testWidgets('deleting a chat whose worktree two others work in, '
         '$name', (tester) async {
       final (_, d) = await _open(tester, [
         'Fix the build',
         'Sync on wake',
       ], brightness: brightness);
-      await expectLater(
-        find.byType(NushiApp),
-        matchesGoldenFile('goldens/delete_others_$name.png'),
-      );
+      // Both named, in the dialog, inside the window.
+      expect(find.textContaining('“Fix the build”, “Sync on wake”'), findsOne);
+      expectTextInside(tester, 900);
+      await render(tester, find.byType(NushiApp), 'delete_others_$name');
       await closeView(tester, d);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }

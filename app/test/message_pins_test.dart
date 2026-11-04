@@ -307,6 +307,10 @@ void main() {
       tester,
     ) async {
       paneWidths.value = {};
+      // At 720, where the chip stands over the text, it's a window golden
+      // (the sidebar hidden: it has its own); at 1700 a render.
+      final golden = width == 720;
+      if (golden) sidebarHidden.value = true;
       final (d, _) = await _window(
         tester,
         pins: ['u1', 'u3', 'a3'],
@@ -322,12 +326,15 @@ void main() {
       // Where the chip stands over the text, the page's band behind it.
       expect(find.byType(PinsBackdrop), width < 1000 ? findsOne : findsNothing);
       if (width < 1000) _backdropUnder(tester);
-      await expectLater(
-        find.byType(NushiApp),
-        matchesGoldenFile(
-          'goldens/message_pins_${width.toInt()}_${b.name}.png',
-        ),
-      );
+      final shot = 'message_pins_${width.toInt()}_${b.name}';
+      if (golden) {
+        await expectLater(
+          find.byType(NushiApp),
+          matchesGoldenFile('goldens/$shot.png'),
+        );
+      } else {
+        await render(tester, find.byType(NushiApp), shot);
+      }
       await closeView(tester, d);
     }, variant: _mac);
   }

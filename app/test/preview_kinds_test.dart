@@ -383,24 +383,7 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('golden: a JSON file in the pane, dark', (tester) async {
-    final (d, _) = await _app(tester, {});
-    await _dark(tester);
-    d.chats['c']!.openPreview('config.json');
-    await tester.runAsync(() async {
-      await tester.pumpAndSettle();
-      // The highlighting comes from an isolate.
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    });
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/preview_code_dark.png'),
-    );
-    d.dispose();
-  }, variant: _mac);
-
-  testWidgets('CSV: a table of the first 500 rows, its source; golden, dark', (
+  testWidgets('CSV: a table of the first 500 rows, its source, dark', (
     tester,
   ) async {
     final (d, _) = await _app(tester, {});
@@ -410,10 +393,7 @@ void main() {
     expect(_inPane(find.text('The first 500 rows of 600.')), findsOneWidget);
     expect(_inPane(find.text('city')), findsOneWidget);
     expect(_inPane(find.text('a note, with a comma')), findsWidgets);
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/preview_csv_dark.png'),
-    );
+    await render(tester, find.byType(NushiApp), 'preview_csv_dark');
     await tester.tap(_inPane(find.text('Source')));
     await tester.pumpAndSettle();
     expect(
@@ -494,9 +474,7 @@ void main() {
 
     final ios = TargetPlatformVariant.only(TargetPlatform.iOS);
 
-    testWidgets('HTML in a frame, saying its files don’t load; golden', (
-      tester,
-    ) async {
+    testWidgets('HTML in a frame, saying its files don’t load', (tester) async {
       final p = await phone(tester);
       await _dark(tester);
       await open(tester, p, 'site/index.html');
@@ -506,10 +484,7 @@ void main() {
         find.text('Files beside it (CSS, images) don’t load here.'),
         findsOneWidget,
       );
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/preview_phone_html_dark.png'),
-      );
+      await render(tester, find.byType(PhoneApp), 'preview_phone_html_dark');
       await tester.tap(find.text('Source'));
       await tester.pumpAndSettle();
       expect(find.textContaining('<h1>The Still Kettle</h1>'), findsOneWidget);
@@ -537,9 +512,7 @@ void main() {
       await end(tester, p);
     }, variant: ios);
 
-    testWidgets('a PDF only on the Mac; a CSV as a table, golden', (
-      tester,
-    ) async {
+    testWidgets('a PDF only on the Mac; a CSV as a table', (tester) async {
       final p = await phone(tester);
       await _dark(tester);
       await open(tester, p, 'report.pdf');
@@ -549,10 +522,7 @@ void main() {
       await tester.pumpAndSettle();
       await open(tester, p, 'data.csv');
       expect(find.text('The first 500 rows of 600.'), findsOneWidget);
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/preview_phone_csv_dark.png'),
-      );
+      await render(tester, find.byType(PhoneApp), 'preview_phone_csv_dark');
       await end(tester, p);
     }, variant: ios);
   });

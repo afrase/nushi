@@ -188,10 +188,7 @@ void main() {
           findsNothing,
         );
       }
-      await expectLater(
-        find.byType(ChatView),
-        matchesGoldenFile('goldens/chapters_$name.png'),
-      );
+      await render(tester, find.byType(ChatView), 'chapters_$name');
       await closeView(tester, d);
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }

@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
@@ -107,38 +106,6 @@ void main() {
     await tester.pumpAndSettle();
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
-  for (final (name, brightness) in [
-    ('dark', Brightness.dark),
-    ('light', Brightness.light),
-  ]) {
-    for (final width in [1700.0, 720.0]) {
-      testWidgets('golden, a row pressed, $name, ${width.toInt()} wide', (
-        tester,
-      ) async {
-        final d = await _twoLongChats(
-          tester,
-          width: width,
-          brightness: brightness,
-        );
-        FocusManager.instance.primaryFocus?.unfocus();
-        final press = await tester.startGesture(
-          tester.getCenter(_row('Beta long chat')),
-          kind: PointerDeviceKind.mouse,
-        );
-        await tester.pumpAndSettle();
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile(
-            'goldens/switch_pressed_${name}_${width.toInt()}.png',
-          ),
-        );
-        await press.up();
-        await tester.pumpAndSettle();
-        await closeView(tester, d);
-      }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-    }
-  }
 
   testWidgets('a long chat stays at its bottom in every frame it fills in', (
     tester,

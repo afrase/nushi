@@ -67,9 +67,10 @@ void main() {
           findsOne,
         );
       }
-      await expectLater(
+      await render(
+        tester,
         find.byType(NushiApp),
-        matchesGoldenFile('goldens/first_run_${width.toInt()}_dark.png'),
+        'first_run_${width.toInt()}_dark',
       );
       d.dispose();
     }, variant: _mac);

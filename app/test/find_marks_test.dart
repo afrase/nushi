@@ -376,9 +376,11 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         }
         await tester.pumpAndSettle();
-        await expectLater(
+        expectTextInside(tester, size.width);
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/find_marks_${name}_$theme.png'),
+          'find_marks_${name}_$theme',
         );
         await closeView(tester, d);
       }, variant: _mac);

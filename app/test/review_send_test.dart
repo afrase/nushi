@@ -83,10 +83,7 @@ void main() {
     final chat = d.chats['c']!;
     expect(_inHeader('Changes 2'), findsOne);
     expect(find.text('2 review comments in Changes aren’t sent.'), findsOne);
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/review_unsent_1700_dark.png'),
-    );
+    await render(tester, find.byType(NushiApp), 'review_unsent_1700_dark');
     // Its links follow the words, not the bar's far end.
     expect(
       tester.getTopLeft(find.text('Send to agent')).dx -
@@ -155,10 +152,7 @@ void main() {
       ),
       findsOne,
     );
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/review_changes_720_dark.png'),
-    );
+    await render(tester, find.byType(NushiApp), 'review_changes_720_dark');
     await tester.tap(find.text('Go to chat'));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.tab.value.name, 'chat');

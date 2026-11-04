@@ -220,19 +220,19 @@ void main() {
         final (d, _) = await _app(tester, size: size, brightness: brightness);
         await tester.tap(find.byTooltip('Chat menu'));
         await tester.pumpAndSettle();
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/fork_menu_${what}_$name.png'),
-        );
+        _inside(tester, find.text('Fork'), size);
+        await render(tester, find.byType(NushiApp), 'fork_menu_${what}_$name');
         await closeView(tester, d);
       }, variant: _mac);
 
       testWidgets('the palette, $what ($name)', (tester) async {
         final (d, _) = await _app(tester, size: size, brightness: brightness);
         await _palette(tester);
-        await expectLater(
+        _inside(tester, find.text('Fork chat'), size);
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/fork_palette_${what}_$name.png'),
+          'fork_palette_${what}_$name',
         );
         await closeView(tester, d);
       }, variant: _mac);
@@ -240,10 +240,8 @@ void main() {
       testWidgets('Fork from here, $what ($name)', (tester) async {
         final (d, _) = await _app(tester, size: size, brightness: brightness);
         await _hover(tester, find.textContaining('So the page you asked'));
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/fork_here_${what}_$name.png'),
-        );
+        _inside(tester, _forkHere, size);
+        await render(tester, find.byType(NushiApp), 'fork_here_${what}_$name');
         await closeView(tester, d);
       }, variant: _mac);
 
@@ -251,14 +249,24 @@ void main() {
         final (d, _) = await _app(tester, size: size, brightness: brightness);
         _side(d);
         await tester.pumpAndSettle();
-        await expectLater(
+        _inside(tester, find.text('Keep as chat'), size);
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/fork_keep_side_${what}_$name.png'),
+          'fork_keep_side_${what}_$name',
         );
         await closeView(tester, d);
       }, variant: _mac);
     }
   }
+}
+
+/// [f], one widget, shown whole inside a window of [size].
+void _inside(WidgetTester tester, Finder f, Size size) {
+  final r = tester.getRect(f);
+  expect(r.left, greaterThanOrEqualTo(0));
+  expect(r.right, lessThanOrEqualTo(size.width));
+  expect(r.bottom, lessThanOrEqualTo(size.height));
 }
 
 /// Opens a side chat s on chat c, with a question and its answer in it.

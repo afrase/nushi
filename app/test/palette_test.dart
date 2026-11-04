@@ -374,7 +374,7 @@ void main() {
     d.dispose();
   }, variant: macOS);
 
-  testWidgets('golden: the palette with a few matches, dark', (tester) async {
+  testWidgets('the palette with a few matches, dark', (tester) async {
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
     await _app(tester, select: 'b');
@@ -382,10 +382,12 @@ void main() {
     await _type(tester, 's');
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pumpAndSettle();
+    // The palette on its own is its golden; the window a render.
     await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/palette_dark.png'),
+      find.byType(Palette),
+      matchesGoldenFile('goldens/palette_box_dark.png'),
     );
+    await render(tester, find.byType(NushiApp), 'palette_dark');
     tester.daemonOf().dispose();
   }, variant: macOS);
 

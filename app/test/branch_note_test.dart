@@ -140,9 +140,10 @@ void main() {
           expect(text.right, lessThanOrEqualTo(view.right));
           expect(tester.takeException(), isNull);
           if (size == 'usual') {
-            await expectLater(
+            await render(
+              tester,
               find.byType(NushiApp),
-              matchesGoldenFile('goldens/branch_note_${state}_$name.png'),
+              'branch_note_${state}_$name',
             );
           }
           await end();

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/main.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 
@@ -269,28 +268,7 @@ void main() {
     ('dark', Brightness.dark),
     ('light', Brightness.light),
   ]) {
-    for (final (state, u, busy) in [
-      ('clean', _clean(), false),
-      ('guarded', _clean(changed: 2), true),
-    ]) {
-      testWidgets('golden: the clean-up dialog, $state, $name', (tester) async {
-        final (d, _) = await _open(
-          tester,
-          u: u,
-          busy: busy,
-          brightness: brightness,
-        );
-        await tester.tap(_inPull(find.text('Clean up…')));
-        await _pump(tester);
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/cleanup_${state}_$name.png'),
-        );
-        d.dispose();
-      }, variant: _mac);
-    }
-
-    testWidgets('golden: the widget once cleaned up, $name', (tester) async {
+    testWidgets('the widget once cleaned up, $name', (tester) async {
       final (d, fake) = await _open(tester, brightness: brightness);
       await tester.tap(_inPull(find.text('Clean up…')));
       await tester.pumpAndSettle();

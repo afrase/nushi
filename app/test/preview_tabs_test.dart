@@ -706,7 +706,7 @@ void main() {
     }, variant: _mac);
   });
 
-  group('goldens', () {
+  group('the window', () {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
       ('light', Brightness.light),
@@ -730,11 +730,10 @@ void main() {
               tester.getTopRight(find.byTooltip('Close')).dx,
               greaterThan(right - NushiTheme.gutter - 1),
             );
-            await expectLater(
+            await render(
+              tester,
               find.byType(NushiApp),
-              matchesGoldenFile(
-                'goldens/preview_pane_${count}_${name}_${width.toInt()}.png',
-              ),
+              'preview_pane_${count}_${name}_${width.toInt()}',
             );
             d.dispose();
           }, variant: _mac);

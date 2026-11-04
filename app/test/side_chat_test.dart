@@ -251,9 +251,14 @@ void main() {
         tester.platformDispatcher.platformBrightnessTestValue = brightness;
         addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
         await _close(tester);
-        await expectLater(
+        expectTextInside(tester, size.width);
+        final dialog = tester.getRect(find.byType(Dialog));
+        expect(dialog.left, greaterThanOrEqualTo(0));
+        expect(dialog.right, lessThanOrEqualTo(size.width));
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/side_chat_end_${what}_$name.png'),
+          'side_chat_end_${what}_$name',
         );
         await closeView(tester, d);
       }, variant: _mac);
@@ -278,9 +283,12 @@ void main() {
           ..emit(_status(2));
         await tester.pump(const Duration(seconds: 3));
         await tester.pumpAndSettle();
-        await expectLater(
+        expectTextInside(tester, size.width);
+        expect(tester.getRect(_chip).right, lessThanOrEqualTo(size.width));
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/side_chat_chip_${what}_$name.png'),
+          'side_chat_chip_${what}_$name',
         );
         await closeView(tester, d);
       }, variant: _mac);

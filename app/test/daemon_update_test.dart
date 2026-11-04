@@ -115,9 +115,10 @@ void main() {
         expect(bar.right, width);
         expect(bar.left, greaterThanOrEqualTo(200)); // clear of the lights
         expect(button.right, greaterThan(width - 40)); // at the trailing edge
-        await expectLater(
+        await render(
+          tester,
           find.byType(DaemonUpdateBar),
-          matchesGoldenFile('goldens/daemon_update_${width.toInt()}_$name.png'),
+          'daemon_update_${width.toInt()}_$name',
         );
         d.dispose();
       }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));

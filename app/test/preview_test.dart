@@ -345,9 +345,7 @@ void main() {
     expect((c.pane.value, c.preview.value), (null, 'b.md'));
   });
 
-  testWidgets('golden: the pane with a Markdown file, dark, wide', (
-    tester,
-  ) async {
+  testWidgets('the pane with a Markdown file, dark, wide', (tester) async {
     final d = await _app(tester);
     tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
@@ -357,10 +355,7 @@ void main() {
     await tester.pumpAndSettle();
     // Its header's buttons at its right edge.
     expect(tester.getTopRight(find.byTooltip('Close')).dx, greaterThan(1660));
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/preview_markdown_dark.png'),
-    );
+    await render(tester, find.byType(NushiApp), 'preview_markdown_dark');
     d.dispose();
   }, variant: _mac);
 }

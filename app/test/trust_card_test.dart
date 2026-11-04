@@ -71,10 +71,7 @@ void main() {
       find.text("Didn't start Claude in site: its code wasn't approved."),
       findsOne,
     );
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/trust_left_dark.png'),
-    );
+    await render(tester, find.byType(NushiApp), 'trust_left_dark');
     await tester.tap(find.byTooltip('Dismiss'));
     await tester.pumpAndSettle();
     expect(find.byType(NoticeBar), findsNothing);

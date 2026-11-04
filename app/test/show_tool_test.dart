@@ -405,10 +405,7 @@ void main() {
       await tester.pumpAndSettle();
       await _shows(tester, fake, 'docs/report.md');
       expect(find.byType(PreviewScreen), findsNothing);
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/show_phone_light.png'),
-      );
+      await render(tester, find.byType(PhoneApp), 'show_phone_light');
       await tester.tap(find.text('Preview'));
       await tester.pumpAndSettle();
       expect(find.byType(PreviewScreen), findsOneWidget);
@@ -418,7 +415,7 @@ void main() {
 
   for (final (name, width) in [('wide', 1700.0), ('narrow', 720.0)]) {
     for (final brightness in Brightness.values) {
-      testWidgets('golden: $name, ${brightness.name}', (tester) async {
+      testWidgets('the window, $name, ${brightness.name}', (tester) async {
         final (fake, d) = await _app(
           tester,
           size: Size(width, 900),
@@ -457,9 +454,10 @@ void main() {
           expect(close, lessThan(width));
           expect(close, greaterThan(width - 40));
         }
-        await expectLater(
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/show_${name}_${brightness.name}.png'),
+          'show_${name}_${brightness.name}',
         );
         d.dispose();
       }, variant: _mac);

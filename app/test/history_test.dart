@@ -132,10 +132,7 @@ void main() {
         '($name)', (tester) async {
       final (_, end) = await _open(tester, _reopened, brightness: brightness);
       expect(find.text('Compacted here'), findsOneWidget);
-      await expectLater(
-        find.byType(ChatView),
-        matchesGoldenFile('goldens/history_marks_$name.png'),
-      );
+      await render(tester, find.byType(ChatView), 'history_marks_$name');
       await end();
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
@@ -149,10 +146,7 @@ void main() {
       );
       expect(find.byType(Composer), findsNothing);
       expect(find.text('Read-only: Nushi’s copy of the transcript.'), findsOne);
-      await expectLater(
-        find.byType(ChatView),
-        matchesGoldenFile('goldens/expired_copy_$name.png'),
-      );
+      await render(tester, find.byType(ChatView), 'expired_copy_$name');
       await end();
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }

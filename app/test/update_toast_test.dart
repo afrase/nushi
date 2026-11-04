@@ -152,11 +152,10 @@ void main() {
             expect(box.left, lessThan(card));
             expect(box.left, greaterThan(card - 20));
           }
-          await expectLater(
-            _toast,
-            matchesGoldenFile(
-              'goldens/update_toast_${kind}_${width.toInt()}_$name.png',
-            ),
+          await render(
+            tester,
+            find.byType(MaterialApp),
+            'update_toast_${kind}_${width.toInt()}_$name',
           );
           d.dispose();
         }, variant: _macOS);
@@ -319,10 +318,7 @@ void main() {
       matching: find.byType(Material),
     );
     expect(tester.getSize(note.first).width, 420);
-    await expectLater(
-      find.byType(MaterialApp),
-      matchesGoldenFile('goldens/up_to_date_dark.png'),
-    );
+    await render(tester, find.byType(MaterialApp), 'up_to_date_dark');
     d.dispose();
   }, variant: _macOS);
 

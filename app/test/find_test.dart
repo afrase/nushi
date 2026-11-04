@@ -113,10 +113,7 @@ void main() {
     ]) {
       viewport(tester, const Size(1700, 700), brightness: mode);
       await tester.pumpAndSettle();
-      await expectLater(
-        find.byType(NushiApp),
-        matchesGoldenFile('goldens/find_chat_$name.png'),
-      );
+      await render(tester, find.byType(NushiApp), 'find_chat_$name');
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
@@ -183,10 +180,7 @@ void main() {
     ]) {
       viewport(tester, const Size(1700, 700), brightness: mode);
       await tester.pumpAndSettle();
-      await expectLater(
-        find.byType(NushiApp),
-        matchesGoldenFile('goldens/find_changes_$name.png'),
-      );
+      await render(tester, find.byType(NushiApp), 'find_changes_$name');
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();

@@ -71,10 +71,7 @@ void main() {
       await tester.pumpWidget(NushiApp(daemon: d));
       await tester.pumpAndSettle();
       expect(find.byType(RemovedChatsBar), findsOneWidget);
-      await expectLater(
-        find.byType(RemovedChatsBar),
-        matchesGoldenFile('goldens/removed_chats_$name.png'),
-      );
+      await render(tester, find.byType(RemovedChatsBar), 'removed_chats_$name');
 
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();

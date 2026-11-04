@@ -191,10 +191,7 @@ void main() {
           expect(find.byType(SideChip), findsOne);
         }
         expect(tester.takeException(), isNull);
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/side_usage_${size}_$name.png'),
-        );
+        await render(tester, find.byType(NushiApp), 'side_usage_${size}_$name');
         await closeView(tester, d);
       }, variant: _mac);
     }

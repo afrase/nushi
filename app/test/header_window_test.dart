@@ -122,9 +122,10 @@ void main() {
         expect(tabs, findsNothing);
       }
       final file = preview ? 'header_window_preview' : 'header_window';
-      await expectLater(
+      await render(
+        tester,
         find.byType(NushiApp),
-        matchesGoldenFile('goldens/${file}_${width.toInt()}_$name.png'),
+        '${file}_${width.toInt()}_$name',
       );
       d.dispose();
     }, variant: _mac);

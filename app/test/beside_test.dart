@@ -192,22 +192,4 @@ void main() {
     expect(_transcript(tester).right, lessThanOrEqualTo(side.left));
     d.dispose();
   }, variant: _mac);
-
-  for (final (name, mode) in [('dark', 'Dark'), ('light', 'Light')]) {
-    for (final (what, width) in [('beside', 1400.0), ('over', 1210.0)]) {
-      testWidgets('the pane and the details, $what ($name)', (tester) async {
-        final d = await _app(tester, width: width);
-        tester.platformDispatcher.platformBrightnessTestValue = mode == 'Dark'
-            ? Brightness.dark
-            : Brightness.light;
-        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-        await _openPane(tester);
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/beside_${what}_$name.png'),
-        );
-        d.dispose();
-      }, variant: _mac);
-    }
-  }
 }

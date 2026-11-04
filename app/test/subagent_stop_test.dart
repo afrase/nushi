@@ -245,9 +245,11 @@ void main() {
             ),
           );
         }
-        await expectLater(
+        expectTextInside(tester, width);
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/subagent_stop_${size}_$name.png'),
+          'subagent_stop_${size}_$name',
         );
         d.dispose();
       }, variant: _mac);

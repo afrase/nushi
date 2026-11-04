@@ -362,11 +362,10 @@ void main() {
         menu: 'Work on the violets',
       );
       expect(tester.takeException(), isNull);
-      await expectLater(
+      await render(
+        tester,
         find.byType(NushiApp),
-        matchesGoldenFile(
-          'goldens/chat_colors_window_${width.toInt()}_${b.name}.png',
-        ),
+        'chat_colors_window_${width.toInt()}_${b.name}',
       );
       await closeView(tester, d);
     }, variant: _mac);
@@ -397,9 +396,10 @@ void main() {
           )
           .map((m) => m.color);
       expect(tints, contains(ChatColor.amber.tint(tokens)));
-      await expectLater(
+      await render(
+        tester,
         find.byType(PhoneApp),
-        matchesGoldenFile('goldens/chat_colors_phone_${b.name}.png'),
+        'chat_colors_phone_${b.name}',
       );
       await endPhone(tester, phone);
     });

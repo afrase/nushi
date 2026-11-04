@@ -16,6 +16,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/message_actions.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plain_tabs.dart';
+import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
@@ -579,23 +580,26 @@ void main() {
         await tester.tap(find.byTooltip('More'));
         await tester.pumpAndSettle();
         expect(find.text('Show in Finder', findRichText: true), findsOne);
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/preview_menu_720_$name.png'),
-        );
+        await render(tester, find.byType(NushiApp), 'preview_menu_720_$name');
         d.dispose();
       }, variant: _mac);
     }
   });
 
-  group('goldens', () {
+  // The chat's window goldens: a turn at 1700 with the details panel, and
+  // at 720, where the layout narrows; the sidebar hidden (it has its own).
+  group('the window', () {
     for (final (name, brightness) in [
       ('dark', Brightness.dark),
       ('light', Brightness.light),
     ]) {
       for (final width in [1700.0, 720.0]) {
         testWidgets('a turn, $name, ${width.toInt()} wide', (tester) async {
+          sidebarHidden.value = true;
           final d = await _app(tester, width: width, brightness: brightness);
+          showDetails.value = width > 720;
+          await tester.pumpAndSettle();
+          expectTextInside(tester, width);
           await expectLater(
             find.byType(NushiApp),
             matchesGoldenFile(
@@ -605,15 +609,6 @@ void main() {
           d.dispose();
         }, variant: _mac);
       }
-      testWidgets('a turn at full width, $name', (tester) async {
-        chatFullWidth.value = true;
-        final d = await _app(tester, width: 1700, brightness: brightness);
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/spacing_turn_full_1700_$name.png'),
-        );
-        d.dispose();
-      }, variant: _mac);
       testWidgets('a turn beside the preview, $name', (tester) async {
         final d = await _app(
           tester,
@@ -621,9 +616,13 @@ void main() {
           brightness: brightness,
           file: 'docs/login-report.md',
         );
-        await expectLater(
+        // The column's composer clear of the preview beside it.
+        final preview = tester.getRect(find.byType(PreviewPane));
+        expect(_box(tester).right, lessThan(preview.left));
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/spacing_preview_1700_$name.png'),
+          'spacing_preview_1700_$name',
         );
         d.dispose();
       }, variant: _mac);

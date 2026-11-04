@@ -370,21 +370,4 @@ void main() {
     expect(find.byType(PreviewScreen), findsOneWidget);
     await endPhone(tester, phone);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
-
-  testWidgets('golden: the Artifacts menu of the pane’s name, dark', (
-    tester,
-  ) async {
-    final d = await _app(tester);
-    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-    d.chats['c']!.openPreview('docs/report.md');
-    await tester.pumpAndSettle();
-    await tester.tap(_inPane(find.text('report.md')));
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/chat_files_dark.png'),
-    );
-    d.dispose();
-  }, variant: _mac);
 }

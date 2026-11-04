@@ -13,6 +13,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/widgets.dart';
@@ -300,7 +301,7 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('golden: the widget with a pin, two recent and Older (5), dark', (
+  testWidgets('the widget with a pin, two recent and Older (5), dark', (
     tester,
   ) async {
     final (d, _) = await _app(tester, _turns);
@@ -309,10 +310,13 @@ void main() {
     togglePin(d.chats['c']!, 'mock/home.html');
     d.chats['c']!.openPreview('docs/report.md');
     await tester.pumpAndSettle();
+    expect(_inRows(find.text('Older (5)')), findsOneWidget);
+    // The widget on its own is its golden; the window a render.
     await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/artifacts_widget_dark.png'),
+      find.ancestor(of: _rows, matching: find.byType(PanelWidget)),
+      matchesGoldenFile('goldens/artifacts_card_dark.png'),
     );
+    await render(tester, find.byType(NushiApp), 'artifacts_widget_dark');
     d.dispose();
   }, variant: _mac);
 }
