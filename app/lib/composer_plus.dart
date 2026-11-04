@@ -9,8 +9,13 @@ import 'package:nushi/widgets.dart';
 /// The + button's tooltip.
 const plusTooltip = 'Add files, mention a file, or run a command';
 
-/// ⌘U: Add files or photos, from the box, with the menu shut.
-const attachKey = SingleActivator(LogicalKeyboardKey.keyU, meta: true);
+/// ⌘U: Add files or photos, from the box, with the menu shut; once a
+/// press, not again as the key repeats.
+const attachKey = SingleActivator(
+  LogicalKeyboardKey.keyU,
+  meta: true,
+  includeRepeats: false,
+);
 
 /// The composer's + at the box's left and its menu, in the form of Claude's
 /// app: Add files or photos (⌘U), Mention a file, Slash commands, each row a

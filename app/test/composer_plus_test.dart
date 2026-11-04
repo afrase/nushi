@@ -90,9 +90,9 @@ String _file(String dir, String name, {int bytes = 12}) {
 
 /// A file on disk that counts its reads.
 class _ReadCount extends XFile {
-  _ReadCount(super.path);
+  new(super.path);
 
-  var reads = 0;
+  int reads = 0;
 
   @override
   Future<Uint8List> readAsBytes() {
@@ -231,6 +231,31 @@ void main() {
     },
     variant: _mac,
   );
+
+  testWidgets('⌘U held, or pressed again, opens one panel', (tester) async {
+    await _box(tester);
+    final panel = Completer<List<XFile>>();
+    var opened = 0;
+    pickFiles = () {
+      opened++;
+      return panel.future;
+    };
+    await tester.tap(find.byType(TextField));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyU);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyU);
+    await tester.sendKeyRepeatEvent(LogicalKeyboardKey.keyU);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyU);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyU);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(opened, 1);
+    panel.complete(const []);
+    await tester.pump();
+    await _cmd(tester, LogicalKeyboardKey.keyU);
+    expect(opened, 2);
+    _end();
+  }, variant: _mac);
 
   testWidgets('an image to an agent without images is a file card', (
     tester,

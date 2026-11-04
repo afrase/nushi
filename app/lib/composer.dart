@@ -195,6 +195,8 @@ class _ComposerState extends State<Composer> {
   /// Add files or photos: the open panel (the phone's picker), then what
   /// was picked into the box.
   Future<void> _attach() async {
+    if (_picking) return; // one panel at a time
+    _picking = true;
     try {
       final picked = await pickFiles();
       if (picked.isEmpty || !mounted) return;
@@ -202,8 +204,13 @@ class _ComposerState extends State<Composer> {
       if (mounted) _focus.requestFocus();
     } on Object catch (e) {
       if (mounted) showError(context, e);
+    } finally {
+      _picking = false;
     }
   }
+
+  /// The open panel is open ([_attach]).
+  bool _picking = false;
 
   /// Waits for [attaching], saying what it didn't attach and why.
   Future<void> _attached(Future<String> attaching) async {
