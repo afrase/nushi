@@ -1,12 +1,15 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/code_run_view.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
+import 'package:nushi/composer_plus.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
@@ -14,7 +17,6 @@ import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plan_view.dart';
@@ -29,8 +31,9 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:nushi/worktree.dart';
 
-/// The composer: "+" on its left mentions a file or attaches images
-/// (⌘V and dropping work too), and on its right a send button once there
+/// The composer: "+" on its left attaches files or photos (⌘U; ⌘V and
+/// dropping work too: [attachFiles]), mentions a file or offers the
+/// commands ([PlusMenu]), and on its right a send button once there
 /// is something to send, or a stop button while a turn runs. Reply cards
 /// and attached images show above the text; the replies go first in the
 /// message. Under it, the agent's pickers. Enter sends (⌘⏎ stops and sends
@@ -81,6 +84,7 @@ class _ComposerState extends State<Composer> {
   void initState() {
     super.initState();
     _images.addListener(_imagesChanged);
+    _draft.files.addListener(_imagesChanged);
     _draft.outputs.addListener(_imagesChanged);
     _draft.replies.addListener(_repliesChanged);
     _replyCount = _draft.replies.value.length;
@@ -107,6 +111,7 @@ class _ComposerState extends State<Composer> {
   @override
   void dispose() {
     _images.removeListener(_imagesChanged);
+    _draft.files.removeListener(_imagesChanged);
     _draft.outputs.removeListener(_imagesChanged);
     _draft.toSubagent.removeListener(_imagesChanged);
     _draft.replies.removeListener(_repliesChanged);
@@ -167,12 +172,13 @@ class _ComposerState extends State<Composer> {
     final meta = HardwareKeyboard.instance.isMetaPressed;
     final enter = enterKey(e, _text, () => unawaited(_send(now: meta)));
     if (enter == KeyEventResult.handled) return enter;
-    if (key == LogicalKeyboardKey.keyV &&
-        HardwareKeyboard.instance.isMetaPressed &&
-        widget.chat.canImages) {
-      unawaited(
-        tryOrShow(context, _images.paste),
-      ); // text, if any, pastes as usual
+    if (attachKey.accepts(e, HardwareKeyboard.instance)) {
+      unawaited(_attach());
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.keyV && meta && !kIsWeb) {
+      // Text, if any, pastes as usual.
+      unawaited(_attached(pasteFiles(widget.chat, api: _api)));
     }
     if (key == LogicalKeyboardKey.arrowUp && _text.text.isEmpty) {
       final last = widget.chat.items.lastWhere(
@@ -185,12 +191,51 @@ class _ComposerState extends State<Composer> {
     return KeyEventResult.ignored;
   }
 
+  int get _api => widget.daemon.daemonApi;
+
+  /// Add files or photos: the open panel (the phone's picker), then what
+  /// was picked into the box.
+  Future<void> _attach() async {
+    try {
+      final picked = await pickFiles();
+      if (picked.isEmpty || !mounted) return;
+      await _attached(attachFiles(widget.chat, picked, api: _api));
+      if (mounted) _focus.requestFocus();
+    } on Object catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
+  /// Waits for [attaching], saying what it didn't attach and why.
+  Future<void> _attached(Future<String> attaching) async {
+    try {
+      final refused = await attaching;
+      if (refused.isNotEmpty && mounted) {
+        showError(context, 'Not attached: $refused');
+      }
+    } on Object catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
   /// Puts a message back in the box, after what is there: its replies as
-  /// cards, its text, its file mentions and images.
+  /// cards, its text, its files (those its text mentions as @mentions, the
+  /// others as file cards) and images.
   void _restore(String message, List<String> files, List<ImageData> images) {
     final (replies, text) = splitReplies(message);
     _draft.replies.value = [..._draft.replies.value, ...replies];
-    _mentions.addAll(files);
+    final folder = widget.chat.folder;
+    for (final f in files) {
+      if (text.contains('@$f')) {
+        _mentions.add(f);
+      } else {
+        final path = f.startsWith('/') ? f : '$folder/$f';
+        final card = AttachedFile.at(path);
+        if (!_draft.files.value.contains(card)) {
+          _draft.files.value = [..._draft.files.value, card];
+        }
+      }
+    }
     _images.value = [..._images.value, ...images];
     final before = _text.text.trim();
     final all = [if (before.isNotEmpty) before, if (text.isNotEmpty) text];
@@ -280,23 +325,32 @@ class _ComposerState extends State<Composer> {
       await copyMessage(context, widget.chat, n);
       return;
     }
-    await _images.ready(); // an image pasted a moment ago goes with it
+    // What was pasted or dropped a moment ago goes with it.
+    await _images.ready();
     final text = _text.text.trim();
     final images = _images.value;
+    final attached = _draft.files.value;
     final replies = _draft.replies.value;
     final outputs = _draft.outputs.value;
     final mentions = {..._mentions};
     final toSubagent = _draft.toSubagent.value;
     final busy = widget.chat.busy;
-    if (text.isEmpty && images.isEmpty && replies.isEmpty && outputs.isEmpty) {
+    if (text.isEmpty &&
+        images.isEmpty &&
+        attached.isEmpty &&
+        replies.isEmpty &&
+        outputs.isEmpty) {
       return;
     }
+    final (paths, uploads) = sendable(attached, widget.chat.folder);
     final files = [
       for (final f in _mentions)
         if (text.contains('@$f')) f,
+      ...paths.where((p) => !text.contains('@$p')),
     ];
     _text.clear();
     _images.clear();
+    _draft.files.value = const [];
     _draft.replies.value = const [];
     _draft.outputs.value = const [];
     _draft.toSubagent.value = null;
@@ -307,7 +361,7 @@ class _ComposerState extends State<Composer> {
     // To an idle chat it shows in the transcript at once, faint until the
     // daemon's echo; not a queued one (a pill) nor one for a subagent.
     final shown = !busy && toSubagent == null && !chat.asleep
-        ? chat.send(message, images)
+        ? chat.send(message, images, files: files) // uploads once saved
         : null;
     try {
       final r = await widget.daemon.sendPrompt(
@@ -316,6 +370,7 @@ class _ComposerState extends State<Composer> {
           text: message,
           files: files,
           images: images,
+          uploads: uploads,
           queue: busy,
           now: now && widget.chat.started != null,
           toSubagent: toSubagent?.$1,
@@ -333,6 +388,10 @@ class _ComposerState extends State<Composer> {
       final since = _text.text.trim();
       _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
       _images.value = [...images, ..._images.value];
+      _draft.files.value = [
+        ...attached,
+        ..._draft.files.value.where((f) => !attached.contains(f)),
+      ];
       _draft.replies.value = [...replies, ..._draft.replies.value];
       _draft.outputs.value = [
         ...outputs.where(
@@ -359,6 +418,7 @@ class _ComposerState extends State<Composer> {
         !_locked &&
         (_text.text.trim().isNotEmpty ||
             _images.value.isNotEmpty ||
+            _draft.files.value.isNotEmpty ||
             _draft.replies.value.isNotEmpty ||
             _draft.outputs.value.isNotEmpty);
     return ChatColumn(
@@ -433,6 +493,7 @@ class _ComposerState extends State<Composer> {
                   GrowLine(
                     child:
                         _images.value.isEmpty &&
+                            _draft.files.value.isEmpty &&
                             _draft.replies.value.isEmpty &&
                             _draft.outputs.value.isEmpty &&
                             _draft.toSubagent.value == null
@@ -466,6 +527,15 @@ class _ComposerState extends State<Composer> {
                                       ),
                                     ],
                                   ),
+                                for (final f in _draft.files.value)
+                                  FileCard(
+                                    f,
+                                    onRemove: () => _draft.files.value = [
+                                      ..._draft.files.value.where(
+                                        (n) => n != f,
+                                      ),
+                                    ],
+                                  ),
                                 Thumbnails(
                                   _images.value,
                                   onRemove: _images.removeAt,
@@ -476,32 +546,21 @@ class _ComposerState extends State<Composer> {
                   ),
                   Row(
                     children: [
-                      Menu(
-                        above: true,
-                        entries: [
-                          MenuEntry(
-                            'Mention a file',
-                            onPick: () {
-                              _completions.mention();
-                              _focus.requestFocus();
-                            },
-                          ),
-                          MenuEntry(
-                            'Image…',
-                            onPick: chat.canImages
-                                ? () => tryOrShow(context, _images.pick)
-                                : null,
-                            tooltip: chat.canImages
-                                ? ''
-                                : '${chat.agentName} doesn’t take images '
-                                      'in this chat',
-                          ),
-                        ],
-                        builder: (context, open) => boxButton(
-                          'Add a file or image',
-                          _locked ? () {} : open,
-                          Icon(Icons.add, size: 18, color: t.textSecondary),
-                        ),
+                      PlusMenu(
+                        chat: chat,
+                        api: _api,
+                        locked: _locked,
+                        onAttach: () => unawaited(_attach()),
+                        onMention: () {
+                          _completions.mention();
+                          _focus.requestFocus();
+                        },
+                        // The focus first: taking it puts the cursor at the
+                        // end, and the commands want it after the slash.
+                        onSlash: () {
+                          _focus.requestFocus();
+                          _completions.slash();
+                        },
                       ),
                       Expanded(
                         child: SpellArea(

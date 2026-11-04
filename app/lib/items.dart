@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/attached_files.dart';
 
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
@@ -107,6 +108,7 @@ class ItemView extends StatelessWidget {
                     if (item.toSubagentName.isNotEmpty)
                       _ToSubagentMark(item, chat),
                     if (item.images.isNotEmpty) Thumbnails(item.images),
+                    ?messageFiles(context, item, chat),
                     if (item.text.isNotEmpty) UserMessageText(item.text),
                   ],
                 ),
@@ -319,6 +321,7 @@ class ItemView extends StatelessWidget {
               children: [
                 if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
                 if (item.images.isNotEmpty) Thumbnails(item.images),
+                ?messageFiles(context, item, chat),
                 if (item.text.isNotEmpty) UserMessageText(item.text),
               ],
             ),

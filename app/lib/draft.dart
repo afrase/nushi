@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:nushi/attached_files.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show ImageData;
 import 'package:nushi/images.dart';
 import 'package:nushi/replies.dart';
@@ -6,7 +7,8 @@ import 'package:nushi/run_text.dart';
 import 'package:nushi/spell_check.dart';
 
 /// What the user is writing to a chat: the box's text, the files mentioned
-/// with @, the reply cards and the images, and the boxes for messages to
+/// with @, the reply cards, the images and the attached files, and the
+/// boxes for messages to
 /// its subagents. It lives on the chat, not in the view, so switching
 /// chats, a peek at Changes or the MCP servers, or a lost connection don't
 /// lose it; `Drafts` keeps it on disk too. It notifies on any change.
@@ -17,6 +19,7 @@ class Draft extends ChangeNotifier {
       replies,
       outputs,
       images,
+      files,
       quote,
       toSubagent,
     ]) {
@@ -28,6 +31,10 @@ class Draft extends ChangeNotifier {
   final mentions = <String>{};
   final Replies replies = ValueNotifier(const []);
   final images = Attachments();
+
+  /// The files attached as file cards (ADR 0089); [images] counts their
+  /// reads too ([Attachments.track]).
+  final files = ValueNotifier<List<AttachedFile>>(const []);
 
   /// Adds [r] as a card, unless it's there already (the same comment,
   /// thread or check sent twice); whether it was added.
@@ -60,6 +67,7 @@ class Draft extends ChangeNotifier {
       text.text.trim().isEmpty &&
       replies.value.isEmpty &&
       images.value.isEmpty &&
+      files.value.isEmpty &&
       quote.value == null &&
       _subagents.values.every((c) => c.text.trim().isEmpty);
 
@@ -91,6 +99,10 @@ class Draft extends ChangeNotifier {
       if (!textOnly) ...{
         if (mentions.isNotEmpty) 'mentions': [...mentions],
         if (images.isNotEmpty) 'images': images,
+        // A Mac's files by their paths; the phone's bytes aren't kept.
+        if (files.value.where((f) => f.data == null) case final kept
+            when kept.isNotEmpty)
+          'files': [for (final f in kept) f.path],
         'quote': ?quote.value,
         // Under `relay`, its older name, so drafts on disk still load.
         if (toSubagent.value case (final call, final agent)?)
@@ -130,6 +142,11 @@ class Draft extends ChangeNotifier {
     }
     if (j['images'] case final List<Object?> names when image != null) {
       images.value = [for (final n in names.whereType<String>()) ?image(n)];
+    }
+    if (j['files'] case final List<Object?> paths) {
+      files.value = [
+        for (final p in paths.whereType<String>()) AttachedFile.at(p),
+      ];
     }
     if (j['quote'] case final String q) quote.value = q;
     if (j['relay'] case [final String call, final String agent]) {

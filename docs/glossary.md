@@ -16,7 +16,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Session** | The agent's own record of a conversation, which it keeps and resumes. A chat is on one at a time; a move or a rewind starts another. | `SessionID`, `AgentSession`, ACP `session/*` | 0008 |
 | **Session started elsewhere** | A session begun in a terminal, opened as a chat from New chat's Sessions →. | `ListAgentSessions`, `OpenAgentSession`, `FoundSession` | 0035 |
 | **Turn** | One message and everything the agent does for it, until it ends. Stop (Esc) ends it. | `ChatStatus.busy`, `CancelTurn` | 0044 |
-| **Message** | What you send: text, mentioned files, images. | `model.Message`, `SendPrompt`, `UserMessage` | |
+| **Message** | What you send: text, mentioned and attached files, images. | `model.Message`, `SendPrompt`, `UserMessage` | |
 | **Prompt** | ACP's word for a message to the agent. The UI says message, and prompt only in "permission prompt". | `SendPrompt` | |
 | **Item** | One entry of the transcript: a message, thought, tool call, permission prompt, question, plan or notice. Code only; prose says entry or names the kind. | `model.Item`, `ItemKind` | 0026 |
 | **Tool call** | The agent's use of a tool (read, edit, run…), shown as a **tool row**. | `ToolCall` item, `ToolCallView` | |
@@ -81,7 +81,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Tabs** | Chat, Changes, Pull request (when the chat has one), in the header. | `chat_keys.dart`, `PlainTabs` | 0071 |
 | **Composer** | The message box and its pickers under the transcript. "The box" is its text field. | `Composer` | |
 | **Spell check** | The composer's dotted underline under misspelled words, on the Mac, from macOS's own checker. A click on one, or ⌘; (**Next Typo**), opens its suggestions. The UI calls a flagged word a typo. | `SpellCheck`, `SpellMenu`, `Speller`, `ComposerText`, pref `checkSpelling` | 0083 |
-| **Draft** | What you've written in a chat and not sent: the box's text, mentioned files, reply cards and images, and the subagents' boxes. Kept on disk until sent, so a crash or restart doesn't lose it. A comment box's (GitHub's, Jira's) and your review's inline comments are kept on disk too, by what they answer. | `Draft`, `Drafts`, `drafts.json`, `commentDraft` | 0062, 0027 |
+| **Draft** | What you've written in a chat and not sent: the box's text, mentioned files, file cards, reply cards and images, and the subagents' boxes. Kept on disk until sent, so a crash or restart doesn't lose it. A comment box's (GitHub's, Jira's) and your review's inline comments are kept on disk too, by what they answer. | `Draft`, `Drafts`, `drafts.json`, `commentDraft` | 0062, 0027 |
 | **Reply card** | A quote put into the box to send with your message: a review thread, a comment, a failed check. | `ReplyCards`, `QuoteBlock` | 0059 |
 | **Side pane** | What opens beside the transcript: the Files pane, a subagent's pane, or the preview of an artifact. A side chat opens beside it, apart. | `beside.dart` (`Beside`, `SidePane`), `panes.dart`, `SubagentPane`, `PreviewPane` | |
 | **Details panel** | The right column, made of widgets. Show details, Hide details. | `details_panel.dart` | |
@@ -95,6 +95,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Commit box** | Under Uncommitted's files: what's staged, the message, Commit. | `CommitBox`, `StageCheck`, `StageFiles`, `CommitStaged` | 0079 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
 | **Run** (a code block's) | ▷ on an agent's shell block: the block typed into the chat's terminal, its newest output under the block, its exit once it ends. | `CodeRuns`, `CodeRun`, `RunnableBlock`, `ShellMarks` | 0084 |
+| **File card** | A file attached to the message being written, in the box: its kind, name and size. Sent as a link to the file; the phone's go whole. In a sent message, a **file chip**. | `AttachedFile`, `FileCard`, `FileChip`, `Draft.files`, `SendPromptRequest.uploads` | 0089 |
 | **Output card** | A run's output in the box, sent after your next message's text: only from a run that ended on its own. | `OutputCard`, `Draft.outputs`, `RunOutput`, `withOutputs` | 0084 |
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |

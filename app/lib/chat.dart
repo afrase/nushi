@@ -311,12 +311,17 @@ class ChatState extends ChangeNotifier {
   int _sends = 0;
 
   /// A message on its way: shown in the transcript until its echo.
-  Item send(String text, List<ImageData> images) {
+  Item send(
+    String text,
+    List<ImageData> images, {
+    List<String> files = const [],
+  }) {
     final it = Item(
       id: 'sending ${++_sends}',
       kind: ItemKind.ITEM_KIND_USER_MESSAGE,
       text: text,
       images: images,
+      files: files,
     );
     sending.add(it);
     notifyListeners();

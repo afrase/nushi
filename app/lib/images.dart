@@ -3,13 +3,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-import 'package:pasteboard/pasteboard.dart';
 
 /// The longest side an attached image keeps; larger ones are scaled down
 /// (Claude scales images past about 1,568 pixels down anyway).
@@ -105,40 +103,9 @@ class Attachments extends ValueNotifier<List<ImageData>> {
   Future<void> ready() =>
       _preparing == 0 ? Future.value() : (_idle ??= Completer()).future;
 
-  /// Attaches the image files among [paths].
-  Future<void> addFiles(Iterable<String> paths) => track(() async {
-    for (final p in paths.where(isImageFile)) {
-      await add(await File(p).readAsBytes());
-    }
-  });
-
   void removeAt(int i) => value = [...value]..removeAt(i);
 
   void clear() => value = const [];
-
-  /// Attaches the clipboard's image files, or else its image; false if it
-  /// has neither.
-  Future<bool> paste() => track(() async {
-    final files = (await Pasteboard.files()).where(isImageFile).toList();
-    if (files.isNotEmpty) {
-      await addFiles(files);
-      return true;
-    }
-    final image = await Pasteboard.image;
-    if (image != null) await add(image);
-    return image != null;
-  });
-
-  /// Attaches images picked in an open panel.
-  Future<void> pick() async {
-    final files = await openFiles(
-      acceptedTypeGroups: [
-        const XTypeGroup(label: 'Images', extensions: _imageTypes),
-      ],
-      confirmButtonText: 'Attach',
-    );
-    await addFiles(files.map((f) => f.path));
-  }
 }
 
 /// Shows an image large, over the window; a click or Escape closes it.

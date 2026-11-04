@@ -83,39 +83,46 @@ void main() {
     },
   );
 
-  // The review's proof (2026-11-04): Enter while a file is still being
-  // read, or between two files of one drop, sent too few images.
-  test('ready() waits for an image file still being read', () async {
-    final dir = Directory.systemTemp.createTempSync('attach');
-    addTearDown(() => dir.deleteSync(recursive: true));
-    final a = File('${dir.path}/a.png')
-      ..writeAsBytesSync(List.filled(4 << 20, 1));
-    final b = File('${dir.path}/b.png')
-      ..writeAsBytesSync(List.filled(4 << 20, 2));
+  // The review's proof (2026-11-04): Enter while a file was still being
+  // read, or between two files of one drop, sent too few images. Each way
+  // of attaching (attached_files.dart) reads inside track().
+  test('ready() waits for a read inside track()', () async {
+    final read = Completer<Uint8List>();
     final images = Attachments(
       prepare: (bytes) async => ImageData(mimeType: 'image/png', data: bytes),
     );
-    final adding = images.addFiles([a.path, b.path]);
-    await images.ready(); // what the box's send awaits
-    expect(images.value, hasLength(2));
+    final adding = images.track(
+      () async => await images.add(await read.future),
+    );
+    var ready = false;
+    unawaited(images.ready().then((_) => ready = true));
+    await Future<void>.delayed(Duration.zero);
+    expect(ready, isFalse, reason: 'the read is still going');
+    read.complete(Uint8List(1));
     await adding;
+    await Future<void>.delayed(Duration.zero);
+    expect((ready, images.value.length), (true, 1));
   });
 
   test('ready() between two files of one drop', () async {
-    final dir = Directory.systemTemp.createTempSync('attach');
-    addTearDown(() => dir.deleteSync(recursive: true));
-    final a = File('${dir.path}/a.png')..writeAsBytesSync([1]);
-    final b = File('${dir.path}/b.png')
-      ..writeAsBytesSync(List.filled(4 << 20, 2));
+    final second = Completer<Uint8List>();
     final images = Attachments(
       prepare: (bytes) async => ImageData(mimeType: 'image/png', data: bytes),
     );
-    final adding = images.addFiles([a.path, b.path]);
+    final adding = images.track(() async {
+      await images.add(Uint8List(1));
+      await images.add(await second.future);
+    });
     while (images.value.isEmpty) {
       await Future<void>.delayed(Duration.zero); // the first shows: Enter
     }
-    await images.ready();
-    expect(images.value, hasLength(2));
+    var ready = false;
+    unawaited(images.ready().then((_) => ready = true));
+    await Future<void>.delayed(Duration.zero);
+    expect(ready, isFalse);
+    second.complete(Uint8List(2));
     await adding;
+    await Future<void>.delayed(Duration.zero);
+    expect((ready, images.value.length), (true, 2));
   });
 }

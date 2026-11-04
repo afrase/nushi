@@ -104,6 +104,19 @@ class Completions extends ChangeNotifier {
     );
   }
 
+  /// Offers the chat's commands, as `/` typed at the start would: a `/`
+  /// before what's written (none when there is one), the cursor after it.
+  void slash() {
+    final has = text.text.startsWith('/');
+    _dismissed = '';
+    text.value = TextEditingValue(
+      text: has ? text.text : '/${text.text}',
+      selection: TextSelection.collapsed(
+        offset: has ? text.text.indexOf(RegExp(r'\s|$')) : 1,
+      ),
+    );
+  }
+
   void accept(Choice c) {
     final (start, end) = _token!;
     final next = text.text.replaceRange(start, end, c.insert);

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
+import 'package:nushi/composer_plus.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/rewind.dart';
@@ -169,7 +170,7 @@ void main() {
       expect(b.text, isEmpty);
       expect(b.sent, isEmpty);
 
-      await tester.tap(find.byTooltip('Add a file or image'));
+      await tester.tap(find.byTooltip(plusTooltip));
       await tester.pump();
       expect(find.text('Mention a file'), findsNothing);
 

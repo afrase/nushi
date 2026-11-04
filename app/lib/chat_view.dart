@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/attached_files.dart';
 import 'package:nushi/background_commands.dart';
 import 'package:nushi/beside.dart';
 import 'package:nushi/chat.dart';
@@ -16,7 +17,6 @@ import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/images.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
@@ -72,20 +72,24 @@ class _ChatViewState extends State<ChatView> {
   Future<void> _ask(String selection) =>
       askAside(context, widget.daemon, widget.chat, selection);
 
-  /// Attaches the images dropped on the chat.
+  /// Attaches the files dropped on the chat ([attachFiles]): images as
+  /// images when the agent takes them, the rest as file cards.
   Future<void> _drop(DropDoneDetails d) async {
     setState(() => _dragging = false);
-    final paths = d.files.map((f) => f.path).where(isImageFile).toList();
     final locked = widget.chat.rewinding.value; // nothing joins the box
-    if (paths.isEmpty || widget.chat.archived || locked) return;
-    if (!widget.chat.canImages) {
-      showError(
-        context,
-        '${widget.chat.agentName} doesn’t take images in this chat',
+    if (d.files.isEmpty || widget.chat.archived || locked) return;
+    try {
+      final refused = await attachFiles(
+        widget.chat,
+        d.files,
+        api: widget.daemon.daemonApi,
       );
-      return;
+      if (refused.isNotEmpty && mounted) {
+        showError(context, 'Not attached: $refused');
+      }
+    } on Object catch (e) {
+      if (mounted) showError(context, e);
     }
-    await tryOrShow(context, () => widget.chat.draft.images.addFiles(paths));
   }
 
   @override

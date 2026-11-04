@@ -1,8 +1,13 @@
+import 'dart:math';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 /// The few icons drawn as light strokes, where Material's glyphs are too heavy
-/// beside the chat header's words (ADR 0072). Each is geometry on a 24 box, so
-/// it's sharp at any size and needs no font. Everywhere else stays Material.
+/// beside the chat header's words (ADR 0072) and in the composer's + menu,
+/// whose rows Claude's app draws the same way. Each is geometry on a 24 box,
+/// so it's sharp at any size and needs no font. Everywhere else stays
+/// Material.
 enum LineIcon {
   /// The terminal's panel: a prompt in the box.
   terminal,
@@ -23,7 +28,19 @@ enum LineIcon {
   more,
 
   /// Arrange (the sidebar's grouping and sort): three lines, each shorter.
-  arrange;
+  arrange,
+
+  /// Add: the composer's +.
+  plus,
+
+  /// Add files or photos: a paper clip, leaning right.
+  paperclip,
+
+  /// Mention a file: an @.
+  at,
+
+  /// Slash commands: a slash in the box.
+  slashBox;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -86,7 +103,57 @@ enum LineIcon {
         ..addOval(_dot(6))
         ..addOval(_dot(12))
         ..addOval(_dot(18)),
+    plus =>
+      Path()
+        ..moveTo(12, 5)
+        ..lineTo(12, 19)
+        ..moveTo(5, 12)
+        ..lineTo(19, 12),
+    // Upright, three bends in one wire, then turned 45° about the middle.
+    paperclip =>
+      (Path()
+            ..moveTo(13.5, 8.5)
+            ..lineTo(13.5, 16)
+            ..arcToPoint(const Offset(10.5, 16), radius: _r(1.5))
+            ..lineTo(10.5, 6)
+            ..arcToPoint(const Offset(15.5, 6), radius: _r(2.5))
+            ..lineTo(15.5, 17)
+            ..arcToPoint(const Offset(8.5, 17), radius: _r(3.5))
+            ..lineTo(8.5, 9))
+          .transform(_turn(pi / 4)),
+    at =>
+      Path()
+        ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 3.5))
+        ..moveTo(15.5, 8.5)
+        ..lineTo(15.5, 13.5)
+        ..arcToPoint(
+          const Offset(20.5, 13.5),
+          radius: _r(2.5),
+          clockwise: false,
+        )
+        ..lineTo(20.5, 12)
+        ..arcToPoint(
+          Offset(12 + 8.5 * cos(0.7), 12 + 8.5 * sin(0.7)),
+          radius: _r(8.5),
+          largeArc: true,
+          clockwise: false,
+        ),
+    slashBox =>
+      Path()
+        ..addRRect(_box)
+        ..moveTo(14.5, 7.5)
+        ..lineTo(9.5, 16.5),
   };
+
+  static Radius _r(double r) => Radius.circular(r);
+
+  /// A turn of [angle] clockwise about the box's middle.
+  static Float64List _turn(double angle) =>
+      (Matrix4.identity()
+            ..translateByDouble(12, 12, 0, 1)
+            ..rotateZ(angle)
+            ..translateByDouble(-12, -12, 0, 1))
+          .storage;
 
   /// A dot at [x], closed up by the stroke.
   static Rect _dot(double x) =>
