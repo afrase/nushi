@@ -12,8 +12,6 @@ import (
 // The writes are GraphQL mutations, each one request (GitHub counts five
 // points of its secondary limit for one), a second apart.
 
-const saidFields = `{ id url author { login __typename } authorAssociation body createdAt }`
-
 const replyMutation = `mutation Reply($thread: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $thread, body: $body}) { comment ` + saidFields + ` }
 }`

@@ -14,7 +14,7 @@ const threadFields = `
 fragment Thread on PullRequestReviewThread {
   id path line startLine originalLine originalStartLine diffSide subjectType
   isOutdated isResolved viewerCanReply viewerCanResolve viewerCanUnresolve
-  comments(first: 50) { nodes { id url author { login __typename } authorAssociation body createdAt } }
+  comments(first: 50) { nodes ` + saidFields + ` }
 }`
 
 const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: Int!) {
@@ -28,7 +28,7 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
       commitCount: commits { totalCount }
       reviewRequests(first: 30) { nodes { asCodeOwner requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
       latestReviews(first: 30) { nodes { author { login } state } }
-      comments(last: 100) { nodes { id url author { login __typename } authorAssociation body createdAt } }
+      comments(last: 100) { nodes ` + saidFields + ` }
       reviews(last: 100) { nodes { id url author { login __typename } authorAssociation body state submittedAt commit { oid } } }
       pending: reviews(first: 1, states: PENDING) { nodes { id comments { totalCount } } }
       threads: reviewThreads(first: 100) { pageInfo { hasNextPage endCursor } nodes { ...Thread } }
@@ -50,6 +50,10 @@ const threadsQuery = `query Threads($id: ID!, $after: String!) {
   } }
 }` + threadFields
 
+// saidFields is what a query asks of a comment (a review's are written out: no createdAt).
+const saidFields = `{ id url author { login __typename } authorAssociation body createdAt }`
+
+// said decodes a comment (saidFields), or a review.
 type said struct {
 	ID                string    `json:"id"`
 	URL               string    `json:"url"`
@@ -325,7 +329,7 @@ const issueQuery = `query Issue($owner: String!, $name: String!, $number: Int!) 
       __typename ...IssueRow body authorAssociation
       labels(first: 20) { nodes { name } }
       assignees(first: 10) { nodes { login } }
-      comments(last: 100) { nodes { id url author { login __typename } authorAssociation body createdAt } }
+      comments(last: 100) { nodes ` + saidFields + ` }
     }
   }
 }` + issueRow
