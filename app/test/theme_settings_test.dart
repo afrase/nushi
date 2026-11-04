@@ -115,7 +115,7 @@ void main() {
     expect(mac.platform, TargetPlatform.macOS);
   });
 
-  testWidgets("a theme file saved as it was tells no one; one that changed "
+  testWidgets('a theme file saved as it was tells no one; one that changed '
       'does', (tester) async {
     final file = _file('Harbor.json', '{"from": "nord"}');
     themeFiles.load();
