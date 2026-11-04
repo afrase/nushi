@@ -71,6 +71,7 @@ class Tokens {
     required this.userBandCodeBlock,
     required this.agentText,
     required this.inlineCode,
+    required this.inlineCodeText,
     required this.codeBlock,
     required this.toolTint,
     required this.toolBorder,
@@ -164,7 +165,16 @@ class Tokens {
   final Color userBandCode;
   final Color userBandCodeBlock;
   final Color agentText;
+
+  // Inline code, in the agent's text, the user's band, a finding and the
+  // composer, orange as Slack draws it: [inlineCodeText] on its chip,
+  // [inlineCode] (or [userBandCode] in the band), a tint of the ink.
+  // AA on every fill it sits on (`code_ink_test`): light 4.61 at worst, on
+  // the findings card under the pointer, 4.65 on raised hovered or
+  // selected, 4.71 in the band, 5.50 on base; dark 4.63 on raised hovered,
+  // 4.81 selected, 5.21 in the band, 6.44 on base.
   final Color inlineCode;
+  final Color inlineCodeText;
   final Color codeBlock;
   final Color toolTint;
   final Color toolBorder;
@@ -256,10 +266,11 @@ class Tokens {
     userBandBorder: Color(0xFFB8CCF4),
     userBandText: Color(0xFF142A5C),
     userBandMuted: Color(0xFF3A5594),
-    userBandCode: Color(0x14142A5C),
+    userBandCode: Color(0x1A9A4700),
     userBandCodeBlock: Color(0xFFF5F8FE),
     agentText: Color(0xFF1E1F22),
-    inlineCode: Color(0x121E1F22),
+    inlineCode: Color(0x1A9A4700),
+    inlineCodeText: Color(0xFF9A4700),
     codeBlock: Color(0xFFF7F8FA),
     toolTint: Color(0xFFEAF6F4),
     toolBorder: Color(0xFFBFE0DA),
@@ -344,10 +355,11 @@ class Tokens {
     userBandBorder: Color(0xFF34497A),
     userBandText: Color(0xFFE8EEFB),
     userBandMuted: Color(0xFF9DB8F5),
-    userBandCode: Color(0x14E8EEFB),
+    userBandCode: Color(0x1FF2A65A),
     userBandCodeBlock: Color(0xFF1A2338),
     agentText: Color(0xFFDFE1E5),
-    inlineCode: Color(0x12DFE1E5),
+    inlineCode: Color(0x1FF2A65A),
+    inlineCodeText: Color(0xFFF2A65A),
     codeBlock: Color(0xFF2B2D30),
     toolTint: Color(0xFF1E2D2B),
     toolBorder: Color(0xFF2F4A47),

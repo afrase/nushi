@@ -62,8 +62,8 @@ void main() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    spellTest('inline code in the box is in the code font on its tint, '
-        'backticks muted, $name', (tester) async {
+    spellTest('inline code in the box is in the code font, in its ink on '
+        'its chip, backticks muted, $name', (tester) async {
       await spellBox(
         tester,
         FakeSpeller({}),
@@ -73,7 +73,7 @@ void main() {
       expect(_inFont(tester, NushiTheme.codeFont), ['`', 'make check', '`']);
       final body = _styleOf(tester, 'make check')!;
       expect(body.backgroundColor, tokens.inlineCode);
-      expect(body.color, isNull, reason: "the box's text color");
+      expect(body.color, tokens.inlineCodeText);
       expect(_styleOf(tester, '`')!.color, tokens.textMuted);
       expect(_styleOf(tester, ' now')?.fontFamily, isNull);
     });

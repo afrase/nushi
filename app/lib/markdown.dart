@@ -86,6 +86,7 @@ class AgentMarkdown extends StatelessWidget {
       code: theme.code(typed ? t.userBandText : t.agentText, size: 12.5),
       codeBackground: typed ? t.userBandCodeBlock : t.codeBlock,
       inlineCode: typed ? t.userBandCode : t.inlineCode,
+      inlineCodeColor: t.inlineCodeText,
       border: typed ? t.userBandBorder : t.borderSubtle,
       muted: typed ? t.userBandMuted : t.textMuted,
       link: t.link,

@@ -45,11 +45,12 @@ List<CodeRun> codeRuns(String text) {
 typedef SpanPaint = (int start, int end, TextStyle style);
 
 /// [code] painted as code in [base]'s place: the code font a size down, as
-/// the transcript's inline code is, on its tint, with the backticks muted;
-/// a block's lines without the tint, its fence lines muted. Only the font
-/// and its colors change: the box's line height is fixed by its strut (a
-/// `TextField`'s default), so a line of code is as tall as one of prose and
-/// the caret, the selection and the box's height are where they'd be.
+/// the transcript's inline code is, in its ink on its chip, with the
+/// backticks muted; a block's lines without the chip, its fence lines
+/// muted. Only the font and its colors change: the box's line height is
+/// fixed by its strut (a `TextField`'s default), so a line of code is as
+/// tall as one of prose and the caret, the selection and the box's height
+/// are where they'd be.
 List<SpanPaint> codePaints(
   List<CodeRun> code,
   TextStyle base,
@@ -64,7 +65,10 @@ List<SpanPaint> codePaints(
       FontFeature.disable('calt'),
     ],
   );
-  final inline = mono.copyWith(backgroundColor: t.inlineCode);
+  final inline = mono.copyWith(
+    color: t.inlineCodeText,
+    backgroundColor: t.inlineCode,
+  );
   final marker = inline.copyWith(color: t.textMuted);
   final fence = mono.copyWith(color: t.textMuted);
   return [

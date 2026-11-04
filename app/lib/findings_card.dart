@@ -280,7 +280,7 @@ class _FindingsCardState extends State<FindingsCard> {
   List<InlineSpan> _withCode(String text, TextStyle body) {
     final theme = NushiTheme.of(context);
     final code = theme
-        .code(theme.t.agentText, size: 12)
+        .code(theme.t.inlineCodeText, size: 12)
         .copyWith(backgroundColor: theme.t.inlineCode);
     final parts = text.split('`');
     return [
