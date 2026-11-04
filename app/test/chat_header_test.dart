@@ -53,6 +53,42 @@ void main() {
     });
   }
 
+  testWidgets('a model the agent doesn’t list shows by its id, as in the '
+      'pickers', (tester) async {
+    final d = await FakeDaemon([]).connect(tester);
+    final chat = ChatState('c', '/Users/me/repo')
+      ..agent = 'claude'
+      ..title = 'Fix the login'
+      ..config = [
+        ConfigOption(
+          id: 'model',
+          category: 'model',
+          current: 'claude-test-preview',
+          values: [ConfigValue(value: 'opus', name: 'Opus 5.5')],
+        ),
+      ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 1200,
+            child: ChatHeader(
+              chat,
+              d,
+              tab: ChatTab.chat,
+              onTab: (_) {},
+              panel: true,
+              onPanel: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('claude-test-preview'), findsOne);
+    d.dispose();
+  });
+
   // At 720 wide, with the sidebar's 260, the header has 460: the least
   // needed parts fold, so ⋯ stays at its end (UX review, finding 6).
   testWidgets('the chat menu stays at the row’s end however narrow', (

@@ -55,7 +55,7 @@ class Pickers extends StatelessWidget {
     }) {
       String? group;
       return [
-        for (final v in values ?? _values(o)) ...[
+        for (final v in values ?? o.shownValues) ...[
           if (v.group.isNotEmpty && v.group != group)
             MenuEntry.heading(group = v.group),
           MenuEntry(
@@ -80,14 +80,14 @@ class Pickers extends StatelessWidget {
     MenuEntry submenu(String name, ConfigOption o, [List<ConfigValue>? vs]) =>
         MenuEntry(
           name,
-          detail: vs == null ? _current(o) : '',
+          detail: vs == null ? o.currentName : '',
           submenu: rows(o, values: vs, tips: o == model),
         );
 
     // Four models: those picked last, the last first, then the agent's
     // first, skipping its "use the default"; the rest (that one included)
     // under More models.
-    final models = model == null ? <ConfigValue>[] : _values(model);
+    final models = model == null ? <ConfigValue>[] : model.shownValues;
     final picked = [
       for (final r in recentModels.value)
         ?models.where((v) => v.value == r && !v.isDefault).firstOrNull,
@@ -109,7 +109,7 @@ class Pickers extends StatelessWidget {
             tooltip: mode.description.isEmpty ? mode.name : mode.description,
             onClose: onClose,
             entries: rows(mode),
-            label: Text(_current(mode), style: value),
+            label: Text(mode.currentName, style: value),
           ),
         if (leading != null) Flexible(child: leading!) else const Spacer(),
         if (leading != null) const SizedBox(width: 12),
@@ -146,10 +146,10 @@ class Pickers extends StatelessWidget {
             label: Text.rich(
               TextSpan(
                 children: [
-                  if (model != null) TextSpan(text: _current(model)),
+                  if (model != null) TextSpan(text: model.currentName),
                   if (effort != null)
                     TextSpan(
-                      text: '${model == null ? '' : '  '}${_current(effort)}',
+                      text: '${model == null ? '' : '  '}${effort.currentName}',
                       style: theme.ui(t.textMuted, size: 12),
                     ),
                 ],
@@ -162,15 +162,21 @@ class Pickers extends StatelessWidget {
   }
 }
 
-/// An option's values; booleans are On and Off.
-List<ConfigValue> _values(ConfigOption o) => o.type == 'boolean'
-    ? [
-        ConfigValue(value: 'true', name: 'On'),
-        ConfigValue(value: 'false', name: 'Off'),
-      ]
-    : o.values;
+/// What an agent's option and its values are called, wherever they show.
+extension ConfigNames on ConfigOption {
+  /// Its values as they're picked; a boolean's are On and Off.
+  List<ConfigValue> get shownValues => type == 'boolean'
+      ? [
+          ConfigValue(value: 'true', name: 'On'),
+          ConfigValue(value: 'false', name: 'Off'),
+        ]
+      : values;
 
-/// The name of an option's current value.
-String _current(ConfigOption o) =>
-    _values(o).where((v) => v.value == o.current).firstOrNull?.name ??
-    o.current;
+  /// [value]'s name, or the value itself when the agent doesn't list it
+  /// (a model id set elsewhere).
+  String nameOf(String value) =>
+      shownValues.where((v) => v.value == value).firstOrNull?.name ?? value;
+
+  /// The current value's name.
+  String get currentName => nameOf(current);
+}

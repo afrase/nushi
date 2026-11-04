@@ -12,6 +12,7 @@ import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/ui.dart';
+import 'package:nushi/pickers.dart' show ConfigNames;
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -100,10 +101,9 @@ class _ChatSheetState extends State<ChatSheet> {
     final chat = widget.chat;
     final d = widget.daemon;
     final model = chat.option('model');
-    final modelName = model?.values
-        .where((v) => v.value == model.current)
-        .firstOrNull
-        ?.name;
+    final modelName = model == null || model.current.isEmpty
+        ? null
+        : model.currentName;
     final (name, parent) = folderParts(chat.folder, scratch: chat.scratch);
     final running = _running;
     Widget info(String label, String value) => Padding(

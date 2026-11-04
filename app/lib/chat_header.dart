@@ -14,6 +14,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/pickers.dart' show ConfigNames;
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
@@ -61,10 +62,9 @@ class ChatHeader extends StatelessWidget {
     final t = theme.t;
     final meta = theme.ui(t.textSecondary, size: 12);
     final model = chat.option('model');
-    final modelName = model?.values
-        .where((v) => v.value == model.current)
-        .firstOrNull
-        ?.name;
+    final modelName = model == null || model.current.isEmpty
+        ? null
+        : model.currentName;
     final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
     // The title and the model (a Codex model id is long) share what the
     // rest of the row leaves (it takes about 455 points, the Pull request

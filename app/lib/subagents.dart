@@ -8,6 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pickers.dart' show ConfigNames;
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
@@ -105,8 +106,7 @@ typedef Setting = ({String name, bool inherited});
   Setting named(String category, String asked) {
     final o = chat.option(category);
     final value = asked.isEmpty ? o?.current ?? '' : asked;
-    final v = o?.values.where((v) => v.value == value).firstOrNull;
-    return (name: v?.name ?? value, inherited: asked.isEmpty);
+    return (name: o?.nameOf(value) ?? value, inherited: asked.isEmpty);
   }
 
   final model = named('model', call.model);
