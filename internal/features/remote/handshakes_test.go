@@ -97,9 +97,17 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 
 // Waits at the relay hold no handshake slot: with more ids given up than
 // MaxConns (one wait each), a phone still connects at the daemon's own id
-// again and again, rather than once and then never.
+// again and again, rather than once and then never. The relay here caps
+// no listeners: the relay's own cap (ListenPerIP, 16 from one address)
+// would refuse some of these MaxConns+5 waits, which is the relay's
+// limit, not the daemon's slots this tests.
 func TestManyOldIDsLeaveTheIDSlots(t *testing.T) {
-	url := startRelay(t)
+	lim := relay.Defaults
+	lim.DialWait = 300 * time.Millisecond
+	lim.ListenPerIP = 0
+	srv := httptest.NewServer(relay.New(lim))
+	t.Cleanup(srv.Close)
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
 	dir := t.TempDir()
 	st := store.New(dir)
 	k, b, c := newKey(t), newKey(t), newKey(t)
