@@ -4,12 +4,12 @@ import 'package:nushi/comment_box.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_check_row.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_thread.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/review_findings.dart';
-import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -96,8 +96,6 @@ class TodoRow extends StatefulWidget {
 
 class _TodoRowState extends State<TodoRow> {
   bool _log = false;
-  String? _tail;
-  String? _error;
   bool _busy = false;
 
   /// The reply box shows: opened, or a reply written there not posted yet.
@@ -107,19 +105,6 @@ class _TodoRowState extends State<TodoRow> {
     ).isNotEmpty,
     _ => false,
   };
-
-  Future<void> _toggleLog(GitHubCheck c) async {
-    setState(() => _log = !_log);
-    if (!_log || _tail != null || c.id == 0) return;
-    try {
-      final r = await widget.daemon.client.getGitHubJobLog(
-        GetGitHubJobLogRequest(ref: widget.pull.item.ref, job: c.id),
-      );
-      if (mounted) setState(() => _tail = failingPart(r.tail));
-    } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
-    }
-  }
 
   Future<void> _resolve(GitHubThread x) async {
     setState(() => _busy = true);
@@ -280,7 +265,7 @@ class _TodoRowState extends State<TodoRow> {
                           : 'The failing part of its log',
                       onTap: c.id == 0
                           ? () => openWeb(c.url)
-                          : () => _toggleLog(c),
+                          : () => setState(() => _log = !_log),
                     ),
                   if (i case ThreadTodo(thread: final x) when x.canReply)
                     GhostButton(
@@ -305,25 +290,16 @@ class _TodoRowState extends State<TodoRow> {
               ),
             ],
           ),
-          if (_log)
+          if (i case CheckTodo(check: final c) when _log && c.id != 0)
             Padding(
               padding: const EdgeInsets.fromLTRB(50, 6, 0, 0),
-              child: _error != null
-                  ? Text(_error!, style: theme.ui(t.crashed, size: 12))
-                  : _tail == null
-                  ? Text('Loading the log…', style: small)
-                  : Container(
-                      constraints: const BoxConstraints(maxHeight: 220),
-                      padding: const EdgeInsets.all(8),
-                      decoration: box(t.borderSubtle, fill: t.codeBlock),
-                      child: SingleChildScrollView(
-                        reverse: true, // the end is what matters
-                        child: SelectableText(
-                          _tail!.isEmpty ? '(an empty log)' : _tail!,
-                          style: theme.code(t.text, size: 11.5),
-                        ),
-                      ),
-                    ),
+              child: JobLog(
+                daemon: widget.daemon,
+                ref: widget.pull.item.ref,
+                check: c,
+                maxHeight: 220,
+                failing: true,
+              ),
             ),
           if (_replying && i is ThreadTodo)
             Padding(

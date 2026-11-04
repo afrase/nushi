@@ -388,4 +388,30 @@ void main() {
     expect(tester.getRect(find.text('To do')).top, lessThan(100));
     d.dispose();
   }, variant: _mac);
+
+  testWidgets("a check's Log that failed to come: closed and opened again, "
+      'asked again, and the error goes', (tester) async {
+    var refuse = true;
+    final (d, fake) = await openPullTab(
+      tester,
+      fixturePull(),
+      more: (input) => input is GetGitHubJobLogRequest && refuse
+          ? throw StateError('down')
+          : null,
+    );
+    await tester.tap(find.text('Log').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Bad state: down'), findsOneWidget);
+    refuse = false;
+    await tester.tap(find.text('Hide log'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bad state: down'), findsNothing);
+    await tester.tap(find.text('Log').first);
+    await tester.pumpAndSettle();
+    // The refused call never reached the fake's calls.
+    expect(fake.calls.whereType<GetGitHubJobLogRequest>(), hasLength(1));
+    expect(find.text('Bad state: down'), findsNothing);
+    expect(find.textContaining('exit code 1'), findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
 }

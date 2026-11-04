@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -50,24 +52,8 @@ class CheckRow extends StatefulWidget {
 
 class _CheckRowState extends State<CheckRow> {
   bool _open = false;
-  String? _log;
-  String? _error;
 
-  Future<void> _toggle() async {
-    setState(() {
-      _open = !_open;
-      _error = null; // asked again below
-    });
-    if (!_open || _log != null || widget.check.id == 0) return;
-    try {
-      final r = await widget.daemon.client.getGitHubJobLog(
-        GetGitHubJobLogRequest(ref: widget.ref, job: widget.check.id),
-      );
-      if (mounted) setState(() => _log = r.tail);
-    } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
-    }
-  }
+  void _toggle() => setState(() => _open = !_open);
 
   @override
   Widget build(BuildContext context) {
@@ -169,30 +155,89 @@ class _CheckRowState extends State<CheckRow> {
                       ),
                     ),
                   ),
-                if (_error case final e?)
-                  Text(e, style: theme.ui(t.crashed, size: 12))
-                else if (c.id != 0 && _log == null)
-                  Text(
-                    'Loading the log…',
-                    style: theme.ui(t.textMuted, size: 12),
-                  )
-                else if (_log case final log?)
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 320),
-                    padding: const EdgeInsets.all(8),
-                    decoration: box(t.borderSubtle, fill: t.codeBlock),
-                    child: SingleChildScrollView(
-                      reverse: true, // the end is what matters
-                      child: SelectableText(
-                        log.isEmpty ? '(an empty log)' : log,
-                        style: theme.code(t.text, size: 11.5),
-                      ),
-                    ),
+                if (c.id != 0)
+                  JobLog(
+                    daemon: widget.daemon,
+                    ref: widget.ref,
+                    check: c,
+                    maxHeight: 320,
                   ),
               ],
             ),
           ),
       ],
     );
+  }
+}
+
+/// The end of [check]'s log (an Actions job's: its id isn't 0), or with
+/// [failing] its failing part ([failingPart]), asked of GitHub when it
+/// first shows (each time it opens: the daemon keeps the tail), in a box
+/// of [maxHeight] at most that shows the end.
+class JobLog extends StatefulWidget {
+  const new({
+    required this.daemon,
+    required this.ref,
+    required this.check,
+    required this.maxHeight,
+    super.key,
+    this.failing = false,
+  });
+
+  final Daemon daemon;
+  final GitHubRef ref;
+  final GitHubCheck check;
+  final double maxHeight;
+  final bool failing;
+
+  @override
+  State<JobLog> createState() => _JobLogState();
+}
+
+class _JobLogState extends State<JobLog> {
+  String? _log;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_fetch());
+  }
+
+  Future<void> _fetch() async {
+    try {
+      final r = await widget.daemon.client.getGitHubJobLog(
+        GetGitHubJobLogRequest(ref: widget.ref, job: widget.check.id),
+      );
+      final log = widget.failing ? failingPart(r.tail) : r.tail;
+      if (mounted) setState(() => _log = log);
+    } on Object catch (e) {
+      if (mounted) setState(() => _error = errorText(e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return switch ((_log, _error)) {
+      (_, final e?) => Text(e, style: theme.ui(t.crashed, size: 12)),
+      (null, _) => Text(
+        'Loading the log…',
+        style: theme.ui(t.textMuted, size: 12),
+      ),
+      (final log?, _) => Container(
+        constraints: BoxConstraints(maxHeight: widget.maxHeight),
+        padding: const EdgeInsets.all(8),
+        decoration: box(t.borderSubtle, fill: t.codeBlock),
+        child: SingleChildScrollView(
+          reverse: true, // the end is what matters
+          child: SelectableText(
+            log.isEmpty ? '(an empty log)' : log,
+            style: theme.code(t.text, size: 11.5),
+          ),
+        ),
+      ),
+    };
   }
 }
