@@ -634,7 +634,26 @@ type Status struct {
 	// Background is how many subagents and background commands its agent
 	// started still run; a turn can end while they do.
 	Background int
+	// Ended is set only on the status published as a turn ends: how the
+	// chat judged it, for the daemon's own followers (push). Clients
+	// aren't sent it.
+	Ended TurnEnd
 }
+
+// TurnEnd is how a chat judged a turn that just ended.
+type TurnEnd int
+
+const (
+	// NotEnded: the status isn't a turn's end.
+	NotEnded TurnEnd = iota
+	// TurnDone: the agent ended the turn, or it failed; the user may want
+	// to know.
+	TurnDone
+	// TurnStopped: someone stopped the turn, the agent quit mid-turn, or
+	// the chat's agent was being stopped (sleep, archive, move, the daemon
+	// closing): nothing to tell.
+	TurnStopped
+)
 
 // Hold is one thing a daemon's restart waits for: a chat that runs or
 // waits, or (Terminal) a terminal running a command, in a chat.

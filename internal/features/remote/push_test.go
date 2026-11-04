@@ -84,9 +84,11 @@ func pushing(t *testing.T, tune ...func(*timing)) (*Service, *pushes, string, st
 	return s, p, d.ID, dir
 }
 
+// turn is a turn in chat that the agent ended.
 func turn(s *Service, chat string) {
 	s.Follow(model.Event{ChatID: chat, Status: &model.Status{Busy: true, Started: time.Now()}})
 	s.Follow(model.Event{ChatID: chat, Status: &model.Status{Busy: true, Started: time.Now(), Waiting: true}})
+	s.Follow(model.Event{ChatID: chat, Status: &model.Status{Ended: model.TurnDone}})
 	s.Follow(model.Event{ChatID: chat, Status: &model.Status{}})
 }
 
@@ -208,21 +210,25 @@ func TestSubscriptionsOnlyToPushServices(t *testing.T) {
 	}
 }
 
-// A stopped turn, and a turn the agent goes straight on from (the next
-// queued message), aren't "finished".
+// A turn the chat says was stopped (the user stopped it, its agent quit
+// mid-turn, it was being archived), and a turn the agent goes straight on
+// from (the next queued message), aren't "finished"; nor is a status that
+// merely has no turn running.
 func TestNoFinishedForAStopOrAQueue(t *testing.T) {
 	s, p, _, _ := pushing(t)
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
-	s.Follow(model.Event{ChatID: "c1", Item: &model.Item{ID: "n", Kind: model.Notice, Status: "cancelled"}})
+	started := &model.Status{Busy: true, Started: time.Now()}
+	s.Follow(model.Event{ChatID: "c1", Status: started})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnStopped}}) // its agent quit: no notice came
 	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}}) // the queue's next
+	s.Follow(model.Event{ChatID: "c1", Status: started})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
+	s.Follow(model.Event{ChatID: "c1", Status: started}) // the queue's next
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Asleep: true}})
 	time.Sleep(100 * time.Millisecond)
 	if got := p.take(); len(got) != 0 {
 		t.Fatalf("pushed %+v", got)
 	}
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
 	if got := p.settle(t, 1); len(got) != 1 || got[0].Kind != "finished" {
 		t.Fatalf("pushed %+v", got)
 	}

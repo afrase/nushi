@@ -214,13 +214,11 @@ func subjectOf(relay string) string {
 	return "mailto:nushi@users.noreply.github.com"
 }
 
-// notifier turns chats' events into pushes: a turn that ended (unless it
-// was stopped, or the agent went straight on), and each permission prompt
-// or question when it comes.
+// notifier turns chats' events into pushes: a turn the chat says ended
+// done (not stopped, its agent didn't go), unless the agent went straight
+// on, and each permission prompt or question when it comes.
 type notifier struct {
 	mu        sync.Mutex
-	running   map[string]bool            // chats with a turn running
-	cancelled map[string]bool            // chats whose running turn was stopped
 	asked     map[string]map[string]bool // per chat, prompts already pushed
 	finishing map[string]*time.Timer     // turns' ends waiting timing.finished
 	outbox    map[string]*outbox         // per device, the pushes waiting on the one in flight
@@ -248,17 +246,14 @@ func (s *Service) Follow(e model.Event) {
 	n := &s.notes
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	if n.running == nil {
-		n.running, n.cancelled, n.asked = map[string]bool{}, map[string]bool{}, map[string]map[string]bool{}
-		n.finishing, n.outbox = map[string]*time.Timer{}, map[string]*outbox{}
+	if n.asked == nil {
+		n.asked, n.finishing, n.outbox = map[string]map[string]bool{}, map[string]*time.Timer{}, map[string]*outbox{}
 	}
 	chat := e.ChatID
 	if chat == "" {
 		return
 	}
 	if e.Removed {
-		delete(n.running, chat)
-		delete(n.cancelled, chat)
 		delete(n.asked, chat)
 		if t := n.finishing[chat]; t != nil {
 			t.Stop()
@@ -268,17 +263,13 @@ func (s *Service) Follow(e model.Event) {
 	}
 	switch {
 	case e.Status != nil && !e.Status.Started.IsZero():
-		n.running[chat] = true
 		if t := n.finishing[chat]; t != nil { // the agent went on: no "finished"
 			t.Stop()
 			delete(n.finishing, chat)
 		}
-	case e.Status != nil && n.running[chat]:
-		stopped := n.cancelled[chat]
-		delete(n.running, chat)
-		delete(n.cancelled, chat)
+	case e.Status != nil && e.Status.Ended != model.NotEnded:
 		delete(n.asked, chat)
-		if !stopped {
+		if e.Status.Ended == model.TurnDone {
 			var t *time.Timer
 			t = time.AfterFunc(s.timing.finished, func() {
 				n.mu.Lock()
@@ -293,8 +284,6 @@ func (s *Service) Follow(e model.Event) {
 			})
 			n.finishing[chat] = t
 		}
-	case e.Item != nil && e.Item.Kind == model.Notice && e.Item.Status == "cancelled" && n.running[chat]:
-		n.cancelled[chat] = true // someone stopped it: they know
 	case e.Item != nil && (e.Item.Kind == model.Permission || e.Item.Kind == model.Question) && e.Item.Status == "pending":
 		if n.asked[chat] == nil {
 			n.asked[chat] = map[string]bool{}

@@ -34,7 +34,7 @@ On an iPhone with iOS 16.4 or later:
 3. Check that the iPhone's six-digit code is the one the Mac shows, and Allow on the Mac.
 4. Turn on Settings › Notifications, and Allow when iOS asks.
 
-A notification says only what happened ("Claude finished", "Codex needs you", "Claude has a question"); tapping it opens that chat. None comes for the chat you have open.
+A notification says only what happened ("Claude finished", "Codex needs you", "Claude has a question"); tapping it opens that chat. None comes for the chat you have open, nor "finished" for a turn that was stopped or whose agent quit.
 
 Forget this Mac (Settings) forgets the pairing and the device's key on the phone; revoke the device on the Mac too. The web app works the same way in a desktop browser, and Chrome on a Mac gets notifications too.
 

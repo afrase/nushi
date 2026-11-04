@@ -3,9 +3,12 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"sync"
 	"testing"
 	"time"
+
+	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
@@ -145,5 +148,58 @@ func TestATurnUpdatesTheChat(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy })
 	if !updated(c).After(sent) {
 		t.Error("a stopped turn's end didn't update it")
+	}
+}
+
+// The status a turn's end publishes says how the chat judged it, for push
+// to tell the phone only of a turn the agent ended: one the user stopped,
+// or whose agent quit mid-turn, says so.
+func TestATurnsEndSaysHowItEnded(t *testing.T) {
+	var mu sync.Mutex
+	var ends []model.TurnEnd
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{},
+		Viewers: &viewers{shown: map[string]bool{}}, Publish: func(e model.Event) {
+			if e.Status != nil && e.Status.Ended != model.NotEnded {
+				mu.Lock()
+				ends = append(ends, e.Status.Ended)
+				mu.Unlock()
+			}
+		}})
+	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	ended := func(want ...model.TurnEnd) {
+		t.Helper()
+		mu.Lock()
+		defer mu.Unlock()
+		if !slices.Equal(ends, want) {
+			t.Errorf("turns ended %v, want %v", ends, want)
+		}
+	}
+
+	turn(t, svc, c, "one")
+	ended(model.TurnDone)
+
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
+	_, err = svc.Stop(context.Background(), c.id, false)
+	testcheck.NoErr(t, err)
+	eventually(t, c, func() bool { return !c.busy })
+	ended(model.TurnDone, model.TurnStopped)
+
+	testcheck.NoErr(t, svc.Seen(c.id)) // the first turn's mark
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendIdle))
+	eventually(t, c, func() bool { return !c.started.IsZero() })
+	agent.mu.Lock()
+	agent.turnErr = acp.ErrClosed // it crashed mid-turn: no notice, no stop
+	agent.mu.Unlock()
+	agent.quit()
+	agent.release()
+	eventually(t, c, func() bool { return c.started.IsZero() })
+	ended(model.TurnDone, model.TurnStopped, model.TurnStopped)
+	if isDone(c) {
+		t.Error("a turn whose agent quit left the chat done")
 	}
 }

@@ -39,20 +39,34 @@ func (s *Service) Seen(chatID string) error {
 	return nil
 }
 
-// endedLocked notes that the chat's turn ended: the chat updated now, and,
-// with [done], marked done unless a client shows the chat or it was
-// stopped: one the user stopped, or whose agent is being stopped (sleep,
-// archive, the daemon closing), they know of. A side chat isn't stored,
-// nor one being deleted.
-func (c *chat) endedLocked(done bool) {
-	if c.parent != nil || c.halting {
-		return
+// turnEndedLocked says a turn ended, done (the agent ended it, or it
+// failed) or not (stopped, or the agent went). The chat is updated now
+// (what a list sorts by Last updated), and a done turn marks it done
+// unless a client shows it, before the status, so a client has the mark as
+// the turn ends; the status carries the verdict for the daemon's own
+// followers (push), so they needn't guess it from the events. A side chat
+// isn't stored, nor one being deleted.
+func (c *chat) turnEndedLocked(done bool) {
+	st := c.statusLocked()
+	st.Ended = model.TurnStopped
+	if done {
+		st.Ended = model.TurnDone
 	}
-	done = done && !c.stopped && !c.stopping && c.viewers != nil && !c.viewers.Shown(c.id)
-	c.saveLocked(func(s *model.ChatRecord) {
-		s.Updated = time.Now()
-		if done {
-			s.Done = true
-		}
-	})
+	if c.parent == nil && !c.halting {
+		mark := done && c.viewers != nil && !c.viewers.Shown(c.id)
+		c.saveLocked(func(s *model.ChatRecord) {
+			s.Updated = time.Now()
+			if mark {
+				s.Done = true
+			}
+		})
+	}
+	c.emitLocked(model.Event{ChatID: c.id, Status: &st})
+}
+
+// turnStoppedLocked says the running turn was stopped: the user stopped it,
+// or its agent is being stopped (sleep, archive, the daemon closing),
+// which they know of.
+func (c *chat) turnStoppedLocked() bool {
+	return c.stopped || c.stopping || c.halting
 }
