@@ -50,12 +50,7 @@ void forgetPullTabs() => _tabLeft.clear();
 /// with no Start work or chats' links (the chat is the one); its comments
 /// are seen while it shows.
 class GitHubPullPane extends StatefulWidget {
-  const new({
-    required this.daemon,
-    required this.ref,
-    super.key,
-    this.source,
-  });
+  const new({required this.daemon, required this.ref, super.key, this.source});
 
   final Daemon daemon;
   final GitHubRef ref;
@@ -360,7 +355,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     final daemon = widget.daemon;
     final pending = p.pendingComments + reviewDrafts(it.ref).length;
     return [
-      if (!_inChat) StartWork(daemon: daemon, item: it, button: true),
+      if (!_inChat) StartWork(daemon: daemon, item: it),
       Button(
         label: pending > 0 ? 'Review ($pending)…' : 'Review…',
         onPressed: () => submitReview(context, daemon, p, onDone: _refresh),

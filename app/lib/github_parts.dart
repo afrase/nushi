@@ -135,37 +135,21 @@ class ItemAge extends StatelessWidget {
 /// Start work: a menu of folders (those that are clones of the item's
 /// repository first), then the New chat dialog with the item picked.
 class StartWork extends StatelessWidget {
-  const new({
-    required this.daemon,
-    required this.item,
-    super.key,
-    this.menu,
-    this.button = false,
-  });
+  const new({required this.daemon, required this.item, super.key});
 
   final Daemon daemon;
   final GitHubItem item;
-
-  /// Takes the menu's opener, for ⌘⏎.
-  final void Function(OpenMenu open)? menu;
-
-  /// As a button rather than a link.
-  final bool button;
 
   @override
   Widget build(BuildContext context) => Menu(
     digits: true,
     entries: startEntries(context, daemon, item),
-    builder: (context, open) {
-      menu?.call(open);
-      return Button(
-        label: 'Start work',
-        icon: button ? Icons.play_arrow : null,
-        menu: true,
-        tooltip: menu != null ? '⌘⏎' : '',
-        onPressed: open,
-      );
-    },
+    builder: (context, open) => Button(
+      label: 'Start work',
+      icon: Icons.play_arrow,
+      menu: true,
+      onPressed: open,
+    ),
   );
 }
 

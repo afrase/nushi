@@ -140,7 +140,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
             runSpacing: 6,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              StartWork(daemon: widget.daemon, item: it, button: true),
+              StartWork(daemon: widget.daemon, item: it),
               for (final c in chats.take(4))
                 Tap(
                   onTap: () => widget.daemon.select(c.id),
