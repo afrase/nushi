@@ -168,7 +168,7 @@ class _ComposerState extends State<Composer> {
     }
     if (key == LogicalKeyboardKey.keyV && meta && !kIsWeb) {
       // Text, if any, pastes as usual.
-      unawaited(_attached(pasteFiles(widget.chat, api: _api)));
+      unawaited(attached(context, pasteFiles(widget.chat, api: _api)));
     }
     if (key == LogicalKeyboardKey.arrowUp && _text.text.isEmpty) {
       unawaited(_recall());
@@ -201,7 +201,7 @@ class _ComposerState extends State<Composer> {
     try {
       final picked = await pickFiles();
       if (picked.isEmpty || !mounted) return;
-      await _attached(attachFiles(widget.chat, picked, api: _api));
+      await attached(context, attachFiles(widget.chat, picked, api: _api));
       if (mounted) _focus.requestFocus();
     } on Object catch (e) {
       if (mounted) showError(context, e);
@@ -212,18 +212,6 @@ class _ComposerState extends State<Composer> {
 
   /// The open panel is open ([_attach]).
   bool _picking = false;
-
-  /// Waits for [attaching], saying what it didn't attach and why.
-  Future<void> _attached(Future<String> attaching) async {
-    try {
-      final refused = await attaching;
-      if (refused.isNotEmpty && mounted) {
-        showError(context, 'Not attached: $refused');
-      }
-    } on Object catch (e) {
-      if (mounted) showError(context, e);
-    }
-  }
 
   /// Puts a message back in the box, after what is there: its replies as
   /// cards, its text, its files (those its text mentions as @mentions, the

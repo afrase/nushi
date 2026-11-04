@@ -187,6 +187,19 @@ Future<String> attachFiles(
   });
 }
 
+/// Waits for [attaching] ([attachFiles], [pasteFiles]), saying over
+/// [context] what it didn't attach and why.
+Future<void> attached(BuildContext context, Future<String> attaching) async {
+  try {
+    final refused = await attaching;
+    if (refused.isNotEmpty && context.mounted) {
+      showError(context, 'Not attached: $refused');
+    }
+  } on Object catch (e) {
+    if (context.mounted) showError(context, e);
+  }
+}
+
 /// What a phone's [draft] sends already: its files' and photos' bytes.
 int _sent(Draft draft) =>
     draft.files.value.fold(0, (n, f) => n + (f.data?.length ?? 0)) +

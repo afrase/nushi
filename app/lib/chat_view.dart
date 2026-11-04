@@ -78,18 +78,10 @@ class _ChatViewState extends State<ChatView> {
     setState(() => _dragging = false);
     final locked = widget.chat.rewinding.value; // nothing joins the box
     if (d.files.isEmpty || widget.chat.archived || locked) return;
-    try {
-      final refused = await attachFiles(
-        widget.chat,
-        d.files,
-        api: widget.daemon.daemonApi,
-      );
-      if (refused.isNotEmpty && mounted) {
-        showError(context, 'Not attached: $refused');
-      }
-    } on Object catch (e) {
-      if (mounted) showError(context, e);
-    }
+    await attached(
+      context,
+      attachFiles(widget.chat, d.files, api: widget.daemon.daemonApi),
+    );
   }
 
   @override
