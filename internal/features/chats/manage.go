@@ -228,6 +228,7 @@ func (s *Service) dropSides(c *chat) []string {
 	for _, side := range sides {
 		side.mu.Lock()
 		side.agent = nil                                             // what still follows it (a background command) stops
+		side.stopping = true                                         // Nushi stops its turn with the agent: stopped, not failed
 		side.emitLocked(model.Event{ChatID: side.id, Removed: true}) // for the app showing it
 		side.mu.Unlock()
 	}

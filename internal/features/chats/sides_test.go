@@ -230,3 +230,39 @@ func TestASideChatsHoldIsItsChats(t *testing.T) {
 	c.mu.Unlock()
 	agent.release()
 }
+
+// A side chat whose turn runs when Nushi stops its chat's agent (sleep,
+// archive, delete, the daemon closing) had its turn stopped, not failed:
+// the agent it shares went because Nushi stopped it.
+func TestASideChatsTurnStopsWithItsChatsAgent(t *testing.T) {
+	agent := &fakeAgent{}
+	ends := make(chan model.Status, 10)
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{},
+		Publish: func(e model.Event) {
+			if e.Status != nil && e.Status.Ended != model.NotEnded && e.ChatID == "fork1" {
+				ends <- *e.Status
+			}
+		}})
+	ctx := context.Background()
+	id, err := svc.Start(ctx, "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	side, err := svc.Fork(ctx, id)
+	testcheck.NoErr(t, err)
+	sideChat := svc.chats[side]
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), side, model.Message{Text: "aside?"}, SendIdle))
+	eventually(t, sideChat, func() bool { return !sideChat.started.IsZero() })
+	testcheck.NoErr(t, svc.Sleep(id))
+	agent.mu.Lock()
+	agent.turnErr = acp.ErrClosed // its connection ended with the agent
+	agent.mu.Unlock()
+	agent.release()
+	select {
+	case st := <-ends:
+		if st.Ended != model.TurnStopped || st.Failure != "" {
+			t.Errorf("the side chat's turn ended %v (%q), want stopped", st.Ended, st.Failure)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the side chat's turn never ended")
+	}
+}
