@@ -99,13 +99,15 @@ void main() {
     const model = 'claude-opus-5-5[1m]';
     for (final pull in [false, true]) {
       for (final panel in [false, true]) {
-        for (final (agent, failed, background) in [
-          ('claude', false, 0),
-          ('omp', true, 0),
-          ('omp', false, 2), // "in background"
+        for (final (agent, failed, background, jira) in [
+          ('claude', false, 0, ''),
+          ('omp', true, 0, ''),
+          ('omp', false, 2, ''), // "in background"
+          ('claude', false, 0, 'PLATFORM-12345'),
         ]) {
           final chat = ChatState('c', '/Users/me/repo')
             ..agent = agent
+            ..jiraKey = jira
             ..background = background
             ..title = 'Fix the login redirect after the session expires'
             ..reopenFailed =
@@ -119,7 +121,10 @@ void main() {
                 values: [ConfigValue(value: model, name: model)],
               ),
             ];
-          for (var width = 320.0; width <= 1200; width += 10) {
+          // A Jira key never folds: everything else folded, a long one
+          // fits from about 380.
+          final least = jira.isEmpty ? 320.0 : 400.0;
+          for (var width = least; width <= 1200; width += 10) {
             await tester.pumpWidget(
               MaterialApp(
                 theme: const NushiTheme(Tokens.dark).toThemeData(),
@@ -141,7 +146,7 @@ void main() {
                 ),
               ),
             );
-            final why = '$width wide, pull $pull, panel $panel';
+            final why = '$width wide, pull $pull, panel $panel, jira $jira';
             expect(tester.takeException(), isNull, reason: why);
             final menu = tester.getRect(find.byTooltip('Chat menu'));
             expect(menu.right, width - NushiTheme.gutter, reason: why);

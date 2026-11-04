@@ -96,6 +96,15 @@ class ChatHeader extends StatelessWidget {
               (shut && chat.color != null ? _dotRoom : 0);
           final comments = unsentComments(chat.id).isNotEmpty;
           final side = chat.side.value != null && chat.sideHidden.value;
+          // The Jira key, and its gap, as wide as it is.
+          final jira = chat.jiraKey.isEmpty
+              ? 0.0
+              : NushiTheme.barGap +
+                    _textWidth(
+                      context,
+                      chat.jiraKey,
+                      theme.code(t.text, size: 12),
+                    );
           final folds = headerFolds(
             width,
             pull: chat.pull != null,
@@ -103,6 +112,7 @@ class ChatHeader extends StatelessWidget {
             model: modelName != null,
             comments: comments,
             side: side,
+            jira: jira,
           );
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
@@ -373,6 +383,19 @@ class ChatHeader extends StatelessWidget {
     );
   }
 
+  /// How wide [text] sets in [style].
+  static double _textWidth(BuildContext context, String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
   List<(ChatTab, String)> _tabs(ChatState chat) => [
     (ChatTab.chat, 'Chat'),
     switch (unsentComments(chat.id).length) {
@@ -397,8 +420,8 @@ const headerGaps = 82.0;
 /// What of the chat's header folds at a width, the least needed first, the
 /// points that frees of the row's [headerRow] (the model's aren't in it),
 /// what the row takes past [headerRow] (`more`: the Pull request tab, the
-/// unsent comments' count, a hidden side chat's chip), and whether nothing
-/// is near folding, so the row has the bar's gaps.
+/// unsent comments' count, a hidden side chat's chip, the Jira key), and
+/// whether nothing is near folding, so the row has the bar's gaps.
 typedef HeaderFolds = ({
   bool roomy,
   bool model,
@@ -417,7 +440,8 @@ typedef HeaderFolds = ({
 /// room over, so they never make a part fold. [pull]: the chat has the
 /// Pull request tab; [panel]: the details panel can show; [model]: the
 /// header names a model (40 points at least, and its gap); [side]: a
-/// hidden side chat's chip shows.
+/// hidden side chat's chip shows; [jira]: what the chat's Jira key takes,
+/// its gap with it.
 HeaderFolds headerFolds(
   double width, {
   required bool pull,
@@ -425,12 +449,14 @@ HeaderFolds headerFolds(
   bool model = false,
   bool comments = false,
   bool side = false,
+  double jira = 0,
 }) {
   // The Pull request tab is 88 more, the comments' count 14.
   final more =
       (pull ? 88.0 : 0.0) +
       (comments ? 14.0 : 0.0) +
-      (side ? SideChip.width : 0.0);
+      (side ? SideChip.width : 0.0) +
+      jira;
   final need = headerRow + more + 80 + (model ? 50 : 0);
   var saved = 0.0;
   final folds = <String>{};
