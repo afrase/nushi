@@ -237,3 +237,23 @@ class LoadAgain {
     _cancel = null;
   }
 }
+
+extension SendPrompt on Daemon {
+  /// Sends a prompt. One the daemon refused because it's restarting into a
+  /// newer build goes again once the new one answers (a minute at most).
+  Future<SendPromptResponse> sendPrompt(SendPromptRequest r) async {
+    try {
+      return await client.sendPrompt(r);
+    } on connect.ConnectException catch (e) {
+      if (e.code != connect.Code.unavailable ||
+          !refusedFor(e, 'restarting', (m) => m.contains('restarting'))) {
+        rethrow;
+      }
+      final before = daemonBuild;
+      for (var i = 0; i < 300 && !(connected && daemonBuild != before); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      }
+      return await client.sendPrompt(r);
+    }
+  }
+}

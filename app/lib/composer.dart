@@ -12,7 +12,6 @@ import 'package:nushi/composer_parts.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';

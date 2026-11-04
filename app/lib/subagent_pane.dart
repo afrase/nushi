@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/panes.dart';

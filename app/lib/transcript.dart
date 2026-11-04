@@ -11,7 +11,6 @@ import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/daemon_update.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
@@ -29,6 +28,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/transcript_pages.dart';
+import 'package:nushi/turn_retry.dart';
 import 'package:nushi/widgets.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of

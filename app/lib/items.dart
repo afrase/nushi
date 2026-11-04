@@ -5,7 +5,6 @@ import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/daemon_update.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/findings.dart';
@@ -24,6 +23,7 @@ import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/turn_retry.dart';
 import 'package:nushi/widgets.dart';
 
 /// The widest a user message's bubble goes (ADR 0076).

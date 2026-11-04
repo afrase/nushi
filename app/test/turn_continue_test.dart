@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/daemon_update.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
@@ -17,6 +16,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/turn_retry.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
