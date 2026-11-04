@@ -16,6 +16,7 @@ import 'package:nushi/message_pins.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/pins_menu.dart';
 import 'package:nushi/pins_rail.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/contrast.dart';
@@ -571,7 +572,7 @@ void main() {
     viewport(tester, const Size(390, 844), ratio: 2);
     final current = ValueNotifier(30);
     addTearDown(current.dispose);
-    final theme = NushiTheme(Tokens.dark);
+    const theme = NushiTheme(Tokens.dark);
     final taps = <Offset>[];
     final scroll = ScrollController();
     addTearDown(scroll.dispose);
