@@ -237,10 +237,10 @@ class _OlderGroup extends StatelessWidget {
               style: theme.ui(t.textMuted, size: 12),
             ),
           ),
-          GhostButton(
-            'Show the review',
+          Button(
+            label: 'Show the review',
             tooltip: 'Its card in Activity',
-            onTap: onShow,
+            onPressed: onShow,
           ),
         ],
       ),
@@ -291,9 +291,9 @@ class _Next extends StatelessWidget {
     final running = countChecks(p).running;
     final ready = mergeView(p)?.ready ?? false; // as the Merge control says
     final ping = waiting.isNotEmpty && p.item.url.isNotEmpty
-        ? GhostButton(
+        ? LinkText(
             'Ping on GitHub',
-            icon: Icons.open_in_new,
+            size: 12.5,
             tooltip: 'Open the pull request on GitHub, to ask them',
             onTap: () => openWeb(p.item.url),
           )

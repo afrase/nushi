@@ -13,55 +13,6 @@ import 'package:nushi/review_findings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A quiet button: its words, a tint under the pointer.
-class GhostButton extends StatelessWidget {
-  const new(
-    this.label, {
-    required this.onTap,
-    super.key,
-    this.icon,
-    this.tooltip = '',
-  });
-
-  final String label;
-  final VoidCallback? onTap;
-  final IconData? icon;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Pressable(
-      onTap: onTap,
-      tooltip: tooltip,
-      builder: (context, look) => Container(
-        height: controlHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
-        decoration: BoxDecoration(
-          color: look.hover ? t.hover : null,
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        foregroundDecoration: focusRing(t, look),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 4,
-          children: [
-            Text(
-              label,
-              style: theme.ui(
-                look.enabled ? t.textSecondary : t.textMuted,
-                size: 12.5,
-              ),
-            ),
-            if (icon != null) Icon(icon, size: 13, color: t.textMuted),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// One item: its box to pick it, its icon, what and where, its line of
 /// detail and whose it is; Log (a check's failing part), Reply and
 /// Resolve (a thread's), Send.
@@ -258,24 +209,24 @@ class _TodoRowState extends State<TodoRow> {
                 children: [
                   if (i case CheckTodo(check: final c)
                       when c.id != 0 || c.url.isNotEmpty)
-                    GhostButton(
-                      _log ? 'Hide log' : 'Log',
+                    Button(
+                      label: _log ? 'Hide log' : 'Log',
                       tooltip: c.id == 0
                           ? 'Open its page on GitHub'
                           : 'The failing part of its log',
-                      onTap: c.id == 0
+                      onPressed: c.id == 0
                           ? () => openWeb(c.url)
                           : () => setState(() => _log = !_log),
                     ),
                   if (i case ThreadTodo(thread: final x) when x.canReply)
-                    GhostButton(
-                      'Reply',
-                      onTap: () => setState(() => _replying = true),
+                    Button(
+                      label: 'Reply',
+                      onPressed: () => setState(() => _replying = true),
                     ),
                   if (i case ThreadTodo(thread: final x) when x.canResolve)
-                    GhostButton(
-                      'Resolve',
-                      onTap: _busy ? null : () => _resolve(x),
+                    Button(
+                      label: 'Resolve',
+                      onPressed: _busy ? null : () => _resolve(x),
                     ),
                   const SizedBox(width: 4),
                   SendButton(
