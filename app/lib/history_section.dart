@@ -81,12 +81,19 @@ class _HistorySectionState extends State<HistorySection> {
   @override
   void dispose() {
     widget.daemon.removeListener(_daemonChanged);
+    _again.cancel();
     _slowTimer.cancel();
     _search.dispose();
     super.dispose();
   }
 
+  // The copies asked for while the daemon was gone.
+  late final _again = LoadAgain(widget.daemon, () {
+    if (mounted) unawaited(_load());
+  });
+
   Future<void> _load() async {
+    _again.cancel();
     try {
       final list = await widget.daemon.client.listTranscripts(
         ListTranscriptsRequest(),
@@ -100,7 +107,10 @@ class _HistorySectionState extends State<HistorySection> {
       });
     } on Object catch (e) {
       // Said in the table's place, not rows coming for good.
-      if (mounted) setState(() => _error = errorText(e));
+      if (mounted) {
+        setState(() => _error = errorText(e));
+        _again.failed(e);
+      }
     }
   }
 

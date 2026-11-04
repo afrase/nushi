@@ -406,6 +406,29 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('a list that failed while the daemon was gone is asked for '
+      'again once it is back', (tester) async {
+    var fail = true;
+    final fake = _fake(
+      0,
+      answer: (list) => fail
+          ? throw ConnectException(
+              Code.unavailable,
+              'daemon unavailable: connection lost',
+            )
+          : list,
+    );
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.history);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    fail = false;
+    await fake.restart(tester);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.text('No copies yet'), findsOneWidget);
+    d.dispose();
+  });
+
   testWidgets('the columns line up across rows and with the header', (
     tester,
   ) async {

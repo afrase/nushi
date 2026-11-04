@@ -12,7 +12,8 @@ import 'package:nushi/widgets.dart' show errorText;
 /// daemon (API 67), read from the agent's files each time the Skills view
 /// opens or is refreshed: a skill added or a switch changed in a terminal
 /// shows then. Shared skills (.agents/skills) come with every agent that
-/// loads each. One per agent and folder while the app runs.
+/// loads each. One per agent and folder while the app runs; listed again
+/// once the daemon is back after a list it was gone for.
 class SkillsList extends ChangeNotifier {
   factory of(Daemon daemon, String folder, String agent) =>
       _byKey[(agent, folder)] ??= SkillsList._(daemon, folder, agent);
@@ -37,6 +38,7 @@ class SkillsList extends ChangeNotifier {
       daemon.daemonApi < agentFactsApi ? agent == 'claude' : list.hasPlugins;
 
   bool _again = false; // refresh once the running one is done
+  late final _back = LoadAgain(daemon, () => unawaited(refresh()));
 
   /// Lists them again; asked while a list is on its way (a switch changed
   /// as the view opened), once more after it, which may predate the change.
@@ -46,6 +48,7 @@ class SkillsList extends ChangeNotifier {
       return;
     }
     loading = true;
+    _back.cancel();
     notifyListeners();
     do {
       _again = false;
@@ -57,6 +60,7 @@ class SkillsList extends ChangeNotifier {
         loaded = true;
       } on Object catch (e) {
         error = errorText(e);
+        if (!_again) _back.failed(e); // asked again once the daemon is back
       }
     } while (_again);
     loading = false;

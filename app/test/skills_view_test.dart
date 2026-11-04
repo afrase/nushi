@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -146,6 +147,37 @@ void main() {
       'and plugins, by its name', (tester) async {
     final (_, d) = await _view(tester, '$_home/old', api: agentFactsApi - 1);
     expect(find.byType(Switch), findsNWidgets(7)); // as in the test above
+    await closeView(tester, d);
+  });
+
+  testWidgets('a list that failed while the daemon was gone is asked for '
+      'again once it is back', (tester) async {
+    var fail = true;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        ListSkillsRequest() when fail => throw ConnectException(
+          Code.unavailable,
+          'daemon unavailable: connection lost',
+        ),
+        ListSkillsRequest() => _skills(),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    await tester.binding.setSurfaceSize(const Size(1000, 860));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: SkillsView(daemon: d, folder: '/Users/me/lost'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    fail = false;
+    await fake.restart(tester);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.byType(Switch), findsNWidgets(7)); // as in the first test
     await closeView(tester, d);
   });
 
