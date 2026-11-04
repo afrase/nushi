@@ -223,13 +223,23 @@ type notifier struct {
 	cancelled map[string]bool            // chats whose running turn was stopped
 	asked     map[string]map[string]bool // per chat, prompts already pushed
 	finishing map[string]*time.Timer     // turns' ends waiting timing.finished
-	outbox    map[string]*outbox         // per device, the push in flight and the next
+	outbox    map[string]*outbox         // per device, the pushes waiting on the one in flight
 }
 
-// outbox is one device's pushes: one in flight at a time, and of those
-// that come meanwhile only the newest waits.
+// outbox is one device's pushes: one in flight at a time, and those that
+// come meanwhile wait in order. Only a chat's push of the same kind takes
+// the place of one waiting: the push service and the phone keep only the
+// newest of each anyway (the Topic, the notification's tag), and another
+// chat's must still be heard.
 type outbox struct {
-	next *payload
+	waiting []payload
+}
+
+// add puts p in line, unless the same chat's push of its kind waits.
+func (ob *outbox) add(p payload) {
+	if !slices.ContainsFunc(ob.waiting, func(w payload) bool { return w.Chat == p.Chat && w.Kind == p.Kind }) {
+		ob.waiting = append(ob.waiting, p)
+	}
 }
 
 // Follow sees every event (the hub's subscriber) and pushes what a device
@@ -332,26 +342,28 @@ func (s *Service) notify(chatID, kind string) {
 }
 
 // queue sends p to device, one push at a time per device: one that comes
-// while another is in flight waits, replacing any already waiting.
+// while another is in flight waits its turn (outbox).
 func (s *Service) queue(device string, p payload) {
 	n := &s.notes
 	n.mu.Lock()
 	if ob := n.outbox[device]; ob != nil {
-		ob.next = &p
+		ob.add(p)
 		n.mu.Unlock()
 		return
 	}
 	n.outbox[device] = &outbox{}
 	n.mu.Unlock()
 	sending := s.spawn(func() {
-		for next := &p; next != nil; {
-			_ = s.send(s.ctx, device, *next) // its failure is logged
+		for next := p; ; {
+			_ = s.send(s.ctx, device, next) // its failure is logged
 			n.mu.Lock()
 			ob := n.outbox[device]
-			if next = ob.next; next == nil {
+			if len(ob.waiting) == 0 || s.ctx.Err() != nil {
 				delete(n.outbox, device)
+				n.mu.Unlock()
+				return
 			}
-			ob.next = nil
+			next, ob.waiting = ob.waiting[0], ob.waiting[1:]
 			n.mu.Unlock()
 		}
 	})

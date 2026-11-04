@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -280,5 +281,50 @@ func TestSameSubscriptionWritesNothing(t *testing.T) {
 	}
 	if after, _ := os.Stat(path); !after.ModTime().Equal(before.ModTime()) {
 		t.Error("rewrote devices.json for the same subscription")
+	}
+}
+
+// While a push is in flight, other chats' pushes wait their turn: only the
+// same chat's push of the same kind takes the place of one waiting.
+func TestPushesWaitWhileOneIsSent(t *testing.T) {
+	s, p, device, _ := pushing(t)
+	release, first := make(chan struct{}), make(chan struct{}, 1)
+	s.UsePush(Push{Key: "key", Agent: func(string) (string, bool) { return "Claude", true },
+		Send: func(ctx context.Context, subject string, sub webpush.Subscription, m webpush.Message) error {
+			select {
+			case first <- struct{}{}:
+				<-release // the first push is slow: a proxy, a hanging push service
+			default:
+			}
+			return p.send(ctx, subject, sub, m)
+		}}, false)
+	waiting := func(n int) {
+		t.Helper()
+		waitFor(t, func() bool {
+			s.notes.mu.Lock()
+			defer s.notes.mu.Unlock()
+			ob := s.notes.outbox[device]
+			return ob != nil && len(ob.waiting) == n
+		})
+	}
+	ask := func(chat, id string, kind model.ItemKind) {
+		s.Follow(model.Event{ChatID: chat, Item: &model.Item{ID: id, Kind: kind, Status: "pending"}})
+	}
+	ask("c1", "q", model.Question)
+	<-first
+	ask("c2", "p", model.Permission)
+	waiting(1)
+	ask("c3", "q", model.Question)
+	waiting(2)
+	ask("c2", "p2", model.Permission) // c2 waits already with a permission
+	ask("c2", "q", model.Question)
+	waiting(3)
+	close(release)
+	var got []string
+	for _, g := range p.settle(t, 4) {
+		got = append(got, g.Chat+" "+g.Kind)
+	}
+	if want := []string{"c1 question", "c2 permission", "c3 question", "c2 question"}; !slices.Equal(got, want) {
+		t.Errorf("pushed %q, want %q", got, want)
 	}
 }
