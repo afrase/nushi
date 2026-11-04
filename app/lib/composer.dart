@@ -84,14 +84,10 @@ class _ComposerState extends State<Composer> {
   @override
   void initState() {
     super.initState();
-    _images.addListener(_imagesChanged);
-    _draft.files.addListener(_imagesChanged);
-    _draft.outputs.addListener(_imagesChanged);
-    _draft.replies.addListener(_repliesChanged);
+    _draft.addListener(_draftChanged);
     _replyCount = _draft.replies.value.length;
     _completions.addListener(_imagesChanged);
     _spell.addListener(_imagesChanged); // marks that came without typing
-    _draft.toSubagent.addListener(_imagesChanged);
     _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
     widget.chat.rewinding.addListener(_imagesChanged);
@@ -104,18 +100,16 @@ class _ComposerState extends State<Composer> {
   bool get _locked => widget.chat.rewinding.value;
 
   int _replyCount = 0;
-  void _repliesChanged() {
+
+  /// The draft changed: a card added takes the focus to the box.
+  void _draftChanged() {
     if (_draft.replies.value.length > _replyCount) _focus.requestFocus();
     setState(() => _replyCount = _draft.replies.value.length);
   }
 
   @override
   void dispose() {
-    _images.removeListener(_imagesChanged);
-    _draft.files.removeListener(_imagesChanged);
-    _draft.outputs.removeListener(_imagesChanged);
-    _draft.toSubagent.removeListener(_imagesChanged);
-    _draft.replies.removeListener(_repliesChanged);
+    _draft.removeListener(_draftChanged);
     _draft.quote.removeListener(_quote);
     widget.chat.rewinding.removeListener(_imagesChanged);
     widget.chat.takeBack.removeListener(_takeBack);
@@ -345,40 +339,22 @@ class _ComposerState extends State<Composer> {
     }
     // What was pasted or dropped a moment ago goes with it.
     await _images.ready();
-    final text = _text.text.trim();
-    final images = _images.value;
-    final attached = _draft.files.value;
-    final replies = _draft.replies.value;
-    final outputs = _draft.outputs.value;
-    final mentions = {..._mentions};
-    final toSubagent = _draft.toSubagent.value;
     final busy = widget.chat.busy;
-    if (text.isEmpty &&
-        images.isEmpty &&
-        attached.isEmpty &&
-        replies.isEmpty &&
-        outputs.isEmpty) {
-      return;
-    }
-    final (paths, uploads) = sendable(attached, widget.chat.folder);
+    if (!_draft.hasMessage) return;
+    final m = _draft.take();
+    final text = m.text;
+    final (paths, uploads) = sendable(m.files, widget.chat.folder);
     final files = [
-      for (final f in _mentions)
+      for (final f in m.mentions)
         if (text.contains('@$f')) f,
       ...paths.where((p) => !text.contains('@$p')),
     ];
-    _text.clear();
-    _images.clear();
-    _draft.files.value = const [];
-    _draft.replies.value = const [];
-    _draft.outputs.value = const [];
-    _draft.toSubagent.value = null;
-    _mentions.clear();
     final chat = widget.chat;
-    final message = withOutputs(withReplies(replies, text), outputs);
+    final message = withOutputs(withReplies(m.replies, text), m.outputs);
     // To an idle chat it shows in the transcript at once, faint until the
     // daemon's echo; not a queued one (a pill) nor one for a subagent.
-    final shown = !busy && toSubagent == null && !chat.asleep
-        ? chat.send(message, images, files: files) // uploads once saved
+    final shown = !busy && m.toSubagent == null && !chat.asleep
+        ? chat.send(message, m.images, files: files) // uploads once saved
         : null;
     try {
       final r = await widget.daemon.sendPrompt(
@@ -386,11 +362,11 @@ class _ComposerState extends State<Composer> {
           chatId: widget.chat.id,
           text: message,
           files: files,
-          images: images,
+          images: m.images,
           uploads: uploads,
           queue: busy,
           now: now && widget.chat.started != null,
-          toSubagent: toSubagent?.$1,
+          toSubagent: m.toSubagent?.$1,
         ),
       );
       // A command the daemon ran (Claude's /plan) has no echo to wait for.
@@ -402,22 +378,7 @@ class _ComposerState extends State<Composer> {
         chat.unsend(shown, fade: still ? Duration.zero : Motion.exit);
       }
       // Back in the draft (it outlives the box), before what was typed since.
-      final since = _text.text.trim();
-      _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
-      _images.value = [...images, ..._images.value];
-      _draft.files.value = [
-        ...attached,
-        ..._draft.files.value.where((f) => !attached.contains(f)),
-      ];
-      _draft.replies.value = [...replies, ..._draft.replies.value];
-      _draft.outputs.value = [
-        ...outputs.where(
-          (o) => !_draft.outputs.value.any((n) => n.key == o.key),
-        ),
-        ..._draft.outputs.value,
-      ];
-      _draft.toSubagent.value ??= toSubagent;
-      _mentions.addAll(mentions);
+      _draft.putBack(m);
       if (mounted) showError(context, e);
     }
   }
@@ -431,13 +392,7 @@ class _ComposerState extends State<Composer> {
     // Buttons pop in once the box is there, not with it.
     final pop = _built;
     _built = true;
-    final written =
-        !_locked &&
-        (_text.text.trim().isNotEmpty ||
-            _images.value.isNotEmpty ||
-            _draft.files.value.isNotEmpty ||
-            _draft.replies.value.isNotEmpty ||
-            _draft.outputs.value.isNotEmpty);
+    final written = !_locked && _draft.hasMessage;
     return ChatColumn(
       child: Padding(
         padding: touch

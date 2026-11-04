@@ -62,6 +62,57 @@ class Draft extends ChangeNotifier {
         ..addListener(notifyListeners);
   final _subagents = <String, TextEditingController>{};
 
+  /// There's a message to send: text, an image, a file, a reply card or a
+  /// run's output in the box (a quote or a subagent's box isn't one).
+  bool get hasMessage =>
+      text.text.trim().isNotEmpty ||
+      images.value.isNotEmpty ||
+      files.value.isNotEmpty ||
+      replies.value.isNotEmpty ||
+      outputs.value.isNotEmpty;
+
+  /// Takes the box's message out to send, leaving the box empty.
+  Outgoing take() {
+    final m = (
+      text: text.text.trim(),
+      images: images.value,
+      files: files.value,
+      replies: replies.value,
+      outputs: outputs.value,
+      mentions: {...mentions},
+      toSubagent: toSubagent.value,
+    );
+    text.clear();
+    images.clear();
+    files.value = const [];
+    replies.value = const [];
+    outputs.value = const [];
+    toSubagent.value = null;
+    mentions.clear();
+    return m;
+  }
+
+  /// Puts back [m], taken to send, when it didn't go, before what was
+  /// written since: its text first, a blank line after it; its images and
+  /// cards in front; its files first, each once; its outputs unless one of
+  /// the same run came since; its subagent unless one was picked since.
+  void putBack(Outgoing m) {
+    final since = text.text.trim();
+    text.text = [m.text, if (since.isNotEmpty) since].join('\n\n');
+    images.value = [...m.images, ...images.value];
+    files.value = [
+      ...m.files,
+      ...files.value.where((f) => !m.files.contains(f)),
+    ];
+    replies.value = [...m.replies, ...replies.value];
+    outputs.value = [
+      ...m.outputs.where((o) => !outputs.value.any((n) => n.key == o.key)),
+      ...outputs.value,
+    ];
+    toSubagent.value ??= m.toSubagent;
+    mentions.addAll(m.mentions);
+  }
+
   /// Nothing written: no text, card, image or quote in any box.
   bool get isEmpty =>
       text.text.trim().isEmpty &&
@@ -159,6 +210,18 @@ class Draft extends ChangeNotifier {
     }
   }
 }
+
+/// A message taken out of a [Draft] to send, as it was in the box (its
+/// text trimmed).
+typedef Outgoing = ({
+  String text,
+  List<ImageData> images,
+  List<AttachedFile> files,
+  List<Reply> replies,
+  List<RunOutput> outputs,
+  Set<String> mentions,
+  (String call, String agent)? toSubagent,
+});
 
 /// An agent's question form half answered (QuestionCard): what's picked
 /// and written, and the question it's on. It lives on the chat, so a look
