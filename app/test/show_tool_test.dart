@@ -306,16 +306,14 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
-    testWidgets('leaves Settings alone, until the chat shows again', (
-      tester,
-    ) async {
+    testWidgets('leaves Settings open over the chat', (tester) async {
       final (fake, d) = await _app(tester);
-      d.go(const SettingsPlace(SettingsSection.general));
+      d.openSettings(section: SettingsSection.general);
       await tester.pumpAndSettle();
       await _shows(tester, fake, 'docs/report.md');
-      expect(d.place, isA<SettingsPlace>());
-      expect(find.byType(PreviewPane), findsNothing);
-      d.back();
+      // Settings stays open over it (ADR 0087).
+      expect(d.settingsOpen, isNotNull);
+      d.closeSettings();
       await tester.pumpAndSettle();
       expect(find.byType(PreviewPane), findsOneWidget);
       d.dispose();

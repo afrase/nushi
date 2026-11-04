@@ -123,27 +123,37 @@ void main() {
     expect(chatsKept(), isEmpty);
   });
 
-  test('places: Settings goes back to the view it came from, Jira and '
-      'GitHub to the chat', () {
+  test('places: Settings opens over the place and shuts leaving it; '
+      'going elsewhere or picking a chat shuts it; Jira and GitHub go back '
+      'to the chat', () {
     final d = Daemon(transport: _Fake());
     addTearDown(d.dispose);
     d
       ..go(const JiraPlace())
       ..openSettings(section: SettingsSection.mcp, folder: '/x')
-      ..openSettings(section: SettingsSection.skills); // still from Jira
-    expect(d.place, const SettingsPlace(SettingsSection.skills));
+      ..openSettings(section: SettingsSection.skills);
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.skills));
+    expect(d.place, const JiraPlace());
     expect(d.mcpFolder, '/x');
-    d.back();
+    d.closeSettings();
+    expect(d.settingsOpen, isNull);
     expect(d.place, const JiraPlace());
     d.toggle(const JiraPlace());
     expect(d.place, const ChatPlace());
     d.toggle(const GitHubPlace());
     expect(d.place, const GitHubPlace());
-    d.openSettings(); // the section shown last
-    expect(d.place, const SettingsPlace(SettingsSection.skills));
-    d.back();
-    expect(d.place, const GitHubPlace());
-    d.back();
+    d.toggleSettings(); // the section shown last
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.skills));
+    d.toggleSettings();
+    expect(d.settingsOpen, isNull);
+    d
+      ..openSettings()
+      ..go(const JiraPlace());
+    expect(d.settingsOpen, isNull, reason: 'going elsewhere shuts it');
+    d
+      ..openSettings()
+      ..select('a');
+    expect(d.settingsOpen, isNull, reason: 'picking a chat shuts it');
     expect(d.place, const ChatPlace());
   });
 

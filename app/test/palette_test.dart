@@ -196,7 +196,9 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.byType(Palette), findsNothing);
-    expect(d.place, const SettingsPlace(SettingsSection.general));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.general));
+    d.closeSettings();
+    await tester.pumpAndSettle();
 
     // What ran comes first next time.
     await _keys(tester, LogicalKeyboardKey.keyK, meta: true);

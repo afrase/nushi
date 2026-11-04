@@ -198,9 +198,10 @@ class _SidebarState extends State<Sidebar> {
   }
 }
 
-/// The footer: the views in the chat's place, Jira, GitHub and Settings
-/// (each again closes it). MCP servers and Skills are Settings' sections,
-/// reached there, from a chat's ⋯ and from the palette.
+/// The footer: the views in the chat's place, Jira and GitHub (each again
+/// closes it), and Settings, which opens over the window (ADR 0087). MCP
+/// servers and Skills are Settings' sections, reached there, from a chat's
+/// ⋯ and from the palette.
 class _Footer extends StatelessWidget {
   const new(this.daemon);
 
@@ -248,13 +249,12 @@ class _Footer extends StatelessWidget {
             open: daemon.place is GitHubPlace,
             () => daemon.toggle(const GitHubPlace()),
           ),
+          // Settings opens over the window, never a place (ADR 0087).
           row(
             'Settings',
             Icons.settings_outlined,
-            open: daemon.place is SettingsPlace,
-            () => daemon.place is SettingsPlace
-                ? daemon.back()
-                : daemon.openSettings(),
+            open: false,
+            daemon.openSettings,
           ),
         ],
       ),

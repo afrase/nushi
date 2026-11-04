@@ -225,10 +225,6 @@ void main() {
       'chat': (find.byType(ChatHeader), (_) {}),
       'jira': (find.byType(PaneHeader), (d) => d.go(const JiraPlace())),
       'github': (find.byType(PaneHeader), (d) => d.go(const GitHubPlace())),
-      'settings': (
-        find.byType(PaneHeader),
-        (d) => d.go(const SettingsPlace(SettingsSection.general)),
-      ),
       'nothing': (
         find.byType(PaneHeader),
         (d) => d
@@ -521,7 +517,10 @@ void main() {
       await run('github', 'GitHub');
       expect(d.place, isA<GitHubPlace>());
       await run('settings', 'Settings');
-      expect(d.place, isA<SettingsPlace>());
+      expect(d.settingsOpen, isNotNull);
+      expect(d.place, isA<GitHubPlace>(), reason: 'Settings is over it');
+      d.closeSettings();
+      await tester.pumpAndSettle();
       await run('sidebar', 'Show the sidebar');
       expect(sidebarHidden.value, isFalse);
       d.dispose();

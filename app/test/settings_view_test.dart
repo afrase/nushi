@@ -14,6 +14,7 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/skills.dart';
+import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -96,13 +97,15 @@ void main() {
     final nav = tester.getRect(find.byType(SettingsNav));
     expect(tester.getRect(find.text('Font')).left, group.left + 14);
     expect(group.left - nav.right, SettingsPage.gutter);
-    expect(group.width, SettingsPage.maxWidth);
+    // The modal's width less the nav's and the gutters (ADR 0087).
+    expect(group.width, lessThanOrEqualTo(SettingsPage.maxWidth));
+    expect(group.width, greaterThan(680));
     expect(tester.getRect(find.text('Terminal').last).left, group.left);
     d.dispose();
   }, variant: macOS);
 
-  testWidgets('the nav picks a section; Esc and Close leave; ⌘, comes back '
-      'to the last one', (tester) async {
+  testWidgets('the nav picks a section; Esc and Close shut it; ⌘, comes '
+      'back to the last one and shuts it again', (tester) async {
     final d = await pumpSettingsApp(
       tester,
       settingsFake(),
@@ -110,13 +113,17 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('settings-nav-jira')));
     await tester.pumpAndSettle();
-    expect(d.place, const SettingsPlace(SettingsSection.jira));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.jira));
     expect(find.text('acme.atlassian.net'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.escape);
+    expect(d.settingsOpen, isNull);
     expect(d.place, const ChatPlace());
     expect(find.byType(SettingsView), findsNothing);
     await _key(tester, LogicalKeyboardKey.comma, meta: true);
-    expect(d.place, const SettingsPlace(SettingsSection.jira));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.jira));
+    await _key(tester, LogicalKeyboardKey.comma, meta: true);
+    expect(find.byType(SettingsView), findsNothing);
+    await _key(tester, LogicalKeyboardKey.comma, meta: true);
     await tester.tap(find.byTooltip('Close (esc)'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsView), findsNothing);
@@ -131,70 +138,89 @@ void main() {
       settingsFake(),
       SettingsSection.skills,
     );
-    await tester.tap(find.byType(TextField)); // the search
-    await tester.enterText(find.byType(TextField), 'rel');
+    final search = find.descendant(
+      of: find.byType(SettingsView),
+      matching: find.byType(TextField),
+    );
+    await tester.tap(search);
+    await tester.enterText(search, 'rel');
     await tester.pumpAndSettle();
     await _key(tester, LogicalKeyboardKey.escape);
-    expect(d.place, const ChatPlace());
+    expect(d.settingsOpen, isNull);
     d.dispose();
   }, variant: macOS);
 
   testWidgets('deep links: a chat’s MCP servers… and Skills… open their '
-      'sections for its folder; the footer’s Settings opens and closes it; '
-      'Agents marks a row; Settings opened from GitHub closes back to it', (
-    tester,
-  ) async {
+      'sections for its folder; the footer’s Settings opens it and is never '
+      'marked; Agents marks a row; Settings opened over GitHub shuts back '
+      'to it', (tester) async {
     final d = await pumpSettingsApp(
       tester,
       settingsFake(),
       SettingsSection.general,
     );
-    d.select('c'); // in /Users/me/site
+    d.select('c'); // in /Users/me/site; picking a chat shuts Settings
     await tester.pumpAndSettle();
+    expect(d.settingsOpen, isNull);
     expect(_footer('MCP servers'), findsNothing); // Settings' sections now
     expect(_footer('Skills'), findsNothing);
     d.showMcp(d.selected!.folder); // as its ⋯'s MCP servers… does
     await tester.pumpAndSettle();
-    expect(d.place, const SettingsPlace(SettingsSection.mcp));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.mcp));
     expect(find.byType(McpView), findsOneWidget);
     expect(
       tester.widget<McpView>(find.byType(McpView)).folder,
       '/Users/me/site',
     );
-    d.back();
+    d.closeSettings();
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Skills…', findRichText: true));
     await tester.pumpAndSettle();
-    expect(d.place, const SettingsPlace(SettingsSection.skills));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.skills));
     expect(
       tester.widget<SkillsView>(find.byType(SkillsView)).folder,
       '/Users/me/site',
     );
-    // The footer's Settings, open, leaves it; again, opens it.
+    d.closeSettings();
+    await tester.pumpAndSettle();
+    // The footer's Settings opens it, and isn't marked as the place.
     await tester.tap(_footer('Settings'));
     await tester.pumpAndSettle();
+    expect(d.settingsOpen, isNotNull);
     expect(d.place, const ChatPlace());
-    await tester.tap(_footer('Settings'));
-    await tester.pumpAndSettle();
-    expect(d.place, isA<SettingsPlace>());
-    d.back();
+    expect(
+      tester
+          .widget<Tap>(
+            find.ancestor(of: _footer('Settings'), matching: find.byType(Tap)),
+          )
+          .selected,
+      isFalse,
+    );
+    d.closeSettings();
     await tester.pumpAndSettle();
 
     d.openSettings(section: SettingsSection.agents, agent: 'codex');
     await tester.pumpAndSettle();
     expect(
-      d.place,
-      const SettingsPlace(SettingsSection.agents, agent: 'codex'),
+      d.settingsOpen,
+      const SettingsAt(SettingsSection.agents, agent: 'codex'),
     );
-
-    d.go(const GitHubPlace());
+    d
+      ..closeSettings()
+      ..go(const GitHubPlace());
     await tester.pumpAndSettle();
     d.openSettings(section: SettingsSection.github);
     await tester.pumpAndSettle();
-    expect(d.place, const SettingsPlace(SettingsSection.github));
-    d.back();
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.github));
+    expect(d.place, const GitHubPlace());
+    await tester.tap(
+      find.descendant(
+        of: find.byType(SettingsView),
+        matching: find.byTooltip('Close (esc)'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(d.place, const GitHubPlace());
     d.dispose();

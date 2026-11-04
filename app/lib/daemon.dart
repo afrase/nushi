@@ -196,12 +196,12 @@ class Daemon extends ChangeNotifier {
     return await next(req);
   };
 
-  /// What shows in the chat's place: the chat, Settings, Jira or GitHub.
+  /// What shows in the chat's place: the chat, Jira or GitHub.
   Place place = const ChatPlace();
 
-  /// What Settings closes back to: the Jira or GitHub view it opened
-  /// from, else the chat.
-  Place _beforeSettings = const ChatPlace();
+  /// Settings, while it's open over the window (ADR 0087): it never
+  /// changes [place].
+  SettingsAt? settingsOpen;
 
   /// The section Settings opens on: the last one shown while the app runs.
   SettingsSection lastSettings = SettingsSection.general;

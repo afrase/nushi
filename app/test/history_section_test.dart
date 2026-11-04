@@ -12,6 +12,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/settings_view.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -120,6 +121,10 @@ Future<void> _clickRow(
 
 List<T> _calls<T>(FakeDaemon fake) => fake.calls.whereType<T>().toList();
 
+/// [f] inside Settings, not the chat under it.
+Finder _inSettings(Finder f) =>
+    find.descendant(of: find.byType(SettingsView), matching: f);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(loadFonts);
@@ -205,13 +210,13 @@ void main() {
     tester,
   ) async {
     final d = await open(tester, _fake(200));
-    await tester.enterText(find.byType(TextField), 'acp-go');
+    await tester.enterText(_inSettings(find.byType(TextField)), 'acp-go');
     await tester.pumpAndSettle();
     expect(
       _rows(tester).every((r) => r.row.folder == '/Users/me/acp-go'),
       isTrue,
     );
-    await tester.enterText(find.byType(TextField), '');
+    await tester.enterText(_inSettings(find.byType(TextField)), '');
     // The filter's (the sidebar's Archived header says the same).
     await tester.tap(find.text('Archived  11').last);
     await tester.pumpAndSettle();
@@ -330,7 +335,10 @@ void main() {
     expect(built, lessThan(40));
     expect(find.text('All  5000'), findsOneWidget);
     // To the end and back: still a screenful built.
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -150000));
+    await tester.drag(
+      _inSettings(find.byType(CustomScrollView)),
+      const Offset(0, -150000),
+    );
     await tester.pumpAndSettle();
     expect(find.byType(HistoryRowView).evaluate().length, lessThan(40));
     // The time it took, for the report; nothing to assert on a CI box.
@@ -448,7 +456,10 @@ void main() {
     expect(ends, hasLength(1));
     // Folder's heading starts where its cells do; Size's ends where they
     // do, less the room of the sort arrow it carries.
-    expect(tester.getRect(find.text('Folder')).left, folders.single);
+    expect(
+      tester.getRect(_inSettings(find.text('Folder'))).left,
+      folders.single,
+    );
     expect(
       tester.getRect(find.text('Size')).right + 12,
       moreOrLessEquals(sizes.single, epsilon: 4.5),
@@ -473,7 +484,7 @@ void main() {
           brightness: brightness,
         );
         await tester.drag(
-          find.byType(CustomScrollView),
+          _inSettings(find.byType(CustomScrollView)),
           const Offset(0, -1200),
         );
         await tester.pumpAndSettle();
@@ -511,7 +522,7 @@ void main() {
           size: size,
           brightness: brightness,
         );
-        await tester.enterText(find.byType(TextField), 'review');
+        await tester.enterText(_inSettings(find.byType(TextField)), 'review');
         await tester.pumpAndSettle();
         expect(find.textContaining('review'), findsWidgets);
         final shot = 'history_search_${sizeName}_$theme';

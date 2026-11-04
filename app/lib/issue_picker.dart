@@ -178,7 +178,7 @@ class _IssuePickerState extends State<IssuePicker> {
                 LinkText(
                   'Settings › Jira',
                   size: 12.5,
-                  // Out of the New chat dialog, to Settings in the window.
+                  // Out of the New chat dialog, to Settings over the window.
                   onTap: () {
                     Navigator.popUntil(context, (r) => r.isFirst);
                     widget.daemon.openSettings(section: SettingsSection.jira);

@@ -84,10 +84,10 @@ void main() {
       greaterThan(appearance.top),
     );
     await _tap(tester, find.byKey(const ValueKey('settings-nav-appearance')));
-    expect(d.place, const SettingsPlace(SettingsSection.appearance));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.appearance));
     expect(find.byType(AppearanceSection), findsOne);
 
-    d.back();
+    d.closeSettings();
     await tester.pumpAndSettle();
     await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
@@ -98,7 +98,7 @@ void main() {
     expect(find.text('Appearance and themes'), findsOne);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(d.place, const SettingsPlace(SettingsSection.appearance));
+    expect(d.settingsOpen, const SettingsAt(SettingsSection.appearance));
     expect(find.byType(ThemeGroup), findsOne);
     d.dispose();
   }, variant: _mac);

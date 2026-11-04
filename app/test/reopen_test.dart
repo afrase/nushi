@@ -153,8 +153,8 @@ void main() {
     await tester.tap(find.text('Set up…'));
     await tester.pumpAndSettle();
     expect(
-      d.place,
-      const SettingsPlace(SettingsSection.agents, agent: 'claude'),
+      d.settingsOpen,
+      const SettingsAt(SettingsSection.agents, agent: 'claude'),
     );
     d.dispose();
   });

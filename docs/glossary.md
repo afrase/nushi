@@ -96,8 +96,8 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |
 | **Find** | ⌘F: in the chat, in Changes' files and diffs, or in a terminal's scrollback. | `TranscriptFind`, `ChangesFind`, `FindBar`, `TerminalFindBar`, `TextMarks` | 0082 |
-| **Settings** | A view in the chat's place (⌘,), a nav of sections. | `settings_view.dart`, `SettingsSection` | 0053 |
-| **View in the chat's place** | Settings, Jira and GitHub: they take the chat's place beside the sidebar; Esc goes back. | `Place`, `Daemon.go`, `back` | 0053 |
+| **Settings** | A modal over the window (⌘,), a nav of sections; it never takes the chat's place. | `settings_modal.dart`, `settings_view.dart`, `SettingsSection`, `Daemon.settingsOpen` | 0053, 0087 |
+| **View in the chat's place** | Jira and GitHub: they take the chat's place beside the sidebar; Esc goes back. | `Place`, `Daemon.go`, `back` | 0053 |
 | **Toast** | A small card in the bottom right corner: the newer release's. | `UpdateToast` | 0061 |
 | **Bar** | A strip over the app or a view saying something (what didn't start, the daemon updating, the connection). | `NoticeBar`, `DaemonUpdateBar`, `ConnectionBar`, `BarSlide` | |
 | **Jump chip** | "Jump to latest" over a transcript scrolled up; "Needs you ↓" when something below waits. | `JumpChip` | |

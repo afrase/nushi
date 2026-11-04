@@ -130,10 +130,10 @@ void main() {
     expect(find.text('Set up'), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.digit1); // Claude
     expect(fake.started, isEmpty);
-    // Settings › Agents, in the window's main area.
+    // Settings › Agents, over the window.
     expect(
-      d.place,
-      isA<SettingsPlace>().having(
+      d.settingsOpen,
+      isA<SettingsAt>().having(
         (p) => p.section,
         'section',
         SettingsSection.agents,

@@ -15,6 +15,7 @@ extension DaemonStart on Daemon {
       if (check.runs.isEmpty) return true;
       trustAsk?.decide(start: false);
       final ask = trustAsk = TrustAsk(folder, action, check.runs, agent);
+      settingsOpen = null; // the card is in the window, under Settings
       _changed();
       final start = await ask.answer.future;
       if (trustAsk == ask) {

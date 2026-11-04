@@ -45,6 +45,8 @@ Future<void> newSkill(BuildContext context, SkillsList list) async {
     shared = choice;
   }
   if (!context.mounted) return;
+  // The chat is the work now: Settings shuts first (ADR 0087).
+  daemon.closeSettings();
   String? started;
   await tryOrShow(context, () async {
     started = await daemon.startChat(list.folder, list.agent);

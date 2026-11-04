@@ -173,7 +173,7 @@ void main() {
     d.openSettings(section: SettingsSection.general);
     await tester.pump();
     d
-      ..back()
+      ..closeSettings()
       ..macView.window = false;
     await tester.pump();
     d.macView.window = true;

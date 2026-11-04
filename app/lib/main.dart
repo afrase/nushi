@@ -32,7 +32,7 @@ import 'package:nushi/pull_tab.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_view.dart';
+import 'package:nushi/settings_modal.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/slides.dart';
@@ -363,7 +363,6 @@ class _Shell extends StatelessWidget {
                     : switch (daemon.place) {
                         JiraPlace() => JiraView(daemon),
                         GitHubPlace() => GitHubView(daemon),
-                        SettingsPlace() => SettingsView(daemon),
                         ChatPlace() when chat == null => NothingOpen(daemon),
                         ChatPlace() => _ChatPane(
                           key: ValueKey(chat!.id),
@@ -376,24 +375,29 @@ class _Shell extends StatelessWidget {
           ),
         ),
       );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // A newer release's toast, in the bottom right corner.
-          Expanded(
-            child: Stack(
-              children: [
-                Positioned.fill(child: app),
-                Positioned(
-                  right: UpdateToast.inset,
-                  bottom: UpdateToast.inset,
-                  child: UpdateToast(daemon),
-                ),
-              ],
+      // Settings opens over all of it (ADR 0087).
+      return SettingsModal(
+        daemon: daemon,
+        open: daemon.settingsOpen != null,
+        app: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // A newer release's toast, in the bottom right corner.
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: app),
+                  Positioned(
+                    right: UpdateToast.inset,
+                    bottom: UpdateToast.inset,
+                    child: UpdateToast(daemon),
+                  ),
+                ],
+              ),
             ),
-          ),
-          StatusBar(daemon),
-        ],
+            StatusBar(daemon),
+          ],
+        ),
       );
     },
   );

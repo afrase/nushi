@@ -188,18 +188,20 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('the user went to another chat: the request goes to the new '
-      'one all the same', (tester) async {
+  testWidgets('the user went elsewhere: the request goes to the new chat '
+      'all the same', (tester) async {
     final start = Completer<void>();
     final fake = _fake('/Users/me/away', start: start);
     final d = await _app(tester, fake, 'pig');
     await _newSkill(tester);
-    d.select('a');
+    // Settings shut as the start began (ADR 0087).
+    expect(d.settingsOpen, isNull);
+    d.go(const JiraPlace());
     await tester.pumpAndSettle();
     start.complete();
     await tester.pumpAndSettle();
     expect(d.selectedId, 'a');
-    expect(_box(tester), isEmpty);
+    expect(d.place, const JiraPlace());
     expect(d.chats['new']!.draft.text.text, startsWith(_shared));
     await closeView(tester, d);
   }, variant: _mac);

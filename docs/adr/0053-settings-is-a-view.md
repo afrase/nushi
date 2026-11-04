@@ -1,5 +1,7 @@
 # 0053. Settings is a view, not a dialog
 
+Superseded in where it shows by [0087](0087-settings-is-a-modal.md): Settings opens as a modal over the window; the nav and the pages stand.
+
 ## Context
 Settings was a ~500 px dialog with four tabs: General held the terminal's font, sleep, every chat's transcript copy (five rows, then "Show all"), remote access, start at login and the logs, each a bold heading with its controls squeezed beside 90 px labels. The owner: "very crammed, it's narrow", and "how will the list grow at 200 chats?". MCP servers and Skills were already views in the chat's place, with their own way in from the sidebar.
 

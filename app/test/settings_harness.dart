@@ -40,7 +40,7 @@ Future<void> pumpSettings(
         body: ListenableBuilder(
           listenable: d,
           builder: (context, _) =>
-              d.place is SettingsPlace ? SettingsView(d) : const Text('closed'),
+              d.settingsOpen != null ? SettingsView(d) : const Text('closed'),
         ),
       ),
     ),

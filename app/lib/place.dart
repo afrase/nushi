@@ -20,9 +20,10 @@ enum SettingsSection {
   final String title;
 }
 
-/// What shows in the chat's place beside the sidebar (ADR 0053): the chat
-/// itself, or a view that takes its place. One at a time, so the views
-/// can't disagree; the trust card shows over whichever it is.
+/// What shows in the chat's place beside the sidebar: the chat itself, or
+/// a view that takes its place. One at a time, so the views can't
+/// disagree; the trust card shows over whichever it is. Settings isn't
+/// one: it opens over the window ([SettingsAt], ADR 0087).
 @immutable
 sealed class Place {
   const new();
@@ -39,9 +40,11 @@ final class ChatPlace extends Place {
   const new();
 }
 
-/// Settings at [section]; [agent] is the row Settings › Agents marks (a
-/// chat that couldn't start it sent you there).
-final class SettingsPlace extends Place {
+/// Settings open over the window at [section] (ADR 0087); [agent] is the
+/// row Settings › Agents marks (a chat that couldn't start it sent you
+/// there).
+@immutable
+final class SettingsAt {
   const new(this.section, {this.agent});
 
   final SettingsSection section;
@@ -49,9 +52,7 @@ final class SettingsPlace extends Place {
 
   @override
   bool operator ==(Object other) =>
-      other is SettingsPlace &&
-      other.section == section &&
-      other.agent == agent;
+      other is SettingsAt && other.section == section && other.agent == agent;
 
   @override
   int get hashCode => Object.hash(section, agent);

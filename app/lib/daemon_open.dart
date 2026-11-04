@@ -70,6 +70,7 @@ extension DaemonOpen on Daemon {
       chatId: DateTime.now().millisecondsSinceEpoch,
     };
     place = const ChatPlace();
+    settingsOpen = null; // picking a chat leaves Settings (ADR 0087)
     final chat = chats[chatId];
     if (chat != null) unawaited(_load(chat));
     _letGo();

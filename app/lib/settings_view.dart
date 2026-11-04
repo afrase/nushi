@@ -24,9 +24,9 @@ import 'package:nushi/widgets.dart';
 
 const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
 
-/// Settings, in place of the chat beside the sidebar (⌘,; Esc or Close
-/// leave it): a nav of sections and the picked one's page. The daemon's
-/// settings are asked for once it opens.
+/// Settings, open over the window (ADR 0087; ⌘,, Esc or Close shut it): a
+/// nav of sections and the picked one's page. The daemon's settings are
+/// asked for once it opens.
 class SettingsView extends StatefulWidget {
   const new(this.daemon, {super.key});
 
@@ -126,10 +126,7 @@ class _SettingsViewState extends State<SettingsView> {
         AgentsPage(
           daemon.client,
           daemonApi: daemon.daemonApi,
-          marked: switch (daemon.place) {
-            SettingsPlace(:final agent) => agent,
-            _ => null,
-          },
+          marked: daemon.settingsOpen?.agent,
           settings: _set,
           onChange: _change,
         ),
@@ -163,29 +160,38 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final place = daemon.place;
-    final section = place is SettingsPlace
-        ? place.section
-        : daemon.lastSettings;
+    final section = daemon.settingsOpen?.section ?? daemon.lastSettings;
     return CallbackShortcuts(
-      bindings: {const SingleActivator(LogicalKeyboardKey.escape): daemon.back},
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): daemon.closeSettings,
+      },
       child: Focus(
         focusNode: _focus,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PaneHeader(
-              plain: true,
-              inset: 16,
-              end: 8,
-              lead: Text(
-                'Settings',
-                style: theme.ui(t.text, weight: FontWeight.w600),
+            // The modal's title bar: no sidebar button or window drag, as
+            // a view's header at the window's top has (ADR 0087).
+            Container(
+              height: PaneHeader.height,
+              padding: const EdgeInsets.only(left: 16, right: 8),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: t.borderSubtle)),
               ),
-              child: IconTap(
-                Icons.close,
-                tooltip: 'Close (esc)',
-                onTap: daemon.back,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Settings',
+                      style: theme.ui(t.text, weight: FontWeight.w600),
+                    ),
+                  ),
+                  IconTap(
+                    Icons.close,
+                    tooltip: 'Close (esc)',
+                    onTap: daemon.closeSettings,
+                  ),
+                ],
               ),
             ),
             Expanded(

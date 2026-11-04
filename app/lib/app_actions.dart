@@ -261,7 +261,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       run: () => unawaited(_spellOf(shown)!.menu.next()),
     ),
     ...chatActions(context, d, shown),
-    AppAction(.settings, 'Settings', run: d.openSettings),
+    AppAction(.settings, 'Settings', run: d.toggleSettings),
     AppAction(
       .appearance,
       'Appearance and themes',
@@ -438,6 +438,9 @@ List<AppAction> chatActions(
 
 /// Runs [act] as it is now, if it applies.
 void runAct(BuildContext context, Daemon d, Act act) {
+  // Only the menu bar reaches here past Settings (it stops the keys): what
+  // runs is elsewhere, so Settings shuts first (ADR 0087).
+  if (act != Act.settings && act != Act.appearance) d.closeSettings();
   final a = appActions(context, d).firstWhere((a) => a.act == act);
   if (a.enabled) a.run();
 }
