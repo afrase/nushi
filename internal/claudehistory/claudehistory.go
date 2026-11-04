@@ -13,10 +13,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"unicode/utf16"
 
+	"github.com/afrase/nushi/claudeagent/sessions"
 	"github.com/afrase/nushi/internal/claude"
 )
 
@@ -73,13 +72,13 @@ func paths(projects, id, from, to string) (src, dst string, err error) {
 	if id == "" || strings.ContainsAny(id, `/\`) || strings.HasPrefix(id, ".") {
 		return "", "", fmt.Errorf("%q is not a session id", id)
 	}
-	return filepath.Join(projects, dirName(from), id+".jsonl"), filepath.Join(projects, dirName(to), id+".jsonl"), nil
+	return filepath.Join(historyDir(projects, from), id+".jsonl"), filepath.Join(historyDir(projects, to), id+".jsonl"), nil
 }
 
 // Has reports whether Claude keeps session id's transcript in folder's
 // history (it writes one once the session has a message).
 func Has(projects, id, folder string) bool {
-	fi, err := os.Stat(filepath.Join(projects, dirName(folder), id+".jsonl"))
+	fi, err := os.Stat(filepath.Join(historyDir(projects, folder), id+".jsonl"))
 	return err == nil && fi.Size() > 0
 }
 
@@ -88,12 +87,12 @@ func Has(projects, id, folder string) bool {
 // can be read, and the transcript isn't in it (Claude Code deletes those
 // older than cleanupPeriodDays when it starts). A history folder that's
 // missing or can't be read says nothing: another CLAUDE_CONFIG_DIR, or a
-// folder whose name Claude spells otherwise (see dirName).
+// folder whose name Claude spells otherwise (see sessions.Store.ProjectDir).
 func (l Local) HistoryGone(id, folder string) bool {
 	if _, _, err := paths(l.Projects, id, folder, folder); err != nil {
 		return false
 	}
-	dir := filepath.Join(l.Projects, dirName(folder))
+	dir := historyDir(l.Projects, folder)
 	f, err := os.Open(dir)
 	if err != nil {
 		return false
@@ -109,32 +108,9 @@ func (l Local) HistoryGone(id, folder string) bool {
 	return errors.Is(err, fs.ErrNotExist)
 }
 
-// dirName is the name Claude gives a folder's history: the folder's real
-// path with each UTF-16 unit that isn't an ASCII letter or digit replaced by
-// "-", and past 200 characters cut short and followed by a hash of the path.
-// Claude also puts the path in Unicode NFC first; that isn't done here, so
-// a path with decomposed accents gets another name than Claude's.
-func dirName(folder string) string {
-	if resolved, err := filepath.EvalSymlinks(folder); err == nil {
-		folder = resolved
-	}
-	var b strings.Builder
-	var hash int32 // JavaScript's usual string hash: h*31 + unit, in 32 bits
-	for _, u := range utf16.Encode([]rune(folder)) {
-		hash = hash*31 + int32(u)
-		if u < 128 && ('a' <= u && u <= 'z' || 'A' <= u && u <= 'Z' || '0' <= u && u <= '9') {
-			b.WriteByte(byte(u))
-		} else {
-			b.WriteByte('-')
-		}
-	}
-	name := b.String()
-	if len(name) <= 200 {
-		return name
-	}
-	h := int64(hash)
-	if h < 0 {
-		h = -h
-	}
-	return name[:200] + "-" + strconv.FormatInt(h, 36)
+// historyDir is folder's history folder in projects, named as Claude names
+// it (sessions.Store.ProjectDir, whose projects folder is taken by name
+// only, as tests pass any folder).
+func historyDir(projects, folder string) string {
+	return filepath.Join(projects, filepath.Base(sessions.Store{ConfigDir: filepath.Dir(projects)}.ProjectDir(folder)))
 }

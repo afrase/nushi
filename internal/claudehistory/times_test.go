@@ -11,7 +11,7 @@ import (
 
 func TestTimes(t *testing.T) {
 	projects, folder := t.TempDir(), t.TempDir()
-	dir := filepath.Join(projects, dirName(folder))
+	dir := historyDir(projects, folder)
 	testcheck.NoErr(t, os.MkdirAll(dir, 0o700))
 	body := `{"type":"queue-operation","uuid":"q","timestamp":"2026-10-25T00:00:00Z"}
 {"type":"user","uuid":"u1","timestamp":"2026-10-25T00:21:56.401Z","message":{"role":"user","content":"hi"}}

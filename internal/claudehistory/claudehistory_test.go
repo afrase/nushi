@@ -3,22 +3,8 @@ package claudehistory
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
-
-func TestDirNameIsClaudes(t *testing.T) {
-	// Expected names from Claude's own function, run in node.
-	long := "/nushi-test/" + strings.Repeat("a-very-long-folder-name/", 9) + "café"
-	for folder, want := range map[string]string{
-		"/Users/me/my.repo é": "-Users-me-my-repo--",
-		long:                  "-nushi-test" + strings.Repeat("-a-very-long-folder-name", 7) + "-a-very-long-folder-n-ytjik2",
-	} {
-		if got := dirName(folder); got != want {
-			t.Errorf("dirName(%q) = %q, want %q", folder, got, want)
-		}
-	}
-}
 
 // Gone is true only when the folder's history folder can be read and the
 // transcript isn't in it.
@@ -27,7 +13,7 @@ func TestGone(t *testing.T) {
 	if local(projects).HistoryGone("s1", folder) {
 		t.Error("gone with no history folder")
 	}
-	dir := filepath.Join(projects, dirName(folder))
+	dir := historyDir(projects, folder)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}

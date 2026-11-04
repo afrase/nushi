@@ -22,7 +22,7 @@ func TestMoveData(t *testing.T) {
 	if err := os.MkdirAll(scratch, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	// Claude's history folder for a path (claudehistory's dirName, short paths).
+	// Claude's history folder for a path (as sessions.Store.ProjectDir names a short one).
 	hist := func(folder string) string {
 		return filepath.Join(projects, regexp.MustCompile(`[^A-Za-z0-9]`).ReplaceAllString(folder, "-"))
 	}
