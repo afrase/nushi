@@ -15,7 +15,7 @@ func TestLoginNeverRunsTheFoldersClaude(t *testing.T) {
 	marker := filepath.Join(folder, "ran")
 	testcheck.NoErr(t, os.MkdirAll(filepath.Join(folder, "node_modules", ".bin"), 0o700))
 	fake := filepath.Join(folder, "node_modules", ".bin", "claude")
-	testcheck.NoErr(t, os.WriteFile(fake, []byte("#!/bin/sh\ntouch '"+marker+"'\n"), 0o700)) //nolint:gosec // a fake claude runs
+	testcheck.NoErr(t, os.WriteFile(fake, []byte("#!/bin/sh\ntouch '"+marker+"'\n"), 0o700))
 	t.Setenv("PATH", "node_modules/.bin:/usr/bin:/bin")
 	if err := (Claude{}).Login(t.Context(), folder, "srv"); err == nil {
 		t.Error("signed in with no claude on PATH")

@@ -300,8 +300,7 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 		}
 	}
 	id, err := s.Chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, opts)
-	var head *trust.UntrustedHead
-	if errors.As(err, &head) { // the app shows its card, and starts again
+	if head, ok := errors.AsType[*trust.UntrustedHeadError](err); ok { // the app shows its card, and starts again
 		out := &nushiv1.StartChatResponse{HeadFolder: head.Folder, HeadRunsKey: head.Shown}
 		for _, r := range head.Runs {
 			out.HeadRuns = append(out.HeadRuns, &nushiv1.FolderRun{File: r.File, What: r.What, Command: r.Command})

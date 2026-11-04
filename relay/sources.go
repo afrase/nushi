@@ -75,7 +75,7 @@ func keyOf(addr string, v6bits int) string {
 	} else {
 		ip = ip.Mask(net.CIDRMask(v6bits, 128))
 	}
-	h := sha256.Sum256(append(append(append([]byte(nil), salt...), byte(v6bits)), ip...))
+	h := sha256.Sum256(append(append([]byte(nil), salt...), ip...))
 	return string(h[:16])
 }
 

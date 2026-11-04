@@ -24,7 +24,7 @@ func TestAFailedCommitsOutputStaysOutOfTheLog(t *testing.T) {
 	testcheck.Git(t, repo, "config", "user.email", "a@b.c")
 	testcheck.Git(t, repo, "config", "user.name", "a")
 	hook := filepath.Join(repo, ".git", "hooks", "commit-msg")
-	testcheck.NoErr(t, os.WriteFile(hook, []byte("#!/bin/sh\necho \"input: $(cat \"$1\")\"\necho 'subject may not be empty'\nexit 1\n"), 0o700)) //nolint:gosec // a hook runs
+	testcheck.NoErr(t, os.WriteFile(hook, []byte("#!/bin/sh\necho \"input: $(cat \"$1\")\"\necho 'subject may not be empty'\nexit 1\n"), 0o700))
 	testcheck.Write(t, filepath.Join(repo, "f"), "x")
 	testcheck.Git(t, repo, "add", "f")
 	ctx := t.Context()

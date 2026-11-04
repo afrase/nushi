@@ -62,7 +62,7 @@ func TestAPullRequestsHead(t *testing.T) {
 	a, st := &agent{key: "repo", file: ".mcp.json"}, &store{}
 	s := New(map[string]Agent{"x": a}, st)
 	err := s.Head("x", "/repo/.worktrees/a", false, "")
-	var head *UntrustedHead
+	var head *UntrustedHeadError
 	if !errors.As(err, &head) || head.Folder != "/repo/.worktrees/a" || len(head.Runs) != 1 || head.Shown == "" {
 		t.Fatalf("Head = %v", err)
 	}
@@ -89,7 +89,7 @@ func TestAForksHead(t *testing.T) {
 	if runs, _, err := s.Check("x", "/repo/.worktrees/a"); err != nil || len(runs) != 0 {
 		t.Fatalf("the repository isn't trusted: %v %v", runs, err)
 	}
-	var head *UntrustedHead
+	var head *UntrustedHeadError
 	if err := s.Head("x", "/repo/.worktrees/a", true, ""); !errors.As(err, &head) {
 		t.Fatalf("a fork's head rode on the repository's trust: %v", err)
 	}

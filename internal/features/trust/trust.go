@@ -78,25 +78,25 @@ func runsOf(a Agent, folder string) ([]model.FolderRun, string) {
 	return runs, key
 }
 
-// UntrustedHead is a pull request's head that brings code for the agent
+// UntrustedHeadError is a pull request's head that brings code for the agent
 // to run that nobody trusted: what it runs, in the worktree at Folder
 // (gone by the time the user looks), and Shown, the key of what it runs,
 // which a start the user said "Start anyway" to gives back.
-type UntrustedHead struct {
+type UntrustedHeadError struct {
 	Folder string
 	Runs   []model.FolderRun
 	Shown  string
 }
 
-func (e *UntrustedHead) Error() string {
+func (e *UntrustedHeadError) Error() string {
 	return "the pull request's head brings its own code to run"
 }
 
 // Head checks a pull request's head, checked out at folder, before the
 // agent starts there (ADR 0023: the folder asked about is the one that
 // starts). It is nil when the head brings nothing nobody trusted, or
-// when shown is the Shown of an *UntrustedHead the user said "Start
-// anyway" to and the head still runs exactly that; *UntrustedHead
+// when shown is the Shown of an *UntrustedHeadError the user said "Start
+// anyway" to and the head still runs exactly that; *UntrustedHeadError
 // otherwise. A fork's head is an outsider's: no earlier trust counts
 // (Claude's is the repository's, which any head would ride on) and Start
 // anyway is for this start only. A head of the repository's own is
@@ -120,7 +120,7 @@ func (s *Service) Head(agent, folder string, fork bool, shown string) error {
 		return nil
 	}
 	if seen := shownKey(folder, runs); seen != shown {
-		return &UntrustedHead{Folder: folder, Runs: runs, Shown: seen}
+		return &UntrustedHeadError{Folder: folder, Runs: runs, Shown: seen}
 	}
 	if key == "" {
 		return nil
@@ -136,7 +136,7 @@ func shownKey(folder string, runs []model.FolderRun) string {
 		in := func(s string) string { return strings.ReplaceAll(s, folder, ".") }
 		rel[i] = model.FolderRun{File: in(r.File), What: in(r.What), Command: in(r.Command)}
 	}
-	b, _ := json.Marshal(rel) //nolint:errchkjson // plain strings
+	b, _ := json.Marshal(rel)
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }

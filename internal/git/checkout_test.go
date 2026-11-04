@@ -19,18 +19,22 @@ func TestTrustRootOnGitFilesThatAreNotFiles(t *testing.T) {
 		make func(t *testing.T, dir string)
 	}{
 		{".git to /dev/zero", func(t *testing.T, dir string) {
+			t.Helper()
 			testcheck.NoErr(t, os.Symlink("/dev/zero", filepath.Join(dir, ".git")))
 		}},
 		{"a .git fifo", func(t *testing.T, dir string) {
+			t.Helper()
 			testcheck.NoErr(t, syscall.Mkfifo(filepath.Join(dir, ".git"), 0o600))
 		}},
 		{"a gitdir record to /dev/zero", func(t *testing.T, dir string) {
+			t.Helper()
 			rec := filepath.Join(dir, "sub", ".git", "worktrees", "w")
 			testcheck.NoErr(t, os.MkdirAll(rec, 0o700))
 			testcheck.NoErr(t, os.Symlink("/dev/zero", filepath.Join(rec, "gitdir")))
 			testcheck.Write(t, filepath.Join(dir, ".git"), "gitdir: sub/.git/worktrees/w\n")
 		}},
 		{"a gitdir record fifo", func(t *testing.T, dir string) {
+			t.Helper()
 			rec := filepath.Join(dir, "sub", ".git", "worktrees", "w")
 			testcheck.NoErr(t, os.MkdirAll(rec, 0o700))
 			testcheck.NoErr(t, syscall.Mkfifo(filepath.Join(rec, "gitdir"), 0o600))
