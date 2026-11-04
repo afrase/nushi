@@ -145,34 +145,76 @@ func titleText(text string) string {
 // titleTimeout bounds the agent's making of a pin's title.
 const titleTimeout = time.Minute
 
+// titlesAtOnce is how many pins' titles a chat's agent makes at once: each
+// is a call to its model on the user's account, and pinning many messages
+// quickly shouldn't send them all together.
+const titlesAtOnce = 2
+
 // titleLocked has the agent make a title for the pin of item, whose message
 // is text, on a goroutine of its own, if it can (TitleMaker) and runs now:
 // pinning doesn't start an agent. A title that comes replaces the one from
 // the message, if the message is still pinned; a failure or none keeps it.
+// One already being made isn't asked for again (a pin taken off and put
+// back meanwhile gets that one), and a chat's agent makes titlesAtOnce at
+// most, the others waiting their turn.
 //
 //nolint:contextcheck // the title comes on the chat's own life, after PinMessage has answered
 func (c *chat) titleLocked(item, text string) {
 	maker, agent, sid := c.kind.titleMaker, c.agent, c.sid
-	if maker == nil || agent == nil || sid == "" {
+	if maker == nil || agent == nil || sid == "" || c.titling[item] {
 		return
 	}
+	if c.titling == nil {
+		c.titling = map[string]bool{}
+		c.titleSlots = make(chan struct{}, titlesAtOnce)
+	}
+	c.titling[item] = true
+	slots := c.titleSlots
 	go func() {
+		// Each way out drops item from titling under the same lock as its
+		// last look at the pins, so a pin put back meanwhile is either seen
+		// here or asks anew.
+		select {
+		case slots <- struct{}{}:
+			defer func() { <-slots }()
+		case <-c.ctx.Done():
+			c.mu.Lock()
+			delete(c.titling, item)
+			c.mu.Unlock()
+			return
+		}
+		if !c.stillPinned(item) {
+			return // unpinned while it waited
+		}
 		ctx, cancel := context.WithTimeout(c.ctx, titleTimeout)
 		defer cancel()
 		made, err := maker.MessageTitle(ctx, agent.Call, sid, titleText(text))
 		title := agentTitle(made)
 		if err != nil || title == "" {
 			c.log().Info("no title from the agent for a pin", "err", err)
-			return
+			title = ""
 		}
 		c.mu.Lock()
 		defer c.mu.Unlock()
+		delete(c.titling, item)
 		i := slices.IndexFunc(c.record.Pins, func(p model.MessagePin) bool { return p.Item == item })
-		if i < 0 || c.halting {
-			return // unpinned meanwhile, or the chat is being deleted: its record isn't saved again
+		if title == "" || i < 0 || c.halting {
+			return // none, unpinned meanwhile, or the chat is being deleted: its record isn't saved again
 		}
 		pins := slices.Clone(c.record.Pins)
 		pins[i].Title = title
 		c.saveLocked(func(s *model.ChatRecord) { s.Pins = pins })
 	}()
+}
+
+// stillPinned says the message of item is pinned; when it isn't, item is
+// no longer being titled.
+func (c *chat) stillPinned(item string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	pinned := slices.ContainsFunc(c.record.Pins, func(p model.MessagePin) bool { return p.Item == item })
+	if !pinned {
+		delete(c.titling, item)
+	}
+	return pinned
 }

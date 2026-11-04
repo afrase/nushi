@@ -69,15 +69,20 @@ func TestAgentTitle(t *testing.T) {
 }
 
 // fakeTitles makes a pin's title in the agent's place (TitleMaker): asked
-// gets each text it's asked about, then it answers title or err.
+// gets each text it's asked about, then it answers title or err, once
+// gate (if any) is closed.
 type fakeTitles struct {
 	title string
 	err   error
 	asked chan string
+	gate  chan struct{}
 }
 
 func (f fakeTitles) MessageTitle(_ context.Context, _ func(context.Context, string, any, any) error, sessionID, text string) (string, error) {
 	f.asked <- sessionID + ": " + text
+	if f.gate != nil {
+		<-f.gate
+	}
 	return f.title, f.err
 }
 
@@ -145,5 +150,41 @@ func TestPinTitledByTheAgent(t *testing.T) {
 				t.Errorf("shown %s", got)
 			}
 		})
+	}
+}
+
+// A title being made isn't asked for again when its pin is taken off and
+// put back, and a chat's agent makes titlesAtOnce at a time, the others
+// waiting their turn.
+func TestPinTitlesAskedOnceAndFewAtOnce(t *testing.T) {
+	agent := &fakeAgent{}
+	titles := fakeTitles{title: "Made", asked: make(chan string, 10), gate: make(chan struct{})}
+	h := titledHarness{testHarness{Name: "claude", Title: "Claude"}, titles}
+	svc := newService(t, []Kind{{Harness: h, Launch: agent.launch}}, Options{Scratch: t.TempDir()})
+	t.Cleanup(svc.Close)
+	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	turns(t, svc, agent, c, "t1", "t2", "t3")
+
+	for _, step := range []struct {
+		item string
+		on   bool
+	}{{"m1", true}, {"m1", false}, {"m1", true}, {"m2", true}, {"m3", true}} {
+		testcheck.NoErr(t, svc.PinMessage(c.id, step.item, step.on))
+	}
+	// m1's and m2's hold both turns; m3's waits, unasked.
+	for range titlesAtOnce {
+		<-titles.asked
+	}
+	if n := len(titles.asked); n != 0 {
+		t.Fatalf("%d more asked while the agent made %d", n, titlesAtOnce)
+	}
+	close(titles.gate)
+	if !testcheck.Eventually(func() bool { return strings.Join(pinTitles(c), ",") == "Made,Made,Made" }) {
+		t.Fatalf("titles %q", pinTitles(c))
+	}
+	if n := len(titles.asked); n != 1 {
+		t.Errorf("asked %d more, want m3's alone", n)
 	}
 }
