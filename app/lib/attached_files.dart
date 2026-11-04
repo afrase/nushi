@@ -11,6 +11,7 @@ import 'package:nushi/images.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/skills_list.dart' show revealInFinder;
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/widgets.dart';
 import 'package:pasteboard/pasteboard.dart';
 
@@ -153,6 +154,7 @@ Future<String> attachFiles(
   return draft.images.track(() async {
     final refused = <String>[];
     for (final f in files) {
+      // As the browser or the path gives it; shown only through plainPath.
       final name = f.name.isEmpty ? fileName(f.path) : f.name;
       if (chat.canImages && isImageFile(name)) {
         try {
@@ -199,12 +201,14 @@ Future<AttachedFile?> _upload(
   }
   final size = await f.length();
   if (size > maxUploadBytes) {
-    refused.add('$name is over ${maxUploadBytes >> 20} MB');
+    refused.add('${plainPath(name)} is over ${maxUploadBytes >> 20} MB');
     return null;
   }
   final sent = attached.fold(0, (n, f) => n + (f.data?.length ?? 0));
   if (sent + size > maxUploadTotal) {
-    refused.add('$name: a message sends ${maxUploadTotal >> 20} MB at most');
+    refused.add(
+      '${plainPath(name)}: a message sends ${maxUploadTotal >> 20} MB at most',
+    );
     return null;
   }
   return AttachedFile(name: name, size: size, data: await f.readAsBytes());
@@ -219,7 +223,7 @@ AttachedFile? _onMac(
   required int api,
   required List<String> refused,
 }) {
-  final name = fileName(path);
+  final name = plainPath(fileName(path));
   final stat = File(path).statSync();
   if (stat.type == FileSystemEntityType.directory) {
     refused.add('$name is a folder: mention one with @');
@@ -237,7 +241,7 @@ AttachedFile? _onMac(
     refused.add('$name is outside the chat’s folder: update Nushi to send it');
     return null;
   }
-  return AttachedFile(name: name, size: stat.size, path: path);
+  return AttachedFile(name: fileName(path), size: stat.size, path: path);
 }
 
 /// The icon of a file's kind, by its name.
@@ -307,8 +311,9 @@ class FileCard extends StatelessWidget {
       children: [
         Tooltip(
           message: file.data != null
-              ? '${file.name}: saved on the Mac for the agent when sent'
-              : file.path,
+              ? '${plainPath(file.name)}: saved on the Mac for the agent '
+                    'when sent'
+              : plainPath(file.path),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 240, minHeight: height),
             padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
@@ -340,7 +345,7 @@ class FileCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        file.name,
+                        plainPath(file.name),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.ui(t.text, size: 12.5),
@@ -391,7 +396,7 @@ class FileChip extends StatelessWidget {
     // As wide as it reads: a phone's Tap fills its row otherwise.
     return IntrinsicWidth(
       child: Tap(
-        tooltip: path,
+        tooltip: plainPath(path),
         onTap: onOpen ?? onReveal,
         child: Container(
           constraints: const BoxConstraints(maxWidth: 280),
@@ -407,7 +412,7 @@ class FileChip extends StatelessWidget {
               const SizedBox(width: 5),
               Flexible(
                 child: Text(
-                  fileName(path),
+                  plainPath(fileName(path)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(ink, size: 12.5),

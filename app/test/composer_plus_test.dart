@@ -345,6 +345,29 @@ void main() {
     _end();
   }, variant: _mac);
 
+  testWidgets('a file’s name shows its bidi controls marked, never applied', (
+    tester,
+  ) async {
+    final (_, _, chat) = await _box(tester);
+    sendWhole = true;
+    const spoof = 'report\u202efdp.sh'; // reads "reportsh.pdf" if applied
+    expect(
+      await attachFiles(chat, [
+        XFile.fromData(Uint8List(3), name: spoof, path: spoof),
+        XFile.fromData(
+          Uint8List(maxUploadBytes + 1),
+          name: 'x\u2066.mov',
+          path: 'x\u2066.mov',
+        ),
+      ], api: apiVersion),
+      'x\ufffd.mov is over 8 MB',
+    );
+    await tester.pump();
+    expect(find.text('report\ufffdfdp.sh'), findsOne);
+    expect(find.textContaining('\u202e'), findsNothing);
+    _end();
+  }, variant: _mac);
+
   testWidgets('on the phone against an older daemon: photos only, or none', (
     tester,
   ) async {
@@ -399,7 +422,12 @@ void main() {
                   Item(
                     kind: ItemKind.ITEM_KIND_USER_MESSAGE,
                     text: 'see @lib/a.dart',
-                    files: ['lib/a.dart', 'docs/b.md', '/tmp/c.pdf'],
+                    files: [
+                      'lib/a.dart',
+                      'docs/b.md',
+                      '/tmp/c.pdf',
+                      '/tmp/d\u202efdp.sh',
+                    ],
                   ),
                   chat,
                 ) ??
@@ -408,7 +436,8 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(FileChip), findsNWidgets(2));
+    expect(find.byType(FileChip), findsNWidgets(3));
+    expect(find.text('d\ufffdfdp.sh'), findsOne);
     expect(find.text('b.md'), findsOne);
     expect(find.text('c.pdf'), findsOne);
     expect(find.text('a.dart'), findsNothing);

@@ -45,7 +45,9 @@ String? showPath(Item it) {
   }
 }
 
-final _unprintable = RegExp('[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]');
+final _unprintable = RegExp(
+  '[\x00-\x1f\x7f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]',
+);
 
 /// [path], an agent's, with what could make it read as something else
 /// (new lines, bidi controls) marked. It only names the file: the daemon

@@ -66,12 +66,13 @@ func (s *Service) saveUploads(c *chat, m *model.Message) error {
 }
 
 // uploadName is a sent file's name as saved: its last part only, without
-// control characters, at most 120 bytes with its extension kept; "file"
+// control characters or bidi marks (an override makes "a‮fdp.sh" show as
+// "ash.pdf"), at most 120 bytes with its extension kept; "file"
 // when nothing is left.
 func uploadName(name string) string {
 	name = name[strings.LastIndexAny(name, `/\`)+1:]
 	name = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || r == ':' {
+		if unicode.IsControl(r) || unicode.Is(unicode.Bidi_Control, r) || r == ':' {
 			return -1
 		}
 		return r

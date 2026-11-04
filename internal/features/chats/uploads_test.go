@@ -121,14 +121,16 @@ func TestUploadsKeepTheNewest(t *testing.T) {
 func TestUploadName(t *testing.T) {
 	long := strings.Repeat("é", 100) + ".pdf"
 	for in, want := range map[string]string{
-		"report.pdf":         "report.pdf",
-		"../../etc/passwd":   "passwd",
-		`C:\Users\me\a.txt`:  "a.txt",
-		"a\x00b\nc.txt":      "abc.txt",
-		"":                   "file",
-		"..":                 "file",
-		"dir/":               "file",
-		"  spaced name.md  ": "spaced name.md",
+		"report.pdf":                     "report.pdf",
+		"../../etc/passwd":               "passwd",
+		`C:\Users\me\a.txt`:              "a.txt",
+		"a\x00b\nc.txt":                  "abc.txt",
+		"":                               "file",
+		"..":                             "file",
+		"dir/":                           "file",
+		"  spaced name.md  ":             "spaced name.md",
+		"report\u202efdp.sh":             "reportfdp.sh",
+		"a\u2066b\u2069\u200f\u061c.txt": "ab.txt",
 	} {
 		if got := uploadName(in); got != want {
 			t.Errorf("uploadName(%q) = %q, want %q", in, got, want)
