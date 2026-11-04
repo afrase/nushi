@@ -2260,6 +2260,25 @@ message ChatStatus {
   // How many subagents and background commands the chat's agent started
   // still run (API 84): a turn can end while they do.
   int32 background = 14;
+  // Set only on the status published as a turn ends (API 107): how the
+  // daemon judged it, the verdict push and every client go by.
+  TurnEnd ended = 16;
+  // With TURN_END_FAILED, what ended the turn: the agent's error, or that
+  // it quit mid-turn (API 107).
+  string failure = 17;
+}
+
+// How a turn ended, as the daemon judged it (ChatStatus.ended).
+enum TurnEnd {
+  // The status isn't a turn's end.
+  TURN_END_UNSPECIFIED = 0;
+  // The agent ended the turn (refusals and limits included).
+  TURN_END_DONE = 1;
+  // An error ended it, or the agent quit or crashed mid-turn.
+  TURN_END_FAILED = 2;
+  // The user stopped it, or Nushi stopped the agent (sleep, archive,
+  // move, delete, the daemon closing).
+  TURN_END_STOPPED = 3;
 }
 
 // A shell the user runs beside a chat, in the daemon.

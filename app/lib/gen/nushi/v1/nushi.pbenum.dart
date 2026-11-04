@@ -122,5 +122,39 @@ class FieldType extends $pb.ProtobufEnum {
   const FieldType._(super.value, super.name);
 }
 
+/// How a turn ended, as the daemon judged it (ChatStatus.ended).
+class TurnEnd extends $pb.ProtobufEnum {
+  /// The status isn't a turn's end.
+  static const TurnEnd TURN_END_UNSPECIFIED =
+      TurnEnd._(0, _omitEnumNames ? '' : 'TURN_END_UNSPECIFIED');
+
+  /// The agent ended the turn (refusals and limits included).
+  static const TurnEnd TURN_END_DONE =
+      TurnEnd._(1, _omitEnumNames ? '' : 'TURN_END_DONE');
+
+  /// An error ended it, or the agent quit or crashed mid-turn.
+  static const TurnEnd TURN_END_FAILED =
+      TurnEnd._(2, _omitEnumNames ? '' : 'TURN_END_FAILED');
+
+  /// The user stopped it, or Nushi stopped the agent (sleep, archive,
+  /// move, delete, the daemon closing).
+  static const TurnEnd TURN_END_STOPPED =
+      TurnEnd._(3, _omitEnumNames ? '' : 'TURN_END_STOPPED');
+
+  static const $core.List<TurnEnd> values = <TurnEnd>[
+    TURN_END_UNSPECIFIED,
+    TURN_END_DONE,
+    TURN_END_FAILED,
+    TURN_END_STOPPED,
+  ];
+
+  static final $core.List<TurnEnd?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 3);
+  static TurnEnd? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const TurnEnd._(super.value, super.name);
+}
+
 const $core.bool _omitEnumNames =
     $core.bool.fromEnvironment('protobuf.omit_enum_names');

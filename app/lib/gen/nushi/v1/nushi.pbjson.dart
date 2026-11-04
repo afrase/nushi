@@ -60,6 +60,22 @@ final $typed_data.Uint8List fieldTypeDescriptor = $convert.base64Decode(
     'RklFTERfVFlQRV9OVU1CRVIQBBIWChJGSUVMRF9UWVBFX0lOVEVHRVIQBRIWChJGSUVMRF9UWV'
     'BFX0JPT0xFQU4QBg==');
 
+@$core.Deprecated('Use turnEndDescriptor instead')
+const TurnEnd$json = {
+  '1': 'TurnEnd',
+  '2': [
+    {'1': 'TURN_END_UNSPECIFIED', '2': 0},
+    {'1': 'TURN_END_DONE', '2': 1},
+    {'1': 'TURN_END_FAILED', '2': 2},
+    {'1': 'TURN_END_STOPPED', '2': 3},
+  ],
+};
+
+/// Descriptor for `TurnEnd`. Decode as a `google.protobuf.EnumDescriptorProto`.
+final $typed_data.Uint8List turnEndDescriptor = $convert.base64Decode(
+    'CgdUdXJuRW5kEhgKFFRVUk5fRU5EX1VOU1BFQ0lGSUVEEAASEQoNVFVSTl9FTkRfRE9ORRABEh'
+    'MKD1RVUk5fRU5EX0ZBSUxFRBACEhQKEFRVUk5fRU5EX1NUT1BQRUQQAw==');
+
 @$core.Deprecated('Use pingRequestDescriptor instead')
 const PingRequest$json = {
   '1': 'PingRequest',
@@ -3766,6 +3782,15 @@ const ChatStatus$json = {
     {'1': 'reopen_failed', '3': 12, '4': 1, '5': 8, '10': 'reopenFailed'},
     {'1': 'session_gone', '3': 13, '4': 1, '5': 8, '10': 'sessionGone'},
     {'1': 'background', '3': 14, '4': 1, '5': 5, '10': 'background'},
+    {
+      '1': 'ended',
+      '3': 16,
+      '4': 1,
+      '5': 14,
+      '6': '.nushi.v1.TurnEnd',
+      '10': 'ended'
+    },
+    {'1': 'failure', '3': 17, '4': 1, '5': 9, '10': 'failure'},
   ],
   '9': [
     {'1': 2, '2': 3},
@@ -3782,8 +3807,9 @@ final $typed_data.Uint8List chatStatusDescriptor = $convert.base64Decode(
     'ZBgIIAEoCFIKbWNwQ2hhbmdlZBImCg9jYW5fYXNrX2NvbnRleHQYCSABKAhSDWNhbkFza0Nvbn'
     'RleHQSFgoGYXNsZWVwGAogASgIUgZhc2xlZXASGwoJY2FuX3NsZWVwGAsgASgIUghjYW5TbGVl'
     'cBIjCg1yZW9wZW5fZmFpbGVkGAwgASgIUgxyZW9wZW5GYWlsZWQSIQoMc2Vzc2lvbl9nb25lGA'
-    '0gASgIUgtzZXNzaW9uR29uZRIeCgpiYWNrZ3JvdW5kGA4gASgFUgpiYWNrZ3JvdW5kSgQIAhAD'
-    'UgVlcnJvcg==');
+    '0gASgIUgtzZXNzaW9uR29uZRIeCgpiYWNrZ3JvdW5kGA4gASgFUgpiYWNrZ3JvdW5kEicKBWVu'
+    'ZGVkGBAgASgOMhEubnVzaGkudjEuVHVybkVuZFIFZW5kZWQSGAoHZmFpbHVyZRgRIAEoCVIHZm'
+    'FpbHVyZUoECAIQA1IFZXJyb3I=');
 
 @$core.Deprecated('Use terminalDescriptor instead')
 const Terminal$json = {

@@ -146,7 +146,15 @@ func usageProto(u model.Usage) *nushiv1.Usage {
 func statusProto(st model.Status) *nushiv1.ChatStatus {
 	return &nushiv1.ChatStatus{Busy: st.Busy, Waiting: st.Waiting, CanFork: st.CanFork, CanWriteCommit: st.CanWriteCommit, Images: st.Images, CanRewind: st.CanRewind,
 		McpChanged: st.MCPChanged, Started: unixMs(st.Started), CanAskContext: st.CanAskContext, Asleep: st.Asleep, CanSleep: st.CanSleep, ReopenFailed: st.ReopenFailed, SessionGone: st.SessionGone,
-		Background: int32(st.Background)}
+		Background: int32(st.Background), Ended: turnEndProto[st.Ended], Failure: st.Failure}
+}
+
+// turnEndProto is each turn's end as the API says it.
+var turnEndProto = map[model.TurnEnd]nushiv1.TurnEnd{
+	model.NotEnded:    nushiv1.TurnEnd_TURN_END_UNSPECIFIED,
+	model.TurnDone:    nushiv1.TurnEnd_TURN_END_DONE,
+	model.TurnFailed:  nushiv1.TurnEnd_TURN_END_FAILED,
+	model.TurnStopped: nushiv1.TurnEnd_TURN_END_STOPPED,
 }
 
 func removedProto(removed []model.RemovedChat) []*nushiv1.RemovedChat {

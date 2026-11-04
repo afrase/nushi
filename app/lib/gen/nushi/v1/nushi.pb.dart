@@ -16151,6 +16151,8 @@ class ChatStatus extends $pb.GeneratedMessage {
     $core.bool? sessionGone,
     $core.int? background,
     $core.bool? canWriteCommit,
+    TurnEnd? ended,
+    $core.String? failure,
   }) {
     final result = ChatStatus._();
     if (busy != null) result.busy = busy;
@@ -16167,6 +16169,8 @@ class ChatStatus extends $pb.GeneratedMessage {
     if (sessionGone != null) result.sessionGone = sessionGone;
     if (background != null) result.background = background;
     if (canWriteCommit != null) result.canWriteCommit = canWriteCommit;
+    if (ended != null) result.ended = ended;
+    if (failure != null) result.failure = failure;
     return result;
   }
 
@@ -16197,6 +16201,9 @@ class ChatStatus extends $pb.GeneratedMessage {
     ..aOB(13, _omitFieldNames ? '' : 'sessionGone')
     ..aI(14, _omitFieldNames ? '' : 'background')
     ..aOB(15, _omitFieldNames ? '' : 'canWriteCommit')
+    ..aE<TurnEnd>(16, _omitFieldNames ? '' : 'ended',
+        enumValues: TurnEnd.values)
+    ..aOS(17, _omitFieldNames ? '' : 'failure')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -16366,6 +16373,28 @@ class ChatStatus extends $pb.GeneratedMessage {
   $core.bool hasCanWriteCommit() => $_has(13);
   @$pb.TagNumber(15)
   void clearCanWriteCommit() => $_clearField(15);
+
+  /// Set only on the status published as a turn ends (API 107): how the
+  /// daemon judged it, the verdict push and every client go by.
+  @$pb.TagNumber(16)
+  TurnEnd get ended => $_getN(14);
+  @$pb.TagNumber(16)
+  set ended(TurnEnd value) => $_setField(16, value);
+  @$pb.TagNumber(16)
+  $core.bool hasEnded() => $_has(14);
+  @$pb.TagNumber(16)
+  void clearEnded() => $_clearField(16);
+
+  /// With TURN_END_FAILED, what ended the turn: the agent's error, or that
+  /// it quit mid-turn (API 107).
+  @$pb.TagNumber(17)
+  $core.String get failure => $_getSZ(15);
+  @$pb.TagNumber(17)
+  set failure($core.String value) => $_setString(15, value);
+  @$pb.TagNumber(17)
+  $core.bool hasFailure() => $_has(15);
+  @$pb.TagNumber(17)
+  void clearFailure() => $_clearField(17);
 }
 
 /// A shell the user runs beside a chat, in the daemon.
