@@ -223,9 +223,8 @@ func cut(records []copied, upTo string) (kept []copied, found bool) {
 // titleOf finds a transcript's title as List does, else its first prompt.
 func titleOf(data []byte) string {
 	head, tail := data[:min(len(data), liteRead)], data[max(0, len(data)-liteRead):]
-	h, t := strings.ToValidUTF8(string(head), "�"), strings.ToValidUTF8(string(tail), "�")
-	return cmp.Or(lastString(t, "customTitle"), lastString(h, "customTitle"),
-		lastString(t, "aiTitle"), lastString(h, "aiTitle"), firstPrompt(h))
+	l := lite{head: strings.ToValidUTF8(string(head), "�"), tail: strings.ToValidUTF8(string(tail), "�")}
+	return cmp.Or(l.customTitle(), firstPrompt(l.head))
 }
 
 // stamp is the time now as the CLI writes it (JavaScript's toISOString).

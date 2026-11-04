@@ -208,6 +208,13 @@ func readLite(path string) (lite, bool) {
 	return l, true
 }
 
+// customTitle is the session's title: the user's, else the one claude
+// made, the last of each, from the end first.
+func (l lite) customTitle() string {
+	return cmp.Or(lastString(l.tail, "customTitle"), lastString(l.head, "customTitle"),
+		lastString(l.tail, "aiTitle"), lastString(l.head, "aiTitle"))
+}
+
 // info reads a session's details from its transcript's start and end;
 // false for a subagent's transcript or one with nothing to name it by.
 func (l lite) info(id, cwd string) (Info, bool) {
@@ -216,9 +223,7 @@ func (l lite) info(id, cwd string) (Info, bool) {
 		return Info{}, false
 	}
 	info := Info{ID: id, Size: l.size, LastModified: l.modified}
-	info.CustomTitle = cmp.Or(
-		lastString(l.tail, "customTitle"), lastString(l.head, "customTitle"),
-		lastString(l.tail, "aiTitle"), lastString(l.head, "aiTitle"))
+	info.CustomTitle = l.customTitle()
 	info.FirstPrompt = firstPrompt(l.head)
 	info.Summary = cmp.Or(info.CustomTitle, lastString(l.tail, "lastPrompt"), lastString(l.tail, "summary"), info.FirstPrompt)
 	if info.Summary == "" {

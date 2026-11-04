@@ -127,27 +127,6 @@ type promptText string
 
 // UnmarshalJSON reads data's text; it never fails.
 func (p *promptText) UnmarshalJSON(data []byte) error {
-	*p = promptText(textOf(data))
+	*p = promptText(strings.Join(texts(data), ""))
 	return nil
-}
-
-// textOf is a prompt's text, as promptText reads it.
-func textOf(data []byte) string {
-	if s, ok := stringOf(data); ok {
-		return s
-	}
-	var blocks []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	}
-	if json.Unmarshal(data, &blocks) != nil {
-		return ""
-	}
-	var b strings.Builder
-	for _, bl := range blocks {
-		if bl.Type == "text" {
-			b.WriteString(bl.Text)
-		}
-	}
-	return b.String()
 }
