@@ -34,6 +34,10 @@ class DrawnDiagram {
 /// Draws a diagram as a picture: on the Mac, mermaid.js in one hidden web
 /// view (`nushi/mermaid`, MainFlutterWindow.swift), `width` points wide at
 /// most, in the colors given. Tests set their own.
+///
+/// The web view gives each diagram 10 s, so a slow one doesn't hold the
+/// rest; a call that waits past [diagramWait] (the window's side never
+/// answered) fails, to be drawn again when next asked for.
 Future<DrawnDiagram> Function(
   String source, {
   required bool dark,
@@ -45,6 +49,9 @@ drawDiagram = _drawOnMac;
 
 const _channel = MethodChannel('nushi/mermaid');
 
+/// How long a diagram waits on the Mac's web view, its queue included.
+Duration diagramWait = const Duration(minutes: 1);
+
 Future<DrawnDiagram> _drawOnMac(
   String source, {
   required bool dark,
@@ -53,13 +60,15 @@ Future<DrawnDiagram> _drawOnMac(
   required Color foreground,
 }) async {
   try {
-    final r = await _channel.invokeMapMethod<String, Object?>('draw', {
-      'source': source,
-      'dark': dark,
-      'width': width,
-      'background': cssColor(background),
-      'foreground': cssColor(foreground),
-    });
+    final r = await _channel
+        .invokeMapMethod<String, Object?>('draw', {
+          'source': source,
+          'dark': dark,
+          'width': width,
+          'background': cssColor(background),
+          'foreground': cssColor(foreground),
+        })
+        .timeout(diagramWait);
     if (r?['png'] case final Uint8List png) {
       return DrawnDiagram(
         png: png,
@@ -70,6 +79,11 @@ Future<DrawnDiagram> _drawOnMac(
     return DrawnDiagram(
       error: '${r?['error'] ?? 'Not drawn'}',
       retry: r?['retry'] == true,
+    );
+  } on TimeoutException {
+    return const DrawnDiagram(
+      error: 'The diagram took too long to draw',
+      retry: true,
     );
   } on Object catch (e) {
     return DrawnDiagram(
