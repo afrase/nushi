@@ -252,10 +252,26 @@ class ClickableImage extends StatelessWidget {
 /// The largest local file a markdown image reads.
 const int maxImageFile = 20 << 20;
 
-/// A markdown image: a local file (an absolute path or a file: URL; a
-/// regular file of [maxImageFile] at most, never a device or a pipe) or a
-/// data: URL shows at once; a remote one only after "Load image", since
-/// loading it tells its server that, and when, the reply was read.
+/// Whether a markdown image may read the file at a path: a regular file of
+/// [maxImageFile] at most, never a device or a pipe. Asked off the UI
+/// thread: a path from an agent's text can be on a network volume that
+/// takes long to answer.
+Future<bool> Function(String path) readableImage = (path) async {
+  try {
+    // Async on purpose: statSync on the UI thread froze the window on a
+    // network volume that didn't answer.
+    // ignore: avoid_slow_async_io
+    final stat = await File(path).stat();
+    return stat.type == FileSystemEntityType.file && stat.size <= maxImageFile;
+  } on Object {
+    return false;
+  }
+};
+
+/// A markdown image: a local file (an absolute path or a file: URL;
+/// [readableImage] says which) shows once checked, a data: URL at once; a
+/// remote one only after "Load image", since loading it tells its server
+/// that, and when, the reply was read.
 Widget markdownImage(Uri uri, String? alt) {
   if (uri.scheme == 'data') {
     final bytes = uri.data?.contentAsBytes();
@@ -268,16 +284,8 @@ Widget markdownImage(Uri uri, String? alt) {
     // Only a plain path: a host or a query isn't a local file (and
     // toFilePath throws on them, which would break the whole message).
     final local = uri.host.isEmpty && !uri.hasQuery && !uri.hasFragment;
-    try {
-      final file = File(uri.toFilePath());
-      final stat = file.statSync();
-      if (local &&
-          stat.type == FileSystemEntityType.file &&
-          stat.size <= maxImageFile) {
-        return ClickableImage(image: FileImage(file), size: 320);
-      }
-    } on Object {
-      // not a file Nushi reads
+    if (local && !kIsWeb) {
+      return _LocalImage(uri.toFilePath(), '[image: ${alt ?? uri}');
     }
     return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
   }
@@ -287,6 +295,38 @@ Widget markdownImage(Uri uri, String? alt) {
     return _RemoteImage(uri, alt);
   }
   return Text('[image: ${alt ?? uri}]');
+}
+
+/// A local file as a markdown image, once [readableImage] said it may be
+/// read; until then, room for it.
+class _LocalImage extends StatefulWidget {
+  const new(this.path, this.said);
+
+  final String path;
+  final String said; // "[image: <alt>", for a file it doesn't read
+
+  @override
+  State<_LocalImage> createState() => _LocalImageState();
+}
+
+class _LocalImageState extends State<_LocalImage> {
+  late Future<bool> _readable = readableImage(widget.path);
+
+  @override
+  void didUpdateWidget(_LocalImage old) {
+    super.didUpdateWidget(old);
+    if (old.path != widget.path) _readable = readableImage(widget.path);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _readable,
+    builder: (context, snap) => switch (snap.data) {
+      null => const SizedBox(width: 320, height: 24),
+      true => ClickableImage(image: FileImage(File(widget.path)), size: 320),
+      false => Text('${widget.said} (not an image file Nushi reads)]'),
+    },
+  );
 }
 
 class _RemoteImage extends StatefulWidget {

@@ -8,19 +8,19 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 
 void main() {
-  test('a markdown image reads only a regular file of a few MB', () {
+  test('a markdown image reads only a regular file of a few MB', () async {
     final dir = Directory.systemTemp.createTempSync('images');
     addTearDown(() => dir.deleteSync(recursive: true));
     final small = File('${dir.path}/a.png')..writeAsBytesSync([1, 2, 3]);
     final big = File('${dir.path}/b.png')
       ..writeAsBytesSync(List.filled(maxImageFile + 1, 0));
     Process.runSync('mkfifo', ['${dir.path}/fifo']);
-    bool refused(String path) => markdownImage(Uri.file(path), 'x') is Text;
-    expect(refused(small.path), isFalse);
-    expect(refused(big.path), isTrue);
-    expect(refused('/dev/zero'), isTrue);
-    expect(refused('${dir.path}/fifo'), isTrue);
-    expect(refused('${dir.path}/missing.png'), isTrue);
+    Future<bool> refused(String path) async => !await readableImage(path);
+    expect(await refused(small.path), isFalse);
+    expect(await refused(big.path), isTrue);
+    expect(await refused('/dev/zero'), isTrue);
+    expect(await refused('${dir.path}/fifo'), isTrue);
+    expect(await refused('${dir.path}/missing.png'), isTrue);
     // A host or a query: not a local file, and no throw.
     for (final u in [
       'file://evil.com/a.png',
@@ -29,6 +29,34 @@ void main() {
     ]) {
       expect(markdownImage(Uri.parse(u), 'x'), isA<Text>(), reason: u);
     }
+  });
+
+  // Chat review 2026-11-04: a path in an agent's Markdown was checked on
+  // the UI thread, so one on a network volume that doesn't answer froze
+  // the window. The build never waits on the file.
+  testWidgets("a local image's file is checked off the UI thread", (
+    tester,
+  ) async {
+    final asked = <String>[];
+    final answer = Completer<bool>();
+    final readable = readableImage;
+    readableImage = (path) {
+      asked.add(path);
+      return answer.future;
+    };
+    addTearDown(() => readableImage = readable);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: markdownImage(Uri.file('/Volumes/share/a.png'), 'x'),
+        ),
+      ),
+    );
+    expect(asked, ['/Volumes/share/a.png']);
+    expect(find.byType(Image), findsNothing);
+    answer.complete(false);
+    await tester.pump();
+    expect(find.text('[image: x (not an image file Nushi reads)]'), findsOne);
   });
 
   test(
