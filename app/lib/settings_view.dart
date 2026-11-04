@@ -122,15 +122,7 @@ class _SettingsViewState extends State<SettingsView> {
     ),
     SettingsSection.agents => SettingsPage(
       title: s.title,
-      children: [
-        AgentsPage(
-          daemon.client,
-          daemonApi: daemon.daemonApi,
-          marked: daemon.settingsOpen?.agent,
-          settings: _set,
-          onChange: _change,
-        ),
-      ],
+      children: [AgentsPage(daemon.client, marked: daemon.settingsOpen?.agent)],
     ),
     SettingsSection.mcp => McpView(
       daemon: daemon,

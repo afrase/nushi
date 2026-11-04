@@ -1,10 +1,9 @@
 import 'package:fixnum/fixnum.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/agents_page.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -12,19 +11,20 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
-Adapter _adapter(String package, String pinned, String installed) => Adapter(
-  package: package,
-  pinned: pinned,
+/// Codex's adapter, pinned at 2.2.2, with [installed] set up.
+Adapter _codexAdapter(String installed) => Adapter(
+  package: '@agentclientprotocol/codex-acp',
+  pinned: '2.2.2',
   installed: installed,
   packages: 107,
-  downloadBytes: Int64(8979854),
-  diskBytes: Int64(73064448),
-  folder: '/Users/me/Library/Application Support/Nushi/agents/claude',
+  downloadBytes: Int64(2337235),
+  diskBytes: Int64(18599936),
+  folder: '/Users/me/Library/Application Support/Nushi/agents/codex',
 );
 
-/// Claude installed but not set up nor signed in, Codex set up with a
-/// newer adapter pinned and a chat awake, Ante ready, oh-my-pi missing,
-/// PiG ready.
+/// Claude ready (through the Go agent: nothing to set up) but not signed
+/// in, Codex set up with a newer adapter pinned and a chat awake, Ante
+/// ready, oh-my-pi missing, PiG ready.
 final _found = [
   Agent(
     name: 'claude',
@@ -32,8 +32,7 @@ final _found = [
     path: '/opt/homebrew/bin/claude',
     version: '2.1.310',
     signedIn: 'no',
-    goAgent: true,
-    adapter: _adapter('@agentclientprotocol/claude-agent-acp', '0.94.0', ''),
+    ready: true,
   ),
   Agent(
     name: 'codex',
@@ -42,7 +41,7 @@ final _found = [
     version: '0.163.0',
     ready: true,
     awake: 1,
-    adapter: _adapter('@agentclientprotocol/codex-acp', '2.2.2', '2.2.1'),
+    adapter: _codexAdapter('2.2.1'),
   ),
   Agent(
     name: 'ante',
@@ -71,19 +70,21 @@ Future<(FakeDaemon, Daemon)> _settings(
   Tokens tokens = Tokens.dark,
   String? agent,
   ShellEnvironment? environment,
-  bool goAgent = false,
+  bool codexSetUp = true,
   Size size = const Size(1000, 760),
-  int api = apiVersion,
 }) async {
   final fake = FakeDaemon([])
-    ..answer = ((input) =>
-        input is PingRequest ? PingResponse(apiVersion: api) : null)
     ..agents = [
       for (final a in _found)
-        a.deepCopy()..goAgent = api >= agentFactsApi && a.goAgent,
+        if (a.name == 'codex' && !codexSetUp)
+          a.deepCopy()
+            ..adapter = _codexAdapter('')
+            ..ready = false
+            ..awake = 0
+        else
+          a,
     ]
     ..environment = environment;
-  fake.settings.claudeGoAgent = goAgent;
   final d = await fake.connect(tester);
   await pumpSettings(
     tester,
@@ -96,15 +97,6 @@ Future<(FakeDaemon, Daemon)> _settings(
   return (fake, d);
 }
 
-/// Settings › Agents' switch for Claude's Go agent.
-Finder get _goSwitch => find.descendant(
-  of: find.ancestor(
-    of: find.text("Use Nushi's Go agent"),
-    matching: find.byType(SettingsRow),
-  ),
-  matching: find.byType(Switch),
-);
-
 void main() {
   setUpAll(loadFonts);
   setUp(() {
@@ -115,22 +107,15 @@ void main() {
         );
   });
 
-  testWidgets('a daemon too old to say still has Claude’s Go agent, by its '
-      'name', (tester) async {
-    final (_, d) = await _settings(tester, api: agentFactsApi - 1);
-    expect(_goSwitch, findsOneWidget);
-    d.dispose();
-  });
-
   testWidgets('each agent as found, and what can be done', (tester) async {
     final (_, d) = await _settings(tester);
     expect(find.text('2.1.310 · /opt/homebrew/bin/claude'), findsOneWidget);
     expect(find.text('Not signed in'), findsOneWidget);
-    expect(find.text('Set up'), findsOneWidget);
+    expect(find.text('Set up'), findsNothing); // Claude needs none
     expect(find.text('Adapter 2.2.1'), findsOneWidget);
     expect(find.text('Update to 2.2.2'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
-    expect(find.text('Ready'), findsNWidgets(2)); // Ante, PiG
+    expect(find.text('Ready'), findsNWidgets(3)); // Claude, Ante, PiG
     expect(find.text('0.5.3 · /Users/me/.local/bin/pig'), findsOneWidget);
     expect(find.text('Not installed'), findsOneWidget);
     expect(find.text('Get it'), findsOneWidget);
@@ -140,21 +125,21 @@ void main() {
   testWidgets('Set up says what it downloads, then installs it', (
     tester,
   ) async {
-    final (fake, d) = await _settings(tester);
+    final (fake, d) = await _settings(tester, codexSetUp: false);
     await tester.tap(find.text('Set up'));
     await tester.pumpAndSettle();
     expect(
       find.text(
-        'Downloads @agentclientprotocol/claude-agent-acp 0.94.0 and the 106 '
-        'packages it needs from npm, about 9 MB (73 MB on disk), into '
-        '/Users/me/Library/Application Support/Nushi/agents/claude.',
+        'Downloads @agentclientprotocol/codex-acp 2.2.2 and the 106 '
+        'packages it needs from npm, about 2 MB (19 MB on disk), into '
+        '/Users/me/Library/Application Support/Nushi/agents/codex.',
       ),
       findsOneWidget,
     );
     await tester.tap(find.text('Set up').last);
     await tester.pumpAndSettle();
-    expect(fake.setUp, ['claude']);
-    expect(find.text('Set up Claude'), findsNothing); // the sheet closed
+    expect(fake.setUp, ['codex']);
+    expect(find.text('Set up Codex'), findsNothing); // the sheet closed
     d.dispose();
   });
 
@@ -174,54 +159,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.removed, ['codex']);
     expect(fake.setUp, isEmpty);
-    d.dispose();
-  });
-
-  testWidgets("Claude's Go agent: the switch sets it, and Claude then needs "
-      'no set-up; off again, it does', (tester) async {
-    final (fake, d) = await _settings(tester);
-    expect(
-      find.text('Runs Claude without Node. New and reopened chats use it.'),
-      findsOneWidget,
-    );
-    // In line with Claude's name, under Claude's row.
-    expect(
-      tester.getRect(find.text("Use Nushi's Go agent")).left,
-      tester.getRect(find.text('Claude')).left,
-    );
-    expect(
-      tester.getRect(find.text("Use Nushi's Go agent")).top,
-      greaterThan(tester.getRect(find.text('Not signed in')).bottom),
-    );
-    expect(
-      tester.getRect(find.text("Use Nushi's Go agent")).bottom,
-      lessThan(tester.getRect(find.text('Codex')).top),
-    );
-    expect(tester.widget<Switch>(_goSwitch).value, isFalse);
-    expect(find.text('Set up'), findsOneWidget);
-    final listed = fake.calls.whereType<ListAgentsRequest>().length;
-    await tester.tap(_goSwitch);
-    await tester.pumpAndSettle();
-    expect(fake.setSettings.single.claudeGoAgent, isTrue);
-    expect(fake.setSettings.single.sleepAfterMinutes, 30); // the rest kept
-    expect(fake.calls.whereType<ListAgentsRequest>().length, listed + 1);
-    expect(tester.widget<Switch>(_goSwitch).value, isTrue);
-    expect(find.text('Set up'), findsNothing);
-    expect(find.text('Ready'), findsNWidgets(3)); // Claude, Ante, PiG
-    await tester.tap(_goSwitch);
-    await tester.pumpAndSettle();
-    expect(fake.setSettings.last.claudeGoAgent, isFalse);
-    expect(find.text('Set up'), findsOneWidget);
-    d.dispose();
-  });
-
-  testWidgets('no switch from a daemon without the setting', (tester) async {
-    final fake = FakeDaemon([])..agents = _found;
-    fake.settings.clearClaudeGoAgent();
-    final d = await fake.connect(tester);
-    await pumpSettings(tester, d, SettingsSection.agents);
-    expect(find.text("Use Nushi's Go agent"), findsNothing);
-    expect(find.text('Set up'), findsOneWidget);
     d.dispose();
   });
 
@@ -282,35 +219,35 @@ void main() {
       d.dispose();
     });
 
-    // Claude's Go agent off (Set up, as today) and on (no adapter, nothing
-    // to set up), in a wide window and a narrow one.
+    // Claude through the Go agent, with no Set up in its row, beside
+    // Codex's adapter to update, in a wide window and a narrow one.
     for (final (size, sizeName) in [
       (const Size(1700, 900), 'wide'),
       (const Size(720, 760), 'narrow'),
     ]) {
-      for (final on in [false, true]) {
-        final state = on ? 'on' : 'off';
-        testWidgets('the page, the Go agent $state, $sizeName ($name)', (
+      testWidgets('the page, $sizeName ($name)', (tester) async {
+        final (_, d) = await _settings(tester, tokens: tokens, size: size);
+        final claude = tester.getRect(find.byType(AgentRow).first);
+        final ready = tester.getRect(find.text('Ready').first);
+        expect(ready.right, closeTo(claude.right - 14, 1));
+        expect(ready.top, lessThan(claude.center.dy)); // Claude's own row
+        expect(find.text('Set up'), findsNothing);
+        expect(
+          tester.getRect(find.text('Update to 2.2.2')).right,
+          lessThanOrEqualTo(claude.right - 14 + 0.5),
+        );
+        expectTextInside(tester, size.width);
+        await render(
           tester,
-        ) async {
-          final (_, d) = await _settings(
-            tester,
-            tokens: tokens,
-            goAgent: on,
-            size: size,
-          );
-          final row = tester.getRect(find.byType(SettingsRow).first);
-          expect(tester.getRect(_goSwitch).right, closeTo(row.right - 14, 1));
-          expect(find.text('Set up'), on ? findsNothing : findsOneWidget);
-          await expectLater(
-            find.byType(SettingsView),
-            matchesGoldenFile(
-              'goldens/agents_go_${state}_${sizeName}_$name.png',
-            ),
-          );
-          d.dispose();
-        });
-      }
+          find.byType(SettingsView),
+          'agents_${sizeName}_$name',
+        );
+        await expectLater(
+          find.byType(SettingsView),
+          matchesGoldenFile('goldens/agents_${sizeName}_$name.png'),
+        );
+        d.dispose();
+      });
     }
 
     // A chat that couldn't start Codex sent you here: its row stands out.

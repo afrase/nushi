@@ -26,7 +26,6 @@ List<Agent> readyAgents() => [
       title: title,
       path: '/bin/$name',
       ready: true,
-      goAgent: name == 'claude',
       mcpUserOnly: name == 'ante',
     ),
 ];
@@ -38,9 +37,7 @@ class FakeDaemon implements Transport {
 
   final List<Chat> chats;
 
-  /// What ListAgents answers (Claude without its adapter while
-  /// [settings] run it through the Go agent, as the daemon does); the
-  /// agents set up and removed.
+  /// What ListAgents answers; the agents set up and removed.
   List<Agent> agents = readyAgents();
 
   /// How reading the shell's environment went, as ListAgents tells it
@@ -51,7 +48,7 @@ class FakeDaemon implements Transport {
   final started = <StartChatRequest>[];
 
   /// What GetSettings answers, and each SetSettings.
-  Settings settings = Settings(sleepAfterMinutes: 30, claudeGoAgent: false);
+  Settings settings = Settings(sleepAfterMinutes: 30);
   final setSettings = <Settings>[];
   String? startError;
 
@@ -140,7 +137,7 @@ class FakeDaemon implements Transport {
             :final reloadEnvironment,
           ) =>
             ListAgentsResponse(
-              agents: [for (final a in agents) _asRun(a)],
+              agents: agents,
               environment: refreshEnvironment || reloadEnvironment
                   ? environment
                   : null,
@@ -159,14 +156,6 @@ class FakeDaemon implements Transport {
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());
   }
-
-  /// [a] as the daemon lists it now: Claude through the Go agent needs
-  /// no adapter, so it's ready once found.
-  Agent _asRun(Agent a) => a.goAgent && settings.claudeGoAgent
-      ? (a.deepCopy()
-          ..clearAdapter()
-          ..ready = a.path.isNotEmpty && a.problem.isEmpty)
-      : a;
 
   /// A fork of chat [of] as the daemon makes one (ForkAsChat, and a kept
   /// side chat's): chat [id], titled as a fork, listed and announced.

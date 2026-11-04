@@ -93,7 +93,6 @@ FakeDaemon settingsFake({List<TranscriptCopy>? copies}) {
       keepTranscripts: true,
       transcriptDays: 90,
       checkUpdates: true,
-      claudeGoAgent: false,
     )
     ..answer = (input) => switch (input) {
       // A packaged daemon's, as Logs & advanced shows it.

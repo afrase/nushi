@@ -4,10 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/shell_env_line.dart';
 import 'package:nushi/theme/theme.dart';
@@ -16,29 +14,15 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// Settings › Agents: each agent as found on this Mac (its version and
 /// path, or "Not installed" with where to get it), and for one that runs
-/// through an adapter, Set up, Update and Remove (ADR 0037). Under Claude,
-/// the daemon's setting that runs it through Nushi's Go agent instead of
-/// its adapter (ADR 0066), once [settings] came. The [marked] agent's row
-/// stands out: a chat that couldn't start it sent you here.
+/// through an adapter (Codex), Set up, Update and Remove (ADR 0037); Claude
+/// runs through Nushi's Go agent, with nothing to set up (ADR 0066). The
+/// [marked] agent's row stands out: a chat that couldn't start it sent you
+/// here.
 class AgentsPage extends StatefulWidget {
-  const new(
-    this.client, {
-    required this.daemonApi,
-    super.key,
-    this.marked,
-    this.settings,
-    this.onChange,
-  });
+  const new(this.client, {super.key, this.marked});
 
   final NushiServiceClient client;
-
-  /// The daemon's API version.
-  final int daemonApi;
   final String? marked;
-
-  /// The daemon's settings; null until it said.
-  final Settings? settings;
-  final SettingsChange? onChange;
 
   @override
   State<AgentsPage> createState() => _AgentsPageState();
@@ -66,29 +50,6 @@ class _AgentsPageState extends State<AgentsPage> {
     if (mounted) setState(() => _removing.remove(a.name));
   }
 
-  /// Claude's switch between its adapter and Nushi's Go agent, set in
-  /// line with Claude's name; the agents are found again once it's set,
-  /// as Claude's needs changed. Null while the daemon's settings aren't
-  /// known (or it is too old to have the setting).
-  Widget? _goAgent() {
-    final (set, change) = (widget.settings, widget.onChange);
-    if (set == null || change == null || !set.hasClaudeGoAgent()) return null;
-    return Padding(
-      padding: const EdgeInsets.only(left: agentTextIndent),
-      child: SettingsRow(
-        "Use Nushi's Go agent",
-        description: 'Runs Claude without Node. New and reopened chats use it.',
-        control: SettingsSwitch(
-          value: set.claudeGoAgent,
-          run: ({required on}) async {
-            await change((s) => s.claudeGoAgent = on);
-            await listAgents(widget.client);
-          },
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: agentList,
@@ -99,7 +60,7 @@ class _AgentsPageState extends State<AgentsPage> {
         if (agents.isNotEmpty)
           SettingsGroup(
             children: [
-              for (final a in agents.values) ...[
+              for (final a in agents.values)
                 AgentRow(
                   a,
                   client: widget.client,
@@ -108,11 +69,6 @@ class _AgentsPageState extends State<AgentsPage> {
                       ? null
                       : () => _remove(a),
                 ),
-                if (widget.daemonApi < agentFactsApi
-                    ? a.name == 'claude'
-                    : a.goAgent)
-                  ?_goAgent(),
-              ],
             ],
           ),
         ShellEnvLine(widget.client),

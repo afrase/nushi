@@ -2266,7 +2266,6 @@ class Agent extends $pb.GeneratedMessage {
     Adapter? adapter,
     $core.bool? ready,
     $core.int? awake,
-    $core.bool? goAgent,
     $core.bool? mcpUserOnly,
   }) {
     final result = Agent._();
@@ -2283,7 +2282,6 @@ class Agent extends $pb.GeneratedMessage {
     if (adapter != null) result.adapter = adapter;
     if (ready != null) result.ready = ready;
     if (awake != null) result.awake = awake;
-    if (goAgent != null) result.goAgent = goAgent;
     if (mcpUserOnly != null) result.mcpUserOnly = mcpUserOnly;
     return result;
   }
@@ -2315,7 +2313,6 @@ class Agent extends $pb.GeneratedMessage {
         subBuilder: Adapter.$_createMessage)
     ..aOB(12, _omitFieldNames ? '' : 'ready')
     ..aI(13, _omitFieldNames ? '' : 'awake')
-    ..aOB(14, _omitFieldNames ? '' : 'goAgent')
     ..aOB(15, _omitFieldNames ? '' : 'mcpUserOnly')
     ..hasRequiredFields = false;
 
@@ -2478,25 +2475,14 @@ class Agent extends $pb.GeneratedMessage {
   @$pb.TagNumber(13)
   void clearAwake() => $_clearField(13);
 
-  /// Nushi's Go agent can run it in place of its adapter, as the setting
-  /// claude_go_agent picks (API 97, ADR 0066).
-  @$pb.TagNumber(14)
-  $core.bool get goAgent => $_getBF(13);
-  @$pb.TagNumber(14)
-  set goAgent($core.bool value) => $_setBool(13, value);
-  @$pb.TagNumber(14)
-  $core.bool hasGoAgent() => $_has(13);
-  @$pb.TagNumber(14)
-  void clearGoAgent() => $_clearField(14);
-
   /// Its MCP servers are only yours, the user scope, with no off switch or
   /// legacy SSE; others have Claude's scopes and those (API 97).
   @$pb.TagNumber(15)
-  $core.bool get mcpUserOnly => $_getBF(14);
+  $core.bool get mcpUserOnly => $_getBF(13);
   @$pb.TagNumber(15)
-  set mcpUserOnly($core.bool value) => $_setBool(14, value);
+  set mcpUserOnly($core.bool value) => $_setBool(13, value);
   @$pb.TagNumber(15)
-  $core.bool hasMcpUserOnly() => $_has(14);
+  $core.bool hasMcpUserOnly() => $_has(13);
   @$pb.TagNumber(15)
   void clearMcpUserOnly() => $_clearField(15);
 }
@@ -6410,7 +6396,6 @@ class Settings extends $pb.GeneratedMessage {
     $core.bool? keepTranscripts,
     $core.int? transcriptDays,
     $core.bool? checkUpdates,
-    $core.bool? claudeGoAgent,
   }) {
     final result = Settings._();
     if (sleepAfterMinutes != null) result.sleepAfterMinutes = sleepAfterMinutes;
@@ -6418,7 +6403,6 @@ class Settings extends $pb.GeneratedMessage {
     if (keepTranscripts != null) result.keepTranscripts = keepTranscripts;
     if (transcriptDays != null) result.transcriptDays = transcriptDays;
     if (checkUpdates != null) result.checkUpdates = checkUpdates;
-    if (claudeGoAgent != null) result.claudeGoAgent = claudeGoAgent;
     return result;
   }
 
@@ -6440,7 +6424,6 @@ class Settings extends $pb.GeneratedMessage {
     ..aOB(3, _omitFieldNames ? '' : 'keepTranscripts')
     ..aI(4, _omitFieldNames ? '' : 'transcriptDays')
     ..aOB(5, _omitFieldNames ? '' : 'checkUpdates')
-    ..aOB(6, _omitFieldNames ? '' : 'claudeGoAgent')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -6518,21 +6501,6 @@ class Settings extends $pb.GeneratedMessage {
   $core.bool hasCheckUpdates() => $_has(4);
   @$pb.TagNumber(5)
   void clearCheckUpdates() => $_clearField(5);
-
-  /// Claude's chats run through Nushi's Go agent (claudeacp, ADR 0066), which
-  /// needs no Node and nothing set up, instead of the adapter
-  /// (claude-agent-acp); off by default. A Claude chat's agent reads it each
-  /// time it starts (a new chat, a reopened or woken one), so chats already
-  /// running keep theirs until then. SetSettings leaves it as it is when not
-  /// given (API 93).
-  @$pb.TagNumber(6)
-  $core.bool get claudeGoAgent => $_getBF(5);
-  @$pb.TagNumber(6)
-  set claudeGoAgent($core.bool value) => $_setBool(5, value);
-  @$pb.TagNumber(6)
-  $core.bool hasClaudeGoAgent() => $_has(5);
-  @$pb.TagNumber(6)
-  void clearClaudeGoAgent() => $_clearField(6);
 }
 
 class ListTranscriptsRequest extends $pb.GeneratedMessage {

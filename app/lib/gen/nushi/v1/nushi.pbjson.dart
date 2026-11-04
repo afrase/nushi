@@ -654,9 +654,12 @@ const Agent$json = {
     },
     {'1': 'ready', '3': 12, '4': 1, '5': 8, '10': 'ready'},
     {'1': 'awake', '3': 13, '4': 1, '5': 5, '10': 'awake'},
-    {'1': 'go_agent', '3': 14, '4': 1, '5': 8, '10': 'goAgent'},
     {'1': 'mcp_user_only', '3': 15, '4': 1, '5': 8, '10': 'mcpUserOnly'},
   ],
+  '9': [
+    {'1': 14, '2': 15},
+  ],
+  '10': ['go_agent'],
 };
 
 /// Descriptor for `Agent`. Decode as a `google.protobuf.DescriptorProto`.
@@ -667,8 +670,8 @@ final $typed_data.Uint8List agentDescriptor = $convert.base64Decode(
     'EoCVIHdmVyc2lvbhISCgRwYWdlGAggASgJUgRwYWdlEhgKB3Byb2JsZW0YCSABKAlSB3Byb2Js'
     'ZW0SGwoJc2lnbmVkX2luGAogASgJUghzaWduZWRJbhIrCgdhZGFwdGVyGAsgASgLMhEubnVzaG'
     'kudjEuQWRhcHRlclIHYWRhcHRlchIUCgVyZWFkeRgMIAEoCFIFcmVhZHkSFAoFYXdha2UYDSAB'
-    'KAVSBWF3YWtlEhkKCGdvX2FnZW50GA4gASgIUgdnb0FnZW50EiIKDW1jcF91c2VyX29ubHkYDy'
-    'ABKAhSC21jcFVzZXJPbmx5');
+    'KAVSBWF3YWtlEiIKDW1jcF91c2VyX29ubHkYDyABKAhSC21jcFVzZXJPbmx5SgQIDhAPUghnb1'
+    '9hZ2VudA==');
 
 @$core.Deprecated('Use adapterDescriptor instead')
 const Adapter$json = {
@@ -1559,22 +1562,16 @@ const Settings$json = {
       '10': 'checkUpdates',
       '17': true
     },
-    {
-      '1': 'claude_go_agent',
-      '3': 6,
-      '4': 1,
-      '5': 8,
-      '9': 3,
-      '10': 'claudeGoAgent',
-      '17': true
-    },
   ],
   '8': [
     {'1': '_keep_transcripts'},
     {'1': '_transcript_days'},
     {'1': '_check_updates'},
-    {'1': '_claude_go_agent'},
   ],
+  '9': [
+    {'1': 6, '2': 7},
+  ],
+  '10': ['claude_go_agent'],
 };
 
 /// Descriptor for `Settings`. Decode as a `google.protobuf.DescriptorProto`.
@@ -1583,9 +1580,8 @@ final $typed_data.Uint8List settingsDescriptor = $convert.base64Decode(
     'RlcxIbCglkZWJ1Z19sb2cYAiABKAhSCGRlYnVnTG9nEi4KEGtlZXBfdHJhbnNjcmlwdHMYAyAB'
     'KAhIAFIPa2VlcFRyYW5zY3JpcHRziAEBEiwKD3RyYW5zY3JpcHRfZGF5cxgEIAEoBUgBUg50cm'
     'Fuc2NyaXB0RGF5c4gBARIoCg1jaGVja191cGRhdGVzGAUgASgISAJSDGNoZWNrVXBkYXRlc4gB'
-    'ARIrCg9jbGF1ZGVfZ29fYWdlbnQYBiABKAhIA1INY2xhdWRlR29BZ2VudIgBAUITChFfa2VlcF'
-    '90cmFuc2NyaXB0c0ISChBfdHJhbnNjcmlwdF9kYXlzQhAKDl9jaGVja191cGRhdGVzQhIKEF9j'
-    'bGF1ZGVfZ29fYWdlbnQ=');
+    'AUITChFfa2VlcF90cmFuc2NyaXB0c0ISChBfdHJhbnNjcmlwdF9kYXlzQhAKDl9jaGVja191cG'
+    'RhdGVzSgQIBhAHUg9jbGF1ZGVfZ29fYWdlbnQ=');
 
 @$core.Deprecated('Use listTranscriptsRequestDescriptor instead')
 const ListTranscriptsRequest$json = {
