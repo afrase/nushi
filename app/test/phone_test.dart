@@ -5,6 +5,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone.dart';
@@ -582,6 +583,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forget this Mac'));
     await tester.pumpAndSettle();
+    // The shared dialog's, in red: it loses the pairing.
+    expect(
+      tester.widget<Button>(find.widgetWithText(Button, 'Forget')).kind,
+      ButtonKind.destructive,
+    );
     await tester.tap(find.text('Forget'));
     await tester.pumpAndSettle();
     expect(platform.saved, isNull);

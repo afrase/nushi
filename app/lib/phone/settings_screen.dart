@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/remote.dart' show keyFingerprint;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_preview.dart';
+import 'package:nushi/widgets.dart';
 
 /// The phone's settings: the relay, this device's name, notifications, the
 /// theme, and Forget this Mac.
@@ -22,28 +22,15 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _forget(BuildContext context) async {
-    final sure = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Forget this Mac?'),
-        content: const Text(
-          'This device forgets the Mac and its own key; pairing again '
-          'makes a new one. Revoke it on the Mac too: until then the Mac '
-          'lists it.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Forget'),
-          ),
-        ],
-      ),
+    final sure = await confirm(
+      context,
+      'Forget this Mac?',
+      'This device forgets the Mac and its own key; pairing again makes a '
+          'new one. Revoke it on the Mac too: until then the Mac lists it.',
+      'Forget',
+      destructive: true,
     );
-    if (sure ?? false) {
+    if (sure) {
       await phone.forget();
       if (context.mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     }
