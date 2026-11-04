@@ -74,7 +74,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
         watch: _watch,
         source: _source,
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        page: _page,
+        page: previewKind(widget.path) == PreviewKind.pdf ? null : _page,
       ),
     ),
   );
@@ -83,9 +83,6 @@ class _PreviewScreenState extends State<PreviewScreen> {
     listenable: watch,
     builder: (context, _) {
       if (previewStatus(context, watch) case final status?) return status;
-      if (previewKind(watch.path) == PreviewKind.pdf) {
-        return const PreviewNote('Open it on your Mac to see it.');
-      }
       final theme = NushiTheme.of(context);
       final f = watch.file!;
       final text = utf8.decode(f.data, allowMalformed: true);

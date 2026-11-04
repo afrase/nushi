@@ -297,6 +297,10 @@ class PreviewBody extends StatelessWidget {
   final FileWatch watch;
   final bool source;
   final VoidCallback? onReveal;
+
+  /// Draws a page's file (HTML, SVG, Mermaid: needed for those, else they
+  /// show as source), and a PDF where it can (the Mac's WebKit); without
+  /// it a PDF says to open it on the Mac.
   final Widget Function(FileWatch watch)? page;
   final EdgeInsets padding;
 
