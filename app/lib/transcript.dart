@@ -275,8 +275,9 @@ class _TranscriptState extends State<Transcript> {
         e is Item &&
         e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE &&
         canForkAt(widget.daemon, widget.chat, e, live: live);
-    // Try again goes by what follows its notice, not by the notice.
-    final again = e is Item && tryAgainRequest(widget.chat, e) != null;
+    // A failed turn's button goes by the items before its notice, not by
+    // the notice: Continue, Try again, or none ('').
+    final again = e is Item ? failedTurnRetry(widget.chat, e)?.label ?? '' : '';
     final sides = chatSides(context, width);
     final sending = _sendState(e);
     final pinned =

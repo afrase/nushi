@@ -114,9 +114,14 @@ The chat's own actions are also in the menu bar's Chat menu, its ⋯ menu, and i
 
 ## When a turn fails
 
-A turn that fails, say on the agent's API answering "overloaded" until it gives up, ends with a red notice saying why. **Try again** beside it sends your last message once more, with its images, as a new message: the agent may already have the failed one in its history, so nothing is rewound, and the box keeps what you've typed. It shows while the notice is the chat's last line and goes grey while the chat is busy. Nushi never tries again on its own.
+A turn that fails, say on the agent's API answering "overloaded" until it gives up or your account running out of credit, ends with a red notice saying why, and a button beside it:
 
-Messages waiting in the queue stay held after a failed turn. Try again, or any message you send, goes first, and the queue follows once that turn ends well. In a chat that's asleep it joins the queue instead, behind them.
+- **Continue**, when the turn got somewhere after your last message: the agent wrote, thought, ran a tool, started a subagent, made a plan, or asked you something (a message that only repeats the error, as Claude's "API Error: …" does, doesn't count; nor does a step of a subagent started earlier). It sends "Continue.", what you'd type in Claude Code: the agent already has your message and its work in its history, so sending the message again would have it start over, or answer that it already did that.
+- **Try again**, when nothing came back: it sends your last message once more, with its images, to the subagent it was for, as a new message.
+
+Nothing is rewound, and the box keeps what you've typed. The button shows while the notice is the chat's last line (in an archived chat, or while a rewind is on its way, there's none) and goes grey while the chat is busy; a chat reopened after Nushi restarted shows the same one, as long as Keep transcripts is on (the notice is Nushi's, not the agent's). Nushi never tries again on its own.
+
+Messages waiting in the queue stay held after a failed turn. Continue, Try again, or any message you send, goes first, and the queue follows once that turn ends well, each message once. A message steered into the turn counts as your last message. In a chat that's asleep it joins the queue instead, behind them.
 
 ## Writing a message
 

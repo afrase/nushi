@@ -173,7 +173,7 @@ class ItemView extends StatelessWidget {
           _ => (Icons.info_outline, t.needs),
         };
         // A reopen or a turn that failed: what helps.
-        final again = tryAgainRequest(chat, item);
+        final again = failedTurnRetry(chat, item);
         final fix = switch (item.status) {
           'not_ready' => (
             'Set up…',
@@ -187,9 +187,10 @@ class ItemView extends StatelessWidget {
             () => moveChat(context, daemon, chat, gone: true),
           ),
           'reopen_failed' => ('Try again', () => daemon.reopen(chat)),
+          // Continue when the turn got somewhere, else Try again.
           'turn_failed' when again != null => (
-            'Try again',
-            () => tryOrShow(context, () => daemon.sendPrompt(again)),
+            again.label,
+            () => tryOrShow(context, () => daemon.sendPrompt(again.request)),
           ),
           // A session gone: the bar in the composer's place has Delete….
           _ => null,
