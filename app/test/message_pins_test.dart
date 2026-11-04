@@ -189,8 +189,11 @@ double _topOf(WidgetTester tester, String text) {
   return _scroll(tester).pixels + at.top - list;
 }
 
-/// Opens the menu with the pointer over the rail.
+/// Opens the menu with the pointer over the rail, come from elsewhere: a
+/// pick leaves the menu closed until the pointer has left the rail.
 Future<void> _openMenu(WidgetTester tester) async {
+  final rail = tester.getRect(find.byType(PinsRail));
+  await _move(tester, rail.bottomRight + const Offset(40, 40));
   await _move(tester, tester.getCenter(_railDashes.first));
   expect(_row('Session start'), findsOneWidget);
 }
@@ -464,6 +467,30 @@ void main() {
     await tester.tap(_row('Session start'));
     await tester.pumpAndSettle();
     expect(_scroll(tester).pixels, 0);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('a click on a menu row over the rail picks it, and the '
+      'menu stays closed until the pointer leaves the rail', (tester) async {
+    final (d, _) = await _window(tester, pins: ['a1', 'a2', 'a3']);
+    final rail = tester.getRect(find.byType(PinsRail));
+    await _openMenu(tester);
+    final row = tester.getRect(_row('Session start'));
+    final at = Offset(rail.right - 3, row.center.dy);
+    expect(rail.contains(at), isTrue, reason: 'the row is over the rail');
+    await _move(tester, at);
+    final mouse = _mice[tester]!;
+    await mouse.down(at);
+    await mouse.up();
+    await tester.pumpAndSettle();
+    expect(_scroll(tester).pixels, 0, reason: 'picked');
+    expect(_row('Session start'), findsNothing, reason: 'closed');
+    await _move(tester, at + const Offset(1, 0)); // still over the rail
+    expect(_row('Session start'), findsNothing);
+
+    await _move(tester, const Offset(900, 600));
+    await _move(tester, at);
+    expect(_row('Session start'), findsOneWidget, reason: 'back over it');
     await closeView(tester, d);
   }, variant: _mac);
 

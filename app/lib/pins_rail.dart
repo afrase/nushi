@@ -106,6 +106,13 @@ class _PinsRailState extends State<PinsRail> {
   /// not Enter's or Space's.
   bool _pressed = false;
 
+  /// Where the pointer is over the menu, and whether a pick made with it
+  /// over the rail (the menu's first rows are) leaves the menu closed until
+  /// the pointer has left the rail: closing it puts the pointer over the
+  /// rail, without its moving, which would open it again at once.
+  Offset? _menuPointer;
+  bool _quiet = false;
+
   @override
   void dispose() {
     _leave?.cancel();
@@ -129,6 +136,10 @@ class _PinsRailState extends State<PinsRail> {
   }
 
   void _pick(int i) {
+    final box = context.findRenderObject();
+    if (_menuPointer case final at? when box is RenderBox && box.hasSize) {
+      _quiet = (Offset.zero & box.size).contains(box.globalToLocal(at));
+    }
     _close();
     if (i < widget.entries.length) widget.onPick(widget.entries[i].id);
   }
@@ -153,7 +164,7 @@ class _PinsRailState extends State<PinsRail> {
     _leave?.cancel();
     if (_overRail || _overMenu) {
       _pointed = true;
-      if (rail ?? false) unawaited(_open());
+      if ((rail ?? false) && !_quiet) unawaited(_open());
       return;
     }
     if (_pointed) _leave = Timer(PinsRail.linger, _close);
@@ -221,7 +232,10 @@ class _PinsRailState extends State<PinsRail> {
       onTapOutside: (_) => _close(),
       child: MouseRegion(
         onEnter: (_) => _pointer(rail: true),
-        onExit: (_) => _pointer(rail: false),
+        onExit: (_) {
+          _quiet = false;
+          _pointer(rail: false);
+        },
         child: Focus(
           canRequestFocus: false,
           skipTraversal: true,
@@ -250,8 +264,15 @@ class _PinsRailState extends State<PinsRail> {
                     child: TapRegion(
                       groupId: _region,
                       child: MouseRegion(
-                        onEnter: (_) => _pointer(menu: true),
-                        onExit: (_) => _pointer(menu: false),
+                        onEnter: (e) {
+                          _menuPointer = e.position;
+                          _pointer(menu: true);
+                        },
+                        onHover: (e) => _menuPointer = e.position,
+                        onExit: (_) {
+                          _menuPointer = null;
+                          _pointer(menu: false);
+                        },
                         child: _PinsMenu(
                           entries: widget.entries,
                           current: widget.current,
