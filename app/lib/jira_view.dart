@@ -143,6 +143,8 @@ class _JiraViewState extends State<JiraView> {
     super.initState();
     unawaited(_loadSites());
     _poll = Timer.periodic(jiraPoll, (_) => unawaited(_load(quiet: true)));
+    _underSettings = widget.daemon.settingsOpen != null;
+    widget.daemon.addListener(_settingsShut);
     jiraCollapsed.addListener(_keepVisible);
     jiraAssignee.addListener(_keepVisible);
   }
@@ -166,8 +168,19 @@ class _JiraViewState extends State<JiraView> {
     });
   }
 
+  // Settings opens over the view (ADR 0087), where a site can be added or
+  // its token allowed: the sites are read again when it shuts.
+  bool _underSettings = false;
+
+  void _settingsShut() {
+    final under = widget.daemon.settingsOpen != null;
+    if (_underSettings && !under && mounted) unawaited(_loadSites());
+    _underSettings = under;
+  }
+
   @override
   void dispose() {
+    widget.daemon.removeListener(_settingsShut);
     _sitesAgain.cancel();
     _poll?.cancel();
     _slowTimer?.cancel();

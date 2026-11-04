@@ -565,6 +565,32 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a site added in Settings, over the view, shows once '
+      'Settings closes', (tester) async {
+    var sites = <JiraSite>[];
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is ListJiraSitesRequest
+          ? ListJiraSitesResponse(sites: sites)
+          : null,
+    );
+    expect(
+      find.textContaining('Settings › Jira', findRichText: true),
+      findsOneWidget,
+    );
+    d.openSettings(section: SettingsSection.jira);
+    await tester.pumpAndSettle();
+    sites = [_site];
+    d.closeSettings();
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Settings › Jira', findRichText: true),
+      findsNothing,
+    );
+    expect(find.text('Log in with a passkey'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
   testWidgets('no site yet', (tester) async {
     final (_, d) = await openView(tester, sites: []);
     expect(

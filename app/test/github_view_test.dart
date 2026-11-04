@@ -769,6 +769,29 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a token allowed in Settings, over the view, loads the inbox '
+      'once Settings closes', (tester) async {
+    var ok = false;
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is ListGitHubHostsRequest
+          ? ListGitHubHostsResponse(
+              hosts: [
+                GitHubHost(host: 'github.com', login: 'afrase', needsOk: !ok),
+              ],
+            )
+          : null,
+    );
+    expect(find.text('Add Sub and Neg'), findsNothing);
+    d.openSettings(section: SettingsSection.github);
+    await tester.pumpAndSettle();
+    ok = true;
+    d.closeSettings();
+    await tester.pumpAndSettle();
+    expect(find.text('Add Sub and Neg'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
   testWidgets('no host yet', (tester) async {
     final (_, d) = await openView(tester, hosts: []);
     expect(find.text('Settings › GitHub'), findsOneWidget);

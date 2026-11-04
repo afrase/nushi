@@ -122,10 +122,23 @@ class _GitHubViewState extends State<GitHubView> {
     }
     unawaited(_loadHosts());
     _poll = Timer.periodic(githubPoll, (_) => unawaited(_load(quiet: true)));
+    _underSettings = widget.daemon.settingsOpen != null;
+    widget.daemon.addListener(_settingsShut);
+  }
+
+  // Settings opens over the view (ADR 0087), where a token can be added or
+  // allowed: the hosts are read again when it shuts.
+  bool _underSettings = false;
+
+  void _settingsShut() {
+    final under = widget.daemon.settingsOpen != null;
+    if (_underSettings && !under && mounted) unawaited(_loadHosts());
+    _underSettings = under;
   }
 
   @override
   void dispose() {
+    widget.daemon.removeListener(_settingsShut);
     _hostsAgain.cancel();
     _poll?.cancel();
     _slowTimer?.cancel();
@@ -359,7 +372,7 @@ class _GitHubViewState extends State<GitHubView> {
     }),
   );
 
-  // The view comes back anew when Settings closes, its hosts read again.
+  // Its hosts are read again when Settings shuts ([_settingsShut]).
   void _settings() =>
       widget.daemon.openSettings(section: SettingsSection.github);
 
