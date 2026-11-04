@@ -19,9 +19,7 @@ const filesApi = 103;
 /// on. Lazy: a folder is listed when it opens. It lasts while the app runs
 /// ([folderTreeOf]), so the pane opens again as it was.
 class FolderTree extends ChangeNotifier {
-  new(this.chat) : _folder = chat.folder {
-    filesIgnored.addListener(_ignoredChanged);
-  }
+  new(this.chat) : _folder = chat.folder;
 
   final ChatState chat;
 
@@ -42,16 +40,22 @@ class FolderTree extends ChangeNotifier {
   int _users = 0;
   String _folder; // the chat's, as listed: a moved chat starts again
 
-  /// Starts listing what's in sight, for a pane that shows it.
+  /// Starts listing what's in sight, for a pane that shows it. Only while
+  /// one does it follows [filesIgnored], so a chat no pane shows is let go
+  /// with its tree; what it missed meanwhile is asked again.
   void attach(Daemon daemon) {
     _daemon = daemon;
-    _users++;
+    if (_users++ == 0) {
+      filesIgnored.addListener(_ignoredChanged);
+      _refused.clear();
+    }
     _sync();
   }
 
   /// Ends the listing when no pane shows it.
   void detach() {
     if (--_users > 0) return;
+    filesIgnored.removeListener(_ignoredChanged);
     for (final s in _subs.values) {
       unawaited(s.cancel());
     }
@@ -219,14 +223,6 @@ class FolderTree extends ChangeNotifier {
 
     walk('', 0);
     return rows;
-  }
-
-  @override
-  void dispose() {
-    filesIgnored.removeListener(_ignoredChanged);
-    _users = 1;
-    detach();
-    super.dispose();
   }
 }
 
