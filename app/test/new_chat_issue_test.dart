@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/inline_edit.dart';
+import 'package:nushi/issue_picker.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
@@ -267,4 +270,56 @@ void main() {
       d.dispose();
     });
   }
+
+  testWidgets('⏎ while a search is asked, or after one failed, picks '
+      'nothing from the results before', (tester) async {
+    var hold = Completer<void>();
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        FindJiraIssuesRequest(text: '') => FindJiraIssuesResponse(
+          issues: [_found(_acme, 'OLD-1', 'Looked at lately')],
+        ),
+        FindJiraIssuesRequest() => hold.future.then(
+          (_) =>
+              FindJiraIssuesResponse(issues: [_found(_acme, 'NEW-2', 'Found')]),
+        ),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final picked = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: IssuePicker(
+            daemon: d,
+            sites: [JiraSite(id: _acme)],
+            onPick: (f) => picked.add(f.issue.key),
+            onBack: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('OLD-1'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'NEW');
+    await tester.pump(const Duration(milliseconds: 300)); // asked
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(picked, isEmpty);
+    // Refused: what showed before isn't the search's either.
+    hold.completeError(StateError('down'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(picked, isEmpty);
+    // Answered: its row.
+    hold = Completer<void>()..complete();
+    await tester.enterText(find.byType(TextField), 'NEW-');
+    await tester.pumpAndSettle(const Duration(milliseconds: 300));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(picked, ['NEW-2']);
+    await closeView(tester, d);
+  });
 }

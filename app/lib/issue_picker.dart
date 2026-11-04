@@ -49,6 +49,10 @@ class _IssuePickerState extends State<IssuePicker> {
   /// The text of the newest search, so an older answer is dropped.
   String? _asked;
 
+  /// The text [_found] answers; null after a search failed. ⏎ picks only
+  /// from the answer to what the field says.
+  String? _answered;
+
   @override
   void initState() {
     super.initState();
@@ -81,12 +85,16 @@ class _IssuePickerState extends State<IssuePicker> {
       if (!mounted || text != _asked) return;
       setState(() {
         _found = r;
+        _answered = text;
         _error = null;
         _at = 0;
       });
     } on Object catch (e) {
       if (!mounted || text != _asked) return;
-      setState(() => _error = errorText(e));
+      setState(() {
+        _answered = null;
+        _error = errorText(e);
+      });
     }
   }
 
@@ -111,7 +119,7 @@ class _IssuePickerState extends State<IssuePicker> {
       case LogicalKeyboardKey.arrowUp when n > 0:
         setState(() => _at = (_at - 1 + n) % n);
       case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
-          when n > 0 && _asked == _text.text.trim():
+          when n > 0 && _answered == _text.text.trim():
         _pick(_at);
       default:
         return KeyEventResult.ignored;
