@@ -1,10 +1,20 @@
 import 'dart:io';
 
-import 'package:nushi/settings_general.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/terminals.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xterm2/xterm.dart';
+
+/// The terminal's text: the picked font, then the bundled Nerd Font
+/// symbols, so file and prompt icons show whatever font is picked.
+TerminalStyle terminalStyle() => TerminalStyle(
+  fontFamily: terminalFont.value ?? NushiTheme.codeFont,
+  fontFamilyFallback: const ['Symbols Nerd Font Mono', NushiTheme.codeFont],
+  fontSize: terminalFontSize.value,
+  height: 1.25,
+);
 
 /// Characters that end a path or URL in a terminal's text.
 final _stop = RegExp(r'''[\s"'`()<>\[\]{}|]''');

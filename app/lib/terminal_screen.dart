@@ -6,7 +6,6 @@ import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_general.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminal_tabs.dart';

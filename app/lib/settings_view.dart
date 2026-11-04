@@ -18,6 +18,7 @@ import 'package:nushi/settings_appearance.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
+import 'package:nushi/settings_terminal.dart';
 import 'package:nushi/skills.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';

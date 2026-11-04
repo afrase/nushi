@@ -8,7 +8,6 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/settings_general.dart';
 
 import 'fake_daemon.dart';
 import 'settings_harness.dart';
@@ -64,49 +63,6 @@ void main() {
     await tester.tap(find.text('1 hour'));
     await tester.pumpAndSettle();
     expect(fake.setSettings.last.sleepAfterMinutes, 60);
-    d.dispose();
-  });
-
-  // The preview draws its Nerd Font icons as the terminal does: through
-  // the bundled fallback, not the picked font's ?-box
-  // (docs/history/decisions-2026-10.md, [controls]).
-  testWidgets('the terminal preview draws its icons from the bundled Nerd '
-      'Font', (tester) async {
-    final (_, d) = await _open(tester, SettingsSection.terminal);
-    final preview = tester.widget<Text>(
-      find.byKey(const ValueKey('terminal-preview')),
-    );
-    final style = preview.style!;
-    expect(style.fontFamilyFallback, terminalStyle().fontFamilyFallback);
-    double width(String s, TextStyle style) {
-      final p = TextPainter(
-        text: TextSpan(text: s, style: style),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      final w = p.width;
-      p.dispose();
-      return w;
-    }
-
-    final icons = {
-      for (final r in preview.data!.runes)
-        if (r >= 0xe000 && r <= 0xf8ff) String.fromCharCode(r),
-    };
-    expect(icons, hasLength(6)); // two folders, branch, Go, Dart, Markdown
-    final symbols = TextStyle(
-      fontFamily: 'Symbols Nerd Font Mono',
-      fontSize: style.fontSize,
-    );
-    final alone = TextStyle(
-      fontFamily: style.fontFamily,
-      fontSize: style.fontSize,
-    );
-    for (final icon in icons) {
-      final code = icon.runes.single.toRadixString(16);
-      expect(width(icon, style), width(icon, symbols), reason: code);
-      // JetBrains Mono alone draws its ?-box, of another width.
-      expect(width(icon, alone), isNot(width(icon, symbols)), reason: code);
-    }
     d.dispose();
   });
 
