@@ -95,19 +95,27 @@ class _Dir {
 
 /// A folder's files as git lists them (ListFiles: what it doesn't
 /// ignore), for a filter: asked when one starts, and again once they're
-/// a few seconds old, so files the agent adds come in.
+/// a few seconds old, so files the agent adds come in; at once for another
+/// folder (the chat moved), whose answer is the only one taken then.
 class GitFiles extends ChangeNotifier {
   List<String> paths = const [];
   DateTime? _at;
+  String? _folder; // the one last asked about
 
   /// Asks [daemon] for [folder]'s files, unless it did a moment ago.
   void ask(Daemon daemon, String folder) {
     final at = _at;
     final now = DateTime.now();
-    if (at != null && now.difference(at).inSeconds <= 5) return;
+    if (folder != _folder) {
+      _folder = folder;
+      paths = const []; // the caller builds again
+    } else if (at != null && now.difference(at).inSeconds <= 5) {
+      return;
+    }
     _at = now;
     unawaited(
       daemon.client.listFiles(ListFilesRequest(folder: folder)).then((r) {
+        if (folder != _folder) return;
         paths = r.paths;
         notifyListeners();
       }, onError: (_) {}), // the tree's own listings are still looked through
