@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/file_filter.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -13,20 +14,40 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-/// Makes a tree for a chat no one else holds.
-WeakReference<FolderTree> _tree() =>
-    WeakReference(folderTreeOf(ChatState('c', '/tmp/c')));
+/// Makes a tree for a chat no one else holds, and shows it in a pane that
+/// then closes.
+WeakReference<FolderTree> _shown(Daemon daemon) {
+  final tree = folderTreeOf(ChatState('c', '/tmp/c'))..attach(daemon);
+  return WeakReference(tree..detach());
+}
 
 void main() {
-  test('a chat whose Files pane was opened is freed with its tree', () async {
-    final tree = _tree();
+  testWidgets('a chat whose Files pane was opened is freed with its tree', (
+    tester,
+  ) async {
+    var watched = 0;
+    final fake = FakeDaemon([])
+      ..streams = (input) {
+        if (input is! WatchChatFolderRequest) return null;
+        watched++;
+        return StreamController<WatchChatFolderResponse>().stream;
+      };
+    final d = await fake.connect(tester);
+    final tree = _shown(d);
+    await tester.pump();
+    expect(watched, 1); // the pane listed it
     // Garbage until the VM collects; a held tree never goes.
-    for (var i = 0; i < 200 && tree.target != null; i++) {
-      final garbage = [for (var j = 0; j < 1000; j++) List<int>.filled(100, j)];
-      expect(garbage, isNotEmpty);
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-    }
+    await tester.runAsync(() async {
+      for (var i = 0; i < 200 && tree.target != null; i++) {
+        final garbage = [
+          for (var j = 0; j < 1000; j++) List<int>.filled(100, j),
+        ];
+        expect(garbage, isNotEmpty);
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+    });
     expect(tree.target, isNull);
+    await closeView(tester, d);
   });
 
   testWidgets("git's list follows a moved chat to its new folder", (
