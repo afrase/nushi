@@ -73,18 +73,6 @@ class QuestionOption extends StatelessWidget {
   }
 }
 
-/// A question that is no longer waiting: what was answered.
-class AnsweredQuestion extends StatelessWidget {
-  const new(this.item, {super.key});
-
-  final Item item;
-
-  @override
-  Widget build(BuildContext context) {
-    return WaitingCard(waiting: false, children: answeredLines(context, item));
-  }
-}
-
 /// An answered question's lines: its title, and each answer, or that it
 /// was skipped or cancelled.
 List<Widget> answeredLines(BuildContext context, Item item) {
