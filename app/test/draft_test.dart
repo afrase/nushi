@@ -35,6 +35,36 @@ void main() {
     await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
   });
 
+  testWidgets('a message for a subagent taken back while the box was away '
+      'lands in it with its note', (tester) async {
+    final daemon = Daemon();
+    // Stop took back a replayed message (which subagent isn't known) while
+    // the user was on Changes: the box isn't built.
+    final chat = ChatState('c', '/tmp')
+      ..takeBack.value = QueuedMessage(
+        text: 'Look at the tests too',
+        toSubagentName: 'Explore',
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: Composer(chat: chat, daemon: daemon),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(chat.draft.text.text, 'Look at the tests too');
+    expect(
+      find.text('This message was for Explore: send it from its pane.'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+    daemon.dispose(); // its ping timer
+    await tester.pump(const Duration(seconds: 4)); // and the ping's timeout
+  });
+
   test(
     "a message to a subagent is kept under the draft's older key, relay",
     () {
