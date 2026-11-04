@@ -315,7 +315,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 		folder = filepath.Join(s.scratch, c.id)
 		err = os.MkdirAll(folder, 0o700)
 	case opts.Worktree:
-		if err = CheckFolder(folder); err == nil {
+		if err = checkFolder(folder); err == nil {
 			wt, folder, err = s.addWorktree(ctx, folder, opts.Branch, opts.From)
 		}
 		if err == nil && opts.Check != nil {
@@ -324,7 +324,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 			}
 		}
 	default:
-		if err = CheckFolder(folder); err == nil && s.worktrees != nil {
+		if err = checkFolder(folder); err == nil && s.worktrees != nil {
 			wt = s.worktrees.Found(ctx, folder) // a worktree that was there: listed under its repository
 		}
 	}
@@ -352,9 +352,9 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	return c.id, nil
 }
 
-// CheckFolder refuses a folder that isn't an absolute path to an existing
+// checkFolder refuses a folder that isn't an absolute path to an existing
 // folder.
-func CheckFolder(folder string) error {
+func checkFolder(folder string) error {
 	if fi, err := os.Stat(folder); err != nil || !fi.IsDir() || !filepath.IsAbs(folder) {
 		return fmt.Errorf("%q is not an absolute path to a folder", folder)
 	}

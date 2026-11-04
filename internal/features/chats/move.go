@@ -26,7 +26,7 @@ import (
 // holds work, or one a chat with messages leaves, stays on disk, and
 // Delete offers it. A folder inside the chat's worktree keeps it.
 func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool) error { //nolint:gocognit,gocyclo // the cases in its comment, in order
-	if err := CheckFolder(folder); err != nil {
+	if err := checkFolder(folder); err != nil {
 		return err
 	}
 	c, err := s.stored(chatID)

@@ -61,7 +61,7 @@ func (s *Service) Find(ctx context.Context, agent, folder, cursor string) (Found
 		return FoundPage{}, err
 	}
 	if folder != "" {
-		if err := CheckFolder(folder); err != nil {
+		if err := checkFolder(folder); err != nil {
 			return FoundPage{}, err
 		}
 	}

@@ -23,7 +23,7 @@ func (s *Service) Open(ctx context.Context, agent, folder, sessionID, listed str
 	if err != nil {
 		return "", err
 	}
-	if err := CheckFolder(folder); err != nil {
+	if err := checkFolder(folder); err != nil {
 		return "", err
 	}
 	stored, err := s.sessions.Sessions()
