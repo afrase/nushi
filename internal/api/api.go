@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 105
+const Version = 106
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -395,6 +395,9 @@ func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.Se
 	msg := model.Message{Text: m.Text, Files: m.Files, To: m.ToSubagent}
 	for _, img := range m.Images {
 		msg.Images = append(msg.Images, model.Image{MimeType: img.MimeType, Data: img.Data})
+	}
+	for _, u := range m.Uploads {
+		msg.Uploads = append(msg.Uploads, model.Upload{Name: u.Name, Data: u.Data})
 	}
 	how := chats.SendIdle
 	switch {

@@ -183,7 +183,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	}
 	// Sleep and the copies as main has them: the settings are the daemon's.
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(dataDir, "scratch"),
-		Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts, Sleep: st})
+		Uploads: filepath.Join(dataDir, "uploads"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts, Sleep: st})
 	shows := preview.New(hub.Publish)
 	shows.UseChats(svc)
 	toolSvc := tools.New(shows)

@@ -314,7 +314,7 @@ type Item struct {
 	ToSubagentState string   `json:"RelayState"`
 	PassedOnBy      string   `json:"RelayedBy"`
 	ToSubagentStop  bool     `json:"RelayStop"`
-	Files           []string // a user message's mentioned files (Message.Files)
+	Files           []string // a user message's mentioned and attached files (Message.Files)
 	// Tool is a tool call's tool, when the agent names it ("Read").
 	Tool string
 	// TaskID is the agent's id for the command a tool call left running in
@@ -447,18 +447,28 @@ type Field struct {
 	OtherFor               string // the field this free-text one is the "Other" answer of
 }
 
-// Message is what the user sends: text, the files it mentions (relative
-// to the chat's folder) and images. ID names one waiting in a chat's queue.
+// Message is what the user sends: text, the files it mentions or attaches
+// (relative to the chat's folder, or absolute for one outside it) and
+// images. Uploads are files a device sent whole, which the chat saves and
+// adds to Files before anything else. ID names one waiting in a chat's
+// queue.
 type Message struct {
-	ID     string
-	Text   string
-	Files  []string
-	Images []Image
+	ID      string
+	Text    string
+	Files   []string
+	Images  []Image
+	Uploads []Upload
 	// To is the tool call of a subagent the message is for: the agent is
 	// asked to pass it on. ToSubagent is that subagent, once the chat found
 	// it.
 	To         string
 	ToSubagent *ToSubagent
+}
+
+// Upload is a file sent whole with a message: its name and its bytes.
+type Upload struct {
+	Name string
+	Data []byte
 }
 
 // ToSubagent is a subagent a message goes to through the agent: its type

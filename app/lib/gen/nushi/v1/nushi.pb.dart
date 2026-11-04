@@ -3792,6 +3792,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     $core.bool? queue,
     $core.bool? now,
     $core.String? toSubagent,
+    $core.Iterable<FileUpload>? uploads,
   }) {
     final result = SendPromptRequest._();
     if (chatId != null) result.chatId = chatId;
@@ -3801,6 +3802,7 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     if (queue != null) result.queue = queue;
     if (now != null) result.now = now;
     if (toSubagent != null) result.toSubagent = toSubagent;
+    if (uploads != null) result.uploads.addAll(uploads);
     return result;
   }
 
@@ -3825,6 +3827,8 @@ class SendPromptRequest extends $pb.GeneratedMessage {
     ..aOB(5, _omitFieldNames ? '' : 'queue')
     ..aOB(6, _omitFieldNames ? '' : 'now')
     ..aOS(7, _omitFieldNames ? '' : 'toSubagent')
+    ..pPM<FileUpload>(8, _omitFieldNames ? '' : 'uploads',
+        subBuilder: FileUpload.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3867,8 +3871,9 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearText() => $_clearField(2);
 
-  /// Files the prompt mentions, relative to the chat's folder; they go to
-  /// the agent as resource links after the text.
+  /// Files the prompt mentions or attaches, relative to the chat's folder,
+  /// or (API 106) absolute for one outside it; they go to the agent as
+  /// resource links after the text.
   @$pb.TagNumber(3)
   $pb.PbList<$core.String> get files => $_getList(2);
 
@@ -3908,6 +3913,81 @@ class SendPromptRequest extends $pb.GeneratedMessage {
   $core.bool hasToSubagent() => $_has(6);
   @$pb.TagNumber(7)
   void clearToSubagent() => $_clearField(7);
+
+  /// Files a device sent whole (the phone's, which aren't on the Mac): the
+  /// daemon saves each in the chat's uploads folder and sends it as a file
+  /// (API 106).
+  @$pb.TagNumber(8)
+  $pb.PbList<FileUpload> get uploads => $_getList(7);
+}
+
+/// A file sent whole with a prompt: its name and its bytes.
+class FileUpload extends $pb.GeneratedMessage {
+  factory FileUpload({
+    $core.String? name,
+    $core.List<$core.int>? data,
+  }) {
+    final result = FileUpload._();
+    if (name != null) result.name = name;
+    if (data != null) result.data = data;
+    return result;
+  }
+
+  FileUpload._();
+
+  factory FileUpload.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FileUpload()..mergeFromBuffer(data, registry);
+  factory FileUpload.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FileUpload()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FileUpload',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FileUpload.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileUpload clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FileUpload copyWith(void Function(FileUpload) updates) =>
+      super.copyWith((message) => updates(message as FileUpload)) as FileUpload;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FileUpload() / FileUpload.new instead')
+  static FileUpload create() => FileUpload._();
+  static $pb.GeneratedMessage $_createMessage() => FileUpload._();
+  @$core.override
+  FileUpload createEmptyInstance() => FileUpload._();
+  @$core.pragma('dart2js:noInline')
+  static FileUpload getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<FileUpload>(FileUpload.$_createMessage);
+  static FileUpload? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
 }
 
 /// A message the user sent, waiting in a chat's queue.
@@ -14794,6 +14874,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? rawOutput,
     $core.bool? forkable,
     $core.bool? steered,
+    $core.Iterable<$core.String>? files,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -14833,6 +14914,7 @@ class Item extends $pb.GeneratedMessage {
     if (rawOutput != null) result.rawOutput = rawOutput;
     if (forkable != null) result.forkable = forkable;
     if (steered != null) result.steered = steered;
+    if (files != null) result.files.addAll(files);
     return result;
   }
 
@@ -14895,6 +14977,7 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(35, _omitFieldNames ? '' : 'rawOutput')
     ..aOB(36, _omitFieldNames ? '' : 'forkable')
     ..aOB(37, _omitFieldNames ? '' : 'steered')
+    ..pPS(38, _omitFieldNames ? '' : 'files')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -15270,6 +15353,12 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasSteered() => $_has(36);
   @$pb.TagNumber(37)
   void clearSteered() => $_clearField(37);
+
+  /// A user message's files (SendPromptRequest.files): relative to the
+  /// chat's folder, or absolute. Those its text doesn't mention as @path
+  /// were attached (API 106).
+  @$pb.TagNumber(38)
+  $pb.PbList<$core.String> get files => $_getList(37);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when

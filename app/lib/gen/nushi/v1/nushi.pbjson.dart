@@ -959,6 +959,14 @@ const SendPromptRequest$json = {
     {'1': 'queue', '3': 5, '4': 1, '5': 8, '10': 'queue'},
     {'1': 'now', '3': 6, '4': 1, '5': 8, '10': 'now'},
     {'1': 'to_subagent', '3': 7, '4': 1, '5': 9, '10': 'toSubagent'},
+    {
+      '1': 'uploads',
+      '3': 8,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FileUpload',
+      '10': 'uploads'
+    },
   ],
 };
 
@@ -967,7 +975,21 @@ final $typed_data.Uint8List sendPromptRequestDescriptor = $convert.base64Decode(
     'ChFTZW5kUHJvbXB0UmVxdWVzdBIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSEgoEdGV4dBgCIA'
     'EoCVIEdGV4dBIUCgVmaWxlcxgDIAMoCVIFZmlsZXMSKwoGaW1hZ2VzGAQgAygLMhMubnVzaGku'
     'djEuSW1hZ2VEYXRhUgZpbWFnZXMSFAoFcXVldWUYBSABKAhSBXF1ZXVlEhAKA25vdxgGIAEoCF'
-    'IDbm93Eh8KC3RvX3N1YmFnZW50GAcgASgJUgp0b1N1YmFnZW50');
+    'IDbm93Eh8KC3RvX3N1YmFnZW50GAcgASgJUgp0b1N1YmFnZW50Ei4KB3VwbG9hZHMYCCADKAsy'
+    'FC5udXNoaS52MS5GaWxlVXBsb2FkUgd1cGxvYWRz');
+
+@$core.Deprecated('Use fileUploadDescriptor instead')
+const FileUpload$json = {
+  '1': 'FileUpload',
+  '2': [
+    {'1': 'name', '3': 1, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'data', '3': 2, '4': 1, '5': 12, '10': 'data'},
+  ],
+};
+
+/// Descriptor for `FileUpload`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List fileUploadDescriptor = $convert.base64Decode(
+    'CgpGaWxlVXBsb2FkEhIKBG5hbWUYASABKAlSBG5hbWUSEgoEZGF0YRgCIAEoDFIEZGF0YQ==');
 
 @$core.Deprecated('Use queuedMessageDescriptor instead')
 const QueuedMessage$json = {
@@ -3512,6 +3534,7 @@ const Item$json = {
     {'1': 'raw_output', '3': 35, '4': 1, '5': 9, '10': 'rawOutput'},
     {'1': 'forkable', '3': 36, '4': 1, '5': 8, '10': 'forkable'},
     {'1': 'steered', '3': 37, '4': 1, '5': 8, '10': 'steered'},
+    {'1': 'files', '3': 38, '4': 3, '5': 9, '10': 'files'},
   ],
 };
 
@@ -3538,7 +3561,7 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'aW5kaW5nc1IIZmluZGluZ3MSKAoQdG9fc3ViYWdlbnRfc3RvcBggIAEoCFIOdG9TdWJhZ2VudF'
     'N0b3ASEgoEc2VudBghIAEoA1IEc2VudBIUCgVpbnB1dBgiIAEoCVIFaW5wdXQSHQoKcmF3X291'
     'dHB1dBgjIAEoCVIJcmF3T3V0cHV0EhoKCGZvcmthYmxlGCQgASgIUghmb3JrYWJsZRIYCgdzdG'
-    'VlcmVkGCUgASgIUgdzdGVlcmVk');
+    'VlcmVkGCUgASgIUgdzdGVlcmVkEhQKBWZpbGVzGCYgAygJUgVmaWxlcw==');
 
 @$core.Deprecated('Use findingsDescriptor instead')
 const Findings$json = {
@@ -7689,6 +7712,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.MoveChatRequest': MoveChatRequest$json,
   '.nushi.v1.MoveChatResponse': MoveChatResponse$json,
   '.nushi.v1.SendPromptRequest': SendPromptRequest$json,
+  '.nushi.v1.FileUpload': FileUpload$json,
   '.nushi.v1.SendPromptResponse': SendPromptResponse$json,
   '.nushi.v1.RewindChatRequest': RewindChatRequest$json,
   '.nushi.v1.RewindChatResponse': RewindChatResponse$json,

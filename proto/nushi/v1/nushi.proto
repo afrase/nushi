@@ -908,8 +908,9 @@ message StartChatResponse {
 message SendPromptRequest {
   string chat_id = 1;
   string text = 2;
-  // Files the prompt mentions, relative to the chat's folder; they go to
-  // the agent as resource links after the text.
+  // Files the prompt mentions or attaches, relative to the chat's folder,
+  // or (API 106) absolute for one outside it; they go to the agent as
+  // resource links after the text.
   repeated string files = 3;
   // Images, after the files; refused unless status.images.
   repeated ImageData images = 4;
@@ -922,6 +923,16 @@ message SendPromptRequest {
   // The tool call of a subagent (one with agent_id) the message is for: the
   // agent is asked to pass it on unchanged.
   string to_subagent = 7;
+  // Files a device sent whole (the phone's, which aren't on the Mac): the
+  // daemon saves each in the chat's uploads folder and sends it as a file
+  // (API 106).
+  repeated FileUpload uploads = 8;
+}
+
+// A file sent whole with a prompt: its name and its bytes.
+message FileUpload {
+  string name = 1;
+  bytes data = 2;
 }
 
 // A message the user sent, waiting in a chat's queue.
@@ -2085,6 +2096,10 @@ message Item {
   // agent was steered), not the prompt a turn began with; kept in Nushi's
   // copy, unknown in a replay.
   bool steered = 37;
+  // A user message's files (SendPromptRequest.files): relative to the
+  // chat's folder, or absolute. Those its text doesn't mention as @path
+  // were attached (API 106).
+  repeated string files = 38;
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when

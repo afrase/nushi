@@ -80,6 +80,7 @@ type Service struct {
 	sessions   Sessions
 	worktrees  Worktrees
 	scratch    string // the folder that holds chats' scratch folders
+	uploads    string // the folder that holds chats' uploaded files (uploads.go)
 	publish    func(model.Event)
 
 	terminals Terminals   // set once at startup, if there are any

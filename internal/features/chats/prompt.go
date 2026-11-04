@@ -28,13 +28,22 @@ const (
 )
 
 // Prompt sends a message to the chat's agent, with links to the files it
-// mentions and its images. The turn runs in the background; its progress
+// mentions or attaches (a device's uploads saved first) and its images. The turn runs in the background; its progress
 // arrives as events. A chat whose agent isn't running is reopened, and the
 // message waits in the queue until it is. SendNow waits for the stopped
 // turn to end, or for ctx: an agent that ignores the cancel doesn't keep
 // the call. A message that is one of the commands Nushi runs in the agent's
 // place (TerminalCommands) is run here instead.
 func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, how Send) error {
+	if len(m.Uploads) > 0 {
+		c, err := s.chat(chatID)
+		if err != nil {
+			return err
+		}
+		if err := s.saveUploads(c, &m); err != nil {
+			return err
+		}
+	}
 	if c, cmd, ok := s.terminalCommandOf(chatID, m); ok {
 		return s.terminalCommand(ctx, c, m, cmd, how)
 	}
@@ -225,7 +234,8 @@ func (c *chat) backgroundLocked(from int) bool {
 }
 
 // blocks makes a message the agent's content: the text, links to the files
-// and the images.
+// (each named by its path in the folder, or by its own name when outside
+// it) and the images.
 func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	text := m.Text
 	switch r := m.ToSubagent; {
@@ -236,9 +246,12 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
 	for _, f := range m.Files {
-		path := filepath.Join(c.record.Folder, f)
+		path, name := filepath.Join(c.record.Folder, f), f
+		if filepath.IsAbs(f) {
+			path, name = filepath.Clean(f), filepath.Base(f)
+		}
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
-			Name: f, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
+			Name: name, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
 	}
 	for _, img := range m.Images {
 		prompt = append(prompt, acp.ContentBlock{Type: "image", Image: &acp.ImageContent{

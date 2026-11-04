@@ -95,6 +95,7 @@ type Options struct {
 	Sessions   Sessions
 	Worktrees  Worktrees         // nil: no chat in a new worktree
 	Scratch    string            // the folder that holds chats' scratch folders
+	Uploads    string            // the folder that holds chats' uploaded files ("": none taken, uploads.go)
 	Publish    func(model.Event) // nil: events go nowhere
 	Tools      Tools             // Nushi's own tools for chats' sessions
 	Viewers    Viewers           // who shows chats, for chats done while nobody looked (seen.go)
@@ -115,7 +116,7 @@ type Options struct {
 // commands followed) runs until Close or until ctx ends.
 func New(ctx context.Context, agents []Kind, o Options) *Service {
 	s := &Service{remembered: o.Remembered, sessions: o.Sessions, worktrees: o.Worktrees,
-		scratch: o.Scratch, publish: o.Publish, viewers: o.Viewers, procs: o.Processes, prefs: o.Sleep, copies: o.Copies, copiesOn: o.CopiesOn,
+		scratch: o.Scratch, uploads: o.Uploads, publish: o.Publish, viewers: o.Viewers, procs: o.Processes, prefs: o.Sleep, copies: o.Copies, copiesOn: o.CopiesOn,
 		chats: map[string]*chat{}, live: map[Agent]bool{}, opening: map[string]bool{}}
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	if s.publish == nil {

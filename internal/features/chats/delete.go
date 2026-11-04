@@ -154,6 +154,9 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 		err = s.copies.Delete(c.id)
 	}
 	if err == nil {
+		err = s.removeUploads(c.id)
+	}
+	if err == nil {
 		err = s.forget(c)
 	}
 	if err == nil {
