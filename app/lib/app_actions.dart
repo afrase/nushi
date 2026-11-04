@@ -270,7 +270,8 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .rewind,
       'Rewind…',
-      enabled: shown != null && rewindChoices(shown).isNotEmpty,
+      enabled:
+          shown != null && (rewindChoices(shown).isNotEmpty || shown.older > 0),
       run: () => unawaited(pickRewind(context, d, shown!)),
     ),
     AppAction(

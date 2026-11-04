@@ -27,21 +27,27 @@ Future<void> pickRewind(
   Daemon daemon,
   ChatState chat,
 ) async {
-  // All of them: those on pages not loaded yet come in as it lists.
-  unawaited(daemon.loadOlder(chat, all: true));
   final item = await showDialog<Item>(
     context: context,
-    builder: (_) => RewindPicker(chat: chat),
+    builder: (_) => RewindPicker(chat: chat, daemon: daemon),
   );
   if (item == null || !context.mounted) return;
   await rewindTo(context, daemon, chat, item);
 }
 
-/// Your messages in [chat] that it can be rewound to, newest first.
-List<Item> rewindChoices(ChatState chat) => [
-  for (final it in chat.items.reversed)
-    if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE && canRewindTo(chat, it)) it,
-];
+/// Your messages in [chat] that it can be rewound to, newest first, then
+/// those in [earlier] (items before what it has loaded).
+List<Item> rewindChoices(ChatState chat, [List<Item> earlier = const []]) {
+  final have = {for (final it in chat.items) it.id};
+  return [
+    for (final it in [
+      ...earlier.where((it) => !have.contains(it.id)),
+      ...chat.items,
+    ].reversed)
+      if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE && canRewindTo(chat, it))
+        it,
+  ];
+}
 
 /// A message in one line: its first line of text (after any replies'
 /// quotes), else a reply's, else its images.
@@ -63,11 +69,14 @@ String rewindLine(Item it) {
 /// each and when it was sent), and the warning that files stay as they
 /// are. ↑↓ move, ⏎ or a click picks (the dialog pops with the message),
 /// Esc closes. While a turn runs it says to stop it first, and lists the
-/// messages once it has stopped.
+/// messages once it has stopped. Those above a long chat's loaded part
+/// come from [daemon] as it lists, into the list only: the transcript
+/// would lay them all out (ADR 0026).
 class RewindPicker extends StatefulWidget {
-  const new({required this.chat, super.key});
+  const new({required this.chat, required this.daemon, super.key});
 
   final ChatState chat;
+  final Daemon daemon;
 
   @override
   State<RewindPicker> createState() => _RewindPickerState();
@@ -77,17 +86,48 @@ class _RewindPickerState extends State<RewindPicker> {
   final _text = TextEditingController();
   final GlobalKey<State<StatefulWidget>> _lit = GlobalKey();
   int _at = 0;
+  List<Item> _earlier = const []; // before the chat's loaded items
+  bool _gone = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_fetch());
+  }
 
   @override
   void dispose() {
+    _gone = true;
     _text.dispose();
     super.dispose();
+  }
+
+  /// The items before the chat's loaded ones, a page of as many as the
+  /// daemon gives at a time, until the start or the list closes. A page
+  /// that fails leaves the list as it is.
+  Future<void> _fetch() async {
+    final chat = widget.chat;
+    var older = chat.older;
+    var first = chat.items.firstOrNull?.id;
+    try {
+      while (older > 0 && first != null) {
+        final page = await widget.daemon.client.getChatItems(
+          GetChatItemsRequest(chatId: chat.id, before: first, limit: 500),
+        );
+        if (_gone || !mounted || page.items.isEmpty) return;
+        setState(() => _earlier = [...page.items, ..._earlier]);
+        older = page.older;
+        first = page.items.first.id;
+      }
+    } on Object {
+      return;
+    }
   }
 
   List<Item> get _shown {
     final q = _text.text.trim().toLowerCase();
     return [
-      for (final it in rewindChoices(widget.chat))
+      for (final it in rewindChoices(widget.chat, _earlier))
         if (it.text.toLowerCase().contains(q)) it,
     ];
   }

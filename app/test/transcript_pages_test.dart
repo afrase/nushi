@@ -351,17 +351,28 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  testWidgets('the rewind list takes every page, and lists the first '
-      'message', (tester) async {
+  testWidgets('the rewind list takes every page into the list, not the '
+      'transcript, and lists the first message', (tester) async {
     final (d, paged) = await _window(tester, turns: 60);
     final c = _chat(d)..canRewind = true;
     for (final it in paged.items) {
       if (it.kind == ItemKind.ITEM_KIND_USER_MESSAGE) it.rewindable = true;
     }
+    final older = c.older;
     unawaited(pickRewind(tester.element(find.byType(ChatView)), d, c));
     await _settle(tester);
-    expect(c.older, 0);
-    expect(rewindChoices(c).last.text, startsWith('Turn 0:'));
+    expect(c.older, older, reason: 'the transcript lays out none of them');
+    expect(paged.pages, isNotEmpty);
+    final rows = find.descendant(
+      of: find.byType(RewindPicker),
+      matching: find.textContaining('Turn '),
+    );
+    expect(rows, findsNWidgets(60));
+    expect(
+      tester.widget<Text>(rows.last).data,
+      startsWith('Turn 0:'),
+      reason: 'the oldest last',
+    );
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await _settle(tester);
     await closeView(tester, d);
