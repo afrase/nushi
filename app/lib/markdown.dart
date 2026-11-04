@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/paced.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// [href] as a link the app opens: http and https only. A file:, a
@@ -22,8 +22,30 @@ Uri? webLink(String href) {
       : null;
 }
 
+/// The host a link's [text] names when it reads as an address on another
+/// host than [target]'s (`[https://github.com/…](https://evil.example)`),
+/// else null: other people's text (a GitHub comment, a Jira issue, an
+/// agent's reply) can dress one address as another.
+String? linkTextElsewhere(String text, Uri target) {
+  final t = text.trim();
+  // An address: with its scheme, from www., or a host and a path ("a.md"
+  // alone is a file's name).
+  final address =
+      t.contains('://') ||
+      t.toLowerCase().startsWith('www.') ||
+      RegExp(r'^[^/]+\.[^/]+/').hasMatch(t);
+  if (!address || t.contains(RegExp(r'\s'))) return null;
+  final shown = Uri.tryParse(t.contains('://') ? t : 'https://$t');
+  String bare(String host) =>
+      host.toLowerCase().replaceFirst(RegExp(r'^www\.'), '');
+  if (shown == null || !shown.host.contains('.')) return null;
+  if (!const {'http', 'https'}.contains(shown.scheme)) return shown.host;
+  return bare(shown.host) == bare(target.host) ? null : shown.host;
+}
+
 /// Agent markdown in the theme's fonts and colors. Links open in the
-/// browser, http and https only; images as [markdownImage] shows them;
+/// browser, http and https only, a link whose text names another address
+/// only once the user saw where it goes; images as [markdownImage] shows them;
 /// ```` ```mermaid ```` blocks as diagrams ([MermaidBlock]).
 class AgentMarkdown extends StatelessWidget {
   const new(
@@ -69,8 +91,24 @@ class AgentMarkdown extends StatelessWidget {
   final Map<String, String>? files;
   final void Function(String path)? onTapFile;
 
-  static void _open(String href) {
-    if (webLink(href) case final uri?) unawaited(launchUrl(uri));
+  static Future<void> _open(
+    BuildContext context,
+    String href,
+    String text,
+  ) async {
+    final uri = webLink(href);
+    if (uri == null) return;
+    if (linkTextElsewhere(text, uri) case final shown?) {
+      if (!await confirm(
+        context,
+        'Open ${uri.host}?',
+        'The link reads $shown, but it goes to $uri.',
+        'Open',
+      )) {
+        return;
+      }
+    }
+    await launchUrl(uri);
   }
 
   @override
@@ -104,7 +142,7 @@ class AgentMarkdown extends StatelessWidget {
             ? null
             : SoftCaret(opacity: shown.caret),
         lineBreaks: typed,
-        onTapLink: _open,
+        onTapLink: (href, text) => unawaited(_open(context, href, text)),
         imageBuilder: images,
         style: style,
         files: files,

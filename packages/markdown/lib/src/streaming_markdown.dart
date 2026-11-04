@@ -106,8 +106,8 @@ class StreamingMarkdown extends StatefulWidget {
   /// joining the lines into one paragraph.
   final bool lineBreaks;
 
-  /// Runs when a link is clicked, with its destination.
-  final void Function(String href)? onTapLink;
+  /// Runs when a link is clicked, with its destination and its text.
+  final void Function(String href, String text)? onTapLink;
 
   /// Builds an image from its URL and alt text.
   final Widget Function(Uri uri, String? alt)? imageBuilder;
@@ -238,8 +238,8 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         padding: const EdgeInsets.only(right: 6),
         child: Text(checked ? '☑' : '☐', style: body.copyWith(color: s.muted)),
       ),
-      onTapLink: (_, href, _) {
-        if (href != null) onTapLink?.call(href);
+      onTapLink: (text, href, _) {
+        if (href != null) onTapLink?.call(href, text);
       },
       imageBuilder: (uri, title, alt) =>
           imageBuilder?.call(uri, alt) ??
