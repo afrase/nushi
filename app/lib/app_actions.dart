@@ -270,8 +270,15 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .rewind,
       'Rewind…',
+      // A long chat's earlier messages may be rewound to once loaded; the
+      // chat itself must allow it now, as each message's own check asks.
       enabled:
-          shown != null && (rewindChoices(shown).isNotEmpty || shown.older > 0),
+          shown != null &&
+          (rewindChoices(shown).isNotEmpty ||
+              (shown.older > 0 &&
+                  shown.canRewind &&
+                  !shown.busy &&
+                  !shown.archived)),
       run: () => unawaited(pickRewind(context, d, shown!)),
     ),
     AppAction(
