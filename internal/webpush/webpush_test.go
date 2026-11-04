@@ -132,11 +132,17 @@ func TestSend(t *testing.T) {
 	status := http.StatusCreated
 	var got *http.Request
 	var body []byte
-	snd := &Sender{Keys: keys, Subject: "https://relay.example.com", Client: &http.Client{Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
+	var asked []string
+	snd := &Sender{Keys: keys, Subject: "https://relay.example.com", Transport: roundTrip(func(r *http.Request) (*http.Response, error) {
 		got = r
+		asked = append(asked, r.URL.String())
 		body, _ = io.ReadAll(r.Body)
-		return &http.Response{StatusCode: status, Status: http.StatusText(status), Body: io.NopCloser(strings.NewReader("")), Header: http.Header{}}, nil
-	})}}
+		h := http.Header{}
+		if status/100 == 3 {
+			h.Set("Location", "https://evil.example.com/caught")
+		}
+		return &http.Response{StatusCode: status, Status: http.StatusText(status), Body: io.NopCloser(strings.NewReader("")), Header: h}, nil
+	})}
 	m := Message{Payload: []byte(`{"title":"Claude finished"}`), Topic: "abc", Urgent: true, TTL: time.Hour}
 	if err := snd.Send(context.Background(), sub, m); err != nil {
 		t.Fatal(err)
@@ -161,10 +167,16 @@ func TestSend(t *testing.T) {
 	if err := snd.Send(context.Background(), sub, m); err == nil || errors.Is(err, ErrGone) {
 		t.Errorf("429: %v", err)
 	}
+	// A redirect isn't followed: the message and its token stay with the
+	// endpoint.
+	status, asked = http.StatusTemporaryRedirect, nil
+	if err := snd.Send(context.Background(), sub, m); err == nil || len(asked) != 1 {
+		t.Errorf("307: %v, asked %q", err, asked)
+	}
 	// A failure doesn't name the endpoint: it's the subscription's secret.
-	down := &Sender{Keys: keys, Subject: snd.Subject, Client: &http.Client{Transport: roundTrip(func(*http.Request) (*http.Response, error) {
+	down := &Sender{Keys: keys, Subject: snd.Subject, Transport: roundTrip(func(*http.Request) (*http.Response, error) {
 		return nil, errors.New("connection refused")
-	})}}
+	})}
 	if err := down.Send(context.Background(), sub, m); err == nil || strings.Contains(err.Error(), "abc") {
 		t.Errorf("a failure: %v", err)
 	}

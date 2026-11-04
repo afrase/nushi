@@ -16,9 +16,9 @@ import (
 // (nothing of the user's is sent), with the last answer's ETag: asked
 // again unchanged, GitHub answers 304, which costs nothing.
 type Releases struct {
-	Repo string       // "owner/name"
-	Base string       // REST's base; "" for api.github.com
-	HTTP *http.Client // nil: a client of its own
+	Repo      string            // "owner/name"
+	Base      string            // REST's base; "" for api.github.com
+	Transport http.RoundTripper // nil: http.DefaultTransport
 
 	mu   sync.Mutex
 	etag string
@@ -49,11 +49,7 @@ func (r *Releases) Latest(ctx context.Context) (string, error) {
 	if r.etag != "" {
 		req.Header.Set("If-None-Match", r.etag)
 	}
-	hc := r.HTTP
-	if hc == nil {
-		hc = &http.Client{Timeout: 30 * time.Second}
-	}
-	resp, err := hc.Do(req)
+	resp, err := (&http.Client{Transport: r.Transport, Timeout: 30 * time.Second}).Do(req)
 	if err != nil {
 		if ue, ok := errors.AsType[*url.Error](err); ok {
 			err = ue.Err // its message has the URL

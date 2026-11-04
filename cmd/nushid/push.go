@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/remote"
@@ -36,12 +35,11 @@ func usePush(st *store.Store, r *remote.Service, chatSvc *chats.Service, kinds [
 		titles[info.Name] = info.Title
 	}
 	// Through the Mac's proxy, as the relay link goes (a company network).
-	client := &http.Client{Timeout: webpush.Timeout, Transport: proxiedTransport(),
-		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	transport := proxiedTransport()
 	r.UsePush(remote.Push{
 		Key: keys.PublicKey(),
 		Send: func(ctx context.Context, subject string, s webpush.Subscription, m webpush.Message) error {
-			return (&webpush.Sender{Keys: keys, Subject: subject, Client: client}).Send(ctx, s, m)
+			return (&webpush.Sender{Keys: keys, Subject: subject, Transport: transport}).Send(ctx, s, m)
 		},
 		Agent: func(chatID string) (string, bool) {
 			sessions, err := chatSvc.List()

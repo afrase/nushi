@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
-	"time"
 
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/features/updates"
@@ -20,7 +18,7 @@ const nushiRepo = "afrase/nushi"
 // token (the repository is public), through the system's proxy as
 // GitHub's other calls.
 func startUpdates(st *store.Store, publish func(model.Event)) *updates.Service {
-	releases := &githubapi.Releases{Repo: nushiRepo, HTTP: &http.Client{Transport: proxiedTransport(), Timeout: 30 * time.Second}}
+	releases := &githubapi.Releases{Repo: nushiRepo, Transport: proxiedTransport()}
 	s := updates.New(releases.Latest, st, api.Release, "https://github.com/"+nushiRepo, publish)
 	go s.Run(context.Background()) // as long as the daemon
 	return s

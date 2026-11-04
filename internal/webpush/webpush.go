@@ -187,11 +187,13 @@ func encrypt(s Subscription, plaintext []byte, pad int, as *ecdh.PrivateKey, sal
 // 410): it is to be forgotten.
 var ErrGone = errors.New("the push subscription has expired or was removed")
 
-// Sender sends messages, signed with its VAPID keys.
+// Sender sends messages, signed with its VAPID keys. It never follows a
+// redirect: the endpoint is the subscription's secret, and a redirect would
+// carry the message and its VAPID token to wherever it led.
 type Sender struct {
-	Keys    Keys
-	Subject string       // a contact for the push service: https:// or mailto:
-	Client  *http.Client // nil: a client of its own; never one that follows redirects
+	Keys      Keys
+	Subject   string            // a contact for the push service: https:// or mailto:
+	Transport http.RoundTripper // nil: http.DefaultTransport
 }
 
 // Message is one push: its payload, and how the push service treats it.
@@ -202,11 +204,8 @@ type Message struct {
 	TTL     time.Duration // how long the service keeps it for an offline device
 }
 
-// Timeout is how long a push service has to answer.
-const Timeout = 30 * time.Second
-
-var defaultClient = &http.Client{Timeout: Timeout,
-	CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+// timeout is how long a push service has to answer.
+const timeout = 30 * time.Second
 
 // Send encrypts m for s and posts it to s's endpoint, which must be a known
 // push service. A 404 or 410 is ErrGone.
@@ -234,10 +233,8 @@ func (snd *Sender) Send(ctx context.Context, s Subscription, m Message) error {
 	if m.Topic != "" {
 		req.Header.Set("Topic", m.Topic)
 	}
-	c := snd.Client
-	if c == nil {
-		c = defaultClient
-	}
+	c := &http.Client{Transport: snd.Transport, Timeout: timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := c.Do(req)
 	if err != nil {
 		// Without the URL: the endpoint is the subscription's secret.
