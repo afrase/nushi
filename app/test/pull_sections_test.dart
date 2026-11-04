@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'pull_fixture.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -89,4 +91,58 @@ void main() {
     expect(spec.top, lessThan(helper.top));
     d.dispose();
   }, variant: _mac);
+
+  testWidgets("Checks: an open failed check's log stays with its check when "
+      'the checks change, and a failed fetch is tried again', (tester) async {
+    var refuse = true;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        GetGitHubJobLogRequest() when refuse => throw StateError('down'),
+        GetGitHubJobLogRequest(:final job) => GetGitHubJobLogResponse(
+          tail: 'LOG OF JOB $job',
+        ),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    GitHubPull pull(List<GitHubCheck> checks) => GitHubPull(
+      item: GitHubItem(
+        ref: GitHubRef(host: 'h', repo: 'o/r', number: 1),
+      ),
+      checks: checks,
+    );
+    Widget at(GitHubPull p) => MaterialApp(
+      theme: const NushiTheme(Tokens.dark).toThemeData(),
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: GitHubChecks(daemon: d, pull: p),
+        ),
+      ),
+    );
+    GitHubCheck failed(int id, String name) =>
+        GitHubCheck(id: Int64(id), name: name, state: 'failure', failed: true);
+    await tester.pumpWidget(at(pull([failed(1, 'lint')])));
+    await tester.tap(find.text('lint'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bad state: down'), findsOneWidget);
+    // Closed and opened again: asked again, and the error goes.
+    refuse = false;
+    await tester.tap(find.text('lint'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('lint'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bad state: down'), findsNothing);
+    expect(find.text('LOG OF JOB 1'), findsOneWidget);
+    // A push: lint passes, test (another job) fails in lint's place.
+    await tester.pumpWidget(
+      at(
+        pull([
+          failed(2, 'test'),
+          GitHubCheck(id: Int64(3), name: 'lint', state: 'success'),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('LOG OF JOB 1'), findsNothing);
+    await closeView(tester, d);
+  });
 }

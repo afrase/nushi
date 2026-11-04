@@ -54,7 +54,10 @@ class _CheckRowState extends State<CheckRow> {
   String? _error;
 
   Future<void> _toggle() async {
-    setState(() => _open = !_open);
+    setState(() {
+      _open = !_open;
+      _error = null; // asked again below
+    });
     if (!_open || _log != null || widget.check.id == 0) return;
     try {
       final r = await widget.daemon.client.getGitHubJobLog(

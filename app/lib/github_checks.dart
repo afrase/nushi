@@ -156,6 +156,9 @@ class _GitHubChecksState extends State<GitHubChecks> {
         ),
         for (final c in [...failed, ...running])
           Padding(
+            // Each row its check's, open and with its log, as the checks
+            // change under it (a push, a re-run).
+            key: ValueKey(c.id != 0 ? c.id : '${c.workflow}/${c.name}'),
             padding: const EdgeInsets.only(bottom: 6),
             child: framed(
               border: c.failed
