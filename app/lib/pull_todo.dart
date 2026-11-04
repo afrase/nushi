@@ -17,8 +17,9 @@ import 'package:nushi/widgets.dart';
 /// Send (a reply card into the chat's box, with whose it is); picked ones
 /// go together (Send n picked), or all (Send all to agent). Its last line
 /// says who's next: "Then waiting on @team: approval required as code
-/// owner." [onChanged] asks for the pull request again after a reply or a
-/// resolve.
+/// owner." (with nothing to do, the head says it, and the line keeps only
+/// Ping on GitHub). [onChanged] asks for the pull request again after a
+/// reply or a resolve.
 class PullTodo extends StatefulWidget {
   const new({
     required this.daemon,
@@ -272,7 +273,9 @@ class _Count extends StatelessWidget {
 }
 
 /// Who's next once the list is done: the reviewers still asked, else the
-/// checks still running, else that it can merge.
+/// checks still running, else that it can merge. With nothing in the list
+/// ([after] false) the head says who's next (said once), so this keeps
+/// only the way to ping the reviewers.
 class _Next extends StatelessWidget {
   const new({required this.pull, required this.after});
 
@@ -286,27 +289,45 @@ class _Next extends StatelessWidget {
     final p = pull;
     final waiting = waitingOn(p);
     final running = countChecks(p).running;
-    final then = after ? 'Then waiting on ' : 'Waiting on ';
     final ready = mergeView(p)?.lead == readyWords; // the Merge control's words
+    final ping = waiting.isNotEmpty && p.item.url.isNotEmpty
+        ? GhostButton(
+            'Ping on GitHub',
+            icon: Icons.open_in_new,
+            tooltip: 'Open the pull request on GitHub, to ask them',
+            onTap: () => openWeb(p.item.url),
+          )
+        : null;
+    final foot = BoxDecoration(
+      color: t.raised,
+      border: Border(top: BorderSide(color: t.borderSubtle)),
+    );
+    if (!after && (waiting.isNotEmpty || running > 0)) {
+      return ping == null
+          ? const SizedBox.shrink()
+          : Container(
+              decoration: foot,
+              padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+              alignment: Alignment.centerRight,
+              child: ping,
+            );
+    }
     final (String? lead, String? who, String rest) = waiting.isNotEmpty
         ? (
-            then,
+            'Then waiting on ',
             names(waiting.map((r) => '@${r.login}')),
             waiting.any((r) => r.codeOwner)
                 ? ': approval required as code owner.'
                 : ': review requested.',
           )
         : running > 0
-        ? (then, null, 'checks: $running running.')
+        ? ('Then waiting on ', null, 'checks: $running running.')
         : after || ready
         ? (null, null, '')
         : (null, null, 'Nothing else waits: it can merge once its rules pass.');
     if (lead == null && rest.isEmpty) return const SizedBox.shrink();
     return Container(
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border(top: BorderSide(color: t.borderSubtle)),
-      ),
+      decoration: foot,
       padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
       child: Row(
         children: [
@@ -332,13 +353,7 @@ class _Next extends StatelessWidget {
               style: theme.ui(t.textSecondary, size: 12.5),
             ),
           ),
-          if (waiting.isNotEmpty && p.item.url.isNotEmpty)
-            GhostButton(
-              'Ping on GitHub',
-              icon: Icons.open_in_new,
-              tooltip: 'Open the pull request on GitHub, to ask them',
-              onTap: () => openWeb(p.item.url),
-            ),
+          ?ping,
         ],
       ),
     );

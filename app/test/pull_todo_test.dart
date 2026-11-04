@@ -414,4 +414,20 @@ void main() {
     expect(find.textContaining('exit code 1'), findsOneWidget);
     d.dispose();
   }, variant: _mac);
+
+  testWidgets('nothing to do, a reviewer still asked: the head says who is '
+      "next, To do's foot only Ping on GitHub", (tester) async {
+    final p = mergePull('ready')
+      ..conversation.clear()
+      ..reviewers.add(
+        GitHubReviewer(login: 'notes-reviewers', state: 'requested'),
+      );
+    final (d, _) = await openPullTab(tester, p);
+    expect(
+      find.textContaining('Waiting on', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text('Ping on GitHub'), findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
 }
