@@ -9,6 +9,12 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
+/// A chat's GitHub link as the ref GitHub's calls take.
+extension GitHubLinkRef on GitHubLink {
+  /// The pull request or issue it links.
+  GitHubRef get asRef => GitHubRef(host: host, repo: repo, number: number);
+}
+
 /// An item's state's color: open green (gray when a draft), merged
 /// violet, closed red.
 Color itemColor(Tokens t, GitHubItem it) => switch (it.state) {
@@ -315,10 +321,7 @@ class _PullChipState extends State<PullChip> {
     if (l == null) return;
     try {
       final r = await widget.daemon.client.getGitHubPull(
-        GetGitHubPullRequest(
-          ref: GitHubRef(host: l.host, repo: l.repo, number: l.number),
-          quiet: quiet,
-        ),
+        GetGitHubPullRequest(ref: l.asRef, quiet: quiet),
       );
       if (mounted && widget.chat.pull?.id == l.id) {
         setState(() => _pull = r.pull);

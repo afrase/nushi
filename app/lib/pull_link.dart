@@ -110,7 +110,7 @@ class ChatPull extends ChangeNotifier {
   void _seed() {
     final l = chat.pull;
     if (pull != null || l == null) return;
-    if (cachedPull(_ref(l)) case (final at, final p)) {
+    if (cachedPull(l.asRef) case (final at, final p)) {
       pull = p;
       keptAt = at;
     }
@@ -245,7 +245,7 @@ class ChatPull extends ChangeNotifier {
         pull = null;
         keptAt = null;
       } else {
-        final ref = _ref(l);
+        final ref = l.asRef;
         final r = await daemon.client.getGitHubPull(
           GetGitHubPullRequest(ref: ref, quiet: quiet),
         );
@@ -284,9 +284,6 @@ class ChatPull extends ChangeNotifier {
   void markSeen() {
     if (pull case final p?) markPullSeen(chat.id, p);
   }
-
-  static GitHubRef _ref(GitHubLink l) =>
-      GitHubRef(host: l.host, repo: l.repo, number: l.number);
 
   /// Links [link] by hand, or unlinks (null).
   Future<void> setLink(GitHubLink? link) async {

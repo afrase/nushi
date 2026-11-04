@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/pull_link.dart';
+import 'package:nushi/pull_states.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
@@ -33,7 +33,7 @@ class PullTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = chat.pull;
     if (l == null) return const SizedBox.shrink();
-    final ref = GitHubRef(host: l.host, repo: l.repo, number: l.number);
+    final ref = l.asRef;
     final source = ChatPull.of(daemon, chat);
     // A toast says what went in.
     Future<void> send(

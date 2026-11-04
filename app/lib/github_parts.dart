@@ -323,11 +323,7 @@ class _GitHubChipState extends State<GitHubChip> {
           ].join('\n');
     return Tap(
       tooltip: details,
-      onTap: () => showItem(
-        widget.daemon,
-        GitHubRef(host: l.host, repo: l.repo, number: l.number),
-        pull: l.pull,
-      ),
+      onTap: () => showItem(widget.daemon, l.asRef, pull: l.pull),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Row(
         mainAxisSize: MainAxisSize.min,
