@@ -403,7 +403,8 @@ List<TextSpan> lineCounts(NushiTheme theme, int added, int removed) => [
     TextSpan(text: ' −$removed', style: theme.code(theme.t.crashed, size: 11)),
 ];
 
-/// [lineCounts] as a widget.
+/// [lineCounts] as a widget, on one line: cut off where there's no room
+/// (a narrow Changes bar with Send to agent), never a digit a line.
 class LineCounts extends StatelessWidget {
   const new(this.added, this.removed, {super.key});
 
@@ -413,5 +414,7 @@ class LineCounts extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text.rich(
     TextSpan(children: lineCounts(NushiTheme.of(context), added, removed)),
+    softWrap: false,
+    overflow: TextOverflow.clip,
   );
 }
