@@ -25,7 +25,6 @@ import (
 	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
-	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // An agent's process starts with a variable only the login shell sets,
@@ -84,7 +83,8 @@ exec /bin/sh -c "$4"
 		t.Fatal(err)
 	}
 	for name, want := range map[string]string{"omp": "", "node": filepath.Join(bin, "codex")} {
-		got := waitFor(t, filepath.Join(out, name))
+		path, got := filepath.Join(out, name), ""
+		until(t, path, func() bool { b, err := os.ReadFile(path); got = string(b); return err == nil })
 		if !strings.Contains(got, "\nONLY_IN_SHELL=yes\n") || !strings.Contains(got, "\nCODEX_PATH="+want+"\n") {
 			t.Errorf("%s started with:\n%s", name, got)
 		}
@@ -92,16 +92,6 @@ exec /bin/sh -c "$4"
 			t.Errorf("%s got Nushi's own variables:\n%s", name, got)
 		}
 	}
-}
-
-// waitFor returns the file at path once it is there, 5 s at most.
-func waitFor(t *testing.T, path string) string {
-	t.Helper()
-	var b []byte
-	if !testcheck.Eventually(func() bool { var err error; b, err = os.ReadFile(path); return err == nil }) {
-		t.Fatalf("%s never came", path)
-	}
-	return string(b)
 }
 
 // setUp has every adapter set up.

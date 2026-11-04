@@ -387,14 +387,7 @@ func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 
 	perm := snap.Items[len(snap.Items)-1]
 	must(second.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
-	items := snap.Items
-	for done := false; !done; {
-		e := second.waitFor("the turn to end", func(e *nushiv1.EventsResponse) bool { return e.ChatId == chatID })
-		if e.Seq > snap.Seq {
-			items = apply(items, e)
-		}
-		done = idle(e)
-	}
+	items := second.follow(chatID, snap)
 
 	final := second.get(chatID)
 	if !slices.EqualFunc(items, final.Items, func(a, b *nushiv1.Item) bool { return proto.Equal(a, b) }) {
