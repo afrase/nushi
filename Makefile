@@ -75,9 +75,9 @@ package: mermaid
 
 install: package
 	mkdir -p "$(HOME)/Applications"
-	rm -rf "$(HOME)/Applications/Nushi.app" "$(HOME)/Applications/Nushi Next.app"
+	rm -rf "$(HOME)/Applications/Nushi.app"
 	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi.app"
-	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi.app" "$(COPY_TO)/Nushi Next.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi.app"; fi
+	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi.app"; fi
 
 # The relay (ADR 0033), one static binary: bin/nushi-relay -h lists its flags.
 relay:

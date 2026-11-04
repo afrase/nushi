@@ -56,19 +56,10 @@ func loginCommand(shell, bin, log string, env []string) ([]string, []string) {
 	return []string{shell, "-l", "-c", `exec "$NUSHID_BIN" >>"$NUSHID_LOG" 2>&1`}, env
 }
 
-// logFolder is where the daemon's log goes: the data folder, or Nushi
-// Next's while that is still to be moved (the daemon moves it, log and
-// all, as it starts).
+// logFolder is where the daemon's log goes: the data folder.
 func logFolder(nushiData, home string) string {
 	if nushiData != "" {
 		return nushiData
 	}
-	support := filepath.Join(home, "Library", "Application Support")
-	dir, old := filepath.Join(support, "Nushi"), filepath.Join(support, "Nushi Next")
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if _, err := os.Stat(old); err == nil {
-			return old
-		}
-	}
-	return dir
+	return filepath.Join(home, "Library", "Application Support", "Nushi")
 }

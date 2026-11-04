@@ -12,7 +12,7 @@ import (
 // the user's. Empty when the transcript can't be read; what it could read
 // of one that ends short.
 func (l Local) MessageTimes(id, folder string) map[string]time.Time {
-	src, _, err := paths(l.Projects, id, folder, folder)
+	src, err := transcriptPath(l.Projects, id, folder)
 	if err != nil {
 		return nil
 	}

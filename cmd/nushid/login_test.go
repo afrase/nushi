@@ -1,12 +1,9 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"slices"
 	"testing"
-
-	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestTheLoginShellStartsTheDaemon(t *testing.T) {
@@ -33,13 +30,5 @@ func TestTheLogGoesToTheDataFolder(t *testing.T) {
 	}
 	if got := logFolder("", home); got != filepath.Join(support, "Nushi") {
 		t.Errorf("no folder yet: %s", got)
-	}
-	testcheck.NoErr(t, os.MkdirAll(filepath.Join(support, "Nushi Next"), 0o700))
-	if got := logFolder("", home); got != filepath.Join(support, "Nushi Next") {
-		t.Errorf("Nushi Next still to move: %s", got)
-	}
-	testcheck.NoErr(t, os.MkdirAll(filepath.Join(support, "Nushi"), 0o700))
-	if got := logFolder("", home); got != filepath.Join(support, "Nushi") {
-		t.Errorf("both: %s", got)
 	}
 }

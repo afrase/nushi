@@ -6,7 +6,6 @@
 package claudehistory
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -36,43 +35,13 @@ func Projects() (string, error) {
 	return filepath.Join(claude.ConfigDir(), "projects"), nil
 }
 
-// Move moves session id's transcript (and its folder, <id>/) from folder
-// from's history into folder to's. One already in to's history that holds
-// all of it stays, and the old one goes; nothing to move is no error.
-func Move(projects, id, from, to string) error {
-	src, dst, err := paths(projects, id, from, to)
-	if err != nil || src == dst {
-		return err
-	}
-	old, err := os.ReadFile(src)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if there, err := os.ReadFile(dst); err == nil && !bytes.HasPrefix(there, old) {
-		return fmt.Errorf("Claude's history of %s has another session %s", to, id)
-	} else if err == nil {
-		return os.Remove(src) // a copy made before, which went on since
-	}
-	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
-		return err
-	}
-	dir := strings.TrimSuffix(src, ".jsonl")
-	if _, err := os.Stat(strings.TrimSuffix(dst, ".jsonl")); errors.Is(err, fs.ErrNotExist) {
-		_ = os.Rename(dir, strings.TrimSuffix(dst, ".jsonl")) // when it has one
-	}
-	return os.Rename(src, dst)
-}
-
-// paths returns where session id's transcript is in folder from's history
-// and in folder to's.
-func paths(projects, id, from, to string) (src, dst string, err error) {
+// transcriptPath returns where session id's transcript is in folder's
+// history; an error for an id that would name another path.
+func transcriptPath(projects, id, folder string) (string, error) {
 	if id == "" || strings.ContainsAny(id, `/\`) || strings.HasPrefix(id, ".") {
-		return "", "", fmt.Errorf("%q is not a session id", id)
+		return "", fmt.Errorf("%q is not a session id", id)
 	}
-	return filepath.Join(historyDir(projects, from), id+".jsonl"), filepath.Join(historyDir(projects, to), id+".jsonl"), nil
+	return filepath.Join(historyDir(projects, folder), id+".jsonl"), nil
 }
 
 // Has reports whether Claude keeps session id's transcript in folder's
@@ -89,7 +58,7 @@ func Has(projects, id, folder string) bool {
 // missing or can't be read says nothing: another CLAUDE_CONFIG_DIR, or a
 // folder whose name Claude spells otherwise (see sessions.Store.ProjectDir).
 func (l Local) HistoryGone(id, folder string) bool {
-	if _, _, err := paths(l.Projects, id, folder, folder); err != nil {
+	if _, err := transcriptPath(l.Projects, id, folder); err != nil {
 		return false
 	}
 	dir := historyDir(l.Projects, folder)

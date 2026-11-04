@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:nushi/app_log.dart';
-import 'package:nushi/daemon.dart';
 
 /// The daemon's helper app inside [app] (`make package`): a background-only
 /// app, so a daemon the app started isn't the app's own process once it
@@ -45,15 +44,6 @@ List<String> openHelper(String helper, String? nushiData) => [
   '-login',
 ];
 
-/// The data folder from when the app was "Nushi Next". The daemon moves it
-/// to [dataDir] when it starts, once its own daemon has stopped.
-final String? _oldDataDir =
-    Platform.environment['NUSHI_DATA'] == null &&
-        !Directory(dataDir).existsSync() &&
-        Directory('$support/Nushi Next').existsSync()
-    ? '$support/Nushi Next'
-    : null;
-
 /// Starts the bundled daemon when none answers.
 class Launcher {
   DateTime launched = DateTime(0); // when it last started it
@@ -69,11 +59,6 @@ class Launcher {
     launched = DateTime.now();
     launches++;
     appLog.info('starting the bundled daemon', {'try': '$launches'});
-    // Moving from Nushi Next: its daemon stops, and the new one starts in
-    // the old folder, which it then moves (its log and folder move along).
-    if (_oldDataDir case final old? when !Directory(dataDir).existsSync()) {
-      stopDaemon(old);
-    }
     Process.run(
       '/usr/bin/open',
       openHelper(helper, Platform.environment['NUSHI_DATA']),

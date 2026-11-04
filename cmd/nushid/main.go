@@ -103,11 +103,7 @@ func run() error {
 	// NUSHI_DATA runs a second daemon beside the usual one, for development.
 	dir := os.Getenv("NUSHI_DATA")
 	if dir == "" {
-		support := filepath.Join(home, "Library", "Application Support")
-		dir = filepath.Join(support, "Nushi")
-		if err := moveData(filepath.Join(support, "Nushi Next"), dir, projects); err != nil {
-			return fmt.Errorf("moving Nushi Next's data: %w", err)
-		}
+		dir = filepath.Join(home, "Library", "Application Support", "Nushi")
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
