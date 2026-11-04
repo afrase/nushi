@@ -73,3 +73,36 @@ func TestAgentShowsAFile(t *testing.T) {
 		t.Errorf("the preview read %q, %v", stream.Msg().GetData(), stream.Err())
 	}
 }
+
+// The Files pane's listing, on the Mac and through a phone's link alike:
+// what's inside the chat's folder, never what a path leads to outside it.
+func TestWatchChatFolder(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	folder := t.TempDir()
+	mac, phone := open(t, d), openAt(t, d.devices)
+	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId
+	testcheck.Write(t, filepath.Join(folder, "docs", "a.md"), "a")
+	testcheck.Write(t, filepath.Join(folder, "b.txt"), "b")
+	for _, a := range []*app{mac, phone} {
+		stream, err := a.c.WatchChatFolder(ctx, connect.NewRequest(&nushiv1.WatchChatFolderRequest{ChatId: id, Depth: 2}))
+		testcheck.NoErr(t, err)
+		if !stream.Receive() {
+			t.Fatalf("no listing: %v", stream.Err())
+		}
+		fs := stream.Msg().Folders
+		if len(fs) != 2 || len(fs[0].Entries) != 2 || fs[0].Entries[0].Name != "docs" || fs[0].Entries[0].Kind != "folder" ||
+			fs[1].Path != "docs" || fs[1].Entries[0].Name != "a.md" || fs[1].Entries[0].Size != 1 {
+			t.Errorf("listing %v", fs)
+		}
+		_ = stream.Close()
+		for _, p := range []string{"..", "../", "/etc", "docs/../..", ".git"} {
+			stream, err := a.c.WatchChatFolder(ctx, connect.NewRequest(&nushiv1.WatchChatFolderRequest{ChatId: id, Path: p}))
+			testcheck.NoErr(t, err)
+			if stream.Receive() || connect.CodeOf(stream.Err()) != connect.CodeInvalidArgument {
+				t.Errorf("%q: %v, %v", p, stream.Msg(), stream.Err())
+			}
+			_ = stream.Close()
+		}
+	}
+}

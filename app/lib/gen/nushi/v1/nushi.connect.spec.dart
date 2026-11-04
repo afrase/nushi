@@ -493,6 +493,18 @@ abstract final class NushiService {
     nushiv1nushi.FindChatFilesResponse.new,
   );
 
+  /// Lists a folder inside the chat's folder (its worktree, for a worktree
+  /// chat) for the Files pane, then again each time it changes, until the
+  /// call ends: folders first, each folder's entries capped (the rest
+  /// counted), what git ignores left out unless asked for. The path is
+  /// checked: no "..", no link out, never .git. (API 103)
+  static const watchChatFolder = connect.Spec(
+    '/$name/WatchChatFolder',
+    connect.StreamType.server,
+    nushiv1nushi.WatchChatFolderRequest.new,
+    nushiv1nushi.WatchChatFolderResponse.new,
+  );
+
   /// Lists a branch's commits since a base, or the last ones.
   static const listCommits = connect.Spec(
     '/$name/ListCommits',

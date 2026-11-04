@@ -12868,6 +12868,388 @@ class FindChatFilesResponse extends $pb.GeneratedMessage {
   $pb.PbList<$core.String> get found => $_getList(0);
 }
 
+class WatchChatFolderRequest extends $pb.GeneratedMessage {
+  factory WatchChatFolderRequest({
+    $core.String? chatId,
+    $core.String? path,
+    $core.int? depth,
+    $core.bool? ignored,
+    $core.int? limit,
+  }) {
+    final result = WatchChatFolderRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (path != null) result.path = path;
+    if (depth != null) result.depth = depth;
+    if (ignored != null) result.ignored = ignored;
+    if (limit != null) result.limit = limit;
+    return result;
+  }
+
+  WatchChatFolderRequest._();
+
+  factory WatchChatFolderRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFolderRequest()..mergeFromBuffer(data, registry);
+  factory WatchChatFolderRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFolderRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchChatFolderRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WatchChatFolderRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..aI(3, _omitFieldNames ? '' : 'depth')
+    ..aOB(4, _omitFieldNames ? '' : 'ignored')
+    ..aI(5, _omitFieldNames ? '' : 'limit')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFolderRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFolderRequest copyWith(
+          void Function(WatchChatFolderRequest) updates) =>
+      super.copyWith((message) => updates(message as WatchChatFolderRequest))
+          as WatchChatFolderRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WatchChatFolderRequest() / WatchChatFolderRequest.new instead')
+  static WatchChatFolderRequest create() => WatchChatFolderRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WatchChatFolderRequest._();
+  @$core.override
+  WatchChatFolderRequest createEmptyInstance() => WatchChatFolderRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WatchChatFolderRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WatchChatFolderRequest>(
+          WatchChatFolderRequest.$_createMessage);
+  static WatchChatFolderRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// Relative to the chat's folder, "/"-separated; "" for the folder.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  /// Levels listed: 1 (or 0) the folder's entries; 2 and 3 its folders'
+  /// too, as many as fit 5,000 entries.
+  @$pb.TagNumber(3)
+  $core.int get depth => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set depth($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDepth() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDepth() => $_clearField(3);
+
+  /// List what git ignores too, marked, rather than leave it out.
+  @$pb.TagNumber(4)
+  $core.bool get ignored => $_getBF(3);
+  @$pb.TagNumber(4)
+  set ignored($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasIgnored() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearIgnored() => $_clearField(4);
+
+  /// The most entries a folder sends: 0 for 500; 2,000 at most.
+  @$pb.TagNumber(5)
+  $core.int get limit => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set limit($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLimit() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLimit() => $_clearField(5);
+}
+
+/// The folder as it is now: its listing, then those of its folders, to
+/// the depth asked.
+class WatchChatFolderResponse extends $pb.GeneratedMessage {
+  factory WatchChatFolderResponse({
+    $core.Iterable<FolderListing>? folders,
+  }) {
+    final result = WatchChatFolderResponse._();
+    if (folders != null) result.folders.addAll(folders);
+    return result;
+  }
+
+  WatchChatFolderResponse._();
+
+  factory WatchChatFolderResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFolderResponse()..mergeFromBuffer(data, registry);
+  factory WatchChatFolderResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchChatFolderResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchChatFolderResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WatchChatFolderResponse.$_createMessage)
+    ..pPM<FolderListing>(1, _omitFieldNames ? '' : 'folders',
+        subBuilder: FolderListing.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFolderResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchChatFolderResponse copyWith(
+          void Function(WatchChatFolderResponse) updates) =>
+      super.copyWith((message) => updates(message as WatchChatFolderResponse))
+          as WatchChatFolderResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WatchChatFolderResponse() / WatchChatFolderResponse.new instead')
+  static WatchChatFolderResponse create() => WatchChatFolderResponse._();
+  static $pb.GeneratedMessage $_createMessage() => WatchChatFolderResponse._();
+  @$core.override
+  WatchChatFolderResponse createEmptyInstance() => WatchChatFolderResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WatchChatFolderResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WatchChatFolderResponse>(
+          WatchChatFolderResponse.$_createMessage);
+  static WatchChatFolderResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<FolderListing> get folders => $_getList(0);
+}
+
+/// One folder's entries: folders first, then the rest, each by name.
+class FolderListing extends $pb.GeneratedMessage {
+  factory FolderListing({
+    $core.String? path,
+    $core.Iterable<FolderEntry>? entries,
+    $core.int? more,
+    $core.bool? missing,
+  }) {
+    final result = FolderListing._();
+    if (path != null) result.path = path;
+    if (entries != null) result.entries.addAll(entries);
+    if (more != null) result.more = more;
+    if (missing != null) result.missing = missing;
+    return result;
+  }
+
+  FolderListing._();
+
+  factory FolderListing.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FolderListing()..mergeFromBuffer(data, registry);
+  factory FolderListing.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FolderListing()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FolderListing',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FolderListing.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..pPM<FolderEntry>(2, _omitFieldNames ? '' : 'entries',
+        subBuilder: FolderEntry.$_createMessage)
+    ..aI(3, _omitFieldNames ? '' : 'more')
+    ..aOB(4, _omitFieldNames ? '' : 'missing')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FolderListing clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FolderListing copyWith(void Function(FolderListing) updates) =>
+      super.copyWith((message) => updates(message as FolderListing))
+          as FolderListing;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FolderListing() / FolderListing.new instead')
+  static FolderListing create() => FolderListing._();
+  static $pb.GeneratedMessage $_createMessage() => FolderListing._();
+  @$core.override
+  FolderListing createEmptyInstance() => FolderListing._();
+  @$core.pragma('dart2js:noInline')
+  static FolderListing getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FolderListing>(
+          FolderListing.$_createMessage);
+  static FolderListing? _defaultInstance;
+
+  /// Relative to the chat's folder; "" for the folder itself.
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<FolderEntry> get entries => $_getList(1);
+
+  /// Entries past the limit, not sent (counted up to 50,000).
+  @$pb.TagNumber(3)
+  $core.int get more => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set more($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMore() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMore() => $_clearField(3);
+
+  /// The folder isn't there (any more).
+  @$pb.TagNumber(4)
+  $core.bool get missing => $_getBF(3);
+  @$pb.TagNumber(4)
+  set missing($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMissing() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMissing() => $_clearField(4);
+}
+
+class FolderEntry extends $pb.GeneratedMessage {
+  factory FolderEntry({
+    $core.String? name,
+    $core.String? kind,
+    $fixnum.Int64? size,
+    $fixnum.Int64? modifiedMs,
+    $core.bool? ignored,
+    $core.bool? linked,
+  }) {
+    final result = FolderEntry._();
+    if (name != null) result.name = name;
+    if (kind != null) result.kind = kind;
+    if (size != null) result.size = size;
+    if (modifiedMs != null) result.modifiedMs = modifiedMs;
+    if (ignored != null) result.ignored = ignored;
+    if (linked != null) result.linked = linked;
+    return result;
+  }
+
+  FolderEntry._();
+
+  factory FolderEntry.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FolderEntry()..mergeFromBuffer(data, registry);
+  factory FolderEntry.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      FolderEntry()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'FolderEntry',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: FolderEntry.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOS(2, _omitFieldNames ? '' : 'kind')
+    ..aInt64(3, _omitFieldNames ? '' : 'size')
+    ..aInt64(4, _omitFieldNames ? '' : 'modifiedMs')
+    ..aOB(5, _omitFieldNames ? '' : 'ignored')
+    ..aOB(6, _omitFieldNames ? '' : 'linked')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FolderEntry clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  FolderEntry copyWith(void Function(FolderEntry) updates) =>
+      super.copyWith((message) => updates(message as FolderEntry))
+          as FolderEntry;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use FolderEntry() / FolderEntry.new instead')
+  static FolderEntry create() => FolderEntry._();
+  static $pb.GeneratedMessage $_createMessage() => FolderEntry._();
+  @$core.override
+  FolderEntry createEmptyInstance() => FolderEntry._();
+  @$core.pragma('dart2js:noInline')
+  static FolderEntry getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<FolderEntry>(
+          FolderEntry.$_createMessage);
+  static FolderEntry? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  /// "folder", "file", "link" (one that leads out of the chat's folder,
+  /// loops or leads nowhere: not followed) or "other" (a fifo, a device).
+  @$pb.TagNumber(2)
+  $core.String get kind => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set kind($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasKind() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearKind() => $_clearField(2);
+
+  /// A file's size, in bytes.
+  @$pb.TagNumber(3)
+  $fixnum.Int64 get size => $_getI64(2);
+  @$pb.TagNumber(3)
+  set size($fixnum.Int64 value) => $_setInt64(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSize() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSize() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get modifiedMs => $_getI64(3);
+  @$pb.TagNumber(4)
+  set modifiedMs($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasModifiedMs() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearModifiedMs() => $_clearField(4);
+
+  /// Git ignores it.
+  @$pb.TagNumber(5)
+  $core.bool get ignored => $_getBF(4);
+  @$pb.TagNumber(5)
+  set ignored($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasIgnored() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearIgnored() => $_clearField(5);
+
+  /// A link inside the chat's folder, followed: kind is its target's.
+  @$pb.TagNumber(6)
+  $core.bool get linked => $_getBF(5);
+  @$pb.TagNumber(6)
+  set linked($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasLinked() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearLinked() => $_clearField(6);
+}
+
 /// The file as it is now.
 class WatchChatFileResponse extends $pb.GeneratedMessage {
   factory WatchChatFileResponse({
@@ -29906,6 +30288,16 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, FindChatFilesRequest request) =>
       _client.invoke<FindChatFilesResponse>(ctx, 'NushiService',
           'FindChatFiles', request, FindChatFilesResponse());
+
+  /// Lists a folder inside the chat's folder (its worktree, for a worktree
+  /// chat) for the Files pane, then again each time it changes, until the
+  /// call ends: folders first, each folder's entries capped (the rest
+  /// counted), what git ignores left out unless asked for. The path is
+  /// checked: no "..", no link out, never .git. (API 103)
+  $async.Future<WatchChatFolderResponse> watchChatFolder(
+          $pb.ClientContext? ctx, WatchChatFolderRequest request) =>
+      _client.invoke<WatchChatFolderResponse>(ctx, 'NushiService',
+          'WatchChatFolder', request, WatchChatFolderResponse());
 
   /// Lists a branch's commits since a base, or the last ones.
   $async.Future<ListCommitsResponse> listCommits(

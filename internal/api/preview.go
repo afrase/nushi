@@ -2,12 +2,14 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/filewatch"
+	"github.com/afrase/nushi/internal/folderlist"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
@@ -61,4 +63,45 @@ func (s *server) FindChatFiles(_ context.Context, req *connect.Request[nushiv1.F
 		}
 	}
 	return connect.NewResponse(&nushiv1.FindChatFilesResponse{Found: found}), nil
+}
+
+// WatchChatFolder lists a folder inside a chat's folder for the Files
+// pane, and again each time it changes (folderlist.Watch). The path is a
+// client's, the phone's too: folderlist.Clean checks it, and os.Root
+// keeps every read inside the chat's folder.
+func (s *server) WatchChatFolder(ctx context.Context, req *connect.Request[nushiv1.WatchChatFolderRequest], stream *connect.ServerStream[nushiv1.WatchChatFolderResponse]) error {
+	rel, err := folderlist.Clean(req.Msg.Path)
+	if err != nil {
+		return invalid(err)
+	}
+	roots, err := s.chats.Roots(req.Msg.ChatId)
+	if err != nil {
+		return notFound(err)
+	}
+	o := folderlist.Options{Depth: int(req.Msg.Depth), Ignored: req.Msg.Ignored, Limit: int(req.Msg.Limit)}
+	var sendErr error
+	err = folderlist.Watch(ctx, roots[0], rel, o, time.Second, func(ls []folderlist.Listing) error {
+		sendErr = stream.Send(&nushiv1.WatchChatFolderResponse{Folders: folderListings(ls)})
+		return sendErr
+	})
+	switch {
+	case err == nil || sendErr != nil:
+		return err
+	case errors.Is(err, folderlist.ErrFolder):
+		return connect.NewError(connect.CodePermissionDenied, err)
+	}
+	return refused(errors.New("the folder can't be read")) // its error names the path
+}
+
+func folderListings(ls []folderlist.Listing) []*nushiv1.FolderListing {
+	out := make([]*nushiv1.FolderListing, 0, len(ls))
+	for _, l := range ls {
+		p := &nushiv1.FolderListing{Path: l.Path, More: int32(l.More), Missing: l.Missing}
+		for _, e := range l.Entries {
+			p.Entries = append(p.Entries, &nushiv1.FolderEntry{Name: e.Name, Kind: string(e.Kind), Size: e.Size,
+				ModifiedMs: e.Modified.UnixMilli(), Ignored: e.Ignored, Linked: e.Linked})
+		}
+		out = append(out, p)
+	}
+	return out
 }

@@ -119,6 +119,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.WatchChatFileRequest request);
   $async.Future<$0.FindChatFilesResponse> findChatFiles(
       $pb.ServerContext ctx, $0.FindChatFilesRequest request);
+  $async.Future<$0.WatchChatFolderResponse> watchChatFolder(
+      $pb.ServerContext ctx, $0.WatchChatFolderRequest request);
   $async.Future<$0.ListCommitsResponse> listCommits(
       $pb.ServerContext ctx, $0.ListCommitsRequest request);
   $async.Future<$0.GetFolderStatusResponse> getFolderStatus(
@@ -402,6 +404,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.WatchChatFileRequest();
       case 'FindChatFiles':
         return $0.FindChatFilesRequest();
+      case 'WatchChatFolder':
+        return $0.WatchChatFolderRequest();
       case 'ListCommits':
         return $0.ListCommitsRequest();
       case 'GetFolderStatus':
@@ -691,6 +695,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return watchChatFile(ctx, request as $0.WatchChatFileRequest);
       case 'FindChatFiles':
         return findChatFiles(ctx, request as $0.FindChatFilesRequest);
+      case 'WatchChatFolder':
+        return watchChatFolder(ctx, request as $0.WatchChatFolderRequest);
       case 'ListCommits':
         return listCommits(ctx, request as $0.ListCommitsRequest);
       case 'GetFolderStatus':

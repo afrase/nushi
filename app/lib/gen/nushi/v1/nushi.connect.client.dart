@@ -981,6 +981,28 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Lists a folder inside the chat's folder (its worktree, for a worktree
+  /// chat) for the Files pane, then again each time it changes, until the
+  /// call ends: folders first, each folder's entries capped (the rest
+  /// counted), what git ignores left out unless asked for. The path is
+  /// checked: no "..", no link out, never .git. (API 103)
+  Stream<nushiv1nushi.WatchChatFolderResponse> watchChatFolder(
+    nushiv1nushi.WatchChatFolderRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).server(
+      specs.NushiService.watchChatFolder,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Lists a branch's commits since a base, or the last ones.
   Future<nushiv1nushi.ListCommitsResponse> listCommits(
     nushiv1nushi.ListCommitsRequest input, {

@@ -193,6 +193,12 @@ service NushiService {
   // worktree, no link out, or one its tool calls worked on), so the app
   // links only those.
   rpc FindChatFiles(FindChatFilesRequest) returns (FindChatFilesResponse);
+  // Lists a folder inside the chat's folder (its worktree, for a worktree
+  // chat) for the Files pane, then again each time it changes, until the
+  // call ends: folders first, each folder's entries capped (the rest
+  // counted), what git ignores left out unless asked for. The path is
+  // checked: no "..", no link out, never .git. (API 103)
+  rpc WatchChatFolder(WatchChatFolderRequest) returns (stream WatchChatFolderResponse);
   // Lists a branch's commits since a base, or the last ones.
   rpc ListCommits(ListCommitsRequest) returns (ListCommitsResponse);
   // Sums up a folder's changes (as GetDiff lists them) and names its
@@ -1739,6 +1745,50 @@ message FindChatFilesRequest {
 message FindChatFilesResponse {
   // Those of the paths that are there, as given.
   repeated string found = 1;
+}
+
+message WatchChatFolderRequest {
+  string chat_id = 1;
+  // Relative to the chat's folder, "/"-separated; "" for the folder.
+  string path = 2;
+  // Levels listed: 1 (or 0) the folder's entries; 2 and 3 its folders'
+  // too, as many as fit 5,000 entries.
+  int32 depth = 3;
+  // List what git ignores too, marked, rather than leave it out.
+  bool ignored = 4;
+  // The most entries a folder sends: 0 for 500; 2,000 at most.
+  int32 limit = 5;
+}
+
+// The folder as it is now: its listing, then those of its folders, to
+// the depth asked.
+message WatchChatFolderResponse {
+  repeated FolderListing folders = 1;
+}
+
+// One folder's entries: folders first, then the rest, each by name.
+message FolderListing {
+  // Relative to the chat's folder; "" for the folder itself.
+  string path = 1;
+  repeated FolderEntry entries = 2;
+  // Entries past the limit, not sent (counted up to 50,000).
+  int32 more = 3;
+  // The folder isn't there (any more).
+  bool missing = 4;
+}
+
+message FolderEntry {
+  string name = 1;
+  // "folder", "file", "link" (one that leads out of the chat's folder,
+  // loops or leads nowhere: not followed) or "other" (a fifo, a device).
+  string kind = 2;
+  // A file's size, in bytes.
+  int64 size = 3;
+  int64 modified_ms = 4;
+  // Git ignores it.
+  bool ignored = 5;
+  // A link inside the chat's folder, followed: kind is its target's.
+  bool linked = 6;
 }
 
 // The file as it is now.
