@@ -165,3 +165,38 @@ func mustJSON(t *testing.T, v any) string {
 	}
 	return string(b)
 }
+
+// A form with no fields (a plain confirmation), answered rather than
+// declined: the agent gets accept, and the card says answered.
+func TestEmptyFormAnsweredIsAccepted(t *testing.T) {
+	events := make(chan model.Event, 100)
+	c := &chat{remembered: &memModes{}, id: "s1", sid: "s1", kind: &kind{}, agent: &fakeAgent{}, publish: func(e model.Event) { events <- e }, questions: map[string]chan<- []model.Field{}}
+	svc := &Service{chats: map[string]*chat{"s1": c}}
+	var req acp.CreateElicitationRequest
+	testcheck.NoErr(t, json.Unmarshal([]byte(`{"message":"Go ahead?","mode":"form","requestedSchema":{"type":"object","properties":{}},"sessionId":"s1"}`), &req))
+	got := make(chan *acp.CreateElicitationResponse, 1)
+	go func() {
+		resp, err := c.CreateElicitation(context.Background(), &req)
+		if err != nil {
+			t.Error(err)
+		}
+		got <- resp
+	}()
+	var id string
+	for e := range events {
+		if e.Item != nil && e.Item.Status == "pending" {
+			id = e.Item.ID
+			break
+		}
+	}
+	// What the API passes for an answer that isn't a decline: a map, empty.
+	testcheck.NoErr(t, svc.AnswerQuestion("s1", id, map[string][]string{}))
+	if resp := <-got; resp == nil || resp.Accept == nil {
+		t.Errorf("answered, but the agent got %+v", resp)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if it := c.itemLocked(id); it == nil || it.Status != "answered" {
+		t.Errorf("the card: %+v", it)
+	}
+}

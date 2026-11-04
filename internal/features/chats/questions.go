@@ -83,9 +83,10 @@ func (s *Service) AnswerQuestion(chatID, itemID string, values map[string][]stri
 	if answer == nil || it == nil {
 		return fmt.Errorf("no pending question %q", itemID)
 	}
-	var fields []model.Field
+	var fields []model.Field // nil declines
 	if values != nil {
-		fields = slices.Clone(it.Fields)
+		// Never nil, even for a form without fields (a plain "Go ahead?").
+		fields = append([]model.Field{}, it.Fields...)
 		for i := range fields {
 			fields[i].Values = values[fields[i].ID]
 			if err := check(fields[i]); err != nil {
