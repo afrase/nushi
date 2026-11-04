@@ -62,11 +62,13 @@ class _StatusBarState extends State<StatusBar> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final small = theme.ui(t.textSecondary, size: 11.5);
-    // The chat list is the daemon's; each chat's status is its own.
+    // The chat list is the daemon's; each chat's status is its look's.
     return ListenableBuilder(
       listenable: widget.daemon,
       builder: (context, _) => ListenableBuilder(
-        listenable: Listenable.merge(widget.daemon.chats.values),
+        listenable: Listenable.merge([
+          for (final c in widget.daemon.chats.values) c.look,
+        ]),
         builder: (context, _) {
           final live = widget.daemon.chats.values.where((c) => !c.archived);
           final working = live.where((c) => c.started != null).length;

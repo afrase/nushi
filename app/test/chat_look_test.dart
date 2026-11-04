@@ -5,6 +5,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/status_bar.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -114,6 +115,58 @@ void main() {
     await event(EventsResponse(status: ChatStatus(busy: true)));
     expect(built, contains('Fix the login redirect'));
     expect(built, isNot(contains('Bump the API version')));
+    d.dispose();
+  });
+
+  testWidgets('streamed text rebuilds none of the status bar; a turn '
+      'starting does', (tester) async {
+    final fake = FakeDaemon([chat('a', 'claude', 'Fix the login redirect')]);
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(body: StatusBar(d)),
+      ),
+    );
+    d.select('a'); // loaded, so its events apply
+    await tester.pumpAndSettle();
+    var seq = 1;
+    Future<void> event(EventsResponse e) async {
+      fake.emit(
+        e
+          ..seq = Int64(seq++)
+          ..chatId = 'a',
+      );
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await event(
+      EventsResponse(
+        item: ItemEvent(
+          item: Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE),
+        ),
+      ),
+    );
+    final built = <String>[];
+    debugOnRebuildDirtyWidget = (e, _) {
+      if (e.widget case Text(:final data?)) built.add(data);
+    };
+    addTearDown(() => debugOnRebuildDirtyWidget = null);
+    for (final chunk in ['Hel', 'lo', ', there']) {
+      await event(
+        EventsResponse(
+          item: ItemEvent(
+            append: true,
+            item: Item(id: 'm', text: chunk),
+          ),
+        ),
+      );
+    }
+    expect(d.chats['a']!.items.single.text, 'Hello, there');
+    expect(built, isEmpty);
+    await event(EventsResponse(status: ChatStatus(busy: true)));
+    expect(built, isNotEmpty);
     d.dispose();
   });
 }

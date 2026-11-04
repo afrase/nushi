@@ -4,11 +4,11 @@ import 'package:nushi/chat.dart';
 
 /// What a list of chats shows of [chat] (the sidebar's row and its menu,
 /// the phone's row, a collapsed group's dot, the sidebar's grouping and
-/// sort): its state, title, pin, color, times, folder, branch and links,
-/// and what its menu offers. It tells its listeners only when one of
-/// those changes, never as text streams into the transcript, which
-/// notifies the chat at every chunk; what lists the chat listens to this
-/// rather than to the chat.
+/// sort, the status bar's counts): its state, title, pin, color, times,
+/// folder, branch and links, and what its menu offers. It tells its
+/// listeners only when one of those changes, never as text streams into
+/// the transcript, which notifies the chat at every chunk; what lists the
+/// chat listens to this rather than to the chat.
 class ChatLook extends ChangeNotifier {
   new(this.chat) : _was = _of(chat) {
     chat.addListener(_changed);
@@ -20,6 +20,8 @@ class ChatLook extends ChangeNotifier {
   /// Everything a list shows of the chat, as one comparable value.
   static Object _of(ChatState c) => (
     c.phase,
+    c.asleep,
+    c.started != null,
     c.title,
     c.pin,
     c.color,
