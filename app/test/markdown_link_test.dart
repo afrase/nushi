@@ -36,6 +36,23 @@ void main() {
     expect(linkTextElsewhere('the pull request', evil), null);
     expect(linkTextElsewhere('README.md', evil), null);
     expect(linkTextElsewhere('docs/setup.md', evil), null);
+    // Fix review 2026-11-04: a bare host, or one in <> or backticks,
+    // passed with no dialog.
+    for (final text in [
+      'github.com',
+      'GitHub.com',
+      'jira.acme.com',
+      '<https://github.com/org/repo>',
+      '`github.com/org/repo`',
+      'github.com.',
+    ]) {
+      expect(linkTextElsewhere(text, evil), isNotNull, reason: text);
+    }
+    expect(linkTextElsewhere('github.com', gh), null);
+    expect(linkTextElsewhere('`GitHub.com`', gh), null);
+    for (final text in ['main.go', 'pubspec.yaml', 'install.sh', 'v1.2']) {
+      expect(linkTextElsewhere(text, evil), null, reason: text);
+    }
   });
 
   testWidgets('clicking one says where it goes first', (tester) async {

@@ -27,13 +27,19 @@ Uri? webLink(String href) {
 /// else null: other people's text (a GitHub comment, a Jira issue, an
 /// agent's reply) can dress one address as another.
 String? linkTextElsewhere(String text, Uri target) {
-  final t = text.trim();
-  // An address: with its scheme, from www., or a host and a path ("a.md"
-  // alone is a file's name).
+  // What wraps an address in text (`<…>`, backticks, quotes) and ends a
+  // sentence isn't part of it.
+  final t = text.trim().replaceAll(
+    RegExp(r'''^[<`'"(\[]+|[>`'")\].,;:!?]+$'''),
+    '',
+  );
+  // An address: with its scheme, from www., a host and a path, or a bare
+  // host ("github.com"; "a.md" is a file's name).
   final address =
       t.contains('://') ||
       t.toLowerCase().startsWith('www.') ||
-      RegExp(r'^[^/]+\.[^/]+/').hasMatch(t);
+      RegExp(r'^[^/]+\.[^/]+/').hasMatch(t) ||
+      _bareHost(t);
   if (!address || t.contains(RegExp(r'\s'))) return null;
   final shown = Uri.tryParse(t.contains('://') ? t : 'https://$t');
   String bare(String host) =>
@@ -42,6 +48,30 @@ String? linkTextElsewhere(String text, Uri target) {
   if (!const {'http', 'https'}.contains(shown.scheme)) return shown.host;
   return bare(shown.host) == bare(target.host) ? null : shown.host;
 }
+
+/// Whether [t] reads as a host alone: dot-separated names whose last is
+/// letters, not a file's extension (README.md, main.go).
+bool _bareHost(String t) {
+  final m = RegExp(
+    r'^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.([a-z]{2,24})$',
+    caseSensitive: false,
+  ).firstMatch(t);
+  return m != null && !_extensions.contains(m[1]!.toLowerCase());
+}
+
+/// File extensions a file's name in a reply often ends in, some of them
+/// top-level domains too (.md, .sh, .rs): such text is a file's name.
+const _extensions = {
+  'bash', 'bat', 'bin', 'c', 'cc', 'cfg', 'cjs', 'conf', 'cpp', 'cs', //
+  'css', 'csv', 'dart', 'db', 'diff', 'dmg', 'env', 'exe', 'fish', 'gif',
+  'go', 'gradle', 'gz', 'h', 'heic', 'hpp', 'htm', 'html', 'ico', 'ini',
+  'ipynb', 'jar', 'java', 'jpeg', 'jpg', 'js', 'json', 'jsonl', 'jsx',
+  'kt', 'kts', 'less', 'lock', 'log', 'lua', 'md', 'mdx', 'mjs', 'mk',
+  'mod', 'mov', 'mp3', 'mp4', 'patch', 'pdf', 'php', 'pl', 'plist', 'png',
+  'proto', 'ps1', 'py', 'rb', 'rs', 'rst', 'sass', 'scss', 'sh', 'sql',
+  'sqlite', 'sum', 'svg', 'swift', 'tar', 'tgz', 'toml', 'ts', 'tsx',
+  'txt', 'wasm', 'wav', 'webp', 'xml', 'yaml', 'yml', 'zip', 'zsh',
+};
 
 /// Agent markdown in the theme's fonts and colors. Links open in the
 /// browser, http and https only, a link whose text names another address
