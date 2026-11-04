@@ -2,9 +2,11 @@ package agentproc
 
 import (
 	"bufio"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -13,7 +15,9 @@ import (
 // last line of stderr past a hint, and Kill ends its whole group.
 func TestPipe(t *testing.T) {
 	var stderr strings.Builder
-	p, err := Pipe("/bin/sh", []string{"-c", `read x; echo "got $x"; echo "Error: no" >&2; echo "Hint: try" >&2; sleep 100 & sleep 100`}, t.TempDir(), nil, &stderr)
+	// Once "got" is read, the stderr lines are written and nothing forks
+	// any more (a child forked as the group is killed can miss the kill).
+	p, err := Pipe("/bin/sh", []string{"-c", `read x; echo "Error: no" >&2; echo "Hint: try" >&2; sleep 100 & echo "got $x"; exec sleep 100`}, t.TempDir(), nil, &stderr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,17 +27,35 @@ func TestPipe(t *testing.T) {
 	if line, _ := bufio.NewReader(p.Out).ReadString('\n'); line != "got hi\n" {
 		t.Errorf("out %q", line)
 	}
-	if !testcheck.Eventually(func() bool { return p.Said() == "Error: no" }) {
-		t.Errorf("said %q", p.Said())
-	}
 	p.Kill()
 	if err := p.Wait(); err == nil || err.Error() != "signal: killed" {
 		t.Errorf("wait %v", err)
+	}
+	if got := p.Said(); got != "Error: no" {
+		t.Errorf("said %q", got)
 	}
 	if !testcheck.Eventually(func() bool { return syscall.Kill(-p.Pid, 0) != nil }) {
 		t.Error("the process group is still there")
 	}
 	if !strings.Contains(stderr.String(), "Hint: try") {
 		t.Errorf("stderr %q", stderr.String())
+	}
+}
+
+// A child that left the group (a job of its own here; a daemonized MCP
+// server in Ante's) keeps stderr open, but Kill doesn't wait for it.
+func TestKillOutlastsAnEscapedChild(t *testing.T) {
+	p, err := Pipe("/bin/sh", []string{"-c", `set -m; sleep 100 & echo $!; sleep 100`}, t.TempDir(), nil, nil)
+	testcheck.NoErr(t, err)
+	line, _ := bufio.NewReader(p.Out).ReadString('\n')
+	child, err := strconv.Atoi(strings.TrimSpace(line))
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { _ = syscall.Kill(child, syscall.SIGKILL) })
+	killed := make(chan struct{})
+	go func() { p.Kill(); close(killed) }()
+	select {
+	case <-killed:
+	case <-time.After(10 * time.Second):
+		t.Fatal("Kill is waiting for the child holding stderr")
 	}
 }

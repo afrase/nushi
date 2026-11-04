@@ -6,7 +6,14 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
+
+// waitDelay is how long Pipe's program's stderr is read after it exits.
+// Its stderr goes through a copy, which reads to EOF: a child that left
+// the group (an MCP server Ante started that daemonized) holds it open,
+// and without the cut Kill and Wait would wait for that child too.
+const waitDelay = time.Second
 
 // Piped is a program started by Pipe, which a bridge talks to over its
 // stdin and stdout in the program's own protocol: its process group lives
@@ -33,6 +40,7 @@ func Pipe(bin string, args []string, dir string, env []string, stderr io.Writer)
 		cmd.Stderr = io.MultiWriter(stderr, &p.said)
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.WaitDelay = waitDelay
 	var err error
 	if p.In, err = cmd.StdinPipe(); err != nil {
 		return nil, err
@@ -58,7 +66,8 @@ func (p *Piped) Kill() {
 }
 
 // Wait waits for it to exit and says how: nil for status 0, else
-// exec's "exit status 1" or "signal: killed".
+// exec's "exit status 1" or "signal: killed" (or exec.ErrWaitDelay for
+// status 0 with its stderr held open past waitDelay).
 func (p *Piped) Wait() error {
 	<-p.exited
 	return p.err
