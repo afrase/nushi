@@ -166,7 +166,7 @@ func (Worktrees) Remove(ctx context.Context, wt model.Worktree, force bool) erro
 
 // DeleteBranch deletes a worktree's branch, merged or not.
 func (Worktrees) DeleteBranch(ctx context.Context, wt model.Worktree) error {
-	_, err := run(ctx, wt.Repo, "branch", "-D", wt.Branch)
+	_, err := run(ctx, wt.Repo, "branch", "-D", "--", wt.Branch)
 	return err
 }
 
@@ -225,7 +225,7 @@ func (w Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to strin
 	if has, err := remoteHas(ctx, wt.Repo, to); err != nil || has {
 		return cmp.Or(err, fmt.Errorf("a remote's branch named %s: %w", to, fs.ErrExist))
 	}
-	_, err := run(ctx, wt.Repo, "branch", "-m", wt.Branch, to)
+	_, err := run(ctx, wt.Repo, "branch", "-m", "--", wt.Branch, to)
 	return err
 }
 

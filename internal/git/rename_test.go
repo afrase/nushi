@@ -84,3 +84,30 @@ func TestRenameBranch(t *testing.T) {
 		t.Errorf("checked out elsewhere: %+v", u)
 	}
 }
+
+// A branch named like an option (refs/heads/-f, which an agent or a
+// downloaded .git can make) is renamed and deleted as a name: "branch -m
+// -f <new>" renamed the main checkout's branch instead (security review
+// 2026-11-04, L2).
+func TestABranchNamedLikeAnOption(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := filepath.EvalSymlinks(t.TempDir())
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
+	testcheck.Git(t, repo, "update-ref", "refs/heads/-f", "HEAD")
+	wt := model.Worktree{Repo: repo, Branch: "-f"}
+	testcheck.NoErr(t, Worktrees{}.RenameBranch(ctx, wt, "nushi/renamed"))
+	branches := func() string {
+		out, err := exec.Command("git", "-C", repo, "for-each-ref", "--format=%(refname:short)", "refs/heads").Output()
+		testcheck.NoErr(t, err)
+		return strings.Join(strings.Fields(string(out)), " ")
+	}
+	if got := branches(); got != "main nushi/renamed" {
+		t.Fatalf("branches after the rename: %s", got)
+	}
+	testcheck.Git(t, repo, "update-ref", "refs/heads/-f", "HEAD")
+	testcheck.NoErr(t, Worktrees{}.DeleteBranch(ctx, wt))
+	if got := branches(); got != "main nushi/renamed" {
+		t.Fatalf("branches after the delete: %s", got)
+	}
+}
