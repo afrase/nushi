@@ -95,13 +95,18 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 		return err
 	}
 	switch {
+	case c.reopeningLocked() && c.held:
+		// A new message is the held queue's chance, and goes ahead of it,
+		// as in a chat that's awake: Continue or Try again after a failed
+		// turn first, then the queue.
+		m.ID = rand.Text()
+		c.queue = append([]model.Message{m}, c.queue...)
+		c.queueChangedLocked()
+		c.held = false
 	case c.reopeningLocked() || c.busy && how == SendQueue:
 		m.ID = rand.Text()
 		c.queue = append(c.queue, m)
 		c.queueChangedLocked()
-		if c.reopeningLocked() {
-			c.held = false // a new message is the held queue's chance
-		}
 	case c.busy:
 		return errors.New("the agent is still working on the last prompt")
 	case len(m.Images) > 0 && !c.canImage:

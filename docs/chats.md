@@ -121,7 +121,7 @@ A turn that fails, say on the agent's API answering "overloaded" until it gives 
 
 Nothing is rewound, and the box keeps what you've typed. The button shows while the notice is the chat's last line (in an archived chat, or while a rewind is on its way, there's none) and goes grey while the chat is busy; a chat reopened after Nushi restarted shows the same one, as long as Keep transcripts is on (the notice is Nushi's, not the agent's). Nushi never tries again on its own.
 
-Messages waiting in the queue stay held after a failed turn. Continue, Try again, or any message you send, goes first, and the queue follows once that turn ends well, each message once. A message steered into the turn counts as your last message. In a chat that's asleep it joins the queue instead, behind them.
+Messages waiting in the queue stay held after a failed turn. Continue, Try again, or any message you send, goes first, and the queue follows once that turn ends well, each message once; in a chat that went to sleep meanwhile too, as it wakes. A message steered into the turn counts as your last message.
 
 ## Writing a message
 

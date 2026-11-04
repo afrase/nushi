@@ -129,6 +129,31 @@ func TestContinueAfterAFailedSteeredTurn(t *testing.T) {
 	}
 }
 
+// In a chat put to sleep after a failed turn (credit topped up later), a
+// message goes ahead of the held queue as it would awake: Continue or Try
+// again first, then the queue, each once.
+func TestAMessageToASleepingChatGoesBeforeTheHeldQueue(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate = make(chan struct{})
+	agent.failTurns(errOverloaded)
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "queued"}, SendQueue))
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy && c.held && len(c.queue) == 1 })
+	agent.failTurns(nil)
+	svc.SleepAgent("claude")
+	eventually(t, c, func() bool { return c.asleep })
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "Continue."}, SendIdle))
+	for n := 2; n <= 3; n++ {
+		eventually(t, c, func() bool { got, _ := agent.texts(); return len(got) == n })
+		agent.release()
+	}
+	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	if got, _ := agent.texts(); !slices.Equal(got, []string{"one", "Continue.", "queued"}) {
+		t.Errorf("prompts %q", got)
+	}
+}
+
 // Only a failed turn's notice is turn_failed: the rest stay "error", and
 // offer nothing to send again (a move and a failed hand-off are tested
 // with their failures, the agent's quitting in internal/e2e).
