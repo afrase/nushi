@@ -5,6 +5,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload, Item;
 import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
@@ -25,9 +26,15 @@ const maxAttachedFiles = 10;
 /// The most a file sent whole from the phone may weigh (`chats.MaxUpload`).
 const int maxUploadBytes = 8 << 20;
 
-/// The most the phone's files may weigh together in one message, so the
-/// request stays under the daemon's 32 MB (`api.MaxRequest`) with photos.
+/// The most the phone's files and photos may weigh together in one message
+/// (a photo yet to be read counted at the most it's sent as,
+/// [maxImageBytes]), so the
+/// request stays under the daemon's 32 MB (`api.MaxRequest`).
 const int maxUploadTotal = 20 << 20;
+
+/// The most an image file may weigh to be read and sent as an image; a
+/// larger one is a file card, under the caps of any file.
+const int maxImageFileBytes = 25 << 20;
 
 /// The most a file on the Mac may weigh: past it no agent reads one whole.
 const int maxLinkedFileBytes = 100 << 20;
@@ -156,7 +163,16 @@ Future<String> attachFiles(
     for (final f in files) {
       // As the browser or the path gives it; shown only through plainPath.
       final name = f.name.isEmpty ? fileName(f.path) : f.name;
-      if (chat.canImages && isImageFile(name)) {
+      if (chat.canImages &&
+          isImageFile(name) &&
+          await f.length() <= maxImageFileBytes) {
+        if (sendWhole && _sent(draft) + maxImageBytes > maxUploadTotal) {
+          refused.add(
+            '${plainPath(name)}: a message sends '
+            '${maxUploadTotal >> 20} MB at most',
+          );
+          continue;
+        }
         try {
           await draft.images.add(await f.readAsBytes());
           continue;
@@ -169,13 +185,7 @@ Future<String> attachFiles(
         break;
       }
       final file = sendWhole
-          ? await _upload(
-              f,
-              name,
-              draft.files.value,
-              api: api,
-              refused: refused,
-            )
+          ? await _upload(f, name, draft, api: api, refused: refused)
           : _onMac(f.path, chat.folder, api: api, refused: refused);
       if (file != null && !draft.files.value.contains(file)) {
         draft.files.value = [...draft.files.value, file];
@@ -185,13 +195,18 @@ Future<String> attachFiles(
   });
 }
 
+/// What a phone's [draft] sends already: its files' and photos' bytes.
+int _sent(Draft draft) =>
+    draft.files.value.fold(0, (n, f) => n + (f.data?.length ?? 0)) +
+    draft.images.value.fold(0, (n, i) => n + i.data.length);
+
 /// A file of the phone's, its bytes read; null, with why in [refused],
-/// when the daemon can't take it, or it or the message's files with it
-/// ([attached]) are too large.
+/// when the daemon can't take it, or it or the [draft]'s files and photos
+/// with it are too large.
 Future<AttachedFile?> _upload(
   XFile f,
   String name,
-  List<AttachedFile> attached, {
+  Draft draft, {
   required int api,
   required List<String> refused,
 }) async {
@@ -204,8 +219,7 @@ Future<AttachedFile?> _upload(
     refused.add('${plainPath(name)} is over ${maxUploadBytes >> 20} MB');
     return null;
   }
-  final sent = attached.fold(0, (n, f) => n + (f.data?.length ?? 0));
-  if (sent + size > maxUploadTotal) {
+  if (_sent(draft) + size > maxUploadTotal) {
     refused.add(
       '${plainPath(name)}: a message sends ${maxUploadTotal >> 20} MB at most',
     );

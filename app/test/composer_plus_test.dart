@@ -17,6 +17,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/images.dart' show maxImageBytes;
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
@@ -85,6 +86,19 @@ String _file(String dir, String name, {int bytes = 12}) {
         ..createSync(recursive: true)
         ..writeAsBytesSync(Uint8List(bytes)))
       .path;
+}
+
+/// A file on disk that counts its reads.
+class _ReadCount extends XFile {
+  _ReadCount(super.path);
+
+  var reads = 0;
+
+  @override
+  Future<Uint8List> readAsBytes() {
+    reads++;
+    return super.readAsBytes();
+  }
 }
 
 /// [pickFiles], [clipboardFiles] and [sendWhole] as they were, after the test.
@@ -302,6 +316,48 @@ void main() {
       await attachFiles(chat, seven, api: apiVersion),
       'c.mov: a message sends 20 MB at most',
     );
+    _end();
+  }, variant: _mac);
+
+  testWidgets('an image too large to read is a file card; photos count', (
+    tester,
+  ) async {
+    final (_, _, chat) = await _box(tester);
+    final big = _ReadCount(
+      _file(chat.folder, 'huge.png', bytes: maxImageFileBytes + 1),
+    );
+    // Its length is real IO, outside the test's fake time.
+    expect(
+      await tester.runAsync(() => attachFiles(chat, [big], api: apiVersion)),
+      '',
+    );
+    expect(big.reads, 0);
+    expect([for (final f in chat.draft.files.value) f.name], ['huge.png']);
+    expect(chat.draft.images.value, isEmpty);
+
+    // The phone's photos count toward what a message sends.
+    chat.draft.files.value = const [];
+    sendWhole = true;
+    chat.draft.images.value = [
+      for (var i = 0; i < 5; i++)
+        ImageData(mimeType: 'image/jpeg', data: Uint8List(maxImageBytes)),
+    ];
+    final notes = XFile.fromData(
+      Uint8List(3 << 20),
+      name: 'notes.pdf',
+      path: 'notes.pdf',
+    );
+    expect(
+      await attachFiles(chat, [notes], api: apiVersion),
+      'notes.pdf: a message sends 20 MB at most',
+    );
+    final photo = _ReadCount('${chat.folder}/one more.jpg');
+    File(photo.path).writeAsBytesSync(Uint8List(10));
+    expect(
+      await tester.runAsync(() => attachFiles(chat, [photo], api: apiVersion)),
+      'one more.jpg: a message sends 20 MB at most',
+    );
+    expect(photo.reads, 0);
     _end();
   }, variant: _mac);
 
