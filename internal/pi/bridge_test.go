@@ -600,6 +600,16 @@ func TestFlattenTexts(t *testing.T) {
 	}
 }
 
+// A path with a space is quoted, as Pi's editor does, so it reads as one.
+func TestFlattenQuotesSpacedPaths(t *testing.T) {
+	text, _ := flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "read"}},
+		{Type: "resource_link", ResourceLink: &acp.ResourceLink{URI: "file:///Users/x/Library/Application%20Support/Nushi/uploads/c/r/IMG%201.pdf"}},
+		{Type: "resource_link", ResourceLink: &acp.ResourceLink{URI: "file:///a/b.go"}}})
+	if want := `read @"/Users/x/Library/Application Support/Nushi/uploads/c/r/IMG 1.pdf" @/a/b.go`; text != want {
+		t.Errorf("flatten = %q, want %q", text, want)
+	}
+}
+
 // Each Flavor has its own folders and variables, and only a PiG moves its
 // home.
 func TestFlavorsFolders(t *testing.T) {

@@ -18,7 +18,7 @@ type image struct {
 }
 
 // flatten turns a prompt into pi's message and images: a file becomes an
-// `@path` mention, as in Pi's own editor, which the model reads with its
+// `@path` mention, as in Pi's own editor (see mention), which the model reads with its
 // tools; an embedded text is quoted.
 func flatten(blocks []acp.ContentBlock) (string, []image) {
 	var b strings.Builder
@@ -34,7 +34,7 @@ func flatten(blocks []acp.ContentBlock) (string, []image) {
 		case block.ResourceLink != nil:
 			uri := block.ResourceLink.URI
 			if u, err := url.Parse(uri); err == nil && u.Scheme == "file" && u.Path != "" {
-				uri = "@" + u.Path
+				uri = mention(u.Path)
 			}
 			if b.Len() > 0 && !strings.HasSuffix(b.String(), " ") && !strings.HasSuffix(b.String(), "\n") {
 				b.WriteByte(' ')
@@ -49,4 +49,14 @@ func flatten(blocks []acp.ContentBlock) (string, []image) {
 		prevText = block.Text != nil
 	}
 	return b.String(), images
+}
+
+// mention is a file's `@path` as Pi's editor writes it: quoted, `@"…"`,
+// when the path has whitespace, so a path like ~/Library/Application
+// Support/… (every phone upload's) reads as one.
+func mention(path string) string {
+	if strings.ContainsAny(path, " \t\n") {
+		return `@"` + path + `"`
+	}
+	return "@" + path
 }
