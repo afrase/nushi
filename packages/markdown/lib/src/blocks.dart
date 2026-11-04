@@ -1,6 +1,7 @@
 /// Where streaming Markdown can be cut so that what comes before is
 /// finished, and parses the same alone as in the whole: the start of a line
-/// after a blank line, outside any fence, that starts a block of its own.
+/// after a blank line, outside any fence or HTML block that runs past blank
+/// lines ([_htmlOpens]), that starts a block of its own.
 /// Not an indented line (a list item's paragraph or an indented code
 /// block going on), not a list item right after a list (a loose list going
 /// on), and only a line that has ended (its first characters could still
@@ -13,6 +14,7 @@ int? lastBoundary(String text, {int from = 0}) {
   if (hasReferences(text)) return null;
   int? cut;
   String? fence; // the open fence's run of backticks or tildes
+  RegExp? html; // the end of the open HTML block that blank lines don't end
   var blank = false; // the line before was blank
   var list = false; // the block so far is a list
   var at = from;
@@ -24,6 +26,11 @@ int? lastBoundary(String text, {int from = 0}) {
     final next = end + 1;
     if (fence != null) {
       if (_closes(line, fence)) fence = null;
+      at = next;
+      continue;
+    }
+    if (html != null) {
+      if (html.hasMatch(line)) html = null;
       at = next;
       continue;
     }
@@ -41,6 +48,7 @@ int? lastBoundary(String text, {int from = 0}) {
       list = true;
     }
     fence = _opens(line);
+    if (fence == null) html = _htmlOpens(line);
     blank = false;
     at = next;
   }
@@ -75,16 +83,44 @@ bool _closes(String line, String fence) {
       line.substring(m.end).trim().isEmpty;
 }
 
+/// The end of the HTML block [line] starts, when it's one that blank lines
+/// don't end and it doesn't end on that line; else null. CommonMark's
+/// types 1 to 5: `<pre>`, `<script>`, `<style>` or `<textarea>`, a comment,
+/// `<?…?>`, a declaration (`<!DOCTYPE …>`) and CDATA. Each end is looked
+/// for in the whole line, its start too, as package:markdown does.
+RegExp? _htmlOpens(String line) {
+  for (final (start, end) in _htmlBlocks) {
+    if (start.hasMatch(line)) return end.hasMatch(line) ? null : end;
+  }
+  return null;
+}
+
+final _htmlBlocks = [
+  (
+    RegExp(
+      r'^ {0,3}<(?:pre|script|style|textarea)(?:\s|>|$)',
+      caseSensitive: false,
+    ),
+    RegExp('</(?:pre|script|style|textarea)>', caseSensitive: false),
+  ),
+  (RegExp('^ {0,3}<!--'), RegExp('-->')),
+  (RegExp(r'^ {0,3}<\?'), RegExp(r'\?>')),
+  (RegExp(r'^ {0,3}<!\[CDATA\['), RegExp(r'\]\]>')),
+  (RegExp('^ {0,3}<![A-Za-z]'), RegExp('>')),
+];
+
 final _htmlStart = RegExp('^ {0,3}<[A-Za-z/!?]');
 
 /// Which lines of streaming Markdown are code, read line by line as the
 /// text grows (each whole line once): a fenced block's lines, its fences
-/// too; an indented line; an HTML block's lines. Give it one text and
-/// more of it, at places that only move on.
+/// too; an indented line; an HTML block's lines, blank lines and all in
+/// one that they don't end ([_htmlOpens]). Give it one text and more of
+/// it, at places that only move on.
 class CodeLines {
   int _line = 0; // the start of the next line to read
   String? _fence; // the fence open at [_line]
   bool _html = false; // [_line] goes on an HTML block
+  RegExp? _until; // the end of the one that blank lines don't end, open
 
   /// Reads the whole lines of [text] that end before [at].
   void _read(String text, int at) {
@@ -95,20 +131,31 @@ class CodeLines {
       final next = _next(line);
       _fence = next.fence;
       _html = next.html;
+      _until = next.until;
       _line = nl + 1;
     }
   }
 
   /// [line] at [_line]: whether it's code, and the state after it.
-  ({bool code, String? fence, bool html}) _next(String line) {
+  ({bool code, String? fence, bool html, RegExp? until}) _next(String line) {
     if (_fence case final f?) {
-      return (code: true, fence: _closes(line, f) ? null : f, html: false);
+      final fence = _closes(line, f) ? null : f;
+      return (code: true, fence: fence, html: false, until: null);
     }
-    if (line.trim().isEmpty) return (code: false, fence: null, html: false);
-    if (_opens(line) case final f?) return (code: true, fence: f, html: false);
+    if (_until case final u?) {
+      final until = u.hasMatch(line) ? null : u;
+      return (code: true, fence: null, html: false, until: until);
+    }
+    if (line.trim().isEmpty) {
+      return (code: false, fence: null, html: false, until: null);
+    }
+    if (_opens(line) case final f?) {
+      return (code: true, fence: f, html: false, until: null);
+    }
+    final until = _html ? null : _htmlOpens(line);
     final html = _html || _htmlStart.hasMatch(line);
     final indented = line.startsWith('    ') || line.startsWith('\t');
-    return (code: html || indented, fence: null, html: html);
+    return (code: html || indented, fence: null, html: html, until: until);
   }
 
   String _lineAt(String text) {

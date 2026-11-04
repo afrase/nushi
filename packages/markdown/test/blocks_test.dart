@@ -35,6 +35,21 @@ void main() {
       '- a\n\n- b\n\n'.length,
     );
     expect(lastBoundary('Para.\n\n- a\n- b\n'), 'Para.\n\n'.length);
+    // Not inside an HTML block that blank lines don't end: a comment,
+    // <pre> and the like, closed or still open.
+    const comment = 'Go:\n\n<!--\n- a\n\n- b\n-->\n\nDone\n';
+    expect(lastBoundary(comment), comment.indexOf('Done'));
+    const pre = 'Go:\n\n<PRE>\na\n\n*b*\n</pre>\n\nDone\n';
+    expect(lastBoundary(pre), pre.indexOf('Done'));
+    expect(lastBoundary('Go:\n\n<!--\na\n\nb\n'), 'Go:\n\n'.length);
+    expect(lastBoundary('Go:\n\n<?x\na\n\nb\n'), 'Go:\n\n'.length);
+    // One that ends on its line, or that blank lines end (<div>), doesn't
+    // hold a cut back.
+    expect(
+      lastBoundary('<!-- a -->\n\nB.\n\nC\n'),
+      '<!-- a -->\n\nB.\n\n'.length,
+    );
+    expect(lastBoundary('<div>\na\n\nB.\n'), '<div>\na\n\n'.length);
     // A reference definition: never.
     expect(lastBoundary('See [x].\n\nMore.\n\n[x]: https://a.b\n'), isNull);
     // From a cut found before.

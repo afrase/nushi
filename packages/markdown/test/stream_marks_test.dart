@@ -136,6 +136,8 @@ void main() {
       'Here:\n\n```\nlet total = sum of parts\n',
       'Here:\n\n```\nlet total = sum of parts\n```\n\nand more words',
       '<div>\nsome html words here\n',
+      '<!--\nA note.\n\nlet total = sum of parts\n',
+      '<pre>\nA note.\n\nlet total = sum of parts\n</pre>\n',
       'Here:\n\n    let total = sum of parts',
     ]) {
       final at = text.indexOf('sum');
