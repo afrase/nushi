@@ -17,6 +17,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+export 'package:nushi/markdown.dart' show openWeb;
 export 'package:nushi/pull_states.dart' show checksIcon, itemColor, itemState;
 
 /// A review decision in words, and its color.
@@ -223,11 +224,6 @@ Widget githubImage(Uri uri, String? alt) {
     tooltip: link == null ? '' : 'Open the image in the browser',
     onTap: link == null ? null : () => unawaited(launchUrl(link)),
   );
-}
-
-/// Opens [url] in the browser, http and https only.
-void openWeb(String url) {
-  if (webLink(url) case final u?) unawaited(launchUrl(u));
 }
 
 /// Explains there's no GitHub host, with the way to Settings.

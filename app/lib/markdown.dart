@@ -22,6 +22,11 @@ Uri? webLink(String href) {
       : null;
 }
 
+/// Opens [url] in the browser, when it's a [webLink].
+void openWeb(String url) {
+  if (webLink(url) case final u?) unawaited(launchUrl(u));
+}
+
 /// The host a link's [text] names when it reads as an address on another
 /// host than [target]'s (`[https://github.com/…](https://evil.example)`),
 /// else null: other people's text (a GitHub comment, a Jira issue, an

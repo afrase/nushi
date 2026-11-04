@@ -21,7 +21,6 @@ import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/turn_status.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// A chat on the phone: the Mac's transcript (messages, tool rows
 /// collapsed, plans, subagents, answerable prompts and questions) and its
@@ -41,14 +40,7 @@ class ChatScreen extends StatelessWidget {
       builder: (context, _) => PhoneScreen(
         title: chat.shownTitle,
         actions: [
-          if (chat.pull != null)
-            PullChip(
-              daemon,
-              chat,
-              onOpen: (url) {
-                if (webLink(url) case final uri?) unawaited(launchUrl(uri));
-              },
-            ),
+          if (chat.pull != null) PullChip(daemon, chat, onOpen: openWeb),
           if (daemon.daemonApi >= previewApi && chatFilesOf(chat).isNotEmpty)
             ListenableBuilder(
               listenable: chat.opened,

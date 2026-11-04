@@ -11,7 +11,6 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// What upgrades a Nushi that Homebrew's cask installed.
 const brewUpgrade = 'brew update && brew upgrade --cask nushi';
@@ -93,9 +92,7 @@ String? updateToShow(Daemon d) {
 }
 
 /// Opens the newer release's page on GitHub.
-void openRelease(Daemon d) {
-  if (webLink(d.update.url) case final u?) unawaited(launchUrl(u));
-}
+void openRelease(Daemon d) => openWeb(d.update.url);
 
 /// Says a newer release is out, in the window's bottom right corner, out
 /// of the way: not modal, no sound. Copy puts Homebrew's upgrade on the
