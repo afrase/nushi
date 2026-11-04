@@ -88,10 +88,7 @@ class ChatScreen extends StatelessWidget {
                         header: chat.older > 0 ? Earlier(daemon, chat) : null,
                         onReply: chat.archived || chat.sessionGone
                             ? null
-                            : (r) => chat.draft.replies.value = [
-                                ...chat.draft.replies.value,
-                                r,
-                              ],
+                            : chat.draft.addReply,
                       ),
                     ),
             ),

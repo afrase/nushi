@@ -103,8 +103,7 @@ class SideChat extends StatelessWidget {
               child: Transcript(
                 chat: side,
                 daemon: daemon,
-                onReply: (r) =>
-                    side.draft.replies.value = [...side.draft.replies.value, r],
+                onReply: side.draft.addReply,
               ),
             ),
             TurnStatus(side),

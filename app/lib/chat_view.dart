@@ -87,7 +87,6 @@ class _ChatViewState extends State<ChatView> {
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
-    final replies = chat.draft.replies;
     final transcript = DropTarget(
       onDragEntered: (_) => setState(() => _dragging = true),
       onDragExited: (_) => setState(() => _dragging = false),
@@ -116,7 +115,7 @@ class _ChatViewState extends State<ChatView> {
                     daemon: widget.daemon,
                     onReply: chat.archived || chat.sessionGone
                         ? null
-                        : (r) => replies.value = [...replies.value, r],
+                        : chat.draft.addReply,
                     onSide: chat.archived || chat.sessionGone ? null : _ask,
                     // Under it, its scrollbar running down beside them.
                     bottom: Column(
