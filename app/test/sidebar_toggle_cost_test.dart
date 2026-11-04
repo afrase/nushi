@@ -19,8 +19,9 @@ import 'long_chat.dart';
 /// the moving sidebar button, a focus scope or two.
 const _mostPerFrame = 20;
 
-/// What each frame rebuilt: every widget, the transcript's rows, and texts.
-typedef _Frame = ({int builds, int rows, int texts});
+/// What each frame rebuilt: every widget, the transcript's rows, texts,
+/// and the MaterialApp.
+typedef _Frame = ({int builds, int rows, int texts, int apps});
 
 /// Runs [change], then pumps 24 frames of 16 ms (past the slide's 240 ms),
 /// counting what each frame rebuilds.
@@ -28,18 +29,20 @@ Future<List<_Frame>> _frames(WidgetTester tester, VoidCallback change) async {
   var builds = 0;
   var rows = 0;
   var texts = 0;
+  var apps = 0;
   debugOnRebuildDirtyWidget = (e, _) {
     builds++;
     if (e.widget is ItemView) rows++;
     if (e.widget is Text) texts++;
+    if (e.widget is MaterialApp) apps++;
   };
   final frames = <_Frame>[];
   try {
     change();
     for (var i = 0; i < 24; i++) {
-      builds = rows = texts = 0;
+      builds = rows = texts = apps = 0;
       await tester.pump(const Duration(milliseconds: 16));
-      frames.add((builds: builds, rows: rows, texts: texts));
+      frames.add((builds: builds, rows: rows, texts: texts, apps: apps));
     }
   } finally {
     debugOnRebuildDirtyWidget = null;
@@ -55,6 +58,8 @@ void _expectQuiet(List<_Frame> frames, String what) {
     0,
     reason: '$what: rows rebuilt on its first frame',
   );
+  // The View menu's label changes; the window under the menu bar stays.
+  expect(frames.first.apps, 0, reason: '$what: the MaterialApp rebuilt');
   for (final (i, f) in frames.indexed.skip(1)) {
     expect(f.rows, 0, reason: '$what: rows rebuilt on frame $i');
     expect(
@@ -132,6 +137,7 @@ void main() {
     // rebuilds that section when its move ends: some 50 widgets, once.
     for (final (i, f) in frames.indexed) {
       expect(f.rows, 0, reason: 'rows rebuilt on frame $i');
+      expect(f.apps, 0, reason: 'the MaterialApp rebuilt on frame $i');
       if (i > 0) {
         expect(
           f.builds,

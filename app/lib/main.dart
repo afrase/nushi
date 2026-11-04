@@ -126,6 +126,16 @@ class _NushiAppState extends State<NushiApp> {
   void _sidebarChanged() => setState(() {});
 
   @override
+  void didUpdateWidget(NushiApp old) {
+    super.didUpdateWidget(old);
+    if (widget.daemon != old.daemon) {
+      old.daemon.removeListener(_pinChanged);
+      widget.daemon.addListener(_pinChanged);
+      _window = _makeWindow();
+    }
+  }
+
+  @override
   void dispose() {
     sidebarHidden.removeListener(_sidebarChanged);
     widget.daemon.removeListener(_pinChanged);
@@ -218,70 +228,77 @@ class _NushiAppState extends State<NushiApp> {
       // The shown chat's actions, as its ⋯ menu has them.
       PlatformMenu(label: 'Chat', menus: _items(ActMenu.chat)),
     ],
-    // The appearance picks the light or dark set, the theme the palette
-    // (ADR 0086); a change to either, or to the theme's file, repaints.
-    child: ListenableBuilder(
-      listenable: Listenable.merge([appearance, colorTheme, themeFiles]),
-      builder: (context, home) => MaterialApp(
-        navigatorKey: _navigator,
-        title: 'Nushi',
-        debugShowCheckedModeBanner: false,
-        theme: NushiTheme.forTheme(pickedTheme(), Brightness.light),
-        darkTheme: NushiTheme.forTheme(pickedTheme(), Brightness.dark),
-        themeMode: appearance.value,
-        // Light and dark switch at once (NushiTheme.lerp), so no frames of a
-        // theme animation, each a rebuild of what reads the theme.
-        themeAnimationDuration: Duration.zero,
-        scrollBehavior: const NativeScroll(),
-        // The menu's keys don't reach the menu while Flutter has the keys:
-        // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
-        // passes them on as the same intents.
-        home: Builder(
-          builder: (context) => Actions(
-            actions: {
-              RunActIntent: CallbackAction<RunActIntent>(
-                onInvoke: (i) => runAct(context, widget.daemon, i.act),
-              ),
-              OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
-                onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
-              ),
-              OpenChatIntent: CallbackAction<OpenChatIntent>(
-                onInvoke: (i) => openNthChat(widget.daemon, i.n),
-              ),
-              StepChatIntent: CallbackAction<StepChatIntent>(
-                onInvoke: (i) => stepChat(widget.daemon, i.step),
-              ),
-              StepTabIntent: CallbackAction<StepTabIntent>(
-                onInvoke: (i) {
-                  if (widget.daemon.chatShows) {
-                    stepTab(widget.daemon.selected!, i.step);
-                  }
-                  return null;
-                },
-              ),
-            },
-            // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
-            // wherever the focus is.
-            child: Shortcuts(
-              shortcuts: {
-                ...actKeys,
-                paletteKey: const OpenPaletteIntent(),
-                paletteKeyToo: const OpenPaletteIntent(),
-                ...chatKeys,
+    child: _window,
+  );
+
+  /// The window below the menu bar, made again only for a new daemon: a
+  /// menu label's change (the sidebar shown or hidden, the chat pinned)
+  /// rebuilds the menus alone. The appearance picks the light or dark set,
+  /// the theme the palette (ADR 0086); a change to either, or to the
+  /// theme's file, repaints.
+  late Widget _window = _makeWindow();
+
+  Widget _makeWindow() => ListenableBuilder(
+    listenable: Listenable.merge([appearance, colorTheme, themeFiles]),
+    builder: (context, home) => MaterialApp(
+      navigatorKey: _navigator,
+      title: 'Nushi',
+      debugShowCheckedModeBanner: false,
+      theme: NushiTheme.forTheme(pickedTheme(), Brightness.light),
+      darkTheme: NushiTheme.forTheme(pickedTheme(), Brightness.dark),
+      themeMode: appearance.value,
+      // Light and dark switch at once (NushiTheme.lerp), so no frames of a
+      // theme animation, each a rebuild of what reads the theme.
+      themeAnimationDuration: Duration.zero,
+      scrollBehavior: const NativeScroll(),
+      // The menu's keys don't reach the menu while Flutter has the keys:
+      // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,
+      // passes them on as the same intents.
+      home: Builder(
+        builder: (context) => Actions(
+          actions: {
+            RunActIntent: CallbackAction<RunActIntent>(
+              onInvoke: (i) => runAct(context, widget.daemon, i.act),
+            ),
+            OpenPaletteIntent: CallbackAction<OpenPaletteIntent>(
+              onInvoke: (_) => unawaited(showPalette(context, widget.daemon)),
+            ),
+            OpenChatIntent: CallbackAction<OpenChatIntent>(
+              onInvoke: (i) => openNthChat(widget.daemon, i.n),
+            ),
+            StepChatIntent: CallbackAction<StepChatIntent>(
+              onInvoke: (i) => stepChat(widget.daemon, i.step),
+            ),
+            StepTabIntent: CallbackAction<StepTabIntent>(
+              onInvoke: (i) {
+                if (widget.daemon.chatShows) {
+                  stepTab(widget.daemon.selected!, i.step);
+                }
+                return null;
               },
-              // Focused when nothing in the window is, so the keys still
-              // come here (an empty pane, after a click on the sidebar).
-              child: Focus(
-                autofocus: true,
-                child: Scaffold(
-                  // The Scaffold's text style blends to a new theme's over
-                  // 200 ms, rebuilding every text below on each frame;
-                  // this one switches at once, with the theme.
-                  body: Material(
-                    type: MaterialType.transparency,
-                    animationDuration: Duration.zero,
-                    child: _Shell(widget.daemon),
-                  ),
+            ),
+          },
+          // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
+          // wherever the focus is.
+          child: Shortcuts(
+            shortcuts: {
+              ...actKeys,
+              paletteKey: const OpenPaletteIntent(),
+              paletteKeyToo: const OpenPaletteIntent(),
+              ...chatKeys,
+            },
+            // Focused when nothing in the window is, so the keys still
+            // come here (an empty pane, after a click on the sidebar).
+            child: Focus(
+              autofocus: true,
+              child: Scaffold(
+                // The Scaffold's text style blends to a new theme's over
+                // 200 ms, rebuilding every text below on each frame;
+                // this one switches at once, with the theme.
+                body: Material(
+                  type: MaterialType.transparency,
+                  animationDuration: Duration.zero,
+                  child: _Shell(widget.daemon),
                 ),
               ),
             ),
