@@ -80,6 +80,11 @@ func (forkPull) Pull(context.Context, string, int) (model.GitHubPull, error) {
 // A fork's head with a hook gets the card's answer and starts no agent;
 // started again with the card's key, the agent starts.
 func TestStartChatChecksAPullRequestsHead(t *testing.T) {
+	// Each start checks the head out in a worktree of its own; the fake
+	// commits it again there, at one fixed time, so it's the same commit as
+	// a pull request's head is.
+	t.Setenv("GIT_AUTHOR_DATE", "2026-11-04T12:00:00Z")
+	t.Setenv("GIT_COMMITTER_DATE", "2026-11-04T12:00:00Z")
 	launches := 0
 	launch := func(acp.Client, *slog.Logger) (chats.Agent, error) {
 		launches++
