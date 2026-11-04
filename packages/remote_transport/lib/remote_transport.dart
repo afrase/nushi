@@ -73,8 +73,7 @@ final class PairingOffer {
   final Uint8List secret;
 }
 
-Uint8List _unb64(String s) =>
-    base64Url.decode(s.padRight((s.length + 3) ~/ 4 * 4, '='));
+Uint8List _unb64(String s) => base64Url.decode(base64Url.normalize(s));
 
 /// A daemon a phone has paired with: what the phone keeps, beside its own
 /// key.

@@ -264,7 +264,7 @@ class Phone extends ChangeNotifier {
       final key = (await d.client.getPushKey(GetPushKeyRequest())).key;
       final k = _pushKey = key.isEmpty
           ? null
-          : base64Url.decode(key.padRight((key.length + 3) ~/ 4 * 4, '='));
+          : base64Url.decode(base64Url.normalize(key));
       // A subscription made with another key (the daemon's was made anew)
       // gets nothing: it's off until turned on again.
       final made = await platform.subscribedWith();

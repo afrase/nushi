@@ -23,8 +23,7 @@ Future<Map<String, String>> _peer(List<String> args) async {
   return (jsonDecode(line) as Map).cast<String, String>();
 }
 
-Uint8List _b64(String s) =>
-    base64Url.decode(s.padRight((s.length + 3) ~/ 4 * 4, '='));
+Uint8List _b64(String s) => base64Url.decode(base64Url.normalize(s));
 
 Future<Channel> _open(
   Map<String, String> peer, {
