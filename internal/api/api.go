@@ -110,8 +110,12 @@ func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Ha
 // is refused with ResourceExhausted before it is decoded.
 const MaxRequest = 32 << 20
 
-// macOnly are the calls that pair, revoke or move remote access: only the
-// Mac makes them, never a device's channel (ADR 0034).
+// macOnly are the calls that pair, revoke or move remote access, and
+// those only the Mac's app has a use for: a device's channel never makes
+// them (ADR 0034). It isn't a boundary: a paired device runs anything as
+// the user through a terminal or an agent, and so can make them with the
+// token; it keeps the phone's own UI and a device's channel to what they
+// are for.
 var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceSetRemoteProcedure:      true,
 	nushiv1connect.NushiServiceStartPairingProcedure:   true,
