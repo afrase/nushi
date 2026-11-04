@@ -22,8 +22,16 @@ func Server(bin string, env []string, stderr io.Writer) Spawn {
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		return p.In, p.Out, p.Kill, nil
+		return hostIn{p.In, p.Said}, p.Out, p.Kill, nil
 	}
+}
+
+// hostIn is the stdin of a host Server started, with what the host last
+// wrote to stderr, which says why it stopped when it did (host.stopped). A
+// test's Spawn has none.
+type hostIn struct {
+	io.WriteCloser
+	said func() string
 }
 
 // CheckMCP has a throwaway Ante host connect to your MCP servers and says

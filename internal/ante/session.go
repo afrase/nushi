@@ -80,7 +80,7 @@ func (s *session) pump() {
 	}
 	s.mu.Lock()
 	if t := s.turn; t != nil {
-		s.endLocked(t, nil, errors.New("Ante's host stopped before the turn ended"))
+		s.endLocked(t, nil, s.h.stopped("stopped before the turn ended"))
 	}
 	s.mu.Unlock()
 	close(s.ended)
@@ -114,7 +114,7 @@ func (s *session) await(ctx context.Context, op any, want ...string) (event, err
 				return ev, nil
 			}
 		case <-s.ended:
-			return event{}, errors.New("Ante's host has stopped")
+			return event{}, s.h.stopped("has stopped")
 		case <-ctx.Done():
 			return event{}, ctx.Err()
 		}
@@ -353,7 +353,7 @@ func (s *session) next(ctx context.Context) (*turn, error) {
 		case <-idle:
 		case <-s.ended:
 			s.mu.Lock()
-			return nil, errors.New("Ante's host has stopped")
+			return nil, s.h.stopped("has stopped")
 		case <-ctx.Done():
 			s.mu.Lock()
 			return nil, ctx.Err()

@@ -22,6 +22,7 @@ type Spawn func(cwd string) (in io.WriteCloser, out io.Reader, kill func(), err 
 type host struct {
 	in     io.WriteCloser
 	kill   func()
+	said   func() string // what it last wrote to stderr; nil: not kept
 	events chan event    // closed when the host's output ends
 	exited chan struct{} // closed after events
 
@@ -43,6 +44,9 @@ func startHost(spawn Spawn, cwd string) (*host, error) {
 		return nil, err
 	}
 	h := &host{in: in, kill: kill, events: make(chan event, 256), exited: make(chan struct{})}
+	if in, ok := in.(hostIn); ok {
+		h.said = in.said
+	}
 	go h.read(out)
 	return h, nil
 }
@@ -109,9 +113,21 @@ func (h *host) write(id string, op any) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if _, err := h.in.Write(append(b, '\n')); err != nil {
-		return errors.New("Ante's host has stopped")
+		return h.stopped("has stopped")
 	}
 	return nil
+}
+
+// stopped is an error saying what happened to the host ("has stopped"),
+// and why if it said.
+func (h *host) stopped(what string) error {
+	msg := "Ante's host " + what
+	if h.said != nil {
+		if why := h.said(); why != "" {
+			msg += ": " + why
+		}
+	}
+	return errors.New(msg)
 }
 
 func opID() string { return "op_" + ulid() }
