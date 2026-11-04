@@ -375,30 +375,22 @@ class FileCard extends StatelessWidget {
 }
 
 /// A file a sent message attached, in the transcript: a small chip with its
-/// kind's icon and name. A click shows it: in the chat's preview when it is
-/// in the chat's folder and the preview shows its kind ([onOpen]), else in
-/// Finder ([onReveal], the Mac's).
+/// kind's icon and name, in the colors of the user message's band it is
+/// on. A click shows it: in the chat's preview when it is in the chat's
+/// folder and the preview shows its kind ([onOpen]), else in Finder
+/// ([onReveal], the Mac's).
 class FileChip extends StatelessWidget {
-  const new(
-    this.path, {
-    super.key,
-    this.onOpen,
-    this.onReveal,
-    this.band = true,
-  });
+  const new(this.path, {super.key, this.onOpen, this.onReveal});
 
   final String path;
   final VoidCallback? onOpen;
   final VoidCallback? onReveal;
 
-  /// On a user message's band (its colors), not the box.
-  final bool band;
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final ink = band ? t.userBandText : t.text;
+    final ink = t.userBandText;
     // As wide as it reads: a phone's Tap fills its row otherwise.
     return IntrinsicWidth(
       child: Tap(
@@ -408,7 +400,7 @@ class FileChip extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 280),
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: BoxDecoration(
-            border: Border.all(color: band ? t.userBandBorder : t.borderSubtle),
+            border: Border.all(color: t.userBandBorder),
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
           child: Row(
