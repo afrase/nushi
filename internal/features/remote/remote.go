@@ -32,7 +32,10 @@ type Store interface {
 	SaveDevices([]model.Device) error
 }
 
-// MaxConns caps the live connections.
+// MaxConns caps the live connections, and apart from them the waits at
+// the relay and handshakes not yet past their first transport message: a
+// dishonest relay can hand the daemon a replayed first message as fast as
+// it listens (ADR 0033).
 const MaxConns = 16
 
 // timing is remote access's waits: a field of the service, not package
@@ -58,7 +61,7 @@ type timing struct {
 }
 
 func defaultTiming() timing {
-	return timing{handshake: 30 * time.Second, pairing: 5 * time.Minute, confirm: 2 * time.Minute, maxBackoff: 30 * time.Second,
+	return timing{handshake: 10 * time.Second, pairing: 5 * time.Minute, confirm: 2 * time.Minute, maxBackoff: 30 * time.Second,
 		push: 30 * time.Second, viewLease: 40 * time.Second, finished: 2 * time.Second, moving: 30 * 24 * time.Hour}
 }
 
@@ -76,6 +79,10 @@ type Service struct {
 	ctx    context.Context //nolint:containedctx // the service's life, which Close ends
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+	// pending holds a slot for each wait at the relay and each handshake
+	// it led to, until that handshake ends: link waits for one before it
+	// listens again.
+	pending chan struct{}
 
 	mu        sync.Mutex
 	closed    bool               // Close was called: nothing more starts
@@ -128,7 +135,8 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 	}
 	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish, timing: tm,
 		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen), moving: k.Moving,
-		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]view{}}
+		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]view{},
+		pending: make(chan struct{}, MaxConns)}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.mu.Lock()
 	s.apply()
@@ -276,8 +284,14 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 	id := listenID(listen)
 	backoff := time.Second
 	for ctx.Err() == nil && s.waits(id) {
+		select {
+		case s.pending <- struct{}{}:
+		case <-ctx.Done():
+			return
+		}
 		c, err := s.dialer.Listen(ctx, relayURL, listen)
 		if err != nil {
+			<-s.pending
 			wait := jitter(backoff)
 			s.setState(ctx, id, "error", err.Error())
 			slog.Info("relay: trying again", "in", wait.Round(time.Second), "id", short(id))
@@ -300,6 +314,7 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			// The relay ended the wait (its limit, a restart) or the network
 			// went: wait again, at a random moment so many daemons don't
 			// come back at once. The Mac shows it reconnecting meanwhile.
+			<-s.pending
 			wait := jitter(backoff)
 			slog.Info("relay dropped the wait", "err", err, "id", short(id), "again_in", wait.Round(time.Second))
 			s.setState(ctx, id, "reconnecting", err.Error())
@@ -308,7 +323,10 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			backoff = min(2*backoff, s.timing.maxBackoff)
 			continue
 		}
-		s.wg.Go(func() { s.accept(ctx, c, id) }) // link is one of wg's: Close can't be waiting at zero
+		s.wg.Go(func() { // link is one of wg's: Close can't be waiting at zero
+			defer func() { <-s.pending }()
+			s.accept(ctx, c, id)
+		})
 	}
 }
 

@@ -20,7 +20,8 @@ var errUnknown = errors.New("not a paired device")
 
 // accept runs IK with a phone that came to id: only a paired device's key
 // gets an answer (on an id given up, only a device still to move), and it
-// counts as connected once its first transport message decrypts.
+// counts as connected once its first transport message decrypts. It
+// returns once the handshake has ended, and runs the API in a goroutine.
 func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
 	timer := time.AfterFunc(s.timing.handshake, func() { _ = c.Close() })
 	defer timer.Stop()
@@ -39,7 +40,7 @@ func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
 		_ = c.Close()
 		return
 	}
-	s.run(conn, s.device(conn.Peer(), id), id)
+	s.wg.Go(func() { s.run(conn, s.device(conn.Peer(), id), id) }) // accept is one of wg's
 }
 
 // device names the paired device with key that may come to id, or "".
