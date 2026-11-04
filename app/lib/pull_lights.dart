@@ -17,17 +17,41 @@ Color moodColor(Tokens t, Mood m) => switch (m) {
   Mood.quiet => t.textMuted,
 };
 
-/// A pull request's checks counted: failing, running, passed, and the
-/// rest (skipped, neutral, cancelled).
+/// A pull request's checks, each in one group: failed (the required
+/// first), running, passed, and the rest (skipped, neutral, cancelled).
+({
+  List<GitHubCheck> failed,
+  List<GitHubCheck> running,
+  List<GitHubCheck> passed,
+  List<GitHubCheck> other,
+})
+splitChecks(GitHubPull p) {
+  final failed = <GitHubCheck>[];
+  final running = <GitHubCheck>[];
+  final passed = <GitHubCheck>[];
+  final other = <GitHubCheck>[];
+  for (final c in p.checks) {
+    (c.failed
+            ? failed
+            : c.state == 'pending'
+            ? running
+            : c.state == 'success'
+            ? passed
+            : other)
+        .add(c);
+  }
+  failed.sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0));
+  return (failed: failed, running: running, passed: passed, other: other);
+}
+
+/// A pull request's checks counted, as [splitChecks] groups them.
 ({int failing, int running, int passed, int other}) countChecks(GitHubPull p) {
-  final failing = p.checks.where((c) => c.failed).length;
-  final running = p.checks.where((c) => c.state == 'pending').length;
-  final passed = p.checks.where((c) => c.state == 'success').length;
+  final s = splitChecks(p);
   return (
-    failing: failing,
-    running: running,
-    passed: passed,
-    other: p.checks.length - failing - running - passed,
+    failing: s.failed.length,
+    running: s.running.length,
+    passed: s.passed.length,
+    other: s.other.length,
   );
 }
 

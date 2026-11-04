@@ -1,5 +1,6 @@
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
@@ -115,13 +116,9 @@ Todo todo(GitHubPull p, {FindingsSetup? findings}) {
         c.author: c.commit,
   };
   final used = <ReviewFinding>{};
-  final checks = [
-    for (final c in p.checks)
-      if (c.failed) c,
-  ]..sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0));
   return (
     items: [
-      for (final c in checks)
+      for (final c in splitChecks(p).failed)
         // By its id: a push and a pull request run share a name. A
         // commit status has none, and is one per name.
         CheckTodo(c.id.isZero ? 'status ${c.name}' : 'check ${c.id}', c),

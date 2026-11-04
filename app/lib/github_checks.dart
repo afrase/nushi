@@ -4,6 +4,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_agent.dart';
 import 'package:nushi/github_check_row.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/pull_lights.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -65,22 +66,7 @@ class _GitHubChecksState extends State<GitHubChecks> {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final p = widget.pull;
-    final failed = [
-      for (final c in p.checks)
-        if (c.failed) c,
-    ]..sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0));
-    final running = [
-      for (final c in p.checks)
-        if (c.state == 'pending') c,
-    ];
-    final passed = [
-      for (final c in p.checks)
-        if (c.state == 'success') c,
-    ];
-    final other = [
-      for (final c in p.checks)
-        if (!c.failed && c.state != 'pending' && c.state != 'success') c,
-    ];
+    final (:failed, :running, :passed, :other) = splitChecks(p);
     if (p.checks.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
