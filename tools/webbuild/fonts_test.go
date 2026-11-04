@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/afrase/nushi/relay"
 )
 
 // The lock is whole: an engine, and each font once, in order, with a sum
@@ -33,9 +35,8 @@ func TestFontsLock(t *testing.T) {
 	}
 }
 
-// The fonts the engine finds in a script, and the files kept out of the
-// service worker's shell (relay/web.go's onDisk has the same rule).
-func TestEngineFontsAndOnDemand(t *testing.T) {
+// The fonts the engine finds in a script, none leading out of its folder.
+func TestEngineFonts(t *testing.T) {
 	var b strings.Builder
 	b.WriteString(`a="notosansjp/v53/x-Y_z.0.woff2";b=c+"roboto/v32/KFOm.woff2";d="notosansjp/v53/x-Y_z.0.woff2";e="../v1/x.woff2"`)
 	for i := range 120 {
@@ -46,17 +47,6 @@ func TestEngineFontsAndOnDemand(t *testing.T) {
 	if engine != strings.Repeat("ab", 20) || !slices.Contains(paths, "notosansjp/v53/x-Y_z.0.woff2") || !slices.Contains(paths, "roboto/v32/KFOm.woff2") ||
 		slices.ContainsFunc(paths, func(p string) bool { return strings.Contains(p, "..") }) {
 		t.Errorf("engine %q, paths %v", engine, paths[:3])
-	}
-	for name, want := range map[string]bool{
-		"assets/fonts/fallback/notosansjp/v53/x.0.woff2": true,
-		"assets/fonts/fallback/OFL.txt":                  true,
-		"assets/fonts/fallback/Roboto-Regular.ttf":       false,
-		"assets/fonts/IBMPlexSans.ttf":                   false,
-		"main.0123.dart.js":                              false,
-	} {
-		if onDemand(name) != want {
-			t.Errorf("onDemand(%q) = %v", name, !want)
-		}
 	}
 }
 
@@ -79,7 +69,7 @@ func TestServiceWorkerPlaceholders(t *testing.T) {
 	if err := json.Unmarshal([]byte(fontSumsJSON()), &sums); err != nil || len(sums) < 100 {
 		t.Fatalf("the fonts' sums: %d, %v", len(sums), err)
 	}
-	if name := "assets/fonts/fallback-" + hashOf(fontSumsJSON()) + ".json"; onDemand(name) {
+	if name := "assets/fonts/fallback-" + hashOf(fontSumsJSON()) + ".json"; relay.FallbackFont(name) {
 		t.Errorf("%s isn't in the shell", name)
 	}
 }

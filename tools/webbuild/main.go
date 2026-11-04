@@ -28,6 +28,8 @@ import (
 	"strings"
 
 	"github.com/andybalholm/brotli"
+
+	"github.com/afrase/nushi/relay"
 )
 
 func main() {
@@ -83,7 +85,7 @@ func main() {
 	sums := map[string]string{}
 	all := sha256.New()
 	check(fs.WalkDir(os.DirFS(dir), ".", func(name string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" || onDemand(name) || name == mermaidJS {
+		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" || relay.FallbackFont(name) || name == mermaidJS {
 			return err
 		}
 		body := read(filepath.Join(dir, name))

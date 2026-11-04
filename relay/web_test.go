@@ -320,6 +320,23 @@ func TestSlowReaderLetGo(t *testing.T) {
 	}
 }
 
+// A fallback font is a file in a family's folder under FallbackDir, or
+// their licence; nothing else there or elsewhere is (tools/webbuild keeps
+// them out of the service worker's shell by the same rule).
+func TestFallbackFont(t *testing.T) {
+	for name, want := range map[string]bool{
+		"assets/fonts/fallback/notosansjp/v53/x.0.woff2": true,
+		"assets/fonts/fallback/OFL.txt":                  true,
+		"assets/fonts/fallback/Roboto-Regular.ttf":       false,
+		"assets/fonts/IBMPlexSans.ttf":                   false,
+		"main.0123.dart.js":                              false,
+	} {
+		if FallbackFont(name) != want {
+			t.Errorf("FallbackFont(%q) = %v", name, !want)
+		}
+	}
+}
+
 // The engine's fallback fonts are read from the folder when asked for, not
 // held in memory: as they are (woff2 is compressed), kept for good (their
 // paths are versioned), and only those there when the site was loaded.

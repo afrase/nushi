@@ -135,16 +135,17 @@ type Site struct {
 	csp    string
 }
 
-// fallbackDir is where the engine asks for its fallback fonts (Noto for
+// FallbackDir is where the engine asks for its fallback fonts (Noto for
 // CJK, emoji and other scripts; flutter_bootstrap.js's
 // fontFallbackBaseUrl), in folders by family and version
 // (notosansjp/v53/…woff2): their paths are versioned.
-const fallbackDir = "assets/fonts/fallback/"
+const FallbackDir = "assets/fonts/fallback/"
 
-// onDisk says whether name is one of the fallback fonts or their licence,
-// served from the folder (tools/webbuild has the same rule).
-func onDisk(name string) bool {
-	rest, ok := strings.CutPrefix(name, fallbackDir)
+// FallbackFont says whether a built file's name is one of the fallback
+// fonts or their licence: served from the folder, and left out of the
+// service worker's shell (tools/webbuild).
+func FallbackFont(name string) bool {
+	rest, ok := strings.CutPrefix(name, FallbackDir)
 	return ok && (strings.Contains(rest, "/") || rest == "OFL.txt")
 }
 
@@ -194,7 +195,7 @@ func LoadSite(dir, origin string) (*Site, error) {
 		if !d.Type().IsRegular() { // links and special files are left out
 			return nil
 		}
-		if onDisk(name) {
+		if FallbackFont(name) {
 			s.fonts[name] = true
 			return nil
 		}

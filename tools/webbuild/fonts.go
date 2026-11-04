@@ -30,6 +30,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/afrase/nushi/relay"
 )
 
 //go:embed fonts.lock
@@ -41,10 +43,9 @@ var fontsLock string
 var notoLicence string
 
 const (
-	fontHost    = "https://fonts.gstatic.com/s/"
-	fallbackDir = "assets/fonts/fallback/"
-	lockPath    = "tools/webbuild/fonts.lock"
-	maxFont     = 16 << 20
+	fontHost = "https://fonts.gstatic.com/s/"
+	lockPath = "tools/webbuild/fonts.lock"
+	maxFont  = 16 << 20
 )
 
 // fontRef is a fallback font's path as main.dart.js has it, relative to
@@ -62,14 +63,6 @@ type lockedFont struct {
 	sum  string // sha256, hex
 	size int
 	path string
-}
-
-// onDemand says whether a built file is one of the mirrored fallback fonts
-// (or their licence), which the service worker doesn't keep in its shell
-// and the relay serves from disk (relay/web.go has the same rule).
-func onDemand(name string) bool {
-	rest, ok := strings.CutPrefix(name, fallbackDir)
-	return ok && (strings.Contains(rest, "/") || rest == "OFL.txt")
 }
 
 // engineFonts gives the engine's revision and the fallback fonts its
@@ -137,7 +130,7 @@ func mirrorFonts(dir, mainJS, boot string) (int, int) {
 		if err != nil {
 			return err
 		}
-		out := filepath.Join(dir, filepath.FromSlash(fallbackDir+f.path))
+		out := filepath.Join(dir, filepath.FromSlash(relay.FallbackDir+f.path))
 		if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 			return err
 		}
@@ -146,7 +139,7 @@ func mirrorFonts(dir, mainJS, boot string) (int, int) {
 	for _, f := range fonts {
 		total += f.size
 	}
-	write(filepath.Join(dir, filepath.FromSlash(fallbackDir+"OFL.txt")), notoLicence)
+	write(filepath.Join(dir, filepath.FromSlash(relay.FallbackDir+"OFL.txt")), notoLicence)
 	return len(fonts), total
 }
 
