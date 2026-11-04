@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:connectrpc/connect.dart' as connect;
+import 'package:connectrpc/http2.dart';
 import 'package:remote_transport/remote_transport.dart';
 import 'package:test/test.dart';
 
@@ -109,6 +111,39 @@ void main() {
       throwsA(isA<PairingRefused>()),
     );
     expect(code, isNotNull);
+  });
+
+  test('a call cut by a reset fails as unavailable', () async {
+    final peer = await _peer(['-mute']);
+    final t = RelayTransport(
+      PairedDaemon(Uri.parse(peer['relay']!), peer['id']!, _b64(peer['key']!)),
+      await KeyPair.make(),
+    );
+    addTearDown(t.close);
+    final call = createHttpClient(transport: t)(
+      connect.HttpRequest(
+        'http://nushid/x',
+        'POST',
+        connect.Headers(),
+        null,
+        null,
+      ),
+    );
+    while (!t.live) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    final failed = expectLater(
+      call,
+      throwsA(
+        isA<connect.ConnectException>().having(
+          (e) => e.code,
+          'code',
+          connect.Code.unavailable,
+        ),
+      ),
+    );
+    await t.reset();
+    await failed;
   });
 
   test('a wrong secret fails', () async {

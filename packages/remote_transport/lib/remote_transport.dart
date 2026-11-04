@@ -166,8 +166,9 @@ Future<(PairedDaemon, RelayTransport)> pair(
 /// An [Http2ClientTransport] to a paired daemon through its relay.
 ///
 /// One channel carries every call. A channel that stops taking streams is
-/// dropped, and the next call dials the relay again (IK). A failed dial
-/// reaches the caller as a [connect.ConnectException] `unavailable`.
+/// dropped, and the next call dials the relay again (IK). A failed dial or
+/// a lost channel reaches the caller as a [connect.ConnectException]
+/// `unavailable`.
 final class RelayTransport implements Http2ClientTransport {
   /// A transport to [daemon] as the phone whose key is [device].
   new(this.daemon, this.device);
@@ -193,7 +194,7 @@ final class RelayTransport implements Http2ClientTransport {
     for (var attempt = 0; ; attempt++) {
       if (_closed) throw _unavailable('closed', null);
       final conn = _live ?? await (_dialing ??= _dialOnce());
-      if (conn.isOpen) return conn.makeRequest(headers);
+      if (conn.isOpen) return _MappedStream(conn.makeRequest(headers));
       _drop(conn);
       if (attempt == 1) throw _unavailable('connection closing', null);
     }
@@ -284,3 +285,47 @@ connect.ConnectException _unavailable(
   'daemon unavailable: $what${cause == null ? '' : ' ($cause)'}',
   cause: why ?? cause,
 );
+
+/// A stream whose transport errors surface as `unavailable`, as
+/// uds_transport's do (connectrpc reports them as `unknown`, which nothing
+/// reloads on).
+final class _MappedStream implements http2.ClientTransportStream {
+  new(this._inner);
+
+  final http2.ClientTransportStream _inner;
+
+  @override
+  int get id => _inner.id;
+
+  @override
+  late final Stream<http2.StreamMessage> incomingMessages = _inner
+      .incomingMessages
+      .handleError(
+        (Object e, StackTrace s) => Error.throwWithStackTrace(switch (e) {
+          http2.TransportException() || http2.StreamTransportException() =>
+            _unavailable('connection lost', e),
+          _ => e,
+        }, s),
+      );
+
+  @override
+  StreamSink<http2.StreamMessage> get outgoingMessages =>
+      _inner.outgoingMessages;
+
+  @override
+  Stream<http2.TransportStreamPush> get peerPushes => _inner.peerPushes;
+
+  @override
+  set onTerminated(void Function(int?) value) => _inner.onTerminated = value;
+
+  @override
+  void terminate() => _inner.terminate();
+
+  @override
+  void sendHeaders(List<http2.Header> headers, {bool endStream = false}) =>
+      _inner.sendHeaders(headers, endStream: endStream);
+
+  @override
+  void sendData(List<int> bytes, {bool endStream = false}) =>
+      _inner.sendData(bytes, endStream: endStream);
+}
