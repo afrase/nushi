@@ -6,25 +6,29 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The chats on the pull request, in the GitHub view: each a link to it.
-class PullChats extends StatelessWidget {
-  const new(this.daemon, this.pull, {super.key});
+/// The chats on a GitHub item, in its details: each a link to it (four
+/// at most, then how many more), after [leading] (an issue's Start work).
+class ItemChats extends StatelessWidget {
+  const new(this.daemon, this.ref, {super.key, this.leading});
 
   final Daemon daemon;
-  final GitHubPull pull;
+  final GitHubRef ref;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final chats = chatsOnItem(daemon, pull.item.ref);
-    if (chats.isEmpty) return const SizedBox.shrink();
+    final chats = chatsOnItem(daemon, ref);
+    if (chats.isEmpty && leading == null) return const SizedBox.shrink();
     return Wrap(
       spacing: 6,
       runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text('Chats:', style: theme.ui(t.textMuted, size: 12)),
+        ?leading,
+        if (chats.isNotEmpty)
+          Text('Chats:', style: theme.ui(t.textMuted, size: 12)),
         for (final c in chats.take(4))
           Tap(
             onTap: () => daemon.select(c.id),

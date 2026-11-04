@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:nushi/agent_mark.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/item_chats.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -80,7 +80,6 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
       );
     }
     final it = i.item;
-    final chats = chatsOnItem(widget.daemon, it.ref);
     return SelectionArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -135,30 +134,10 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              StartWork(daemon: widget.daemon, item: it),
-              for (final c in chats.take(4))
-                Tap(
-                  onTap: () => widget.daemon.select(c.id),
-                  tooltip: 'Open the chat',
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AgentMark(c.agent, size: 13),
-                      const SizedBox(width: 4),
-                      Text(c.shownTitle, style: theme.ui(t.link, size: 12)),
-                    ],
-                  ),
-                ),
-            ],
+          ItemChats(
+            widget.daemon,
+            it.ref,
+            leading: StartWork(daemon: widget.daemon, item: it),
           ),
           if (_error case final e?)
             Padding(

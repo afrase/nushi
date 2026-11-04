@@ -628,6 +628,35 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets("an issue's chats at 720: each link capped, then how many "
+      'more', (tester) async {
+    const long =
+        'Add a Mul function, with its tests and the docs that say how it '
+        'rounds, and a benchmark beside Add';
+    final (_, d) = await openView(
+      tester,
+      size: const Size(720, 900),
+      chats: [
+        for (var i = 0; i < 5; i++)
+          chat('c$i', 'claude', i == 0 ? long : 'Mul, take $i', age: i)
+            ..github = GitHubLink(
+              host: 'github.com',
+              id: 'I_2',
+              repo: _repo,
+              number: 2,
+            ),
+      ],
+    );
+    await tester.tap(find.text('Add a Mul function'));
+    await tester.pumpAndSettle();
+    expectTextInside(tester, 720);
+    expect(tester.getRect(find.text(long)).width, lessThanOrEqualTo(180));
+    expect(find.text('+1 chats'), findsOneWidget);
+    expect(find.text('Chats:'), findsOneWidget);
+    await render(tester, find.byType(GitHubIssuePane), 'github_issue_720');
+    await closeView(tester, d);
+  });
+
   testWidgets('Start work on an issue: the New chat dialog with it, a '
       'worktree on its branch', (tester) async {
     final (fake, d) = await openView(

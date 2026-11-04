@@ -8,10 +8,10 @@ import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/item_chats.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/pull_activity.dart';
 import 'package:nushi/pull_cache.dart';
-import 'package:nushi/pull_chats.dart';
 import 'package:nushi/pull_header.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_merge.dart';
@@ -274,7 +274,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 ),
                 top: 16,
               ),
-            if (!_inChat) column(PullChats(widget.daemon, p), top: 10),
+            if (!_inChat) column(ItemChats(widget.daemon, p.item.ref), top: 10),
             if (error case final e?)
               column(
                 Text('Not current: $e', style: theme.ui(t.needs, size: 12)),
