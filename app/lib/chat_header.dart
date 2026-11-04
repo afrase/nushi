@@ -32,7 +32,7 @@ import 'package:nushi/window_drag.dart';
 /// files it wrote are in Artifacts.) With the sidebar hidden it starts past
 /// the traffic lights and the button that shows the sidebar, and the chat's
 /// color, if it has one, is a dot before the title (ADR 0080).
-class ChatHeader extends StatefulWidget {
+class ChatHeader extends StatelessWidget {
   const new(
     this.chat,
     this.daemon, {
@@ -50,43 +50,15 @@ class ChatHeader extends StatefulWidget {
   final bool panel; // the details panel shows
   final VoidCallback? onPanel; // shows or hides it; null when it can't show
 
-  @override
-  State<ChatHeader> createState() => _ChatHeaderState();
-}
-
-class _ChatHeaderState extends State<ChatHeader> {
   // The title is a field (a double-click, ⋯'s Rename, or the palette's
   // and the Chat menu's, through the chat).
-  bool get _renaming => widget.chat.renaming.value;
-  set _renaming(bool v) => widget.chat.renaming.value = v;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.chat.renaming.addListener(_changed);
-  }
-
-  @override
-  void didUpdateWidget(ChatHeader old) {
-    super.didUpdateWidget(old);
-    if (old.chat == widget.chat) return;
-    old.chat.renaming.removeListener(_changed);
-    widget.chat.renaming.addListener(_changed);
-  }
-
-  @override
-  void dispose() {
-    widget.chat.renaming.removeListener(_changed);
-    super.dispose();
-  }
-
-  void _changed() => setState(() {});
+  bool get _renaming => chat.renaming.value;
+  set _renaming(bool v) => chat.renaming.value = v;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final chat = widget.chat;
     final meta = theme.ui(t.textSecondary, size: 12);
     final model = chat.option('model');
     final modelName = model?.values
@@ -107,6 +79,7 @@ class _ChatHeaderState extends State<ChatHeader> {
     // a hidden side chat's chip takes its own room.
     return ListenableBuilder(
       listenable: Listenable.merge([
+        chat.renaming,
         reviews,
         chat.side,
         chat.sideHidden,
@@ -123,14 +96,10 @@ class _ChatHeaderState extends State<ChatHeader> {
               (shut && chat.color != null ? _dotRoom : 0);
           final comments = unsentComments(chat.id).isNotEmpty;
           final side = chat.side.value != null && chat.sideHidden.value;
-          final more =
-              (chat.pull == null ? 0 : 88) +
-              (comments ? 14 : 0) +
-              (side ? SideChip.width : 0);
           final folds = headerFolds(
             width,
             pull: chat.pull != null,
-            panel: widget.onPanel != null,
+            panel: onPanel != null,
             model: modelName != null,
             comments: comments,
             side: side,
@@ -141,7 +110,7 @@ class _ChatHeaderState extends State<ChatHeader> {
               width -
               headerRow -
               (folds.roomy ? headerGaps : 0) -
-              more +
+              folds.more +
               folds.saved -
               (shown ? (folds.roomy ? NushiTheme.barGap : 8) : 0);
           const least = 80.0;
@@ -173,7 +142,6 @@ class _ChatHeaderState extends State<ChatHeader> {
     final shut = sidebarShut;
     final t = NushiTheme.of(context).t;
     final theme = NushiTheme.of(context);
-    final chat = widget.chat;
     // Controls and groups of them, and what's around the row's free space;
     // with no room to spare, what the row has always taken, in the gutters
     // the transcript has (its fold's numbers are the same either way).
@@ -229,7 +197,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                         child: _renaming
                             ? RenameField(
                                 chat: chat,
-                                daemon: widget.daemon,
+                                daemon: daemon,
                                 style: titleStyle,
                                 onDone: () => _renaming = false,
                               )
@@ -250,18 +218,15 @@ class _ChatHeaderState extends State<ChatHeader> {
                           mono: true,
                           size: 12,
                           tooltip: 'Show ${chat.jiraKey} in Jira',
-                          onTap: () => showIssue(
-                            widget.daemon,
-                            chat.jiraSite,
-                            chat.jiraKey,
-                          ),
+                          onTap: () =>
+                              showIssue(daemon, chat.jiraSite, chat.jiraKey),
                         ),
                       ],
                       if (chat.github case final link?) ...[
                         SizedBox(width: gap),
                         GitHubChip(
                           key: ValueKey(link.id),
-                          daemon: widget.daemon,
+                          daemon: daemon,
                           link: link,
                         ),
                       ],
@@ -325,19 +290,17 @@ class _ChatHeaderState extends State<ChatHeader> {
                         MenuEntry(
                           label,
                           detail: keyLabel(tabKey(tab)),
-                          checked: tab == widget.tab,
-                          onPick: () => widget.onTab(tab),
+                          checked: tab == tab,
+                          onPick: () => onTab(tab),
                         ),
                     ],
-                    label: Text(
-                      _tabs(chat).firstWhere((s) => s.$1 == widget.tab).$2,
-                    ),
+                    label: Text(_tabs(chat).firstWhere((s) => s.$1 == tab).$2),
                   )
                 else
                   PlainTabs(
-                    value: widget.tab,
+                    value: tab,
                     tabs: _tabs(chat),
-                    onChanged: widget.onTab,
+                    onChanged: onTab,
                     fill: true,
                     tooltip: (t) =>
                         '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
@@ -345,19 +308,19 @@ class _ChatHeaderState extends State<ChatHeader> {
                   ),
                 SizedBox(width: roomy ? NushiTheme.groupGap : 4),
                 if (!folds.buttons) ...[
-                  TerminalButton(chat: chat, daemon: widget.daemon),
+                  TerminalButton(chat: chat, daemon: daemon),
                   if (roomy) const SizedBox(width: NushiTheme.iconGap),
                 ],
                 if (!folds.buttons && !folds.panel) ...[
                   IconTap.line(
                     LineIcon.details,
-                    tooltip: widget.onPanel == null
+                    tooltip: onPanel == null
                         ? 'The window is too narrow'
-                        : widget.panel
+                        : panel
                         ? 'Hide details'
                         : 'Show details',
-                    color: widget.panel ? t.accentInk : t.textSecondary,
-                    onTap: widget.onPanel,
+                    color: panel ? t.accentInk : t.textSecondary,
+                    onTap: onPanel,
                   ),
                   if (roomy) const SizedBox(width: NushiTheme.iconGap),
                 ],
@@ -376,14 +339,14 @@ class _ChatHeaderState extends State<ChatHeader> {
                           line: LineIcon.terminal,
                           onPick: () => toggleTerminal(chat.id),
                         ),
-                      if (widget.onPanel case final toggle?)
+                      if (onPanel case final toggle?)
                         MenuEntry(
-                          widget.panel ? 'Hide details' : 'Show details',
+                          panel ? 'Hide details' : 'Show details',
                           line: LineIcon.details,
                           onPick: toggle,
                         ),
                     ],
-                    if (widget.daemon.daemonApi >= filesApi) ...[
+                    if (daemon.daemonApi >= filesApi) ...[
                       MenuEntry(
                         filesOpen(chat) ? 'Hide files' : 'Show files',
                         shortcut: keyLabel(filesKey),
@@ -396,7 +359,7 @@ class _ChatHeaderState extends State<ChatHeader> {
                     ...chatMenu(
                       context,
                       chat,
-                      widget.daemon,
+                      daemon,
                       onRename: () => _renaming = true,
                     ),
                   ],
@@ -432,8 +395,10 @@ const headerRow = 455.0;
 const headerGaps = 82.0;
 
 /// What of the chat's header folds at a width, the least needed first, the
-/// points that frees of the row's [headerRow] (the model's aren't in it), and
-/// whether nothing is near folding, so the row has the bar's gaps.
+/// points that frees of the row's [headerRow] (the model's aren't in it),
+/// what the row takes past [headerRow] (`more`: the Pull request tab, the
+/// unsent comments' count, a hidden side chat's chip), and whether nothing
+/// is near folding, so the row has the bar's gaps.
 typedef HeaderFolds = ({
   bool roomy,
   bool model,
@@ -444,6 +409,7 @@ typedef HeaderFolds = ({
   bool buttons,
   bool any,
   double saved,
+  double more,
 });
 
 /// The parts of the header that fold in [width] (see [ChatHeader]): each
@@ -460,14 +426,12 @@ HeaderFolds headerFolds(
   bool comments = false,
   bool side = false,
 }) {
-  // The Pull request tab is 88 more.
-  final need =
-      headerRow +
-      (pull ? 88 : 0) +
-      (comments ? 14 : 0) +
-      (side ? SideChip.width : 0) +
-      80 +
-      (model ? 50 : 0);
+  // The Pull request tab is 88 more, the comments' count 14.
+  final more =
+      (pull ? 88.0 : 0.0) +
+      (comments ? 14.0 : 0.0) +
+      (side ? SideChip.width : 0.0);
+  final need = headerRow + more + 80 + (model ? 50 : 0);
   var saved = 0.0;
   final folds = <String>{};
   // Each part and about how much folding it frees.
@@ -494,5 +458,6 @@ HeaderFolds headerFolds(
     any: folds.isNotEmpty,
     // The model's points were never in the row's 455.
     saved: saved - (folds.contains('model') ? 50 : 0),
+    more: more,
   );
 }

@@ -113,7 +113,7 @@ void main() {
       // Clear of the traffic lights, the sidebar at its narrowest too.
       expect(200 - 10 - button.width, greaterThan(lightsInset));
       final header = find.byType(ChatHeader);
-      final state = tester.state(header);
+      final element = tester.element(header);
       expect(tester.getRect(header).left, 333);
 
       await tester.tap(find.byTooltip(_hide));
@@ -122,7 +122,7 @@ void main() {
       expect(find.byType(Sidebar), findsNothing);
       expect(tester.getRect(header).left, 0);
       expect(tester.getRect(header).width, 1200);
-      expect(tester.state(header), same(state), reason: 'the chat stayed');
+      expect(tester.element(header), same(element), reason: 'the chat stayed');
       expect(readSaved()['sidebarHidden'], isTrue);
       expect(paneWidths.value['sidebar'], 333);
 
@@ -130,7 +130,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.getRect(find.byType(Sidebar)).width, 333);
       expect(tester.getRect(header).left, 333);
-      expect(tester.state(header), same(state), reason: 'the chat stayed');
+      expect(tester.element(header), same(element), reason: 'the chat stayed');
       expect(readSaved()['sidebarHidden'], isFalse);
       d.dispose();
     }, variant: _mac);
