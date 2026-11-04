@@ -40,16 +40,35 @@ func (Harness) BackgroundCommand(it model.Item) (id, file string, ok bool) {
 }
 
 // taskFile says whether file is where Claude writes task id's output:
-// <tmp>/claude-<uid>/<project>/<session>/tasks/<id>.output
-// (docs/facts/claude.md), a clean path under the user's own claude-<uid>
-// folder, so a text naming another file (a project's tasks/x.output) is
-// never read.
+// <tmp>/claude-<uid>/<project>/<session>/tasks/<id>.output, <tmp> being
+// $CLAUDE_CODE_TMPDIR or /tmp (Claude Code 2.1.314's binary;
+// docs/facts/claude.md). A clean path of that shape under the user's own
+// claude-<uid> folder there, so a text naming another file (a project's
+// tasks/x.output, its vendor/claude-<uid>/…) is never read.
 func taskFile(id, file string) bool {
 	if filepath.Clean(file) != file || !filepath.IsAbs(file) || filepath.Base(file) != id+".output" ||
 		filepath.Base(filepath.Dir(file)) != "tasks" {
 		return false
 	}
-	return slices.Contains(strings.Split(file, string(filepath.Separator)), "claude-"+strconv.Itoa(os.Getuid()))
+	user := filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(file)))) // tasks, session, project
+	return filepath.Base(user) == "claude-"+strconv.Itoa(os.Getuid()) && slices.Contains(tempRoots(), filepath.Dir(user))
+}
+
+// tempRoots are the folders Claude's claude-<uid> folder can be in:
+// $CLAUDE_CODE_TMPDIR as the daemon has it, else /tmp, each also as its
+// real path (/tmp is /private/tmp on the Mac, the path Claude names). A
+// CLAUDE_CODE_TMPDIR set only in the shell agents start from isn't seen:
+// their background commands aren't followed then.
+func tempRoots() []string {
+	root := "/tmp"
+	if d := os.Getenv("CLAUDE_CODE_TMPDIR"); d != "" {
+		root = filepath.Clean(d)
+	}
+	roots := []string{root}
+	if real, err := filepath.EvalSymlinks(root); err == nil && real != root {
+		roots = append(roots, real)
+	}
+	return roots
 }
 
 // outputTail is how much of a background command's output is read.

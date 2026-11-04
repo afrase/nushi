@@ -3,6 +3,7 @@ package claude
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"testing"
 
@@ -11,7 +12,10 @@ import (
 )
 
 func TestBackgroundCommands(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "claude-"+strconv.Itoa(os.Getuid()), "-Users-me-app", "s1", "tasks")
+	tmp := t.TempDir()
+	t.Setenv("CLAUDE_CODE_TMPDIR", tmp)
+	user := "claude-" + strconv.Itoa(os.Getuid())
+	dir := filepath.Join(tmp, user, "-Users-me-app", "s1", "tasks")
 	testcheck.NoErr(t, os.MkdirAll(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
 	started := "```console\nCommand running in background with ID: b1. Output is being written to: " + file + ". You will be notified when it completes.\n```"
@@ -36,6 +40,11 @@ func TestBackgroundCommands(t *testing.T) {
 		// A file of the right name elsewhere: a project's, or out of Claude's folder (integrations review 2026-11-04).
 		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: /Users/me/app/tasks/b1.output."},
 		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: " + filepath.Dir(dir) + "/../../../../x/tasks/b1.output."},
+		// A claude-<uid> folder out of Claude's temp root, or not three
+		// folders up (fix review 2026-11-04).
+		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: /Users/me/app/vendor/" + user + "/p/s/tasks/b1.output."},
+		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: " + filepath.Join(tmp, user, "p", "tasks") + "/b1.output."},
+		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: " + filepath.Join(tmp, "x", user, "p", "s", "tasks") + "/b1.output."},
 	} {
 		if _, _, ok := harness.BackgroundCommand(it); ok {
 			t.Errorf("followed %+v", it)
@@ -66,5 +75,18 @@ func TestBackgroundCommands(t *testing.T) {
 	testcheck.Write(t, filepath.Join(other, "b3.output"), "a project's file")
 	if _, _, err := harness.ReadBackgroundCommand("b3", filepath.Join(other, "b3.output")); err == nil {
 		t.Error("read a task's file out of Claude's folder")
+	}
+	vendored := filepath.Join(t.TempDir(), "vendor", user, "p", "s", "tasks")
+	testcheck.NoErr(t, os.MkdirAll(vendored, 0o700))
+	testcheck.Write(t, filepath.Join(vendored, "b4.output"), "a project's file")
+	if _, _, err := harness.ReadBackgroundCommand("b4", filepath.Join(vendored, "b4.output")); err == nil {
+		t.Error("read a claude-<uid> folder out of Claude's temp root")
+	}
+	t.Setenv("CLAUDE_CODE_TMPDIR", "")
+	if !taskFile("b1", "/tmp/"+user+"/-Users-me-app/s1/tasks/b1.output") {
+		t.Error("refused a task's file in /tmp")
+	}
+	if runtime.GOOS == "darwin" && !taskFile("b1", "/private/tmp/"+user+"/-Users-me-app/s1/tasks/b1.output") {
+		t.Error("refused a task's file in /tmp's real path")
 	}
 }

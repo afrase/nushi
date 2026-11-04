@@ -99,10 +99,13 @@ func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixtu
 }
 
 // taskDir is a folder where Claude writes its tasks' output:
-// <tmp>/claude-<uid>/<project>/<session>/tasks (docs/facts/claude.md).
+// <tmp>/claude-<uid>/<project>/<session>/tasks (docs/facts/claude.md),
+// <tmp> being $CLAUDE_CODE_TMPDIR.
 func taskDir(t *testing.T) string {
 	t.Helper()
-	dir := filepath.Join(t.TempDir(), "claude-"+strconv.Itoa(os.Getuid()), "-w", "s1", "tasks")
+	tmp := t.TempDir()
+	t.Setenv("CLAUDE_CODE_TMPDIR", tmp)
+	dir := filepath.Join(tmp, "claude-"+strconv.Itoa(os.Getuid()), "-w", "s1", "tasks")
 	testcheck.NoErr(t, os.MkdirAll(dir, 0o700))
 	return dir
 }
