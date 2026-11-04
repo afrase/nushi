@@ -284,7 +284,7 @@ class PinnedHeader extends StatelessWidget {
           ),
           if (collapsed)
             ListenableBuilder(
-              listenable: Listenable.merge(chats),
+              listenable: Listenable.merge([for (final c in chats) c.look]),
               builder: (context, _) => switch (groupPhase(chats)) {
                 final phase? => Padding(
                   padding: const EdgeInsets.only(left: 5),

@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart' show TextEditingController;
 
 import 'package:nushi/agents.dart';
 import 'package:nushi/chat_colors.dart';
+import 'package:nushi/chat_look.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/code_runs.dart';
 import 'package:nushi/draft.dart';
@@ -63,6 +64,10 @@ class ChatState extends ChangeNotifier {
 
   /// The worktrees its subagents work in (ADR 0081).
   late final related = RelatedWorktrees(id);
+
+  /// What a list shows of it, which tells its listeners only when that
+  /// changes, not as text streams in ([ChatLook]).
+  late final look = ChatLook(this);
 
   /// A file its Changes view is to show next (a terminal link to it, a
   /// review's finding); the chat shows its Changes then.

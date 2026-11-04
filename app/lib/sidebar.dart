@@ -306,8 +306,9 @@ class _ChatRowState extends State<_ChatRow> {
     final shown = selected && daemon.chatShows;
     final movable =
         widget.movable ?? (Widget child, {required bool enabled}) => child;
+    // Not the chat itself, which notifies at every streamed chunk.
     return ListenableBuilder(
-      listenable: chat,
+      listenable: chat.look,
       builder: (context, _) => movable(
         enabled: !_renaming,
         Padding(

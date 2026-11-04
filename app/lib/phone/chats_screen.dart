@@ -143,7 +143,7 @@ class _NeedsYouState extends State<_NeedsYou> {
   void dispose() {
     widget.daemon.removeListener(_relisted);
     for (final c in _chats) {
-      c.removeListener(_changed);
+      c.look.removeListener(_changed);
     }
     super.dispose();
   }
@@ -154,10 +154,10 @@ class _NeedsYouState extends State<_NeedsYou> {
   void _follow() {
     final now = widget.daemon.chats.values.toSet();
     for (final c in _chats.difference(now)) {
-      c.removeListener(_changed);
+      c.look.removeListener(_changed);
     }
     for (final c in now.difference(_chats)) {
-      c.addListener(_changed);
+      c.look.addListener(_changed);
     }
     _chats
       ..clear()
@@ -256,7 +256,7 @@ class ChatRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     return ListenableBuilder(
-      listenable: chat,
+      listenable: chat.look, // not at each streamed chunk
       builder: (context, _) {
         final (word, color) = phaseWord(chat.phase, t);
         final row = InkWell(
