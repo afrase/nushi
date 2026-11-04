@@ -334,3 +334,30 @@ func TestPushesWaitWhileOneIsSent(t *testing.T) {
 		t.Errorf("pushed %q, want %q", got, want)
 	}
 }
+
+// A turn's "finished" wait is the service's: Close ends it, and nothing
+// of it runs into the service (or the chats, through Agent) after Close
+// returned.
+func TestCloseEndsTheFinishedWait(t *testing.T) {
+	s, p, _, _ := pushing(t, func(tm *timing) { tm.finished = 200 * time.Millisecond })
+	var mu sync.Mutex
+	closed, after := false, false
+	s.UsePush(Push{Key: "key", Send: p.send,
+		Agent: func(string) (string, bool) {
+			mu.Lock()
+			defer mu.Unlock()
+			after = after || closed
+			return "Claude", true
+		}}, false)
+	turn(s, "c1")
+	s.Close()
+	mu.Lock()
+	closed = true
+	mu.Unlock()
+	time.Sleep(400 * time.Millisecond) // past the wait
+	mu.Lock()
+	defer mu.Unlock()
+	if after || len(p.take()) > 0 {
+		t.Error("the finished wait called into the service after Close returned")
+	}
+}

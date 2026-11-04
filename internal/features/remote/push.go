@@ -220,7 +220,7 @@ func subjectOf(relay string) string {
 type notifier struct {
 	mu        sync.Mutex
 	asked     map[string]map[string]bool // per chat, prompts already pushed
-	finishing map[string]*time.Timer     // turns' ends waiting timing.finished
+	finishing map[string]chan struct{}   // turns' ends waiting timing.finished; closed: the wait is off
 	outbox    map[string]*outbox         // per device, the pushes waiting on the one in flight
 }
 
@@ -247,7 +247,7 @@ func (s *Service) Follow(e model.Event) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	if n.asked == nil {
-		n.asked, n.finishing, n.outbox = map[string]map[string]bool{}, map[string]*time.Timer{}, map[string]*outbox{}
+		n.asked, n.finishing, n.outbox = map[string]map[string]bool{}, map[string]chan struct{}{}, map[string]*outbox{}
 	}
 	chat := e.ChatID
 	if chat == "" {
@@ -255,34 +255,21 @@ func (s *Service) Follow(e model.Event) {
 	}
 	if e.Removed {
 		delete(n.asked, chat)
-		if t := n.finishing[chat]; t != nil {
-			t.Stop()
-			delete(n.finishing, chat)
-		}
+		n.unfinishLocked(chat)
 		return
 	}
 	switch {
 	case e.Status != nil && !e.Status.Started.IsZero():
-		if t := n.finishing[chat]; t != nil { // the agent went on: no "finished"
-			t.Stop()
-			delete(n.finishing, chat)
-		}
+		n.unfinishLocked(chat) // the agent went on: no "finished"
 	case e.Status != nil && e.Status.Ended != model.NotEnded:
 		delete(n.asked, chat)
+		n.unfinishLocked(chat)
 		if e.Status.Ended == model.TurnDone {
-			var t *time.Timer
-			t = time.AfterFunc(s.timing.finished, func() {
-				n.mu.Lock()
-				waited := n.finishing[chat] == t
-				if waited {
-					delete(n.finishing, chat)
-				}
-				n.mu.Unlock()
-				if waited {
-					s.notify(chat, "finished")
-				}
-			})
-			n.finishing[chat] = t
+			off := make(chan struct{})
+			n.finishing[chat] = off
+			if !s.spawn(func() { s.finish(chat, off) }) { // closed
+				delete(n.finishing, chat)
+			}
 		}
 	case e.Item != nil && (e.Item.Kind == model.Permission || e.Item.Kind == model.Question) && e.Item.Status == "pending":
 		if n.asked[chat] == nil {
@@ -297,6 +284,40 @@ func (s *Service) Follow(e model.Event) {
 			kind = "permission"
 		}
 		s.spawn(func() { s.notify(chat, kind) }) // not under n.mu: queue takes it
+	}
+}
+
+// finish pushes "finished" for chatID once its turn's end has waited
+// timing.finished, unless the wait is called off (off closed: the agent
+// went on, or the chat went) or the service closes first.
+func (s *Service) finish(chatID string, off <-chan struct{}) {
+	wait := time.NewTimer(s.timing.finished)
+	defer wait.Stop()
+	select {
+	case <-wait.C:
+	case <-off:
+		return
+	case <-s.ctx.Done():
+		return
+	}
+	n := &s.notes
+	n.mu.Lock()
+	waited := n.finishing[chatID] == off
+	if waited {
+		delete(n.finishing, chatID)
+	}
+	n.mu.Unlock()
+	if waited {
+		s.notify(chatID, "finished")
+	}
+}
+
+// unfinishLocked calls off chatID's wait for "finished", if one runs.
+// Called with n.mu.
+func (n *notifier) unfinishLocked(chatID string) {
+	if off := n.finishing[chatID]; off != nil {
+		close(off)
+		delete(n.finishing, chatID)
 	}
 }
 
