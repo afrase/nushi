@@ -23,7 +23,9 @@ func TestRequests(t *testing.T) {
 		want     string // the result, as JSON; "" for none
 	}{
 		{"set_permission_mode", `{}`, `{"subtype":"set_permission_mode","mode":"plan"}`, `{}`,
-			func(s *claudeagent.Session) (any, error) { return nil, s.SetPermissionMode(ctx, claudeagent.Plan) }, ""},
+			func(s *claudeagent.Session) (any, error) {
+				return nil, s.SetPermissionMode(ctx, claudeagent.PermissionPlan)
+			}, ""},
 		{"set_model", `{}`, `{"subtype":"set_model","model":"opus"}`, `{}`,
 			func(s *claudeagent.Session) (any, error) { return nil, s.SetModel(ctx, "opus") }, ""},
 		{"set_model default", `{}`, `{"subtype":"set_model","model":null}`, `{}`,

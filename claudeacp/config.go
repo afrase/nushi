@@ -67,8 +67,8 @@ func (c *config) init(o claudeagent.Options, ir *claudeagent.InitResponse, boole
 		FastMode    bool   `json:"fastMode"`
 		Agent       string `json:"agent"`
 	}
-	if len(o.Settings) > 0 && o.Settings[0] == '{' { // else a settings file's path, which claude reads
-		_ = json.Unmarshal(o.Settings, &set)
+	if strings.HasPrefix(o.Settings, "{") { // else a settings file's path, which claude reads
+		_ = json.Unmarshal([]byte(o.Settings), &set)
 	}
 	if ir == nil {
 		ir = &claudeagent.InitResponse{}
@@ -149,10 +149,10 @@ func (c *config) modelInfo() *claudeagent.ModelInfo {
 // The permission modes a session offers, in order.
 var modes = []acp.SessionMode{
 	{ID: acp.SessionModeID(claudeagent.PermissionDefault), Name: "Manual", Description: "Asks before changing anything"},
-	{ID: acp.SessionModeID(claudeagent.AcceptEdits), Name: "Accept edits", Description: "Edits files without asking"},
-	{ID: acp.SessionModeID(claudeagent.Plan), Name: "Plan", Description: "Plans first, changing nothing"},
-	{ID: acp.SessionModeID(claudeagent.Auto), Name: "Auto", Description: "Claude decides what to ask"},
-	{ID: acp.SessionModeID(claudeagent.BypassPermissions), Name: "Bypass permissions", Description: "Asks nothing"},
+	{ID: acp.SessionModeID(claudeagent.PermissionAcceptEdits), Name: "Accept edits", Description: "Edits files without asking"},
+	{ID: acp.SessionModeID(claudeagent.PermissionPlan), Name: "Plan", Description: "Plans first, changing nothing"},
+	{ID: acp.SessionModeID(claudeagent.PermissionAuto), Name: "Auto", Description: "Claude decides what to ask"},
+	{ID: acp.SessionModeID(claudeagent.PermissionBypass), Name: "Bypass permissions", Description: "Asks nothing"},
 }
 
 // modesLocked are the modes the session offers.
@@ -187,6 +187,9 @@ func (c *config) optionsLocked() []acp.SessionConfigOption {
 	if m != nil && m.SupportsEffort && len(m.SupportedEffortLevels) > 0 {
 		vs := []acp.SessionConfigSelectOption{{Value: defaultValue, Name: "Default"}}
 		for _, l := range m.SupportedEffortLevels {
+			if l == "" {
+				continue // not a level: nothing to name or pick
+			}
 			vs = append(vs, acp.SessionConfigSelectOption{Value: acp.SessionConfigValueID(l), Name: strings.ToUpper(l[:1]) + l[1:]})
 		}
 		opts = append(opts, selectOption(optEffort, "Effort", acp.SessionConfigOptionCategoryThoughtLevel, c.effort, vs))
@@ -319,7 +322,7 @@ func (s *session) followInit(m *claudeagent.SystemInit) {
 var modelName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:@/\[\]-]{0,199}$`)
 
 // postModelSwitch is claude's PostModelSwitch hook, called after the
-// session's model changes for any cause (docs/facts/claude.md): the
+// session's model changes for any cause (its schema in claude's binary): the
 // client's option and the window follow, the turn not waiting for its
 // next system/init or result. A switch the client asked for (sdk) is
 // known already, and one a resume restores says nothing new. The window

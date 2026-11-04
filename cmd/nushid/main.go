@@ -28,6 +28,7 @@ import (
 	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/api"
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/claudehistory"
 	"github.com/afrase/nushi/internal/events"
 	"github.com/afrase/nushi/internal/features/chats"
@@ -62,7 +63,7 @@ func main() {
 			return
 		}
 	}
-	if len(os.Args) > 1 && os.Args[1] == claudeacp.Command { // and Claude, when its Go agent is on (ADR 0066)
+	if len(os.Args) > 1 && os.Args[1] == claude.AgentCommand { // and Claude, through its Go agent (ADR 0066)
 		claudeacp.Main()
 		return
 	}

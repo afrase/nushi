@@ -165,6 +165,11 @@ func (a *agent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*
 	o.Resume = fork
 	s, err := a.start(ctx, fork, o)
 	if err != nil {
+		// The fork's transcript, made for a session that never ran, goes
+		// with it rather than show in session/list.
+		if derr := store.Delete(fork, req.Cwd); derr != nil {
+			a.log.Warn("removing a fork that didn't start", "err", derr)
+		}
 		return nil, err
 	}
 	a.out.after(s.id, s.cmds.sendAll)

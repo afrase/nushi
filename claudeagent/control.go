@@ -28,6 +28,9 @@ type ControlError struct {
 }
 
 func (e *ControlError) Error() string {
+	if e.Code != "" {
+		return fmt.Sprintf("claude refused %s (%s): %s", e.Subtype, e.Code, e.Message)
+	}
 	return fmt.Sprintf("claude refused %s: %s", e.Subtype, e.Message)
 }
 

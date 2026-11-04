@@ -137,6 +137,21 @@ func TestForkFails(t *testing.T) {
 	}
 }
 
+// A fork whose claude doesn't start leaves no transcript behind to show in
+// session/list.
+func TestAForkThatDoesntStartIsRemoved(t *testing.T) {
+	p := start(t, nil) // no fake claude: the fork's start fails
+	cwd, sid := t.TempDir(), nthUUID(1)
+	p.writeHistory(t, cwd, sid, conversation()...)
+	if _, err := p.ForkSession(context.Background(), &acp.ForkSessionRequest{SessionID: acp.SessionID(sid), Cwd: cwd}); err == nil {
+		t.Fatal("the fork started with no claude")
+	}
+	ms, _ := sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.List(cwd, 0, 0)
+	if len(ms) != 1 || ms[0].ID != sid {
+		t.Errorf("sessions %+v", ms)
+	}
+}
+
 func TestListTitle(t *testing.T) {
 	long := strings.Repeat("é", 300)
 	for _, tc := range []struct{ in, want string }{

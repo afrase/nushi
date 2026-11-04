@@ -52,8 +52,10 @@ func TestExitPlanMode(t *testing.T) {
 		{inPlan, optReject, "exit-plan-auto exit-plan-accept-edits exit-plan-default reject",
 			`{"behavior":"deny","message":"The user wants to keep planning.","interrupt":true,"decisionClassification":"user_reject"}`, "", "cancelled"},
 		{inPlan, "", "exit-plan-auto exit-plan-accept-edits exit-plan-default reject", `{"behavior":"deny","interrupt":true}`, "", "end_turn"},
+		// Auto mode wasn't offered: picking it anyway leaves plan mode for nothing.
+		{noAuto, optPlanAuto, "exit-plan-accept-edits exit-plan-default reject", `{"behavior":"deny","interrupt":true}`, "", "end_turn"},
 	} {
-		t.Run(tc.pick, func(t *testing.T) {
+		t.Run(tc.pick+" "+tc.options, func(t *testing.T) {
 			f := started(tc.init, `null`, user("id2"), echo("id2"),
 				assistant(`{"type":"tool_use","id":"toolu_1","name":"ExitPlanMode","input":`+plan+`}`),
 				canUseTool("toolu_1", "ExitPlanMode", plan, ""), answers("toolu_1", tc.answer), toolDone,

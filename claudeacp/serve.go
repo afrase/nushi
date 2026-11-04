@@ -20,7 +20,8 @@ import (
 type Config struct {
 	CLIPath string // "" = claude, looked up on PATH
 	// ConfigDir is claude's config folder, where its transcripts are; ""
-	// = $CLAUDE_CONFIG_DIR, else ~/.claude.
+	// = $CLAUDE_CONFIG_DIR, else ~/.claude. When set, each claude gets it
+	// as CLAUDE_CONFIG_DIR, so it writes where the agent reads.
 	ConfigDir string
 	Spawn     claudeagent.Spawner // nil = claudeagent.Exec
 	Log       *slog.Logger        // nil = no log; never a prompt or a token

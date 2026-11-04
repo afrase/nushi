@@ -119,7 +119,7 @@ func (s *Session) Interrupt(ctx context.Context) (InterruptReceipt, error) {
 }
 
 // SetPermissionMode switches the session's permission mode. claude
-// refuses BypassPermissions unless the session started with AllowBypass
+// refuses PermissionBypass unless the session started with AllowBypass
 // (code "bypass_disabled").
 func (s *Session) SetPermissionMode(ctx context.Context, m PermissionMode) error {
 	return s.do(ctx, struct {

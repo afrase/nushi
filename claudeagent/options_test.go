@@ -2,7 +2,6 @@ package claudeagent
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -38,7 +37,7 @@ func TestArgs(t *testing.T) {
 		{"empty lists that mean none", Options{SettingSources: []string{}, Tools: []string{}}, []string{"--setting-sources=", "--tools="}},
 		{
 			"JSON in an argument of its own",
-			Options{Settings: json.RawMessage(`{"ultracode":true}`), MCPServers: map[string]MCPServer{
+			Options{Settings: `{"ultracode":true}`, MCPServers: map[string]MCPServer{
 				"web":   {Type: "http", URL: "https://x", Headers: map[string]string{"A": "b"}},
 				"tools": {Type: "stdio", Command: "/bin/t", Args: []string{"-x"}, Env: map[string]string{"K": "v"}},
 			}},
@@ -84,6 +83,7 @@ func TestArgsRefused(t *testing.T) {
 		{ExtraArgs: map[string]*string{"--model": nil}},
 		{ExtraArgs: map[string]*string{"a=b": nil}},
 		{ExtraArgs: map[string]*string{"": nil}},
+		{Settings: "-x"},
 	} {
 		if a, err := args(o); err == nil {
 			t.Errorf("%+v: %q, no error", o, a)
@@ -110,8 +110,8 @@ func TestEnviron(t *testing.T) {
 		},
 		{
 			"the app, the folder",
-			Options{Env: base, ClientApp: "nushi/0.9", Cwd: "/w"},
-			[]string{"PATH=/bin", "HOME=/h", "CLAUDE_AGENT_SDK_CLIENT_APP=nushi/0.9", "CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS=1",
+			Options{Env: base, ClientApp: "myeditor/1.2", Cwd: "/w"},
+			[]string{"PATH=/bin", "HOME=/h", "CLAUDE_AGENT_SDK_CLIENT_APP=myeditor/1.2", "CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS=1",
 				"PWD=/w", "CLAUDE_CODE_ENTRYPOINT=sdk-cli"},
 		},
 		{
@@ -162,6 +162,14 @@ func TestSpecFindsClaude(t *testing.T) {
 		t.Error("found a claude that can't run")
 	}
 	if s, err := spec(Options{CLIPath: "/opt/claude", Env: []string{}}); err != nil || s.Path != "/opt/claude" {
+		t.Errorf("%+v %v", s, err)
+	}
+	// A relative path is this process's, never the session's folder's.
+	here, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s, err := spec(Options{CLIPath: "node_modules/.bin/claude", Cwd: "/w", Env: []string{}}); err != nil || s.Path != filepath.Join(here, "node_modules", ".bin", "claude") {
 		t.Errorf("%+v %v", s, err)
 	}
 }

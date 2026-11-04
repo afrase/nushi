@@ -58,8 +58,10 @@ type ExitError struct {
 
 func (e *ExitError) Error() string {
 	switch {
+	case e.Result != "" && e.Signal != nil:
+		return fmt.Sprintf("claude returned an error result, then ended on a signal (%v): %s", e.Signal, e.Result)
 	case e.Result != "":
-		return "claude returned an error result: " + e.Result
+		return fmt.Sprintf("claude returned an error result, then exited with code %d: %s", e.Code, e.Result)
 	case e.Signal != nil:
 		return fmt.Sprintf("claude ended on a signal (%v)%s", e.Signal, stderrSuffix(e.Stderr))
 	default:

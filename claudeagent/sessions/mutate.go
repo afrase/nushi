@@ -139,7 +139,7 @@ func parseFork(data []byte, id string) (records []copied, replacements []json.Ra
 func forkLines(records []copied, replacements []json.RawMessage, id, upTo string) (string, []string, error) {
 	kept, found := cut(records, upTo)
 	if upTo != "" && !found {
-		return "", nil, fmt.Errorf("message %s isn't in session %s", upTo, id)
+		return "", nil, fmt.Errorf("sessions: message %s isn't in session %s", upTo, id)
 	}
 	// Progress records only link others: they get a uuid for the links
 	// through them, but aren't written.
@@ -152,7 +152,7 @@ func forkLines(records []copied, replacements []json.RawMessage, id, upTo string
 		}
 	}
 	if len(writable) == 0 {
-		return "", nil, fmt.Errorf("session %s has no messages to fork", id)
+		return "", nil, fmt.Errorf("sessions: session %s has no messages to fork", id)
 	}
 	newID, now := newUUID(), stamp()
 	var lines []string

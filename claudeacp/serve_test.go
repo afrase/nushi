@@ -46,7 +46,7 @@ func TestInitialize(t *testing.T) {
 
 // session/new runs claude in the folder with the session's id, the
 // user's settings, partial messages and echoes, the ACP MCP servers over
-// the options' and the options Nushi sends; initialize carries what the
+// the options' and the host options a client sends; initialize carries what the
 // command line can't.
 func TestNewSession(t *testing.T) {
 	f := claudetest.New(
@@ -64,7 +64,7 @@ func TestNewSession(t *testing.T) {
 		SystemPrompt: &acp.SystemPrompt{Mode: acp.SystemPromptModeAppend, Content: []acp.ContentBlock{
 			{Text: &acp.TextContent{Text: "Be brief."}}, {Text: &acp.TextContent{Text: "Be kind."}}}},
 		Meta: map[string]any{"claudeCode": map[string]any{"options": map[string]any{
-			"perTaskStopAffordance": false, "env": map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1"},
+			"perTaskStopAffordance": false, "env": map[string]any{"CLAUDE_CODE_REPORT_FINDINGS": "1", "CLAUDE_CONFIG_DIR": "/elsewhere"},
 			"settings": map[string]any{"ultracode": true}, "model": "opus", "unknownKey": 1,
 			"mcpServers": map[string]any{"tools": map[string]any{"type": "stdio", "command": "/old"}, "kept": map[string]any{"type": "sse", "url": "https://kept"}},
 		}}},
@@ -97,6 +97,17 @@ func TestNewSession(t *testing.T) {
 	}
 	if !slices.Contains(sp.Env, "CLAUDE_CODE_REPORT_FINDINGS=1") {
 		t.Error("the options' env isn't claude's")
+	}
+	// claude writes its transcripts where the agent reads them, whatever
+	// the session's env says.
+	var dirs []string
+	for _, kv := range sp.Env {
+		if v, ok := strings.CutPrefix(kv, "CLAUDE_CONFIG_DIR="); ok {
+			dirs = append(dirs, v)
+		}
+	}
+	if !slices.Equal(dirs, []string{p.agent.cfg.ConfigDir}) {
+		t.Errorf("CLAUDE_CONFIG_DIR %q, the agent's %q", dirs, p.agent.cfg.ConfigDir)
 	}
 }
 
@@ -187,7 +198,7 @@ func TestClose(t *testing.T) {
 // A client that goes mid-turn has claude interrupted once: closing the
 // session interrupts the turn, and the prompt's request ending with the
 // connection isn't a cancel of its own, which would race the close with a
-// second interrupt (the parity scenario eof-mid-tool).
+// second interrupt (as a recording of a client gone mid-tool showed).
 func TestClientGoesMidTurn(t *testing.T) {
 	taken := make(chan struct{})
 	f := fake(user("id2"), echo("id2"), signal(taken))

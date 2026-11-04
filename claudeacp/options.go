@@ -25,8 +25,8 @@ type setup struct {
 }
 
 // sessionOptions are the keys of _meta.claudeCode.options the agent
-// applies: the ones Nushi sends, and a few more of the SDK options of the
-// same names. Others are logged and ignored.
+// applies, claude-agent-acp's host options: the Agent SDK's options of
+// the same names. Others are logged and ignored.
 type sessionOptions struct {
 	PerTaskStopAffordance *bool                            `json:"perTaskStopAffordance"`
 	ForwardSubagentText   *bool                            `json:"forwardSubagentText"`
@@ -73,6 +73,13 @@ func (a *agent) options(su setup) (claudeagent.Options, error) {
 	}
 	if err := a.applyOptions(&o, su.meta); err != nil {
 		return o, err
+	}
+	if dir := a.cfg.ConfigDir; dir != "" {
+		env := o.Env
+		if env == nil {
+			env = os.Environ()
+		}
+		o.Env = withEnv(env, map[string]string{configDirVar: dir})
 	}
 	o.AddDirs = append(o.AddDirs, su.dirs...)
 	for _, s := range su.mcpServers { // over the options' servers of the same name
@@ -135,6 +142,12 @@ func (a *agent) applyOptions(o *claudeagent.Options, meta map[string]any) error 
 	if so.ForwardSubagentText != nil {
 		o.Init.ForwardSubagentText = *so.ForwardSubagentText
 	}
+	if _, ok := so.Env[configDirVar]; ok {
+		// The agent reads claude's transcripts from its own config folder
+		// (Config.ConfigDir), so a session's claude can't write elsewhere.
+		a.log.Warn("a session's " + configDirVar + " left out: the agent's own stands")
+		delete(so.Env, configDirVar)
+	}
 	if len(so.Env) > 0 {
 		o.Env = withEnv(os.Environ(), so.Env)
 	}
@@ -159,14 +172,17 @@ func settings(o *claudeagent.Options, v json.RawMessage) error {
 		if !filepath.IsAbs(path) {
 			path = filepath.Join(o.Cwd, path)
 		}
-		o.Settings = json.RawMessage(path) // claude's --settings takes JSON or a path
+		o.Settings = path // claude's --settings takes JSON or a path
 	case v[0] == '{':
-		o.Settings = v
+		o.Settings = string(v)
 	default:
 		return invalidParams("_meta.claudeCode.options.settings is an object or a path")
 	}
 	return nil
 }
+
+// configDirVar names claude's config folder in its environment.
+const configDirVar = "CLAUDE_CONFIG_DIR"
 
 // withEnv is env with set's variables, replacing those of the same names.
 func withEnv(env []string, set map[string]string) []string {

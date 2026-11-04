@@ -169,8 +169,8 @@ func known(u claudeagent.PermissionUpdate) bool {
 		return u.Behavior == claudeagent.BehaviorAllow || u.Behavior == claudeagent.BehaviorDeny || u.Behavior == claudeagent.BehaviorAsk
 	case claudeagent.UpdateSetMode:
 		switch u.Mode {
-		case claudeagent.PermissionDefault, claudeagent.AcceptEdits, claudeagent.BypassPermissions, claudeagent.Plan,
-			claudeagent.DontAsk, claudeagent.Auto:
+		case claudeagent.PermissionDefault, claudeagent.PermissionAcceptEdits, claudeagent.PermissionBypass, claudeagent.PermissionPlan,
+			claudeagent.PermissionDontAsk, claudeagent.PermissionAuto:
 			return true
 		}
 		return false

@@ -17,7 +17,7 @@ func TestPermissionAnswer(t *testing.T) {
 		want   string
 	}{
 		{"allow", asked, Allow{}, `{"behavior":"allow","toolUseID":"t1","updatedInput":{"command":"ls"}}`},
-		{"allow changed", asked, Allow{UpdatedInput: json.RawMessage(`{"command":"pwd"}`), UpdatedPermissions: []PermissionUpdate{{Type: "setMode", Mode: Plan, Destination: "session"}}, Classification: UserPermanent},
+		{"allow changed", asked, Allow{UpdatedInput: json.RawMessage(`{"command":"pwd"}`), UpdatedPermissions: []PermissionUpdate{{Type: "setMode", Mode: PermissionPlan, Destination: "session"}}, Classification: UserPermanent},
 			`{"behavior":"allow","decisionClassification":"user_permanent","toolUseID":"t1","updatedInput":{"command":"pwd"},"updatedPermissions":[{"type":"setMode","mode":"plan","destination":"session"}]}`},
 		{"allow rules", asked, Allow{UpdatedPermissions: []PermissionUpdate{{Type: "addRules", Rules: []PermissionRule{{ToolName: "Bash", RuleContent: "ls:*"}, {ToolName: "Read"}}, Behavior: "allow", Destination: "localSettings"}}},
 			`{"behavior":"allow","toolUseID":"t1","updatedInput":{"command":"ls"},"updatedPermissions":[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"ls:*"},{"toolName":"Read"}],"behavior":"allow","destination":"localSettings"}]}`},

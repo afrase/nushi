@@ -86,6 +86,8 @@ func TestConfigOptions(t *testing.T) {
 			map[string]any{"model": "haiku", "permissionMode": "plan", "settings": map[string]any{"effortLevel": "medium"}}, "plan",
 			"mode/mode=plan[" + allModes + "] model/model=haiku[default sonnet haiku] agent/=default[default reviewer]"},
 		{"nothing said", `{}`, nil, nil, "default", "mode/mode=default[" + allModes + "]"},
+		{"an empty effort level, passed over", `{"models":[{"value":"default","supportsEffort":true,"supportedEffortLevels":["","low"]}]}`, nil, nil, "default",
+			"mode/mode=default[" + allModes + "] model/model=default[default] effort/thought_level=default[default low]"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			p := start(t, tc.caps, started(tc.init, `null`))

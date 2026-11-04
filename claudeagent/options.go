@@ -19,12 +19,12 @@ type PermissionMode string
 
 // The permission modes claude knows; it may know more.
 const (
-	PermissionDefault PermissionMode = "default" // ask, as the settings say ("Manual")
-	AcceptEdits       PermissionMode = "acceptEdits"
-	Plan              PermissionMode = "plan"
-	Auto              PermissionMode = "auto"
-	BypassPermissions PermissionMode = "bypassPermissions"
-	DontAsk           PermissionMode = "dontAsk"
+	PermissionDefault     PermissionMode = "default" // ask, as the settings say ("Manual")
+	PermissionAcceptEdits PermissionMode = "acceptEdits"
+	PermissionPlan        PermissionMode = "plan"
+	PermissionAuto        PermissionMode = "auto"
+	PermissionBypass      PermissionMode = "bypassPermissions"
+	PermissionDontAsk     PermissionMode = "dontAsk"
 )
 
 // Thinking is how the model thinks before it answers.
@@ -71,13 +71,13 @@ type Options struct {
 	// model's SupportedEffortLevels); "" = claude's default.
 	Effort                 string
 	PermissionMode         PermissionMode // "" = claude decides, from the settings
-	AllowBypass            bool           // lets the session switch to BypassPermissions
+	AllowBypass            bool           // lets the session switch to PermissionBypass
 	Resume                 string         // a session id to continue
 	SessionID              string         // the new session's id
 	ForkSession            bool           // with Resume: continue in a new session
 	ResumeSessionAt        string         // with Resume: the message to resume after
 	SettingSources         []string       // nil = every source; empty = none
-	Settings               json.RawMessage
+	Settings               string         // --settings: a JSON object, or a settings file's path
 	MCPServers             map[string]MCPServer
 	AddDirs                []string
 	AllowedTools           []string
@@ -119,7 +119,7 @@ type Options struct {
 	// runs on the reading goroutine, and claude's exit is reported only
 	// once stderr is read through, so it should return promptly.
 	Stderr    func(line string)
-	ClientApp string       // names the app in claude's User-Agent, e.g. "nushi/0.9"
+	ClientApp string       // names the app in claude's User-Agent, e.g. "myeditor/1.2"
 	MaxLine   int          // the longest stdout line read; 0 = 128 MiB
 	Spawner   Spawner      // nil = Exec
 	Log       *slog.Logger // nil = no log
@@ -172,8 +172,10 @@ func args(o Options) ([]string, error) {
 	on("fork-session", o.ForkSession)
 	flag("resume-session-at", o.ResumeSessionAt)
 	list("setting-sources", o.SettingSources)
-	if len(o.Settings) > 0 {
-		a = append(a, "--settings", string(o.Settings))
+	if strings.HasPrefix(o.Settings, "-") {
+		return nil, errors.New("claudeagent: Settings is a JSON object or a file's path, not a flag")
+	} else if o.Settings != "" {
+		a = append(a, "--settings", o.Settings)
 	}
 	if len(o.MCPServers) > 0 {
 		config, err := json.Marshal(map[string]any{"mcpServers": o.MCPServers})
@@ -296,12 +298,19 @@ func spec(o Options) (Spec, error) {
 	}
 	env := environ(o)
 	path := o.CLIPath
-	if path == "" {
+	switch {
+	case path == "":
 		path = "claude"
-	}
-	if !strings.ContainsRune(path, filepath.Separator) {
+		fallthrough
+	case !strings.ContainsRune(path, filepath.Separator):
 		if path, err = lookPath(path, getenv(env, "PATH")); err != nil {
 			return Spec{}, err
+		}
+	case !filepath.IsAbs(path):
+		// Against this process's folder: claude runs in Cwd, where a
+		// relative path would name whatever the project put there.
+		if path, err = filepath.Abs(path); err != nil {
+			return Spec{}, fmt.Errorf("claudeagent: CLIPath %q: %w", o.CLIPath, err)
 		}
 	}
 	return Spec{Path: path, Args: a, Env: env, Dir: o.Cwd, SharedGroup: o.SharedGroup}, nil

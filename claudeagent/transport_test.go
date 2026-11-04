@@ -246,7 +246,7 @@ func TestTransportExitError(t *testing.T) {
 	if len(ee.Stderr) > tailSize || len(ee.Stderr) < tailSize-100 || !utf8.ValidString(ee.Stderr) || !strings.HasSuffix(ee.Stderr, "fatal: no login") {
 		t.Errorf("stderr %d bytes: %.40q…", len(ee.Stderr), ee.Stderr)
 	}
-	if ee.Result != "boom" || ee.Error() != "claude returned an error result: boom" {
+	if ee.Result != "boom" || ee.Error() != "claude returned an error result, then exited with code 3: boom" {
 		t.Errorf("%q", ee.Error())
 	}
 	if len(lines) != 101 {

@@ -1,6 +1,8 @@
 package claudeacp
 
 import (
+	"slices"
+
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/claudeagent"
@@ -20,8 +22,8 @@ const (
 
 // planModes are the modes ExitPlanMode's options start the work in.
 var planModes = map[string]claudeagent.PermissionMode{
-	optPlanAuto:   claudeagent.Auto,
-	optPlanEdits:  claudeagent.AcceptEdits,
+	optPlanAuto:   claudeagent.PermissionAuto,
+	optPlanEdits:  claudeagent.PermissionAcceptEdits,
 	optPlanManual: claudeagent.PermissionDefault,
 }
 
@@ -50,7 +52,8 @@ func (c *config) exitPlanOptions() []acp.PermissionOption {
 // for the mode picked, and the client is told; keeping on planning
 // stops the turn, which ends cancelled.
 func (s *session) exitPlan(option string) claudeagent.PermissionResult {
-	if mode, ok := planModes[option]; ok {
+	offered := slices.ContainsFunc(s.cfg.exitPlanOptions(), func(o acp.PermissionOption) bool { return string(o.OptionID) == option })
+	if mode, ok := planModes[option]; ok && offered {
 		s.cfg.modeChanged(mode)
 		return claudeagent.Allow{Classification: claudeagent.UserTemporary,
 			UpdatedPermissions: []claudeagent.PermissionUpdate{{Type: claudeagent.UpdateSetMode, Mode: mode, Destination: claudeagent.DestinationSession}}}
