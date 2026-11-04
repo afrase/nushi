@@ -267,3 +267,24 @@ func TestTakeBackGivesUpWithItsContext(t *testing.T) {
 	agent.release()
 	eventually(t, c, func() bool { return !c.busy })
 }
+
+// A stop that races the agent's own end is the user's (verdictLocked): the
+// turn is stopped, so the queue waits, as after any stopped turn, rather
+// than starting a turn the user just stopped.
+func TestAStopRacingTheAgentsEndHoldsTheQueue(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.gate, agent.ignoreCancel = make(chan struct{}), true
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	agent.release() // it answers end_turn, not cancelled
+	eventually(t, c, func() bool { return !c.busy || len(c.queue) == 0 })
+	c.mu.Lock()
+	queued, held := len(c.queue), c.held
+	c.mu.Unlock()
+	if got, _ := agent.texts(); !reflect.DeepEqual(got, []string{"one"}) || queued != 1 || !held {
+		t.Errorf("prompts %q, queue %d, held %v; want only one, two waiting", got, queued, held)
+	}
+}
