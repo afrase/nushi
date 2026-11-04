@@ -44,18 +44,33 @@ List<CodeRun> codeRuns(String text) {
 /// One style over part of a text, merged over what's under it.
 typedef SpanPaint = (int start, int end, TextStyle style);
 
+/// Whether [c] is inline code whose backticks show for [selection]: the
+/// caret, or either end of a selection, strictly between them. Elsewhere
+/// they're hidden, as Obsidian's live preview hides them, so closing the
+/// code hides both and arrowing back in shows them.
+bool showsTicks(CodeRun c, TextSelection selection) {
+  bool inside(int at) => c.start < at && at < c.end;
+  return selection.isValid &&
+      (inside(selection.baseOffset) || inside(selection.extentOffset));
+}
+
 /// [code] painted as code in [base]'s place: the code font a size down, as
-/// the transcript's inline code is, in its ink on its chip, with the
-/// backticks muted; a block's lines without the chip, its fence lines
-/// muted. Only the font and its colors change: the box's line height is
-/// fixed by its strut (a `TextField`'s default), so a line of code is as
-/// tall as one of prose and the caret, the selection and the box's height
-/// are where they'd be.
+/// the transcript's inline code is, in its ink on its chip; the backticks
+/// muted while [selection] is in it ([showsTicks]) and hidden otherwise; a
+/// block's lines without the chip, its fence lines muted. Only the font
+/// and its colors change: the box's line height is fixed by its strut (a
+/// `TextField`'s default), so a line of code is as tall as one of prose and
+/// the caret, the selection and the box's height are where they'd be.
+///
+/// A hidden backtick is still in the text, drawn at no size: it takes no
+/// width and paints nothing, while what's sent, copied, undone and spell
+/// checked is the text as typed, and the caret still steps over it.
 List<SpanPaint> codePaints(
   List<CodeRun> code,
   TextStyle base,
-  NushiTheme theme,
-) {
+  NushiTheme theme, {
+  TextSelection selection = const TextSelection.collapsed(offset: -1),
+}) {
   final t = theme.t;
   final mono = TextStyle(
     fontFamily: NushiTheme.codeFont,
@@ -70,13 +85,16 @@ List<SpanPaint> codePaints(
     backgroundColor: t.inlineCode,
   );
   final marker = inline.copyWith(color: t.textMuted);
+  // No size and no spacing: the box's text inherits the theme's letter
+  // spacing, which a glyph of no size would still take.
+  final hidden = marker.copyWith(fontSize: 0, letterSpacing: 0);
   final fence = mono.copyWith(color: t.textMuted);
   return [
     for (final c in code)
       if (c.open == 1) ...[
-        (c.start, c.start + 1, marker),
+        (c.start, c.start + 1, showsTicks(c, selection) ? marker : hidden),
         (c.start + 1, c.end - 1, inline),
-        (c.end - 1, c.end, marker),
+        (c.end - 1, c.end, showsTicks(c, selection) ? marker : hidden),
       ] else ...[
         (c.start, c.start + c.open, fence),
         (c.start + c.open, c.end - c.close, mono),

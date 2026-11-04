@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/composer_code.dart';
 import 'package:nushi/theme/theme.dart';
@@ -7,7 +8,8 @@ import 'fake_daemon.dart';
 import 'spell_harness.dart';
 
 // Code in the composer's text shows in the code font (codeRuns, codePaints),
-// and the field stays as plain text's: its text, height and caret.
+// inline code in its ink with its backticks hidden while the caret is
+// elsewhere, and the field stays as plain text's: its text, height and caret.
 
 List<String> _code(String text) => [
   for (final c in codeRuns(text)) text.substring(c.start, c.end),
@@ -23,6 +25,47 @@ List<String> _inFont(WidgetTester tester, String family) {
     return true;
   });
   return found;
+}
+
+/// The style of the character at [offset] as drawn.
+TextStyle? _styleAt(WidgetTester tester, int offset) {
+  var at = 0;
+  TextStyle? found;
+  editable(tester).text!.visitChildren((span) {
+    final text = (span as TextSpan).text;
+    if (text == null) return true;
+    if (offset < at + text.length) {
+      found = span.style;
+      return false;
+    }
+    at += text.length;
+    return true;
+  });
+  return found;
+}
+
+/// Whether the backtick at [offset] is drawn.
+bool _shown(WidgetTester tester, int offset) {
+  expect(editable(tester).text!.toPlainText()[offset], '`');
+  return _styleAt(tester, offset)?.fontSize != 0;
+}
+
+/// Where the caret at [offset] is drawn, from the box's left.
+double _caretX(WidgetTester tester, int offset) =>
+    editable(tester).getLocalRectForCaret(TextPosition(offset: offset)).left;
+
+Future<void> _select(WidgetTester tester, TextSelection s) async {
+  final text = tester.state<EditableTextState>(find.byType(EditableText));
+  text.userUpdateTextEditingValue(
+    text.textEditingValue.copyWith(selection: s),
+    SelectionChangedCause.keyboard,
+  );
+  await tester.pump();
+}
+
+Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
+  await tester.sendKeyEvent(key);
+  await tester.pump();
 }
 
 TextStyle? _styleOf(WidgetTester tester, String text) {
@@ -63,18 +106,22 @@ void main() {
     ('light', Tokens.light),
   ]) {
     spellTest('inline code in the box is in the code font, in its ink on '
-        'its chip, backticks muted, $name', (tester) async {
+        'its chip, backticks muted while the caret is in it, $name', (
+      tester,
+    ) async {
       await spellBox(
         tester,
         FakeSpeller({}),
         text: 'run `make check` now',
         tokens: tokens,
       );
+      await _select(tester, const TextSelection.collapsed(offset: 8));
       expect(_inFont(tester, NushiTheme.codeFont), ['`', 'make check', '`']);
       final body = _styleOf(tester, 'make check')!;
       expect(body.backgroundColor, tokens.inlineCode);
       expect(body.color, tokens.inlineCodeText);
-      expect(_styleOf(tester, '`')!.color, tokens.textMuted);
+      expect(_styleAt(tester, 4)!.color, tokens.textMuted);
+      expect(_styleAt(tester, 4)!.fontSize, greaterThan(0));
       expect(_styleOf(tester, ' now')?.fontFamily, isNull);
     });
   }
@@ -157,6 +204,159 @@ void main() {
     expect(style.fontFamily, NushiTheme.codeFont);
     expect(style.decoration, TextDecoration.underline);
     expect(editable(tester).text!.toPlainText(), 'a `kana` b');
+  });
+
+  group('backticks', () {
+    // "a `bc` d": the code is 2 to 6, its backticks at 2 and 5.
+    const text = 'a `bc` d';
+
+    spellTest('show only with the caret strictly between them', (tester) async {
+      await spellBox(tester, FakeSpeller({}), text: text);
+      for (final (caret, shown) in [
+        (0, false),
+        (2, false), // before the opening one
+        (3, true),
+        (4, true),
+        (5, true), // before the closing one
+        (6, false), // after it
+        (8, false),
+      ]) {
+        await _select(tester, TextSelection.collapsed(offset: caret));
+        expect(_shown(tester, 2), shown, reason: 'caret at $caret');
+        expect(_shown(tester, 5), shown, reason: 'caret at $caret');
+        expect(editable(tester).text!.toPlainText(), text);
+      }
+    });
+
+    spellTest('show with either end of a selection in the code, not with '
+        'one across it', (tester) async {
+      await spellBox(tester, FakeSpeller({}), text: text);
+      for (final (base, extent, shown) in [
+        (0, 8, false),
+        (2, 6, false),
+        (0, 4, true),
+        (4, 8, true),
+        (8, 3, true),
+        (3, 4, true),
+      ]) {
+        await _select(
+          tester,
+          TextSelection(baseOffset: base, extentOffset: extent),
+        );
+        expect(_shown(tester, 2), shown, reason: '$base to $extent');
+        expect(_shown(tester, 5), shown, reason: '$base to $extent');
+      }
+    });
+
+    spellTest('hidden, a backtick takes no width and paints nothing; the '
+        'caret is on the line as anywhere', (tester) async {
+      await spellBox(tester, FakeSpeller({}), text: text, width: 900);
+      await _select(tester, const TextSelection.collapsed(offset: 8));
+      final e = editable(tester);
+      expect(_caretX(tester, 2), _caretX(tester, 3));
+      expect(_caretX(tester, 5), _caretX(tester, 6));
+      for (final at in [2, 5]) {
+        expect(
+          e.getBoxesForSelection(
+            TextSelection(baseOffset: at, extentOffset: at + 1),
+          ),
+          isEmpty,
+        );
+      }
+      final line = e.getLocalRectForCaret(const TextPosition(offset: 0));
+      for (final at in [2, 3, 5, 6]) {
+        final caret = e.getLocalRectForCaret(TextPosition(offset: at));
+        expect((caret.top, caret.height), (line.top, line.height));
+      }
+      // Shown, they take their width again.
+      await _select(tester, const TextSelection.collapsed(offset: 4));
+      expect(_caretX(tester, 3), greaterThan(_caretX(tester, 2) + 4));
+    });
+
+    spellTest('typing the closing backtick hides both; arrowing back in '
+        'shows them, and each arrow moves the caret', (tester) async {
+      final (_, chat) = await spellBox(tester, FakeSpeller({}), width: 900);
+      await typed(tester, 'run `make');
+      expect(chat.draft.text.code, isEmpty);
+      expect(
+        _styleAt(tester, 4)?.fontFamily,
+        isNot(NushiTheme.codeFont),
+        reason: 'not code yet',
+      );
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: 'run `make`',
+          selection: TextSelection.collapsed(offset: 10),
+        ),
+      );
+      await tester.pump();
+      expect(_shown(tester, 4), isFalse);
+      expect(_shown(tester, 9), isFalse);
+      expect(chat.draft.text.text, 'run `make`');
+
+      final end = _caretX(tester, 10);
+      await _key(tester, LogicalKeyboardKey.arrowLeft);
+      expect(chat.draft.text.selection.baseOffset, 9);
+      expect(_shown(tester, 4), isTrue);
+      // The caret is before the closing backtick, drawn again; the opening
+      // one's width moves it right of where the code ended.
+      final closing = editable(tester).getBoxesForSelection(
+        const TextSelection(baseOffset: 9, extentOffset: 10),
+      );
+      expect(closing.single.right - closing.single.left, greaterThan(4));
+      expect(
+        _caretX(tester, 9),
+        moreOrLessEquals(closing.single.left, epsilon: 2.5),
+      );
+      expect(_caretX(tester, 9), isNot(end));
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      expect(chat.draft.text.selection.baseOffset, 10);
+      expect(_shown(tester, 9), isFalse);
+      expect(_caretX(tester, 10), end);
+
+      await _select(tester, const TextSelection.collapsed(offset: 4));
+      final before = _caretX(tester, 4);
+      await _key(tester, LogicalKeyboardKey.arrowRight);
+      expect(chat.draft.text.selection.baseOffset, 5);
+      expect(_shown(tester, 4), isTrue);
+      expect(_caretX(tester, 5), greaterThan(before));
+    });
+
+    spellTest('backspace after a hidden closing backtick deletes it, and '
+        'the open one shows as typed', (tester) async {
+      final (_, chat) = await spellBox(tester, FakeSpeller({}));
+      await typed(tester, 'run `make` now');
+      await _select(tester, const TextSelection.collapsed(offset: 10));
+      expect(_shown(tester, 9), isFalse);
+      await tester.pump(const Duration(seconds: 1)); // undo's pause
+      await _key(tester, LogicalKeyboardKey.backspace);
+      await tester.pump(const Duration(seconds: 1));
+      expect(chat.draft.text.text, 'run `make now');
+      expect(
+        chat.draft.text.selection,
+        const TextSelection.collapsed(offset: 9),
+      );
+      expect(chat.draft.text.code, isEmpty);
+      expect(_styleAt(tester, 4)?.fontFamily, isNot(NushiTheme.codeFont));
+      expect(_styleAt(tester, 4)?.fontSize, isNot(0));
+      // Undone, it's back, and hidden again.
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      await tester.pump();
+      expect(chat.draft.text.text, 'run `make` now');
+      expect(_shown(tester, 9), isFalse, reason: 'the caret is after it');
+    });
+
+    spellTest('what is sent keeps its backticks', (tester) async {
+      final (_, chat) = await spellBox(tester, FakeSpeller({}));
+      await typed(tester, 'run `make check` and `go vet`');
+      expect(_shown(tester, 4), isFalse);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(sentPrompts().single.text, 'run `make check` and `go vet`');
+      expect(chat.draft.text.text, isEmpty);
+    });
   });
 
   for (final (name, tokens) in [

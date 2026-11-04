@@ -90,7 +90,7 @@ class ComposerText extends TextEditingController {
         ? value.composing
         : null;
     return paintedSpan(text, style, [
-      codePaints(code, base, theme),
+      codePaints(code, base, theme, selection: selection),
       [
         for (final m in marks)
           if (composing == null ||
