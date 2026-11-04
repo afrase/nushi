@@ -168,6 +168,7 @@ class _JiraViewState extends State<JiraView> {
 
   @override
   void dispose() {
+    _sitesAgain.cancel();
     _poll?.cancel();
     _slowTimer?.cancel();
     jiraCollapsed.removeListener(_keepVisible);
@@ -179,7 +180,14 @@ class _JiraViewState extends State<JiraView> {
     super.dispose();
   }
 
+  // The sites asked for while the daemon was gone: without them the view
+  // would say there are none.
+  late final _sitesAgain = LoadAgain(widget.daemon, () {
+    if (mounted) unawaited(_loadSites());
+  });
+
   Future<void> _loadSites() async {
+    _sitesAgain.cancel();
     try {
       final r = await widget.daemon.client.listJiraSites(
         ListJiraSitesRequest(),
@@ -194,6 +202,7 @@ class _JiraViewState extends State<JiraView> {
           _sites = const [];
           _error = errorText(e);
         });
+        _sitesAgain.failed(e);
       }
     }
   }

@@ -126,6 +126,7 @@ class _GitHubViewState extends State<GitHubView> {
 
   @override
   void dispose() {
+    _hostsAgain.cancel();
     _poll?.cancel();
     _slowTimer?.cancel();
     _listFocus.dispose();
@@ -133,7 +134,13 @@ class _GitHubViewState extends State<GitHubView> {
     super.dispose();
   }
 
+  // The hosts asked for while the daemon was gone: the inbox needs one.
+  late final _hostsAgain = LoadAgain(widget.daemon, () {
+    if (mounted) unawaited(_loadHosts());
+  });
+
   Future<void> _loadHosts() async {
+    _hostsAgain.cancel();
     try {
       final r = await widget.daemon.client.listGitHubHosts(
         ListGitHubHostsRequest(),
@@ -153,6 +160,7 @@ class _GitHubViewState extends State<GitHubView> {
           _hosts = const [];
           _error = errorText(e);
         });
+        _hostsAgain.failed(e);
       }
     }
   }

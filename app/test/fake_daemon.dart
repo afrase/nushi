@@ -61,6 +61,19 @@ class FakeDaemon implements Transport {
   Object? Function(Object input)? answer;
   final calls = <Object>[];
 
+  /// While set the daemon is gone: every call fails as the transport says
+  /// when none answers, pings too.
+  bool down = false;
+
+  /// The daemon gone for a ping, then back, as across a restart.
+  Future<void> restart(WidgetTester tester) async {
+    down = true;
+    await tester.pump(const Duration(seconds: 2));
+    down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+  }
+
   /// What ListAgentSessions answers (nothing listed when unset), and the
   /// requests: listed and opened.
   ListAgentSessionsResponse Function(ListAgentSessionsRequest)? sessions;
@@ -88,6 +101,12 @@ class FakeDaemon implements Transport {
     I input, [
     CallOptions? options,
   ]) async {
+    if (down) {
+      throw ConnectException(
+        Code.unavailable,
+        'daemon unavailable: dial failed',
+      );
+    }
     if (input is ListAgentSessionsRequest) listed.add(input);
     if (input is OpenAgentSessionRequest) opened.add(input);
     if (input is SetUpAgentRequest) setUp.add(input.agent);

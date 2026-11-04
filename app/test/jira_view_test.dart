@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -344,6 +345,26 @@ void main() {
       (s.jiraKey, s.worktree, s.branch),
       ('ACME-9', true, 'ACME-9-log-in-with-a-passkey'),
     );
+    await closeView(tester, d);
+  });
+
+  testWidgets('sites not listed while the daemon was gone are listed once '
+      'it is back', (tester) async {
+    var gone = true; // the first ask meets a restarting daemon
+    final (fake, d) = await openView(
+      tester,
+      more: (input) => input is ListJiraSitesRequest && gone
+          ? throw ConnectException(
+              Code.unavailable,
+              'daemon unavailable: connection lost',
+            )
+          : null,
+    );
+    expect(find.text('ACME-12'), findsNothing);
+    gone = false;
+    await fake.restart(tester);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.text('ACME-12'), findsOneWidget);
     await closeView(tester, d);
   });
 

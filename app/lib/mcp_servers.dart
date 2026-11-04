@@ -7,7 +7,7 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart' show daemonGone, errorText;
+import 'package:nushi/widgets.dart' show errorText;
 
 /// The MCP servers an agent's config gives a folder, from the daemon (API
 /// 32; Ante's from API 80): read from the config at once, then checked
@@ -58,7 +58,7 @@ class McpServers extends ChangeNotifier {
 
   bool _again = false; // refresh once the running one is done
   DateTime? _at; // when the last refresh ended
-  VoidCallback? _back; // refreshes once the lost daemon is back
+  late final _back = LoadAgain(daemon, () => unawaited(refresh()));
 
   Future<void> refresh() async {
     if (checking) {
@@ -66,8 +66,7 @@ class McpServers extends ChangeNotifier {
       return;
     }
     checking = true;
-    _back?.call();
-    _back = null;
+    _back.cancel();
     notifyListeners();
     do {
       _again = false;
@@ -77,7 +76,7 @@ class McpServers extends ChangeNotifier {
       } on Object catch (e) {
         _unchecked();
         error = errorText(e);
-        if (daemonGone(e) && !_again) _back = daemon.whenBack(refresh);
+        if (!_again) _back.failed(e);
       }
     } while (_again);
     checking = false;

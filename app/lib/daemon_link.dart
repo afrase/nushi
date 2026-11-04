@@ -205,3 +205,35 @@ extension DaemonLink on Daemon {
     }
   }
 }
+
+/// A load from the daemon made again once the daemon is back, when it
+/// failed because the daemon was gone ([daemonGone]; [DaemonLink.whenBack]):
+/// one for each thing loaded, so that what a restart cut short doesn't
+/// keep its error until someone asks again.
+class LoadAgain {
+  new(this.daemon, this.load);
+
+  final Daemon daemon;
+
+  /// What loads it; a widget's checks it is still mounted.
+  final VoidCallback load;
+
+  VoidCallback? _cancel;
+
+  /// After [error], the load's failure: waits for the daemon if it was
+  /// gone, else (another failure) not.
+  void failed(Object error) {
+    cancel();
+    if (!daemonGone(error)) return;
+    _cancel = daemon.whenBack(() {
+      _cancel = null;
+      load();
+    });
+  }
+
+  /// Stops waiting: the load ran again, or what it fed is gone.
+  void cancel() {
+    _cancel?.call();
+    _cancel = null;
+  }
+}

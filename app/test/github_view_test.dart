@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:diff_view/diff_view.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
@@ -730,6 +731,26 @@ void main() {
       (d.place, d.githubShow?.ref.number, d.githubShow?.pull),
       (const GitHubPlace(), 1, true),
     );
+    await closeView(tester, d);
+  });
+
+  testWidgets('hosts not listed while the daemon was gone are listed once '
+      'it is back', (tester) async {
+    var gone = true; // the first ask meets a restarting daemon
+    final (fake, d) = await openView(
+      tester,
+      more: (input) => input is ListGitHubHostsRequest && gone
+          ? throw ConnectException(
+              Code.unavailable,
+              'daemon unavailable: connection lost',
+            )
+          : null,
+    );
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    gone = false;
+    await fake.restart(tester);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.text('My pull requests  2'), findsOneWidget);
     await closeView(tester, d);
   });
 
