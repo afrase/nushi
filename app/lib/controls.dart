@@ -737,7 +737,8 @@ class LinkText extends StatelessWidget {
 }
 
 /// A small icon button: a tint under the pointer and its [tooltip]. Only
-/// where the icon alone says what it does.
+/// where the icon alone says what it does. [held] keeps the tint while what
+/// it toggles is on (a pinned message's pin).
 class IconTap extends StatelessWidget {
   const new(
     IconData this.icon, {
@@ -747,6 +748,7 @@ class IconTap extends StatelessWidget {
     this.size = 16,
     this.color,
     this.padding = 5,
+    this.held = false,
   }) : line = null,
        glyph = null,
        _working = false;
@@ -762,7 +764,8 @@ class IconTap extends StatelessWidget {
     this.padding = 5,
   }) : icon = null,
        glyph = null,
-       _working = false;
+       _working = false,
+       held = false;
 
   /// The same button with [glyph] drawn in the icon's place, at the
   /// icon's size and in its color (a chevron that turns).
@@ -776,7 +779,8 @@ class IconTap extends StatelessWidget {
     this.padding = 5,
   }) : icon = null,
        line = null,
-       _working = false;
+       _working = false,
+       held = false;
 
   /// A button for something that runs: held down (tinted) with [glyph]
   /// (a spinner) at rest, and [icon] (✕, to stop it) under the pointer.
@@ -790,12 +794,14 @@ class IconTap extends StatelessWidget {
     this.color,
     this.padding = 5,
   }) : line = null,
-       _working = true;
+       _working = true,
+       held = false;
 
   final IconData? icon;
   final LineIcon? line;
   final Widget Function(double size, Color color)? glyph;
   final bool _working;
+  final bool held;
   final String tooltip;
   final VoidCallback? onTap;
   final double size;
@@ -817,7 +823,7 @@ class IconTap extends StatelessWidget {
           decoration: BoxDecoration(
             color: look.hover
                 ? _tint(t, look)
-                : _working
+                : _working || held
                 ? t.hover
                 : null,
             borderRadius: BorderRadius.circular(NushiTheme.control),

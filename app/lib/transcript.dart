@@ -20,6 +20,7 @@ import 'package:nushi/message_actions.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/paced.dart';
+import 'package:nushi/pins_rail.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/selection_lines.dart';
@@ -110,20 +111,11 @@ const _scrollbarEdge = 16.0;
 const double _findBarWidth = 340.0 + NushiTheme.gutter;
 const double _findBarHeight = 48.0;
 
-/// The room the pins' chip takes at the transcript's top, the chip and a
-/// little under it (on the phone it's a touch target, 44 high): what's gone
-/// to from its list lands below it.
-double _pinsRoom(BuildContext context) => TouchTargets.of(context) ? 56 : 40;
+/// How far under the transcript's top a message gone to from the pins'
+/// menu lands.
+const _pinGap = 16.0;
 
-/// About the widest the pins' chip is (a pin and two digits), and the gap
-/// it wants from the text beside it.
-const double _pinsChipWidth = 64.0;
-
-/// Where the pins' chip stands from the transcript's left edge.
-double _pinsLeft(BuildContext context) =>
-    TouchTargets.of(context) ? 12 : NushiTheme.gutter;
-
-/// How long a message gone to from the pins' list stays tinted.
+/// How long a message gone to from the pins' menu stays tinted.
 const _flashFor = Duration(milliseconds: 1400);
 
 class _TranscriptState extends State<Transcript> {
@@ -458,6 +450,7 @@ class _TranscriptState extends State<Transcript> {
       _tail = Transcript.firstEntries;
     }
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
+    _follower.scroll.addListener(_findPinAt);
     _marks.onFound = (marks) {
       widget.chat.find.found([for (final m in marks) m.key]);
       _showCurrent();
@@ -504,6 +497,8 @@ class _TranscriptState extends State<Transcript> {
   @override
   void dispose() {
     _flashTimer?.cancel();
+    _follower.scroll.removeListener(_findPinAt);
+    _pinAt.dispose();
     widget.chat.find.removeListener(_findChanged);
     _marks.dispose();
     _hold.dispose();
@@ -682,7 +677,7 @@ class _TranscriptState extends State<Transcript> {
     }
   }
 
-  // A pick in the pins' list: the message to go to ('' for the chat's
+  // A pick in the pins' menu: the message to go to ('' for the chat's
   // start) once all of it is laid out, and the one tinted for a moment.
   String? _goTo;
   int _goTries = 0;
@@ -691,21 +686,69 @@ class _TranscriptState extends State<Transcript> {
   final GlobalKey _column = GlobalKey();
   List<Object> _laidOut = const [];
 
-  /// Goes to [item] from the pins' list, or to the chat's start: the
-  /// phone first takes the pages it's on.
-  Future<void> _pick(Item? item) async {
+  // The pins' rail: its entries' ids after the start's, and which entry is
+  // current (0, the start): the last whose message's top is above a line a
+  // third down the transcript, so it changes as one scrolls up near a pin.
+  List<String> _railIds = const [];
+  // Where each pinned message's entry is among the column's children, as
+  // last laid out: found once a build, not on each scroll.
+  Map<String, int> _railAt = const {};
+  List<RenderBox> _railBoxes = const [];
+  final _pinAt = ValueNotifier<int>(0);
+  double _padTop = 0;
+
+  /// Finds the current entry from where the pinned messages are laid out:
+  /// a few offsets read, on each scroll and after each layout, nothing
+  /// rebuilt but the rail, and only when it changes. A pin not laid out
+  /// (above what's built while the transcript fills in, or on a page the
+  /// phone hasn't taken) is above all that is.
+  void _findPinAt() {
+    final ids = _railIds;
+    final column = _column.currentContext?.findRenderObject();
+    if (ids.isEmpty ||
+        !_follower.scroll.hasClients ||
+        column is! RenderFlex ||
+        !column.hasSize) {
+      _pinAt.value = 0;
+      return;
+    }
+    final p = _follower.scroll.position;
+    // At the bottom, what shows of a pin there counts: a short last answer
+    // never reaches the line.
+    final line = p.pixels >= p.maxScrollExtent - 1
+        ? p.pixels + p.viewportDimension - 24
+        : p.pixels + p.viewportDimension / 3;
+    final boxes = _railBoxes;
+    var current = 0;
+    for (final (n, id) in ids.indexed) {
+      final i = _railAt[id];
+      final box = i == null || i >= boxes.length ? null : boxes[i];
+      // One not laid out, or gone since (the frame that rebuilt the column
+      // hasn't found its children yet), counts as above.
+      final top = box != null && box.parent == column
+          ? _padTop + (box.parentData! as FlexParentData).offset.dy
+          : double.negativeInfinity;
+      if (top > line) break;
+      current = n + 1;
+    }
+    _pinAt.value = current;
+  }
+
+  /// Goes to the message of [id] from the pins' menu, or to the chat's
+  /// start for '': the phone first takes the pages it's on.
+  Future<void> _pick(String id) async {
     if (widget.onTop != null) {
-      await loadPinned(widget.daemon, widget.chat, all: item == null);
+      await loadPinned(widget.daemon, widget.chat, all: id.isEmpty);
     }
     if (!mounted) return;
     setState(() {
       _tail = null; // all of it, to know where it is
-      _goTo = item?.id ?? '';
+      _goTo = id;
       _goTries = 0;
     });
   }
 
-  /// Takes the list to [_goTo], its top just under the pins' chip, as a
+  /// Takes the list to [_goTo], its top just under the transcript's, as a
   /// find's jump does ([_reveal]), and tints it for a moment.
   void _go() {
     final id = _goTo;
@@ -732,9 +775,7 @@ class _TranscriptState extends State<Transcript> {
     _goTo = null;
     final box = boxes[at];
     final to = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
-    _follower.hold(
-      (to - _pinsRoom(context) + 8).clamp(p.minScrollExtent, p.maxScrollExtent),
-    );
+    _follower.hold((to - _pinGap).clamp(p.minScrollExtent, p.maxScrollExtent));
     _flashTimer?.cancel();
     setState(() => _flash = id);
     _flashTimer = Timer(_flashFor, () {
@@ -765,8 +806,23 @@ class _TranscriptState extends State<Transcript> {
     if (_goTo != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _go());
     }
-    final pinned = widget.items == null ? pinnedItems(chat) : const <Item>[];
-    final pins = widget.items == null ? pinCount(chat, pinned) : 0;
+    final rail = widget.items == null ? pinEntries(chat) : const <PinEntry>[];
+    _railIds = [for (final e in rail) e.id];
+    final pinned = _railIds.toSet();
+    _railAt = {
+      if (pinned.isNotEmpty)
+        for (final (i, e) in _laidOut.indexed)
+          if (e is Item && pinned.contains(e.id))
+            e.id: i + (widget.header == null ? 0 : 1),
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final column = _column.currentContext?.findRenderObject();
+      _railBoxes = _railIds.isNotEmpty && column is RenderFlex
+          ? column.getChildrenAsList()
+          : const [];
+      _findPinAt();
+    });
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
@@ -833,11 +889,7 @@ class _TranscriptState extends State<Transcript> {
                     child: SingleChildScrollView(
                       controller: _follower.scroll,
                       padding: EdgeInsets.only(
-                        top: _roomAbove
-                            ? _findBarHeight + 8
-                            : pins > 0
-                            ? _pinsRoom(context)
-                            : 2,
+                        top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
                         bottom: 14,
                       ),
                       child: Column(
@@ -894,28 +946,19 @@ class _TranscriptState extends State<Transcript> {
                 },
               ),
             ),
-          // Where the chip stands over the text's column (a narrow pane,
-          // the phone), what scrolls under it fades out behind a band of
-          // the page, so no line sits half-hidden under the chip.
-          if (pins > 0 &&
-              chatSides(context, box.maxWidth).left <
-                  _pinsLeft(context) + _pinsChipWidth)
+          // In the margin at the top left, where it stays as the text scrolls.
+          if (rail.isNotEmpty)
             Positioned(
               left: 0,
-              right: _scrollbarEdge,
-              top: 0,
-              height: _pinsRoom(context) + PinsBackdrop.fade,
-              child: const PinsBackdrop(),
-            ),
-          if (pins > 0)
-            Positioned(
-              left: _pinsLeft(context),
-              top: 8,
-              child: PinsChip(
-                chat: chat,
-                pinned: pinned,
-                count: pins,
-                onPick: (item) => unawaited(_pick(item)),
+              top: 6,
+              child: PinsRail(
+                entries: [PinEntry.start, ...rail],
+                current: _pinAt,
+                inset: railInset(
+                  context,
+                  chatSides(context, box.maxWidth).left,
+                ),
+                onPick: (id) => unawaited(_pick(id)),
                 before: widget.onTop == null
                     ? null
                     : () => loadPinned(widget.daemon, chat),
