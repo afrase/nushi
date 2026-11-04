@@ -12,7 +12,6 @@ import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/marks.dart';
 import 'package:nushi/message_actions.dart';
@@ -21,17 +20,16 @@ import 'package:nushi/plan_view.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/stop_label.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/widgets.dart';
 
-/// One item of a transcript, by its kind.
 /// The widest a user message's bubble goes (ADR 0076).
 const _bubbleWidth = 640.0;
 
+/// One item of a transcript, by its kind.
 class ItemView extends StatelessWidget {
   const new(
     this.item,
@@ -95,24 +93,7 @@ class ItemView extends StatelessWidget {
                   horizontal: BorderSide(color: t.userBandBorder),
                 ),
               ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: phone || chatFullWidth.value
-                      ? double.infinity
-                      : readableWidth,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 6,
-                  children: [
-                    if (item.toSubagentName.isNotEmpty)
-                      _ToSubagentMark(item, chat),
-                    if (item.images.isNotEmpty) Thumbnails(item.images),
-                    ?messageFiles(context, item, chat),
-                    if (item.text.isNotEmpty) UserMessageText(item.text),
-                  ],
-                ),
-              ),
+              child: _contents(context),
             ),
           ),
         );
@@ -315,21 +296,24 @@ class ItemView extends StatelessWidget {
               color: t.userBand,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 6,
-              children: [
-                if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
-                if (item.images.isNotEmpty) Thumbnails(item.images),
-                ?messageFiles(context, item, chat),
-                if (item.text.isNotEmpty) UserMessageText(item.text),
-              ],
-            ),
+            child: _contents(context),
           ),
         ),
       ),
     );
   }
+
+  /// A user message's contents, in its band or its bubble.
+  Widget _contents(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    spacing: 6,
+    children: [
+      if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
+      if (item.images.isNotEmpty) Thumbnails(item.images),
+      ?messageFiles(context, item, chat),
+      if (item.text.isNotEmpty) UserMessageText(item.text),
+    ],
+  );
 }
 
 /// Which subagent a message was for (the agent was asked to pass it on, or
