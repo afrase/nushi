@@ -5,6 +5,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'theme_sets.dart';
 
 const _agents = ['claude', 'codex', 'ante', 'omp', 'pi', 'pig', 'gemini'];
 
@@ -19,8 +20,8 @@ void main() {
   setUpAll(loadFonts);
 
   test('each agent’s color is at least 3:1 on the sidebar, a selected row '
-      'and the header, in both themes', () {
-    for (final t in [Tokens.light, Tokens.dark]) {
+      'and the header, in every theme', () {
+    for (final (name, t) in everySet) {
       for (final a in _agents) {
         final color = agentColor(a, t);
         final colors = [?color, if (a == 'omp') t.ompPlug];
@@ -33,7 +34,7 @@ void main() {
             expect(
               _contrast(c, bg),
               greaterThanOrEqualTo(3),
-              reason: '$a on $where, ${t.brightness.name}',
+              reason: '$a on $where, $name',
             );
           }
         }

@@ -16,6 +16,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'theme_sets.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -71,9 +72,7 @@ TextStyle? _styleOf(WidgetTester tester, Finder root, String text) {
 void main() {
   setUpAll(loadFonts);
 
-  for (final t in [Tokens.light, Tokens.dark]) {
-    final name = t.brightness.name;
-
+  for (final (name, t) in everySet) {
     test('inline code holds AA on every fill it sits on ($name)', () {
       // The agent's (and a finding's, and the composer's) chip on what's
       // under it: the page, a raised panel, a code block, the findings

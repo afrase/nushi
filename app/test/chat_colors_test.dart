@@ -22,6 +22,7 @@ import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
+import 'theme_sets.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -97,9 +98,7 @@ void main() {
     }
   });
 
-  for (final t in [Tokens.light, Tokens.dark]) {
-    final name = t.brightness.name;
-
+  for (final (name, t) in everySet) {
     test('each theme has its eight ($name)', () {
       expect(t.avatars, hasLength(ChatColor.values.length));
     });

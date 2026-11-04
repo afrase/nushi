@@ -2,7 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/theme/tokens.dart';
+
+import 'theme_sets.dart';
 
 /// The WCAG contrast of [a] and [b].
 double _contrast(Color a, Color b) {
@@ -60,8 +61,7 @@ const _washFloor = 4.5;
 const _borderFloor = 8.0;
 
 void main() {
-  for (final t in [Tokens.light, Tokens.dark]) {
-    final name = t.brightness.name;
+  for (final (name, t) in everySet) {
     Color on(Color tint, Color surface) => Color.alphaBlend(tint, surface);
 
     // What a row can be (as in chat_colors_test), and the tints text sits
