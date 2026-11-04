@@ -429,3 +429,24 @@ func Ignored(ctx context.Context, folder, path string) bool {
 	_, err := run(ctx, folder, "check-ignore", "-q", "--", path)
 	return err == nil
 }
+
+// IgnoredOf says which of paths (relative to folder, a folder's ending in
+// "/" so a pattern for folders alone matches it) git ignores, in one run:
+// none outside git, or when git can't say. A tracked file is never
+// ignored, as git sees it.
+func IgnoredOf(ctx context.Context, folder string, paths []string) map[string]bool {
+	if len(paths) == 0 {
+		return nil
+	}
+	cmd := command(ctx, folder, nil, "check-ignore", "-z", "--stdin")
+	cmd.Stdin = strings.NewReader(strings.Join(paths, "\x00") + "\x00")
+	out, err := cmd.Output() // exit 1: none ignored; 128: not a repository
+	if err != nil {
+		return nil
+	}
+	ignored := map[string]bool{}
+	for _, p := range split(out) {
+		ignored[p] = true
+	}
+	return ignored
+}
