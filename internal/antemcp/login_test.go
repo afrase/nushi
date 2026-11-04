@@ -128,10 +128,12 @@ func TestLoginFailure(t *testing.T) {
 }
 
 // A sign-in never finished ends with its context, and so does the wait.
+// The context also covers the version check before it, which a loaded
+// machine can take past a few hundred milliseconds, so it's given 2 s.
 func TestLoginGivesUp(t *testing.T) {
 	home(t, gateway)
 	run, _ := fakeAnte(t, "0.3", `exec sleep 60`)
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	start := time.Now()
 	err := Ante{Run: run}.Login(ctx, "/f", "example-gateway")
