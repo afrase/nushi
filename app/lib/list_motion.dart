@@ -195,14 +195,20 @@ class PresenceState extends State<Presence> with TickerProviderStateMixin {
 
   void _hide() => _glideBox?.hidden = true;
 
-  _RenderGlide? get _glideBox =>
-      _glide.currentContext?.findRenderObject() as _RenderGlide?;
+  /// Its glide's render object, kept as it's made rather than asked of
+  /// its element: a row left behind is hidden while its list is being
+  /// taken away (a regrouping), when its element is no longer active.
+  _RenderGlide? _glideBox;
 
   /// Where its row is drawn in [space], if it shows (not folded away).
   double? _drawnTop(RenderBox space) {
     final box = _glideBox;
     final row = box?.child;
-    if (box == null || row == null || !row.hasSize || row.size.isEmpty) {
+    if (box == null ||
+        !box.attached ||
+        row == null ||
+        !row.hasSize ||
+        row.size.isEmpty) {
       return null;
     }
     if (box.hidden || widget.leaving != null) return null;
@@ -247,6 +253,7 @@ class PresenceState extends State<Presence> with TickerProviderStateMixin {
                   offset: Offset(0, rise),
                   child: _Glide(
                     key: _glide,
+                    onBox: (box) => _glideBox = box,
                     from: _from,
                     motion: _motion,
                     t: Motion.size.transform(_g.value),
@@ -270,6 +277,7 @@ class _Glide extends SingleChildRenderObjectWidget {
     required this.from,
     required this.motion,
     required this.t,
+    required this.onBox,
     super.child,
     super.key,
   });
@@ -278,9 +286,15 @@ class _Glide extends SingleChildRenderObjectWidget {
   final ListMotion? motion;
   final double t;
 
+  /// Told the render object it makes.
+  final ValueChanged<_RenderGlide> onBox;
+
   @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderGlide(from, motion, t);
+  RenderObject createRenderObject(BuildContext context) {
+    final box = _RenderGlide(from, motion, t);
+    onBox(box);
+    return box;
+  }
 
   @override
   void updateRenderObject(BuildContext context, _RenderGlide renderObject) =>
