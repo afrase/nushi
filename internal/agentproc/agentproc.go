@@ -22,8 +22,8 @@ import (
 )
 
 // NotFound says an agent's error is ACP's "Resource not found" (-32002),
-// which claude-agent-acp's session/load answers for a session Claude
-// doesn't have, as PiG's bridge does.
+// which claudeacp's session/load answers for a session claude has no
+// transcript of, as PiG's bridge does.
 func NotFound(err error) bool {
 	e, ok := errors.AsType[*acp.Error](err)
 	return ok && e.Code == acp.ErrorCodeResourceNotFound
@@ -91,8 +91,8 @@ func Connect(conn *acp.AgentConn, log *slog.Logger) *Agent {
 }
 
 // MaxMessage is the largest message written to an agent, kept below what
-// agents read in one line (claude-agent-acp's SDK: 32 MiB, past which it
-// ends the connection).
+// agents read in one line: the ACP SDK's Node agents (codex-acp) end the
+// connection past 32 MiB, the tightest of them (claudeacp reads 64 MiB).
 const MaxMessage = 30 << 20
 
 // MaxRead is the largest message read from an agent, generous: a longer
@@ -118,8 +118,8 @@ func (a *Agent) Close() error {
 }
 
 // Stop ends the agent gently: its input closes, which an agent takes as
-// the end of the connection (claude-agent-acp cancels its turns and closes
-// its sessions, so they are recorded as ended), and once it has exited,
+// the end of the connection (claudeacp closes its sessions, their turns
+// cancelled, so they are recorded as ended), and once it has exited,
 // or after grace, it is killed.
 func (a *Agent) Stop(grace time.Duration) error {
 	a.stopped.Store(true)
