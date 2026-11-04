@@ -232,7 +232,11 @@ class _GitHubViewState extends State<GitHubView> {
       });
     } on Object catch (e) {
       if (n == _asked && mounted && !quiet) {
-        setState(() => _error = errorText(e));
+        setState(() {
+          // Another filter's rows aren't what this one asked for.
+          if (_shown != key) _inbox = _shown = null;
+          _error = errorText(e);
+        });
       }
     } finally {
       if (n == _asked && mounted) setState(() => _loading = false);

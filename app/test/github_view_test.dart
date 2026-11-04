@@ -827,6 +827,23 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets("a filter change GitHub refuses doesn't show the last "
+      "filter's rows under it", (tester) async {
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is ListGitHubInboxRequest && input.updatedDays == 7
+          ? throw StateError('GitHub is down')
+          : null,
+    );
+    expect(find.text('Add Sub and Neg'), findsOneWidget);
+    tester.widget<GitHubBar>(find.byType(GitHubBar)).onDays(7);
+    await tester.pumpAndSettle();
+    expect(find.text('Bad state: GitHub is down'), findsOneWidget);
+    expect(find.textContaining('Showing what GitHub said'), findsNothing);
+    expect(find.text('Add Sub and Neg'), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('no host yet', (tester) async {
     final (_, d) = await openView(tester, hosts: []);
     expect(find.text('Settings › GitHub'), findsOneWidget);
