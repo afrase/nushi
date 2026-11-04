@@ -7,6 +7,7 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/commits.dart' show dateTime;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/settings_rows.dart';
+import 'package:nushi/status_bar.dart' show restartDaemonAsking;
 import 'package:nushi/widgets.dart';
 
 /// Reveals the daemon's log (nushid.log, app.log beside it) in Finder.
@@ -35,19 +36,6 @@ class LogsSection extends StatelessWidget {
   final bool? debug;
   final ValueChanged<bool> onDebug;
   final Future<void> Function() reveal;
-
-  Future<void> _restart(BuildContext context) async {
-    if (await confirm(
-          context,
-          'Restart the daemon?',
-          'Running turns stop and terminals close; chats reopen as you '
-              'open them.',
-          'Restart',
-        ) &&
-        context.mounted) {
-      await tryOrShow(context, daemon.restartDaemon);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +76,10 @@ class LogsSection extends StatelessWidget {
                 control: bundledDaemon == null
                     ? null
                     : Button(
-                        label: daemon.restarting ? 'Restarting…' : 'Restart…',
+                        label: daemon.restarting ? 'Restarting…' : 'Restart',
                         onPressed: daemon.restarting
                             ? null
-                            : () => _restart(context),
+                            : () => restartDaemonAsking(context, daemon),
                       ),
               ),
               if (appVersion.isNotEmpty)
