@@ -256,6 +256,30 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
+  testWidgets("mid-turn, a stop that doesn't end the turn in 20 s: it says "
+      'so', (tester) async {
+    final (d, fake) = await _open(tester, busy: true);
+    await tester.tap(_inPull(find.text('Clean up…')));
+    await _pump(tester);
+    await tester.tap(find.text('Stop the turn, clean up now'));
+    await _pump(tester);
+    await tester.tap(find.text('Clean up'));
+    await _pump(tester);
+    expect(fake.calls.whereType<CancelTurnRequest>(), hasLength(1));
+    expect(_inPull(find.text('Waiting for the turn to end…')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 20));
+    await _pump(tester);
+    expect(
+      _inPull(find.textContaining("The turn didn't stop")),
+      findsOneWidget,
+    );
+    expect(_inPull(find.text('Waiting for the turn to end…')), findsNothing);
+    final job = CleanUpJob.of(d.chats['c']!);
+    expect((job.running, job.finished), (false, true));
+    expect(fake.calls.whereType<ArchiveChatRequest>(), isEmpty);
+    d.dispose();
+  }, variant: _mac);
+
   testWidgets("the chat's ⋯ has Clean up… for a worktree chat", (tester) async {
     final (d, _) = await _open(tester);
     await tester.tap(find.byTooltip('Chat menu').first);

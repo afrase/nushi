@@ -28,13 +28,25 @@ typedef CleanUpPicks = ({
 });
 
 /// Where one of a clean-up's parts is.
-enum StepState { waiting, running, done, failed }
+enum StepState {
+  waiting,
+  running,
+  done,
+  failed;
+
+  /// It has run, well or not.
+  bool get finished => this == done || this == failed;
+}
+
+/// A part of a clean-up: what it does (the branch on GitHub made again,
+/// once undone, is one too).
+enum CleanUpPart { remote, archive, worktree, branch, restored }
 
 /// One part of a clean-up: what it does, as it goes.
 class CleanUpStep {
-  new(this.key, this.label);
+  new(this.part, this.label);
 
-  final String key;
+  final CleanUpPart part;
   String label;
   StepState state = StepState.waiting;
   String? error;
@@ -66,20 +78,24 @@ class CleanUpJob extends ChangeNotifier {
   bool get started => steps.isNotEmpty || error != null;
   bool get running => waiting || steps.any((s) => s.state == StepState.running);
   bool get finished =>
-      started && !waiting && steps.every((s) => s.state.index >= 2);
+      started && !waiting && steps.every((s) => s.state.finished);
 
   GitHubRef? _pull;
   Daemon? _daemon;
 
   /// The branch on GitHub was deleted here, and can be made again.
   bool get canRestore =>
-      steps.any((s) => s.key == 'remote' && s.state == StepState.done) &&
+      steps.any(
+        (s) => s.part == CleanUpPart.remote && s.state == StepState.done,
+      ) &&
       _pull != null;
 
   /// The chat was archived here.
   bool get canUnarchive =>
       chat.archived &&
-      steps.any((s) => s.key == 'archive' && s.state == StepState.done);
+      steps.any(
+        (s) => s.part == CleanUpPart.archive && s.state == StepState.done,
+      );
 
   /// Runs [picks]: waits for the turn (or stops it), then archives the
   /// chat, removes its worktree, deletes its branch and the pull request's
@@ -94,10 +110,12 @@ class CleanUpJob extends ChangeNotifier {
     error = null;
     steps = [
       if (picks.remote && pull != null)
-        CleanUpStep('remote', 'Delete the branch on GitHub'),
-      if (picks.archive) CleanUpStep('archive', 'Archive this chat'),
-      if (picks.worktree) CleanUpStep('worktree', 'Delete the worktree'),
-      if (picks.branch) CleanUpStep('branch', 'Delete the local branch'),
+        CleanUpStep(CleanUpPart.remote, 'Delete the branch on GitHub'),
+      if (picks.archive) CleanUpStep(CleanUpPart.archive, 'Archive this chat'),
+      if (picks.worktree)
+        CleanUpStep(CleanUpPart.worktree, 'Delete the worktree'),
+      if (picks.branch)
+        CleanUpStep(CleanUpPart.branch, 'Delete the local branch'),
     ];
     kept = chat.worktree == null || picks.worktree && picks.branch
         ? ''
@@ -148,34 +166,35 @@ class CleanUpJob extends ChangeNotifier {
     GitHubRef? pull,
   ) async {
     final c = daemon.client;
-    switch (s.key) {
-      case 'archive':
+    switch (s.part) {
+      case CleanUpPart.archive:
         await c.archiveChat(
           ArchiveChatRequest(chatId: chat.id, archived: true),
         );
         s.label = 'Chat archived';
-      case 'worktree':
+      case CleanUpPart.worktree:
         await c.removeChatWorktree(
           RemoveChatWorktreeRequest(chatId: chat.id, force: picks.force),
         );
         s.label = 'Worktree deleted';
-      case 'branch':
+      case CleanUpPart.branch:
         await c.deleteChatBranch(
           DeleteChatBranchRequest(chatId: chat.id, force: picks.forceBranch),
         );
         s.label = 'Local branch deleted';
-      case 'remote':
+      case CleanUpPart.remote:
         final r = await c.deleteGitHubBranch(
           DeleteGitHubBranchRequest(ref: pull),
         );
         s.label = r.deleted
             ? 'Branch deleted on GitHub'
             : 'The branch on GitHub was gone already';
+      case CleanUpPart.restored: // what an undo shows; never run
     }
   }
 
   /// Waits until the chat's turn ends: true then, false when cancelled.
-  /// Stopping, it gives up after 20 s.
+  /// Stopping, it gives up after 20 s, and says so.
   Future<bool> _turnEnds(bool stopping) async {
     final done = Completer<bool>();
     void check() {
@@ -199,6 +218,11 @@ class CleanUpJob extends ChangeNotifier {
     if (!ok) {
       waiting = false;
       steps = [];
+      if (!cancelled) {
+        kept = '';
+        error =
+            "The turn didn't stop in 20 seconds, so nothing was cleaned up.";
+      }
       notifyListeners();
     }
     return ok;
@@ -216,8 +240,11 @@ class CleanUpJob extends ChangeNotifier {
     final pull = _pull;
     if (d == null || pull == null) return;
     await d.client.restoreGitHubBranch(RestoreGitHubBranchRequest(ref: pull));
-    steps.removeWhere((s) => s.key == 'remote');
-    steps.insert(0, CleanUpStep('restored', 'Branch restored on GitHub'));
+    steps.removeWhere((s) => s.part == CleanUpPart.remote);
+    steps.insert(
+      0,
+      CleanUpStep(CleanUpPart.restored, 'Branch restored on GitHub'),
+    );
     steps.first.state = StepState.done;
     notifyListeners();
   }
@@ -229,15 +256,7 @@ class CleanUpJob extends ChangeNotifier {
     await d.client.archiveChat(
       ArchiveChatRequest(chatId: chat.id, archived: false),
     );
-    steps.removeWhere((s) => s.key == 'archive');
-    notifyListeners();
-  }
-
-  /// Forgets a finished clean-up (the widget offers it again).
-  void clear() {
-    steps = [];
-    kept = '';
-    error = null;
+    steps.removeWhere((s) => s.part == CleanUpPart.archive);
     notifyListeners();
   }
 }
