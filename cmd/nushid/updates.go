@@ -21,11 +21,7 @@ const nushiRepo = "afrase/nushi"
 // GitHub's other calls.
 func startUpdates(st *store.Store, publish func(model.Event)) *updates.Service {
 	releases := &githubapi.Releases{Repo: nushiRepo, HTTP: &http.Client{Transport: proxiedTransport(), Timeout: 30 * time.Second}}
-	latest := func(ctx context.Context) (string, time.Time, error) {
-		r, err := releases.Latest(ctx)
-		return r.Tag, r.Published, err
-	}
-	s := updates.New(latest, st, api.Release, "https://github.com/"+nushiRepo, publish)
+	s := updates.New(releases.Latest, st, api.Release, "https://github.com/"+nushiRepo, publish)
 	go s.Run(context.Background()) // as long as the daemon
 	return s
 }

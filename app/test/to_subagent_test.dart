@@ -37,7 +37,6 @@ final _items = [
     toSubagentName: 'Explore',
     toSubagent: 'a',
     toSubagentState: 'relayed',
-    passedOnBy: 'sm1',
   ),
   Item(
     id: 'sm1',

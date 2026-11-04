@@ -3,7 +3,6 @@ package githubapi
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -12,7 +11,7 @@ import (
 // (ADR 0069). All of it is single objects and scalars, which cost no points.
 // The alias repo is because PullRow's repository decodes into row.
 const mergeFields = `canBeRebased viewerCanMergeAsAdmin viewerCanEnableAutoMerge viewerCanDisableAutoMerge isMergeQueueEnabled
-      autoMergeRequest { enabledAt mergeMethod enabledBy { login } }
+      autoMergeRequest { mergeMethod enabledBy { login } }
       mergeQueueEntry { position state estimatedTimeToMerge enqueuer { login } }
       mergeQueue { configuration { mergeMethod } }
       baseRef { refUpdateRule { requiresConversationResolution requiresLinearHistory } }
@@ -26,9 +25,8 @@ type mergeNode struct {
 	ViewerCanDisableAutoMerge bool `json:"viewerCanDisableAutoMerge"`
 	IsMergeQueueEnabled       bool `json:"isMergeQueueEnabled"`
 	AutoMergeRequest          *struct {
-		EnabledAt   time.Time `json:"enabledAt"`
-		MergeMethod string    `json:"mergeMethod"`
-		EnabledBy   *login    `json:"enabledBy"`
+		MergeMethod string `json:"mergeMethod"`
+		EnabledBy   *login `json:"enabledBy"`
 	} `json:"autoMergeRequest"`
 	MergeQueueEntry *struct {
 		Position             int    `json:"position"`
@@ -82,7 +80,7 @@ func (n mergeNode) merge() model.GitHubMerge {
 		out.Methods = append(out.Methods, "rebase")
 	}
 	if a := n.AutoMergeRequest; a != nil {
-		out.Auto = &model.GitHubAutoMerge{By: shown(a.EnabledBy.name()), Method: strings.ToLower(a.MergeMethod), Enabled: a.EnabledAt}
+		out.Auto = &model.GitHubAutoMerge{By: shown(a.EnabledBy.name()), Method: strings.ToLower(a.MergeMethod)}
 	}
 	if e := n.MergeQueueEntry; e != nil {
 		out.Entry = &model.GitHubQueueEntry{Position: e.Position, State: strings.ToLower(e.State), By: shown(e.Enqueuer.name()), Eta: e.EstimatedTimeToMerge}

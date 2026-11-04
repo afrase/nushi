@@ -293,11 +293,10 @@ func (x *PingResponse) GetUpdate() *UpdateCheck {
 // one; nor does any while Settings.check_updates is off.
 type UpdateCheck struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The newer release, when there is one: its version ("0.1.17"), its
-	// page on GitHub, and when it was published.
-	Version     string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	Url         string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	PublishedMs int64  `protobuf:"varint,3,opt,name=published_ms,json=publishedMs,proto3" json:"published_ms,omitempty"`
+	// The newer release, when there is one: its version ("0.1.17") and its
+	// page on GitHub.
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Url     string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 	// The latest release, newer or not; "" until GitHub has answered.
 	Latest string `protobuf:"bytes,4,opt,name=latest,proto3" json:"latest,omitempty"`
 	// When GitHub last answered; 0: not yet.
@@ -348,13 +347,6 @@ func (x *UpdateCheck) GetUrl() string {
 		return x.Url
 	}
 	return ""
-}
-
-func (x *UpdateCheck) GetPublishedMs() int64 {
-	if x != nil {
-		return x.PublishedMs
-	}
-	return 0
 }
 
 func (x *UpdateCheck) GetLatest() string {
@@ -697,7 +689,6 @@ type RemovedChat struct {
 	Agent         string                 `protobuf:"bytes,2,opt,name=agent,proto3" json:"agent,omitempty"`
 	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
 	Folder        string                 `protobuf:"bytes,4,opt,name=folder,proto3" json:"folder,omitempty"`
-	RemovedUnixMs int64                  `protobuf:"varint,5,opt,name=removed_unix_ms,json=removedUnixMs,proto3" json:"removed_unix_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -758,13 +749,6 @@ func (x *RemovedChat) GetFolder() string {
 		return x.Folder
 	}
 	return ""
-}
-
-func (x *RemovedChat) GetRemovedUnixMs() int64 {
-	if x != nil {
-		return x.RemovedUnixMs
-	}
-	return 0
 }
 
 type RemovedChats struct {
@@ -5529,10 +5513,7 @@ type ClearTranscriptsRequest struct {
 	// These chats' copies.
 	ChatIds []string `protobuf:"bytes,1,rep,name=chat_ids,json=chatIds,proto3" json:"chat_ids,omitempty"`
 	// Every copy.
-	All bool `protobuf:"varint,2,opt,name=all,proto3" json:"all,omitempty"`
-	// The copies last written more than this many days ago (with neither
-	// of the above).
-	OlderThanDays int32 `protobuf:"varint,3,opt,name=older_than_days,json=olderThanDays,proto3" json:"older_than_days,omitempty"`
+	All           bool `protobuf:"varint,2,opt,name=all,proto3" json:"all,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5579,13 +5560,6 @@ func (x *ClearTranscriptsRequest) GetAll() bool {
 		return x.All
 	}
 	return false
-}
-
-func (x *ClearTranscriptsRequest) GetOlderThanDays() int32 {
-	if x != nil {
-		return x.OlderThanDays
-	}
-	return 0
 }
 
 type ClearTranscriptsResponse struct {
@@ -11597,9 +11571,6 @@ type Item struct {
 	// A tool call's tool, when the agent names it (Claude's "Read",
 	// "SubagentHandback", ...).
 	Tool string `protobuf:"bytes,16,opt,name=tool,proto3" json:"tool,omitempty"`
-	// For a user message: the agent's message the conversation before it
-	// ends with, where a rewind to it forks the session.
-	ForkAt string `protobuf:"bytes,17,opt,name=fork_at,json=forkAt,proto3" json:"fork_at,omitempty"`
 	// For a user message: the chat can be rewound to just before it while
 	// status.can_rewind and the chat is idle.
 	Rewindable bool `protobuf:"varint,18,opt,name=rewindable,proto3" json:"rewindable,omitempty"`
@@ -11629,11 +11600,10 @@ type Item struct {
 	// relay_state, relayed_by and relay_stop.
 	ToSubagentName string `protobuf:"bytes,27,opt,name=to_subagent_name,json=toSubagentName,proto3" json:"to_subagent_name,omitempty"`
 	ToSubagent     string `protobuf:"bytes,28,opt,name=to_subagent,json=toSubagent,proto3" json:"to_subagent,omitempty"`
-	// How it went: "sending" until the agent passes it on (its call that
-	// does is passed_on_by), "relayed" once that call completes, "failed"
-	// when it fails or the turn ends without one; "" when unknown (replayed).
+	// How it went: "sending" until the agent passes it on, "relayed" once
+	// its call that does completes, "failed" when that fails or the turn
+	// ends without one; "" when unknown (replayed).
 	ToSubagentState string `protobuf:"bytes,29,opt,name=to_subagent_state,json=toSubagentState,proto3" json:"to_subagent_state,omitempty"`
-	PassedOnBy      string `protobuf:"bytes,30,opt,name=passed_on_by,json=passedOnBy,proto3" json:"passed_on_by,omitempty"`
 	// For a tool call that reports a code review's result (Claude's
 	// ReportFindings): what it found.
 	Findings *Findings `protobuf:"bytes,31,opt,name=findings,proto3" json:"findings,omitempty"`
@@ -11807,13 +11777,6 @@ func (x *Item) GetTool() string {
 	return ""
 }
 
-func (x *Item) GetForkAt() string {
-	if x != nil {
-		return x.ForkAt
-	}
-	return ""
-}
-
 func (x *Item) GetRewindable() bool {
 	if x != nil {
 		return x.Rewindable
@@ -11894,13 +11857,6 @@ func (x *Item) GetToSubagent() string {
 func (x *Item) GetToSubagentState() string {
 	if x != nil {
 		return x.ToSubagentState
-	}
-	return ""
-}
-
-func (x *Item) GetPassedOnBy() string {
-	if x != nil {
-		return x.PassedOnBy
 	}
 	return ""
 }
@@ -15986,7 +15942,6 @@ type JiraTransition struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	To            string                 `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
-	ToCategory    string                 `protobuf:"bytes,4,opt,name=to_category,json=toCategory,proto3" json:"to_category,omitempty"`
 	Fields        []*JiraField           `protobuf:"bytes,5,rep,name=fields,proto3" json:"fields,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -16039,13 +15994,6 @@ func (x *JiraTransition) GetName() string {
 func (x *JiraTransition) GetTo() string {
 	if x != nil {
 		return x.To
-	}
-	return ""
-}
-
-func (x *JiraTransition) GetToCategory() string {
-	if x != nil {
-		return x.ToCategory
 	}
 	return ""
 }
@@ -19712,9 +19660,6 @@ type GitHubComment struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Author string                 `protobuf:"bytes,2,opt,name=author,proto3" json:"author,omitempty"`
-	// GitHub's author association: OWNER, MEMBER, COLLABORATOR,
-	// CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, NONE…
-	Association string `protobuf:"bytes,3,opt,name=association,proto3" json:"association,omitempty"`
 	// The author isn't the repository's owner, a member or a collaborator.
 	Outside   bool   `protobuf:"varint,4,opt,name=outside,proto3" json:"outside,omitempty"`
 	Bot       bool   `protobuf:"varint,5,opt,name=bot,proto3" json:"bot,omitempty"`
@@ -19770,13 +19715,6 @@ func (x *GitHubComment) GetId() string {
 func (x *GitHubComment) GetAuthor() string {
 	if x != nil {
 		return x.Author
-	}
-	return ""
-}
-
-func (x *GitHubComment) GetAssociation() string {
-	if x != nil {
-		return x.Association
 	}
 	return ""
 }
@@ -19989,7 +19927,6 @@ type GitHubAnnotation struct {
 	Title         string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
 	Message       string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
 	Line          int32  `protobuf:"varint,5,opt,name=line,proto3" json:"line,omitempty"`
-	EndLine       int32  `protobuf:"varint,6,opt,name=end_line,json=endLine,proto3" json:"end_line,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -20055,13 +19992,6 @@ func (x *GitHubAnnotation) GetMessage() string {
 func (x *GitHubAnnotation) GetLine() int32 {
 	if x != nil {
 		return x.Line
-	}
-	return 0
-}
-
-func (x *GitHubAnnotation) GetEndLine() int32 {
-	if x != nil {
-		return x.EndLine
 	}
 	return 0
 }
@@ -20282,13 +20212,12 @@ func (x *GitHubReviewer) GetCodeOwner() bool {
 }
 
 type GitHubPull struct {
-	state       protoimpl.MessageState `protogen:"open.v1"`
-	Item        *GitHubItem            `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
-	Body        string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
-	Association string                 `protobuf:"bytes,3,opt,name=association,proto3" json:"association,omitempty"`
-	Outside     bool                   `protobuf:"varint,4,opt,name=outside,proto3" json:"outside,omitempty"`
-	Base        string                 `protobuf:"bytes,5,opt,name=base,proto3" json:"base,omitempty"`
-	Head        string                 `protobuf:"bytes,6,opt,name=head,proto3" json:"head,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Item    *GitHubItem            `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	Body    string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
+	Outside bool                   `protobuf:"varint,4,opt,name=outside,proto3" json:"outside,omitempty"`
+	Base    string                 `protobuf:"bytes,5,opt,name=base,proto3" json:"base,omitempty"`
+	Head    string                 `protobuf:"bytes,6,opt,name=head,proto3" json:"head,omitempty"`
 	// The head's repository (owner/name): another one for a fork's.
 	HeadRepo  string `protobuf:"bytes,7,opt,name=head_repo,json=headRepo,proto3" json:"head_repo,omitempty"`
 	CrossRepo bool   `protobuf:"varint,8,opt,name=cross_repo,json=crossRepo,proto3" json:"cross_repo,omitempty"`
@@ -20359,13 +20288,6 @@ func (x *GitHubPull) GetItem() *GitHubItem {
 func (x *GitHubPull) GetBody() string {
 	if x != nil {
 		return x.Body
-	}
-	return ""
-}
-
-func (x *GitHubPull) GetAssociation() string {
-	if x != nil {
-		return x.Association
 	}
 	return ""
 }
@@ -20671,7 +20593,6 @@ type GitHubAutoMerge struct {
 	// A login, or someone.
 	By            string `protobuf:"bytes,1,opt,name=by,proto3" json:"by,omitempty"`
 	Method        string `protobuf:"bytes,2,opt,name=method,proto3" json:"method,omitempty"`
-	EnabledMs     int64  `protobuf:"varint,3,opt,name=enabled_ms,json=enabledMs,proto3" json:"enabled_ms,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -20718,13 +20639,6 @@ func (x *GitHubAutoMerge) GetMethod() string {
 		return x.Method
 	}
 	return ""
-}
-
-func (x *GitHubAutoMerge) GetEnabledMs() int64 {
-	if x != nil {
-		return x.EnabledMs
-	}
-	return 0
 }
 
 type GitHubQueueEntry struct {
@@ -20898,7 +20812,6 @@ type GitHubIssue struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Item          *GitHubItem            `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
 	Body          string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
-	Association   string                 `protobuf:"bytes,3,opt,name=association,proto3" json:"association,omitempty"`
 	Outside       bool                   `protobuf:"varint,4,opt,name=outside,proto3" json:"outside,omitempty"`
 	Labels        []string               `protobuf:"bytes,5,rep,name=labels,proto3" json:"labels,omitempty"`
 	Assignees     []string               `protobuf:"bytes,6,rep,name=assignees,proto3" json:"assignees,omitempty"`
@@ -20947,13 +20860,6 @@ func (x *GitHubIssue) GetItem() *GitHubItem {
 func (x *GitHubIssue) GetBody() string {
 	if x != nil {
 		return x.Body
-	}
-	return ""
-}
-
-func (x *GitHubIssue) GetAssociation() string {
-	if x != nil {
-		return x.Association
 	}
 	return ""
 }
@@ -22997,14 +22903,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"apiVersion\x12\x14\n" +
 	"\x05build\x18\x02 \x01(\tR\x05build\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x12-\n" +
-	"\x06update\x18\x04 \x01(\v2\x15.nushi.v1.UpdateCheckR\x06update\"\x93\x01\n" +
+	"\x06update\x18\x04 \x01(\v2\x15.nushi.v1.UpdateCheckR\x06update\"\x84\x01\n" +
 	"\vUpdateCheck\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\x12!\n" +
-	"\fpublished_ms\x18\x03 \x01(\x03R\vpublishedMs\x12\x16\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +
 	"\x06latest\x18\x04 \x01(\tR\x06latest\x12\x1d\n" +
 	"\n" +
-	"checked_ms\x18\x05 \x01(\x03R\tcheckedMs\"\x18\n" +
+	"checked_ms\x18\x05 \x01(\x03R\tcheckedMsJ\x04\b\x03\x10\x04R\fpublished_ms\"\x18\n" +
 	"\x16CheckForUpdatesRequest\"H\n" +
 	"\x17CheckForUpdatesResponse\x12-\n" +
 	"\x06update\x18\x01 \x01(\v2\x15.nushi.v1.UpdateCheckR\x06update\"\x18\n" +
@@ -23018,13 +22923,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x10ListChatsRequest\"j\n" +
 	"\x11ListChatsResponse\x12$\n" +
 	"\x05chats\x18\x01 \x03(\v2\x0e.nushi.v1.ChatR\x05chats\x12/\n" +
-	"\aremoved\x18\x02 \x03(\v2\x15.nushi.v1.RemovedChatR\aremoved\"\x89\x01\n" +
+	"\aremoved\x18\x02 \x03(\v2\x15.nushi.v1.RemovedChatR\aremoved\"x\n" +
 	"\vRemovedChat\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x16\n" +
-	"\x06folder\x18\x04 \x01(\tR\x06folder\x12&\n" +
-	"\x0fremoved_unix_ms\x18\x05 \x01(\x03R\rremovedUnixMs\";\n" +
+	"\x06folder\x18\x04 \x01(\tR\x06folderJ\x04\b\x05\x10\x06R\x0fremoved_unix_ms\";\n" +
 	"\fRemovedChats\x12+\n" +
 	"\x05chats\x18\x01 \x03(\v2\x15.nushi.v1.RemovedChatR\x05chats\".\n" +
 	"\x1aDismissRemovedChatsRequest\x12\x10\n" +
@@ -23339,11 +23243,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
 	"\x05agent\x18\x03 \x01(\tR\x05agent\x12\x14\n" +
 	"\x05bytes\x18\x04 \x01(\x03R\x05bytes\x12&\n" +
-	"\x0flast_written_ms\x18\x05 \x01(\x03R\rlastWrittenMs\"n\n" +
+	"\x0flast_written_ms\x18\x05 \x01(\x03R\rlastWrittenMs\"]\n" +
 	"\x17ClearTranscriptsRequest\x12\x19\n" +
 	"\bchat_ids\x18\x01 \x03(\tR\achatIds\x12\x10\n" +
-	"\x03all\x18\x02 \x01(\bR\x03all\x12&\n" +
-	"\x0folder_than_days\x18\x03 \x01(\x05R\rolderThanDays\"J\n" +
+	"\x03all\x18\x02 \x01(\bR\x03allJ\x04\b\x03\x10\x04R\x0folder_than_days\"J\n" +
 	"\x18ClearTranscriptsResponse\x12\x18\n" +
 	"\acleared\x18\x01 \x01(\x05R\acleared\x12\x14\n" +
 	"\x05bytes\x18\x02 \x01(\x03R\x05bytes\"E\n" +
@@ -23743,7 +23646,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\xb7\t\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\x9f\t\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -23761,8 +23664,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06images\x18\r \x03(\v2\x13.nushi.v1.ImageDataR\x06images\x12\x16\n" +
 	"\x06parent\x18\x0e \x01(\tR\x06parent\x12\x14\n" +
 	"\x05agent\x18\x0f \x01(\tR\x05agent\x12\x12\n" +
-	"\x04tool\x18\x10 \x01(\tR\x04tool\x12\x17\n" +
-	"\afork_at\x18\x11 \x01(\tR\x06forkAt\x12\x1e\n" +
+	"\x04tool\x18\x10 \x01(\tR\x04tool\x12\x1e\n" +
 	"\n" +
 	"rewindable\x18\x12 \x01(\bR\n" +
 	"rewindable\x12.\n" +
@@ -23777,9 +23679,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x10to_subagent_name\x18\x1b \x01(\tR\x0etoSubagentName\x12\x1f\n" +
 	"\vto_subagent\x18\x1c \x01(\tR\n" +
 	"toSubagent\x12*\n" +
-	"\x11to_subagent_state\x18\x1d \x01(\tR\x0ftoSubagentState\x12 \n" +
-	"\fpassed_on_by\x18\x1e \x01(\tR\n" +
-	"passedOnBy\x12.\n" +
+	"\x11to_subagent_state\x18\x1d \x01(\tR\x0ftoSubagentState\x12.\n" +
 	"\bfindings\x18\x1f \x01(\v2\x12.nushi.v1.FindingsR\bfindings\x12(\n" +
 	"\x10to_subagent_stop\x18  \x01(\bR\x0etoSubagentStop\x12\x12\n" +
 	"\x04sent\x18! \x01(\x03R\x04sent\x12\x14\n" +
@@ -23788,7 +23688,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"raw_output\x18# \x01(\tR\trawOutput\x12\x1a\n" +
 	"\bforkable\x18$ \x01(\bR\bforkable\x12\x18\n" +
 	"\asteered\x18% \x01(\bR\asteered\x12\x14\n" +
-	"\x05files\x18& \x03(\tR\x05files\"I\n" +
+	"\x05files\x18& \x03(\tR\x05filesJ\x04\b\x11\x10\x12J\x04\b\x1e\x10\x1fR\afork_atR\fpassed_on_by\"I\n" +
 	"\bFindings\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12'\n" +
 	"\x05items\x18\x02 \x03(\v2\x11.nushi.v1.FindingR\x05items\"\xeb\x01\n" +
@@ -24066,14 +23966,12 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\aupdated\x18\x05 \x01(\x03R\aupdated\"8\n" +
 	"\x0eJiraRemoteLink\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x10\n" +
-	"\x03url\x18\x02 \x01(\tR\x03url\"\x92\x01\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\"\x84\x01\n" +
 	"\x0eJiraTransition\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x0e\n" +
-	"\x02to\x18\x03 \x01(\tR\x02to\x12\x1f\n" +
-	"\vto_category\x18\x04 \x01(\tR\n" +
-	"toCategory\x12+\n" +
-	"\x06fields\x18\x05 \x03(\v2\x13.nushi.v1.JiraFieldR\x06fields\"\x8f\x01\n" +
+	"\x02to\x18\x03 \x01(\tR\x02to\x12+\n" +
+	"\x06fields\x18\x05 \x03(\v2\x13.nushi.v1.JiraFieldR\x06fieldsJ\x04\b\x04\x10\x05R\vto_category\"\x8f\x01\n" +
 	"\tJiraField\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -24315,11 +24213,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\x14.nushi.v1.GitHubLinkR\x05items\x12\x14\n" +
 	"\x05quiet\x18\x02 \x01(\bR\x05quiet\"E\n" +
 	"\x17GetGitHubStatesResponse\x12*\n" +
-	"\x05items\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x05items\"\xfa\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x14.nushi.v1.GitHubItemR\x05items\"\xeb\x01\n" +
 	"\rGitHubComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
-	"\x06author\x18\x02 \x01(\tR\x06author\x12 \n" +
-	"\vassociation\x18\x03 \x01(\tR\vassociation\x12\x18\n" +
+	"\x06author\x18\x02 \x01(\tR\x06author\x12\x18\n" +
 	"\aoutside\x18\x04 \x01(\bR\aoutside\x12\x10\n" +
 	"\x03bot\x18\x05 \x01(\bR\x03bot\x12\x12\n" +
 	"\x04body\x18\x06 \x01(\tR\x04body\x12\x10\n" +
@@ -24328,7 +24225,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"created_ms\x18\b \x01(\x03R\tcreatedMs\x12\x16\n" +
 	"\x06review\x18\t \x01(\tR\x06review\x12\x16\n" +
 	"\x06commit\x18\n" +
-	" \x01(\tR\x06commit\"\xb7\x03\n" +
+	" \x01(\tR\x06commitJ\x04\b\x03\x10\x04R\vassociation\"\xb7\x03\n" +
 	"\fGitHubThread\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +
@@ -24346,14 +24243,13 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vcan_resolve\x18\f \x01(\bR\n" +
 	"canResolve\x12#\n" +
 	"\rcan_unresolve\x18\r \x01(\bR\fcanUnresolve\x123\n" +
-	"\bcomments\x18\x0e \x03(\v2\x17.nushi.v1.GitHubCommentR\bcomments\"\x9b\x01\n" +
+	"\bcomments\x18\x0e \x03(\v2\x17.nushi.v1.GitHubCommentR\bcomments\"\x90\x01\n" +
 	"\x10GitHubAnnotation\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x14\n" +
 	"\x05level\x18\x02 \x01(\tR\x05level\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x18\n" +
 	"\amessage\x18\x04 \x01(\tR\amessage\x12\x12\n" +
-	"\x04line\x18\x05 \x01(\x05R\x04line\x12\x19\n" +
-	"\bend_line\x18\x06 \x01(\x05R\aendLine\"\xeb\x02\n" +
+	"\x04line\x18\x05 \x01(\x05R\x04lineJ\x04\b\x06\x10\aR\bend_line\"\xeb\x02\n" +
 	"\vGitHubCheck\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
@@ -24375,12 +24271,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x12\n" +
 	"\x04team\x18\x03 \x01(\bR\x04team\x12\x1d\n" +
 	"\n" +
-	"code_owner\x18\x04 \x01(\bR\tcodeOwner\"\xaf\x06\n" +
+	"code_owner\x18\x04 \x01(\bR\tcodeOwner\"\xa0\x06\n" +
 	"\n" +
 	"GitHubPull\x12(\n" +
 	"\x04item\x18\x01 \x01(\v2\x14.nushi.v1.GitHubItemR\x04item\x12\x12\n" +
-	"\x04body\x18\x02 \x01(\tR\x04body\x12 \n" +
-	"\vassociation\x18\x03 \x01(\tR\vassociation\x12\x18\n" +
+	"\x04body\x18\x02 \x01(\tR\x04body\x12\x18\n" +
 	"\aoutside\x18\x04 \x01(\bR\aoutside\x12\x12\n" +
 	"\x04base\x18\x05 \x01(\tR\x04base\x12\x12\n" +
 	"\x04head\x18\x06 \x01(\tR\x04head\x12\x1b\n" +
@@ -24403,7 +24298,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x0epending_review\x18\x14 \x01(\tR\rpendingReview\x12)\n" +
 	"\x10pending_comments\x18\x15 \x01(\x05R\x0fpendingComments\x12\x18\n" +
 	"\acommits\x18\x16 \x01(\x05R\acommits\x12+\n" +
-	"\x05merge\x18\x17 \x01(\v2\x15.nushi.v1.GitHubMergeR\x05merge\"\xd6\x03\n" +
+	"\x05merge\x18\x17 \x01(\v2\x15.nushi.v1.GitHubMergeR\x05mergeJ\x04\b\x03\x10\x04R\vassociation\"\xd6\x03\n" +
 	"\vGitHubMerge\x12\x18\n" +
 	"\amethods\x18\x01 \x03(\tR\amethods\x12%\n" +
 	"\x0edefault_method\x18\x02 \x01(\tR\rdefaultMethod\x12\x1b\n" +
@@ -24419,12 +24314,11 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	" \x01(\bR\x05queue\x12!\n" +
 	"\fqueue_method\x18\v \x01(\tR\vqueueMethod\x120\n" +
 	"\x05entry\x18\f \x01(\v2\x1a.nushi.v1.GitHubQueueEntryR\x05entry\x12#\n" +
-	"\rdelete_branch\x18\r \x01(\bR\fdeleteBranch\"X\n" +
+	"\rdelete_branch\x18\r \x01(\bR\fdeleteBranch\"K\n" +
 	"\x0fGitHubAutoMerge\x12\x0e\n" +
 	"\x02by\x18\x01 \x01(\tR\x02by\x12\x16\n" +
-	"\x06method\x18\x02 \x01(\tR\x06method\x12\x1d\n" +
-	"\n" +
-	"enabled_ms\x18\x03 \x01(\x03R\tenabledMs\"u\n" +
+	"\x06method\x18\x02 \x01(\tR\x06methodJ\x04\b\x03\x10\x04R\n" +
+	"enabled_ms\"u\n" +
 	"\x10GitHubQueueEntry\x12\x1a\n" +
 	"\bposition\x18\x01 \x01(\x05R\bposition\x12\x14\n" +
 	"\x05state\x18\x02 \x01(\tR\x05state\x12\x0e\n" +
@@ -24435,15 +24329,14 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x14\n" +
 	"\x05quiet\x18\x02 \x01(\bR\x05quiet\"A\n" +
 	"\x15GetGitHubPullResponse\x12(\n" +
-	"\x04pull\x18\x01 \x01(\v2\x14.nushi.v1.GitHubPullR\x04pull\"\xfa\x01\n" +
+	"\x04pull\x18\x01 \x01(\v2\x14.nushi.v1.GitHubPullR\x04pull\"\xeb\x01\n" +
 	"\vGitHubIssue\x12(\n" +
 	"\x04item\x18\x01 \x01(\v2\x14.nushi.v1.GitHubItemR\x04item\x12\x12\n" +
-	"\x04body\x18\x02 \x01(\tR\x04body\x12 \n" +
-	"\vassociation\x18\x03 \x01(\tR\vassociation\x12\x18\n" +
+	"\x04body\x18\x02 \x01(\tR\x04body\x12\x18\n" +
 	"\aoutside\x18\x04 \x01(\bR\aoutside\x12\x16\n" +
 	"\x06labels\x18\x05 \x03(\tR\x06labels\x12\x1c\n" +
 	"\tassignees\x18\x06 \x03(\tR\tassignees\x12;\n" +
-	"\fconversation\x18\a \x03(\v2\x17.nushi.v1.GitHubCommentR\fconversation\"T\n" +
+	"\fconversation\x18\a \x03(\v2\x17.nushi.v1.GitHubCommentR\fconversationJ\x04\b\x03\x10\x04R\vassociation\"T\n" +
 	"\x15GetGitHubIssueRequest\x12%\n" +
 	"\x03ref\x18\x01 \x01(\v2\x13.nushi.v1.GitHubRefR\x03ref\x12\x14\n" +
 	"\x05quiet\x18\x02 \x01(\bR\x05quiet\"E\n" +

@@ -163,7 +163,7 @@ func (s *server) ListJiraTransitions(ctx context.Context, req *connect.Request[n
 	}
 	out := &nushiv1.ListJiraTransitionsResponse{}
 	for _, t := range ts {
-		pt := &nushiv1.JiraTransition{Id: t.ID, Name: t.Name, To: t.To, ToCategory: t.ToCategory}
+		pt := &nushiv1.JiraTransition{Id: t.ID, Name: t.Name, To: t.To}
 		for _, f := range t.Fields {
 			pt.Fields = append(pt.Fields, &nushiv1.JiraField{Id: f.ID, Name: f.Name, Type: f.Type, Required: f.Required, Options: jiraOptions(f.Options)})
 		}

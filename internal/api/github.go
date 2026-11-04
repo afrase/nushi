@@ -130,7 +130,7 @@ func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv
 		return nil, githubErr(err)
 	}
 	return connect.NewResponse(&nushiv1.GetGitHubIssueResponse{Issue: &nushiv1.GitHubIssue{Item: ghItemProto(is.GitHubItem), Body: is.Body,
-		Association: is.Association, Outside: github.Outside(is.Association), Labels: is.Labels, Assignees: is.Assignees,
+		Outside: github.Outside(is.Association), Labels: is.Labels, Assignees: is.Assignees,
 		Conversation: ghCommentsProto(is.Conversation)}}), nil
 }
 
@@ -206,7 +206,7 @@ func ghItemsProto(items []model.GitHubItem) []*nushiv1.GitHubItem {
 }
 
 func ghCommentProto(c model.GitHubComment) *nushiv1.GitHubComment {
-	return &nushiv1.GitHubComment{Id: c.ID, Author: c.Author, Association: c.Association, Outside: github.Outside(c.Association),
+	return &nushiv1.GitHubComment{Id: c.ID, Author: c.Author, Outside: github.Outside(c.Association),
 		Bot: c.Bot, Body: c.Body, Url: c.URL, CreatedMs: unixMs(c.Created), Review: c.Review, Commit: c.Commit}
 }
 
@@ -219,7 +219,7 @@ func ghCommentsProto(cs []model.GitHubComment) []*nushiv1.GitHubComment {
 }
 
 func pullProto(p model.GitHubPull) *nushiv1.GitHubPull {
-	out := &nushiv1.GitHubPull{Item: ghItemProto(p.GitHubItem), Body: p.Body, Association: p.Association, Outside: github.Outside(p.Association),
+	out := &nushiv1.GitHubPull{Item: ghItemProto(p.GitHubItem), Body: p.Body, Outside: github.Outside(p.Association),
 		Base: p.Base, Head: p.Head, HeadRepo: p.HeadRepo, CrossRepo: p.CrossRepo, BaseOid: p.BaseOID, HeadOid: p.HeadOID,
 		Mergeable: p.Mergeable, MergeState: p.MergeState, Additions: int32(p.Additions), Deletions: int32(p.Deletions),
 		ChangedFiles: int32(p.ChangedFiles), Conversation: ghCommentsProto(p.Conversation), PendingReview: p.PendingReview,
@@ -237,7 +237,7 @@ func pullProto(p model.GitHubPull) *nushiv1.GitHubPull {
 			Title: c.Title, Summary: c.Summary, Required: c.Required, StartedMs: unixMs(c.Started), CompletedMs: unixMs(c.Completed)}
 		for _, a := range c.Annotations {
 			pc.Annotations = append(pc.Annotations, &nushiv1.GitHubAnnotation{Path: a.Path, Level: a.Level, Title: a.Title, Message: a.Message,
-				Line: int32(a.Line), EndLine: int32(a.EndLine)})
+				Line: int32(a.Line)})
 		}
 		out.Checks = append(out.Checks, pc)
 	}

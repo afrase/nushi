@@ -97,7 +97,7 @@ func TestTransitions(t *testing.T) {
 	f := issueFake(t)
 	c := f.client()
 	ts, err := c.Transitions(t.Context(), "SCRUM-5")
-	if err != nil || len(ts) != 4 || ts[1].Name != "In Progress" || ts[1].ToCategory != "indeterminate" || len(ts[1].Fields) != 0 {
+	if err != nil || len(ts) != 4 || ts[1].Name != "In Progress" || ts[1].To != "In Progress" || len(ts[1].Fields) != 0 {
 		t.Fatalf("%+v, %v", ts, err)
 	}
 	// A workflow with a screen: required fields first, each as its type.

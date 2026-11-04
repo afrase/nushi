@@ -83,12 +83,7 @@ func (g *github) serve(t *testing.T) *githubapi.Releases {
 	return &githubapi.Releases{Repo: "afrase/nushi", Base: srv.URL}
 }
 
-func latest(r *githubapi.Releases) Latest {
-	return func(ctx context.Context) (string, time.Time, error) {
-		rel, err := r.Latest(ctx)
-		return rel.Tag, rel.Published, err
-	}
-}
+func latest(r *githubapi.Releases) Latest { return r.Latest }
 
 // A newer release is said with its page; the same, an older one, or any
 // to a build that isn't a release (dev), is not, though the latest is.
@@ -108,7 +103,7 @@ func TestNewerOnly(t *testing.T) {
 		if err != nil || got.Version != c.want || got.Latest != "0.1.17" || got.Checked.IsZero() {
 			t.Fatalf("running %q: %+v %v", c.running, got, err)
 		}
-		if c.want != "" && (got.URL != "https://github.com/afrase/nushi/releases/tag/v0.1.17" || got.Published.Day() != 29) {
+		if c.want != "" && got.URL != "https://github.com/afrase/nushi/releases/tag/v0.1.17" {
 			t.Fatalf("running %q: %+v", c.running, got)
 		}
 		if ev.n() != 1 || s.Get() != got {
@@ -151,14 +146,14 @@ func TestEveryTwoHours(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var mu sync.Mutex
 		asked, fail := 0, true
-		ask := func(context.Context) (string, time.Time, error) {
+		ask := func(context.Context) (string, error) {
 			mu.Lock()
 			defer mu.Unlock()
 			asked++
 			if fail {
-				return "", time.Time{}, errors.New("offline")
+				return "", errors.New("offline")
 			}
-			return "v0.1.17", time.Now(), nil
+			return "v0.1.17", nil
 		}
 		count := func() int { mu.Lock(); defer mu.Unlock(); return asked }
 		var ev events
@@ -204,10 +199,10 @@ func TestEveryTwoHours(t *testing.T) {
 func TestOffDuringACheck(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		asked, answer := make(chan struct{}), make(chan struct{})
-		ask := func(context.Context) (string, time.Time, error) {
+		ask := func(context.Context) (string, error) {
 			asked <- struct{}{}
 			<-answer
-			return "v0.1.17", time.Now(), nil
+			return "v0.1.17", nil
 		}
 		var ev events
 		s := New(ask, &prefs{on: true}, "0.1.16", "https://github.com/afrase/nushi", ev.publish)

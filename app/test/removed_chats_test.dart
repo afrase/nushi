@@ -1,4 +1,3 @@
-import 'package:fixnum/fixnum.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -9,13 +8,7 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 RemovedChat _removed(String id, String title, {String agent = 'claude'}) =>
-    RemovedChat(
-      id: id,
-      agent: agent,
-      title: title,
-      folder: '/Users/me/nushi',
-      removedUnixMs: Int64(1),
-    );
+    RemovedChat(id: id, agent: agent, title: title, folder: '/Users/me/nushi');
 
 final List<RemovedChat> _three = [
   _removed('a', 'Fix the login redirect'),

@@ -373,7 +373,6 @@ GitHubComment _said(
 }) => GitHubComment(
   id: 'C_${author}_${age.inSeconds}',
   author: author,
-  association: 'MEMBER',
   body: body,
   url: 'https://github.com/$demoRepo/pull/218',
   createdMs: ago(age),
@@ -420,7 +419,6 @@ GitHubPull demoPull({bool running = true}) => GitHubPull(
       '- [x] Cursor in `store.ListPosts`\n'
       '- [x] Handler reads `?after=`\n'
       '- [ ] Themes: minimal and docs',
-  association: 'MEMBER',
   base: 'main',
   head: demoBranch,
   headRepo: demoRepo,

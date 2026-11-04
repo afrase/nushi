@@ -26,7 +26,7 @@ func mergeProto(p model.GitHubPull) *nushiv1.GitHubMerge {
 		Blocks: github.MergeBlocks(p), AutoAllowed: m.AutoAllowed, CanEnableAuto: m.CanEnableAuto, CanDisableAuto: m.CanDisableAuto,
 		Queue: m.Queue, QueueMethod: m.QueueMethod, DeleteBranch: m.DeleteBranch}
 	if a := m.Auto; a != nil {
-		out.Auto = &nushiv1.GitHubAutoMerge{By: a.By, Method: a.Method, EnabledMs: unixMs(a.Enabled)}
+		out.Auto = &nushiv1.GitHubAutoMerge{By: a.By, Method: a.Method}
 	}
 	if e := m.Entry; e != nil {
 		out.Entry = &nushiv1.GitHubQueueEntry{Position: int32(e.Position), State: e.State, By: e.By, EtaSeconds: int32(e.Eta)}

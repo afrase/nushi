@@ -285,8 +285,8 @@ extension type NushiServiceClient(connect.Transport _transport) {
   }
 
   /// Cuts a chat back to just before one of its user messages (when
-  /// status.can_rewind and the message's fork_at is set, or it is the first)
-  /// and returns that message. The agent's session is forked there: a new
+  /// status.can_rewind and the message is rewindable) and returns that
+  /// message. The agent's session is forked there: a new
   /// session id, the same chat. Files aren't rewound. Refused while the chat
   /// is busy.
   Future<nushiv1nushi.RewindChatResponse> rewindChat(

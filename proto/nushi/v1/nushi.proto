@@ -57,8 +57,8 @@ service NushiService {
   // Sends a prompt; the reply arrives as events.
   rpc SendPrompt(SendPromptRequest) returns (SendPromptResponse);
   // Cuts a chat back to just before one of its user messages (when
-  // status.can_rewind and the message's fork_at is set, or it is the first)
-  // and returns that message. The agent's session is forked there: a new
+  // status.can_rewind and the message is rewindable) and returns that
+  // message. The agent's session is forked there: a new
   // session id, the same chat. Files aren't rewound. Refused while the chat
   // is busy.
   rpc RewindChat(RewindChatRequest) returns (RewindChatResponse);
@@ -479,11 +479,13 @@ message PingResponse {
 // daemon's own version. A build that isn't a release never has a newer
 // one; nor does any while Settings.check_updates is off.
 message UpdateCheck {
-  // The newer release, when there is one: its version ("0.1.17"), its
-  // page on GitHub, and when it was published.
+  // The newer release, when there is one: its version ("0.1.17") and its
+  // page on GitHub.
   string version = 1;
   string url = 2;
-  int64 published_ms = 3;
+  // When it was published: never read.
+  reserved 3;
+  reserved "published_ms";
   // The latest release, newer or not; "" until GitHub has answered.
   string latest = 4;
   // When GitHub last answered; 0: not yet.
@@ -532,7 +534,9 @@ message RemovedChat {
   string agent = 2;
   string title = 3;
   string folder = 4;
-  int64 removed_unix_ms = 5;
+  // When it was removed: never read.
+  reserved 5;
+  reserved "removed_unix_ms";
 }
 
 message RemovedChats {
@@ -1202,9 +1206,10 @@ message ClearTranscriptsRequest {
   repeated string chat_ids = 1;
   // Every copy.
   bool all = 2;
-  // The copies last written more than this many days ago (with neither
-  // of the above).
-  int32 older_than_days = 3;
+  // The copies last written more than this many days ago: no client sent
+  // it (the daemon clears those itself, Settings.transcript_days).
+  reserved 3;
+  reserved "older_than_days";
 }
 
 message ClearTranscriptsResponse {
@@ -2035,9 +2040,10 @@ message Item {
   // A tool call's tool, when the agent names it (Claude's "Read",
   // "SubagentHandback", ...).
   string tool = 16;
-  // For a user message: the agent's message the conversation before it
-  // ends with, where a rewind to it forks the session.
-  string fork_at = 17;
+  // For a user message: the agent's message a rewind to it forks the
+  // session at; the daemon's alone (rewindable says it has one).
+  reserved 17;
+  reserved "fork_at";
   // For a user message: the chat can be rewound to just before it while
   // status.can_rewind and the chat is idle.
   bool rewindable = 18;
@@ -2067,11 +2073,13 @@ message Item {
   // relay_state, relayed_by and relay_stop.
   string to_subagent_name = 27;
   string to_subagent = 28;
-  // How it went: "sending" until the agent passes it on (its call that
-  // does is passed_on_by), "relayed" once that call completes, "failed"
-  // when it fails or the turn ends without one; "" when unknown (replayed).
+  // How it went: "sending" until the agent passes it on, "relayed" once
+  // its call that does completes, "failed" when that fails or the turn
+  // ends without one; "" when unknown (replayed).
   string to_subagent_state = 29;
-  string passed_on_by = 30;
+  // The call that passes it on: the daemon's alone.
+  reserved 30;
+  reserved "passed_on_by";
   // For a tool call that reports a code review's result (Claude's
   // ReportFindings): what it found.
   Findings findings = 31;
@@ -2607,7 +2615,9 @@ message JiraTransition {
   string id = 1;
   string name = 2;
   string to = 3;
-  string to_category = 4;
+  // The status's category: never read.
+  reserved 4;
+  reserved "to_category";
   repeated JiraField fields = 5;
 }
 
@@ -3030,9 +3040,9 @@ message GetGitHubStatesResponse {
 message GitHubComment {
   string id = 1;
   string author = 2;
-  // GitHub's author association: OWNER, MEMBER, COLLABORATOR,
-  // CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, NONE…
-  string association = 3;
+  // GitHub's author association: the daemon's alone, as outside.
+  reserved 3;
+  reserved "association";
   // The author isn't the repository's owner, a member or a collaborator.
   bool outside = 4;
   bool bot = 5;
@@ -3073,7 +3083,9 @@ message GitHubAnnotation {
   string title = 3;
   string message = 4;
   int32 line = 5;
-  int32 end_line = 6;
+  // Where it ends: never read.
+  reserved 6;
+  reserved "end_line";
 }
 
 // A check run (id is its id, an Actions job's) or a commit status (id 0).
@@ -3109,7 +3121,9 @@ message GitHubReviewer {
 message GitHubPull {
   GitHubItem item = 1;
   string body = 2;
-  string association = 3;
+  // GitHub's author association: the daemon's alone, as outside.
+  reserved 3;
+  reserved "association";
   bool outside = 4;
   string base = 5;
   string head = 6;
@@ -3177,7 +3191,9 @@ message GitHubAutoMerge {
   // A login, or someone.
   string by = 1;
   string method = 2;
-  int64 enabled_ms = 3;
+  // When it was turned on: never read.
+  reserved 3;
+  reserved "enabled_ms";
 }
 
 message GitHubQueueEntry {
@@ -3202,7 +3218,9 @@ message GetGitHubPullResponse {
 message GitHubIssue {
   GitHubItem item = 1;
   string body = 2;
-  string association = 3;
+  // GitHub's author association: the daemon's alone, as outside.
+  reserved 3;
+  reserved "association";
   bool outside = 4;
   repeated string labels = 5;
   repeated string assignees = 6;

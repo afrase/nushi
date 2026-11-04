@@ -472,8 +472,8 @@ type NushiServiceClient interface {
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
 	// Cuts a chat back to just before one of its user messages (when
-	// status.can_rewind and the message's fork_at is set, or it is the first)
-	// and returns that message. The agent's session is forked there: a new
+	// status.can_rewind and the message is rewindable) and returns that
+	// message. The agent's session is forked there: a new
 	// session id, the same chat. Files aren't rewound. Refused while the chat
 	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)
@@ -2624,8 +2624,8 @@ type NushiServiceHandler interface {
 	// Sends a prompt; the reply arrives as events.
 	SendPrompt(context.Context, *connect.Request[v1.SendPromptRequest]) (*connect.Response[v1.SendPromptResponse], error)
 	// Cuts a chat back to just before one of its user messages (when
-	// status.can_rewind and the message's fork_at is set, or it is the first)
-	// and returns that message. The agent's session is forked there: a new
+	// status.can_rewind and the message is rewindable) and returns that
+	// message. The agent's session is forked there: a new
 	// session id, the same chat. Files aren't rewound. Refused while the chat
 	// is busy.
 	RewindChat(context.Context, *connect.Request[v1.RewindChatRequest]) (*connect.Response[v1.RewindChatResponse], error)

@@ -16,10 +16,9 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// Latest is the repository's latest release, neither a draft nor a
-// pre-release: its tag ("v0.1.17") and when it was published
-// (internal/githubapi).
-type Latest func(ctx context.Context) (tag string, published time.Time, err error)
+// Latest is the tag ("v0.1.17") of the repository's latest release,
+// neither a draft nor a pre-release (internal/githubapi).
+type Latest func(ctx context.Context) (tag string, err error)
 
 // Prefs keeps whether the daemon checks (internal/store).
 type Prefs interface {
@@ -94,7 +93,7 @@ func (s *Service) SetOn(on bool) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.found.Version, s.found.URL, s.found.Published = "", "", time.Time{}
+	s.found.Version, s.found.URL = "", ""
 	found := s.found
 	s.publish(model.Event{Update: &found}) // under mu: a check ending now publishes before, or not at all
 	return nil
@@ -113,7 +112,7 @@ func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	defer s.checking.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	tag, published, err := s.latest(ctx)
+	tag, err := s.latest(ctx)
 	if err != nil {
 		return s.Get(), err
 	}
@@ -124,7 +123,7 @@ func (s *Service) check(ctx context.Context, auto bool) (model.Update, error) {
 	found := model.Update{Latest: v, Checked: time.Now()}
 	newer := s.current != "" && Compare(v, s.current) > 0
 	if newer {
-		found.Version, found.URL, found.Published = v, s.web+"/releases/tag/"+url.PathEscape(tag), published
+		found.Version, found.URL = v, s.web+"/releases/tag/"+url.PathEscape(tag)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"time"
 
 	"connectrpc.com/connect"
 
@@ -35,7 +34,7 @@ func (s *server) ListTranscripts(context.Context, *connect.Request[nushiv1.ListT
 
 func (s *server) ClearTranscripts(ctx context.Context, req *connect.Request[nushiv1.ClearTranscriptsRequest]) (*connect.Response[nushiv1.ClearTranscriptsResponse], error) {
 	ids := req.Msg.ChatIds
-	switch days := req.Msg.OlderThanDays; {
+	switch {
 	case req.Msg.All:
 		list, err := s.Chats.ListCopies()
 		if err != nil {
@@ -45,16 +44,11 @@ func (s *server) ClearTranscripts(ctx context.Context, req *connect.Request[nush
 		for _, c := range list {
 			ids = append(ids, c.Chat)
 		}
-	case len(ids) == 0 && days > 0:
-		var err error
-		if ids, err = s.Chats.Older(time.Duration(days) * 24 * time.Hour); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
-		}
 	case len(ids) == 0:
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("say which copies: chat_ids, all or older_than_days"))
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("say which copies: chat_ids or all"))
 	}
 	n, bytes, err := s.Chats.ClearCopies(ctx, ids)
-	slog.Info("transcript copies cleared", "copies", n, "bytes", bytes, "all", req.Msg.All, "older_than_days", req.Msg.OlderThanDays)
+	slog.Info("transcript copies cleared", "copies", n, "bytes", bytes, "all", req.Msg.All)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}

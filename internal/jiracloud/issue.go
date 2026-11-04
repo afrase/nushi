@@ -247,9 +247,11 @@ func (c *Client) remoteLinks(ctx context.Context, key string) ([]model.JiraRemot
 func (c *Client) Transitions(ctx context.Context, key string) ([]model.JiraTransition, error) {
 	var raw struct {
 		Transitions []struct {
-			ID     string    `json:"id"`
-			Name   string    `json:"name"`
-			To     rawStatus `json:"to"`
+			ID   string `json:"id"`
+			Name string `json:"name"`
+			To   struct {
+				Name string `json:"name"`
+			} `json:"to"`
 			Fields map[string]struct {
 				Required bool   `json:"required"`
 				Name     string `json:"name"`
@@ -272,7 +274,7 @@ func (c *Client) Transitions(ctx context.Context, key string) ([]model.JiraTrans
 	}
 	var out []model.JiraTransition
 	for _, t := range raw.Transitions {
-		tr := model.JiraTransition{ID: t.ID, Name: t.Name, To: t.To.Name, ToCategory: t.To.Category.Key}
+		tr := model.JiraTransition{ID: t.ID, Name: t.Name, To: t.To.Name}
 		for id, f := range t.Fields {
 			typ := f.Schema.Type
 			switch {

@@ -37,7 +37,7 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
         ... on CheckRun { databaseId name status conclusion detailsUrl title summary startedAt completedAt
           isRequired(pullRequestNumber: $number)
           checkSuite { app { name } workflowRun { workflow { name } } }
-          annotations(first: 10) { nodes { path title message annotationLevel location { start { line } end { line } } } } }
+          annotations(first: 10) { nodes { path title message annotationLevel location { start { line } } } } }
         ... on StatusContext { context state targetUrl description createdAt isRequired(pullRequestNumber: $number) }
       } } } } } }
     }
@@ -146,9 +146,6 @@ type checkNode struct {
 				Start struct {
 					Line int `json:"line"`
 				} `json:"start"`
-				End struct {
-					Line int `json:"line"`
-				} `json:"end"`
 			} `json:"location"`
 		} `json:"nodes"`
 	} `json:"annotations"`
@@ -181,7 +178,7 @@ func (n checkNode) check() model.GitHubCheck {
 	}
 	for _, a := range n.Annotations.Nodes {
 		c.Annotations = append(c.Annotations, model.GitHubAnnotation{Path: a.Path, Level: strings.ToLower(a.AnnotationLevel),
-			Title: a.Title, Message: Brief(a.Message), Line: a.Location.Start.Line, EndLine: a.Location.End.Line})
+			Title: a.Title, Message: Brief(a.Message), Line: a.Location.Start.Line})
 	}
 	return c
 }

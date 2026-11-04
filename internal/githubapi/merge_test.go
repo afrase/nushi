@@ -3,7 +3,6 @@ package githubapi
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -21,7 +20,7 @@ func TestPullAutoMerge(t *testing.T) {
 	if strings.Join(m.Methods, " ") != "merge squash rebase" || m.Default != "merge" || !m.Can || !m.Bypass || !m.AutoAllowed || m.CanEnableAuto || !m.CanDisableAuto {
 		t.Fatalf("%+v", m)
 	}
-	want := model.GitHubAutoMerge{By: "afrase", Method: "squash", Enabled: time.Date(2026, 10, 31, 5, 25, 18, 0, time.UTC)}
+	want := model.GitHubAutoMerge{By: "afrase", Method: "squash"}
 	if m.Auto == nil || *m.Auto != want || m.Queue || m.Entry != nil {
 		t.Fatalf("%+v %+v", m.Auto, m)
 	}

@@ -36,10 +36,6 @@ func TestTranscriptCopies(t *testing.T) {
 	}
 
 	// Cleared, the chat's history after a restart is the agent's alone.
-	none := must(a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{OlderThanDays: 1})))
-	if none.Cleared != 0 {
-		t.Errorf("cleared %d copies a day old", none.Cleared)
-	}
 	all := must(a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{All: true})))
 	if all.Cleared != 1 || all.Bytes != list.TotalBytes {
 		t.Errorf("cleared %v", all)

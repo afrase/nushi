@@ -20,12 +20,11 @@ GitHubComment said(
   String review = '',
   bool bot = false,
   Duration age = const Duration(minutes: 30),
-  String association = 'MEMBER',
+  bool outside = false,
 }) => GitHubComment(
   id: 'C_${author}_${body.length}_${age.inSeconds}',
   author: author,
-  association: association,
-  outside: !['OWNER', 'MEMBER', 'COLLABORATOR'].contains(association),
+  outside: outside,
   bot: bot,
   body: body,
   url: 'https://github.com/$fixtureRepo/pull/412#c',
@@ -132,7 +131,6 @@ GitHubPull fixturePull() => GitHubPull(
       'missing `q`.\n\n'
       '- [x] Tests for each filter that reads `q`\n'
       '- [ ] Specs run locally (CI will run them)',
-  association: 'MEMBER',
   base: 'main',
   head: 'filters-malformed-q',
   headRepo: fixtureRepo,
@@ -160,7 +158,7 @@ GitHubPull fixturePull() => GitHubPull(
       dangerBody,
       bot: true,
       age: const Duration(minutes: 11),
-      association: 'NONE',
+      outside: true,
     ),
     said(
       'github-actions',
@@ -168,7 +166,7 @@ GitHubPull fixturePull() => GitHubPull(
       bot: true,
       review: 'commented',
       age: const Duration(minutes: 2),
-      association: 'NONE',
+      outside: true,
     ),
     said(
       'mona',

@@ -29,7 +29,7 @@ func TestLatestRelease(t *testing.T) {
 	r := &Releases{Repo: "afrase/nushi", Base: srv.URL}
 	for range 2 {
 		got, err := r.Latest(t.Context())
-		if err != nil || got.Tag != "v0.1.17" || got.Published.Day() != 29 {
+		if err != nil || got != "v0.1.17" {
 			t.Fatalf("%+v %v", got, err)
 		}
 	}

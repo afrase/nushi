@@ -73,7 +73,7 @@ type GitHubCheck struct {
 // GitHubAnnotation is a check run's note on a file's lines.
 type GitHubAnnotation struct {
 	Path, Level, Title, Message string
-	Line, EndLine               int
+	Line                        int
 }
 
 // GitHubReviewer is a reviewer of a pull request: asked to review (State
@@ -142,11 +142,10 @@ type GitHubMerge struct {
 	Conversations bool
 }
 
-// GitHubAutoMerge is auto-merge turned on: by whom, when, with which method.
+// GitHubAutoMerge is auto-merge turned on: by whom, with which method.
 type GitHubAutoMerge struct {
-	By      string
-	Method  string
-	Enabled time.Time
+	By     string
+	Method string
 }
 
 // GitHubQueueEntry is a pull request's place in its base's merge queue;

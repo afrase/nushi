@@ -91,9 +91,9 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 
 func itemProto(it *model.Item) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
-		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt,
+		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool,
 		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, ToSubagentName: it.ToSubagentName,
-		ToSubagent: it.ToSubagent, ToSubagentState: it.ToSubagentState, PassedOnBy: it.PassedOnBy, ToSubagentStop: it.ToSubagentStop,
+		ToSubagent: it.ToSubagent, ToSubagentState: it.ToSubagentState, ToSubagentStop: it.ToSubagentStop,
 		Rewindable: it.Rewindable, Steered: it.Steered, Forkable: chats.Forkable(*it), Report: it.Report, Sent: unixMs(it.Sent),
 		Input: it.Input, RawOutput: it.RawOutput, Files: it.Files}
 	if sh := it.BackgroundCommand; sh != nil {
@@ -152,7 +152,7 @@ func statusProto(st model.Status) *nushiv1.ChatStatus {
 func removedProto(removed []model.RemovedChat) []*nushiv1.RemovedChat {
 	out := make([]*nushiv1.RemovedChat, 0, len(removed))
 	for _, r := range removed {
-		out = append(out, &nushiv1.RemovedChat{Id: r.ID, Agent: r.Agent, Title: r.Title, Folder: r.Folder, RemovedUnixMs: unixMs(r.At)})
+		out = append(out, &nushiv1.RemovedChat{Id: r.ID, Agent: r.Agent, Title: r.Title, Folder: r.Folder})
 	}
 	return out
 }

@@ -66,8 +66,8 @@ type JiraRemoteLink struct {
 // JiraTransition is a move an issue's workflow allows now, to a status;
 // Fields are what the move's screen asks for.
 type JiraTransition struct {
-	ID, Name, To, ToCategory string
-	Fields                   []JiraField
+	ID, Name, To string
+	Fields       []JiraField
 }
 
 // JiraField is a field a transition asks for. Type is Jira's schema type

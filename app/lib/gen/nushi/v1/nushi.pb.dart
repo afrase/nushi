@@ -174,14 +174,12 @@ class UpdateCheck extends $pb.GeneratedMessage {
   factory UpdateCheck({
     $core.String? version,
     $core.String? url,
-    $fixnum.Int64? publishedMs,
     $core.String? latest,
     $fixnum.Int64? checkedMs,
   }) {
     final result = UpdateCheck._();
     if (version != null) result.version = version;
     if (url != null) result.url = url;
-    if (publishedMs != null) result.publishedMs = publishedMs;
     if (latest != null) result.latest = latest;
     if (checkedMs != null) result.checkedMs = checkedMs;
     return result;
@@ -202,7 +200,6 @@ class UpdateCheck extends $pb.GeneratedMessage {
       createEmptyInstance: UpdateCheck.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'version')
     ..aOS(2, _omitFieldNames ? '' : 'url')
-    ..aInt64(3, _omitFieldNames ? '' : 'publishedMs')
     ..aOS(4, _omitFieldNames ? '' : 'latest')
     ..aInt64(5, _omitFieldNames ? '' : 'checkedMs')
     ..hasRequiredFields = false;
@@ -229,8 +226,8 @@ class UpdateCheck extends $pb.GeneratedMessage {
           UpdateCheck.$_createMessage);
   static UpdateCheck? _defaultInstance;
 
-  /// The newer release, when there is one: its version ("0.1.17"), its
-  /// page on GitHub, and when it was published.
+  /// The newer release, when there is one: its version ("0.1.17") and its
+  /// page on GitHub.
   @$pb.TagNumber(1)
   $core.String get version => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -249,32 +246,23 @@ class UpdateCheck extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearUrl() => $_clearField(2);
 
-  @$pb.TagNumber(3)
-  $fixnum.Int64 get publishedMs => $_getI64(2);
-  @$pb.TagNumber(3)
-  set publishedMs($fixnum.Int64 value) => $_setInt64(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasPublishedMs() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearPublishedMs() => $_clearField(3);
-
   /// The latest release, newer or not; "" until GitHub has answered.
   @$pb.TagNumber(4)
-  $core.String get latest => $_getSZ(3);
+  $core.String get latest => $_getSZ(2);
   @$pb.TagNumber(4)
-  set latest($core.String value) => $_setString(3, value);
+  set latest($core.String value) => $_setString(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasLatest() => $_has(3);
+  $core.bool hasLatest() => $_has(2);
   @$pb.TagNumber(4)
   void clearLatest() => $_clearField(4);
 
   /// When GitHub last answered; 0: not yet.
   @$pb.TagNumber(5)
-  $fixnum.Int64 get checkedMs => $_getI64(4);
+  $fixnum.Int64 get checkedMs => $_getI64(3);
   @$pb.TagNumber(5)
-  set checkedMs($fixnum.Int64 value) => $_setInt64(4, value);
+  set checkedMs($fixnum.Int64 value) => $_setInt64(3, value);
   @$pb.TagNumber(5)
-  $core.bool hasCheckedMs() => $_has(4);
+  $core.bool hasCheckedMs() => $_has(3);
   @$pb.TagNumber(5)
   void clearCheckedMs() => $_clearField(5);
 }
@@ -680,14 +668,12 @@ class RemovedChat extends $pb.GeneratedMessage {
     $core.String? agent,
     $core.String? title,
     $core.String? folder,
-    $fixnum.Int64? removedUnixMs,
   }) {
     final result = RemovedChat._();
     if (id != null) result.id = id;
     if (agent != null) result.agent = agent;
     if (title != null) result.title = title;
     if (folder != null) result.folder = folder;
-    if (removedUnixMs != null) result.removedUnixMs = removedUnixMs;
     return result;
   }
 
@@ -708,7 +694,6 @@ class RemovedChat extends $pb.GeneratedMessage {
     ..aOS(2, _omitFieldNames ? '' : 'agent')
     ..aOS(3, _omitFieldNames ? '' : 'title')
     ..aOS(4, _omitFieldNames ? '' : 'folder')
-    ..aInt64(5, _omitFieldNames ? '' : 'removedUnixMs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -768,15 +753,6 @@ class RemovedChat extends $pb.GeneratedMessage {
   $core.bool hasFolder() => $_has(3);
   @$pb.TagNumber(4)
   void clearFolder() => $_clearField(4);
-
-  @$pb.TagNumber(5)
-  $fixnum.Int64 get removedUnixMs => $_getI64(4);
-  @$pb.TagNumber(5)
-  set removedUnixMs($fixnum.Int64 value) => $_setInt64(4, value);
-  @$pb.TagNumber(5)
-  $core.bool hasRemovedUnixMs() => $_has(4);
-  @$pb.TagNumber(5)
-  void clearRemovedUnixMs() => $_clearField(5);
 }
 
 class RemovedChats extends $pb.GeneratedMessage {
@@ -6960,12 +6936,10 @@ class ClearTranscriptsRequest extends $pb.GeneratedMessage {
   factory ClearTranscriptsRequest({
     $core.Iterable<$core.String>? chatIds,
     $core.bool? all,
-    $core.int? olderThanDays,
   }) {
     final result = ClearTranscriptsRequest._();
     if (chatIds != null) result.chatIds.addAll(chatIds);
     if (all != null) result.all = all;
-    if (olderThanDays != null) result.olderThanDays = olderThanDays;
     return result;
   }
 
@@ -6984,7 +6958,6 @@ class ClearTranscriptsRequest extends $pb.GeneratedMessage {
       createEmptyInstance: ClearTranscriptsRequest.$_createMessage)
     ..pPS(1, _omitFieldNames ? '' : 'chatIds')
     ..aOB(2, _omitFieldNames ? '' : 'all')
-    ..aI(3, _omitFieldNames ? '' : 'olderThanDays')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -7024,17 +6997,6 @@ class ClearTranscriptsRequest extends $pb.GeneratedMessage {
   $core.bool hasAll() => $_has(1);
   @$pb.TagNumber(2)
   void clearAll() => $_clearField(2);
-
-  /// The copies last written more than this many days ago (with neither
-  /// of the above).
-  @$pb.TagNumber(3)
-  $core.int get olderThanDays => $_getIZ(2);
-  @$pb.TagNumber(3)
-  set olderThanDays($core.int value) => $_setSignedInt32(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasOlderThanDays() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearOlderThanDays() => $_clearField(3);
 }
 
 class ClearTranscriptsResponse extends $pb.GeneratedMessage {
@@ -14863,7 +14825,6 @@ class Item extends $pb.GeneratedMessage {
     $core.String? parent,
     $core.String? agent,
     $core.String? tool,
-    $core.String? forkAt,
     $core.bool? rewindable,
     Subagent? subagent,
     $core.bool? report,
@@ -14876,7 +14837,6 @@ class Item extends $pb.GeneratedMessage {
     $core.String? toSubagentName,
     $core.String? toSubagent,
     $core.String? toSubagentState,
-    $core.String? passedOnBy,
     Findings? findings,
     $core.bool? toSubagentStop,
     $fixnum.Int64? sent,
@@ -14903,7 +14863,6 @@ class Item extends $pb.GeneratedMessage {
     if (parent != null) result.parent = parent;
     if (agent != null) result.agent = agent;
     if (tool != null) result.tool = tool;
-    if (forkAt != null) result.forkAt = forkAt;
     if (rewindable != null) result.rewindable = rewindable;
     if (subagent != null) result.subagent = subagent;
     if (report != null) result.report = report;
@@ -14916,7 +14875,6 @@ class Item extends $pb.GeneratedMessage {
     if (toSubagentName != null) result.toSubagentName = toSubagentName;
     if (toSubagent != null) result.toSubagent = toSubagent;
     if (toSubagentState != null) result.toSubagentState = toSubagentState;
-    if (passedOnBy != null) result.passedOnBy = passedOnBy;
     if (findings != null) result.findings = findings;
     if (toSubagentStop != null) result.toSubagentStop = toSubagentStop;
     if (sent != null) result.sent = sent;
@@ -14963,7 +14921,6 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(14, _omitFieldNames ? '' : 'parent')
     ..aOS(15, _omitFieldNames ? '' : 'agent')
     ..aOS(16, _omitFieldNames ? '' : 'tool')
-    ..aOS(17, _omitFieldNames ? '' : 'forkAt')
     ..aOB(18, _omitFieldNames ? '' : 'rewindable')
     ..aOM<Subagent>(19, _omitFieldNames ? '' : 'subagent',
         subBuilder: Subagent.$_createMessage)
@@ -14978,7 +14935,6 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(27, _omitFieldNames ? '' : 'toSubagentName')
     ..aOS(28, _omitFieldNames ? '' : 'toSubagent')
     ..aOS(29, _omitFieldNames ? '' : 'toSubagentState')
-    ..aOS(30, _omitFieldNames ? '' : 'passedOnBy')
     ..aOM<Findings>(31, _omitFieldNames ? '' : 'findings',
         subBuilder: Findings.$_createMessage)
     ..aOB(32, _omitFieldNames ? '' : 'toSubagentStop')
@@ -15130,48 +15086,37 @@ class Item extends $pb.GeneratedMessage {
   @$pb.TagNumber(16)
   void clearTool() => $_clearField(16);
 
-  /// For a user message: the agent's message the conversation before it
-  /// ends with, where a rewind to it forks the session.
-  @$pb.TagNumber(17)
-  $core.String get forkAt => $_getSZ(16);
-  @$pb.TagNumber(17)
-  set forkAt($core.String value) => $_setString(16, value);
-  @$pb.TagNumber(17)
-  $core.bool hasForkAt() => $_has(16);
-  @$pb.TagNumber(17)
-  void clearForkAt() => $_clearField(17);
-
   /// For a user message: the chat can be rewound to just before it while
   /// status.can_rewind and the chat is idle.
   @$pb.TagNumber(18)
-  $core.bool get rewindable => $_getBF(17);
+  $core.bool get rewindable => $_getBF(16);
   @$pb.TagNumber(18)
-  set rewindable($core.bool value) => $_setBool(17, value);
+  set rewindable($core.bool value) => $_setBool(16, value);
   @$pb.TagNumber(18)
-  $core.bool hasRewindable() => $_has(17);
+  $core.bool hasRewindable() => $_has(16);
   @$pb.TagNumber(18)
   void clearRewindable() => $_clearField(18);
 
   /// For a tool call that starts a subagent: how the subagent goes.
   @$pb.TagNumber(19)
-  Subagent get subagent => $_getN(18);
+  Subagent get subagent => $_getN(17);
   @$pb.TagNumber(19)
   set subagent(Subagent value) => $_setField(19, value);
   @$pb.TagNumber(19)
-  $core.bool hasSubagent() => $_has(18);
+  $core.bool hasSubagent() => $_has(17);
   @$pb.TagNumber(19)
   void clearSubagent() => $_clearField(19);
   @$pb.TagNumber(19)
-  Subagent ensureSubagent() => $_ensure(18);
+  Subagent ensureSubagent() => $_ensure(17);
 
   /// The tool call is a subagent's report to the chat (Claude's
   /// SubagentHandback): its subagent's result, not one of its steps.
   @$pb.TagNumber(20)
-  $core.bool get report => $_getBF(19);
+  $core.bool get report => $_getBF(18);
   @$pb.TagNumber(20)
-  set report($core.bool value) => $_setBool(19, value);
+  set report($core.bool value) => $_setBool(18, value);
   @$pb.TagNumber(20)
-  $core.bool hasReport() => $_has(19);
+  $core.bool hasReport() => $_has(18);
   @$pb.TagNumber(20)
   void clearReport() => $_clearField(20);
 
@@ -15180,62 +15125,62 @@ class Item extends $pb.GeneratedMessage {
   /// it uses the chat's), and the model it ran on (a name to show), once the
   /// agent says.
   @$pb.TagNumber(21)
-  $core.String get prompt => $_getSZ(20);
+  $core.String get prompt => $_getSZ(19);
   @$pb.TagNumber(21)
-  set prompt($core.String value) => $_setString(20, value);
+  set prompt($core.String value) => $_setString(19, value);
   @$pb.TagNumber(21)
-  $core.bool hasPrompt() => $_has(20);
+  $core.bool hasPrompt() => $_has(19);
   @$pb.TagNumber(21)
   void clearPrompt() => $_clearField(21);
 
   @$pb.TagNumber(22)
-  $core.String get model => $_getSZ(21);
+  $core.String get model => $_getSZ(20);
   @$pb.TagNumber(22)
-  set model($core.String value) => $_setString(21, value);
+  set model($core.String value) => $_setString(20, value);
   @$pb.TagNumber(22)
-  $core.bool hasModel() => $_has(21);
+  $core.bool hasModel() => $_has(20);
   @$pb.TagNumber(22)
   void clearModel() => $_clearField(22);
 
   @$pb.TagNumber(23)
-  $core.String get effort => $_getSZ(22);
+  $core.String get effort => $_getSZ(21);
   @$pb.TagNumber(23)
-  set effort($core.String value) => $_setString(22, value);
+  set effort($core.String value) => $_setString(21, value);
   @$pb.TagNumber(23)
-  $core.bool hasEffort() => $_has(22);
+  $core.bool hasEffort() => $_has(21);
   @$pb.TagNumber(23)
   void clearEffort() => $_clearField(23);
 
   @$pb.TagNumber(24)
-  $core.String get ranModel => $_getSZ(23);
+  $core.String get ranModel => $_getSZ(22);
   @$pb.TagNumber(24)
-  set ranModel($core.String value) => $_setString(23, value);
+  set ranModel($core.String value) => $_setString(22, value);
   @$pb.TagNumber(24)
-  $core.bool hasRanModel() => $_has(23);
+  $core.bool hasRanModel() => $_has(22);
   @$pb.TagNumber(24)
   void clearRanModel() => $_clearField(24);
 
   /// For a tool call that left its command running in the background.
   /// Named shell before API 92 (the same field).
   @$pb.TagNumber(25)
-  BackgroundCommand get backgroundCommand => $_getN(24);
+  BackgroundCommand get backgroundCommand => $_getN(23);
   @$pb.TagNumber(25)
   set backgroundCommand(BackgroundCommand value) => $_setField(25, value);
   @$pb.TagNumber(25)
-  $core.bool hasBackgroundCommand() => $_has(24);
+  $core.bool hasBackgroundCommand() => $_has(23);
   @$pb.TagNumber(25)
   void clearBackgroundCommand() => $_clearField(25);
   @$pb.TagNumber(25)
-  BackgroundCommand ensureBackgroundCommand() => $_ensure(24);
+  BackgroundCommand ensureBackgroundCommand() => $_ensure(23);
 
   /// For a tool call that starts a subagent: the agent's id for it, when the
   /// agent can pass it messages (SendPromptRequest.to_subagent).
   @$pb.TagNumber(26)
-  $core.String get agentId => $_getSZ(25);
+  $core.String get agentId => $_getSZ(24);
   @$pb.TagNumber(26)
-  set agentId($core.String value) => $_setString(25, value);
+  set agentId($core.String value) => $_setString(24, value);
   @$pb.TagNumber(26)
-  $core.bool hasAgentId() => $_has(25);
+  $core.bool hasAgentId() => $_has(24);
   @$pb.TagNumber(26)
   void clearAgentId() => $_clearField(26);
 
@@ -15245,66 +15190,57 @@ class Item extends $pb.GeneratedMessage {
   /// relay_call before API 92 (the same fields), as the three below were
   /// relay_state, relayed_by and relay_stop.
   @$pb.TagNumber(27)
-  $core.String get toSubagentName => $_getSZ(26);
+  $core.String get toSubagentName => $_getSZ(25);
   @$pb.TagNumber(27)
-  set toSubagentName($core.String value) => $_setString(26, value);
+  set toSubagentName($core.String value) => $_setString(25, value);
   @$pb.TagNumber(27)
-  $core.bool hasToSubagentName() => $_has(26);
+  $core.bool hasToSubagentName() => $_has(25);
   @$pb.TagNumber(27)
   void clearToSubagentName() => $_clearField(27);
 
   @$pb.TagNumber(28)
-  $core.String get toSubagent => $_getSZ(27);
+  $core.String get toSubagent => $_getSZ(26);
   @$pb.TagNumber(28)
-  set toSubagent($core.String value) => $_setString(27, value);
+  set toSubagent($core.String value) => $_setString(26, value);
   @$pb.TagNumber(28)
-  $core.bool hasToSubagent() => $_has(27);
+  $core.bool hasToSubagent() => $_has(26);
   @$pb.TagNumber(28)
   void clearToSubagent() => $_clearField(28);
 
-  /// How it went: "sending" until the agent passes it on (its call that
-  /// does is passed_on_by), "relayed" once that call completes, "failed"
-  /// when it fails or the turn ends without one; "" when unknown (replayed).
+  /// How it went: "sending" until the agent passes it on, "relayed" once
+  /// its call that does completes, "failed" when that fails or the turn
+  /// ends without one; "" when unknown (replayed).
   @$pb.TagNumber(29)
-  $core.String get toSubagentState => $_getSZ(28);
+  $core.String get toSubagentState => $_getSZ(27);
   @$pb.TagNumber(29)
-  set toSubagentState($core.String value) => $_setString(28, value);
+  set toSubagentState($core.String value) => $_setString(27, value);
   @$pb.TagNumber(29)
-  $core.bool hasToSubagentState() => $_has(28);
+  $core.bool hasToSubagentState() => $_has(27);
   @$pb.TagNumber(29)
   void clearToSubagentState() => $_clearField(29);
-
-  @$pb.TagNumber(30)
-  $core.String get passedOnBy => $_getSZ(29);
-  @$pb.TagNumber(30)
-  set passedOnBy($core.String value) => $_setString(29, value);
-  @$pb.TagNumber(30)
-  $core.bool hasPassedOnBy() => $_has(29);
-  @$pb.TagNumber(30)
-  void clearPassedOnBy() => $_clearField(30);
 
   /// For a tool call that reports a code review's result (Claude's
   /// ReportFindings): what it found.
   @$pb.TagNumber(31)
-  Findings get findings => $_getN(30);
+  Findings get findings => $_getN(28);
   @$pb.TagNumber(31)
   set findings(Findings value) => $_setField(31, value);
   @$pb.TagNumber(31)
-  $core.bool hasFindings() => $_has(30);
+  $core.bool hasFindings() => $_has(28);
   @$pb.TagNumber(31)
   void clearFindings() => $_clearField(31);
   @$pb.TagNumber(31)
-  Findings ensureFindings() => $_ensure(30);
+  Findings ensureFindings() => $_ensure(28);
 
   /// For a user message: it asked the agent to stop that subagent, or the
   /// background command to_subagent_name names (StopTask), not to pass
   /// anything on.
   @$pb.TagNumber(32)
-  $core.bool get toSubagentStop => $_getBF(31);
+  $core.bool get toSubagentStop => $_getBF(29);
   @$pb.TagNumber(32)
-  set toSubagentStop($core.bool value) => $_setBool(31, value);
+  set toSubagentStop($core.bool value) => $_setBool(29, value);
   @$pb.TagNumber(32)
-  $core.bool hasToSubagentStop() => $_has(31);
+  $core.bool hasToSubagentStop() => $_has(29);
   @$pb.TagNumber(32)
   void clearToSubagentStop() => $_clearField(32);
 
@@ -15312,11 +15248,11 @@ class Item extends $pb.GeneratedMessage {
   /// arrive: when, in Unix milliseconds; 0 when not known (one the agent
   /// replayed). API 78; the agent's messages since v0.2.11.
   @$pb.TagNumber(33)
-  $fixnum.Int64 get sent => $_getI64(32);
+  $fixnum.Int64 get sent => $_getI64(30);
   @$pb.TagNumber(33)
-  set sent($fixnum.Int64 value) => $_setInt64(32, value);
+  set sent($fixnum.Int64 value) => $_setInt64(30, value);
   @$pb.TagNumber(33)
-  $core.bool hasSent() => $_has(32);
+  $core.bool hasSent() => $_has(30);
   @$pb.TagNumber(33)
   void clearSent() => $_clearField(33);
 
@@ -15324,31 +15260,31 @@ class Item extends $pb.GeneratedMessage {
   /// result as the agent gave it (text or indented JSON), only while its
   /// text, diffs and images show nothing; each cut to about 8 KB. API 79.
   @$pb.TagNumber(34)
-  $core.String get input => $_getSZ(33);
+  $core.String get input => $_getSZ(31);
   @$pb.TagNumber(34)
-  set input($core.String value) => $_setString(33, value);
+  set input($core.String value) => $_setString(31, value);
   @$pb.TagNumber(34)
-  $core.bool hasInput() => $_has(33);
+  $core.bool hasInput() => $_has(31);
   @$pb.TagNumber(34)
   void clearInput() => $_clearField(34);
 
   @$pb.TagNumber(35)
-  $core.String get rawOutput => $_getSZ(34);
+  $core.String get rawOutput => $_getSZ(32);
   @$pb.TagNumber(35)
-  set rawOutput($core.String value) => $_setString(34, value);
+  set rawOutput($core.String value) => $_setString(32, value);
   @$pb.TagNumber(35)
-  $core.bool hasRawOutput() => $_has(34);
+  $core.bool hasRawOutput() => $_has(32);
   @$pb.TagNumber(35)
   void clearRawOutput() => $_clearField(35);
 
   /// For an agent message: a fork can be cut there (Fork from here,
   /// ForkAsChatRequest.item_id) while status.can_rewind. API 94.
   @$pb.TagNumber(36)
-  $core.bool get forkable => $_getBF(35);
+  $core.bool get forkable => $_getBF(33);
   @$pb.TagNumber(36)
-  set forkable($core.bool value) => $_setBool(35, value);
+  set forkable($core.bool value) => $_setBool(33, value);
   @$pb.TagNumber(36)
-  $core.bool hasForkable() => $_has(35);
+  $core.bool hasForkable() => $_has(33);
   @$pb.TagNumber(36)
   void clearForkable() => $_clearField(36);
 
@@ -15356,11 +15292,11 @@ class Item extends $pb.GeneratedMessage {
   /// agent was steered), not the prompt a turn began with; kept in Nushi's
   /// copy, unknown in a replay.
   @$pb.TagNumber(37)
-  $core.bool get steered => $_getBF(36);
+  $core.bool get steered => $_getBF(34);
   @$pb.TagNumber(37)
-  set steered($core.bool value) => $_setBool(36, value);
+  set steered($core.bool value) => $_setBool(34, value);
   @$pb.TagNumber(37)
-  $core.bool hasSteered() => $_has(36);
+  $core.bool hasSteered() => $_has(34);
   @$pb.TagNumber(37)
   void clearSteered() => $_clearField(37);
 
@@ -15368,7 +15304,7 @@ class Item extends $pb.GeneratedMessage {
   /// chat's folder, or absolute. Those its text doesn't mention as @path
   /// were attached (API 106).
   @$pb.TagNumber(38)
-  $pb.PbList<$core.String> get files => $_getList(37);
+  $pb.PbList<$core.String> get files => $_getList(35);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when
@@ -20639,14 +20575,12 @@ class JiraTransition extends $pb.GeneratedMessage {
     $core.String? id,
     $core.String? name,
     $core.String? to,
-    $core.String? toCategory,
     $core.Iterable<JiraField>? fields,
   }) {
     final result = JiraTransition._();
     if (id != null) result.id = id;
     if (name != null) result.name = name;
     if (to != null) result.to = to;
-    if (toCategory != null) result.toCategory = toCategory;
     if (fields != null) result.fields.addAll(fields);
     return result;
   }
@@ -20667,7 +20601,6 @@ class JiraTransition extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aOS(3, _omitFieldNames ? '' : 'to')
-    ..aOS(4, _omitFieldNames ? '' : 'toCategory')
     ..pPM<JiraField>(5, _omitFieldNames ? '' : 'fields',
         subBuilder: JiraField.$_createMessage)
     ..hasRequiredFields = false;
@@ -20721,17 +20654,8 @@ class JiraTransition extends $pb.GeneratedMessage {
   @$pb.TagNumber(3)
   void clearTo() => $_clearField(3);
 
-  @$pb.TagNumber(4)
-  $core.String get toCategory => $_getSZ(3);
-  @$pb.TagNumber(4)
-  set toCategory($core.String value) => $_setString(3, value);
-  @$pb.TagNumber(4)
-  $core.bool hasToCategory() => $_has(3);
-  @$pb.TagNumber(4)
-  void clearToCategory() => $_clearField(4);
-
   @$pb.TagNumber(5)
-  $pb.PbList<JiraField> get fields => $_getList(4);
+  $pb.PbList<JiraField> get fields => $_getList(3);
 }
 
 /// A field a transition's screen asks for. type: "string", "text"
@@ -25524,7 +25448,6 @@ class GitHubComment extends $pb.GeneratedMessage {
   factory GitHubComment({
     $core.String? id,
     $core.String? author,
-    $core.String? association,
     $core.bool? outside,
     $core.bool? bot,
     $core.String? body,
@@ -25536,7 +25459,6 @@ class GitHubComment extends $pb.GeneratedMessage {
     final result = GitHubComment._();
     if (id != null) result.id = id;
     if (author != null) result.author = author;
-    if (association != null) result.association = association;
     if (outside != null) result.outside = outside;
     if (bot != null) result.bot = bot;
     if (body != null) result.body = body;
@@ -25562,7 +25484,6 @@ class GitHubComment extends $pb.GeneratedMessage {
       createEmptyInstance: GitHubComment.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'author')
-    ..aOS(3, _omitFieldNames ? '' : 'association')
     ..aOB(4, _omitFieldNames ? '' : 'outside')
     ..aOB(5, _omitFieldNames ? '' : 'bot')
     ..aOS(6, _omitFieldNames ? '' : 'body')
@@ -25612,81 +25533,70 @@ class GitHubComment extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearAuthor() => $_clearField(2);
 
-  /// GitHub's author association: OWNER, MEMBER, COLLABORATOR,
-  /// CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, NONE…
-  @$pb.TagNumber(3)
-  $core.String get association => $_getSZ(2);
-  @$pb.TagNumber(3)
-  set association($core.String value) => $_setString(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasAssociation() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearAssociation() => $_clearField(3);
-
   /// The author isn't the repository's owner, a member or a collaborator.
   @$pb.TagNumber(4)
-  $core.bool get outside => $_getBF(3);
+  $core.bool get outside => $_getBF(2);
   @$pb.TagNumber(4)
-  set outside($core.bool value) => $_setBool(3, value);
+  set outside($core.bool value) => $_setBool(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasOutside() => $_has(3);
+  $core.bool hasOutside() => $_has(2);
   @$pb.TagNumber(4)
   void clearOutside() => $_clearField(4);
 
   @$pb.TagNumber(5)
-  $core.bool get bot => $_getBF(4);
+  $core.bool get bot => $_getBF(3);
   @$pb.TagNumber(5)
-  set bot($core.bool value) => $_setBool(4, value);
+  set bot($core.bool value) => $_setBool(3, value);
   @$pb.TagNumber(5)
-  $core.bool hasBot() => $_has(4);
+  $core.bool hasBot() => $_has(3);
   @$pb.TagNumber(5)
   void clearBot() => $_clearField(5);
 
   @$pb.TagNumber(6)
-  $core.String get body => $_getSZ(5);
+  $core.String get body => $_getSZ(4);
   @$pb.TagNumber(6)
-  set body($core.String value) => $_setString(5, value);
+  set body($core.String value) => $_setString(4, value);
   @$pb.TagNumber(6)
-  $core.bool hasBody() => $_has(5);
+  $core.bool hasBody() => $_has(4);
   @$pb.TagNumber(6)
   void clearBody() => $_clearField(6);
 
   @$pb.TagNumber(7)
-  $core.String get url => $_getSZ(6);
+  $core.String get url => $_getSZ(5);
   @$pb.TagNumber(7)
-  set url($core.String value) => $_setString(6, value);
+  set url($core.String value) => $_setString(5, value);
   @$pb.TagNumber(7)
-  $core.bool hasUrl() => $_has(6);
+  $core.bool hasUrl() => $_has(5);
   @$pb.TagNumber(7)
   void clearUrl() => $_clearField(7);
 
   @$pb.TagNumber(8)
-  $fixnum.Int64 get createdMs => $_getI64(7);
+  $fixnum.Int64 get createdMs => $_getI64(6);
   @$pb.TagNumber(8)
-  set createdMs($fixnum.Int64 value) => $_setInt64(7, value);
+  set createdMs($fixnum.Int64 value) => $_setInt64(6, value);
   @$pb.TagNumber(8)
-  $core.bool hasCreatedMs() => $_has(7);
+  $core.bool hasCreatedMs() => $_has(6);
   @$pb.TagNumber(8)
   void clearCreatedMs() => $_clearField(8);
 
   /// A review's state ("approved", "changes_requested", "commented",
   /// "dismissed"); empty for a comment.
   @$pb.TagNumber(9)
-  $core.String get review => $_getSZ(8);
+  $core.String get review => $_getSZ(7);
   @$pb.TagNumber(9)
-  set review($core.String value) => $_setString(8, value);
+  set review($core.String value) => $_setString(7, value);
   @$pb.TagNumber(9)
-  $core.bool hasReview() => $_has(8);
+  $core.bool hasReview() => $_has(7);
   @$pb.TagNumber(9)
   void clearReview() => $_clearField(9);
 
   /// The head commit a review was made on (its oid); empty for a comment.
   @$pb.TagNumber(10)
-  $core.String get commit => $_getSZ(9);
+  $core.String get commit => $_getSZ(8);
   @$pb.TagNumber(10)
-  set commit($core.String value) => $_setString(9, value);
+  set commit($core.String value) => $_setString(8, value);
   @$pb.TagNumber(10)
-  $core.bool hasCommit() => $_has(9);
+  $core.bool hasCommit() => $_has(8);
   @$pb.TagNumber(10)
   void clearCommit() => $_clearField(10);
 }
@@ -25909,7 +25819,6 @@ class GitHubAnnotation extends $pb.GeneratedMessage {
     $core.String? title,
     $core.String? message,
     $core.int? line,
-    $core.int? endLine,
   }) {
     final result = GitHubAnnotation._();
     if (path != null) result.path = path;
@@ -25917,7 +25826,6 @@ class GitHubAnnotation extends $pb.GeneratedMessage {
     if (title != null) result.title = title;
     if (message != null) result.message = message;
     if (line != null) result.line = line;
-    if (endLine != null) result.endLine = endLine;
     return result;
   }
 
@@ -25939,7 +25847,6 @@ class GitHubAnnotation extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'title')
     ..aOS(4, _omitFieldNames ? '' : 'message')
     ..aI(5, _omitFieldNames ? '' : 'line')
-    ..aI(6, _omitFieldNames ? '' : 'endLine')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -26009,15 +25916,6 @@ class GitHubAnnotation extends $pb.GeneratedMessage {
   $core.bool hasLine() => $_has(4);
   @$pb.TagNumber(5)
   void clearLine() => $_clearField(5);
-
-  @$pb.TagNumber(6)
-  $core.int get endLine => $_getIZ(5);
-  @$pb.TagNumber(6)
-  set endLine($core.int value) => $_setSignedInt32(5, value);
-  @$pb.TagNumber(6)
-  $core.bool hasEndLine() => $_has(5);
-  @$pb.TagNumber(6)
-  void clearEndLine() => $_clearField(6);
 }
 
 /// A check run (id is its id, an Actions job's) or a commit status (id 0).
@@ -26320,7 +26218,6 @@ class GitHubPull extends $pb.GeneratedMessage {
   factory GitHubPull({
     GitHubItem? item,
     $core.String? body,
-    $core.String? association,
     $core.bool? outside,
     $core.String? base,
     $core.String? head,
@@ -26345,7 +26242,6 @@ class GitHubPull extends $pb.GeneratedMessage {
     final result = GitHubPull._();
     if (item != null) result.item = item;
     if (body != null) result.body = body;
-    if (association != null) result.association = association;
     if (outside != null) result.outside = outside;
     if (base != null) result.base = base;
     if (head != null) result.head = head;
@@ -26385,7 +26281,6 @@ class GitHubPull extends $pb.GeneratedMessage {
     ..aOM<GitHubItem>(1, _omitFieldNames ? '' : 'item',
         subBuilder: GitHubItem.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'body')
-    ..aOS(3, _omitFieldNames ? '' : 'association')
     ..aOB(4, _omitFieldNames ? '' : 'outside')
     ..aOS(5, _omitFieldNames ? '' : 'base')
     ..aOS(6, _omitFieldNames ? '' : 'head')
@@ -26453,181 +26348,172 @@ class GitHubPull extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearBody() => $_clearField(2);
 
-  @$pb.TagNumber(3)
-  $core.String get association => $_getSZ(2);
-  @$pb.TagNumber(3)
-  set association($core.String value) => $_setString(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasAssociation() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearAssociation() => $_clearField(3);
-
   @$pb.TagNumber(4)
-  $core.bool get outside => $_getBF(3);
+  $core.bool get outside => $_getBF(2);
   @$pb.TagNumber(4)
-  set outside($core.bool value) => $_setBool(3, value);
+  set outside($core.bool value) => $_setBool(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasOutside() => $_has(3);
+  $core.bool hasOutside() => $_has(2);
   @$pb.TagNumber(4)
   void clearOutside() => $_clearField(4);
 
   @$pb.TagNumber(5)
-  $core.String get base => $_getSZ(4);
+  $core.String get base => $_getSZ(3);
   @$pb.TagNumber(5)
-  set base($core.String value) => $_setString(4, value);
+  set base($core.String value) => $_setString(3, value);
   @$pb.TagNumber(5)
-  $core.bool hasBase() => $_has(4);
+  $core.bool hasBase() => $_has(3);
   @$pb.TagNumber(5)
   void clearBase() => $_clearField(5);
 
   @$pb.TagNumber(6)
-  $core.String get head => $_getSZ(5);
+  $core.String get head => $_getSZ(4);
   @$pb.TagNumber(6)
-  set head($core.String value) => $_setString(5, value);
+  set head($core.String value) => $_setString(4, value);
   @$pb.TagNumber(6)
-  $core.bool hasHead() => $_has(5);
+  $core.bool hasHead() => $_has(4);
   @$pb.TagNumber(6)
   void clearHead() => $_clearField(6);
 
   /// The head's repository (owner/name): another one for a fork's.
   @$pb.TagNumber(7)
-  $core.String get headRepo => $_getSZ(6);
+  $core.String get headRepo => $_getSZ(5);
   @$pb.TagNumber(7)
-  set headRepo($core.String value) => $_setString(6, value);
+  set headRepo($core.String value) => $_setString(5, value);
   @$pb.TagNumber(7)
-  $core.bool hasHeadRepo() => $_has(6);
+  $core.bool hasHeadRepo() => $_has(5);
   @$pb.TagNumber(7)
   void clearHeadRepo() => $_clearField(7);
 
   @$pb.TagNumber(8)
-  $core.bool get crossRepo => $_getBF(7);
+  $core.bool get crossRepo => $_getBF(6);
   @$pb.TagNumber(8)
-  set crossRepo($core.bool value) => $_setBool(7, value);
+  set crossRepo($core.bool value) => $_setBool(6, value);
   @$pb.TagNumber(8)
-  $core.bool hasCrossRepo() => $_has(7);
+  $core.bool hasCrossRepo() => $_has(6);
   @$pb.TagNumber(8)
   void clearCrossRepo() => $_clearField(8);
 
   @$pb.TagNumber(9)
-  $core.String get baseOid => $_getSZ(8);
+  $core.String get baseOid => $_getSZ(7);
   @$pb.TagNumber(9)
-  set baseOid($core.String value) => $_setString(8, value);
+  set baseOid($core.String value) => $_setString(7, value);
   @$pb.TagNumber(9)
-  $core.bool hasBaseOid() => $_has(8);
+  $core.bool hasBaseOid() => $_has(7);
   @$pb.TagNumber(9)
   void clearBaseOid() => $_clearField(9);
 
   @$pb.TagNumber(10)
-  $core.String get headOid => $_getSZ(9);
+  $core.String get headOid => $_getSZ(8);
   @$pb.TagNumber(10)
-  set headOid($core.String value) => $_setString(9, value);
+  set headOid($core.String value) => $_setString(8, value);
   @$pb.TagNumber(10)
-  $core.bool hasHeadOid() => $_has(9);
+  $core.bool hasHeadOid() => $_has(8);
   @$pb.TagNumber(10)
   void clearHeadOid() => $_clearField(10);
 
   /// "mergeable", "conflicting", "unknown".
   @$pb.TagNumber(11)
-  $core.String get mergeable => $_getSZ(10);
+  $core.String get mergeable => $_getSZ(9);
   @$pb.TagNumber(11)
-  set mergeable($core.String value) => $_setString(10, value);
+  set mergeable($core.String value) => $_setString(9, value);
   @$pb.TagNumber(11)
-  $core.bool hasMergeable() => $_has(10);
+  $core.bool hasMergeable() => $_has(9);
   @$pb.TagNumber(11)
   void clearMergeable() => $_clearField(11);
 
   /// "clean", "blocked", "behind", "dirty", "unstable", "has_hooks",
   /// "unknown".
   @$pb.TagNumber(12)
-  $core.String get mergeState => $_getSZ(11);
+  $core.String get mergeState => $_getSZ(10);
   @$pb.TagNumber(12)
-  set mergeState($core.String value) => $_setString(11, value);
+  set mergeState($core.String value) => $_setString(10, value);
   @$pb.TagNumber(12)
-  $core.bool hasMergeState() => $_has(11);
+  $core.bool hasMergeState() => $_has(10);
   @$pb.TagNumber(12)
   void clearMergeState() => $_clearField(12);
 
   @$pb.TagNumber(13)
-  $core.int get additions => $_getIZ(12);
+  $core.int get additions => $_getIZ(11);
   @$pb.TagNumber(13)
-  set additions($core.int value) => $_setSignedInt32(12, value);
+  set additions($core.int value) => $_setSignedInt32(11, value);
   @$pb.TagNumber(13)
-  $core.bool hasAdditions() => $_has(12);
+  $core.bool hasAdditions() => $_has(11);
   @$pb.TagNumber(13)
   void clearAdditions() => $_clearField(13);
 
   @$pb.TagNumber(14)
-  $core.int get deletions => $_getIZ(13);
+  $core.int get deletions => $_getIZ(12);
   @$pb.TagNumber(14)
-  set deletions($core.int value) => $_setSignedInt32(13, value);
+  set deletions($core.int value) => $_setSignedInt32(12, value);
   @$pb.TagNumber(14)
-  $core.bool hasDeletions() => $_has(13);
+  $core.bool hasDeletions() => $_has(12);
   @$pb.TagNumber(14)
   void clearDeletions() => $_clearField(14);
 
   @$pb.TagNumber(15)
-  $core.int get changedFiles => $_getIZ(14);
+  $core.int get changedFiles => $_getIZ(13);
   @$pb.TagNumber(15)
-  set changedFiles($core.int value) => $_setSignedInt32(14, value);
+  set changedFiles($core.int value) => $_setSignedInt32(13, value);
   @$pb.TagNumber(15)
-  $core.bool hasChangedFiles() => $_has(14);
+  $core.bool hasChangedFiles() => $_has(13);
   @$pb.TagNumber(15)
   void clearChangedFiles() => $_clearField(15);
 
   @$pb.TagNumber(16)
-  $pb.PbList<GitHubReviewer> get reviewers => $_getList(15);
+  $pb.PbList<GitHubReviewer> get reviewers => $_getList(14);
 
   /// Comments and reviews that said something, oldest first.
   @$pb.TagNumber(17)
-  $pb.PbList<GitHubComment> get conversation => $_getList(16);
+  $pb.PbList<GitHubComment> get conversation => $_getList(15);
 
   @$pb.TagNumber(18)
-  $pb.PbList<GitHubThread> get threads => $_getList(17);
+  $pb.PbList<GitHubThread> get threads => $_getList(16);
 
   @$pb.TagNumber(19)
-  $pb.PbList<GitHubCheck> get checks => $_getList(18);
+  $pb.PbList<GitHubCheck> get checks => $_getList(17);
 
   /// My review pending on GitHub (made in the browser), which a review
   /// submitted here joins, and its comments' count.
   @$pb.TagNumber(20)
-  $core.String get pendingReview => $_getSZ(19);
+  $core.String get pendingReview => $_getSZ(18);
   @$pb.TagNumber(20)
-  set pendingReview($core.String value) => $_setString(19, value);
+  set pendingReview($core.String value) => $_setString(18, value);
   @$pb.TagNumber(20)
-  $core.bool hasPendingReview() => $_has(19);
+  $core.bool hasPendingReview() => $_has(18);
   @$pb.TagNumber(20)
   void clearPendingReview() => $_clearField(20);
 
   @$pb.TagNumber(21)
-  $core.int get pendingComments => $_getIZ(20);
+  $core.int get pendingComments => $_getIZ(19);
   @$pb.TagNumber(21)
-  set pendingComments($core.int value) => $_setSignedInt32(20, value);
+  set pendingComments($core.int value) => $_setSignedInt32(19, value);
   @$pb.TagNumber(21)
-  $core.bool hasPendingComments() => $_has(20);
+  $core.bool hasPendingComments() => $_has(19);
   @$pb.TagNumber(21)
   void clearPendingComments() => $_clearField(21);
 
   /// Its commits.
   @$pb.TagNumber(22)
-  $core.int get commits => $_getIZ(21);
+  $core.int get commits => $_getIZ(20);
   @$pb.TagNumber(22)
-  set commits($core.int value) => $_setSignedInt32(21, value);
+  set commits($core.int value) => $_setSignedInt32(20, value);
   @$pb.TagNumber(22)
-  $core.bool hasCommits() => $_has(21);
+  $core.bool hasCommits() => $_has(20);
   @$pb.TagNumber(22)
   void clearCommits() => $_clearField(22);
 
   /// What merging it may do. Unset from a daemon before API 96.
   @$pb.TagNumber(23)
-  GitHubMerge get merge => $_getN(22);
+  GitHubMerge get merge => $_getN(21);
   @$pb.TagNumber(23)
   set merge(GitHubMerge value) => $_setField(23, value);
   @$pb.TagNumber(23)
-  $core.bool hasMerge() => $_has(22);
+  $core.bool hasMerge() => $_has(21);
   @$pb.TagNumber(23)
   void clearMerge() => $_clearField(23);
   @$pb.TagNumber(23)
-  GitHubMerge ensureMerge() => $_ensure(22);
+  GitHubMerge ensureMerge() => $_ensure(21);
 }
 
 /// What merging an open pull request may do, as GitHub says for the viewer.
@@ -26845,12 +26731,10 @@ class GitHubAutoMerge extends $pb.GeneratedMessage {
   factory GitHubAutoMerge({
     $core.String? by,
     $core.String? method,
-    $fixnum.Int64? enabledMs,
   }) {
     final result = GitHubAutoMerge._();
     if (by != null) result.by = by;
     if (method != null) result.method = method;
-    if (enabledMs != null) result.enabledMs = enabledMs;
     return result;
   }
 
@@ -26869,7 +26753,6 @@ class GitHubAutoMerge extends $pb.GeneratedMessage {
       createEmptyInstance: GitHubAutoMerge.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'by')
     ..aOS(2, _omitFieldNames ? '' : 'method')
-    ..aInt64(3, _omitFieldNames ? '' : 'enabledMs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -26912,15 +26795,6 @@ class GitHubAutoMerge extends $pb.GeneratedMessage {
   $core.bool hasMethod() => $_has(1);
   @$pb.TagNumber(2)
   void clearMethod() => $_clearField(2);
-
-  @$pb.TagNumber(3)
-  $fixnum.Int64 get enabledMs => $_getI64(2);
-  @$pb.TagNumber(3)
-  set enabledMs($fixnum.Int64 value) => $_setInt64(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasEnabledMs() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearEnabledMs() => $_clearField(3);
 }
 
 class GitHubQueueEntry extends $pb.GeneratedMessage {
@@ -27158,7 +27032,6 @@ class GitHubIssue extends $pb.GeneratedMessage {
   factory GitHubIssue({
     GitHubItem? item,
     $core.String? body,
-    $core.String? association,
     $core.bool? outside,
     $core.Iterable<$core.String>? labels,
     $core.Iterable<$core.String>? assignees,
@@ -27167,7 +27040,6 @@ class GitHubIssue extends $pb.GeneratedMessage {
     final result = GitHubIssue._();
     if (item != null) result.item = item;
     if (body != null) result.body = body;
-    if (association != null) result.association = association;
     if (outside != null) result.outside = outside;
     if (labels != null) result.labels.addAll(labels);
     if (assignees != null) result.assignees.addAll(assignees);
@@ -27191,7 +27063,6 @@ class GitHubIssue extends $pb.GeneratedMessage {
     ..aOM<GitHubItem>(1, _omitFieldNames ? '' : 'item',
         subBuilder: GitHubItem.$_createMessage)
     ..aOS(2, _omitFieldNames ? '' : 'body')
-    ..aOS(3, _omitFieldNames ? '' : 'association')
     ..aOB(4, _omitFieldNames ? '' : 'outside')
     ..pPS(5, _omitFieldNames ? '' : 'labels')
     ..pPS(6, _omitFieldNames ? '' : 'assignees')
@@ -27241,32 +27112,23 @@ class GitHubIssue extends $pb.GeneratedMessage {
   @$pb.TagNumber(2)
   void clearBody() => $_clearField(2);
 
-  @$pb.TagNumber(3)
-  $core.String get association => $_getSZ(2);
-  @$pb.TagNumber(3)
-  set association($core.String value) => $_setString(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasAssociation() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearAssociation() => $_clearField(3);
-
   @$pb.TagNumber(4)
-  $core.bool get outside => $_getBF(3);
+  $core.bool get outside => $_getBF(2);
   @$pb.TagNumber(4)
-  set outside($core.bool value) => $_setBool(3, value);
+  set outside($core.bool value) => $_setBool(2, value);
   @$pb.TagNumber(4)
-  $core.bool hasOutside() => $_has(3);
+  $core.bool hasOutside() => $_has(2);
   @$pb.TagNumber(4)
   void clearOutside() => $_clearField(4);
 
   @$pb.TagNumber(5)
-  $pb.PbList<$core.String> get labels => $_getList(4);
+  $pb.PbList<$core.String> get labels => $_getList(3);
 
   @$pb.TagNumber(6)
-  $pb.PbList<$core.String> get assignees => $_getList(5);
+  $pb.PbList<$core.String> get assignees => $_getList(4);
 
   @$pb.TagNumber(7)
-  $pb.PbList<GitHubComment> get conversation => $_getList(6);
+  $pb.PbList<GitHubComment> get conversation => $_getList(5);
 }
 
 class GetGitHubIssueRequest extends $pb.GeneratedMessage {
@@ -30137,8 +29999,8 @@ class NushiServiceApi {
           ctx, 'NushiService', 'SendPrompt', request, SendPromptResponse());
 
   /// Cuts a chat back to just before one of its user messages (when
-  /// status.can_rewind and the message's fork_at is set, or it is the first)
-  /// and returns that message. The agent's session is forked there: a new
+  /// status.can_rewind and the message is rewindable) and returns that
+  /// message. The agent's session is forked there: a new
   /// session id, the same chat. Files aren't rewound. Refused while the chat
   /// is busy.
   $async.Future<RewindChatResponse> rewindChat(
