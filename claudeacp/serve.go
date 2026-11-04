@@ -249,5 +249,8 @@ func (a *agent) ExtMethod(ctx context.Context, method string, params json.RawMes
 	if method == steering.Method {
 		return a.steer(ctx, params)
 	}
+	if method == GenerateTitleMethod {
+		return a.generateTitle(ctx, params)
+	}
 	return nil, &acp.Error{Code: acp.ErrorCodeMethodNotFound, Message: "Method not found: " + method}
 }

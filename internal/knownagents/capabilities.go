@@ -29,6 +29,7 @@ var (
 	_ chats.TerminalCommands = claude.Harness{}
 	_ chats.ReadOnly         = claude.Harness{}
 	_ chats.GoneReader       = claude.Harness{}
+	_ chats.TitleMaker       = claude.Harness{}
 
 	_ chats.HistoryCopier  = claudehistory.Local{}
 	_ chats.OpenFinder     = claudehistory.Local{}
