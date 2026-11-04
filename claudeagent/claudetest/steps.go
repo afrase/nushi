@@ -29,15 +29,10 @@ func Expect(match string) Step {
 		if jsonErr != nil {
 			return fmt.Errorf("the match isn't JSON: %w", jsonErr)
 		}
-		line, err := r.line()
+		req, uuid, err := r.expect(want)
 		if err != nil {
-			return fmt.Errorf("stdin: %w", err)
+			return err
 		}
-		var got any
-		if err := json.Unmarshal(line, &got); err != nil || !matches(want, got) {
-			return fmt.Errorf("got %s", line)
-		}
-		req, uuid := captured(got)
 		if req != "" {
 			r.req = req
 		}
@@ -46,6 +41,21 @@ func Expect(match string) Step {
 		}
 		return nil
 	}}
+}
+
+// expect reads the next stdin line, which must match want, and returns
+// its request_id and uuid (captured).
+func (r *run) expect(want any) (req, uuid string, err error) {
+	line, err := r.line()
+	if err != nil {
+		return "", "", fmt.Errorf("stdin: %w", err)
+	}
+	var got any
+	if err := json.Unmarshal(line, &got); err != nil || !matches(want, got) {
+		return "", "", fmt.Errorf("got %s", line)
+	}
+	req, uuid = captured(got)
+	return req, uuid, nil
 }
 
 // matches says whether got has every field of want, with the same value.

@@ -147,15 +147,10 @@ func expectRecorded(rec json.RawMessage, ids map[string]string) Step {
 	var recorded any
 	_ = json.Unmarshal(rec, &recorded)
 	return Step{name: strings.TrimSpace("expect recorded " + r.Type + " " + r.Subtype + r.Request.Subtype), wants: recorded, run: func(run *run) error {
-		line, err := run.line()
+		req, uuid, err := run.expect(want)
 		if err != nil {
-			return fmt.Errorf("stdin: %w", err)
+			return err
 		}
-		var got any
-		if err := json.Unmarshal(line, &got); err != nil || !matches(want, got) {
-			return fmt.Errorf("got %s", line)
-		}
-		req, uuid := captured(got)
 		for rec, live := range map[string]string{r.RequestID: req, r.UUID: uuid} {
 			if rec != "" && live != "" {
 				ids[rec] = live
