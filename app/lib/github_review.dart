@@ -57,10 +57,7 @@ Future<void> submitReview(
     context: context,
     builder: (_) => _ReviewDialog(daemon, pull),
   );
-  if (sent ?? false) {
-    setDrafts(pull.item.ref, const []);
-    await onDone();
-  }
+  if (sent ?? false) await onDone();
 }
 
 class _ReviewDialog extends StatefulWidget {
@@ -96,6 +93,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
       _busy = true;
       _error = null;
     });
+    final drafts = reviewDrafts(p.item.ref);
     try {
       await widget.daemon.client.submitGitHubReview(
         SubmitGitHubReviewRequest(
@@ -105,9 +103,15 @@ class _ReviewDialogState extends State<_ReviewDialog> {
           pendingReview: p.pendingReview,
           event: _event,
           body: _body.text.trim(),
-          drafts: reviewDrafts(p.item.ref),
+          drafts: drafts,
         ),
       );
+      // Cleared here, not from the dialog's result: once GitHub has them
+      // they must never go with another review.
+      setDrafts(p.item.ref, [
+        for (final d in reviewDrafts(p.item.ref))
+          if (!drafts.any((s) => identical(s, d))) d,
+      ]);
       keepCommentDraft(_draft, '');
       if (mounted) Navigator.pop(context, true);
     } on Object catch (e) {
@@ -128,7 +132,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
       if (p.pendingComments > 0)
         '${p.pendingComments} in your review pending on GitHub',
     ];
-    return nushiDialog(
+    // Once it's sent it can't be called off (Esc, the barrier): it stays to
+    // say how it went.
+    final dialog = nushiDialog(
       'Review #${p.item.ref.number}',
       SizedBox(
         width: 440,
@@ -184,5 +190,6 @@ class _ReviewDialogState extends State<_ReviewDialog> {
         ),
       ],
     );
+    return PopScope(canPop: !_busy, child: dialog);
   }
 }

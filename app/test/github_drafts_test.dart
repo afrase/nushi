@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
@@ -202,6 +204,45 @@ void main() {
     );
     expect(commentDraft(githubDraft(pull().item.ref, 'review')), isEmpty);
     expect(fake.calls.whereType<AddGitHubCommentRequest>(), isEmpty);
+    await closeView(tester, d);
+  });
+
+  testWidgets('a review being submitted stays open through Esc, and its '
+      'inline comments go once sent', (tester) async {
+    final hold = Completer<void>();
+    final (fake, d) = await _files(
+      tester,
+      more: (input) => input is SubmitGitHubReviewRequest
+          ? hold.future.then((_) => SubmitGitHubReviewResponse())
+          : null,
+    );
+    tester.widget<DiffBox>(find.byType(DiffBox)).onLines!(
+      const LineSelection(side: PaneSide.neu, anchor: 2, focus: 3),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Call it Minus?');
+    await _post(tester);
+    final ref = pull().item.ref;
+    expect(reviewDrafts(ref), hasLength(1));
+    final review = find.text('Review (1)…', skipOffstage: false);
+    await tester.ensureVisible(review);
+    await tester.pumpAndSettle();
+    await tester.tap(review);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Submit review'));
+    await tester.pump();
+    // Esc while it's sent: the dialog stays, saying so.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Submitting…'), findsOneWidget);
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Submitting…'), findsNothing);
+    expect(
+      fake.calls.whereType<SubmitGitHubReviewRequest>().single.drafts,
+      hasLength(1),
+    );
+    expect(reviewDrafts(ref), isEmpty, reason: 'sent, so not sent again');
     await closeView(tester, d);
   });
 }
