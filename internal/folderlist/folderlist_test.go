@@ -130,10 +130,12 @@ func TestLinksAreFollowedOnlyInside(t *testing.T) {
 	link("loop", "loop")
 	link("nowhere", "dangling")
 	link(".git", "g")
+	link(".git/refs", "refs")
 	testcheck.Git(t, root, "init", "-q")
 	ls := listOf(t, root, ".", Options{})
-	// g is .git by another name: left out, and refused below.
-	if got, want := names(ls[0]), []string{"docs/", "docs2/", "a.md", "dangling@", "key@", "loop@", "out@"}; !slices.Equal(got, want) {
+	// g is .git by another name: left out, and refused below; refs, a
+	// folder in it, is shown but refused too.
+	if got, want := names(ls[0]), []string{"docs/", "docs2/", "refs/", "a.md", "dangling@", "key@", "loop@", "out@"}; !slices.Equal(got, want) {
 		t.Errorf("names = %q, want %q", got, want)
 	}
 	for _, e := range ls[0].Entries {
@@ -144,7 +146,7 @@ func TestLinksAreFollowedOnlyInside(t *testing.T) {
 	if got := names(listOf(t, root, "docs2", Options{})[0]); !slices.Equal(got, []string{"a.md"}) {
 		t.Errorf("a link inside: %q", got)
 	}
-	for _, p := range []string{"out", "loop", "g", "key"} {
+	for _, p := range []string{"out", "loop", "g", "refs", "key"} {
 		if ls, err := List(context.Background(), root, p, Options{}); err == nil {
 			t.Errorf("List(%q) = %+v; want refused", p, ls)
 		}

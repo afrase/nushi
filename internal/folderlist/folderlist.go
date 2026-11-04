@@ -15,6 +15,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -166,7 +167,7 @@ func one(ctx context.Context, r *os.Root, root, rel string, o Options) (Listing,
 	case errors.Is(err, fs.ErrNotExist):
 		l.Missing = true
 		return l, nil
-	case err != nil || !fi.IsDir() || isGit(r, fi):
+	case err != nil || !fi.IsDir() || inGit(root, rel):
 		return l, ErrFolder
 	}
 	l.at = fi.ModTime()
@@ -212,6 +213,18 @@ func one(ctx context.Context, r *os.Root, root, rel string, o Options) (Listing,
 	l.Entries = kept[:min(len(kept), o.Limit)]
 	l.More = len(kept) - len(l.Entries)
 	return l, nil
+}
+
+// inGit says rel inside root is root's .git or a folder in it, reached
+// through a link (Clean refuses it by name). Only what's shown hangs on
+// it: os.Root keeps the read inside root whatever this says.
+func inGit(root, rel string) bool {
+	at, err := filepath.EvalSymlinks(filepath.Join(root, rel))
+	if err != nil {
+		return false
+	}
+	git, err := filepath.EvalSymlinks(filepath.Join(root, ".git"))
+	return err == nil && (at == git || strings.HasPrefix(at, git+string(filepath.Separator)))
 }
 
 // isGit says the folder fi is root's .git, reached through a link.
