@@ -1,5 +1,5 @@
 // End to end through the relay (ADR 0034): the real nushid and
-// nushi-relay on localhost, the fake agent as Claude, and the app's
+// nushi-relay on localhost, the fake agent as Codex, and the app's
 // generated client on the phone's transport. A phone pairs, lists chats,
 // starts one, prompts it, answers its permission card, gets the streamed
 // events, and is revoked.
@@ -85,7 +85,7 @@ void main() {
     final events = StreamIterator(phone.events(EventsRequest()));
     expect(await events.moveNext(), isTrue); // live
     final chat = (await phone.startChat(
-      StartChatRequest(agent: 'claude', folder: rig.work),
+      StartChatRequest(agent: rigAgent, folder: rig.work),
     )).chatId;
     await phone.sendPrompt(
       SendPromptRequest(chatId: chat, text: 'hello from the phone'),

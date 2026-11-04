@@ -70,7 +70,10 @@ void main() {
       await _until(() => daemon.connected);
 
       // A chat, a prompt, a permission card answered.
-      await daemon.startChat(setup['folder']! as String, 'claude');
+      await daemon.startChat(
+        setup['folder']! as String,
+        setup['agent']! as String,
+      );
       final chat = daemon.selected!;
       await daemon.client.sendPrompt(
         SendPromptRequest(chatId: chat.id, text: 'permission please'),

@@ -1,5 +1,5 @@
 // The phone's link to the Mac when its channel drops (ADR 0054): the real
-// nushid and nushi-relay on localhost, the fake agent as Claude, and the
+// nushid and nushi-relay on localhost, the fake agent as Codex, and the
 // phone's Daemon and Link on the relay transport. A drop mid-stream,
 // mid-call, while hidden, and the relay restarting: the phone reconnects,
 // subscribes again and fetches what shows, with no raw error left.
@@ -77,7 +77,7 @@ void main() {
     await until(() => daemon.connected);
 
     chat = (await mac.startChat(
-      StartChatRequest(agent: 'claude', folder: rig.work),
+      StartChatRequest(agent: rigAgent, folder: rig.work),
     )).chatId;
     await mac.sendPrompt(SendPromptRequest(chatId: chat, text: 'first'));
     await until(() => daemon.chats.containsKey(chat));

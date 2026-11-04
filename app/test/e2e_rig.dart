@@ -1,7 +1,9 @@
 // The end-to-end tests' rig (remote_e2e_test, phone_link_test and the web
 // test's web/mac_side.dart): the real nushid and nushi-relay built into a
-// folder of their own in /tmp, the fake agent as Claude, the relay and the
-// daemon started there. Each test makes its own client steps on it.
+// folder of their own in /tmp, the fake agent as Codex (its adapter run by
+// a fake "node"; Claude runs through Nushi's Go agent, which has no adapter
+// to stand in for), the relay and the daemon started there. Each test
+// makes its own client steps on it.
 //
 // dart:io only: web/mac_side.dart runs in a hybrid isolate, which resolves
 // no packages, and imports this file by its relative path.
@@ -9,11 +11,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-/// The version the fake `claude` CLI says it is.
-const claudeVersion = '2.1.310';
+/// The agent the rig's chats run: the fake agent, as Codex.
+const rigAgent = 'codex';
 
-/// The version of Claude's adapter, as installed in the data folder.
-const adapterVersion = '0.94.0';
+/// The version the fake `codex` CLI says it is.
+const codexVersion = 'codex-cli 0.163.0';
+
+/// The version of Codex's adapter, as installed in the data folder.
+const adapterVersion = '2.2.2';
 
 /// Waits until [ok] says yes, asking every 50 ms; a [TimeoutException]
 /// after [within].
@@ -52,7 +57,7 @@ class Rig {
   String get work => '$path/work';
 
   /// Builds nushid, nushi-relay and the fake agent into a new folder in
-  /// /tmp whose name starts with [name], and sets Claude up there: its CLI
+  /// /tmp whose name starts with [name], and sets Codex up there: its CLI
   /// on the daemon's PATH, its adapter in the data folder, run by a "node"
   /// that runs the fake agent instead.
   static Future<Rig> build(String name) async {
@@ -86,18 +91,18 @@ class Rig {
     }
     for (final (name, body) in [
       ('node', 'exec $path/bin/fakeagent'),
-      ('claude', 'echo $claudeVersion'),
+      ('codex', 'echo $codexVersion'),
     ]) {
       final f = File('$path/bin/$name');
       await f.writeAsString('#!/bin/sh\n$body\n');
       await Process.run('chmod', ['+x', f.path]);
     }
     final adapter = Directory(
-      '$path/data/agents/claude/node_modules/@agentclientprotocol/claude-agent-acp',
+      '$path/data/agents/codex/node_modules/@agentclientprotocol/codex-acp',
     );
     await adapter.create(recursive: true);
     await File('${adapter.path}/package.json').writeAsString(
-      '{"version": "$adapterVersion", "bin": {"claude-agent-acp": "dist/index.js"}}',
+      '{"version": "$adapterVersion", "bin": {"codex-acp": "dist/index.js"}}',
     );
   }
 
