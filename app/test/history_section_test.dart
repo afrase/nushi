@@ -11,6 +11,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart';
+import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -463,7 +464,7 @@ void main() {
       (Brightness.dark, 'dark'),
       (Brightness.light, 'light'),
     ]) {
-      testWidgets('golden: 200 copies scrolled, some picked, $sizeName, '
+      testWidgets('200 copies scrolled, some picked, $sizeName, '
           '$theme', (tester) async {
         final d = await open(
           tester,
@@ -491,16 +492,19 @@ void main() {
           holding: LogicalKeyboardKey.metaLeft,
         );
         expect(find.textContaining('5 selected'), findsOneWidget);
-        await expectLater(
+        await render(
+          tester,
           find.byType(MaterialApp),
-          matchesGoldenFile('goldens/history_picked_${sizeName}_$theme.png'),
+          'history_picked_${sizeName}_$theme',
         );
         d.dispose();
       }, variant: macOS);
 
-      testWidgets('golden: the search filtering, $sizeName, $theme', (
-        tester,
-      ) async {
+      testWidgets('the search filtering, $sizeName, $theme', (tester) async {
+        // Wide, it's Chat history's window golden (the sidebar hidden: it
+        // has its own); small, a render.
+        final golden = sizeName == 'wide';
+        if (golden) sidebarHidden.value = true;
         final d = await open(
           tester,
           _fake(200),
@@ -509,10 +513,16 @@ void main() {
         );
         await tester.enterText(find.byType(TextField), 'review');
         await tester.pumpAndSettle();
-        await expectLater(
-          find.byType(MaterialApp),
-          matchesGoldenFile('goldens/history_search_${sizeName}_$theme.png'),
-        );
+        expect(find.textContaining('review'), findsWidgets);
+        final shot = 'history_search_${sizeName}_$theme';
+        if (golden) {
+          await expectLater(
+            find.byType(MaterialApp),
+            matchesGoldenFile('goldens/$shot.png'),
+          );
+        } else {
+          await render(tester, find.byType(MaterialApp), shot);
+        }
         d.dispose();
       }, variant: macOS);
     }

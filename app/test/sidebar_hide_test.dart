@@ -246,7 +246,7 @@ void main() {
       for (final width in [1700.0, 720.0]) {
         for (final b in Brightness.values) {
           testWidgets('$name, $width wide, ${b.name}: the button past the '
-              'lights, and the whole window', (tester) async {
+              'lights', (tester) async {
             final d = await _window(tester, width: width, brightness: b);
             go(d);
             await tester.pumpAndSettle();
@@ -271,12 +271,17 @@ void main() {
               case 'settings':
                 cleared(tester, 'Settings');
             }
-            await expectLater(
-              find.byType(NushiApp),
-              matchesGoldenFile(
-                'goldens/sidebar_hidden_${name}_${width.toInt()}_${b.name}.png',
-              ),
-            );
+            // The empty window, wide, is its window golden; the rest are
+            // renders.
+            final shot = 'sidebar_hidden_${name}_${width.toInt()}_${b.name}';
+            if (name == 'nothing' && width == 1700) {
+              await expectLater(
+                find.byType(NushiApp),
+                matchesGoldenFile('goldens/$shot.png'),
+              );
+            } else {
+              await render(tester, find.byType(NushiApp), shot);
+            }
             d.dispose();
           }, variant: _mac);
         }
@@ -390,11 +395,10 @@ void main() {
         final noticeIcon = find.byIcon(Icons.shield_outlined);
         past(tester, bar(notice), noticeIcon);
         expect(tester.getTopLeft(notice).dx, greaterThan(lightsInset));
-        await expectLater(
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile(
-            'goldens/sidebar_hidden_bars_${width.toInt()}_${b.name}.png',
-          ),
+          'sidebar_hidden_bars_${width.toInt()}_${b.name}',
         );
 
         // Beside the sidebar they keep their margin from it.

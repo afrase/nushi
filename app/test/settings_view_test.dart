@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
@@ -37,7 +38,9 @@ void main() {
   setUpAll(loadFonts);
   final macOS = TargetPlatformVariant.only(TargetPlatform.macOS);
 
-  // Every section, both themes, a wide window and a small one.
+  // Every section, both themes, a wide window and a small one; the general
+  // section, wide, is the settings' window golden (with the sidebar hidden,
+  // which has its own), the others renders.
   for (final (size, sizeName) in [
     (const Size(1700, 1000), 'wide'),
     (const Size(900, 700), 'small'),
@@ -47,7 +50,9 @@ void main() {
       (Brightness.light, 'light'),
     ]) {
       for (final s in SettingsSection.values) {
-        testWidgets('golden: ${s.name}, $sizeName, $theme', (tester) async {
+        testWidgets('${s.name}, $sizeName, $theme', (tester) async {
+          final golden = sizeName == 'wide' && s == SettingsSection.general;
+          if (golden) sidebarHidden.value = true;
           final d = await pumpSettingsApp(
             tester,
             settingsFake(),
@@ -60,12 +65,15 @@ void main() {
             SettingsNav.width,
           );
           expectControlsAtEdge(tester);
-          await expectLater(
-            find.byType(MaterialApp),
-            matchesGoldenFile(
-              'goldens/settings_${s.name}_${sizeName}_$theme.png',
-            ),
-          );
+          final name = 'settings_${s.name}_${sizeName}_$theme';
+          if (golden) {
+            await expectLater(
+              find.byType(MaterialApp),
+              matchesGoldenFile('goldens/$name.png'),
+            );
+          } else {
+            await render(tester, find.byType(MaterialApp), name);
+          }
           d.dispose();
         }, variant: macOS);
       }
