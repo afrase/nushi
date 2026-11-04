@@ -58,4 +58,94 @@ void main() {
     await tester.pump();
     expect(streams, hasLength(3));
   });
+
+  // Restart shows only on an exited shell, so every other app has been
+  // told it exited. Another app restarting it lists it running again:
+  // this one attaches to the new shell, not left on the old output.
+  testWidgets('a restart in another app attaches here', (tester) async {
+    final (terms, streams, _) = _daemon();
+    final t = Terminal(id: 't1', chatId: 'c1');
+    terms.apply('c1', [t]);
+    final session = terms.session(t);
+    addTearDown(() {
+      session.dispose();
+      for (final s in streams) {
+        unawaited(s.close());
+      }
+    });
+    session.terminal.resize(80, 24);
+    await tester.pump();
+    await _exit(tester, terms, streams.first);
+    expect(streams, hasLength(1));
+    expect(session.exited, isTrue);
+
+    terms.apply('c1', [t]); // restarted elsewhere
+    await tester.pump();
+    session.terminal.resize(80, 24); // its view laid out again
+    await tester.pump();
+    expect(streams, hasLength(2), reason: 'never attached to the new shell');
+    expect(session.fresh, isFalse); // the app that restarted it answers
+  });
+
+  // A restart here whose list event comes before its answer attaches
+  // once, when the answer comes, fresh.
+  testWidgets('a restart here attaches once', (tester) async {
+    final (terms, streams, fake) = _daemon();
+    final answered = Completer<RestartTerminalResponse>();
+    fake.answer = (input) =>
+        input is RestartTerminalRequest ? answered.future : null;
+    final t = Terminal(id: 't1', chatId: 'c1');
+    terms.apply('c1', [t]);
+    final session = terms.session(t);
+    addTearDown(() {
+      session.dispose();
+      for (final s in streams) {
+        unawaited(s.close());
+      }
+    });
+    session.terminal.resize(80, 24);
+    await tester.pump();
+    await _exit(tester, terms, streams.first);
+
+    final restart = terms.restart('t1');
+    await tester.pump();
+    final old = session.terminal;
+    terms.apply('c1', [t]); // its list event, before its answer
+    expect(session.terminal, same(old));
+    answered.complete(RestartTerminalResponse());
+    await restart;
+    expect(session.fresh, isTrue);
+    session.terminal.resize(80, 24);
+    await tester.pump();
+    expect(streams, hasLength(2));
+  });
+}
+
+/// A daemon whose attaches are the streams returned, each starting with a
+/// prompt.
+(Terminals, List<StreamController<AttachTerminalResponse>>, FakeDaemon)
+_daemon() {
+  final streams = <StreamController<AttachTerminalResponse>>[];
+  final fake = FakeDaemon([])
+    ..streams = (input) {
+      if (input is! AttachTerminalRequest) return null;
+      final s = StreamController<AttachTerminalResponse>()
+        ..add(AttachTerminalResponse(data: utf8.encode(r'$ ')));
+      streams.add(s);
+      return s.stream;
+    };
+  return (Terminals(NushiServiceClient(fake)), streams, fake);
+}
+
+/// The shell exits: the daemon says so, ends the stream, and lists it so.
+Future<void> _exit(
+  WidgetTester tester,
+  Terminals terms,
+  StreamController<AttachTerminalResponse> stream,
+) async {
+  stream.add(AttachTerminalResponse(exited: true, exitCode: 0));
+  unawaited(stream.close());
+  terms.apply('c1', [Terminal(id: 't1', chatId: 'c1', exited: true)]);
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 2));
 }

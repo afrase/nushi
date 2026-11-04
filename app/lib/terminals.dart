@@ -17,6 +17,7 @@ class Terminals extends ChangeNotifier {
   final _lists = <String, List<pb.Terminal>>{}; // by chat, once known
   final _sessions = <String, TermSession>{}; // by terminal id
   final _opened = <String>{}; // opened here, not attached to yet
+  final _restarting = <String>{}; // restarted here: it attaches once done
 
   /// The tab shown in each chat's panel, by chat.
   final active = <String, String>{};
@@ -44,6 +45,15 @@ class Terminals extends ChangeNotifier {
       if (gone) s.dispose();
       return gone;
     });
+    // Restarted elsewhere (another app): its stream ended with the old
+    // shell, so it attaches to the new one. Not fresh: the app that
+    // restarted it answers the new shell's first queries.
+    for (final t in list) {
+      final s = _sessions[t.id];
+      if (s != null && s.exited && !t.exited && !_restarting.contains(t.id)) {
+        s.attach();
+      }
+    }
     if (!ids.contains(active[chatId])) {
       final id = list.lastOrNull?.id;
       id == null ? active.remove(chatId) : active[chatId] = id;
@@ -137,13 +147,18 @@ class Terminals extends ChangeNotifier {
 
   Future<void> restart(String id) async {
     final s = _sessions[id];
-    await client.restartTerminal(
-      pb.RestartTerminalRequest(
-        terminalId: id,
-        cols: s?.terminal.viewWidth ?? 80,
-        rows: s?.terminal.viewHeight ?? 24,
-      ),
-    );
+    _restarting.add(id);
+    try {
+      await client.restartTerminal(
+        pb.RestartTerminalRequest(
+          terminalId: id,
+          cols: s?.terminal.viewWidth ?? 80,
+          rows: s?.terminal.viewHeight ?? 24,
+        ),
+      );
+    } finally {
+      _restarting.remove(id);
+    }
     s
       ?..fresh = true
       ..attach();
@@ -189,6 +204,9 @@ class TermSession extends ChangeNotifier {
   bool _exited = false; // the stream said so: it has ended for good
   final _input = BytesBuilder();
   bool _sending = false;
+
+  /// Whether its stream said the shell exited (and it stopped following).
+  bool get exited => _exited;
 
   /// Attaches (again) with a fresh emulator: the replay rebuilds it.
   void attach() {
