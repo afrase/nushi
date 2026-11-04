@@ -13,7 +13,8 @@ extension DaemonLink on Daemon {
   bool get replaced =>
       _build.isNotEmpty && _builtAt(bundled ?? '') > _builtAt(_build);
 
-  static int _builtAt(String build) => int.tryParse(build.split('-').last) ?? 0;
+  static int _builtAt(String build) =>
+      buildTime(build)?.millisecondsSinceEpoch ?? 0;
 
   /// Whether the daemon is older than the bundled one and restarts into it
   /// by itself once nothing runs: the pings ask it to (an ask lapses unless

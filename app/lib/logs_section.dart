@@ -18,14 +18,6 @@ Future<void> showLogs() async {
   );
 }
 
-/// When a daemon build (`<size>-<mtime in ms>`) was made, if it says.
-DateTime? buildTime(String build) => switch (int.tryParse(
-  build.split('-').last,
-)) {
-  final ms? when build.contains('-') => DateTime.fromMillisecondsSinceEpoch(ms),
-  _ => null,
-};
-
 /// Settings › Logs & advanced: Show logs, whether the daemon's log has
 /// DEBUG lines ([debug] null: the daemon didn't say, so no switch), and the
 /// daemon: its release, its API, its build, and Restart (the packaged

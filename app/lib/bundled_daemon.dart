@@ -24,6 +24,14 @@ final String? bundledBuild = () {
   return null;
 }();
 
+/// When a daemon build (`<size>-<mtime in ms>`) was made, if it says.
+DateTime? buildTime(String build) => switch (int.tryParse(
+  build.split('-').last,
+)) {
+  final ms? when build.contains('-') => DateTime.fromMillisecondsSinceEpoch(ms),
+  _ => null,
+};
+
 /// What opens [helper] as a new instance through Launch Services, in the
 /// background, with [nushiData] (development) passed on. The daemon then
 /// goes through the user's login shell (`nushid -login`), so it and its
