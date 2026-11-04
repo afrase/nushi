@@ -142,9 +142,9 @@ void main() {
   });
 
   testWidgets("the daemon's verdict decides: a stop it judged (the phone's, "
-      "or the Stop button's with no event between) gets no receipt nor "
-      'check, a failure a check without sparks, and a done turn both, an '
-      'error notice in it or not', (tester) async {
+      "or the Stop button's with no event between) and a failure get no "
+      'receipt nor check (a check reads as success), and a done turn both, '
+      'an error notice in it or not', (tester) async {
     Future<void> ends(
       TurnEnd end, {
       required bool receipt,
@@ -177,7 +177,7 @@ void main() {
     }
 
     await ends(TurnEnd.TURN_END_STOPPED, receipt: false, check: false);
-    await ends(TurnEnd.TURN_END_FAILED, receipt: false, check: true);
+    await ends(TurnEnd.TURN_END_FAILED, receipt: false, check: false);
     await ends(TurnEnd.TURN_END_DONE, receipt: true, check: true);
   });
 

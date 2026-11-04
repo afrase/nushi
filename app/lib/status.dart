@@ -74,7 +74,7 @@ class _Ring extends CustomPainter {
 /// A chat's status dot: amber, a size up, with a soft ring while it waits
 /// on the user (it hops once when that starts), a ring growing out of it
 /// while the agent works, a ring when idle (a check draws itself there for
-/// a moment when a turn ends), solid green while a turn's end is unseen
+/// a moment when a turn is done), solid green while a turn's end is unseen
 /// (the check settles into it); a ring that pulses slowly while subagents
 /// or commands run in the background after the turn; a moon asleep, a
 /// quiet clock when its agent deleted its session, an error mark when it
@@ -149,10 +149,11 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       (_hop ??= _once(hopFor)).forward(from: 0).ignore();
     }
     final end = _busy && !c.busy ? turnEnd(c, stopped: _stopped) : null;
-    if (end != null && !c.waiting && end != TurnEnd.TURN_END_STOPPED) {
+    // A done turn's check only: a check reads as success, wrong for a
+    // failure (its alert and notice say so) and a stop.
+    if (end == TurnEnd.TURN_END_DONE && !c.waiting) {
       final lasted = DateTime.now().difference(_since ?? DateTime.now());
-      _sparks =
-          widget.sparks && end == TurnEnd.TURN_END_DONE && sparksFor(lasted);
+      _sparks = widget.sparks && sparksFor(lasted);
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
     if (!c.busy) _since = null;
