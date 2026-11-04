@@ -20,7 +20,10 @@ enum LineIcon {
   close,
 
   /// More: three dots, as heavy as the others' strokes.
-  more;
+  more,
+
+  /// Arrange (the sidebar's grouping and sort): three lines, each shorter.
+  arrange;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -70,6 +73,14 @@ enum LineIcon {
         ..lineTo(18, 18)
         ..moveTo(18, 6)
         ..lineTo(6, 18),
+    arrange =>
+      Path()
+        ..moveTo(4, 7)
+        ..lineTo(20, 7)
+        ..moveTo(7, 12)
+        ..lineTo(17, 12)
+        ..moveTo(10, 17)
+        ..lineTo(14, 17),
     more =>
       Path()
         ..addOval(_dot(6))

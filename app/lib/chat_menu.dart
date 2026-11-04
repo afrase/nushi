@@ -25,12 +25,15 @@ import 'package:nushi/worktree.dart';
 /// pull request…, Archive or Unarchive, MCP servers…, Skills…, Delete…), each
 /// with its icon, in groups ([_group]) with a line between them; Delete in
 /// red. The chat's own group ends with its Color, which isn't an action of
-/// the palette or the menu bar: it's the row of swatches, not one choice.
+/// the palette or the menu bar: it's the row of swatches, not one choice;
+/// then [more], what only the asker offers (a sidebar row's Move to
+/// section).
 List<MenuEntry> chatMenu(
   BuildContext context,
   ChatState chat,
   Daemon daemon, {
   required VoidCallback onRename,
+  List<MenuEntry> more = const [],
 }) {
   final shown = [
     for (final a in chatActions(context, daemon, chat, onRename: onRename))
@@ -63,9 +66,16 @@ List<MenuEntry> chatMenu(
             },
           ),
         ),
+      // [more] (the sidebar row's Move to section) closes the chat's own
+      // group, before what it's linked to and keeping it.
+      if (i == _lastOfGroup(shown, 1)) ...more,
     ],
   ];
 }
+
+/// The index of the last of [shown] in [group] or before it.
+int _lastOfGroup(List<AppAction> shown, int group) =>
+    shown.lastIndexWhere((a) => _group(a.act) <= group);
 
 /// Where an action goes in the chat's menu: the conversation, the chat
 /// itself, what it's linked to and uses, keeping it, deleting it. One the

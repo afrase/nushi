@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/settings.dart';
 
@@ -39,10 +41,20 @@ Map<String, List<ChatState>> chatGroups(Daemon daemon) {
 /// starting in) that folder goes first too, as it will once its new chat
 /// is there, with chats or not yet. In each, the
 /// chats in the order they were dragged into ([sidebarChats]), a chat it
-/// doesn't name (a new one) first, the newest first. The phone keeps
-/// [chatGroups]' order.
-Map<String, List<ChatState>> sidebarGroups(Daemon daemon, {String? starting}) {
-  final byFolder = chatGroups(daemon);
+/// doesn't name (a new one) first, the newest first. Those of [without]
+/// (in a section) are left out, and a folder left with none with them.
+/// The phone keeps [chatGroups]' order.
+Map<String, List<ChatState>> sidebarGroups(
+  Daemon daemon, {
+  String? starting,
+  Set<String> without = const {},
+}) {
+  final byFolder = {
+    for (final MapEntry(:key, :value) in chatGroups(daemon).entries)
+      if (value.where((c) => !without.contains(c.id)).toList() case final chats
+          when chats.isNotEmpty)
+        key: chats,
+  };
   final groups = {?starting: byFolder[starting] ?? <ChatState>[], ...byFolder};
   final saved = sidebarOrder.value;
   final placed = saved.toSet();
@@ -87,16 +99,105 @@ Iterable<ChatState> shownPinned(Daemon daemon) {
       : pinned;
 }
 
-/// The chats as the sidebar shows them, top to bottom, Pinned first, the
-/// archived (in their collapsed group) and those of collapsed groups left
-/// out: what ⌘1–⌘9, ⌘[ and ⌘] go through.
-List<ChatState> chatOrder(Daemon daemon) => [
-  ...shownPinned(daemon),
-  for (final MapEntry(key: folder, value: chats) in sidebarGroups(
-    daemon,
-  ).entries)
-    ...shownChats(folder, chats, daemon.selectedId),
-];
+/// The sidebar as it's arranged ([arrangeSidebar]): Pinned, the sections
+/// of the user's own, then under Project grouping each folder's chats
+/// ([projects]), else the grouping's groups ([groups]).
+class SidebarView {
+  const new({
+    required this.pinned,
+    required this.sections,
+    required this.projects,
+    required this.groups,
+  });
+
+  final List<ChatState> pinned;
+  final List<(Section, List<ChatState>)> sections;
+  final Map<String, List<ChatState>> projects;
+  final List<ChatGroup> groups;
+}
+
+/// The sidebar's chats arranged as its Arrange menu says
+/// (`arrangement.dart`): the pinned ones on top whatever the grouping;
+/// then each section's chats, unarchived and unpinned (a chat in two goes
+/// in the first), in the order moved in under Manual, else sorted; then
+/// the others, each folder's as [sidebarGroups] has them (sorted, unless
+/// Manual) under Project grouping, else in the grouping's groups.
+/// [starting], the folder a chat is starting in.
+SidebarView arrangeSidebar(Daemon daemon, {String? starting}) {
+  final group = sidebarGroupBy.value;
+  final sort = effectiveSort(group, sidebarSort.value);
+  final up = sidebarAscending.value;
+  final live = {
+    for (final c in daemon.chats.values)
+      if (!c.archived && c.pin == 0) c.id: c,
+  };
+  final placed = <String>{};
+  final sections = [
+    for (final s in sidebarSections.value)
+      (
+        s,
+        sortChats(
+          [
+            for (final id in s.chats)
+              if (live[id] case final c? when placed.add(id)) c,
+          ],
+          sort,
+          ascending: up,
+        ),
+      ),
+  ];
+  final projects = group == GroupBy.project
+      ? {
+          for (final MapEntry(:key, :value) in sidebarGroups(
+            daemon,
+            starting: starting,
+            without: placed,
+          ).entries)
+            key: sortChats(value, sort, ascending: up),
+        }
+      : <String, List<ChatState>>{};
+  final pinned = pinnedChats(daemon);
+  final groups = group == GroupBy.project
+      ? const <ChatGroup>[]
+      : groupChats(
+          live.values.where((c) => !placed.contains(c.id)),
+          group,
+          sort,
+          ascending: up,
+          now: clock(),
+        );
+  return SidebarView(
+    pinned: pinned,
+    sections: sections,
+    projects: projects,
+    // None's one list is headed "Chats" under Pinned or a section, so its
+    // rows don't read as theirs.
+    groups: [
+      for (final g in groups)
+        if (g.label.isEmpty && (pinned.isNotEmpty || sections.isNotEmpty))
+          ChatGroup(g.key, 'Chats', g.chats)
+        else
+          g,
+    ],
+  );
+}
+
+/// The chats as the sidebar shows them, top to bottom, Pinned first, then
+/// the sections and the groups, the archived (in their collapsed group)
+/// and those of collapsed sections and groups left out but the selected
+/// one: what ⌘1–⌘9, ⌘[ and ⌘] go through.
+List<ChatState> chatOrder(Daemon daemon) {
+  final view = arrangeSidebar(daemon);
+  final selected = daemon.selectedId;
+  return [
+    ...shownPinned(daemon),
+    for (final (section, chats) in view.sections)
+      ...section.collapsed ? chats.where((c) => c.id == selected) : chats,
+    for (final MapEntry(key: folder, value: chats) in view.projects.entries)
+      ...shownChats(folder, chats, selected),
+    for (final g in view.groups) ...shownChats(g.key, g.chats, selected),
+  ];
+}
 
 /// Opens the [n]th chat (1–9) of [chatOrder], if there's one.
 void openNthChat(Daemon daemon, int n) {

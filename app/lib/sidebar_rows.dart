@@ -22,8 +22,8 @@ import 'package:nushi/widgets.dart';
 typedef Movable = Widget Function(Widget child, {required bool enabled});
 
 /// What a chat row's drag carries: its list ([MovableRows.group]) and the
-/// chat.
-class _MovingChat {
+/// chat. A section takes one from another list (`sidebar_sections.dart`).
+class MovingChat {
   const new(this.group, this.id);
 
   final Object group;
@@ -36,7 +36,8 @@ class _MovingChat {
 /// [onMove] says it moved from one place to another. [row] builds each
 /// row, making it movable with what it's given. [collapsed], the rows
 /// other than [selectedId]'s fold away together ([Disclosure]), and none
-/// moves.
+/// moves. Without [reorders] (the sort sets the order) a row still drags,
+/// into a section, but its own list takes no drop.
 class MovableRows extends StatelessWidget {
   const new({
     required this.group,
@@ -45,6 +46,7 @@ class MovableRows extends StatelessWidget {
     required this.onMove,
     super.key,
     this.collapsed = false,
+    this.reorders = true,
     this.selectedId,
     this.standIn,
   });
@@ -55,6 +57,7 @@ class MovableRows extends StatelessWidget {
   final Widget Function(ChatState chat, Movable movable) row;
   final void Function(int from, int to) onMove;
   final bool collapsed;
+  final bool reorders;
   final String? selectedId;
 
   /// A row-shaped placeholder at the top for a chat starting here, which
@@ -62,10 +65,10 @@ class MovableRows extends StatelessWidget {
   final Widget? standIn;
 
   @override
-  Widget build(BuildContext context) => SlideList<_MovingChat>(
+  Widget build(BuildContext context) => SlideList<MovingChat>(
     count: chats.length,
     standIn: standIn,
-    accepts: (m) => m.group == group && !collapsed,
+    accepts: (m) => reorders && m.group == group && !collapsed,
     onMove: onMove,
     item: (i, drag) {
       final c = chats[i];
@@ -77,7 +80,7 @@ class MovableRows extends StatelessWidget {
             c,
             (child, {required enabled}) => LayoutBuilder(
               builder: (context, box) => drag.draggable(
-                data: _MovingChat(group, c.id),
+                data: MovingChat(group, c.id),
                 enabled: enabled && !collapsed,
                 feedback: Lifted(
                   c.shownTitle,
@@ -140,7 +143,7 @@ class ArchivedSection extends StatelessWidget {
         ),
         Disclosure(
           open: open && archived.isNotEmpty,
-          child: SlideList<_MovingChat>(
+          child: SlideList<MovingChat>(
             count: archived.length,
             accepts: (_) => false,
             onMove: (_, _) {},
@@ -254,10 +257,45 @@ class PinnedHeader extends StatelessWidget {
   final List<ChatState> chats;
 
   @override
+  Widget build(BuildContext context) => GroupHeader(
+    title: 'Pinned',
+    chats: chats,
+    collapsed: pinnedCollapsed.value,
+    onToggle: () => pinnedCollapsed.value = !pinnedCollapsed.value,
+  );
+}
+
+/// A group's header as a project's looks (Pinned's, a section's, a Date or
+/// Status group's): a chevron that collapses it ([onToggle]), [lead] (an
+/// agent's mark) and [title] in its weight, the most urgent of its
+/// chats' states as one dot while it's [collapsed], and [trailing] at its
+/// end. As tall as a project's header with its + button, so all match.
+class GroupHeader extends StatelessWidget {
+  const new({
+    required this.title,
+    required this.chats,
+    required this.collapsed,
+    required this.onToggle,
+    super.key,
+    this.lead,
+    this.trailing,
+    this.titleWidget,
+  });
+
+  final String title;
+  final List<ChatState> chats;
+  final bool collapsed;
+  final VoidCallback onToggle;
+  final Widget? lead;
+  final Widget? trailing;
+
+  /// In [title]'s place (a field to rename a section).
+  final Widget? titleWidget;
+
+  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final collapsed = pinnedCollapsed.value;
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
       child: Row(
@@ -269,30 +307,47 @@ class PinnedHeader extends StatelessWidget {
             size: 12,
             padding: 6,
             color: t.textMuted,
-            onTap: () => pinnedCollapsed.value = !collapsed,
+            onTap: onToggle,
           ),
           const SizedBox(width: 2),
-          // As tall as a project's + button, so both headers match.
-          SizedBox(
-            height: 26,
-            child: Center(
-              child: Text(
-                'Pinned',
-                style: theme.ui(t.text, weight: FontWeight.w600),
-              ),
+          if (lead case final lead?) ...[lead, const SizedBox(width: 6)],
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: SizedBox(
+                    height: 26,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: 1,
+                      child:
+                          titleWidget ??
+                          Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.ui(t.text, weight: FontWeight.w600),
+                          ),
+                    ),
+                  ),
+                ),
+                if (collapsed)
+                  ListenableBuilder(
+                    listenable: Listenable.merge([
+                      for (final c in chats) c.look,
+                    ]),
+                    builder: (context, _) => switch (groupPhase(chats)) {
+                      final phase? => Padding(
+                        padding: const EdgeInsets.only(left: 5),
+                        child: PhaseDot(phase),
+                      ),
+                      null => const SizedBox.shrink(),
+                    },
+                  ),
+              ],
             ),
           ),
-          if (collapsed)
-            ListenableBuilder(
-              listenable: Listenable.merge([for (final c in chats) c.look]),
-              builder: (context, _) => switch (groupPhase(chats)) {
-                final phase? => Padding(
-                  padding: const EdgeInsets.only(left: 5),
-                  child: PhaseDot(phase),
-                ),
-                null => const SizedBox.shrink(),
-              },
-            ),
+          ?trailing,
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 
+import 'package:nushi/arrangement.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 
@@ -16,7 +17,8 @@ import 'package:nushi/file_mode.dart';
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
 /// groups' order and which are collapsed, each project's chats' order,
-/// whether Pinned is collapsed, the models picked last, each repository's
+/// whether Pinned is collapsed, the sidebar's arrangement (grouping, sort,
+/// what rows show) and sections, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
 /// and Dock badge, the appearance and the color theme, whether the
 /// composer checks spelling, and the newer release whose toast was
@@ -102,7 +104,9 @@ final Pref<Map<String, String>> mergeMethods = Pref(
 );
 
 /// The sidebar's project groups, by folder path: the order they were
-/// dragged into (folders it doesn't name go first), and those collapsed.
+/// dragged into (folders it doesn't name go first), and those collapsed;
+/// with these, the other groupings' groups collapsed (`ChatGroup.key`,
+/// such as `date:9today`) and the sections (`Section.key`).
 final Pref<List<String>> sidebarOrder = _list('sidebarOrder');
 final Pref<Set<String>> sidebarCollapsed = _set('sidebarCollapsed');
 
@@ -124,6 +128,45 @@ final Pref<bool> sidebarHidden = _plain('sidebarHidden', false);
 
 /// Whether the sidebar's Pinned section is collapsed.
 final Pref<bool> pinnedCollapsed = _plain('pinnedCollapsed', false);
+
+/// The sidebar's arrangement, from its Arrange menu (`arrangement.dart`):
+/// what it groups its chats by, how it sorts them and which way (the
+/// newest first unless ascending), and what its rows show.
+final sidebarGroupBy = Pref<GroupBy>(
+  'sidebarGroupBy',
+  (v) => GroupBy.values.asNameMap()[v] ?? GroupBy.project,
+  write: (g) => g.name,
+);
+final sidebarSort = Pref<SortBy>(
+  'sidebarSort',
+  (v) => SortBy.values.asNameMap()[v] ?? SortBy.manual,
+  write: (s) => s.name,
+);
+final Pref<bool> sidebarAscending = _plain('sidebarAscending', false);
+final sidebarShows = Pref<Set<RowPart>>(
+  'sidebarShows',
+  (v) => v is List
+      ? {for (final n in v) ?RowPart.values.asNameMap()[n]}
+      : defaultRowParts,
+  write: (parts) => [for (final p in parts) p.name],
+);
+
+/// The sidebar's sections of the user's own, in the order they were
+/// dragged into, each with the chats moved into it (ADR 0089). A chat
+/// deleted leaves its section.
+final sidebarSections = Pref<List<Section>>(
+  'sidebarSections',
+  (v) => [
+    if (v is List)
+      for (final s in v) ?Section.read(s),
+  ],
+  write: (sections) => [for (final s in sections) s.toJson()],
+  chats: (sections) => sections.expand((s) => s.chats),
+  without: (sections, gone) => [
+    for (final s in sections)
+      s.copyWith(chats: [...s.chats.where((id) => !gone.contains(id))]),
+  ],
+);
 
 /// The models picked from the model menu, by value, the last first: the
 /// menu's first four are the ones used last.
@@ -209,6 +252,7 @@ List<Pref<Object?>> get _chatPrefs => [
   changeScopes,
   terminalChats,
   sidebarChats,
+  sidebarSections,
   chatOpened,
   pinnedFiles,
   pullSeen,

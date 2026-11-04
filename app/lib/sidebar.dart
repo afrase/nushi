@@ -1,31 +1,33 @@
 import 'package:flutter/material.dart';
 
-import 'package:nushi/agent_mark.dart';
+import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_keys.dart';
-import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
-import 'package:nushi/folder_button.dart';
 import 'package:nushi/list_motion.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/sidebar_arrange.dart';
 import 'package:nushi/sidebar_button.dart';
+import 'package:nushi/sidebar_grouped.dart';
 import 'package:nushi/sidebar_groups.dart';
+import 'package:nushi/sidebar_row.dart';
 import 'package:nushi/sidebar_rows.dart';
-import 'package:nushi/status.dart';
+import 'package:nushi/sidebar_sections.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The chats: the pinned ones first ([PinnedSection]), then grouped by
-/// folder (a chat in a worktree under its repository; [SidebarGroups]):
-/// the groups in the order they were dragged into, a new folder's first,
-/// and in each the chats as they were dragged, a new one first. Archived
-/// chats are in a collapsed group at the bottom. While ⌘ is held
+/// The chats: the pinned ones first ([PinnedSection]), then the sections
+/// of the user's own ([SidebarSections]), then at first grouped by folder
+/// (a chat in a worktree under its repository; [SidebarGroups]): the
+/// groups in the order they were dragged into, a new folder's first, and
+/// in each the chats as they were dragged, a new one first. Its header's
+/// [ArrangeButton] groups them otherwise ([GroupedChats]), sorts them and
+/// picks what rows show ([arrangeSidebar]). Archived chats are in a
+/// collapsed group at the bottom. While ⌘ is held
 /// alone, the first nine chats shown (archived left out) show the number
 /// ⌘ opens them with. Its header's [SidebarButton] hides it ([sidebarHidden]);
 /// `main.dart` then doesn't build it, so it asks nothing while it's hidden.
@@ -45,6 +47,9 @@ class _SidebarState extends State<Sidebar> {
   /// The rows of its lists, so one that moves between them glides.
   final _motion = ListMotion();
 
+  /// Whether the pointer is over it, which shows its Arrange button.
+  final _hover = ValueNotifier<bool>(false);
+
   /// The chats' pull requests' checks, for their rows' dots, asked while
   /// the list shows.
   late final PullStates _pulls;
@@ -58,6 +63,7 @@ class _SidebarState extends State<Sidebar> {
   @override
   void dispose() {
     _hold.dispose();
+    _hover.dispose();
     _pulls.unwatch();
     super.dispose();
   }
@@ -83,115 +89,159 @@ class _SidebarState extends State<Sidebar> {
     final archived = daemon.chats.values.where((c) => c.archived).toList()
       ..sort((a, b) => b.created.compareTo(a.created));
     final starting = daemon.starting;
-    return DecoratedBox(
-      decoration: BoxDecoration(color: t.raised),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return MouseRegion(
+      onEnter: (_) => _hover.value = true,
+      onExit: (_) => _hover.value = false,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: t.raised),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Under the traffic lights, its hairline the chat header's. Its
+            // empty space moves the window; the buttons keep their clicks.
+            PaneHeader(
+              end: 10,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ArrangeButton(daemon: daemon, hover: _hover),
+                    const SizedBox(width: 2),
+                    const SidebarButton(),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Button(
+                label: 'New chat',
+                icon: Icons.add,
+                hint: '⌘N',
+                onPressed: starting == null ? () => _new('') : null,
+              ),
+            ),
+            Expanded(
+              child: ValueListenableBuilder(
+                valueListenable: sidebarGroupBy,
+                builder: (context, group, _) => ListenableBuilder(
+                  listenable: Listenable.merge([
+                    _hold,
+                    sidebarOrder,
+                    sidebarCollapsed,
+                    sidebarChats,
+                    pinnedCollapsed,
+                    sidebarSort,
+                    sidebarAscending,
+                    sidebarShows,
+                    sidebarSections,
+                    // Grouped by state, a chat regroups as its state
+                    // changes, not at each streamed chunk.
+                    if (group == GroupBy.status)
+                      for (final c in daemon.chats.values) c.look,
+                  ]),
+                  builder: (context, _) => _list(context, archived),
+                ),
+              ),
+            ),
+            _Footer(daemon),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _list(BuildContext context, List<ChatState> archived) {
+    final t = NushiTheme.of(context).t;
+    final daemon = widget.daemon;
+    final starting = daemon.starting;
+    final held = _hold.value;
+    final group = sidebarGroupBy.value;
+    final sort = effectiveSort(group, sidebarSort.value);
+    final reorders = dragsOrder(group, sidebarSort.value);
+    final shows = sidebarShows.value;
+    final view = arrangeSidebar(daemon, starting: starting);
+    // Where each row is before the lists change, and what they show now:
+    // a row one loses and another shows moved.
+    _motion
+      ..ground = t.raised
+      ..shown = {
+        for (final c in view.pinned) ValueKey(c.id),
+        for (final (section, chats) in view.sections) ...[
+          ValueKey(section.key),
+          for (final c in chats) ValueKey(c.id),
+        ],
+        for (final MapEntry(:key, :value) in view.projects.entries) ...[
+          ValueKey(key),
+          for (final c in value) ValueKey(c.id),
+        ],
+        for (final g in view.groups) ...[
+          ValueKey(g.key),
+          for (final c in g.chats) ValueKey(c.id),
+        ],
+        if (_showArchived)
+          for (final c in archived) ValueKey(c.id),
+      }
+      ..snapshot();
+    final numbers = {
+      for (final (i, c) in chatOrder(daemon).take(9).indexed) c.id: i + 1,
+    };
+    // A row says its project where its group doesn't.
+    Widget row(ChatState c, Movable movable, {bool inProject = false}) =>
+        SidebarRow(
+          c,
+          key: ValueKey(c.id),
+          daemon: daemon,
+          number: held ? numbers[c.id] : null,
+          movable: movable,
+          project: !inProject && shows.contains(RowPart.project),
+          time: shows.contains(RowPart.time) ? chatTime(c, sort) : null,
+        );
+    return ListMotionScope(
+      motion: _motion,
+      child: ListView(
+        // Hiding the sidebar takes it away: back where it was.
+        key: const PageStorageKey('sidebar'),
+        padding: const EdgeInsets.only(bottom: 10),
         children: [
-          // Under the traffic lights, its hairline the chat header's. Its
-          // empty space moves the window; the button keeps its clicks.
-          const PaneHeader(
-            end: 10,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: SidebarButton(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Button(
-              label: 'New chat',
-              icon: Icons.add,
-              hint: '⌘N',
-              onPressed: starting == null ? () => _new('') : null,
-            ),
-          ),
-          Expanded(
-            child: ListenableBuilder(
-              listenable: Listenable.merge([
-                _hold,
-                sidebarOrder,
-                sidebarCollapsed,
-                sidebarChats,
-                pinnedCollapsed,
-              ]),
-              builder: (context, _) {
-                final held = _hold.value;
-                final groups = sidebarGroups(daemon, starting: starting);
-                // Where each row is before the lists change, and what they
-                // show now: a row one loses and another shows moved.
-                _motion
-                  ..ground = t.raised
-                  ..shown = {
-                    for (final c in pinnedChats(daemon)) ValueKey(c.id),
-                    for (final MapEntry(:key, :value) in groups.entries) ...[
-                      ValueKey(key),
-                      for (final c in value) ValueKey(c.id),
-                    ],
-                    if (_showArchived)
-                      for (final c in archived) ValueKey(c.id),
-                  }
-                  ..snapshot();
-                final numbers = {
-                  for (final (i, c) in chatOrder(daemon).take(9).indexed)
-                    c.id: i + 1,
-                };
-                Widget row(
-                  ChatState c,
-                  Movable movable, {
-                  bool pinned = false,
-                }) => _ChatRow(
-                  c,
-                  key: ValueKey(c.id),
-                  daemon: daemon,
-                  number: held ? numbers[c.id] : null,
-                  movable: movable,
-                  project: pinned,
-                );
-                return ListMotionScope(
-                  motion: _motion,
-                  child: ListView(
-                    // Hiding the sidebar takes it away: back where it was.
-                    key: const PageStorageKey('sidebar'),
-                    padding: const EdgeInsets.only(bottom: 10),
-                    children: [
-                      Column(
-                        key: _motion.space,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          PinnedSection(
-                            daemon,
-                            row: (c, movable) => row(c, movable, pinned: true),
-                          ),
-                          SidebarGroups(
-                            groups: groups,
-                            selectedId: daemon.selectedId,
-                            starting: starting,
-                            startingAgent: daemon.startingAgent,
-                            onNew: starting == null ? _new : null,
-                            onTerminal: _terminal,
-                            row: row,
-                          ),
-                          ArchivedSection(
-                            archived,
-                            open: _showArchived,
-                            onToggle: () =>
-                                setState(() => _showArchived = !_showArchived),
-                            row: (c) => _ChatRow(
-                              c,
-                              key: ValueKey(c.id),
-                              daemon: daemon,
-                            ),
-                          ),
-                        ],
+          Column(
+            key: _motion.space,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PinnedSection(daemon, row: row),
+              SidebarSections(
+                daemon: daemon,
+                sections: view.sections,
+                reorders: reorders,
+                row: row,
+              ),
+              LeaveSectionTarget(
+                child: group == GroupBy.project
+                    ? SidebarGroups(
+                        groups: view.projects,
+                        selectedId: daemon.selectedId,
+                        starting: starting,
+                        startingAgent: daemon.startingAgent,
+                        onNew: starting == null ? _new : null,
+                        onTerminal: _terminal,
+                        reorders: reorders,
+                        row: (c, movable) => row(c, movable, inProject: true),
+                      )
+                    : GroupedChats(
+                        groups: view.groups,
+                        selectedId: daemon.selectedId,
+                        row: row,
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+              ),
+              ArchivedSection(
+                archived,
+                open: _showArchived,
+                onToggle: () => setState(() => _showArchived = !_showArchived),
+                row: (c) => SidebarRow(c, key: ValueKey(c.id), daemon: daemon),
+              ),
+            ],
           ),
-          _Footer(daemon),
         ],
       ),
     );
@@ -257,171 +307,6 @@ class _Footer extends StatelessWidget {
             daemon.openSettings,
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A chat in the list: click opens it, a right-click opens its menu
-/// (Rename among it: a second click on a chat slow to open must not
-/// start a rename), and dragged ([movable]) it moves within
-/// its list. A pinned chat's ([project]) says its project after its title,
-/// muted, in the place of its branch or Jira key. A chat with a color has
-/// a bar of it at the row's left ([ColorBar]); only the open chat's row is
-/// filled, so a blue chat never reads as the open one.
-class _ChatRow extends StatefulWidget {
-  const new(
-    this.chat, {
-    required this.daemon,
-    super.key,
-    this.number,
-    this.movable,
-    this.project = false,
-  });
-
-  final ChatState chat;
-  final Daemon daemon;
-  final Movable? movable;
-  final bool project;
-
-  /// The number ⌘ opens it with, shown while ⌘ is held.
-  final int? number;
-
-  @override
-  State<_ChatRow> createState() => _ChatRowState();
-}
-
-class _ChatRowState extends State<_ChatRow> {
-  bool _renaming = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final chat = widget.chat;
-    final daemon = widget.daemon;
-    final selected = daemon.selectedId == chat.id;
-    // Under Settings, Jira or GitHub it stays marked, but quieter: the open
-    // view's row is the one in the accent.
-    final shown = selected && daemon.chatShows;
-    final movable =
-        widget.movable ?? (Widget child, {required bool enabled}) => child;
-    // Not the chat itself, which notifies at every streamed chunk.
-    return ListenableBuilder(
-      listenable: chat.look,
-      builder: (context, _) => movable(
-        enabled: !_renaming,
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          child: Menu(
-            filter: false,
-            entries: chatMenu(
-              context,
-              chat,
-              daemon,
-              onRename: () => setState(() => _renaming = true),
-            ),
-            builder: (context, open) => ColorBar(
-              color: chat.color,
-              child: Tap(
-                onTap: () => daemon.select(chat.id),
-                onSecondaryTapUp: (d) => open(d.localPosition),
-                selected: selected,
-                // The open chat in the accent's soft fill: the plain selected
-                // gray is hardly apart from the sidebar's own.
-                fill: shown ? t.accentSoft : null,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: _renaming ? 1 : 5,
-                ),
-                child: Row(
-                  children: [
-                    // Its state in a word on hover ("needs you"), which the
-                    // row leaves to the dot so the title keeps its width.
-                    Tooltip(
-                      message: phaseWord(chat.phase, t).$1,
-                      child: ChatDot(chat: chat, sparks: true),
-                    ),
-                    const SizedBox(width: 6),
-                    Tooltip(
-                      message: chat.agentName,
-                      child: AgentMark(
-                        chat.agent,
-                        color: chat.archived ? t.textMuted : null,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _renaming
-                          ? RenameField(
-                              chat: chat,
-                              daemon: daemon,
-                              onDone: () => setState(() => _renaming = false),
-                            )
-                          : Text(
-                              chat.shownTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.ui(
-                                chat.archived ? t.textSecondary : t.text,
-                                weight: shown ? FontWeight.w600 : null,
-                              ),
-                            ),
-                    ),
-                    if (widget.project)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text(
-                          chat.scratch ? '' : folderParts(chat.home).$1,
-                          style: theme.ui(t.textMuted, size: 11.5),
-                        ),
-                      )
-                    else if (chat.jiraKey.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: Text(
-                          chat.jiraKey,
-                          style: theme.code(t.textMuted, size: 10.5),
-                        ),
-                      )
-                    else if (chat.worktree case final wt?)
-                      Flexible(
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: Text(
-                            wt.branch.replaceFirst('nushi/', ''),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.code(t.textMuted, size: 10.5),
-                          ),
-                        ),
-                      ),
-                    if (chat.pull != null) PullDot(chat, PullStates.of(daemon)),
-                    if (chat.archived && !chat.scratch)
-                      Text(
-                        folderParts(chat.home).$1,
-                        style: theme.ui(t.textMuted, size: 11.5),
-                      ),
-                    if (widget.number case final n?)
-                      Container(
-                        margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: box(
-                          t.fieldBorder,
-                          fill: t.fieldFill,
-                          radius: NushiTheme.control,
-                        ),
-                        child: keyText(
-                          '⌘$n',
-                          theme.code(t.textSecondary, size: 11),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

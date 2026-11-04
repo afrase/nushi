@@ -34,6 +34,7 @@ class SidebarGroups extends StatelessWidget {
     required this.onNew,
     required this.onTerminal,
     super.key,
+    this.reorders = true,
   });
 
   final Map<String, List<ChatState>> groups;
@@ -49,6 +50,10 @@ class SidebarGroups extends StatelessWidget {
 
   /// A terminal in a folder, in one of its group's chats.
   final void Function(String folder, List<ChatState> chats) onTerminal;
+
+  /// Whether a project's rows move by dragging (Manual sort); else they
+  /// drag only into a section.
+  final bool reorders;
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +99,7 @@ class SidebarGroups extends StatelessWidget {
               group: folder,
               chats: chats,
               collapsed: collapsed,
+              reorders: reorders,
               selectedId: selectedId,
               row: row,
               onMove: (from, to) => moveInProject(folder, chats, from, to),

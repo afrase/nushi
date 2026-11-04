@@ -344,17 +344,29 @@ class PhaseDot extends StatelessWidget {
 /// that ended while subagents or commands it started still run (not
 /// "idle": the user would take it as done); "expired", a chat whose agent
 /// deleted its session; "couldn't start", one whose reopen failed.
-(String, Color) phaseWord(ChatPhase p, Tokens t) => switch (p) {
-  .waiting => ('needs you', t.needs),
-  .working => ('working', t.running),
-  .background => ('in background', t.running),
-  .expired => ('expired', t.idle),
-  .failed => ("couldn't start", t.crashed),
-  .done => ('done', t.done),
-  .asleep => ('asleep', t.idle),
-  .fresh => ('new', t.idle),
-  .idle => ('idle', t.idle),
-  .archived => ('archived', t.idle),
+(String, Color) phaseWord(ChatPhase p, Tokens t) => (
+  phaseName(p),
+  switch (p) {
+    .waiting => t.needs,
+    .working || .background => t.running,
+    .failed => t.crashed,
+    .done => t.done,
+    .expired || .asleep || .fresh || .idle || .archived => t.idle,
+  },
+);
+
+/// [phaseWord]'s word alone: what the sidebar's Status groups are called.
+String phaseName(ChatPhase p) => switch (p) {
+  .waiting => 'needs you',
+  .working => 'working',
+  .background => 'in background',
+  .expired => 'expired',
+  .failed => "couldn't start",
+  .done => 'done',
+  .asleep => 'asleep',
+  .fresh => 'new',
+  .idle => 'idle',
+  .archived => 'archived',
 };
 
 /// What a chat is doing, in a word ([phaseWord]).

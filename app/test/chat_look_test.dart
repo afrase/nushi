@@ -56,7 +56,7 @@ void main() {
     final d = await fake.connect(tester);
     await tester.pumpWidget(
       MaterialApp(
-        theme: NushiTheme(Tokens.dark).toThemeData(),
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: MediaQuery(
           data: const MediaQueryData(disableAnimations: true),
           child: Scaffold(
