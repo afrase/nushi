@@ -2,8 +2,6 @@ package chats
 
 import (
 	"errors"
-	"maps"
-	"slices"
 	"time"
 )
 
@@ -11,9 +9,7 @@ import (
 // to: their agent keeps the MCP servers it started with until the chat is
 // reloaded.
 func (s *Service) MCPChanged(agent string, affected func(folder string) bool) {
-	s.mu.Lock()
-	open := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
+	open := s.openChats()
 	for _, c := range open {
 		c.mu.Lock()
 		folder, running := c.record.Folder, c.agent != nil && c.parent == nil && c.kind.MCP && c.kind.Name == agent

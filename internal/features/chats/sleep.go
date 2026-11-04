@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"maps"
 	"slices"
 	"time"
 )
@@ -70,9 +69,7 @@ func (s *Service) autoSleep() {
 		case <-s.ctx.Done():
 			return
 		}
-		s.mu.Lock()
-		open := slices.Collect(maps.Values(s.chats))
-		s.mu.Unlock()
+		open := s.openChats()
 		if after := s.prefs.SleepAfter(); after > 0 {
 			for _, c := range open {
 				s.doze(c, after)
@@ -156,12 +153,22 @@ func (s *Service) awake(ctx context.Context, c *chat) error {
 	return nil
 }
 
+// awakeChat is chat id, awake (and woken first if it slept).
+func (s *Service) awakeChat(ctx context.Context, id string) (*chat, error) {
+	c, err := s.chat(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.awake(ctx, c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 // AgentPids returns the process of each chat's running agent, by chat id
 // (side chats share their chat's).
 func (s *Service) AgentPids() map[string]int {
-	s.mu.Lock()
-	open := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
+	open := s.openChats()
 	pids := map[string]int{}
 	for _, c := range open {
 		c.mu.Lock()
@@ -176,9 +183,7 @@ func (s *Service) AgentPids() map[string]int {
 // awakeOf returns the chats of the agent named agent whose agent runs
 // (side chats are their chat's).
 func (s *Service) awakeOf(agent string) []string {
-	s.mu.Lock()
-	open := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
+	open := s.openChats()
 	var ids []string
 	for _, c := range open {
 		c.mu.Lock()

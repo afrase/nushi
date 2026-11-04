@@ -27,10 +27,7 @@ const (
 // can't be asked anything, and a tool call ends it (ADR 0079). What comes
 // back is only text for the user to read before they commit.
 func (s *Service) CommitMessage(ctx context.Context, chatID string, diff func(context.Context, string) (string, error)) (string, error) {
-	c, err := s.chat(chatID)
-	if err == nil {
-		err = s.awake(ctx, c)
-	}
+	c, err := s.awakeChat(ctx, chatID)
 	if err != nil {
 		return "", err
 	}

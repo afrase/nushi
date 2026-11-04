@@ -2,7 +2,6 @@ package chats
 
 import (
 	"errors"
-	"maps"
 	"slices"
 	"strings"
 
@@ -50,9 +49,7 @@ func (s *Service) notQuiet() string {
 // its chat's (the app lists only those: ADR 0056 wants no hold it can't
 // show), unless that chat holds by itself.
 func (s *Service) Holding() []model.Hold {
-	s.mu.Lock()
-	open := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
+	open := s.openChats()
 	own, sides := map[string]string{}, map[string]string{}
 	for _, c := range open {
 		c.mu.Lock()

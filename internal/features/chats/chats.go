@@ -353,13 +353,7 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
 	}
-	s.mu.Lock() // before it's stored: found by id, it must be this one
-	s.chats[c.id] = c
-	s.mu.Unlock()
-	c.mu.Lock()
-	c.saveLocked(c.modeLocked)
-	c.storeLocked()
-	c.mu.Unlock()
+	s.register(c)
 	c.log().Info("chat created", "scratch", scratch, "worktree", wt != nil)
 	return c.id, nil
 }

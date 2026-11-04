@@ -30,10 +30,7 @@ type silentRun struct {
 // the agent may keep the answer in a conversation. An agent that can't
 // fork isn't asked.
 func (s *Service) ContextUsage(ctx context.Context, chatID string) (model.ContextUsage, error) {
-	c, err := s.chat(chatID)
-	if err == nil {
-		err = s.awake(ctx, c)
-	}
+	c, err := s.awakeChat(ctx, chatID)
 	if err != nil {
 		return model.ContextUsage{}, err
 	}

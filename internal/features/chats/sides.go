@@ -120,10 +120,7 @@ func (c *chat) routeLocked(session acp.SessionID) (*chat, *child) {
 
 // Fork opens a side chat of a chat and returns its id.
 func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
-	p, err := s.chat(chatID)
-	if err == nil {
-		err = s.awake(ctx, p)
-	}
+	p, err := s.awakeChat(ctx, chatID)
 	if err != nil {
 		return "", err
 	}

@@ -36,10 +36,7 @@ func Forkable(it model.Item) bool {
 // marked as a fork. With at, one of the agent's messages (Forkable), the
 // conversation up to it, it included; else all that has finished.
 func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, error) {
-	p, err := s.chat(chatID)
-	if err == nil {
-		err = s.awake(ctx, p)
-	}
+	p, err := s.awakeChat(ctx, chatID)
 	if err != nil {
 		return "", err
 	}
@@ -68,13 +65,7 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 	if err := c.reapply(ctx, o.agent, o.sid, of.Mode, of.Picks); err != nil {
 		c.log().Warn("mode after forking", "err", err)
 	}
-	s.mu.Lock() // before it's stored: found by id, it must be this one
-	s.chats[c.id] = c
-	s.mu.Unlock()
-	c.mu.Lock()
-	c.saveLocked(c.modeLocked)
-	c.storeLocked()
-	c.mu.Unlock()
+	s.register(c)
 	c.log().Info("chat forked", "from", p.id, "at_message", at != "")
 	return c.id, nil
 }
@@ -260,12 +251,7 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	c.lastItem = lastItem
 	c.forkedLocked(items)
 	c.mu.Unlock()
-	s.mu.Lock() // before it's stored: found by id, it must be this one
-	s.chats[c.id] = c
-	s.mu.Unlock()
-	c.mu.Lock()
-	c.storeLocked()
-	c.mu.Unlock()
+	s.register(c)
 	c.log().Info("side chat kept", "from", p.id)
 	return c.id, nil
 }

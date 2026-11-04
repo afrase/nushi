@@ -39,6 +39,26 @@ func (s *Service) lookup(id string) (*chat, error) {
 	return c, nil
 }
 
+// openChats is the chats open now, side chats among them.
+func (s *Service) openChats() []*chat {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Collect(maps.Values(s.chats))
+}
+
+// register adds a chat just made to the service, then stores it with its
+// mode: in that order, as a chat found by id must be this one (its
+// record's event can bring the app to look it up).
+func (s *Service) register(c *chat) {
+	s.mu.Lock()
+	s.chats[c.id] = c
+	s.mu.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.modeLocked(&c.record)
+	c.storeLocked()
+}
+
 // storedSession is a stored chat's session, as its chat starts with it,
 // and its agent's kind.
 func (s *Service) storedSession(id string) (model.ChatRecord, *kind, error) {
@@ -184,9 +204,7 @@ func (s *Service) Reopen(id string) error {
 // found ready): its chats that failed to reopen because it wasn't may try
 // again, each when it's next shown (Reopen). None starts now.
 func (s *Service) AgentReady(agent string) {
-	s.mu.Lock()
-	open := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
+	open := s.openChats()
 	for _, c := range open {
 		c.mu.Lock()
 		if i := c.indexLocked(c.failure); c.kind.Name == agent && c.reopenFailed && i >= 0 && c.items[i].Status == "not_ready" {

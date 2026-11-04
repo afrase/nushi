@@ -45,10 +45,7 @@ func (c *chat) rewindableLocked(i int) bool {
 // a new session id, the same chat. The old session stays as one the chat
 // had before (Earlier), so Delete still deletes it. Files aren't rewound.
 func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Message, error) {
-	c, err := s.chat(chatID)
-	if err == nil {
-		err = s.awake(ctx, c)
-	}
+	c, err := s.awakeChat(ctx, chatID)
 	if err != nil {
 		return model.Message{}, err
 	}

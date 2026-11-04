@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"maps"
 	"os"
 	"slices"
 	"time"
@@ -158,9 +157,7 @@ func (s *Service) ownSessions() (map[string]bool, error) {
 			own[id] = true
 		}
 	}
-	s.mu.Lock()
-	chats := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
+	chats := s.openChats()
 	for _, c := range chats {
 		c.mu.Lock()
 		own[c.sid] = true
