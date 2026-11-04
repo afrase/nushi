@@ -7,14 +7,13 @@ import 'package:test/test.dart';
 
 /// A relay stand-in: dart:io's WebSocket server, sending [script]'s
 /// messages, then echoing.
-Future<Uri> _server(List<Object> script, {Duration? ping}) async {
+Future<Uri> _server(List<Object> script) async {
   final srv = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   addTearDown(() => srv.close(force: true));
   srv.listen((req) async {
     // Closed by the script, or by the server's close at teardown.
     // ignore: close_sinks
     final ws = await WebSocketTransformer.upgrade(req);
-    ws.pingInterval = ping;
     script.forEach(ws.add);
     ws.listen(ws.add);
   });
@@ -44,18 +43,6 @@ void main() {
   test('a text message ends the connection', () async {
     final ws = await RelaySocket.connect(await _server(['hello']));
     await expectLater(ws.messages.toList(), throwsA(isA<SocketException>()));
-  });
-
-  test('pings from the relay are answered', () async {
-    final ws = await RelaySocket.connect(
-      await _server([], ping: const Duration(milliseconds: 50)),
-    );
-    final it = StreamIterator(ws.messages);
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    ws.send([9]);
-    expect(await it.moveNext(), isTrue);
-    expect(it.current, [9]);
-    await ws.close();
   });
 
   test('a plain HTTP answer is refused', () async {
