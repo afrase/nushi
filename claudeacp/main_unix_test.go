@@ -75,8 +75,8 @@ func standInClaude() int {
 // quietClient is a client that asks nothing of the agent's requests.
 type quietClient struct{ acp.UnimplementedClient }
 
-// However the agent ends (its group killed, as Nushi stops an agent that
-// overstays its grace; itself killed alone; SIGTERM; its stdin's end),
+// However the agent ends (its group killed, as a client stops an agent
+// that overstays its grace; itself killed alone; SIGTERM; its stdin's end),
 // its claude doesn't outlive it.
 func TestClaudeEndsWithTheAgent(t *testing.T) {
 	if testing.Short() {
@@ -119,7 +119,7 @@ func TestClaudeEndsWithTheAgent(t *testing.T) {
 			defer func() { _ = logFile.Close() }()
 			cmd.Stderr = logFile
 			agentLog := func() string { b, _ := os.ReadFile(logFile.Name()); return string(b) }
-			conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return quietClient{} }) // in a group of its own, as Nushi runs it
+			conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return quietClient{} }) // in a group of its own, as a client runs it
 			if err != nil {
 				t.Fatal(err)
 			}

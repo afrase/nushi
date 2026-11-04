@@ -16,9 +16,8 @@ import (
 	"github.com/afrase/nushi/claudeagent/claudetest"
 )
 
-// testdata/subagents/stops is claude-agent-acp 0.94.0's recording that
-// Nushi's chats test with (internal/features/chats/testdata/subagents):
-// a background subagent stopped by cancelling its session while the
+// testdata/subagents/stops is a recording of claude-agent-acp 0.94.0 on
+// the real claude: a background subagent stopped by cancelling its session while the
 // chat is idle, a foreground one the same way mid-turn, a background
 // command and Claude's TaskStop of it, a foreground subagent stopped with
 // the turn, and a background one left running. stops.acp.jsonl is its

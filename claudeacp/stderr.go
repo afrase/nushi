@@ -9,9 +9,8 @@ import (
 
 // Caps on what of claude's stderr a session logs: a line is cut at
 // stderrLine bytes, and lines go at stderrBurst, then stderrRate a second.
-// A client's log of the agent has caps of its own (Nushi's lets an agent's
-// stderr through at 100, then 10 a second), which a chatty claude
-// mustn't use up.
+// A client's log of the agent may have caps of its own, which a chatty
+// claude mustn't use up.
 const (
 	stderrLine  = 1024
 	stderrBurst = 20

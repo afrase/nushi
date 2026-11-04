@@ -43,7 +43,7 @@ func (s *session) cancel() {
 	s.mu.Unlock()
 	// The queued prompts are dropped first, then claude is interrupted,
 	// with no wait between, as claude-agent-acp writes them (the
-	// cancel-queued parity scenario). Claude is interrupted even when no
+	// order a recording of it showed). Claude is interrupted even when no
 	// prompt is known to run: it may have taken one whose echo hasn't come
 	// yet, or be at work of its own.
 	s.bg.Go(func() {

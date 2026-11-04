@@ -119,7 +119,7 @@ func TestLoadReplaysSubagents(t *testing.T) {
 
 // A task notification claude took into a running turn is kept only as a
 // queued_command attachment, and one still queued as claude closed only
-// as a queue-operation (docs/facts/claude.md): a load reads both for the
+// as a queue-operation: a load reads both for the
 // subagents' ends, in the transcript's order with the user messages', so
 // the last about a subagent says how it ended.
 func TestLoadSubagentsQueuedEnds(t *testing.T) {
@@ -243,7 +243,7 @@ func TestLoadNestedSubagentEnds(t *testing.T) {
 	}
 }
 
-// On claude's own transcripts (the subagent-nested parity scenario), a
+// On claude's own transcripts (a recorded run of nested subagents), a
 // load finds the end of the subagent a subagent started, delivered into
 // the turn of the one that started it, and that one's own.
 func TestLoadRecordedNestedSubagent(t *testing.T) {

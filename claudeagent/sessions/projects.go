@@ -4,15 +4,6 @@
 // as Go, the functions a Store's methods; folder names are counted and
 // hashed by UTF-16 unit, as the CLI does.
 
-// Package sessions reads and changes the Claude CLI's session transcripts on
-// disk: listing sessions, one session's details and messages, its subagents'
-// messages, forking and deleting. A Store holds them.
-//
-// The CLI keeps each session as <config>/projects/<folder>/<id>.jsonl, the
-// folder named after the session's working directory, and its subagents'
-// transcripts under <folder>/<id>/subagents/. The layout is the CLI's own and
-// undocumented; Anthropic's Agent SDKs read and write it the same way, and
-// this package is a port of the Python SDK's helpers.
 package sessions
 
 import (
@@ -38,7 +29,7 @@ const maxName = 200
 
 // ErrInvalidID is the error for an id that isn't a session's: the CLI
 // names sessions by UUID, so no session has it.
-var ErrInvalidID = errors.New("not a session id")
+var ErrInvalidID = errors.New("sessions: not a session id")
 
 var idRE = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
@@ -65,7 +56,7 @@ func newUUID() string {
 // notFound is the error for a session or subagent that isn't on disk; it
 // matches fs.ErrNotExist.
 func notFound(what string) error {
-	return fmt.Errorf("%s: %w", what, fs.ErrNotExist)
+	return fmt.Errorf("sessions: %s: %w", what, fs.ErrNotExist)
 }
 
 // Store is the CLI's session transcripts in one config folder. The zero
@@ -90,7 +81,7 @@ func (s Store) projects() (string, error) {
 	if configDir == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", fmt.Errorf("finding Claude's config folder: %w", err)
+			return "", fmt.Errorf("sessions: finding Claude's config folder: %w", err)
 		}
 		configDir = filepath.Join(home, ".claude")
 	}

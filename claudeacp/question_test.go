@@ -11,13 +11,12 @@ import (
 	"github.com/afrase/nushi/claudeagent/claudetest"
 )
 
-// nushiForm is the form claude-agent-acp 0.94.0 sent for AskUserQuestion
+// adapterForm is the form claude-agent-acp 0.94.0 sent for AskUserQuestion
 // with two questions, one single-choice and one multi-select, as
-// recorded in Nushi's chats tests (claudeForm in questions_test.go),
-// which read it.
-const nushiForm = `{"message":"Please answer the following questions.","mode":"form","requestedSchema":{"properties":{"question_0":{"type":"string","title":"Colour","description":"What is your favourite colour?","oneOf":[{"const":"Red","title":"Red","description":"The colour red"},{"const":"Green","title":"Green","description":"The colour green"},{"const":"Blue","title":"Blue","description":"The colour blue"}]},"question_0_custom":{"type":"string","title":"Other","description":"Type your own answer, or add a note to the option you chose above (optional)."},"question_1":{"type":"array","title":"Fruits","description":"Which fruits do you like?","items":{"anyOf":[{"const":"Apple","title":"Apple","description":"Apples"},{"const":"Pear","title":"Pear","description":"Pears"},{"const":"Plum","title":"Plum","description":"Plums"}]}},"question_1_custom":{"type":"string","title":"Other","description":"Type your own answer to add to your selection above (optional)."}},"type":"object"},"sessionId":"s1","toolCallId":"t1"}`
+// recorded, which clients written for it read.
+const adapterForm = `{"message":"Please answer the following questions.","mode":"form","requestedSchema":{"properties":{"question_0":{"type":"string","title":"Colour","description":"What is your favourite colour?","oneOf":[{"const":"Red","title":"Red","description":"The colour red"},{"const":"Green","title":"Green","description":"The colour green"},{"const":"Blue","title":"Blue","description":"The colour blue"}]},"question_0_custom":{"type":"string","title":"Other","description":"Type your own answer, or add a note to the option you chose above (optional)."},"question_1":{"type":"array","title":"Fruits","description":"Which fruits do you like?","items":{"anyOf":[{"const":"Apple","title":"Apple","description":"Apples"},{"const":"Pear","title":"Pear","description":"Pears"},{"const":"Plum","title":"Plum","description":"Plums"}]}},"question_1_custom":{"type":"string","title":"Other","description":"Type your own answer to add to your selection above (optional)."}},"type":"object"},"sessionId":"s1","toolCallId":"t1"}`
 
-// The questions nushiForm asks.
+// The questions adapterForm asks.
 const twoQuestions = `{"questions":[` +
 	`{"question":"What is your favourite colour?","header":"Colour","multiSelect":false,"options":[{"label":"Red","description":"The colour red"},{"label":"Green","description":"The colour green"},{"label":"Blue","description":"The colour blue"}]},` +
 	`{"question":"Which fruits do you like?","header":"Fruits","multiSelect":true,"options":[{"label":"Apple","description":"Apples"},{"label":"Pear","description":"Pears"},{"label":"Plum","description":"Plums"}]}]}`
@@ -41,7 +40,7 @@ func fieldNames(r *acp.CreateElicitationRequest) []string {
 	return names
 }
 
-// The form is the one Nushi reads, to the byte once keys are sorted, its
+// The form is claude-agent-acp's, to the byte once keys are sorted, its
 // fields in the same order.
 func TestQuestionForm(t *testing.T) {
 	var in struct {
@@ -55,11 +54,11 @@ func TestQuestionForm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if g, w := canonical(t, b), canonical(t, []byte(nushiForm)); g != w {
+	if g, w := canonical(t, b), canonical(t, []byte(adapterForm)); g != w {
 		t.Errorf("got\n%s\nwant\n%s", g, w)
 	}
 	var want acp.CreateElicitationRequest
-	if err := json.Unmarshal([]byte(nushiForm), &want); err != nil {
+	if err := json.Unmarshal([]byte(adapterForm), &want); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(fieldNames(got), fieldNames(&want)) {

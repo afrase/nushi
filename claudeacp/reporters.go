@@ -177,7 +177,7 @@ func resultContent(name string, b claudeagent.Block) (content []acp.ToolCallCont
 }
 
 // handedBack is a foreground subagent's report out of the frame claude
-// puts around it for the model (docs/facts/claude.md), as the adapter
+// puts around it for the model, as claude-agent-acp
 // shows it: without the frame's words, the indent claude gives each line,
 // or what claude adds after it (the agent's id, its worktree). Any other
 // text comes back as it is.

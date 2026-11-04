@@ -20,7 +20,7 @@ func TestFolderNameIsTheCLIs(t *testing.T) {
 		{"/Users/me/my.repo é", "-Users-me-my-repo--"},
 		// Two for an emoji, which is two (Python's port counts one).
 		{"/a/\U0001F600b", "-a---b"},
-		// From the CLI's own function, run in node (internal/claudehistory's test).
+		// From the CLI's own function, run in node.
 		{long, "-nushi-test" + strings.Repeat("-a-very-long-folder-name", 7) + "-a-very-long-folder-n-ytjik2"},
 		{"", ""},
 	} {

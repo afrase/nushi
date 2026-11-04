@@ -18,7 +18,7 @@ import (
 // client that shows them; else as message text with no message id,
 // "**Level:** " before it (none for info) and _meta.claudeCode saying it
 // is a notice, so a client that knows claude can tell it from the
-// model's words (the shape claude-agent-acp gives, which Nushi reads).
+// model's words (the shape claude-agent-acp gives, which clients read).
 func (s *session) notice(level, content string) {
 	if content == "" {
 		return
@@ -61,7 +61,7 @@ func (s *session) modelFallback(m *claudeagent.ModelRefusalFallback) {
 }
 
 // compacting starts a compaction, shown as a tool call of its own
-// ("compact", which Nushi keys on), since ACP's compaction updates go
+// ("compact", as claude-agent-acp names it), since ACP's compaction updates go
 // only to a client that declares them. One that has ended is kept until
 // the turn's result, so its boundary and claude's word on its outcome
 // end the same call in either order; a start after it is a new one.
@@ -151,7 +151,8 @@ func (ts *tools) memoryRecall(m *claudeagent.MemoryRecall) {
 
 // localOutput is what a slash command claude ran itself printed (/context
 // among them): message text. The turn's result text follows it as a
-// second message, as claude-agent-acp sends both; Nushi reads the last.
+// second message, as claude-agent-acp sends both; a client that wants
+// the command's output reads the last.
 func (s *session) localOutput(m *claudeagent.LocalCommandOutput) {
 	if m.Content == "" {
 		return

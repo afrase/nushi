@@ -144,7 +144,7 @@ func (r *replayer) launchOf(call string) *replayedKid {
 // findQueued reads the prompts claude kept other than as user messages
 // (sessions.Store.QueuedPrompts): a task notification delivered into a
 // running turn is only an attachment, and one still queued when claude
-// closed only a queue-operation (docs/facts/claude.md). The end of a
+// closed only a queue-operation, as recordings show. The end of a
 // subagent started by a subagent goes to the one that started it, in that
 // one's transcript (subagent). claude-agent-acp reads neither, so its
 // replay leaves such a subagent idle with no reason.

@@ -216,8 +216,8 @@ func (s *session) send(ctx context.Context, content []claudeagent.Block) (*turn,
 
 // closeWait is how long close waits for claude to take an interrupt. With
 // claudeagent's 2 s for claude to exit once its stdin ends, a close takes
-// under the 5 s a client such as Nushi gives an agent before it kills its
-// group, and claude with it (Main).
+// under the 5 s a client may give an agent before it kills its group, and
+// claude with it (Main).
 const closeWait = 2 * time.Second
 
 // close ends the session: a running turn is interrupted, every turn

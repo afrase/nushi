@@ -188,8 +188,7 @@ func (c *config) setFlag(ctx context.Context, claude claudeSettings, id, value s
 
 // effortSettings are the flag settings for an effort level. They carry
 // ultracode when the session's settings turned it on: since claude
-// 2.1.284 an effort change without it turns ultracode off (docs/facts,
-// Ultracode).
+// 2.1.284 an effort change without it turns ultracode off.
 func (c *config) effortSettings(level string) map[string]any {
 	flags := map[string]any{"effortLevel": orNull(level)}
 	c.mu.Lock()

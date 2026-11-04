@@ -12,7 +12,7 @@ import (
 
 // A loaded session's history, replayed to the client from claude's
 // transcript as claude-agent-acp replays it, so a client that kept its
-// own copy can line the two up (docs/facts/claude.md, Sessions): the
+// own copy can line the two up: the
 // user's messages under claude's uuids, the model's text under the API's
 // message ids, each tool call as a tool_call with its whole input then
 // its result. Usage, notices and permission requests aren't replayed. To
