@@ -69,12 +69,7 @@ class _ComposerState extends State<Composer> {
   ); // the + menu opens over it
   late final Draft _draft = widget.chat.draft;
   late final TextEditingController _text = _draft.text;
-  late final _completions = Completions(
-    _text,
-    _draft.mentions,
-    () => widget.chat,
-    widget.daemon,
-  );
+  late final _completions = Completions(widget.chat, widget.daemon);
   Set<String> get _mentions => _draft.mentions; // files picked with @
   late final Attachments _images = _draft.images;
   Timer? _esc; // a first Esc's time to be followed by a second

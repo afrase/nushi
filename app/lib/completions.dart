@@ -11,20 +11,21 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// What the prompt box offers while typing in [text]: at its start after
-/// `/` the agent's commands, anywhere after `@` the chat folder's files.
-/// The files picked go in [mentions].
+/// What [chat]'s prompt box offers while typing in its draft's text: at
+/// its start after `/` the agent's commands, anywhere after `@` the chat
+/// folder's files. The files picked go in the draft's mentions.
 class Completions extends ChangeNotifier {
-  new(this.text, this.mentions, this.chat, this.daemon) {
+  new(this.chat, this.daemon) : _commands = chat.commands {
     text.addListener(_update);
-    _heard = chat()..addListener(_chatChanged);
-    _commands = _heard.commands;
+    chat.addListener(_chatChanged);
   }
 
-  final TextEditingController text;
-  final ChatState Function() chat;
+  final ChatState chat;
   final Daemon daemon;
-  final Set<String> mentions;
+
+  /// The draft's text, and the files its @ picked.
+  TextEditingController get text => chat.draft.text;
+  Set<String> get mentions => chat.draft.mentions;
   List<Choice> choices = [];
   int picked = 0;
   List<String>? _files; // the folder's, fetched at the first @
@@ -33,13 +34,12 @@ class Completions extends ChangeNotifier {
   (int, int)? _token; // where the text being completed starts and ends
   String _dismissed = ''; // the text Escape closed the choices for
   bool _disposed = false;
-  late final ChatState _heard; // the chat listened to
-  late List<Command> _commands; // its commands, as last offered
+  List<Command> _commands; // the chat's commands, as last offered
 
   /// The agent's commands came: `/` typed before them offers them now.
   void _chatChanged() {
-    if (identical(_commands, _heard.commands)) return;
-    _commands = _heard.commands;
+    if (identical(_commands, chat.commands)) return;
+    _commands = chat.commands;
     if (text.text.startsWith('/')) _update();
   }
 
@@ -50,7 +50,7 @@ class Completions extends ChangeNotifier {
     _token = null;
     if (RegExp(r'^/(\S*)$').firstMatch(before) case final m?) {
       final names = {
-        for (final c in chat().commands) c.name: c,
+        for (final c in chat.commands) c.name: c,
         copyCommand.name: copyCommand,
       };
       found = [
@@ -59,7 +59,7 @@ class Completions extends ChangeNotifier {
       ];
       _token = (0, caret);
     } else if (RegExp(r'(^|\s)@(\S*)$').firstMatch(before) case final m?) {
-      final folder = chat().folder;
+      final folder = chat.folder;
       final files = _filesOf == folder ? _files : null;
       // Asked again for each mention, after a few seconds: the agent adds
       // files. The list it had shows meanwhile.
@@ -156,7 +156,7 @@ class Completions extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     text.removeListener(_update);
-    _heard.removeListener(_chatChanged);
+    chat.removeListener(_chatChanged);
     super.dispose();
   }
 }
