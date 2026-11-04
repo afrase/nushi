@@ -21,17 +21,10 @@ class GrowLine extends StatelessWidget {
     curve: Motion.size,
     builder: (context, run, last) {
       // The width it's given, as in a stretched column (the size eases
-      // only the height). With Reduce Motion, no AnimatedSize (one of no
-      // length relays out as it lays out).
-      final fill = SizedBox(width: double.infinity, child: last);
-      final line = reduceMotion(context)
-          ? fill
-          : AnimatedSize(
-              duration: Motion.standard,
-              curve: Motion.size,
-              alignment: AlignmentDirectional.topStart,
-              child: fill,
-            );
+      // only the height).
+      final line = EaseSize(
+        child: SizedBox(width: double.infinity, child: last),
+      );
       // The same widgets throughout, so the line keeps its state; at rest
       // the fade adds no layer. Coming, it's in by Motion.quick.
       final fade = run.status == AnimationStatus.reverse

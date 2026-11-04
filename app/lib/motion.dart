@@ -248,6 +248,30 @@ double loopPhase(Duration period) => Shine.stopAt ?? loopClock.phase(period);
 /// still frame (see [loopPhase]).
 Listenable? get loopRepaint => Shine.stopAt == null ? loopClock : null;
 
+/// [child] easing to its new size as it changes, over [Motion.standard]
+/// from [alignment]; under Reduce Motion at once, with no AnimatedSize (one
+/// of no length relays out as it lays out, and never settles).
+class EaseSize extends StatelessWidget {
+  const new({
+    required this.child,
+    super.key,
+    this.alignment = AlignmentDirectional.topStart,
+  });
+
+  final Widget child;
+  final AlignmentGeometry alignment;
+
+  @override
+  Widget build(BuildContext context) => reduceMotion(context)
+      ? child
+      : AnimatedSize(
+          duration: Motion.standard,
+          curve: Motion.size,
+          alignment: alignment,
+          child: child,
+        );
+}
+
 /// [child] coming in once, as it's first built: it fades in as it rises
 /// ([Enter.rise]) or grows ([Enter.pop]). Not [play], or with Reduce
 /// Motion, it's there at once.

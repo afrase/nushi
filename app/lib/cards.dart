@@ -132,24 +132,17 @@ class _SettleCardState extends State<SettleCard> with ClockRun {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: _box(widget.decoration),
-      // With Reduce Motion, no AnimatedSize (one of no length relays out
-      // as it lays out).
       child: Marks(
-        child: reduceMotion(context)
-            ? content
-            : AnimatedSize(
-                duration: Motion.standard,
-                curve: Motion.size,
-                alignment: AlignmentDirectional.topStart,
-                child: AnimatedSwitcher(
-                  duration: Motion.quick,
-                  // The old content goes at once and the new fades in, as
-                  // the card eases from the old height to its own: two
-                  // texts over each other read as a mess.
-                  layoutBuilder: (current, _) => current ?? const SizedBox(),
-                  child: content,
-                ),
-              ),
+        child: EaseSize(
+          child: AnimatedSwitcher(
+            duration: reduceMotion(context) ? Duration.zero : Motion.quick,
+            // The old content goes at once and the new fades in, as the
+            // card eases from the old height to its own: two texts over
+            // each other read as a mess.
+            layoutBuilder: (current, _) => current ?? const SizedBox(),
+            child: content,
+          ),
+        ),
       ),
     );
   }

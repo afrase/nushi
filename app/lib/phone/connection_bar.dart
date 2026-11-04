@@ -39,23 +39,15 @@ class ConnectionBar extends StatelessWidget {
     final muted = phoneText(context, size: 13, color: t.textSecondary);
     final still = reduceMotion(context);
     // "Reconnecting…" and "Can't reach your Mac" crossfade, the bar easing
-    // to the new one's height (at once under Reduce Motion: an AnimatedSize
-    // of no length can't settle).
-    Widget eased(Widget child) => still
-        ? child
-        : AnimatedSize(
-            duration: Motion.standard,
-            curve: Motion.size,
-            alignment: Alignment.topCenter,
-            child: child,
-          );
+    // to the new one's height (at once under Reduce Motion).
     return Semantics(
       liveRegion: true,
       child: AnimatedContainer(
         duration: still ? Duration.zero : Motion.quick,
         color: down ? t.crashedSoft : t.raised,
-        child: eased(
-          AnimatedSwitcher(
+        child: EaseSize(
+          alignment: Alignment.topCenter,
+          child: AnimatedSwitcher(
             duration: still ? Duration.zero : Motion.quick,
             layoutBuilder: (current, previous) => Stack(
               alignment: Alignment.topCenter,
