@@ -137,6 +137,16 @@ type ReadOnly interface {
 	ReadOnlyMode() string
 }
 
+// TerminalCommands are slash commands only the agent's terminal runs (its
+// headless CLI refuses them) that set one of the chat's options, which Nushi
+// runs in its place: Claude's /plan (docs/facts/claude.md, ADR 0088).
+type TerminalCommands interface {
+	// TerminalCommands are those commands, offered with the agent's own.
+	TerminalCommands() []model.Command
+	// TerminalCommand reads a prompt's text as one of them.
+	TerminalCommand(text string) (model.OptionCommand, bool)
+}
+
 // ContextCommander has a slash command that says what fills the context:
 // ContextCommand, run unseen in a throwaway fork; ReadContext reads its reply
 // (the reply's messages, in order, at least one).

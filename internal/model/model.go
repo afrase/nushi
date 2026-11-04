@@ -555,6 +555,16 @@ type Command struct {
 	Name, Description, Hint string
 }
 
+// OptionCommand is a prompt that is one of the agent's slash commands which
+// Nushi runs itself by setting one of the chat's options, as its menu does:
+// the option of Category to Value, with the notice Set, then Prompt sent as
+// the message, unless it is "". When the option has Value already, Prompt
+// goes alone, or with none the chat gets the notice Already.
+type OptionCommand struct {
+	Category, Value, Prompt string
+	Set, Already            string
+}
+
 // ConfigOption is one of the agent's session settings (mode, model, ...).
 // Category is ACP's ("mode", "model", "thought_level", ...); Type is
 // "select" or "boolean", whose Current is "true" or "false".

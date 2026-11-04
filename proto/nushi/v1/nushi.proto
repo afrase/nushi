@@ -627,7 +627,8 @@ message GetChatResponse {
   ChatStatus status = 4;
   // The last event this includes: apply only the chat's events after it.
   int64 seq = 5;
-  // The agent's slash commands.
+  // The agent's slash commands, with those the daemon runs in its place
+  // (SendPromptResponse.ran_command).
   repeated Command commands = 6;
   Usage usage = 7;
   // Messages waiting for the agent.
@@ -945,7 +946,12 @@ message ListFilesResponse {
   repeated string paths = 1;
 }
 
-message SendPromptResponse {}
+message SendPromptResponse {
+  // The text was a command the daemon ran in the agent's place (Claude's
+  // /plan, which a chat's commands list): no user message of that text comes
+  // back; a prompt it sent on after the command comes as its own.
+  bool ran_command = 1;
+}
 
 message CancelTurnRequest {
   string chat_id = 1;
@@ -1906,7 +1912,8 @@ enum ItemKind {
   // background task ended). "branch_renamed" says Nushi named the chat's
   // branch after it, between turns (the agent isn't told);
   // "branch_switched" that the chat's folder was switched to another
-  // branch (SwitchBranch).
+  // branch (SwitchBranch). "command" says what a command the daemon ran in
+  // the agent's place did (SendPromptResponse.ran_command).
   ITEM_KIND_NOTICE = 8;
 }
 

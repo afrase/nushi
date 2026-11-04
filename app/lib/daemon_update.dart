@@ -10,9 +10,9 @@ import 'package:nushi/widgets.dart';
 extension SendPrompt on Daemon {
   /// Sends a prompt. One the daemon refused because it's restarting into a
   /// newer build goes again once the new one answers (a minute at most).
-  Future<void> sendPrompt(SendPromptRequest r) async {
+  Future<SendPromptResponse> sendPrompt(SendPromptRequest r) async {
     try {
-      await client.sendPrompt(r);
+      return await client.sendPrompt(r);
     } on connect.ConnectException catch (e) {
       if (e.code != connect.Code.unavailable ||
           !refusedFor(e, 'restarting', (m) => m.contains('restarting'))) {
@@ -22,7 +22,7 @@ extension SendPrompt on Daemon {
       for (var i = 0; i < 300 && !(connected && daemonBuild != before); i++) {
         await Future<void>.delayed(const Duration(milliseconds: 200));
       }
-      await client.sendPrompt(r);
+      return await client.sendPrompt(r);
     }
   }
 }

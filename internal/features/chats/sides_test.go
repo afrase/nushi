@@ -153,7 +153,7 @@ func TestCommandsAheadOfANewSessionsAnswerAreKept(t *testing.T) {
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
-	eventually(t, c, func() bool { return len(c.commands) == 1 && c.commands[0].Name == "review" })
+	eventually(t, c, func() bool { return len(c.commands) == 2 && c.commands[0].Name == "review" }) // and /plan, Nushi's
 	if err := c.SessionUpdate(t.Context(), &acp.SessionNotification{SessionID: "other", Update: list("other")}); err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,8 @@ func TestCommandsAheadOfANewSessionsAnswerAreKept(t *testing.T) {
 }
 
 // After a restart a chat offers what its agent listed last, before an agent
-// runs to say; once one does, its own list is the chat's.
+// runs to say; once one does, its own list is the chat's. Claude's /plan,
+// which Nushi runs, comes with either.
 func TestAReopeningChatOffersTheCommandsListedLast(t *testing.T) {
 	list := func(name string) acp.SessionUpdate {
 		return acp.SessionUpdate{SessionUpdate: "available_commands_update",
@@ -191,10 +192,10 @@ func TestAReopeningChatOffersTheCommandsListedLast(t *testing.T) {
 	t.Cleanup(again.Close)
 	shown, err := again.Get(id)
 	testcheck.NoErr(t, err)
-	if len(shown.Commands) != 1 || shown.Commands[0].Name != "review" {
+	if len(shown.Commands) != 2 || shown.Commands[0].Name != "review" || shown.Commands[1].Name != "plan" {
 		t.Errorf("while it reopens, commands %v", shown.Commands)
 	}
 	close(agent.loadGate)
 	back := reopened(t, again, id)
-	eventually(t, back, func() bool { return len(back.commands) == 1 && back.commands[0].Name == "fresh" })
+	eventually(t, back, func() bool { return len(back.commands) == 2 && back.commands[0].Name == "fresh" })
 }

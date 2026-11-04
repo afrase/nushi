@@ -77,18 +77,19 @@ func (c *chat) updateLocked(n *acp.SessionNotification, from *child) { //nolint:
 		c.reportedLocked(item)
 		c.passedOnLocked(item)
 	case "available_commands_update":
-		c.commands = []model.Command{}
+		listed := []model.Command{}
 		for _, a := range u.AvailableCommandsUpdate.AvailableCommands {
 			cmd := model.Command{Name: a.Name, Description: a.Description}
 			if a.Input != nil && a.Input.Unstructured != nil {
 				cmd.Hint = a.Input.Unstructured.Hint
 			}
-			c.commands = append(c.commands, cmd)
+			listed = append(listed, cmd)
 		}
+		c.commands = c.kind.withTerminalCommands(listed)
 		c.emitLocked(model.Event{ChatID: c.id, Commands: slices.Clone(c.commands)})
 		c.statusChangedLocked() // CanAskContext
-		if len(c.commands) > 0 && !slices.Equal(c.commands, c.remembered.Commands(c.kind.Name)) {
-			if err := c.remembered.SetCommands(c.kind.Name, c.commands); err != nil {
+		if len(listed) > 0 && !slices.Equal(listed, c.remembered.Commands(c.kind.Name)) {
+			if err := c.remembered.SetCommands(c.kind.Name, listed); err != nil {
 				c.logLocked().Warn("commands not remembered", "err", err)
 			}
 		}

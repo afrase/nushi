@@ -26,6 +26,7 @@ var (
 	_ chats.SubagentMessages = claude.Harness{}
 	_ chats.BackgroundTasks  = claude.Harness{}
 	_ chats.ContextCommander = claude.Harness{}
+	_ chats.TerminalCommands = claude.Harness{}
 	_ chats.ReadOnly         = claude.Harness{}
 	_ chats.GoneReader       = claude.Harness{}
 

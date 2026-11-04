@@ -305,7 +305,7 @@ class _ComposerState extends State<Composer> {
         ? chat.send(message, images)
         : null;
     try {
-      await widget.daemon.sendPrompt(
+      final r = await widget.daemon.sendPrompt(
         SendPromptRequest(
           chatId: widget.chat.id,
           text: message,
@@ -316,7 +316,8 @@ class _ComposerState extends State<Composer> {
           toSubagent: toSubagent?.$1,
         ),
       );
-      if (shown != null) chat.sent(shown);
+      // A command the daemon ran (Claude's /plan) has no echo to wait for.
+      if (shown != null) r.ranCommand ? chat.ran(shown) : chat.sent(shown);
     } on Object catch (e) {
       // It fades out of the transcript as it goes back in the box.
       if (shown != null) {

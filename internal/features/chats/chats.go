@@ -264,10 +264,11 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 
 // commandsLocked is what a chat's agent can be asked: what it listed, or
 // until it has (a reopen can take a while, and its commands come last)
-// what its kind listed last, so a chat offers them from the start.
+// what its kind listed last, so a chat offers them from the start; with
+// the commands Nushi runs in its place either way.
 func (c *chat) commandsLocked() []model.Command {
 	if len(c.commands) == 0 {
-		return c.remembered.Commands(c.kind.Name)
+		return c.kind.withTerminalCommands(c.remembered.Commands(c.kind.Name))
 	}
 	return slices.Clone(c.commands)
 }

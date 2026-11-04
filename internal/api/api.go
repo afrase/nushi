@@ -409,12 +409,13 @@ func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.Se
 	case m.Queue:
 		how = chats.SendQueue
 	}
+	ran := s.chats.RunsCommand(m.ChatId, msg)
 	if err := s.chats.Prompt(ctx, m.ChatId, msg, how); errors.Is(err, chats.ErrRestarting) {
 		return nil, because(connect.NewError(connect.CodeUnavailable, err), ReasonRestarting) // the app sends it again
 	} else if err != nil {
 		return nil, waitErr(ctx, err)
 	}
-	return connect.NewResponse(&nushiv1.SendPromptResponse{}), nil
+	return connect.NewResponse(&nushiv1.SendPromptResponse{RanCommand: ran}), nil
 }
 
 func (s *server) RewindChat(ctx context.Context, req *connect.Request[nushiv1.RewindChatRequest]) (*connect.Response[nushiv1.RewindChatResponse], error) {

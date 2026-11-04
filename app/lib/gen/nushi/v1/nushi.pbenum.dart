@@ -58,7 +58,8 @@ class ItemKind extends $pb.ProtobufEnum {
   /// background task ended). "branch_renamed" says Nushi named the chat's
   /// branch after it, between turns (the agent isn't told);
   /// "branch_switched" that the chat's folder was switched to another
-  /// branch (SwitchBranch).
+  /// branch (SwitchBranch). "command" says what a command the daemon ran in
+  /// the agent's place did (SendPromptResponse.ran_command).
   static const ItemKind ITEM_KIND_NOTICE =
       ItemKind._(8, _omitEnumNames ? '' : 'ITEM_KIND_NOTICE');
 

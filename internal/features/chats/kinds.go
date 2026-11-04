@@ -41,6 +41,7 @@ type kind struct {
 	toSubagents    SubagentMessages
 	background     BackgroundTasks
 	contextCommand ContextCommander
+	terminalCmds   TerminalCommands
 	contextAsker   ContextAsker
 	readOnly       ReadOnly
 	goneReader     GoneReader
@@ -58,7 +59,7 @@ func newKind(k Kind) *kind {
 	h := k.Harness
 	return &kind{Kind: k, HarnessInfo: h.Info(), forker: can[Forker](h), toolReader: can[ToolReader](h),
 		otherReader: can[OtherReader](h), defaultReader: can[DefaultReader](h), transcript: can[Transcript](h), subagents: can[Subagents](h), toSubagents: can[SubagentMessages](h),
-		background: can[BackgroundTasks](h), contextCommand: can[ContextCommander](h), contextAsker: can[ContextAsker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
+		background: can[BackgroundTasks](h), contextCommand: can[ContextCommander](h), terminalCmds: can[TerminalCommands](h), contextAsker: can[ContextAsker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
 		historyCopier: can[HistoryCopier](h), openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), historyChecker: can[HistoryChecker](h),
 		messageDater: can[MessageDater](h), worktreeFinder: can[WorktreeFinder](h)}
 }

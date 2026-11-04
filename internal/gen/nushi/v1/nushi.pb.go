@@ -54,7 +54,8 @@ const (
 	// background task ended). "branch_renamed" says Nushi named the chat's
 	// branch after it, between turns (the agent isn't told);
 	// "branch_switched" that the chat's folder was switched to another
-	// branch (SwitchBranch).
+	// branch (SwitchBranch). "command" says what a command the daemon ran in
+	// the agent's place did (SendPromptResponse.ran_command).
 	ItemKind_ITEM_KIND_NOTICE ItemKind = 8
 )
 
@@ -1262,7 +1263,8 @@ type GetChatResponse struct {
 	Status *ChatStatus            `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	// The last event this includes: apply only the chat's events after it.
 	Seq int64 `protobuf:"varint,5,opt,name=seq,proto3" json:"seq,omitempty"`
-	// The agent's slash commands.
+	// The agent's slash commands, with those the daemon runs in its place
+	// (SendPromptResponse.ran_command).
 	Commands []*Command `protobuf:"bytes,6,rep,name=commands,proto3" json:"commands,omitempty"`
 	Usage    *Usage     `protobuf:"bytes,7,opt,name=usage,proto3" json:"usage,omitempty"`
 	// Messages waiting for the agent.
@@ -3503,7 +3505,11 @@ func (x *ListFilesResponse) GetPaths() []string {
 }
 
 type SendPromptResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The text was a command the daemon ran in the agent's place (Claude's
+	// /plan, which a chat's commands list): no user message of that text comes
+	// back; a prompt it sent on after the command comes as its own.
+	RanCommand    bool `protobuf:"varint,1,opt,name=ran_command,json=ranCommand,proto3" json:"ran_command,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3536,6 +3542,13 @@ func (x *SendPromptResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use SendPromptResponse.ProtoReflect.Descriptor instead.
 func (*SendPromptResponse) Descriptor() ([]byte, []int) {
 	return file_nushi_v1_nushi_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *SendPromptResponse) GetRanCommand() bool {
+	if x != nil {
+		return x.RanCommand
+	}
+	return false
 }
 
 type CancelTurnRequest struct {
@@ -22820,8 +22833,10 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x10ListFilesRequest\x12\x16\n" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\")\n" +
 	"\x11ListFilesResponse\x12\x14\n" +
-	"\x05paths\x18\x01 \x03(\tR\x05paths\"\x14\n" +
-	"\x12SendPromptResponse\"I\n" +
+	"\x05paths\x18\x01 \x03(\tR\x05paths\"5\n" +
+	"\x12SendPromptResponse\x12\x1f\n" +
+	"\vran_command\x18\x01 \x01(\bR\n" +
+	"ranCommand\"I\n" +
 	"\x11CancelTurnRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x1b\n" +
 	"\ttake_back\x18\x02 \x01(\bR\btakeBack\"C\n" +

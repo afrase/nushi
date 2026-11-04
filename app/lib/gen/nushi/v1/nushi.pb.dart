@@ -1552,7 +1552,8 @@ class GetChatResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(5)
   void clearSeq() => $_clearField(5);
 
-  /// The agent's slash commands.
+  /// The agent's slash commands, with those the daemon runs in its place
+  /// (SendPromptResponse.ran_command).
   @$pb.TagNumber(6)
   $pb.PbList<Command> get commands => $_getList(5);
 
@@ -4394,7 +4395,13 @@ class ListFilesResponse extends $pb.GeneratedMessage {
 }
 
 class SendPromptResponse extends $pb.GeneratedMessage {
-  factory SendPromptResponse() => SendPromptResponse._();
+  factory SendPromptResponse({
+    $core.bool? ranCommand,
+  }) {
+    final result = SendPromptResponse._();
+    if (ranCommand != null) result.ranCommand = ranCommand;
+    return result;
+  }
 
   SendPromptResponse._();
 
@@ -4409,6 +4416,7 @@ class SendPromptResponse extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'SendPromptResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: SendPromptResponse.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'ranCommand')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4432,6 +4440,18 @@ class SendPromptResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<SendPromptResponse>(
           SendPromptResponse.$_createMessage);
   static SendPromptResponse? _defaultInstance;
+
+  /// The text was a command the daemon ran in the agent's place (Claude's
+  /// /plan, which a chat's commands list): no user message of that text comes
+  /// back; a prompt it sent on after the command comes as its own.
+  @$pb.TagNumber(1)
+  $core.bool get ranCommand => $_getBF(0);
+  @$pb.TagNumber(1)
+  set ranCommand($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasRanCommand() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearRanCommand() => $_clearField(1);
 }
 
 class CancelTurnRequest extends $pb.GeneratedMessage {

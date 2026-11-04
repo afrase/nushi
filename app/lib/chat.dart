@@ -274,8 +274,9 @@ class ChatState extends ChangeNotifier {
   /// back yet: the transcript shows each at once, faint, after the items.
   /// Each goes when its echo (the daemon's user message of the same text)
   /// comes, which takes its place in the transcript ([echoes]); when its
-  /// send fails ([unsend]); or, sent, when the chat's status or queue says
-  /// the daemon has it without an echo. In the app's memory only.
+  /// send fails ([unsend]); when the daemon ran it as a command ([ran]); or,
+  /// sent, when the chat's status or queue says the daemon has it without
+  /// an echo. In the app's memory only.
   final List<Item> sending = [];
 
   /// The [sending] message (its id) each echo took the place of: the
@@ -306,6 +307,10 @@ class ChatState extends ChangeNotifier {
   void sent(Item it) {
     if (sending.contains(it)) _sent.add(it.id);
   }
+
+  /// [it] was a command the daemon ran in the agent's place
+  /// (SendPromptResponse.ranCommand): no echo comes, so it goes now.
+  void ran(Item it) => _drop(it.id);
 
   /// [it]'s send failed: it fades out over [fade], then goes.
   void unsend(Item it, {required Duration fade}) {

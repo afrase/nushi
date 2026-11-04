@@ -52,7 +52,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Picks** | The options you chose for a chat, put back whenever its session opens; an agent's last picks start its new chats. | `ChatRecord.Picks` | 0060 |
 | **Ultracode** | Claude Code's standing multi-agent workflows for a chat; in ⋯ under the box, off by default. | `ChatRecord.Ultracode`, `ultracodeID` | |
 | **Fast** | Claude's fast mode: one of the agent's options in ⋯ under the box, named as the agent names it. | `ConfigOption` id `fast` | |
-| **Slash command** | One of the agent's `/` commands, completed in the box. | `Command`, `ChatCommands` | |
+| **Slash command** | One of the agent's `/` commands, completed in the box. A few are Nushi's: `/copy` the app answers, and Claude's `/plan`, which Claude refuses outside its terminal, the daemon runs in its place. | `Command`, `ChatCommands`, `TerminalCommands`, `OptionCommand`, `SendPromptResponse.ran_command` | 0075, 0088 |
 | **Context** | What fills the agent's context window, broken down in the Context widget. | `GetContextUsage`, `ContextUsage` | 0017 |
 | **Findings** | A code review's result (`/code-review`), as a card in the transcript. | `Findings`, `Finding`, `FindingsCard` | |
 | **Trust card** | Before an agent starts in a folder that brings code of its own (hooks, MCP servers, extensions), it lists that code; Start anyway goes on. | `features/trust`, `CheckFolder`, `TrustFolder`, `FolderRun`, `TrustCard` | 0023, 0029, 0031 |

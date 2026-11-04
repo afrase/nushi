@@ -32,8 +32,17 @@ const (
 // arrives as events. A chat whose agent isn't running is reopened, and the
 // message waits in the queue until it is. SendNow waits for the stopped
 // turn to end, or for ctx: an agent that ignores the cancel doesn't keep
-// the call.
+// the call. A message that is one of the commands Nushi runs in the agent's
+// place (TerminalCommands) is run here instead.
 func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, how Send) error {
+	if c, cmd, ok := s.terminalCommandOf(chatID, m); ok {
+		return s.terminalCommand(ctx, c, m, cmd, how)
+	}
+	return s.prompt(ctx, chatID, m, how)
+}
+
+// prompt is Prompt's, for a message that goes to the agent as it is.
+func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, how Send) error {
 	if n := size(m); n > agentproc.MaxMessage-64<<10 {
 		return fmt.Errorf("the message is too large to send: %d MB with its images, and the agent takes about %d MB", n>>20, agentproc.MaxMessage>>20)
 	}

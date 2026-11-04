@@ -1085,11 +1085,14 @@ final $typed_data.Uint8List listFilesResponseDescriptor = $convert
 @$core.Deprecated('Use sendPromptResponseDescriptor instead')
 const SendPromptResponse$json = {
   '1': 'SendPromptResponse',
+  '2': [
+    {'1': 'ran_command', '3': 1, '4': 1, '5': 8, '10': 'ranCommand'},
+  ],
 };
 
 /// Descriptor for `SendPromptResponse`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List sendPromptResponseDescriptor =
-    $convert.base64Decode('ChJTZW5kUHJvbXB0UmVzcG9uc2U=');
+final $typed_data.Uint8List sendPromptResponseDescriptor = $convert.base64Decode(
+    'ChJTZW5kUHJvbXB0UmVzcG9uc2USHwoLcmFuX2NvbW1hbmQYASABKAhSCnJhbkNvbW1hbmQ=');
 
 @$core.Deprecated('Use cancelTurnRequestDescriptor instead')
 const CancelTurnRequest$json = {
