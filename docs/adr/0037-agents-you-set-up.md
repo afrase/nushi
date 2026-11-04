@@ -23,3 +23,5 @@ A chat's first start ran `npx --yes -p <pinned package>`: it downloaded and ran 
 - Bundle the adapters in the app: every user carries both whether they use the agent or not, and an update needs a new app.
 - `npm install` without a lockfile: transitive versions float again.
 - Pointing codex-acp at Codex's native binary inside the user's npm package rather than at the `codex` on `PATH`: saves the 14 MB launcher, but reaches into how Codex is packaged, and isn't "the CLI found".
+
+**Note (ADR [0066](0066-claude-through-nushis-go-agent.md), 2026-11-04):** its Claude part is superseded: Claude runs through Nushi's Go agent, with no adapter, Set up, Node or pinned versions. Codex's adapter stays as above.

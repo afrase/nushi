@@ -20,9 +20,7 @@ Agents start with your login shell's environment, as a new terminal has it, howe
 
 ### Claude
 
-Nushi runs your `claude` through Claude Code's ACP adapter, `@agentclientprotocol/claude-agent-acp` 0.94.0. **Set up** installs it into `~/Library/Application Support/Nushi/agents/claude` (about 9 MB from npm, from the lockfile in `internal/claude/adapter`). It uses Claude Code's own login and settings.
-
-Or turn on **Use Nushi's Go agent**, under Claude in Settings › Agents: Nushi then runs your `claude` through its own ACP agent, with no Node and nothing to set up ([ADR 0066](adr/0066-claude-through-nushis-go-agent.md)). New chats, and chats as they reopen or wake, use it; a chat already running keeps its agent until then. It's off by default while it's new.
+Nushi runs your `claude` through its own ACP agent, `nushid claude-acp` ([ADR 0066](adr/0066-claude-through-nushis-go-agent.md)): no Node and nothing to set up once `claude` is on your login shell's `PATH`. It uses Claude Code's own login and settings. Until 2026-11-04 Claude ran through the Node adapter, claude-agent-acp; chats from then reopen and resume as they were, and the adapter Set up installed is removed.
 
 - **Code review.** Claude's `/code-review` reports its findings as a card in the transcript (Nushi sets `CLAUDE_CODE_REPORT_FINDINGS` for Claude Code). A review that writes them as JSON gets the same card, with Show JSON. A row opens to how the finding fails; its `file:line` opens the chat's Changes at that line, or the file as it is when it isn't changed.
 - **Ultracode**, in the ⋯ menu under the box, turns on Claude Code's standing multi-agent workflows for the chat. It's off by default; "Ultracode" shows beside the model while it's on. Changing it reopens the chat's session (a second or so), so it waits for a turn to end. The word "ultracode" in a message opts just that turn in, as in the terminal.
@@ -102,7 +100,7 @@ Nushi follows PiG 0.5.3; Settings › Agents then says Ready.
 
 ## Setting up adapters
 
-Claude and Codex need an adapter; Settings › Agents' **Set up** installs it.
+Codex needs an adapter; Settings › Agents' **Set up** installs it.
 
 - It needs Node and npm on the login shell's `PATH`; Nushi doesn't install them.
 - It runs `npm ci` from Nushi's lockfile: every package's version and hash pinned, no install scripts, and no optional packages (such as the adapters' own Claude Code or Codex). npm's cache goes in the folder and is removed after.

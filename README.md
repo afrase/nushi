@@ -52,7 +52,7 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 ## Requirements
 
 - A Mac with Apple silicon and macOS 13 or later.
-- An agent's CLI: `claude`, `codex`, `ante`, `omp`, `pi` or `pig`. Pi needs Node, Codex also needs Node and npm, and so does Claude unless you turn on Nushi's Go agent in Settings › Agents.
+- An agent's CLI: `claude`, `codex`, `ante`, `omp`, `pi` or `pig`. Pi needs Node, Codex also needs Node and npm; Claude needs neither (Nushi runs it through its own agent).
 
 ## Docs
 
