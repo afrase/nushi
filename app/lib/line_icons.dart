@@ -18,6 +18,9 @@ enum LineIcon {
   /// The sidebar: the box, its left side marked off.
   sidebar,
 
+  /// The Files pane: a folder, shut.
+  folder,
+
   /// Show in Finder.
   folderOpen,
 
@@ -66,6 +69,21 @@ enum LineIcon {
         ..addRRect(_box)
         ..moveTo(9, 3)
         ..lineTo(9, 21),
+    // The open folder's back, its tab and corners, closed up into the box's
+    // width and height.
+    folder =>
+      Path()
+        ..moveTo(3, 7)
+        ..quadraticBezierTo(3, 5, 5, 5)
+        ..lineTo(9, 5)
+        ..lineTo(11.5, 7.5)
+        ..lineTo(19, 7.5)
+        ..quadraticBezierTo(21, 7.5, 21, 9.5)
+        ..lineTo(21, 17)
+        ..quadraticBezierTo(21, 19, 19, 19)
+        ..lineTo(5, 19)
+        ..quadraticBezierTo(3, 19, 3, 17)
+        ..close(),
     folderOpen =>
       Path()
         ..moveTo(3, 19)

@@ -211,7 +211,7 @@ The widget, collapsed, counts the pinned and recent; with none of either, the th
 
 **Preview tabs.** A second file opens beside the first: with two or more, the pane's title row shows their names as tabs in place of the file name, and nothing else moves. Every way of opening a file does this, the agent's `show` too, and a file already open goes to its tab. Click a name to show it. Its ✕ closes it, on the tab showing or under the pointer; the next one shows, and closing the last closes the pane, as the pane's own Close does with all of them. Names too long for the row shrink, then the row scrolls. Tabs aren't kept: they go with the pane. Only the tab showing has a view, so an HTML page starts again when you come back to it. The phone has no tabs: it opens previews full screen.
 
-**Files** (⇧⌘E, View › Files, the chat's ⋯ or the palette) opens a tree of the chat's folder (its worktree, for a worktree chat) beside the chat, left of the preview; Nushi remembers it per chat.
+**Files** (⇧⌘E, the folder button in the chat's header, View › Files or the palette) opens a tree of the chat's folder (its worktree, for a worktree chat) beside the chat, left of the preview; Nushi remembers it per chat. The button is lit while the pane shows; from Changes or Pull request it goes back to the chat with the pane open. In a header too narrow for its buttons, Show files is in the chat's ⋯ with the terminal's and the details'.
 
 - Folders open with a click or →, and close with a click or ←; ↑↓ move, ⏎ opens. The tree keeps up as files come and go, and keeps what's open and selected.
 - A file that previews opens in the preview as an artifact does, in a tab of its own. One the preview can't show (a zip, say) is dimmed. Nothing is edited here.

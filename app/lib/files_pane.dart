@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_filter.dart';
@@ -297,3 +298,43 @@ class _FilesPaneState extends State<FilesPane> {
 
 /// Whether [chat]'s Files pane is open: a [Listenable] with it.
 bool filesOpen(ChatState chat) => filesChats.value.contains(chat.id);
+
+/// Whether [chat]'s Files pane shows: open, on the Chat tab (it's beside
+/// the chat).
+bool filesShown(ChatState chat) =>
+    filesOpen(chat) && chat.shownTab == ChatTab.chat;
+
+/// Hides [chat]'s Files pane while it shows, or shows it, on the Chat tab:
+/// what ⇧⌘E, View › Files and the header's button do.
+void showOrHideFiles(ChatState chat) {
+  if (filesShown(chat)) return toggleFiles(chat);
+  chat.tab.value = ChatTab.chat;
+  if (!filesOpen(chat)) toggleFiles(chat);
+}
+
+/// The chat header's Files button, lit while the pane shows, as the
+/// terminal's and the details' are.
+class FilesButton extends StatelessWidget {
+  const new({required this.chat, super.key});
+
+  final ChatState chat;
+
+  /// Its tooltip: Show files or Hide files, and the key.
+  static String tooltip({required bool shown}) =>
+      '${shown ? 'Hide' : 'Show'} files  ${keyLabel(filesKey)}';
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([filesChats, chat.tab]),
+    builder: (context, _) {
+      final t = NushiTheme.of(context).t;
+      final shown = filesShown(chat);
+      return IconTap.line(
+        LineIcon.folder,
+        tooltip: tooltip(shown: shown),
+        color: shown ? t.accentInk : t.textSecondary,
+        onTap: () => showOrHideFiles(chat),
+      );
+    },
+  );
+}

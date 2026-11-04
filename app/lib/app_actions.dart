@@ -249,12 +249,9 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     ),
     AppAction(
       .files,
-      shown != null && filesOpen(shown) ? 'Hide files' : 'Show files',
+      shown != null && filesShown(shown) ? 'Hide files' : 'Show files',
       enabled: shown != null && d.daemonApi >= filesApi,
-      run: () {
-        if (!filesOpen(shown!)) shown.tab.value = ChatTab.chat;
-        toggleFiles(shown);
-      },
+      run: () => showOrHideFiles(shown!),
     ),
     AppAction(
       .chatWidth,

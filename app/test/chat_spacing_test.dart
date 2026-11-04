@@ -10,6 +10,7 @@ import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/files_pane.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
@@ -281,28 +282,40 @@ void main() {
       final terminal = tester.getRect(find.byType(TerminalButton));
       expect(terminal.left - tabs.right, NushiTheme.groupGap);
       final menu = tester.getRect(find.byTooltip('Chat menu'));
+      final files = tester.getRect(find.byType(FilesButton));
       final details = tester.getRect(find.byTooltip('Show details'));
-      expect(details.left - terminal.right, NushiTheme.iconGap);
+      expect(files.left - terminal.right, NushiTheme.iconGap);
+      expect(details.left - files.right, NushiTheme.iconGap);
       expect(menu.left - details.right, NushiTheme.iconGap);
       await closeView(tester, d);
     }, variant: _mac);
 
     test('the bar’s gaps never fold anything', () {
       // Where each case first folded before them: 455 for the row, 80 for
-      // the title, then what the case adds.
-      for (final (pull, model, first) in [
-        (false, false, 535.0),
-        (true, false, 623.0),
-        (false, true, 585.0),
-        (true, true, 673.0),
+      // the title, then what the case adds (the Files button 26, its gap 2).
+      for (final (pull, model, files, first) in [
+        (false, false, false, 535.0),
+        (true, false, false, 623.0),
+        (false, true, false, 585.0),
+        (true, true, false, 673.0),
+        (false, false, true, 561.0),
+        (true, true, true, 699.0),
       ]) {
         for (final panel in [false, true]) {
-          HeaderFolds at(double width) =>
-              headerFolds(width, pull: pull, panel: panel, model: model);
+          HeaderFolds at(double width) => headerFolds(
+            width,
+            pull: pull,
+            panel: panel,
+            files: files,
+            model: model,
+          );
+          final gaps = headerGaps + (files ? NushiTheme.iconGap : 0);
           expect(at(first).any, isFalse);
           expect(at(first - 1).any, isTrue);
           expect(at(first).roomy, isFalse);
-          expect(at(first + headerGaps).roomy, isTrue);
+          expect(at(first + gaps - 1).roomy, isFalse);
+          expect(at(first + gaps).roomy, isTrue);
+          expect(at(first + gaps).gaps, gaps);
           for (var w = 300.0; w < first; w += 5) {
             expect(at(w).roomy, isFalse, reason: 'folded at $w');
           }
@@ -457,6 +470,11 @@ void main() {
                       onTap: () {},
                     ),
                     IconTap.line(
+                      LineIcon.folder,
+                      tooltip: 'Show files',
+                      onTap: () {},
+                    ),
+                    IconTap.line(
                       LineIcon.details,
                       tooltip: 'Show details',
                       onTap: () {},
@@ -577,6 +595,7 @@ void main() {
         await tester.tap(find.byTooltip('Chat menu'));
         await tester.pumpAndSettle();
         expect(find.text('Show terminal', findRichText: true), findsOne);
+        expect(find.text('Show files', findRichText: true), findsOne);
         expect(find.text('Show details', findRichText: true), findsOne);
         await expectLater(
           find.byType(MaterialApp),
