@@ -194,6 +194,7 @@ extension DaemonEvents on Daemon {
       ..done = daemonApi >= doneApi ? c.done : null
       ..pin = c.pin
       ..color = ChatColor.named(c.color)
+      ..pinnedMessages = c.pinnedMessages
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       // Only the list carries a status; a chat event would clear it.
       ..listed(c.hasStatus() ? c.status : null);

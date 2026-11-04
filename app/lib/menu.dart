@@ -27,10 +27,12 @@ class MenuEntry {
     this.action,
     this.icon,
     this.line,
+    this.mark,
     this.danger = false,
     this.shortcut = '',
     this.controls,
     this.lit = false,
+    this.autofocus = false,
   }) : heading = false;
 
   /// A group's name over its rows.
@@ -43,10 +45,12 @@ class MenuEntry {
       action = null,
       icon = null,
       line = null,
+      mark = null,
       danger = false,
       shortcut = '',
       controls = null,
       lit = false,
+      autofocus = false,
       heading = true;
 
   /// The line between groups of rows.
@@ -64,6 +68,9 @@ class MenuEntry {
 
   /// A drawn icon, in [icon]'s place.
   final LineIcon? line;
+
+  /// A widget in [icon]'s place, 16 square (an agent's mark).
+  final Widget? mark;
   final bool danger;
   final String shortcut;
   final Widget Function(VoidCallback close)? controls;
@@ -71,9 +78,13 @@ class MenuEntry {
   /// Marked as the row Enter picks, when the keys are handled elsewhere.
   final bool lit;
 
+  /// Takes the focus as the menu opens, so Esc, the arrows and Enter work
+  /// the menu at once, wherever the focus was (a chip over the transcript).
+  final bool autofocus;
+
   bool get _pickable => onPick != null && submenu == null;
 
-  bool get _hasIcon => icon != null || line != null;
+  bool get _hasIcon => icon != null || line != null || mark != null;
 }
 
 /// Opens the menu: under (or over) the button, or at [at] in it.
@@ -311,14 +322,17 @@ Widget _row(
       ? SizedBox(
           width: 16,
           child:
+              e.mark ??
               e.line?.view(size: 16, color: iconColor) ??
               (e.icon == null
                   ? null
                   : Icon(e.icon, size: 16, color: iconColor)),
         )
       : null;
+  // Narrower on a narrow screen (the phone's), so the menu fits on it.
+  final screen = MediaQuery.sizeOf(context).width;
   Widget label = ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 380),
+    constraints: BoxConstraints(maxWidth: max(120, min(380, screen - 150))),
     child: Text.rich(
       TextSpan(
         children: [
@@ -395,6 +409,7 @@ Widget _button(
   return MenuItemButton(
     key: key,
     onPressed: e.onPick,
+    autofocus: e.autofocus,
     requestFocusOnHover: !keepFocus,
     onHover: onHover,
     onFocusChange: onFocus,

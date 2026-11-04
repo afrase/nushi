@@ -11,18 +11,22 @@ import 'package:nushi/widgets.dart';
 const messageActionsHeight = 28.0;
 
 /// A message with what can be done to it in a row under it, on hover: at
-/// its right under [end] (the user's), at its left otherwise.
+/// its right under [end] (the user's), at its left otherwise. [mark] shows
+/// in the row while the actions don't (a pinned message's pin), at the
+/// row's outer end, where its action is.
 class MessageActions extends StatelessWidget {
   const new({
     required this.child,
     required this.actions,
     super.key,
     this.end = false,
+    this.mark,
   });
 
   final Widget child;
   final List<Widget> Function() actions;
   final bool end;
+  final Widget? mark;
 
   @override
   Widget build(BuildContext context) => Hover(
@@ -36,13 +40,13 @@ class MessageActions extends StatelessWidget {
         Unmarked(
           child: SizedBox(
             height: messageActionsHeight,
-            child: hover
+            child: hover || mark != null
                 ? Row(
                     mainAxisAlignment: end
                         ? MainAxisAlignment.end
                         : MainAxisAlignment.start,
                     spacing: NushiTheme.iconGap,
-                    children: actions(),
+                    children: hover ? actions() : [mark!],
                   )
                 : null,
           ),

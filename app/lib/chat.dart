@@ -133,6 +133,17 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The ids of its pinned messages' items, in the order pinned; the
+  /// daemon keeps them (API 102, ADR 0085). An id not among [items] is a
+  /// message not loaded yet (the phone's) or gone.
+  List<String> get pinnedMessages => _pinnedMessages;
+  List<String> _pinnedMessages = const [];
+  set pinnedMessages(List<String> v) {
+    if (listEquals(v, _pinnedMessages)) return;
+    _pinnedMessages = List.unmodifiable(v);
+    notifyListeners();
+  }
+
   DateTime created = DateTime.now();
   final List<Item> items = [];
 

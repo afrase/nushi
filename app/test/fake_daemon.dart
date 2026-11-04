@@ -95,6 +95,7 @@ class FakeDaemon implements Transport {
     if (input is SetSettingsRequest) setSettings.add(settings = input.settings);
     if (input is PinChatsRequest) _pin(input.chatIds);
     if (input is SetChatColorRequest) _color(input.chatId, input.color);
+    if (input is PinMessageRequest) _pinMessage(input);
     if (input is ForkAsChatRequest) _fork(input.chatId, 'fork');
     if (input is KeepSideChatRequest) _fork(chats.first.id, 'kept');
     if (input is StartChatRequest) {
@@ -189,6 +190,20 @@ class FakeDaemon implements Transport {
     if (c.color != color) {
       emit(EventsResponse(chatId: id, chat: c..color = color));
     }
+  }
+
+  /// Pins or unpins a message as the daemon does: one pinned again keeps its
+  /// place; a changed chat comes as an event.
+  void _pinMessage(PinMessageRequest r) {
+    final ids = chats.firstWhere((c) => c.id == r.chatId).pinnedMessages;
+    if (ids.contains(r.itemId) == r.pinned) return;
+    r.pinned ? ids.add(r.itemId) : ids.remove(r.itemId);
+    emit(
+      EventsResponse(
+        chatId: r.chatId,
+        chat: chats.firstWhere((c) => c.id == r.chatId),
+      ),
+    );
   }
 
   /// Answers a stream call (its request): its messages, or null for the

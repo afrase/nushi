@@ -15,6 +15,7 @@ import 'package:nushi/github_text.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/marks.dart';
 import 'package:nushi/message_actions.dart';
+import 'package:nushi/message_pins.dart';
 import 'package:nushi/plan_view.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/replies.dart';
@@ -40,6 +41,8 @@ class ItemView extends StatelessWidget {
     super.key,
     this.onRewind,
     this.onFork,
+    this.pinned = false,
+    this.onPin,
   });
 
   final Item item;
@@ -58,6 +61,12 @@ class ItemView extends StatelessWidget {
   /// Forks a new chat up to this agent message, if it can be.
   final VoidCallback? onFork;
 
+  /// The message is pinned (ADR 0085): its mark shows beside it.
+  final bool pinned;
+
+  /// Pins or unpins it, if it can be.
+  final VoidCallback? onPin;
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -68,7 +77,7 @@ class ItemView extends StatelessWidget {
         if (!phone) return _bubble(context);
         // On the phone a band across the transcript, the heading of the
         // agent's work that follows it.
-        return RewindTarget(
+        final band = RewindTarget(
           onRewind: onRewind,
           child: LayoutBuilder(
             builder: (context, box) => Container(
@@ -104,6 +113,14 @@ class ItemView extends StatelessWidget {
               ),
             ),
           ),
+        );
+        if (!pinned) return band;
+        // Its pin in the band's top right, the room its text leaves.
+        return Stack(
+          children: [
+            band,
+            const Positioned(top: 7, right: 6, child: PinnedMark()),
+          ],
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
         if (item.hasFindings()) return FindingsCard(item.findings, chat);
@@ -245,9 +262,17 @@ class ItemView extends StatelessWidget {
             if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
           ],
         );
-        if (TouchTargets.of(context)) return message;
+        if (TouchTargets.of(context)) {
+          if (!pinned) return message;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [message, const PinnedMark()],
+          );
+        }
         return MessageActions(
+          mark: pinned ? const PinnedMark() : null,
           actions: () => [
+            if (onPin case final pin?) PinAction(pinned: pinned, onTap: pin),
             CopyAction(item.text),
             if (onFork case final fork?)
               IconTap(
@@ -277,6 +302,7 @@ class ItemView extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     return MessageActions(
       end: true,
+      mark: pinned ? const PinnedMark() : null,
       actions: () => [
         ReadMark(read: _answered, agent: chat.agentName),
         if (item.sent != 0) MessageTime(item.sent.toInt()),
@@ -289,6 +315,7 @@ class ItemView extends StatelessWidget {
             tooltip: 'Rewind to here (Esc Esc)',
             onTap: rewind,
           ),
+        if (onPin case final pin?) PinAction(pinned: pinned, onTap: pin),
       ],
       child: RewindTarget(
         onRewind: onRewind,

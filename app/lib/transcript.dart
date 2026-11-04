@@ -10,7 +10,6 @@ import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/bottom_follower.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/fork_chat.dart';
@@ -18,6 +17,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/message_actions.dart';
+import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/paced.dart';
 import 'package:nushi/replies.dart';
@@ -26,6 +26,7 @@ import 'package:nushi/selection_lines.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/widgets.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
 /// them (a review's findings show as a card of their own).
@@ -108,6 +109,13 @@ const _scrollbarEdge = 16.0;
 /// What the find bar covers of the transcript's top right.
 const double _findBarWidth = 340.0 + NushiTheme.gutter;
 const double _findBarHeight = 48.0;
+
+/// The room the pins' chip takes at the transcript's top: what's gone to
+/// from its list lands below it.
+const double _pinsRoom = 40.0;
+
+/// How long a message gone to from the pins' list stays tinted.
+const _flashFor = Duration(milliseconds: 1400);
 
 class _TranscriptState extends State<Transcript> {
   final _follower = BottomFollower();
@@ -262,6 +270,15 @@ class _TranscriptState extends State<Transcript> {
     final again = e is Item && tryAgainRequest(widget.chat, e) != null;
     final sides = chatSides(context, width);
     final sending = _sendState(e);
+    final pinned =
+        widget.items == null &&
+        e is Item &&
+        widget.chat.pinnedMessages.contains(e.id);
+    final pinnable =
+        widget.items == null &&
+        e is Item &&
+        canPinMessage(widget.daemon, widget.chat, e);
+    final flash = e is Item && e.id == _flash;
     final from = [
       sending,
       live,
@@ -269,6 +286,9 @@ class _TranscriptState extends State<Transcript> {
       rewindable,
       forkable,
       again,
+      pinned,
+      pinnable,
+      flash,
       top,
       sides.left,
       sides.right,
@@ -295,31 +315,40 @@ class _TranscriptState extends State<Transcript> {
                   child: Enter.rise(
                     play: rise,
                     child: RepaintBoundary(
-                      // Always there, so that a find coming and going
-                      // leaves the entry's state alone.
-                      child: Marks(
-                        entry: key,
-                        // A call's title types out as it comes, or as it
-                        // joins a run; not what the chat opened with.
-                        child: Arriving(
-                          play: rise || was != null,
-                          child: _isBand(e)
-                              ? _Sending(
-                                  state: sending,
-                                  child: _view(
+                      // Always there, as Marks is: a pick in the pins'
+                      // list tints the message for a moment.
+                      child: PinFlash(
+                        on: flash,
+                        // Always there, so that a find coming and going
+                        // leaves the entry's state alone.
+                        child: Marks(
+                          entry: key,
+                          // A call's title types out as it comes, or as it
+                          // joins a run; not what the chat opened with.
+                          child: Arriving(
+                            play: rise || was != null,
+                            child: _isBand(e)
+                                ? _Sending(
+                                    state: sending,
+                                    child: _view(
+                                      e,
+                                      live: live,
+                                      still: still,
+                                      rewindable: rewindable,
+                                      pinned: pinned,
+                                      pinnable: pinnable,
+                                    ),
+                                  )
+                                : _view(
                                     e,
                                     live: live,
                                     still: still,
                                     rewindable: rewindable,
+                                    forkable: forkable,
+                                    pinned: pinned,
+                                    pinnable: pinnable,
                                   ),
-                                )
-                              : _view(
-                                  e,
-                                  live: live,
-                                  still: still,
-                                  rewindable: rewindable,
-                                  forkable: forkable,
-                                ),
+                          ),
                         ),
                       ),
                     ),
@@ -336,6 +365,8 @@ class _TranscriptState extends State<Transcript> {
     required bool still,
     bool rewindable = false,
     bool forkable = false,
+    bool pinned = false,
+    bool pinnable = false,
   }) => switch (e) {
     final List<Item> run => RunView(run, still: still),
     final SubagentRun s => SubagentLine(
@@ -355,6 +386,13 @@ class _TranscriptState extends State<Transcript> {
           : null,
       onFork: forkable
           ? () => forkChat(context, widget.daemon, widget.chat, at: e)
+          : null,
+      pinned: pinned,
+      onPin: pinnable
+          ? () => tryOrShow(
+              context,
+              () => toggleMessagePin(widget.daemon, widget.chat, e),
+            )
           : null,
     ),
   };
@@ -455,6 +493,7 @@ class _TranscriptState extends State<Transcript> {
 
   @override
   void dispose() {
+    _flashTimer?.cancel();
     widget.chat.find.removeListener(_findChanged);
     _marks.dispose();
     _hold.dispose();
@@ -633,6 +672,66 @@ class _TranscriptState extends State<Transcript> {
     }
   }
 
+  // A pick in the pins' list: the message to go to ('' for the chat's
+  // start) once all of it is laid out, and the one tinted for a moment.
+  String? _goTo;
+  int _goTries = 0;
+  String? _flash;
+  Timer? _flashTimer;
+  final GlobalKey _column = GlobalKey();
+  List<Object> _laidOut = const [];
+
+  /// Goes to [item] from the pins' list, or to the chat's start: the
+  /// phone first takes the pages it's on.
+  Future<void> _pick(Item? item) async {
+    if (widget.onTop != null) {
+      await loadPinned(widget.daemon, widget.chat, all: item == null);
+    }
+    if (!mounted) return;
+    setState(() {
+      _tail = null; // all of it, to know where it is
+      _goTo = item?.id ?? '';
+      _goTries = 0;
+    });
+  }
+
+  /// Takes the list to [_goTo], its top just under the pins' chip, as a
+  /// find's jump does ([_reveal]), and tints it for a moment.
+  void _go() {
+    final id = _goTo;
+    if (id == null || !mounted || !_follower.scroll.hasClients) return;
+    final p = _follower.scroll.position;
+    if (id.isEmpty) {
+      _goTo = null;
+      _follower.hold(p.minScrollExtent);
+      return;
+    }
+    final i = _laidOut.indexWhere((e) => e is Item && e.id == id);
+    final column = _column.currentContext?.findRenderObject();
+    final boxes = column is RenderFlex ? column.getChildrenAsList() : null;
+    final at = i + (widget.header == null ? 0 : 1);
+    if (i < 0 || boxes == null || at >= boxes.length) {
+      // Not laid out yet (an older page coming in): a frame or two more.
+      if (++_goTries < 4) {
+        setState(() {});
+      } else {
+        _goTo = null;
+      }
+      return;
+    }
+    _goTo = null;
+    final box = boxes[at];
+    final to = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
+    _follower.hold(
+      (to - _pinsRoom + 8).clamp(p.minScrollExtent, p.maxScrollExtent),
+    );
+    _flashTimer?.cancel();
+    setState(() => _flash = id);
+    _flashTimer = Timer(_flashFor, () {
+      if (mounted) setState(() => _flash = null);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = widget.chat;
@@ -652,6 +751,12 @@ class _TranscriptState extends State<Transcript> {
       _tail = null;
     }
     _keepPlace(entries.sublist(from), filling: tail != null);
+    _laidOut = entries.sublist(from);
+    if (_goTo != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _go());
+    }
+    final pinned = widget.items == null ? pinnedItems(chat) : const <Item>[];
+    final pins = widget.items == null ? pinCount(chat, pinned) : 0;
     final arrived = _arrived(entries);
     final live = widget.items == null ? chat.busy : widget.live;
     _follower.stick();
@@ -718,10 +823,15 @@ class _TranscriptState extends State<Transcript> {
                     child: SingleChildScrollView(
                       controller: _follower.scroll,
                       padding: EdgeInsets.only(
-                        top: _roomAbove ? _findBarHeight + 8 : 2,
+                        top: _roomAbove
+                            ? _findBarHeight + 8
+                            : pins > 0
+                            ? _pinsRoom
+                            : 2,
                         bottom: 14,
                       ),
                       child: Column(
+                        key: _column,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (widget.header case final h?)
@@ -772,6 +882,20 @@ class _TranscriptState extends State<Transcript> {
                   ),
                   null => SelectionToolbar(onSide: side, onReply: reply),
                 },
+              ),
+            ),
+          if (pins > 0)
+            Positioned(
+              left: TouchTargets.of(context) ? 12 : NushiTheme.gutter,
+              top: 8,
+              child: PinsChip(
+                chat: chat,
+                pinned: pinned,
+                count: pins,
+                onPick: (item) => unawaited(_pick(item)),
+                before: widget.onTop == null
+                    ? null
+                    : () => loadPinned(widget.daemon, chat),
               ),
             ),
           Positioned(
