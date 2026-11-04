@@ -31,11 +31,18 @@ func (Claude) Remove(ctx context.Context, folder, scope, name string) error {
 // Login signs in to a server that needs OAuth (`claude mcp login`): it
 // opens the browser and waits, a few minutes at most, for the sign-in to
 // finish there. The CLI refuses to run without a terminal, so it runs
-// under script(1), which gives it one.
+// under script(1), which gives it one. script looks a bare name up
+// itself, in the folder for a relative PATH entry (node_modules/.bin), so
+// it gets the path Go's lookup found, which refuses those as every other
+// claude Nushi runs does.
 func (Claude) Login(ctx context.Context, folder, name string) error {
+	claude, err := exec.LookPath("claude")
+	if err != nil {
+		return fmt.Errorf("signing in to %s: %w", name, err)
+	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "script", "-q", "/dev/null", "claude", "mcp", "login", "--", name) //nolint:gosec // the user's claude, the server name after --
+	cmd := exec.CommandContext(ctx, "/usr/bin/script", "-q", "/dev/null", claude, "mcp", "login", "--", name) //nolint:gosec // the user's claude, the server name after --
 	cmd.Dir = folder
 	procgroup.Bound(cmd)
 	out, err := cmd.CombinedOutput()
