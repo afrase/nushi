@@ -1,8 +1,6 @@
 package api
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +9,6 @@ import (
 
 	"github.com/afrase/nushi/internal/features/agents"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
-	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -26,9 +23,7 @@ func TestStageAndCommitThroughTheAPI(t *testing.T) {
 	testcheck.Git(t, repo, "config", "user.email", "test@example.com")
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(repo, "f.txt"), []byte("x\n"), 0o600))
 
-	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil)}))
-	defer srv.Close()
-	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	c := client(t, New(Services{Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil)}))
 	ctx := t.Context()
 	if _, err := c.StageFiles(ctx, connect.NewRequest(&nushiv1.StageFilesRequest{Folder: repo, Paths: []string{"f.txt"}, Staged: true})); err != nil {
 		t.Fatal(err)
@@ -48,9 +43,7 @@ func TestStageAndCommitThroughTheAPI(t *testing.T) {
 		t.Fatalf("commit: %v %v", done, err)
 	}
 
-	dev := httptest.NewServer(ForDevices(Services{}))
-	defer dev.Close()
-	d := nushiv1connect.NewNushiServiceClient(http.DefaultClient, dev.URL)
+	d := client(t, ForDevices(Services{}))
 	if _, err := d.StageFiles(ctx, connect.NewRequest(&nushiv1.StageFilesRequest{Folder: repo})); connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Errorf("a device staged: %v", err)
 	}

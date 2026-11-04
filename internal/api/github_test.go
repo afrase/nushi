@@ -15,7 +15,6 @@ import (
 
 	"github.com/afrase/nushi/internal/features/github"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
-	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/store"
@@ -95,9 +94,7 @@ func TestGitHubLogsNoTokenNorText(t *testing.T) {
 		Restart: func(error) bool { return false },
 		Missing: func(error) bool { return false },
 	})
-	srv := httptest.NewServer(New(Services{GitHub: svc}))
-	defer srv.Close()
-	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	c := client(t, New(Services{GitHub: svc}))
 	ctx := context.Background()
 	if _, err := c.AddGitHubToken(ctx, connect.NewRequest(&nushiv1.AddGitHubTokenRequest{Host: host, Token: bad})); err == nil {
 		t.Fatal("a refused token was kept")

@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,7 +15,6 @@ import (
 	"github.com/afrase/nushi/internal/features/github"
 	"github.com/afrase/nushi/internal/features/trust"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
-	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/testcheck"
@@ -104,9 +101,7 @@ func TestStartChatChecksAPullRequestsHead(t *testing.T) {
 		Fetch:       func(context.Context, string, string, string) error { return nil },
 		CheckBranch: func(string) error { return nil },
 	})
-	srv := httptest.NewServer(New(Services{Chats: svc, GitHub: gh, Trust: trust.New(map[string]trust.Agent{"a": hookAgent{}}, st)}))
-	defer srv.Close()
-	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	c := client(t, New(Services{Chats: svc, GitHub: gh, Trust: trust.New(map[string]trust.Agent{"a": hookAgent{}}, st)}))
 	req := &nushiv1.StartChatRequest{Folder: t.TempDir(), Worktree: true,
 		Github: &nushiv1.GitHubLink{Host: "github.com", Repo: "o/app", Number: 9, Pull: true, Id: "PR_9"}}
 	r, err := c.StartChat(t.Context(), connect.NewRequest(req))

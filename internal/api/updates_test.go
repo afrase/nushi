@@ -2,15 +2,12 @@ package api
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
-	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -28,9 +25,7 @@ func (f *fakeUpdates) SetOn(bool) error { return nil }
 // a device's channel can't.
 func TestPingSaysTheUpdate(t *testing.T) {
 	u := &fakeUpdates{found: model.Update{Version: "0.1.17", URL: "https://github.com/afrase/nushi/releases/tag/v0.1.17", Latest: "0.1.17", Checked: time.UnixMilli(1000)}}
-	srv := httptest.NewServer(New(Services{Updates: u}))
-	defer srv.Close()
-	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	c := client(t, New(Services{Updates: u}))
 	r, err := c.Ping(t.Context(), connect.NewRequest(&nushiv1.PingRequest{}))
 	if err != nil {
 		t.Fatal(err)
@@ -42,9 +37,7 @@ func TestPingSaysTheUpdate(t *testing.T) {
 	if err != nil || cr.Msg.GetUpdate().GetCheckedMs() != 2000 {
 		t.Fatalf("check: %v %v", cr, err)
 	}
-	dev := httptest.NewServer(ForDevices(Services{Updates: u}))
-	defer dev.Close()
-	_, err = nushiv1connect.NewNushiServiceClient(http.DefaultClient, dev.URL).CheckForUpdates(t.Context(), connect.NewRequest(&nushiv1.CheckForUpdatesRequest{}))
+	_, err = client(t, ForDevices(Services{Updates: u})).CheckForUpdates(t.Context(), connect.NewRequest(&nushiv1.CheckForUpdatesRequest{}))
 	if connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Fatalf("a device: %v", err)
 	}

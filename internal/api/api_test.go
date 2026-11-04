@@ -24,11 +24,9 @@ import (
 
 // A request over MaxRequest is refused before it is decoded, zipped or not.
 func TestRequestTooLarge(t *testing.T) {
-	srv := httptest.NewServer(New(Services{}))
-	defer srv.Close()
 	text := strings.Repeat("x", MaxRequest+1<<20)
 	for _, opts := range [][]connect.ClientOption{nil, {connect.WithSendGzip()}} {
-		c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL, opts...)
+		c := client(t, New(Services{}), opts...)
 		_, err := c.SendPrompt(context.Background(), connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: "c", Text: text}))
 		if connect.CodeOf(err) != connect.CodeResourceExhausted {
 			t.Errorf("a %d MB prompt (%d options): %v", len(text)>>20, len(opts), err)
@@ -37,11 +35,8 @@ func TestRequestTooLarge(t *testing.T) {
 }
 
 func TestPingNeedsToken(t *testing.T) {
-	srv := httptest.NewServer(WithToken("secret", New(Services{})))
-	defer srv.Close()
-
+	c := client(t, WithToken("secret", New(Services{})))
 	ping := func(token string) error {
-		c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
 		req := connect.NewRequest(&nushiv1.PingRequest{})
 		if token != "" {
 			req.Header().Set("Authorization", "Bearer "+token)
@@ -63,9 +58,7 @@ func TestPingNeedsToken(t *testing.T) {
 func TestPingSaysTheRelease(t *testing.T) {
 	defer func(r string) { Release = r }(Release)
 	Release = "1.2.0-beta.1"
-	srv := httptest.NewServer(New(Services{}))
-	defer srv.Close()
-	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	c := client(t, New(Services{}))
 	r, err := c.Ping(context.Background(), connect.NewRequest(&nushiv1.PingRequest{}))
 	if err != nil {
 		t.Fatal(err)
@@ -87,8 +80,7 @@ func TestDevicesCantPairOrRevoke(t *testing.T) {
 		h    http.Handler
 		want connect.Code
 	}{{New(Services{Remote: rs}), 0}, {ForDevices(Services{Remote: rs}), connect.CodePermissionDenied}} {
-		srv := httptest.NewServer(tc.h)
-		c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+		c := client(t, tc.h)
 		ctx := context.Background()
 		for name, call := range map[string]func() error{
 			"SetRemote": func() error {
@@ -131,7 +123,6 @@ func TestDevicesCantPairOrRevoke(t *testing.T) {
 		if _, err := c.UnpairThisDevice(ctx, connect.NewRequest(&nushiv1.UnpairThisDeviceRequest{})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 			t.Errorf("UnpairThisDevice without a device: %v", err)
 		}
-		srv.Close()
 	}
 }
 
@@ -141,9 +132,7 @@ func TestStartFailureReason(t *testing.T) {
 	launch := func(acp.Client, *slog.Logger) (chats.Agent, error) { return nil, errors.New("it quit") }
 	st := store.New(t.TempDir())
 	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}, Launch: launch}}, chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir()})
-	srv := httptest.NewServer(New(Services{Chats: svc}))
-	defer srv.Close()
-	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
+	c := client(t, New(Services{Chats: svc}))
 	for _, tc := range []struct{ folder, reason, says string }{
 		{"", ReasonAgentStart, "couldn't start A: start agent: it quit"},
 		{"relative", "", "is not an absolute path"},
@@ -178,3 +167,12 @@ type specConn struct {
 }
 
 func (c specConn) Spec() connect.Spec { return c.spec }
+
+// client is a client of the API h serves, on a server that lasts until
+// the test ends.
+func client(t *testing.T, h http.Handler, opts ...connect.ClientOption) nushiv1connect.NushiServiceClient {
+	t.Helper()
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+	return nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL, opts...)
+}
