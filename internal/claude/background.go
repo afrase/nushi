@@ -65,8 +65,8 @@ func tempRoots() []string {
 		root = filepath.Clean(d)
 	}
 	roots := []string{root}
-	if real, err := filepath.EvalSymlinks(root); err == nil && real != root {
-		roots = append(roots, real)
+	if resolved, err := filepath.EvalSymlinks(root); err == nil && resolved != root {
+		roots = append(roots, resolved)
 	}
 	return roots
 }

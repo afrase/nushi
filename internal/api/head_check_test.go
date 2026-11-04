@@ -69,7 +69,7 @@ func (hookAgent) Trusted(string, []string) (bool, error) { return false, nil }
 type forkPull struct{ github.Client }
 
 func (forkPull) Pull(context.Context, string, int) (model.GitHubPull, error) {
-	return model.GitHubPull{GitHubItem: model.GitHubItem{ID: "PR_9"}, Head: "fix", CrossRepo: true}, nil
+	return model.GitHubPull{ID: "PR_9", Head: "fix", CrossRepo: true}, nil
 }
 
 // Security fix review 2026-11-04: nothing tested that StartChat checks a
