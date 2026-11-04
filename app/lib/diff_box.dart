@@ -311,30 +311,16 @@ class _DiffBoxState extends State<DiffBox> {
     null => const [],
   };
 
-  /// Comments were made, changed or removed: they show as they are. Not
-  /// followed into this file again: the view may be about to show another
-  /// (the file left it, and is outdated there).
-  void _commentsChanged() => _showComments(anchor: false);
+  /// Comments were made, changed or removed: they show as they are.
+  void _commentsChanged() => _showComments();
 
-  /// Puts the comments, and the box being written in, under their lines:
-  /// where those lines are now ([anchor]), or above the file when they're
-  /// gone.
-  void _showComments({bool anchor = true}) {
+  /// Puts the comments, and the box being written in, under their lines,
+  /// or above the file when they're gone. Changes has already moved each
+  /// with its lines for the files it shows ([filesRead]).
+  void _showComments() {
     final c = _controller;
     if (c == null) return;
     final doc = c.document;
-    final change = widget.change;
-    var moved = false;
-    for (final m in anchor ? _comments : const <ReviewComment>[]) {
-      if (m.anchor(m.old ? change.oldText : change.newText)) moved = true;
-    }
-    if (moved) {
-      // After this build: saving tells every view, this one included.
-      final chat = widget.review!.chat;
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => setComments(chat, [...commentsOf(chat)]),
-      );
-    }
     int below(int line, {required bool old}) =>
         min(line, (old ? doc.oldLineCount : doc.newLineCount)) - 1;
     final d = _draft;
