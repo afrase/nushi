@@ -161,6 +161,13 @@ var hashed = regexp.MustCompile(`[.-][0-9a-f]{16,}[./]`)
 // no-cache on a script into hours of caching, but leaves no-store alone.
 var fresh = map[string]bool{"index.html": true, "flutter_bootstrap.js": true, "sw.js": true, "manifest.json": true}
 
+// noTransform, on every file, asks a proxy or CDN in front not to rewrite
+// it (RFC 9111; Cloudflare's email obfuscation honours it, its Rocket
+// Loader is a zone setting to keep off): the service worker installs only
+// files whose SHA-256 is the build's, so a rewritten page would fail every
+// install, silently, and leave the app without its offline copy.
+const noTransform = ", no-transform"
+
 // LoadSite reads the built app in dir, to be served at origin
 // (scheme://host[:port]).
 func LoadSite(dir, origin string) (*Site, error) {
@@ -321,7 +328,7 @@ func (s *Site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.Set("Content-Type", f.ctype)
-	h.Set("Cache-Control", f.cache)
+	h.Set("Cache-Control", f.cache+noTransform)
 	h.Set("Vary", "Accept-Encoding")
 	body, etag := f.body, f.etag
 	if f.br != nil && accepts(r, "br") {
@@ -366,7 +373,7 @@ func (s *Site) serveFont(w http.ResponseWriter, r *http.Request, name string) {
 	if path.Ext(name) != ".woff2" {
 		cache = "no-cache"
 	}
-	h.Set("Cache-Control", cache)
+	h.Set("Cache-Control", cache+noTransform)
 	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(writeWait + time.Duration(info.Size()/int64(writeRate))*time.Second))
 	h.Set("Content-Length", strconv.FormatInt(info.Size(), 10))
 	if r.Method == http.MethodHead {

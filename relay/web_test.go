@@ -178,7 +178,7 @@ func TestWebHeaders(t *testing.T) {
 	want := map[string]string{
 		"Content-Type":                 "text/html; charset=utf-8",
 		"X-Content-Type-Options":       "nosniff",
-		"Cache-Control":                "no-store",
+		"Cache-Control":                "no-store, no-transform",
 		"X-Frame-Options":              "DENY",
 		"Referrer-Policy":              "no-referrer",
 		"Strict-Transport-Security":    "max-age=31536000",
@@ -200,13 +200,13 @@ func TestWebHeaders(t *testing.T) {
 		t.Errorf("the CSP lets scripts in: %s", csp)
 	}
 	for name, cache := range map[string]string{
-		"sw.js":                       "no-store",
-		"flutter_bootstrap.js":        "no-store",
-		"manifest.json":               "no-store",
-		"assets/fonts/x.ttf":          "no-cache",
-		"main.0123456789abcdef.js":    "public, max-age=31536000, immutable",
-		"ck-0123456789abcdef/ck.wasm": "public, max-age=31536000, immutable",
-		"canvaskit/canvaskit.wasm":    "no-cache",
+		"sw.js":                       "no-store, no-transform",
+		"flutter_bootstrap.js":        "no-store, no-transform",
+		"manifest.json":               "no-store, no-transform",
+		"assets/fonts/x.ttf":          "no-cache, no-transform",
+		"main.0123456789abcdef.js":    "public, max-age=31536000, immutable, no-transform",
+		"ck-0123456789abcdef/ck.wasm": "public, max-age=31536000, immutable, no-transform",
+		"canvaskit/canvaskit.wasm":    "no-cache, no-transform",
 	} {
 		resp, _ := get(t, srv.URL+"/"+name, nil)
 		if resp.StatusCode != http.StatusOK || resp.Header.Get("Cache-Control") != cache {
@@ -350,12 +350,12 @@ func TestFallbackFontsFromDisk(t *testing.T) {
 
 	resp, body := get(t, srv.URL+"/"+font, http.Header{"Accept-Encoding": {"gzip, br"}})
 	if resp.StatusCode != http.StatusOK || string(body) != "wOF2 font" || resp.Header.Get("Content-Encoding") != "" ||
-		resp.Header.Get("Content-Type") != "font/woff2" || resp.Header.Get("Cache-Control") != "public, max-age=31536000, immutable" ||
+		resp.Header.Get("Content-Type") != "font/woff2" || resp.Header.Get("Cache-Control") != "public, max-age=31536000, immutable, no-transform" ||
 		resp.Header.Get("Content-Security-Policy") == "" || resp.Header.Get("X-Content-Type-Options") != "nosniff" {
 		t.Errorf("the font: %d %q %v", resp.StatusCode, body, resp.Header)
 	}
 	if resp, body := get(t, srv.URL+"/assets/fonts/fallback/OFL.txt", nil); resp.StatusCode != http.StatusOK || string(body) != "SIL Open Font License" ||
-		resp.Header.Get("Content-Type") != "text/plain; charset=utf-8" || resp.Header.Get("Cache-Control") != "no-cache" {
+		resp.Header.Get("Content-Type") != "text/plain; charset=utf-8" || resp.Header.Get("Cache-Control") != "no-cache, no-transform" {
 		t.Errorf("the licence: %d %q %v", resp.StatusCode, body, resp.Header)
 	}
 	late := "assets/fonts/fallback/notosansjp/v53/late.woff2"
