@@ -135,7 +135,7 @@ func CommitStaged(ctx context.Context, folder, message, index string, environ []
 		if ctx.Err() != nil {
 			return "", fmt.Errorf("git commit gave up after %s: a hook or a signing prompt took too long", commitTimeout)
 		}
-		return "", fmt.Errorf("git commit: %s", cmp.Or(lastSaid(said.b), err.Error()))
+		return "", &CommitError{Said: cmp.Or(lastSaid(said.b), err.Error())}
 	}
 	out, err := run(ctx, folder, "rev-parse", "--short", "HEAD")
 	if err != nil {
@@ -143,6 +143,13 @@ func CommitStaged(ctx context.Context, folder, message, index string, environ []
 	}
 	return strings.TrimSpace(string(out)), nil
 }
+
+// CommitError is a commit that failed, with the end of what it printed:
+// a hook's output, which can quote the message (commitlint's "input:"),
+// so it is the app's to show and never the log's.
+type CommitError struct{ Said string }
+
+func (e *CommitError) Error() string { return "git commit: " + e.Said }
 
 // lastSaid is the end of a commit's output, which is where a hook's failure
 // is, as plain text.

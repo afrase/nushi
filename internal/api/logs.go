@@ -15,6 +15,7 @@ import (
 
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
+	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/logs"
 )
@@ -76,10 +77,15 @@ func (l logCalls) ended(procedure string, took time.Duration, err error) {
 }
 
 // loggable is err as the log says it: GitHub's refusal by its status, never
-// its words, which can quote what someone else wrote or what was sent.
+// its words, which can quote what someone else wrote or what was sent; a
+// failed commit without what its hooks printed, which can quote the
+// message.
 func loggable(err error) any {
 	if api, ok := errors.AsType[*githubapi.APIError](err); ok {
 		return "GitHub answered " + strconv.Itoa(api.Status)
+	}
+	if _, ok := errors.AsType[*git.CommitError](err); ok {
+		return "git commit failed"
 	}
 	return err
 }
