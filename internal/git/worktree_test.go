@@ -165,3 +165,22 @@ func TestCheckBranch(t *testing.T) {
 		}
 	}
 }
+
+// A bare repository has no main worktree: List marks none of its linked
+// ones Main.
+func TestListOfABareRepository(t *testing.T) {
+	ctx := context.Background()
+	dir, _ := filepath.EvalSymlinks(t.TempDir())
+	src, bare := filepath.Join(dir, "src"), filepath.Join(dir, "bare.git")
+	testcheck.NoErr(t, os.MkdirAll(src, 0o700))
+	testcheck.Git(t, src, "init", "-q", "-b", "main")
+	testcheck.Git(t, src, "commit", "-q", "--allow-empty", "-m", "init")
+	testcheck.Git(t, dir, "clone", "-q", "--bare", src, bare)
+	one, two := filepath.Join(dir, "one"), filepath.Join(dir, "two")
+	testcheck.Git(t, bare, "worktree", "add", "-q", "-b", "one", one)
+	testcheck.Git(t, bare, "worktree", "add", "-q", "-b", "two", two)
+	list, err := Worktrees{}.List(ctx, two)
+	if err != nil || len(list) != 2 || list[0].Path != one || list[0].Main || list[1].Main || !list[1].Current {
+		t.Errorf("List = %+v, %v", list, err)
+	}
+}

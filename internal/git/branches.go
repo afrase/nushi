@@ -25,12 +25,13 @@ func (Worktrees) List(ctx context.Context, folder string) ([]model.WorktreeEntry
 	}
 	var list []model.WorktreeEntry
 	var e model.WorktreeEntry
-	skip := false
+	// git gives the main worktree first, a bare repository's entry in its place.
+	skip, first := false, true
 	for _, field := range append(split(out), "") { // an empty field ends each entry
 		key, value, _ := strings.Cut(field, " ")
 		switch key {
 		case "worktree":
-			e = model.WorktreeEntry{Path: value, Main: len(list) == 0 && !skip}
+			e, first = model.WorktreeEntry{Path: value, Main: first}, false
 		case "HEAD":
 			e.Head = value
 		case "branch":
