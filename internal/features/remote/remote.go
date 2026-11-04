@@ -72,7 +72,6 @@ type Service struct {
 	serve   func(net.Conn)       // runs the API on a device's channel
 	awake   func() (stop func()) // keeps the Mac from idle sleep
 	publish func(model.Event)
-	key     noise.DHKey
 	timing  timing
 	// ctx ends with Close, and with it everything the service started,
 	// which wg counts: Close returns once they have.
@@ -86,6 +85,7 @@ type Service struct {
 
 	mu        sync.Mutex
 	closed    bool               // Close was called: nothing more starts
+	key       noise.DHKey        // the daemon's Noise key at id (each id given up keeps its own)
 	listen    ed25519.PrivateKey // proves to the relay the daemon may listen at id
 	id        string
 	moving    []model.Moving // ids given up, still waited on for some devices
@@ -123,6 +123,11 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 		k.Listen = newListenKey()
 		if err := st.SaveRemoteKey(k); err != nil {
 			return nil, err
+		}
+	}
+	for i := range k.Moving { // given up before the Noise key moved too: it was the daemon's
+		if len(k.Moving[i].Private) == 0 {
+			k.Moving[i].Private, k.Moving[i].Public = k.Private, k.Public
 		}
 	}
 	settings, err := st.Remote()

@@ -15,6 +15,8 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/flynn/noise"
+
 	"github.com/afrase/nushi/noiseconn"
 )
 
@@ -23,6 +25,7 @@ import (
 type pairing struct {
 	id      string
 	listen  ed25519.PrivateKey
+	static  noise.DHKey // the daemon's key, which the QR code holds
 	psk     []byte
 	expires time.Time
 	cancel  context.CancelFunc
@@ -48,7 +51,7 @@ func (s *Service) StartPairing() (string, time.Time, error) {
 	rand.Read(psk)
 	ctx, cancel := context.WithCancel(s.ctx)
 	listen := newListenKey()
-	p := &pairing{id: listenID(listen), listen: listen, psk: psk, expires: time.Now().Add(s.timing.pairing), cancel: cancel, answer: make(chan bool, 1)}
+	p := &pairing{id: listenID(listen), listen: listen, static: s.key, psk: psk, expires: time.Now().Add(s.timing.pairing), cancel: cancel, answer: make(chan bool, 1)}
 	s.pairing = p
 	s.changed()
 	slog.Info("pairing started", "until", p.expires.Format(time.TimeOnly))
@@ -169,7 +172,7 @@ func (s *Service) meet(ctx context.Context, p *pairing, relayURL string) (conn *
 	}
 	timer := time.AfterFunc(s.timing.handshake, func() { _ = c.Close() })
 	defer timer.Stop()
-	conn, err = noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(p.id), PSK: p.psk},
+	conn, err = noiseconn.Respond(c, noiseconn.Config{Static: p.static, Prologue: prologue(p.id), PSK: p.psk},
 		func([]byte) error { return nil })
 	if err != nil {
 		return nil, h, false

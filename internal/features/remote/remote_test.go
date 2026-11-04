@@ -539,9 +539,10 @@ func TestOneHandshakePerPairing(t *testing.T) {
 	}
 }
 
-// Revoking a device moves the daemon to a new id, which the revoked one
-// doesn't know; the others reach the old one until they've come to the new
-// one, and the daemon then stops waiting there.
+// Revoking a device moves the daemon to a new id and a new Noise key,
+// neither of which the revoked one knows (it may have read the old ones
+// while paired); the others reach the old id, with the old key, until
+// they've come to the new one, and the daemon then stops waiting there.
 func TestRevokeMovesTheID(t *testing.T) {
 	url := startRelay(t)
 	dir := t.TempDir()
@@ -558,12 +559,16 @@ func TestRevokeMovesTheID(t *testing.T) {
 	if err := s.Revoke(aID); err != nil {
 		t.Fatal(err)
 	}
-	moved := s.Get().Rendezvous
+	moved, key := s.Get().Rendezvous, s.Get().Key
 	if moved == old || moved == "" {
 		t.Fatalf("the id stayed %q", moved)
 	}
+	if bytes.Equal(key, o.key) || len(key) != 32 {
+		t.Fatal("the daemon's Noise key stayed")
+	}
 
-	// After a restart too, b still reaches the old id, and learns the new.
+	// After a restart too, b still reaches the old id with the old key,
+	// and learns the new id and key.
 	s.Close()
 	s = startRemote(t, dir, url)
 	waitFor(t, func() bool {
@@ -574,10 +579,14 @@ func TestRevokeMovesTheID(t *testing.T) {
 		_ = c.Close()
 		t.Fatal("the revoked device got an answer")
 	}
-	if got := s.Get().Rendezvous; got != moved {
-		t.Fatalf("after a restart the id is %q", got)
+	if got := s.Get(); got.Rendezvous != moved || !bytes.Equal(got.Key, key) {
+		t.Fatalf("after a restart the id is %q", got.Rendezvous)
 	}
-	conn, err := phoneConnect(url, moved, o.key, b)
+	if c, err := phoneConnect(url, moved, o.key, b); err == nil {
+		_ = c.Close()
+		t.Fatal("the new id answered with the old key")
+	}
+	conn, err := phoneConnect(url, moved, key, b)
 	if err != nil || !talks(conn) {
 		t.Fatal("no connection at the new id", err)
 	}
@@ -589,6 +598,46 @@ func TestRevokeMovesTheID(t *testing.T) {
 			_ = c.Close()
 		}
 		return err != nil
+	})
+	// A pairing after it gives the new key.
+	qr, _, err := s.StartPairing()
+	if err != nil || !bytes.Equal(parseQR(t, qr).key, key) {
+		t.Fatal("a new pairing doesn't give the new key", err)
+	}
+}
+
+// Ids given up before the daemon's key moved with them (remote-key.json
+// from before) keep answering with the key they had.
+func TestOldMovingKeepsItsKey(t *testing.T) {
+	url := startRelay(t)
+	dir := t.TempDir()
+	st := store.New(dir)
+	k := newKey(t)
+	oldListen, listen := newListenKey(), newListenKey()
+	b := newKey(t)
+	testcheck.NoErr(t, st.SaveRemoteKey(model.RemoteKey{Private: k.Private, Public: k.Public, Listen: listen,
+		Moving: []model.Moving{{Listen: oldListen, Devices: []string{"b"}, Since: time.Now()}}}))
+	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "b", Name: "b", Key: b.Public, Paired: time.Now()}}))
+	s := startRemote(t, dir, url)
+	waitFor(t, func() bool {
+		c, err := phoneConnect(url, listenID(oldListen), k.Public, b)
+		return err == nil && talks(c) && c.Close() == nil
+	})
+	// Revoking another device moves the key; the oldest id keeps its own.
+	s.mu.Lock()
+	_, err := s.add("c", "web", newKey(t).Public)
+	s.mu.Unlock()
+	testcheck.NoErr(t, err)
+	var cID string
+	for _, d := range s.Get().Devices {
+		if d.Name == "c" {
+			cID = d.ID
+		}
+	}
+	testcheck.NoErr(t, s.Revoke(cID))
+	waitFor(t, func() bool {
+		c, err := phoneConnect(url, listenID(oldListen), k.Public, b)
+		return err == nil && talks(c) && c.Close() == nil
 	})
 }
 

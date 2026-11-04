@@ -27,7 +27,12 @@ func (s *Service) accept(ctx context.Context, c *relay.Conn, id string) {
 	defer timer.Stop()
 	stop := context.AfterFunc(ctx, func() { _ = c.Close() })
 	defer stop()
-	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: s.key, Prologue: prologue(id)}, func(peer []byte) error {
+	key, ok := s.staticKey(id)
+	if !ok { // given up meanwhile
+		_ = c.Close()
+		return
+	}
+	conn, err := noiseconn.Respond(c, noiseconn.Config{Static: key, Prologue: prologue(id)}, func(peer []byte) error {
 		if s.device(peer, id) == "" {
 			return errUnknown
 		}

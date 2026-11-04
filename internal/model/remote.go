@@ -18,11 +18,13 @@ type RemoteKey struct {
 	Moving  []Moving `json:"moving,omitempty"`
 }
 
-// Moving is a rendezvous id the daemon gave up when it revoked a device:
-// it still waits there for the devices still paired then, until each has
-// connected at the new id.
+// Moving is a rendezvous id the daemon gave up when it revoked a device,
+// with the Noise key it had there: it still waits there for the devices
+// still paired then, until each has connected at the new id.
 type Moving struct {
 	Listen  []byte    `json:"listen"`
+	Private []byte    `json:"private,omitempty"` // empty in files from before the key moved too: the daemon's key then
+	Public  []byte    `json:"public,omitempty"`
 	Devices []string  `json:"devices"`
 	Since   time.Time `json:"since"`
 }

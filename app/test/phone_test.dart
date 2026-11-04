@@ -629,6 +629,37 @@ void main() {
     await endPhone(tester, phone);
   });
 
+  testWidgets('a revoke moves the Mac to a new id and key: the phone keeps '
+      'both, and dials them from then on', (tester) async {
+    // A key as X25519 keeps it (clamped): the record is this one's.
+    final (phone, platform) = await _app(
+      tester,
+      FakeDaemon(_chats),
+      record: {
+        ...pairedRecord(),
+        'key': Uint8List(32)
+          ..[0] = 8
+          ..[31] = 64,
+      },
+    );
+    final key = Uint8List.fromList(List.generate(32, (i) => i + 1));
+    remoteState.value = Remote(rendezvous: 'moved', key: key);
+    for (var i = 0; i < 4; i++) {
+      await tester.pump();
+    }
+    expect(platform.saved?['daemon'], 'moved');
+    expect(platform.saved?['daemonKey'], key);
+    expect(phone.paired?.key, key);
+    // A key that isn't one keeps the old with the new id.
+    final was = phone.paired!.key;
+    remoteState.value = Remote(rendezvous: 'again', key: [1, 2, 3]);
+    for (var i = 0; i < 4; i++) {
+      await tester.pump();
+    }
+    expect((phone.paired?.id, phone.paired?.key), ('again', was));
+    await endPhone(tester, phone);
+  });
+
   testWidgets('Forget this Mac runs once, and a Mac that never answers '
       'turning notifications off holds it 5 s', (tester) async {
     final never = Completer<SetPushSubscriptionResponse>();

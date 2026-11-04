@@ -46,6 +46,10 @@ Forget this Mac (Settings) forgets the pairing and the device's key on the phone
 - An expired chat is read-only, with New chat here.
 - After the first visit the app starts from its own cache. A new version shows "Nushi was updated", with Reload.
 
+### If a phone is lost or stolen
+
+Revoke it on the Mac (Settings › Remote access). The daemon moves to a new id and key at the relay; phones connected then move at once, and the others when they next connect. A paired phone can read any file on the Mac, the daemon's key too, and with it could still answer as the Mac to a phone that hasn't moved yet. So if it may have been used before you revoked it, pair your other phones again (Forget this Mac on each, then pair), and look on the Mac for anything it left (a device paired since, a LaunchAgent, a changed shell profile): it could run anything as you.
+
 ### If the app's code may have been changed
 
 Whoever serves the web app (the relay's host, a proxy that terminates TLS such as Cloudflare) can serve code that takes the device's key. If that may have happened:

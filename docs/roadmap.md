@@ -54,6 +54,7 @@ What isn't built yet and the decisions still open, each checked against the code
 ### The phone
 
 - **Mobile, next**: an `Events` filter for cellular; tool output and diffs fetched on expanding them (the API would need an item's own call); renaming the device after pairing; a native iOS app with the Keychain and Face ID if the developer program ever works out.
+- **After a revoke** (ADR 0034's 2026-11-04 amendment, the relay review's #1 and #6): the Mac shows which devices haven't moved to the new id and key yet, and the devices paired since the revoked one was last seen, with "Pair again" and "Revoke these too"; a "Revoke and reset" for a lost or stolen phone that drops the old ids at once and makes a new VAPID key (the phones subscribe again); the relay closing a replaced listener with a code of its own (4409), so the Mac warns that another holder of the id's key listens (left until the relay's listen allowlist lands, which changes the same code); a new pairing announced by a macOS notification and a push to the other devices.
 
 ## Decisions to revisit
 

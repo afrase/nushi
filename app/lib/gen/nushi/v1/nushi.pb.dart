@@ -18194,7 +18194,8 @@ class Remote extends $pb.GeneratedMessage {
 
   /// The daemon's id at the relay, where its phones dial. It changes when a
   /// device is revoked: a phone that sees another than the one it dials
-  /// keeps this one from then on (its old one answers it for 30 days).
+  /// keeps this one from then on, with key (its old one answers it, with
+  /// the old key, for 30 days).
   @$pb.TagNumber(7)
   $core.String get rendezvous => $_getSZ(6);
   @$pb.TagNumber(7)
@@ -18204,8 +18205,9 @@ class Remote extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearRendezvous() => $_clearField(7);
 
-  /// The daemon's Noise public key (32 bytes), so a phone and the Mac can
-  /// show the same fingerprint of it.
+  /// The daemon's Noise public key (32 bytes) at rendezvous, so a phone and
+  /// the Mac can show the same fingerprint of it. It changes with
+  /// rendezvous when a device is revoked (ADR 0034).
   @$pb.TagNumber(8)
   $core.List<$core.int> get key => $_getN(7);
   @$pb.TagNumber(8)

@@ -14028,10 +14028,12 @@ type Remote struct {
 	Pairing *Pairing `protobuf:"bytes,6,opt,name=pairing,proto3" json:"pairing,omitempty"`
 	// The daemon's id at the relay, where its phones dial. It changes when a
 	// device is revoked: a phone that sees another than the one it dials
-	// keeps this one from then on (its old one answers it for 30 days).
+	// keeps this one from then on, with key (its old one answers it, with
+	// the old key, for 30 days).
 	Rendezvous string `protobuf:"bytes,7,opt,name=rendezvous,proto3" json:"rendezvous,omitempty"`
-	// The daemon's Noise public key (32 bytes), so a phone and the Mac can
-	// show the same fingerprint of it.
+	// The daemon's Noise public key (32 bytes) at rendezvous, so a phone and
+	// the Mac can show the same fingerprint of it. It changes with
+	// rendezvous when a device is revoked (ADR 0034).
 	Key           []byte `protobuf:"bytes,8,opt,name=key,proto3" json:"key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -5,13 +5,19 @@ import (
 	"slices"
 	"time"
 
+	"github.com/flynn/noise"
+
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/noiseconn"
 )
 
-// rotate gives up the daemon's id after revoked was revoked, which knows
-// it: the daemon waits at a new one, and at the old one only for the
-// devices still paired until they move (Remote.Rendezvous tells them).
-// Called with s.mu.
+// rotate gives up the daemon's id and Noise key after revoked was
+// revoked, which knows the id and may have read both keys (a paired
+// device reads any file, ADR 0034): the daemon waits at a new id with a
+// new key, and at the old id, with the old key, only for the devices still
+// paired until they move (Remote's rendezvous and key tell them, over a
+// channel the old key authenticates). A pairing under way ends: its QR
+// code holds the old key. Called with s.mu.
 func (s *Service) rotate(revoked string) error {
 	var moving []model.Moving
 	for _, m := range s.moving {
@@ -23,12 +29,20 @@ func (s *Service) rotate(revoked string) error {
 		left = append(left, d.ID)
 	}
 	if len(left) > 0 {
-		moving = append(moving, model.Moving{Listen: s.listen, Devices: left, Since: time.Now()})
+		moving = append(moving, model.Moving{Listen: s.listen, Private: s.key.Private, Public: s.key.Public, Devices: left, Since: time.Now()})
 	}
-	listen := newListenKey()
-	if err := s.saveKey(listen, moving); err != nil {
+	key, err := noiseconn.NewKey()
+	if err != nil {
 		return err
 	}
+	listen := newListenKey()
+	old := s.key
+	s.key = key
+	if err := s.saveKey(listen, moving); err != nil {
+		s.key = old
+		return err
+	}
+	s.endPairing()
 	s.listen, s.id, s.moving = listen, listenID(listen), moving
 	if s.settings.On {
 		s.relink()
@@ -63,6 +77,22 @@ func (s *Service) prune() bool {
 		return len(m.Devices) == 0 || time.Since(m.Since) > s.timing.moving
 	})
 	return len(s.moving) != n
+}
+
+// staticKey is the daemon's Noise key at id, its own or one given up, and
+// whether it still waits there.
+func (s *Service) staticKey(id string) (noise.DHKey, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id == s.id {
+		return s.key, true
+	}
+	for _, m := range s.moving {
+		if listenID(m.Listen) == id {
+			return noise.DHKey{Private: m.Private, Public: m.Public}, true
+		}
+	}
+	return noise.DHKey{}, false
 }
 
 // mayMove says whether device may still come to id, one given up. Called
