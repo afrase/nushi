@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:nushi/settings.dart';
+import 'package:nushi/skills_list.dart' show revealInFinder;
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
@@ -70,7 +71,7 @@ Future<void> openLink(
   if (link.url case final url?) {
     await launchUrl(url);
   } else if (link.path case final path?) {
-    if (!await showChange(path)) await Process.run('open', ['-R', path]);
+    if (!await showChange(path)) await revealInFinder(path);
   }
 }
 
