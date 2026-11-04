@@ -267,7 +267,8 @@ class _Footer extends StatelessWidget {
 /// start a rename), and dragged ([movable]) it moves within
 /// its list. A pinned chat's ([project]) says its project after its title,
 /// muted, in the place of its branch or Jira key. A chat with a color has
-/// the whole row tinted with it, deeper when selected ([ChatColor.tint]).
+/// a bar of it at the row's left ([ColorBar]); only the open chat's row is
+/// filled, so a blue chat never reads as the open one.
 class _ChatRow extends StatefulWidget {
   const new(
     this.chat, {
@@ -319,102 +320,103 @@ class _ChatRowState extends State<_ChatRow> {
               daemon,
               onRename: () => setState(() => _renaming = true),
             ),
-            builder: (context, open) => Tap(
-              onTap: () => daemon.select(chat.id),
-              onSecondaryTapUp: (d) => open(d.localPosition),
-              selected: selected,
-              // The open chat in the accent's soft fill: the plain selected
-              // gray is hardly apart from the sidebar's own.
-              fill:
-                  chat.color?.tint(t, selected: selected) ??
-                  (shown ? t.accentSoft : null),
-              padding: EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: _renaming ? 1 : 5,
-              ),
-              child: Row(
-                children: [
-                  // Its state in a word on hover ("needs you"), which the
-                  // row leaves to the dot so the title keeps its width.
-                  Tooltip(
-                    message: phaseWord(chat.phase, t).$1,
-                    child: ChatDot(chat: chat, sparks: true),
-                  ),
-                  const SizedBox(width: 6),
-                  Tooltip(
-                    message: chat.agentName,
-                    child: AgentMark(
-                      chat.agent,
-                      color: chat.archived ? t.textMuted : null,
+            builder: (context, open) => ColorBar(
+              color: chat.color,
+              child: Tap(
+                onTap: () => daemon.select(chat.id),
+                onSecondaryTapUp: (d) => open(d.localPosition),
+                selected: selected,
+                // The open chat in the accent's soft fill: the plain selected
+                // gray is hardly apart from the sidebar's own.
+                fill: shown ? t.accentSoft : null,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: _renaming ? 1 : 5,
+                ),
+                child: Row(
+                  children: [
+                    // Its state in a word on hover ("needs you"), which the
+                    // row leaves to the dot so the title keeps its width.
+                    Tooltip(
+                      message: phaseWord(chat.phase, t).$1,
+                      child: ChatDot(chat: chat, sparks: true),
                     ),
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: _renaming
-                        ? RenameField(
-                            chat: chat,
-                            daemon: daemon,
-                            onDone: () => setState(() => _renaming = false),
-                          )
-                        : Text(
-                            chat.shownTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.ui(
-                              chat.archived ? t.textSecondary : t.text,
-                              weight: shown ? FontWeight.w600 : null,
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: chat.agentName,
+                      child: AgentMark(
+                        chat.agent,
+                        color: chat.archived ? t.textMuted : null,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: _renaming
+                          ? RenameField(
+                              chat: chat,
+                              daemon: daemon,
+                              onDone: () => setState(() => _renaming = false),
+                            )
+                          : Text(
+                              chat.shownTitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.ui(
+                                chat.archived ? t.textSecondary : t.text,
+                                weight: shown ? FontWeight.w600 : null,
+                              ),
                             ),
-                          ),
-                  ),
-                  if (widget.project)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Text(
-                        chat.scratch ? '' : folderParts(chat.home).$1,
-                        style: theme.ui(t.textMuted, size: 11.5),
-                      ),
-                    )
-                  else if (chat.jiraKey.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: Text(
-                        chat.jiraKey,
-                        style: theme.code(t.textMuted, size: 10.5),
-                      ),
-                    )
-                  else if (chat.worktree case final wt?)
-                    Flexible(
-                      child: Padding(
+                    ),
+                    if (widget.project)
+                      Padding(
                         padding: const EdgeInsets.only(left: 6),
                         child: Text(
-                          wt.branch.replaceFirst('nushi/', ''),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          chat.scratch ? '' : folderParts(chat.home).$1,
+                          style: theme.ui(t.textMuted, size: 11.5),
+                        ),
+                      )
+                    else if (chat.jiraKey.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Text(
+                          chat.jiraKey,
                           style: theme.code(t.textMuted, size: 10.5),
                         ),
+                      )
+                    else if (chat.worktree case final wt?)
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            wt.branch.replaceFirst('nushi/', ''),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.code(t.textMuted, size: 10.5),
+                          ),
+                        ),
                       ),
-                    ),
-                  if (chat.pull != null) PullDot(chat, PullStates.of(daemon)),
-                  if (chat.archived && !chat.scratch)
-                    Text(
-                      folderParts(chat.home).$1,
-                      style: theme.ui(t.textMuted, size: 11.5),
-                    ),
-                  if (widget.number case final n?)
-                    Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: box(
-                        t.fieldBorder,
-                        fill: t.fieldFill,
-                        radius: NushiTheme.control,
+                    if (chat.pull != null) PullDot(chat, PullStates.of(daemon)),
+                    if (chat.archived && !chat.scratch)
+                      Text(
+                        folderParts(chat.home).$1,
+                        style: theme.ui(t.textMuted, size: 11.5),
                       ),
-                      child: keyText(
-                        '⌘$n',
-                        theme.code(t.textSecondary, size: 11),
+                    if (widget.number case final n?)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: box(
+                          t.fieldBorder,
+                          fill: t.fieldFill,
+                          radius: NushiTheme.control,
+                        ),
+                        child: keyText(
+                          '⌘$n',
+                          theme.code(t.textSecondary, size: 11),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

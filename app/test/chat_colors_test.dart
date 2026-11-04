@@ -53,6 +53,17 @@ Tap _row(WidgetTester tester, String title) => tester.widget<Tap>(
   find.ancestor(of: find.text(title), matching: find.byType(Tap)).first,
 );
 
+/// The color of the bar on the row titled [title], or null without one.
+Color? _bar(WidgetTester tester, String title) {
+  final bar = find.descendant(
+    of: find.ancestor(of: find.text(title), matching: find.byType(ColorBar)),
+    matching: find.byKey(const Key('color bar')),
+  );
+  if (bar.evaluate().isEmpty) return null;
+  final box = tester.widget<DecoratedBox>(bar).decoration as BoxDecoration;
+  return box.color;
+}
+
 /// The window on [fake], showing [selected]; the chat [menu]'s menu open, if
 /// given.
 Future<Daemon> _window(
@@ -89,13 +100,33 @@ void main() {
   for (final t in [Tokens.light, Tokens.dark]) {
     final name = t.brightness.name;
 
-    test('each theme has its eight, each in its place ($name)', () {
+    test('each theme has its eight ($name)', () {
       expect(t.avatars, hasLength(ChatColor.values.length));
-      expect(t.chatTints, hasLength(ChatColor.values.length));
     });
 
-    test('a tinted row keeps AA for all its text ($name)', () {
-      // The sidebar's raised, the phone's base; the selected and hover tints.
+    // What a row can be: the sidebar's raised, under the pointer, the open
+    // chat's, the open chat's behind Settings, and the phone's base.
+    final rows = {
+      'raised': t.raised,
+      'hovered': _on(t.hover, t.raised),
+      'open': t.accentSoft,
+      'selected': t.selected,
+      'base': t.base,
+    };
+
+    test('a color’s bar and swatch read on every row ($name)', () {
+      for (final MapEntry(key: row, value: fill) in rows.entries) {
+        for (final c in ChatColor.values) {
+          expect(
+            contrast(c.ink(t), fill),
+            greaterThanOrEqualTo(3),
+            reason: '${c.name} on $row',
+          );
+        }
+      }
+    });
+
+    test('a row keeps AA for all its text ($name)', () {
       final inks = {
         'text': t.text,
         'secondary': t.textSecondary,
@@ -103,39 +134,14 @@ void main() {
         'needs': t.needs,
         'done': t.done,
       };
-      for (final surface in [t.raised, t.base]) {
-        for (final selected in [false, true]) {
-          for (final c in ChatColor.values) {
-            final fill = _on(c.tint(t, selected: selected), surface);
-            for (final MapEntry(key: ink, value: color) in inks.entries) {
-              expect(
-                contrast(color, fill),
-                greaterThanOrEqualTo(4.5),
-                reason: '$ink on ${c.name}, selected $selected',
-              );
-            }
-          }
+      for (final MapEntry(key: row, value: fill) in rows.entries) {
+        for (final MapEntry(key: ink, value: color) in inks.entries) {
+          expect(
+            contrast(color, fill),
+            greaterThanOrEqualTo(4.5),
+            reason: '$ink on $row',
+          );
         }
-      }
-    });
-
-    test('selection reads against the tint, and the tint against the row '
-        '($name)', () {
-      for (final c in ChatColor.values) {
-        final rest = _on(c.tint(t), t.raised);
-        final selected = _on(c.tint(t, selected: true), t.raised);
-        expect(contrast(rest, t.raised), greaterThan(1.08), reason: c.name);
-        expect(contrast(selected, rest), greaterThan(1.05), reason: c.name);
-      }
-    });
-
-    test('a swatch reads on the menu ($name)', () {
-      for (final c in ChatColor.values) {
-        expect(
-          contrast(c.ink(t), t.raised),
-          greaterThanOrEqualTo(3),
-          reason: c.name,
-        );
       }
     });
   }
@@ -172,15 +178,40 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(
-          _row(tester, 'Work on the ambers').fill,
-          ChatColor.amber.tint(tokens, selected: true),
-        );
-        expect(
-          _row(tester, 'Work on the teals').fill,
-          ChatColor.teal.tint(tokens),
-        );
+        // Only the open chat's row is filled; a color is its bar.
+        expect(_row(tester, 'Work on the ambers').fill, tokens.accentSoft);
+        expect(_bar(tester, 'Work on the ambers'), ChatColor.amber.ink(tokens));
+        expect(_row(tester, 'Work on the teals').fill, isNull);
+        expect(_bar(tester, 'Work on the teals'), ChatColor.teal.ink(tokens));
         expect(_row(tester, 'No color at all').fill, isNull);
+        expect(_bar(tester, 'No color at all'), isNull);
+        // The bar takes no width: a colored row's title starts where a
+        // plain one's does.
+        expect(
+          tester.getTopLeft(find.text('Work on the teals')).dx,
+          tester.getTopLeft(find.text('No color at all')).dx,
+        );
+        final bar = tester.getRect(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text('Work on the teals'),
+              matching: find.byType(ColorBar),
+            ),
+            matching: find.byKey(const Key('color bar')),
+          ),
+        );
+        final box = tester.getRect(
+          find
+              .ancestor(
+                of: find.text('Work on the teals'),
+                matching: find.byType(Tap),
+              )
+              .first,
+        );
+        expect(bar.left, box.left);
+        expect(bar.width, 3);
+        expect(bar.top, box.top + 4);
+        expect(bar.bottom, box.bottom - 4);
         await expectLater(
           find.byKey(const Key('shot')),
           matchesGoldenFile('goldens/chat_colors_rows_$name.png'),
@@ -195,7 +226,7 @@ void main() {
       final fake = FakeDaemon([chat('c', 'claude', 'Odd')..color = '#ff00ff']);
       final d = await _window(tester, fake, width: 1200);
       expect(d.chats['c']!.color, isNull);
-      expect(_row(tester, 'Odd').fill, isNull);
+      expect(_bar(tester, 'Odd'), isNull);
       fake.emit(
         EventsResponse(
           chatId: 'c',
@@ -204,6 +235,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(d.chats['c']!.color, ChatColor.amber);
+      expect(_bar(tester, 'Odd'), ChatColor.amber.ink(Tokens.dark));
       fake.emit(
         EventsResponse(
           chatId: 'c',
@@ -387,15 +419,30 @@ void main() {
       expect(find.byType(ChatRow), findsNWidgets(9));
       expect(tester.takeException(), isNull);
       final tokens = b == Brightness.dark ? Tokens.dark : Tokens.light;
-      final tints = tester
-          .widgetList<Material>(
-            find.ancestor(
-              of: find.byType(InkWell),
-              matching: find.byType(Material),
-            ),
-          )
-          .map((m) => m.color);
-      expect(tints, contains(ChatColor.amber.tint(tokens)));
+      expect(_bar(tester, 'Work on the ambers'), ChatColor.amber.ink(tokens));
+      expect(_bar(tester, 'No color at all'), isNull);
+      // No wash: nothing between a row and the list is filled with a color.
+      for (final m in tester.widgetList<Material>(
+        find.ancestor(
+          of: find.byType(InkWell),
+          matching: find.byType(Material),
+        ),
+      )) {
+        expect([
+          for (final c in ChatColor.values) c.ink(tokens),
+        ], isNot(contains(m.color)));
+      }
+      final bar = tester.getRect(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('Work on the ambers'),
+            matching: find.byType(ColorBar),
+          ),
+          matching: find.byKey(const Key('color bar')),
+        ),
+      );
+      expect(bar.left, 0);
+      expect(bar.width, 4);
       await render(
         tester,
         find.byType(PhoneApp),

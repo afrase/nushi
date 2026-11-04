@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -243,8 +244,8 @@ class _Folder extends StatelessWidget {
 }
 
 /// A chat in the list: its state, its agent, its title, and its state in
-/// a word, as the Mac says it ([phaseWord]); tinted with its color, as on
-/// the Mac, which is where one is set.
+/// a word, as the Mac says it ([phaseWord]); its color a bar at its left
+/// ([ColorBar]), as on the Mac, which is where one is set.
 class ChatRow extends StatelessWidget {
   const new(this.chat, {required this.onTap, super.key});
 
@@ -285,10 +286,7 @@ class ChatRow extends StatelessWidget {
             ),
           ),
         );
-        return switch (chat.color?.tint(t)) {
-          final tint? => Material(color: tint, child: row),
-          null => row,
-        };
+        return ColorBar(color: chat.color, width: 4, inset: 6, child: row);
       },
     );
   }

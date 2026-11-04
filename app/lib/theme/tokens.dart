@@ -94,9 +94,6 @@ class Tokens {
     required this.pig,
     required this.monogramText,
     required this.avatars,
-    required this.chatTints,
-    required this.chatTintRest,
-    required this.chatTintSelected,
     required this.syntax,
   });
 
@@ -202,19 +199,13 @@ class Tokens {
 
   /// People's colors (a Jira assignee's avatar), each under
   /// [monogramText]'s initials; also a chat's color as a mark (a swatch, a
-  /// dot), which `ChatColor` takes by position.
+  /// dot, the bar at its row's left), which `ChatColor` takes by position.
+  /// As a bar each must hold 3:1 on what a row can be: raised, [hover] on
+  /// it, [selected], [accentSoft] (the open chat) and base (the phone's
+  /// list). Worst of the eight: light 4.91 on raised, 4.38 hovered, 4.38
+  /// selected, 4.44 open, 5.22 on base; dark 5.55, 4.74, 4.93, 5.05, 6.62
+  /// (`chat_colors_test`, which also holds a row's text to AA on each).
   final List<Color> avatars;
-
-  /// A chat's color as a row's tint, at [chatTintRest], or [chatTintSelected]
-  /// on the selected row, in [avatars]' order. Light, those same colors. Dark,
-  /// mid-tones: [avatars]' pale ones lift the row until muted text falls under
-  /// AA at any alpha that shows a hue, and these keep its brightness.
-  ///
-  /// Muted text, the faintest on a row, on the worst of the eight: light 5.00
-  /// at rest, 4.55 selected; dark 4.91, 4.52 (`chat_colors_test`).
-  final List<Color> chatTints;
-  final double chatTintRest;
-  final double chatTintSelected;
 
   /// Code's colors, in diffs and code blocks, by [Capture].
   final Map<Capture, CodeInk> syntax;
@@ -301,18 +292,6 @@ class Tokens {
       Color(0xFF4E6D8C), // slate
       Color(0xFF4A7526), // green
     ],
-    chatTints: [
-      Color(0xFF2A5CC8), // blue
-      Color(0xFF0E7A6D), // teal
-      Color(0xFF6A3FC4), // violet
-      Color(0xFF8A5300), // amber
-      Color(0xFFA9512A), // rust
-      Color(0xFFA23C83), // magenta
-      Color(0xFF4E6D8C), // slate
-      Color(0xFF4A7526), // green
-    ],
-    chatTintRest: 0.10,
-    chatTintSelected: 0.16,
     syntax: {
       Capture.keyword: CodeInk(Color(0xFF0033B3)),
       Capture.declaration: CodeInk(Color(0xFF00627A)),
@@ -401,18 +380,6 @@ class Tokens {
       Color(0xFF9DB4C0), // slate
       Color(0xFF9CC572), // green
     ],
-    chatTints: [
-      Color(0xFF2A5CC8), // blue
-      Color(0xFF0E7A6D), // teal
-      Color(0xFF6A3FC4), // violet
-      Color(0xFF8A5300), // amber
-      Color(0xFFA9512A), // rust
-      Color(0xFFA23C83), // magenta
-      Color(0xFF4E6D8C), // slate
-      Color(0xFF4A7526), // green
-    ],
-    chatTintRest: 0.16,
-    chatTintSelected: 0.25,
     syntax: {
       Capture.keyword: CodeInk(Color(0xFFCF8E6D)),
       Capture.declaration: CodeInk(Color(0xFF56A8F5)),
