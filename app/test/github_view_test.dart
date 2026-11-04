@@ -364,6 +364,59 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('an older answer of a pull request or issue, come after a '
+      'newer one, never shows', (tester) async {
+    final holds = [Completer<void>(), Completer<void>()];
+    var pulls = 0;
+    var issues = 0;
+    final (_, d) = await openView(
+      tester,
+      more: (input) => switch (input) {
+        // The first poll held, answered after the second.
+        GetGitHubPullRequest() when ++pulls >= 2 => switch (pulls) {
+          2 => holds[0].future.then(
+            (_) => GetGitHubPullResponse(
+              pull: pull()..item = item(1, 'The old title'),
+            ),
+          ),
+          _ => GetGitHubPullResponse(
+            pull: pull()..item = item(1, 'The new title'),
+          ),
+        },
+        GetGitHubIssueRequest() when ++issues >= 2 => switch (issues) {
+          2 => holds[1].future.then(
+            (_) => GetGitHubIssueResponse(
+              issue: GitHubIssue(item: item(2, 'The old title', pull: false)),
+            ),
+          ),
+          _ => GetGitHubIssueResponse(
+            issue: GitHubIssue(item: item(2, 'The new title', pull: false)),
+          ),
+        },
+        _ => null,
+      },
+    );
+    Finder text(String s) => find.textContaining(s, findRichText: true);
+    for (final (open, poll, hold) in [
+      ('Add Sub and Neg', pullPoll, holds[0]),
+      ('Add a Mul function', const Duration(minutes: 1), holds[1]),
+    ]) {
+      await tester.tap(find.text(open));
+      await tester.pumpAndSettle();
+      await tester.pump(poll);
+      await tester.pump(poll);
+      await tester.pumpAndSettle();
+      expect(text('The new title'), findsOneWidget, reason: open);
+      hold.complete();
+      await tester.pumpAndSettle();
+      expect(text('The new title'), findsOneWidget, reason: open);
+      expect(text('The old title'), findsNothing, reason: open);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+    }
+    await closeView(tester, d);
+  });
+
   testWidgets("only my folders' repositories", (tester) async {
     final (fake, d) = await openView(tester);
     await tester.tap(find.text('All repositories'));

@@ -57,6 +57,10 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
   DateTime? _cachedAt;
   bool _refreshing = true;
 
+  /// The newest [_load]'s number: an older answer (a poll overtaken by the
+  /// reload after a post) is dropped.
+  int _asked = 0;
+
   @override
   void initState() {
     super.initState();
@@ -72,11 +76,12 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
   }
 
   Future<void> _load({bool quiet = false}) async {
+    final n = ++_asked;
     try {
       final r = await widget.daemon.client.getJiraIssue(
         GetJiraIssueRequest(site: widget.site, key: widget.issueKey),
       );
-      if (mounted) {
+      if (mounted && n == _asked) {
         setState(() {
           _issue = r.issue;
           _writes = r.agentWrites;
@@ -85,9 +90,11 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         });
       }
     } on Object catch (e) {
-      if (mounted && !quiet) setState(() => _error = errorText(e));
+      if (mounted && n == _asked && !quiet) {
+        setState(() => _error = errorText(e));
+      }
     } finally {
-      if (mounted) setState(() => _refreshing = false);
+      if (mounted && n == _asked) setState(() => _refreshing = false);
     }
   }
 

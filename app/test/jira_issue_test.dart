@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fixnum/fixnum.dart';
@@ -79,6 +80,7 @@ JiraIssue _issue() => JiraIssue(
 Future<(FakeDaemon, Daemon, List<String>)> _open(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
+  Object? Function(Object input)? more,
 }) async {
   final opened = <String>[];
   final fake =
@@ -87,64 +89,70 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
             ..jiraSite = 'acme.atlassian.net'
             ..jiraKey = 'ACME-12',
         ])
-        ..answer = (input) => switch (input) {
-          GetJiraIssueRequest() => GetJiraIssueResponse(
-            issue: _issue(),
-            agentWrites: [
-              JiraWrite(
-                kind: 'move',
-                to: 'In Progress',
-                chat: 'c1',
-                agent: 'claude',
-                at: _ago(const Duration(hours: 1)),
-              ),
-              JiraWrite(
-                kind: 'comment',
-                comment: 'k1',
-                chat: 'c1',
-                agent: 'claude',
-              ),
-            ],
-          ),
-          GetJiraAttachmentRequest(:final id) => GetJiraAttachmentResponse(
-            data: id == '10000' ? _png : [],
-            mimeType: 'image/png',
-          ),
-          FindJiraIssuesRequest(:final text, :final site)
-              when text == 'ACME-12' && site == 'acme.atlassian.net' =>
-            FindJiraIssuesResponse(
-              issues: [
-                FoundJiraIssue(
-                  site: 'acme.atlassian.net',
-                  issue: JiraIssue(
-                    key: 'ACME-12',
-                    summary: 'Log in with a passkey',
+        ..answer = (input) =>
+            more?.call(input) ??
+            switch (input) {
+              GetJiraIssueRequest() => GetJiraIssueResponse(
+                issue: _issue(),
+                agentWrites: [
+                  JiraWrite(
+                    kind: 'move',
+                    to: 'In Progress',
+                    chat: 'c1',
+                    agent: 'claude',
+                    at: _ago(const Duration(hours: 1)),
                   ),
-                  branch: 'ACME-12-log-in-with-a-passkey',
-                ),
-              ],
-            ),
-          ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
-            transitions: [
-              JiraTransition(id: '21', name: 'In Progress', to: 'In Progress'),
-              JiraTransition(
-                id: '31',
-                name: 'Done',
-                to: 'Done',
-                fields: [
-                  JiraField(
-                    id: 'resolution',
-                    name: 'Resolution',
-                    type: 'resolution',
-                    required: true,
-                    options: [JiraOption(id: '1', name: 'Fixed')],
+                  JiraWrite(
+                    kind: 'comment',
+                    comment: 'k1',
+                    chat: 'c1',
+                    agent: 'claude',
                   ),
                 ],
               ),
-            ],
-          ),
-          _ => null,
-        };
+              GetJiraAttachmentRequest(:final id) => GetJiraAttachmentResponse(
+                data: id == '10000' ? _png : [],
+                mimeType: 'image/png',
+              ),
+              FindJiraIssuesRequest(:final text, :final site)
+                  when text == 'ACME-12' && site == 'acme.atlassian.net' =>
+                FindJiraIssuesResponse(
+                  issues: [
+                    FoundJiraIssue(
+                      site: 'acme.atlassian.net',
+                      issue: JiraIssue(
+                        key: 'ACME-12',
+                        summary: 'Log in with a passkey',
+                      ),
+                      branch: 'ACME-12-log-in-with-a-passkey',
+                    ),
+                  ],
+                ),
+              ListJiraTransitionsRequest() => ListJiraTransitionsResponse(
+                transitions: [
+                  JiraTransition(
+                    id: '21',
+                    name: 'In Progress',
+                    to: 'In Progress',
+                  ),
+                  JiraTransition(
+                    id: '31',
+                    name: 'Done',
+                    to: 'Done',
+                    fields: [
+                      JiraField(
+                        id: 'resolution',
+                        name: 'Resolution',
+                        type: 'resolution',
+                        required: true,
+                        options: [JiraOption(id: '1', name: 'Fixed')],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              _ => null,
+            };
   final d = await fake.connect(tester);
   await tester.binding.setSurfaceSize(const Size(700, 1100));
   await tester.pumpWidget(
@@ -222,6 +230,39 @@ void main() {
     await tester.tap(find.text('ACME-13'));
     await tester.tap(find.text('ACME-1'));
     expect(opened, ['ACME-13', 'ACME-1']);
+    await closeView(tester, d);
+  });
+
+  testWidgets('an older answer, come after a newer one, never shows', (
+    tester,
+  ) async {
+    final hold = Completer<void>();
+    var asked = 0;
+    final (_, d, _) = await _open(
+      tester,
+      more: (input) => input is GetJiraIssueRequest && !input.cached
+          ? switch (++asked) {
+              // The first poll, answered after the second.
+              2 => hold.future.then(
+                (_) => GetJiraIssueResponse(
+                  issue: _issue()..summary = 'The old summary',
+                ),
+              ),
+              3 => GetJiraIssueResponse(
+                issue: _issue()..summary = 'The new summary',
+              ),
+              _ => null,
+            }
+          : null,
+    );
+    await tester.pump(issuePoll);
+    await tester.pump(issuePoll);
+    await tester.pumpAndSettle();
+    expect(find.text('The new summary'), findsOneWidget);
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('The new summary'), findsOneWidget);
+    expect(find.text('The old summary'), findsNothing);
     await closeView(tester, d);
   });
 

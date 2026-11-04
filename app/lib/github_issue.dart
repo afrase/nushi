@@ -47,19 +47,24 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
     super.dispose();
   }
 
+  /// The newest [_load]'s number: an older answer (a poll overtaken by the
+  /// reload after a post) is dropped.
+  int _asked = 0;
+
   Future<void> _load({bool quiet = false}) async {
+    final n = ++_asked;
     try {
       final r = await widget.daemon.client.getGitHubIssue(
         GetGitHubIssueRequest(ref: widget.ref, quiet: quiet),
       );
-      if (mounted) {
+      if (mounted && n == _asked) {
         setState(() {
           _issue = r.issue;
           _error = null;
         });
       }
     } on Object catch (e) {
-      if (mounted) setState(() => _error = errorText(e));
+      if (mounted && n == _asked) setState(() => _error = errorText(e));
     }
   }
 

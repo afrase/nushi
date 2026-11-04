@@ -145,11 +145,17 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
     await s.again();
   }
 
+  /// The newest [_load]'s number: an older answer (a poll overtaken by the
+  /// reload after a merge or a post) is dropped.
+  int _asked = 0;
+
   Future<void> _load({bool quiet = false}) async {
+    final n = ++_asked;
     try {
       final r = await widget.daemon.client.getGitHubPull(
         GetGitHubPullRequest(ref: widget.ref, quiet: quiet),
       );
+      if (n != _asked) return;
       keepPull(widget.ref, r.pull);
       if (mounted) {
         setState(() {
@@ -160,9 +166,11 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
       }
     } on Object catch (e) {
       // A failed poll keeps what shows, and says why.
-      if (mounted) setState(() => _error = errorText(e));
+      if (mounted && n == _asked) setState(() => _error = errorText(e));
     } finally {
-      if (mounted && _asking) setState(() => _asking = false);
+      if (mounted && n == _asked && _asking) {
+        setState(() => _asking = false);
+      }
     }
   }
 
