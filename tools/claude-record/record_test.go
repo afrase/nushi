@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"log/slog"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -71,7 +73,7 @@ func scenario(t *testing.T, src string, also map[string]string) string {
 		if err != nil {
 			t.Fatal(err)
 		}
-		also[f] = cmpOr(also[f], string(b))
+		also[f] = cmp.Or(also[f], string(b))
 	}
 	for f, body := range also {
 		if err := os.WriteFile(filepath.Join(dir, f), []byte(body), 0o600); err != nil {
@@ -79,13 +81,6 @@ func scenario(t *testing.T, src string, also map[string]string) string {
 		}
 	}
 	return dir
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 // acpLines reads an ACP recording: each line's direction and method, or
@@ -119,13 +114,7 @@ func acpLines(t *testing.T, path string) []string {
 		default:
 			var r map[string]any
 			_ = json.Unmarshal(l.Msg.Result, &r)
-			out = append(out, l.Dir+" answer "+strings.Join(slices.Sorted(func(yield func(string) bool) {
-				for k := range r {
-					if !yield(k) {
-						return
-					}
-				}
-			}), ","))
+			out = append(out, l.Dir+" answer "+strings.Join(slices.Sorted(maps.Keys(r)), ","))
 		}
 	}
 	return out
