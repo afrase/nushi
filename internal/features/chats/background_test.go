@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -83,7 +84,7 @@ func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixtu
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
-	file := filepath.Join(t.TempDir(), waitTask+".output")
+	file := filepath.Join(taskDir(t), waitTask+".output")
 	testcheck.NoErr(t, os.WriteFile(file, []byte("waiting\n"), 0o600))
 	in, err := json.Marshal(map[string]any{"command": waitLoop, "run_in_background": true})
 	testcheck.NoErr(t, err)
@@ -95,6 +96,15 @@ func commandChat(t *testing.T, follow bool, below ...model.Process) commandFixtu
 	}
 	c.mu.Unlock()
 	return commandFixture{svc, agent, c, procs, file}
+}
+
+// taskDir is a folder where Claude writes its tasks' output:
+// <tmp>/claude-<uid>/<project>/<session>/tasks (docs/facts/claude.md).
+func taskDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "claude-"+strconv.Itoa(os.Getuid()), "-w", "s1", "tasks")
+	testcheck.NoErr(t, os.MkdirAll(dir, 0o700))
+	return dir
 }
 
 func commandOf(c *chat) model.BackgroundCommand {

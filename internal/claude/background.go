@@ -3,8 +3,11 @@ package claude
 import (
 	"errors"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
@@ -30,10 +33,23 @@ func (Harness) BackgroundCommand(it model.Item) (id, file string, ok bool) {
 		return "", "", false
 	}
 	id = strings.TrimSuffix(filepath.Base(m[1]), ".output")
-	if it.TaskID != "" && it.TaskID != id || !strings.Contains(it.Text, "ID: "+id) {
+	if it.TaskID != "" && it.TaskID != id || !strings.Contains(it.Text, "ID: "+id) || !taskFile(id, m[1]) {
 		return "", "", false
 	}
 	return id, m[1], true
+}
+
+// taskFile says whether file is where Claude writes task id's output:
+// <tmp>/claude-<uid>/<project>/<session>/tasks/<id>.output
+// (docs/facts/claude.md), a clean path under the user's own claude-<uid>
+// folder, so a text naming another file (a project's tasks/x.output) is
+// never read.
+func taskFile(id, file string) bool {
+	if filepath.Clean(file) != file || !filepath.IsAbs(file) || filepath.Base(file) != id+".output" ||
+		filepath.Base(filepath.Dir(file)) != "tasks" {
+		return false
+	}
+	return slices.Contains(strings.Split(file, string(filepath.Separator)), "claude-"+strconv.Itoa(os.Getuid()))
 }
 
 // outputTail is how much of a background command's output is read.
@@ -45,9 +61,9 @@ var endLine = regexp.MustCompile(`\n+\[(exited with code -?\d+|killed)\]\n$`)
 // and how it ended once it has: Claude ends the file with a line of its
 // own, "\n[exited with code N]\n" or "\n[killed]\n" (the command could
 // print such a line too: see chats' followCommand). Only a regular file named
-// for the task is read.
+// for the task, in Claude's folder for them (taskFile), is read.
 func (Harness) ReadBackgroundCommand(id, file string) (output, end string, err error) {
-	if filepath.Base(file) != id+".output" {
+	if !taskFile(id, file) {
 		return "", "", errors.New("not the task's output file")
 	}
 	f, st, err := regularfile.Open(file, false)

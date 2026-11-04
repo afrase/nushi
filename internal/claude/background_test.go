@@ -3,6 +3,7 @@ package claude
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -10,8 +11,8 @@ import (
 )
 
 func TestBackgroundCommands(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "tasks")
-	testcheck.NoErr(t, os.Mkdir(dir, 0o700))
+	dir := filepath.Join(t.TempDir(), "claude-"+strconv.Itoa(os.Getuid()), "-Users-me-app", "s1", "tasks")
+	testcheck.NoErr(t, os.MkdirAll(dir, 0o700))
 	file := filepath.Join(dir, "b1.output")
 	started := "```console\nCommand running in background with ID: b1. Output is being written to: " + file + ". You will be notified when it completes.\n```"
 	id, got, ok := harness.BackgroundCommand(model.Item{Tool: "Bash", TaskID: "b1", Text: started})
@@ -32,6 +33,9 @@ func TestBackgroundCommands(t *testing.T) {
 		{Tool: "Bash", Text: started},               // a foreground command that prints it
 		{Tool: "Bash", TaskID: "b9", Text: started}, // another task's file
 		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: /etc/b1.output."},
+		// A file of the right name elsewhere: a project's, or out of Claude's folder (integrations review 2026-11-04).
+		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: /Users/me/app/tasks/b1.output."},
+		{Tool: "Bash", TaskID: "b1", Text: "Command running in background with ID: b1. Output is being written to: " + filepath.Dir(dir) + "/../../../../x/tasks/b1.output."},
 	} {
 		if _, _, ok := harness.BackgroundCommand(it); ok {
 			t.Errorf("followed %+v", it)
@@ -56,5 +60,11 @@ func TestBackgroundCommands(t *testing.T) {
 	testcheck.NoErr(t, os.Symlink(file, link))
 	if _, _, err := harness.ReadBackgroundCommand("b2", link); err == nil {
 		t.Error("read through a link")
+	}
+	other := filepath.Join(t.TempDir(), "tasks")
+	testcheck.NoErr(t, os.Mkdir(other, 0o700))
+	testcheck.Write(t, filepath.Join(other, "b3.output"), "a project's file")
+	if _, _, err := harness.ReadBackgroundCommand("b3", filepath.Join(other, "b3.output")); err == nil {
+		t.Error("read a task's file out of Claude's folder")
 	}
 }

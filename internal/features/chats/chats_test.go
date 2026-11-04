@@ -436,9 +436,7 @@ func TestSubagentUpdatesGoUnderTheirToolCall(t *testing.T) {
 func TestBackgroundCommandsAreFollowed(t *testing.T) {
 	defer func(d time.Duration) { commandPoll = d }(commandPoll)
 	commandPoll = 10 * time.Millisecond
-	dir := filepath.Join(t.TempDir(), "tasks")
-	testcheck.NoErr(t, os.Mkdir(dir, 0o700))
-	file := filepath.Join(dir, "b1.output")
+	file := filepath.Join(taskDir(t), "b1.output")
 	testcheck.NoErr(t, os.WriteFile(file, []byte("half"), 0o600))
 	events := make(chan model.Event, 100)
 	var counts []int // how many run in the background, as each status said (under c.mu)
