@@ -197,6 +197,9 @@ class ChatState extends ChangeNotifier {
   int background = 0; // subagents and background commands running (API 84)
   DateTime? started; // when the running turn started
   bool stopping = false; // the app asked the turn to stop
+  // How the last turn ended, as the daemon judged it (API 107); unspecified
+  // while one runs, before any ended, or from an older daemon.
+  TurnEnd ended = TurnEnd.TURN_END_UNSPECIFIED;
   String error = ''; // why the snapshot didn't load
   String loadError = ''; // the same on the phone, which tries again
 
@@ -660,6 +663,11 @@ class ChatState extends ChangeNotifier {
   void status(ChatStatus? s) {
     if (s == null) return;
     if (busy && !s.busy) related.turnEnded();
+    if (s.busy) {
+      ended = TurnEnd.TURN_END_UNSPECIFIED;
+    } else if (s.ended != TurnEnd.TURN_END_UNSPECIFIED) {
+      ended = s.ended;
+    }
     busy = s.busy;
     waiting = s.waiting;
     canFork = s.canFork;

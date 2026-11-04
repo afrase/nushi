@@ -51,6 +51,16 @@ void _end(ChatState chat, {bool stopped = false}) {
     ..notifyListeners();
 }
 
+/// Ends chat's turn as a daemon from API 107 does: its status says how it
+/// judged it, and the app's own stop (ChatState.stopping) isn't seen.
+void _judged(ChatState chat, TurnEnd end) {
+  chat
+    ..started = DateTime.now().subtract(_ran[chat]!)
+    ..notifyListeners()
+    ..status(ChatStatus(ended: end))
+    ..notifyListeners();
+}
+
 /// The check painter TurnStatus or ChatDot draws, if one shows.
 CheckPainter? _check(WidgetTester tester, Type under) => tester
     .widgetList<CustomPaint>(
@@ -129,6 +139,46 @@ void main() {
       ),
     );
     await noReceipt(_working(const Duration(seconds: 30)));
+  });
+
+  testWidgets("the daemon's verdict decides: a stop it judged (the phone's, "
+      "or the Stop button's with no event between) gets no receipt nor "
+      'check, a failure a check without sparks, and a done turn both, an '
+      'error notice in it or not', (tester) async {
+    Future<void> ends(
+      TurnEnd end, {
+      required bool receipt,
+      required bool check,
+    }) async {
+      final chat = _working(const Duration(seconds: 30))
+        ..items.add(
+          Item(id: 'e', kind: ItemKind.ITEM_KIND_NOTICE, status: 'error'),
+        );
+      await tester.pumpWidget(
+        _app(
+          Column(
+            children: [
+              TurnStatus(chat),
+              ChatDot(chat: chat, sparks: true),
+            ],
+          ),
+        ),
+      );
+      _judged(chat, end);
+      expect(chat.ended, end);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('Done in 30s'), receipt ? findsOne : findsNothing);
+      final dot = _check(tester, ChatDot);
+      expect(dot != null, check, reason: '$end');
+      expect(dot?.sparks != null, receipt, reason: '$end');
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(const SizedBox());
+    }
+
+    await ends(TurnEnd.TURN_END_STOPPED, receipt: false, check: false);
+    await ends(TurnEnd.TURN_END_FAILED, receipt: false, check: true);
+    await ends(TurnEnd.TURN_END_DONE, receipt: true, check: true);
   });
 
   testWidgets('with Reduce Motion the receipt shows still, then goes', (

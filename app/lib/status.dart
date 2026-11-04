@@ -148,9 +148,11 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     if (c.waiting && !_waiting && !reduceMotion(context)) {
       (_hop ??= _once(hopFor)).forward(from: 0).ignore();
     }
-    if (_busy && !c.busy && !c.waiting && !_stopped) {
+    final end = _busy && !c.busy ? turnEnd(c, stopped: _stopped) : null;
+    if (end != null && !c.waiting && end != TurnEnd.TURN_END_STOPPED) {
       final lasted = DateTime.now().difference(_since ?? DateTime.now());
-      _sparks = widget.sparks && !turnFailed(c.items) && sparksFor(lasted);
+      _sparks =
+          widget.sparks && end == TurnEnd.TURN_END_DONE && sparksFor(lasted);
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }
     if (!c.busy) _since = null;
@@ -280,6 +282,19 @@ Widget _waitingDot(Tokens t) => Padding(
     child: const SizedBox.square(dimension: ChatDot.size + 1),
   ),
 );
+
+/// How the turn that just ended ended, for what marks it (a receipt, a
+/// check, sparks): as the daemon judged it ([ChatState.ended], API 107),
+/// which knows of a stop from anywhere; from an older daemon, a guess:
+/// [stopped] when the app stopped it, failed on an error notice in it.
+TurnEnd turnEnd(ChatState c, {required bool stopped}) =>
+    c.ended != TurnEnd.TURN_END_UNSPECIFIED
+    ? c.ended
+    : stopped
+    ? TurnEnd.TURN_END_STOPPED
+    : turnFailed(c.items)
+    ? TurnEnd.TURN_END_FAILED
+    : TurnEnd.TURN_END_DONE;
 
 /// Whether the turn that just ended failed: an error notice in it.
 bool turnFailed(List<Item> items) => items.reversed

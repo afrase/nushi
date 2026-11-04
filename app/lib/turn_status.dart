@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/drawn.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';
@@ -100,7 +101,9 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     final still = reduceMotion(context);
     _growing = false;
     _receipt =
-        !_stopped && !c.waiting && !turnFailed(c.items) && sparksFor(lasted)
+        turnEnd(c, stopped: _stopped) == TurnEnd.TURN_END_DONE &&
+            !c.waiting &&
+            sparksFor(lasted)
         ? 'Done in ${elapsed(lasted)}'
         : null;
     _since = null;
