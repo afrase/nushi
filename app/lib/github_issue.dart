@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -80,7 +79,6 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
         ),
       );
     }
-    final now = clock();
     final it = i.item;
     final chats = chatsOnItem(widget.daemon, it.ref);
     return SelectionArea(
@@ -177,11 +175,10 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
               body: i.body,
               createdMs: it.updatedMs,
             ),
-            now: now,
           ),
           if (i.body.isEmpty)
             Text('No description.', style: theme.ui(t.textMuted, size: 12.5)),
-          for (final c in i.conversation) CommentEntry(c, now: now),
+          for (final c in i.conversation) CommentEntry(c),
           const SizedBox(height: 16),
           CommentBox(
             draft: githubDraft(it.ref, 'comment'),

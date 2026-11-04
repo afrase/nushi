@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
@@ -25,7 +26,6 @@ class PullActivity extends StatelessWidget {
   const new({
     required this.daemon,
     required this.pull,
-    required this.now,
     required this.me,
     required this.onPosted,
     required this.onTodo,
@@ -36,7 +36,6 @@ class PullActivity extends StatelessWidget {
 
   final Daemon daemon;
   final GitHubPull pull;
-  final DateTime now;
 
   /// The findings in To do from each review (by its id).
   final Map<String, int> findings;
@@ -70,7 +69,6 @@ class PullActivity extends StatelessWidget {
               createdMs: p.item.updatedMs,
             ),
             what: 'description',
-            now: now,
             pull: p,
             onTodo: onTodo,
           ),
@@ -79,7 +77,6 @@ class PullActivity extends StatelessWidget {
               key: shown?.$1 == c.id ? shown!.$2 : null,
               findings: findings[c.id] ?? 0,
               comment: c,
-              now: now,
               pull: p,
               onTodo: onTodo,
               threads: latest[c.author] == c,
@@ -175,7 +172,6 @@ final _numbers = RegExp(
 class _Entry extends StatefulWidget {
   const new({
     required this.comment,
-    required this.now,
     required this.pull,
     required this.onTodo,
     super.key,
@@ -188,7 +184,6 @@ class _Entry extends StatefulWidget {
   final int findings;
 
   final GitHubComment comment;
-  final DateTime now;
   final GitHubPull pull;
   final VoidCallback onTodo;
 
@@ -213,7 +208,7 @@ class _EntryState extends State<_Entry> {
       return _Gutter(
         login: c.author,
         bot: true,
-        child: CommentEntry(c, now: widget.now, mark: false),
+        child: CommentEntry(c, mark: false),
       );
     }
     final theme = NushiTheme.of(context);
@@ -245,7 +240,7 @@ class _EntryState extends State<_Entry> {
         : c.review.isNotEmpty
         ? 'reviewed · '
         : '';
-    final when = agoAt(c.createdMs.toInt(), widget.now);
+    final when = agoAt(c.createdMs.toInt(), clock());
     final body = AgentMarkdown(
       githubText(clamped ? textStart(text) : text),
       images: githubImage,
@@ -378,7 +373,7 @@ class _EntryState extends State<_Entry> {
                       ],
                     ),
                   for (final x in threads)
-                    if (x.resolved) ResolvedThread(x, now: widget.now),
+                    if (x.resolved) ResolvedThread(x),
                   if (foot.isNotEmpty)
                     Row(
                       children: [

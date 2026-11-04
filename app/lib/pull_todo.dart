@@ -24,7 +24,6 @@ class PullTodo extends StatefulWidget {
     required this.daemon,
     required this.pull,
     required this.items,
-    required this.now,
     required this.onChanged,
     super.key,
     this.older = const {},
@@ -40,7 +39,6 @@ class PullTodo extends StatefulWidget {
   /// way to the message in Activity ([onOlder]).
   final Map<String, String> older;
   final ValueChanged<GitHubComment>? onOlder;
-  final DateTime now;
   final Future<void> Function() onChanged;
 
   @override
@@ -119,7 +117,6 @@ class _PullTodoState extends State<PullTodo> {
       item: i,
       daemon: widget.daemon,
       pull: widget.pull,
-      now: widget.now,
       picked: _picked.contains(i.id),
       inBox: _inBox(box, i),
       onPick: (v) =>

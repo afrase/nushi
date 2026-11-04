@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
@@ -221,7 +220,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
           : Center(child: Text(error, style: theme.ui(t.crashed)));
     }
     final failed = p.checks.where((c) => c.failed).length;
-    final now = clock();
     final todo = todoOf(p);
     final items = todo.items;
     final open = p.item.state == 'open';
@@ -251,7 +249,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
             column(
               PullHeader(
                 pull: p,
-                now: now,
                 todo: items.length + (hasConflicts(p) ? 1 : 0),
                 onJump: _jump,
                 threadsTo: open ? PullSection.todo : PullSection.activity,
@@ -278,7 +275,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                   items: items,
                   older: todo.older,
                   onOlder: _showReview,
-                  now: now,
                   onChanged: _refresh,
                 ),
                 top: 16,
@@ -341,7 +337,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                 PullActivity(
                   daemon: widget.daemon,
                   pull: p,
-                  now: now,
                   me: _me,
                   onPosted: _refresh,
                   onTodo: () => _jump(PullSection.todo),

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
@@ -486,7 +485,7 @@ class _ThreadCardState extends State<ThreadCard> {
           ),
           if (_open) ...[
             for (final c in x.comments)
-              CommentEntry(c, now: clock(), sendable: false),
+              CommentEntry(c, sendable: false),
             const SizedBox(height: 8),
             if (_replying)
               CommentBox(

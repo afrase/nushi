@@ -75,7 +75,6 @@ class InboxCards extends StatelessWidget {
     required this.daemon,
     required this.sections,
     required this.picked,
-    required this.now,
     required this.days,
     required this.whose,
     required this.onOpen,
@@ -89,7 +88,6 @@ class InboxCards extends StatelessWidget {
   final Daemon daemon;
   final List<Section> sections;
   final GitHubRef? picked;
-  final DateTime now;
 
   /// The date filter's days (0: any time).
   final int days;
@@ -163,7 +161,6 @@ class InboxCards extends StatelessWidget {
                       daemon: daemon,
                       item: it,
                       selected: sameRef(it.ref, picked),
-                      now: now,
                       onOpen: () => onOpen(it),
                       onHide: () => onHide(it.ref.repo),
                       startMenu: (open) => startMenu(it.ref, open),
@@ -210,7 +207,6 @@ class ItemRow extends StatefulWidget {
     required this.daemon,
     required this.item,
     required this.selected,
-    required this.now,
     required this.onOpen,
     required this.onHide,
     required this.startMenu,
@@ -220,7 +216,6 @@ class ItemRow extends StatefulWidget {
   final Daemon daemon;
   final GitHubItem item;
   final bool selected;
-  final DateTime now;
   final VoidCallback onOpen;
   final VoidCallback onHide;
 
@@ -328,7 +323,7 @@ class _ItemRowState extends State<ItemRow> {
                 ),
                 _column(40, _talk(theme, it)),
                 const SizedBox(width: 6),
-                ItemAge(it.updatedMs.toInt(), now: widget.now),
+                ItemAge(it.updatedMs.toInt()),
                 SizedBox(
                   width: 30,
                   child: _hover || widget.selected

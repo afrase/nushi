@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
@@ -22,14 +23,12 @@ export 'package:nushi/github_text.dart';
 class CommentEntry extends StatefulWidget {
   const new(
     this.comment, {
-    required this.now,
     super.key,
     this.sendable = true,
     this.mark = true,
   });
 
   final GitHubComment comment;
-  final DateTime now;
   final bool sendable;
 
   /// A bot's mark before its name (none where an avatar shows it).
@@ -98,7 +97,7 @@ class _CommentEntryState extends State<CommentEntry> {
             ),
           ),
         Text(
-          '  ${agoAt(c.createdMs.toInt(), widget.now)}',
+          '  ${agoAt(c.createdMs.toInt(), clock())}',
           style: theme.ui(t.textMuted, size: 11.5),
         ),
         if (!folds || _open) const Spacer(),

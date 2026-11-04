@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_parts.dart';
@@ -55,7 +56,6 @@ class StatePill extends StatelessWidget {
 class PullHeader extends StatelessWidget {
   const new({
     required this.pull,
-    required this.now,
     required this.todo,
     required this.onJump,
     required this.actions,
@@ -64,7 +64,6 @@ class PullHeader extends StatelessWidget {
   });
 
   final GitHubPull pull;
-  final DateTime now;
   final int todo;
   final ValueChanged<PullSection> onJump;
   final List<Widget> actions;
@@ -130,7 +129,9 @@ class PullHeader extends StatelessWidget {
                             text: ' (outside the repository)',
                             style: theme.ui(t.needs, size: 12),
                           ),
-                        TextSpan(text: ', ${agoAt(it.updatedMs.toInt(), now)}'),
+                        TextSpan(
+                          text: ', ${agoAt(it.updatedMs.toInt(), clock())}',
+                        ),
                       ],
                     ),
                     style: small,

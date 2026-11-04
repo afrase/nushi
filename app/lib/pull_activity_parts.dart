@@ -82,10 +82,9 @@ class PointerChip extends StatelessWidget {
 /// A resolved thread as one line: its place, its first words and the last
 /// reply; Show opens its comments.
 class ResolvedThread extends StatefulWidget {
-  const new(this.thread, {required this.now, super.key});
+  const new(this.thread, {super.key});
 
   final GitHubThread thread;
-  final DateTime now;
 
   @override
   State<ResolvedThread> createState() => _ResolvedThreadState();
@@ -153,8 +152,7 @@ class _ResolvedThreadState extends State<ResolvedThread> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final c in x.comments)
-                    CommentEntry(c, now: widget.now, sendable: false),
+                  for (final c in x.comments) CommentEntry(c, sendable: false),
                 ],
               ),
             ),

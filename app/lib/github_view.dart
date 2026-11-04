@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/back_swipe.dart';
 import 'package:nushi/bundled_daemon.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
@@ -526,7 +525,6 @@ class _GitHubViewState extends State<GitHubView> {
                       daemon: widget.daemon,
                       sections: _sections,
                       picked: _picked,
-                      now: clock(),
                       days: githubDays.value,
                       whose: Whose(onPick: _whose),
                       onOpen: (it) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
@@ -69,7 +70,6 @@ class TodoRow extends StatefulWidget {
     required this.item,
     required this.daemon,
     required this.pull,
-    required this.now,
     required this.picked,
     required this.onPick,
     required this.onSend,
@@ -81,7 +81,6 @@ class TodoRow extends StatefulWidget {
   final TodoItem item;
   final Daemon daemon;
   final GitHubPull pull;
-  final DateTime now;
   final bool picked;
   final ValueChanged<bool> onPick;
 
@@ -210,7 +209,7 @@ class _TodoRowState extends State<TodoRow> {
         plainText(f.text),
       ),
     };
-    final who = _whose(i, widget.now);
+    final who = _whose(i, clock());
     return Container(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: t.borderSubtle)),

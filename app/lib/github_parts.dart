@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
@@ -97,11 +98,10 @@ class ItemBadges extends StatelessWidget {
 /// When an item changed, in one line of a fixed width (sized for
 /// [agoShortLongest]): "12d", "5w", "3mo"; the date and time on hover.
 class ItemAge extends StatelessWidget {
-  const new(this.ms, {required this.now, super.key});
+  const new(this.ms, {super.key});
 
   /// When (ms since the epoch).
   final int ms;
-  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +121,7 @@ class ItemAge extends StatelessWidget {
       child: SizedBox(
         width: width,
         child: Text(
-          agoShort(now.difference(when)),
+          agoShort(clock().difference(when)),
           maxLines: 1,
           softWrap: false,
           textAlign: TextAlign.right,
