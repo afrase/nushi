@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -91,6 +93,54 @@ void main() {
       tester.getRect(inPane('Read auth/redirect.go')).top,
       lessThan(tester.getRect(inPane('Look at auth/session.go too')).top),
     );
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('what is typed while a message to a subagent sends stays, '
+      'and a failed one comes back before it', (tester) async {
+    viewport(tester, const Size(1400, 700));
+    showDetails.value = false;
+    paneWidths.value = {};
+    final c = chat('c', 'claude', 'Fix the login redirect');
+    var sent = Completer<SendPromptResponse>();
+    final fake = FakeDaemon([c])
+      ..answer = (input) => switch (input) {
+        GetChatRequest() => GetChatResponse(chat: c, items: _items),
+        SendPromptRequest() => sent.future,
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    d.select('c');
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.textContaining('→ Explore', findRichText: true).first,
+    );
+    await tester.pumpAndSettle();
+    final box = find.descendant(
+      of: find.byType(SubagentPane),
+      matching: find.byType(TextField),
+    );
+    String typed() => tester.widget<TextField>(box).controller!.text;
+
+    Future<void> sendThenType(String first, String then) async {
+      await tester.enterText(box, first);
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pump();
+      await tester.enterText(box, then);
+      await tester.pump();
+    }
+
+    await sendThenType('Look at the tests too', 'and the docs');
+    sent.complete(SendPromptResponse());
+    await tester.pumpAndSettle();
+    expect(typed(), 'and the docs');
+
+    sent = Completer();
+    await sendThenType('Look at the tests too', 'and the docs');
+    sent.completeError(Exception('the agent stopped'));
+    await tester.pumpAndSettle();
+    expect(typed(), 'Look at the tests too\n\nand the docs');
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

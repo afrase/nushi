@@ -258,16 +258,25 @@ class _ToSubagentBoxState extends State<_ToSubagentBox> {
     final text = _text.text.trim();
     if (text.isEmpty || _sending || widget.chat.rewinding.value) return;
     setState(() => _sending = true);
+    // Cleared up front, as the composer does: the send can wait a minute
+    // (a daemon restarting into an update), and what is typed meanwhile
+    // stays. A failed one comes back before it.
+    _text.clear();
     await tryOrShow(context, () async {
-      await widget.daemon.sendPrompt(
-        SendPromptRequest(
-          chatId: widget.chat.id,
-          text: text,
-          queue: true,
-          toSubagent: widget.s.call.id,
-        ),
-      );
-      _text.clear();
+      try {
+        await widget.daemon.sendPrompt(
+          SendPromptRequest(
+            chatId: widget.chat.id,
+            text: text,
+            queue: true,
+            toSubagent: widget.s.call.id,
+          ),
+        );
+      } on Object {
+        final since = _text.text.trim();
+        _text.text = [text, if (since.isNotEmpty) since].join('\n\n');
+        rethrow;
+      }
     });
     if (mounted) setState(() => _sending = false);
   }
