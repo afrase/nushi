@@ -22,17 +22,15 @@ extension DaemonPages on Daemon {
     bool all = false,
   }) async {
     final more = all || through.isNotEmpty;
-    if (chat.olderLoad case final on?) {
+    // One at a time: after any on its way, and any that waited for it.
+    for (var on = chat.olderLoad; on != null; on = chat.olderLoad) {
       if (!more) return;
       await on;
     }
-    bool missing() {
-      final have = {for (final it in chat.items) it.id};
-      return through.any((id) => !have.contains(id));
-    }
-
     if (chat.older == 0 || chat.items.isEmpty || !chat.loaded) return;
-    if (more && !all && !missing()) return;
+    final have = {for (final it in chat.items) it.id};
+    final want = {...through}..removeAll(have);
+    if (!all && more && want.isEmpty) return;
     final done = Completer<void>();
     chat.olderGoing(done.future);
     final before = chat.items.first.id;
@@ -42,7 +40,6 @@ extension DaemonPages on Daemon {
     try {
       var first = before;
       var older = chat.older;
-      final want = through.toSet();
       while (true) {
         final got = await client.getChatItems(
           GetChatItemsRequest(

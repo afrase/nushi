@@ -265,6 +265,24 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('going to several messages pages only for those not loaded', (
+    tester,
+  ) async {
+    final (d, paged) = await _window(tester);
+    final c = _chat(d);
+    expect(c.items.any((it) => it.id == 'c-a99'), isTrue);
+    await d.loadOlder(c, through: ['c-a99', 'c-a80']);
+    expect(c.items.any((it) => it.id == 'c-a80'), isTrue);
+    expect(paged.pages.length, 1);
+    expect(c.older, greaterThan(0), reason: 'not to the start');
+    // Two at once: one after the other, the second with nothing to take.
+    final first = d.loadOlder(c, through: ['c-a20']);
+    final second = d.loadOlder(c, through: ['c-a20']);
+    await Future.wait([first, second]);
+    expect(paged.pages.length, 2);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('⌘F says it looks in what’s loaded; Load all takes the rest '
       'and finds there', (tester) async {
     final (d, _) = await _window(tester);
