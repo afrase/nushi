@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -809,5 +810,123 @@ func TestListenersPerAddress(t *testing.T) {
 	_ = open[0].Close()
 	if !testcheck.Eventually(func() bool { return listen("203.0.113.7") == 0 }) {
 		t.Error("a listener that left still counts")
+	}
+}
+
+// The address header is believed only from a trusted proxy: a client that
+// reaches the relay directly can't pick a new address for each request
+// and so slip the per-address caps.
+func TestHeaderOnlyFromTrustedProxies(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.PerIP = 2
+	lim.Total = 100
+	lim.NewRate = 1e9
+	lim.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")} // not this test's loopback
+	url := start(t, lim)
+	for i := range 2 {
+		ws, code := from(url, "listen", newID(), fmt.Sprintf("203.0.113.%d", i))
+		if ws == nil {
+			t.Fatalf("refused (%d) under the cap", code)
+		}
+		t.Cleanup(func() { _ = ws.Close() })
+	}
+	if ws, code := from(url, "listen", newID(), "203.0.113.99"); ws != nil || code != http.StatusServiceUnavailable {
+		if ws != nil {
+			_ = ws.Close()
+		}
+		t.Fatalf("a direct client's header was believed: %d", code)
+	}
+
+	// Loopback is trusted when none are named: a proxy on the same machine.
+	lim.TrustedProxies = nil
+	url = start(t, lim)
+	for i := range 3 {
+		ws, code := from(url, "listen", newID(), fmt.Sprintf("203.0.113.%d", i))
+		if ws == nil {
+			t.Fatalf("a local proxy's header wasn't believed: %d", code)
+		}
+		t.Cleanup(func() { _ = ws.Close() })
+	}
+}
+
+// Behind a proxy, a plain connection from a peer that isn't one is counted
+// under its own address at once.
+func TestPlainCapForADirectPeer(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.PlainPerIP = 2
+	lim.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")}
+	srv := NewServer(lim)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go func() { _ = srv.Serve(ln) }()
+	defer func() { _ = srv.Close() }()
+	codes := ""
+	for i := range 3 {
+		c, err := net.Dial("tcp", ln.Addr().String())
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = c.Close() })
+		_, _ = fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: 198.51.100.%d\r\n\r\n", i)
+		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
+		if err != nil {
+			codes += "closed "
+			continue
+		}
+		_ = resp.Body.Close()
+		codes += fmt.Sprint(resp.StatusCode, " ")
+	}
+	if codes != "200 200 closed " {
+		t.Fatalf("three plain connections from one direct peer: %s", codes)
+	}
+}
+
+// Listeners are capped under the address the relay believes: from a peer
+// that isn't a trusted proxy, its own, whatever address its header names,
+// so a direct client can't spread its listeners over made-up addresses;
+// from a trusted proxy, the header's, so its clients don't share the
+// proxy's one cap.
+func TestListenerCapUnderTheBelievedAddress(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.ListenPerIP = 2
+	lim.NewRate = 1e9
+	listen := func(url, addr string) int {
+		ws, code := from(url, "listen", newID(), addr)
+		if ws != nil {
+			t.Cleanup(func() { _ = ws.Close() })
+		}
+		return code
+	}
+
+	lim.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("192.0.2.0/24")} // not this test's loopback
+	url := start(t, lim)
+	for i := range 2 {
+		if code := listen(url, fmt.Sprintf("203.0.113.%d", i)); code != 0 {
+			t.Fatalf("a direct peer's listener %d refused (%d) under the cap", i, code)
+		}
+	}
+	if code := listen(url, "198.51.100.1"); code != http.StatusServiceUnavailable {
+		t.Errorf("a direct peer's third listener, under another header address: %d", code)
+	}
+	if ws, code := from(url, "dial", newID(), "198.51.100.2"); ws == nil {
+		t.Errorf("a dialer from a peer with every listener was refused: %d", code)
+	} else {
+		_ = ws.Close()
+	}
+
+	lim.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	url = start(t, lim)
+	for _, addr := range []string{"203.0.113.7", "203.0.113.7", "198.51.100.1", "2001:db8:1::1"} {
+		if code := listen(url, addr); code != 0 {
+			t.Fatalf("a trusted proxy's client %s refused (%d) under its own cap", addr, code)
+		}
+	}
+	if code := listen(url, "203.0.113.7"); code != http.StatusServiceUnavailable {
+		t.Errorf("a third listener from one client behind a trusted proxy: %d", code)
 	}
 }

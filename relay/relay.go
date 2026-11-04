@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"net"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"sync"
 	"sync/atomic"
@@ -33,12 +34,16 @@ type Limits struct {
 	PerIP      int           // connections from one address (an IPv6 /64); at most half of Total
 	NewRate    float64       // new connections a second from one address, once NewBurst is spent
 	NewBurst   float64
-	Total      int           // connections in all
-	IPHeader   string        // behind a reverse proxy, the header with the client's address (such as Fly-Client-IP)
-	IPHops     int           // the proxies that append to IPHeader: the address is this many from its right (at least 1)
-	HTTPIdle   time.Duration // a plain HTTP connection (not a WebSocket) waits this long for its next request
-	PlainPerIP int           // plain connections from one address
-	FirstWait  time.Duration // a new connection has this long for its first request's headers
+	Total      int    // connections in all
+	IPHeader   string // behind a reverse proxy, the header with the client's address (such as Fly-Client-IP)
+	IPHops     int    // the proxies that append to IPHeader: the address is this many from its right (at least 1)
+	// TrustedProxies are the peers whose IPHeader is believed (nil:
+	// loopback only); any other peer is counted under its own address
+	// against every per-address cap, ListenPerIP included.
+	TrustedProxies []netip.Prefix
+	HTTPIdle       time.Duration // a plain HTTP connection (not a WebSocket) waits this long for its next request
+	PlainPerIP     int           // plain connections from one address
+	FirstWait      time.Duration // a new connection has this long for its first request's headers
 	// ListenPerIP caps the listeners from one address (an IPv6 /48), 0
 	// for none: listening needs only a key of one's own, so without it
 	// a few addresses could hold every connection for MaxWait at a time.

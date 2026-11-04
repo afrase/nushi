@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
+	"strings"
 
 	"golang.org/x/crypto/acme/autocert"
 
@@ -41,6 +43,7 @@ func main() {
 	flag.Float64Var(&lim.NewBurst, "new-burst", lim.NewBurst, "new connections from one address at once")
 	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. CF-Connecting-IP for cloudflared, Fly-Client-IP); of a list (X-Forwarded-For), the last entry")
 	flag.IntVar(&lim.IPHops, "ip-hops", 1, "with -ip-header: how many proxies append to it (the client's address is this many from the right)")
+	proxies := flag.String("trusted-proxy", "", "with -ip-header: the proxies whose header is believed, as comma-separated addresses or CIDRs (default: loopback only); any other peer counts under its own address")
 	flag.IntVar(&lim.Total, "total", lim.Total, "connections in all")
 	flag.DurationVar(&lim.HTTPIdle, "http-idle", lim.HTTPIdle, "close a plain HTTP connection (not a WebSocket) idle this long")
 	flag.DurationVar(&lim.FirstWait, "first-wait", lim.FirstWait, "how long a new connection has for its first request's headers")
@@ -51,6 +54,21 @@ func main() {
 	if *showVersion {
 		fmt.Println("nushi-relay", version) //nolint:forbidigo // -version's answer
 		return
+	}
+
+	for p := range strings.SplitSeq(*proxies, ",") {
+		if p = strings.TrimSpace(p); p == "" {
+			continue
+		}
+		pre, err := netip.ParsePrefix(p)
+		if err != nil {
+			a, aerr := netip.ParseAddr(p)
+			if aerr != nil {
+				log.Fatalf("-trusted-proxy: %q is neither an address nor a CIDR", p)
+			}
+			pre = netip.PrefixFrom(a, a.BitLen())
+		}
+		lim.TrustedProxies = append(lim.TrustedProxies, pre.Masked())
 	}
 
 	if *origin == "" && *web != "" && *host != "" {

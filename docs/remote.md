@@ -128,6 +128,7 @@ app = "my-nushi-relay"
 ```
 
 - Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests.
+- Fly's proxy doesn't reach the relay over loopback, so add `-trusted-proxy` with the address range it connects from (the peer address the relay sees); until then the relay counts every client under the proxy's address. Other machines in your Fly organization may share that range and so could pick their own address.
 - For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
 
 ### The client's address
@@ -137,6 +138,7 @@ app = "my-nushi-relay"
 - Behind a proxy of your own, name a header it sets (nginx's `X-Real-IP $remote_addr`), or one it appends to (`X-Forwarded-For` with `$proxy_add_x_forwarded_for`, HAProxy's `option forwardfor`).
 - With an appended header, the relay takes the last entry, the one the proxy added, since the client writes what comes before. With several proxies in a row, `-ip-hops` says how many append.
 - Never name a header the proxy passes on as the client sent it.
+- The header is believed only from a loopback peer (a proxy on the same machine, as cloudflared or Caddy usually is), or from the addresses `-trusted-proxy` names (comma-separated addresses or CIDRs). Any other peer is counted under its own address. Still bind the relay where only the proxy reaches it (`-addr 127.0.0.1:8090`).
 
 ### Updating a relay from a release
 

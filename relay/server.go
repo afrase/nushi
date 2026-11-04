@@ -15,8 +15,8 @@ import (
 // gets FirstWait for its first request's headers, a later request 5 s, and
 // it waits HTTPIdle between requests. Per address, at most PlainPerIP are
 // open and new ones come at the WebSockets' rate; the address is the TCP
-// peer's from the accept, or behind a proxy (IPHeader) the header's once a
-// request has come. New connections that haven't sent a request yet have
+// peer's from the accept, or from a trusted proxy (IPHeader,
+// TrustedProxies) the header's once a request has come. New connections that haven't sent a request yet have
 // a budget of their own, a tenth of Total: when it's spent, the oldest of
 // them makes way for a new one. When Total are open, the oldest of them
 // does, else the one idle longest.
@@ -63,7 +63,7 @@ func (s *server) connState(c net.Conn, st http.ConnState) {
 	switch st {
 	case http.StateNew:
 		key := ""
-		if s.lim.IPHeader == "" {
+		if !s.proxied(c.RemoteAddr().String()) {
 			key = keyOf(c.RemoteAddr().String(), 64)
 			if !s.admitPlain(key, now) {
 				_ = c.Close()
@@ -136,7 +136,7 @@ func (s *server) served(r *http.Request) bool {
 	}
 	s.unFresh(pc)
 	key := s.sourceKey(r)
-	if s.lim.IPHeader == "" || pc.key == key {
+	if pc.key == key {
 		return true
 	}
 	now := time.Now()

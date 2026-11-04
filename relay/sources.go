@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"net"
 	"net/http"
+	"net/netip"
 	"strings"
 	"time"
 )
@@ -27,9 +28,10 @@ var salt = func() []byte {
 
 // sourceKey is the hash of the client's address: an IPv4 address, or an
 // IPv6 address's /64 (one home or phone has a whole /64). Behind a reverse
-// proxy the address comes from the header Limits.IPHeader names. A proxy
-// appends to a list header such as X-Forwarded-For, after whatever the
-// client wrote there, so the address is the IPHops-th from the right.
+// proxy the address comes from the header Limits.IPHeader names, when the
+// request came through one of TrustedProxies. A proxy appends to a list
+// header such as X-Forwarded-For, after whatever the client wrote there, so
+// the address is the IPHops-th from the right.
 func (s *server) sourceKey(r *http.Request) string {
 	return keyOf(s.clientAddr(r), 64)
 }
@@ -37,14 +39,16 @@ func (s *server) sourceKey(r *http.Request) string {
 // listenerKey is the hash of the client's address as listeners are
 // counted: an IPv4 address, or an IPv6 address's /48, which one home or
 // one rented server often has whole, so a /56 of /64s can't take every
-// listener.
+// listener. It is the same address as sourceKey's, so a peer that isn't
+// a trusted proxy can't spread its listeners over made-up addresses.
 func (s *server) listenerKey(r *http.Request) string {
 	return keyOf(s.clientAddr(r), 48)
 }
 
-// clientAddr is the client's address, as sourceKey says.
+// clientAddr is the client's address, as sourceKey says: the header's
+// only from a trusted proxy, else the TCP peer's.
 func (s *server) clientAddr(r *http.Request) string {
-	if s.lim.IPHeader == "" {
+	if !s.proxied(r.RemoteAddr) {
 		return r.RemoteAddr
 	}
 	var addrs []string
@@ -58,6 +62,29 @@ func (s *server) clientAddr(r *http.Request) string {
 		return "" // not through the proxies said
 	}
 	return addrs[len(addrs)-hops]
+}
+
+// proxied says whether a peer at addr is a proxy whose IPHeader the relay
+// believes: one of TrustedProxies, or with none named a loopback address
+// (a proxy on the same machine). Anyone else could write any address there.
+func (s *server) proxied(addr string) bool {
+	if s.lim.IPHeader == "" {
+		return false
+	}
+	ap, err := netip.ParseAddrPort(addr)
+	if err != nil {
+		return false
+	}
+	ip := ap.Addr().Unmap()
+	if s.lim.TrustedProxies == nil {
+		return ip.IsLoopback()
+	}
+	for _, p := range s.lim.TrustedProxies {
+		if p.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 // keyOf is the hash of an address (with or without a port), an IPv6 one
