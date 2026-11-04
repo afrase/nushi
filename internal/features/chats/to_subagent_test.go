@@ -49,6 +49,21 @@ func TestMessagesGoToSubagentsThroughTheAgent(t *testing.T) {
 		t.Errorf("replayed = %+v", it)
 	}
 
+	// Its files go inside the message the agent forwards, not beside it.
+	if err := svc.Prompt(t.Context(), c.id, model.Message{Text: "see these", To: "a1", Files: []string{"docs/a.md", "/x/b c.pdf"}}, SendQueue); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, c, func() bool { return !c.busy })
+	agent.mu.Lock()
+	p := agent.prompt
+	agent.mu.Unlock()
+	if want := claudeHarness.ToSubagent("Explore", "ab59", "see these\n\n@\""+c.record.Folder+"/docs/a.md\" @\"/x/b c.pdf\""); len(p) != 1 || p[0].Text == nil || p[0].Text.Text != want {
+		t.Errorf("prompt = %+v", p)
+	}
+	if _, _, _, ok := claudeHarness.ReadToSubagent(p[0].Text.Text); !ok {
+		t.Error("its replay isn't read as for the subagent")
+	}
+
 	// A replayed subagent (no steps, no report) that a message runs again.
 	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{
 		ToolCallID: "r1", Title: "head -1 a.go", Kind: "execute", Meta: map[string]any{"claudeCode": map[string]any{"parentToolUseId": "a1"}}}}})

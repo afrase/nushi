@@ -238,18 +238,27 @@ func (c *chat) backgroundLocked(from int) bool {
 // its absolute path when outside it: omp gives its model only the name, never
 // the URI, so a bare name would send it to a same-named file in the folder.
 func (c *chat) blocks(m model.Message) []acp.ContentBlock {
-	text := m.Text
+	text, files := m.Text, m.Files
 	switch r := m.ToSubagent; {
 	case r != nil && r.Stop:
 		text = c.kind.background.StopTask(r.AgentID)
 	case r != nil:
-		text = c.kind.toSubagents.ToSubagent(r.Agent, r.AgentID, text)
+		// The files go in the message the agent forwards, by their paths,
+		// not as links of the agent's own beside it: those it would be
+		// told not to act on, and the subagent never told of.
+		var b strings.Builder
+		b.WriteString(text)
+		sep := "\n\n"
+		for _, f := range files {
+			b.WriteString(sep + `@"` + c.filePath(f) + `"`)
+			sep = " "
+		}
+		text, files = c.kind.toSubagents.ToSubagent(r.Agent, r.AgentID, b.String()), nil
 	}
 	prompt := []acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: text}}}
-	for _, f := range m.Files {
-		path, name := filepath.Join(c.record.Folder, f), f
+	for _, f := range files {
+		path, name := c.filePath(f), f
 		if filepath.IsAbs(f) {
-			path = filepath.Clean(f)
 			name = path
 		}
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
@@ -260,6 +269,15 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 			MimeType: img.MimeType, Data: base64.StdEncoding.EncodeToString(img.Data)}})
 	}
 	return prompt
+}
+
+// filePath is where a message's file is: its path in the chat's folder,
+// or its own when outside it.
+func (c *chat) filePath(f string) string {
+	if filepath.IsAbs(f) {
+		return filepath.Clean(f)
+	}
+	return filepath.Join(c.record.Folder, f)
 }
 
 // size is about how much of a prompt's frame a message takes: its text, and
