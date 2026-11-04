@@ -659,7 +659,7 @@ const (
 // waits, or (Terminal) a terminal running a command, in a chat.
 type Hold struct {
 	ChatID   string
-	Why      string // "working", "waits on you", "a message queued", "in background"; a terminal's "running <program>"
+	Why      string // "working", "waits on you", "a message queued", "in background", a side chat's ("a side chat is working"); a terminal's "running <program>"
 	Terminal bool
 }
 

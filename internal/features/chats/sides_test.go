@@ -199,3 +199,34 @@ func TestAReopeningChatOffersTheCommandsListedLast(t *testing.T) {
 	back := reopened(t, again, id)
 	eventually(t, back, func() bool { return len(back.commands) == 2 && back.commands[0].Name == "fresh" })
 }
+
+// A busy side chat holds the idle restart, and the restart's bar says so
+// under its chat, the one the app lists: no hold it can't show (ADR 0056).
+// The chat's own hold comes first.
+func TestASideChatsHoldIsItsChats(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	ctx := context.Background()
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+	side, err := svc.Fork(ctx, c.id)
+	testcheck.NoErr(t, err)
+	agent.updates, agent.gate = nil, make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(ctx, side, model.Message{Text: "aside?"}, SendIdle))
+	if ok, holding := svc.Rest(); ok || holding != c.id {
+		t.Errorf("Rest = %v, %q; want held by %q", ok, holding, c.id)
+	}
+	if got, want := svc.Holding(), []model.Hold{{ChatID: c.id, Why: "a side chat is working"}}; !slices.Equal(got, want) {
+		t.Errorf("holding %+v, want %+v", got, want)
+	}
+	c.mu.Lock()
+	c.queue = []model.Message{{ID: "q", Text: "later"}}
+	c.mu.Unlock()
+	if got, want := svc.Holding(), []model.Hold{{ChatID: c.id, Why: "a message queued"}}; !slices.Equal(got, want) {
+		t.Errorf("holding %+v, want %+v", got, want)
+	}
+	c.mu.Lock()
+	c.queue = nil
+	c.mu.Unlock()
+	agent.release()
+}

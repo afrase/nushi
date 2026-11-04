@@ -37,38 +37,58 @@ func (s *Service) Unrest() {
 	s.resting.Store(false)
 }
 
-// notQuiet returns a chat that isn't quiet, or "".
+// notQuiet returns a chat that isn't quiet (a side chat's chat), or "".
 func (s *Service) notQuiet() string {
-	s.mu.Lock()
-	open := slices.Collect(maps.Values(s.chats))
-	s.mu.Unlock()
-	for _, c := range open {
-		c.mu.Lock()
-		quiet := c.quietLocked()
-		c.mu.Unlock()
-		if !quiet {
-			return c.id
-		}
+	if holds := s.Holding(); len(holds) > 0 {
+		return holds[0].ChatID
 	}
 	return ""
 }
 
 // Holding says what keeps each chat that isn't quiet from resting, for
-// the restart's wait to show; it changes nothing.
+// the restart's wait to show; it changes nothing. A side chat's hold is
+// its chat's (the app lists only those: ADR 0056 wants no hold it can't
+// show), unless that chat holds by itself.
 func (s *Service) Holding() []model.Hold {
 	s.mu.Lock()
 	open := slices.Collect(maps.Values(s.chats))
 	s.mu.Unlock()
-	var out []model.Hold
+	own, sides := map[string]string{}, map[string]string{}
 	for _, c := range open {
 		c.mu.Lock()
-		if !c.quietLocked() && c.parent == nil {
-			out = append(out, model.Hold{ChatID: c.id, Why: c.holdLocked()})
+		if !c.quietLocked() {
+			if c.parent == nil {
+				own[c.id] = c.holdLocked()
+			} else {
+				sides[c.parent.id] = sideHold(c.holdLocked()) // its id never changes: no need of its lock
+			}
 		}
 		c.mu.Unlock()
 	}
+	for id, why := range sides {
+		if _, ok := own[id]; !ok {
+			own[id] = why
+		}
+	}
+	out := make([]model.Hold, 0, len(own))
+	for id, why := range own {
+		out = append(out, model.Hold{ChatID: id, Why: why})
+	}
 	slices.SortFunc(out, func(a, b model.Hold) int { return strings.Compare(a.ChatID, b.ChatID) })
 	return out
+}
+
+// sideHold is a side chat's hold (holdLocked) as its chat shows it.
+func sideHold(why string) string {
+	switch why {
+	case "waits on you":
+		return "a side chat waits on you"
+	case "working":
+		return "a side chat is working"
+	case "a message queued":
+		return "a side chat has a message queued"
+	}
+	return "a side chat is in background"
 }
 
 // holdLocked is why a chat that isn't quiet isn't, in a few words.
