@@ -139,3 +139,19 @@ func TestUnder(t *testing.T) {
 		t.Errorf("under 10: %v", got)
 	}
 }
+
+// An empty first argument isn't taken for the path's padding: the
+// arguments stay where they are, and the environment out of them.
+func TestArgsWithAnEmptyFirstArgument(t *testing.T) {
+	for _, want := range [][]string{{"", "30"}, {"sleep", "30"}} {
+		cmd := &exec.Cmd{Path: "/bin/sleep", Args: want, Env: []string{"SECRET_TOKEN=hunter2"}}
+		testcheck.NoErr(t, cmd.Start())
+		var got []string
+		ok := testcheck.Eventually(func() bool { got = Args(cmd.Process.Pid); return slices.Equal(got, want) })
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait() // killed: its error says only that
+		if !ok {
+			t.Errorf("Args of %q = %q", want, got)
+		}
+	}
+}

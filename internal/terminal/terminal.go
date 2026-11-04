@@ -16,6 +16,8 @@ import (
 
 	"github.com/creack/pty"
 	"golang.org/x/sys/unix"
+
+	"github.com/afrase/nushi/internal/proctree"
 )
 
 const (
@@ -217,22 +219,10 @@ func (t *Terminal) foreground() int {
 // commandLine returns a process's arguments, the first without its folder,
 // or its name when they can't be read.
 func commandLine(pid int) string {
-	raw, err := unix.SysctlRaw("kern.procargs2", pid)
-	if err != nil || len(raw) < 4 {
+	args := proctree.Args(pid)
+	if args == nil {
 		return name(pid)
 	}
-	argc := int(raw[0]) | int(raw[1])<<8 | int(raw[2])<<16 | int(raw[3])<<24
-	// The executable's path, then NULs up to the next multiple of 8, then
-	// the arguments and the environment: an empty first argument is one
-	// NUL more, which a cut at the first non-NUL would take for padding.
-	rest := raw[4:]
-	i := bytes.IndexByte(rest, 0)
-	start := (i + 1 + 7) &^ 7
-	if i < 0 || start > len(rest) || len(bytes.Trim(rest[i:start], "\x00")) > 0 {
-		return name(pid)
-	}
-	args := strings.Split(string(rest[start:]), "\x00")
-	args = args[:min(argc, len(args))]
 	if len(args) == 0 {
 		return ""
 	}

@@ -75,15 +75,18 @@ func (Tree) Under(root int) ([]model.Process, error) {
 	}
 	out := under(ps, root)
 	for i := range out {
-		out[i].Args = args(out[i].Pid)
+		out[i].Args = Args(out[i].Pid)
 	}
 	return out, nil
 }
 
-// args reads a process's command line: kern.procargs2 is argc (an int32),
-// the executable's path and its padding, then argc strings, then the
-// environment, each ended by a NUL.
-func args(pid int) []string {
+// Args reads a process's command line, nil when it can't be read (it
+// ended, or it isn't the user's). kern.procargs2 is argc (an int32), the
+// executable's path and NULs up to the next multiple of 8, then argc
+// strings and the environment, each ended by a NUL: an empty first
+// argument is one NUL more, which a cut at the first non-NUL would take
+// for padding.
+func Args(pid int) []string {
 	b, err := unix.SysctlRaw("kern.procargs2", pid)
 	if err != nil || len(b) < 4 {
 		return nil
@@ -91,10 +94,11 @@ func args(pid int) []string {
 	argc := int(binary.LittleEndian.Uint32(b))
 	b = b[4:]
 	i := bytes.IndexByte(b, 0)
-	if i < 0 {
+	start := (i + 1 + 7) &^ 7
+	if i < 0 || start > len(b) || len(bytes.Trim(b[i:start], "\x00")) > 0 {
 		return nil
 	}
-	b = bytes.TrimLeft(b[i:], "\x00")
+	b = b[start:]
 	out := make([]string, 0, min(argc, 256))
 	for range argc {
 		i := bytes.IndexByte(b, 0)
