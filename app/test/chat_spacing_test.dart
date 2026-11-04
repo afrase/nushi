@@ -102,11 +102,12 @@ final _items = <Item>[
   ),
 ];
 
-/// The app on a chat with [_items], its preview open with [file], [pane]
-/// wide if given.
+/// The app on a chat with [items] ([_items] if not given), its preview open
+/// with [file], [pane] wide if given.
 Future<Daemon> _app(
   WidgetTester tester, {
   required double width,
+  List<Item>? items,
   Brightness? brightness,
   double height = 1000,
   String? file,
@@ -118,7 +119,7 @@ Future<Daemon> _app(
   final c = chat('c', 'claude', 'Fix the login redirect after it expires');
   final fake = FakeDaemon([c])
     ..answer = ((input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items)
+        ? GetChatResponse(chat: c, items: items ?? _items)
         : null)
     ..streams = (input) {
       if (input is! WatchChatFileRequest) return null;
@@ -342,6 +343,24 @@ void main() {
       expect(text.height % 22, 0);
       final view = tester.getRect(find.byType(ChatView));
       expect(text.left, view.left + readablePad(view.width));
+      await closeView(tester, d);
+    }, variant: _mac);
+
+    testWidgets('14 on 22 for a message that names a file', (tester) async {
+      // A finished message whose paths are links is built apart from one
+      // without: it must still be a transcript's message (ADR 0072).
+      final d = await _app(
+        tester,
+        width: 1700,
+        items: [
+          Item(
+            id: 'm',
+            kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+            text: 'The fix is in `app/session.go`, and nowhere else.',
+          ),
+        ],
+      );
+      expect(_text(tester, 'The fix is in').height, 22);
       await closeView(tester, d);
     }, variant: _mac);
 

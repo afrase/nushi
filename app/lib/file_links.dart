@@ -175,49 +175,47 @@ class _LinkedMarkdownState extends State<LinkedMarkdown> {
     }
   }
 
-  // A shell block runs in a terminal of the chat's: on the Mac only, the
-  // phone has none.
-  Widget? _runnable(String language, String code, MarkdownStyle style) =>
-      runnableBlock(language, code, style, widget.chat, widget.daemon);
-
   _CodeBlock? _block;
 
   @override
   Widget build(BuildContext context) {
-    _block = kIsWeb || TouchTargets.of(context) ? null : _runnable;
-    return _paced(context);
+    // A shell block runs in a terminal of the chat's: on the Mac only, the
+    // phone has none.
+    _block = kIsWeb || TouchTargets.of(context)
+        ? null
+        : (language, code, style) =>
+              runnableBlock(language, code, style, widget.chat, widget.daemon);
+    return Paced(
+      widget.text,
+      live: widget.live,
+      builder: (context, shown) =>
+          shown != null ? _md(live: true, shown: shown) : _linked(context),
+    );
   }
 
-  Widget _paced(BuildContext context) => Paced(
+  /// The message as a transcript's Markdown (ADR 0072), however it shows.
+  Widget _md({
+    bool live = false,
+    Shown? shown,
+    Map<String, String>? files,
+    void Function(String path)? onTapFile,
+  }) => AgentMarkdown(
     widget.text,
-    live: widget.live,
-    builder: (context, shown) => shown != null
-        ? AgentMarkdown(
-            widget.text,
-            live: true,
-            shown: shown,
-            transcript: true,
-            codeBlock: _block,
-          )
-        : _linked(context),
+    live: live,
+    shown: shown,
+    files: files,
+    onTapFile: onTapFile,
+    transcript: true,
+    codeBlock: _block,
   );
 
   Widget _linked(BuildContext context) {
     final open = Previews.of(context)?.open;
-    if (open == null || _named.isEmpty) {
-      return AgentMarkdown(
-        widget.text,
-        live: widget.live,
-        transcript: true,
-        codeBlock: _block,
-      );
-    }
+    if (open == null || _named.isEmpty) return _md(live: widget.live);
     final links = widget.chat.fileLinks;
     return ListenableBuilder(
       listenable: links,
-      builder: (context, _) => AgentMarkdown(
-        widget.text,
-        codeBlock: _block,
+      builder: (context, _) => _md(
         files: {
           for (final MapEntry(:key, :value) in _named.entries)
             if (links.there(value) ?? false) key: value,
