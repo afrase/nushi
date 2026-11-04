@@ -20,13 +20,6 @@ class FilesScreen extends StatefulWidget {
   final Daemon daemon;
   final ChatState chat;
 
-  static void open(BuildContext context, Daemon daemon, ChatState chat) =>
-      Navigator.of(context)
-          .push(
-            MaterialPageRoute<void>(builder: (_) => FilesScreen(daemon, chat)),
-          )
-          .ignore();
-
   @override
   State<FilesScreen> createState() => _FilesScreenState();
 }
