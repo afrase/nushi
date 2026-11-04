@@ -275,7 +275,8 @@ class _Count extends StatelessWidget {
 /// Who's next once the list is done: the reviewers still asked, else the
 /// checks still running, else that it can merge. With nothing in the list
 /// ([after] false) the head says who's next (said once), so this keeps
-/// only the way to ping the reviewers.
+/// only the way to ping the reviewers; a draft's head says only that it's
+/// a draft, so there this still says it.
 class _Next extends StatelessWidget {
   const new({required this.pull, required this.after});
 
@@ -302,7 +303,8 @@ class _Next extends StatelessWidget {
       color: t.raised,
       border: Border(top: BorderSide(color: t.borderSubtle)),
     );
-    if (!after && (waiting.isNotEmpty || running > 0)) {
+    final headSays = !after && !p.item.draft;
+    if (headSays && (waiting.isNotEmpty || running > 0)) {
       return ping == null
           ? const SizedBox.shrink()
           : Container(
@@ -312,16 +314,17 @@ class _Next extends StatelessWidget {
               child: ping,
             );
     }
+    final then = after ? 'Then waiting on ' : 'Waiting on ';
     final (String? lead, String? who, String rest) = waiting.isNotEmpty
         ? (
-            'Then waiting on ',
+            then,
             names(waiting.map((r) => '@${r.login}')),
             waiting.any((r) => r.codeOwner)
                 ? ': approval required as code owner.'
                 : ': review requested.',
           )
         : running > 0
-        ? ('Then waiting on ', null, 'checks: $running running.')
+        ? (then, null, 'checks: $running running.')
         : after || ready
         ? (null, null, '')
         : (null, null, 'Nothing else waits: it can merge once its rules pass.');

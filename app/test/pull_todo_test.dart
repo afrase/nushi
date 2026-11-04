@@ -430,4 +430,24 @@ void main() {
     expect(find.text('Ping on GitHub'), findsOneWidget);
     d.dispose();
   }, variant: _mac);
+
+  testWidgets("a draft with nothing to do: To do's foot says who is waited "
+      "on, since the head's draft line doesn't", (tester) async {
+    final p = mergePull('ready')
+      ..conversation.clear()
+      ..item.draft = true
+      ..reviewers.add(
+        GitHubReviewer(login: 'notes-reviewers', state: 'requested'),
+      );
+    final (d, _) = await openPullTab(tester, p);
+    expect(
+      find.textContaining(
+        'Waiting on @notes-reviewers: review requested.',
+        findRichText: true,
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Ping on GitHub'), findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
 }
