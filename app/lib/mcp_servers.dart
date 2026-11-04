@@ -70,6 +70,7 @@ class McpServers extends ChangeNotifier {
         _take(await _list(false));
         _take(await _list(true));
       } on Object catch (e) {
+        _unchecked();
         error = errorText(e);
       }
     } while (_again);
@@ -91,18 +92,19 @@ class McpServers extends ChangeNotifier {
       );
 
   void _take(ListMcpServersResponse r) {
-    // A check that failed leaves the servers unchecked, not "Checking…".
-    servers = [
-      for (final s in r.servers)
-        if (r.checkError.isNotEmpty && s.state.isEmpty)
-          s.deepCopy()..state = 'unknown'
-        else
-          s,
-    ];
+    servers = r.servers;
+    if (r.checkError.isNotEmpty) _unchecked();
     error = r.checkError;
     loaded = true;
     notifyListeners();
   }
+
+  /// A check that failed, or a call cut short, leaves the servers
+  /// unchecked, not "Checking…".
+  void _unchecked() => servers = [
+    for (final s in servers)
+      if (s.state.isEmpty) s.deepCopy()..state = 'unknown' else s,
+  ];
 
   /// The servers the agent uses: none hidden by one of the same name.
   Iterable<McpServer> get used => servers.where((s) => !s.shadowed);

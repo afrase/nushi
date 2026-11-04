@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -123,6 +124,48 @@ void main() {
     await tester.tap(find.text('Reload'));
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<ReloadChatRequest>().single.chatId, 'c1');
+    await closeView(tester, d);
+  });
+
+  testWidgets('a check whose call fails leaves the servers not checked, '
+      'with Try again', (tester) async {
+    var checks = 0;
+    final fake = FakeDaemon([])
+      ..answer = (input) {
+        if (input is! ListMcpServersRequest) return null;
+        if (!input.checkHealth) {
+          return ListMcpServersResponse(
+            servers: [for (final s in _servers()) s.deepCopy()..clearState()],
+          );
+        }
+        if (checks++ == 0) {
+          throw ConnectException(
+            Code.unavailable,
+            'daemon unavailable: connection lost',
+          );
+        }
+        return ListMcpServersResponse(servers: _servers());
+      };
+    fake.agents.first.mcp = true;
+    final d = await fake.connect(tester);
+    final chat = ChatState('c1', '/Users/me/cut')..agent = 'claude';
+    await tester.binding.setSurfaceSize(const Size(340, 500));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(body: PanelWidgets([mcpWidget(chat, d)])),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    expect(find.text('Checking…'), findsNothing);
+    expect(find.text('Not checked'), findsNWidgets(5)); // and one off
+
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(checks, 2);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.text('Connected'), findsNWidgets(4));
     await closeView(tester, d);
   });
 
