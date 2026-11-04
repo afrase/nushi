@@ -77,6 +77,11 @@ func configValue(v acp.SessionConfigSelectOption, group string) model.ConfigValu
 	return model.ConfigValue{Value: string(v.Value), Name: v.Name, Description: v.Description, Group: group}
 }
 
+// configIndex is the index of option id in opts, or -1.
+func configIndex(opts []model.ConfigOption, id string) int {
+	return slices.IndexFunc(opts, func(o model.ConfigOption) bool { return o.ID == id })
+}
+
 // modeIndex is the index of the mode option in opts, or -1.
 func modeIndex(opts []model.ConfigOption) int {
 	return slices.IndexFunc(opts, func(o model.ConfigOption) bool { return o.Category == "mode" })
@@ -157,7 +162,7 @@ func withPick(picks map[string]string, id, value string) map[string]string {
 // session the chat no longer has is dropped.
 func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string) error {
 	c.mu.Lock()
-	i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id })
+	i := configIndex(c.config, id)
 	var opt model.ConfigOption
 	if i >= 0 {
 		opt = c.config[i]
@@ -198,7 +203,7 @@ func (c *chat) setConfig(ctx context.Context, agent Agent, sid, id, value string
 	}
 	if updated != nil {
 		c.replaceConfigLocked(updated)
-	} else if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id }); i >= 0 {
+	} else if i := configIndex(c.config, id); i >= 0 {
 		c.config[i].Current = value
 	}
 	c.configChangedLocked()
@@ -227,7 +232,7 @@ func (c *chat) configChangedLocked() {
 func (c *chat) followedLocked(picks map[string]string) map[string]string {
 	var out map[string]string
 	for id, value := range picks {
-		if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id }); i >= 0 && c.config[i].Current != value {
+		if i := configIndex(c.config, id); i >= 0 && c.config[i].Current != value {
 			if out == nil {
 				out = maps.Clone(picks)
 			}
@@ -282,7 +287,7 @@ func (c *chat) reapply(ctx context.Context, agent Agent, sid, mode string, picks
 func (c *chat) applyPicks(ctx context.Context, agent Agent, sid string, picks map[string]string) map[string]string {
 	c.mu.Lock()
 	rank := func(id string) int {
-		i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id })
+		i := configIndex(c.config, id)
 		switch {
 		case i < 0:
 			return len(c.config)
@@ -298,7 +303,7 @@ func (c *chat) applyPicks(ctx context.Context, agent Agent, sid string, picks ma
 	for _, id := range ids {
 		value := picks[id]
 		c.mu.Lock()
-		i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == id })
+		i := configIndex(c.config, id)
 		offered := i >= 0 && (c.config[i].Type == "boolean" || slices.ContainsFunc(c.config[i].Values, func(v model.ConfigValue) bool { return v.Value == value }))
 		set := offered && c.config[i].Current != value
 		c.mu.Unlock()
@@ -359,7 +364,7 @@ func (s *Service) setUltracode(ctx context.Context, c *chat, on bool) error {
 	}
 	c.ultracode.Store(on)
 	c.saveLocked(func(s *model.ChatRecord) { s.Ultracode = on })
-	if i := slices.IndexFunc(c.config, func(o model.ConfigOption) bool { return o.ID == ultracodeID }); i >= 0 {
+	if i := configIndex(c.config, ultracodeID); i >= 0 {
 		c.config[i] = c.ultracodeOption()
 	}
 	c.configChangedLocked()

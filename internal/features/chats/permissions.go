@@ -106,11 +106,17 @@ func (c *chat) liveLocked(id string) bool {
 	return c.waiting[id] != nil || c.questions[id] != nil
 }
 
+// waitsLocked says whether the agent waits on the user: a permission
+// prompt or a question.
+func (c *chat) waitsLocked() bool {
+	return len(c.waiting)+len(c.questions) > 0
+}
+
 // dropPromptsLocked cancels the prompts and questions the agent waits on,
 // as ACP asks of a client that stops a turn: each request answers
 // "cancelled" and marks its item so once it has the lock.
 func (c *chat) dropPromptsLocked() {
-	if len(c.waiting)+len(c.questions) == 0 {
+	if !c.waitsLocked() {
 		return
 	}
 	for _, answer := range c.waiting {

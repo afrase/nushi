@@ -60,7 +60,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 		switch {
 		case c.busy:
 			return errors.New("the chat is busy; rewind once the turn has ended")
-		case c.ownTurn || len(c.waiting)+len(c.questions) > 0:
+		case c.ownTurn || c.waitsLocked():
 			return errors.New("the agent is working on its own (a background task ended); stop it, or rewind once it's done")
 		case c.backgroundLocked(0):
 			return errors.New("a subagent is still running in the background; rewind once it's done")

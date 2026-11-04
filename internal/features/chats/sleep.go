@@ -128,7 +128,7 @@ func (c *chat) idleLocked(after time.Duration) bool {
 // rewinds or reopens it.
 func (c *chat) quietLocked() bool {
 	return !c.busy && c.started.IsZero() && !c.ownTurn && !c.steering && c.sendingNow == 0 &&
-		len(c.queue) == 0 && len(c.waiting)+len(c.questions) == 0 && len(c.probes) == 0 &&
+		len(c.queue) == 0 && !c.waitsLocked() && len(c.probes) == 0 &&
 		!slices.ContainsFunc(c.items, running)
 }
 

@@ -192,7 +192,7 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	of, canLoad := p.record, p.canLoad
 	p.mu.Unlock()
 	side.mu.Lock()
-	busy := side.busy || side.ownTurn || len(side.waiting)+len(side.questions) > 0 || side.backgroundLocked(0)
+	busy := side.busy || side.ownTurn || side.waitsLocked() || side.backgroundLocked(0)
 	side.mu.Unlock()
 	switch {
 	case !canLoad:

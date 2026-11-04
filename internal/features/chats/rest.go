@@ -91,7 +91,7 @@ func sideHold(why string) string {
 // holdLocked is why a chat that isn't quiet isn't, in a few words.
 func (c *chat) holdLocked() string {
 	switch {
-	case len(c.waiting)+len(c.questions) > 0:
+	case c.waitsLocked():
 		return "waits on you"
 	case c.busy || !c.started.IsZero() || c.ownTurn || c.steering || c.sendingNow > 0 || len(c.probes) > 0:
 		return "working"
