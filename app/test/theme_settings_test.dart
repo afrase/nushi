@@ -3,6 +3,7 @@
 // say what's wrong, and an edit to one reloads it.
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -99,6 +100,20 @@ void main() {
     );
     await closeView(tester, d);
   }, variant: _mac);
+
+  test('a theme made once is made again for another platform', () {
+    // ThemeData takes its platform when it is made, so a theme cached
+    // under one platform must not answer for another: a test for the Mac
+    // after one that ran as Android would get Android's controls.
+    final nord = builtInTheme('nord')!;
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final android = NushiTheme.forTheme(nord, Brightness.light);
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    final mac = NushiTheme.forTheme(nord, Brightness.light);
+    debugDefaultTargetPlatformOverride = null;
+    expect(android.platform, TargetPlatform.android);
+    expect(mac.platform, TargetPlatform.macOS);
+  });
 
   testWidgets('720 wide, the tiles wrap and nothing runs off', (tester) async {
     _file(

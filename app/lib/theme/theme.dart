@@ -108,14 +108,16 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
 
   /// Material's theme for [theme]'s set for [brightness], made once per
   /// theme: the app rebuilt with nothing changed (a theme file read again)
-  /// gets the same one, so nothing below it rebuilds for it.
+  /// gets the same one, so nothing below it rebuilds for it. ThemeData
+  /// takes the platform it was made on, so that is part of the key too
+  /// (it changes only in tests).
   static ThemeData forTheme(ColorTheme theme, Brightness brightness) =>
-      (_made[theme] ??= {})[brightness] ??= NushiTheme(
+      (_made[theme] ??= {})[(brightness, defaultTargetPlatform)] ??= NushiTheme(
         theme.of(brightness),
         dark: theme.dark,
       ).toThemeData();
 
-  static final _made = Expando<Map<Brightness, ThemeData>>();
+  static final _made = Expando<Map<(Brightness, TargetPlatform), ThemeData>>();
 
   ThemeData toThemeData() {
     final scheme = ColorScheme(
