@@ -1,3 +1,5 @@
+import 'package:markdown_view/src/fence.dart';
+
 /// Makes a streaming message renderable while it is incomplete, so half
 /// a construct never shows as raw syntax. Only the render is healed; the
 /// text itself is never changed.
@@ -51,7 +53,6 @@ String healLine(String line) {
 
 // ---------------------------------------------------------------- fences
 
-final _fence = RegExp('^ {0,3}(`{3,}|~{3,})');
 final _partialFence = RegExp(r'^ {0,3}(`{1,2}|~{1,2})$');
 
 /// Ends the info string of a fence [heal] closed, when asked to mark it: a
@@ -64,16 +65,9 @@ const openMark = '\u{E000}';
   ({String run, int line})? open;
   for (var (i, line) in text.split('\n').indexed) {
     if (line.endsWith('\r')) line = line.substring(0, line.length - 1);
-    final m = _fence.firstMatch(line);
-    if (m == null) continue;
-    final run = m[1]!;
     if (open == null) {
-      // A backtick fence's info string can't hold backticks.
-      if (run[0] == '`' && line.substring(m.end).contains('`')) continue;
-      open = (run: run, line: i);
-    } else if (run[0] == open.run[0] &&
-        run.length >= open.run.length &&
-        line.substring(m.end).trim().isEmpty) {
+      if (openingFence(line) case final run?) open = (run: run, line: i);
+    } else if (closesFence(line, open.run)) {
       open = null;
     }
   }

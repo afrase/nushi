@@ -1,3 +1,5 @@
+import 'package:markdown_view/src/fence.dart';
+
 /// Where streaming Markdown can be cut so that what comes before is
 /// finished, and parses the same alone as in the whole: the start of a line
 /// after a blank line, outside any fence or HTML block that runs past blank
@@ -25,7 +27,7 @@ int? lastBoundary(String text, {int from = 0}) {
     if (line.endsWith('\r')) line = line.substring(0, line.length - 1);
     final next = end + 1;
     if (fence != null) {
-      if (_closes(line, fence)) fence = null;
+      if (closesFence(line, fence)) fence = null;
       at = next;
       continue;
     }
@@ -47,7 +49,7 @@ int? lastBoundary(String text, {int from = 0}) {
     } else if (item && !indented) {
       list = true;
     }
-    fence = _opens(line);
+    fence = openingFence(line);
     if (fence == null) html = _htmlOpens(line);
     blank = false;
     at = next;
@@ -59,29 +61,8 @@ int? lastBoundary(String text, {int from = 0}) {
 /// anywhere may refer to.
 bool hasReferences(String text) => _reference.hasMatch(text);
 
-final _fence = RegExp('^ {0,3}(`{3,}|~{3,})');
 final _item = RegExp(r'^ {0,3}(?:[-+*]|\d{1,9}[.)])(?:[ \t]|$)');
 final _reference = RegExp(r'^ {0,3}\[[^\]]+\]:', multiLine: true);
-
-/// The fence [line] opens a code block with (its run of backticks or
-/// tildes), or null.
-String? _opens(String line) {
-  final m = _fence.firstMatch(line);
-  // A backtick fence's info string can't hold backticks.
-  if (m == null || m[1]![0] == '`' && line.substring(m.end).contains('`')) {
-    return null;
-  }
-  return m[1];
-}
-
-/// Whether [line] closes the block [fence] opened.
-bool _closes(String line, String fence) {
-  final m = _fence.firstMatch(line);
-  return m != null &&
-      m[1]![0] == fence[0] &&
-      m[1]!.length >= fence.length &&
-      line.substring(m.end).trim().isEmpty;
-}
 
 /// The end of the HTML block [line] starts, when it's one that blank lines
 /// don't end and it doesn't end on that line; else null. CommonMark's
@@ -139,7 +120,7 @@ class CodeLines {
   /// [line] at [_line]: whether it's code, and the state after it.
   ({bool code, String? fence, bool html, RegExp? until}) _next(String line) {
     if (_fence case final f?) {
-      final fence = _closes(line, f) ? null : f;
+      final fence = closesFence(line, f) ? null : f;
       return (code: true, fence: fence, html: false, until: null);
     }
     if (_until case final u?) {
@@ -149,7 +130,7 @@ class CodeLines {
     if (line.trim().isEmpty) {
       return (code: false, fence: null, html: false, until: null);
     }
-    if (_opens(line) case final f?) {
+    if (openingFence(line) case final f?) {
       return (code: true, fence: f, html: false, until: null);
     }
     final until = _html ? null : _htmlOpens(line);
@@ -177,7 +158,7 @@ class CodeLines {
     var fence = _fence;
     var from = _line;
     if (fence == null) {
-      fence = _opens(_lineAt(text));
+      fence = openingFence(_lineAt(text));
       if (fence == null) return null;
       final nl = text.indexOf('\n', _line);
       if (nl < 0) return text.length;
@@ -186,7 +167,7 @@ class CodeLines {
     while (from < text.length) {
       final nl = text.indexOf('\n', from);
       final end = nl < 0 ? text.length : nl;
-      if (_closes(text.substring(from, end), fence)) {
+      if (closesFence(text.substring(from, end), fence)) {
         return nl < 0 ? text.length : nl + 1;
       }
       from = end + 1;
