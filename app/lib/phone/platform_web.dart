@@ -5,7 +5,6 @@ import 'dart:js_interop_unsafe';
 import 'package:flutter/foundation.dart';
 import 'package:nushi/phone/keyboard_web.dart';
 import 'package:nushi/phone/subscription.dart';
-import 'package:nushi/phone/update_ready.dart';
 import 'package:web/web.dart' as web;
 
 /// The browser: IndexedDB for the device's key and pairing and the chats'
@@ -21,7 +20,7 @@ final class PhonePlatform {
       'hashchange',
       ((web.Event _) => _fromAddress(starting: false)).toJS,
     );
-    if (_has(web.window.navigator, 'serviceWorker')) {
+    if (web.window.navigator.has('serviceWorker')) {
       web.window.navigator.serviceWorker.addEventListener(
         'message',
         ((web.MessageEvent e) {
@@ -89,8 +88,6 @@ final class PhonePlatform {
     '',
     web.window.location.pathname + web.window.location.search,
   );
-
-  static bool _has(JSObject o, String name) => o.has(name);
 
   /// Whether it runs from the Home Screen (or as an installed app), not in
   /// a browser's tab.
@@ -225,7 +222,7 @@ final class PhonePlatform {
   /// one and waits: [updateReady] says so, and [applyUpdate] reloads into
   /// it (never a page half on one version, half on the next).
   Future<void> registerWorker() async {
-    if (!_has(web.window.navigator, 'serviceWorker')) return;
+    if (!web.window.navigator.has('serviceWorker')) return;
     final sw = web.window.navigator.serviceWorker;
     try {
       watchUpdates(
@@ -283,10 +280,8 @@ final class PhonePlatform {
       for (final k in keys.toDart) {
         await web.window.caches.delete(k.toDart).toDart;
       }
-      if (_has(web.window.navigator, 'serviceWorker')) {
-        final reg = await web.window.navigator.serviceWorker
-            .getRegistration()
-            .toDart;
+      if (web.window.navigator.has('serviceWorker')) {
+        final reg = await _registration();
         await reg?.unregister().toDart;
       }
     } on Object {
@@ -298,9 +293,7 @@ final class PhonePlatform {
   /// Closes the notifications about [chat]: it's open.
   Future<void> closeNotifications(String chat) async {
     try {
-      final reg = await web.window.navigator.serviceWorker
-          .getRegistration()
-          .toDart;
+      final reg = await _registration();
       final ns = await reg?.getNotifications().toDart;
       for (final n in ns?.toDart ?? <web.Notification>[]) {
         final data = n.data;
@@ -318,28 +311,28 @@ final class PhonePlatform {
   /// The VAPID key the push subscription was made with, if there's one.
   Future<Uint8List?> subscribedWith() async {
     if (!_pushable) return null;
-    final reg = await web.window.navigator.serviceWorker
-        .getRegistration()
-        .toDart;
+    final reg = await _registration();
     final sub = await reg?.pushManager.getSubscription().toDart;
     return sub?.options.applicationServerKey?.toDart.asUint8List();
   }
 
   bool get _pushable =>
-      _has(web.window, 'Notification') &&
-      _has(web.window, 'PushManager') &&
-      _has(web.window.navigator, 'serviceWorker');
+      web.window.has('Notification') &&
+      web.window.has('PushManager') &&
+      web.window.navigator.has('serviceWorker');
 
   Future<PushState> pushState() async {
     if (!_pushable) return PushState.unsupported;
     if (web.Notification.permission == 'denied') return PushState.denied;
-    // Not `ready`, which waits for good while no worker is registered.
-    final reg = await web.window.navigator.serviceWorker
-        .getRegistration()
-        .toDart;
+    final reg = await _registration();
     final sub = await reg?.pushManager.getSubscription().toDart;
     return sub == null ? PushState.off : PushState.on;
   }
+
+  /// The service worker's registration, if one is registered (not
+  /// [_ready], which waits for good while none is).
+  Future<web.ServiceWorkerRegistration?> _registration() =>
+      web.window.navigator.serviceWorker.getRegistration().toDart;
 
   /// The service worker's registration, once it's active (10 s at most).
   Future<web.ServiceWorkerRegistration> _ready() => web
@@ -379,9 +372,7 @@ final class PhonePlatform {
 
   Future<void> unsubscribe() async {
     if (!_pushable) return;
-    final reg = await web.window.navigator.serviceWorker
-        .getRegistration()
-        .toDart;
+    final reg = await _registration();
     final sub = await reg?.pushManager.getSubscription().toDart;
     await sub?.unsubscribe().toDart;
   }
@@ -472,16 +463,17 @@ JSAny trustedScriptUrl(String name) {
 }
 
 /// Sets [ready] once a newer version of the app waits in [reg] to replace
-/// the running one ([updateWaits]): now, or when one of its workers is
-/// installed.
+/// the running one: now, or when one of its workers is installed. One
+/// waits while another is active. A fresh install's first worker is
+/// "installed" too, with nothing active, on its way to taking over at once
+/// (sw.js), and the page may be controlled by then: asking whether the
+/// page had a controller took that for an update.
 void watchUpdates(
   web.ServiceWorkerRegistration reg,
   ValueNotifier<bool> ready,
 ) {
   void check() {
-    if (updateWaits(waiting: reg.waiting != null, active: reg.active != null)) {
-      ready.value = true;
-    }
+    if (reg.waiting != null && reg.active != null) ready.value = true;
   }
 
   void watch(web.ServiceWorker? w) => w?.addEventListener(
