@@ -17,6 +17,7 @@ class MainFlutterWindow: NSWindow {
     self.titleVisibility = .hidden
     self.styleMask.insert(.fullSizeContentView)
     restoreFrame()
+    keepFullScreen()
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
@@ -176,6 +177,24 @@ class MainFlutterWindow: NSWindow {
     frame.origin = NSPoint(x: min(max(frame.minX, room.minX), room.maxX - frame.width),
                            y: min(max(frame.minY, room.minY), room.maxY - frame.height))
     setFrame(frame, display: false)
+  }
+
+  /// Full screen across launches too, which the saved frame doesn't say
+  /// (it keeps the frame from before full screen): a default of its own,
+  /// and full screen again once the window is up, on the screen it went
+  /// back to.
+  private func keepFullScreen() {
+    let key = "NushiWindowFullScreen"
+    let center = NotificationCenter.default
+    center.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: self, queue: .main) { _ in
+      UserDefaults.standard.set(true, forKey: key)
+    }
+    center.addObserver(forName: NSWindow.didExitFullScreenNotification, object: self, queue: .main) { _ in
+      UserDefaults.standard.removeObject(forKey: key)
+    }
+    if UserDefaults.standard.bool(forKey: key) {
+      DispatchQueue.main.async { [weak self] in self?.toggleFullScreen(nil) }
+    }
   }
 
   private var swipeMonitor: Any?
