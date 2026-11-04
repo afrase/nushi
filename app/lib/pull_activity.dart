@@ -270,16 +270,7 @@ class _EntryState extends State<_Entry> {
                             weight: FontWeight.w600,
                           ),
                         ),
-                        if (c.outside && !c.bot)
-                          Tooltip(
-                            message:
-                                "Not the repository's owner, a member or a "
-                                'collaborator',
-                            child: Text(
-                              '  outside',
-                              style: theme.ui(t.needs, size: 11.5),
-                            ),
-                          ),
+                        if (c.outside && !c.bot) const OutsideMark(),
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
