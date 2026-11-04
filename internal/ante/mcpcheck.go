@@ -61,7 +61,12 @@ func CheckMCP(ctx context.Context, spawn Spawn) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { h.kill(); <-h.exited }()
+	defer func() {
+		h.kill()
+		for range h.events { // the reader may be waiting on a full channel nobody else reads
+		}
+		<-h.exited
+	}()
 	if err := h.send(map[string]any{"StartSession": map[string]any{"cwd": dir}}); err != nil {
 		return nil, err
 	}

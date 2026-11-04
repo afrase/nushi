@@ -2,10 +2,12 @@ package ante
 
 import (
 	"bufio"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // A host's stderr goes where Server was told (the bridge's, which the
@@ -29,5 +31,29 @@ func TestServerStderr(t *testing.T) {
 	kill()
 	if got := stderr.String(); got != "serve --stdio: no provider\n" {
 		t.Errorf("stderr %q", got)
+	}
+}
+
+// TestCheckMCPLeavesEventsUnread: the check returns at "MCP ready" though
+// the host has more events than the reader's buffer left to send, which
+// nobody reads after.
+func TestCheckMCPLeavesEventsUnread(t *testing.T) {
+	out := `{"event":{"SessionStart":{"session_id":"s1"}}}` + "\n" +
+		`{"event":{"InfoBlockAppend":{"id":"mcp-warmup-s1","detail":"MCP ready: 0 servers"}}}` + "\n" +
+		strings.Repeat(`{"event":"Goodbye"}`+"\n", 300)
+	done := make(chan error, 1)
+	go func() {
+		_, err := CheckMCP(t.Context(), func(string) (io.WriteCloser, io.Reader, func(), error) {
+			return discard{io.Discard}, strings.NewReader(out), func() {}, nil
+		})
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the check never returned")
 	}
 }
