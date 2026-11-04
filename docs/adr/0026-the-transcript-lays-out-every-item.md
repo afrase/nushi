@@ -13,6 +13,6 @@ Until milestone I the transcript was a lazy list. A lazy list only estimates its
 
 ## Consequences
 - Opening the 2,007-item chat (debug widget test): the first frame 260–300 ms before and after (filling in from the bottom bounded it already); all of what's loaded laid out in 0.52–0.63 s over 6 frames, from 4.2–4.7 s over 39; the snapshot 47 KiB. Release builds are several times faster.
-- The scrollbar is over what's loaded, so it shrinks as pages come in. ⌘F finds in what's loaded and says so. What's worked out from the items (the Artifacts widget, the Files pane's marks, Up's last message) knows only what's loaded.
+- The scrollbar is over what's loaded, so it shrinks as pages come in. ⌘F finds in what's loaded and says so. What's worked out from the items (the Artifacts widget, the Files pane's marks) knows only what's loaded; Up takes the pages back to your last message when it isn't.
 - A relayout costs what's loaded (300 items, debug: 28 ms per streamed chunk, 100 ms for a relayout; a lazy list was 8 ms per chunk but 418 ms to jump to the top). While it fills in (about 0.1 s), the thumb shrinks and the top isn't there yet.
 - Going back to a lazy list brings the scroll bugs back unless the list can know its height.

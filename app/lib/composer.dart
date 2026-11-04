@@ -183,17 +183,27 @@ class _ComposerState extends State<Composer> {
       unawaited(_attached(pasteFiles(widget.chat, api: _api)));
     }
     if (key == LogicalKeyboardKey.arrowUp && _text.text.isEmpty) {
-      final last = widget.chat.items.lastWhere(
-        (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE,
-        orElse: Item.new,
-      );
-      _restore(last.text, last.files, const []); // the saved uploads too
+      unawaited(_recall());
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
   }
 
   int get _api => widget.daemon.daemonApi;
+
+  /// Up in an empty box: your last message back in it, with its files and
+  /// the saved uploads. A long last turn can start above a long chat's
+  /// recent part: the pages back to its message first (ADR 0026).
+  Future<void> _recall() async {
+    final chat = widget.chat;
+    bool mine(Item it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
+    if (!chat.items.any(mine) && chat.older > 0) {
+      await widget.daemon.loadOlder(chat, until: mine);
+      if (!mounted || _text.text.isNotEmpty) return; // typed meanwhile
+    }
+    final last = chat.items.lastWhere(mine, orElse: Item.new);
+    _restore(last.text, last.files, const []);
+  }
 
   /// Add files or photos: the open panel (the phone's picker), then what
   /// was picked into the box.

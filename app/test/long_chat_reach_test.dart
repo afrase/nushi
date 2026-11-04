@@ -1,8 +1,11 @@
 // What reaches past a long chat's recent part (ADR 0026): a pane open on
 // an early subagent outlives the chat going back to its recent part, and a
-// chat let go scrolled up reopens where it was.
+// chat let go scrolled up reopens where it was; Up reaches a last message
+// above the recent part.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -122,6 +125,49 @@ void main() {
     );
     expect(start.top, greaterThanOrEqualTo(list.top));
     expect(start.bottom, lessThanOrEqualTo(list.bottom));
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('Up recalls the last message when the last turn is longer '
+      'than the recent part', (tester) async {
+    final items = [
+      ...longChat('c', turns: 80),
+      Item(
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        id: 'u-last',
+        text: 'refactor the whole thing',
+      ),
+      for (var i = 0; i < 125; i++) ...[
+        Item(
+          id: 'say$i',
+          kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+          text: 'Step $i: now I read the next file to see how it does it.',
+        ),
+        Item(
+          id: 'step$i',
+          kind: ItemKind.ITEM_KIND_TOOL_CALL,
+          toolKind: 'read',
+          title: 'Read f$i.go',
+          status: 'completed',
+        ),
+      ],
+    ];
+    final (d, _) = await _open(tester, items);
+    final c = d.chats['c']!;
+    expect(c.items.any((it) => it.id == 'u-last'), isFalse);
+    final box = find.descendant(
+      of: find.byType(Composer),
+      matching: find.byType(TextField),
+    );
+    await tester.tap(box);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await _settle(tester);
+    expect(
+      tester.widget<TextField>(box).controller!.text,
+      'refactor the whole thing',
+    );
+    expect(c.older, greaterThan(0), reason: 'only the pages back to it');
     await closeView(tester, d);
   }, variant: _mac);
 }

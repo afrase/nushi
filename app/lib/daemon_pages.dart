@@ -13,15 +13,17 @@ extension DaemonPages on Daemon {
 
   /// Takes the page of [chat]'s items before those it has (nothing when it
   /// has them all, or a page is on its way). Given [through], it goes on
-  /// page by page until it has all those messages, or with [all] to the
-  /// chat's start, and puts them in at once, after any page on its way.
-  /// A failed page sets [ChatState.olderFailed] until the next try.
+  /// page by page until it has all those messages, given [until] until a
+  /// page has one it holds, or with [all] to the chat's start, and puts
+  /// them in at once, after any page on its way. A failed page sets
+  /// [ChatState.olderFailed] until the next try.
   Future<void> loadOlder(
     ChatState chat, {
     Iterable<String> through = const [],
+    bool Function(Item)? until,
     bool all = false,
   }) async {
-    final more = all || through.isNotEmpty;
+    final more = all || through.isNotEmpty || until != null;
     // One at a time: after any on its way, and any that waited for it.
     for (var on = chat.olderLoad; on != null; on = chat.olderLoad) {
       if (!more) return;
@@ -30,7 +32,8 @@ extension DaemonPages on Daemon {
     if (chat.older == 0 || chat.items.isEmpty || !chat.loaded) return;
     final have = {for (final it in chat.items) it.id};
     final want = {...through}..removeAll(have);
-    if (!all && more && want.isEmpty) return;
+    if (!all && through.isNotEmpty && want.isEmpty) return;
+    if (until != null && chat.items.any(until)) return;
     final done = Completer<void>();
     chat.olderGoing(done.future);
     final before = chat.items.first.id;
@@ -52,7 +55,10 @@ extension DaemonPages on Daemon {
         page.insertAll(0, got.items);
         older = got.older;
         want.removeAll(got.items.map((it) => it.id));
-        if (got.items.isEmpty || older == 0 || !all && want.isEmpty) break;
+        if (got.items.isEmpty || older == 0) break;
+        if (!all && (until != null ? got.items.any(until) : want.isEmpty)) {
+          break;
+        }
         first = got.items.first.id;
       }
       // Only onto what it was asked for: a reload meanwhile (a reconnect,
