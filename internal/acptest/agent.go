@@ -64,7 +64,6 @@ type Agent struct {
 	Pause   time.Duration
 	Codex   bool // answers as codex-acp does (codex.go)
 	Omp     bool // answers as omp does (omp.go)
-	NoList  bool // doesn't advertise session/list
 	// For the log: what it writes to its stderr, how long session/load
 	// takes, and whether it reopens a session it doesn't know (as if
 	// another process had kept it), replaying nothing.
@@ -217,9 +216,6 @@ func (a *Agent) answer(f frame) {
 		}
 		if a.Omp {
 			result = ompInit()
-		}
-		if a.NoList {
-			delete(result.(map[string]any)["agentCapabilities"].(map[string]any)["sessionCapabilities"].(map[string]any), "list")
 		}
 	case "session/list":
 		var req struct{ Cwd, Cursor string }
