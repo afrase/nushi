@@ -1908,9 +1908,6 @@ type Agent struct {
 	Ready bool `protobuf:"varint,12,opt,name=ready,proto3" json:"ready,omitempty"`
 	// Its chats whose agent runs (they sleep when the adapter changes).
 	Awake int32 `protobuf:"varint,13,opt,name=awake,proto3" json:"awake,omitempty"`
-	// Nushi's Go agent can run it in place of its adapter, as the setting
-	// claude_go_agent picks (API 97, ADR 0066).
-	GoAgent bool `protobuf:"varint,14,opt,name=go_agent,json=goAgent,proto3" json:"go_agent,omitempty"`
 	// Its MCP servers are only yours, the user scope, with no off switch or
 	// legacy SSE; others have Claude's scopes and those (API 97).
 	McpUserOnly   bool `protobuf:"varint,15,opt,name=mcp_user_only,json=mcpUserOnly,proto3" json:"mcp_user_only,omitempty"`
@@ -2037,13 +2034,6 @@ func (x *Agent) GetAwake() int32 {
 		return x.Awake
 	}
 	return 0
-}
-
-func (x *Agent) GetGoAgent() bool {
-	if x != nil {
-		return x.GoAgent
-	}
-	return false
 }
 
 func (x *Agent) GetMcpUserOnly() bool {
@@ -5103,14 +5093,7 @@ type Settings struct {
 	// The daemon asks GitHub for a newer release of Nushi at start and every
 	// 2 hours; on by default. SetSettings leaves it as it is when not given
 	// (API 86).
-	CheckUpdates *bool `protobuf:"varint,5,opt,name=check_updates,json=checkUpdates,proto3,oneof" json:"check_updates,omitempty"`
-	// Claude's chats run through Nushi's Go agent (claudeacp, ADR 0066), which
-	// needs no Node and nothing set up, instead of the adapter
-	// (claude-agent-acp); off by default. A Claude chat's agent reads it each
-	// time it starts (a new chat, a reopened or woken one), so chats already
-	// running keep theirs until then. SetSettings leaves it as it is when not
-	// given (API 93).
-	ClaudeGoAgent *bool `protobuf:"varint,6,opt,name=claude_go_agent,json=claudeGoAgent,proto3,oneof" json:"claude_go_agent,omitempty"`
+	CheckUpdates  *bool `protobuf:"varint,5,opt,name=check_updates,json=checkUpdates,proto3,oneof" json:"check_updates,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5176,13 +5159,6 @@ func (x *Settings) GetTranscriptDays() int32 {
 func (x *Settings) GetCheckUpdates() bool {
 	if x != nil && x.CheckUpdates != nil {
 		return *x.CheckUpdates
-	}
-	return false
-}
-
-func (x *Settings) GetClaudeGoAgent() bool {
-	if x != nil && x.ClaudeGoAgent != nil {
-		return *x.ClaudeGoAgent
 	}
 	return false
 }
@@ -22718,7 +22694,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05shell\x18\x01 \x01(\tR\x05shell\x12 \n" +
 	"\fread_unix_ms\x18\x02 \x01(\x03R\n" +
 	"readUnixMs\x12\x18\n" +
-	"\aproblem\x18\x03 \x01(\tR\aproblem\"\x95\x03\n" +
+	"\aproblem\x18\x03 \x01(\tR\aproblem\"\x8a\x03\n" +
 	"\x05Agent\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -22733,9 +22709,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	" \x01(\tR\bsignedIn\x12+\n" +
 	"\aadapter\x18\v \x01(\v2\x11.nushi.v1.AdapterR\aadapter\x12\x14\n" +
 	"\x05ready\x18\f \x01(\bR\x05ready\x12\x14\n" +
-	"\x05awake\x18\r \x01(\x05R\x05awake\x12\x19\n" +
-	"\bgo_agent\x18\x0e \x01(\bR\agoAgent\x12\"\n" +
-	"\rmcp_user_only\x18\x0f \x01(\bR\vmcpUserOnly\"\xd3\x01\n" +
+	"\x05awake\x18\r \x01(\x05R\x05awake\x12\"\n" +
+	"\rmcp_user_only\x18\x0f \x01(\bR\vmcpUserOnlyJ\x04\b\x0e\x10\x0fR\bgo_agent\"\xd3\x01\n" +
 	"\aAdapter\x12\x18\n" +
 	"\apackage\x18\x01 \x01(\tR\apackage\x12\x16\n" +
 	"\x06pinned\x18\x02 \x01(\tR\x06pinned\x12\x1c\n" +
@@ -22915,18 +22890,16 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"ChatsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\"\x14\n" +
-	"\x12GetSettingsRequest\"\xdb\x02\n" +
+	"\x12GetSettingsRequest\"\xb1\x02\n" +
 	"\bSettings\x12.\n" +
 	"\x13sleep_after_minutes\x18\x01 \x01(\x05R\x11sleepAfterMinutes\x12\x1b\n" +
 	"\tdebug_log\x18\x02 \x01(\bR\bdebugLog\x12.\n" +
 	"\x10keep_transcripts\x18\x03 \x01(\bH\x00R\x0fkeepTranscripts\x88\x01\x01\x12,\n" +
 	"\x0ftranscript_days\x18\x04 \x01(\x05H\x01R\x0etranscriptDays\x88\x01\x01\x12(\n" +
-	"\rcheck_updates\x18\x05 \x01(\bH\x02R\fcheckUpdates\x88\x01\x01\x12+\n" +
-	"\x0fclaude_go_agent\x18\x06 \x01(\bH\x03R\rclaudeGoAgent\x88\x01\x01B\x13\n" +
+	"\rcheck_updates\x18\x05 \x01(\bH\x02R\fcheckUpdates\x88\x01\x01B\x13\n" +
 	"\x11_keep_transcriptsB\x12\n" +
 	"\x10_transcript_daysB\x10\n" +
-	"\x0e_check_updatesB\x12\n" +
-	"\x10_claude_go_agent\"\x18\n" +
+	"\x0e_check_updatesJ\x04\b\x06\x10\aR\x0fclaude_go_agent\"\x18\n" +
 	"\x16ListTranscriptsRequest\"l\n" +
 	"\x17ListTranscriptsResponse\x12\x1f\n" +
 	"\vtotal_bytes\x18\x01 \x01(\x03R\n" +

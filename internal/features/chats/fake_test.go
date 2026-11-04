@@ -16,6 +16,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
+	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )
@@ -217,7 +218,7 @@ func (f *fakeAgent) Initialize(context.Context, *acp.InitializeRequest) (*acp.In
 	if f.lists {
 		caps.SessionCapabilities.List = &acp.SessionListCapabilities{}
 	}
-	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion, AgentInfo: &acp.Implementation{Name: "@agentclientprotocol/claude-agent-acp"},
+	return &acp.InitializeResponse{ProtocolVersion: acp.LatestProtocolVersion, AgentInfo: &acp.Implementation{Name: claudeacp.Name}, // as Claude's agent, which forks at a message
 		AgentCapabilities: caps}, nil
 }
 

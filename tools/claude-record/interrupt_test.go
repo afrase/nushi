@@ -68,7 +68,7 @@ func TestRecordInterrupted(t *testing.T) {
 func TestRunInterrupted(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	err := run(ctx, "testdata", "all", "", &recorder{tee: "claude-tee", claude: "claude", agent: []string{"false"}, acp: "acp-go.jsonl", log: slog.New(slog.DiscardHandler)})
+	err := run(ctx, "testdata", "all", &recorder{tee: "claude-tee", claude: "claude", agent: []string{"false"}, acp: "acp-go.jsonl", log: slog.New(slog.DiscardHandler)})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("got %v", err)
 	}

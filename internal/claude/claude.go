@@ -1,22 +1,19 @@
-// Package claude knows what Claude Code's ACP adapter (claude-agent-acp
-// 0.94.0) does beyond ACP: how to start it, the _meta it reads and sends,
-// and its quirks, as its Harness; the chats feature, which knows nothing of
-// Claude, takes that through its interfaces. Claude's files are read in
-// claudehistory (whose Local is this Harness with them), claudemcp and
-// claudetrust. Nushi's Go agent (claudeacp, `nushid claude-acp`)
-// speaks the same _meta and runs instead of the adapter when the daemon
-// is told to (goagent.go).
+// Package claude knows what Claude's ACP agent does beyond ACP: how to
+// start it, the _meta it reads and sends, and its quirks, as its Harness;
+// the chats feature, which knows nothing of Claude, takes that through its
+// interfaces. The agent is Nushi's Go agent (claudeacp, `nushid
+// claude-acp`, ADR 0066), which keeps the wire shape of claude-agent-acp,
+// the Node adapter Claude ran through until 2026-11-04. Claude's files are
+// read in claudehistory (whose Local is this Harness with them), claudemcp
+// and claudetrust.
 package claude
 
 import (
 	"cmp"
-	"embed"
 	"encoding/json"
-	"io/fs"
 	"log/slog"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -37,12 +34,12 @@ type Harness struct{}
 
 // Info is what Harness is. Claude deletes a session once more 3 seconds on:
 // deleting closes it first, but Claude writes a little of the session back
-// as it ends. The adapter shows subagents as sessions of their own (ACP's
+// as it ends. The agent shows subagents as sessions of their own (ACP's
 // subagents RFD) to a client that says it can take them: each subagent's
 // end, why it ended, and a stop of its own (session/cancel on its session).
 //
-// Its _meta: InitMeta has the adapter send a subagent's text and thinking too.
-// SessionMeta is the host options the adapter passes Claude Code:
+// Its _meta: InitMeta has the agent send a subagent's text and thinking too.
+// SessionMeta is the host options the agent passes Claude Code:
 // perTaskStopAffordance, as Claude Code's terminal has it, makes stopping a
 // turn (session/cancel) stop only the turn, as without it Claude Code's
 // interrupt kills the background subagents too, which no update then tells;
@@ -50,9 +47,9 @@ type Harness struct{}
 // /code-review report through its ReportFindings tool, which the transcript
 // draws as a card, instead of printing JSON. UltracodeMeta is Claude Code's
 // ultracode (standing multi-agent workflow orchestration) for the session,
-// through host options' settings, which the adapter gives Claude Code as its
+// through host options' settings, which the agent gives Claude Code as its
 // programmatic settings (as --settings would): it takes effect only with
-// workflows on and a model that supports it, and the adapter keeps it on
+// workflows on and a model that supports it, and the agent keeps it on
 // across effort changes.
 func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "claude", Title: "Claude", Resume: "claude --resume", ClientMCP: true,
@@ -67,49 +64,24 @@ func (Harness) Info() model.HarnessInfo {
 		}}}}
 }
 
-// Adapter is Claude Code's ACP adapter, as Nushi pins it: adapter/'s
-// package.json names the version, its lockfile every package's (make
-// adapters writes it again, and says the sizes). Its own Claude Code (an
-// optional dependency) is left out: it runs the user's.
-var Adapter, _ = fs.Sub(adapterFiles, "adapter")
-
-const (
-	AdapterPackage  = "@agentclientprotocol/claude-agent-acp"
-	AdapterBin      = "claude-agent-acp"
-	AdapterDownload = 8_979_854
-	AdapterDisk     = 73_064_448
-)
-
-//go:embed adapter
-var adapterFiles embed.FS
-
-// Start starts Nushi's Go agent when r says (goagent.go), else the adapter
-// set up in Nushi's data folder (its program, under node, the Node on
-// PATH), running r's CLI, the user's Claude Code, in r's environment (the
-// login shell's, ADR 0048). It runs in dir (the daemon's own folder); a
-// chat's folder reaches the agent only as the session's cwd. Its stderr
-// goes to log.
+// Start starts Nushi's Go agent (start.go), running r's CLI, the user's
+// Claude Code, in r's environment (the login shell's, ADR 0048). It runs in
+// dir (the daemon's own folder); a chat's folder reaches the agent only as
+// the session's cwd. Its stderr goes to log.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	if r.Own {
-		return startGo(dir, r.CLI, Environ(r.Env), client, log)
-	}
-	cmd := exec.Command(r.Node, r.Program) //nolint:gosec,noctx // lives until Stop or Close, not a context; the adapter set up in the data folder (ADR 0037)
-	cmd.Dir = dir
-	cmd.Env = append(Environ(r.Env), "CLAUDE_CODE_EXECUTABLE="+r.CLI)
-	return agentproc.Start(cmd, client, log)
+	return startGo(dir, r.CLI, Environ(r.Env), client, log)
 }
 
 // TodoTools is the variable that turns on Claude Code's to-do list (its
 // task tools, TaskCreate and the rest) for the current models: without it
-// Claude keeps no plan, so the adapter and the Go agent send none
-// (docs/facts/claude.md).
+// Claude keeps no plan, so the agent sends none (docs/facts/claude.md).
 const TodoTools = "CLAUDE_CODE_ENABLE_TODO_TOOLS"
 
 // Environ is env, the user's agent environment, with what Nushi adds for
 // Claude Code: TodoTools on, unless env sets it, so a user's own value
 // stands. It goes in the agent's process environment rather than the
-// session's _meta, whose env the adapter lays over its own: both agents
-// pass theirs on to claude.
+// session's _meta, whose env the agent lays over its own: it passes both
+// on to claude.
 func Environ(env []string) []string {
 	env = slices.Clone(env)
 	for _, kv := range env {
@@ -151,11 +123,6 @@ func ConfigFile() string {
 // UserSettings is your settings file: settings.json in the config folder.
 func UserSettings() string { return filepath.Join(ConfigDir(), "settings.json") }
 
-// Tested are the Claude Code versions the adapter was run with: its own
-// (until milestone Z), then the user's. The Go agent has none: it pins no
-// version, and asks claude what it supports.
-var Tested = []string{"2.1.303", "2.1.310"}
-
 // SignedIn asks the CLI whether it's signed in (`claude auth status`,
 // JSON): "yes" or "no", or "" when it can't say. Claude reads its own
 // login for that; Nushi sees only the answer's loggedIn.
@@ -179,22 +146,22 @@ func (Harness) ReadOnlyMode() string { return "plan" }
 // TurnDone says a usage update is the result of the user's turn: the one
 // with the cost, from a model cycle the user started
 // (`_claude/origin.kind` "human", not a task notification or a
-// subagent's report). The adapter answers the turn's prompt only once the
+// subagent's report). The agent answers the turn's prompt only once the
 // background subagents the turn started have ended, and their reports
-// have been answered.
+// have been answered (claude's result comes only then).
 func (Harness) TurnDone(u *acp.UsageUpdate) bool {
 	origin, _ := u.Meta["_claude/origin"].(map[string]any)
 	return u.Cost != nil && origin["kind"] == "human"
 }
 
-// ForkAt says how to fork a session at a message, if the agent is the
-// adapter or Nushi's Go agent. ACP's session/fork copies a whole
-// conversation; the adapter cuts the copy after an agent message (its ACP
-// messageId, the message included) only given a vendor extension meant for
-// JetBrains AIR, `_meta.jetbrains.air.fork` (ADR 0020), which the Go agent
-// reads too. Drop it when ACP has a standard way.
+// ForkAt says how to fork a session at a message, if the agent is Nushi's
+// Go agent. ACP's session/fork copies a whole conversation; the agent cuts
+// the copy after an agent message (its ACP messageId, the message included)
+// only given the vendor extension claude-agent-acp took from JetBrains AIR,
+// `_meta.jetbrains.air.fork` (ADR 0020). Drop it when ACP has a standard
+// way.
 func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[string]any {
-	if init.AgentInfo == nil || init.AgentInfo.Name != AdapterPackage && init.AgentInfo.Name != claudeacp.Name {
+	if init.AgentInfo == nil || init.AgentInfo.Name != claudeacp.Name {
 		return nil
 	}
 	return func(messageID string) map[string]any {
@@ -208,7 +175,7 @@ func (Harness) ForkAt(init *acp.InitializeResponse) func(messageID string) map[s
 func (Harness) Parent(meta map[string]any) string { return claudeCode(meta, "parentToolUseId") }
 
 // Gone says a session/load error means Claude no longer has the session:
-// the adapter answers ACP's "Resource not found".
+// the agent answers ACP's "Resource not found".
 func (Harness) Gone(err error) bool { return agentproc.NotFound(err) }
 
 func claudeCode(meta map[string]any, key string) string {
@@ -274,7 +241,7 @@ func (h Harness) ToolCall(it *model.Item, meta map[string]any, input json.RawMes
 }
 
 // findings reads ReportFindings' input, once it holds the findings: the
-// adapter sends it as it grows.
+// agent sends it as it grows.
 func findings(input json.RawMessage) *model.Findings {
 	var in struct {
 		Level    string `json:"level"`
@@ -366,13 +333,12 @@ func (Harness) Compacted(it model.Item) bool {
 		it.Kind == model.UserMessage && strings.HasPrefix(it.Text, summaryStart)
 }
 
-// ContextCommand says what fills the context. The adapter answers it
-// itself, without the model, but Claude keeps the answer in the
-// conversation (ADR 0017).
+// ContextCommand says what fills the context. Claude answers it itself,
+// without the model, but keeps the answer in the conversation (ADR 0017).
 func (Harness) ContextCommand() string { return "context" }
 
-// ReadContext reads /context's reply: its last message, since the adapter
-// sends the output twice, as two messages.
+// ReadContext reads /context's reply: its last message, since the agent
+// may send the output twice, as two messages (claude-agent-acp did).
 func (Harness) ReadContext(messages []string) model.ContextUsage {
 	md := messages[len(messages)-1]
 	cats, _ := Parse(md) // the app shows the markdown when there are none

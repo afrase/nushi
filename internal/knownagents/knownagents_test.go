@@ -5,7 +5,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/features/chats"
 	"github.com/afrase/nushi/internal/features/skills"
 )
@@ -13,7 +12,7 @@ import (
 // Each agent is whole: named once, its setup named and titled as its
 // harness, with its skills and trust; Claude first.
 func TestEveryAgentIsWhole(t *testing.T) {
-	all := All(t.TempDir(), func() bool { return false })
+	all := All(t.TempDir())
 	var names []string
 	for _, a := range all {
 		info, n := a.Harness.Info(), a.Agent.Name
@@ -72,7 +71,7 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 		"pi":    {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 		"pig":   {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},
 	}
-	for _, a := range All("", func() bool { return false }) {
+	for _, a := range All("") {
 		w := want[a.Agent.Name]
 		if got := listed(a.Harness); !slices.Equal(got, w.harness) {
 			t.Errorf("%s has %v, want %v", a.Agent.Name, got, w.harness)
@@ -85,19 +84,16 @@ func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 }
 
 // What the app goes by instead of an agent's name is each agent's own:
-// Claude's built-in skills, plugins, links and Go agent, and Ante's plain
-// MCP servers.
+// Claude's built-in skills, plugins and links, and Ante's plain MCP
+// servers.
 func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
-	for _, a := range All("", func() bool { return false }) {
+	for _, a := range All("") {
 		claudes := a.Agent.Name == "claude"
 		_, builtIn := a.Skills.(skills.BuiltIn)
 		_, plugins := a.Skills.(skills.Plugins)
 		_, linker := a.Skills.(skills.Linker)
 		if builtIn != claudes || plugins != claudes || linker != claudes {
 			t.Errorf("%s: built in %v, plugins %v, links %v", a.Agent.Name, builtIn, plugins, linker)
-		}
-		if got := a.Agent.Own != nil; got != claudes {
-			t.Errorf("%s: has an Own: %v", a.Agent.Name, got)
 		}
 		if a.MCP != nil {
 			if got, want := a.MCP(nil).UserOnly(), a.Agent.Name == "ante"; got != want {
@@ -107,26 +103,11 @@ func TestWhatTheAppShowsIsOneAgentsAlone(t *testing.T) {
 	}
 }
 
-// Claude runs through the adapter unless the setting, or the daemon's
-// environment (a dev override), says Nushi's Go agent, asked each time.
-func TestClaudesAgentIsTheAdapterUnlessToldGo(t *testing.T) {
-	for _, tc := range []struct {
-		env     string
-		setting bool
-		goes    bool
-	}{{"", false, false}, {"node", false, false}, {"Go", false, false}, {"go", false, true}, {"", true, true}, {"node", true, true}} {
-		t.Setenv(claude.AdapterChoice, tc.env)
-		setting := tc.setting
-		c := All(t.TempDir(), func() bool { return setting })[0]
-		if c.Agent.Adapter == nil || len(c.Agent.Tested) == 0 {
-			t.Fatalf("Claude without its adapter: %+v", c.Agent)
-		}
-		if got := c.Agent.Own(); got != tc.goes {
-			t.Errorf("env %q, setting %v: own %v", tc.env, tc.setting, got)
-		}
-		setting = !setting
-		if got := c.Agent.Own(); tc.env != "go" && got == tc.goes {
-			t.Errorf("env %q: the setting's change wasn't seen", tc.env)
-		}
+// Claude runs through Nushi's Go agent: no adapter to set up, so no Node,
+// and no CLI version pinned (ADR 0066).
+func TestClaudeHasNoAdapter(t *testing.T) {
+	c := All(t.TempDir())[0]
+	if c.Agent.Name != "claude" || c.Agent.Adapter != nil || c.Agent.Needs != "" || len(c.Agent.Tested) != 0 {
+		t.Errorf("Claude: %+v", c.Agent)
 	}
 }

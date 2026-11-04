@@ -10,7 +10,7 @@ import (
 
 // Parse reads what fills Claude's context from the output of its /context
 // command, in its order: the "Estimated usage by category" table of the
-// markdown the adapter returns. This is Claude's private format (Claude
+// markdown the agent returns. This is Claude's private format (Claude
 // Code 2.1.308, claude-agent-acp 0.94.0): see ADR 0017.
 func Parse(markdown string) ([]model.ContextCategory, error) {
 	_, table, ok := strings.Cut(markdown, "### Estimated usage by category")

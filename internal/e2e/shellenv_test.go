@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/afrase/nushi/internal/api"
-	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/codex"
 	"github.com/afrase/nushi/internal/features/agents"
 	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -30,7 +30,7 @@ import (
 
 // An agent's process starts with a variable only the login shell sets,
 // is found on the shell's PATH only, and gets none of Nushi's own
-// variables; Claude's adapter gets its CLI on top (ADR 0048).
+// variables; Codex's adapter gets its CLI on top (ADR 0048).
 func TestAgentsStartWithTheShellsEnvironment(t *testing.T) {
 	bin, out := t.TempDir(), t.TempDir()
 	write := func(path, body string) {
@@ -42,10 +42,10 @@ func TestAgentsStartWithTheShellsEnvironment(t *testing.T) {
 	// Each program writes what it was started with: the names of its
 	// environment, and the values of the few this test looks at.
 	report := `[ "$1" = --version ] && { echo 18.12.6; exit 0; }
-{ env | cut -d= -f1; echo "ONLY_IN_SHELL=$ONLY_IN_SHELL"; echo "CLAUDE_CODE_EXECUTABLE=$CLAUDE_CODE_EXECUTABLE"; } > "` + out + `/$(basename "$0").tmp"
+{ env | cut -d= -f1; echo "ONLY_IN_SHELL=$ONLY_IN_SHELL"; echo "CODEX_PATH=$CODEX_PATH"; } > "` + out + `/$(basename "$0").tmp"
 mv "` + out + `/$(basename "$0").tmp" "` + out + `/$(basename "$0")"
 `
-	for _, name := range []string{"omp", "bun", "node", "claude"} {
+	for _, name := range []string{"omp", "bun", "node", "codex"} {
 		write(filepath.Join(bin, name), "#!/bin/sh\n"+report)
 	}
 	shell := filepath.Join(t.TempDir(), "fish")
@@ -58,7 +58,7 @@ exec /bin/sh -c "$4"
 	env.Start()
 	svc := agents.New([]agents.Agent{
 		{Name: "omp", Title: "oh-my-pi", CLI: "omp", Needs: "bun"},
-		{Name: "claude", Title: "Claude", CLI: "claude", Adapter: &agents.Adapter{Lock: os.DirFS(t.TempDir()), Package: "p", Bin: "b"}},
+		{Name: "codex", Title: "Codex", CLI: "codex", Adapter: &agents.Adapter{Lock: os.DirFS(t.TempDir()), Package: "p", Bin: "b"}},
 	}, func(ctx context.Context, path string, args ...string) ([]byte, error) {
 		return readonly.Output(ctx, env.Environ(), path, args...)
 	}, t.TempDir(), setUp{})
@@ -76,17 +76,17 @@ exec /bin/sh -c "$4"
 	if _, err := (omp.Harness{}).Start(t.TempDir(), r, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	r, err = svc.Run("claude")
+	r, err = svc.Run("codex")
 	if err != nil {
 		t.Fatal(err)
 	}
 	r.Program = "adapter.js"
-	if _, err := (claude.Harness{}).Start(t.TempDir(), r, nil, nil); err != nil {
+	if _, err := (codex.Harness{}).Start(t.TempDir(), r, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-	for name, want := range map[string]string{"omp": "", "node": filepath.Join(bin, "claude")} {
+	for name, want := range map[string]string{"omp": "", "node": filepath.Join(bin, "codex")} {
 		got := waitFor(t, filepath.Join(out, name))
-		if !strings.Contains(got, "\nONLY_IN_SHELL=yes\n") || !strings.Contains(got, "\nCLAUDE_CODE_EXECUTABLE="+want+"\n") {
+		if !strings.Contains(got, "\nONLY_IN_SHELL=yes\n") || !strings.Contains(got, "\nCODEX_PATH="+want+"\n") {
 			t.Errorf("%s started with:\n%s", name, got)
 		}
 		if strings.Contains(got, "NUSHI") {

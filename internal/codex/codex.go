@@ -47,8 +47,9 @@ func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.
 	return agentproc.Start(cmd, client, log)
 }
 
-// Adapter is Codex's ACP adapter, as Nushi pins it (see claude.Adapter).
-// Its own Codex (the platforms' optional dependencies) is left out: it
+// Adapter is Codex's ACP adapter, as Nushi pins it: adapter/'s
+// package.json names the version, its lockfile every package's (make
+// adapters writes it again, and says the sizes). Its own Codex (the platforms' optional dependencies) is left out: it
 // runs the user's. Only a 20 KB launcher of @openai/codex, a dependency,
 // comes along, unused.
 var Adapter, _ = fs.Sub(adapterFiles, "adapter")

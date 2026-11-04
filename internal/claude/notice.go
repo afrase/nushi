@@ -17,7 +17,7 @@ func (Harness) Interrupted(text string) bool {
 	return false
 }
 
-// Notice reads a message chunk the adapter marks as a notice of Claude
+// Notice reads a message chunk the agent marks as a notice of Claude
 // Code's own, not the model's words: `_meta.claudeCode.kind`
 // "informational", sent as agent text to a client without ACP's notices
 // (docs/facts/claude.md), its level as a bold label ("**Notice:** …",

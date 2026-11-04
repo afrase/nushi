@@ -12,20 +12,10 @@ import (
 	"github.com/afrase/nushi/internal/agentproc"
 )
 
-// AdapterChoice is a dev override in the daemon's environment: "go" runs
-// Claude through Nushi's own agent (claudeacp, startGo) whatever the
-// setting (Settings › Agents, store's claudeGoAgent) says, for a dev
-// daemon (docs/development.md's Working notes). Nothing else reads it.
-const AdapterChoice = "NUSHI_CLAUDE_ADAPTER"
-
-// GoForced says the daemon's environment forces Nushi's Go agent
-// (AdapterChoice).
-func GoForced() bool { return os.Getenv(AdapterChoice) == "go" }
-
-// startGo starts Nushi's Go agent for Claude, as Start does the adapter:
-// this executable's claudeacp.Command, in dir (the daemon's folder) and
-// env, running cli, the user's Claude Code. It needs no Node and nothing
-// set up. Its stderr goes to log.
+// startGo starts Nushi's Go agent for Claude: this executable's
+// claudeacp.Command, in dir (the daemon's folder) and env, running cli,
+// the user's Claude Code. It needs no Node and nothing set up. Its stderr
+// goes to log.
 func startGo(dir, cli string, env []string, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
 	self, err := os.Executable()
 	if err != nil {
@@ -35,7 +25,8 @@ func startGo(dir, cli string, env []string, client acp.Client, log *slog.Logger)
 }
 
 // goCommand is the Go agent's command, self being this executable. The
-// agent reads claude's path from the variable the adapter reads.
+// agent reads claude's path from CLAUDE_CODE_EXECUTABLE, as
+// claude-agent-acp did.
 func goCommand(self, dir, cli string, env []string) *exec.Cmd {
 	cmd := exec.Command(self, claudeacp.Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as Claude's agent
 	cmd.Dir = dir

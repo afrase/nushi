@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,21 +102,20 @@ func TestTranscriptSettings(t *testing.T) {
 	}
 }
 
-// Claude runs through the adapter until the Go agent is turned on, which
-// is kept.
-func TestClaudeGoAgentSetting(t *testing.T) {
+// A settings.json from when Claude's Go agent was a setting reads as
+// before, the old key ignored, and is gone once a change is written.
+func TestTheOldGoAgentSettingIsIgnored(t *testing.T) {
 	dir := t.TempDir()
+	testcheck.Write(t, filepath.Join(dir, "settings.json"), `{"sleepAfterMinutes":5,"claudeGoAgent":true,"checkUpdates":false}`)
 	s := New(dir)
-	if s.ClaudeGoAgent() {
-		t.Fatal("the Go agent is on by default")
+	if s.SleepAfter() != 5*time.Minute || s.CheckUpdates() {
+		t.Fatalf("read: sleep %v, updates %v", s.SleepAfter(), s.CheckUpdates())
 	}
-	testcheck.NoErr(t, s.SetClaudeGoAgent(true))
-	if s = New(dir); !s.ClaudeGoAgent() || !s.KeepTranscripts() {
-		t.Errorf("kept: go %v, keep %v", s.ClaudeGoAgent(), s.KeepTranscripts())
-	}
-	testcheck.NoErr(t, s.SetClaudeGoAgent(false))
-	if New(dir).ClaudeGoAgent() {
-		t.Error("turned off, still on")
+	testcheck.NoErr(t, s.SetTranscriptDays(7))
+	b, err := os.ReadFile(filepath.Join(dir, "settings.json"))
+	testcheck.NoErr(t, err)
+	if strings.Contains(string(b), "claudeGoAgent") || !strings.Contains(string(b), `"sleepAfterMinutes": 5`) {
+		t.Errorf("written: %s", b)
 	}
 }
 

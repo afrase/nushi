@@ -85,6 +85,16 @@ func (fakeHarness) Interrupted(string) bool        { return false }
 func (fakeHarness) Compacted(model.Item) bool      { return false }
 func (fakeHarness) ForkTitle(string, string) bool  { return false }
 
+// claudeOnFake is Claude's harness on the fake agent, as "claude-fake":
+// the fake agent's subagents and worktrees read as Claude's.
+type claudeOnFake struct{ claude.Harness }
+
+func (claudeOnFake) Info() model.HarnessInfo {
+	info := claude.Harness{}.Info()
+	info.Name, info.Title = "claude-fake", "Claude on the fake agent"
+	return info
+}
+
 // pipeAgent is a fake agent "process" over pipes.
 type pipeAgent struct{ *agentproc.Agent }
 
@@ -127,13 +137,14 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	st := store.New(dataDir)
 	// The default agent is "fake", shaped like Claude's adapter as far as
 	// these tests need: it names its sessions, and its notices read as
-	// Claude's (the fake isn't Claude's adapter, so the rest of Claude's
+	// Claude's (the fake isn't Claude's agent, so the rest of Claude's
 	// harness stays out). The others are main's (knownagents), each on a
 	// fake: Codex and omp as the fake agent shaped like them, Ante, Pi and
 	// PiG as their bridges on a fake Ante and Pi, Claude as Nushi's Go agent
-	// on fake claudes, or, as its setting says when a chat's agent starts
-	// (agents.Agent.Own), as the fake agent for the adapter. What reads an
-	// agent's own files on this Mac (Agent.Local) is left out.
+	// on fake claudes. "claude-fake" is Claude's harness on the fake agent,
+	// for what the fake agent plays in Claude's terms (a subagent and its
+	// worktree). What reads an agent's own files on this Mac (Agent.Local)
+	// is left out.
 	piStore := piStores(dataDir)
 	pis := func(f pi.Flavor) chats.Launch {
 		return launch(func(r io.Reader, w io.Writer) {
@@ -151,8 +162,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		"claude": launch(func(r io.Reader, w io.Writer) {
 			_ = claudeacp.Serve(context.Background(), r, w, claudeacp.Config{CLIPath: "/fake/claude", ConfigDir: filepath.Join(dataDir, "claude"), Spawn: cls.spawn})
 		}),
-		"claude adapter": fake(false, false),
-		"codex":          fake(true, false),
+		"codex": fake(true, false),
 		"ante": launch(func(r io.Reader, w io.Writer) {
 			ante.Serve(r, w, ante.Config{Spawn: anteHosts, Home: anteStore.Home, Version: "0.2.14"})
 		}),
@@ -161,20 +171,12 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		"pig": pis(pi.PiG),
 	}
 	kinds := []chats.Kind{{Harness: fakeHarness{copyHistory}, Launch: fake(false, false)}}
-	for _, a := range knownagents.All("", st.ClaudeGoAgent) { // no projects folder: Local isn't used
+	for _, a := range knownagents.All("") { // no projects folder: Local isn't used
 		if l := launches[a.Agent.Name]; l != nil {
-			k := chats.Kind{Harness: a.Harness, Launch: l, MCP: a.MCP != nil}
-			if own := a.Agent.Own; own != nil {
-				k.Launch = func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
-					if own() {
-						return l(h, log)
-					}
-					return launches[a.Agent.Name+" adapter"](h, log)
-				}
-			}
-			kinds = append(kinds, k)
+			kinds = append(kinds, chats.Kind{Harness: a.Harness, Launch: l, MCP: a.MCP != nil})
 		}
 	}
+	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{}, Launch: fake(false, false), MCP: true})
 	copies, err := transcripts.Open(filepath.Join(dataDir, "transcripts"))
 	if err != nil {
 		t.Fatal(err)
@@ -193,7 +195,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 	}()
 	restarts := restart.New(svc, terms)
 	restarts.Every = 20 * time.Millisecond
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts, ClaudeGo: st}
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))
 	toolAPI := httptest.NewServer(api.Tools(toolSvc))

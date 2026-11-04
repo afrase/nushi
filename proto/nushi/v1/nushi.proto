@@ -744,9 +744,11 @@ message Agent {
   bool ready = 12;
   // Its chats whose agent runs (they sleep when the adapter changes).
   int32 awake = 13;
-  // Nushi's Go agent can run it in place of its adapter, as the setting
-  // claude_go_agent picks (API 97, ADR 0066).
-  bool go_agent = 14;
+  // go_agent (API 97 to 102): Nushi's Go agent could run it in place of its
+  // adapter, as Settings.claude_go_agent picked. Claude always runs through
+  // it now (ADR 0066).
+  reserved 14;
+  reserved "go_agent";
   // Its MCP servers are only yours, the user scope, with no off switch or
   // legacy SSE; others have Claude's scopes and those (API 97).
   bool mcp_user_only = 15;
@@ -1125,13 +1127,11 @@ message Settings {
   // 2 hours; on by default. SetSettings leaves it as it is when not given
   // (API 86).
   optional bool check_updates = 5;
-  // Claude's chats run through Nushi's Go agent (claudeacp, ADR 0066), which
-  // needs no Node and nothing set up, instead of the adapter
-  // (claude-agent-acp); off by default. A Claude chat's agent reads it each
-  // time it starts (a new chat, a reopened or woken one), so chats already
-  // running keep theirs until then. SetSettings leaves it as it is when not
-  // given (API 93).
-  optional bool claude_go_agent = 6;
+  // claude_go_agent (API 93 to 102): Claude's chats ran through Nushi's Go
+  // agent instead of the Node adapter. Claude always runs through it now
+  // (ADR 0066).
+  reserved 6;
+  reserved "claude_go_agent";
 }
 
 message ListTranscriptsRequest {}

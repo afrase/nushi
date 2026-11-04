@@ -33,12 +33,6 @@ type Agent struct {
 	Min         string   // the oldest version Nushi runs: Ante's bridge follows 0.2.14
 	Adapter     *Adapter // nil when it speaks ACP itself, or through Nushi's bridge
 	Tested      []string // the CLI's versions Nushi was tried with, oldest first
-	// Own says whether the agent runs, for now, through Nushi's own ACP
-	// agent rather than its Adapter: Claude through the Go agent, as the
-	// user's setting says (ADR 0066). It is asked each time, so a change
-	// needs no restart; while it says so, the agent has no Adapter and no
-	// Tested versions. nil: never.
-	Own func() bool
 	// SignedIn says whether the CLI is signed in, "yes" or "no", or ""
 	// when it can't tell cheaply; run runs the CLI with args, read-only.
 	SignedIn func(run func(args ...string) ([]byte, error)) string
@@ -115,23 +109,13 @@ func (s *Service) Environment(ctx context.Context, maxAge time.Duration) model.S
 	return s.env.Status()
 }
 
-// agent is the agent named name as it runs now (Agent.Own), and whether
-// it is known.
+// agent is the agent named name, and whether it is known.
 func (s *Service) agent(name string) (Agent, bool) {
 	i := slices.IndexFunc(s.agents, func(a Agent) bool { return a.Name == name })
 	if i < 0 {
 		return Agent{}, false
 	}
-	return now(s.agents[i]), true
-}
-
-// now is a as it runs now: through Nushi's own agent, with no adapter or
-// tested versions, when its Own says so.
-func now(a Agent) Agent {
-	if a.Own != nil && a.Own() {
-		a.Adapter, a.Tested = nil, nil
-	}
-	return a
+	return s.agents[i], true
 }
 
 // List finds every agent, all at once, and tells the chats which are ready.
@@ -139,7 +123,7 @@ func (s *Service) List(ctx context.Context) []Status {
 	out := make([]Status, len(s.agents))
 	var wg sync.WaitGroup
 	for i, a := range s.agents {
-		wg.Go(func() { out[i] = s.find(ctx, now(a)) })
+		wg.Go(func() { out[i] = s.find(ctx, a) })
 	}
 	wg.Wait()
 	s.logFound(out)
@@ -249,10 +233,7 @@ func (s *Service) Run(name string) (model.AgentRun, error) {
 	if !ok {
 		return model.AgentRun{}, fmt.Errorf("Nushi doesn't know the agent %q", name)
 	}
-	// An agent with an Own has an adapter to run instead; none now means
-	// Own said so when agent asked it (asked once, so a change meanwhile
-	// can't split the decision).
-	r := model.AgentRun{CLI: s.lookPath(a.CLI, a.Also), Env: s.Environ(), Own: a.Own != nil && a.Adapter == nil}
+	r := model.AgentRun{CLI: s.lookPath(a.CLI, a.Also), Env: s.Environ()}
 	if a.Adapter != nil {
 		r.Node = s.lookPath("node", nil)
 	}

@@ -29,7 +29,7 @@ func TestRelatedWorktrees(t *testing.T) {
 	data := t.TempDir()
 	d := startDaemon(t, data, history, nil)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: repo}))).ChatId
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo}))).ChatId
 	read := func() []*nushiv1.RelatedWorktree {
 		t.Helper()
 		return must(a.c.GetRelatedWorktrees(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreesRequest{ChatId: id}))).Worktrees
@@ -81,7 +81,7 @@ func TestRelatedWorktreeNotUTF8(t *testing.T) {
 	fine := filepath.Join(repo, ".claude", "worktrees", "fine")
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "fine", fine)
 	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}, nil))
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: repo}))).ChatId
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "subagent ls " + bad + " " + fine})))
 	a.waitFor("the worktree beside it", func(e *nushiv1.EventsResponse) bool {
 		r := e.GetRelatedWorktrees()
@@ -106,7 +106,7 @@ func TestFoundWorktreeNotUTF8(t *testing.T) {
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "bad", bad)
 	testcheck.PutBranch(t, repo, "bad", "bad\xff")
 	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}, nil))
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: bad}))).ChatId
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: bad}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
 	a.waitFor("a later event", func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && e.GetItem() != nil })
 	got := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{})))
@@ -135,7 +135,7 @@ func TestRelatedWorktreeStatsAndDiffs(t *testing.T) {
 	testcheck.Write(t, filepath.Join(wt, "wip.txt"), "wip\n")
 
 	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}, nil))
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: repo}))).ChatId
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "subagent ls " + wt})))
 	settled(ctx, t, a, id)
 	stats := func(paths ...string) []*nushiv1.RelatedWorktreeStats {

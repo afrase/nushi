@@ -61,7 +61,7 @@ func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "ante", Title: "Ante", Resume: "ante --resume"}
 }
 
-// Start starts the bridge, as claude.Harness does Claude's adapter: this
+// Start starts the bridge, as claude.Harness does Claude's Go agent: this
 // executable's Command, in dir (the daemon's folder) and r's environment
 // (the login shell's, ADR 0048), its stderr to log.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {

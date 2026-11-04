@@ -4,13 +4,13 @@
 // Messages API, runs the ACP agent with claude-tee as its claude, plays
 // client.json against the agent as Nushi would, and writes the
 // scenario's cli.jsonl (and cli-2.jsonl… for each further claude) and
-// acp-node.jsonl. make claude-record runs it.
+// acp.jsonl. make claude-record runs it, with Nushi's Go agent (`nushid
+// claude-acp`) as the agent.
 //
-//	claude-record -tee <claude-tee> -claude <claude> [-only all|name,…] [-- agent command…]
+//	claude-record -tee <claude-tee> -claude <claude> [-only all|name,…] -- agent command…
 //
-// The agent is Nushi's pinned claude-agent-acp under the node on PATH,
-// set up once in a cache folder of its own, unless a command is given.
-// Each run has a throwaway HOME, CLAUDE_CONFIG_DIR and TMPDIR, a dummy
+// The scenarios recorded until 2026-11-03 ran claude-agent-acp, the Node
+// adapter Claude ran through before the Go agent (ADR 0066). Each run has a throwaway HOME, CLAUDE_CONFIG_DIR and TMPDIR, a dummy
 // key and nothing else of the caller's environment but PATH, so no one's
 // login or settings take part. A scenario's old recordings are replaced
 // only by a run that went as its scripts say.
@@ -18,11 +18,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -30,9 +27,6 @@ import (
 	"slices"
 	"strings"
 	"syscall"
-
-	"github.com/afrase/nushi/internal/claude"
-	"github.com/afrase/nushi/internal/npm"
 )
 
 func main() {
@@ -40,13 +34,12 @@ func main() {
 	only := flag.String("only", "all", `the scenarios to record: "all", or names with commas`)
 	tee := flag.String("tee", "", "claude-tee, built")
 	claudePath := flag.String("claude", os.Getenv("CLAUDE_TEE_REAL"), "the claude to record ($CLAUDE_TEE_REAL)")
-	adapterDir := flag.String("adapter-dir", "", "where claude-agent-acp is set up (default: a cache folder)")
-	acpName := flag.String("acp", "acp-node.jsonl", "the ACP recording's file name")
+	acpName := flag.String("acp", "acp.jsonl", "the ACP recording's file name")
 	mcpEcho := flag.String("mcp-echo", "", "claudetest's mcp-echo, built: the scenarios' $mcp-echo")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	if *tee == "" || *claudePath == "" {
-		log.Error("claude-record needs -tee and -claude (or CLAUDE_TEE_REAL)")
+	if *tee == "" || *claudePath == "" || flag.NArg() == 0 {
+		log.Error("claude-record needs -tee, -claude (or CLAUDE_TEE_REAL) and the agent's command after --")
 		os.Exit(2)
 	}
 	// The first Ctrl-C or SIGTERM stops the run and keeps no recording;
@@ -56,7 +49,7 @@ func main() {
 	defer cancel()
 	context.AfterFunc(ctx, cancel)
 	r := &recorder{tee: *tee, claude: *claudePath, agent: flag.Args(), acp: *acpName, mcpEcho: *mcpEcho, log: log}
-	if err := run(ctx, *scenarios, *only, *adapterDir, r); err != nil {
+	if err := run(ctx, *scenarios, *only, r); err != nil {
 		log.Error("claude-record", "err", err)
 		cancel()
 		os.Exit(1) //nolint:gocritic // cancel ran
@@ -64,9 +57,8 @@ func main() {
 }
 
 // run records the scenarios only names in scenarios with r, whose paths
-// it makes absolute; r's agent is the pinned claude-agent-acp, set up in
-// adapterDir, unless r names one.
-func run(ctx context.Context, scenarios, only, adapterDir string, r *recorder) error {
+// it makes absolute.
+func run(ctx context.Context, scenarios, only string, r *recorder) error {
 	dirs, err := pick(scenarios, only)
 	if err != nil {
 		return err
@@ -86,12 +78,10 @@ func run(ctx context.Context, scenarios, only, adapterDir string, r *recorder) e
 	if r.mcpEcho, err = abs(r.mcpEcho); err != nil {
 		return err
 	}
-	log := r.log
-	if len(r.agent) == 0 {
-		if r.agent, err = nodeAgent(ctx, log, adapterDir); err != nil {
-			return err
-		}
+	if r.agent[0], err = abs(r.agent[0]); err != nil {
+		return err
 	}
+	log := r.log
 	var failed []string
 	for _, dir := range dirs {
 		if err := ctx.Err(); err != nil { // interrupted: the rest stay as they are
@@ -139,48 +129,4 @@ func pick(scenarios, only string) ([]string, error) {
 		out = append(out, dir)
 	}
 	return out, nil
-}
-
-// nodeAgent is the command that runs Nushi's pinned claude-agent-acp,
-// set up in dir (default: a cache folder) with internal/npm as Nushi sets
-// it up, unless it is there at the pinned version already.
-func nodeAgent(ctx context.Context, log *slog.Logger, dir string) ([]string, error) {
-	if dir == "" {
-		cache, err := os.UserCacheDir()
-		if err != nil {
-			return nil, err
-		}
-		dir = filepath.Join(cache, "nushi-claude-record", "claude-agent-acp")
-	}
-	want, err := pinned()
-	if err != nil {
-		return nil, err
-	}
-	var in npm.Installer
-	version, program := in.Installed(dir, claude.AdapterPackage, claude.AdapterBin)
-	if version != want {
-		log.Info("setting up claude-agent-acp", "version", want, "folder", dir)
-		if err := in.Install(ctx, claude.Adapter, dir, func() {}); err != nil {
-			return nil, fmt.Errorf("set up claude-agent-acp: %w", err)
-		}
-		if version, program = in.Installed(dir, claude.AdapterPackage, claude.AdapterBin); version != want {
-			return nil, errors.New("claude-agent-acp isn't there after setting it up")
-		}
-	}
-	return []string{"node", program}, nil
-}
-
-// pinned is the claude-agent-acp version Nushi pins.
-func pinned() (string, error) {
-	b, err := fs.ReadFile(claude.Adapter, "package.json")
-	if err != nil {
-		return "", err
-	}
-	var p struct {
-		Dependencies map[string]string `json:"dependencies"`
-	}
-	if err := json.Unmarshal(b, &p); err != nil || p.Dependencies[claude.AdapterPackage] == "" {
-		return "", fmt.Errorf("no %s in Nushi's adapter package.json", claude.AdapterPackage)
-	}
-	return p.Dependencies[claude.AdapterPackage], nil
 }

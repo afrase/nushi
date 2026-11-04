@@ -69,18 +69,13 @@ type Agent struct {
 
 // All is every agent, in the order they're listed, the default (Claude)
 // first. projects is Claude's projects folder (claudehistory.Projects),
-// which its Local reads. claudeGo is the user's setting that runs Claude
-// through Nushi's Go agent instead of the adapter (ADR 0066), asked each
-// time a Claude chat's agent starts; the daemon's environment can force it
-// (claude.GoForced, a dev override).
-func All(projects string, claudeGo func() bool) []Agent {
+// which its Local reads. Claude runs through Nushi's Go agent (ADR 0066):
+// no adapter, Node, set-up or pinned versions.
+func All(projects string) []Agent {
 	all := []Agent{
 		{
 			Harness: claude.Harness{}, Local: claudehistory.Local{Projects: projects},
-			Agent: agents.Agent{CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn, Tested: claude.Tested,
-				Adapter: &agents.Adapter{Lock: claude.Adapter, Package: claude.AdapterPackage, Bin: claude.AdapterBin, Download: claude.AdapterDownload, Disk: claude.AdapterDisk},
-				// The Go agent needs no Node, nothing set up and no version pinned.
-				Own: func() bool { return claude.GoForced() || claudeGo() }},
+			Agent:  agents.Agent{CLI: claude.CLI, Page: claude.Page, SignedIn: claude.SignedIn},
 			Skills: claudeskills.Claude{}, Trust: claudetrust.Trust{},
 			MCP: func(func() (model.AgentRun, error)) mcp.Config { return claudemcp.Claude{} },
 		},

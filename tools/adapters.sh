@@ -8,7 +8,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 touch "$tmp/npmrc"
 export npm_config_userconfig="$tmp/npmrc" npm_config_globalconfig="$tmp/npmrc.global" npm_config_update_notifier=false
-for dir in internal/claude/adapter internal/codex/adapter; do
+for dir in internal/codex/adapter; do
 	(cd "$dir" && npm install --package-lock-only --ignore-scripts --no-audit --no-fund --cache "$tmp/cache" >/dev/null)
 	mkdir "$tmp/i"
 	cp "$dir"/package.json "$dir"/package-lock.json "$tmp/i/"

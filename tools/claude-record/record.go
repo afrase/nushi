@@ -157,8 +157,8 @@ func (r *recorder) run(ctx context.Context, scratch string, script *fakeapi.Scri
 	return errors.Join(played, stopped)
 }
 
-// environ is the agent's environment: none of the caller's but PATH (for
-// node), throwaway folders, the fake API with a dummy key, claude-tee as
+// environ is the agent's environment: none of the caller's but PATH,
+// throwaway folders, the fake API with a dummy key, claude-tee as
 // claude, the CLI's calls home off, and what Nushi adds (claude.Environ).
 func (r *recorder) environ(dirs map[string]string, url string) []string {
 	return claude.Environ([]string{

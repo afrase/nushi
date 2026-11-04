@@ -39,12 +39,12 @@ func (builtInPlugins) SetPluginOn(context.Context, string, string, bool) error {
 func (builtInPlugins) Uninstall(context.Context, string, string) error         { return nil }
 func (builtInPlugins) PluginScope(string, model.Plugin) string                 { return "" }
 
-// What the app asks of an agent instead of going by its name: Settings'
-// Go agent switch and the plain MCP view, from the agents as main lists
+// What the app asks of an agent instead of going by its name: the plain
+// MCP view, from the agents as main lists
 // them, and what its skills view shows. Nothing runs: the probe is fake.
 func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
-	all := knownagents.All("", func() bool { return false })
+	all := knownagents.All("")
 	var kinds []chats.Kind
 	var found []agents.Agent
 	servers := map[string]*mcp.Service{}
@@ -71,9 +71,6 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 		t.Fatalf("%d agents listed, want %d", len(listed), len(all))
 	}
 	for _, a := range listed {
-		if want := a.Name == "claude"; a.GoAgent != want {
-			t.Errorf("%s: go_agent %v, want %v", a.Name, a.GoAgent, want)
-		}
 		if want := a.Name == "ante"; a.McpUserOnly != want {
 			t.Errorf("%s: mcp_user_only %v, want %v", a.Name, a.McpUserOnly, want)
 		}

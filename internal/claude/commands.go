@@ -9,7 +9,7 @@ import (
 
 // planCommand is Claude Code's /plan as Nushi runs it: claude refuses it
 // headless ("/plan isn't available in this environment."), and neither
-// the adapter nor the Go agent lists it (docs/facts/claude.md, ADR 0088).
+// claude-agent-acp nor the Go agent lists it (docs/facts/claude.md, ADR 0088).
 var planCommand = model.Command{Name: "plan", Description: "Switch to plan mode; with a description, start planning it", Hint: "[description]"}
 
 // TerminalCommands are the commands of Claude's terminal that Nushi runs in

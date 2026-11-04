@@ -55,11 +55,9 @@ type HarnessInfo struct {
 func (i HarnessInfo) Info() HarnessInfo { return i }
 
 // AgentRun is what starting an agent takes: its CLI, and with an adapter, the
-// adapter's program and the Node on PATH that runs it; the environment it
-// starts with; and whether it runs through Nushi's own agent instead of its
-// adapter (agents.Agent.Own), decided once so the start follows it.
+// adapter's program and the Node on PATH that runs it; and the environment
+// it starts with.
 type AgentRun struct {
 	CLI, Program, Node string
 	Env                []string
-	Own                bool
 }
