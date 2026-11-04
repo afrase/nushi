@@ -29,7 +29,7 @@ func TestRelatedWorktrees(t *testing.T) {
 	data := t.TempDir()
 	d := startDaemon(t, data, history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo})
 	read := func() []*nushiv1.RelatedWorktree {
 		t.Helper()
 		return must(a.c.GetRelatedWorktrees(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreesRequest{ChatId: id}))).Worktrees
@@ -46,11 +46,11 @@ func TestRelatedWorktrees(t *testing.T) {
 			return r != nil && e.ChatId == id && len(r.Worktrees) == 1 && is(r.Worktrees[0], state)
 		})
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "subagent ls " + wt})))
+	a.send(id, "subagent ls "+wt)
 	if e := event("present"); e.Seq != 0 {
 		t.Errorf("the event has a number: %d", e.Seq)
 	}
-	settled(ctx, t, a, id)
+	a.settled(id)
 	if got := read(); len(got) != 1 || !is(got[0], "present") {
 		t.Errorf("found: %v", got)
 	}
@@ -81,18 +81,18 @@ func TestRelatedWorktreeNotUTF8(t *testing.T) {
 	fine := filepath.Join(repo, ".claude", "worktrees", "fine")
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "fine", fine)
 	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}))
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "subagent ls " + bad + " " + fine})))
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo})
+	a.send(id, "subagent ls "+bad+" "+fine)
 	a.waitFor("the worktree beside it", func(e *nushiv1.EventsResponse) bool {
 		r := e.GetRelatedWorktrees()
 		return r != nil && len(r.Worktrees) == 1 && r.Worktrees[0].Branch == "fine"
 	})
-	settled(ctx, t, a, id)
+	a.settled(id)
 	got := must(a.c.GetRelatedWorktrees(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreesRequest{ChatId: id}))).Worktrees
 	if len(got) != 1 || got[0].Branch != "fine" {
 		t.Errorf("read: %v", got)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+	a.send(id, "hello")
 	a.waitFor("a later event", func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && e.GetItem() != nil })
 }
 
@@ -106,8 +106,8 @@ func TestFoundWorktreeNotUTF8(t *testing.T) {
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "bad", bad)
 	testcheck.PutBranch(t, repo, "bad", "bad\xff")
 	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}))
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: bad}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: bad})
+	a.send(id, "hello")
 	a.waitFor("a later event", func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && e.GetItem() != nil })
 	got := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{})))
 	if len(got.Chats) != 1 || got.Chats[0].Worktree != nil {
@@ -135,9 +135,9 @@ func TestRelatedWorktreeStatsAndDiffs(t *testing.T) {
 	testcheck.Write(t, filepath.Join(wt, "wip.txt"), "wip\n")
 
 	a := open(t, startDaemon(t, t.TempDir(), &acptest.History{}))
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "subagent ls " + wt})))
-	settled(ctx, t, a, id)
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude-fake", Folder: repo})
+	a.send(id, "subagent ls "+wt)
+	a.settled(id)
 	stats := func(paths ...string) []*nushiv1.RelatedWorktreeStats {
 		t.Helper()
 		return must(a.c.GetRelatedWorktreeStats(ctx, connect.NewRequest(&nushiv1.GetRelatedWorktreeStatsRequest{ChatId: id, Paths: paths}))).Stats

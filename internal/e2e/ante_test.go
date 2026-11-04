@@ -38,16 +38,12 @@ func TestAnAnteChat(t *testing.T) {
 		t.Errorf("options = %s", got)
 	}
 	id := start.ChatId
-	send := func(text string) {
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-	}
-	send("hello")
-	a.waitFor("the reply", idle)
-	send("please write")
+	a.say(id, "hello")
+	a.send(id, "please write")
 	perm := a.waitFor("the permission", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: id, ItemId: perm.Id, OptionId: "allow_once"})))
 	a.waitFor("the write", idle)
-	send("ask me")
+	a.send(id, "ask me")
 	q := a.waitFor("the question", questionPending).GetItem().Item
 	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" {
 		t.Errorf("question fields %v", q.Fields)
@@ -55,7 +51,7 @@ func TestAnAnteChat(t *testing.T) {
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: "q0", Values: []string{"Blue"}}, {FieldId: "q0_other", Values: []string{"teal"}}}})))
 	a.waitFor("the answer", idle)
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap := a.get(id)
 	if st := snap.Status; !st.CanFork || !st.CanRewind || !st.CanAskContext {
 		t.Errorf("status = %v, want fork, rewind and the context", st)
 	}
@@ -79,7 +75,7 @@ func TestAnAnteChat(t *testing.T) {
 	}
 	must(a.c.RewindChat(ctx, connect.NewRequest(&nushiv1.RewindChatRequest{ChatId: id, ItemId: second})))
 	a.waitFor("the rewind", idle)
-	rewound := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items)
+	rewound := transcript(a.get(id).Items)
 	if strings.Contains(rewound, "please write") || !strings.Contains(rewound, "You said: hello") {
 		t.Errorf("rewound:\n%s", rewound)
 	}
@@ -87,12 +83,12 @@ func TestAnAnteChat(t *testing.T) {
 	d.stop()
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap = a.get(id)
 	if got := transcript(a.follow(id, snap)); got != "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:" {
 		t.Errorf("replayed:\n%s", got)
 	}
 	plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id})))
-	sid := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat.SessionId
+	sid := a.get(id).Chat.SessionId
 	must(a.c.DeleteChat(ctx, connect.NewRequest(&nushiv1.DeleteChatRequest{ChatId: id})))
 	if !plan.DeletesHistory || anteStores(dataDir).Saved(sid) {
 		t.Errorf("Delete left Ante's session (plan %v)", plan)
@@ -119,14 +115,12 @@ func subagentView(items []*nushiv1.Item) string {
 // the same again after a restart, from Nushi's copy, and from the agent's
 // replay alone, as for a session Nushi never saw run.
 func TestAnAnteSubagent(t *testing.T) {
-	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "ante", Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask a subagent"})))
-	a.waitFor("the reply", idle)
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	id := a.start(&nushiv1.StartChatRequest{Agent: "ante", Folder: t.TempDir()})
+	a.say(id, "ask a subagent")
+	snap := a.get(id)
 	live := subagentView(snap.Items)
 	const fence = "```"
 	want := "agent general:Find the handler:done:" + antetest.Report + ":Find where errors are handled:\n" +
@@ -146,7 +140,7 @@ func TestAnAnteSubagent(t *testing.T) {
 	d.stop()
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap = a.get(id)
 	if got := subagentView(a.follow(id, snap)); got != live {
 		t.Errorf("reopened:\n%s\nlive:\n%s", got, live)
 	}
@@ -155,7 +149,7 @@ func TestAnAnteSubagent(t *testing.T) {
 	testcheck.NoErr(t, os.RemoveAll(filepath.Join(dataDir, "transcripts")))
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap = a.get(id)
 	if got := subagentView(a.follow(id, snap)); got != live {
 		t.Errorf("from Ante's replay alone:\n%s\nlive:\n%s", got, live)
 	}
@@ -167,8 +161,8 @@ func TestAnOmpChat(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "a question"})))
+	id := a.start(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()})
+	a.send(id, "a question")
 	q := a.waitFor("the question", questionPending).GetItem().Item
 	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" {
 		t.Errorf("question fields %v", q.Fields)
@@ -176,7 +170,7 @@ func TestAnOmpChat(t *testing.T) {
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: "q0", Values: []string{"Red"}}}})))
 	a.waitFor("the answer", idle)
-	if st := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Status; !st.CanFork || st.CanRewind || st.CanAskContext {
+	if st := a.get(id).Status; !st.CanFork || st.CanRewind || st.CanAskContext {
 		t.Errorf("status = %v, want fork only", st)
 	}
 	if plan := must(a.c.PlanDeleteChat(ctx, connect.NewRequest(&nushiv1.PlanDeleteChatRequest{ChatId: id}))); plan.DeletesHistory {

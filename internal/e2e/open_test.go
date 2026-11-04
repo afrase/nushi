@@ -85,8 +85,8 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 	if err := os.Symlink(dir, link); err != nil {
 		t.Fatal(err)
 	}
-	ours := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: link}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: ours, Text: "a chat of Nushi's"})))
+	ours := a.start(&nushiv1.StartChatRequest{Folder: link})
+	a.send(ours, "a chat of Nushi's")
 	a.waitFor("its reply", func(e *nushiv1.EventsResponse) bool { return e.ChatId == ours && idle(e) })
 	sid, resume := inTerminal(t, history, false, dir, "hello from the terminal")
 	inTerminal(t, history, false, t.TempDir(), "another folder's")
@@ -106,13 +106,13 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 			Folder: dir, SessionId: sid, Title: found.Sessions[0].Title}))).ChatId
 	}
 	chatID := open()
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	snap := a.get(chatID)
 	want := "USER_MESSAGE:hello from the terminal:\nAGENT_MESSAGE:You said: hello from the terminal:"
 	if got := transcript(snap.Items); got != want || snap.Status.Busy || snap.Chat.Folder != link || snap.Chat.Title != "hello from the terminal" {
 		t.Errorf("opened: %s (%v, %s, %q)\nwant:\n%s", got, snap.Status.Busy, snap.Chat.Folder, snap.Chat.Title, want)
 	}
 
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "and from Nushi"})))
+	a.send(chatID, "and from Nushi")
 	a.waitFor("the reply", func(e *nushiv1.EventsResponse) bool {
 		return e.ChatId == chatID && strings.Contains(e.GetItem().GetItem().GetText(), "and from Nushi") &&
 			e.GetItem().GetItem().GetKind() == nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE
@@ -170,7 +170,7 @@ func TestListAcrossFoldersAndPages(t *testing.T) {
 	}
 	// Without a title from the list, the chat takes its first message's.
 	id := must(a.c.OpenAgentSession(ctx, connect.NewRequest(&nushiv1.OpenAgentSessionRequest{Agent: "codex", Folder: dir, SessionId: mine[0]}))).ChatId
-	if c := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat; c.Title != "three" {
+	if c := a.get(id).Chat; c.Title != "three" {
 		t.Errorf("titled %q, want its first message", c.Title)
 	}
 }

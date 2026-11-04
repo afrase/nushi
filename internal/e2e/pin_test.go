@@ -16,7 +16,7 @@ func TestPinChats(t *testing.T) {
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	start := func() string {
-		return must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+		return a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	}
 	pins := func() map[string]int32 {
 		out := map[string]int32{}

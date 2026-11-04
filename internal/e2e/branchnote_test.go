@@ -25,17 +25,14 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	repo, dataDir, history := gitRepo(t), t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	get := func(id string) *nushiv1.GetChatResponse {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
 	start := func() (string, string) {
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
-		return id, get(id).Chat.Worktree.Branch
+		id := a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
+		return id, a.get(id).Chat.Worktree.Branch
 	}
 	turn := func(id, text string) *nushiv1.GetChatResponse {
 		t.Helper()
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-		return settled(ctx, t, a, id)
+		a.send(id, text)
+		return a.settled(id)
 	}
 	rename := func(id, branch string) {
 		t.Helper()
@@ -45,12 +42,12 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	}
 	// last is the blocks of the last prompt the chat's agent had.
 	last := func(id string) []string {
-		p := history.Prompts(get(id).Chat.SessionId)
+		p := history.Prompts(a.get(id).Chat.SessionId)
 		return p[len(p)-1]
 	}
 	lines := func(id string) []string {
 		var out []string
-		for _, it := range get(id).Items {
+		for _, it := range a.get(id).Items {
 			if it.Kind == nushiv1.ItemKind_ITEM_KIND_NOTICE && it.Status == "branch_renamed" {
 				out = append(out, it.Text)
 			}
@@ -132,7 +129,7 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	}
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	r := a.follow(idMany, get(idMany))
+	r := a.follow(idMany, a.get(idMany))
 	for _, it := range r {
 		if it.Kind == nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE && strings.Contains(it.Text, "[Nushi]") {
 			t.Errorf("a replayed message with the note: %q", it.Text)

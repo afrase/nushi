@@ -55,21 +55,17 @@ func (c *claudes) spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 // answer streamed and its turn ended at claude's result, with the cost;
 // the daemon's stop ends claude.
 func TestAClaudeChatThroughTheGoAgent(t *testing.T) {
-	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: t.TempDir()}))).ChatId
-	get := func() *nushiv1.GetChatResponse {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude", Folder: t.TempDir()})
 	for n, text := range []string{"hello", "again"} {
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
+		a.send(id, text)
 		until(t, "the answer to "+text, func() bool {
-			snap := get()
+			snap := a.get(id)
 			return !snap.Status.Busy && strings.Count(transcript(snap.Items), "AGENT_MESSAGE:Hello from claude") == n+1
 		})
 	}
-	snap := get()
+	snap := a.get(id)
 	if got, want := transcript(snap.Items), "USER_MESSAGE:hello:\nAGENT_MESSAGE:Hello from claude:\nUSER_MESSAGE:again:\nAGENT_MESSAGE:Hello from claude:"; got != want {
 		t.Errorf("transcript:\n%s\nwant\n%s", got, want)
 	}
@@ -103,25 +99,22 @@ func TestAClaudeChatMovesThroughTheGoAgent(t *testing.T) {
 	dataDir, from, to := t.TempDir(), t.TempDir(), t.TempDir()
 	d := startDaemon(t, dataDir, &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: from}))).ChatId
-	get := func() *nushiv1.GetChatResponse {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
-	until(t, "the answer", func() bool { snap := get(); return !snap.Status.Busy && len(snap.Items) == 2 })
+	id := a.start(&nushiv1.StartChatRequest{Agent: "claude", Folder: from})
+	a.send(id, "hello")
+	until(t, "the answer", func() bool { snap := a.get(id); return !snap.Status.Busy && len(snap.Items) == 2 })
 	// The fake claude writes no transcript: this is the one claude would.
 	store := sessions.Store{ConfigDir: filepath.Join(dataDir, "claude")}
-	sid := get().Chat.SessionId
+	sid := a.get(id).Chat.SessionId
 	original := filepath.Join(store.ProjectDir(from), sid+".jsonl")
 	testcheck.Write(t, original, `{"type":"user","uuid":"u1","sessionId":"`+sid+`","cwd":"`+from+`","message":{"role":"user","content":"hello"}}
 {"type":"assistant","uuid":"u2","parentUuid":"u1","sessionId":"`+sid+`","message":{"id":"msg_1","role":"assistant","content":[{"type":"text","text":"Hello from claude"}]}}
 `)
-	before := transcript(get().Items)
+	before := transcript(a.get(id).Items)
 
 	if _, err := a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: to})); err != nil {
 		t.Fatal(err)
 	}
-	snap := get()
+	snap := a.get(id)
 	fork := snap.Chat.SessionId
 	if snap.Chat.Folder != to || fork == sid || transcript(snap.Items) != before {
 		t.Fatalf("after the move: %v\n%s\nwant\n%s", snap.Chat, transcript(snap.Items), before)
@@ -138,9 +131,9 @@ func TestAClaudeChatMovesThroughTheGoAgent(t *testing.T) {
 	if last := specs[len(specs)-1]; !slices.Contains(last.Args, "--resume="+fork) || !sameDir(last.Dir, to) {
 		t.Errorf("claude after the move: %v in %s", last.Args, last.Dir)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "again"})))
+	a.send(id, "again")
 	until(t, "the answer in the new folder", func() bool {
-		snap := get()
+		snap := a.get(id)
 		return !snap.Status.Busy && strings.Count(transcript(snap.Items), "AGENT_MESSAGE:Hello from claude") == 2
 	})
 }

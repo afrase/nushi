@@ -36,7 +36,7 @@ func TestACodexChat(t *testing.T) {
 	if got := strings.Join(ids, " "); got != "mode/mode model/model reasoning_effort/thought_level" {
 		t.Errorf("options = %s, want one mode, the model and the effort", got)
 	}
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: first.ChatId})))
+	snap := a.get(first.ChatId)
 	if st := snap.Status; !st.CanFork || st.CanRewind || st.CanAskContext {
 		t.Errorf("status = %v, want fork but no rewind or context", st)
 	}
@@ -48,17 +48,17 @@ func TestACodexChat(t *testing.T) {
 		t.Error("the other agent took Codex's mode")
 	}
 
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: first.ChatId, Text: "run it"})))
+	a.send(first.ChatId, "run it")
 	a.waitFor("the turn to end", func(e *nushiv1.EventsResponse) bool { return e.ChatId == first.ChatId && idle(e) })
 	want := "USER_MESSAGE:run it:\nTOOL_CALL:```\nhi\n```:completed\nAGENT_MESSAGE:Ran it.:"
-	if got := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: first.ChatId}))).Items); got != want {
+	if got := transcript(a.get(first.ChatId).Items); got != want {
 		t.Errorf("transcript:\n%s\nwant:\n%s", got, want)
 	}
 
 	d.stop()
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: first.ChatId})))
+	snap = a.get(first.ChatId)
 	if got := transcript(a.follow(first.ChatId, snap)); got != want {
 		t.Errorf("replayed:\n%s\nwant:\n%s", got, want)
 	}

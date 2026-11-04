@@ -19,8 +19,8 @@ func TestTranscriptCopies(t *testing.T) {
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(chatID, "ask permission")
 	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
 	a.waitFor("the reply", idle)
@@ -50,8 +50,7 @@ func TestTranscriptCopies(t *testing.T) {
 	}
 	off, days := false, int32(30)
 	must(a.c.SetSettings(ctx, connect.NewRequest(&nushiv1.SetSettingsRequest{Settings: &nushiv1.Settings{SleepAfterMinutes: 30, KeepTranscripts: &off, TranscriptDays: &days}})))
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
-	a.waitFor("the second reply", idle)
+	a.say(chatID, "hello")
 	if list := must(a.c.ListTranscripts(ctx, connect.NewRequest(&nushiv1.ListTranscriptsRequest{}))); len(list.Copies) != 0 {
 		t.Errorf("copied while off: %v", list)
 	}
@@ -63,7 +62,7 @@ func TestTranscriptCopies(t *testing.T) {
 	if set.GetKeepTranscripts() || set.GetTranscriptDays() != 30 {
 		t.Errorf("settings after a restart: %v", set)
 	}
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	snap := a.get(chatID)
 	got := transcript(a.follow(chatID, snap))
 	if strings.Contains(got, "PERMISSION") || !strings.Contains(got, "You said: hello") {
 		t.Errorf("the agent's history alone:\n%s", got)

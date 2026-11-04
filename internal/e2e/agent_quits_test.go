@@ -1,24 +1,17 @@
 package e2e
 
 import (
-	"context"
 	"strings"
 	"testing"
-
-	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
 func TestAChatOutlivesItsAgent(t *testing.T) {
-	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	send := func(text string) {
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-	}
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	quit := func(e *nushiv1.EventsResponse) bool {
 		it := e.GetItem().GetItem()
 		return it.GetKind() == nushiv1.ItemKind_ITEM_KIND_NOTICE && strings.Contains(it.GetText(), "agent quit")
@@ -32,21 +25,21 @@ func TestAChatOutlivesItsAgent(t *testing.T) {
 	}
 
 	// Mid-turn, while a permission prompt waits.
-	send("ask permission")
+	a.send(id, "ask permission")
 	a.waitFor("the permission prompt", pendingPermission)
 	d.kill()
 	a.waitFor("the notice", quit)
 	a.waitFor("the turn to end", idle)
-	send("hello") // reopens the session, then goes
+	a.send(id, "hello") // reopens the session, then goes
 	replied("hello")
 
 	// Between turns.
 	d.kill()
 	a.waitFor("the notice", quit)
-	send("again")
+	a.send(id, "again")
 	replied("again")
 
-	got := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items)
+	got := transcript(a.get(id).Items)
 	want := `USER_MESSAGE:ask permission:
 TOOL_CALL::failed
 PERMISSION::cancelled

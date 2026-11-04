@@ -22,9 +22,6 @@ func TestPlanFromThePhone(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	mac, phone := open(t, d), openAt(t, d.devices)
-	get := func(id string) *nushiv1.GetChatResponse {
-		return must(phone.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
 	mode := func(snap *nushiv1.GetChatResponse) string {
 		i := slices.IndexFunc(snap.Config, func(o *nushiv1.ConfigOption) bool { return o.Category == "mode" })
 		if i < 0 {
@@ -32,16 +29,16 @@ func TestPlanFromThePhone(t *testing.T) {
 		}
 		return snap.Config[i].Current
 	}
-	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "claude", Folder: t.TempDir()}))).ChatId
+	id := mac.start(&nushiv1.StartChatRequest{Agent: "claude", Folder: t.TempDir()})
 	plan := func(text string, items int) string {
 		t.Helper()
-		if !must(phone.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text}))).RanCommand {
+		if !phone.send(id, text).RanCommand {
 			t.Errorf("%s: the answer doesn't say the daemon ran it", text)
 		}
-		if !testcheck.Eventually(func() bool { s := get(id); return !s.Status.Busy && len(s.Items) == items }) {
-			t.Fatalf("%s:\n%s", text, transcript(get(id).Items))
+		if !testcheck.Eventually(func() bool { s := phone.get(id); return !s.Status.Busy && len(s.Items) == items }) {
+			t.Fatalf("%s:\n%s", text, transcript(phone.get(id).Items))
 		}
-		snap := get(id)
+		snap := phone.get(id)
 		if mode(snap) != "plan" || !slices.ContainsFunc(snap.Commands, func(c *nushiv1.Command) bool { return c.Name == "plan" }) {
 			t.Errorf("%s: mode %q, commands %v; want plan, and /plan offered", text, mode(snap), snap.Commands)
 		}
@@ -58,13 +55,13 @@ func TestPlanFromThePhone(t *testing.T) {
 	}
 
 	// Another agent's /plan goes to it as it is.
-	other := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	if must(phone.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: other, Text: "/plan x"}))).RanCommand {
+	other := mac.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	if phone.send(other, "/plan x").RanCommand {
 		t.Error("the daemon says it ran another agent's /plan")
 	}
 	// The fake agent answers a prompt with "plan" in it with a plan.
 	until(t, "the fake's answer", func() bool {
-		s := get(other)
+		s := phone.get(other)
 		return !s.Status.Busy && strings.HasPrefix(transcript(s.Items), "USER_MESSAGE:/plan x:\nPLAN:")
 	})
 }

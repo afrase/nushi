@@ -17,10 +17,9 @@ func TestReloadReplaysTheChat(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
-	a.waitFor("the reply", idle)
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.say(chatID, "hello")
+	snap := a.get(chatID)
 	before := transcript(snap.Items)
 
 	// The app follows along: the transcript is cut, then replayed.
@@ -29,30 +28,27 @@ func TestReloadReplaysTheChat(t *testing.T) {
 	if got := transcript(a.follow(chatID, snap)); got != before {
 		t.Errorf("transcript after reload:\n%s\nwant:\n%s", got, before)
 	}
-	if got := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items); got != before {
+	if got := transcript(a.get(chatID).Items); got != before {
 		t.Errorf("snapshot after reload:\n%s\nwant:\n%s", got, before)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "again"})))
-	a.waitFor("the reply after reloading", idle)
+	a.say(chatID, "again")
 }
 
 // A chat without messages has nothing in the agent's history (Claude keeps
 // a session only once it has one), so after a restart it starts afresh.
 func TestAnEmptyChatReopensAfterARestart(t *testing.T) {
-	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	d.stop()
 
 	a = open(t, startDaemon(t, dataDir, history))
-	items := a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))
+	items := a.follow(chatID, a.get(chatID))
 	if got := transcript(items); got != "" {
 		t.Errorf("transcript after a restart:\n%s", got)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
-	a.waitFor("the reply", idle)
+	a.say(chatID, "hello")
 }
 
 // When Claude's safeguards stop a response (the fake's "safeguards", as
@@ -61,24 +57,22 @@ func TestAnEmptyChatReopensAfterARestart(t *testing.T) {
 // reply it went on with after; Claude's history keeps only the reply, so
 // after a restart Nushi's copy brings back the rest.
 func TestAResponseStoppedBySafeguards(t *testing.T) {
-	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "safeguards"})))
-	a.waitFor("the reply", idle)
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.say(chatID, "safeguards")
 	want := "USER_MESSAGE:safeguards:\n" +
 		"AGENT_MESSAGE:Here is the first part of an answer:stopped_by_safeguards\n" +
 		"NOTICE:Opus 5.5's safeguards stopped the response above · continuing once with that noted:agent_notice\n" +
 		"AGENT_MESSAGE:Continued reply after the stop.:"
-	if got := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items); got != want {
+	if got := transcript(a.get(chatID).Items); got != want {
 		t.Errorf("transcript:\n%s\nwant:\n%s", got, want)
 	}
 
 	d.stop()
 	a = open(t, startDaemon(t, dataDir, history))
-	if got := transcript(a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))); got != want {
+	if got := transcript(a.follow(chatID, a.get(chatID))); got != want {
 		t.Errorf("after a restart:\n%s\nwant:\n%s", got, want)
 	}
 }
@@ -106,7 +100,7 @@ func TestFindChatFiles(t *testing.T) {
 	if err := os.Symlink(secret, filepath.Join(folder, "link.md")); err != nil {
 		t.Fatal(err)
 	}
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: folder})
 	asked := []string{"docs/plan.md", filepath.Join(folder, "main.go"), "missing.md", "docs", "../" + filepath.Base(outside) + "/secret.md", secret, "link.md"}
 	got := must(a.c.FindChatFiles(ctx, connect.NewRequest(&nushiv1.FindChatFilesRequest{ChatId: chatID, Paths: asked}))).Found
 	if want := []string{"docs/plan.md", filepath.Join(folder, "main.go")}; !slices.Equal(got, want) {

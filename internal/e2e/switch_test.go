@@ -35,19 +35,16 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "try-sqrly", try)
 	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
-	get := func(id string) *nushiv1.GetChatResponse {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
 	start := func(text string) string {
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo}))).ChatId
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-		settled(ctx, t, a, id)
+		id := a.start(&nushiv1.StartChatRequest{Folder: repo})
+		a.send(id, text)
+		a.settled(id)
 		return id
 	}
 	turn := func(id, text string) []string {
 		t.Helper()
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-		p := history.Prompts(settled(ctx, t, a, id).Chat.SessionId)
+		a.send(id, text)
+		p := history.Prompts(a.settled(id).Chat.SessionId)
 		return p[len(p)-1]
 	}
 	switchTo := func(id, branch string, others bool) (*nushiv1.SwitchBranchResponse, error) {
@@ -92,19 +89,19 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	}
 	testcheck.Git(t, repo, "checkout", "--", "a.txt")
 	// The folder's other chat mid-turn: refused, naming it.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: two, Text: "wait"})))
+	a.send(two, "wait")
 	if _, err := switchTo(one, "other", true); err == nil || !strings.Contains(err.Error(), "“Two” is working") {
 		t.Errorf("another chat mid-turn: %v", err)
 	}
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: two})))
-	settled(ctx, t, a, two)
+	a.settled(two)
 	// Its own turn: refused.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: one, Text: "wait"})))
+	a.send(one, "wait")
 	if _, err := switchTo(one, "other", true); err == nil || !strings.Contains(err.Error(), "agent is working") {
 		t.Errorf("mid-turn: %v", err)
 	}
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: one})))
-	settled(ctx, t, a, one)
+	a.settled(one)
 	// The other chat goes along: asked first.
 	if r, err := switchTo(one, "other", false); err != nil || r.Switched || !slices.Equal(r.Others, []string{"Two"}) || on() != "main" {
 		t.Errorf("with another chat there: %v, %v", r, err)
@@ -124,7 +121,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 		}
 	}
 	lines := 0
-	for _, it := range get(one).Items {
+	for _, it := range a.get(one).Items {
 		if it.Status == "branch_switched" && it.Text == "Switched to branch other · told the agent" {
 			lines++
 		}
@@ -147,7 +144,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	if _, err := a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: one, Folder: try})); err != nil {
 		t.Fatal(err)
 	}
-	c := get(one).Chat
+	c := a.get(one).Chat
 	if wt := c.Worktree; c.Folder != try || wt == nil || !wt.Found || wt.Path != try || wt.Repo != repo || wt.Branch != "try-sqrly" {
 		t.Fatalf("moved: %s in %v", c.Folder, c.Worktree)
 	}
@@ -162,8 +159,8 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 		t.Errorf("Delete offers the worktree that was there: %v", p.Worktrees)
 	}
 	// A new chat there runs in it the same way.
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: try}))).ChatId
-	if wt := get(id).Chat.Worktree; wt == nil || !wt.Found || wt.Path != try {
+	id := a.start(&nushiv1.StartChatRequest{Folder: try})
+	if wt := a.get(id).Chat.Worktree; wt == nil || !wt.Found || wt.Path != try {
 		t.Errorf("a new chat in the worktree: %v", wt)
 	}
 	// Back to the repository's own folder: a plain chat again; the
@@ -171,7 +168,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	if _, err := a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: one, Folder: repo})); err != nil {
 		t.Fatal(err)
 	}
-	if c := get(one).Chat; c.Worktree != nil || c.Folder != repo {
+	if c := a.get(one).Chat; c.Worktree != nil || c.Folder != repo {
 		t.Errorf("back: %s in %v", c.Folder, c.Worktree)
 	}
 	if _, err := os.Stat(try); err != nil {

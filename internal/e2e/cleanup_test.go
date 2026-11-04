@@ -26,9 +26,9 @@ func TestCleanUp(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	start := func(folder string, worktree bool) (string, *nushiv1.Worktree) {
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder, Worktree: worktree}))).ChatId
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
-		return id, settled(ctx, t, a, id).Chat.Worktree
+		id := a.start(&nushiv1.StartChatRequest{Folder: folder, Worktree: worktree})
+		a.send(id, "pwd")
+		return id, a.settled(id).Chat.Worktree
 	}
 	cleanUp := func(id string) *nushiv1.GetCleanUpResponse {
 		return must(a.c.GetCleanUp(ctx, connect.NewRequest(&nushiv1.GetCleanUpRequest{ChatId: id})))
@@ -85,13 +85,13 @@ func TestCleanUp(t *testing.T) {
 	must(a.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: other, Archived: true})))
 
 	// A turn running.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "wait"})))
+	a.send(id, "wait")
 	until(t, "the turn", func() bool {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Status.Busy
+		return a.get(id).Status.Busy
 	})
 	refused("mid-turn", remove(id, true), "working")
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id})))
-	settled(ctx, t, a, id)
+	a.settled(id)
 
 	// A commit on the branch, then the worktree forced away, changes and
 	// all; the branch then goes only with force (a squash merge's).

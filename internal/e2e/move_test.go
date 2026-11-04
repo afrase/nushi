@@ -33,13 +33,13 @@ func TestMoveAChat(t *testing.T) {
 	}
 	ask := func(id, text string) string {
 		t.Helper()
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
+		a.send(id, text)
 		// The reply, then the end of its turn: a failed move's idle may be waiting before them.
 		a.waitFor("the reply to "+text, func(e *nushiv1.EventsResponse) bool {
 			return e.GetItem().GetItem().GetKind() == nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE
 		})
 		a.waitFor("the end of the turn", idle)
-		items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
+		items := a.get(id).Items
 		return items[len(items)-1].Text
 	}
 	move := func(id, folder string) error {
@@ -48,7 +48,7 @@ func TestMoveAChat(t *testing.T) {
 	}
 
 	// A chat without a folder starts in a scratch folder of its own.
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{})
 	scratch := chat(id)
 	if scratch.Folder != filepath.Join(dataDir, "scratch", id) {
 		t.Fatalf("folder = %q, want a scratch folder", scratch.Folder)
@@ -72,11 +72,11 @@ func TestMoveAChat(t *testing.T) {
 
 	// After messages, the session is forked into the new folder: a new
 	// session with the same transcript, new cwd; the original stays.
-	before := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items)
+	before := transcript(a.get(id).Items)
 	if err := move(id, other); err != nil {
 		t.Fatal(err)
 	}
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap := a.get(id)
 	if c := chat(id); c.Folder != other || c.SessionId == moved.SessionId || transcript(snap.Items) != before {
 		t.Fatalf("after moving: %v\n%s\nwant\n%s", c, transcript(snap.Items), before)
 	}
@@ -86,12 +86,12 @@ func TestMoveAChat(t *testing.T) {
 	if got := ask(id, "pwd"); got != "cwd: "+other {
 		t.Fatalf("reply = %q", got)
 	}
-	if !strings.HasPrefix(transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items), before) {
+	if !strings.HasPrefix(transcript(a.get(id).Items), before) {
 		t.Error("the transcript lost its start")
 	}
 
 	// Not while a turn waits on the user.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask permission"})))
+	a.send(id, "ask permission")
 	a.waitFor("the permission prompt", pendingPermission)
 	if err := move(id, repo); err == nil {
 		t.Error("a busy chat moved")
@@ -103,7 +103,7 @@ func TestMoveAChat(t *testing.T) {
 	if err := move(id, broken); err == nil {
 		t.Fatal("the move worked")
 	}
-	items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
+	items := a.get(id).Items
 	if last := items[len(items)-1]; chat(id).Folder != other || !strings.Contains(last.Text, "no room") {
 		t.Errorf("after a failed move: folder %q, last item %q", chat(id).Folder, last.Text)
 	}
@@ -116,7 +116,7 @@ func TestMoveAChat(t *testing.T) {
 	d.stop()
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	items = a.follow(id, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))))
+	items = a.follow(id, a.get(id))
 	got := transcript(items)
 	if !strings.HasPrefix(got, "USER_MESSAGE:pwd:\nAGENT_MESSAGE:cwd: "+repo) || !strings.HasSuffix(got, "cwd: "+other+":") {
 		t.Errorf("after a restart:\n%s", got)

@@ -15,13 +15,13 @@ func TestStopEndsTheAgentsTurn(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "wait"})))
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "wait")
 	a.waitFor("the turn to start", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetBusy() })
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id})))
 	a.waitFor("the turn to end", idle)
 	want := "USER_MESSAGE:wait:\nNOTICE:Stopped:cancelled"
-	if got := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items); got != want {
+	if got := transcript(a.get(id).Items); got != want {
 		t.Errorf("transcript:\n%s\nwant:\n%s", got, want)
 	}
 }
@@ -31,8 +31,8 @@ func TestAQuestionRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "a question"})))
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "a question")
 	q := a.waitFor("the question", func(e *nushiv1.EventsResponse) bool {
 		it := e.GetItem().GetItem()
 		return it.GetKind() == nushiv1.ItemKind_ITEM_KIND_QUESTION && it.GetStatus() == "pending"
@@ -40,7 +40,7 @@ func TestAQuestionRoundTrip(t *testing.T) {
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: "color", Values: []string{"green"}}}})))
 	a.waitFor("the turn to end", idle)
-	items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
+	items := a.get(id).Items
 	if last := items[len(items)-1].Text; last != `Answer: {"action":"accept","content":{"color":"green"}}` {
 		t.Errorf("the agent got %s", last)
 	}

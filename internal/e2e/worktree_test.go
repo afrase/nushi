@@ -32,7 +32,7 @@ func TestChatsInWorktrees(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	chat := func(id string) *nushiv1.Chat {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat
+		return a.get(id).Chat
 	}
 
 	// Two chats in new worktrees of one repository: each has its own folder
@@ -40,15 +40,15 @@ func TestChatsInWorktrees(t *testing.T) {
 	var ids []string
 	var wts []*nushiv1.Worktree
 	for range 3 {
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
+		id := a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
 		c := chat(id)
 		wt := c.Worktree
 		if wt == nil || wt.Repo != repo || wt.Base != "main" || c.Folder != wt.Path || filepath.Dir(wt.Path) != filepath.Join(repo, ".worktrees") ||
 			wt.Branch != "nushi/"+filepath.Base(wt.Path) {
 			t.Fatalf("chat = %v", c)
 		}
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
-		wt = settled(ctx, t, a, id).Chat.Worktree // named after the chat: nushi/pwd, then -2, -3
+		a.send(id, "pwd")
+		wt = a.settled(id).Chat.Worktree // named after the chat: nushi/pwd, then -2, -3
 		ids, wts = append(ids, id), append(wts, wt)
 	}
 	if wts[0].Path == wts[1].Path {
@@ -57,7 +57,7 @@ func TestChatsInWorktrees(t *testing.T) {
 
 	// A chat without messages moves into a new worktree and back out; the
 	// worktree it leaves goes, with its branch.
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Folder: repo})
 	must(a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: repo, Worktree: true})))
 	wt := chat(id).Worktree
 	if wt == nil || chat(id).Folder != wt.Path {
@@ -78,9 +78,9 @@ func TestChatsInWorktrees(t *testing.T) {
 
 	// A chat with messages moved out of its worktree keeps it, and Delete
 	// offers it with what removing it would lose.
-	id = must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "pwd"})))
-	wt = settled(ctx, t, a, id).Chat.Worktree
+	id = a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
+	a.send(id, "pwd")
+	wt = a.settled(id).Chat.Worktree
 	testcheck.Git(t, wt.Path, "commit", "-q", "--allow-empty", "-m", "work")
 	must(a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: repo})))
 	if c := chat(id); c.Worktree != nil || c.Folder != repo {
@@ -170,13 +170,13 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 		t.Error("a worktree chat in a folder the worktree doesn't have started")
 	}
 	chat := func(id string) *nushiv1.Chat {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat
+		return a.get(id).Chat
 	}
 	move := func(id, folder string) {
 		t.Helper()
 		must(a.c.MoveChat(ctx, connect.NewRequest(&nushiv1.MoveChatRequest{ChatId: id, Folder: folder})))
 	}
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
 	wt := chat(id).Worktree
 	sub := filepath.Join(wt.Path, "sub")
 	testcheck.NoErr(t, os.Mkdir(sub, 0o755))
@@ -196,7 +196,7 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	}
 
 	// Nor one a terminal runs in; Delete ends the terminal, then removes it.
-	id = must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
+	id = a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
 	wt = chat(id).Worktree
 	must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: id, Cols: 80, Rows: 24})))
 	move(id, repo)
@@ -224,12 +224,12 @@ func TestChatOnAnIssue(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	start := func(branch string) (*nushiv1.Chat, error) {
-		r, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true,
+		r, err := a.c.StartChat(t.Context(), connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true,
 			JiraSite: "acme.atlassian.net", JiraKey: "ACME-12", Branch: branch}))
 		if err != nil {
 			return nil, err
 		}
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: r.Msg.ChatId}))).Chat, nil
+		return a.get(r.Msg.ChatId).Chat, nil
 	}
 	for _, c := range []struct{ branch, want, folder string }{
 		{"ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey", "ACME-12-log-in-with-a-passkey"},

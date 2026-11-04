@@ -37,14 +37,9 @@ func aPiChat(t *testing.T, agent string) {
 		t.Errorf("options = %s", got)
 	}
 	id := start.ChatId
-	send := func(text string) {
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-	}
-	send("hello")
-	a.waitFor("the reply", idle)
-	send("use a tool")
-	a.waitFor("the tool", idle)
-	send("/ask")
+	a.say(id, "hello")
+	a.say(id, "use a tool")
+	a.send(id, "/ask")
 	q := a.waitFor("the question", questionPending).GetItem().Item
 	if q.Text != "Pick a colour" || len(q.Fields) != 1 || len(q.Fields[0].Options) != 2 {
 		t.Errorf("question %v", q)
@@ -52,7 +47,7 @@ func aPiChat(t *testing.T, agent string) {
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: q.Fields[0].Id, Values: []string{"Blue"}}}})))
 	a.waitFor("the answer", idle)
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap := a.get(id)
 	if st := snap.Status; !st.CanFork || !st.CanRewind || !st.CanAskContext {
 		t.Errorf("status = %v, want fork, rewind and the context", st)
 	}
@@ -79,7 +74,7 @@ func aPiChat(t *testing.T, agent string) {
 	d.stop()
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap = a.get(id)
 	if got := transcript(a.follow(id, snap)); got != "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:" {
 		t.Errorf("replayed:\n%s", got)
 	}

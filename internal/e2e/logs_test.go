@@ -95,14 +95,14 @@ func TestNothingPrivateLogged(t *testing.T) {
 	ctx := context.Background()
 	a := open(t, &daemon{url: srv.URL})
 	defer func() { a.quit(); srv.CloseClientConnections(); srv.Close(); terms.CloseAll(); svc.Close() }()
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo}))).ChatId
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: repo})
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "MARKER-PROMPT-1b2e tool stderr",
 		Files: []string{filepath.Join(repo, "notes.txt")}})))
 	a.waitFor("the reply", func(e *nushiv1.EventsResponse) bool {
 		return e.GetItem().GetItem().GetText() == "Ran it."
 	})
 	a.waitFor("the turn to end", idle) // the reply comes before the end: a prompt between them is refused
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "MARKER-ASK-77aa permission"})))
+	a.send(chatID, "MARKER-ASK-77aa permission")
 	perm := a.waitFor("the permission", pendingPermission).GetItem().GetItem()
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
 	must(a.c.GetDiff(ctx, connect.NewRequest(&nushiv1.GetDiffRequest{Folder: repo})))

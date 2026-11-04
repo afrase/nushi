@@ -15,7 +15,7 @@ func TestSetChatColor(t *testing.T) {
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	color := func() string {
 		t.Helper()
 		for _, c := range must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats {

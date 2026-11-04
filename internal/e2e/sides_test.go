@@ -22,9 +22,8 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 	dir := t.TempDir()
 	d := startDaemon(t, dir, history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
-	a.waitFor("the reply", idle)
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.say(id, "hello")
 	side := func() string {
 		s := must(a.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
 		if !history.Has(s) {
@@ -51,7 +50,7 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 	}
 	d = startDaemon(t, dir, history)
 	a = open(t, d)
-	must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	a.get(id)
 	gone(s2)
 
 	// The app quits with a side chat open: nobody will see it again.
@@ -72,9 +71,8 @@ func TestSideChatsStayWhileAPhoneFollows(t *testing.T) {
 	history := &acptest.History{}
 	d := startDaemon(t, t.TempDir(), history)
 	mac, phone := open(t, d), openAt(t, d.devices)
-	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(mac.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
-	mac.waitFor("the reply", idle)
+	id := mac.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	mac.say(id, "hello")
 	side := must(phone.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
 	mac.quit()
 	time.Sleep(200 * time.Millisecond) // many graces

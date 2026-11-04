@@ -22,7 +22,7 @@ func TestAPromptsFilesAndUploads(t *testing.T) {
 	dataDir := t.TempDir()
 	a := open(t, startDaemon(t, dataDir, &acptest.History{}))
 	outside := filepath.Join(t.TempDir(), "spec.pdf")
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello",
 		Files: []string{"a.go", outside}, Uploads: []*nushiv1.FileUpload{{Name: "photo notes.txt", Data: []byte("from the phone")}}})))
 	msg := a.waitFor("the message", func(e *nushiv1.EventsResponse) bool {

@@ -27,26 +27,26 @@ func TestForkAChat(t *testing.T) {
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "hello")
 	a.waitFor("the reply", idleChat(id))
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "permission"})))
+	a.send(id, "permission")
 	p := a.waitFor("the permission", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: id, ItemId: p.Id, OptionId: "allow"})))
 	a.waitFor("the answer", idleChat(id))
-	orig := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	orig := a.get(id)
 
 	fork := must(a.c.ForkAsChat(ctx, connect.NewRequest(&nushiv1.ForkAsChatRequest{ChatId: id}))).ChatId
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: fork})))
+	snap := a.get(fork)
 	if got, want := transcript(snap.Items), transcript(orig.Items); got != want || !strings.Contains(got, "PERMISSION:") {
 		t.Errorf("the fork's transcript:\n%s\nwant:\n%s", got, want)
 	}
 	if c := snap.Chat; c.Title != "hello (fork)" || c.Folder != orig.Chat.Folder || c.Agent != orig.Chat.Agent {
 		t.Errorf("fork %v", c)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: fork, Text: "only here"})))
+	a.send(fork, "only here")
 	a.waitFor("the fork's reply", idleChat(fork))
-	if now := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))); transcript(now.Items) != transcript(orig.Items) {
+	if now := a.get(id); transcript(now.Items) != transcript(orig.Items) {
 		t.Errorf("the original changed:\n%s", transcript(now.Items))
 	}
 
@@ -57,7 +57,7 @@ func TestForkAChat(t *testing.T) {
 	if !slices.ContainsFunc(listed, func(c *nushiv1.Chat) bool { return c.Id == fork }) {
 		t.Fatal("the fork isn't listed after a restart")
 	}
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: fork})))
+	snap = a.get(fork)
 	got := transcript(a.follow(fork, snap))
 	for _, want := range []string{"USER_MESSAGE:hello:", "PERMISSION:", "USER_MESSAGE:only here:", "AGENT_MESSAGE:You said: only here:"} {
 		if !strings.Contains(got, want) {
@@ -72,28 +72,28 @@ func TestForkFromAMessage(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "pig", Folder: t.TempDir()}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Agent: "pig", Folder: t.TempDir()})
 	for _, text := range []string{"hello", "use a tool"} {
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
+		a.send(id, text)
 		a.waitFor("the reply", idleChat(id))
 	}
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	snap := a.get(id)
 	i := slices.IndexFunc(snap.Items, func(it *nushiv1.Item) bool { return it.Text == "You said: hello" })
 	if i < 0 || !snap.Items[i].Forkable || !snap.Status.CanRewind {
 		t.Fatalf("no forkable reply in:\n%s", transcript(snap.Items))
 	}
 	fork := must(a.c.ForkAsChat(ctx, connect.NewRequest(&nushiv1.ForkAsChatRequest{ChatId: id, ItemId: snap.Items[i].Id}))).ChatId
-	forked := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: fork})))
+	forked := a.get(fork)
 	if got := transcript(forked.Items); got != "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:" {
 		t.Errorf("the fork:\n%s", got)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: fork, Text: "again"})))
+	a.send(fork, "again")
 	a.waitFor("the fork's reply", idleChat(fork))
 
-	omp := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: omp, Text: "hello"})))
+	omp := a.start(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()})
+	a.send(omp, "hello")
 	a.waitFor("omp's reply", idleChat(omp))
-	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: omp})))
+	snap = a.get(omp)
 	last := snap.Items[len(snap.Items)-1]
 	before := len(must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats)
 	_, err := a.c.ForkAsChat(ctx, connect.NewRequest(&nushiv1.ForkAsChatRequest{ChatId: omp, ItemId: last.Id}))
@@ -115,11 +115,11 @@ func TestKeepASideChat(t *testing.T) {
 	history := &acptest.History{}
 	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "hello")
 	a.waitFor("the reply", idleChat(id))
 	side := must(a.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: side, Text: "aside"})))
+	a.send(side, "aside")
 	a.waitFor("the side chat's reply", idleChat(side))
 
 	kept := must(a.c.KeepSideChat(ctx, connect.NewRequest(&nushiv1.KeepSideChatRequest{ChatId: side}))).ChatId
@@ -132,7 +132,7 @@ func TestKeepASideChat(t *testing.T) {
 		t.Fatal("the kept side chat's session was deleted")
 	}
 	a = open(t, d)
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: kept})))
+	snap := a.get(kept)
 	got := transcript(a.follow(kept, snap))
 	if want := "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:\nUSER_MESSAGE:aside:\nAGENT_MESSAGE:You said: aside:"; got != want {
 		t.Errorf("the kept chat:\n%s\nwant:\n%s", got, want)
@@ -140,6 +140,6 @@ func TestKeepASideChat(t *testing.T) {
 	if snap.Chat.Title != "hello (fork)" {
 		t.Errorf("title %q", snap.Chat.Title)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: kept, Text: "more"})))
+	a.send(kept, "more")
 	a.waitFor("the kept chat's reply", idleChat(kept))
 }

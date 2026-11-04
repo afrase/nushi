@@ -296,6 +296,35 @@ func (a *app) waitFor(what string, match func(*nushiv1.EventsResponse) bool) *nu
 	}
 }
 
+// start starts a chat as req says and returns its id.
+func (a *app) start(req *nushiv1.StartChatRequest) string {
+	return must(a.c.StartChat(a.t.Context(), connect.NewRequest(req))).ChatId
+}
+
+// send sends text to chat id.
+func (a *app) send(id, text string) *nushiv1.SendPromptResponse {
+	return must(a.c.SendPrompt(a.t.Context(), connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
+}
+
+// get is chat id, its transcript and status.
+func (a *app) get(id string) *nushiv1.GetChatResponse {
+	return must(a.c.GetChat(a.t.Context(), connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+}
+
+// say sends text to chat id and waits for a chat to go idle.
+func (a *app) say(id, text string) {
+	a.t.Helper()
+	a.send(id, text)
+	a.waitFor("the reply to "+text, idle)
+}
+
+// settled waits for chat id's turn to end, and returns the chat.
+func (a *app) settled(id string) *nushiv1.GetChatResponse {
+	a.t.Helper()
+	until(a.t, "the turn's end", func() bool { return !a.get(id).Status.Busy })
+	return a.get(id)
+}
+
 // must returns a call's response; a failed call fails the test (by panic).
 func must[T any](resp *connect.Response[T], err error) *T {
 	if err != nil {
@@ -340,10 +369,9 @@ func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 
 	first := open(t, d)
-	chatID := must(first.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(first.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
-	first.waitFor("the first reply", idle)
-	must(first.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
+	chatID := first.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	first.say(chatID, "hello")
+	first.send(chatID, "ask permission")
 	first.waitFor("the permission prompt", pendingPermission)
 	first.quit()
 
@@ -354,7 +382,7 @@ func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 	if len(list) != 1 || list[0].Id != chatID || list[0].Title != "hello" {
 		t.Fatalf("chats = %v", list)
 	}
-	snap := must(second.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	snap := second.get(chatID)
 	var texts []string
 	for _, it := range snap.Items {
 		texts = append(texts, it.Kind.String()+":"+it.Text+it.Status)
@@ -375,7 +403,7 @@ func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 		done = idle(e)
 	}
 
-	final := must(second.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	final := second.get(chatID)
 	if !slices.EqualFunc(items, final.Items, func(a, b *nushiv1.Item) bool { return proto.Equal(a, b) }) {
 		t.Errorf("snapshot plus events:\n%v\nwant the new snapshot:\n%v", items, final.Items)
 	}
@@ -417,14 +445,13 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	d := startDaemon(t, dataDir, history)
 
 	a := open(t, d)
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
-	a.waitFor("the first reply", idle)
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.say(chatID, "hello")
+	a.send(chatID, "ask permission")
 	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
 	a.waitFor("the second reply", idle)
-	before := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items)
+	before := transcript(a.get(chatID).Items)
 
 	d.stop() // the daemon goes, and its agents with it
 	d = startDaemon(t, dataDir, history)
@@ -434,7 +461,7 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	if len(list) != 1 || list[0].Id != chatID {
 		t.Fatalf("chats = %v", list)
 	}
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	snap := a.get(chatID)
 	items := a.follow(chatID, snap)
 
 	// The agent's history has no permission prompts: Nushi's copy of the
@@ -443,15 +470,14 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	if got := transcript(items); got != want {
 		t.Errorf("rebuilt transcript:\n%s\nwant:\n%s", got, want)
 	}
-	final := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	final := a.get(chatID)
 	if transcript(final.Items) != transcript(items) {
 		t.Errorf("snapshot after reopening = %s", transcript(final.Items))
 	}
 
 	// The reopened chat carries on.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "again"})))
-	a.waitFor("the reply after reopening", idle)
-	final = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	a.say(chatID, "again")
+	final = a.get(chatID)
 	if last := final.Items[len(final.Items)-1]; last.Text != "You said: again" {
 		t.Errorf("reply after reopening = %q", last.Text)
 	}
@@ -461,13 +487,13 @@ func TestStopCancelsAWaitingPrompt(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
+	chatID := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(chatID, "ask permission")
 	a.waitFor("the chat to wait on the user", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetWaiting() })
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: chatID})))
 	a.waitFor("the turn to end", idle)
 
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID})))
+	snap := a.get(chatID)
 	var got []string
 	for _, it := range snap.Items {
 		got = append(got, it.Kind.String()+":"+it.Status)
@@ -484,9 +510,8 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	start := func() string {
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
-		a.waitFor("the reply", idle)
+		id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+		a.say(id, "hello")
 		return id
 	}
 	list := func() map[string]*nushiv1.Chat {
@@ -501,13 +526,13 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 
 	// Archiving cancels the turn waiting on the user and stops the agent;
 	// the transcript stays readable, but takes no prompts.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: kept, Text: "ask permission"})))
+	a.send(kept, "ask permission")
 	a.waitFor("the permission prompt", pendingPermission)
 	must(a.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: kept, Archived: true})))
 	if c := list()[kept]; !c.Archived || c.Title != "Greeting" || c.Status.Busy {
 		t.Fatalf("archived chat = %v", c)
 	}
-	snap := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: kept})))
+	snap := a.get(kept)
 	if !strings.HasSuffix(transcript(snap.Items), "PERMISSION::cancelled\nNOTICE:Stopped:cancelled") || snap.Status.Busy {
 		t.Fatalf("archived transcript:\n%s", transcript(snap.Items))
 	}
@@ -531,12 +556,11 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 		t.Fatalf("chats after restart = %v", c)
 	}
 	must(a.c.ArchiveChat(ctx, connect.NewRequest(&nushiv1.ArchiveChatRequest{ChatId: kept, Archived: false})))
-	items := a.follow(kept, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: kept}))))
+	items := a.follow(kept, a.get(kept))
 	if !strings.HasPrefix(transcript(items), "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:") {
 		t.Errorf("unarchived transcript:\n%s", transcript(items))
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: kept, Text: "again"})))
-	a.waitFor("the reply after unarchiving", idle)
+	a.say(kept, "again")
 	must(a.c.RenameChat(ctx, connect.NewRequest(&nushiv1.RenameChatRequest{ChatId: kept})))
 	if c := list()[kept]; c.Archived || c.Title != "hello" {
 		t.Errorf("chat = %v, want the first prompt's title back", c)

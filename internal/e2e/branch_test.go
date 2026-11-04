@@ -24,19 +24,16 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	repo := gitRepo(t)
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	get := func(id string) *nushiv1.GetChatResponse {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
 	start := func() (string, *nushiv1.Worktree) {
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true}))).ChatId
-		return id, get(id).Chat.Worktree
+		id := a.start(&nushiv1.StartChatRequest{Folder: repo, Worktree: true})
+		return id, a.get(id).Chat.Worktree
 	}
 	until := func(what string, ok func() bool) { t.Helper(); until(t, what, ok) }
 	// turn sends text and waits for the turn's end.
 	turn := func(id, text string) *nushiv1.GetChatResponse {
 		t.Helper()
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: text})))
-		return settled(ctx, t, a, id)
+		a.send(id, text)
+		return a.settled(id)
 	}
 	head := func(dir string) string {
 		out, _ := exec.Command("git", "-C", dir, "symbolic-ref", "--short", "HEAD").Output()
@@ -78,8 +75,8 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	if r := turn(idLate, "hello\nlate title: Go version bump"); r.Chat.Worktree.Branch != wtLate.Branch {
 		t.Errorf("named before the agent's title: %v", r.Chat.Worktree)
 	}
-	until("the late title's name", func() bool { return get(idLate).Chat.Worktree.Branch == "nushi/go-version-bump" })
-	if got := renamed(get(idLate)); len(got) != 1 {
+	until("the late title's name", func() bool { return a.get(idLate).Chat.Worktree.Branch == "nushi/go-version-bump" })
+	if got := renamed(a.get(idLate)); len(got) != 1 {
 		t.Errorf("notices: %q", got)
 	}
 	idNone, wtNone := start()
@@ -89,7 +86,7 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	if got := turn(idNone, "again").Chat.Worktree.Branch; got != "nushi/hello-there" {
 		t.Errorf("after the second turn: %s", got)
 	}
-	idCodex := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "codex", Folder: repo, Worktree: true}))).ChatId
+	idCodex := a.start(&nushiv1.StartChatRequest{Agent: "codex", Folder: repo, Worktree: true})
 	if got := turn(idCodex, "plain words").Chat.Worktree.Branch; got != "nushi/plain-words" {
 		t.Errorf("a Codex chat's branch: %s", got)
 	}
@@ -102,15 +99,15 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 
 	// Mid-turn the title comes, and the branch waits for the turn's end.
 	id3, wt3 := start()
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id3, Text: "title: Slow work\nwait"})))
-	until("the agent's title", func() bool { return get(id3).Chat.Title == "Slow work" })
+	a.send(id3, "title: Slow work\nwait")
+	until("the agent's title", func() bool { return a.get(id3).Chat.Title == "Slow work" })
 	time.Sleep(50 * time.Millisecond)
-	if r := get(id3); !r.Status.Busy || r.Chat.Worktree.Branch != wt3.Branch || head(wt3.Path) != wt3.Branch {
+	if r := a.get(id3); !r.Status.Busy || r.Chat.Worktree.Branch != wt3.Branch || head(wt3.Path) != wt3.Branch {
 		t.Fatalf("mid-turn: %v, the worktree on %q", r, head(wt3.Path))
 	}
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id3})))
-	until("the turn's end", func() bool { return !get(id3).Status.Busy })
-	if got := get(id3).Chat.Worktree.Branch; got != "nushi/slow-work" || head(wt3.Path) != got {
+	until("the turn's end", func() bool { return !a.get(id3).Status.Busy })
+	if got := a.get(id3).Chat.Worktree.Branch; got != "nushi/slow-work" || head(wt3.Path) != got {
 		t.Errorf("after a stopped turn: %s", got)
 	}
 
@@ -164,14 +161,14 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 	if err := rename(id7, "me/my-name"); err != nil {
 		t.Fatal(err)
 	}
-	if c := get(id7).Chat; c.Worktree.Branch != "me/my-name" || head(wt7.Path) != "me/my-name" || c.Worktree.Path != wt7.Path {
+	if c := a.get(id7).Chat; c.Worktree.Branch != "me/my-name" || head(wt7.Path) != "me/my-name" || c.Worktree.Path != wt7.Path {
 		t.Errorf("after Rename branch: %v", c)
 	}
 	if r := turn(id7, "title: Named after this"); r.Chat.Worktree.Branch != "me/my-name" || len(renamed(r)) != 1 || !strings.HasPrefix(renamed(r)[0], "Branch renamed to me/my-name") {
 		t.Errorf("the title renamed a branch the user named: %v", r.Chat.Worktree)
 	}
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id7, Text: "wait"})))
-	until("the turn's start", func() bool { return get(id7).Status.Busy })
+	a.send(id7, "wait")
+	until("the turn's start", func() bool { return a.get(id7).Status.Busy })
 	if err := rename(id7, "me/mid-turn"); err == nil {
 		t.Error("renamed mid-turn")
 	}
@@ -196,14 +193,4 @@ func until(t *testing.T, what string, ok func() bool) {
 	if !testcheck.Eventually(ok) {
 		t.Fatalf("timed out waiting for %s", what)
 	}
-}
-
-// settled waits for a chat's turn to end, and returns the chat.
-func settled(ctx context.Context, t *testing.T, a *app, id string) *nushiv1.GetChatResponse {
-	t.Helper()
-	get := func() *nushiv1.GetChatResponse {
-		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
-	}
-	until(t, "the turn's end", func() bool { return !get().Status.Busy })
-	return get()
 }

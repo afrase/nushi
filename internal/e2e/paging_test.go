@@ -16,12 +16,11 @@ func TestRecentThenOlderPages(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	for _, p := range []string{"one", "two", "three", "four", "five"} {
-		must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: p})))
-		a.waitFor("the turn to end", idle)
+		a.say(id, p)
 	}
-	all := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
+	all := a.get(id)
 	if all.Older != 0 || len(all.Items) < 10 {
 		t.Fatalf("whole: %d items, %d older", len(all.Items), all.Older)
 	}
@@ -42,7 +41,7 @@ func TestRecentThenOlderPages(t *testing.T) {
 	}
 	// A new item's event says where it is, so a client with the recent
 	// part only can tell it from an update to an item it hasn't got.
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "six"})))
+	a.send(id, "six")
 	e := a.waitFor("the new message", func(e *nushiv1.EventsResponse) bool {
 		return e.GetItem().GetItem().GetText() == "six" && !e.GetItem().GetAppend()
 	})

@@ -44,7 +44,7 @@ func TestAgentShowsAFile(t *testing.T) {
 	dataDir, folder := t.TempDir(), t.TempDir()
 	d := startDaemon(t, dataDir, &acptest.History{})
 	mac, phone := open(t, d), openAt(t, d.devices)
-	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId
+	id := mac.start(&nushiv1.StartChatRequest{Folder: folder})
 	testcheck.Write(t, filepath.Join(folder, "report.html"), "<h1>the report</h1>")
 	testcheck.Write(t, filepath.Join(folder, "main.go"), "package main")
 	key := d.tools.Key(tools.Grant{Chat: id, Agent: "fake"})
@@ -81,7 +81,7 @@ func TestWatchChatFolder(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	folder := t.TempDir()
 	mac, phone := open(t, d), openAt(t, d.devices)
-	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId
+	id := mac.start(&nushiv1.StartChatRequest{Folder: folder})
 	testcheck.Write(t, filepath.Join(folder, "docs", "a.md"), "a")
 	testcheck.Write(t, filepath.Join(folder, "b.txt"), "b")
 	for _, a := range []*app{mac, phone} {

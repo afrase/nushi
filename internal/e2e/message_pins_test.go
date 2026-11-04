@@ -16,10 +16,9 @@ func TestPinMessage(t *testing.T) {
 	dataDir, history := t.TempDir(), &acptest.History{}
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
-	a.waitFor("the reply", idle)
-	items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.say(id, "hello")
+	items := a.get(id).Items
 	var mine, reply string
 	for _, it := range items {
 		switch it.Kind {
@@ -62,7 +61,7 @@ func TestPinMessage(t *testing.T) {
 	d.stop()
 	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
-	a.follow(id, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))))
+	a.follow(id, a.get(id))
 	if got := pinned(); !slices.Equal(got, []string{reply}) {
 		t.Fatalf("after a restart: %v", got)
 	}

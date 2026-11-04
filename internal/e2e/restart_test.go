@@ -31,8 +31,8 @@ func TestRestartWaitsForTheTurn(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask permission"})))
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "ask permission")
 	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
 
 	// It says what it waits for (API 85), for the app's bar.
@@ -61,9 +61,8 @@ func TestRestartWithNothingRunning(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
-	a.waitFor("the reply", idle)
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.say(id, "hello")
 	must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{})))
 	if !d.due(time.Second) {
 		t.Fatal("no restart with nothing running")
@@ -78,7 +77,7 @@ func TestAPromptAtTheRestartIsntLost(t *testing.T) {
 	for range 5 {
 		d := startDaemon(t, t.TempDir(), &acptest.History{})
 		a := open(t, d)
-		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+		id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 		sent := make(chan error, 1)
 		go func() {
 			_, err := a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"}))
@@ -89,7 +88,7 @@ func TestAPromptAtTheRestartIsntLost(t *testing.T) {
 			t.Fatal("no restart")
 		}
 		err := <-sent
-		items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
+		items := a.get(id).Items
 		switch {
 		case err == nil && !strings.HasSuffix(transcript(items), "AGENT_MESSAGE:You said: hello:"):
 			t.Fatalf("the prompt was taken, but its turn hadn't run when the restart came:\n%s", transcript(items))
@@ -106,7 +105,7 @@ func TestRestartWaitsForATerminalsCommand(t *testing.T) {
 	ctx := context.Background()
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	term := must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: id, Cols: 80, Rows: 24}))).Terminal
 	must(a.c.WriteTerminal(ctx, connect.NewRequest(&nushiv1.WriteTerminalRequest{TerminalId: term.Id, Data: []byte("sleep 30\n")})))
 	a.waitFor("the command", func(e *nushiv1.EventsResponse) bool {
@@ -133,8 +132,8 @@ func TestARestartNotAskedAgainLapses(t *testing.T) {
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	d.restart.Lease = 100 * time.Millisecond
 	a := open(t, d)
-	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
-	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "wait"})))
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	a.send(id, "wait")
 	a.waitFor("the turn to start", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetBusy() })
 	must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{})))
 	time.Sleep(300 * time.Millisecond)
