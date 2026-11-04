@@ -68,7 +68,7 @@ func (s *Service) SetPush(device string, sub *webpush.Subscription) error {
 	if s.push == nil && p != nil {
 		return errors.New("this daemon doesn't send notifications")
 	}
-	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
+	i := s.deviceIndexLocked(device)
 	if i >= 0 && samePush(s.devices[i].Push, p) {
 		return nil // nothing to write or tell
 	}
@@ -88,7 +88,7 @@ func samePush(a, b *model.Push) bool {
 
 // setPushLocked stores device's subscription. Called with s.mu.
 func (s *Service) setPushLocked(device string, p *model.Push) error {
-	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
+	i := s.deviceIndexLocked(device)
 	if i < 0 {
 		return errors.New("no such device")
 	}
@@ -169,7 +169,7 @@ func (s *Service) TestPush(ctx context.Context, device string) error {
 // push service no longer knows is forgotten.
 func (s *Service) send(ctx context.Context, device string, p payload) error {
 	s.mu.Lock()
-	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
+	i := s.deviceIndexLocked(device)
 	if i < 0 || s.devices[i].Push == nil || s.push == nil {
 		s.mu.Unlock()
 		return errors.New("notifications are off on that device")
@@ -191,7 +191,7 @@ func (s *Service) send(ctx context.Context, device string, p payload) error {
 	if errors.Is(err, webpush.ErrGone) {
 		s.mu.Lock()
 		// Only if it's still the subscription that's gone.
-		if j := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device }); j >= 0 &&
+		if j := s.deviceIndexLocked(device); j >= 0 &&
 			s.devices[j].Push != nil && s.devices[j].Push.Endpoint == sub.Endpoint {
 			_ = s.setPushLocked(device, nil)
 		}

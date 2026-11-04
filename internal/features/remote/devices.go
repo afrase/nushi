@@ -64,7 +64,7 @@ func (s *Service) device(key []byte, id string) string {
 // closes, if the device is still paired and the cap allows.
 func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	s.mu.Lock()
-	i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
+	i := s.deviceIndexLocked(device)
 	if i < 0 || !s.settings.On || len(s.conns) >= MaxConns {
 		s.mu.Unlock()
 		slog.Info("device turned away", "device", device, "connections", len(s.conns))
@@ -108,7 +108,7 @@ func (c *served) Close() error {
 			delete(s.views, device)
 		}
 		slog.Info("device disconnected", "device", device)
-		if i := slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device }); i >= 0 {
+		if i := s.deviceIndexLocked(device); i >= 0 {
 			s.seen(i)
 		}
 	}
@@ -153,4 +153,10 @@ func (s *Service) Revoke(id string) error {
 	s.changed()
 	slog.Info("device revoked", "device", id, "err", err)
 	return err
+}
+
+// deviceIndexLocked is device's index in s.devices, or -1. Called with
+// s.mu.
+func (s *Service) deviceIndexLocked(device string) int {
+	return slices.IndexFunc(s.devices, func(d model.Device) bool { return d.ID == device })
 }
