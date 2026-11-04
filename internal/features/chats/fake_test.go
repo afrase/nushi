@@ -445,6 +445,7 @@ type memSessions struct {
 	mu        sync.Mutex
 	saved     []model.ChatRecord
 	stored    []model.ChatRecord // what Sessions returns
+	readErr   error              // and its error
 	deleteErr error
 	deleted   []string
 }
@@ -459,7 +460,7 @@ func (m *memSessions) SaveSession(s model.ChatRecord) error {
 func (m *memSessions) Sessions() ([]model.ChatRecord, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return slices.Clone(m.stored), nil
+	return slices.Clone(m.stored), m.readErr
 }
 
 func (m *memSessions) DeleteSession(id string) error {

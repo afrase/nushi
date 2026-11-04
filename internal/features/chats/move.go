@@ -169,12 +169,9 @@ func (s *Service) fork(ctx context.Context, c *chat, sid, to string) (opened, er
 	return c.openSession(ctx, sid, to, true, "")
 }
 
-// inUse says whether something but chat c runs in dir: another chat, or a
-// terminal (c's too: it stays in its folder).
+// inUse says whether something but chat c may run in dir: another chat
+// (or the chats can't be read), or a terminal (c's too: it stays in its
+// folder).
 func (s *Service) inUse(c *chat, dir string) bool {
-	if s.terminals != nil && s.terminals.Within(dir) {
-		return true
-	}
-	stored, _ := s.sessions.Sessions()
-	return slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID != c.id && within(sess.Folder, dir) })
+	return s.terminals != nil && s.terminals.Within(dir) || s.othersWorkIn(c, dir)
 }

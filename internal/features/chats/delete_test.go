@@ -108,6 +108,26 @@ func TestAFailedMoveKeepsAnEarlierWorktree(t *testing.T) {
 	lastNoticeIs(t, c, "error", "Couldn't move the chat")
 }
 
+// A chat without messages that moves out of its worktree leaves it when
+// the chats can't be read: another chat may work in it.
+func TestAMoveKeepsTheWorktreeWhenTheChatsCantBeRead(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &removingWorktrees{}
+	svc.worktrees = wts
+	w := t.TempDir()
+	c.mu.Lock()
+	c.record.Worktree = &model.Worktree{Path: w}
+	c.mu.Unlock()
+	svc.sessions.(*memSessions).readErr = errors.New("disk gone")
+	testcheck.NoErr(t, svc.Move(context.Background(), c.id, t.TempDir(), false))
+	c.mu.Lock()
+	earlier := slices.Clone(c.record.EarlierWorktrees)
+	c.mu.Unlock()
+	if len(wts.removed) > 0 || len(earlier) != 1 || earlier[0].Path != w {
+		t.Errorf("removed %q, earlier %v", wts.removed, earlier)
+	}
+}
+
 func TestAChatStaysIfItsWorktreeOrHistoryCantGo(t *testing.T) {
 	ctx := context.Background()
 	stays := func(what string, err error, c *chat) {
