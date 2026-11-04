@@ -282,13 +282,6 @@ func (c *chat) commandsLocked() []model.Command {
 	return slices.Clone(c.commands)
 }
 
-// Start opens a chat with agent ("" for the default) in folder, or in a new
-// scratch folder of its own when folder is "". With worktree, the chat gets
-// a new git worktree of folder's repository and runs there.
-func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool) (string, error) {
-	return s.StartOn(ctx, agent, folder, StartOptions{Worktree: worktree})
-}
-
 // StartOptions are a new chat's: a worktree of its own (on Branch, else
 // a name of Nushi's; from From, a commit or ref, else the folder's HEAD),
 // and the Jira issue or GitHub pull request or issue it's on, which it
@@ -306,7 +299,8 @@ type StartOptions struct {
 // " and why.
 var ErrStart = errors.New("couldn't start")
 
-// StartOn is Start with options.
+// StartOn opens a chat with agent ("" for the default) in folder, or in a
+// new scratch folder of its own when folder is "", as opts say.
 func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartOptions) (string, error) {
 	k, err := s.kindOf(agent)
 	if err != nil {

@@ -109,7 +109,7 @@ func TestASideChatThatEndsSaysSo(t *testing.T) {
 }
 
 // An agent that never answers a side chat's delete doesn't hold CloseSide
-// (and CloseSides' loop after it) for good.
+// (and closeSides' loop after it) for good.
 func TestClosingASideChatGivesUpOnASilentDelete(t *testing.T) {
 	wait, grace := throwAwayWait, stopGrace
 	t.Cleanup(func() { throwAwayWait, stopGrace = wait, grace })

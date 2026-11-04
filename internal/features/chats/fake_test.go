@@ -519,3 +519,10 @@ func chunk(id, text string) acp.SessionUpdate {
 		Content:   acp.ContentBlock{Text: &acp.TextContent{Text: text}},
 	}}
 }
+
+// Start opens a chat with agent ("" for the default) in folder, or in a new
+// scratch folder of its own when folder is "". With worktree, the chat gets
+// a new git worktree of folder's repository and runs there.
+func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool) (string, error) {
+	return s.StartOn(ctx, agent, folder, StartOptions{Worktree: worktree})
+}

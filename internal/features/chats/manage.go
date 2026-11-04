@@ -35,10 +35,10 @@ func (s *Service) Rename(chatID, name string) error {
 	return nil
 }
 
-// record is what Nushi keeps of a listed chat, as stored has it: the open
+// Session is what Nushi keeps of a listed chat, as stored has it: the open
 // chat's, or else the stored one's, without opening the chat (its
 // transcript isn't read).
-func (s *Service) record(id string) (model.ChatRecord, error) {
+func (s *Service) Session(id string) (model.ChatRecord, error) {
 	s.mu.Lock()
 	c := s.chats[id]
 	s.mu.Unlock()
@@ -52,11 +52,6 @@ func (s *Service) record(id string) (model.ChatRecord, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.record, nil
-}
-
-// Session is what Nushi keeps of a chat, without reopening it.
-func (s *Service) Session(chatID string) (model.ChatRecord, error) {
-	return s.record(chatID)
 }
 
 // LinkPull sets the pull request of a chat's branch (found, or picked by
@@ -284,7 +279,7 @@ func (c *chat) throwawayLocked(ids []string, deleted bool) {
 // Folder returns the folder a chat runs in (in its worktree, for a worktree
 // chat). An archived chat has none to work in.
 func (s *Service) Folder(chatID string) (string, error) {
-	sess, err := s.record(chatID)
+	sess, err := s.Session(chatID)
 	if err != nil {
 		return "", err
 	}

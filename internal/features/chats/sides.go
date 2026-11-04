@@ -212,13 +212,14 @@ func (s *Service) Following(n int) {
 		s.idle.Stop()
 	}
 	if s.following == 0 && !s.closing {
-		s.idle = time.AfterFunc(SidesGrace, s.CloseSides)
+		s.idle = time.AfterFunc(SidesGrace, s.closeSides)
 	}
 }
 
-// CloseSides ends every side chat (see CloseSide): the app keeps them only
-// while it runs, so once no app is left, nobody will see them again.
-func (s *Service) CloseSides() {
+// closeSides ends every side chat (see CloseSide), once no app has followed
+// for SidesGrace: the app keeps them only while it runs, so nobody will see
+// them again.
+func (s *Service) closeSides() {
 	s.mu.Lock()
 	var sides []string
 	for id, c := range s.chats {
@@ -233,7 +234,7 @@ func (s *Service) CloseSides() {
 }
 
 // throwAwayWait is how long an agent gets to delete a thrown-away session:
-// one alive but silent would otherwise hold CloseSides' loop for good.
+// one alive but silent would otherwise hold closeSides' loop for good.
 var throwAwayWait = 30 * time.Second
 
 // throwAway has the chat's agent delete a session forked from the chat that
