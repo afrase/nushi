@@ -205,7 +205,7 @@ class _TodoRowState extends State<TodoRow> {
               const SizedBox(width: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
-                spacing: 2,
+                spacing: 6,
                 children: [
                   if (i case CheckTodo(check: final c)
                       when c.id != 0 || c.url.isNotEmpty)
@@ -228,7 +228,6 @@ class _TodoRowState extends State<TodoRow> {
                       label: 'Resolve',
                       onPressed: _busy ? null : () => _resolve(x),
                     ),
-                  const SizedBox(width: 4),
                   SendButton(
                     label: widget.inBox ? 'In the box ✓' : 'Send',
                     tooltip: widget.inBox

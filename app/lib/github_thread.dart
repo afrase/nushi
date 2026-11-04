@@ -178,6 +178,7 @@ class _ThreadCardState extends State<ThreadCard> {
               )
             else
               Row(
+                spacing: 6,
                 children: [
                   if (x.canReply)
                     Button(
