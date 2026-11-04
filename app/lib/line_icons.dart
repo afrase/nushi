@@ -120,7 +120,9 @@ enum LineIcon {
             ..lineTo(15.5, 17)
             ..arcToPoint(const Offset(8.5, 17), radius: _r(3.5))
             ..lineTo(8.5, 9))
-          .transform(_turn(pi / 4)),
+          // Grown to fill the box on its diagonal, as the @ and the slash
+          // box do, its wires apart at 16 on a 1x screen.
+          .transform(_turn(pi / 4, scale: 1.25)),
     at =>
       Path()
         ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 3.5))
@@ -148,10 +150,11 @@ enum LineIcon {
   static Radius _r(double r) => Radius.circular(r);
 
   /// A turn of [angle] clockwise about the box's middle.
-  static Float64List _turn(double angle) =>
+  static Float64List _turn(double angle, {double scale = 1}) =>
       (Matrix4.identity()
             ..translateByDouble(12, 12, 0, 1)
             ..rotateZ(angle)
+            ..scaleByDouble(scale, scale, 1, 1)
             ..translateByDouble(-12, -12, 0, 1))
           .storage;
 

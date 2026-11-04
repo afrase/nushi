@@ -28,6 +28,7 @@ class PlusMenu extends StatelessWidget {
     required this.onAttach,
     required this.onMention,
     required this.onSlash,
+    required this.box,
     super.key,
     this.locked = false,
   });
@@ -41,6 +42,9 @@ class PlusMenu extends StatelessWidget {
   final VoidCallback onSlash;
   final bool locked;
 
+  /// The box the + sits in: the menu opens over it, as Claude's does.
+  final GlobalKey box;
+
   @override
   Widget build(BuildContext context) {
     final touch = TouchTargets.of(context);
@@ -50,6 +54,8 @@ class PlusMenu extends StatelessWidget {
     final attach = !photosOnly || chat.canImages;
     return Menu(
       above: true,
+      aboveOf: box,
+      largeIcons: true,
       filter: false,
       entries: [
         MenuEntry(

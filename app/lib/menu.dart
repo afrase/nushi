@@ -102,7 +102,10 @@ typedef OpenMenu = void Function([Offset? at]);
 /// it: for what sits at the window's bottom. [controller], given, is what
 /// else opens and closes it. With [keepFocus] the pointer over a row leaves
 /// the focus where it is, for a menu whose keys are handled by the text field
-/// under it.
+/// under it. With [aboveOf] an [above] menu opens over that widget instead
+/// (the box its opener sits in), clear of its border, as Claude's composer
+/// menu floats over its box. [largeIcons] draws the rows' icons in the
+/// labels' ink and a little larger than the text, as that menu does.
 class Menu extends StatefulWidget {
   const new({
     required this.entries,
@@ -112,6 +115,8 @@ class Menu extends StatefulWidget {
     this.filter = true,
     this.above = false,
     this.keepFocus = false,
+    this.aboveOf,
+    this.largeIcons = false,
     this.controller,
     this.onOpen,
     this.onClose,
@@ -129,6 +134,8 @@ class Menu extends StatefulWidget {
   final bool filter;
   final bool above;
   final bool keepFocus;
+  final GlobalKey? aboveOf;
+  final bool largeIcons;
   final MenuController? controller;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
@@ -157,8 +164,27 @@ class _MenuState extends State<Menu> {
     );
   }
 
-  void _open([Offset? at]) =>
-      _menu.isOpen && at == null ? _menu.close() : _menu.open(position: at);
+  void _open([Offset? at]) {
+    if (_menu.isOpen && at == null) return _menu.close();
+    _menu.open(position: at ?? _overOf());
+  }
+
+  /// Where an [Menu.above] menu opens over [Menu.aboveOf], from the
+  /// opener's top left, as laid out now; null without one.
+  Offset? _overOf() {
+    final over = widget.aboveOf?.currentContext?.findRenderObject();
+    final opener = context.findRenderObject();
+    if (!widget.above || over is! RenderBox || opener is! RenderBox) {
+      return null;
+    }
+    final top =
+        over.localToGlobal(Offset.zero).dy -
+        opener.localToGlobal(Offset.zero).dy;
+    return Offset(0, top - _height(context) - _aboveGap);
+  }
+
+  /// The room between a menu opened over [Menu.aboveOf] and it.
+  static const _aboveGap = 6.0;
 
   KeyEventResult _onKey(FocusNode _, KeyEvent e) {
     final n = int.tryParse(e.character ?? '') ?? 0;
@@ -192,6 +218,7 @@ class _MenuState extends State<Menu> {
         digits: widget.digits,
         filter: widget.filter,
         keepFocus: widget.keepFocus,
+        largeIcons: widget.largeIcons,
       ),
       onOpen: () {
         if (widget.digits) _focus.requestFocus();
@@ -219,6 +246,7 @@ List<Widget> _rows(
   bool digits = false,
   bool filter = true,
   bool keepFocus = false,
+  bool largeIcons = false,
 }) {
   if (filter && entries.where((e) => e._pickable).length > _filterPast) {
     return [_Filtered(entries, close)];
@@ -248,6 +276,7 @@ List<Widget> _rows(
           e,
           close,
           icons: icons,
+          largeIcons: largeIcons,
           checks: checks,
           keepFocus: keepFocus,
           digit: !digits
@@ -305,6 +334,7 @@ Widget _row(
   String? digit,
   bool lit = false,
   bool icons = false,
+  bool largeIcons = false,
   bool checks = true,
   bool keepFocus = false,
   Key? key,
@@ -321,16 +351,22 @@ Widget _row(
       ? t.textMuted
       : e.danger
       ? t.crashed
-      : t.textSecondary; // a disabled row's icon muted, as its label
+      : largeIcons
+      ? t.text
+      : t.textSecondary;
+  // A phone's larger text takes its icons with it.
+  final iconSize = largeIcons
+      ? MediaQuery.textScalerOf(context).scale(18)
+      : 16.0;
   final icon = icons
       ? SizedBox(
-          width: 16,
+          width: iconSize,
           child:
               e.mark ??
-              e.line?.view(size: 16, color: iconColor) ??
+              e.line?.view(size: iconSize, color: iconColor) ??
               (e.icon == null
                   ? null
-                  : Icon(e.icon, size: 16, color: iconColor)),
+                  : Icon(e.icon, size: iconSize, color: iconColor)),
         )
       : null;
   // Narrower on a narrow screen (the phone's), so the menu fits on it.

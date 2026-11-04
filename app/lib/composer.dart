@@ -65,6 +65,9 @@ class Composer extends StatefulWidget {
 
 class _ComposerState extends State<Composer> {
   final _focus = FocusNode();
+  final GlobalKey _box = GlobalKey(
+    debugLabel: 'box',
+  ); // the + menu opens over it
   late final Draft _draft = widget.chat.draft;
   late final TextEditingController _text = _draft.text;
   late final _completions = Completions(
@@ -479,6 +482,7 @@ class _ComposerState extends State<Composer> {
             AnimatedBuilder(
               animation: _focus,
               builder: (context, child) => Container(
+                key: _box,
                 decoration: BoxDecoration(
                   color: t.base,
                   borderRadius: BorderRadius.circular(12),
@@ -557,6 +561,7 @@ class _ComposerState extends State<Composer> {
                   Row(
                     children: [
                       PlusMenu(
+                        box: _box,
                         chat: chat,
                         api: _api,
                         locked: _locked,

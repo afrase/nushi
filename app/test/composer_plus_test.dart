@@ -150,6 +150,31 @@ void main() {
           tester.getRect(find.text('Slash commands')).bottom,
           lessThan(box.top),
         );
+        // Clear of the box's border, as Claude's floats over its box.
+        final border = tester.getRect(
+          find
+              .ancestor(
+                of: find.byType(TextField),
+                matching: find.byWidgetPredicate(
+                  (w) =>
+                      w is Container &&
+                      w.decoration is BoxDecoration &&
+                      (w.decoration! as BoxDecoration).border != null,
+                ),
+              )
+              .first,
+        );
+        // The panel: the nearest Material around every row.
+        final top = tester.getRect(find.text('Add files or photos'));
+        final panel = find
+            .ancestor(
+              of: find.text('Slash commands'),
+              matching: find.byType(Material),
+            )
+            .evaluate()
+            .map((e) => tester.getRect(find.byWidget(e.widget)))
+            .firstWhere((r) => r.contains(top.center));
+        expect(border.top - panel.bottom, inInclusiveRange(4, 8));
         expect(
           find.descendant(
             of: find.byType(MenuItemButton),
