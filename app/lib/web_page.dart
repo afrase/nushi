@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -40,8 +41,9 @@ Future<void> Function(Uri url) openInBrowser = (url) async {
 
 /// A WKWebView with only its free defaults (the owner's call):
 /// no script message handlers (nothing from the page reaches Nushi), file
-/// reads inside the root it's given, the network on, and a link that
-/// leaves the page opened in the default browser instead.
+/// reads inside the root it's given, the network on, and a link the user
+/// clicks that leaves the page opened in the default browser instead (a
+/// page that leaves on its own, by script or a refresh, goes nowhere).
 class WebKitPage implements PageHost {
   new() {
     final nav = WebKitNavigationDelegate(
@@ -60,11 +62,16 @@ class WebKitPage implements PageHost {
   String _root = '';
   bool _loaded = false;
   num? _scrollTo;
+  DateTime? _pressed; // when the user last pressed or let go in the page
 
   @override
-  Widget view(BuildContext context) =>
-      PlatformWebViewWidget(WebKitWebViewWidgetCreationParams(controller: _c))
-          .build(context);
+  Widget view(BuildContext context) => Listener(
+    onPointerDown: (_) => _pressed = clock(),
+    onPointerUp: (_) => _pressed = clock(),
+    child: PlatformWebViewWidget(
+      WebKitWebViewWidgetCreationParams(controller: _c),
+    ).build(context),
+  );
 
   @override
   Future<void> load(String path, String root) {
@@ -98,11 +105,19 @@ class WebKitPage implements PageHost {
   }
 
   FutureOr<NavigationDecision> _decide(NavigationRequest r) {
-    if (staysInPage(r.url, _path, mainFrame: r.isMainFrame)) {
-      return NavigationDecision.navigate;
-    }
-    if (Uri.tryParse(r.url) case final url?) {
-      unawaited(openInBrowser(url).catchError((_) {}));
+    switch (navigation(
+      r.url,
+      _path,
+      mainFrame: r.isMainFrame,
+      pressed: _pressed,
+    )) {
+      case PageNavigation.stay:
+        return NavigationDecision.navigate;
+      case PageNavigation.open:
+        if (Uri.tryParse(r.url) case final url?) {
+          unawaited(openInBrowser(url).catchError((_) {}));
+        }
+      case PageNavigation.drop:
     }
     return NavigationDecision.prevent;
   }
@@ -112,6 +127,31 @@ class WebKitPage implements PageHost {
     // The view goes with its widget; the page stops with it.
     unawaited(_c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))));
   }
+}
+
+/// What a navigation a page asks for does: it stays in the web view, opens
+/// in the default browser, or goes nowhere.
+enum PageNavigation { stay, open, drop }
+
+/// How long after the user pressed in a page a navigation away from it
+/// counts as theirs (a click on a link), as a browser's transient user
+/// activation does. The plugin doesn't give WebKit's navigation type.
+const userGesture = Duration(seconds: 1);
+
+/// What a navigation to [url] does in the web view showing the file at
+/// [path], the user having last pressed in it at [pressed]: one that
+/// leaves the page opens in the browser only right after a press, so a
+/// page the agent shows (no click, ADR 0068) can't open tabs on its own.
+PageNavigation navigation(
+  String url,
+  String path, {
+  required bool mainFrame,
+  DateTime? pressed,
+}) {
+  if (staysInPage(url, path, mainFrame: mainFrame)) return PageNavigation.stay;
+  return pressed != null && clock().difference(pressed) <= userGesture
+      ? PageNavigation.open
+      : PageNavigation.drop;
 }
 
 /// Whether a navigation to [url] stays in the web view showing the file
