@@ -564,9 +564,9 @@ class _ComposerState extends State<Composer> {
                       ),
                       // Queue (after this turn) and Stop and send (stop it,
                       // and this goes now): a phone's only way, the Mac's ⏎
-                      // and ⌘⏎ as buttons. One coming pops in (grow.dart).
+                      // and ⌘⏎ as buttons. One coming pops in (Enter.pop).
                       if (written && chat.busy) ...[
-                        PopIn(
+                        Enter.pop(
                           key: const ValueKey('queue'),
                           play: pop,
                           child: boxButton(
@@ -576,7 +576,7 @@ class _ComposerState extends State<Composer> {
                           ),
                         ),
                         if (chat.started != null)
-                          PopIn(
+                          Enter.pop(
                             key: const ValueKey('now'),
                             play: pop,
                             child: boxButton(
@@ -591,7 +591,7 @@ class _ComposerState extends State<Composer> {
                           ),
                       ],
                       if (chat.started != null)
-                        PopIn(
+                        Enter.pop(
                           key: const ValueKey('stop'),
                           play: pop,
                           child: boxButton(
@@ -601,7 +601,7 @@ class _ComposerState extends State<Composer> {
                           ),
                         )
                       else if (written && !chat.busy)
-                        PopIn(
+                        Enter.pop(
                           key: const ValueKey('send'),
                           play: pop,
                           child: boxButton(

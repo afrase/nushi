@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/grow.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/stop_label.dart';
@@ -13,7 +12,7 @@ import 'package:nushi/widgets.dart';
 /// takes one back to edit ([onEdit]), ⏩ sends it now, in place of the
 /// running turn ([onSendNow]; a turn runs), × drops it ([onRemove]).
 ///
-/// A pill coming pops in ([PopIn], from 0.96); one going (sent, edited or
+/// A pill coming pops in ([Enter.pop], from 0.96); one going (sent, edited or
 /// removed) fades out rising over [Motion.exit], where it was, taking no
 /// click. With Reduce Motion they come and go at once.
 class QueuePills extends StatefulWidget {
@@ -215,7 +214,7 @@ class _PillMotionState extends State<_PillMotion>
             child: Transform.translate(offset: Offset(0, -6 * v), child: child),
           );
         },
-        child: PopIn(play: widget.play, from: 0.96, child: widget.child),
+        child: Enter.pop(play: widget.play, from: 0.96, child: widget.child),
       ),
     ),
   );

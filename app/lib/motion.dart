@@ -248,34 +248,38 @@ double loopPhase(Duration period) => Shine.stopAt ?? loopClock.phase(period);
 /// still frame (see [loopPhase]).
 Listenable? get loopRepaint => Shine.stopAt == null ? loopClock : null;
 
-/// [child] coming in once, as it's first built: it fades in from [from]
-/// away. Not [play], or with Reduce Motion, it's there at once.
+/// [child] coming in once, as it's first built: it fades in as it rises
+/// ([Enter.rise]) or grows ([Enter.pop]). Not [play], or with Reduce
+/// Motion, it's there at once.
 class Enter extends StatefulWidget {
-  const new({
+  /// A new transcript item: it rises 8 px as it fades in, both eased out.
+  const new rise({required this.child, super.key, this.play = true})
+    : _from = const Offset(0, 8),
+      _scale = 1,
+      _duration = const Duration(milliseconds: 220),
+      _curve = Curves.easeOutCubic,
+      _pop = false;
+
+  /// A box's button or a queued message's pill: it grows from [from] of
+  /// its size over [Motion.quick] as it fades in, its fade not eased.
+  const new pop({
     required this.child,
-    required this.from,
-    required this.duration,
-    required this.curve,
     super.key,
     this.play = true,
-  });
-
-  /// A new transcript item: it rises 8 px.
-  const new rise({required Widget child, Key? key, bool play = true})
-    : this(
-        key: key,
-        play: play,
-        from: const Offset(0, 8),
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        child: child,
-      );
+    double from = 0.85,
+  }) : _from = Offset.zero,
+       _scale = from,
+       _duration = Motion.quick,
+       _curve = Motion.settle,
+       _pop = true;
 
   final Widget child;
-  final Offset from;
-  final Duration duration;
-  final Curve curve;
   final bool play;
+  final Offset _from;
+  final double _scale;
+  final Duration _duration;
+  final Curve _curve;
+  final bool _pop;
 
   @override
   State<Enter> createState() => _EnterState();
@@ -283,8 +287,7 @@ class Enter extends StatefulWidget {
 
 class _EnterState extends State<Enter> with SingleTickerProviderStateMixin {
   AnimationController? _c;
-  CurvedAnimation? _curved;
-  Animation<double>? _a;
+  bool _playing = false;
   bool _started = false;
 
   @override
@@ -293,17 +296,16 @@ class _EnterState extends State<Enter> with SingleTickerProviderStateMixin {
     if (_started) return;
     _started = true;
     if (!widget.play || reduceMotion(context)) return;
-    final c = _c = AnimationController(vsync: this, duration: widget.duration)
+    _playing = true;
+    _c = AnimationController(vsync: this, duration: widget._duration)
       ..addStatusListener((s) {
-        if (s == AnimationStatus.completed) setState(() => _a = null);
-      });
-    _a = _curved = CurvedAnimation(parent: c, curve: widget.curve);
-    c.forward().ignore();
+        if (s == AnimationStatus.completed) setState(() => _playing = false);
+      })
+      ..forward().ignore();
   }
 
   @override
   void dispose() {
-    _curved?.dispose();
     _c?.dispose();
     super.dispose();
   }
@@ -311,18 +313,26 @@ class _EnterState extends State<Enter> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     // The same widgets throughout, so the child keeps its state; at rest
-    // they cost nothing (an opacity of 1 and no offset paint straight).
-    final a = _a ?? kAlwaysCompleteAnimation;
+    // they cost nothing (an opacity of 1 and no transform paint straight).
+    final a = _playing ? _c! : kAlwaysCompleteAnimation;
+    final w = widget;
     return AnimatedBuilder(
       animation: a,
-      builder: (context, child) => Opacity(
-        opacity: a.value,
-        child: Transform.translate(
-          offset: widget.from * (1 - a.value),
-          child: child,
-        ),
-      ),
-      child: widget.child,
+      builder: (context, child) {
+        final v = w._curve.transform(a.value);
+        final scale = w._scale + (1 - w._scale) * v;
+        final by = w._from * (1 - v);
+        return Opacity(
+          opacity: w._pop ? a.value : v,
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.diagonal3Values(scale, scale, 1)
+              ..setTranslationRaw(by.dx, by.dy, 0),
+            child: child,
+          ),
+        );
+      },
+      child: w.child,
     );
   }
 }
