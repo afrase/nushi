@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_sources.dart';
 import 'package:nushi/menu.dart';
@@ -43,11 +44,7 @@ String initials(String name) {
 /// A person's color, the same for an account id every time (FNV-1a of
 /// it, the name when there's no id): one of the theme's [Tokens.avatars].
 Color personColor(Tokens t, String id) {
-  var h = 0x811c9dc5;
-  for (final u in id.codeUnits) {
-    h = ((h ^ u) * 0x01000193) & 0xFFFFFFFF;
-  }
-  return t.avatars[h % t.avatars.length];
+  return t.avatars[fnv1a(id.codeUnits) % t.avatars.length];
 }
 
 /// An issue's assignee as a small round avatar: initials on the person's

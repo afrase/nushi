@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/syntax.dart';
@@ -129,14 +130,14 @@ class ReviewComment {
   /// Keeps [side] (its hash) as the text the comment is on: true if it
   /// wasn't already.
   bool see(String side) {
-    final h = _hash(side);
+    final h = fnv1a(side.codeUnits);
     if (seen == h) return false;
     seen = h;
     return true;
   }
 
   /// Whether [side] is the text it was on when last seen.
-  bool saw(String side) => seen == _hash(side);
+  bool saw(String side) => seen == fnv1a(side.codeUnits);
 
   String get lines => start == end ? 'Line $start' : 'Lines $start–$end';
 }
@@ -225,15 +226,6 @@ void filesRead(
     kept.add(c);
   }
   if (changed) setComments(chat.id, kept);
-}
-
-/// FNV-1a over the text's code units: the same across launches.
-int _hash(String s) {
-  var h = 0x811c9dc5;
-  for (final u in s.codeUnits) {
-    h = ((h ^ u) * 0x01000193) & 0xffffffff;
-  }
-  return h;
 }
 
 /// The lead line of the user's own review comments in a message.

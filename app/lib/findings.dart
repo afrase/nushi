@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// A code review's findings that an agent wrote as JSON in a message (a
@@ -103,7 +104,11 @@ List<String> findingIds(List<Finding> findings) {
 
   return [
     for (final f in findings)
-      numbered(_fnv('${f.file}\n${f.line}\n${f.summary}')),
+      numbered(
+        fnv1a(utf8.encode('${f.file}\n${f.line}\n${f.summary}'))
+            .toRadixString(16)
+            .padLeft(8, '0'),
+      ),
   ];
 }
 
@@ -127,15 +132,6 @@ Set<String> findingsShownBefore(List<Item> items, int at) {
     }
   }
   return out;
-}
-
-/// FNV-1a, 32 bits, of [s]'s UTF-8, in hex.
-String _fnv(String s) {
-  var h = 0x811c9dc5;
-  for (final b in utf8.encode(s)) {
-    h = ((h ^ b) * 0x01000193) & 0xffffffff;
-  }
-  return h.toRadixString(16).padLeft(8, '0');
 }
 
 /// [path]'s segments with `.` and `..` resolved, or null if a `..` climbs
