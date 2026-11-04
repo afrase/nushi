@@ -247,7 +247,7 @@ func TestLoadNestedSubagentEnds(t *testing.T) {
 // load finds the end of the subagent a subagent started, delivered into
 // the turn of the one that started it, and that one's own.
 func TestLoadRecordedNestedSubagent(t *testing.T) {
-	history := filepath.Join("..", "internal", "features", "chats", "testdata", "claude-parity", "subagent-nested", "history", "end")
+	history := filepath.Join("testdata", "nested") // claude's transcripts at the run's end
 	p := start(t, &acp.ClientCapabilities{Subagents: &acp.SubagentCapabilities{}}, fake())
 	cwd := t.TempDir()
 	project := sessions.Store{ConfigDir: p.agent.cfg.ConfigDir}.ProjectDir(cwd)

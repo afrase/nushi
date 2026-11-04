@@ -179,7 +179,9 @@ func start(t *testing.T, caps *acp.ClientCapabilities, fakes ...*claudetest.Fake
 	t.Cleanup(func() {
 		_ = toAgentW.Close()
 		<-done
-		for _, f := range fakes {
+		// Only the claudes the agent started: a test that failed before
+		// starting one mustn't wait for it.
+		for _, f := range fakes[:min(int(spawned.Load()), len(fakes))] {
 			<-f.Exited()
 		}
 	})
