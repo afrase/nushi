@@ -17,10 +17,11 @@ import (
 
 // pushes records what the daemon pushed, and answers with err.
 type pushes struct {
-	mu   sync.Mutex
-	sent []payload
-	subj []string
-	err  error
+	mu     sync.Mutex
+	sent   []payload
+	subj   []string
+	topics []string
+	err    error
 }
 
 func (p *pushes) send(_ context.Context, subject string, _ webpush.Subscription, m webpush.Message) error {
@@ -32,6 +33,7 @@ func (p *pushes) send(_ context.Context, subject string, _ webpush.Subscription,
 	defer p.mu.Unlock()
 	p.sent = append(p.sent, got)
 	p.subj = append(p.subj, subject)
+	p.topics = append(p.topics, m.Topic)
 	return p.err
 }
 
@@ -219,6 +221,24 @@ func TestAFailedTurnPushesFailed(t *testing.T) {
 	got := p.settle(t, 1)
 	if want := (payload{Title: "Claude's turn failed", Kind: "failed", Agent: "Claude", Chat: "c1"}); len(got) != 1 || got[0] != want {
 		t.Fatalf("pushed %+v, want %+v", got, want)
+	}
+}
+
+// A turn's end replaces the last one at the push service, finished or
+// failed, so a Try again that worked leaves no stale failure; a question
+// keeps its own.
+func TestATurnsEndReplacesTheLast(t *testing.T) {
+	s, p, _, _ := pushing(t)
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed, Failure: "boom"}})
+	p.settle(t, 1)
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
+	p.settle(t, 1)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if len(p.topics) != 2 || p.topics[0] != p.topics[1] || p.topics[0] == "" {
+		t.Fatalf("topics %q: want one for both ends", p.topics)
 	}
 }
 

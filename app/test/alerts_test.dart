@@ -163,7 +163,7 @@ void main() {
       'Claude finished',
     ]);
     final failed = swift.calls.firstWhere(
-      (c) => c.method == 'post' && (c.arguments as Map)['id'] == 'b/failed',
+      (c) => c.method == 'post' && (c.arguments as Map)['id'] == 'b/ended',
     );
     expect(
       (failed.arguments as Map)['body'],

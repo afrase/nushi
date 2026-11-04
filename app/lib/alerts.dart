@@ -26,6 +26,11 @@ enum AlertKind {
 
   final String words;
 
+  /// The notification this kind takes the place of: a turn's end, done or
+  /// failed, replaces the last one, so a Try again that worked leaves no
+  /// stale failure beside it; a prompt or question has its own.
+  String get slot => this == finished || this == failed ? 'ended' : name;
+
   /// Whether the user wants this kind (Settings › General).
   bool get on => switch (this) {
     permission || question => alertNeedsYou.value,
@@ -181,7 +186,7 @@ class MacAlerts {
       _needs[id] = chat.waiting;
     }
     channel.invokeMethod<Object?>('post', {
-      'id': '$id/${kind.name}',
+      'id': '$id/${kind.slot}',
       'chat': id,
       'title': '${chat.agentName}${kind.words}',
       'body': detail.isEmpty ? chat.shownTitle : '${chat.shownTitle}\n$detail',

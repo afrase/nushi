@@ -149,8 +149,9 @@ self.addEventListener("push", (event) => {
   const kind = ["finished", "failed", "question", "permission", "test"].includes(data.kind) ? data.kind : "";
   event.waitUntil(
     self.registration.showNotification(title, {
-      // One per chat and kind: a question doesn't silently replace a turn's end.
-      tag: chat ? chat + ":" + kind : "nushi",
+      // One per chat and kind: a question doesn't silently replace a turn's
+      // end; a turn's end, finished or failed, replaces the last one.
+      tag: chat ? chat + ":" + (kind === "finished" || kind === "failed" ? "ended" : kind) : "nushi",
       data: { chat },
       icon: "icons/Icon-192.png",
     }),

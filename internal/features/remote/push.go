@@ -178,9 +178,14 @@ func (s *Service) send(ctx context.Context, device string, p payload) error {
 	send, subject := s.push.Send, subjectOf(s.settings.Relay)
 	s.mu.Unlock()
 	body, _ := json.Marshal(p)
-	topic := sha256.Sum256([]byte(p.Chat + "\x00" + p.Kind))
-	// A prompt or question goes stale: an hour; a turn's end can wait.
+	// A prompt or question goes stale: an hour; a turn's end can wait, and
+	// a newer one, finished or failed, replaces it at the push service.
 	ttl, ended := time.Hour, p.Kind == "finished" || p.Kind == "failed"
+	slot := p.Kind
+	if ended {
+		slot = "ended"
+	}
+	topic := sha256.Sum256([]byte(p.Chat + "\x00" + slot))
 	if ended {
 		ttl = 4 * time.Hour
 	}
