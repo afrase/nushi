@@ -5,7 +5,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// A chat's items as the daemon pages them (internal/api's GetChat with
 /// `recent`, GetChatItems): a page reaches back to the call of a subagent
-/// whose steps are in it. Every request is in [asked]; while [fail] is set
+/// whose steps are in it, and the recent part comes with the tasks running
+/// before it. Every request is in [asked]; while [fail] is set
 /// a page fails, and while [hold] is set a page waits for it.
 class PagedChat {
   new(this.chat, this.items);
@@ -31,6 +32,12 @@ class PagedChat {
       status: chat.status,
       items: items.sublist(start),
       older: start,
+      running: [
+        for (final it in items.take(start))
+          if (it.backgroundCommand.state == 'running' ||
+              it.subagent.state == 'running')
+            it,
+      ],
     );
   }
 

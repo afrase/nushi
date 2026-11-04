@@ -1,7 +1,8 @@
 // What reaches past a long chat's recent part (ADR 0026): a pane open on
 // an early subagent outlives the chat going back to its recent part, and a
 // chat let go scrolled up reopens where it was; Up reaches a last message
-// above the recent part.
+// above the recent part; a task running before it shows.
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -168,6 +169,51 @@ void main() {
       'refactor the whole thing',
     );
     expect(c.older, greaterThan(0), reason: 'only the pages back to it');
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('a background command started early and still running shows '
+      'in Background tasks, and its events keep it up', (tester) async {
+    final items = [
+      Item(kind: ItemKind.ITEM_KIND_USER_MESSAGE, id: 'u-start', text: 'go'),
+      Item(
+        id: 'bg',
+        kind: ItemKind.ITEM_KIND_TOOL_CALL,
+        title: 'npm run dev',
+        status: 'completed',
+        backgroundCommand: BackgroundCommand(id: 'b1', state: 'running'),
+      ),
+      ...longChat('c', turns: 100),
+    ];
+    final (d, _) = await _open(
+      tester,
+      items,
+      status: ChatStatus(background: 1),
+      details: true,
+    );
+    final c = d.chats['c']!;
+    expect(c.older, greaterThan(0));
+    expect(c.items.any((it) => it.id == 'bg'), isFalse);
+    expect(find.text(r'$ npm run dev'), findsOneWidget);
+    expect(find.text('running'), findsOneWidget);
+    // It ends: its event, before the recent part, still reaches it.
+    c.apply(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(1000),
+        item: ItemEvent(
+          index: 1,
+          item: items[1].deepCopy()
+            ..backgroundCommand = BackgroundCommand(
+              id: 'b1',
+              state: 'completed',
+            ),
+        ),
+      ),
+    );
+    await _settle(tester);
+    expect(c.runningBefore.single.backgroundCommand.state, 'completed');
+    expect(find.text('running'), findsNothing);
     await closeView(tester, d);
   }, variant: _mac);
 }

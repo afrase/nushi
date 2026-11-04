@@ -11,18 +11,37 @@ import (
 // changed since the client's snapshot (a rewind, a compaction's replay).
 var ErrNoItem = errors.New("no such item: the chat changed")
 
+// RecentPart is a chat's snapshot with only its recent items.
+type RecentPart struct {
+	Chat    model.Chat   // its Items are the recent part
+	Older   int          // how many items come before them
+	Running []model.Item // those before them whose subagent or background command runs
+}
+
 // Recent returns a snapshot of a chat with only its last n items, reaching
-// back as a page does (pageStart), and how many items come before them.
-// Only those items are copied (ADR 0026).
-func (s *Service) Recent(chatID string, n int) (model.Chat, int, error) {
+// back as a page does (pageStart), with the items before them still
+// running: a chat's background tasks show (and stop) before their page is
+// loaded. Only those items are copied (ADR 0026).
+func (s *Service) Recent(chatID string, n int) (RecentPart, error) {
 	c, err := s.open(chatID)
 	if err != nil {
-		return model.Chat{}, 0, err
+		return RecentPart{}, err
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	start := pageStart(c.items, len(c.items), n)
-	return c.snapshotLocked(start), start, nil
+	return RecentPart{Chat: c.snapshotLocked(start), Older: start, Running: runningIn(c.items[:start])}, nil
+}
+
+// runningIn is those of items whose subagent or background command runs.
+func runningIn(items []model.Item) []model.Item {
+	var out []model.Item
+	for i := range items {
+		if running(items[i]) {
+			out = append(out, items[i])
+		}
+	}
+	return out
 }
 
 // Items returns the page of a chat's items before the one of id before: n

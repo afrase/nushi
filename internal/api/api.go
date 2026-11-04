@@ -217,22 +217,25 @@ func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListC
 }
 
 func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChatRequest]) (*connect.Response[nushiv1.GetChatResponse], error) {
-	var c model.Chat
-	start := 0
+	var part chats.RecentPart
 	var err error
 	if n := int(req.Msg.Recent); n > 0 {
-		c, start, err = s.Chats.Recent(req.Msg.ChatId, n)
+		part, err = s.Chats.Recent(req.Msg.ChatId, n)
 	} else {
-		c, err = s.Chats.Get(req.Msg.ChatId)
+		part.Chat, err = s.Chats.Get(req.Msg.ChatId)
 	}
 	if err != nil {
 		return nil, notFound(err)
 	}
+	c, start := part.Chat, part.Older
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Record), Config: configProto(c.Config),
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
 		Queue: queueProto(c.Queue), Older: int32(start)}
 	for _, it := range c.Items {
 		resp.Items = append(resp.Items, itemProto(&it))
+	}
+	for _, it := range part.Running {
+		resp.Running = append(resp.Running, itemProto(&it))
 	}
 	return connect.NewResponse(resp), nil
 }

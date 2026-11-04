@@ -36,7 +36,7 @@ class SubagentPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: chat,
       builder: (context, _) {
-        final s = subagentsOf(chat.items)
+        final s = subagentsOf(chat.withRunning)
             .where((s) => s.call.id == id)
             .firstOrNull;
         return Column(

@@ -293,7 +293,9 @@ class _ChatViewState extends State<ChatView> {
     final chat = widget.chat;
     void onClose() => chat.pane.value = null;
     // Keyed: another subagent's pane is its own, its unsent text too.
-    return chat.items.any((it) => it.id == id && it.hasBackgroundCommand())
+    return chat.withRunning.any(
+          (it) => it.id == id && it.hasBackgroundCommand(),
+        )
         ? BackgroundCommandPane(
             key: ValueKey(id),
             chat: chat,

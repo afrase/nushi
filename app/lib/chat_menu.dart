@@ -147,10 +147,10 @@ Future<bool> stopsBackground(
   String action,
 ) async {
   final running = [
-    for (final s in subagentsOf(chat.items))
+    for (final s in subagentsOf(chat.withRunning))
       if (subagentRunning(s)) s.call.agent,
   ];
-  final commands = backgroundCommandsOf(chat.items).where(commandRunning);
+  final commands = backgroundCommandsOf(chat.withRunning).where(commandRunning);
   final n = max(chat.background, running.length + commands.length);
   if (n == 0) return true;
   final which = running.length < n

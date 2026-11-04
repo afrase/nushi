@@ -89,7 +89,7 @@ class BackgroundCommandPane extends StatelessWidget {
     return ListenableBuilder(
       listenable: chat,
       builder: (context, _) {
-        final it = backgroundCommandsOf(chat.items)
+        final it = backgroundCommandsOf(chat.withRunning)
             .where((it) => it.id == id)
             .firstOrNull;
         final small = theme.ui(t.textMuted, size: 12);

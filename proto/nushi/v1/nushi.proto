@@ -657,6 +657,10 @@ message GetChatResponse {
   ChatQueue queue = 8;
   // How many items come before `items` (with `recent`).
   int32 older = 9;
+  // With `recent`: the items before `items` whose subagent or background
+  // command still runs, in order, so the chat's running tasks show and stop
+  // before their page is loaded. Their events say where they are.
+  repeated Item running = 10;
 }
 
 message GetChatItemsRequest {

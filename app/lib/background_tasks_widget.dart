@@ -15,8 +15,8 @@ import 'package:nushi/widgets.dart';
 /// they stay, to go back into what one did. Under the pointer, a running one
 /// shows its Stop. Null (no widget) before the chat has any.
 PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
-  final subs = subagentsOf(chat.items);
-  final commands = backgroundCommandsOf(chat.items);
+  final subs = subagentsOf(chat.withRunning);
+  final commands = backgroundCommandsOf(chat.withRunning);
   final running = [
     for (final s in subs.where(subagentRunning)) _AgentRow(chat, daemon, s),
     for (final it in commands.where(commandRunning))

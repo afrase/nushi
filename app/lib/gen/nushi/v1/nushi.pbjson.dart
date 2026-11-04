@@ -464,6 +464,14 @@ const GetChatResponse$json = {
       '10': 'queue'
     },
     {'1': 'older', '3': 9, '4': 1, '5': 5, '10': 'older'},
+    {
+      '1': 'running',
+      '3': 10,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.Item',
+      '10': 'running'
+    },
   ],
 };
 
@@ -475,7 +483,8 @@ final $typed_data.Uint8List getChatResponseDescriptor = $convert.base64Decode(
     '5DaGF0U3RhdHVzUgZzdGF0dXMSEAoDc2VxGAUgASgDUgNzZXESLQoIY29tbWFuZHMYBiADKAsy'
     'ES5udXNoaS52MS5Db21tYW5kUghjb21tYW5kcxIlCgV1c2FnZRgHIAEoCzIPLm51c2hpLnYxLl'
     'VzYWdlUgV1c2FnZRIpCgVxdWV1ZRgIIAEoCzITLm51c2hpLnYxLkNoYXRRdWV1ZVIFcXVldWUS'
-    'FAoFb2xkZXIYCSABKAVSBW9sZGVy');
+    'FAoFb2xkZXIYCSABKAVSBW9sZGVyEigKB3J1bm5pbmcYCiADKAsyDi5udXNoaS52MS5JdGVtUg'
+    'dydW5uaW5n');
 
 @$core.Deprecated('Use getChatItemsRequestDescriptor instead')
 const GetChatItemsRequest$json = {

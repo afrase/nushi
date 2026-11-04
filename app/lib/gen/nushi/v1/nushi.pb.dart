@@ -1541,6 +1541,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     Usage? usage,
     ChatQueue? queue,
     $core.int? older,
+    $core.Iterable<Item>? running,
   }) {
     final result = GetChatResponse._();
     if (chat != null) result.chat = chat;
@@ -1552,6 +1553,7 @@ class GetChatResponse extends $pb.GeneratedMessage {
     if (usage != null) result.usage = usage;
     if (queue != null) result.queue = queue;
     if (older != null) result.older = older;
+    if (running != null) result.running.addAll(running);
     return result;
   }
 
@@ -1584,6 +1586,8 @@ class GetChatResponse extends $pb.GeneratedMessage {
     ..aOM<ChatQueue>(8, _omitFieldNames ? '' : 'queue',
         subBuilder: ChatQueue.$_createMessage)
     ..aI(9, _omitFieldNames ? '' : 'older')
+    ..pPM<Item>(10, _omitFieldNames ? '' : 'running',
+        subBuilder: Item.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1683,6 +1687,12 @@ class GetChatResponse extends $pb.GeneratedMessage {
   $core.bool hasOlder() => $_has(8);
   @$pb.TagNumber(9)
   void clearOlder() => $_clearField(9);
+
+  /// With `recent`: the items before `items` whose subagent or background
+  /// command still runs, in order, so the chat's running tasks show and stop
+  /// before their page is loaded. Their events say where they are.
+  @$pb.TagNumber(10)
+  $pb.PbList<Item> get running => $_getList(9);
 }
 
 class GetChatItemsRequest extends $pb.GeneratedMessage {

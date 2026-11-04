@@ -483,6 +483,15 @@ class ChatState extends ChangeNotifier {
   /// part, GetChatRequest.recent); 0 when it has them all.
   int older = 0;
 
+  /// The items before [items] whose subagent or background command runs
+  /// (GetChatResponse.running), kept up by their events: its background
+  /// tasks show and stop before their page is loaded.
+  final runningBefore = <Item>[];
+
+  /// [runningBefore] and [items]: what its background tasks are found in.
+  List<Item> get withRunning =>
+      runningBefore.isEmpty ? items : [...runningBefore, ...items];
+
   /// The older pages on their way (Daemon.loadOlder), if any.
   Future<void>? get olderLoad => _olderLoad;
   Future<void>? _olderLoad;
@@ -525,6 +534,9 @@ class ChatState extends ChangeNotifier {
       ..addAll(s.items);
     revision++;
     older = s.older;
+    runningBefore
+      ..clear()
+      ..addAll(s.running);
     config = s.config;
     commands = s.commands;
     usage = s.usage;
@@ -558,6 +570,11 @@ class ChatState extends ChangeNotifier {
     final late = {
       for (final it in items.where((it) => ids.contains(it.id))) it.id: it,
     };
+    // What ran before the page, as its events left it.
+    for (final it in runningBefore.where((it) => ids.contains(it.id))) {
+      late[it.id] ??= it;
+    }
+    runningBefore.removeWhere((it) => ids.contains(it.id));
     items
       ..removeWhere((it) => ids.contains(it.id))
       ..insertAll(0, [for (final it in page) late[it.id] ?? it]);
@@ -580,6 +597,8 @@ class ChatState extends ChangeNotifier {
       if (i >= 0 && i < start) start = i;
     }
     if (start == 0) return false;
+    // A task that runs among them stays listed.
+    runningBefore.addAll(items.take(start).where(_runs));
     items.removeRange(0, start);
     older += start;
     olderFailed = false;
@@ -600,6 +619,7 @@ class ChatState extends ChangeNotifier {
     unload();
     keptItems = kept == null ? 0 : items.length;
     items.clear();
+    runningBefore.clear();
     sending.clear();
     unsent.clear();
     _sent.clear();
@@ -709,7 +729,14 @@ class ChatState extends ChangeNotifier {
   void _applyItem(ItemEvent e) {
     final i = items.indexWhere((it) => it.id == e.item.id);
     if (i < 0 && older > 0 && (e.append || e.index < older)) {
-      return; // an item before the recent part: its page will have it
+      // An item before the recent part: its page will have it; a task
+      // running there is kept up.
+      final j = runningBefore.indexWhere((it) => it.id == e.item.id);
+      if (j < 0) return;
+      runningBefore[j] = e.append
+          ? (runningBefore[j].deepCopy()
+              ..text = runningBefore[j].text + e.item.text)
+          : e.item;
     } else if (i >= 0 && e.append) {
       items[i] = items[i].deepCopy()..text = items[i].text + e.item.text;
       return;
@@ -727,6 +754,10 @@ class ChatState extends ChangeNotifier {
     revision++;
   }
 }
+
+/// Whether [it] is a subagent or background command that runs.
+bool _runs(Item it) =>
+    it.backgroundCommand.state == 'running' || it.subagent.state == 'running';
 
 /// Where the last [n] of [items] before [end] start: [n] back, and further
 /// back to the call that started a subagent whose steps are among them, so

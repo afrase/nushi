@@ -68,9 +68,9 @@ class _ChatSheetState extends State<ChatSheet> {
 
   /// The running subagents and background commands it can stop.
   List<String> get _running => [
-    for (final s in subagentsOf(widget.chat.items))
+    for (final s in subagentsOf(widget.chat.withRunning))
       if (subagentStoppable(s)) s.call.id,
-    for (final it in backgroundCommandsOf(widget.chat.items))
+    for (final it in backgroundCommandsOf(widget.chat.withRunning))
       if (commandRunning(it)) it.id,
   ];
 

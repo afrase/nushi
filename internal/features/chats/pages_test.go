@@ -25,3 +25,21 @@ func TestPageStart(t *testing.T) {
 		}
 	}
 }
+
+// The recent part comes with what runs before it: a background command or
+// subagent still running, not one that ended.
+func TestRunningIn(t *testing.T) {
+	items := []model.Item{
+		{ID: "dev", BackgroundCommand: &model.BackgroundCommand{State: "running"}},
+		{ID: "done", BackgroundCommand: &model.BackgroundCommand{State: "completed"}},
+		{ID: "a"},
+		{ID: "agent", Subagent: &model.Subagent{State: "running"}},
+	}
+	var got []string
+	for _, it := range runningIn(items) {
+		got = append(got, it.ID)
+	}
+	if len(got) != 2 || got[0] != "dev" || got[1] != "agent" {
+		t.Errorf("running: %v, want [dev agent]", got)
+	}
+}

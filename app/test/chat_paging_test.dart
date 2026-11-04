@@ -138,4 +138,27 @@ void main() {
     expect(finding.trim(2), isFalse);
     expect(finding.items.length, 20);
   });
+
+  test('a task running before the recent part is kept, through a trim and '
+      'its page coming back', () {
+    final dev = Item(
+      id: 'dev',
+      kind: ItemKind.ITEM_KIND_TOOL_CALL,
+      backgroundCommand: BackgroundCommand(id: 'b', state: 'running'),
+    );
+    final chat = ChatState('c', '/f')
+      ..load(
+        GetChatResponse(
+          items: [dev, for (var i = 0; i < 20; i++) _msg(i)],
+          older: 5,
+          seq: Int64(5),
+        ),
+      );
+    expect(chat.trim(2), isTrue);
+    expect(chat.runningBefore.map((it) => it.id), ['dev']);
+    expect(chat.withRunning.first.id, 'dev');
+    chat.prepend([dev, for (var i = 0; i < 18; i++) _msg(i)], 5);
+    expect(chat.runningBefore, isEmpty);
+    expect(chat.items.where((it) => it.id == 'dev').length, 1);
+  });
 }
