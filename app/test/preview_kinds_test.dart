@@ -9,6 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/phone/diagram_screen.dart';
 import 'package:nushi/phone/page_frame.dart';
 import 'package:nushi/phone/phone.dart';
@@ -332,6 +333,73 @@ void main() {
     await tester.pumpAndSettle();
     expect(host.disposed, isTrue);
     d.dispose();
+  }, variant: _mac);
+
+  testWidgets('the pane’s edge lies beside a web view, not over it, and '
+      'drags over it', (tester) async {
+    final streams = <String, StreamController<WatchChatFileResponse>>{};
+    final (d, _) = await _app(tester, streams);
+    final diagram = _Diagram();
+    final was = newDiagramHost;
+    newDiagramHost = () => diagram;
+    addTearDown(() => newDiagramHost = was);
+    final c = d.chats['c']!..openPreview('site/index.html');
+    await tester.pumpAndSettle();
+    await render(tester, find.byType(NushiApp), 'preview_html_edge');
+    final pane = tester.getRect(_pane);
+    final page = _inPane(find.byKey(const Key('page')));
+    // The edge's strip, its full height under the header, is Flutter's:
+    // the web view starts past it.
+    expect(tester.getRect(page).left, pane.left + Resizable.edgeWidth);
+    expect(tester.getRect(page).right, pane.right);
+    // A press on the strip beside the page, dragged left, then right past
+    // the pane's least width into the page's region, and back: it follows
+    // the pointer throughout.
+    var at = Offset(pane.left + 2, tester.getCenter(page).dy);
+    final drag = await tester.startGesture(at);
+    Future<void> move(double dx) async {
+      at += Offset(dx, 0);
+      await drag.moveTo(at);
+      await tester.pump();
+    }
+
+    await move(-20); // past the slop
+    await move(-200);
+    expect(tester.getRect(_pane).left, pane.left - 200);
+    await move(500);
+    expect(tester.getSize(_pane).width, 300); // its least
+    expect(tester.getRect(page).contains(at), isTrue);
+    await move(-100);
+    await drag.up();
+    await tester.pumpAndSettle();
+    expect(tester.getRect(_pane).left, pane.left + 200);
+    expect(
+      tester.getRect(page).left,
+      tester.getRect(_pane).left + Resizable.edgeWidth,
+    );
+    // Narrow, the pane over the chat: still beside its edge.
+    viewport(tester, const Size(720, 900));
+    await tester.pumpAndSettle();
+    await render(tester, find.byType(NushiApp), 'preview_html_edge_narrow');
+    expect(
+      tester.getRect(page).left,
+      tester.getRect(_pane).left + Resizable.edgeWidth,
+    );
+    // A diagram's web view too; a page drawn by Flutter runs under it.
+    c.openPreview('docs/flow.mmd');
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(_inPane(find.byKey(const Key('diagram')))).left,
+      tester.getRect(_pane).left + Resizable.edgeWidth,
+    );
+    c.openPreview('config.json');
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(_inPane(find.byType(SourceView))).left,
+      tester.getRect(_pane).left,
+    );
+    d.dispose();
+    await tester.pump(const Duration(seconds: 2)); // the width's saved
   }, variant: _mac);
 
   testWidgets('SVG and PDF in the web view; a PDF has no Source', (

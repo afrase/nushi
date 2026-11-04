@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/mermaid.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -173,6 +174,6 @@ class _DiagramViewState extends State<DiagramView> {
             previewStatus(context, widget.watch) ?? const SizedBox.shrink(),
       );
     }
-    return widget.host.view(context);
+    return ClearOfEdge(child: widget.host.view(context));
   }
 }

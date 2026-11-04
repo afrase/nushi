@@ -12,7 +12,8 @@ import 'package:nushi/window_drag.dart';
 /// right side: a thin line that highlights under the pointer. Dragging it
 /// resizes the pane between [min] and [max]; a double-click resets it to
 /// [initial]. The width is remembered across launches by [name]. With
-/// [top], the edge is on top and it is the pane's height.
+/// [top], the edge is on top and it is the pane's height. The edge lies over
+/// the pane's side; a platform view there keeps clear of it ([ClearOfEdge]).
 class Resizable extends StatefulWidget {
   const new({
     required this.name,
@@ -33,8 +34,43 @@ class Resizable extends StatefulWidget {
   final bool top;
   final Widget child;
 
+  /// How far in from the pane's side the edge takes the pointer.
+  static const edgeWidth = 5.0;
+
   @override
   State<Resizable> createState() => _ResizableState();
+}
+
+/// [child], a platform view (a WKWebView), kept clear of the edge of the
+/// [Resizable] it's in, so the edge lies beside it, not over it. On the Mac
+/// a platform view takes the pointer from the Flutter content over it except
+/// where that content paints (the engine's hit-test ignore region, from what
+/// each frame draws over it): over a web view only the edge's line would
+/// start a drag, its unpainted rest giving the press to WebKit. A drag
+/// started beside the view goes on over it: AppKit sends the drag and the
+/// release to the view that took the press.
+class ClearOfEdge extends StatelessWidget {
+  const new({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding:
+        context.dependOnInheritedWidgetOfExactType<_Edge>()?.inset ??
+        EdgeInsets.zero,
+    child: child,
+  );
+}
+
+/// Where the edge of the [Resizable] around lies, for [ClearOfEdge].
+class _Edge extends InheritedWidget {
+  const new({required this.inset, required super.child});
+
+  final EdgeInsets inset;
+
+  @override
+  bool updateShouldNotify(_Edge old) => inset != old.inset;
 }
 
 /// The width the pane [name] was given, or [initial].
@@ -106,12 +142,21 @@ class _ResizableState extends State<Resizable> {
         height: top ? _width() : null,
         child: Stack(
           children: [
-            Positioned.fill(child: widget.child),
+            Positioned.fill(
+              child: _Edge(
+                inset: top
+                    ? const EdgeInsets.only(top: Resizable.edgeWidth)
+                    : widget.left
+                    ? const EdgeInsets.only(left: Resizable.edgeWidth)
+                    : const EdgeInsets.only(right: Resizable.edgeWidth),
+                child: widget.child,
+              ),
+            ),
             Positioned(
               top: 0,
               bottom: top ? null : 0,
-              width: top ? null : 5,
-              height: top ? 5 : null,
+              width: top ? null : Resizable.edgeWidth,
+              height: top ? Resizable.edgeWidth : null,
               left: widget.left || top ? 0 : null,
               right: widget.left ? null : 0,
               child: edge,

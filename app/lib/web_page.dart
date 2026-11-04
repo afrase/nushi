@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
@@ -197,6 +198,6 @@ class _WebPageState extends State<WebPage> {
             const SizedBox.shrink(),
       );
     }
-    return widget.host.view(context);
+    return ClearOfEdge(child: widget.host.view(context));
   }
 }

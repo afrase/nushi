@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/beside.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/theme/theme.dart';
 
 void main() {
@@ -59,5 +60,56 @@ void main() {
     await tester.pump();
     expect(width(tester), 1200 - 360);
     await tester.pump(const Duration(seconds: 2)); // the width's saved
+  });
+
+  testWidgets('a platform view keeps clear of the edge, on whichever side', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    for (final (left, top, inset) in [
+      (true, false, const EdgeInsets.only(left: Resizable.edgeWidth)),
+      (false, false, const EdgeInsets.only(right: Resizable.edgeWidth)),
+      (false, true, const EdgeInsets.only(top: Resizable.edgeWidth)),
+    ]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: const NushiTheme(Tokens.dark).toThemeData(),
+          home: Align(
+            alignment: Alignment.topLeft,
+            child: Resizable(
+              name: 'test',
+              initial: 300,
+              min: 100,
+              max: 500,
+              left: left,
+              top: top,
+              child: const ColoredBox(
+                key: Key('pane'),
+                color: Color(0xFF000000),
+                child: ClearOfEdge(child: SizedBox.expand(key: Key('view'))),
+              ),
+            ),
+          ),
+        ),
+      );
+      final pane = tester.getRect(find.byKey(const Key('pane')));
+      expect(
+        tester.getRect(find.byKey(const Key('view'))),
+        inset.deflateRect(pane),
+      );
+    }
+    // Outside a pane it fills its place.
+    await tester.pumpWidget(
+      const Directionality(
+        textDirection: TextDirection.ltr,
+        child: ClearOfEdge(child: SizedBox.expand(key: Key('view'))),
+      ),
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('view'))),
+      Offset.zero & const Size(800, 600),
+    );
   });
 }
