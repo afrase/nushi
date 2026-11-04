@@ -183,9 +183,16 @@ func (f InboxFilter) Check() error {
 // hideQualifiers).
 func (f InboxFilter) shows(repo string) bool {
 	owner, _, _ := strings.Cut(repo, "/")
-	return (len(f.Repos) == 0 || slices.Contains(f.Repos, repo)) &&
-		!slices.Contains(f.Hide, repo) && !slices.Contains(f.Hide, owner) &&
-		(len(f.Owners) == 0 || slices.Contains(f.Owners, owner))
+	return (len(f.Repos) == 0 || named(f.Repos, repo)) &&
+		!named(f.Hide, repo) && !named(f.Hide, owner) &&
+		(len(f.Owners) == 0 || named(f.Owners, owner))
+}
+
+// named is whether names has name. GitHub's owners and repositories take
+// any case (a remote may say Afrase/Nushi, GitHub afrase/nushi), as its
+// search does.
+func named(names []string, name string) bool {
+	return slices.ContainsFunc(names, func(n string) bool { return strings.EqualFold(n, name) })
 }
 
 // narrowed is the filter without the repositories and owners it both
@@ -196,7 +203,7 @@ func (f InboxFilter) narrowed() (InboxFilter, bool) {
 		var out []string
 		for _, n := range names {
 			owner, _, _ := strings.Cut(n, "/")
-			if !slices.Contains(f.Hide, n) && !slices.Contains(f.Hide, owner) {
+			if !named(f.Hide, n) && !named(f.Hide, owner) {
 				out = append(out, n)
 			}
 		}
@@ -205,7 +212,7 @@ func (f InboxFilter) narrowed() (InboxFilter, bool) {
 	n := f
 	n.Repos, n.Owners = keep(f.Repos), keep(f.Owners)
 	n.Hide = slices.DeleteFunc(slices.Clone(f.Hide), func(h string) bool {
-		return slices.Contains(f.Repos, h) || slices.Contains(f.Owners, h)
+		return named(f.Repos, h) || named(f.Owners, h)
 	})
 	return n, (len(f.Repos) == 0 || len(n.Repos) > 0) && (len(f.Owners) == 0 || len(n.Owners) > 0)
 }

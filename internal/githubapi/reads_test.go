@@ -37,6 +37,27 @@ func TestInbox(t *testing.T) {
 	}
 }
 
+// TestInboxNamesAnyCase: GitHub's names take any case (a remote written
+// Afrase/Nushi filters the inbox, and GitHub's search finds afrase/nushi),
+// so the daemon's own checks fold case too.
+func TestInboxNamesAnyCase(t *testing.T) {
+	f := newFake(t)
+	f.route("graphql Inbox", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"data":{"mine":{"issueCount":1,"nodes":[{"__typename":"PullRequest","id":"PR_1","number":1,"title":"t","url":"https://x/1","state":"OPEN","repository":{"nameWithOwner":"afrase/nushi"}}]},"review":{"issueCount":0,"nodes":[]},"assigned":{"issueCount":0,"nodes":[]}}}`))
+	})
+	in, err := f.client().Inbox(t.Context(), InboxFilter{Repos: []string{"Afrase/Nushi"}})
+	if err != nil || in.MineTotal != 1 || len(in.Mine) != 1 {
+		t.Fatalf("GitHub found %d, the inbox lists %d (%v)", in.MineTotal, len(in.Mine), err)
+	}
+	if (InboxFilter{Hide: []string{"AFRASE"}}).shows("afrase/x") || (InboxFilter{Hide: []string{"A/B"}}).shows("a/b") ||
+		!(InboxFilter{Owners: []string{"Afrase"}}).shows("afrase/x") {
+		t.Fatal("the daemon's own check")
+	}
+	if _, left := (InboxFilter{Repos: []string{"A/B"}, Hide: []string{"a"}}).narrowed(); left {
+		t.Fatal("all hidden")
+	}
+}
+
 // Review requested is me by name (user-review-requested:@me) unless my
 // teams are asked for too (review-requested:@me); either way the inbox
 // is one query.
