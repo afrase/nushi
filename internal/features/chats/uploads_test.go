@@ -25,7 +25,8 @@ func sent(t *testing.T, c *chat, agent *fakeAgent) []acp.ContentBlock {
 }
 
 // A file inside the chat's folder goes by its path there, one outside it
-// by its absolute path and its own name (ADR 0089).
+// by its absolute path, as its URI and as its name: omp reads only the
+// name (ADR 0089).
 func TestAttachedFilesAreLinks(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	outside := filepath.Join(t.TempDir(), "spec sheet.pdf")
@@ -38,7 +39,7 @@ func TestAttachedFilesAreLinks(t *testing.T) {
 	if in.Name != "docs/a.md" || in.URI != "file://"+c.record.Folder+"/docs/a.md" {
 		t.Errorf("inside: %+v", in)
 	}
-	if out.Name != "spec sheet.pdf" || out.URI != "file://"+strings.ReplaceAll(outside, " ", "%20") {
+	if out.Name != outside || out.URI != "file://"+strings.ReplaceAll(outside, " ", "%20") {
 		t.Errorf("outside: %+v", out)
 	}
 	c.mu.Lock()
@@ -55,10 +56,13 @@ func TestUploadsAreSavedAndLinked(t *testing.T) {
 	svc.uploads = t.TempDir()
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "this one", Uploads: []model.Upload{{Name: "../notes.txt", Data: []byte("hello")}}}, SendIdle))
 	p := sent(t, c, agent)
-	if len(p) != 2 || p[1].ResourceLink == nil || p[1].ResourceLink.Name != "notes.txt" {
+	if len(p) != 2 || p[1].ResourceLink == nil || filepath.Base(p[1].ResourceLink.Name) != "notes.txt" {
 		t.Fatalf("prompt %+v", p)
 	}
 	path := strings.TrimPrefix(p[1].ResourceLink.URI, "file://")
+	if p[1].ResourceLink.Name != path {
+		t.Errorf("named %q, not by its path %q", p[1].ResourceLink.Name, path)
+	}
 	if filepath.Dir(filepath.Dir(path)) != filepath.Join(svc.uploads, c.id) {
 		t.Errorf("saved at %s, not in the chat's uploads", path)
 	}

@@ -1,7 +1,7 @@
 # 0091. Attached files go to the agent as links
 
 ## Context
-The owner asked for the composer's + to attach any file, not only images (2026-11-04). ACP gives a client two ways to hand an agent a file: a `resource_link` (a URI; every agent must take one) or an embedded `resource` with the text (only for an agent whose `promptCapabilities.embeddedContext` says so). Every agent Nushi runs turns a `file://` link into a mention its model reads with its own tools: Claude (both agents) and Codex as `[@name](uri)`, the Ante and Pi/PiG bridges as `@path` (omp wasn't looked at: it isn't installed where this was built). The phone's files aren't on the Mac.
+The owner asked for the composer's + to attach any file, not only images (2026-11-04). ACP gives a client two ways to hand an agent a file: a `resource_link` (a URI; every agent must take one) or an embedded `resource` with the text (only for an agent whose `promptCapabilities.embeddedContext` says so). Every agent Nushi runs turns a `file://` link into a mention its model reads with its own tools: Claude (both agents) and Codex as `[@name](uri)`, the Ante and Pi/PiG bridges as `@path`. omp (18.12.6) gives its model only the link's name, never its URI, so a link's name is the file's path: its path in the folder, or its absolute path outside it. The phone's files aren't on the Mac.
 
 ## Decision
 - **A file goes as a `resource_link` to where it is**, never as a copy and never embedded: inside the chat's folder by its path there (as an @ mention), outside it by its absolute path (`SendPromptRequest.files`, API 103). The agent reads it when it needs it, as it is then, under its own permission rules: Claude asks before reading outside its folder, and that question is the harness's card (ADR 0007).

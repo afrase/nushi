@@ -234,8 +234,9 @@ func (c *chat) backgroundLocked(from int) bool {
 }
 
 // blocks makes a message the agent's content: the text, links to the files
-// (each named by its path in the folder, or by its own name when outside
-// it) and the images.
+// and the images. A link is named by the file's path in the folder, or by
+// its absolute path when outside it: omp gives its model only the name, never
+// the URI, so a bare name would send it to a same-named file in the folder.
 func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	text := m.Text
 	switch r := m.ToSubagent; {
@@ -248,7 +249,8 @@ func (c *chat) blocks(m model.Message) []acp.ContentBlock {
 	for _, f := range m.Files {
 		path, name := filepath.Join(c.record.Folder, f), f
 		if filepath.IsAbs(f) {
-			path, name = filepath.Clean(f), filepath.Base(f)
+			path = filepath.Clean(f)
+			name = path
 		}
 		prompt = append(prompt, acp.ContentBlock{Type: "resource_link", ResourceLink: &acp.ResourceLink{
 			Name: name, URI: (&url.URL{Scheme: "file", Path: path}).String()}})
