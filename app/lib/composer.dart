@@ -519,10 +519,14 @@ class _ComposerState extends State<Composer> {
                                         _draft.toSubagent.value = null,
                                     visualDensity: VisualDensity.compact,
                                   ),
-                                ReplyCards(
-                                  _draft.replies,
-                                  onDone: _focus.requestFocus,
-                                ),
+                                // Only when there are some: an empty one
+                                // still takes a spacing, which put the first
+                                // row 6pt right of the rows wrapped under it.
+                                if (_draft.replies.value.isNotEmpty)
+                                  ReplyCards(
+                                    _draft.replies,
+                                    onDone: _focus.requestFocus,
+                                  ),
                                 for (final o in _draft.outputs.value)
                                   OutputCard(
                                     o,
@@ -541,10 +545,11 @@ class _ComposerState extends State<Composer> {
                                       ),
                                     ],
                                   ),
-                                Thumbnails(
-                                  _images.value,
-                                  onRemove: _images.removeAt,
-                                ),
+                                if (_images.value.isNotEmpty)
+                                  Thumbnails(
+                                    _images.value,
+                                    onRemove: _images.removeAt,
+                                  ),
                               ],
                             ),
                           ),

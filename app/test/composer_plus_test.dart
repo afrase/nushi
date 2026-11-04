@@ -257,6 +257,23 @@ void main() {
     _end();
   }, variant: _mac);
 
+  testWidgets('cards wrapped to a second row start where the first does', (
+    tester,
+  ) async {
+    final (_, _, chat) = await _box(tester, size: const Size(420, 300));
+    chat.draft.files.value = [
+      for (final n in ['a long name for a file.pdf', 'another long one.txt'])
+        AttachedFile(name: n, size: 10, path: '/tmp/$n'),
+    ];
+    await tester.pumpAndSettle();
+    final cards = find.byType(FileCard);
+    final first = tester.getRect(cards.at(0));
+    final second = tester.getRect(cards.at(1));
+    expect(second.top, greaterThan(first.bottom)); // wrapped
+    expect(second.left, first.left);
+    _end();
+  }, variant: _mac);
+
   testWidgets('an image to an agent without images is a file card', (
     tester,
   ) async {
