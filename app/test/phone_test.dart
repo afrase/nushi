@@ -772,4 +772,31 @@ void main() {
     expect(find.bySemanticsLabel('Back'), findsNothing);
     await endPhone(tester, phone);
   });
+
+  testWidgets('paired again after Forget in the same page, notifications '
+      'can be turned on: the push key is asked again and the worker is '
+      'back', (tester) async {
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) =>
+          input is GetPushKeyRequest ? GetPushKeyResponse(key: _vapid) : null;
+    final (phone, platform) = await _app(tester, fake);
+    expect(phone.canPush, isTrue);
+    final registered = platform.workerRegistered;
+    await phone.forget();
+    for (var i = 0; i < 8; i++) {
+      await tester.pump();
+    }
+    expect(find.text('Pair with a Mac'), findsOneWidget);
+    expect(platform.workerRegistered, registered + 1);
+    // Paired again, as pair() ends (a new Daemon connects).
+    platform.saved = pairedRecord();
+    await phone.start();
+    for (var i = 0; i < 8; i++) {
+      await tester.pump();
+    }
+    expect(phone.daemon!.connected, isTrue);
+    expect(fake.calls.whereType<GetPushKeyRequest>(), hasLength(2));
+    expect(phone.canPush, isTrue);
+    await endPhone(tester, phone);
+  });
 }

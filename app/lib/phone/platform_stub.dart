@@ -49,7 +49,10 @@ final class PhonePlatform {
 
   /// What [clear] throws (a test sets it).
   Error? clearFails;
-  Future<void> registerWorker() async {}
+
+  /// How many times [registerWorker] was asked.
+  int workerRegistered = 0;
+  Future<void> registerWorker() async => workerRegistered++;
 
   /// Whether a newer version waits (a test sets it).
   final updateReady = ValueNotifier<bool>(false);

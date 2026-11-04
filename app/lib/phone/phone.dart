@@ -356,6 +356,7 @@ class Phone extends ChangeNotifier {
   Future<void> close() async {
     _viewing?.cancel();
     _viewing = null;
+    _wasConnected = false; // the next Daemon's connection is a new one
     link?.dispose();
     link = null;
     remoteState.removeListener(_remoteChanged);
@@ -415,6 +416,9 @@ class Phone extends ChangeNotifier {
       // The storage first: if it fails, nothing here looks forgotten.
       await platform.clear();
       await platform.reset();
+      // Pairing again comes next, in this page: its notifications, taps and
+      // offline shell need a worker, which reset took away.
+      unawaited(platform.registerWorker());
       await close();
       paired = _key = _pushKey = null;
       remoteState.value = null;
