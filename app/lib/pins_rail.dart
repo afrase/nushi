@@ -39,37 +39,67 @@ class PinEntry {
   int get hashCode => Object.hash(id, title);
 }
 
-/// A dash's length: the current entry's, the others'.
-const _long = 14.0;
-const _short = 9.0;
-
 /// The room between the dashes, and their thickness.
 const _pitch = 8.0;
 const _thick = 2.0;
 
-/// How far right of the transcript's left edge the dashes stand, given the
-/// room beside its text ([margin], its left inset): as Claude's, unless
-/// the margin is too narrow for that, then as far left as keeps a long dash
-/// clear of the words (the phone's, its dashes shorter).
-double railInset(BuildContext context, double margin) =>
-    (margin - _dash(context, on: true) - 4).clamp(4, 15).toDouble();
+/// Where the rail's dashes stand and how long they are, given the room
+/// beside the transcript's text ([margin], its left inset): as Claude's
+/// (15 from the edge, 14 and 9 long), unless the margin is too narrow for
+/// that and a gap of [gap] to the words; then nearer the edge, and if need
+/// be shorter (the phone's, a narrow window's). A long dash nearer the
+/// words reads as a dash opening the line beside it.
+@immutable
+class RailFit {
+  const new _(this.margin, this.inset, this.long, this.short);
 
-/// A dash's length: the current entry's, or another's; shorter on the
-/// phone, whose margin is narrow.
-double _dash(BuildContext context, {required bool on}) =>
-    TouchTargets.of(context) ? (on ? 11 : 7) : (on ? _long : _short);
+  factory of(double margin) {
+    final inset = (margin - 14 - gap).clamp(3, 15).toDouble();
+    final long = (margin - inset - gap).clamp(6, 14).toDouble();
+    return RailFit._(margin, inset, long, (long * 9 / 14).roundToDouble());
+  }
+
+  /// As in a wide window: room enough.
+  static const wide = RailFit._(40, 15, 14, 9);
+
+  /// The room between a long dash and the words.
+  static const gap = 8.0;
+
+  final double margin;
+
+  /// How far right of the transcript's left edge the dashes stand.
+  final double inset;
+
+  /// The current entry's dash, and the others'.
+  final double long;
+  final double short;
+
+  /// An entry's dash, the current one's if [on].
+  double dash({required bool on}) => on ? long : short;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RailFit &&
+      other.margin == margin &&
+      other.inset == inset &&
+      other.long == long;
+
+  @override
+  int get hashCode => Object.hash(margin, inset, long);
+}
 
 /// The rail: [entries] (the start first, then the pins in the transcript's
 /// order) as dashes, [current]'s long and bright. Its menu lists them;
 /// [onPick] goes to the one picked (its id, '' for the start). [before]
-/// runs as it opens (the phone takes the pages its pins are on). [inset] is
-/// where the dashes stand from its left edge, which is the transcript's.
+/// runs as it opens (the phone takes the pages its pins are on). [fit] is
+/// where the dashes stand from its left edge, which is the transcript's,
+/// and how long they are.
 class PinsRail extends StatefulWidget {
   const new({
     required this.entries,
     required this.current,
     required this.onPick,
-    required this.inset,
+    required this.fit,
     super.key,
     this.before,
   });
@@ -77,7 +107,7 @@ class PinsRail extends StatefulWidget {
   final List<PinEntry> entries;
   final ValueListenable<int> current;
   final void Function(String id) onPick;
-  final double inset;
+  final RailFit fit;
   final Future<void> Function()? before;
 
   /// How long the menu stays once the pointer has left it and the rail.
@@ -213,15 +243,16 @@ class _PinsRailState extends State<PinsRail> {
             shown: !_menu.isShowing,
             count: widget.entries.length,
             current: current,
+            fit: widget.fit,
             look: look,
             // On the phone a finger's width, past the margin into the text's
             // edge, where nothing's drawn: the dashes stay in the margin.
             padding: EdgeInsets.fromLTRB(
-              widget.inset,
+              widget.fit.inset,
               10,
               phone
-                  ? TouchTargets.size - widget.inset - _dash(context, on: true)
-                  : 10,
+                  ? TouchTargets.size - widget.fit.inset - widget.fit.long
+                  : RailFit.gap,
               10,
             ),
           ),
@@ -278,7 +309,7 @@ class _PinsRailState extends State<PinsRail> {
                           entries: widget.entries,
                           current: widget.current,
                           lit: _lit,
-                          inset: widget.inset,
+                          fit: widget.fit,
                           room: _room(context),
                           onPick: _pick,
                         ),
@@ -302,6 +333,7 @@ class _Dashes extends StatelessWidget {
     required this.shown,
     required this.count,
     required this.current,
+    required this.fit,
     required this.look,
     required this.padding,
   });
@@ -309,6 +341,7 @@ class _Dashes extends StatelessWidget {
   final bool shown;
   final int count;
   final int current;
+  final RailFit fit;
   final ControlLook look;
   final EdgeInsets padding;
 
@@ -324,7 +357,9 @@ class _Dashes extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: _pitch - _thick,
-          children: [for (var i = 0; i < count; i++) PinDash(on: i == current)],
+          children: [
+            for (var i = 0; i < count; i++) PinDash(on: i == current, fit: fit),
+          ],
         ),
       ),
     );
@@ -346,9 +381,15 @@ Color pinTitleDim(Tokens t) {
 /// dim otherwise; between the two if [bright] (its row under the pointer or
 /// the keys), as Claude's hovered row has it.
 class PinDash extends StatelessWidget {
-  const new({required this.on, super.key, this.bright = false});
+  const new({
+    required this.on,
+    super.key,
+    this.fit = RailFit.wide,
+    this.bright = false,
+  });
 
   final bool on;
+  final RailFit fit;
   final bool bright;
 
   @override
@@ -356,7 +397,7 @@ class PinDash extends StatelessWidget {
     final t = NushiTheme.of(context).t;
     return AnimatedContainer(
       duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-      width: _dash(context, on: on),
+      width: fit.dash(on: on),
       height: _thick,
       decoration: BoxDecoration(
         color: on
@@ -377,7 +418,7 @@ class _PinsMenu extends StatelessWidget {
     required this.entries,
     required this.current,
     required this.lit,
-    required this.inset,
+    required this.fit,
     required this.room,
     required this.onPick,
   });
@@ -385,7 +426,7 @@ class _PinsMenu extends StatelessWidget {
   final List<PinEntry> entries;
   final ValueListenable<int> current;
   final ValueNotifier<int?> lit;
-  final double inset;
+  final RailFit fit;
 
   /// How tall it can be: down to the window's bottom, from the rail.
   final double room;
@@ -439,7 +480,8 @@ class _PinsMenu extends StatelessWidget {
                         entry: e,
                         height: row,
                         // The dashes line up with the rail's under them.
-                        inset: max(4, inset - _pad - 1 - shift),
+                        inset: max(4, fit.inset - _pad - 1 - shift),
+                        fit: fit,
                         current: i == current.value,
                         lit: i == lit.value,
                         onHover: (on) {
@@ -468,6 +510,7 @@ class _MenuRow extends StatelessWidget {
     required this.entry,
     required this.height,
     required this.inset,
+    required this.fit,
     required this.current,
     required this.lit,
     required this.onHover,
@@ -477,6 +520,7 @@ class _MenuRow extends StatelessWidget {
   final PinEntry entry;
   final double height;
   final double inset;
+  final RailFit fit;
   final bool current;
   final bool lit;
   final ValueChanged<bool> onHover;
@@ -517,7 +561,7 @@ class _MenuRow extends StatelessWidget {
           child: Row(
             spacing: 10,
             children: [
-              PinDash(on: current, bright: bright),
+              PinDash(on: current, fit: fit, bright: bright),
               Flexible(
                 child: Text(
                   entry.title,

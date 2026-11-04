@@ -20,7 +20,6 @@ import 'package:nushi/pins_rail.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/theme/themes.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -78,6 +77,12 @@ final List<Item> _items = [
     text: 'Done: the relay restarts without dropping a phone.',
     sent: _ago(3),
   ),
+];
+
+/// [_items], the text of [id] [text].
+List<Item> _itemsWith(String id, String text) => [
+  for (final it in _items)
+    if (it.id == id) it.deepCopy()..text = text else it,
 ];
 
 /// The titles the daemon gave the agent's messages.
@@ -189,6 +194,15 @@ double _topOf(WidgetTester tester, String text) {
     find.textContaining(text, findRichText: true).first,
   );
   return _scroll(tester).pixels + at.top - list;
+}
+
+/// The room from the rail's long dash to the words of the last message.
+double _gapToWords(WidgetTester tester) {
+  final long = tester.getRect(_railDashes.at(_current(tester, 4)));
+  final words = tester.getRect(
+    find.textContaining('Done: the relay', findRichText: true).last,
+  );
+  return words.left - long.right;
 }
 
 /// Opens the menu with the pointer over the rail, come from elsewhere: a
@@ -350,10 +364,7 @@ void main() {
 
   testWidgets('two short answers at the end: each is current somewhere, '
       'and a pick is current until the list scrolls', (tester) async {
-    final items = [
-      for (final it in _items)
-        it.id == 'a2' ? (it.deepCopy()..text = 'The tests pass.') : it,
-    ];
+    final items = _itemsWith('a2', 'The tests pass.');
     final (d, _) = await _window(
       tester,
       pins: ['a1', 'a2', 'a3'],
@@ -388,13 +399,10 @@ void main() {
 
   testWidgets('a call opened above a pin moves it: the current entry '
       'follows, though nothing scrolled', (tester) async {
-    final items = [
-      for (final it in _items)
-        it.id == 't1'
-            ? (it.deepCopy()
-                ..text = [for (var i = 0; i < 60; i++) 'out $i'].join('\n'))
-            : it,
-    ];
+    final items = _itemsWith(
+      't1',
+      [for (var i = 0; i < 60; i++) 'out $i'].join('\n'),
+    );
     final (d, _) = await _window(tester, pins: ['a1', 'a2'], items: items);
     final third = _scroll(tester).viewportDimension / 3;
     await _scrollTo(tester, _topOf(tester, 'The tests, line 0') - third + 30);
@@ -587,7 +595,7 @@ void main() {
                   PinEntry('d', 'v0.3.1 deployment and parallel features'),
                 ],
                 current: current,
-                inset: 15,
+                fit: RailFit.wide,
                 onPick: (_) {},
               ),
             ),
@@ -625,13 +633,8 @@ void main() {
         brightness: b,
       );
       final name = 'message_pins_${width.toInt()}_${b.name}';
-      // The dashes clear of the text, a long one too.
-      final text = tester.getRect(find.text('Ship it').first);
-      final dash = tester.getRect(_railDashes.first);
-      expect(
-        dash.left + 14,
-        lessThan(width < 1000 ? 24 + dash.left : text.left),
-      );
+      // The dashes clear of the text, a long one by a gap.
+      expect(_gapToWords(tester), greaterThanOrEqualTo(RailFit.gap));
       await render(tester, find.byType(NushiApp), '${name}_bottom');
       await _scrollTo(tester, 0);
       await render(tester, find.byType(NushiApp), '${name}_top');
@@ -690,8 +693,7 @@ void main() {
       // Pin on the phone, which has no actions row.
       expect(_railDashes, findsNWidgets(4));
       expect(find.byTooltip('Pin'), findsNothing);
-      final dash = tester.getRect(_railDashes.first);
-      expect(dash.left + 14, lessThan(20), reason: 'in the margin');
+      expect(_gapToWords(tester), greaterThanOrEqualTo(RailFit.gap));
       await render(tester, find.byType(PhoneApp), 'message_pins_phone_$name');
 
       await tester.tap(_railDashes.first);

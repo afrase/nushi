@@ -986,10 +986,7 @@ class _TranscriptState extends State<Transcript> {
               child: PinsRail(
                 entries: [PinEntry.start, ...rail],
                 current: _pinAt,
-                inset: railInset(
-                  context,
-                  chatSides(context, box.maxWidth).left,
-                ),
+                fit: RailFit.of(chatSides(context, box.maxWidth).left),
                 onPick: (id) => unawaited(_pick(id)),
                 before: widget.onTop == null
                     ? null
