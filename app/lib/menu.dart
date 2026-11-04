@@ -317,7 +317,11 @@ Widget _row(
       : e.danger
       ? t.crashed
       : t.text;
-  final iconColor = e.danger && on ? t.crashed : t.textSecondary;
+  final iconColor = !on
+      ? t.textMuted
+      : e.danger
+      ? t.crashed
+      : t.textSecondary; // a disabled row's icon muted, as its label
   final icon = icons
       ? SizedBox(
           width: 16,
