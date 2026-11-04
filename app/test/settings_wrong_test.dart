@@ -21,7 +21,7 @@ void main() {
           'githubFindingBots', 'githubFindingHeadings', 'sidebarOrder',
           'sidebarCollapsed', 'sidebarChats', 'pinnedCollapsed', 'models',
           'opened', 'pins', 'pullSeen', 'cleanUpLater', 'panes',
-          'subagentWide', 'termFont', 'termSize', 'appearance',
+          'termFont', 'termSize', 'appearance',
           'alertNeedsYou', 'alertFinished', 'alertFailed', 'alertSound',
           'dockBadge', 'dismissedUpdate',
         ])

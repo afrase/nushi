@@ -8,10 +8,8 @@ import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
 
-/// A pane beside a view: its remembered width's [name], the width it
-/// starts at, and its least and most. [slot] is which of the view's panes
-/// it is, so one whose width changes its name (a subagent's pane made
-/// wider) stays the same pane; by default its [name].
+/// A pane beside a view: its [name] (its remembered width's), the width
+/// it starts at, and its least and most.
 class SidePane {
   new(
     this.name, {
@@ -19,11 +17,9 @@ class SidePane {
     required this.min,
     required this.cap,
     required this.child,
-    String? slot,
-  }) : slot = slot ?? name;
+  });
 
   final String name;
-  final String slot;
   final double initial;
   final double min;
   final double cap;
@@ -96,13 +92,10 @@ class _BesideState extends State<Beside> {
         final over = room - detailsWidth - panesWidth < widget.least;
         final t = NushiTheme.of(context).t;
         final shown = [...panes, ?details];
-        final now = {for (final p in shown) p.slot};
-        // What glides: the panes open (and their widths' names), and the
-        // sidebar, which moves everything here sideways.
-        final token = [
-          for (final p in shown) '${p.slot}:${p.name}',
-          sidebarShut,
-        ].join(',');
+        final now = {for (final p in shown) p.name};
+        // What glides: the panes open, and the sidebar, which moves
+        // everything here sideways.
+        final token = [for (final p in shown) p.name, sidebarShut].join(',');
         for (final slot in now) {
           if (_shown.contains(slot)) _tokens[slot] = token;
           _tokens.putIfAbsent(slot, () => token);
@@ -152,8 +145,8 @@ class _BesideState extends State<Beside> {
         return CustomMultiChildLayout(
           delegate: _Beside(
             widget.least,
-            panes: [for (final p in panes) p.slot],
-            details: details?.slot,
+            panes: [for (final p in panes) p.name],
+            details: details?.name,
             going: [
               for (final s in _seen)
                 if (!now.contains(s)) s,
@@ -178,7 +171,7 @@ class _BesideState extends State<Beside> {
             // it, the first one's shadow falls on it.
             for (final (i, p) in panes.indexed)
               pane(
-                p.slot,
+                p.name,
                 backed(
                   resizable(
                     p,
@@ -192,7 +185,7 @@ class _BesideState extends State<Beside> {
               ),
             if (details != null)
               pane(
-                details.slot,
+                details.name,
                 resizable(
                   details,
                   room - (over ? 0 : panesWidth) - widget.least,

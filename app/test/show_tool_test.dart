@@ -107,7 +107,6 @@ Future<(FakeDaemon, Daemon)> _app(
   viewport(tester, size);
   showDetails.value = false;
   paneWidths.value = {};
-  subagentWide.value = false;
   Collapsible.opened.clear();
   final fake = _fake(items: items, asked: asked);
   final d = await fake.connect(tester);

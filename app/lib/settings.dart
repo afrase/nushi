@@ -12,17 +12,17 @@ import 'package:nushi/file_mode.dart';
 /// whether the details panel shows (its toolbar button), which of its widgets
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// panes' widths, whether changed files show flat, which chats show their
-/// terminals, the terminal's font, whether a subagent's pane shows wide,
-/// whether the chat takes the whole width, whether the sidebar is hidden,
-/// the Jira task list's groups and assignee filters, the GitHub view's
-/// cards and filters, the sidebar's project groups' order and which are
-/// collapsed, each project's chats' order, whether Pinned is collapsed,
-/// the models picked last, each repository's merge method, each chat's
-/// pinned artifacts, and the Mac's notifications and Dock badge, the
-/// appearance, whether the composer checks spelling, and the newer
-/// release whose toast was dismissed. Each is a [Pref].
-/// Not whether new chats get a worktree: an older `worktrees` key is
-/// ignored, and dropped by the next save.
+/// terminals, the terminal's font, whether the chat takes the whole width,
+/// whether the sidebar is hidden, the Jira task list's groups and assignee
+/// filters, the GitHub view's cards and filters, the sidebar's project
+/// groups' order and which are collapsed, each project's chats' order,
+/// whether Pinned is collapsed, the models picked last, each repository's
+/// merge method, each chat's pinned artifacts, and the Mac's notifications
+/// and Dock badge, the appearance, whether the composer checks spelling,
+/// and the newer release whose toast was dismissed. Each is a [Pref].
+/// Not whether new chats get a worktree, nor whether a subagent's pane
+/// shows wide: an older `worktrees` or `subagentWide` key is ignored, and
+/// dropped by the next save.
 final Pref<bool> showDetails = _plain('details', true);
 
 /// The details panel's widgets collapsed, by title.
@@ -159,9 +159,6 @@ final paneWidths = Pref<Map<String, double>>(
   'panes',
   (v) => _entries(v, (w) => w is num ? w.toDouble() : null),
 );
-
-/// Whether a subagent's pane shows wide.
-final Pref<bool> subagentWide = _plain('subagentWide', false);
 
 /// Whether the chat takes the pane's whole width rather than a column in
 /// its middle (ADR 0074).
@@ -324,8 +321,9 @@ Map<String, Object?> readSaved() {
 }
 
 /// Keys an older app saved that mean nothing now, dropped by the next
-/// save: `worktrees` (new chats no longer remember one).
-const _dropped = {'worktrees'};
+/// save: `worktrees` (new chats no longer remember one) and `subagentWide`
+/// (a subagent's pane is dragged as wide as it's wanted).
+const _dropped = {'worktrees', 'subagentWide'};
 
 var _saveDue = false;
 

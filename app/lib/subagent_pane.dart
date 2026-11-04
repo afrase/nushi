@@ -52,7 +52,6 @@ class SubagentPane extends StatelessWidget {
                   ),
                   if (s != null && subagentStoppable(s))
                     stopButton(context, daemon, chat, id),
-                  const WideToggle(),
                   IconTap(
                     Icons.close,
                     tooltip: 'Close',

@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
-import 'package:nushi/controls.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/theme/theme.dart';
@@ -255,21 +254,4 @@ class PaneHeader extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Wider and Narrower in a subagent's or a command's pane header: the
-/// pane takes more of the window, remembered ([subagentWide]).
-class WideToggle extends StatelessWidget {
-  const new({super.key});
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: subagentWide,
-    builder: (context, wide, _) => IconTap(
-      wide ? Icons.close_fullscreen : Icons.open_in_full,
-      tooltip: wide ? 'Narrower' : 'Wider',
-      size: 13,
-      onTap: () => subagentWide.value = !wide,
-    ),
-  );
 }

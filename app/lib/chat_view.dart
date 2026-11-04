@@ -48,7 +48,8 @@ class ChatView extends StatefulWidget {
   /// The narrowest the transcript gets beside a panel.
   static const minWidth = 556.0;
 
-  /// The narrowest the transcript gets beside a wide pane.
+  /// The narrowest the transcript gets beside a pane dragged as wide as
+  /// it's wanted (a subagent's, or the preview).
   static const leastBesideWide = 360.0;
 
   /// The preview pane's width, as dragged.
@@ -176,7 +177,6 @@ class _ChatViewState extends State<ChatView> {
           chat.preview,
           chat.side,
           chat.sideHidden,
-          subagentWide,
         ]),
         builder: (context, _) => _beside(transcript),
       ),
@@ -194,7 +194,8 @@ class _ChatViewState extends State<ChatView> {
         : chat.side.value;
     final id = chat.pane.value;
     final preview = id == null ? chat.preview.value : null;
-    final wide = id != null && subagentWide.value || preview != null;
+    // Either is dragged as wide as it's wanted.
+    final wide = id != null || preview != null;
     final details = widget.details;
     return Beside(
       main: transcript,
@@ -219,12 +220,11 @@ class _ChatViewState extends State<ChatView> {
           ),
         if (id != null)
           SidePane(
-            // A wide pane has a width of its own.
-            wide ? 'subagent' : 'pane',
-            slot: 'pane',
-            initial: wide ? 640 : DetailsPanel.width,
+            // Named as the old Wider one was: a width dragged then stays.
+            'subagent',
+            initial: DetailsPanel.width,
             min: 220,
-            cap: wide ? double.infinity : 480,
+            cap: double.infinity,
             child: _pane(id),
           ),
         if (preview != null)

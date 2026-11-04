@@ -112,7 +112,6 @@ class BackgroundCommandPane extends StatelessWidget {
                   ),
                   if (it != null && commandRunning(it))
                     stopButton(context, daemon, chat, id),
-                  const WideToggle(),
                   IconTap(
                     Icons.close,
                     tooltip: 'Close',

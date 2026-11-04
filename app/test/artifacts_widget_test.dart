@@ -78,7 +78,6 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, List<Item> items) async {
   viewport(tester, const Size(1700, 900));
   showDetails.value = true;
   paneWidths.value = {};
-  subagentWide.value = false;
   collapsedWidgets.value = {};
   widgetOrder.value = [];
   pinnedFiles.value = {};

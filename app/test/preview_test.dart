@@ -150,7 +150,6 @@ Future<Daemon> _app(
   viewport(tester, Size(width, 900));
   showDetails.value = false;
   paneWidths.value = {};
-  subagentWide.value = false;
   Collapsible.opened.clear();
   final d = await _fake(asked: asked).connect(tester);
   d.select('c');

@@ -54,7 +54,6 @@ Future<Daemon> _app(
   viewport(tester, Size(width, 560));
   showDetails.value = details;
   paneWidths.value = {};
-  subagentWide.value = false;
   final c = chat('c', 'claude', 'Fix the login redirect');
   final fake = FakeDaemon([c])
     ..answer = (input) => input is GetChatRequest
@@ -150,7 +149,7 @@ void main() {
 
   testWidgets('each keeps its own width', (tester) async {
     final d = await _app(tester);
-    paneWidths.value = {'pane': 300, 'details': 240};
+    paneWidths.value = {'subagent': 300, 'details': 240};
     await _openPane(tester);
     expect(tester.getRect(_pane).width, 300);
     expect(tester.getRect(_details).width, 240);
@@ -160,9 +159,10 @@ void main() {
   testWidgets('too narrow for both: the pane lies over the transcript', (
     tester,
   ) async {
-    // 950 for the chat: the details (264) fit beside the transcript
-    // (556), the pane too, but not all three.
-    final d = await _app(tester, width: 1210);
+    // 840 for the chat: the details (264) fit beside the transcript
+    // (556), the pane too, but not with the transcript at its least
+    // beside the pane (360).
+    final d = await _app(tester, width: 1100);
     await _openPane(tester);
     final pane = tester.getRect(_pane);
     final details = tester.getRect(_details);
@@ -178,6 +178,74 @@ void main() {
     expect(_transcript(tester).right, details.left);
     d.dispose();
   }, variant: _mac);
+
+  testWidgets('the pane drags past 480, to a strip of the transcript, and '
+      'keeps its width across a relaunch', (tester) async {
+    var d = await _app(tester);
+    await _openPane(tester);
+    expect(
+      find.descendant(of: _pane, matching: find.byTooltip('Wider')),
+      findsNothing,
+    );
+    // Its edge, dragged far left: the pane goes over the transcript until
+    // 48 of it is left (1400 less the sidebar's 260 and the details' 264).
+    final drag = await tester.startGesture(
+      tester.getTopLeft(_pane) + const Offset(2, 200),
+    );
+    await drag.moveBy(const Offset(-20, 0));
+    await tester.pump();
+    await drag.moveBy(const Offset(-300, 0));
+    await tester.pump();
+    expect(tester.getRect(_pane).width, greaterThan(480)); // the old cap
+    await drag.moveBy(const Offset(-2000, 0));
+    await tester.pump();
+    await drag.up();
+    await tester.pumpAndSettle();
+    const most = 1400 - 260 - 264 - 48;
+    expect(tester.getRect(_pane).width, most);
+    expect(tester.getRect(_pane).right, tester.getRect(_details).left);
+    expect((readSaved()['panes']! as Map)['subagent'], most);
+    d.dispose();
+
+    // Relaunched, the widths read from app.json: the pane opens at the
+    // width it was left at.
+    await tester.pumpWidget(const SizedBox());
+    final saved = readSaved()['panes']! as Map<String, Object?>;
+    d = await _app(tester);
+    paneWidths.value = {
+      for (final MapEntry(:key, :value) in saved.entries)
+        key: (value! as num).toDouble(),
+    };
+    await _openPane(tester);
+    expect(tester.getRect(_pane).width, most);
+    d.dispose();
+  }, variant: _mac);
+
+  // Dragged wide, beside the transcript, and as far as it goes, over it.
+  for (final (name, width, by) in [
+    ('wide_beside', 1700.0, -500.0),
+    ('wide_most', 1700.0, -2000.0),
+    ('narrow_most', 720.0, -2000.0),
+  ]) {
+    testWidgets('dragged wide: $name (dark)', (tester) async {
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      final d = await _app(tester, width: width);
+      await _openPane(tester);
+      final drag = await tester.startGesture(
+        tester.getTopLeft(_pane) + const Offset(2, 200),
+      );
+      await drag.moveBy(const Offset(-20, 0));
+      await tester.pump();
+      await drag.moveBy(Offset(by, 0));
+      await tester.pump();
+      await drag.up();
+      await tester.pumpAndSettle();
+      expectTextInside(tester, width);
+      await render(tester, find.byType(NushiApp), 'pane_drag_$name');
+      d.dispose();
+    }, variant: _mac);
+  }
 
   testWidgets('a side chat goes left of the pane and the details', (
     tester,

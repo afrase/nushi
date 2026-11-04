@@ -154,7 +154,6 @@ Future<(Daemon, FakeDaemon)> _app(
   clock = () => demoNow;
   showDetails.value = details;
   paneWidths.value = {};
-  subagentWide.value = false;
   collapsedWidgets.value = {};
   widgetOrder.value = [];
   pullSeen.value = {};

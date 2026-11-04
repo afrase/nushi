@@ -115,7 +115,6 @@ Future<Daemon> _app(WidgetTester tester) async {
   viewport(tester, const Size(1700, 900));
   showDetails.value = false;
   paneWidths.value = {};
-  subagentWide.value = false;
   Collapsible.opened.clear();
   final was = fileChanged;
   fileChanged = (p) => switch (_minutes[p.split('/').last]) {

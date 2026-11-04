@@ -113,7 +113,6 @@ Future<(Daemon, FakeDaemon)> _app(WidgetTester tester, double width) async {
   viewport(tester, Size(width, 640));
   showDetails.value = true;
   paneWidths.value = {};
-  subagentWide.value = false;
   // The turn ended; the running subagent and make watch go on (API 84).
   final running = ChatStatus(background: 2);
   final c = chat('c', 'claude', 'ClickHouse time binding', status: running);
@@ -183,7 +182,7 @@ void main() {
     await _pump(tester);
     expect(_stops, findsNothing); // the stopped one has none
 
-    // Its pane has Stop beside Wider and Close; the stopped one's none.
+    // Its pane has Stop beside Close; the stopped one's none.
     await tester.tap(_line('b'));
     await _pump(tester);
     final pane = find.byType(SubagentPane);

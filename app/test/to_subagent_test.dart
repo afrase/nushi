@@ -60,7 +60,6 @@ void main() {
       'agent passed it on', (tester) async {
     viewport(tester, const Size(1400, 700));
     showDetails.value = false;
-    subagentWide.value = false;
     paneWidths.value = {};
     final c = chat('c', 'claude', 'Fix the login redirect');
     final fake = FakeDaemon([c])

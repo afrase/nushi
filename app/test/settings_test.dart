@@ -10,7 +10,7 @@ import 'package:nushi/settings.dart';
 File get _appJson => File('$dataDir/app.json');
 
 /// An `app.json` with every key the app saves, none at its default, a key
-/// from a newer app and an older app's `worktrees`.
+/// from a newer app and an older app's `worktrees` and `subagentWide`.
 final _saved = <String, Object?>{
   'details': false,
   'collapsed': ['Context'],
@@ -56,7 +56,6 @@ final _saved = <String, Object?>{
   'pullSeen': {'x': 3000, 'y': 4000},
   'cleanUpLater': ['x', 'y'],
   'panes': {'details': 360.5},
-  'subagentWide': true,
   'termFont': 'Menlo',
   'termSize': 14.0,
   'appearance': 'dark',
@@ -68,6 +67,7 @@ final _saved = <String, Object?>{
   'dismissedUpdate': '0.1.17',
   'fromANewerApp': {'kept': true},
   'worktrees': ['/a'],
+  'subagentWide': true,
 };
 
 /// Every pref, so each is read (made) before a save.
@@ -101,7 +101,6 @@ List<ValueNotifier<Object?>> get _all => [
   pullSeen,
   cleanUpLater,
   paneWidths,
-  subagentWide,
   terminalFont,
   terminalFontSize,
   appearance,
@@ -121,18 +120,20 @@ void main() {
   });
 
   test("every key read and saved back as it was; a newer app's key stays, "
-      "the old worktrees goes; only the user's (0600)", () async {
+      "old keys go; only the user's (0600)", () async {
     expect(showDetails.value, isFalse);
     expect(terminalChats.value, {'x', 'y'});
     expect(paneWidths.value, {'details': 360.5});
     expect(terminalFontSize.value, 14);
     expect(githubDays.value, 30);
     expect(dismissedUpdate.value, '0.1.17');
-    expect(_all.map((p) => p.value), hasLength(39)); // each made
+    expect(_all.map((p) => p.value), hasLength(38)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     expect(readSaved(), {
-      ...(Map.of(_saved)..remove('worktrees')),
+      ...(Map.of(_saved)
+        ..remove('worktrees')
+        ..remove('subagentWide')),
       'details': true,
     });
     expect(_appJson.statSync().mode & 0x1ff, 0x180);
