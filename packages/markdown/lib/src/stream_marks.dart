@@ -17,8 +17,9 @@ const _close = '\u{E003}';
 /// [tail] (the text from [at] on, raw, starting a block) with [fresh] runs
 /// marked where it's safe to draw them faded: within one line of prose,
 /// after something on that line, outside code (a code block's lines too:
-/// no inline syntax is read there, so a mark would show), links and any
-/// Markdown's syntax. Elsewhere a run just shows.
+/// no inline syntax is read there, so a mark would show), links (an
+/// autolink's too, in `<>` or bare) and any Markdown's syntax. Elsewhere a
+/// run just shows.
 String markFresh(String tail, int at, List<FreshRun> fresh) {
   if (fresh.isEmpty) return tail;
   final code = CodeLines();
@@ -35,12 +36,18 @@ String markFresh(String tail, int at, List<FreshRun> fresh) {
     final lineStart = nl + 1;
     final before = tail.substring(lineStart, start);
     final run = tail.substring(start, end);
+    // The word the run goes on: a bare URL's (GitHub's autolinks) would
+    // take the marks into the link.
+    final word = before.substring(before.lastIndexOf(_space) + 1);
     if (code.inCode(tail, lineStart) ||
         run.trim().isEmpty ||
         before.trim().isEmpty ||
         _syntax.hasMatch(run) ||
         '`'.allMatches(before).length.isOdd ||
         '['.allMatches(before).length != ']'.allMatches(before).length ||
+        '<'.allMatches(before).length > '>'.allMatches(before).length ||
+        word.contains('://') ||
+        word.toLowerCase().startsWith('www.') ||
         before.trimLeft().startsWith('|')) {
       continue;
     }
@@ -78,6 +85,8 @@ final _anyMark = RegExp('$_open\\d?|[$_close$_caret]');
 
 /// [healed] with the caret's mark at its end.
 String withCaret(String healed) => '$healed$_caret';
+
+final _space = RegExp(r'\s');
 
 final _syntax = RegExp('[*_`~\\[\\]()<>\\\\|!#$_caret$_open$_close]');
 

@@ -109,6 +109,26 @@ void main() {
     expect(all.where((s) => (s.$2 ?? 1) < 0.9), isEmpty);
   });
 
+  testWidgets('no mark in a link written as a URL, in angle brackets or '
+      'bare: the run just shows', (tester) async {
+    for (final text in [
+      'See <https://example.com/docs/streaming> for the rest',
+      'See https://example.com/docs/streaming for the rest',
+    ]) {
+      final at = text.indexOf('docs/');
+      await show(
+        tester,
+        text,
+        fresh: [(start: at, end: at + 'docs/streaming'.length, opacity: 0.3)],
+      );
+      for (final r in tester.widgetList<RichText>(find.byType(RichText))) {
+        final s = r.text.toPlainText();
+        expect(_broken(s), isFalse, reason: '$text: "$s"');
+        expect(s, contains('https://example.com/docs/streaming'), reason: text);
+      }
+    }
+  });
+
   testWidgets('no mark in a code block: a fresh run in a fence, open or '
       'closed, and the caret after a closing fence, just show', (tester) async {
     const caret = SizedBox.shrink(key: ValueKey('caret'));
