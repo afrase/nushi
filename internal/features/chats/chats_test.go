@@ -89,7 +89,9 @@ func TestPromptStreamsTheReply(t *testing.T) {
 			sessions++
 		}
 	}
-	if items != 5 || appends != 2 || sessions != 2 {
+	// The record: its title and first message, then its update as the
+	// turn ends (ChatRecord.Updated).
+	if items != 5 || appends != 2 || sessions != 3 {
 		t.Errorf("events = %+v", got)
 	}
 }

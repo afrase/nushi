@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
@@ -108,5 +109,41 @@ func TestDoneSurvivesARestart(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if list[0].Done {
 		t.Error("shown after a restart, it's still done")
+	}
+}
+
+func updated(c *chat) time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.record.Updated
+}
+
+// A message sent and a turn's end update the chat, shown or not, and a
+// stopped turn too: what a list sorts by last updated.
+func TestATurnUpdatesTheChat(t *testing.T) {
+	v := &viewers{shown: map[string]bool{}}
+	svc, agent, c := newSeenChat(t, &memSessions{}, v)
+	if !updated(c).IsZero() {
+		t.Fatal("a new chat is updated before its first message")
+	}
+	v.show(c.id, true)
+	before := time.Now()
+	turn(t, svc, c, "one")
+	first := updated(c)
+	if first.Before(before) {
+		t.Fatalf("after a turn, updated %v, before it began (%v)", first, before)
+	}
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
+	sent := updated(c)
+	if !sent.After(first) {
+		t.Errorf("sending didn't update it: %v, then %v", first, sent)
+	}
+	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, c, func() bool { return !c.busy })
+	if !updated(c).After(sent) {
+		t.Error("a stopped turn's end didn't update it")
 	}
 }

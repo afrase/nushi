@@ -590,6 +590,10 @@ message Chat {
   // (PinMessage); a client shows them in the transcript's order, and an id
   // it doesn't have among the items as nothing. API 102.
   repeated string pinned_messages = 19;
+  // When a message was last sent to it or a turn of it last ended; 0 for
+  // neither since the daemon kept it (a client goes by created_unix_ms).
+  // What the sidebar sorts by Last updated.
+  int64 updated_unix_ms = 20;
 }
 
 // A git worktree of a repository, on a branch of its own.

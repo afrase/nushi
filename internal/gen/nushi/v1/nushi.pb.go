@@ -938,8 +938,12 @@ type Chat struct {
 	// (PinMessage); a client shows them in the transcript's order, and an id
 	// it doesn't have among the items as nothing. API 102.
 	PinnedMessages []string `protobuf:"bytes,19,rep,name=pinned_messages,json=pinnedMessages,proto3" json:"pinned_messages,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// When a message was last sent to it or a turn of it last ended; 0 for
+	// neither since the daemon kept it (a client goes by created_unix_ms).
+	// What the sidebar sorts by Last updated.
+	UpdatedUnixMs int64 `protobuf:"varint,20,opt,name=updated_unix_ms,json=updatedUnixMs,proto3" json:"updated_unix_ms,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Chat) Reset() {
@@ -1103,6 +1107,13 @@ func (x *Chat) GetPinnedMessages() []string {
 		return x.PinnedMessages
 	}
 	return nil
+}
+
+func (x *Chat) GetUpdatedUnixMs() int64 {
+	if x != nil {
+		return x.UpdatedUnixMs
+	}
+	return 0
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -22618,7 +22629,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05chats\x18\x01 \x03(\v2\x15.nushi.v1.RemovedChatR\x05chats\".\n" +
 	"\x1aDismissRemovedChatsRequest\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x1d\n" +
-	"\x1bDismissRemovedChatsResponse\"\xbe\x04\n" +
+	"\x1bDismissRemovedChatsResponse\"\xe6\x04\n" +
 	"\x04Chat\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x16\n" +
@@ -22640,7 +22651,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x04pull\x18\x10 \x01(\v2\x14.nushi.v1.GitHubLinkR\x04pull\x12\x10\n" +
 	"\x03pin\x18\x11 \x01(\x05R\x03pin\x12\x14\n" +
 	"\x05color\x18\x12 \x01(\tR\x05color\x12'\n" +
-	"\x0fpinned_messages\x18\x13 \x03(\tR\x0epinnedMessages\"\x95\x01\n" +
+	"\x0fpinned_messages\x18\x13 \x03(\tR\x0epinnedMessages\x12&\n" +
+	"\x0fupdated_unix_ms\x18\x14 \x01(\x03R\rupdatedUnixMs\"\x95\x01\n" +
 	"\bWorktree\x12\x12\n" +
 	"\x04repo\x18\x01 \x01(\tR\x04repo\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x16\n" +

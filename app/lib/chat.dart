@@ -145,6 +145,11 @@ class ChatState extends ChangeNotifier {
   }
 
   DateTime created = DateTime.now();
+
+  /// When a message was last sent to it or a turn of it last ended (the
+  /// daemon's `Chat.updated_unix_ms`); [created] until then, and from a
+  /// daemon that doesn't say.
+  DateTime updated = DateTime.now();
   final List<Item> items = [];
 
   /// Goes up whenever [items] change but by text streaming into one: what

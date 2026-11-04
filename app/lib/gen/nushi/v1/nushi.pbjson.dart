@@ -334,6 +334,7 @@ const Chat$json = {
     {'1': 'pin', '3': 17, '4': 1, '5': 5, '10': 'pin'},
     {'1': 'color', '3': 18, '4': 1, '5': 9, '10': 'color'},
     {'1': 'pinned_messages', '3': 19, '4': 3, '5': 9, '10': 'pinnedMessages'},
+    {'1': 'updated_unix_ms', '3': 20, '4': 1, '5': 3, '10': 'updatedUnixMs'},
   ],
 };
 
@@ -349,7 +350,8 @@ final $typed_data.Uint8List chatDescriptor = $convert.base64Decode(
     'ZnaXRodWIYDiABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWISEgoEZG9uZRgPIAEo'
     'CFIEZG9uZRIoCgRwdWxsGBAgASgLMhQubnVzaGkudjEuR2l0SHViTGlua1IEcHVsbBIQCgNwaW'
     '4YESABKAVSA3BpbhIUCgVjb2xvchgSIAEoCVIFY29sb3ISJwoPcGlubmVkX21lc3NhZ2VzGBMg'
-    'AygJUg5waW5uZWRNZXNzYWdlcw==');
+    'AygJUg5waW5uZWRNZXNzYWdlcxImCg91cGRhdGVkX3VuaXhfbXMYFCABKANSDXVwZGF0ZWRVbm'
+    'l4TXM=');
 
 @$core.Deprecated('Use worktreeDescriptor instead')
 const Worktree$json = {

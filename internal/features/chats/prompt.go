@@ -166,6 +166,7 @@ func (c *chat) sendLocked(m model.Message) {
 	c.addLocked(userItem(m))
 	c.saveLocked(func(s *model.ChatRecord) {
 		s.HasMessages = true
+		s.Updated = time.Now()
 		if s.Title == "" {
 			s.Title = title(m.Text)
 		}
@@ -205,7 +206,7 @@ func (c *chat) releaseLocked() {
 	c.notPassedOnLocked()
 	c.copyLocked(true)
 	c.lookRelatedLocked()
-	c.endedLocked()
+	c.endedLocked(true)
 	c.statusChangedLocked()
 	c.deliverLocked()
 }
@@ -319,9 +320,8 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 	c.lookRelatedLocked()
 	// Done unless stopped or the agent went (watch says so); marked
 	// before the status, so a client has it as the turn ends.
-	if stopped := err == nil && resp.StopReason == "cancelled"; !stopped && (err == nil || !quit) {
-		c.endedLocked()
-	}
+	stopped := err == nil && resp.StopReason == "cancelled"
+	c.endedLocked(!stopped && (err == nil || !quit))
 	c.statusChangedLocked()
 	c.copyLocked(true)
 	// A stopped or failed turn holds the queue until the next one ends.

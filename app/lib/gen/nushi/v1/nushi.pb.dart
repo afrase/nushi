@@ -956,6 +956,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.int? pin,
     $core.String? color,
     $core.Iterable<$core.String>? pinnedMessages,
+    $fixnum.Int64? updatedUnixMs,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -977,6 +978,7 @@ class Chat extends $pb.GeneratedMessage {
     if (pin != null) result.pin = pin;
     if (color != null) result.color = color;
     if (pinnedMessages != null) result.pinnedMessages.addAll(pinnedMessages);
+    if (updatedUnixMs != null) result.updatedUnixMs = updatedUnixMs;
     return result;
   }
 
@@ -1016,6 +1018,7 @@ class Chat extends $pb.GeneratedMessage {
     ..aI(17, _omitFieldNames ? '' : 'pin')
     ..aOS(18, _omitFieldNames ? '' : 'color')
     ..pPS(19, _omitFieldNames ? '' : 'pinnedMessages')
+    ..aInt64(20, _omitFieldNames ? '' : 'updatedUnixMs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1236,6 +1239,18 @@ class Chat extends $pb.GeneratedMessage {
   /// it doesn't have among the items as nothing. API 102.
   @$pb.TagNumber(19)
   $pb.PbList<$core.String> get pinnedMessages => $_getList(18);
+
+  /// When a message was last sent to it or a turn of it last ended; 0 for
+  /// neither since the daemon kept it (a client goes by created_unix_ms).
+  /// What the sidebar sorts by Last updated.
+  @$pb.TagNumber(20)
+  $fixnum.Int64 get updatedUnixMs => $_getI64(19);
+  @$pb.TagNumber(20)
+  set updatedUnixMs($fixnum.Int64 value) => $_setInt64(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasUpdatedUnixMs() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearUpdatedUnixMs() => $_clearField(20);
 }
 
 /// A git worktree of a repository, on a branch of its own.

@@ -2,6 +2,7 @@ package chats
 
 import (
 	"slices"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -38,12 +39,20 @@ func (s *Service) Seen(chatID string) error {
 	return nil
 }
 
-// endedLocked marks the chat done as its turn ends, unless a client shows
-// the chat or it was stopped: one the user stopped, or whose agent is
-// being stopped (sleep, archive, the daemon closing), they know of.
-func (c *chat) endedLocked() {
-	if c.parent != nil || c.stopped || c.stopping || c.halting || c.viewers == nil || c.viewers.Shown(c.id) {
+// endedLocked notes that the chat's turn ended: the chat updated now, and,
+// with [done], marked done unless a client shows the chat or it was
+// stopped: one the user stopped, or whose agent is being stopped (sleep,
+// archive, the daemon closing), they know of. A side chat isn't stored,
+// nor one being deleted.
+func (c *chat) endedLocked(done bool) {
+	if c.parent != nil || c.halting {
 		return
 	}
-	c.saveLocked(func(s *model.ChatRecord) { s.Done = true })
+	done = done && !c.stopped && !c.stopping && c.viewers != nil && !c.viewers.Shown(c.id)
+	c.saveLocked(func(s *model.ChatRecord) {
+		s.Updated = time.Now()
+		if done {
+			s.Done = true
+		}
+	})
 }

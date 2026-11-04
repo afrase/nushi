@@ -16,6 +16,10 @@ type ChatRecord struct {
 	Name      string // the title the user set, which wins over Title
 	Mode      string // the mode it was last in
 	Created   time.Time
+	// Updated is when a message was last sent to the chat or a turn of it
+	// last ended: what a list sorts by "last updated". Zero for a chat
+	// with neither since the daemon kept it.
+	Updated time.Time `json:",omitzero"`
 	// Archived chats have no agent running; they reopen when unarchived.
 	Archived bool
 	// HasMessages says the chat's session has had a message: it is in the
