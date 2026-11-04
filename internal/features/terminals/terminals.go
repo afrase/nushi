@@ -19,7 +19,8 @@ import (
 type Shell interface {
 	Write([]byte) error
 	Resize(cols, rows int) error
-	Program() string
+	Program() string    // the foreground program, as last seen
+	Foreground() string // the foreground program now, "" at the prompt
 	Exit() (exited bool, code int)
 	Attach(stop <-chan struct{}, fn func([]byte) bool)
 	Close()
@@ -263,26 +264,21 @@ func (s *Service) Within(dir string) bool {
 }
 
 // Busy says whether a terminal runs a command: a program other than its
-// shell in the foreground. One at its prompt has nothing to lose but its
-// scrollback.
+// shell in the foreground, as it is now (a command typed a moment ago
+// counts). One at its prompt has nothing to lose but its scrollback.
 func (s *Service) Busy() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return slices.ContainsFunc(s.terms, func(t *term) bool {
-		exited, _ := t.shell.Exit()
-		return !exited && t.shell.Program() != ""
-	})
+	return len(s.Running()) > 0
 }
 
-// Running says which terminals run a command, for the restart's wait to
-// show: each one's chat and "running <program>".
+// Running says which terminals run a command now, for the restart's wait
+// to show: each one's chat and "running <program>".
 func (s *Service) Running() []model.Hold {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var out []model.Hold
 	for _, t := range s.terms {
-		if exited, _ := t.shell.Exit(); !exited && t.shell.Program() != "" {
-			out = append(out, model.Hold{ChatID: t.ChatID, Why: "running " + t.shell.Program(), Terminal: true})
+		if program := t.shell.Foreground(); program != "" {
+			out = append(out, model.Hold{ChatID: t.ChatID, Why: "running " + program, Terminal: true})
 		}
 	}
 	return out

@@ -171,10 +171,7 @@ func (t *Terminal) watch() {
 			continue
 		}
 		last = pg
-		program := ""
-		if pg > 0 && pg != t.cmd.Process.Pid {
-			program = commandLine(pg)
-		}
+		program := t.programOf(pg)
 		t.mu.Lock()
 		same := program == t.program
 		t.program = program
@@ -183,6 +180,29 @@ func (t *Terminal) watch() {
 			t.changed()
 		}
 	}
+}
+
+// programOf returns the command line of process group pg in the
+// foreground, or "" when that is the program the terminal started with.
+func (t *Terminal) programOf(pg int) string {
+	if pg <= 0 || pg == t.cmd.Process.Pid {
+		return ""
+	}
+	return commandLine(pg)
+}
+
+// Foreground returns the foreground program's command line as it is now,
+// read from the terminal rather than from the watcher's last look (Program,
+// up to half a second old): "" at the shell's prompt or once it has exited.
+// What decides to end the terminal asks this, so a command started a moment
+// ago counts.
+func (t *Terminal) Foreground() string {
+	select {
+	case <-t.done:
+		return ""
+	default:
+	}
+	return t.programOf(t.foreground())
 }
 
 // foreground returns the terminal's foreground process group, or 0.
