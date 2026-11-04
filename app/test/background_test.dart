@@ -61,6 +61,38 @@ void main() {
     expect(await ask(tester, chat), isTrue);
   });
 
+  testWidgets('a chat not loaded asks from its status', (tester) async {
+    // The sidebar's or status bar's chat: its status says two run in the
+    // background, its items aren't loaded.
+    final chat = ChatState('c', '/x')
+      ..agent = 'claude'
+      ..background = 2;
+    await ask(tester, chat);
+    expect(find.text('Sleep the chat?'), findsOneWidget);
+    expect(
+      find.textContaining('2 background tasks are still running'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a background command asks too', (tester) async {
+    final chat = ChatState('c', '/x')
+      ..agent = 'claude'
+      ..background = 1;
+    chat.items.add(
+      Item(
+        id: 'b',
+        kind: ItemKind.ITEM_KIND_TOOL_CALL,
+        backgroundCommand: BackgroundCommand(state: 'running'),
+      ),
+    );
+    await ask(tester, chat);
+    expect(
+      find.textContaining('A background task is still running'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a subagent stopped with its agent says so', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

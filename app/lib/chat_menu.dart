@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
 import 'package:nushi/app_actions.dart';
+import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_colors.dart';
 import 'package:nushi/daemon.dart';
@@ -123,9 +125,11 @@ Future<void> sleepChat(
   );
 }
 
-/// Asks [title] before stopping [chat]'s agent while subagents it started
-/// run in the background, since they stop with it; true when none runs or
-/// [action] is pressed.
+/// Asks [title] before stopping [chat]'s agent while background tasks it
+/// started run, since they stop with it; true when none runs or [action] is
+/// pressed. The count is the status's, which a chat has loaded or not (a
+/// sidebar row's items are often not loaded); the items name the subagents
+/// when they are all there is.
 Future<bool> stopsBackground(
   BuildContext context,
   ChatState chat,
@@ -136,8 +140,12 @@ Future<bool> stopsBackground(
     for (final s in subagentsOf(chat.items))
       if (subagentRunning(s)) s.call.agent,
   ];
-  if (running.isEmpty) return true;
-  final which = running.length == 1
+  final commands = backgroundCommandsOf(chat.items).where(commandRunning);
+  final n = max(chat.background, running.length + commands.length);
+  if (n == 0) return true;
+  final which = running.length < n
+      ? (n == 1 ? 'A background task is' : '$n background tasks are')
+      : running.length == 1
       ? 'Its ${running.single} subagent is'
       : 'Its subagents ${running.join(', ')} are';
   return await confirm(
