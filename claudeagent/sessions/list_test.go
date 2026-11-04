@@ -5,6 +5,7 @@
 package sessions
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -34,7 +35,7 @@ func (f fixture) write(t *testing.T, dir, id string) {
 		}
 		return string(b)
 	}
-	first := map[string]any{"type": "user", "message": map[string]any{"role": "user", "content": firstOf(f.prompt, "Hello Claude")}}
+	first := map[string]any{"type": "user", "message": map[string]any{"role": "user", "content": cmp.Or(f.prompt, "Hello Claude")}}
 	tail := map[string]any{"type": "summary"}
 	for k, v := range map[string]string{"cwd": f.cwd, "gitBranch": f.branch} {
 		if v != "" {

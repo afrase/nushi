@@ -8,8 +8,6 @@ package sessions
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -21,6 +19,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf16"
+	"uuid"
 )
 
 // maxName is the longest folder name the CLI keeps whole; a longer one is
@@ -44,14 +43,7 @@ func checkID(id string) error {
 
 // newUUID returns a random (version 4) UUID, as the CLI names sessions and
 // records.
-func newUUID() string {
-	var b [16]byte
-	_, _ = rand.Read(b[:]) // never fails (crypto/rand)
-	b[6] = b[6]&0x0f | 0x40
-	b[8] = b[8]&0x3f | 0x80
-	h := hex.EncodeToString(b[:])
-	return h[:8] + "-" + h[8:12] + "-" + h[12:16] + "-" + h[16:20] + "-" + h[20:]
-}
+func newUUID() string { return uuid.NewV4().String() }
 
 // notFound is the error for a session or subagent that isn't on disk; it
 // matches fs.ErrNotExist.

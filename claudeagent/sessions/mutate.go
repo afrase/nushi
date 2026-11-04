@@ -10,6 +10,7 @@ package sessions
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -60,7 +61,7 @@ func (s Store) Fork(id, cwd string, o ForkOptions) (string, error) {
 	}
 	title := strings.TrimSpace(o.Title)
 	if title == "" {
-		title = firstOf(titleOf(data), "Forked session") + " (fork)"
+		title = cmp.Or(titleOf(data), "Forked session") + " (fork)"
 	}
 	lines = append(lines, string(marshal(titleRecord{
 		Type: "custom-title", SessionID: newID, CustomTitle: title, UUID: newUUID(), Timestamp: stamp(),
@@ -223,7 +224,7 @@ func cut(records []copied, upTo string) (kept []copied, found bool) {
 func titleOf(data []byte) string {
 	head, tail := data[:min(len(data), liteRead)], data[max(0, len(data)-liteRead):]
 	h, t := strings.ToValidUTF8(string(head), "�"), strings.ToValidUTF8(string(tail), "�")
-	return firstOf(lastString(t, "customTitle"), lastString(h, "customTitle"),
+	return cmp.Or(lastString(t, "customTitle"), lastString(h, "customTitle"),
 		lastString(t, "aiTitle"), lastString(h, "aiTitle"), firstPrompt(h))
 }
 
