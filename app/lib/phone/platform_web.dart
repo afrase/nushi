@@ -271,8 +271,12 @@ final class PhonePlatform {
     waiting.postMessage('skipWaiting'.toJS);
   }
 
-  /// Unregisters the service worker and empties its caches: Forget leaves
-  /// nothing that a script once run here could have changed.
+  /// Unregisters the service worker and empties its caches, the fonts'
+  /// too. What a script once run here wrote there can't be served anyway
+  /// (the worker checks every cached answer against the build's sums), but
+  /// if that script's code is what runs now, this is its code too: then
+  /// only removing the app from the Home Screen (or the site's data in
+  /// Settings) clears it (docs/remote.md).
   Future<void> reset() async {
     try {
       final keys = await web.window.caches.keys().toDart;
@@ -286,7 +290,8 @@ final class PhonePlatform {
         await reg?.unregister().toDart;
       }
     } on Object {
-      // Best effort: the next build's worker replaces its caches anyway.
+      // Best effort: what's left is checked before it's served, and the
+      // next build's worker deletes the shell's cache (not the fonts').
     }
   }
 

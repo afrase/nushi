@@ -15,6 +15,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -147,6 +148,18 @@ func mirrorFonts(dir, mainJS, boot string) (int, int) {
 	}
 	write(filepath.Join(dir, filepath.FromSlash(fallbackDir+"OFL.txt")), notoLicence)
 	return len(fonts), total
+}
+
+// fontSumsJSON is each fallback font's SHA-256 (hex) by its path under
+// assets/fonts/fallback/, from the lock, for the service worker.
+func fontSumsJSON() string {
+	_, fonts := parseLock(fontsLock)
+	sums := make(map[string]string, len(fonts))
+	for _, f := range fonts {
+		sums[f.path] = f.sum
+	}
+	b, _ := json.Marshal(sums)
+	return string(b)
 }
 
 // cachedFont gives f from the cache, fetching it first if it isn't there;

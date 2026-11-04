@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -55,5 +57,29 @@ func TestEngineFontsAndOnDemand(t *testing.T) {
 		if onDemand(name) != want {
 			t.Errorf("onDemand(%q) = %v", name, !want)
 		}
+	}
+}
+
+// The service worker carries each placeholder webbuild fills in exactly
+// once (replaceOnce stops the build otherwise), and the fonts' sums file
+// is one the worker keeps in its shell, under a name the relay may cache
+// for good.
+func TestServiceWorkerPlaceholders(t *testing.T) {
+	sw, err := os.ReadFile("../../app/web/sw.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{`const VERSION = "nushi-dev";`, `const SHELL = ["./"];`, `const SUMS = {};`,
+		`const FONTS = "nushi-fonts-dev";`, `const FONT_SUMS = "";`} {
+		if n := strings.Count(string(sw), p); n != 1 {
+			t.Errorf("sw.js has %q %d times", p, n)
+		}
+	}
+	var sums map[string]string
+	if err := json.Unmarshal([]byte(fontSumsJSON()), &sums); err != nil || len(sums) < 100 {
+		t.Fatalf("the fonts' sums: %d, %v", len(sums), err)
+	}
+	if name := "assets/fonts/fallback-" + hashOf(fontSumsJSON()) + ".json"; onDemand(name) {
+		t.Errorf("%s isn't in the shell", name)
 	}
 }

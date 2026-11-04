@@ -67,28 +67,44 @@ func main() {
 	index := filepath.Join(dir, "index.html")
 	write(index, replaceOnce(read(index), `src="flutter_bootstrap.js"`, `src="`+bootJS+`"`))
 
+	// The fallback fonts' sums, for the service worker to check each one it
+	// keeps against: a file of the shell (so checked like the rest), named
+	// for its content.
+	fontSums := fontSumsJSON()
+	fontSumsFile := "assets/fonts/fallback-" + hashOf(fontSums) + ".json"
+	write(filepath.Join(dir, filepath.FromSlash(fontSumsFile)), fontSums)
+
 	// The shell the service worker keeps: every file but itself, the
 	// licences, the fallback fonts (fetched when a character needs one) and
 	// mermaid's script (fetched by the diagram's frame, which the worker
-	// doesn't serve).
+	// doesn't serve), each with its SHA-256, which the worker checks every
+	// cached answer against.
 	var shell []string
+	sums := map[string]string{}
 	all := sha256.New()
 	check(fs.WalkDir(os.DirFS(dir), ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || name == "sw.js" || name == "assets/NOTICES" || onDemand(name) || name == mermaidJS {
 			return err
 		}
-		_, _ = fmt.Fprintf(all, "%s\x00%s\x00", name, hashOf(read(filepath.Join(dir, name))))
-		if name != "index.html" {
+		body := read(filepath.Join(dir, name))
+		_, _ = fmt.Fprintf(all, "%s\x00%s\x00", name, hashOf(body))
+		if name == "index.html" {
+			sums["./"] = sumOf([]byte(body))
+		} else {
 			shell = append(shell, name)
+			sums[name] = sumOf([]byte(body))
 		}
 		return nil
 	}))
 	slices.Sort(shell)
 	list, _ := json.Marshal(append([]string{"./"}, shell...))
+	sumsJSON, _ := json.Marshal(sums) // sorted keys
 	sw := read(filepath.Join(dir, "sw.js"))
 	sw = replaceOnce(sw, `const VERSION = "nushi-dev";`, `const VERSION = "nushi-`+hex.EncodeToString(all.Sum(nil))[:16]+`";`)
 	sw = replaceOnce(sw, `const SHELL = ["./"];`, `const SHELL = `+string(list)+`;`)
+	sw = replaceOnce(sw, `const SUMS = {};`, `const SUMS = `+string(sumsJSON)+`;`)
 	sw = replaceOnce(sw, `const FONTS = "nushi-fonts-dev";`, `const FONTS = "nushi-fonts-`+hashOf(fontsLock)+`";`)
+	sw = replaceOnce(sw, `const FONT_SUMS = "";`, `const FONT_SUMS = "`+fontSumsFile+`";`)
 	write(filepath.Join(dir, "sw.js"), sw)
 	saved := compress(dir)
 	log.Printf("web app: %s, %s, %d files in the shell; Brotli saves %d KB over gzip; %d fallback fonts, %d KB", mainJS, ckDir, len(shell)+1, saved>>10, fonts, fontsSize>>10)

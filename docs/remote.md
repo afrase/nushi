@@ -46,6 +46,18 @@ Forget this Mac (Settings) forgets the pairing and the device's key on the phone
 - An expired chat is read-only, with New chat here.
 - After the first visit the app starts from its own cache. A new version shows "Nushi was updated", with Reload.
 
+### If the app's code may have been changed
+
+Whoever serves the web app (the relay's host, a proxy that terminates TLS such as Cloudflare) can serve code that takes the device's key. If that may have happened:
+
+1. Put the relay's web folder back from the release's tarball (its sha256 is in the release), and restart the relay.
+2. Purge the proxy's cache (Cloudflare keeps the app's hashed files at its edge for a year).
+3. Cut a new release if the files themselves were wrong.
+4. Revoke every phone on the Mac.
+5. On each phone, delete Nushi from the Home Screen, which deletes its storage (in a desktop browser, clear the site's data), then add it again and pair again. Don't rely on Forget this Mac: if altered code is what runs, the button is its code too.
+
+The app's service worker checks every file it serves from its cache against the build's SHA-256s, so something kept once can't outlive the server being put right; it can't tell, though, whether the server is right.
+
 ## The relay
 
 A phone reaches the daemon through a relay: `nushi-relay`, one static binary that pairs two WebSocket connections on an id and copies their messages. Only the daemon, holding its key, can listen on an id, and the messages are end-to-end encrypted between the phone and the daemon.
