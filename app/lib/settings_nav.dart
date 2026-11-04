@@ -8,6 +8,7 @@ import 'package:nushi/widgets.dart';
 extension SectionIcon on SettingsSection {
   IconData get icon => switch (this) {
     .general => Icons.tune,
+    .appearance => Icons.palette_outlined,
     .terminal => Icons.terminal,
     .history => Icons.history,
     .remote => Icons.phone_iphone,

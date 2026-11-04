@@ -1,7 +1,7 @@
 // Each built-in theme (ADR 0086), dark and light, on the README's demo
 // data: the main window mid-turn (the transcript with its diffs, a
 // subagent's pane, the details panel), a narrow one with the terminal, the
-// phone's chat, and Settings › General. Renders to look at
+// phone's chat, and Settings › Appearance. Renders to look at
 // (`make renders TEST=test/theme_renders_test.dart`); here each must draw
 // without an error or text past the window's edge.
 import 'dart:async';
@@ -117,12 +117,12 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('${theme.name}, ${b.name}: Settings › General', (
+      testWidgets('${theme.name}, ${b.name}: Settings › Appearance', (
         tester,
       ) async {
         colorTheme.value = theme.id;
         final d = await _window(tester, const Size(1200, 900), b);
-        d.openSettings(section: SettingsSection.general);
+        d.openSettings(section: SettingsSection.appearance);
         await _pump(tester, 4);
         expect(tester.takeException(), isNull);
         await render(tester, find.byType(NushiApp), 'theme_${name}_settings');

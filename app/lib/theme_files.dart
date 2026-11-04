@@ -44,10 +44,14 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
   StreamSubscription<FileSystemEvent>? _watching;
   Timer? _soon;
 
+  /// Each file's path, by the name it's shown as.
+  final _paths = <String, String>{};
+
   /// Reads them all again.
   void load() => value = _read();
 
   List<ThemeFile> _read() {
+    _paths.clear();
     final List<File> files;
     try {
       if (!dir.existsSync()) return const [];
@@ -69,6 +73,7 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
   }
 
   ThemeFile _readOne(File f, String name) {
+    _paths[name] = f.path;
     try {
       // At most one byte past the limit: a file that grew since it was
       // listed is still read only so far.
@@ -144,6 +149,11 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
   Future<void> reveal() async {
     privateDir(dir);
     await openInFinder([dir.path]);
+  }
+
+  /// Shows the theme file [file] (a name [value] lists) in Finder.
+  Future<void> revealFile(String file) async {
+    if (_paths[file] case final path?) await openInFinder(['-R', path]);
   }
 
   /// None read and none watched, as at launch (tests).

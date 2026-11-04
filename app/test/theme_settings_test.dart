@@ -1,4 +1,4 @@
-// Settings › General's Theme (ADR 0086): a pick repaints the app at once
+// Settings › Appearance's Theme (ADR 0086): a pick repaints the app at once
 // and is remembered; the user's theme files load, partial and broken ones
 // say what's wrong, and an edit to one reloads it.
 import 'dart:io';
@@ -12,6 +12,7 @@ import 'package:nushi/settings_theme.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
+import 'package:nushi/theme_preview.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -23,6 +24,13 @@ final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 Tokens _painted(WidgetTester tester, Finder of) =>
     NushiTheme.of(tester.element(of)).t;
 
+/// Taps [f] once it's scrolled into view.
+Future<void> _tap(WidgetTester tester, Finder f) async {
+  await tester.ensureVisible(f);
+  await tester.pumpAndSettle();
+  await tester.tap(f);
+}
+
 /// Writes [text] as the theme file [name], and the folder's gone after.
 File _file(String name, String text) {
   final dir = themeFiles.dir..createSync(recursive: true);
@@ -32,7 +40,7 @@ File _file(String name, String text) {
   return File('${dir.path}/$name')..writeAsStringSync(text);
 }
 
-/// The Mac app on Settings › General, [size] wide, dark.
+/// The Mac app on Settings › Appearance, [size] wide, dark.
 Future<Daemon> _app(
   WidgetTester tester, {
   Size size = const Size(1200, 900),
@@ -40,7 +48,7 @@ Future<Daemon> _app(
   viewport(tester, size, brightness: Brightness.dark);
   final d =
       await FakeDaemon([chat('a', 'claude', 'Fix the login')]).connect(tester)
-        ..openSettings(section: SettingsSection.general);
+        ..openSettings(section: SettingsSection.appearance);
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();
   return d;
@@ -54,15 +62,15 @@ void main() {
     Directory(dataDir).createSync(recursive: true);
     final d = await _app(tester);
     expect(_painted(tester, find.byType(SettingsView)), same(Tokens.dark));
-    expect(find.byType(ThemeTile), findsNWidgets(builtInThemes.length));
-    await tester.tap(find.text('Nord'));
+    expect(find.byType(ThemeCard), findsNWidgets(builtInThemes.length));
+    await _tap(tester, find.text('Nord'));
     await tester.pumpAndSettle();
     final nord = builtInTheme('nord')!;
     expect(_painted(tester, find.byType(SettingsView)), same(nord.dark));
     expect(colorTheme.value, 'nord');
     expect(readSaved()['theme'], 'nord');
-    final picked = tester.widget<ThemeTile>(
-      find.ancestor(of: find.text('Nord'), matching: find.byType(ThemeTile)),
+    final picked = tester.widget<ThemeCard>(
+      find.ancestor(of: find.text('Nord'), matching: find.byType(ThemeCard)),
     );
     expect(picked.picked, isTrue);
     // Light: the same theme's light set.
@@ -109,27 +117,57 @@ void main() {
     );
     final d = await _app(tester, size: const Size(1700, 1100));
     expect(find.text('Good'), findsOne);
-    expect(find.text('Good.json'), findsOne); // the file, under its name
     expect(find.text('Dim'), findsOne);
     expect(find.text('Odd'), findsOne);
-    expect(find.textContaining('Broken'), findsOne); // its note, no tile
+    // A file that's no theme says so under the cards; one that is says
+    // what's wrong on its own card.
+    expect(find.textContaining('Broken'), findsOne);
     expect(
       find.text('Broken.json: Isn’t JSON: Unexpected end of input.'),
       findsOne,
     );
-    expect(find.text('Odd.json: "dark.basee" is no token: ignored.'), findsOne);
+    Finder onCard(String name, Finder f) => find.descendant(
+      of: find.ancestor(of: find.text(name), matching: find.byType(ThemeCard)),
+      matching: f,
+    );
     expect(
-      find.text('Odd.json: "dark.text" isn’t #RRGGBB or #AARRGGBB: ignored.'),
+      onCard('Odd', find.text('"dark.basee" is no token: ignored.')),
       findsOne,
     );
     expect(
-      find.textContaining(RegExp(r'^Dim, dark: textMuted on .+ under 4\.5:1')),
+      onCard(
+        'Odd',
+        find.text('"dark.text" isn’t #RRGGBB or #AARRGGBB: ignored.'),
+      ),
       findsOne,
     );
-    expect(find.textContaining('Dim, light'), findsNothing);
+    expect(
+      onCard(
+        'Dim',
+        find.textContaining(RegExp(r'^Dark: textMuted on .+ under 4\.5:1')),
+      ),
+      findsOne,
+    );
+    expect(onCard('Dim', find.textContaining('Light:')), findsNothing);
+    expect(onCard('Good', find.text('Yours · Good.json')), findsOne);
+    expect(onCard('Nord', find.text('Built in')), findsOne);
+    // The custom card's colors are its own: its preview draws in them.
+    final mine = tester.widget<ThemeCard>(
+      find.ancestor(of: find.text('Good'), matching: find.byType(ThemeCard)),
+    );
+    expect(mine.theme.dark.base, const Color(0xFF101820));
+    expect(
+      find.descendant(
+        of: find.byWidget(mine),
+        matching: find.byWidgetPredicate(
+          (w) => w is ThemePreview && w.tokens.base == const Color(0xFF101820),
+        ),
+      ),
+      findsOne,
+    );
     await render(tester, find.byType(NushiApp), 'theme_files_1700_dark');
 
-    await tester.tap(find.text('Good'));
+    await _tap(tester, find.text('Good'));
     await tester.pumpAndSettle();
     expect(colorTheme.value, 'custom:Good');
     final t = _painted(tester, find.byType(SettingsView));
@@ -199,7 +237,7 @@ void main() {
     });
     colorTheme.value = 'catppuccin';
     final d = await _app(tester);
-    await tester.tap(find.text('New from Catppuccin'));
+    await _tap(tester, find.text('New from Catppuccin'));
     await tester.pumpAndSettle();
     final file = File('${themeFiles.dir.path}/Catppuccin.json');
     expect(file.existsSync(), isTrue);
@@ -209,13 +247,13 @@ void main() {
     expect(made.dark.base, builtInTheme('catppuccin')!.dark.base);
     expect(themeFiles.value.single.notes, isEmpty);
     // Again: a name of its own.
-    await tester.tap(find.text('New from Catppuccin'));
+    await _tap(tester, find.text('New from Catppuccin'));
     await tester.pumpAndSettle();
     expect(
       File('${themeFiles.dir.path}/Catppuccin 2.json').existsSync(),
       isTrue,
     );
-    await tester.tap(find.text('Show folder'));
+    await _tap(tester, find.text('Show folder'));
     await tester.pumpAndSettle();
     expect(opened.last, [themeFiles.dir.path]);
     await closeView(tester, d);
@@ -231,7 +269,7 @@ void main() {
       await pumpSettings(
         tester,
         d,
-        SettingsSection.general,
+        SettingsSection.appearance,
         tokens: tokens,
         size: const Size(1000, 900),
       );

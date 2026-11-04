@@ -11,6 +11,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/scanner.dart';
+import 'package:nushi/phone/settings_screen.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/remote.dart' show keyFingerprint, remoteState;
@@ -115,6 +116,18 @@ Future<(Phone, PhonePlatform)> _app(
   return (phone, platform);
 }
 
+/// Scrolls Settings down to Forget this Mac, under the themes.
+Future<void> _toForget(WidgetTester tester) => tester.scrollUntilVisible(
+  find.text('Forget this Mac'),
+  300,
+  scrollable: find
+      .descendant(
+        of: find.byType(SettingsScreen),
+        matching: find.byType(Scrollable),
+      )
+      .first,
+);
+
 void main() {
   setUpAll(loadFonts);
 
@@ -206,10 +219,14 @@ void main() {
       final (phone, _) = await _app(tester, fake, brightness: b);
       await tester.tap(find.bySemanticsLabel('Settings'));
       await tester.pumpAndSettle();
-      for (final words in ['Mac', 'Notifications', 'Forget this Mac']) {
+      for (final words in ['Mac', 'Notifications']) {
         expect(find.text(words), findsWidgets);
       }
       await render(tester, find.byType(PhoneApp), 'phone_settings_$name');
+      // The themes and Forget this Mac, under them.
+      await _toForget(tester);
+      await tester.pumpAndSettle();
+      await render(tester, find.byType(PhoneApp), 'phone_settings_${name}_end');
       await endPhone(tester, phone);
     });
   }
@@ -561,6 +578,8 @@ void main() {
       findsOneWidget,
       reason: "the Mac's key, as the Mac shows it",
     );
+    await _toForget(tester);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Forget this Mac'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Forget'));

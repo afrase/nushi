@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show immutable;
 /// the nav's, `settings_nav.dart`).
 enum SettingsSection {
   general('General'),
+  appearance('Appearance'),
   terminal('Terminal'),
   history('Chat history'),
   remote('Remote access'),

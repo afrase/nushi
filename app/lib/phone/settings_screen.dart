@@ -7,7 +7,7 @@ import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/remote.dart' show keyFingerprint;
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/theme_strip.dart';
+import 'package:nushi/theme_preview.dart';
 
 /// The phone's settings: the relay, this device's name, notifications, the
 /// theme, and Forget this Mac.
@@ -142,8 +142,9 @@ class _Line extends StatelessWidget {
   }
 }
 
-/// The built-in themes (ADR 0086), each its name and its key colors in the
-/// phone's brightness, the one picked checked; a tap picks one at once.
+/// The built-in themes (ADR 0086), two across, each a picture of Nushi in
+/// it (in the phone's brightness) over its name, the one picked ringed and
+/// checked; a tap picks one at once.
 class _Themes extends StatelessWidget {
   const new(this.phone);
 
@@ -152,45 +153,82 @@ class _Themes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return ValueListenableBuilder(
-      valueListenable: phone.theme,
-      builder: (context, picked, _) => Column(
-        children: [
-          for (final c in builtInThemes)
-            Semantics(
-              selected: c.id == picked.id,
-              child: Pressable(
-                onTap: () => unawaited(phone.pickTheme(c)),
-                builder: (context, look) => Container(
-                  constraints: const BoxConstraints(minHeight: touch),
-                  color: look.hover ? t.hover : null,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+    Widget card(ColorTheme c, {required bool picked}) => Semantics(
+      selected: picked,
+      button: true,
+      label: c.name,
+      child: Pressable(
+        onTap: () => unawaited(phone.pickTheme(c)),
+        builder: (context, look) => Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: look.hover ? Color.alphaBlend(t.hover, t.raised) : t.raised,
+            border: Border.all(
+              color: picked ? t.accentInk : t.borderSubtle,
+              width: picked ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(picked ? 0 : 1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 6,
+              children: [
+                framed(
+                  border: t.borderStrong,
+                  radius: 4,
+                  child: ThemePreview(c.of(t.brightness), dark: c.dark),
+                ),
+                SizedBox(
+                  height: 24,
                   child: Row(
-                    spacing: 12,
                     children: [
-                      SizedBox(
-                        width: 110,
-                        child: Text(c.name, style: phoneText(context)),
-                      ),
+                      const SizedBox(width: 2),
                       Expanded(
-                        child: ThemeStrip(
-                          c.of(t.brightness),
-                          outline: t.borderStrong,
-                          height: 18,
+                        child: Text(
+                          c.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: phoneText(context),
                         ),
                       ),
-                      SizedBox(
-                        width: 22,
-                        child: c.id == picked.id
-                            ? Icon(Icons.check, size: 20, color: t.accentInk)
-                            : null,
-                      ),
+                      if (picked)
+                        Icon(Icons.check, size: 20, color: t.accentInk),
                     ],
                   ),
                 ),
-              ),
+              ],
             ),
-        ],
+          ),
+        ),
+      ),
+    );
+    return ValueListenableBuilder(
+      valueListenable: phone.theme,
+      builder: (context, picked, _) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+        child: Column(
+          spacing: 12,
+          children: [
+            for (var i = 0; i < builtInThemes.length; i += 2)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 12,
+                children: [
+                  for (var j = i; j < i + 2; j++)
+                    Expanded(
+                      child: j < builtInThemes.length
+                          ? card(
+                              builtInThemes[j],
+                              picked: builtInThemes[j].id == picked.id,
+                            )
+                          : const SizedBox(),
+                    ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }

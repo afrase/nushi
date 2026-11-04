@@ -14,6 +14,7 @@ import 'package:nushi/logs_section.dart';
 import 'package:nushi/mcp.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/remote.dart';
+import 'package:nushi/settings_appearance.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
 import 'package:nushi/settings_rows.dart';
@@ -108,6 +109,7 @@ class _SettingsViewState extends State<SettingsView> {
       settings: _set,
       onChange: _change,
     ),
+    SettingsSection.appearance => const AppearanceSection(),
     SettingsSection.terminal => const TerminalSection(),
     SettingsSection.history => HistorySection(
       daemon: daemon,

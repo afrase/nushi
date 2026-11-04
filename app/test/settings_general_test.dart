@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
@@ -112,15 +113,23 @@ void main() {
   // UX review, finding 15: remembered, not the View menu's state alone.
   testWidgets('the appearance is a setting, kept in app.json', (tester) async {
     Directory(dataDir).createSync(recursive: true);
-    final (_, d) = await _open(tester, SettingsSection.general);
+    final (_, d) = await _open(tester, SettingsSection.appearance);
     expect(find.text('As the system'), findsOne);
     await tester.tap(find.text('As the system'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Dark', findRichText: true).last);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(MenuItemButton),
+        matching: find.text('Dark', findRichText: true),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(appearance.value, ThemeMode.dark);
     expect(readSaved()['appearance'], 'dark');
-    expect(find.text('Dark'), findsOne); // the field says it
+    expect(
+      find.descendant(of: find.byType(MenuField), matching: find.text('Dark')),
+      findsOne,
+    ); // the field says it
     d.dispose();
   });
 }

@@ -93,6 +93,7 @@ enum Act {
   skills(menu: ActMenu.chat, menuLabel: 'Skills…'),
   delete(menu: ActMenu.chat, menuLabel: 'Delete…'),
   settings(key: settingsKey, menu: ActMenu.nushi, menuLabel: 'Settings…'),
+  appearance,
   jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
   github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
   restart,
@@ -261,6 +262,11 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     ),
     ...chatActions(context, d, shown),
     AppAction(.settings, 'Settings', run: d.openSettings),
+    AppAction(
+      .appearance,
+      'Appearance and themes',
+      run: () => d.openSettings(section: SettingsSection.appearance),
+    ),
     AppAction(
       .jira,
       d.place is JiraPlace ? 'Close Jira' : 'Jira',
