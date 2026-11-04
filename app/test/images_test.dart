@@ -26,6 +26,10 @@ void main() {
       'file://evil.com/a.png',
       '//host/a.png',
       '/assets/logo.png?raw=true',
+      // Security fix review 2026-11-04: toFilePath throws on an encoded
+      // slash, which broke the whole message's render.
+      '/a%2Fb.png',
+      'file:///a%2Fb.png',
     ]) {
       expect(markdownImage(Uri.parse(u), 'x'), isA<Text>(), reason: u);
     }

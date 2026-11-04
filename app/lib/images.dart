@@ -285,7 +285,11 @@ Widget markdownImage(Uri uri, String? alt) {
     // toFilePath throws on them, which would break the whole message).
     final local = uri.host.isEmpty && !uri.hasQuery && !uri.hasFragment;
     if (local && !kIsWeb) {
-      return _LocalImage(uri.toFilePath(), '[image: ${alt ?? uri}');
+      try {
+        return _LocalImage(uri.toFilePath(), '[image: ${alt ?? uri}');
+      } on UnsupportedError {
+        // an encoded slash (/a%2Fb.png): no file path
+      }
     }
     return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
   }
