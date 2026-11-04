@@ -10,6 +10,11 @@ import 'package:nushi/settings.dart';
 /// The app's Swift side of notifications and the Dock badge.
 const alertsChannel = MethodChannel('nushi/alerts');
 
+/// The API from which the daemon says how each turn ended
+/// (ChatStatus.ended, failure). While an older daemon waits to restart (ADR
+/// 0056) the alerts still guess it from the turn's notices.
+const turnEndApi = 107;
+
 /// What a Mac notification says happened, in the phone's pushes' words.
 enum AlertKind {
   permission(' needs you'),
@@ -32,8 +37,9 @@ enum AlertKind {
 /// The Mac's notifications and Dock badge, from the chats' events as the
 /// daemon's pushes to the phone are (`features/remote`'s notifier): a
 /// permission prompt or a question when it comes, and a turn's end
-/// [finishedWait] later (none if the agent went straight on, or someone
-/// stopped it), "failed" when the turn had an error. A notification is
+/// [finishedWait] later as the daemon judged it (ChatStatus.ended):
+/// "finished", "failed" with what ended it, nothing for a stopped one, and
+/// none if the agent went straight on. A notification is
 /// posted unless Nushi is the app in front *and* shows that chat: in the
 /// background every chat's; in front, the other chats'. A click opens its
 /// chat, and a "needs you" goes once its chat no longer does. Nothing
@@ -67,8 +73,10 @@ class MacAlerts {
   }
 
   final _running = <String>{}; // chats whose turn runs, as events said
-  final _stopped = <String>{}; // whose running turn someone stopped
-  final _failed = <String>{}; // whose running turn had an error
+  // An older daemon's turns, judged from their notices: whose running turn
+  // someone stopped, and whose had an error.
+  final _stopped = <String>{};
+  final _failed = <String>{};
   final _asked = <String, Set<String>>{}; // prompts already notified
   final _finishing = <String, Timer>{};
   final _posted = <String>{}; // chats with notifications posted
@@ -101,19 +109,28 @@ class MacAlerts {
       return;
     }
     if (e.hasStatus()) {
-      if (e.status.started != 0) {
+      final s = e.status;
+      if (s.started != 0) {
         _running.add(id);
         _finishing.remove(id)?.cancel(); // the agent went on
+      } else if (_judged) {
+        if (s.ended != TurnEnd.TURN_END_UNSPECIFIED) {
+          _running.remove(id);
+          _asked.remove(id);
+          _finishing.remove(id)?.cancel();
+        }
+        // A stopped turn, or a status that isn't an end: nothing.
+        if (s.ended == TurnEnd.TURN_END_DONE) {
+          _finish(id, AlertKind.finished);
+        } else if (s.ended == TurnEnd.TURN_END_FAILED) {
+          _finish(id, AlertKind.failed, s.failure);
+        }
       } else if (_running.remove(id) || daemon.chats[id]?.started != null) {
         final stopped = _stopped.remove(id);
         final failed = _failed.remove(id);
         _asked.remove(id);
         if (!stopped) {
-          _finishing[id]?.cancel();
-          _finishing[id] = Timer(finishedWait, () {
-            _finishing.remove(id);
-            _post(id, failed ? AlertKind.failed : AlertKind.finished);
-          });
+          _finish(id, failed ? AlertKind.failed : AlertKind.finished);
         }
       }
       scheduleMicrotask(_badge); // once the daemon applied it
@@ -124,7 +141,7 @@ class MacAlerts {
       final prompt =
           it.kind == ItemKind.ITEM_KIND_PERMISSION ||
           it.kind == ItemKind.ITEM_KIND_QUESTION;
-      if (it.kind == ItemKind.ITEM_KIND_NOTICE && running) {
+      if (it.kind == ItemKind.ITEM_KIND_NOTICE && running && !_judged) {
         if (it.status == 'cancelled') _stopped.add(id);
         if (it.status == 'error' || it.status == 'turn_failed') _failed.add(id);
       } else if (prompt &&
@@ -140,7 +157,22 @@ class MacAlerts {
     }
   }
 
-  void _post(String id, AlertKind kind) {
+  /// Whether the daemon judges each turn's end (from [turnEndApi]).
+  bool get _judged => daemon.daemonApi >= turnEndApi;
+
+  /// Posts a turn's end [finishedWait] from now, unless the agent goes on
+  /// first; [detail] is what ended a failed one.
+  void _finish(String id, AlertKind kind, [String detail = '']) {
+    _finishing[id]?.cancel();
+    _finishing[id] = Timer(finishedWait, () {
+      _finishing.remove(id);
+      _post(id, kind, detail);
+    });
+  }
+
+  /// Posts [kind] for chat [id], the chat's title under it, then [detail]
+  /// when there is one.
+  void _post(String id, AlertKind kind, [String detail = '']) {
     final chat = daemon.chats[id];
     if (!kind.on || chat == null || chat.archived) return;
     if (_focused && daemon.macView.showing == id) return;
@@ -152,7 +184,7 @@ class MacAlerts {
       'id': '$id/${kind.name}',
       'chat': id,
       'title': '${chat.agentName}${kind.words}',
-      'body': chat.shownTitle,
+      'body': detail.isEmpty ? chat.shownTitle : '${chat.shownTitle}\n$detail',
       'sound': alertSound.value,
     }).ignore();
   }

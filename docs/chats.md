@@ -296,8 +296,11 @@ A chat's history is its agent's: a chat reopens from the agent's session, and re
 The Mac notifies you, in the phone's words, with the chat's title under each:
 
 - when a chat needs you ("Claude needs you", "Claude has a question");
-- when a turn ends ("Claude finished", 2 s after; none if the agent goes straight on or you stopped it);
-- when a turn fails.
+- when a turn ends ("Claude finished", 2 s after; none if the agent goes straight on);
+- when a turn fails ("Claude's turn failed", with the error under the chat's title): an error ended it, or the agent quit or crashed mid-turn;
+- nothing for a turn that was stopped, by you or by Nushi stopping the agent (Sleep, Archive, Delete).
+
+Both the Mac and the phone go by the daemon's verdict on how the turn ended.
 
 The Dock icon counts the chats that need you.
 

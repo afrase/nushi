@@ -60,6 +60,13 @@ EventsResponse _status(
   ),
 );
 
+/// The status a turn's end publishes, as the daemon judged it (API 107).
+EventsResponse _ended(String id, TurnEnd end, [String failure = '']) =>
+    EventsResponse(
+      chatId: id,
+      status: ChatStatus(ended: end, failure: failure),
+    );
+
 EventsResponse _item(String id, ItemKind kind, String status, [String? item]) =>
     EventsResponse(
       chatId: id,
@@ -68,11 +75,20 @@ EventsResponse _item(String id, ItemKind kind, String status, [String? item]) =>
       ),
     );
 
-Future<(FakeDaemon, Daemon, MacAlerts)> _connect(WidgetTester tester) async {
+/// The alerts on a daemon with chats a (Claude's) and b (Codex's); with
+/// [api], a daemon of that API version.
+Future<(FakeDaemon, Daemon, MacAlerts)> _connect(
+  WidgetTester tester, {
+  int? api,
+}) async {
   final fake = FakeDaemon([
     chat('a', 'claude', 'Fix the login'),
     chat('b', 'codex', 'Tidy the docs', age: 1),
   ]);
+  if (api != null) {
+    fake.answer = (input) =>
+        input is PingRequest ? PingResponse(apiVersion: api) : null;
+  }
   final d = await fake.connect(tester);
   return (fake, d, MacAlerts(d));
 }
@@ -103,12 +119,64 @@ void main() {
     d.dispose();
   });
 
-  testWidgets("a turn's end is posted 2 s later; not when the agent goes "
-      'on, nor when someone stopped it; an error makes it a failure', (
-    tester,
-  ) async {
+  testWidgets("a turn's end is posted 2 s later as the daemon judged it: "
+      'done or failed, with what ended it; not when the agent goes on, nor '
+      'for a stopped one', (tester) async {
     final swift = _fake();
     final (fake, d, alerts) = await _connect(tester);
+    fake
+      ..emit(_status('a', running: true))
+      ..emit(_ended('a', TurnEnd.TURN_END_DONE))
+      ..emit(_status('a'));
+    await tester.pump(const Duration(seconds: 1));
+    expect(swift.posted(), isEmpty);
+    await tester.pump(const Duration(seconds: 1));
+    expect(swift.posted(), ['Claude finished']);
+
+    // Went straight on: nothing.
+    fake
+      ..emit(_status('a', running: true))
+      ..emit(_ended('a', TurnEnd.TURN_END_DONE))
+      ..emit(_status('a', running: true));
+    await tester.pump(const Duration(seconds: 3));
+    // Stopped, though the agent's answer came first: nothing. A status
+    // that merely has no turn running isn't an end.
+    fake
+      ..emit(_item('a', ItemKind.ITEM_KIND_AGENT_MESSAGE, 'done'))
+      ..emit(_ended('a', TurnEnd.TURN_END_STOPPED))
+      ..emit(_status('a'));
+    await tester.pump(const Duration(seconds: 3));
+    expect(swift.posted(), ['Claude finished']);
+
+    // Its agent quit mid-turn: failed, saying so; an error notice in a
+    // turn the daemon judged done is no failure.
+    fake
+      ..emit(_status('b', running: true))
+      ..emit(_ended('b', TurnEnd.TURN_END_FAILED, 'The agent quit mid-turn.'))
+      ..emit(_status('a', running: true))
+      ..emit(_item('a', ItemKind.ITEM_KIND_NOTICE, 'error'))
+      ..emit(_ended('a', TurnEnd.TURN_END_DONE));
+    await tester.pump(const Duration(seconds: 3));
+    expect(swift.posted(), [
+      'Claude finished',
+      "Codex's turn failed",
+      'Claude finished',
+    ]);
+    final failed = swift.calls.firstWhere(
+      (c) => c.method == 'post' && (c.arguments as Map)['id'] == 'b/failed',
+    );
+    expect(
+      (failed.arguments as Map)['body'],
+      'Tidy the docs\nThe agent quit mid-turn.',
+    );
+    alerts.dispose();
+    d.dispose();
+  });
+
+  testWidgets("an older daemon's turn ends are still judged from their "
+      'notices: an error makes it a failure, a cancel a stop', (tester) async {
+    final swift = _fake();
+    final (fake, d, alerts) = await _connect(tester, api: turnEndApi - 1);
     fake
       ..emit(_status('a', running: true))
       ..emit(_status('a'));
@@ -177,10 +245,9 @@ void main() {
     fake
       ..emit(_item('a', ItemKind.ITEM_KIND_PERMISSION, 'pending', 'p1'))
       ..emit(_status('b', running: true))
-      ..emit(_status('b'))
+      ..emit(_ended('b', TurnEnd.TURN_END_DONE))
       ..emit(_status('a', running: true))
-      ..emit(_item('a', ItemKind.ITEM_KIND_NOTICE, 'error'))
-      ..emit(_status('a'));
+      ..emit(_ended('a', TurnEnd.TURN_END_FAILED, 'overloaded'));
     await tester.pump(const Duration(seconds: 3));
     expect(swift.posted(), ["Claude's turn failed"]);
     final post = swift.calls.lastWhere((c) => c.method == 'post');
