@@ -168,7 +168,14 @@ class ChatPull extends ChangeNotifier {
     _front = null;
     _soon?.cancel();
     _timer?.cancel();
+    _back.cancel();
   }
+
+  // An ask the daemon was gone for, made again once it is back rather than
+  // on the timer (a quarter of an hour for a merged pull request).
+  late final _back = LoadAgain(daemon, () {
+    if (_followers > 0) unawaited(refresh(quiet: true));
+  });
 
   /// A turn ended, or a tool call pushed or opened a pull request: ask
   /// again in a moment (GitHub takes a moment to list a new one).
@@ -225,6 +232,7 @@ class ChatPull extends ChangeNotifier {
 
   Future<void> _ask(bool quiet) async {
     if (daemon.daemonApi < chatPullApi) return;
+    _back.cancel();
     try {
       final f = await daemon.client.findChatPull(
         FindChatPullRequest(chatId: chat.id, quiet: quiet),
@@ -251,6 +259,7 @@ class ChatPull extends ChangeNotifier {
       }
     } on Object catch (e) {
       error = errorText(e);
+      _back.failed(e);
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -126,6 +127,26 @@ void main() {
     expect(_asks(fake), asked);
     await _later(tester, const Duration(seconds: 1));
     await tester.pumpAndSettle();
+    expect(_asks(fake), asked + 1);
+    expect(d.chats['c']!.pull?.number, 1);
+    expect(_tab, findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('an ask the daemon was gone for is asked again once it is '
+      'back, not a minute later', (tester) async {
+    final (d, fake) = await _app(tester);
+    fake.answer = (input) => input is FindChatPullRequest
+        ? throw ConnectException(
+            Code.unavailable,
+            'daemon unavailable: connection lost',
+          )
+        : null;
+    await _later(tester, const Duration(minutes: 1)); // the timer's ask
+    final asked = _asks(fake);
+    expect(d.chats['c']!.pull, isNull);
+    _opened(fake);
+    await fake.restart(tester);
     expect(_asks(fake), asked + 1);
     expect(d.chats['c']!.pull?.number, 1);
     expect(_tab, findsOneWidget);
