@@ -14,15 +14,12 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 /// own. Never message text or anything else the user wrote.
 final appLog = AppLog('$dataDir/app.log');
 
-/// The API version with Log.
-const _logApi = 51;
-
 class AppLog {
   new(this.path);
 
   final String path;
 
-  /// The daemon, once there is one: lines go there while it has Log.
+  /// The daemon, once there is one: lines go there while it answers.
   NushiServiceClient? client;
   bool Function() reachable = () => false;
 
@@ -199,6 +196,3 @@ final String appVersion = () {
     return '';
   }
 }();
-
-/// Whether the daemon has Log.
-bool hasLog(int daemonApi) => daemonApi >= _logApi;

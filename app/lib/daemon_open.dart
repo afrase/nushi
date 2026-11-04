@@ -21,10 +21,7 @@ extension DaemonOpen on Daemon {
       // up), as much as it had, so what shows, or its place, stays.
       final had = max(chat.items.length, chat.keptItems);
       final snapshot = await client.getChat(
-        GetChatRequest(
-          chatId: chat.id,
-          recent: pages ? max(pageItems, had) : 0,
-        ),
+        GetChatRequest(chatId: chat.id, recent: max(pageItems, had)),
       );
       if (load == chat.loads) {
         chat

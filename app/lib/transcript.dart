@@ -313,8 +313,7 @@ class _TranscriptState extends State<Transcript> {
 
   /// Whether this is a chat's transcript that takes its own pages: the
   /// Mac's (the phone's has [Transcript.onTop]).
-  bool get _pages =>
-      widget.items == null && widget.onTop == null && widget.daemon.pages;
+  bool get _pages => widget.items == null && widget.onTop == null;
 
   /// An entry's key; a message's echo keeps the key of the message shown
   /// as it was on its way (ChatState.echoes).

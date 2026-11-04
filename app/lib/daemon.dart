@@ -117,7 +117,7 @@ class Daemon extends ChangeNotifier {
       (_) => unawaited(ping()),
     );
     appLog.client = client;
-    appLog.reachable = () => connected && hasLog(daemonApi);
+    appLog.reachable = () => connected;
     unawaited(
       ping().then(
         (_) => appLog.info('app started', {

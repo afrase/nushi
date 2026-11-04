@@ -7,10 +7,6 @@ extension DaemonPages on Daemon {
   /// How many items a chat opens with, and a page brings.
   int get pageItems => remote ? Daemon.recentItems : Daemon.macRecentItems;
 
-  /// Whether a snapshot can be the recent part: from API 71, whose events
-  /// say where each item is.
-  bool get pages => daemonApi >= 71;
-
   /// Takes the page of [chat]'s items before those it has (nothing when it
   /// has them all, or a page is on its way). Given [through], it goes on
   /// page by page until it has all those messages, given [until] until a
@@ -83,7 +79,6 @@ extension DaemonPages on Daemon {
   /// go until it's scrolled up to again. After this frame: the transcript
   /// that left it is being built.
   void leftAtBottom(ChatState chat) {
-    if (!pages) return;
     scheduleMicrotask(() {
       if (chat.kept == null) chat.trim(pageItems);
     });
