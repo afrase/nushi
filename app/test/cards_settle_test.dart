@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/cards.dart';
+import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/question_card.dart';
@@ -54,7 +55,12 @@ Widget _card(Item item) => MaterialApp(
           width: 560,
           child: item.kind == ItemKind.ITEM_KIND_PERMISSION
               ? PermissionCard(item, onAnswer: (_) async {})
-              : QuestionCard(item, agent: 'Claude', onAnswer: (_) async {}),
+              : QuestionCard(
+                  item,
+                  agent: 'Claude',
+                  draft: QuestionDraft(),
+                  onAnswer: (_) async {},
+                ),
         ),
       ),
     ),

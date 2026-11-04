@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/question_card.dart';
@@ -47,6 +48,7 @@ void main() {
                   ],
                 ),
                 agent: 'Claude',
+                draft: QuestionDraft(),
                 onAnswer: (_) async {},
               ),
             ),
@@ -89,6 +91,7 @@ void main() {
           body: QuestionCard(
             item,
             agent: 'Claude',
+            draft: QuestionDraft(),
             onAnswer: (a) async => sent = a,
           ),
         ),
@@ -129,7 +132,8 @@ void main() {
       find.textContaining('apple, fig', findRichText: true),
       findsOneWidget,
     );
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    // The keypad's Enter sends it as Return does.
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
     await tester.pump();
     expect(
       {for (final a in sent!) a.fieldId: a.values},
@@ -214,6 +218,7 @@ void main() {
           body: QuestionCard(
             item,
             agent: 'Claude',
+            draft: QuestionDraft(),
             onAnswer: (a) async => sent = a,
           ),
         ),
@@ -256,6 +261,7 @@ void main() {
                 QuestionCard(
                   item,
                   agent: 'Claude',
+                  draft: QuestionDraft(),
                   onAnswer: (a) async => sent = a,
                 ),
               TextField(controller: draft, focusNode: draftFocus),
@@ -307,6 +313,7 @@ void main() {
                 QuestionCard(
                   item,
                   agent: 'Claude',
+                  draft: QuestionDraft(),
                   onAnswer: (a) async => sent = a,
                 ),
               Focus(

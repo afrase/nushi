@@ -26,7 +26,7 @@ class QuestionCard extends StatefulWidget {
     this.item, {
     required this.agent,
     required this.onAnswer,
-    this.draft,
+    required this.draft,
     super.key,
   });
 
@@ -34,8 +34,8 @@ class QuestionCard extends StatefulWidget {
   final String agent; // its name
 
   /// The answers so far, kept by the chat (ChatState.answers) so they
-  /// outlive the card; its own when null.
-  final QuestionDraft? draft;
+  /// outlive the card.
+  final QuestionDraft draft;
 
   /// Sends the answers, or null to decline.
   final Future<void> Function(List<FieldAnswer>? answer) onAnswer;
@@ -45,7 +45,7 @@ class QuestionCard extends StatefulWidget {
 }
 
 class _QuestionCardState extends State<QuestionCard> {
-  late final QuestionDraft _draft = widget.draft ?? QuestionDraft();
+  late final QuestionDraft _draft = widget.draft;
   Map<String, List<String>> get _picked => _draft.picked; // by field id
   Map<String, TextEditingController> get _text => _draft.text;
   final _focus = FocusNode();
@@ -87,9 +87,9 @@ class _QuestionCardState extends State<QuestionCard> {
 
   @override
   void dispose() {
-    // The text outlives the card when the chat keeps it.
+    // The text outlives the card: the chat keeps it.
     for (final c in _text.values) {
-      widget.draft == null ? c.dispose() : c.removeListener(_typed);
+      c.removeListener(_typed);
     }
     _focus.dispose();
     _sending.dispose();
@@ -187,7 +187,8 @@ class _QuestionCardState extends State<QuestionCard> {
       );
     } else if (options.isNotEmpty && k == LogicalKeyboardKey.space) {
       _pick(_at);
-    } else if (k == LogicalKeyboardKey.enter) {
+    } else if (k == LogicalKeyboardKey.enter ||
+        k == LogicalKeyboardKey.numpadEnter) {
       final f = onQuestion ? _qs[_tab].field : null;
       if (f != null &&
           f.type != FieldType.FIELD_TYPE_CHOICES &&
