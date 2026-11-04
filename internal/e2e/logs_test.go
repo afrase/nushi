@@ -86,7 +86,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub,
-		Memory: memory.New(svc), Log: st, Transcripts: st})))
+		Memory: memory.New(svc), LogPrefs: st, Transcripts: st})))
 	go func() {
 		_ = hub.Subscribe(context.Background(), func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
 	}()

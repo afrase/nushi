@@ -11,7 +11,7 @@ import (
 
 func (s *server) OpenTerminal(_ context.Context, req *connect.Request[nushiv1.OpenTerminalRequest]) (*connect.Response[nushiv1.OpenTerminalResponse], error) {
 	m := req.Msg
-	t, err := s.terms.Open(m.ChatId, m.Folder, int(m.Cols), int(m.Rows))
+	t, err := s.Terms.Open(m.ChatId, m.Folder, int(m.Cols), int(m.Rows))
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -19,12 +19,12 @@ func (s *server) OpenTerminal(_ context.Context, req *connect.Request[nushiv1.Op
 }
 
 func (s *server) ListTerminals(_ context.Context, req *connect.Request[nushiv1.ListTerminalsRequest]) (*connect.Response[nushiv1.ListTerminalsResponse], error) {
-	return connect.NewResponse(&nushiv1.ListTerminalsResponse{Terminals: terminalsProto(s.terms.List(req.Msg.ChatId))}), nil
+	return connect.NewResponse(&nushiv1.ListTerminalsResponse{Terminals: terminalsProto(s.Terms.List(req.Msg.ChatId))}), nil
 }
 
 func (s *server) AttachTerminal(ctx context.Context, req *connect.Request[nushiv1.AttachTerminalRequest], stream *connect.ServerStream[nushiv1.AttachTerminalResponse]) error {
 	var sendErr error
-	exited, code, err := s.terms.Attach(req.Msg.TerminalId, ctx.Done(), func(b []byte) bool {
+	exited, code, err := s.Terms.Attach(req.Msg.TerminalId, ctx.Done(), func(b []byte) bool {
 		sendErr = stream.Send(&nushiv1.AttachTerminalResponse{Data: b})
 		return sendErr == nil
 	})
@@ -38,30 +38,30 @@ func (s *server) AttachTerminal(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) WriteTerminal(_ context.Context, req *connect.Request[nushiv1.WriteTerminalRequest]) (*connect.Response[nushiv1.WriteTerminalResponse], error) {
-	return done[nushiv1.WriteTerminalResponse](s.terms.Write(req.Msg.TerminalId, req.Msg.Data), refused)
+	return done[nushiv1.WriteTerminalResponse](s.Terms.Write(req.Msg.TerminalId, req.Msg.Data), refused)
 }
 
 func (s *server) ResizeTerminal(_ context.Context, req *connect.Request[nushiv1.ResizeTerminalRequest]) (*connect.Response[nushiv1.ResizeTerminalResponse], error) {
 	m := req.Msg
-	return done[nushiv1.ResizeTerminalResponse](s.terms.Resize(m.TerminalId, int(m.Cols), int(m.Rows)), refused)
+	return done[nushiv1.ResizeTerminalResponse](s.Terms.Resize(m.TerminalId, int(m.Cols), int(m.Rows)), refused)
 }
 
 func (s *server) RenameTerminal(_ context.Context, req *connect.Request[nushiv1.RenameTerminalRequest]) (*connect.Response[nushiv1.RenameTerminalResponse], error) {
-	return done[nushiv1.RenameTerminalResponse](s.terms.Rename(req.Msg.TerminalId, req.Msg.Name), refused)
+	return done[nushiv1.RenameTerminalResponse](s.Terms.Rename(req.Msg.TerminalId, req.Msg.Name), refused)
 }
 
 func (s *server) ArrangeTerminals(_ context.Context, req *connect.Request[nushiv1.ArrangeTerminalsRequest]) (*connect.Response[nushiv1.ArrangeTerminalsResponse], error) {
-	s.terms.Arrange(req.Msg.ChatId, req.Msg.TerminalIds)
+	s.Terms.Arrange(req.Msg.ChatId, req.Msg.TerminalIds)
 	return connect.NewResponse(&nushiv1.ArrangeTerminalsResponse{}), nil
 }
 
 func (s *server) RestartTerminal(_ context.Context, req *connect.Request[nushiv1.RestartTerminalRequest]) (*connect.Response[nushiv1.RestartTerminalResponse], error) {
 	m := req.Msg
-	return done[nushiv1.RestartTerminalResponse](s.terms.Restart(m.TerminalId, int(m.Cols), int(m.Rows)), refused)
+	return done[nushiv1.RestartTerminalResponse](s.Terms.Restart(m.TerminalId, int(m.Cols), int(m.Rows)), refused)
 }
 
 func (s *server) CloseTerminal(_ context.Context, req *connect.Request[nushiv1.CloseTerminalRequest]) (*connect.Response[nushiv1.CloseTerminalResponse], error) {
-	return done[nushiv1.CloseTerminalResponse](s.terms.Close(req.Msg.TerminalId), refused)
+	return done[nushiv1.CloseTerminalResponse](s.Terms.Close(req.Msg.TerminalId), refused)
 }
 
 func terminalProto(t model.Terminal) *nushiv1.Terminal {

@@ -23,7 +23,7 @@ func githubErr(err error) error {
 }
 
 func (s *server) ListGitHubHosts(ctx context.Context, _ *connect.Request[nushiv1.ListGitHubHostsRequest]) (*connect.Response[nushiv1.ListGitHubHostsResponse], error) {
-	hosts, err := s.github.Hosts(ctx)
+	hosts, err := s.GitHub.Hosts(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -40,7 +40,7 @@ func (s *server) ListGitHubHosts(ctx context.Context, _ *connect.Request[nushiv1
 }
 
 func (s *server) AddGitHubToken(ctx context.Context, req *connect.Request[nushiv1.AddGitHubTokenRequest]) (*connect.Response[nushiv1.AddGitHubTokenResponse], error) {
-	u, err := s.github.AddToken(ctx, req.Msg.Host, req.Msg.Token)
+	u, err := s.GitHub.AddToken(ctx, req.Msg.Host, req.Msg.Token)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -48,16 +48,16 @@ func (s *server) AddGitHubToken(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) RemoveGitHubToken(_ context.Context, req *connect.Request[nushiv1.RemoveGitHubTokenRequest]) (*connect.Response[nushiv1.RemoveGitHubTokenResponse], error) {
-	return done[nushiv1.RemoveGitHubTokenResponse](s.github.RemoveToken(req.Msg.Host), githubErr)
+	return done[nushiv1.RemoveGitHubTokenResponse](s.GitHub.RemoveToken(req.Msg.Host), githubErr)
 }
 
 func (s *server) AllowGitHubToken(ctx context.Context, req *connect.Request[nushiv1.AllowGitHubTokenRequest]) (*connect.Response[nushiv1.AllowGitHubTokenResponse], error) {
-	return done[nushiv1.AllowGitHubTokenResponse](s.github.AllowToken(ctx, req.Msg.Host), githubErr)
+	return done[nushiv1.AllowGitHubTokenResponse](s.GitHub.AllowToken(ctx, req.Msg.Host), githubErr)
 }
 
 func (s *server) ListGitHubRepos(ctx context.Context, req *connect.Request[nushiv1.ListGitHubReposRequest]) (*connect.Response[nushiv1.ListGitHubReposResponse], error) {
 	folders := slices.Clone(req.Msg.Folders)
-	if chats, err := s.chats.List(); err == nil {
+	if chats, err := s.Chats.List(); err == nil {
 		for _, c := range chats {
 			folder := c.Folder
 			if c.Worktree != nil {
@@ -69,7 +69,7 @@ func (s *server) ListGitHubRepos(ctx context.Context, req *connect.Request[nushi
 		}
 	}
 	out := &nushiv1.ListGitHubReposResponse{}
-	for _, r := range s.github.Repos(ctx, folders) {
+	for _, r := range s.GitHub.Repos(ctx, folders) {
 		out.Repos = append(out.Repos, &nushiv1.GitHubRepo{Host: r.Host, Repo: r.Repo, Folders: r.Folders})
 	}
 	return connect.NewResponse(out), nil
@@ -84,9 +84,9 @@ func (s *server) ListGitHubInbox(ctx context.Context, req *connect.Request[nushi
 	var in github.Inbox
 	var err error
 	if req.Msg.Cached {
-		in, err = s.github.CachedInbox(req.Msg.Host, f)
+		in, err = s.GitHub.CachedInbox(req.Msg.Host, f)
 	} else {
-		in, err = s.github.Inbox(ctx, req.Msg.Host, f, req.Msg.Quiet)
+		in, err = s.GitHub.Inbox(ctx, req.Msg.Host, f, req.Msg.Quiet)
 	}
 	if err != nil {
 		return nil, githubErr(err)
@@ -106,7 +106,7 @@ func (s *server) GetGitHubStates(ctx context.Context, req *connect.Request[nushi
 		links = append(links, model.ChatGitHub{Host: l.Host, ID: l.Id})
 	}
 	out := &nushiv1.GetGitHubStatesResponse{}
-	for _, it := range s.github.States(ctx, links, req.Msg.Quiet) {
+	for _, it := range s.GitHub.States(ctx, links, req.Msg.Quiet) {
 		out.Items = append(out.Items, ghItemProto(it))
 	}
 	return connect.NewResponse(out), nil
@@ -117,7 +117,7 @@ func ref(r *nushiv1.GitHubRef) model.GitHubRef {
 }
 
 func (s *server) GetGitHubPull(ctx context.Context, req *connect.Request[nushiv1.GetGitHubPullRequest]) (*connect.Response[nushiv1.GetGitHubPullResponse], error) {
-	p, err := s.github.Pull(ctx, ref(req.Msg.Ref), req.Msg.Quiet)
+	p, err := s.GitHub.Pull(ctx, ref(req.Msg.Ref), req.Msg.Quiet)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -125,7 +125,7 @@ func (s *server) GetGitHubPull(ctx context.Context, req *connect.Request[nushiv1
 }
 
 func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv1.GetGitHubIssueRequest]) (*connect.Response[nushiv1.GetGitHubIssueResponse], error) {
-	is, err := s.github.Issue(ctx, ref(req.Msg.Ref), req.Msg.Quiet)
+	is, err := s.GitHub.Issue(ctx, ref(req.Msg.Ref), req.Msg.Quiet)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -135,7 +135,7 @@ func (s *server) GetGitHubIssue(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) GetGitHubFiles(ctx context.Context, req *connect.Request[nushiv1.GetGitHubFilesRequest]) (*connect.Response[nushiv1.GetGitHubFilesResponse], error) {
-	files, err := s.github.Files(ctx, ref(req.Msg.Ref), req.Msg.BaseOid, req.Msg.HeadOid)
+	files, err := s.GitHub.Files(ctx, ref(req.Msg.Ref), req.Msg.BaseOid, req.Msg.HeadOid)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -147,7 +147,7 @@ func (s *server) GetGitHubFiles(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) GetGitHubJobLog(ctx context.Context, req *connect.Request[nushiv1.GetGitHubJobLogRequest]) (*connect.Response[nushiv1.GetGitHubJobLogResponse], error) {
-	tail, err := s.github.JobTail(ctx, ref(req.Msg.Ref), req.Msg.Job)
+	tail, err := s.GitHub.JobTail(ctx, ref(req.Msg.Ref), req.Msg.Job)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -159,9 +159,9 @@ func (s *server) GetGitHubPrompt(ctx context.Context, req *connect.Request[nushi
 	var err error
 	switch req.Msg.Kind {
 	case "fix_checks":
-		text, err = s.github.FixChecks(ctx, ref(req.Msg.Ref))
+		text, err = s.GitHub.FixChecks(ctx, ref(req.Msg.Ref))
 	case "address_comments":
-		text, err = s.github.AddressComments(ctx, ref(req.Msg.Ref), req.Msg.Threads)
+		text, err = s.GitHub.AddressComments(ctx, ref(req.Msg.Ref), req.Msg.Threads)
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("fix_checks or address_comments"))
 	}
@@ -172,7 +172,7 @@ func (s *server) GetGitHubPrompt(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) ReplyGitHubThread(ctx context.Context, req *connect.Request[nushiv1.ReplyGitHubThreadRequest]) (*connect.Response[nushiv1.ReplyGitHubThreadResponse], error) {
-	c, err := s.github.Reply(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Body)
+	c, err := s.GitHub.Reply(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Body)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -180,11 +180,11 @@ func (s *server) ReplyGitHubThread(ctx context.Context, req *connect.Request[nus
 }
 
 func (s *server) ResolveGitHubThread(ctx context.Context, req *connect.Request[nushiv1.ResolveGitHubThreadRequest]) (*connect.Response[nushiv1.ResolveGitHubThreadResponse], error) {
-	return done[nushiv1.ResolveGitHubThreadResponse](s.github.Resolve(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Resolve), githubErr)
+	return done[nushiv1.ResolveGitHubThreadResponse](s.GitHub.Resolve(ctx, req.Msg.Host, req.Msg.Thread, req.Msg.Resolve), githubErr)
 }
 
 func (s *server) RerunGitHubChecks(ctx context.Context, req *connect.Request[nushiv1.RerunGitHubChecksRequest]) (*connect.Response[nushiv1.RerunGitHubChecksResponse], error) {
-	n, err := s.github.RerunFailed(ctx, ref(req.Msg.Ref), req.Msg.Jobs)
+	n, err := s.GitHub.RerunFailed(ctx, ref(req.Msg.Ref), req.Msg.Jobs)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -192,7 +192,7 @@ func (s *server) RerunGitHubChecks(ctx context.Context, req *connect.Request[nus
 }
 
 func (s *server) AddGitHubComment(ctx context.Context, req *connect.Request[nushiv1.AddGitHubCommentRequest]) (*connect.Response[nushiv1.AddGitHubCommentResponse], error) {
-	c, err := s.github.Comment(ctx, req.Msg.Host, req.Msg.Subject, req.Msg.Body)
+	c, err := s.GitHub.Comment(ctx, req.Msg.Host, req.Msg.Subject, req.Msg.Body)
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -205,7 +205,7 @@ func (s *server) SubmitGitHubReview(ctx context.Context, req *connect.Request[nu
 	for _, d := range m.Drafts {
 		r.Drafts = append(r.Drafts, githubapi.Draft{Path: d.Path, Side: d.Side, Line: int(d.Line), StartLine: int(d.StartLine), Body: d.Body})
 	}
-	return done[nushiv1.SubmitGitHubReviewResponse](s.github.Review(ctx, m.Host, r), githubErr)
+	return done[nushiv1.SubmitGitHubReviewResponse](s.GitHub.Review(ctx, m.Host, r), githubErr)
 }
 
 func ghItemProto(it model.GitHubItem) *nushiv1.GitHubItem {

@@ -10,7 +10,7 @@ import (
 
 func (s *server) ListSkills(ctx context.Context, req *connect.Request[nushiv1.ListSkillsRequest]) (*connect.Response[nushiv1.ListSkillsResponse], error) {
 	m := req.Msg
-	list, err := s.skills.List(ctx, m.Agent, m.Folder)
+	list, err := s.Skills.List(ctx, m.Agent, m.Folder)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -27,32 +27,32 @@ func (s *server) ListSkills(ctx context.Context, req *connect.Request[nushiv1.Li
 	for _, p := range list.Plugins {
 		resp.Plugins = append(resp.Plugins, &nushiv1.Plugin{Id: p.ID, Name: p.Name, Version: p.Version, Description: p.Description,
 			Scope: p.Scope, Path: p.Path, Enabled: p.Enabled, Skills: int32(p.Skills), Commands: int32(p.Commands),
-			Agents: int32(p.Agents), McpServers: int32(p.MCPServers), SwitchScope: s.skills.PluginScope(m.Agent, m.Folder, p)})
+			Agents: int32(p.Agents), McpServers: int32(p.MCPServers), SwitchScope: s.Skills.PluginScope(m.Agent, m.Folder, p)})
 	}
 	return connect.NewResponse(resp), nil
 }
 
 func (s *server) SetSkillOn(ctx context.Context, req *connect.Request[nushiv1.SetSkillOnRequest]) (*connect.Response[nushiv1.SetSkillOnResponse], error) {
 	m := req.Msg
-	return done[nushiv1.SetSkillOnResponse](s.skills.SetSkillOn(ctx, m.Agent, m.Folder, m.Source, m.Name, m.On), refused)
+	return done[nushiv1.SetSkillOnResponse](s.Skills.SetSkillOn(ctx, m.Agent, m.Folder, m.Source, m.Name, m.On), refused)
 }
 
 func (s *server) SetPluginOn(ctx context.Context, req *connect.Request[nushiv1.SetPluginOnRequest]) (*connect.Response[nushiv1.SetPluginOnResponse], error) {
 	m := req.Msg
-	return done[nushiv1.SetPluginOnResponse](s.skills.SetPluginOn(ctx, m.Agent, m.Folder, m.Id, m.On), refused)
+	return done[nushiv1.SetPluginOnResponse](s.Skills.SetPluginOn(ctx, m.Agent, m.Folder, m.Id, m.On), refused)
 }
 
 func (s *server) UninstallPlugin(ctx context.Context, req *connect.Request[nushiv1.UninstallPluginRequest]) (*connect.Response[nushiv1.UninstallPluginResponse], error) {
 	m := req.Msg
-	return done[nushiv1.UninstallPluginResponse](s.skills.Uninstall(ctx, m.Agent, m.Folder, m.Id), refused)
+	return done[nushiv1.UninstallPluginResponse](s.Skills.Uninstall(ctx, m.Agent, m.Folder, m.Id), refused)
 }
 
 func (s *server) TrashSkill(ctx context.Context, req *connect.Request[nushiv1.TrashSkillRequest]) (*connect.Response[nushiv1.TrashSkillResponse], error) {
 	m := req.Msg
-	return done[nushiv1.TrashSkillResponse](s.skills.Trash(ctx, m.Agent, m.Folder, m.Path), refused)
+	return done[nushiv1.TrashSkillResponse](s.Skills.Trash(ctx, m.Agent, m.Folder, m.Path), refused)
 }
 
 func (s *server) LinkSkill(ctx context.Context, req *connect.Request[nushiv1.LinkSkillRequest]) (*connect.Response[nushiv1.LinkSkillResponse], error) {
 	m := req.Msg
-	return done[nushiv1.LinkSkillResponse](s.skills.Link(ctx, m.Agent, m.Folder, m.Path), refused)
+	return done[nushiv1.LinkSkillResponse](s.Skills.Link(ctx, m.Agent, m.Folder, m.Path), refused)
 }

@@ -10,15 +10,15 @@ import (
 )
 
 func (s *server) GetRemote(context.Context, *connect.Request[nushiv1.GetRemoteRequest]) (*connect.Response[nushiv1.GetRemoteResponse], error) {
-	return connect.NewResponse(&nushiv1.GetRemoteResponse{Remote: remoteProto(s.remote.Get())}), nil
+	return connect.NewResponse(&nushiv1.GetRemoteResponse{Remote: remoteProto(s.Remote.Get())}), nil
 }
 
 func (s *server) SetRemote(_ context.Context, req *connect.Request[nushiv1.SetRemoteRequest]) (*connect.Response[nushiv1.SetRemoteResponse], error) {
-	return done[nushiv1.SetRemoteResponse](s.remote.Set(req.Msg.On, req.Msg.Relay), invalid)
+	return done[nushiv1.SetRemoteResponse](s.Remote.Set(req.Msg.On, req.Msg.Relay), invalid)
 }
 
 func (s *server) StartPairing(context.Context, *connect.Request[nushiv1.StartPairingRequest]) (*connect.Response[nushiv1.StartPairingResponse], error) {
-	qr, expires, err := s.remote.StartPairing()
+	qr, expires, err := s.Remote.StartPairing()
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -26,11 +26,11 @@ func (s *server) StartPairing(context.Context, *connect.Request[nushiv1.StartPai
 }
 
 func (s *server) ConfirmPairing(_ context.Context, req *connect.Request[nushiv1.ConfirmPairingRequest]) (*connect.Response[nushiv1.ConfirmPairingResponse], error) {
-	return done[nushiv1.ConfirmPairingResponse](s.remote.ConfirmPairing(req.Msg.Code, req.Msg.Allow), notFound)
+	return done[nushiv1.ConfirmPairingResponse](s.Remote.ConfirmPairing(req.Msg.Code, req.Msg.Allow), notFound)
 }
 
 func (s *server) RevokeDevice(_ context.Context, req *connect.Request[nushiv1.RevokeDeviceRequest]) (*connect.Response[nushiv1.RevokeDeviceResponse], error) {
-	return done[nushiv1.RevokeDeviceResponse](s.remote.Revoke(req.Msg.Id), notFound)
+	return done[nushiv1.RevokeDeviceResponse](s.Remote.Revoke(req.Msg.Id), notFound)
 }
 
 func remoteProto(r model.Remote) *nushiv1.Remote {

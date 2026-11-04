@@ -16,7 +16,7 @@ import (
 func jiraErr(err error) error { return refused(err) }
 
 func (s *server) ListJiraSites(context.Context, *connect.Request[nushiv1.ListJiraSitesRequest]) (*connect.Response[nushiv1.ListJiraSitesResponse], error) {
-	sites, err := s.jira.Sites()
+	sites, err := s.Jira.Sites()
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -43,7 +43,7 @@ func (s *server) AddJiraSite(ctx context.Context, req *connect.Request[nushiv1.A
 	if req.Msg.Expires > 0 {
 		expires = time.UnixMilli(req.Msg.Expires)
 	}
-	site, err := s.jira.AddSite(ctx, req.Msg.Url, req.Msg.Email, req.Msg.Token, expires)
+	site, err := s.Jira.AddSite(ctx, req.Msg.Url, req.Msg.Email, req.Msg.Token, expires)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -51,11 +51,11 @@ func (s *server) AddJiraSite(ctx context.Context, req *connect.Request[nushiv1.A
 }
 
 func (s *server) RemoveJiraSite(_ context.Context, req *connect.Request[nushiv1.RemoveJiraSiteRequest]) (*connect.Response[nushiv1.RemoveJiraSiteResponse], error) {
-	return done[nushiv1.RemoveJiraSiteResponse](s.jira.RemoveSite(req.Msg.Site), jiraErr)
+	return done[nushiv1.RemoveJiraSiteResponse](s.Jira.RemoveSite(req.Msg.Site), jiraErr)
 }
 
 func (s *server) CheckJiraSite(ctx context.Context, req *connect.Request[nushiv1.CheckJiraSiteRequest]) (*connect.Response[nushiv1.CheckJiraSiteResponse], error) {
-	u, err := s.jira.Check(ctx, req.Msg.Site)
+	u, err := s.Jira.Check(ctx, req.Msg.Site)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -63,11 +63,11 @@ func (s *server) CheckJiraSite(ctx context.Context, req *connect.Request[nushiv1
 }
 
 func (s *server) AllowJiraToken(_ context.Context, req *connect.Request[nushiv1.AllowJiraTokenRequest]) (*connect.Response[nushiv1.AllowJiraTokenResponse], error) {
-	return done[nushiv1.AllowJiraTokenResponse](s.jira.AllowToken(req.Msg.Site), jiraErr)
+	return done[nushiv1.AllowJiraTokenResponse](s.Jira.AllowToken(req.Msg.Site), jiraErr)
 }
 
 func (s *server) ListJiraBoards(ctx context.Context, req *connect.Request[nushiv1.ListJiraBoardsRequest]) (*connect.Response[nushiv1.ListJiraBoardsResponse], error) {
-	boards, err := s.jira.Boards(ctx, req.Msg.Site)
+	boards, err := s.Jira.Boards(ctx, req.Msg.Site)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -80,7 +80,7 @@ func (s *server) ListJiraBoards(ctx context.Context, req *connect.Request[nushiv
 
 func (s *server) SetJiraBoard(_ context.Context, req *connect.Request[nushiv1.SetJiraBoardRequest]) (*connect.Response[nushiv1.SetJiraBoardResponse], error) {
 	b := req.Msg.GetBoard()
-	return done[nushiv1.SetJiraBoardResponse](s.jira.SetBoard(req.Msg.Site, model.JiraBoard{ID: b.GetId(), Name: b.GetName(), Project: b.GetProject()}), jiraErr)
+	return done[nushiv1.SetJiraBoardResponse](s.Jira.SetBoard(req.Msg.Site, model.JiraBoard{ID: b.GetId(), Name: b.GetName(), Project: b.GetProject()}), jiraErr)
 }
 
 func (s *server) SetJiraSearches(_ context.Context, req *connect.Request[nushiv1.SetJiraSearchesRequest]) (*connect.Response[nushiv1.SetJiraSearchesResponse], error) {
@@ -88,7 +88,7 @@ func (s *server) SetJiraSearches(_ context.Context, req *connect.Request[nushiv1
 	for _, q := range req.Msg.Searches {
 		searches = append(searches, model.JiraSearch{Name: q.Name, JQL: q.Jql})
 	}
-	return done[nushiv1.SetJiraSearchesResponse](s.jira.SetSearches(req.Msg.Site, searches), jiraErr)
+	return done[nushiv1.SetJiraSearchesResponse](s.Jira.SetSearches(req.Msg.Site, searches), jiraErr)
 }
 
 func (s *server) ListJiraIssues(ctx context.Context, req *connect.Request[nushiv1.ListJiraIssuesRequest]) (*connect.Response[nushiv1.ListJiraIssuesResponse], error) {
@@ -98,9 +98,9 @@ func (s *server) ListJiraIssues(ctx context.Context, req *connect.Request[nushiv
 		err error
 	)
 	if req.Msg.Cached {
-		l, at, err = s.jira.CachedList(req.Msg.Site, req.Msg.List, req.Msg.Jql)
+		l, at, err = s.Jira.CachedList(req.Msg.Site, req.Msg.List, req.Msg.Jql)
 	} else {
-		l, err = s.jira.List(ctx, req.Msg.Site, req.Msg.List, req.Msg.Jql)
+		l, err = s.Jira.List(ctx, req.Msg.Site, req.Msg.List, req.Msg.Jql)
 	}
 	if err != nil {
 		return nil, jiraErr(err)
@@ -113,7 +113,7 @@ func (s *server) ListJiraIssues(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) GetJiraJql(ctx context.Context, req *connect.Request[nushiv1.GetJiraJqlRequest]) (*connect.Response[nushiv1.GetJiraJqlResponse], error) {
-	jql, err := s.jira.JQL(ctx, req.Msg.Site)
+	jql, err := s.Jira.JQL(ctx, req.Msg.Site)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -125,7 +125,7 @@ func (s *server) GetJiraJql(ctx context.Context, req *connect.Request[nushiv1.Ge
 }
 
 func (s *server) SuggestJiraJql(ctx context.Context, req *connect.Request[nushiv1.SuggestJiraJqlRequest]) (*connect.Response[nushiv1.SuggestJiraJqlResponse], error) {
-	values, err := s.jira.Suggestions(ctx, req.Msg.Site, req.Msg.FieldName, req.Msg.Prefix)
+	values, err := s.Jira.Suggestions(ctx, req.Msg.Site, req.Msg.FieldName, req.Msg.Prefix)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -139,9 +139,9 @@ func (s *server) GetJiraIssue(ctx context.Context, req *connect.Request[nushiv1.
 		err error
 	)
 	if req.Msg.Cached {
-		is, at, err = s.jira.CachedIssue(req.Msg.Site, req.Msg.Key)
+		is, at, err = s.Jira.CachedIssue(req.Msg.Site, req.Msg.Key)
 	} else {
-		is, err = s.jira.Issue(ctx, req.Msg.Site, req.Msg.Key)
+		is, err = s.Jira.Issue(ctx, req.Msg.Site, req.Msg.Key)
 	}
 	if err != nil {
 		return nil, jiraErr(err)
@@ -149,15 +149,15 @@ func (s *server) GetJiraIssue(ctx context.Context, req *connect.Request[nushiv1.
 	if at.IsZero() {
 		return connect.NewResponse(&nushiv1.GetJiraIssueResponse{}), nil
 	}
-	resp := &nushiv1.GetJiraIssueResponse{Issue: jiraIssueProto(is, s.jira.Browse(req.Msg.Site, is.Key)), AtMs: unixMs(at)}
-	for _, w := range s.jira.Writes(req.Msg.Site, is.Key) {
+	resp := &nushiv1.GetJiraIssueResponse{Issue: jiraIssueProto(is, s.Jira.Browse(req.Msg.Site, is.Key)), AtMs: unixMs(at)}
+	for _, w := range s.Jira.Writes(req.Msg.Site, is.Key) {
 		resp.AgentWrites = append(resp.AgentWrites, &nushiv1.JiraWrite{Kind: w.Kind, Comment: w.Comment, To: w.To, Chat: w.Chat, Agent: w.Agent, At: unixMs(w.At)})
 	}
 	return connect.NewResponse(resp), nil
 }
 
 func (s *server) ListJiraTransitions(ctx context.Context, req *connect.Request[nushiv1.ListJiraTransitionsRequest]) (*connect.Response[nushiv1.ListJiraTransitionsResponse], error) {
-	ts, err := s.jira.Transitions(ctx, req.Msg.Site, req.Msg.Key)
+	ts, err := s.Jira.Transitions(ctx, req.Msg.Site, req.Msg.Key)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -173,12 +173,12 @@ func (s *server) ListJiraTransitions(ctx context.Context, req *connect.Request[n
 }
 
 func (s *server) TransitionJiraIssue(ctx context.Context, req *connect.Request[nushiv1.TransitionJiraIssueRequest]) (*connect.Response[nushiv1.TransitionJiraIssueResponse], error) {
-	_, err := s.jira.Transition(ctx, req.Msg.Site, req.Msg.Key, req.Msg.Transition, req.Msg.Values, "you")
+	_, err := s.Jira.Transition(ctx, req.Msg.Site, req.Msg.Key, req.Msg.Transition, req.Msg.Values, "you")
 	return done[nushiv1.TransitionJiraIssueResponse](err, jiraErr)
 }
 
 func (s *server) AddJiraComment(ctx context.Context, req *connect.Request[nushiv1.AddJiraCommentRequest]) (*connect.Response[nushiv1.AddJiraCommentResponse], error) {
-	cm, err := s.jira.AddComment(ctx, req.Msg.Site, req.Msg.Key, req.Msg.Markdown, "you")
+	cm, err := s.Jira.AddComment(ctx, req.Msg.Site, req.Msg.Key, req.Msg.Markdown, "you")
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -186,7 +186,7 @@ func (s *server) AddJiraComment(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) FindJiraIssues(ctx context.Context, req *connect.Request[nushiv1.FindJiraIssuesRequest]) (*connect.Response[nushiv1.FindJiraIssuesResponse], error) {
-	f, err := s.jira.Find(ctx, req.Msg.Text, req.Msg.Site)
+	f, err := s.Jira.Find(ctx, req.Msg.Text, req.Msg.Site)
 	if err != nil {
 		return nil, jiraErr(err)
 	}
@@ -198,7 +198,7 @@ func (s *server) FindJiraIssues(ctx context.Context, req *connect.Request[nushiv
 }
 
 func (s *server) GetJiraAttachment(ctx context.Context, req *connect.Request[nushiv1.GetJiraAttachmentRequest]) (*connect.Response[nushiv1.GetJiraAttachmentResponse], error) {
-	b, mime, err := s.jira.Attachment(ctx, req.Msg.Site, req.Msg.Id, req.Msg.Thumbnail)
+	b, mime, err := s.Jira.Attachment(ctx, req.Msg.Site, req.Msg.Id, req.Msg.Thumbnail)
 	if err != nil {
 		return nil, jiraErr(err)
 	}

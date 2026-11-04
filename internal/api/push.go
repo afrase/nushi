@@ -32,7 +32,7 @@ func deviceOf(ctx context.Context) (string, error) {
 }
 
 func (s *server) GetPushKey(context.Context, *connect.Request[nushiv1.GetPushKeyRequest]) (*connect.Response[nushiv1.GetPushKeyResponse], error) {
-	return connect.NewResponse(&nushiv1.GetPushKeyResponse{Key: s.remote.PushKey()}), nil
+	return connect.NewResponse(&nushiv1.GetPushKeyResponse{Key: s.Remote.PushKey()}), nil
 }
 
 func (s *server) SetPushSubscription(ctx context.Context, req *connect.Request[nushiv1.SetPushSubscriptionRequest]) (*connect.Response[nushiv1.SetPushSubscriptionResponse], error) {
@@ -44,7 +44,7 @@ func (s *server) SetPushSubscription(ctx context.Context, req *connect.Request[n
 	if m := req.Msg; m.Endpoint != "" {
 		sub = &webpush.Subscription{Endpoint: m.Endpoint, P256DH: m.P256Dh, Auth: m.Auth}
 	}
-	return done[nushiv1.SetPushSubscriptionResponse](s.remote.SetPush(device, sub), invalid)
+	return done[nushiv1.SetPushSubscriptionResponse](s.Remote.SetPush(device, sub), invalid)
 }
 
 // SetDeviceView keeps the chat a client shows: a device's, or on the
@@ -52,15 +52,15 @@ func (s *server) SetPushSubscription(ctx context.Context, req *connect.Request[n
 func (s *server) SetDeviceView(ctx context.Context, req *connect.Request[nushiv1.SetDeviceViewRequest]) (*connect.Response[nushiv1.SetDeviceViewResponse], error) {
 	device, _ := deviceOf(ctx) // "": the Mac
 	id := req.Msg.ChatId
-	s.remote.SetView(device, id)
+	s.Remote.SetView(device, id)
 	if id != "" {
-		_ = s.chats.Seen(id) // a chat that's gone has nothing to see
+		_ = s.Chats.Seen(id) // a chat that's gone has nothing to see
 	}
 	return connect.NewResponse(&nushiv1.SetDeviceViewResponse{}), nil
 }
 
 func (s *server) SendTestPush(ctx context.Context, req *connect.Request[nushiv1.SendTestPushRequest]) (*connect.Response[nushiv1.SendTestPushResponse], error) {
-	return done[nushiv1.SendTestPushResponse](s.remote.TestPush(ctx, req.Msg.DeviceId), refused)
+	return done[nushiv1.SendTestPushResponse](s.Remote.TestPush(ctx, req.Msg.DeviceId), refused)
 }
 
 func (s *server) UnpairThisDevice(ctx context.Context, _ *connect.Request[nushiv1.UnpairThisDeviceRequest]) (*connect.Response[nushiv1.UnpairThisDeviceResponse], error) {
@@ -68,5 +68,5 @@ func (s *server) UnpairThisDevice(ctx context.Context, _ *connect.Request[nushiv
 	if err != nil {
 		return nil, err
 	}
-	return done[nushiv1.UnpairThisDeviceResponse](s.remote.Revoke(device), notFound)
+	return done[nushiv1.UnpairThisDeviceResponse](s.Remote.Revoke(device), notFound)
 }

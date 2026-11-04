@@ -75,7 +75,7 @@ func (s *server) StageFiles(ctx context.Context, req *connect.Request[nushiv1.St
 }
 
 func (s *server) WriteCommitMessage(ctx context.Context, req *connect.Request[nushiv1.WriteCommitMessageRequest]) (*connect.Response[nushiv1.WriteCommitMessageResponse], error) {
-	message, err := s.chats.CommitMessage(ctx, req.Msg.ChatId, git.StagedDiff)
+	message, err := s.Chats.CommitMessage(ctx, req.Msg.ChatId, git.StagedDiff)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -95,7 +95,7 @@ func (s *server) CommitStaged(ctx context.Context, req *connect.Request[nushiv1.
 	case len(m) > maxCommitMessage:
 		return nil, invalid(errors.New("the commit's message is too long"))
 	}
-	short, err := git.CommitStaged(ctx, req.Msg.Folder, req.Msg.Message, req.Msg.Index, s.agents.Environ())
+	short, err := git.CommitStaged(ctx, req.Msg.Folder, req.Msg.Message, req.Msg.Index, s.Agents.Environ())
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -119,7 +119,7 @@ func fileChangeProto(c model.FileChange) *nushiv1.FileChange {
 }
 
 func (s *server) GetRelatedWorktrees(ctx context.Context, req *connect.Request[nushiv1.GetRelatedWorktreesRequest]) (*connect.Response[nushiv1.GetRelatedWorktreesResponse], error) {
-	list, err := s.chats.RelatedWorktrees(ctx, req.Msg.ChatId)
+	list, err := s.Chats.RelatedWorktrees(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -136,7 +136,7 @@ func relatedProto(list []model.RelatedWorktree) []*nushiv1.RelatedWorktree {
 }
 
 func (s *server) GetRelatedWorktreeStats(ctx context.Context, req *connect.Request[nushiv1.GetRelatedWorktreeStatsRequest]) (*connect.Response[nushiv1.GetRelatedWorktreeStatsResponse], error) {
-	folder, list, err := s.chats.KnownRelated(req.Msg.ChatId)
+	folder, list, err := s.Chats.KnownRelated(req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}

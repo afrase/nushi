@@ -22,10 +22,10 @@ type Updates interface {
 }
 
 func (s *server) CheckForUpdates(ctx context.Context, _ *connect.Request[nushiv1.CheckForUpdatesRequest]) (*connect.Response[nushiv1.CheckForUpdatesResponse], error) {
-	if s.updates == nil {
+	if s.Updates == nil {
 		return nil, connect.NewError(connect.CodeUnimplemented, errNoUpdates)
 	}
-	u, err := s.updates.Check(ctx)
+	u, err := s.Updates.Check(ctx)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnavailable, err)
 	}
@@ -34,10 +34,10 @@ func (s *server) CheckForUpdates(ctx context.Context, _ *connect.Request[nushiv1
 
 // update is what the last check found; nil when the daemon doesn't check.
 func (s *server) update() *nushiv1.UpdateCheck {
-	if s.updates == nil {
+	if s.Updates == nil {
 		return nil
 	}
-	return updateProto(s.updates.Get())
+	return updateProto(s.Updates.Get())
 }
 
 func updateProto(u model.Update) *nushiv1.UpdateCheck {
@@ -46,8 +46,8 @@ func updateProto(u model.Update) *nushiv1.UpdateCheck {
 
 // setCheckUpdates turns the checks on or off, when given and changed.
 func (s *server) setCheckUpdates(set *nushiv1.Settings) error {
-	if s.updates == nil || set.CheckUpdates == nil || *set.CheckUpdates == s.updates.On() {
+	if s.Updates == nil || set.CheckUpdates == nil || *set.CheckUpdates == s.Updates.On() {
 		return nil
 	}
-	return s.updates.SetOn(*set.CheckUpdates)
+	return s.Updates.SetOn(*set.CheckUpdates)
 }

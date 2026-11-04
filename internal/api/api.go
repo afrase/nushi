@@ -55,23 +55,10 @@ var Build = sync.OnceValue(func() string {
 	return fmt.Sprintf("%d-%d", fi.Size(), fi.ModTime().UnixMilli())
 })
 
+// server serves the API from Services, embedded: a service added there is
+// every handler's at once.
 type server struct {
-	chats    *chats.Service
-	agents   *agents.Service
-	mcp      map[string]*mcp.Service
-	skills   *skills.Service
-	terms    *terminals.Service
-	trust    *trust.Service
-	hub      *events.Hub
-	memory   *memory.Service
-	remote   *remote.Service
-	jira     *jira.Service
-	github   *github.Service
-	logPrefs LogPrefs
-	restart  Restart
-	updates  Updates
-
-	transcripts TranscriptPrefs
+	Services
 }
 
 // Services are what the API serves.
@@ -87,7 +74,8 @@ type Services struct {
 	Remote *remote.Service
 	Jira   *jira.Service
 	GitHub *github.Service
-	Log    LogPrefs // nil: the debug setting isn't kept
+	// LogPrefs keeps the debug log setting; nil: not kept.
+	LogPrefs LogPrefs
 	// Transcripts keeps the transcripts' copies' settings; nil: not kept.
 	Transcripts TranscriptPrefs
 	// Restart stops the daemon for a newer build; nil: it isn't offered.
@@ -109,8 +97,7 @@ func New(sv Services) http.Handler { return serve(sv, "socket") }
 // serve is the API for clients that come via, its calls logged.
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{chats: sv.Chats, agents: sv.Agents, mcp: sv.MCP, skills: sv.Skills, terms: sv.Terms, trust: sv.Trust,
-		hub: sv.Hub, memory: sv.Memory, remote: sv.Remote, jira: sv.Jira, github: sv.GitHub, logPrefs: sv.Log, transcripts: sv.Transcripts, restart: sv.Restart, updates: sv.Updates}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}, mended{}}, interceptors...)...),
+	mux.Handle(nushiv1connect.NewNushiServiceHandler(&server{sv}, connect.WithInterceptors(append([]connect.Interceptor{logCalls{via}, mended{}}, interceptors...)...),
 		// Gzip only for a client that asks (the phone, over a slow link;
 		// never the Mac's socket), and only where it pays.
 		connect.WithCompressMinBytes(1024),
@@ -201,33 +188,33 @@ func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*
 }
 
 func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.RestartWhenIdleRequest]) (*connect.Response[nushiv1.RestartWhenIdleResponse], error) {
-	if s.restart == nil {
+	if s.Restart == nil {
 		return nil, connect.NewError(connect.CodeUnimplemented, errors.New("this daemon doesn't restart itself"))
 	}
 	out := &nushiv1.RestartWhenIdleResponse{}
-	for _, h := range s.restart.WhenIdle() {
+	for _, h := range s.Restart.WhenIdle() {
 		out.Holds = append(out.Holds, &nushiv1.RestartHold{ChatId: h.ChatID, Why: h.Why, Terminal: h.Terminal})
 	}
 	return connect.NewResponse(out), nil
 }
 
 func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListChatsRequest]) (*connect.Response[nushiv1.ListChatsResponse], error) {
-	s.chats.Sweep(ctx)
-	sessions, err := s.chats.List()
+	s.Chats.Sweep(ctx)
+	sessions, err := s.Chats.List()
 	if err != nil {
 		return nil, refused(err)
 	}
-	resp := &nushiv1.ListChatsResponse{Removed: removedProto(s.chats.Removed())}
+	resp := &nushiv1.ListChatsResponse{Removed: removedProto(s.Chats.Removed())}
 	for _, sess := range sessions {
 		c := chatProto(sess)
-		c.Status = statusProto(s.chats.Status(sess))
+		c.Status = statusProto(s.Chats.Status(sess))
 		resp.Chats = append(resp.Chats, c)
 	}
 	return connect.NewResponse(resp), nil
 }
 
 func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChatRequest]) (*connect.Response[nushiv1.GetChatResponse], error) {
-	c, err := s.chats.Get(req.Msg.ChatId)
+	c, err := s.Chats.Get(req.Msg.ChatId)
 	if err != nil {
 		return nil, notFound(err)
 	}
@@ -245,7 +232,7 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 }
 
 func (s *server) GetChatItems(_ context.Context, req *connect.Request[nushiv1.GetChatItemsRequest]) (*connect.Response[nushiv1.GetChatItemsResponse], error) {
-	c, err := s.chats.Get(req.Msg.ChatId)
+	c, err := s.Chats.Get(req.Msg.ChatId)
 	if err != nil {
 		return nil, notFound(err)
 	}
@@ -297,26 +284,26 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 	}
 	opts := chats.StartOptions{Worktree: req.Msg.Worktree, Branch: req.Msg.Branch, Issue: issue}
 	if l := req.Msg.Github; l != nil {
-		link, err := s.github.Link(model.ChatGitHub{Host: l.Host, Repo: l.Repo, Number: int(l.Number), Pull: l.Pull, ID: l.Id})
+		link, err := s.GitHub.Link(model.ChatGitHub{Host: l.Host, Repo: l.Repo, Number: int(l.Number), Pull: l.Pull, ID: l.Id})
 		if err != nil {
 			return nil, invalid(err)
 		}
 		opts.GitHub = &link
 		if link.Pull && opts.Worktree && req.Msg.Folder != "" {
-			co, err := s.github.CheckOut(ctx, req.Msg.Folder, link.GitHubRef)
+			co, err := s.GitHub.CheckOut(ctx, req.Msg.Folder, link.GitHubRef)
 			if err != nil {
 				return nil, githubErr(err)
 			}
 			opts.Branch, opts.From = co.Branch, co.From
 		}
 	}
-	id, err := s.chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, opts)
+	id, err := s.Chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, opts)
 	if errors.Is(err, chats.ErrStart) {
 		return nil, because(connect.NewError(connect.CodeFailedPrecondition, err), ReasonAgentStart)
 	} else if err != nil {
 		return nil, refused(err)
 	}
-	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.chats.Config(id))}), nil
+	return connect.NewResponse(&nushiv1.StartChatResponse{ChatId: id, Config: configProto(s.Chats.Config(id))}), nil
 }
 
 func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.ListAgentsRequest]) (*connect.Response[nushiv1.ListAgentsResponse], error) {
@@ -326,19 +313,19 @@ func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.Li
 		if m.ReloadEnvironment {
 			maxAge = 0
 		}
-		if st := s.agents.Environment(ctx, maxAge); st.Shell != "" {
+		if st := s.Agents.Environment(ctx, maxAge); st.Shell != "" {
 			env = &nushiv1.ShellEnvironment{Shell: st.Shell, ReadUnixMs: st.Read.UnixMilli(), Problem: st.Problem}
 		}
 	}
 	found := map[string]agents.Status{}
-	for _, st := range s.agents.List(ctx) {
+	for _, st := range s.Agents.List(ctx) {
 		found[st.Name] = st
 	}
 	resp := &nushiv1.ListAgentsResponse{Environment: env}
-	for _, k := range s.chats.Agents() {
+	for _, k := range s.Chats.Agents() {
 		info := k.Info()
 		st := found[info.Name]
-		m := s.mcp[info.Name]
+		m := s.MCP[info.Name]
 		a := &nushiv1.Agent{Name: info.Name, Title: info.Title, Resume: info.Resume, Mcp: k.MCP, DeleteArchives: info.DeleteArchives,
 			Path: st.Path, Version: st.Version, Page: st.Page, Problem: st.Problem, SignedIn: st.SignedIn, Ready: st.Ready, Awake: int32(st.Awake),
 			McpUserOnly: m != nil && m.UserOnly()}
@@ -352,16 +339,16 @@ func (s *server) ListAgents(ctx context.Context, req *connect.Request[nushiv1.Li
 }
 
 func (s *server) SetUpAgent(ctx context.Context, req *connect.Request[nushiv1.SetUpAgentRequest]) (*connect.Response[nushiv1.SetUpAgentResponse], error) {
-	return done[nushiv1.SetUpAgentResponse](s.agents.SetUp(ctx, req.Msg.Agent), refused)
+	return done[nushiv1.SetUpAgentResponse](s.Agents.SetUp(ctx, req.Msg.Agent), refused)
 }
 
 func (s *server) RemoveAgent(_ context.Context, req *connect.Request[nushiv1.RemoveAgentRequest]) (*connect.Response[nushiv1.RemoveAgentResponse], error) {
-	return done[nushiv1.RemoveAgentResponse](s.agents.Remove(req.Msg.Agent), refused)
+	return done[nushiv1.RemoveAgentResponse](s.Agents.Remove(req.Msg.Agent), refused)
 }
 
 func (s *server) ListAgentSessions(ctx context.Context, req *connect.Request[nushiv1.ListAgentSessionsRequest]) (*connect.Response[nushiv1.ListAgentSessionsResponse], error) {
 	m := req.Msg
-	page, err := s.chats.Find(ctx, s.agent(m.Agent), m.Folder, m.Cursor)
+	page, err := s.Chats.Find(ctx, s.agent(m.Agent), m.Folder, m.Cursor)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -378,7 +365,7 @@ func (s *server) ListAgentSessions(ctx context.Context, req *connect.Request[nus
 
 func (s *server) OpenAgentSession(ctx context.Context, req *connect.Request[nushiv1.OpenAgentSessionRequest]) (*connect.Response[nushiv1.OpenAgentSessionResponse], error) {
 	m := req.Msg
-	id, err := s.chats.Open(ctx, s.agent(m.Agent), m.Folder, m.SessionId, m.Title)
+	id, err := s.Chats.Open(ctx, s.agent(m.Agent), m.Folder, m.SessionId, m.Title)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -386,10 +373,10 @@ func (s *server) OpenAgentSession(ctx context.Context, req *connect.Request[nush
 }
 
 // agent names the agent a request names, or the default for "".
-func (s *server) agent(name string) string { return cmp.Or(name, s.chats.Agents()[0].Info().Name) }
+func (s *server) agent(name string) string { return cmp.Or(name, s.Chats.Agents()[0].Info().Name) }
 
 func (s *server) MoveChat(ctx context.Context, req *connect.Request[nushiv1.MoveChatRequest]) (*connect.Response[nushiv1.MoveChatResponse], error) {
-	return done[nushiv1.MoveChatResponse](s.chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder, req.Msg.Worktree), refused)
+	return done[nushiv1.MoveChatResponse](s.Chats.Move(ctx, req.Msg.ChatId, req.Msg.Folder, req.Msg.Worktree), refused)
 }
 
 func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.SendPromptRequest]) (*connect.Response[nushiv1.SendPromptResponse], error) {
@@ -405,8 +392,8 @@ func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.Se
 	case m.Queue:
 		how = chats.SendQueue
 	}
-	ran := s.chats.RunsCommand(m.ChatId, msg)
-	if err := s.chats.Prompt(ctx, m.ChatId, msg, how); errors.Is(err, chats.ErrRestarting) {
+	ran := s.Chats.RunsCommand(m.ChatId, msg)
+	if err := s.Chats.Prompt(ctx, m.ChatId, msg, how); errors.Is(err, chats.ErrRestarting) {
 		return nil, because(connect.NewError(connect.CodeUnavailable, err), ReasonRestarting) // the app sends it again
 	} else if err != nil {
 		return nil, waitErr(ctx, err)
@@ -415,7 +402,7 @@ func (s *server) SendPrompt(ctx context.Context, req *connect.Request[nushiv1.Se
 }
 
 func (s *server) RewindChat(ctx context.Context, req *connect.Request[nushiv1.RewindChatRequest]) (*connect.Response[nushiv1.RewindChatResponse], error) {
-	m, err := s.chats.Rewind(ctx, req.Msg.ChatId, req.Msg.ItemId)
+	m, err := s.Chats.Rewind(ctx, req.Msg.ChatId, req.Msg.ItemId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -423,7 +410,7 @@ func (s *server) RewindChat(ctx context.Context, req *connect.Request[nushiv1.Re
 }
 
 func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.UnqueueRequest]) (*connect.Response[nushiv1.UnqueueResponse], error) {
-	m, err := s.chats.Unqueue(req.Msg.ChatId, req.Msg.Id)
+	m, err := s.Chats.Unqueue(req.Msg.ChatId, req.Msg.Id)
 	if err != nil {
 		return nil, notFound(err)
 	}
@@ -431,7 +418,7 @@ func (s *server) Unqueue(_ context.Context, req *connect.Request[nushiv1.Unqueue
 }
 
 func (s *server) CancelTurn(ctx context.Context, req *connect.Request[nushiv1.CancelTurnRequest]) (*connect.Response[nushiv1.CancelTurnResponse], error) {
-	m, err := s.chats.Stop(ctx, req.Msg.ChatId, req.Msg.TakeBack)
+	m, err := s.Chats.Stop(ctx, req.Msg.ChatId, req.Msg.TakeBack)
 	if err != nil {
 		return nil, waitErr(ctx, err)
 	}
@@ -443,11 +430,11 @@ func (s *server) CancelTurn(ctx context.Context, req *connect.Request[nushiv1.Ca
 }
 
 func (s *server) StopTask(ctx context.Context, req *connect.Request[nushiv1.StopTaskRequest]) (*connect.Response[nushiv1.StopTaskResponse], error) {
-	return done[nushiv1.StopTaskResponse](s.chats.StopTask(ctx, req.Msg.ChatId, req.Msg.CallId), refused)
+	return done[nushiv1.StopTaskResponse](s.Chats.StopTask(ctx, req.Msg.ChatId, req.Msg.CallId), refused)
 }
 
 func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.ForkChatRequest]) (*connect.Response[nushiv1.ForkChatResponse], error) {
-	id, err := s.chats.Fork(ctx, req.Msg.ChatId)
+	id, err := s.Chats.Fork(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -455,7 +442,7 @@ func (s *server) ForkChat(ctx context.Context, req *connect.Request[nushiv1.Fork
 }
 
 func (s *server) ForkAsChat(ctx context.Context, req *connect.Request[nushiv1.ForkAsChatRequest]) (*connect.Response[nushiv1.ForkAsChatResponse], error) {
-	id, err := s.chats.ForkAsChat(ctx, req.Msg.ChatId, req.Msg.ItemId)
+	id, err := s.Chats.ForkAsChat(ctx, req.Msg.ChatId, req.Msg.ItemId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -463,7 +450,7 @@ func (s *server) ForkAsChat(ctx context.Context, req *connect.Request[nushiv1.Fo
 }
 
 func (s *server) KeepSideChat(ctx context.Context, req *connect.Request[nushiv1.KeepSideChatRequest]) (*connect.Response[nushiv1.KeepSideChatResponse], error) {
-	id, err := s.chats.KeepSide(ctx, req.Msg.ChatId)
+	id, err := s.Chats.KeepSide(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -471,22 +458,22 @@ func (s *server) KeepSideChat(ctx context.Context, req *connect.Request[nushiv1.
 }
 
 func (s *server) CloseSideChat(_ context.Context, req *connect.Request[nushiv1.CloseSideChatRequest]) (*connect.Response[nushiv1.CloseSideChatResponse], error) {
-	return done[nushiv1.CloseSideChatResponse](s.chats.CloseSide(req.Msg.ChatId), notFound)
+	return done[nushiv1.CloseSideChatResponse](s.Chats.CloseSide(req.Msg.ChatId), notFound)
 }
 
 func (s *server) RenameChat(_ context.Context, req *connect.Request[nushiv1.RenameChatRequest]) (*connect.Response[nushiv1.RenameChatResponse], error) {
-	return done[nushiv1.RenameChatResponse](s.chats.Rename(req.Msg.ChatId, req.Msg.Title), notFound)
+	return done[nushiv1.RenameChatResponse](s.Chats.Rename(req.Msg.ChatId, req.Msg.Title), notFound)
 }
 
 func (s *server) PinChats(_ context.Context, req *connect.Request[nushiv1.PinChatsRequest]) (*connect.Response[nushiv1.PinChatsResponse], error) {
-	if err := s.chats.Pin(req.Msg.ChatIds); err != nil {
+	if err := s.Chats.Pin(req.Msg.ChatIds); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&nushiv1.PinChatsResponse{}), nil
 }
 
 func (s *server) SetChatColor(_ context.Context, req *connect.Request[nushiv1.SetChatColorRequest]) (*connect.Response[nushiv1.SetChatColorResponse], error) {
-	err := s.chats.SetColor(req.Msg.ChatId, req.Msg.Color)
+	err := s.Chats.SetColor(req.Msg.ChatId, req.Msg.Color)
 	if errors.Is(err, chats.ErrColor) {
 		return nil, invalid(err)
 	}
@@ -495,7 +482,7 @@ func (s *server) SetChatColor(_ context.Context, req *connect.Request[nushiv1.Se
 
 func (s *server) PinMessage(_ context.Context, req *connect.Request[nushiv1.PinMessageRequest]) (*connect.Response[nushiv1.PinMessageResponse], error) {
 	m := req.Msg
-	return done[nushiv1.PinMessageResponse](s.chats.PinMessage(m.ChatId, m.ItemId, m.Pinned), notFound)
+	return done[nushiv1.PinMessageResponse](s.Chats.PinMessage(m.ChatId, m.ItemId, m.Pinned), notFound)
 }
 
 func (s *server) SwitchBranch(ctx context.Context, req *connect.Request[nushiv1.SwitchBranchRequest]) (*connect.Response[nushiv1.SwitchBranchResponse], error) {
@@ -503,7 +490,7 @@ func (s *server) SwitchBranch(ctx context.Context, req *connect.Request[nushiv1.
 	if err := git.CheckBranch(m.Branch); err != nil {
 		return nil, invalid(err)
 	}
-	r, err := s.chats.SwitchBranch(ctx, m.ChatId, m.Branch, m.NewBranch, m.WithOthers)
+	r, err := s.Chats.SwitchBranch(ctx, m.ChatId, m.Branch, m.NewBranch, m.WithOthers)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -514,23 +501,23 @@ func (s *server) RenameBranch(ctx context.Context, req *connect.Request[nushiv1.
 	if err := git.CheckBranch(req.Msg.Branch); err != nil {
 		return nil, invalid(err)
 	}
-	return done[nushiv1.RenameBranchResponse](s.chats.RenameBranch(ctx, req.Msg.ChatId, req.Msg.Branch), refused)
+	return done[nushiv1.RenameBranchResponse](s.Chats.RenameBranch(ctx, req.Msg.ChatId, req.Msg.Branch), refused)
 }
 
 func (s *server) ArchiveChat(_ context.Context, req *connect.Request[nushiv1.ArchiveChatRequest]) (*connect.Response[nushiv1.ArchiveChatResponse], error) {
-	return done[nushiv1.ArchiveChatResponse](s.chats.Archive(req.Msg.ChatId, req.Msg.Archived), refused)
+	return done[nushiv1.ArchiveChatResponse](s.Chats.Archive(req.Msg.ChatId, req.Msg.Archived), refused)
 }
 
 func (s *server) SleepChat(_ context.Context, req *connect.Request[nushiv1.SleepChatRequest]) (*connect.Response[nushiv1.SleepChatResponse], error) {
-	return done[nushiv1.SleepChatResponse](s.chats.Sleep(req.Msg.ChatId), refused)
+	return done[nushiv1.SleepChatResponse](s.Chats.Sleep(req.Msg.ChatId), refused)
 }
 
 func (s *server) ReopenChat(_ context.Context, req *connect.Request[nushiv1.ReopenChatRequest]) (*connect.Response[nushiv1.ReopenChatResponse], error) {
-	return done[nushiv1.ReopenChatResponse](s.chats.Reopen(req.Msg.ChatId), notFound)
+	return done[nushiv1.ReopenChatResponse](s.Chats.Reopen(req.Msg.ChatId), notFound)
 }
 
 func (s *server) GetMemory(_ context.Context, req *connect.Request[nushiv1.GetMemoryRequest]) (*connect.Response[nushiv1.GetMemoryResponse], error) {
-	r, err := s.memory.Report(int(req.Msg.AppPid))
+	r, err := s.Memory.Report(int(req.Msg.AppPid))
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -542,16 +529,16 @@ func (s *server) GetMemory(_ context.Context, req *connect.Request[nushiv1.GetMe
 }
 
 func (s *server) GetSettings(context.Context, *connect.Request[nushiv1.GetSettingsRequest]) (*connect.Response[nushiv1.GetSettingsResponse], error) {
-	set := &nushiv1.Settings{SleepAfterMinutes: int32(s.chats.SleepAfter() / time.Minute)}
-	if s.logPrefs != nil {
-		set.DebugLog = s.logPrefs.DebugLog()
+	set := &nushiv1.Settings{SleepAfterMinutes: int32(s.Chats.SleepAfter() / time.Minute)}
+	if s.LogPrefs != nil {
+		set.DebugLog = s.LogPrefs.DebugLog()
 	}
-	if s.transcripts != nil {
-		keep, days := s.transcripts.KeepTranscripts(), int32(s.transcripts.TranscriptDays())
+	if s.Transcripts != nil {
+		keep, days := s.Transcripts.KeepTranscripts(), int32(s.Transcripts.TranscriptDays())
 		set.KeepTranscripts, set.TranscriptDays = &keep, &days
 	}
-	if s.updates != nil {
-		on := s.updates.On()
+	if s.Updates != nil {
+		on := s.Updates.On()
 		set.CheckUpdates = &on
 	}
 	return connect.NewResponse(&nushiv1.GetSettingsResponse{Settings: set}), nil
@@ -562,7 +549,7 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 	if m < 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("sleep_after_minutes can't be negative"))
 	}
-	if err := s.chats.SetSleepAfter(time.Duration(m) * time.Minute); err != nil {
+	if err := s.Chats.SetSleepAfter(time.Duration(m) * time.Minute); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	if err := s.setDebugLog(req.Msg.GetSettings().GetDebugLog()); err != nil {
@@ -578,7 +565,7 @@ func (s *server) SetSettings(_ context.Context, req *connect.Request[nushiv1.Set
 }
 
 func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv1.PlanDeleteChatRequest]) (*connect.Response[nushiv1.PlanDeleteChatResponse], error) {
-	p, err := s.chats.PlanDelete(ctx, req.Msg.ChatId)
+	p, err := s.Chats.PlanDelete(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -589,7 +576,7 @@ func (s *server) PlanDeleteChat(ctx context.Context, req *connect.Request[nushiv
 	for _, sess := range p.Sessions {
 		out.Sessions = append(out.Sessions, &nushiv1.AgentSession{SessionId: sess.ID, Folder: sess.Folder})
 	}
-	for _, t := range s.terms.List(req.Msg.ChatId) {
+	for _, t := range s.Terms.List(req.Msg.ChatId) {
 		if !t.Exited {
 			out.Terminals = append(out.Terminals, terminalProto(t))
 		}
@@ -604,16 +591,16 @@ func (s *server) DeleteChat(ctx context.Context, req *connect.Request[nushiv1.De
 		opts[c.Path] = chats.WorktreeOptions{RemoveWorktree: c.RemoveWorktree, ForceWorktree: c.ForceWorktree,
 			DeleteBranch: c.DeleteBranch, ForceBranch: c.ForceBranch}
 	}
-	return done[nushiv1.DeleteChatResponse](s.chats.Delete(ctx, m.ChatId, opts), refused)
+	return done[nushiv1.DeleteChatResponse](s.Chats.Delete(ctx, m.ChatId, opts), refused)
 }
 
 func (s *server) DismissRemovedChats(_ context.Context, req *connect.Request[nushiv1.DismissRemovedChatsRequest]) (*connect.Response[nushiv1.DismissRemovedChatsResponse], error) {
-	s.chats.DismissRemoved(req.Msg.Ids)
+	s.Chats.DismissRemoved(req.Msg.Ids)
 	return connect.NewResponse(&nushiv1.DismissRemovedChatsResponse{}), nil
 }
 
 func (s *server) AnswerPermission(_ context.Context, req *connect.Request[nushiv1.AnswerPermissionRequest]) (*connect.Response[nushiv1.AnswerPermissionResponse], error) {
-	return done[nushiv1.AnswerPermissionResponse](s.chats.AnswerPermission(req.Msg.ChatId, req.Msg.ItemId, req.Msg.OptionId), refused)
+	return done[nushiv1.AnswerPermissionResponse](s.Chats.AnswerPermission(req.Msg.ChatId, req.Msg.ItemId, req.Msg.OptionId), refused)
 }
 
 func (s *server) AnswerQuestion(_ context.Context, req *connect.Request[nushiv1.AnswerQuestionRequest]) (*connect.Response[nushiv1.AnswerQuestionResponse], error) {
@@ -624,18 +611,18 @@ func (s *server) AnswerQuestion(_ context.Context, req *connect.Request[nushiv1.
 			values[a.FieldId] = a.Values
 		}
 	}
-	return done[nushiv1.AnswerQuestionResponse](s.chats.AnswerQuestion(req.Msg.ChatId, req.Msg.ItemId, values), refused)
+	return done[nushiv1.AnswerQuestionResponse](s.Chats.AnswerQuestion(req.Msg.ChatId, req.Msg.ItemId, values), refused)
 }
 
 func (s *server) SetConfigOption(ctx context.Context, req *connect.Request[nushiv1.SetConfigOptionRequest]) (*connect.Response[nushiv1.SetConfigOptionResponse], error) {
-	if err := s.chats.SetConfig(ctx, req.Msg.ChatId, req.Msg.ConfigId, req.Msg.Value); err != nil {
+	if err := s.Chats.SetConfig(ctx, req.Msg.ChatId, req.Msg.ConfigId, req.Msg.Value); err != nil {
 		return nil, waitErr(ctx, err)
 	}
 	return connect.NewResponse(&nushiv1.SetConfigOptionResponse{}), nil
 }
 
 func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushiv1.GetContextUsageRequest]) (*connect.Response[nushiv1.GetContextUsageResponse], error) {
-	u, err := s.chats.ContextUsage(ctx, req.Msg.ChatId)
+	u, err := s.Chats.ContextUsage(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -647,7 +634,7 @@ func (s *server) GetContextUsage(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.CheckFolderRequest]) (*connect.Response[nushiv1.CheckFolderResponse], error) {
-	runs, key, err := s.trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder)
+	runs, key, err := s.Trust.Check(s.agent(req.Msg.Agent), req.Msg.Folder)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -659,7 +646,7 @@ func (s *server) CheckFolder(_ context.Context, req *connect.Request[nushiv1.Che
 }
 
 func (s *server) TrustFolder(_ context.Context, req *connect.Request[nushiv1.TrustFolderRequest]) (*connect.Response[nushiv1.TrustFolderResponse], error) {
-	switch err := s.trust.Trust(s.agent(req.Msg.Agent), req.Msg.Folder, req.Msg.Key); {
+	switch err := s.Trust.Trust(s.agent(req.Msg.Agent), req.Msg.Folder, req.Msg.Key); {
 	case errors.Is(err, trust.ErrChanged):
 		return nil, connect.NewError(connect.CodeAborted, err)
 	case err != nil:
@@ -672,10 +659,10 @@ func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRe
 	var err error
 	// The count is the chats' own: the socket's server and the devices'
 	// are two, and a phone following keeps side chats the Mac left.
-	s.chats.Following(1)
-	defer s.chats.Following(-1)
+	s.Chats.Following(1)
+	defer s.Chats.Following(-1)
 	// An empty first message tells the client the subscription is live.
-	behind := s.hub.Subscribe(ctx, func(e model.Event) bool {
+	behind := s.Hub.Subscribe(ctx, func(e model.Event) bool {
 		err = stream.Send(toProto(e))
 		return err == nil
 	}, events.OnLive(func() bool {

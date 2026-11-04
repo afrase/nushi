@@ -9,7 +9,7 @@ import (
 )
 
 func (s *server) GetCleanUp(ctx context.Context, req *connect.Request[nushiv1.GetCleanUpRequest]) (*connect.Response[nushiv1.GetCleanUpResponse], error) {
-	u, err := s.chats.CleanUpOf(ctx, req.Msg.ChatId)
+	u, err := s.Chats.CleanUpOf(ctx, req.Msg.ChatId)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -21,15 +21,15 @@ func (s *server) GetCleanUp(ctx context.Context, req *connect.Request[nushiv1.Ge
 }
 
 func (s *server) RemoveChatWorktree(ctx context.Context, req *connect.Request[nushiv1.RemoveChatWorktreeRequest]) (*connect.Response[nushiv1.RemoveChatWorktreeResponse], error) {
-	return done[nushiv1.RemoveChatWorktreeResponse](s.chats.RemoveWorktree(ctx, req.Msg.ChatId, req.Msg.Force), refused)
+	return done[nushiv1.RemoveChatWorktreeResponse](s.Chats.RemoveWorktree(ctx, req.Msg.ChatId, req.Msg.Force), refused)
 }
 
 func (s *server) DeleteChatBranch(ctx context.Context, req *connect.Request[nushiv1.DeleteChatBranchRequest]) (*connect.Response[nushiv1.DeleteChatBranchResponse], error) {
-	return done[nushiv1.DeleteChatBranchResponse](s.chats.DeleteBranch(ctx, req.Msg.ChatId, req.Msg.Force), refused)
+	return done[nushiv1.DeleteChatBranchResponse](s.Chats.DeleteBranch(ctx, req.Msg.ChatId, req.Msg.Force), refused)
 }
 
 func (s *server) DeleteGitHubBranch(ctx context.Context, req *connect.Request[nushiv1.DeleteGitHubBranchRequest]) (*connect.Response[nushiv1.DeleteGitHubBranchResponse], error) {
-	deleted, err := s.github.DeleteHeadBranch(ctx, ref(req.Msg.Ref))
+	deleted, err := s.GitHub.DeleteHeadBranch(ctx, ref(req.Msg.Ref))
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -37,5 +37,5 @@ func (s *server) DeleteGitHubBranch(ctx context.Context, req *connect.Request[nu
 }
 
 func (s *server) RestoreGitHubBranch(ctx context.Context, req *connect.Request[nushiv1.RestoreGitHubBranchRequest]) (*connect.Response[nushiv1.RestoreGitHubBranchResponse], error) {
-	return done[nushiv1.RestoreGitHubBranchResponse](s.github.RestoreHeadBranch(ctx, ref(req.Msg.Ref)), githubErr)
+	return done[nushiv1.RestoreGitHubBranchResponse](s.GitHub.RestoreHeadBranch(ctx, ref(req.Msg.Ref)), githubErr)
 }

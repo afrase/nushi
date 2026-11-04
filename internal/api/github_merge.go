@@ -35,7 +35,7 @@ func mergeProto(p model.GitHubPull) *nushiv1.GitHubMerge {
 }
 
 func (s *server) GetGitHubMergeText(ctx context.Context, req *connect.Request[nushiv1.GetGitHubMergeTextRequest]) (*connect.Response[nushiv1.GetGitHubMergeTextResponse], error) {
-	t, err := s.github.MergeText(ctx, ref(req.Msg.Ref))
+	t, err := s.GitHub.MergeText(ctx, ref(req.Msg.Ref))
 	if err != nil {
 		return nil, githubErr(err)
 	}
@@ -45,25 +45,25 @@ func (s *server) GetGitHubMergeText(ctx context.Context, req *connect.Request[nu
 
 func (s *server) MergeGitHubPull(ctx context.Context, req *connect.Request[nushiv1.MergeGitHubPullRequest]) (*connect.Response[nushiv1.MergeGitHubPullResponse], error) {
 	m := req.Msg
-	err := s.github.Merge(ctx, ref(m.Ref), github.Merging{Head: m.HeadOid, Base: m.Base, Method: m.Method, Title: m.Title, Body: m.Body})
+	err := s.GitHub.Merge(ctx, ref(m.Ref), github.Merging{Head: m.HeadOid, Base: m.Base, Method: m.Method, Title: m.Title, Body: m.Body})
 	return done[nushiv1.MergeGitHubPullResponse](err, mergeErr)
 }
 
 func (s *server) EnableGitHubAutoMerge(ctx context.Context, req *connect.Request[nushiv1.EnableGitHubAutoMergeRequest]) (*connect.Response[nushiv1.EnableGitHubAutoMergeResponse], error) {
 	m := req.Msg
-	err := s.github.EnableAutoMerge(ctx, ref(m.Ref), github.Merging{Head: m.HeadOid, Base: m.Base, Method: m.Method, Title: m.Title, Body: m.Body})
+	err := s.GitHub.EnableAutoMerge(ctx, ref(m.Ref), github.Merging{Head: m.HeadOid, Base: m.Base, Method: m.Method, Title: m.Title, Body: m.Body})
 	return done[nushiv1.EnableGitHubAutoMergeResponse](err, mergeErr)
 }
 
 func (s *server) DisableGitHubAutoMerge(ctx context.Context, req *connect.Request[nushiv1.DisableGitHubAutoMergeRequest]) (*connect.Response[nushiv1.DisableGitHubAutoMergeResponse], error) {
-	return done[nushiv1.DisableGitHubAutoMergeResponse](s.github.DisableAutoMerge(ctx, ref(req.Msg.Ref)), mergeErr)
+	return done[nushiv1.DisableGitHubAutoMergeResponse](s.GitHub.DisableAutoMerge(ctx, ref(req.Msg.Ref)), mergeErr)
 }
 
 func (s *server) EnqueueGitHubPull(ctx context.Context, req *connect.Request[nushiv1.EnqueueGitHubPullRequest]) (*connect.Response[nushiv1.EnqueueGitHubPullResponse], error) {
 	m := github.Merging{Head: req.Msg.HeadOid, Base: req.Msg.Base}
-	return done[nushiv1.EnqueueGitHubPullResponse](s.github.Enqueue(ctx, ref(req.Msg.Ref), m), mergeErr)
+	return done[nushiv1.EnqueueGitHubPullResponse](s.GitHub.Enqueue(ctx, ref(req.Msg.Ref), m), mergeErr)
 }
 
 func (s *server) DequeueGitHubPull(ctx context.Context, req *connect.Request[nushiv1.DequeueGitHubPullRequest]) (*connect.Response[nushiv1.DequeueGitHubPullResponse], error) {
-	return done[nushiv1.DequeueGitHubPullResponse](s.github.Dequeue(ctx, ref(req.Msg.Ref)), mergeErr)
+	return done[nushiv1.DequeueGitHubPullResponse](s.GitHub.Dequeue(ctx, ref(req.Msg.Ref)), mergeErr)
 }

@@ -14,7 +14,7 @@ import (
 // mcpOf is the MCP servers of agent (the default when empty).
 func (s *server) mcpOf(agent string) (*mcp.Service, error) {
 	agent = s.agent(agent)
-	if m, ok := s.mcp[agent]; ok {
+	if m, ok := s.MCP[agent]; ok {
 		return m, nil
 	}
 	return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("Nushi doesn't show %s's MCP servers", agent))
@@ -96,5 +96,5 @@ func (s *server) LogoutMcpServer(ctx context.Context, req *connect.Request[nushi
 }
 
 func (s *server) ReloadChat(_ context.Context, req *connect.Request[nushiv1.ReloadChatRequest]) (*connect.Response[nushiv1.ReloadChatResponse], error) {
-	return done[nushiv1.ReloadChatResponse](s.chats.Reload(req.Msg.ChatId), refused)
+	return done[nushiv1.ReloadChatResponse](s.Chats.Reload(req.Msg.ChatId), refused)
 }

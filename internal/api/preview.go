@@ -16,7 +16,7 @@ import (
 // WatchChatFile sends a file of a chat's, and again each time it changes:
 // the preview pane, while it's open.
 func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1.WatchChatFileRequest], stream *connect.ServerStream[nushiv1.WatchChatFileResponse]) error {
-	roots, err := s.chats.Roots(req.Msg.ChatId)
+	roots, err := s.Chats.Roots(req.Msg.ChatId)
 	if err != nil {
 		return notFound(err)
 	}
@@ -40,7 +40,7 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 // chatFile is where the preview may read path from (filewatch.Allowed):
 // the answer the agent's show tool gets too.
 func (s *server) chatFile(chatID string, roots []string, path string) (root, rel string, err error) {
-	return filewatch.Allowed(roots, path, func(p string) bool { return s.chats.Wrote(chatID, p) })
+	return filewatch.Allowed(roots, path, func(p string) bool { return s.Chats.Wrote(chatID, p) })
 }
 
 // maxFindFiles is how many paths FindChatFiles takes at once.
@@ -52,7 +52,7 @@ func (s *server) FindChatFiles(_ context.Context, req *connect.Request[nushiv1.F
 	if len(req.Msg.Paths) > maxFindFiles {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%d paths, %d at most", len(req.Msg.Paths), maxFindFiles))
 	}
-	roots, err := s.chats.Roots(req.Msg.ChatId)
+	roots, err := s.Chats.Roots(req.Msg.ChatId)
 	if err != nil {
 		return nil, notFound(err)
 	}
@@ -74,7 +74,7 @@ func (s *server) WatchChatFolder(ctx context.Context, req *connect.Request[nushi
 	if err != nil {
 		return invalid(err)
 	}
-	roots, err := s.chats.Roots(req.Msg.ChatId)
+	roots, err := s.Chats.Roots(req.Msg.ChatId)
 	if err != nil {
 		return notFound(err)
 	}

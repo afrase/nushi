@@ -91,10 +91,10 @@ type LogPrefs interface {
 }
 
 func (s *server) setDebugLog(on bool) error {
-	if s.logPrefs == nil || s.logPrefs.DebugLog() == on {
+	if s.LogPrefs == nil || s.LogPrefs.DebugLog() == on {
 		return nil
 	}
-	if err := s.logPrefs.SetDebugLog(on); err != nil {
+	if err := s.LogPrefs.SetDebugLog(on); err != nil {
 		return err
 	}
 	logs.SetDebug(on)
