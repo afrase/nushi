@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/changes_view.dart';
@@ -79,6 +80,45 @@ void main() {
   double opacity(WidgetTester tester) => tester
       .widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first)
       .opacity;
+
+  testWidgets('changes a lost daemon left unloaded load once it is back', (
+    tester,
+  ) async {
+    var gone = true; // the first ask meets a restarting daemon
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        GetFolderStatusRequest() when gone => throw ConnectException(
+          Code.unavailable,
+          'daemon unavailable: connection lost',
+        ),
+        GetFolderStatusRequest() => GetFolderStatusResponse(
+          git: true,
+          branch: 'feature',
+          defaultBase: 'main',
+        ),
+        GetDiffRequest() => files(['back.txt']),
+        _ => null,
+      };
+    final chat = ChatState('c', '/lost')..scope = 'uncommitted';
+    addTearDown(() => chat.scope = null);
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: ChangesView(chat: chat, daemon: d),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    gone = false;
+    await fake.restart(tester);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.text('back.txt  +1', findRichText: true), findsOne);
+    await tester.pumpWidget(const SizedBox());
+    d.dispose();
+  });
 
   testWidgets('a quick switch neither dims nor spins', (tester) async {
     await open(tester);

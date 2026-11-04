@@ -208,7 +208,8 @@ class ChangeSpan {
 }
 
 /// Reloads (`reload`) a chat's changes when its turn ends, it moves, its
-/// scope is changed, or a commit is made in it.
+/// scope is changed, or a commit is made in it; and once the daemon is
+/// back after a reload it was gone for ([reloadFailed]).
 mixin FollowsChanges<T extends StatefulWidget> on State<T> {
   ChatState get chat;
   Daemon get daemon;
@@ -216,8 +217,15 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
   String? _scope;
   bool _wasBusy = false;
   int _commits = 0;
+  late final _again = LoadAgain(daemon, () {
+    if (mounted) unawaited(reload());
+  });
 
   Future<void> reload();
+
+  /// After [error], a reload's failure: reloads once the daemon is back if
+  /// it was gone (a restart), rather than waiting for the next turn.
+  void reloadFailed(Object error) => _again.failed(error);
 
   @override
   void initState() {
@@ -231,6 +239,7 @@ mixin FollowsChanges<T extends StatefulWidget> on State<T> {
 
   @override
   void dispose() {
+    _again.cancel();
     chat.removeListener(_changed);
     super.dispose();
   }

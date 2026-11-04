@@ -136,8 +136,9 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
         ListBranchesRequest(folder: chat.folder),
       );
       if (mounted) setState(() => _branches = r);
-    } on Object {
+    } on Object catch (e) {
       // Outside git, or gone: the menu says Loading… until asked again.
+      reloadFailed(e);
     }
   }
 
@@ -157,6 +158,7 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
       }
     } on Object catch (e) {
       if (mounted) setState(() => _error = errorText(e));
+      reloadFailed(e);
     }
   }
 

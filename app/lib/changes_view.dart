@@ -263,7 +263,10 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       });
       if (_repick) unawaited(tryOrShow(context, _diff));
     } on Object catch (e) {
-      if (mounted && asked == _asked) setState(() => _error = errorText(e));
+      if (mounted && asked == _asked) {
+        setState(() => _error = errorText(e));
+        reloadFailed(e);
+      }
     } finally {
       if (mounted && asked == _asked) {
         setState(() {

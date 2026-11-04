@@ -160,8 +160,9 @@ class _NewChatBarState extends State<NewChatBar> with FollowsChanges {
           _worktrees = l?.worktrees ?? const [];
         });
       }
-    } on Object {
-      // No chip, as outside git.
+    } on Object catch (e) {
+      // No chip, as outside git; asked again if the daemon was gone.
+      reloadFailed(e);
     }
   }
 

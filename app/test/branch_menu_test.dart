@@ -480,4 +480,47 @@ void main() {
     expect(fake.calls.whereType<MoveChatRequest>().single.folder, _try);
     d.dispose();
   });
+
+  testWidgets('what a lost daemon left unloaded loads once it is back: the '
+      'panel’s changes and branch, a new chat’s worktrees', (tester) async {
+    final fake = _fake();
+    final inner = fake.answer!;
+    var gone = true; // the first asks meet a restarting daemon
+    fake.answer = (input) =>
+        gone &&
+            (input is GetFolderStatusRequest || input is ListBranchesRequest)
+        ? throw ConnectException(
+            Code.unavailable,
+            'daemon unavailable: connection lost',
+          )
+        : inner(input);
+    final d = await _panel(tester, fake, _chat());
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    expect(find.text('main'), findsNothing);
+    gone = false;
+    await fake.restart(tester);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    expect(find.text('main'), findsOneWidget); // the Branch row
+    await closeView(tester, d);
+
+    gone = true;
+    final d2 = await fake.connect(tester);
+    final chat = ChatState('c', _repo)..load(GetChatResponse());
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: NewChatBar(chat: chat, daemon: d2),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('New worktree'), findsNothing);
+    gone = false;
+    await fake.restart(tester);
+    await tester.tap(find.text('cappy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Worktrees of cappy'), findsOneWidget);
+    await closeView(tester, d2);
+  });
 }
