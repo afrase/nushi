@@ -35,7 +35,7 @@ func TestClaudeMerge(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
-			node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
+			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 			var loads []string
 			for _, e := range node {
 				if e.method == "session/load" && !e.done && !slices.Contains(loads, e.session) {

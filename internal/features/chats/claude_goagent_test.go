@@ -37,6 +37,7 @@ type replays struct {
 	mu    sync.Mutex
 	fakes []*claudetest.Fake
 	next  int
+	specs []claudeagent.Spec // how the agent started each
 }
 
 // readReplays reads dir's cli.jsonl, cli-2.jsonl and on, as claude-tee
@@ -76,6 +77,7 @@ func (r *replays) Spawn(ctx context.Context, s claudeagent.Spec) (*claudeagent.P
 		return nil, fmt.Errorf("the Go agent started claude %d times, the adapter %d", r.next+1, len(r.fakes))
 	}
 	r.next++
+	r.specs = append(r.specs, s)
 	return r.fakes[r.next-1].Spawn(ctx, s)
 }
 
@@ -137,7 +139,12 @@ func (r *replays) Err() error {
 // for one of more's.
 func runGoAgent(t *testing.T, dir string, rec, more []acpLine) []event {
 	t.Helper()
-	fake := readReplays(t, dir)
+	return runGoAgentOn(t, readReplays(t, dir), dir, rec, more)
+}
+
+// runGoAgentOn is runGoAgent with fake as the claudes.
+func runGoAgentOn(t *testing.T, fake *replays, dir string, rec, more []acpLine) []event {
+	t.Helper()
 	toAgentR, toAgentW := io.Pipe()
 	fromAgentR, fromAgentW := io.Pipe()
 	served := make(chan struct{})

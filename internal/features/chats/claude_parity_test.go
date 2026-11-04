@@ -15,13 +15,15 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// The parity tests hold Nushi's Go agent for Claude (claudeacp) to what
-// claude-agent-acp does, as far as Nushi reads it. Each scenario in
-// testdata/claude-parity is one run of the Node adapter, recorded at both
-// ends:
+// The parity tests hold Nushi's Go agent for Claude (claudeacp) to its
+// golden behaviour, as far as Nushi reads it: what claude-agent-acp, the
+// Node adapter Claude ran through until 2026-11-04, did. Each scenario in
+// testdata/claude-parity is one run of an agent, recorded at both ends
+// (until 2026-11-03 the adapter's; make claude-record now records the Go
+// agent's own, which then serve as its golden):
 //   - cli.jsonl: claude's stdin and stdout, a claudetest cassette, and
-//     cli-2.jsonl and on for each further claude the adapter ran;
-//   - acp-node.jsonl: the ACP between Nushi and the adapter, a line a
+//     cli-2.jsonl and on for each further claude the agent ran;
+//   - acp.jsonl: the ACP between Nushi and the agent, a line a
 //     message, {"dir":"in"|"out","msg":…}, "in" being to the agent;
 //   - history/: claude's transcripts before each load, resume and fork,
 //     and at the end, which the Go agent reads itself.
@@ -41,7 +43,7 @@ func TestClaudeParity(t *testing.T) {
 	for _, dir := range scenarios(t) {
 		t.Run(filepath.Base(dir), func(t *testing.T) {
 			skipUnrecorded(t, dir)
-			node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
+			node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 			goRun := runGoAgent(t, dir, sent, nil)
 			want, got := views(t, node), views(t, goRun)
 			if len(want) == 0 || len(want[0].Items) == 0 {
@@ -60,7 +62,7 @@ func TestClaudeParity(t *testing.T) {
 func TestClaudeFallbackModel(t *testing.T) {
 	dir := filepath.Join("testdata", "claude-parity", "refusal")
 	skipUnrecorded(t, dir)
-	node, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
+	node, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 	want, got := lastModel(node), lastModel(runGoAgent(t, dir, sent, nil))
 	if want != "claude-opus-4-8" || got != want {
 		t.Errorf("the model option: the Go agent's %q, the adapter's %q", got, want)
@@ -137,7 +139,7 @@ func skipUnrecorded(t *testing.T, dir string) {
 	}
 }
 
-// acpLine is a line of acp-node.jsonl, and rpc the JSON-RPC message in it.
+// acpLine is a line of acp.jsonl, and rpc the JSON-RPC message in it.
 type acpLine struct {
 	Dir string          `json:"dir"`
 	Msg json.RawMessage `json:"msg"`

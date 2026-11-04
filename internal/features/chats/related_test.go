@@ -532,7 +532,7 @@ func TestRelatedFromRecordings(t *testing.T) {
 		t.Run(tc.scenario, func(t *testing.T) {
 			dir := filepath.Join("testdata", "claude-parity", tc.scenario)
 			skipUnrecorded(t, dir)
-			events, sent := readACP(t, filepath.Join(dir, "acp-node.jsonl"))
+			events, sent := readACP(t, filepath.Join(dir, "acp.jsonl"))
 			folder := recordedCwd(t, sent)
 			p := newPlayer(t, false)
 			for _, e := range events {

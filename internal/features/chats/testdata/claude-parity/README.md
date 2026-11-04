@@ -1,6 +1,6 @@
 # Claude parity scenarios
 
-Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`): one run of the Node adapter (claude-agent-acp, as Nushi pins it) on the real `claude`, recorded at both ends, which the test replays to Nushi's Go agent (`claudeacp`) to compare what Nushi makes of each.
+Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`): one run of an ACP agent on the real `claude`, recorded at both ends, which the test replays to Nushi's Go agent (`claudeacp`) to compare what Nushi makes of each. Every scenario here was recorded through the Node adapter (claude-agent-acp 0.94.0), which Claude ran through until 2026-11-04 (ADR 0066): those recordings are the Go agent's golden behaviour. The adapter is gone from Nushi, so `make claude-record` now records through the Go agent (`nushid claude-acp`): a scenario recorded again holds the Go agent's own run, a regression check against claude's real output rather than a comparison with the adapter. The cassette's filtering for what only the adapter wrote claude (below) then has nothing to drop.
 
 A scenario is two scripts, written by hand:
 
@@ -9,8 +9,8 @@ A scenario is two scripts, written by hand:
 
 and the recordings `make claude-record` writes from them (never edit them by hand):
 
-- `cli.jsonl`: `claude`'s stdin and stdout, a `claudetest` cassette, written by `claude-tee`; `cli-2.jsonl` and on for each further `claude` the adapter starts in the run (a load, a fork), in the order it starts them;
-- `acp-node.jsonl`: the ACP between the client and the adapter, `{"dir":"in"|"out","msg":…}` a line, `"in"` being to the agent;
+- `cli.jsonl`: `claude`'s stdin and stdout, a `claudetest` cassette, written by `claude-tee`; `cli-2.jsonl` and on for each further `claude` the agent starts in the run (a load, a fork), in the order it starts them;
+- `acp.jsonl` (`acp-node.jsonl` until 2026-11-04): the ACP between the client and the agent, `{"dir":"in"|"out","msg":…}` a line, `"in"` being to the agent;
 - `history/`: claude's transcripts (its project folder, the folder's own name and `memory/` left out): `history/1/` and on just before each request that reads them (`session/load`, `resume`, `fork`), `history/end/` once the run is over. The Go agent reads transcripts itself, so the test gives it these at the same points.
 
 A scenario without `cli.jsonl` is skipped by the test, by name, until it is recorded. The test also merges each load's replay with Nushi's copy of the chat (`TestClaudeMerge`, ADR 0047: no divider); a scenario that doesn't load has the Go agent load its first session after the recording, from `history/end/`.
@@ -75,7 +75,7 @@ Every scenario is recorded (2026-10-30, Claude Code 2.1.312 through claude-agent
 | `models` | `availableModels` in the session's settings | `initialize`'s models are already filtered |
 | `mcp` | a tool of a stdio MCP server (`mcp-echo`), asked about | |
 
-`stop_task` on a background command isn't among them: the adapter never sends it, so a recording through it can't show it.
+`stop_task` on a background command isn't among them: the adapter never sent it, so the recordings through it couldn't show it.
 
 ## Recording
 
@@ -86,11 +86,11 @@ env CLAUDE_TEE_REAL=(command -v claude) make claude-record SCENARIOS=all    # or
 For each scenario, `tools/claude-record`:
 
 1. serves `api.json` on loopback;
-2. runs the adapter (`node`, the adapter set up once in a cache folder from `internal/claude/adapter`'s lockfile) with a throwaway `HOME`, `CLAUDE_CONFIG_DIR` and `TMPDIR`, `ANTHROPIC_BASE_URL` at the fake API, a dummy `ANTHROPIC_API_KEY`, the CLI's calls home off, nothing else of your environment but `PATH`, and `CLAUDE_CODE_EXECUTABLE` at `claude-tee`, which runs `CLAUDE_TEE_REAL`, and what Nushi adds to an agent's environment (`claude.Environ`: the todo tools on);
+2. runs the agent (`bin/nushid claude-acp`, which the target builds) with a throwaway `HOME`, `CLAUDE_CONFIG_DIR` and `TMPDIR`, `ANTHROPIC_BASE_URL` at the fake API, a dummy `ANTHROPIC_API_KEY`, the CLI's calls home off, nothing else of your environment but `PATH`, and `CLAUDE_CODE_EXECUTABLE` at `claude-tee`, which runs `CLAUDE_TEE_REAL`, and what Nushi adds to an agent's environment (`claude.Environ`: the todo tools on);
 3. plays `client.json`;
 4. closes the agent's stdin, waits for it to end (then stops its process group), and checks that every turn of `api.json` was asked for, and nothing the scripts don't cover was.
 
-Only a run that went as the scripts say replaces the scenario's recordings. A failed one says why and keeps its folder (the recordings, `agent.log`: the adapter's stderr, `fakeapi.log`: each API call and how it was answered) for a look. Then `claude-tee -schema-diff` reports message kinds and fields the recordings have that claude 2.1.312's schemas don't (`claudeagent/claudetest/cmd/claude-tee/testdata`); it never fails the build.
+Only a run that went as the scripts say replaces the scenario's recordings. A failed one says why and keeps its folder (the recordings, `agent.log`: the agent's stderr, `fakeapi.log`: each API call and how it was answered) for a look. Then `claude-tee -schema-diff` reports message kinds and fields the recordings have that claude 2.1.312's schemas don't (`claudeagent/claudetest/cmd/claude-tee/testdata`); it never fails the build.
 
 ## `api.json`
 

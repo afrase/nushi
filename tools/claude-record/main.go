@@ -10,8 +10,9 @@
 //	claude-record -tee <claude-tee> -claude <claude> [-only all|name,…] -- agent command…
 //
 // The scenarios recorded until 2026-11-03 ran claude-agent-acp, the Node
-// adapter Claude ran through before the Go agent (ADR 0066). Each run has a throwaway HOME, CLAUDE_CONFIG_DIR and TMPDIR, a dummy
-// key and nothing else of the caller's environment but PATH, so no one's
+// adapter Claude ran through before the Go agent (ADR 0066). Each run has
+// a throwaway HOME, CLAUDE_CONFIG_DIR and TMPDIR, a dummy key and nothing
+// else of the caller's environment but PATH, so no one's
 // login or settings take part. A scenario's old recordings are replaced
 // only by a run that went as its scripts say.
 package main
