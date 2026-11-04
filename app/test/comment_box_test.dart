@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,5 +56,60 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     expect(cancelled, 1);
+  });
+
+  testWidgets('a box left and opened again while its comment posts starts '
+      'empty, and gets the text back if the post fails', (tester) async {
+    forgetCommentDrafts();
+    var posts = 0;
+    var hold = Completer<void>();
+    Widget box() => MaterialApp(
+      theme: const NushiTheme(Tokens.light).toThemeData(),
+      home: Scaffold(
+        body: CommentBox(
+          draft: 'jira s A-1',
+          onPost: (_) async {
+            posts++;
+            await hold.future;
+          },
+        ),
+      ),
+    );
+    Button comment() =>
+        tester.widget<Button>(find.widgetWithText(Button, 'Comment'));
+    Future<void> leaveAndCome() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(box());
+      await tester.pumpAndSettle();
+    }
+
+    await tester.pumpWidget(box());
+    await tester.enterText(find.byType(TextField), 'Hello');
+    await tester.pump();
+    await tester.tap(find.text('Comment'));
+    await tester.pump();
+    expect(posts, 1);
+    // A look elsewhere, and back, while it posts: nothing to post twice.
+    await leaveAndCome();
+    expect(find.widgetWithText(TextField, 'Hello'), findsNothing);
+    expect(comment().onPressed, isNull);
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(commentDraft('jira s A-1'), isEmpty);
+
+    // One refused while the box is gone: the text is back for a retry.
+    await tester.enterText(find.byType(TextField), 'Again');
+    await tester.pump();
+    hold = Completer<void>();
+    await tester.tap(find.text('Comment'));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+    hold.completeError(StateError('down'));
+    await tester.pump();
+    expect(commentDraft('jira s A-1'), 'Again');
+    await tester.pumpWidget(box());
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'Again'), findsOneWidget);
+    expect(posts, 2);
   });
 }

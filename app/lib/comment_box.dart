@@ -117,11 +117,14 @@ class _CommentBoxState extends State<CommentBox> {
   }
 
   void _keep() {
-    final key = widget.draft;
-    if (key == null) return;
+    if (widget.draft case final key?) _keepOwn(key, _text.text);
+  }
+
+  /// Keeps [text] as [key]'s draft without this box following the change.
+  void _keepOwn(String key, String text) {
     _keeping = true;
     try {
-      keepCommentDraft(key, _text.text);
+      keepCommentDraft(key, text);
     } finally {
       _keeping = false;
     }
@@ -155,13 +158,19 @@ class _CommentBoxState extends State<CommentBox> {
       _busy = true;
       _error = null;
     });
-    // The box may be gone by the time it's posted (its view left).
+    // The box may be gone by the time it's posted (its view left), and
+    // another of its key opened meanwhile: the draft leaves the store while
+    // it posts, so that box can't post it again, and is back if it fails.
     final key = widget.draft;
+    final written = _text.text;
+    if (key != null) _keepOwn(key, '');
     try {
       await widget.onPost(md);
-      if (key != null) keepCommentDraft(key, '');
       if (mounted) _text.clear();
     } on Object catch (e) {
+      if (key != null && commentDraft(key).isEmpty) {
+        keepCommentDraft(key, written);
+      }
       if (mounted) setState(() => _error = errorText(e));
     } finally {
       if (mounted) setState(() => _busy = false);
