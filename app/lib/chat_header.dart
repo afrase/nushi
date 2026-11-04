@@ -8,6 +8,8 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/files_pane.dart';
+import 'package:nushi/folder_tree.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/menu.dart';
@@ -109,6 +111,7 @@ class _ChatHeaderState extends State<ChatHeader> {
         chat.side,
         chat.sideHidden,
         sidebarHidden,
+        filesChats,
       ]),
       builder: (context, _) => LayoutBuilder(
         builder: (context, box) {
@@ -379,8 +382,17 @@ class _ChatHeaderState extends State<ChatHeader> {
                           line: LineIcon.details,
                           onPick: toggle,
                         ),
-                      MenuEntry.divider,
                     ],
+                    if (widget.daemon.daemonApi >= filesApi) ...[
+                      MenuEntry(
+                        filesOpen(chat) ? 'Hide files' : 'Show files',
+                        shortcut: keyLabel(filesKey),
+                        icon: Icons.folder_outlined,
+                        onPick: () => toggleFiles(chat),
+                      ),
+                      MenuEntry.divider,
+                    ] else if (folds.buttons)
+                      MenuEntry.divider,
                     ...chatMenu(
                       context,
                       chat,

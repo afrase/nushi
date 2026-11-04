@@ -7,8 +7,10 @@ import 'package:nushi/chat_menu.dart';
 import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/phone/files_screen.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
@@ -130,6 +132,21 @@ class _ChatSheetState extends State<ChatSheet> {
             const SizedBox(height: 12),
             for (final (label, run, destructive) in [
               ('Rename…', _rename, false),
+              if (d.daemonApi >= filesApi)
+                (
+                  'Files',
+                  // Closed first: the files' screen goes over the chat's.
+                  () async {
+                    Navigator.of(context)
+                      ..pop()
+                      ..push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => FilesScreen(d, chat),
+                        ),
+                      );
+                  },
+                  false,
+                ),
               if (widget.onFork case final fork? when canForkChat(d, chat))
                 (
                   'Fork',

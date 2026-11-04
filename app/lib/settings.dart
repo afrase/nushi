@@ -13,7 +13,8 @@ import 'package:nushi/file_mode.dart';
 /// whether the details panel shows (its toolbar button), which of its widgets
 /// are collapsed and their order, what each chat's Changes view shows, the
 /// panes' widths, whether changed files show flat, which chats show their
-/// terminals, the terminal's font, whether the chat takes the whole width,
+/// terminals and their Files pane, whether it lists ignored files, the
+/// terminal's font, whether the chat takes the whole width,
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
 /// groups' order and which are collapsed, each project's chats' order,
@@ -47,6 +48,11 @@ final Pref<bool> changesFlat = _plain('flat', false);
 
 /// The chats whose terminal panel is open.
 final Pref<Set<String>> terminalChats = _set('terminals', chats: true);
+
+/// The chats whose Files pane is open, and whether the pane lists what git
+/// ignores.
+final Pref<Set<String>> filesChats = _set('files', chats: true);
+final Pref<bool> filesIgnored = _plain('filesIgnored', false);
 
 /// The Jira site used last (shown in the Jira view, or an issue picked from
 /// it for a chat): a key typed alone is looked for there.
@@ -251,6 +257,7 @@ final Pref<String?> dismissedUpdate = _plain('dismissedUpdate', null);
 List<Pref<Object?>> get _chatPrefs => [
   changeScopes,
   terminalChats,
+  filesChats,
   sidebarChats,
   sidebarSections,
   chatOpened,

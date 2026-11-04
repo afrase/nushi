@@ -16,10 +16,10 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
 /// The artifacts ([isArtifact]) [items] wrote or edited (a subagent's
-/// calls too), each once, the one changed last first; a file deleted
-/// since is left out. As the tool rows name them: relative to the chat's
-/// folder when inside it.
-List<String> chatFiles(Iterable<Item> items) {
+/// calls too), or with [any] every file, each once, the one changed last
+/// first; a file deleted since is left out. As the tool rows name them:
+/// relative to the chat's folder when inside it.
+List<String> chatFiles(Iterable<Item> items, {bool any = false}) {
   final files = <String>{}; // in the order last changed
   for (final it in items) {
     if (it.kind != ItemKind.ITEM_KIND_TOOL_CALL || it.status == 'failed') {
@@ -35,7 +35,7 @@ List<String> chatFiles(Iterable<Item> items) {
       files.removeAll(it.paths);
     } else if (it.toolKind == 'edit' || it.diffs.isNotEmpty) {
       for (final p in {...it.paths, for (final d in it.diffs) d.path}) {
-        if (!isArtifact(p)) continue;
+        if (!any && !isArtifact(p)) continue;
         files
           ..remove(p)
           ..add(p);
@@ -46,8 +46,14 @@ List<String> chatFiles(Iterable<Item> items) {
 }
 
 /// [chatFiles] of a chat's items, all of them and those of its last turn
-/// (from the last message of the user's on), as of its items' revision.
-typedef _Written = ({int revision, List<String> all, Set<String> last});
+/// (from the last message of the user's on), and every file it wrote, as
+/// of its items' revision.
+typedef _Written = ({
+  int revision,
+  List<String> all,
+  Set<String> last,
+  Set<String> any,
+});
 
 final _written = Expando<_Written>();
 
@@ -62,6 +68,7 @@ _Written _writtenBy(ChatState chat) {
     revision: chat.revision,
     all: chatFiles(items),
     last: chatFiles(items.skip(turn + 1)).toSet(),
+    any: chatFiles(items, any: true).toSet(),
   );
 }
 
@@ -69,6 +76,10 @@ _Written _writtenBy(ChatState chat) {
 /// but by text streaming in ([ChatState.revision]): every chunk builds the
 /// details panel, which asks a few times.
 List<String> chatFilesOf(ChatState chat) => _writtenBy(chat).all;
+
+/// Every file [chat]'s tool calls wrote or edited, code and text too, as
+/// [chatFiles] names them: the Files pane marks them.
+Set<String> chatWrote(ChatState chat) => _writtenBy(chat).any;
 
 /// A chat's artifacts ([chatFiles]) in the order the owner cares about
 /// them: the pinned (in the order pinned), then the recent (newest

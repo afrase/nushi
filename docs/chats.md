@@ -85,6 +85,7 @@ Nushi remembers all of it. ⌘1–⌘9 and ⌘[ ⌘] go through the chats in the
 | ⌘F | Find. |
 | ⌘; | The next typo in the composer ([Spell check](#spell-check)). |
 | ⌘P | Open file. |
+| ⇧⌘E | Show or hide the Files pane. |
 | Esc | Stop a running turn. |
 | Esc Esc | Rewind: list your messages. |
 
@@ -196,6 +197,16 @@ The widget, collapsed, counts the pinned and recent; with none of either, the th
 **An agent can open a preview itself.** Claude and Codex have a `show` tool, for a finished page, document or image. Their own permission prompt asks first, as for any MCP tool, and names the file; opening an HTML page runs it, so allowing the tool for good means pages open unasked. The file opens beside the chat if that chat's transcript is showing. If you're in another chat, in Changes or in a view, nothing moves: the latest file opens when you next come back to the transcript, and the row ("Showed report.html") keeps its Preview button either way. The phone doesn't open anything by itself; use the row's Preview. A file can be shown only if Preview could open it: an artifact inside the chat's folder or worktree, or one the chat wrote.
 
 **Preview tabs.** A second file opens beside the first: with two or more, the pane's title row shows their names as tabs in place of the file name, and nothing else moves. Every way of opening a file does this, the agent's `show` too, and a file already open goes to its tab. Click a name to show it. Its ✕ closes it, on the tab showing or under the pointer; the next one shows, and closing the last closes the pane, as the pane's own Close does with all of them. Names too long for the row shrink, then the row scrolls. Tabs aren't kept: they go with the pane. Only the tab showing has a view, so an HTML page starts again when you come back to it. The phone has no tabs: it opens previews full screen.
+
+**Files** (⇧⌘E, View › Files, the chat's ⋯ or the palette) opens a tree of the chat's folder (its worktree, for a worktree chat) beside the chat, left of the preview; Nushi remembers it per chat.
+
+- Folders open with a click or →, and close with a click or ←; ↑↓ move, ⏎ opens. The tree keeps up as files come and go, and keeps what's open and selected.
+- A file that previews opens in the preview as an artifact does, in a tab of its own. One the preview can't show (a zip, say) is dimmed. Nothing is edited here.
+- The files the chat wrote or edited have a green dot, and so do the folders holding them.
+- What git ignores is left out; the eye in the pane's header shows it, dimmed. `.git` never shows.
+- A folder with more than 500 entries shows the first 500 and "N more".
+- **Filter files** over the tree finds any file in the folder by name, in folders not opened too: the start of its name first, then anywhere in its name or path, then its letters in order ("trvw" finds `tree_view.dart`). The matches show as a tree, the best one picked; ⏎ opens it, Esc clears the filter.
+- On the phone, the chat's ⋯ › Files shows the same tree; a file opens full screen ([ADR 0090](adr/0090-a-files-pane-beside-the-chat.md)).
 
 **Open file** (⌘P, File › Open File…) opens any file that previews (code and text too) in the chat's folder that git doesn't ignore, matched as you type.
 

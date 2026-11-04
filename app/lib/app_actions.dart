@@ -13,6 +13,8 @@ import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/files_pane.dart';
+import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
@@ -61,6 +63,13 @@ const sidebarKey = SingleActivator(LogicalKeyboardKey.backslash, meta: true);
 /// ⌘;: the next flagged word in the composer.
 const nextTypoKey = SingleActivator(LogicalKeyboardKey.semicolon, meta: true);
 
+/// ⇧⌘E: the Files pane (VS Code's key for its Explorer).
+const filesKey = SingleActivator(
+  LogicalKeyboardKey.keyE,
+  meta: true,
+  shift: true,
+);
+
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
@@ -73,6 +82,7 @@ enum Act {
   pull(key: pullTabKey, menu: ActMenu.view, menuLabel: 'Pull Request'),
   sidebar(key: sidebarKey, menu: ActMenu.view, menuLabel: 'Hide Sidebar'),
   details,
+  files(key: filesKey, menu: ActMenu.view, menuLabel: 'Files'),
   chatWidth,
   terminal(key: toggleTerminalKey),
   rewind(keyText: 'Esc Esc'), // the composer's
@@ -236,6 +246,15 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       details ? 'Hide details' : 'Show details',
       enabled: shown?.shownTab == ChatTab.chat,
       run: () => showDetails.value = !details,
+    ),
+    AppAction(
+      .files,
+      shown != null && filesOpen(shown) ? 'Hide files' : 'Show files',
+      enabled: shown != null && d.daemonApi >= filesApi,
+      run: () {
+        if (!filesOpen(shown!)) shown.tab.value = ChatTab.chat;
+        toggleFiles(shown);
+      },
     ),
     AppAction(
       .chatWidth,

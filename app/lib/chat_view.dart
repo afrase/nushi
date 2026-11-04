@@ -12,6 +12,8 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
+import 'package:nushi/files_pane.dart';
+import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
@@ -177,6 +179,7 @@ class _ChatViewState extends State<ChatView> {
           chat.preview,
           chat.side,
           chat.sideHidden,
+          filesChats,
         ]),
         builder: (context, _) => _beside(transcript),
       ),
@@ -194,6 +197,7 @@ class _ChatViewState extends State<ChatView> {
         : chat.side.value;
     final id = chat.pane.value;
     final preview = id == null ? chat.preview.value : null;
+    final files = filesOpen(chat) && widget.daemon.daemonApi >= filesApi;
     // Either is dragged as wide as it's wanted.
     final wide = id != null || preview != null;
     final details = widget.details;
@@ -216,6 +220,18 @@ class _ChatViewState extends State<ChatView> {
               onHide: () => chat.sideHidden.value = true,
               onClose: () => unawaited(endSide(context, widget.daemon, chat)),
               onKeep: () => unawaited(keepSide(context, widget.daemon, chat)),
+            ),
+          ),
+        if (files)
+          SidePane(
+            'files',
+            initial: 260,
+            min: 200,
+            cap: 480,
+            child: FilesPane(
+              chat: chat,
+              daemon: widget.daemon,
+              onClose: () => toggleFiles(chat),
             ),
           ),
         if (id != null)

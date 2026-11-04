@@ -224,7 +224,7 @@ Widget? previewStatus(
   if (f.missing) return const PreviewNote('The file isn’t there (yet).');
   if (f.tooLarge && capped) {
     return PreviewNote(
-      'Too large to preview (${_size(f.size.toInt())}).',
+      'Too large to preview (${sizeText(f.size.toInt())}).',
       action: onReveal == null
           ? null
           : Button(
@@ -382,7 +382,10 @@ class PreviewBody extends StatelessWidget {
   }
 }
 
-String _size(int n) => n < 1 << 20
+/// A file's size as a preview says it: "640 bytes", "12 KB", "1.4 MB".
+String sizeText(int n) => n < 1024
+    ? '$n bytes'
+    : n < 1 << 20
     ? '${(n / 1024).toStringAsFixed(0)} KB'
     : '${(n / (1 << 20)).toStringAsFixed(1)} MB';
 
