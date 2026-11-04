@@ -148,7 +148,18 @@ class _ChatViewState extends State<ChatView> {
                                     NushiTheme.gutter,
                                     0,
                                   ),
-                                  child: FindBar(chat.find),
+                                  child: FindBar(
+                                    chat.find,
+                                    loadAll: chat.older > 0
+                                        ? () => unawaited(
+                                            widget.daemon.loadOlder(
+                                              chat,
+                                              all: true,
+                                            ),
+                                          )
+                                        : null,
+                                    loading: chat.loadingOlder,
+                                  ),
                                 ),
                               ),
                       ),

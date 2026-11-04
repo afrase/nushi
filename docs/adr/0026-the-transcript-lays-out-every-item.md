@@ -1,14 +1,17 @@
-# 0026. The transcript lays out every item
+# 0026. The transcript lays out every item it has
 
 ## Context
-Until milestone I the transcript was a lazy list. A lazy list only estimates its height from the items built so far, so the scrollbar thumb changed size while scrolling, the height shifted under the user, and following the bottom pulled a slow scroll back down.
+Until milestone I the transcript was a lazy list. A lazy list only estimates its height from the items built so far, so the scrollbar thumb changed size while scrolling, the height shifted under the user, and following the bottom pulled a slow scroll back down. Laying out all of a long chat had its own cost: a 2,007-item chat took 39 frames and 4.2–4.7 s to lay out in a debug widget test, and its snapshot was 472 KiB.
 
 ## Decision
-- The transcript is a `Column` in a `SingleChildScrollView`: every item is laid out. Each entry's widget is kept while its items are the same objects, so a streamed chunk rebuilds only the message it changes; a code block is highlighted once.
-- It fills in from the bottom (2026-10-30): a transcript that opens at its bottom builds its last 12 entries in its first frame and 24 more in each frame after, until all are laid out; what shows stays put if the user scrolls up meanwhile. Picking a long chat showed nothing for one 200–330 ms frame (debug, 300 items), so the click seemed lost; now its first frame is 35–75 ms and the rest comes in about five frames. One that opens at its top (a finished subagent's) builds all at once.
+- The transcript is a `Column` in a `SingleChildScrollView`: every item it has is laid out. Each entry's widget is kept while its items are the same objects, so a streamed chunk rebuilds only the message it changes; a code block is highlighted once.
+- It fills in from the bottom (2026-10-30): a transcript that opens at its bottom builds its last 12 entries in its first frame and 24 more in each frame after, until all are laid out; what shows stays put if the user scrolls up meanwhile. One that opens at its top (a finished subagent's) builds all at once.
 - Following the bottom stops only on the user's own scroll up (not a fling's spring back past the bottom) and resumes at the bottom.
+- **It has a long chat's recent part, and pages above it** (2026-11-04, as Claude's desktop app does). A chat opens with its last 200 items on the Mac (80 on the phone; `GetChatRequest.recent`, reaching back to a subagent's call so it shows whole): about 18 turns of a long chat, several screens. Within a screen of the top the page before comes (`GetChatItems`, 200 more), a small spinner at the top meanwhile; a failed page says so with Try again and asks no more on its own. A page builds over a few frames as the chat fills in, and in the layout that adds what's above, the list moves down by its height (`BottomFollower.shift`, measured at the bottom of the first entry that was there): what shows doesn't move, a frame later or ever, and the thumb shrinks and moves down. What goes to a message not loaded (a pin, ⌘F's Load all, the rewind list) takes the pages up to it, 500 items a call, and puts them in at once: no call of the daemon's own. A chat left at its bottom goes back to its recent part; one left scrolled up keeps what it loaded, to open there again; one let go (not among the last six opened) loads again.
+- Why still no lazy list: what's loaded is laid out in full, so its height is exact and nothing estimated moves; pages keep how much that is small.
 
 ## Consequences
-- Opening a very long chat costs a full layout (measured in a debug widget test with 300 items: 28 ms per streamed chunk, 100 ms for a relayout; a lazy list was 8 ms per chunk but 418 ms to jump to the top). Release builds are several times faster.
+- Opening the 2,007-item chat (debug widget test): the first frame 260–300 ms before and after (filling in from the bottom bounded it already); all of what's loaded laid out in 0.52–0.63 s over 6 frames, from 4.2–4.7 s over 39; the snapshot 47 KiB. Release builds are several times faster.
+- The scrollbar is over what's loaded, so it shrinks as pages come in. ⌘F finds in what's loaded and says so. What's worked out from the items (the Artifacts widget, the Files pane's marks, Up's last message) knows only what's loaded.
+- A relayout costs what's loaded (300 items, debug: 28 ms per streamed chunk, 100 ms for a relayout; a lazy list was 8 ms per chunk but 418 ms to jump to the top). While it fills in (about 0.1 s), the thumb shrinks and the top isn't there yet.
 - Going back to a lazy list brings the scroll bugs back unless the list can know its height.
-- While it fills in (about 0.1 s), the scrollbar's thumb shrinks and the top isn't there yet.

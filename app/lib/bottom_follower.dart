@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -14,6 +16,12 @@ class BottomFollower extends ChangeNotifier {
   bool _jumping = false; // the scroll moves because of us
   bool _dragged = false; // the scroll going on began with a drag
   bool _held = false; // [hold]: being at the bottom doesn't follow it again
+
+  /// While set, the next layout that changes the list's height moves the
+  /// list by what it returns, in that layout (so before its paint): what
+  /// came in above what shows keeps it where it was (the transcript sets
+  /// it as a page or more entries come in above). Unused while following.
+  double Function()? shift;
 
   /// How long [follow]'s glide takes, whatever the distance.
   static const glideFor = Duration(milliseconds: 260);
@@ -184,8 +192,20 @@ class _Position extends ScrollPositionWithSingleContext {
 
   @override
   bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
+    final shift = follower.shift;
+    follower.shift = null;
     if (follower.following && hasPixels && pixels < maxScrollExtent) {
       correctPixels(maxScrollExtent);
+    } else if (shift != null && hasPixels && !follower.following) {
+      final by = shift();
+      if (by != 0) {
+        correctPixels(
+          (pixels + by).clamp(
+            minScrollExtent,
+            max(minScrollExtent, maxScrollExtent),
+          ),
+        );
+      }
     }
     return super.applyContentDimensions(minScrollExtent, maxScrollExtent);
   }

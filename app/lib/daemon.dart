@@ -33,6 +33,7 @@ export 'package:nushi/place.dart';
 part 'daemon_events.dart';
 part 'daemon_link.dart';
 part 'daemon_open.dart';
+part 'daemon_pages.dart';
 part 'daemon_places.dart';
 part 'daemon_sides.dart';
 part 'daemon_start.dart';
@@ -245,42 +246,14 @@ class Daemon extends ChangeNotifier {
   /// Sees each event before it's applied (the Mac's notifications).
   void Function(EventsResponse)? onEvent;
 
-  /// How many of a chat's latest items the phone takes first.
+  /// How many of a chat's latest items the phone takes first, and in each
+  /// page before them (a slow link).
   static const recentItems = 80;
 
-  /// Takes the page of [chat]'s items before those it has, as the phone
-  /// scrolls up (nothing when it has them all, or a page is on its way).
-  Future<void> loadOlder(ChatState chat) async {
-    if (chat.older == 0 || chat.loadingOlder || chat.items.isEmpty) return;
-    chat
-      ..loadingOlder = true
-      ..notifyListeners();
-    final before = chat.items.first.id;
-    final snapshot = chat.snapshots;
-    try {
-      final page = await client.getChatItems(
-        GetChatItemsRequest(
-          chatId: chat.id,
-          before: before,
-          limit: recentItems,
-        ),
-      );
-      // Only onto what it was asked for: a reload meanwhile (a reconnect,
-      // a rewind) took another snapshot.
-      if (chat.loaded &&
-          chat.snapshots == snapshot &&
-          chat.items.isNotEmpty &&
-          chat.items.first.id == before) {
-        chat.prepend(page.items, page.older);
-      }
-    } on Object {
-      // Asked again on the next scroll up.
-    } finally {
-      chat
-        ..loadingOlder = false
-        ..notifyListeners();
-    }
-  }
+  /// The same on the Mac: a long chat's recent part is several screens
+  /// (about 18 turns of a long chat's, 100 entries), and a page laid out
+  /// over a few frames keeps a fast scroll up going ([DaemonPages]).
+  static const macRecentItems = 200;
 
   Timer? _loadRetry;
 

@@ -475,12 +475,34 @@ class ChatState extends ChangeNotifier {
   bool loading = false;
   int loads = 0; // counts loads and unloads: an answer only the latest may use
 
-  /// How many items come before [items] (the phone takes the recent part
-  /// first, GetChatRequest.recent); 0 when it has them all.
+  /// How many items come before [items] (a chat opens with its recent
+  /// part, GetChatRequest.recent); 0 when it has them all.
   int older = 0;
 
+  /// The older pages on their way (Daemon.loadOlder), if any.
+  Future<void>? get olderLoad => _olderLoad;
+  Future<void>? _olderLoad;
+
   /// Whether an older page is on its way.
-  bool loadingOlder = false;
+  bool get loadingOlder => _olderLoad != null;
+
+  /// Whether the last older page failed: the Mac's transcript offers Try
+  /// again at its top, and asks for no more on its own until then.
+  bool olderFailed = false;
+
+  /// Older pages set out, until [on] ends ([olderDone]).
+  void olderGoing(Future<void> on) {
+    _olderLoad = on;
+    olderFailed = false;
+    notifyListeners();
+  }
+
+  /// The older pages that set out are in, or [failed].
+  void olderDone({required bool failed}) {
+    _olderLoad = null;
+    olderFailed = failed;
+    notifyListeners();
+  }
 
   /// Asks for a fresh snapshot: an event reached past what's loaded (a
   /// rewind before the recent part). The daemon sets it.
@@ -505,6 +527,7 @@ class ChatState extends ChangeNotifier {
     queue = s.queue.messages;
     status(s.status);
     error = loadError = '';
+    olderFailed = false;
     _seq = s.seq.toInt();
     loaded = true;
     loading = false;
@@ -539,6 +562,21 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Lets go of all but its last [n] items, reaching back to the call of a
+  /// subagent whose steps are among them as the daemon's pages do: a long
+  /// chat left at its bottom goes back to its recent part. Whether any went.
+  bool trim(int n) {
+    if (!loaded || sending.isNotEmpty) return false;
+    final start = recentStart(items, items.length, n);
+    if (start == 0) return false;
+    items.removeRange(0, start);
+    older += start;
+    olderFailed = false;
+    revision++;
+    notifyListeners();
+    return true;
+  }
+
   /// The chat moved to [to]; what shows its folder follows.
   void moved(String to) {
     folder = to;
@@ -554,6 +592,7 @@ class ChatState extends ChangeNotifier {
     unsent.clear();
     _sent.clear();
     older = 0;
+    olderFailed = false;
     revision++;
   }
 
@@ -675,4 +714,16 @@ class ChatState extends ChangeNotifier {
     }
     revision++;
   }
+}
+
+/// Where the last [n] of [items] before [end] start: [n] back, and further
+/// back to the call that started a subagent whose steps are among them, so
+/// the subagent shows whole (internal/api's pageStart).
+int recentStart(List<Item> items, int end, int n) {
+  var start = max(0, end - n);
+  final index = {for (final (i, it) in items.take(end).indexed) it.id: i};
+  for (var i = end - 1; i >= start; i--) {
+    if (index[items[i].parent] case final j? when j < start) start = j;
+  }
+  return start;
 }

@@ -174,12 +174,27 @@ class FoundCount extends StatelessWidget {
 }
 
 /// The find bar over the transcript: the field, "2 of 7", ↑ and ↓ (or ⏎
-/// and ⇧⏎), and × (or Esc) to close.
+/// and ⇧⏎), and × (or Esc) to close. Given [loadAll] (a chat with more
+/// before what it has loaded), a line under them says the find looks in
+/// what's loaded, and Load all takes the rest ([loading] while it comes).
 class FindBar extends StatefulWidget {
-  const new(this.find, {super.key, this.hint = 'Find in the chat'});
+  const new(
+    this.find, {
+    super.key,
+    this.hint = 'Find in the chat',
+    this.loadAll,
+    this.loading = false,
+  });
 
   final TranscriptFind find;
   final String hint;
+  final VoidCallback? loadAll;
+  final bool loading;
+
+  /// What the bar covers of the transcript's top, the room above it
+  /// included: without its line under it, and with it.
+  static const height = 48.0;
+  static const withNote = 66.0;
 
   @override
   State<FindBar> createState() => _FindBarState();
@@ -202,58 +217,86 @@ class _FindBarState extends State<FindBar> {
     return ListenableBuilder(
       listenable: f,
       builder: (context, _) {
+        final all = widget.loadAll;
+        final row = Row(
+          children: [
+            Icon(Icons.search, size: 14, color: t.textMuted),
+            const SizedBox(width: 6),
+            Expanded(
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.escape): f.close,
+                  const SingleActivator(LogicalKeyboardKey.enter): () =>
+                      f.step(1),
+                  const SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    shift: true,
+                  ): () =>
+                      f.step(-1),
+                  const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                      f.step(1),
+                  const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                      f.step(-1),
+                },
+                child: TextField(
+                  controller: _text,
+                  focusNode: f.focus,
+                  autofocus: true,
+                  style: theme.ui(t.text),
+                  onChanged: (q) => f.query = q,
+                  decoration: InputDecoration(
+                    hintText: widget.hint,
+                    isDense: true,
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+            ),
+            Text(f.count, style: theme.ui(t.textMuted, size: 12)),
+            IconTap(
+              Icons.keyboard_arrow_up,
+              tooltip: 'Previous (⇧⏎)',
+              onTap: f.canStep ? () => f.step(-1) : null,
+            ),
+            IconTap(
+              Icons.keyboard_arrow_down,
+              tooltip: 'Next (⏎)',
+              onTap: f.canStep ? () => f.step(1) : null,
+            ),
+            IconTap(Icons.close, tooltip: 'Close (esc)', onTap: f.close),
+          ],
+        );
         return Container(
           width: 340,
           padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
           decoration: box(t.borderStrong, fill: t.raised, radius: 8),
-          child: Row(
-            children: [
-              Icon(Icons.search, size: 14, color: t.textMuted),
-              const SizedBox(width: 6),
-              Expanded(
-                child: CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(LogicalKeyboardKey.escape): f.close,
-                    const SingleActivator(LogicalKeyboardKey.enter): () =>
-                        f.step(1),
-                    const SingleActivator(
-                      LogicalKeyboardKey.enter,
-                      shift: true,
-                    ): () =>
-                        f.step(-1),
-                    const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-                        f.step(1),
-                    const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-                        f.step(-1),
-                  },
-                  child: TextField(
-                    controller: _text,
-                    focusNode: f.focus,
-                    autofocus: true,
-                    style: theme.ui(t.text),
-                    onChanged: (q) => f.query = q,
-                    decoration: InputDecoration(
-                      hintText: widget.hint,
-                      isDense: true,
-                      border: InputBorder.none,
+          child: all == null && !widget.loading
+              ? row
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    row,
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 6, 4),
+                      child: Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              widget.loading
+                                  ? 'Loading earlier messages…'
+                                  : 'Searching loaded messages · ',
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.ui(t.textMuted, size: 12),
+                            ),
+                          ),
+                          if (all != null && !widget.loading)
+                            LinkText('Load all', size: 12, onTap: all),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-              Text(f.count, style: theme.ui(t.textMuted, size: 12)),
-              IconTap(
-                Icons.keyboard_arrow_up,
-                tooltip: 'Previous (⇧⏎)',
-                onTap: f.canStep ? () => f.step(-1) : null,
-              ),
-              IconTap(
-                Icons.keyboard_arrow_down,
-                tooltip: 'Next (⏎)',
-                onTap: f.canStep ? () => f.step(1) : null,
-              ),
-              IconTap(Icons.close, tooltip: 'Close (esc)', onTap: f.close),
-            ],
-          ),
         );
       },
     );

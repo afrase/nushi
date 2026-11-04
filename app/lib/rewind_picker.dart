@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,6 +27,8 @@ Future<void> pickRewind(
   Daemon daemon,
   ChatState chat,
 ) async {
+  // All of them: those on pages not loaded yet come in as it lists.
+  unawaited(daemon.loadOlder(chat, all: true));
   final item = await showDialog<Item>(
     context: context,
     builder: (_) => RewindPicker(chat: chat),

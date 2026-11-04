@@ -95,4 +95,28 @@ void main() {
     expect(chat.items.map((i) => i.id), [for (var i = 90; i < 110; i++) 'i$i']);
     expect(chat.older, 90);
   });
+
+  test('trimmed to its last items, a subagent among them stays whole', () {
+    final chat = ChatState('c', '/f')
+      ..load(
+        GetChatResponse(
+          items: [
+            for (var i = 0; i < 10; i++) _msg(i),
+            Item(id: 'sa', kind: ItemKind.ITEM_KIND_TOOL_CALL),
+            for (var i = 0; i < 3; i++)
+              Item(id: 's$i', parent: 'sa', kind: ItemKind.ITEM_KIND_TOOL_CALL),
+            _msg(20),
+          ],
+          older: 5,
+          seq: Int64(5),
+        ),
+      );
+    expect(chat.trim(2), isTrue);
+    expect(chat.items.map((i) => i.id), ['sa', 's0', 's1', 's2', 'i20']);
+    expect(chat.older, 15);
+    expect(chat.trim(20), isFalse, reason: 'nothing to let go');
+    // A new item still lands at its place.
+    chat.apply(_item(6, _msg(21), index: 20));
+    expect(chat.items.last.id, 'i21');
+  });
 }

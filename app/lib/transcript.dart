@@ -27,6 +27,8 @@ import 'package:nushi/selection_lines.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/transcript_find.dart';
+import 'package:nushi/transcript_pages.dart';
 import 'package:nushi/widgets.dart';
 
 /// Whether [e] is a tool call that shows as a row, and can join a run of
@@ -92,7 +94,9 @@ class Transcript extends StatefulWidget {
   final Widget? footer;
 
   /// Called as the user scrolls near the top (the phone takes an older
-  /// page then); what shows stays put as items come in above it.
+  /// page then, and shows its own [header]); what shows stays put as
+  /// items come in above it. Without it a chat's transcript takes the
+  /// page itself, with [EarlierMessages] at its top.
   final VoidCallback? onTop;
 
   /// The entries a transcript's first frame builds, and how many more
@@ -109,7 +113,6 @@ const _scrollbarEdge = 16.0;
 
 /// What the find bar covers of the transcript's top right.
 const double _findBarWidth = 340.0 + NushiTheme.gutter;
-const double _findBarHeight = 48.0;
 
 /// How far under the transcript's top a message gone to from the pins'
 /// menu lands.
@@ -142,9 +145,15 @@ class _TranscriptState extends State<Transcript> {
   // The widget built for each entry, by key, and what it was built from.
   var _built = <String, (List<Object>, Widget)>{};
 
-  // The first entry's key at the last build: when items come in above it,
-  // the list moves down by their height, so what shows stays put.
-  String? _first;
+  // The keys of the entries laid out at the last build, and whether a
+  // header was above them: when entries come in above them, the list moves
+  // down by their height in the same layout, so what shows stays put.
+  List<String> _laidKeys = const [];
+  bool _hadHeader = false;
+
+  // The first entry's key at the last build: a page that comes in above it
+  // fills in a few frames, as the chat does when it opens.
+  String? _firstKey;
 
   /// How many of the last entries are built, while the transcript fills
   /// in; null once all of it is. A chat opens at its bottom, so its first
@@ -192,12 +201,19 @@ class _TranscriptState extends State<Transcript> {
   }
 
   bool _onScroll(Notification n) {
-    if (widget.onTop case final top?
-        when n is ScrollUpdateNotification &&
-            n.depth == 0 &&
-            (n.scrollDelta ?? 0) < 0 &&
-            n.metrics.pixels < 800) {
-      top();
+    // Within a screen of the top, scrolling up, or as the list's height
+    // changes there (a short recent part, a page that left it near).
+    final near = switch (n) {
+      ScrollUpdateNotification(depth: 0, :final metrics, :final scrollDelta)
+          when (scrollDelta ?? 0) < 0 =>
+        metrics,
+      ScrollMetricsNotification(depth: 0, :final metrics)
+          when !widget.chat.olderFailed =>
+        metrics,
+      _ => null,
+    };
+    if (near != null && near.extentBefore < near.viewportDimension) {
+      _nearTop();
     }
     // A code block's sideways scroll tells nobody where its text went: what
     // shows of a selection there would sit where it was.
@@ -215,26 +231,76 @@ class _TranscriptState extends State<Transcript> {
     return _follower.onNotification(n);
   }
 
-  void _keepPlace(List<Object> entries, {required bool filling}) {
-    if (widget.onTop == null && !filling || entries.isEmpty) return;
-    final was = _first;
-    final first = _first = _key(entries.first);
-    if (was == null || was == first || !_follower.scroll.hasClients) return;
+  /// Keeps what shows where it is as [laidOut] comes in with entries
+  /// above those laid out at the last build (a page, or the chat filling
+  /// in): the first of those still there ends as far down the screen as it
+  /// did (its bottom, which its gap above doesn't move), in the layout
+  /// that adds them (BottomFollower.shift), not a frame after it.
+  void _keepPlace(List<Object> laidOut, {required bool header}) {
+    final was = _laidKeys;
+    final wasHeader = _hadHeader;
+    final keys = [for (final e in laidOut) _key(e)];
+    _laidKeys = keys;
+    _hadHeader = header;
+    if (was.isEmpty || keys.isEmpty) return;
+    if (keys.first == was.first && header == wasHeader) return;
     // A glide to the bottom keeps its own place, from the bottom.
     if (_follower.following ||
         _follower.gliding ||
-        !entries.any((e) => _key(e) == was)) {
+        !_follower.scroll.hasClients) {
       return;
     }
-    final max = _follower.scroll.position.maxScrollExtent;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_follower.scroll.hasClients) return;
-      final q = _follower.scroll.position;
-      q.jumpTo(
-        (q.pixels + q.maxScrollExtent - max).clamp(0, q.maxScrollExtent),
-      );
-    });
+    final column = _column.currentContext?.findRenderObject();
+    if (column is! RenderFlex) return;
+    final index = {for (final (i, k) in keys.indexed) k: i};
+    for (final (i, k) in was.indexed) {
+      final at = index[k];
+      if (at == null) continue; // joined the run above it
+      // Its bottom: the top of the entry after it (the same one after it
+      // still), or its own top if it was the last.
+      final row = i + (wasHeader ? 1 : 0);
+      final next = topOfChild(column, row + 1) != null ? 1 : 0;
+      final top = topOfChild(column, row + next);
+      if (top == null) return;
+      final to = at + (header ? 1 : 0) + next;
+      _follower.shift = () => switch (topOfChild(column, to)) {
+        final now? => now - top,
+        null => 0,
+      };
+      return;
+    }
   }
+
+  /// A page that came in above what's built builds over the next frames,
+  /// as the chat fills in when it opens: the first frame only what it was
+  /// and [Transcript.moreEntries] more. Not while a find looks or a pin is
+  /// gone to, which need all of it.
+  void _pageFills(List<Object> entries) {
+    final was = _firstKey;
+    _firstKey = entries.isEmpty ? null : _key(entries.first);
+    if (_tail != null || was == null || was == _firstKey) return;
+    if (_goTo != null) return;
+    if ((widget.chat.find.query ?? '').isNotEmpty) return;
+    final at = entries.indexWhere((e) => _key(e) == was);
+    if (at > Transcript.moreEntries) {
+      _tail = entries.length - at + Transcript.moreEntries;
+    }
+  }
+
+  /// The user scrolled to within a screen of the top: the page before.
+  /// Not while the list fills in (its top isn't built yet).
+  void _nearTop() {
+    if (_tail != null) return;
+    if (widget.onTop case final top?) return top();
+    if (_pages && !widget.chat.olderFailed) {
+      unawaited(widget.daemon.loadOlder(widget.chat));
+    }
+  }
+
+  /// Whether this is a chat's transcript that takes its own pages: the
+  /// Mac's (the phone's has [Transcript.onTop]).
+  bool get _pages =>
+      widget.items == null && widget.onTop == null && widget.daemon.pages;
 
   /// An entry's key; a message's echo keeps the key of the message shown
   /// as it was on its way (ChatState.echoes).
@@ -416,13 +482,15 @@ class _TranscriptState extends State<Transcript> {
     }
   }
 
-  /// Keeps where the chat is left (see [ChatState.kept]).
+  /// Keeps where the chat is left (see [ChatState.kept]); left at its
+  /// bottom, a long one goes back to its recent part.
   void _keep(ChatState chat) {
     if (widget.items != null || _restore != null) return; // not there yet
     final s = _follower.scroll;
     chat.kept = _follower.following || _follower.gliding || !s.hasClients
         ? null
         : s.position.extentAfter;
+    if (chat.kept == null) widget.daemon.leftAtBottom(chat);
   }
 
   /// Puts the list back [_restore] from its bottom once that much is
@@ -477,6 +545,8 @@ class _TranscriptState extends State<Transcript> {
     if (old.chat != widget.chat) {
       _keep(old.chat);
       _restore = null;
+      _laidKeys = const [];
+      _firstKey = null;
       if (widget.items == null) _follower.follow();
       _openAtKept();
       if (_follower.following || _restore != null) {
@@ -615,6 +685,12 @@ class _TranscriptState extends State<Transcript> {
   final _marks = TextMarks();
   int _shownAsk = -1;
   bool _roomAbove = false; // the list starts below the find bar
+
+  /// What the find bar covers of the transcript's top: more with its line
+  /// saying it looks in what's loaded (FindBar.loadAll).
+  double get _findBarHeight => widget.chat.older > 0 || widget.chat.loadingOlder
+      ? FindBar.withNote
+      : FindBar.height;
 
   /// Draws the find's current match as such and, if it was asked for,
   /// brings it into view.
@@ -759,10 +835,14 @@ class _TranscriptState extends State<Transcript> {
   }
 
   /// Goes to the message of [id] from the pins' menu, or to the chat's
-  /// start for '': the phone first takes the pages it's on.
+  /// start for '': first the pages up to it, if it isn't loaded.
   Future<void> _pick(String id) async {
-    if (widget.onTop != null) {
-      await loadPinned(widget.daemon, widget.chat, all: id.isEmpty);
+    if (widget.items == null) {
+      await widget.daemon.loadOlder(
+        widget.chat,
+        through: [if (id.isNotEmpty) id],
+        all: id.isEmpty,
+      );
     }
     if (!mounted) return;
     setState(() {
@@ -789,7 +869,7 @@ class _TranscriptState extends State<Transcript> {
     final i = _laidOut.indexWhere((e) => e is Item && e.id == id);
     final column = _column.currentContext?.findRenderObject();
     final boxes = column is RenderFlex ? column.getChildrenAsList() : null;
-    final at = i + (widget.header == null ? 0 : 1);
+    final at = i + (_hadHeader ? 1 : 0);
     if (i < 0 || boxes == null || at >= boxes.length) {
       // Not laid out yet (an older page coming in): a frame or two more.
       if (++_goTries < 4) {
@@ -819,6 +899,15 @@ class _TranscriptState extends State<Transcript> {
     // What this app sent shows at once, after the items, until its echo.
     final entries = _entries(widget.items ?? [...chat.items, ...chat.sending]);
     final query = widget.items == null ? chat.find.query ?? '' : '';
+    final header =
+        widget.header ??
+        (_pages && chat.older > 0
+            ? EarlierMessages(
+                chat,
+                onRetry: () => unawaited(widget.daemon.loadOlder(chat)),
+              )
+            : null);
+    _pageFills(entries);
     // A find looks in all of it, and needs its place to go to it: what's
     // still to come in comes now. Not under a press (_grow).
     if (query.isNotEmpty && !_down) _tail = null;
@@ -831,8 +920,8 @@ class _TranscriptState extends State<Transcript> {
     } else if (widget.items != null || chat.loaded) {
       _tail = null;
     }
-    _keepPlace(entries.sublist(from), filling: tail != null);
     _laidOut = entries.sublist(from);
+    _keepPlace(_laidOut, header: header != null);
     if (_goTo != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _go());
     }
@@ -843,7 +932,7 @@ class _TranscriptState extends State<Transcript> {
       if (pinned.isNotEmpty)
         for (final (i, e) in _laidOut.indexed)
           if (e is Item && pinned.contains(e.id))
-            e.id: i + (widget.header == null ? 0 : 1),
+            e.id: i + (header == null ? 0 : 1),
     };
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -926,7 +1015,7 @@ class _TranscriptState extends State<Transcript> {
                         key: _column,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (widget.header case final h?)
+                          if (header case final h?)
                             Padding(
                               padding: chatSides(context, box.maxWidth),
                               child: h,
@@ -940,7 +1029,7 @@ class _TranscriptState extends State<Transcript> {
                               top: _gap(
                                 entries,
                                 i,
-                                header: widget.header != null,
+                                header: header != null,
                                 phone: TouchTargets.of(context),
                               ),
                               width: box.maxWidth,

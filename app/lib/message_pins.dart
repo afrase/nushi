@@ -32,7 +32,7 @@ bool canPinMessage(Daemon d, ChatState chat, Item item, {required bool live}) =>
     !chat.sending.contains(item);
 
 /// [chat]'s pins as the rail lists them, in the transcript's order: those
-/// on pages not taken yet first (the phone's, which are older), then those
+/// on pages not loaded yet first (which are older), then those
 /// among its items. A pin whose message is gone isn't listed.
 List<PinEntry> pinEntries(ChatState chat) {
   final ids = chat.pinnedMessages.toSet();
@@ -76,19 +76,9 @@ Future<void> toggleMessagePin(Daemon d, ChatState chat, Item item) async {
 }
 
 /// Takes the pages of [chat]'s items its pins are on, or with [all] every
-/// page: the phone has only the latest at first.
-Future<void> loadPinned(Daemon d, ChatState chat, {bool all = false}) async {
-  bool missing() {
-    final have = {for (final it in chat.items) it.id};
-    return chat.pinnedMessages.any((id) => !have.contains(id));
-  }
-
-  while (chat.older > 0 && (all || missing())) {
-    final older = chat.older;
-    await d.loadOlder(chat);
-    if (chat.older == older) return; // it failed, or a page was on its way
-  }
-}
+/// page: the phone's rail has them laid out before its menu opens.
+Future<void> loadPinned(Daemon d, ChatState chat, {bool all = false}) =>
+    d.loadOlder(chat, through: chat.pinnedMessages, all: all);
 
 /// A message's first line, as a pin without a title (an older daemon's)
 /// is listed: without the Markdown that opens a heading, a quote or a
