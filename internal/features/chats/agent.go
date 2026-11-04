@@ -163,23 +163,30 @@ func initialize(ctx context.Context, k *kind, h acp.Client, log *slog.Logger) (A
 		log.Warn("agent not started", "err", err)
 		return nil, nil, fmt.Errorf("start agent: %w", err)
 	}
-	caps := &acp.ClientCapabilities{
-		Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
-		Meta:        k.InitMeta,
-	}
-	if k.SubagentSessions {
-		caps.Subagents = &acp.SubagentCapabilities{}
-	}
-	init, err := agent.Initialize(ctx, &acp.InitializeRequest{
-		ProtocolVersion:    acp.LatestProtocolVersion,
-		ClientCapabilities: caps,
-		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
-	})
+	init, err := agent.Initialize(ctx, InitializeRequest(k.HarnessInfo))
 	if err != nil {
 		_ = agent.Close() // as above
 		return nil, nil, err
 	}
 	return agent, init, nil
+}
+
+// InitializeRequest is what Nushi first sends an agent of info's: forms
+// it can answer, info's _meta, subagent sessions when info has them, and
+// Nushi's name. claude-record sends the same.
+func InitializeRequest(info model.HarnessInfo) *acp.InitializeRequest {
+	caps := &acp.ClientCapabilities{
+		Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}},
+		Meta:        info.InitMeta,
+	}
+	if info.SubagentSessions {
+		caps.Subagents = &acp.SubagentCapabilities{}
+	}
+	return &acp.InitializeRequest{
+		ProtocolVersion:    acp.LatestProtocolVersion,
+		ClientCapabilities: caps,
+		ClientInfo:         &acp.Implementation{Name: "nushi", Title: "Nushi"},
+	}
 }
 
 // useLocked makes an opened session the chat's, on a new agent, whose

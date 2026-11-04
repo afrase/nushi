@@ -15,6 +15,7 @@ import (
 	acp "github.com/afrase/acp-go/unstable"
 
 	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/features/chats"
 )
 
 // player plays a client script on a connection.
@@ -252,12 +253,7 @@ func (p *player) build(s *step) (string, any, error) {
 		if string(s.Initialize) != "{}" {
 			return "initialize", s.Initialize, nil
 		}
-		caps := &acp.ClientCapabilities{Elicitation: &acp.ElicitationCapabilities{Form: &acp.ElicitationFormCapabilities{}}, Meta: claude.Harness{}.Info().InitMeta}
-		if (claude.Harness{}).Info().SubagentSessions {
-			caps.Subagents = &acp.SubagentCapabilities{}
-		}
-		return "initialize", acp.InitializeRequest{ProtocolVersion: acp.LatestProtocolVersion, ClientCapabilities: caps,
-			ClientInfo: &acp.Implementation{Name: "nushi", Title: "Nushi"}}, nil
+		return "initialize", chats.InitializeRequest(claude.Harness{}.Info()), nil
 	case "new":
 		return "session/new", acp.NewSessionRequest{Cwd: p.cwd, MCPServers: servers, Meta: meta}, nil
 	case "load":
