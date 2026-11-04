@@ -505,7 +505,8 @@ class _JiraViewState extends State<JiraView> {
               child: sites == null
                   ? const SizedBox()
                   : site == null
-                  ? NoSite(widget.daemon)
+                  // With an error, listing the sites failed.
+                  ? NoSite(widget.daemon, error: _error, onRetry: _loadSites)
                   : details != null
                   ? BackSwipe(
                       onBack: _back,

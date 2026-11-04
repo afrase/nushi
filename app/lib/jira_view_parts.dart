@@ -63,14 +63,34 @@ Color statusColor(Tokens t, String category) => switch (category) {
   _ => t.textMuted,
 };
 
+/// No site to show: where to add one, or why the sites couldn't be listed
+/// ([error]), with Try again ([onRetry]).
 class NoSite extends StatelessWidget {
-  const new(this.daemon, {super.key});
+  const new(this.daemon, {super.key, this.error, this.onRetry});
 
   final Daemon daemon;
+  final String? error;
+  final Future<void> Function()? onRetry;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
+    if (error case final e?) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 8,
+          children: [
+            Text(
+              e,
+              textAlign: TextAlign.center,
+              style: theme.ui(theme.t.crashed),
+            ),
+            RunButton(label: 'Try again', run: onRetry),
+          ],
+        ),
+      );
+    }
     return Center(
       child: Row(
         mainAxisSize: MainAxisSize.min,

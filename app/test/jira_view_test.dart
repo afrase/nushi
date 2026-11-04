@@ -697,6 +697,28 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('sites that could not be listed say why, with Try again, '
+      'not that there are none', (tester) async {
+    var refuse = true;
+    final (_, d) = await openView(
+      tester,
+      more: (input) => input is ListJiraSitesRequest && refuse
+          ? throw StateError('the keychain is locked')
+          : null,
+    );
+    expect(find.text('Bad state: the keychain is locked'), findsOneWidget);
+    expect(
+      find.textContaining('Settings › Jira', findRichText: true),
+      findsNothing,
+    );
+    refuse = false;
+    await tester.tap(find.text('Try again'));
+    await tester.pumpAndSettle();
+    expect(find.text('Bad state: the keychain is locked'), findsNothing);
+    expect(find.text('Log in with a passkey'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
   for (final (name, tokens) in [
     ('dark', Tokens.dark),
     ('light', Tokens.light),
