@@ -135,6 +135,15 @@ Future<void> _openList(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// The band behind the pins' chip is the page's down to past the chip, so
+/// no line shows half-hidden beside it.
+void _backdropUnder(WidgetTester tester) {
+  final chip = tester.getRect(find.byType(PinsChip));
+  final band = tester.getRect(find.byType(PinsBackdrop));
+  expect(band.top, lessThanOrEqualTo(chip.top));
+  expect(band.bottom - PinsBackdrop.fade, greaterThanOrEqualTo(chip.bottom));
+}
+
 void main() {
   setUpAll(loadFonts);
 
@@ -310,6 +319,9 @@ void main() {
       // The list inside the window, beside the chip.
       final menu = tester.getRect(_row('Start of the chat'));
       expect(menu.right, lessThan(width));
+      // Where the chip stands over the text, the page's band behind it.
+      expect(find.byType(PinsBackdrop), width < 1000 ? findsOne : findsNothing);
+      if (width < 1000) _backdropUnder(tester);
       await expectLater(
         find.byType(NushiApp),
         matchesGoldenFile(
@@ -368,6 +380,7 @@ void main() {
       expect(pages, ['u2']);
       expect(_row('Make the relay restart cleanly'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      _backdropUnder(tester);
       await expectLater(
         find.byType(PhoneApp),
         matchesGoldenFile('goldens/message_pins_phone_${b.name}.png'),

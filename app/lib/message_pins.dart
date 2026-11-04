@@ -157,6 +157,42 @@ class PinFlash extends StatelessWidget {
   );
 }
 
+/// The band behind the pins' chip where it stands over the text: the page's
+/// color down to just under the chip, then fading out over its last [fade],
+/// so a line scrolling under it goes rather than showing half-hidden beside
+/// the chip.
+class PinsBackdrop extends StatelessWidget {
+  const new({super.key});
+
+  /// How tall the band's fading edge is.
+  static const fade = 12.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = NushiTheme.of(context).t.base;
+    return IgnorePointer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: ColoredBox(color: base)),
+          SizedBox(
+            height: fade,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [base, base.withValues(alpha: 0)],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The chip over the transcript's top left while the chat has pinned
 /// messages: a pin and their [count]. It opens their list: "Start of the
 /// chat" first, then each of [pinned] in the transcript's order, its first

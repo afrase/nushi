@@ -110,9 +110,18 @@ const _scrollbarEdge = 16.0;
 const double _findBarWidth = 340.0 + NushiTheme.gutter;
 const double _findBarHeight = 48.0;
 
-/// The room the pins' chip takes at the transcript's top: what's gone to
-/// from its list lands below it.
-const double _pinsRoom = 40.0;
+/// The room the pins' chip takes at the transcript's top, the chip and a
+/// little under it (on the phone it's a touch target, 44 high): what's gone
+/// to from its list lands below it.
+double _pinsRoom(BuildContext context) => TouchTargets.of(context) ? 56 : 40;
+
+/// About the widest the pins' chip is (a pin and two digits), and the gap
+/// it wants from the text beside it.
+const double _pinsChipWidth = 64.0;
+
+/// Where the pins' chip stands from the transcript's left edge.
+double _pinsLeft(BuildContext context) =>
+    TouchTargets.of(context) ? 12 : NushiTheme.gutter;
 
 /// How long a message gone to from the pins' list stays tinted.
 const _flashFor = Duration(milliseconds: 1400);
@@ -723,7 +732,7 @@ class _TranscriptState extends State<Transcript> {
     final box = boxes[at];
     final to = RenderAbstractViewport.of(box).getOffsetToReveal(box, 0).offset;
     _follower.hold(
-      (to - _pinsRoom + 8).clamp(p.minScrollExtent, p.maxScrollExtent),
+      (to - _pinsRoom(context) + 8).clamp(p.minScrollExtent, p.maxScrollExtent),
     );
     _flashTimer?.cancel();
     setState(() => _flash = id);
@@ -826,7 +835,7 @@ class _TranscriptState extends State<Transcript> {
                         top: _roomAbove
                             ? _findBarHeight + 8
                             : pins > 0
-                            ? _pinsRoom
+                            ? _pinsRoom(context)
                             : 2,
                         bottom: 14,
                       ),
@@ -884,9 +893,22 @@ class _TranscriptState extends State<Transcript> {
                 },
               ),
             ),
+          // Where the chip stands over the text's column (a narrow pane,
+          // the phone), what scrolls under it fades out behind a band of
+          // the page, so no line sits half-hidden under the chip.
+          if (pins > 0 &&
+              chatSides(context, box.maxWidth).left <
+                  _pinsLeft(context) + _pinsChipWidth)
+            Positioned(
+              left: 0,
+              right: _scrollbarEdge,
+              top: 0,
+              height: _pinsRoom(context) + PinsBackdrop.fade,
+              child: const PinsBackdrop(),
+            ),
           if (pins > 0)
             Positioned(
-              left: TouchTargets.of(context) ? 12 : NushiTheme.gutter,
+              left: _pinsLeft(context),
               top: 8,
               child: PinsChip(
                 chat: chat,
