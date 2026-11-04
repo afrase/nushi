@@ -98,6 +98,8 @@ func TestOrigins(t *testing.T) {
 		"https://xn--bcher-kva.example":  "https://xn--bcher-kva.example",
 		"https://relay.example.com:0443": "https://relay.example.com", // as a browser reads the port
 		"https://relay:08443":            "https://relay:8443",
+		"https://[::ffff:1.2.3.4]":       "https://[::ffff:102:304]", // as a browser writes it
+		"https://[::FFFF:0:0]:8443":      "https://[::ffff:0:0]:8443",
 	} {
 		if got, err := Origin(in); err != nil || got != want {
 			t.Errorf("Origin(%q) = %q, %v; want %q", in, got, err, want)

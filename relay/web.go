@@ -56,7 +56,7 @@ func Origin(s string) (string, error) {
 		return "", errors.New("the origin must be https, except on this machine (localhost)")
 	}
 	if ipErr == nil {
-		host = ip.String()
+		host = ipHost(ip)
 	}
 	port := 0
 	if p := u.Port(); p != "" {
@@ -71,6 +71,17 @@ func Origin(s string) (string, error) {
 		host = "[" + host + "]"
 	}
 	return u.Scheme + "://" + host, nil
+}
+
+// ipHost is ip as a browser writes it in an origin (the URL standard's
+// form): Go's, except that an IPv4-mapped IPv6 address ends in two hex
+// pieces, not a dotted quad (::ffff:102:304, not ::ffff:1.2.3.4).
+func ipHost(ip netip.Addr) string {
+	if !ip.Is4In6() {
+		return ip.String()
+	}
+	b := ip.As16()
+	return fmt.Sprintf("::ffff:%x:%x", uint16(b[12])<<8|uint16(b[13]), uint16(b[14])<<8|uint16(b[15]))
 }
 
 // hostName checks that host is a DNS name of letters, digits and hyphens:
