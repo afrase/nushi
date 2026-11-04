@@ -168,11 +168,13 @@ class _PressableState extends State<Pressable> {
   }
 }
 
-/// The ring a focused control wears, over its border.
-BoxDecoration? focusRing(Tokens t, ControlLook look) => look.focus
+/// The ring a focused control wears, over its border ([radius]: a
+/// control's corners unless given).
+BoxDecoration? focusRing(Tokens t, ControlLook look, {BorderRadius? radius}) =>
+    look.focus
     ? BoxDecoration(
         border: Border.all(color: t.focus, width: 2),
-        borderRadius: BorderRadius.circular(NushiTheme.control),
+        borderRadius: radius ?? BorderRadius.circular(NushiTheme.control),
       )
     : null;
 
@@ -192,6 +194,39 @@ enum ButtonKind {
 
   /// One that deletes or loses something: red text, outlined.
   destructive,
+}
+
+/// The ink of a button of [kind].
+Color _fg(Tokens t, ButtonKind kind) => switch (kind) {
+  ButtonKind.primary => t.onAccent,
+  ButtonKind.secondary => t.text,
+  ButtonKind.destructive => t.crashed,
+};
+
+/// A button's fill and border, as [look] has it, rounded by [r]: the
+/// accent's fill for a primary one, else outlined.
+BoxDecoration _buttonBox(
+  Tokens t,
+  ButtonKind kind,
+  ControlLook look,
+  BorderRadius r,
+) {
+  final primary = kind == ButtonKind.primary;
+  return BoxDecoration(
+    color: primary
+        ? (look.pressed
+              ? t.accentPressed
+              : look.hover
+              ? Color.alphaBlend(t.onAccent.withValues(alpha: 0.12), t.accent)
+              : t.accent)
+        : (look.hover
+              ? Color.alphaBlend(_tint(t, look), t.fieldFill)
+              : t.fieldFill),
+    border: primary
+        ? null
+        : Border.all(color: look.hover ? t.fieldBorderHover : t.fieldBorder),
+    borderRadius: r,
+  );
 }
 
 /// A button: [label], an optional leading [icon], a shortcut [hint] after
@@ -231,11 +266,7 @@ class Button extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final primary = kind == ButtonKind.primary;
-    final fg = switch (kind) {
-      ButtonKind.primary => t.onAccent,
-      ButtonKind.secondary => t.text,
-      ButtonKind.destructive => t.crashed,
-    };
+    final fg = _fg(t, kind);
     final style = theme.ui(fg, weight: primary ? FontWeight.w500 : null);
     final touch = TouchTargets.of(context);
     final lines = wrap && touch ? 3 : 1;
@@ -253,25 +284,11 @@ class Button extends StatelessWidget {
           padding: lines > 1
               ? const EdgeInsets.symmetric(horizontal: 10, vertical: 5)
               : const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: primary
-                ? (look.pressed
-                      ? t.accentPressed
-                      : look.hover
-                      ? Color.alphaBlend(
-                          t.onAccent.withValues(alpha: 0.12),
-                          t.accent,
-                        )
-                      : t.accent)
-                : (look.hover
-                      ? Color.alphaBlend(_tint(t, look), t.fieldFill)
-                      : t.fieldFill),
-            border: primary
-                ? null
-                : Border.all(
-                    color: look.hover ? t.fieldBorderHover : t.fieldBorder,
-                  ),
-            borderRadius: BorderRadius.circular(NushiTheme.control),
+          decoration: _buttonBox(
+            t,
+            kind,
+            look,
+            BorderRadius.circular(NushiTheme.control),
           ),
           foregroundDecoration: focusRing(t, look),
           // Centred when its parent stretches it (the sidebar's New chat);
@@ -342,38 +359,13 @@ class SplitButton extends StatelessWidget {
     Widget child,
   ) {
     final t = NushiTheme.of(context).t;
-    final primary = kind == ButtonKind.primary;
     return _faded(
       look,
       Container(
         height: controlHeight,
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: primary
-              ? (look.pressed
-                    ? t.accentPressed
-                    : look.hover
-                    ? Color.alphaBlend(
-                        t.onAccent.withValues(alpha: 0.12),
-                        t.accent,
-                      )
-                    : t.accent)
-              : (look.hover
-                    ? Color.alphaBlend(_tint(t, look), t.fieldFill)
-                    : t.fieldFill),
-          border: primary
-              ? null
-              : Border.all(
-                  color: look.hover ? t.fieldBorderHover : t.fieldBorder,
-                ),
-          borderRadius: r,
-        ),
-        foregroundDecoration: look.focus
-            ? BoxDecoration(
-                border: Border.all(color: t.focus, width: 2),
-                borderRadius: r,
-              )
-            : null,
+        decoration: _buttonBox(t, kind, look, r),
+        foregroundDecoration: focusRing(t, look, radius: r),
         // As wide as its content, whatever room it's given.
         child: Center(widthFactor: 1, child: child),
       ),
@@ -385,11 +377,7 @@ class SplitButton extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final primary = kind == ButtonKind.primary;
-    final fg = switch (kind) {
-      ButtonKind.primary => t.onAccent,
-      ButtonKind.secondary => t.text,
-      ButtonKind.destructive => t.crashed,
-    };
+    final fg = _fg(t, kind);
     const round = Radius.circular(NushiTheme.control);
     return Row(
       mainAxisSize: MainAxisSize.min,
