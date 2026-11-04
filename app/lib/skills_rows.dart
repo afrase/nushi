@@ -5,6 +5,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/skills_list.dart';
+import 'package:nushi/skills_shared.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -131,27 +132,6 @@ class _SkillRow extends StatelessWidget {
   final SkillsList list;
   final Skill skill;
 
-  Future<void> _delete(BuildContext context) async {
-    final ok = await confirm(
-      context,
-      'Delete ${skill.name}?',
-      'Its folder goes to the Trash:\n${tildePath(skill.path)}',
-      'Move to Trash',
-      destructive: true,
-    );
-    if (!ok || !context.mounted) return;
-    await tryOrShow(context, () async {
-      await list.daemon.client.trashSkill(
-        TrashSkillRequest(
-          folder: list.folder,
-          path: skill.path,
-          agent: list.agent,
-        ),
-      );
-      await list.changed();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -206,7 +186,11 @@ class _SkillRow extends StatelessWidget {
               'Show in Finder',
               onPick: () => revealInFinder(skill.path),
             ),
-            if (deletable) MenuEntry('Delete…', onPick: () => _delete(context)),
+            if (deletable)
+              MenuEntry(
+                'Delete…',
+                onPick: () => deleteSkill(context, list, skill),
+              ),
           ],
         ),
       ],

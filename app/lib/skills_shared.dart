@@ -10,6 +10,31 @@ import 'package:nushi/skills_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// Asks to move skill [s]'s folder to the Trash ([more], a paragraph
+/// after where it is: what else goes), then has the daemon move it.
+Future<void> deleteSkill(
+  BuildContext context,
+  SkillsList list,
+  Skill s, {
+  String more = '',
+}) async {
+  final ok = await confirm(
+    context,
+    'Delete ${s.name}?',
+    'Its folder goes to the Trash:\n${tildePath(s.path)}'
+        '${more.isEmpty ? '' : '\n\n$more'}',
+    'Move to Trash',
+    destructive: true,
+  );
+  if (!ok || !context.mounted) return;
+  await tryOrShow(context, () async {
+    await list.daemon.client.trashSkill(
+      TrashSkillRequest(folder: list.folder, path: s.path, agent: list.agent),
+    );
+    await list.changed();
+  });
+}
+
 /// The shared skills (ADR 0052): the project's .agents/skills (here and in
 /// the folders above it) and yours in ~/.agents/skills, which several
 /// agents read. Each row names the agents that load it; its switch is the
@@ -61,26 +86,14 @@ class _SharedRow extends StatelessWidget {
         if (a.via.isNotEmpty)
           '${agentTitle(a.agent)}’s link ${tildePath(a.via)}',
     ];
-    final ok = await confirm(
+    await deleteSkill(
       context,
-      'Delete ${skill.name}?',
-      'Its folder goes to the Trash:\n${tildePath(skill.path)}\n\n'
+      list,
+      skill,
+      more:
           '${losing.isEmpty ? 'No agent loads it here.' : '$losing lose it.'}'
           '${links.isEmpty ? '' : '\n${listed(links)} go too.'}',
-      'Move to Trash',
-      destructive: true,
     );
-    if (!ok || !context.mounted) return;
-    await tryOrShow(context, () async {
-      await list.daemon.client.trashSkill(
-        TrashSkillRequest(
-          folder: list.folder,
-          path: skill.path,
-          agent: list.agent,
-        ),
-      );
-      await list.changed();
-    });
   }
 
   Future<void> _link(BuildContext context) async {
