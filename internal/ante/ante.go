@@ -126,27 +126,43 @@ func version(bin string) (string, error) {
 		return "", fmt.Errorf("couldn't run %s --version: %w", bin, err)
 	}
 	v := strings.TrimPrefix(strings.TrimSpace(string(out)), "ante ")
-	got, want := numbers(v), numbers(Min)
-	switch {
-	case got == nil:
-		return "", fmt.Errorf("couldn't read ante's version from %q", out)
-	case got[0] != want[0] || got[1] < want[1] || got[1] == want[1] && got[2] < want[2]:
-		return "", fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, Min)
-	case !slices.Contains(Tested, v):
+	if err := check(v); err != nil {
+		return "", err
+	}
+	if !slices.Contains(Tested, v) {
 		warnf("ante %s isn't one the bridge was run with: %s", v, strings.Join(Tested, ", "))
 	}
 	return v, nil
 }
 
-// numbers reads a version's three numbers; nil if it hasn't three.
+// check refuses a version older than Min, or one it can't read; a newer
+// one, of any major, is tried (ADR 0030).
+func check(v string) error {
+	got, want := numbers(v), numbers(Min)
+	switch {
+	case got == nil:
+		return fmt.Errorf("couldn't read ante's version from %q", v)
+	case slices.Compare(got, want) < 0:
+		return fmt.Errorf("Ante %s is older than the %s Nushi needs: run `ante update`", v, Min)
+	}
+	return nil
+}
+
+// numbers reads a version's three numbers, a prerelease's tag left out;
+// nil if it hasn't three.
 func numbers(v string) []int {
+	v, _, _ = strings.Cut(v, "-")
 	parts := strings.Split(v, ".")
 	if len(parts) != 3 {
 		return nil
 	}
 	out := make([]int, 3)
 	for i, p := range parts {
-		out[i], _ = strconv.Atoi(p)
+		n, err := strconv.Atoi(p)
+		if err != nil {
+			return nil
+		}
+		out[i] = n
 	}
 	return out
 }
