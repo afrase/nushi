@@ -217,6 +217,7 @@ class _Footer extends StatelessWidget {
       required bool open,
     }) => Tap(
       selected: open,
+      fill: open ? t.accentSoft : null, // as the open chat's row
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       child: Row(
@@ -299,6 +300,9 @@ class _ChatRowState extends State<_ChatRow> {
     final chat = widget.chat;
     final daemon = widget.daemon;
     final selected = daemon.selectedId == chat.id;
+    // Under Settings, Jira or GitHub it stays marked, but quieter: the open
+    // view's row is the one in the accent.
+    final shown = selected && daemon.chatShows;
     final movable =
         widget.movable ?? (Widget child, {required bool enabled}) => child;
     return ListenableBuilder(
@@ -319,7 +323,11 @@ class _ChatRowState extends State<_ChatRow> {
               onTap: () => daemon.select(chat.id),
               onSecondaryTapUp: (d) => open(d.localPosition),
               selected: selected,
-              fill: chat.color?.tint(t, selected: selected),
+              // The open chat in the accent's soft fill: the plain selected
+              // gray is hardly apart from the sidebar's own.
+              fill:
+                  chat.color?.tint(t, selected: selected) ??
+                  (shown ? t.accentSoft : null),
               padding: EdgeInsets.symmetric(
                 horizontal: 8,
                 vertical: _renaming ? 1 : 5,
@@ -354,6 +362,7 @@ class _ChatRowState extends State<_ChatRow> {
                             overflow: TextOverflow.ellipsis,
                             style: theme.ui(
                               chat.archived ? t.textSecondary : t.text,
+                              weight: shown ? FontWeight.w600 : null,
                             ),
                           ),
                   ),

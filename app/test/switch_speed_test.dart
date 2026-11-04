@@ -67,7 +67,7 @@ void main() {
     await tester.tap(_row('Beta long chat'));
     await tester.pump();
     final t = NushiTheme.of(tester.element(find.byType(Sidebar))).t;
-    expect(_rowColor(tester, 'Beta long chat'), t.selected);
+    expect(_rowColor(tester, 'Beta long chat'), t.accentSoft);
     expect(
       find.descendant(
         of: find.byType(ChatHeader),
@@ -103,7 +103,7 @@ void main() {
     await press.up();
     await tester.pump();
     expect(d.selectedId, 'b');
-    expect(_rowColor(tester, 'Beta long chat'), t.selected);
+    expect(_rowColor(tester, 'Beta long chat'), t.accentSoft);
     await tester.pumpAndSettle();
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
