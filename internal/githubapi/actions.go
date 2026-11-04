@@ -34,8 +34,7 @@ func (c *Client) RerunFailed(ctx context.Context, repo string, jobs []int64) ([]
 		}
 		seen[j.RunID] = true
 		path := "/repos/{}/{}/actions/runs/{}/rerun-failed-jobs"
-		if _, err := c.send(ctx, http.MethodPost, path, c.rest+fill(path, []string{owner, name, strconv.FormatInt(j.RunID, 10)}),
-			"core", []byte("{}"), true); err != nil {
+		if _, err := c.call(ctx, http.MethodPost, path, fill(path, []string{owner, name, strconv.FormatInt(j.RunID, 10)}), []byte("{}")); err != nil {
 			var api *APIError
 			if errors.As(err, &api) && api.Status == http.StatusForbidden && strings.Contains(strings.ToLower(api.Message), "not") {
 				return runs, errors.New("GitHub won't re-run it with this token (it needs the actions write permission): " + api.Message)

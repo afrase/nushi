@@ -196,6 +196,12 @@ type answer struct {
 	body   []byte
 }
 
+// call is a REST call of path (filled; what, its template) in the core
+// bucket; anything but a GET is a write, through the gate's write limits.
+func (c *Client) call(ctx context.Context, method, what, path string, payload []byte) (*answer, error) {
+	return c.send(ctx, method, what, c.rest+path, "core", payload, method != http.MethodGet)
+}
+
 // send makes a request through the gate and returns a 2xx (or a 304)
 // answer, read whole while the request holds its place; any other is an
 // error. what is the path template or the operation, the only thing of

@@ -59,7 +59,7 @@ func (c *Client) BranchHead(ctx context.Context, repo, branch string) (string, e
 	if err != nil {
 		return "", err
 	}
-	a, err := c.send(ctx, http.MethodGet, "/repos/{}/{}/git/ref/heads/{}", c.rest+path, "core", nil, false)
+	a, err := c.call(ctx, http.MethodGet, "/repos/{}/{}/git/ref/heads/{}", path, nil)
 	if err != nil {
 		return "", err
 	}
@@ -85,7 +85,7 @@ func (c *Client) DeleteBranch(ctx context.Context, repo, branch string) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.send(ctx, http.MethodDelete, "/repos/{}/{}/git/refs/heads/{}", c.rest+path, "core", nil, true)
+	_, err = c.call(ctx, http.MethodDelete, "/repos/{}/{}/git/refs/heads/{}", path, nil)
 	var api *APIError
 	if errors.As(err, &api) && api.Status == http.StatusUnprocessableEntity && strings.Contains(api.Message, "does not exist") {
 		return ErrNotFound
@@ -104,7 +104,7 @@ func (c *Client) CreateBranch(ctx context.Context, repo, branch, sha string) err
 	}
 	payload, _ := json.Marshal(map[string]string{"ref": "refs/heads/" + branch, "sha": sha})
 	path := "/repos/{}/{}/git/refs"
-	_, err = c.send(ctx, http.MethodPost, path, c.rest+fill(path, []string{owner, name}), "core", payload, true)
+	_, err = c.call(ctx, http.MethodPost, path, fill(path, []string{owner, name}), payload)
 	return err
 }
 

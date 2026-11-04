@@ -31,12 +31,12 @@ const (
 // run's): GitHub answers with a link, good for a minute, to the plain
 // text, which is fetched without the token.
 func (c *Client) JobLog(ctx context.Context, repo string, job int64) (string, error) {
-	if _, _, err := SplitRepo(repo); err != nil {
+	owner, name, err := SplitRepo(repo)
+	if err != nil {
 		return "", err
 	}
 	path := "/repos/{}/{}/actions/jobs/{}/logs"
-	owner, name, _ := strings.Cut(repo, "/")
-	a, err := c.send(ctx, http.MethodGet, path, c.rest+fill(path, []string{owner, name, strconv.FormatInt(job, 10)}), "core", nil, false)
+	a, err := c.call(ctx, http.MethodGet, path, fill(path, []string{owner, name, strconv.FormatInt(job, 10)}), nil)
 	if err != nil {
 		return "", err
 	}
