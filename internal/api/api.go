@@ -296,7 +296,9 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 			}
 			opts.Branch, opts.From = co.Branch, co.From
 			agent := s.agent(req.Msg.Agent)
-			opts.Check = func(folder string) error { return s.Trust.Head(agent, folder, co.Fork, req.Msg.HeadRunsKey) }
+			opts.Check = func(folder string) error {
+				return s.Trust.Head(agent, folder, git.HeadCommit(ctx, folder), co.Fork, req.Msg.HeadRunsKey)
+			}
 		}
 	}
 	id, err := s.Chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, opts)

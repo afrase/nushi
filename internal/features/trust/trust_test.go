@@ -58,25 +58,28 @@ func TestTrustKeepsWhatTheCardShowed(t *testing.T) {
 // back for the card, and a start again with its key (in another worktree
 // of the same head) goes ahead; a head of the repository's own is then
 // remembered, as a folder's card is.
+// Two commits a head can be at.
+const c1, c2 = "1111111111111111111111111111111111111111", "2222222222222222222222222222222222222222"
+
 func TestAPullRequestsHead(t *testing.T) {
 	a, st := &agent{key: "repo", file: ".mcp.json"}, &store{}
 	s := New(map[string]Agent{"x": a}, st)
-	err := s.Head("x", "/repo/.worktrees/a", false, "")
+	err := s.Head("x", "/repo/.worktrees/a", c1, false, "")
 	var head *UntrustedHeadError
 	if !errors.As(err, &head) || head.Folder != "/repo/.worktrees/a" || len(head.Runs) != 1 || head.Shown == "" {
 		t.Fatalf("Head = %v", err)
 	}
-	if err := s.Head("x", "/repo/.worktrees/b", false, "other"); !errors.As(err, &head) {
+	if err := s.Head("x", "/repo/.worktrees/b", c1, false, "other"); !errors.As(err, &head) {
 		t.Fatalf("a key of something else let it start: %v", err)
 	}
-	if err := s.Head("x", "/repo/.worktrees/c", false, head.Shown); err != nil || !slices.Equal(st.keys, []string{"repo"}) {
+	if err := s.Head("x", "/repo/.worktrees/c", c1, false, head.Shown); err != nil || !slices.Equal(st.keys, []string{"repo"}) {
 		t.Fatalf("Start anyway: %v, kept %v", err, st.keys)
 	}
-	if err := s.Head("x", "/repo/.worktrees/d", false, ""); err != nil {
+	if err := s.Head("x", "/repo/.worktrees/d", c1, false, ""); err != nil {
 		t.Errorf("a trusted repository's own head asked again: %v", err)
 	}
 	a.file = ".claude/settings.json" // the head changed after the card showed
-	if err := s.Head("x", "/repo/.worktrees/e", false, head.Shown); err != nil {
+	if err := s.Head("x", "/repo/.worktrees/e", c1, false, head.Shown); err != nil {
 		t.Errorf("trusted, yet asked: %v", err)
 	}
 }
@@ -90,13 +93,21 @@ func TestAForksHead(t *testing.T) {
 		t.Fatalf("the repository isn't trusted: %v %v", runs, err)
 	}
 	var head *UntrustedHeadError
-	if err := s.Head("x", "/repo/.worktrees/a", true, ""); !errors.As(err, &head) {
+	if err := s.Head("x", "/repo/.worktrees/a", c1, true, ""); !errors.As(err, &head) {
 		t.Fatalf("a fork's head rode on the repository's trust: %v", err)
 	}
-	if err := s.Head("x", "/repo/.worktrees/b", true, head.Shown); err != nil || len(st.keys) != 1 {
+	if err := s.Head("x", "/repo/.worktrees/b", c1, true, head.Shown); err != nil || len(st.keys) != 1 {
 		t.Fatalf("Start anyway: %v, kept %v", err, st.keys)
 	}
-	if err := s.Head("x", "/repo/.worktrees/c", true, ""); !errors.As(err, &head) {
+	if err := s.Head("x", "/repo/.worktrees/c", c1, true, ""); !errors.As(err, &head) {
 		t.Errorf("a fork's head was remembered: %v", err)
+	}
+	// Pushed again between the card and the start: the same listed runs,
+	// but not the commit the card showed.
+	if err := s.Head("x", "/repo/.worktrees/d", c2, true, head.Shown); !errors.As(err, &head) {
+		t.Errorf("Start anyway let another commit start: %v", err)
+	}
+	if err := s.Head("x", "/repo/.worktrees/e", "", true, ""); err == nil || errors.As(err, &head) {
+		t.Errorf("a head with no commit: %v", err)
 	}
 }

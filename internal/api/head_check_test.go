@@ -20,12 +20,14 @@ import (
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // headWorktrees makes each worktree a folder whose .claude/settings.json
 // has a hook, as a pull request's head can bring, and removes it.
 type headWorktrees struct {
 	chats.Worktrees // nothing else is called
+	t               *testing.T
 	dir             string
 	removed         []string
 }
@@ -38,6 +40,10 @@ func (w *headWorktrees) Add(_ context.Context, _, name, branch, from string) (mo
 	if err := os.WriteFile(filepath.Join(path, ".claude", "settings.json"), []byte(`{"hooks":{}}`), 0o600); err != nil {
 		return model.Worktree{}, "", err
 	}
+	// The head is a commit: what the card's Start anyway is pinned to.
+	testcheck.Git(w.t, path, "init", "-q", "-b", branch)
+	testcheck.Git(w.t, path, "add", ".")
+	testcheck.Git(w.t, path, "commit", "-q", "-m", "head")
 	return model.Worktree{Repo: w.dir, Path: path, Branch: branch, Base: from}, path, nil
 }
 
@@ -83,7 +89,7 @@ func TestStartChatChecksAPullRequestsHead(t *testing.T) {
 		return nil, errors.New("it quit")
 	}
 	st := store.New(t.TempDir())
-	wts := &headWorktrees{dir: t.TempDir()}
+	wts := &headWorktrees{t: t, dir: t.TempDir()}
 	svc := chats.New(t.Context(), []chats.Kind{{Harness: model.HarnessInfo{Name: "a", Title: "A"}, Launch: launch}},
 		chats.Options{Remembered: st, Sessions: st, Scratch: t.TempDir(), Worktrees: wts})
 	gh := github.New(github.Deps{

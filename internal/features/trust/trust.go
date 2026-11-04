@@ -96,12 +96,17 @@ func (e *UntrustedHeadError) Error() string {
 // agent starts there (ADR 0023: the folder asked about is the one that
 // starts). It is nil when the head brings nothing nobody trusted, or
 // when shown is the Shown of an *UntrustedHeadError the user said "Start
-// anyway" to and the head still runs exactly that; *UntrustedHeadError
-// otherwise. A fork's head is an outsider's: no earlier trust counts
+// anyway" to and the head is still the commit the card was made from
+// (commit, its id), running exactly that: a fork pushed again between the
+// card and the start, changing what a listed hook runs and nothing listed,
+// is asked about again. *UntrustedHeadError otherwise. A fork's head is an outsider's: no earlier trust counts
 // (Claude's is the repository's, which any head would ride on) and Start
 // anyway is for this start only. A head of the repository's own is
 // remembered as a folder's card is.
-func (s *Service) Head(agent, folder string, fork bool, shown string) error {
+func (s *Service) Head(agent, folder, commit string, fork bool, shown string) error {
+	if commit == "" {
+		return fmt.Errorf("the pull request's head in %s has no commit to check", folder)
+	}
 	var runs []model.FolderRun
 	var key string
 	if fork {
@@ -119,7 +124,7 @@ func (s *Service) Head(agent, folder string, fork bool, shown string) error {
 	if len(runs) == 0 {
 		return nil
 	}
-	if seen := shownKey(folder, runs); seen != shown {
+	if seen := shownKey(folder, commit, runs); seen != shown {
 		return &UntrustedHeadError{Folder: folder, Runs: runs, Shown: seen}
 	}
 	if key == "" {
@@ -128,15 +133,18 @@ func (s *Service) Head(agent, folder string, fork bool, shown string) error {
 	return s.store.TrustFolder(key)
 }
 
-// shownKey names what runs shows, folder's path taken out of it: a start
-// again checks out the same head in another worktree.
-func shownKey(folder string, runs []model.FolderRun) string {
+// shownKey names what runs shows at commit, folder's path taken out of
+// it: a start again checks out the same head in another worktree.
+func shownKey(folder, commit string, runs []model.FolderRun) string {
 	rel := make([]model.FolderRun, len(runs))
 	for i, r := range runs {
 		in := func(s string) string { return strings.ReplaceAll(s, folder, ".") }
 		rel[i] = model.FolderRun{File: in(r.File), What: in(r.What), Command: in(r.Command)}
 	}
-	b, _ := json.Marshal(rel)
+	b, _ := json.Marshal(struct {
+		Commit string
+		Runs   []model.FolderRun
+	}{commit, rel})
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
 }
