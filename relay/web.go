@@ -91,7 +91,7 @@ func hostName(host string) error {
 			if r > 0x7f {
 				return fmt.Errorf("the origin's host must be ASCII (punycode), not %q", host)
 			}
-			if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+			if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
 				return fmt.Errorf("the origin's host isn't a host name: %q", host)
 			}
 		}

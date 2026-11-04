@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -864,7 +865,7 @@ func TestPlainCapForADirectPeer(t *testing.T) {
 	}
 	go func() { _ = srv.Serve(ln) }()
 	defer func() { _ = srv.Close() }()
-	codes := ""
+	var codes strings.Builder
 	for i := range 3 {
 		c, err := net.Dial("tcp", ln.Addr().String())
 		if err != nil {
@@ -874,14 +875,14 @@ func TestPlainCapForADirectPeer(t *testing.T) {
 		_, _ = fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: 198.51.100.%d\r\n\r\n", i)
 		resp, err := http.ReadResponse(bufio.NewReader(c), nil)
 		if err != nil {
-			codes += "closed "
+			codes.WriteString("closed ")
 			continue
 		}
 		_ = resp.Body.Close()
-		codes += fmt.Sprint(resp.StatusCode, " ")
+		codes.WriteString(strconv.Itoa(resp.StatusCode) + " ")
 	}
-	if codes != "200 200 closed " {
-		t.Fatalf("three plain connections from one direct peer: %s", codes)
+	if codes.String() != "200 200 closed " {
+		t.Fatalf("three plain connections from one direct peer: %s", codes.String())
 	}
 }
 

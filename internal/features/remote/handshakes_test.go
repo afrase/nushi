@@ -46,7 +46,10 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m1, _, _, _ := hs.WriteMessage(nil, nil)
+	m1, _, _, err := hs.WriteMessage(nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var open, total atomic.Int64
 	up := websocket.Upgrader{}
@@ -58,7 +61,7 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 		open.Add(1)
 		total.Add(1)
 		defer open.Add(-1)
-		defer ws.Close()
+		defer func() { _ = ws.Close() }()
 		_ = ws.WriteMessage(websocket.BinaryMessage, append([]byte("nushi-relay/1 challenge\x00"), make([]byte, 32)...))
 		if _, _, err := ws.ReadMessage(); err != nil {
 			return
