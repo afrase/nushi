@@ -326,6 +326,9 @@ func TestWrites(t *testing.T) {
 	if _, err := s.Transition(t.Context(), "e.atlassian.net", "A-1", "41", map[string]string{"resolution": "1"}, "you"); err != nil || len(c.moves) != 1 {
 		t.Errorf("%v, %v", err, c.moves)
 	}
+	if tr, err := s.Transition(t.Context(), "e.atlassian.net", "A-1", "done", map[string]string{"resolution": "1"}, "you"); err != nil || tr.ID != "41" || len(c.moves) != 2 {
+		t.Errorf("by its name: %+v, %v, %v", tr, err, c.moves)
+	}
 	if _, err := s.AddComment(t.Context(), "e.atlassian.net", "A-1", "  ", "you"); err == nil {
 		t.Error("an empty comment")
 	}

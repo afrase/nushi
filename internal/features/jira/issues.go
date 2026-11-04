@@ -187,10 +187,11 @@ func (s *Service) Transitions(ctx context.Context, id, key string) ([]model.Jira
 	return c.Transitions(ctx, key)
 }
 
-// Transition moves an issue through the transition with tid, with values
-// for its screen's fields; by says who asked ("you", or a chat's agent),
-// for the log.
-func (s *Service) Transition(ctx context.Context, id, key, tid string, values map[string]string, by string) (model.JiraTransition, error) {
+// Transition moves an issue through the transition move names, by its id
+// or its name (in any case: an agent's jira_transition gives either), with
+// values for its screen's fields; by says who asked ("you", or a chat's
+// agent), for the log.
+func (s *Service) Transition(ctx context.Context, id, key, move string, values map[string]string, by string) (model.JiraTransition, error) {
 	c, err := s.issueClient(id, key)
 	if err != nil {
 		return model.JiraTransition{}, err
@@ -200,7 +201,7 @@ func (s *Service) Transition(ctx context.Context, id, key, tid string, values ma
 		return model.JiraTransition{}, err
 	}
 	for _, t := range ts {
-		if t.ID != tid {
+		if t.ID != move && !strings.EqualFold(t.Name, move) {
 			continue
 		}
 		for _, f := range t.Fields {

@@ -120,17 +120,7 @@ func (t toolSet) Call(ctx context.Context, g tools.Grant, tool string, raw json.
 		}
 		return asData(is.Key, "the moves its workflow allows", movesText(ts)), nil
 	case "jira_transition":
-		ts, err := t.s.Transitions(ctx, is.Site, is.Key)
-		if err != nil {
-			return "", err
-		}
-		id := args.Transition
-		for _, tr := range ts {
-			if strings.EqualFold(tr.Name, args.Transition) {
-				id = tr.ID
-			}
-		}
-		tr, err := t.s.Transition(ctx, is.Site, is.Key, id, args.Fields, by)
+		tr, err := t.s.Transition(ctx, is.Site, is.Key, args.Transition, args.Fields, by)
 		if err != nil {
 			return "", err
 		}
