@@ -1,10 +1,6 @@
 package store
 
 import (
-	"encoding/json"
-	"errors"
-	"io/fs"
-	"os"
 	"path/filepath"
 
 	"github.com/afrase/nushi/internal/model"
@@ -52,14 +48,7 @@ func (s *Store) SaveVAPIDKey(k model.VAPIDKey) error { return s.write("vapid.jso
 func (s *Store) read(name string, v any) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	b, err := os.ReadFile(filepath.Join(s.dir, name))
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, json.Unmarshal(b, v)
+	return readJSON(filepath.Join(s.dir, name), v)
 }
 
 func (s *Store) write(name string, v any) error {

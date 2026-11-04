@@ -38,6 +38,18 @@ func TestStateSurvivesANewStore(t *testing.T) {
 		}
 	}
 
+	for _, sub := range []string{"", "sessions"} { // every write is atomicfile's: no temporary file stays, and each is 0600
+		entries, err := os.ReadDir(filepath.Join(dir, sub))
+		testcheck.NoErr(t, err)
+		for _, e := range entries {
+			fi, err := e.Info()
+			testcheck.NoErr(t, err)
+			if !e.IsDir() && (!strings.HasSuffix(e.Name(), ".json") || fi.Mode().Perm() != 0o600) {
+				t.Errorf("%s: %s, mode %v", sub, e.Name(), fi.Mode().Perm())
+			}
+		}
+	}
+
 	s = New(dir)
 	if got := s.Mode("claude"); got != "plan" || s.SleepAfter() != 0 {
 		t.Errorf("mode = %q, want plan; sleep after %v, want never", got, s.SleepAfter())
@@ -68,6 +80,7 @@ func TestOldAndBrokenSessionFiles(t *testing.T) {
 		"empty.json":      `{"ID":"empty","SessionID":"e"}`,
 		"broken.json":     `{"ID":`,
 		"unreadable.json": ``,
+		".nushi-123":      `{"ID":"orphan"}`, // a write's temporary file, left by a crash
 	}
 	for name, body := range files {
 		if err := os.WriteFile(filepath.Join(dir, "sessions", name), []byte(body), 0o600); err != nil {
