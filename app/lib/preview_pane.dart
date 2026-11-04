@@ -75,11 +75,8 @@ class _PreviewPaneState extends State<PreviewPane> {
     super.dispose();
   }
 
-  String get _abs {
-    final p = widget.path;
-    return _watch.file?.path ??
-        (p.startsWith('/') ? p : '${widget.chat.folder}/$p');
-  }
+  String get _abs =>
+      _watch.file?.path ?? absoluteIn(widget.chat.folder, widget.path);
 
   void _reveal() => revealInFinder(_abs).ignore();
 

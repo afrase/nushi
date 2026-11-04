@@ -429,9 +429,7 @@ class ChatState extends ChangeNotifier {
   }
 
   String _absolute(String path) =>
-      Uri.file(path.startsWith('/') ? path : '$folder/$path')
-          .normalizePath()
-          .path;
+      Uri.file(absoluteIn(folder, path)).normalizePath().path;
 
   /// Closes [file]'s tab. If it showed, the one after it shows, or the last;
   /// with none left the preview closes.
@@ -770,3 +768,7 @@ int recentStart(List<Item> items, int end, int n) {
   }
   return start;
 }
+
+/// [path] (relative to [folder], or absolute) as an absolute path.
+String absoluteIn(String folder, String path) =>
+    path.startsWith('/') ? path : '$folder/$path';

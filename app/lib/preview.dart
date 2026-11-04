@@ -109,8 +109,11 @@ PreviewKind? previewKind(String path) {
 /// ([PreviewKind.artifact]).
 bool isArtifact(String path) => previewKind(path)?.artifact ?? false;
 
-/// The last part of [path].
-String baseName(String path) => path.substring(path.lastIndexOf('/') + 1);
+/// The last part of [path] (all of it when it ends in a slash).
+String baseName(String path) {
+  final name = path.substring(path.lastIndexOf('/') + 1);
+  return name.isEmpty ? path : name;
+}
 
 /// Opens a file's preview from the tool rows below it, the one open
 /// ([current]) marked. With no [open] (an older daemon) there's no

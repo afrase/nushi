@@ -62,7 +62,7 @@ class AttachedFile {
         // gone, or not readable: the agent will say
       }
     }
-    return AttachedFile(name: fileName(path), size: size, path: path);
+    return AttachedFile(name: baseName(path), size: size, path: path);
   }
 
   final String name;
@@ -79,14 +79,6 @@ class AttachedFile {
 
   @override
   int get hashCode => Object.hash(name, path, data);
-}
-
-/// The last part of a path.
-String fileName(String path) =>
-    path.substring(path.lastIndexOf('/') + 1).ifEmpty(path);
-
-extension on String {
-  String ifEmpty(String other) => isEmpty ? other : this;
 }
 
 /// Whether files are sent whole: the phone's, which aren't on the Mac
@@ -162,7 +154,7 @@ Future<String> attachFiles(
     final refused = <String>[];
     for (final f in files) {
       // As the browser or the path gives it; shown only through plainPath.
-      final name = f.name.isEmpty ? fileName(f.path) : f.name;
+      final name = f.name.isEmpty ? baseName(f.path) : f.name;
       if (chat.canImages &&
           isImageFile(name) &&
           await f.length() <= maxImageFileBytes) {
@@ -237,7 +229,7 @@ AttachedFile? _onMac(
   required int api,
   required List<String> refused,
 }) {
-  final name = plainPath(fileName(path));
+  final name = plainPath(baseName(path));
   final stat = File(path).statSync();
   if (stat.type == FileSystemEntityType.directory) {
     refused.add('$name is a folder: mention one with @');
@@ -255,7 +247,7 @@ AttachedFile? _onMac(
     refused.add('$name is outside the chat’s folder: update Nushi to send it');
     return null;
   }
-  return AttachedFile(name: fileName(path), size: stat.size, path: path);
+  return AttachedFile(name: baseName(path), size: stat.size, path: path);
 }
 
 /// The icon of a file's kind, by its name.
@@ -426,7 +418,7 @@ class FileChip extends StatelessWidget {
               const SizedBox(width: 5),
               Flexible(
                 child: Text(
-                  plainPath(fileName(path)),
+                  plainPath(baseName(path)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.ui(ink, size: 12.5),
@@ -455,15 +447,13 @@ Widget? messageFiles(BuildContext context, Item item, ChatState chat) {
     children: [
       for (final f in attached)
         FileChip(
-          f.startsWith('/') ? f : '${chat.folder}/$f',
+          absoluteIn(chat.folder, f),
           onOpen: open != null && !f.startsWith('/') && previewKind(f) != null
               ? () => open(f)
               : null,
           onReveal: kIsWeb || !f.startsWith('/') && chat.folder.isEmpty
               ? null
-              : () =>
-                    revealInFinder(f.startsWith('/') ? f : '${chat.folder}/$f')
-                        .ignore(),
+              : () => revealInFinder(absoluteIn(chat.folder, f)).ignore(),
         ),
     ],
   );

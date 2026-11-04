@@ -241,8 +241,7 @@ class _ComposerState extends State<Composer> {
       if (text.contains('@$f')) {
         _mentions.add(f);
       } else {
-        final path = f.startsWith('/') ? f : '$folder/$f';
-        final card = AttachedFile.at(path);
+        final card = AttachedFile.at(absoluteIn(folder, f));
         if (!_draft.files.value.contains(card)) {
           _draft.files.value = [..._draft.files.value, card];
         }

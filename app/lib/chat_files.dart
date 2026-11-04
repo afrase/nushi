@@ -196,10 +196,6 @@ String folderOf(String path) {
   return path.startsWith('/') ? tildePath(dir.isEmpty ? '/' : dir) : dir;
 }
 
-/// [path] (relative to [folder], or absolute) as an absolute path.
-String absoluteIn(String folder, String path) =>
-    path.startsWith('/') ? path : '$folder/$path';
-
 /// When the file at an absolute path last changed; null when it isn't
 /// there, or can't be known (the phone). Tests set their own.
 DateTime? Function(String path) fileChanged = _modified;
