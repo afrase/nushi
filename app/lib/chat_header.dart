@@ -129,7 +129,10 @@ class ChatHeader extends StatelessWidget {
               folds.saved -
               (shown ? (folds.roomy ? NushiTheme.barGap : 8) : 0);
           const least = 80.0;
-          var title = (room * 0.6).clamp(least, 320.0);
+          // The title takes what the model doesn't (all of it with none),
+          // and 60% when both are too long for it.
+          final modelWidth = shown ? _textWidth(context, modelName, meta) : 0.0;
+          var title = max(room * 0.6, room - modelWidth).clamp(least, 320.0);
           if (shown) title = min(title, max(least, room - 40));
           return _row(
             context,
