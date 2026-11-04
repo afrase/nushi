@@ -98,6 +98,22 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
     ],
   );
 
+  // Equal when made of the same token sets, so a ThemeData built again from
+  // the same theme, past forTheme's cache (the replies pill and the theme
+  // previews make theirs on every build), equals the last one: an unequal
+  // one rebuilds every reader of the theme below it, and under a theme
+  // animation on each of its frames. The built-in sets are constants and a
+  // theme file read again makes new ones, so an edited file still
+  // re-themes.
+  @override
+  bool operator ==(Object other) =>
+      other is NushiTheme &&
+      identical(other.t, t) &&
+      identical(other._dark, _dark);
+
+  @override
+  int get hashCode => Object.hash(identityHashCode(t), identityHashCode(_dark));
+
   @override
   NushiTheme copyWith({Tokens? t}) => NushiTheme(t ?? this.t, dark: _dark);
 
