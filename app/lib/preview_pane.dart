@@ -180,10 +180,10 @@ class _PreviewPaneState extends State<PreviewPane> {
                                           child: FilesMenu(
                                             chat: widget.chat,
                                             current: widget.path,
-                                            tooltip: (_) =>
+                                            tooltip:
                                                 _watch.file?.path ??
                                                 widget.path,
-                                            label: (_) => Text(
+                                            label: Text(
                                               baseName(widget.path),
                                               style: theme.code(
                                                 t.text,
