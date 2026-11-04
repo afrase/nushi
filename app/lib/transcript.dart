@@ -279,7 +279,7 @@ class _TranscriptState extends State<Transcript> {
     final pinnable =
         widget.items == null &&
         e is Item &&
-        canPinMessage(widget.daemon, widget.chat, e);
+        canPinMessage(widget.daemon, widget.chat, e, live: live);
     final flash = e is Item && e.id == _flash;
     final from = [
       sending,

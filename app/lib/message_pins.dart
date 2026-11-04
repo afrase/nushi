@@ -20,12 +20,15 @@ bool _pinnable(Item item) =>
     item.parent.isEmpty && item.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE;
 
 /// Whether [item] can be pinned or unpinned in [chat]: one of the agent's
-/// messages the daemon shows, on a daemon that keeps pins. Not in a side
-/// chat, which isn't one of the daemon's chats and keeps none.
-bool canPinMessage(Daemon d, ChatState chat, Item item) =>
+/// messages the daemon shows, on a daemon that keeps pins, and not the one
+/// still being written ([live]), whose title would be made from its first
+/// words. Not in a side chat, which isn't one of the daemon's chats and
+/// keeps none.
+bool canPinMessage(Daemon d, ChatState chat, Item item, {required bool live}) =>
     d.daemonApi >= messagePinApi &&
     identical(d.chats[chat.id], chat) &&
     _pinnable(item) &&
+    !live &&
     !chat.sending.contains(item);
 
 /// [chat]'s pins as the rail lists them, in the transcript's order: those

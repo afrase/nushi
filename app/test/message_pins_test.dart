@@ -85,12 +85,14 @@ const _titles = {
   'a3': 'Relay restarts shipped',
 };
 
-/// Chat c, its messages [pins] pinned, titled as [_titles] has them.
-Chat _chat(List<String> pins) => chat('c', 'claude', 'Relay restarts')
-  ..pinnedMessages.addAll(pins)
-  ..messagePins.addAll([
-    for (final id in pins) MessagePin(itemId: id, title: _titles[id]),
-  ]);
+/// Chat c, its messages [pins] pinned, titled as [_titles] has them;
+/// running a turn if [busy].
+Chat _chat(List<String> pins, {bool busy = false}) =>
+    chat('c', 'claude', 'Relay restarts', status: ChatStatus(busy: busy))
+      ..pinnedMessages.addAll(pins)
+      ..messagePins.addAll([
+        for (final id in pins) MessagePin(itemId: id, title: _titles[id]),
+      ]);
 
 /// The window on chat c, its messages [pins] pinned.
 Future<(Daemon, FakeDaemon)> _window(
@@ -98,18 +100,26 @@ Future<(Daemon, FakeDaemon)> _window(
   List<String> pins = const [],
   double width = 1400,
   Brightness brightness = Brightness.dark,
+  bool busy = false,
 }) async {
   viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = false;
-  final c = _chat(pins);
+  final c = _chat(pins, busy: busy);
   final fake = FakeDaemon([c])
     ..answer = (input) => input is GetChatRequest
-        ? GetChatResponse(chat: c, items: _items)
+        ? GetChatResponse(chat: c, items: _items, status: c.status)
         : null;
   final d = await fake.connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
+  if (busy) {
+    // A running turn's spinner never settles.
+    for (var i = 0; i < 40; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  } else {
+    await tester.pumpAndSettle();
+  }
   return (d, fake);
 }
 
@@ -227,6 +237,32 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('no Pin on the message still being written', (tester) async {
+    final (d, _) = await _window(tester, busy: true);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    Future<void> over(String text) async {
+      await mouse.moveTo(
+        tester.getCenter(find.textContaining(text, findRichText: true).last),
+      );
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    await over('Done: the relay restarts without dropping a phone.');
+    expect(
+      find.byTooltip('Copy as Markdown'),
+      findsOneWidget,
+      reason: 'its actions',
+    );
+    expect(find.byTooltip('Pin'), findsNothing);
+    await over('The tests, line 39');
+    expect(find.byTooltip('Pin'), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('a pin the daemon refuses goes back', (tester) async {
     final (d, fake) = await _window(tester);
     fake.answer = (input) =>
@@ -243,7 +279,10 @@ void main() {
       'shown by a daemon that keeps pins', (tester) async {
     final d = await FakeDaemon([]).connect(tester);
     final chat = ChatState('c', '/x')..items.addAll(_items);
-    expect(canPinMessage(d, chat, _items[1]), isFalse); // a side chat's
+    expect(
+      canPinMessage(d, chat, _items[1], live: false),
+      isFalse,
+    ); // a side chat's
     d.chats['c'] = chat;
     final step = Item(
       id: 's',
@@ -251,12 +290,20 @@ void main() {
       text: 'Inside',
       parent: 't1',
     );
-    expect(canPinMessage(d, chat, _items[1]), isTrue);
-    expect(canPinMessage(d, chat, _items[0]), isFalse); // the user's
-    expect(canPinMessage(d, chat, _items[2]), isFalse); // a tool call
-    expect(canPinMessage(d, chat, step), isFalse); // a subagent's
+    expect(canPinMessage(d, chat, _items[1], live: false), isTrue);
+    expect(
+      canPinMessage(d, chat, _items[0], live: false),
+      isFalse,
+    ); // the user's
+    expect(
+      canPinMessage(d, chat, _items[2], live: false),
+      isFalse,
+    ); // a tool call
+    expect(canPinMessage(d, chat, step, live: false), isFalse); // a subagent's
+    // The one still being written: its title would be its first words.
+    expect(canPinMessage(d, chat, _items[1], live: true), isFalse);
     d.daemonApi = messagePinApi - 1;
-    expect(canPinMessage(d, chat, _items[1]), isFalse);
+    expect(canPinMessage(d, chat, _items[1], live: false), isFalse);
     d.dispose();
   });
 
