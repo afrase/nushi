@@ -566,6 +566,72 @@ void main() {
     }
   });
 
+  testWidgets('many pins on the phone: the rail stays short, and below its '
+      'top the text’s edge beside it takes taps and drags', (tester) async {
+    viewport(tester, const Size(390, 844), ratio: 2);
+    final current = ValueNotifier(30);
+    addTearDown(current.dispose);
+    final theme = NushiTheme(Tokens.dark);
+    final taps = <Offset>[];
+    final scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme.toThemeData(),
+        home: TouchTargets(
+          child: Scaffold(
+            body: Stack(
+              children: [
+                // The text: 20 from the edge, as the phone's.
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTapUp: (d) => taps.add(d.localPosition),
+                    child: ListView(
+                      controller: scroll,
+                      padding: const EdgeInsets.only(left: 20),
+                      children: [for (var i = 0; i < 80; i++) Text('Line $i')],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  top: 6,
+                  child: PinsRail(
+                    entries: [
+                      PinEntry.start,
+                      for (var i = 1; i < 50; i++) PinEntry('p$i', 'Pin $i'),
+                    ],
+                    current: current,
+                    fit: RailFit.of(20),
+                    onPick: (_) {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    final rail = tester.getRect(find.byType(PinsRail));
+    expect(_railDashes, findsNWidgets(railMost));
+    expect(_current(tester, railMost), railMost ~/ 2, reason: 'around it');
+    expect(rail.height, lessThan(130));
+    // Over the text, under the rail's top: the text's.
+    await tester.tapAt(const Offset(30, 100));
+    expect(taps, isNotEmpty);
+    expect(_row('Session start'), findsNothing);
+    await tester.drag(find.text('Line 3'), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(0));
+    await tester.dragFrom(const Offset(30, 100), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(scroll.offset, greaterThan(250), reason: 'a drag from beside it');
+    // Its top, a finger wide, opens the menu.
+    await tester.tapAt(const Offset(30, 20));
+    await tester.pumpAndSettle();
+    expect(_row('Session start'), findsOneWidget);
+  });
+
   for (final b in Brightness.values) {
     testWidgets('the rail and its menu, ${b.name}', (tester) async {
       viewport(tester, const Size(420, 260), brightness: b);

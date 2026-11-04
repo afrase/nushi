@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/controls.dart';
@@ -259,65 +260,70 @@ class _PinsRailState extends State<PinsRail> {
         ),
       ),
     );
-    return TapRegion(
-      groupId: _region,
-      onTapOutside: (_) => _close(),
-      child: MouseRegion(
-        onEnter: (_) => _pointer(rail: true),
-        onExit: (_) {
-          _quiet = false;
-          _pointer(rail: false);
-        },
-        child: Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          onKeyEvent: _key,
-          onFocusChange: (focus) {
-            if (!focus) {
-              _close();
-            } else if (FocusManager.instance.highlightMode ==
-                FocusHighlightMode.traditional) {
-              unawaited(_open(keys: true)); // focused from the keyboard
-            }
+    // Only its top reaches past the margin (the phone's finger-wide
+    // target): below, the text's edge under it takes touches and drags.
+    return _RailHit(
+      reach: widget.fit.margin,
+      child: TapRegion(
+        groupId: _region,
+        onTapOutside: (_) => _close(),
+        child: MouseRegion(
+          onEnter: (_) => _pointer(rail: true),
+          onExit: (_) {
+            _quiet = false;
+            _pointer(rail: false);
           },
-          child: Semantics(
-            button: true,
-            label: 'Pinned messages',
-            child: CompositedTransformTarget(
-              link: _link,
-              child: OverlayPortal(
-                controller: _menu,
-                overlayChildBuilder: (context) => CompositedTransformFollower(
-                  link: _link,
-                  showWhenUnlinked: false,
-                  offset: const Offset(_PinsMenu.shift, 0),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: TapRegion(
-                      groupId: _region,
-                      child: MouseRegion(
-                        onEnter: (e) {
-                          _menuPointer = e.position;
-                          _pointer(menu: true);
-                        },
-                        onHover: (e) => _menuPointer = e.position,
-                        onExit: (_) {
-                          _menuPointer = null;
-                          _pointer(menu: false);
-                        },
-                        child: _PinsMenu(
-                          entries: widget.entries,
-                          current: widget.current,
-                          lit: _lit,
-                          fit: widget.fit,
-                          room: _room(context),
-                          onPick: _pick,
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: _key,
+            onFocusChange: (focus) {
+              if (!focus) {
+                _close();
+              } else if (FocusManager.instance.highlightMode ==
+                  FocusHighlightMode.traditional) {
+                unawaited(_open(keys: true)); // focused from the keyboard
+              }
+            },
+            child: Semantics(
+              button: true,
+              label: 'Pinned messages',
+              child: CompositedTransformTarget(
+                link: _link,
+                child: OverlayPortal(
+                  controller: _menu,
+                  overlayChildBuilder: (context) => CompositedTransformFollower(
+                    link: _link,
+                    showWhenUnlinked: false,
+                    offset: const Offset(_PinsMenu.shift, 0),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: TapRegion(
+                        groupId: _region,
+                        child: MouseRegion(
+                          onEnter: (e) {
+                            _menuPointer = e.position;
+                            _pointer(menu: true);
+                          },
+                          onHover: (e) => _menuPointer = e.position,
+                          onExit: (_) {
+                            _menuPointer = null;
+                            _pointer(menu: false);
+                          },
+                          child: _PinsMenu(
+                            entries: widget.entries,
+                            current: widget.current,
+                            lit: _lit,
+                            fit: widget.fit,
+                            room: _room(context),
+                            onPick: _pick,
+                          ),
                         ),
                       ),
                     ),
                   ),
+                  child: rail,
                 ),
-                child: rail,
               ),
             ),
           ),
@@ -327,7 +333,38 @@ class _PinsRailState extends State<PinsRail> {
   }
 }
 
-/// The rail's dashes, [current]'s long and bright.
+/// [child], hit only within [reach] of its left edge, but for its top
+/// [TouchTargets.size], hit across.
+class _RailHit extends SingleChildRenderObjectWidget {
+  const new({required this.reach, required super.child});
+
+  final double reach;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderRailHit(reach);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderRailHit renderObject) =>
+      renderObject.reach = reach;
+}
+
+class _RenderRailHit extends RenderProxyBox {
+  new(this.reach);
+
+  double reach;
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) =>
+      (position.dx <= reach || position.dy <= TouchTargets.size) &&
+      super.hitTest(result, position: position);
+}
+
+/// The most dashes the rail draws: with more pins, those around the
+/// current one, so it stays short (the menu lists them all).
+const railMost = 12;
+
+/// The rail's dashes, [current]'s long and bright; at most [railMost].
 class _Dashes extends StatelessWidget {
   const new({
     required this.shown,
@@ -348,6 +385,7 @@ class _Dashes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    final from = (current - railMost ~/ 2).clamp(0, max(0, count - railMost));
     return Container(
       padding: padding,
       foregroundDecoration: focusRing(t, look),
@@ -358,7 +396,8 @@ class _Dashes extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: _pitch - _thick,
           children: [
-            for (var i = 0; i < count; i++) PinDash(on: i == current, fit: fit),
+            for (var i = from; i < min(count, from + railMost); i++)
+              PinDash(on: i == current, fit: fit),
           ],
         ),
       ),
