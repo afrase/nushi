@@ -16,6 +16,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Session** | The agent's own record of a conversation, which it keeps and resumes. A chat is on one at a time; a move or a rewind starts another. | `SessionID`, `AgentSession`, ACP `session/*` | 0008 |
 | **Session started elsewhere** | A session begun in a terminal, opened as a chat from New chat's Sessions →. | `ListAgentSessions`, `OpenAgentSession`, `FoundSession` | 0035 |
 | **Turn** | One message and everything the agent does for it, until it ends. Stop (Esc) ends it. | `ChatStatus.busy`, `CancelTurn` | 0044 |
+| **Turn's end** | How the daemon judged a turn as it ended: done (the agent ended it), failed (an error, or the agent quit or crashed mid-turn) or stopped (you, or Nushi stopping the agent). Notifications, pushes and the receipt go by it. | `model.TurnEnd`, `ChatStatus.ended`, `ChatState.ended` | 0054 |
 | **Message** | What you send: text, mentioned and attached files, images. | `model.Message`, `SendPrompt`, `UserMessage` | |
 | **Prompt** | ACP's word for a message to the agent. The UI says message, and prompt only in "permission prompt". | `SendPrompt` | |
 | **Item** | One entry of the transcript: a message, thought, tool call, permission prompt, question, plan or notice. Code only; prose says entry or names the kind. | `model.Item`, `ItemKind` | 0026 |
@@ -28,7 +29,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Question** | A form the agent asks you to fill in (Claude's AskUserQuestion), as a question card. | `Question` item, `Field`, `QuestionCard`, `AnswerQuestion` | 0009 |
 | **Needs you** | The chat waits on you: a permission prompt or a question. Amber dot, Dock badge, "Needs you ↓". | `waiting` (`ChatStatus`, `ChatPhase`), `WaitingCard` | |
 | **Chat states** | A chat's dot and word: needs you, working, in background, done, asleep, idle, new, expired, couldn't start, archived. | `ChatPhase`, `phaseWord` | |
-| **Done** | A turn ended while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, proto `Chat.done`, `ChatState.done`, `ChatPhase.done` | |
+| **Done** | A turn ended, done or failed, while nothing showed the chat; showing it clears it. | `ChatRecord.Done`, proto `Chat.done`, `ChatState.done`, `ChatPhase.done` | |
 | **Subagent** | A helper the agent starts for a task ("Explore: find the scroll handling"). Its steps show in its row and its pane; it can be stopped alone, if its agent has a way (Ante's stops only with the turn). | `Subagent`, `Item.Agent`, `SubagentPane` | 0044 |
 | **Message to a subagent** | A message you write to a running subagent; the agent passes it on ("To Explore, through Claude"). | `model.ToSubagent`, `Item.ToSubagentName`, `claude/subagents.go`, `to_subagent.go`, proto `to_subagent`, `to_subagent_name`, `Draft.toSubagent` | |
 | **Background task** | A subagent or command still running after the turn that started it ended. The Background tasks widget lists them, each with a Stop, and keeps those that finished, to open again. | `ChatStatus.background`, `StopTask` | 0044 |
