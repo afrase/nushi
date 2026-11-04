@@ -26,7 +26,12 @@ extension DaemonOpen on Daemon {
           recent: pages ? max(pageItems, had) : 0,
         ),
       );
-      if (load == chat.loads) chat.load(snapshot);
+      if (load == chat.loads) {
+        chat
+          ..load(snapshot)
+          // Taken back once: a later reload asks only for what then shows.
+          ..keptItems = 0;
+      }
     } on Object catch (e) {
       if (load != chat.loads) return; // a newer load has it now
       chat.unload();

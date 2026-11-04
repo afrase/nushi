@@ -9,6 +9,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
@@ -418,6 +419,44 @@ void main() {
     await _settle(tester);
     expect(c.items.length, had);
     expect(c.kept, isNotNull);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('what a chat let go scrolled up kept is taken back once, not '
+      'on every reload after', (tester) async {
+    final (d, paged) = await _window(tester);
+    final c = _chat(d)..keptItems = 500;
+    c.stale!();
+    await _settle(tester);
+    expect(paged.asked.whereType<GetChatRequest>().last.recent, 500);
+    expect(c.keptItems, 0);
+    final had = c.items.length;
+    c.stale!();
+    await _settle(tester);
+    expect(paged.asked.whereType<GetChatRequest>().last.recent, had);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('Rewind… in a long chat is offered only when the chat may '
+      'rewind now', (tester) async {
+    final (d, _) = await _window(tester);
+    final c = _chat(d)..canRewind = true;
+    expect(c.older, greaterThan(0));
+    bool rewind() => appActions(
+      tester.element(find.byType(ChatView)),
+      d,
+    ).firstWhere((a) => a.act == Act.rewind).enabled;
+    expect(rewind(), isTrue);
+    c.busy = true;
+    expect(rewind(), isFalse, reason: 'a turn runs');
+    c
+      ..busy = false
+      ..archived = true;
+    expect(rewind(), isFalse, reason: 'archived');
+    c
+      ..archived = false
+      ..canRewind = false;
+    expect(rewind(), isFalse, reason: "the agent can't rewind");
     await closeView(tester, d);
   }, variant: _mac);
 
