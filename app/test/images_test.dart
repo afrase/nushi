@@ -82,4 +82,40 @@ void main() {
       expect(ready, isTrue);
     },
   );
+
+  // The review's proof (2026-11-04): Enter while a file is still being
+  // read, or between two files of one drop, sent too few images.
+  test('ready() waits for an image file still being read', () async {
+    final dir = Directory.systemTemp.createTempSync('attach');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final a = File('${dir.path}/a.png')
+      ..writeAsBytesSync(List.filled(4 << 20, 1));
+    final b = File('${dir.path}/b.png')
+      ..writeAsBytesSync(List.filled(4 << 20, 2));
+    final images = Attachments(
+      prepare: (bytes) async => ImageData(mimeType: 'image/png', data: bytes),
+    );
+    final adding = images.addFiles([a.path, b.path]);
+    await images.ready(); // what the box's send awaits
+    expect(images.value, hasLength(2));
+    await adding;
+  });
+
+  test('ready() between two files of one drop', () async {
+    final dir = Directory.systemTemp.createTempSync('attach');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final a = File('${dir.path}/a.png')..writeAsBytesSync([1]);
+    final b = File('${dir.path}/b.png')
+      ..writeAsBytesSync(List.filled(4 << 20, 2));
+    final images = Attachments(
+      prepare: (bytes) async => ImageData(mimeType: 'image/png', data: bytes),
+    );
+    final adding = images.addFiles([a.path, b.path]);
+    while (images.value.isEmpty) {
+      await Future<void>.delayed(Duration.zero); // the first shows: Enter
+    }
+    await images.ready();
+    expect(images.value, hasLength(2));
+    await adding;
+  });
 }

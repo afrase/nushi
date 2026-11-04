@@ -71,7 +71,8 @@ bool isImageFile(String path) =>
     _imageTypes.contains(path.split('.').last.toLowerCase());
 
 /// The images attached to the prompt being written, each prepared with
-/// [prepare] ([prepareImage]), which takes a moment: [ready] waits for them.
+/// [prepare] ([prepareImage]), which takes a moment: [ready] waits for them,
+/// and for whatever else is still being attached ([track]).
 class Attachments extends ValueNotifier<List<ImageData>> {
   new({this.prepare = prepareImage}) : super(const []);
 
@@ -79,12 +80,13 @@ class Attachments extends ValueNotifier<List<ImageData>> {
   int _preparing = 0;
   Completer<void>? _idle;
 
-  /// Adds an image once it is prepared, to the images there are then.
-  Future<void> add(Uint8List bytes) async {
+  /// Runs [work], which attaches something (reads a file or the clipboard,
+  /// then adds it): [ready] waits for all of it, the reads too, so a
+  /// message sent meanwhile goes with what it attaches.
+  Future<T> track<T>(Future<T> Function() work) async {
     _preparing++;
     try {
-      final image = await prepare(bytes);
-      value = [...value, image];
+      return await work();
     } finally {
       if (--_preparing == 0) {
         _idle?.complete();
@@ -93,16 +95,22 @@ class Attachments extends ValueNotifier<List<ImageData>> {
     }
   }
 
-  /// Done once no image is still being prepared.
+  /// Adds an image once it is prepared, to the images there are then.
+  Future<void> add(Uint8List bytes) => track(() async {
+    final image = await prepare(bytes);
+    value = [...value, image];
+  });
+
+  /// Done once nothing is still being attached.
   Future<void> ready() =>
       _preparing == 0 ? Future.value() : (_idle ??= Completer()).future;
 
   /// Attaches the image files among [paths].
-  Future<void> addFiles(Iterable<String> paths) async {
+  Future<void> addFiles(Iterable<String> paths) => track(() async {
     for (final p in paths.where(isImageFile)) {
       await add(await File(p).readAsBytes());
     }
-  }
+  });
 
   void removeAt(int i) => value = [...value]..removeAt(i);
 
@@ -110,7 +118,7 @@ class Attachments extends ValueNotifier<List<ImageData>> {
 
   /// Attaches the clipboard's image files, or else its image; false if it
   /// has neither.
-  Future<bool> paste() async {
+  Future<bool> paste() => track(() async {
     final files = (await Pasteboard.files()).where(isImageFile).toList();
     if (files.isNotEmpty) {
       await addFiles(files);
@@ -119,7 +127,7 @@ class Attachments extends ValueNotifier<List<ImageData>> {
     final image = await Pasteboard.image;
     if (image != null) await add(image);
     return image != null;
-  }
+  });
 
   /// Attaches images picked in an open panel.
   Future<void> pick() async {
