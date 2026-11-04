@@ -287,8 +287,9 @@ void main() {
     d.dispose();
   });
 
-  testWidgets('Settings: the switches set each kind; macOS having them off '
-      'says so with a way to its settings', (tester) async {
+  testWidgets('Settings: the switches set each kind, a failure taking in an '
+      'agent that quits mid-turn; macOS having them off says so with a way '
+      'to its settings', (tester) async {
     final swift = _fake()..status = 'denied';
     await tester.pumpWidget(
       MaterialApp(
@@ -299,6 +300,10 @@ void main() {
       ),
     );
     await tester.pump();
+    expect(
+      find.text('The turn ended with an error, or the agent quit mid-turn.'),
+      findsOne,
+    );
     expect(find.text('macOS has notifications off for Nushi.'), findsOne);
     await tester.tap(find.text('Open Notifications…'));
     await tester.pump();

@@ -77,7 +77,11 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
             alertNeedsYou,
           ),
           row('A turn ends', 'The agent finished its turn.', alertFinished),
-          row('A turn fails', 'The turn ended with an error.', alertFailed),
+          row(
+            'A turn fails',
+            'The turn ended with an error, or the agent quit mid-turn.',
+            alertFailed,
+          ),
           row('Sound', 'Play the notification sound.', alertSound),
           row(
             'Dock badge',
