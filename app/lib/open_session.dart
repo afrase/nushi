@@ -50,21 +50,16 @@ class _SessionListState extends State<SessionList> {
 
   final _scroll = ScrollController();
 
-  /// Moves the selection, keeping it in view: a row away from the screen
-  /// isn't built, but then the selection wrapped to the first or last.
+  /// Moves the selection, keeping it in view. Wrapped to the first or the
+  /// last, the list jumps to its end: that row, away from the screen,
+  /// isn't built.
   void _move(int by) {
-    setState(() => _at = (_at + by + _rows) % _rows);
+    final to = _at + by;
+    setState(() => _at = (to + _rows) % _rows);
+    if (to >= 0 && to < _rows) return revealRow(_shown, down: by > 0);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_shown.currentContext case final c?) {
-        Scrollable.ensureVisible(
-          c,
-          alignmentPolicy: by > 0
-              ? ScrollPositionAlignmentPolicy.keepVisibleAtEnd
-              : ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-        );
-      } else if (_scroll.hasClients) {
-        _scroll.jumpTo(_at == 0 ? 0 : _scroll.position.maxScrollExtent);
-      }
+      if (!_scroll.hasClients) return;
+      _scroll.jumpTo(_at == 0 ? 0 : _scroll.position.maxScrollExtent);
     });
   }
 
