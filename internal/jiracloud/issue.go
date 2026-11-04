@@ -114,7 +114,7 @@ func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error)
 
 // fields is an issue's fields, and its attachments' names by id.
 func (c *Client) fields(ctx context.Context, key string) (model.JiraIssue, map[string]string, error) {
-	accept, err := c.AcceptanceField(ctx)
+	accept, err := c.acceptanceField(ctx)
 	if err != nil {
 		return model.JiraIssue{}, nil, err
 	}
@@ -265,9 +265,9 @@ func (c *Client) Attachment(ctx context.Context, id string, thumbnail bool) ([]b
 
 var acceptanceNames = map[string]bool{"acceptance criteria": true, "acceptance criterion": true}
 
-// AcceptanceField is the id of the site's acceptance criteria field, ""
+// acceptanceField is the id of the site's acceptance criteria field, ""
 // when it has none (looked up once).
-func (c *Client) AcceptanceField(ctx context.Context) (string, error) {
+func (c *Client) acceptanceField(ctx context.Context) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.acceptance != nil {
