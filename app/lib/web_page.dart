@@ -39,6 +39,16 @@ Future<void> Function(Uri url) openInBrowser = (url) async {
   }
 };
 
+/// How long ago the user last pressed, let go or typed in a web view in
+/// the window, null if never: the Swift side's event monitor sees it, as
+/// Flutter doesn't (WebKit takes a press inside its view, and the plugin
+/// doesn't give WebKit's navigation type). Tests set their own.
+Future<Duration?> Function() sincePressInPage = () async {
+  final s = await const MethodChannel('nushi/browser')
+      .invokeMethod<double>('sincePress');
+  return s == null ? null : Duration(microseconds: (s * 1e6).round());
+};
+
 /// A WKWebView with only its free defaults (the owner's call):
 /// no script message handlers (nothing from the page reaches Nushi), file
 /// reads inside the root it's given, the network on, and a link the user
@@ -62,16 +72,11 @@ class WebKitPage implements PageHost {
   String _root = '';
   bool _loaded = false;
   num? _scrollTo;
-  DateTime? _pressed; // when the user last pressed or let go in the page
 
   @override
-  Widget view(BuildContext context) => Listener(
-    onPointerDown: (_) => _pressed = clock(),
-    onPointerUp: (_) => _pressed = clock(),
-    child: PlatformWebViewWidget(
-      WebKitWebViewWidgetCreationParams(controller: _c),
-    ).build(context),
-  );
+  Widget view(BuildContext context) =>
+      PlatformWebViewWidget(WebKitWebViewWidgetCreationParams(controller: _c))
+          .build(context);
 
   @override
   Future<void> load(String path, String root) {
@@ -104,13 +109,8 @@ class WebKitPage implements PageHost {
     }
   }
 
-  FutureOr<NavigationDecision> _decide(NavigationRequest r) {
-    switch (navigation(
-      r.url,
-      _path,
-      mainFrame: r.isMainFrame,
-      pressed: _pressed,
-    )) {
+  Future<NavigationDecision> _decide(NavigationRequest r) async {
+    switch (await pageNavigation(r.url, _path, mainFrame: r.isMainFrame)) {
       case PageNavigation.stay:
         return NavigationDecision.navigate;
       case PageNavigation.open:
@@ -152,6 +152,28 @@ PageNavigation navigation(
   return pressed != null && clock().difference(pressed) <= userGesture
       ? PageNavigation.open
       : PageNavigation.drop;
+}
+
+/// [navigation], with when the user last pressed in a page from
+/// [sincePressInPage], asked only for one that leaves the page.
+Future<PageNavigation> pageNavigation(
+  String url,
+  String path, {
+  required bool mainFrame,
+}) async {
+  if (staysInPage(url, path, mainFrame: mainFrame)) return PageNavigation.stay;
+  Duration? ago;
+  try {
+    ago = await sincePressInPage();
+  } on Object {
+    // no answer: no press
+  }
+  return navigation(
+    url,
+    path,
+    mainFrame: mainFrame,
+    pressed: ago == null ? null : clock().subtract(ago),
+  );
 }
 
 /// Whether a navigation to [url] stays in the web view showing the file

@@ -55,9 +55,14 @@ class MainFlutterWindow: NSWindow {
 
     // Opens an address in the default browser (a preview's Open in browser and
     // its links): the app that opens https, for a file too, so a file a page
-    // links is never run by the app its type has.
+    // links is never run by the app its type has. And how long ago the user
+    // last pressed or typed in a web view (lib/web_page.dart): Flutter never
+    // sees those, WebKit takes them.
     FlutterMethodChannel(name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
-      .setMethodCallHandler { call, result in
+      .setMethodCallHandler { [weak self] call, result in
+        if call.method == "sincePress" {
+          return result(self?.webPressedAt.map { ProcessInfo.processInfo.systemUptime - $0 })
+        }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
         guard let text = call.arguments as? String, let url = URL(string: text),
           ["http", "https", "file"].contains(url.scheme?.lowercased() ?? ""),
@@ -138,11 +143,17 @@ class MainFlutterWindow: NSWindow {
     // A press whose release Flutter never gets leaves it dragging: what
     // moves the window takes the release, and a web view's own tracking can.
     // The pointer then moves with no button held, which is the sign.
-    pressMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .mouseMoved]) { [weak self] event in
+    // It also notes when a press, its release or a key goes to a web view,
+    // which is a user's own act in a page (a preview's link opens in the
+    // browser only right after one).
+    pressMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .mouseMoved, .keyDown]) { [weak self] event in
       guard let self, event.window === self else { return event }
       switch event.type {
-      case .leftMouseDown: self.pressed = true
-      case .leftMouseUp: self.pressed = false
+      case .leftMouseDown, .leftMouseUp:
+        self.pressed = event.type == .leftMouseDown
+        if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
+      case .keyDown:
+        if Self.inWebView(self.firstResponder as? NSView) { self.webPressedAt = event.timestamp }
       default:
         if NSEvent.pressedMouseButtons & 1 == 0 { self.letGoInFlutter() }
       }
@@ -200,6 +211,20 @@ class MainFlutterWindow: NSWindow {
   private var swipeMonitor: Any?
   private var pressMonitor: Any?
   private var pressed = false
+  /// When a press, its release or a key last went to a web view (an
+  /// event's timestamp: seconds since the system started).
+  private var webPressedAt: TimeInterval?
+
+  /// Whether a view is a web view or inside one. AppKit gives a press to
+  /// the view its hit test finds, so this is where WebKit took it.
+  private static func inWebView(_ view: NSView?) -> Bool {
+    var v = view
+    while let view = v {
+      if view is WKWebView { return true }
+      v = view.superview
+    }
+    return false
+  }
 
   /// Tells Flutter of a release it missed, if it did.
   private func letGoInFlutter() {
