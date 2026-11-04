@@ -440,10 +440,7 @@ void main() {
     expect(second.site, isNot(first.site));
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(
-      fake.calls.whereType<GetJiraIssueRequest>().last.site,
-      second.site,
-    );
+    expect(fake.calls.whereType<GetJiraIssueRequest>().last.site, second.site);
     await closeView(tester, d);
   });
 
