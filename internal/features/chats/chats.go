@@ -254,16 +254,21 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	return c.snapshotLocked(0), nil
+}
+
+// snapshotLocked is the chat as it is, with its items from start on.
+func (c *chat) snapshotLocked(start int) model.Chat {
 	return model.Chat{
 		Record:   c.record,
-		Items:    slices.Clone(c.items),
+		Items:    slices.Clone(c.items[start:]),
 		Config:   slices.Clone(c.config),
 		Commands: c.commandsLocked(),
 		Usage:    c.usage,
 		Status:   c.statusLocked(),
 		Queue:    slices.Clone(c.queue),
 		Seq:      c.seq,
-	}, nil
+	}
 }
 
 // commandsLocked is what a chat's agent can be asked: what it listed, or

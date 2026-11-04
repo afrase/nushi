@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"slices"
 	"sync"
 	"time"
 
@@ -218,59 +217,40 @@ func (s *server) ListChats(ctx context.Context, _ *connect.Request[nushiv1.ListC
 }
 
 func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChatRequest]) (*connect.Response[nushiv1.GetChatResponse], error) {
-	c, err := s.Chats.Get(req.Msg.ChatId)
+	var c model.Chat
+	start := 0
+	var err error
+	if n := int(req.Msg.Recent); n > 0 {
+		c, start, err = s.Chats.Recent(req.Msg.ChatId, n)
+	} else {
+		c, err = s.Chats.Get(req.Msg.ChatId)
+	}
 	if err != nil {
 		return nil, notFound(err)
-	}
-	start := 0
-	if n := int(req.Msg.Recent); n > 0 {
-		start = pageStart(c.Items, len(c.Items), n)
 	}
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Record), Config: configProto(c.Config),
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
 		Queue: queueProto(c.Queue), Older: int32(start)}
-	for _, it := range c.Items[start:] {
+	for _, it := range c.Items {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
 	return connect.NewResponse(resp), nil
 }
 
 func (s *server) GetChatItems(_ context.Context, req *connect.Request[nushiv1.GetChatItemsRequest]) (*connect.Response[nushiv1.GetChatItemsResponse], error) {
-	c, err := s.Chats.Get(req.Msg.ChatId)
-	if err != nil {
-		return nil, notFound(err)
-	}
-	end := slices.IndexFunc(c.Items, func(it model.Item) bool { return it.ID == req.Msg.Before })
-	if end < 0 {
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("no such item: the chat changed"))
-	}
 	n := int(req.Msg.Limit)
 	if n <= 0 || n > 500 {
 		n = 500
 	}
-	start := pageStart(c.Items, end, n)
+	items, start, err := s.Chats.Items(req.Msg.ChatId, req.Msg.Before, n)
+	if err != nil {
+		return nil, notFound(err)
+	}
 	resp := &nushiv1.GetChatItemsResponse{Older: int32(start)}
-	for _, it := range c.Items[start:end] {
+	for _, it := range items {
 		resp.Items = append(resp.Items, itemProto(&it))
 	}
 	return connect.NewResponse(resp), nil
-}
-
-// pageStart is where a page of items ending before end starts: n items
-// back, and further back to the call that started a subagent whose steps
-// are in the page, so the subagent shows whole.
-func pageStart(items []model.Item, end, n int) int {
-	start := max(0, end-n)
-	index := map[string]int{}
-	for i, it := range items[:end] {
-		index[it.ID] = i
-	}
-	for i := end - 1; i >= start; i-- {
-		if j, ok := index[items[i].Parent]; ok && j < start {
-			start = j
-		}
-	}
-	return start
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {
