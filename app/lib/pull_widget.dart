@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panel_widgets.dart';
@@ -128,7 +127,7 @@ class _Rows extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Text(
-            updatedLine(kept, loading: cp.asking, now: clock())!,
+            updatedLine(kept, loading: cp.asking)!,
             style: theme.ui(t.textMuted, size: 11.5),
           ),
         ),

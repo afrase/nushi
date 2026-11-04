@@ -39,13 +39,10 @@ DateTime? _date(String text) => text.isEmpty ? null : DateTime.tryParse(text);
 /// Settings › Jira: the sites added, each with who its token is (asked of
 /// Jira when the page opens) or what's wrong; Add a site; Remove.
 class JiraPage extends StatefulWidget {
-  const new(this.daemon, {super.key, this.now});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
   NushiServiceClient get client => daemon.client;
-
-  /// The time expiry is measured from (tests); now when null.
-  final DateTime? now;
 
   @override
   State<JiraPage> createState() => _JiraPageState();
@@ -193,7 +190,7 @@ class _JiraPageState extends State<JiraPage> {
                   t,
                   s,
                   checked: _checked[s.id],
-                  warning: expiryWarning(s, widget.now ?? clock()),
+                  warning: expiryWarning(s, clock()),
                   onAllow: () => _allow(s),
                   onRemove: () => _remove(s),
                 ),

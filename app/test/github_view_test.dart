@@ -8,6 +8,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -286,11 +287,12 @@ Future<(FakeDaemon, Daemon)> openView(
     d.go(const GitHubPlace());
     await tester.pumpWidget(NushiApp(daemon: d));
   } else {
+    clock = () => testNow;
     await tester.pumpWidget(
       MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: NushiTheme(tokens).toThemeData(),
-        home: Scaffold(body: GitHubView(d, now: testNow)),
+        home: Scaffold(body: GitHubView(d)),
       ),
     );
   }

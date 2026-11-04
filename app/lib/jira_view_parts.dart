@@ -118,7 +118,6 @@ class JiraBar extends StatelessWidget {
     required this.onClose,
     super.key,
     this.updated,
-    this.now,
   });
 
   final List<JiraSite> sites;
@@ -127,9 +126,6 @@ class JiraBar extends StatelessWidget {
 
   /// When Jira said what shows, if it's what was kept from last time.
   final DateTime? updated;
-
-  /// The time ages are counted from (tests); now when null.
-  final DateTime? now;
   final void Function(String? id) onSite;
   final VoidCallback onRefresh;
   final VoidCallback onClose;
@@ -172,7 +168,7 @@ class JiraBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (updatedLine(updated, loading: loading, now: now) case final line?)
+          if (updatedLine(updated, loading: loading) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: Text(line, style: theme.ui(t.textMuted, size: 12)),

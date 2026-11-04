@@ -16,11 +16,10 @@ import 'package:nushi/widgets.dart';
 /// repository), labels and assignees, Start work and its chats, its text
 /// and comments, and a box for a comment.
 class GitHubIssuePane extends StatefulWidget {
-  const new({required this.daemon, required this.ref, super.key, this.now});
+  const new({required this.daemon, required this.ref, super.key});
 
   final Daemon daemon;
   final GitHubRef ref;
-  final DateTime? now;
 
   @override
   State<GitHubIssuePane> createState() => _GitHubIssuePaneState();
@@ -81,7 +80,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
         ),
       );
     }
-    final now = widget.now ?? clock();
+    final now = clock();
     final it = i.item;
     final chats = chatsOnItem(widget.daemon, it.ref);
     return SelectionArea(

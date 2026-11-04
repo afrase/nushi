@@ -5,6 +5,7 @@ import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
@@ -21,6 +22,7 @@ import 'harness.dart';
 /// main area): gone while a chat shows, back when GitHub is.
 Future<void> _inPlace(WidgetTester tester, Daemon d) async {
   d.go(const GitHubPlace());
+  clock = () => testNow;
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -29,7 +31,7 @@ Future<void> _inPlace(WidgetTester tester, Daemon d) async {
         body: ListenableBuilder(
           listenable: d,
           builder: (_, _) => switch (d.place) {
-            GitHubPlace() => GitHubView(d, now: testNow),
+            GitHubPlace() => GitHubView(d),
             _ => const Text('A chat'),
           },
         ),

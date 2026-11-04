@@ -52,12 +52,9 @@ void forgetGitHubView() {
 /// j k) pick, ⏎ the details, ⌘⏎ Start work, ⌘R asks again, Esc back to
 /// the list, then closes.
 class GitHubView extends StatefulWidget {
-  const new(this.daemon, {super.key, this.now});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
-
-  /// The time ages are counted from (tests); now when null.
-  final DateTime? now;
 
   @override
   State<GitHubView> createState() => _GitHubViewState();
@@ -413,7 +410,6 @@ class _GitHubViewState extends State<GitHubView> {
               onDays: _setDays,
               loading: _loading,
               updated: _cachedAt,
-              now: widget.now,
               onHost: (h) {
                 setState(() {
                   _host = h;
@@ -469,13 +465,11 @@ class _GitHubViewState extends State<GitHubView> {
                   key: ValueKey('${ref.host} ${ref.repo} ${ref.number}'),
                   daemon: widget.daemon,
                   ref: ref,
-                  now: widget.now,
                 )
               : GitHubIssuePane(
                   key: ValueKey('${ref.host} ${ref.repo} ${ref.number}'),
                   daemon: widget.daemon,
                   ref: ref,
-                  now: widget.now,
                 ),
         ),
       ],
@@ -532,7 +526,7 @@ class _GitHubViewState extends State<GitHubView> {
                       daemon: widget.daemon,
                       sections: _sections,
                       picked: _picked,
-                      now: widget.now ?? clock(),
+                      now: clock(),
                       days: githubDays.value,
                       whose: Whose(onPick: _whose),
                       onOpen: (it) {

@@ -28,14 +28,10 @@ class GitHubFiles extends StatefulWidget {
     required this.pull,
     required this.onChanged,
     super.key,
-    this.now,
   });
 
   final Daemon daemon;
   final GitHubPull pull;
-
-  /// The time ages are counted from (tests); now when null.
-  final DateTime? now;
 
   /// The pull request changed here (a reply, a resolve): ask for it again.
   final Future<void> Function() onChanged;
@@ -290,7 +286,6 @@ class _GitHubFilesState extends State<GitHubFiles> {
                 daemon: widget.daemon,
                 ref: _ref,
                 thread: x,
-                now: widget.now,
                 onChanged: widget.onChanged,
               );
       },
@@ -398,7 +393,6 @@ class ThreadCard extends StatefulWidget {
     required this.thread,
     required this.onChanged,
     super.key,
-    this.now,
   });
 
   final Daemon daemon;
@@ -406,7 +400,6 @@ class ThreadCard extends StatefulWidget {
   /// The pull request it's on.
   final GitHubRef ref;
   final GitHubThread thread;
-  final DateTime? now;
   final Future<void> Function() onChanged;
 
   @override
@@ -493,7 +486,7 @@ class _ThreadCardState extends State<ThreadCard> {
           ),
           if (_open) ...[
             for (final c in x.comments)
-              CommentEntry(c, now: widget.now ?? clock(), sendable: false),
+              CommentEntry(c, now: clock(), sendable: false),
             const SizedBox(height: 8),
             if (_replying)
               CommentBox(

@@ -29,7 +29,6 @@ class JiraIssuePane extends StatefulWidget {
     required this.issueKey,
     required this.onOpen,
     super.key,
-    this.now,
   });
 
   final Daemon daemon;
@@ -38,9 +37,6 @@ class JiraIssuePane extends StatefulWidget {
 
   /// Shows another issue (a subtask, a link) in its place.
   final void Function(String key) onOpen;
-
-  /// The time ages are counted from (tests); now when null.
-  final DateTime? now;
 
   @override
   State<JiraIssuePane> createState() => _JiraIssuePaneState();
@@ -153,7 +149,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         ),
       );
     }
-    final now = widget.now ?? clock();
+    final now = clock();
     String age(int ms) {
       final when = DateTime.fromMillisecondsSinceEpoch(ms);
       return ago(now.difference(when), when);
@@ -174,7 +170,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
         ],
       ),
     );
-    final kept = updatedLine(_cachedAt, loading: _refreshing, now: now);
+    final kept = updatedLine(_cachedAt, loading: _refreshing);
     return SelectionArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),

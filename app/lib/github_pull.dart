@@ -55,13 +55,11 @@ class GitHubPullPane extends StatefulWidget {
     required this.daemon,
     required this.ref,
     super.key,
-    this.now,
     this.source,
   });
 
   final Daemon daemon;
   final GitHubRef ref;
-  final DateTime? now;
 
   /// The chat's pull request, in its Pull request tab.
   final ChatPull? source;
@@ -223,7 +221,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
           : Center(child: Text(error, style: theme.ui(t.crashed)));
     }
     final failed = p.checks.where((c) => c.failed).length;
-    final now = widget.now ?? clock();
+    final now = clock();
     final todo = todoOf(p);
     final items = todo.items;
     final open = p.item.state == 'open';
@@ -243,7 +241,7 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
             if (keptAt case final at?)
               column(
                 Text(
-                  updatedLine(at, loading: asking, now: now)!,
+                  updatedLine(at, loading: asking)!,
                   key: const ValueKey('pull-kept'),
                   textAlign: TextAlign.right,
                   style: theme.ui(t.textMuted, size: 11.5),
@@ -335,7 +333,6 @@ class _GitHubPullPaneState extends State<GitHubPullPane> {
                   child: GitHubFiles(
                     daemon: widget.daemon,
                     pull: p,
-                    now: widget.now,
                     onChanged: _refresh,
                   ),
                 ),

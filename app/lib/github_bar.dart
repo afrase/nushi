@@ -54,7 +54,6 @@ class GitHubBar extends StatelessWidget {
     required this.onClose,
     super.key,
     this.updated,
-    this.now,
   });
 
   final List<GitHubHost> hosts;
@@ -69,7 +68,6 @@ class GitHubBar extends StatelessWidget {
   final ValueChanged<int> onDays;
   final bool loading;
   final DateTime? updated;
-  final DateTime? now;
   final ValueChanged<String> onHost;
   final ValueChanged<bool> onKnown;
   final VoidCallback onRefresh;
@@ -145,7 +143,7 @@ class GitHubBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (updatedLine(updated, loading: loading, now: now) case final line?)
+          if (updatedLine(updated, loading: loading) case final line?)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: Text(line, style: theme.ui(t.textMuted, size: 12)),

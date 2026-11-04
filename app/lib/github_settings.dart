@@ -58,13 +58,10 @@ String budgetLine(GitHubHost h, DateTime now) {
 /// left of its rate limits (shared with gh in a terminal and agents that
 /// run gh); Add a token, for a host without gh, or instead of gh's.
 class GitHubPage extends StatefulWidget {
-  const new(this.daemon, {super.key, this.now});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
   NushiServiceClient get client => daemon.client;
-
-  /// The time resets are counted from (tests); now when null.
-  final DateTime? now;
 
   @override
   State<GitHubPage> createState() => _GitHubPageState();
@@ -159,7 +156,7 @@ class _GitHubPageState extends State<GitHubPage> {
               _hostRow(
                 t,
                 h,
-                now: widget.now ?? clock(),
+                now: clock(),
                 onAllow: () => _allow(h),
                 onRemove: () => _remove(h),
               ),

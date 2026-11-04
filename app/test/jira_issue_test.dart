@@ -5,6 +5,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -155,6 +156,7 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
             };
   final d = await fake.connect(tester);
   await tester.binding.setSurfaceSize(const Size(700, 1100));
+  clock = () => _now;
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -165,7 +167,6 @@ Future<(FakeDaemon, Daemon, List<String>)> _open(
           site: 'acme.atlassian.net',
           issueKey: 'ACME-12',
           onOpen: opened.add,
-          now: _now,
         ),
       ),
     ),

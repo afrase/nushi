@@ -61,12 +61,9 @@ void showIssue(Daemon daemon, String site, String key) {
 /// place. Keys: ↑↓ (or j k) pick, ⏎ the details, ⌘⏎ Start work, ⌘R asks
 /// again, ⌥⌘1–9 a list, / the JQL, Esc back to the list, then closes.
 class JiraView extends StatefulWidget {
-  const new(this.daemon, {super.key, this.now});
+  const new(this.daemon, {super.key});
 
   final Daemon daemon;
-
-  /// The time ages are counted from (tests); now when null.
-  final DateTime? now;
 
   @override
   State<JiraView> createState() => _JiraViewState();
@@ -489,7 +486,6 @@ class _JiraViewState extends State<JiraView> {
               site: _every ? null : site,
               loading: _loading,
               updated: _cachedAt,
-              now: widget.now,
               onSite: (id) {
                 setState(() {
                   _all = id == null;
@@ -535,7 +531,6 @@ class _JiraViewState extends State<JiraView> {
                               onOpen: (key) => setState(
                                 () => _details = (site: details.site, key: key),
                               ),
-                              now: widget.now,
                             ),
                           ),
                         ],
