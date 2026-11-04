@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/account_rows.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_findings_settings.dart';
@@ -57,9 +58,10 @@ String budgetLine(GitHubHost h, DateTime now) {
 /// left of its rate limits (shared with gh in a terminal and agents that
 /// run gh); Add a token, for a host without gh, or instead of gh's.
 class GitHubPage extends StatefulWidget {
-  const new(this.client, {super.key, this.now});
+  const new(this.daemon, {super.key, this.now});
 
-  final NushiServiceClient client;
+  final Daemon daemon;
+  NushiServiceClient get client => daemon.client;
 
   /// The time resets are counted from (tests); now when null.
   final DateTime? now;
@@ -73,13 +75,25 @@ class _GitHubPageState extends State<GitHubPage> {
   String? _error;
   bool _adding = false;
 
+  // The hosts asked for while the daemon was gone.
+  late final _again = LoadAgain(widget.daemon, () {
+    if (mounted) unawaited(_load());
+  });
+
   @override
   void initState() {
     super.initState();
     unawaited(_load());
   }
 
+  @override
+  void dispose() {
+    _again.cancel();
+    super.dispose();
+  }
+
   Future<void> _load() async {
+    _again.cancel();
     try {
       final r = await widget.client.listGitHubHosts(ListGitHubHostsRequest());
       if (!mounted) return;
@@ -94,6 +108,7 @@ class _GitHubPageState extends State<GitHubPage> {
           _hosts = const [];
           _error = errorText(e);
         });
+        _again.failed(e);
       }
     }
   }

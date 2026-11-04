@@ -139,6 +139,28 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('hosts not listed while the daemon was gone are listed once '
+      'it is back', (tester) async {
+    var fail = true;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        ListGitHubHostsRequest() when fail => throw ConnectException(
+          Code.unavailable,
+          'daemon unavailable: connection lost',
+        ),
+        ListGitHubHostsRequest() => ListGitHubHostsResponse(hosts: _hosts()),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.github);
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    fail = false;
+    await fake.restart(tester);
+    expect(find.text('github.com'), findsOneWidget);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    await closeView(tester, d);
+  });
+
   testWidgets('adding a token checks it with GitHub', (tester) async {
     final (fake, d) = await _open(tester, hosts: []);
     // No host yet: the form is open.

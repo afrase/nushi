@@ -38,8 +38,12 @@ class SettingsView extends StatefulWidget {
 class _SettingsViewState extends State<SettingsView> {
   final _focus = FocusNode(debugLabel: 'settings');
   Settings? _set; // the daemon's, once it said
-  bool _connected = false; // the daemon, when last looked
   bool _asking = false;
+
+  // The settings asked for while the daemon was gone.
+  late final _again = LoadAgain(daemon, () {
+    if (mounted) _ask();
+  });
 
   /// The changes being made, one after another: each sends every setting
   /// (SetSettings), so each starts from what the one before set.
@@ -54,14 +58,12 @@ class _SettingsViewState extends State<SettingsView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_focus.hasFocus) _focus.requestFocus();
     });
-    _connected = daemon.connected;
-    daemon.addListener(_reconnected);
     _ask();
   }
 
   @override
   void dispose() {
-    daemon.removeListener(_reconnected);
+    _again.cancel();
     _focus.dispose();
     super.dispose();
   }
@@ -76,16 +78,10 @@ class _SettingsViewState extends State<SettingsView> {
           .getSettings(GetSettingsRequest())
           .then(
             (r) => mounted ? setState(() => _set = r.settings) : null,
-            onError: (_) {}, // asked again when the daemon is back
+            onError: _again.failed, // asked again when the daemon is back
           )
           .whenComplete(() => _asking = false),
     );
-  }
-
-  /// The daemon is back: the settings it didn't give are asked for again.
-  void _reconnected() {
-    if (daemon.connected && !_connected) _ask();
-    _connected = daemon.connected;
   }
 
   /// Sets the daemon's settings: [change] applied to them, after the
@@ -147,11 +143,11 @@ class _SettingsViewState extends State<SettingsView> {
     ),
     SettingsSection.jira => SettingsPage(
       title: s.title,
-      children: [JiraPage(daemon.client)],
+      children: [JiraPage(daemon)],
     ),
     SettingsSection.github => SettingsPage(
       title: s.title,
-      children: [GitHubPage(daemon.client)],
+      children: [GitHubPage(daemon)],
     ),
     SettingsSection.logs => LogsSection(
       daemon: daemon,

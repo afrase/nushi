@@ -140,6 +140,28 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('a list that failed while the daemon was gone is asked for '
+      'again once it is back', (tester) async {
+    var fail = true;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        ListJiraSitesRequest() when fail => throw ConnectException(
+          Code.unavailable,
+          'daemon unavailable: connection lost',
+        ),
+        ListJiraSitesRequest() => ListJiraSitesResponse(sites: _sites()),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    await pumpSettings(tester, d, SettingsSection.jira);
+    expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
+    fail = false;
+    await fake.restart(tester);
+    expect(find.text('acme.atlassian.net'), findsOneWidget);
+    expect(find.text('daemon unavailable: connection lost'), findsNothing);
+    d.dispose();
+  });
+
   testWidgets('adding a site checks its token', (tester) async {
     final (fake, d) = await _open(tester, sites: []);
     // No site yet: the form is open.

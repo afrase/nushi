@@ -4,6 +4,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/account_rows.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_rows.dart';
@@ -38,9 +39,10 @@ DateTime? _date(String text) => text.isEmpty ? null : DateTime.tryParse(text);
 /// Settings › Jira: the sites added, each with who its token is (asked of
 /// Jira when the page opens) or what's wrong; Add a site; Remove.
 class JiraPage extends StatefulWidget {
-  const new(this.client, {super.key, this.now});
+  const new(this.daemon, {super.key, this.now});
 
-  final NushiServiceClient client;
+  final Daemon daemon;
+  NushiServiceClient get client => daemon.client;
 
   /// The time expiry is measured from (tests); now when null.
   final DateTime? now;
@@ -55,19 +57,35 @@ class _JiraPageState extends State<JiraPage> {
   final _checked = <String, String>{}; // site id -> "Connected as …" or why not
   bool _adding = false;
 
+  // The sites asked for while the daemon was gone.
+  late final _again = LoadAgain(widget.daemon, () {
+    if (mounted) unawaited(_load(check: true));
+  });
+
   @override
   void initState() {
     super.initState();
     unawaited(_load(check: true));
   }
 
+  @override
+  void dispose() {
+    _again.cancel();
+    super.dispose();
+  }
+
   Future<void> _load({bool check = false}) async {
+    _again.cancel();
     final ListJiraSitesResponse r;
     try {
       r = await widget.client.listJiraSites(ListJiraSitesRequest());
     } on Object catch (e) {
-      // The daemon restarting, say: what went wrong, not a blank page.
-      if (mounted) setState(() => _error = errorText(e));
+      // The daemon restarting, say: what went wrong, not a blank page;
+      // asked again once it is back.
+      if (mounted) {
+        setState(() => _error = errorText(e));
+        _again.failed(e);
+      }
       return;
     }
     if (!mounted) return;
