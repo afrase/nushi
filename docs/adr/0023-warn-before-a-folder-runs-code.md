@@ -11,7 +11,7 @@ Claude Code in a terminal shows a trust dialog before it starts in a folder it h
 
 ## Consequences
 - The card lists what Claude's files say; a plugin the user enabled, or a server in the user's own config, isn't the folder's and isn't listed.
-- Opening Changes, and making a worktree (a checkout), still run the repository's own filters, as the user's own git would there.
+- Opening Changes, and making a worktree (a checkout), still run the repository's own filters, as the user's own git would there; fetching a pull request's head runs its transport config (`core.sshCommand`, `uploadpack`, `credential.helper`, `insteadOf`).
 - An older app (before API 37) starts chats without asking.
 
 ## Amendment (2026-11-04): a pull request's head is checked where it starts
