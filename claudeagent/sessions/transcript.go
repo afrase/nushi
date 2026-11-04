@@ -92,22 +92,13 @@ func (e *entry) readMessage() {
 // back. logicalParentUuid (a compaction's link to what it replaced) isn't
 // followed: the compaction's summary stands for what came before.
 func chain(entries []*entry) []*entry {
-	byUUID, order, index := map[string]*entry{}, []string{}, map[string]int{}
-	parents := map[string]bool{}
+	l := linksOf(entries)
+	index, parents := map[string]int{}, map[string]bool{}
 	for i, e := range entries {
-		if _, ok := byUUID[e.uuid]; !ok {
-			order = append(order, e.uuid)
-		}
-		byUUID[e.uuid], index[e.uuid] = e, i
+		index[e.uuid] = i
 		if e.parent != "" {
 			parents[e.parent] = true
 		}
-	}
-	up := func(e *entry) *entry {
-		if e.parent == "" {
-			return nil
-		}
-		return byUUID[e.parent]
 	}
 	// From each record nothing follows, back to its nearest message.
 	var leaves, main []*entry
@@ -116,7 +107,7 @@ func chain(entries []*entry) []*entry {
 			continue
 		}
 		seen := map[string]bool{}
-		for cur := e; cur != nil && !seen[cur.uuid]; cur = up(cur) {
+		for cur := e; cur != nil && !seen[cur.uuid]; cur = l.up(cur) {
 			seen[cur.uuid] = true
 			if cur.typ == "user" || cur.typ == "assistant" {
 				leaves = append(leaves, cur)
@@ -134,45 +125,62 @@ func chain(entries []*entry) []*entry {
 		return nil
 	}
 	leaf := leaves[0] // the one written last
-	for _, l := range leaves[1:] {
-		if index[l.uuid] > index[leaf.uuid] {
-			leaf = l
+	for _, e := range leaves[1:] {
+		if index[e.uuid] > index[leaf.uuid] {
+			leaf = e
 		}
 	}
-	var out []*entry
-	seen := map[string]bool{}
-	for cur := leaf; cur != nil && !seen[cur.uuid]; cur = up(cur) {
-		seen[cur.uuid] = true
-		out = append(out, cur)
-	}
-	slices.Reverse(out)
-	return recoverParallel(byUUID, order, out, seen)
+	return l.walkBack(leaf)
 }
 
 // linear is a subagent's chain: nothing rewinds its transcript, so the walk
 // starts at its last message. Its parallel calls branch it all the same.
 func linear(entries []*entry) []*entry {
-	byUUID, order := map[string]*entry{}, []string{}
 	var leaf *entry
 	for _, e := range entries {
-		if _, ok := byUUID[e.uuid]; !ok {
-			order = append(order, e.uuid)
-		}
-		byUUID[e.uuid] = e
 		if e.typ == "user" || e.typ == "assistant" {
 			leaf = e
 		}
 	}
+	return linksOf(entries).walkBack(leaf)
+}
+
+// links are a transcript's records by uuid (the last of each), and their
+// uuids as first written.
+type links struct {
+	byUUID map[string]*entry
+	order  []string
+}
+
+func linksOf(entries []*entry) links {
+	l := links{byUUID: map[string]*entry{}}
+	for _, e := range entries {
+		if _, ok := l.byUUID[e.uuid]; !ok {
+			l.order = append(l.order, e.uuid)
+		}
+		l.byUUID[e.uuid] = e
+	}
+	return l
+}
+
+// up is the record e follows by parentUuid; nil at the first.
+func (l links) up(e *entry) *entry {
+	if e.parent == "" {
+		return nil
+	}
+	return l.byUUID[e.parent]
+}
+
+// walkBack is the chain from leaf back to the first record, oldest first,
+// a loop cut where it comes round, with the parallel calls the walk misses
+// put back.
+func (l links) walkBack(leaf *entry) []*entry {
 	var out []*entry
 	seen := map[string]bool{}
-	for cur := leaf; cur != nil && !seen[cur.uuid]; {
+	for cur := leaf; cur != nil && !seen[cur.uuid]; cur = l.up(cur) {
 		seen[cur.uuid] = true
 		out = append(out, cur)
-		if cur.parent == "" {
-			break
-		}
-		cur = byUUID[cur.parent]
 	}
 	slices.Reverse(out)
-	return recoverParallel(byUUID, order, out, seen)
+	return recoverParallel(l.byUUID, l.order, out, seen)
 }
