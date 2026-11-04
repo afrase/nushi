@@ -119,4 +119,23 @@ void main() {
     chat.apply(_item(6, _msg(21), index: 20));
     expect(chat.items.last.id, 'i21');
   });
+
+  test('trimmed, it keeps the call its pane shows, and nothing while a find '
+      'looks', () {
+    ChatState loaded() => ChatState('c', '/f')
+      ..load(
+        GetChatResponse(
+          items: [for (var i = 0; i < 20; i++) _msg(i)],
+          older: 5,
+          seq: Int64(5),
+        ),
+      );
+    final shown = loaded()..pane.value = 'i3';
+    expect(shown.trim(2), isTrue);
+    expect(shown.items.first.id, 'i3');
+    expect(shown.older, 8);
+    final finding = loaded()..find.query = 'm1';
+    expect(finding.trim(2), isFalse);
+    expect(finding.items.length, 20);
+  });
 }

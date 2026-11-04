@@ -563,11 +563,18 @@ class ChatState extends ChangeNotifier {
   }
 
   /// Lets go of all but its last [n] items, reaching back to the call of a
-  /// subagent whose steps are among them as the daemon's pages do: a long
-  /// chat left at its bottom goes back to its recent part. Whether any went.
+  /// subagent whose steps are among them as the daemon's pages do, and to
+  /// the call its [pane] shows: a long chat left at its bottom goes back to
+  /// its recent part. Not while a find looks in what it has. Whether any
+  /// went.
   bool trim(int n) {
     if (!loaded || sending.isNotEmpty) return false;
-    final start = recentStart(items, items.length, n);
+    if ((find.query ?? '').isNotEmpty) return false;
+    var start = recentStart(items, items.length, n);
+    if (pane.value case final id?) {
+      final i = items.indexWhere((it) => it.id == id);
+      if (i >= 0 && i < start) start = i;
+    }
     if (start == 0) return false;
     items.removeRange(0, start);
     older += start;
