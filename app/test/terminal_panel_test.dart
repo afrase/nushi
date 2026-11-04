@@ -11,6 +11,9 @@ import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'fake_daemon.dart' show loadFonts;
+import 'harness.dart';
+
 /// A daemon with two terminals that records what the app asks of it.
 class _Daemon implements Transport {
   final calls = <String>[];
@@ -88,6 +91,8 @@ Future<void> _panel(
 }
 
 void main() {
+  setUpAll(loadFonts);
+
   testWidgets('tabs, and the keys the panel keeps from the shell', (
     tester,
   ) async {
@@ -109,7 +114,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), r'$');
     await tester.pump();
-    expect(find.text('1/1'), findsOneWidget);
+    expect(find.text('1 of 1'), findsOneWidget);
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
     expect(find.byType(TextField), findsNothing);
@@ -142,18 +147,33 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'x');
     await tester.pump();
-    expect(find.text('3/3'), findsOne);
-    await tester.testTextInput.receiveAction(TextInputAction.done); // ⏎
+    expect(find.text('3 of 3'), findsOne);
+    for (final w in [1700.0, 720.0]) {
+      viewport(tester, Size(w, 500));
+      await tester.pumpAndSettle();
+      await render(
+        tester,
+        find.byType(TerminalPanel),
+        'terminal_find_${w.toInt()}',
+      );
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
-    expect(find.text('1/3'), findsOne);
-    await tester.testTextInput.receiveAction(TextInputAction.done); // ⏎
+    expect(find.text('1 of 3'), findsOne);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
-    expect(find.text('2/3'), findsOne);
+    expect(find.text('2 of 3'), findsOne);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
-    expect(find.text('1/3'), findsOne);
+    expect(find.text('1 of 3'), findsOne);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.byType(TextField), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyL); // the shell's again
+    await tester.pumpAndSettle();
+    expect(daemon.written.join(), 'l');
   });
 
   // fish waits 10 seconds for an answer to the query it starts with.

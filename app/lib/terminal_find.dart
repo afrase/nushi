@@ -1,12 +1,8 @@
 import 'dart:io';
-import 'dart:math';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/terminals.dart';
-import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xterm2/xterm.dart';
 
@@ -68,102 +64,55 @@ Future<void> openLink(
   }
 }
 
-/// ⌘F over a terminal: finds in its scrollback, highlights every match,
-/// and scrolls to the current one, starting from the latest. Enter goes to
-/// the next one down, Shift-Enter up, as every find bar does (round from
-/// the latest to the first); Escape closes it.
-class TerminalFindBar extends StatefulWidget {
-  const new({required this.session, super.key});
+/// ⌘F over a terminal, in a [FindBar]: finds in its scrollback,
+/// highlights every match and scrolls to the current one, starting from
+/// the latest. ⏎ goes to the next one down (round from the latest to the
+/// first), ⇧⏎ up. A match is keyed by where it starts.
+class TerminalFind extends TranscriptFind {
+  new(this.session);
 
+  /// The session it finds in (its emulator is a new one after each attach).
   final TermSession session;
+  List<TerminalSearchMatch> _matches = const [];
 
   @override
-  State<TerminalFindBar> createState() => _TerminalFindBarState();
-}
-
-class _TerminalFindBarState extends State<TerminalFindBar> {
-  List<TerminalSearchMatch> _matches = [];
-  int _current = 0;
-
-  TermSession get _s => widget.session;
-
-  void _find(String query) {
-    _matches = _s.terminal.search(query);
-    _current = max(0, _matches.length - 1); // the latest first
-    _s.controller.setSearchHighlights(_s.terminal.buffer, [
+  set query(String? q) {
+    if (q == query) return;
+    super.query = q;
+    final terminal = session.terminal;
+    _matches = q == null || q.isEmpty ? const [] : terminal.search(q);
+    foundFromLast([
+      for (final m in _matches) '${m.range.begin.y}:${m.range.begin.x}',
+    ]);
+    session.controller.setSearchHighlights(terminal.buffer, [
       for (final m in _matches) m.range,
-    ], currentIndex: _current);
+    ], currentIndex: at);
     _show();
   }
 
-  void _step(int by) {
+  @override
+  void step(int by) {
+    super.step(by);
     if (_matches.isEmpty) return;
-    _current = (_current + by + _matches.length) % _matches.length;
-    _s.controller.setCurrentSearchHighlight(_current);
+    session.controller.setCurrentSearchHighlight(at);
     _show();
+  }
+
+  @override
+  void close() {
+    session.controller.clearSearchHighlights();
+    _matches = const [];
+    super.close();
+    session.focus.requestFocus();
   }
 
   // Scrolls the current match to the middle of the screen.
   void _show() {
-    setState(() {});
-    final scroll = _s.scroll;
+    final scroll = session.scroll;
     if (_matches.isEmpty || !scroll.hasClients) return;
     final style = terminalStyle();
     final lineHeight = style.fontSize * style.height;
-    final y = _matches[_current].range.begin.y - _s.terminal.viewHeight / 2;
-    final p = scroll.position;
-    scroll.jumpTo((y * lineHeight).clamp(0, p.maxScrollExtent));
-  }
-
-  void _close() {
-    _s.controller.clearSearchHighlights();
-    _s.finding.value = false;
-    _s.focus.requestFocus();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return Container(
-      width: 280,
-      padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
-      decoration: BoxDecoration(
-        color: t.raised,
-        border: Border.all(color: t.borderStrong),
-        borderRadius: BorderRadius.circular(NushiTheme.card),
-      ),
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): _close,
-          const SingleActivator(LogicalKeyboardKey.enter, shift: true): () =>
-              _step(-1),
-        },
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                autofocus: true,
-                style: theme.ui(t.text, size: 12),
-                decoration: const InputDecoration.collapsed(hintText: 'Find'),
-                onChanged: _find,
-                onSubmitted: (_) => _step(1),
-                onEditingComplete: () {}, // Enter keeps the focus here
-              ),
-            ),
-            Text(
-              _matches.isEmpty ? '' : '${_current + 1}/${_matches.length}',
-              style: theme.ui(t.textMuted, size: 11.5),
-            ),
-            IconTap(
-              Icons.close,
-              size: 13,
-              tooltip: 'Close  Esc',
-              onTap: _close,
-            ),
-          ],
-        ),
-      ),
-    );
+    final y = _matches[at].range.begin.y - session.terminal.viewHeight / 2;
+    scroll.jumpTo((y * lineHeight).clamp(0, scroll.position.maxScrollExtent));
   }
 }

@@ -12,6 +12,7 @@ import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminal_tabs.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
 
@@ -56,9 +57,7 @@ class TerminalScreen extends StatelessWidget {
         () => closeTerminal(context, terms, info),
       ),
       toggleTerminalKey: VoidCallbackIntent(onHide),
-      cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(
-        () => s.finding.value = true,
-      ),
+      cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(s.find.open),
       // ⌥⌘1–9 a terminal; ⌘1–9, ⌘[ and ⌘] switch chats, ⌃Tab and ⌃⇧Tab
       // the chat's tabs, as elsewhere.
       for (var i = 0; i < 9 && i < list.length; i++)
@@ -152,15 +151,15 @@ class TerminalScreen extends StatelessWidget {
                           ),
                         ),
                 ),
-                ValueListenableBuilder(
-                  valueListenable: s.finding,
-                  builder: (context, finding, _) => finding
-                      ? Positioned(
+                ListenableBuilder(
+                  listenable: s.find,
+                  builder: (context, _) => s.find.query == null
+                      ? const SizedBox.shrink()
+                      : Positioned(
                           top: 6,
                           right: 14,
-                          child: TerminalFindBar(session: s),
-                        )
-                      : const SizedBox.shrink(),
+                          child: FindBar(s.find, hint: 'Find in the terminal'),
+                        ),
                 ),
               ],
             ),

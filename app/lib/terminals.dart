@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
+import 'package:nushi/terminal_find.dart';
 import 'package:xterm2/xterm.dart';
 
 /// The chats' terminals as the daemon lists them, and an emulator for each
@@ -187,8 +188,8 @@ class TermSession extends ChangeNotifier {
   final focus = FocusNode();
   final scroll = ScrollController();
 
-  /// Whether its find bar shows (⌘F).
-  final finding = ValueNotifier<bool>(false);
+  /// Its find (⌘F); the bar shows while it has a query.
+  late final find = TerminalFind(this);
 
   /// The real target of the OSC 8 link under the pointer, if any.
   final hoveredLink = ValueNotifier<String?>(null);
@@ -314,7 +315,7 @@ class TermSession extends ChangeNotifier {
     controller.dispose();
     focus.dispose();
     scroll.dispose();
-    finding.dispose();
+    find.dispose();
     hoveredLink.dispose();
     super.dispose();
   }
