@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -35,6 +36,18 @@ func TestPinTitle(t *testing.T) {
 		if got := pinTitle(tc.text); got != tc.want {
 			t.Errorf("pinTitle(%q) = %q, want %q", tc.text, got, tc.want)
 		}
+	}
+}
+
+// A huge message is titled from its opening: quickly, under the chat's
+// lock, with a heading past it unseen.
+func TestPinTitleOfAHugeMessage(t *testing.T) {
+	line := strings.Repeat("word ", 2<<20) // one 10 MB line
+	if got := pinTitle(line + "\n## Late heading"); got != strings.Repeat("word ", 7)+"word…" {
+		t.Errorf("pinTitle = %q", got)
+	}
+	if got := pinTitle(strings.Repeat("é", titleBytes) + "\n## Late heading"); strings.Contains(got, "Late") || !utf8.ValidString(got) {
+		t.Errorf("pinTitle = %q", got)
 	}
 }
 

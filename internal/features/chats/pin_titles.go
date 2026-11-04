@@ -23,6 +23,14 @@ const titleRunes = 40
 // titleTextRunes is how much of a message the agent makes its title from.
 const titleTextRunes = 2000
 
+// A message's title is found in its opening, titleBytes of it at most, and
+// in at most titleLineRunes of its first line: pinTitle runs under the
+// chat's lock, and a message can be megabytes.
+const (
+	titleBytes     = 16 << 10
+	titleLineRunes = 500
+)
+
 var (
 	heading    = regexp.MustCompile(`^#{1,6}\s+(.+?)\s*#*$`)
 	lineMarks  = regexp.MustCompile(`^(\s*(>\s*|[-*+]\s+|\d+[.)]\s+))+`)
@@ -38,6 +46,9 @@ var (
 // the agent's text, so the title is one line of printable text, as an
 // agent's own title is (agentTitle).
 func pinTitle(text string) string {
+	if len(text) > titleBytes {
+		text = strings.ToValidUTF8(text[:titleBytes], "")
+	}
 	var first string
 	fenced := false
 	for line := range strings.Lines(text) {
@@ -57,6 +68,9 @@ func pinTitle(text string) string {
 		}
 		if first == "" {
 			first = line
+			if utf8.RuneCountInString(first) > titleLineRunes {
+				first = string([]rune(first)[:titleLineRunes])
+			}
 		}
 	}
 	plain := printable(plainTitle(lineMarks.ReplaceAllString(first, "")))
