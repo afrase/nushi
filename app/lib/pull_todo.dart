@@ -289,7 +289,7 @@ class _Next extends StatelessWidget {
     final p = pull;
     final waiting = waitingOn(p);
     final running = countChecks(p).running;
-    final ready = mergeView(p)?.lead == readyWords; // the Merge control's words
+    final ready = mergeView(p)?.ready ?? false; // as the Merge control says
     final ping = waiting.isNotEmpty && p.item.url.isNotEmpty
         ? GhostButton(
             'Ping on GitHub',

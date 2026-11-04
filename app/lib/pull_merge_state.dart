@@ -10,13 +10,15 @@ import 'package:nushi/settings.dart';
 /// no admin bypass (ADR 0069).
 enum MergeStep { words, merge, auto, addToQueue, whenReady, autoOn, inQueue }
 
-/// The Merge control's state: what it offers and what it says first.
+/// The Merge control's state: what it offers and what it says first, and
+/// whether that is that it can merge (ready: nothing blocks it).
 typedef MergeView = ({
   MergeStep step,
   String lead,
   String rest,
   Mood mood,
   IconData icon,
+  bool ready,
 });
 
 /// A method as a button says it.
@@ -96,9 +98,6 @@ String _queueState(GitHubQueueEntry e) => switch (e.state) {
 String _eta(int seconds) =>
     seconds <= 0 ? '' : ' About ${(seconds / 60).ceil()} min left.';
 
-/// What the Merge control says of a pull request that can merge.
-const readyWords = 'Ready to merge.';
-
 /// What the Merge control shows of [p]; null when it has none: merged,
 /// closed, or from a daemon before the control.
 MergeView? mergeView(GitHubPull p) {
@@ -110,7 +109,14 @@ MergeView? mergeView(GitHubPull p) {
     Mood mood,
     IconData icon, [
     String rest = '',
-  ]) => (step: step, lead: lead, rest: rest, mood: mood, icon: icon);
+  ]) => (
+    step: step,
+    lead: lead,
+    rest: rest,
+    mood: mood,
+    icon: icon,
+    ready: false,
+  );
   if (m.hasEntry()) {
     final e = m.entry;
     return say(
@@ -146,7 +152,14 @@ MergeView? mergeView(GitHubPull p) {
         : mergeMethodsOf(p).isEmpty
         ? MergeStep.words
         : MergeStep.merge;
-    return say(step, readyWords, Mood.ok, Icons.check_circle_outline, note);
+    return (
+      step: step,
+      lead: 'Ready to merge.',
+      rest: note,
+      mood: Mood.ok,
+      icon: Icons.check_circle_outline,
+      ready: true,
+    );
   }
   if (blocks.length == 1 && blocks.first == 'unknown') {
     return say(

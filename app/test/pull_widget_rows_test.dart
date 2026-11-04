@@ -53,6 +53,23 @@ Map<String, GitHubPull Function()> states = {
   'closed': () => fixturePull()..item.state = 'closed',
 };
 
+/// Ready by its Merge control (API 96), with a failing check its base
+/// doesn't require.
+GitHubPull _optionalFailing() => mergePull('ready')
+  ..mergeState = 'unstable'
+  ..checks.add(check('lint', state: 'failure'));
+
+/// [pullSummary] of [p] on its own.
+Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => MaterialApp(
+  theme: NushiTheme(tokens).toThemeData(),
+  home: Scaffold(
+    body: Builder(
+      builder: (context) =>
+          pullSummary(NushiTheme.of(context), number: 412, pull: p),
+    ),
+  ),
+);
+
 void main() {
   setUpAll(loadFonts);
 
@@ -80,6 +97,22 @@ void main() {
     expect(box.value, hasLength(5));
     expect(box.value.last.from, startsWith('Review comments from @mona'));
     d.dispose();
+  }, variant: _mac);
+
+  testWidgets("a failing check that isn't required: the summary says Ready, "
+      'as the Merge control does', (tester) async {
+    await tester.pumpWidget(_summary(_optionalFailing()));
+    expect(find.text('Ready'), findsOneWidget);
+    expect(find.byTooltip('Checks: 1 failing'), findsNothing);
+    // Blocked by the control: not Ready, whatever the merge state says.
+    await tester.pumpWidget(
+      _summary(
+        _optionalFailing()
+          ..mergeState = 'clean'
+          ..merge.blocks.add('rules'),
+      ),
+    );
+    expect(find.text('Ready'), findsNothing);
   }, variant: _mac);
 
   testWidgets('a code owner waited on; ready; closed', (tester) async {
@@ -177,7 +210,10 @@ void main() {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: 10,
                     children: [
-                      for (final s in states.keys)
+                      for (final (s, p) in [
+                        for (final s in states.keys) (s, states[s]!),
+                        ('optional', _optionalFailing),
+                      ])
                         Row(
                           children: [
                             SizedBox(
@@ -187,7 +223,7 @@ void main() {
                             pullSummary(
                               theme,
                               number: 412,
-                              pull: states[s]!(),
+                              pull: p(),
                               unread: s == 'running' ? 1 : 0,
                             ),
                           ],

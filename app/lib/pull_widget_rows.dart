@@ -149,12 +149,7 @@ class PullRows extends StatelessWidget {
     final open = p.threads.where((x) => !x.resolved).length;
     final comments = commentTimes(p).length;
     final block = mergeBlockers(p);
-    // Unstable with nothing else in the way, as the header has it: it can
-    // merge (the checks that don't pass aren't required).
-    final unstable = p.mergeState == 'unstable' && block.isEmpty;
-    final ready =
-        !hasConflicts(p) &&
-        (p.mergeState == 'clean' || p.mergeState == 'has_hooks' || unstable);
+    final ready = mergeStateReady(p);
     return [
       if (it.draft && p.reviewers.isEmpty)
         WidgetRow(
@@ -228,7 +223,10 @@ class PullRows extends StatelessWidget {
           ),
         },
       // Under Ready to merge, whole (it may wrap).
-      if (mergeView(p) == null && !it.draft && ready && unstable)
+      if (mergeView(p) == null &&
+          !it.draft &&
+          ready &&
+          p.mergeState == 'unstable')
         Padding(
           padding: const EdgeInsets.only(left: 26, bottom: 4),
           child: Text(unstableWords, style: theme.ui(t.textMuted, size: 12)),

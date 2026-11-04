@@ -18,6 +18,17 @@ List<String> mergeBlockers(GitHubPull p) => [
   if (p.mergeState == 'behind') 'behind ${p.base}',
 ];
 
+/// Whether [p] can merge, as GitHub's merge state has it: for a daemon
+/// before the Merge control (API 96), which may still serve the app until
+/// it restarts when idle (ADR 0056). No conflicts, and clean, with hooks,
+/// or unstable (checks not passing that aren't required) with nothing of
+/// [mergeBlockers] in the way.
+bool mergeStateReady(GitHubPull p) =>
+    !hasConflicts(p) &&
+    (p.mergeState == 'clean' ||
+        p.mergeState == 'has_hooks' ||
+        (p.mergeState == 'unstable' && mergeBlockers(p).isEmpty));
+
 /// A pull request's checks as one bar: failing red, running amber, passed
 /// green, the rest grey, each as wide as its count.
 class ChecksBar extends StatelessWidget {

@@ -3,6 +3,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/pull_states.dart';
+import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A pull request on one line, as the collapsed PR widget (and the
@@ -37,12 +38,10 @@ Widget pullSummary(
     final n = countChecks(p);
     final open = p.threads.where((x) => !x.resolved).length;
     final waiting = p.reviewers.any((r) => r.state == 'requested');
-    final ready =
-        (p.mergeState == 'clean' ||
-            p.mergeState == 'has_hooks' ||
-            p.mergeState == 'unstable') &&
-        n.failing + n.running == 0 &&
-        open == 0;
+    // As the Merge control says it, from a daemon that has it (API 96).
+    final ready = p.hasMerge()
+        ? p.merge.blocks.isEmpty && !it.draft
+        : mergeStateReady(p);
     switch (it.state) {
       case 'merged' || 'closed':
         parts.add(
