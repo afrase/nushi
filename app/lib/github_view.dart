@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/back_swipe.dart';
-import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
@@ -15,6 +14,7 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/token_notices.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘G shows GitHub in place of the chat, and back.
@@ -486,24 +486,18 @@ class _GitHubViewState extends State<GitHubView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (host.needsOk)
-          Notice(
-            'This build of Nushi needs your OK to read the token from the '
-            'keychain; macOS asks for your password.',
-            action: 'Allow…',
-            onAction: () => tryOrShow(context, () async {
+        if (host.needsOk || host.needsRestart)
+          TokenNotices(
+            needsOk: host.needsOk,
+            needsRestart: host.needsRestart,
+            problem: host.problem,
+            onAllow: () => tryOrShow(context, () async {
               await widget.daemon.client.allowGitHubToken(
                 AllowGitHubTokenRequest(host: host.host),
               );
               await _loadHosts();
             }),
-          )
-        else if (host.needsRestart)
-          Notice(
-            '${host.problem}. Restarting stops running turns and closes '
-            'terminals.',
-            action: bundledDaemon == null ? null : 'Restart daemon',
-            onAction: _restart,
+            onRestart: _restart,
           )
         else if (host.problem.isNotEmpty)
           Notice(host.problem, action: 'Settings…', onAction: _settings),

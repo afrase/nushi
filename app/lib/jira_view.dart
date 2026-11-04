@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/back_swipe.dart';
-import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
@@ -15,6 +14,7 @@ import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/token_notices.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘J shows Jira in place of the chat, and back.
@@ -554,28 +554,21 @@ class _JiraViewState extends State<JiraView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (site.needsOk)
-          Notice(
-            'This build of Nushi needs your OK to read the token from the '
-            'keychain; macOS asks for your password.',
-            action: 'Allow…',
-            onAction: () => tryOrShow(context, () async {
-              await widget.daemon.client.allowJiraToken(
-                AllowJiraTokenRequest(site: site.id),
-              );
-              await _loadSites();
-            }),
-          ),
-        if (site.needsRestart)
-          Notice(
-            '${site.problem}. Restarting stops running turns and closes '
-            'terminals.',
-            action: bundledDaemon == null ? null : 'Restart daemon',
-            onAction: () => tryOrShow(context, () async {
-              await widget.daemon.restartDaemon();
-              if (mounted) await _loadSites();
-            }),
-          ),
+        TokenNotices(
+          needsOk: site.needsOk,
+          needsRestart: site.needsRestart,
+          problem: site.problem,
+          onAllow: () => tryOrShow(context, () async {
+            await widget.daemon.client.allowJiraToken(
+              AllowJiraTokenRequest(site: site.id),
+            );
+            await _loadSites();
+          }),
+          onRestart: () => tryOrShow(context, () async {
+            await widget.daemon.restartDaemon();
+            if (mounted) await _loadSites();
+          }),
+        ),
         JiraSources(
           daemon: widget.daemon,
           site: site,
