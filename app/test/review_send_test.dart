@@ -77,8 +77,8 @@ void main() {
   // UX review, finding 7: review comments go as reply cards, as a pull
   // request's do, and unsent ones show outside the Changes tab.
   testWidgets('unsent comments show in the header and over the box; Send '
-      'to agent makes them reply cards; one taken out of the box is unsent '
-      'again', (tester) async {
+      'to agent makes them reply cards; one taken out of the box is '
+      'removed', (tester) async {
     final d = await _app(tester, 1700);
     final chat = d.chats['c']!;
     expect(_inHeader('Changes 2'), findsOne);
@@ -103,11 +103,13 @@ void main() {
     expect(_inHeader('Changes'), findsOne);
     expect(find.textContaining('aren’t sent'), findsNothing);
 
-    // The second card removed, unsent: it's back.
+    // The second card removed: the comment is gone with it, never to
+    // come back with the next Send to agent.
     chat.draft.replies.value = [cards.first];
     await tester.pump(const Duration(seconds: 3));
-    expect(unsentComments('c').map((c) => c.id), ['2']);
-    expect(find.text('1 review comment in Changes isn’t sent.'), findsOne);
+    expect(commentsOf('c').map((c) => c.id), ['1']);
+    expect(unsentComments('c'), isEmpty);
+    expect(find.textContaining('review comment in Changes'), findsNothing);
     d.dispose();
   }, variant: _mac);
 

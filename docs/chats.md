@@ -153,6 +153,7 @@ When a chat's subagents work in worktrees of their own, a menu at the left of th
 - Select lines to write a review comment for the agent.
 - **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message.
 - Comments not sent yet show in the header ("Changes 2") and over the box, with Send to agent and Show.
+- Taking a comment's card out of the box (or its queued message out of the queue) removes the comment: it doesn't come back with the next Send to agent.
 
 ## Previews and artifacts
 

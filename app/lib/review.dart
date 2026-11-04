@@ -230,7 +230,7 @@ List<ReviewComment> unsentComments(String chat) =>
 
 /// Puts [chat]'s unsent comments in its box as reply cards, to go with
 /// the next message, and marks them sent; one taken out of the box
-/// without being sent is unsent again ([_untilSent]).
+/// without being sent is removed ([_untilSent]).
 void reviewToBox(ChatState chat) {
   final unsent = unsentComments(chat.id);
   if (unsent.isEmpty) return;
@@ -243,40 +243,65 @@ void reviewToBox(ChatState chat) {
   _untilSent(chat, cards);
 }
 
-/// Whether a message with [r] (its quote: its text may be edited) is in
-/// [chat]'s transcript or queue.
-bool _gone(ChatState chat, Reply r) => [
+/// The texts of [chat]'s messages in its transcript, but for those in
+/// [before] (by id): an earlier message may quote the same lines.
+Iterable<String> _said(ChatState chat, Set<String> before) => [
   for (final i in chat.items)
-    if (i.kind == ItemKind.ITEM_KIND_USER_MESSAGE) i.text,
-  for (final m in chat.queue) m.text,
-].any((text) => splitReplies(text).$1.any((x) => x.quote == r.quote.trim()));
+    if (i.kind == ItemKind.ITEM_KIND_USER_MESSAGE && !before.contains(i.id))
+      i.text,
+];
 
-/// Marks a comment unsent again when its card leaves the box without a
-/// message taking it (removed, or the box cleared): the agent never got
-/// it. Stops following once each card went or came back.
+/// Whether a message in [texts] has the card [r] (by its quote: its text
+/// may be edited).
+bool _carried(Iterable<String> texts, Reply r) => texts.any(
+  (text) => splitReplies(text).$1.any((x) => x.quote == r.quote.trim()),
+);
+
+/// Whether [r] waits to go to the agent: in [chat]'s box, or in a message
+/// in its queue.
+bool _waiting(ChatState chat, Reply r) =>
+    chat.draft.replies.value.any((x) => x.quote == r.quote) ||
+    _carried([for (final m in chat.queue) m.text], r);
+
+/// Follows each comment's card until a message in the transcript has it.
+/// One that leaves the box and the queue without that (the card removed,
+/// the box cleared, its queued message removed) is removed: the user took
+/// it out, and it never comes back on its own (the owner's call: it came
+/// back with the next Send to agent when it was only unsent). A queued
+/// message taken back to edit puts its cards in the box again, still
+/// followed.
 void _untilSent(ChatState chat, Map<ReviewComment, Reply> cards) {
   final open = {...cards};
-  void check() {
-    bool inBox(Reply r) =>
-        chat.draft.replies.value.any((x) => x.quote == r.quote);
-    open.removeWhere((c, r) {
-      if (inBox(r)) return false;
-      if (!_gone(chat, r)) {
-        // Sending moves it from the box into a message a moment later.
-        Timer(const Duration(seconds: 2), () {
-          if (_gone(chat, r) || inBox(r)) return;
-          c.sent = false;
-          setComments(chat.id, [...commentsOf(chat.id)]);
-        });
-      }
-      return true;
-    });
-    if (open.isEmpty) {
-      chat.draft.replies.removeListener(check);
-      chat.removeListener(check);
-    }
+  final before = {for (final i in chat.items) i.id};
+  final checking = <ReviewComment>{};
+  late final VoidCallback check;
+  void settled(ReviewComment c) {
+    open.remove(c);
+    if (open.isNotEmpty) return;
+    chat.draft.replies.removeListener(check);
+    chat.removeListener(check);
   }
 
+  check = () {
+    for (final c in [...open.keys]) {
+      final r = open[c]!;
+      if (_carried(_said(chat, before), r)) {
+        settled(c);
+      } else if (!_waiting(chat, r) && checking.add(c)) {
+        // Sending moves it from the box into a message a moment later.
+        Timer(const Duration(seconds: 2), () {
+          checking.remove(c);
+          if (!open.containsKey(c) || _waiting(chat, r)) return;
+          settled(c);
+          if (_carried(_said(chat, before), r)) return;
+          setComments(chat.id, [
+            for (final m in commentsOf(chat.id))
+              if (m != c) m,
+          ]);
+        });
+      }
+    }
+  };
   chat.draft.replies.addListener(check);
   chat.addListener(check);
 }
