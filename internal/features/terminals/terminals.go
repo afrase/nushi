@@ -143,13 +143,25 @@ func (s *Service) Resize(id string, cols, rows int) error {
 }
 
 // Attach calls fn with the terminal's recent output, then with new output,
-// until its shell exits (and says how) or stop is closed.
+// until its shell exits (and says how) or stop is closed. A shell that
+// ended because the terminal restarted (Restart) isn't the terminal
+// exiting: it says not exited, so the client attaches again, to the new
+// one.
 func (s *Service) Attach(id string, stop <-chan struct{}, fn func([]byte) bool) (exited bool, code int, err error) {
-	sh, err := s.shellOf(id)
+	t, err := s.get(id)
 	if err != nil {
 		return false, 0, err
 	}
+	s.mu.Lock()
+	sh := t.shell
+	s.mu.Unlock()
 	sh.Attach(stop, fn)
+	s.mu.Lock()
+	replaced := t.shell != sh
+	s.mu.Unlock()
+	if replaced {
+		return false, 0, nil
+	}
 	exited, code = sh.Exit()
 	return exited, code, nil
 }

@@ -85,3 +85,71 @@ func TestRestartRacingCloseLeaksNoShell(t *testing.T) {
 		t.Errorf("shells left running: %+v", shells)
 	}
 }
+
+// endingShell is a shell whose Attach follows it until it is closed, as a
+// real one's does.
+type endingShell struct {
+	fakeShell
+	done     chan struct{}
+	attached chan<- struct{} // told of each client that attaches
+}
+
+func (e *endingShell) Exit() (bool, int) {
+	select {
+	case <-e.done:
+		return true, -1
+	default:
+		return false, 0
+	}
+}
+
+func (e *endingShell) Attach(stop <-chan struct{}, _ func([]byte) bool) {
+	e.attached <- struct{}{}
+	select {
+	case <-stop:
+	case <-e.done:
+	}
+}
+
+func (e *endingShell) Close() { close(e.done) }
+
+// A client attached while another restarts the terminal isn't told it
+// exited: it runs on, in a new shell, which the client attaches to again.
+// Closing it still says it exited.
+func TestRestartDoesNotEndOtherClients(t *testing.T) {
+	attached := make(chan struct{}, 1)
+	s := New(func(string, int, int, func()) (Shell, error) {
+		return &endingShell{done: make(chan struct{}), attached: attached}, nil
+	}, "zsh", folders{}, func(model.Event) {})
+	m, err := s.Open("c1", "", 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type ended struct {
+		exited bool
+		err    error
+	}
+	attach := func() <-chan ended {
+		got := make(chan ended, 1)
+		go func() {
+			exited, _, err := s.Attach(m.ID, make(chan struct{}), func([]byte) bool { return true })
+			got <- ended{exited, err}
+		}()
+		<-attached
+		return got
+	}
+	first := attach()
+	if err := s.Restart(m.ID, 80, 24); err != nil {
+		t.Fatal(err)
+	}
+	if r := <-first; r.err != nil || r.exited {
+		t.Errorf("the other client was told %+v on a restart", r)
+	}
+	second := attach()
+	if err := s.Close(m.ID); err != nil {
+		t.Fatal(err)
+	}
+	if r := <-second; r.err != nil || !r.exited {
+		t.Errorf("closed, the client was told %+v", r)
+	}
+}
