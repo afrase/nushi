@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/motion.dart';
+import 'package:nushi/slides.dart';
 
 /// A line that comes and goes in a column (the composer's plan, queue and
 /// error lines): while [child] is there it grows in from no height over
@@ -9,91 +10,41 @@ import 'package:nushi/motion.dart';
 /// or focus as it goes. A change of the child's own height eases too. A
 /// second change reverses from where it is. With Reduce Motion it comes
 /// and goes at once. It takes the width it's given.
-class GrowLine extends StatefulWidget {
+class GrowLine extends StatelessWidget {
   const new({required this.child, super.key});
 
   final Widget? child;
 
   @override
-  State<GrowLine> createState() => _GrowLineState();
-}
-
-class _GrowLineState extends State<GrowLine>
-    with SingleTickerProviderStateMixin {
-  late final _c = AnimationController(
-    vsync: this,
-    duration: Motion.standard,
-    reverseDuration: Motion.exit,
-    value: widget.child == null ? 0 : 1,
-  )..addStatusListener((_) => setState(() {}));
-  late final _size = CurvedAnimation(
-    parent: _c,
+  Widget build(BuildContext context) => Presence(
+    enter: Motion.standard,
     curve: Motion.size,
-    reverseCurve: Motion.leave.flipped,
+    builder: (context, run, last) {
+      // The width it's given, as in a stretched column (the size eases
+      // only the height). With Reduce Motion, no AnimatedSize (one of no
+      // length relays out as it lays out).
+      final fill = SizedBox(width: double.infinity, child: last);
+      final line = reduceMotion(context)
+          ? fill
+          : AnimatedSize(
+              duration: Motion.standard,
+              curve: Motion.size,
+              alignment: AlignmentDirectional.topStart,
+              child: fill,
+            );
+      // The same widgets throughout, so the line keeps its state; at rest
+      // the fade adds no layer. Coming, it's in by Motion.quick.
+      final fade = run.status == AnimationStatus.reverse
+          ? run
+          : run.drive(CurveTween(curve: const Interval(0, 0.6)));
+      return SizeTransition(
+        sizeFactor: run,
+        alignment: Alignment.topCenter,
+        child: FadeTransition(opacity: fade, child: line),
+      );
+    },
+    child: child,
   );
-  late final _fade = CurvedAnimation(
-    parent: _c,
-    curve: const Interval(0, 0.6), // Motion.quick of Motion.standard
-    reverseCurve: Motion.leave.flipped,
-  );
-  late Widget? _last = widget.child; // what folds away
-
-  @override
-  void didUpdateWidget(GrowLine old) {
-    super.didUpdateWidget(old);
-    if (widget.child case final c?) _last = c;
-    final show = widget.child != null;
-    if (show == (old.child != null)) return;
-    if (reduceMotion(context)) {
-      _c.value = show ? 1 : 0;
-    } else if (show) {
-      _c.forward().ignore();
-    } else {
-      _c.reverse().ignore();
-    }
-  }
-
-  @override
-  void dispose() {
-    _size.dispose();
-    _fade.dispose();
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_c.isDismissed) {
-      _last = null;
-      return const SizedBox.shrink();
-    }
-    final leaving = widget.child == null;
-    // The width it's given, as in a stretched column (the size eases only
-    // the height). With Reduce Motion, no AnimatedSize (one of no length
-    // relays out as it lays out).
-    final fill = SizedBox(width: double.infinity, child: _last);
-    final line = reduceMotion(context)
-        ? fill
-        : AnimatedSize(
-            duration: Motion.standard,
-            curve: Motion.size,
-            alignment: AlignmentDirectional.topStart,
-            child: fill,
-          );
-    // The same widgets throughout, so the line keeps its state; at rest
-    // the fade adds no layer.
-    return IgnorePointer(
-      ignoring: leaving,
-      child: ExcludeFocus(
-        excluding: leaving,
-        child: SizeTransition(
-          sizeFactor: _size,
-          alignment: Alignment.topCenter,
-          child: FadeTransition(opacity: _fade, child: line),
-        ),
-      ),
-    );
-  }
 }
 
 /// [child] coming in once, as it's first built: it fades in and grows
