@@ -18,13 +18,6 @@ import 'package:nushi/theme/themes.dart';
 import 'package:nushi/widgets.dart' show errorText;
 import 'package:remote_transport/remote_transport.dart' as rt;
 
-/// Where pairing stands while it runs: the code to compare with the Mac's.
-final class PairingCode {
-  new(this.code);
-
-  final String code;
-}
-
 /// The phone (ADR 0054): its key and the Mac it's paired with, kept in the
 /// browser's storage, and while paired, the [Daemon] it reaches through
 /// the relay.
@@ -71,8 +64,9 @@ class Phone extends ChangeNotifier {
   /// When the Mac last answered, kept across launches.
   DateTime? _seen;
 
-  /// A pairing under way, once it has its code.
-  PairingCode? pairing;
+  /// The code of a pairing under way, to compare with the Mac's, once it
+  /// has one.
+  String? pairing;
 
   /// The daemon's VAPID key, asked for once connected, so a tap on
   /// Notifications can subscribe at once (iOS asks only from a tap).
@@ -197,7 +191,7 @@ class Phone extends ChangeNotifier {
         name: name,
         kind: 'web',
         onCode: (code) {
-          pairing = PairingCode(code);
+          pairing = code;
           notifyListeners();
         },
       );

@@ -99,7 +99,7 @@ class _PairScreenState extends State<PairScreen> {
     return ListenableBuilder(
       listenable: widget.phone,
       builder: (context, _) {
-        final code = widget.phone.pairing?.code;
+        final code = widget.phone.pairing;
         return PhoneScreen(
           title: 'Pair with a Mac',
           body: ListView(

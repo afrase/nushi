@@ -63,7 +63,7 @@ void main() {
       // Pairing: the code on the phone is the one the Mac allows.
       final paired = phone.pair(setup['link']! as String, 'Test browser');
       await _until(() => phone.pairing != null);
-      mac.sink.add({'do': 'confirm', 'code': phone.pairing!.code});
+      mac.sink.add({'do': 'confirm', 'code': phone.pairing!});
       expect((await next())['allowed'], isTrue);
       await paired;
       final daemon = phone.daemon!;

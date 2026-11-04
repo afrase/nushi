@@ -205,7 +205,7 @@ void main() {
       expect(find.text('Pair with a Mac'), findsOneWidget);
       await render(tester, find.byType(PhoneApp), 'phone_pair_$name');
       phone
-        ..pairing = PairingCode('491 207')
+        ..pairing = '491 207'
         ..notifyListeners();
       await tester.pump();
       expect(find.textContaining('491 207'), findsOneWidget);
