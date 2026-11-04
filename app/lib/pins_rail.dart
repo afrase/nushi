@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/controls.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 
 // The pins' rail (ADR 0085), as Claude's desktop app has it: a dash for the
@@ -330,8 +331,20 @@ class _Dashes extends StatelessWidget {
   }
 }
 
+/// A menu title's color, not the current one's: [Tokens.text] dimmed over
+/// the menu's fill, as Claude's are (about half the contrast of the current
+/// one's, whatever the theme; textSecondary is nearly text in some), but
+/// no dimmer than reads on the fill.
+Color pinTitleDim(Tokens t) {
+  for (var a = 0.6; ; a += 0.05) {
+    final dim = Color.alphaBlend(t.text.withValues(alpha: a), t.raised);
+    if (a >= 0.8 || contrast(dim, t.raised) >= 4) return dim;
+  }
+}
+
 /// One entry's dash: long and bright for the current one ([on]), short and
-/// dim otherwise, unless [bright] (its row under the pointer or the keys).
+/// dim otherwise; between the two if [bright] (its row under the pointer or
+/// the keys), as Claude's hovered row has it.
 class PinDash extends StatelessWidget {
   const new({required this.on, super.key, this.bright = false});
 
@@ -346,7 +359,11 @@ class PinDash extends StatelessWidget {
       width: _dash(context, on: on),
       height: _thick,
       decoration: BoxDecoration(
-        color: on || bright ? t.text : t.borderStrong,
+        color: on
+            ? t.text
+            : bright
+            ? Color.lerp(t.borderStrong, t.text, 0.5)
+            : t.borderStrong,
         borderRadius: BorderRadius.circular(_thick / 2),
       ),
     );
@@ -506,10 +523,7 @@ class _MenuRow extends StatelessWidget {
                   entry.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.ui(
-                    bright ? t.text : t.textSecondary,
-                    size: 13.5,
-                  ),
+                  style: theme.ui(bright ? t.text : pinTitleDim(t), size: 13.5),
                 ),
               ),
             ],

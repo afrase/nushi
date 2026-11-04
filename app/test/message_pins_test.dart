@@ -18,7 +18,9 @@ import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/pins_rail.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/theme/themes.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -426,7 +428,7 @@ void main() {
     final t = NushiTheme.of(tester.element(_row(rows.last))).t;
     Color? colorOf(String r) => tester.widget<Text>(_row(r)).style?.color;
     expect(colorOf(rows.last), t.text);
-    expect(colorOf(rows[1]), t.textSecondary);
+    expect(colorOf(rows[1]), pinTitleDim(t));
 
     // Over the menu it stays; away from both it goes.
     await _move(tester, tester.getCenter(_row(rows[1])));
@@ -541,6 +543,20 @@ void main() {
     expect(_row('Relay restart plan'), findsNothing);
     await closeView(tester, d);
   }, variant: _mac);
+
+  test('the menu’s dim titles are told from the current one’s, and read, '
+      'in every built-in theme', () {
+    for (final theme in builtInThemes) {
+      for (final t in [theme.dark, theme.light]) {
+        final dim = pinTitleDim(t);
+        final what = '${theme.id} ${t == theme.dark ? 'dark' : 'light'}';
+        // Claude's are about 2.2 from the current one's; themes whose text
+        // is dimmer on its fill (Solarized dark) get less, to stay legible.
+        expect(contrast(t.text, dim), greaterThan(1.5), reason: what);
+        expect(contrast(dim, t.raised), greaterThanOrEqualTo(4), reason: what);
+      }
+    }
+  });
 
   for (final b in Brightness.values) {
     testWidgets('the rail and its menu, ${b.name}', (tester) async {
