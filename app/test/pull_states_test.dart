@@ -6,6 +6,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -159,6 +160,35 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byType(PullChip));
     expect(opened, ['https://github.com/afrase/nushi-gh-test/pull/1']);
+    await closeView(tester, d);
+  });
+
+  testWidgets('the chip asks again each minute, a merged pull request every '
+      '15', (tester) async {
+    final fake = FakeDaemon(_chats())
+      ..answer = (input) => switch (input) {
+        GetGitHubPullRequest() => GetGitHubPullResponse(
+          pull: pull()
+            ..item.id = 'PR_3'
+            ..item.state = 'merged',
+        ),
+        _ => _states(input),
+      };
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(body: PullChip(d, d.chats['c']!, onOpen: (_) {})),
+      ),
+    );
+    await tester.pumpAndSettle();
+    int asked() => fake.calls.whereType<GetGitHubPullRequest>().length;
+    expect(asked(), 1);
+    await tester.pump(pullWidgetPoll);
+    expect(asked(), 1);
+    await tester.pump(pullDonePoll - pullWidgetPoll);
+    await tester.pump();
+    expect(asked(), 2);
     await closeView(tester, d);
   });
 }

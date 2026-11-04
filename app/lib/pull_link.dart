@@ -21,6 +21,13 @@ const chatPullApi = 81;
 const pullWidgetPoll = Duration(minutes: 1);
 const pullDonePoll = Duration(minutes: 15);
 
+/// How long until [p] is asked for again: [pullDonePoll] once merged or
+/// closed, else [pullWidgetPoll] (also before it's known).
+Duration pullPoll(GitHubPull? p) {
+  final state = p?.item.state;
+  return state == 'merged' || state == 'closed' ? pullDonePoll : pullWidgetPoll;
+}
+
 /// When the chat's pull request was last looked for and how often it is,
 /// as the widget's tooltip says it: "Checked 20 s ago · every minute".
 String checkedWords(DateTime? checked, Duration every, DateTime now) {
@@ -138,12 +145,7 @@ class ChatPull extends ChangeNotifier {
 
   /// How long until the next ask on the timer: a minute, or 15 for a
   /// pull request merged or closed.
-  Duration get every {
-    final state = pull?.item.state;
-    return state == 'merged' || state == 'closed'
-        ? pullDonePoll
-        : pullWidgetPoll;
-  }
+  Duration get every => pullPoll(pull);
 
   /// Follows the chat (its pane shows): asks now, on [pullWidgetPoll], after
   /// a tool call that pushed or opened a pull request, when a turn ends

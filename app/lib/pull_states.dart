@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -265,9 +266,10 @@ class ChecksMark extends CustomPainter {
 /// one-line summary (`pullSummary`: its number in its state's color, then
 /// failing or running checks, changes requested or a reviewer waited on,
 /// open threads; or Ready, Draft, Merged, Closed), from the pull request
-/// whole, asked at once and each minute (quietly) while it shows; until
-/// then its number and checks' icon from the chats' states. A tap opens
-/// it on GitHub.
+/// whole, asked at once and then (quietly) as the PR widget asks for it
+/// ([pullPoll]: each minute, merged or closed every 15) while it shows;
+/// until then its number and checks' icon from the chats' states. A tap
+/// opens it on GitHub.
 class PullChip extends StatefulWidget {
   const new(this.daemon, this.chat, {required this.onOpen, super.key});
 
@@ -291,10 +293,6 @@ class _PullChipState extends State<PullChip> {
   void initState() {
     super.initState();
     _states = PullStates.of(widget.daemon)..watch();
-    _timer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) => unawaited(_ask(quiet: true)),
-    );
     widget.chat.addListener(_chatChanged);
     unawaited(_ask());
   }
@@ -314,10 +312,11 @@ class _PullChipState extends State<PullChip> {
     unawaited(_ask());
   }
 
-  /// Asks for the linked pull request whole.
+  /// Asks for the linked pull request whole, then again in [pullPoll].
   Future<void> _ask({bool quiet = false}) async {
     final l = widget.chat.pull;
     _asked = l?.id;
+    _timer?.cancel();
     if (l == null) return;
     try {
       final r = await widget.daemon.client.getGitHubPull(
@@ -330,6 +329,9 @@ class _PullChipState extends State<PullChip> {
     } on Object {
       // What shows stays: the states' summary.
     }
+    if (!mounted || widget.chat.pull?.id != l.id) return;
+    _timer?.cancel();
+    _timer = Timer(pullPoll(_pull), () => unawaited(_ask(quiet: true)));
   }
 
   @override
