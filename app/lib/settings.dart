@@ -86,6 +86,10 @@ final githubDays = Pref<int>('githubDays', (v) => v is int && v >= 0 ? v : 90);
 final Pref<Map<String, List<String>>> githubHidden = _places('githubHidden');
 final Pref<Map<String, List<String>>> githubOwners = _places('githubOwners');
 
+/// Whether the GitHub view's inbox is only the repositories of the folders
+/// Nushi knows ("My folders' repositories"), not all.
+final Pref<bool> githubKnownRepos = _plain('githubKnown', false);
+
 /// Findings from review bots (Settings › GitHub; off at first): the To do
 /// list reads must-address findings out of these bots' reviews (logins,
 /// comma-separated), the list items under a heading with any of

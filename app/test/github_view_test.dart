@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:connectrpc/connect.dart';
 import 'package:diff_view/diff_view.dart';
@@ -194,6 +195,7 @@ Future<(FakeDaemon, Daemon)> openView(
     githubDays.value = 90;
     githubHidden.value = {};
     githubOwners.value = {};
+    githubKnownRepos.value = false;
   }
   final fake = FakeDaemon(chats)
     ..answer = (input) =>
@@ -427,6 +429,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(fake.calls.whereType<ListGitHubInboxRequest>().last.repos, [_repo]);
     await closeView(tester, d);
+  });
+
+  testWidgets("my folders' repositories, picked, are remembered across a "
+      'relaunch', (tester) async {
+    Directory(dataDir).createSync(recursive: true);
+    final (_, d) = await openView(tester);
+    await tester.tap(find.text('All repositories'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.textContaining("My folders' repositories", findRichText: true).last,
+    );
+    await tester.pumpAndSettle();
+    expect(readSaved()['githubKnown'], isTrue);
+    await closeView(tester, d);
+    // A relaunch: what the view had while the app ran is gone.
+    final (fake, again) = await openView(tester, keep: true);
+    expect(fake.calls.whereType<ListGitHubInboxRequest>().first.repos, [_repo]);
+    await closeView(tester, again);
   });
 
   testWidgets('a pull request: its header, conversation, checks with a '

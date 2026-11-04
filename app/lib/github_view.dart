@@ -25,12 +25,10 @@ const githubKey = SingleActivator(LogicalKeyboardKey.keyG, meta: true);
 /// ask: the daemon holds it back while a rate limit runs low).
 const githubPoll = Duration(minutes: 1);
 
-/// What the view had last, while the app runs: the host, whether the
-/// inbox is only the repositories of folders Nushi knows, the item picked,
+/// What the view had last, while the app runs: the host, the item picked,
 /// and the one whose details show: kept whatever the inbox holds, so a
 /// pull request that leaves Review requested stays a pull request.
 String? _host;
-bool _known = false;
 GitHubRef? _picked;
 GitHubPick? _details;
 
@@ -43,7 +41,6 @@ final _wide = <String>{};
 void forgetGitHubView() {
   _host = _picked = null;
   _details = null;
-  _known = false;
   _wide.clear();
 }
 
@@ -105,6 +102,9 @@ class _GitHubViewState extends State<GitHubView> {
     for (final r in _repos)
       if (r.host == _hostNow?.host) r.repo,
   ];
+
+  /// Only the repositories of the folders Nushi knows (remembered).
+  bool get _known => githubKnownRepos.value;
 
   List<Section> get _sections => sectionsOf(_inbox);
 
@@ -425,7 +425,7 @@ class _GitHubViewState extends State<GitHubView> {
               },
               onKnown: (known) {
                 if (known == _known) return;
-                setState(() => _known = known);
+                setState(() => githubKnownRepos.value = known);
                 unawaited(_load());
               },
               onRefresh: _load,
