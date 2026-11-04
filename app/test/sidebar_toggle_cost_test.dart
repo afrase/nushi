@@ -19,25 +19,27 @@ import 'long_chat.dart';
 /// the moving sidebar button, a focus scope or two.
 const _mostPerFrame = 20;
 
-/// What each frame rebuilt: every widget, and the transcript's rows.
-typedef _Frame = ({int builds, int rows});
+/// What each frame rebuilt: every widget, the transcript's rows, and texts.
+typedef _Frame = ({int builds, int rows, int texts});
 
 /// Runs [change], then pumps 24 frames of 16 ms (past the slide's 240 ms),
 /// counting what each frame rebuilds.
 Future<List<_Frame>> _frames(WidgetTester tester, VoidCallback change) async {
   var builds = 0;
   var rows = 0;
+  var texts = 0;
   debugOnRebuildDirtyWidget = (e, _) {
     builds++;
     if (e.widget is ItemView) rows++;
+    if (e.widget is Text) texts++;
   };
   final frames = <_Frame>[];
   try {
     change();
     for (var i = 0; i < 24; i++) {
-      builds = rows = 0;
+      builds = rows = texts = 0;
       await tester.pump(const Duration(milliseconds: 16));
-      frames.add((builds: builds, rows: rows));
+      frames.add((builds: builds, rows: rows, texts: texts));
     }
   } finally {
     debugOnRebuildDirtyWidget = null;
@@ -90,6 +92,24 @@ void main() {
       await _frames(tester, () => sidebarHidden.value = false),
       'show',
     );
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a new appearance or theme shows at once, not blended over '
+      'frames that each rebuild the transcript', (tester) async {
+    final d = await app(tester);
+    // Material's buttons and the rows' flash still blend their own colors
+    // for 200 ms, a container each; no text rebuilds after the first frame.
+    for (final (what, change) in [
+      ('dark', () => appearance.value = ThemeMode.dark),
+      ('Nord', () => colorTheme.value = 'nord'),
+    ]) {
+      final frames = await _frames(tester, change);
+      for (final (i, f) in frames.indexed.skip(1)) {
+        expect(f.rows, 0, reason: '$what: rows rebuilt on frame $i');
+        expect(f.texts, 0, reason: '$what: texts rebuilt on frame $i');
+      }
+    }
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 

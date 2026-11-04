@@ -273,7 +273,16 @@ class _NushiAppState extends State<NushiApp> {
               // come here (an empty pane, after a click on the sidebar).
               child: Focus(
                 autofocus: true,
-                child: Scaffold(body: _Shell(widget.daemon)),
+                child: Scaffold(
+                  // The Scaffold's text style blends to a new theme's over
+                  // 200 ms, rebuilding every text below on each frame;
+                  // this one switches at once, with the theme.
+                  body: Material(
+                    type: MaterialType.transparency,
+                    animationDuration: Duration.zero,
+                    child: _Shell(widget.daemon),
+                  ),
+                ),
               ),
             ),
           ),
