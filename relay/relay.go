@@ -42,8 +42,9 @@ type Limits struct {
 	// ListenPerIP caps the listeners from one address (an IPv6 /48), 0
 	// for none: listening needs only a key of one's own, so without it
 	// a few addresses could hold every connection for MaxWait at a time.
-	// One daemon listens on a few ids (its own, those it gave up but a
-	// phone still needs, a pairing's).
+	// A listener counts until its connection ends, a phone's session on
+	// it included (ADR 0033): one daemon holds its waiting one, one per
+	// live session, those it gave up but a phone still needs, a pairing's.
 	ListenPerIP int
 	// Site is the web app the relay serves too (ADR 0054), or nil. Its
 	// origin is then the only one whose pages may open a WebSocket here.
