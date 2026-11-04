@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"os"
 	"slices"
 	"testing"
 
@@ -32,8 +33,9 @@ func TestForkAtIsTheGoAgents(t *testing.T) {
 // with the chat's environment and claude's path as the agent reads it.
 func TestTheGoAgentsCommand(t *testing.T) {
 	env := []string{"PATH=/bin", "HOME=/h"}
-	cmd := goCommand("/x/nushid", "/data", "/bin/claude", env)
-	if !slices.Equal(cmd.Args, []string{"/x/nushid", "claude-acp"}) || cmd.Dir != "/data" {
+	cmd, err := goCommand("/data", "/bin/claude", env)
+	self, _ := os.Executable()
+	if err != nil || !slices.Equal(cmd.Args, []string{self, "claude-acp"}) || cmd.Dir != "/data" {
 		t.Errorf("args %q in %q", cmd.Args, cmd.Dir)
 	}
 	if want := []string{"PATH=/bin", "HOME=/h", "CLAUDE_CODE_EXECUTABLE=/bin/claude"}; !slices.Equal(cmd.Env, want) {

@@ -65,12 +65,10 @@ func (Harness) Info() model.HarnessInfo {
 // executable's Command, in dir (the daemon's folder) and r's environment
 // (the login shell's, ADR 0048), its stderr to log.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	self, err := os.Executable()
+	cmd, err := agentproc.SelfCommand(Command, dir, r.Env) // the bridge finds the CLI on that PATH
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(self, Command) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
-	cmd.Dir, cmd.Env = dir, r.Env      // the bridge finds the CLI on that PATH
 	return agentproc.Start(cmd, client, log)
 }
 

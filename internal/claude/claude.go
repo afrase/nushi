@@ -69,7 +69,11 @@ func (Harness) Info() model.HarnessInfo {
 // dir (the daemon's own folder); a chat's folder reaches the agent only as
 // the session's cwd. Its stderr goes to log.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	return startGo(dir, r.CLI, Environ(r.Env), client, log)
+	cmd, err := goCommand(dir, r.CLI, Environ(r.Env))
+	if err != nil {
+		return nil, err
+	}
+	return agentproc.Start(cmd, client, log)
 }
 
 // TodoTools is the variable that turns on Claude Code's to-do list (its

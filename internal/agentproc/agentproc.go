@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"os"
 	"os/exec"
 	"strings"
 	"sync/atomic"
@@ -64,6 +65,19 @@ func Start(cmd *exec.Cmd, client acp.Client, log *slog.Logger) (*Agent, error) {
 		a.exited(time.Since(started))
 	}()
 	return a, nil
+}
+
+// SelfCommand is this executable run as an agent built into it: its
+// subcommand sub, in dir with env. Its caller Starts it; an agent of the
+// user's own runs through Start alone.
+func SelfCommand(sub, dir string, env []string) (*exec.Cmd, error) {
+	self, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command(self, sub) //nolint:gosec,noctx // lives until Stop or Close, not a context; this executable as the agent
+	cmd.Dir, cmd.Env = dir, env
+	return cmd, nil
 }
 
 // Connect is an Agent of a connection Nushi didn't start a process for

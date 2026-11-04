@@ -80,12 +80,10 @@ func (Harness) Gone(err error) bool { return agentproc.NotFound(err) }
 // Command, in dir (the daemon's folder) and r's environment, its stderr to
 // log.
 func (h Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {
-	self, err := os.Executable()
+	cmd, err := agentproc.SelfCommand(h.Command(), dir, r.Env) // the bridge finds the CLI on that PATH
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(self, h.Command()) //nolint:gosec,noctx // lives until Stop or Close, not a context; this nushid as the bridge
-	cmd.Dir, cmd.Env = dir, r.Env          // the bridge finds the CLI on that PATH
 	return agentproc.Start(cmd, client, log)
 }
 
