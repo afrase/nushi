@@ -153,7 +153,8 @@ func (c *chat) toSubagentOfLocked(m *model.Message) error {
 }
 
 // closedLocked says why a chat takes no prompts: it is archived, being
-// deleted, or its agent is stopping; nil when it takes them.
+// deleted, its agent is stopping, or its worktree is being removed; nil
+// when it takes them.
 func (c *chat) closedLocked() error {
 	switch {
 	case c.record.Archived:
@@ -162,6 +163,8 @@ func (c *chat) closedLocked() error {
 		return errors.New("the chat is being deleted")
 	case c.stopping:
 		return errors.New("the chat's agent is stopping")
+	case c.removing:
+		return errors.New("the chat's worktree is being removed")
 	}
 	return nil
 }

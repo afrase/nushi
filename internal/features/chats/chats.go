@@ -147,6 +147,7 @@ type chat struct {
 	busy         bool                            // running a turn, or reopening or moving the session
 	halting      bool                            // being deleted: never reopens
 	stopping     bool                            // its agent is being stopped: nothing more goes to it
+	removing     bool                            // its worktree is being removed (RemoveWorktree): it takes no prompts and doesn't reopen
 	held         bool                            // the last turn was stopped or failed: the queue waits for the next
 	steering     bool                            // a steering worker hands the queue to the running turn
 	sendingNow   int                             // SendNow prompts waiting on the turn they stop: the queue waits too

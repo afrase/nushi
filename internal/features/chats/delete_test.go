@@ -170,3 +170,41 @@ func TestNothingReopensAChatBeingDeleted(t *testing.T) {
 		t.Errorf("%d agents started while the chat was being deleted", again-launches)
 	}
 }
+
+// inspectingWorktrees is a worktree whose Inspect waits for the test.
+type inspectingWorktrees struct {
+	removingWorktrees
+	inspecting, goOn chan struct{}
+}
+
+func (w *inspectingWorktrees) Inspect(context.Context, model.Worktree) (model.WorktreeState, error) {
+	w.inspecting <- struct{}{}
+	<-w.goOn
+	return model.WorktreeState{}, nil
+}
+
+// While RemoveWorktree looks at the worktree (git, which takes time) the
+// chat takes no prompt and doesn't reopen: a message then would start a
+// turn that the removal cuts, in a folder about to go.
+func TestRemoveWorktreeHoldsTheChat(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	wts := &inspectingWorktrees{inspecting: make(chan struct{}), goOn: make(chan struct{})}
+	svc.worktrees = wts
+	c.mu.Lock()
+	c.record.Worktree = &model.Worktree{Path: c.record.Folder}
+	c.mu.Unlock()
+	removed := make(chan error, 1)
+	go func() { removed <- svc.RemoveWorktree(context.Background(), c.id, false) }()
+	<-wts.inspecting
+	err := svc.Prompt(t.Context(), c.id, model.Message{Text: "hi"}, SendIdle)
+	if err == nil || !strings.Contains(err.Error(), "worktree is being removed") {
+		t.Errorf("a prompt during the removal: %v", err)
+	}
+	close(wts.goOn)
+	testcheck.NoErr(t, <-removed)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(agent.prompts) > 0 || !slices.Equal(wts.removed, []string{c.record.Folder}) || !c.asleep || c.removing {
+		t.Errorf("prompts %q, removed %q, asleep %v, removing %v", agent.prompts, wts.removed, c.asleep, c.removing)
+	}
+}

@@ -73,23 +73,38 @@ func (s *Service) othersIn(c *chat, folder string) ([]string, error) {
 // RemoveWorktree removes the chat's worktree (git worktree remove): refused
 // while the chat's turn runs or another chat works in it, and with
 // uncommitted changes unless force. The chat's agent stops first (it
-// sleeps, when it can reopen), and its terminals end.
+// sleeps, when it can reopen), and its terminals end. From the check that
+// the chat is quiet to the end, the chat takes no prompts and doesn't
+// reopen (removing), so no turn starts in a folder about to go.
 func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool) error {
 	c, err := s.stored(chatID)
 	if err != nil {
 		return err
 	}
 	c.mu.Lock()
-	wt, quiet, running := c.record.Worktree, c.quietLocked(), c.agent != nil
-	c.mu.Unlock()
+	wt := c.record.Worktree
 	switch {
 	case wt == nil:
-		return errors.New("this chat has no worktree")
+		err = errors.New("this chat has no worktree")
 	case s.worktrees == nil:
-		return errors.New("no git")
-	case !quiet:
-		return errors.New("the agent is working: clean up once its turn ends")
+		err = errors.New("no git")
+	case c.removing:
+		err = errors.New("the chat's worktree is being removed")
+	case !c.quietLocked():
+		err = errors.New("the agent is working: clean up once its turn ends")
 	}
+	if err == nil {
+		c.removing = true
+	}
+	c.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		c.mu.Lock()
+		c.removing = false
+		c.mu.Unlock()
+	}()
 	others, err := s.othersIn(c, wt.Path)
 	if err != nil {
 		return err
@@ -104,10 +119,18 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 	if st.Changed > 0 && !force {
 		return fmt.Errorf("the worktree has %d uncommitted changes", st.Changed)
 	}
+	c.mu.Lock()
+	running := c.agent != nil
 	if running {
-		if err := s.Sleep(chatID); err != nil {
-			s.stop(c) // an agent that can't reopen its sessions just stops
-		}
+		c.asleep = c.canLoad // an agent that can't reopen its sessions just stops
+	}
+	c.mu.Unlock()
+	if running {
+		s.stop(c)
+		c.mu.Lock()
+		c.statusChangedLocked()
+		c.logLocked().Info("agent stopped", "why", "its worktree is removed", "asleep", c.asleep)
+		c.mu.Unlock()
 	}
 	if s.terminals != nil {
 		s.terminals.CloseChat(chatID)
