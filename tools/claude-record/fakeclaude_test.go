@@ -27,10 +27,6 @@ func fakeClaude(args []string) int {
 		fmt.Println("2.1.312 (Fake Claude)") //nolint:forbidigo // claude's own output
 		return 0
 	}
-	if slices.Equal(args, []string{"auth", "status", "--json"}) { // the Node adapter asks
-		fmt.Println(`{"loggedIn":true,"authMethod":"api_key"}`) //nolint:forbidigo // as above
-		return 0
-	}
 	f := &fake{sid: "fake-session", waiting: map[string]chan map[string]any{}, partial: slices.Contains(args, "--include-partial-messages"),
 		replay: slices.Contains(args, "--replay-user-messages")}
 	for _, a := range args {
@@ -156,7 +152,8 @@ func (f *fake) turn(u map[string]any) error {
 		f.history = append(f.history, msg)
 		f.send(map[string]any{"type": "user", "message": msg, "parent_tool_use_id": nil, "session_id": f.sid, "uuid": f.uuid()})
 	}
-	// The Node adapter reads modelUsage and permission_denials too.
+	// claude sends modelUsage and permission_denials too (the Node adapter
+	// read them).
 	byModel := map[string]any{"claude-fake": map[string]any{"inputTokens": 1, "outputTokens": 1, "cacheReadInputTokens": 0,
 		"cacheCreationInputTokens": 0, "costUSD": 0.01, "contextWindow": 200000}}
 	f.send(map[string]any{"type": "result", "subtype": "success", "is_error": false, "num_turns": 1, "result": text.String(), "stop_reason": stop,

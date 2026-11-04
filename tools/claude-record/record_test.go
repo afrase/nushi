@@ -54,7 +54,7 @@ func testRecorder(t *testing.T) *recorder {
 	if err := os.Symlink(exe, claude); err != nil {
 		t.Fatal(err)
 	}
-	return &recorder{tee: tee, claude: claude, agent: []string{exe}, acp: "acp-go.jsonl", env: []string{"RECORD_TEST_AGENT=1"},
+	return &recorder{tee: tee, claude: claude, agent: []string{exe}, env: []string{"RECORD_TEST_AGENT=1"},
 		tmp: t.TempDir(), log: slog.New(slog.DiscardHandler)}
 }
 
@@ -178,7 +178,7 @@ func TestRecord(t *testing.T) {
 			t.Errorf("no %q in the cassette:\n%s", want, strings.Join(kinds, "\n"))
 		}
 	}
-	got := acpLines(t, filepath.Join(dir, "acp-go.jsonl"))
+	got := acpLines(t, filepath.Join(dir, acpFile))
 	for _, want := range []string{"in initialize", "out answer _meta,agentCapabilities,agentInfo,protocolVersion", "in session/new", "out update agent_message_chunk",
 		"out session/request_permission", "in answer outcome", "out answer stopReason,usage", "in session/list", "out answer sessions"} {
 		if !slices.ContainsFunc(got, func(l string) bool { return strings.HasPrefix(l, want) }) {
@@ -218,7 +218,7 @@ func TestHelloScenario(t *testing.T) {
 	if err := r.record(context.Background(), dir); err != nil {
 		t.Fatal(err)
 	}
-	got := acpLines(t, filepath.Join(dir, "acp-go.jsonl"))
+	got := acpLines(t, filepath.Join(dir, acpFile))
 	if !slices.Contains(got, "out update agent_message_chunk") || got[len(got)-1] != "out answer stopReason,usage" {
 		t.Errorf("the ACP recording:\n%s", strings.Join(got, "\n"))
 	}

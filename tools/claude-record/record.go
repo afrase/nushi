@@ -20,13 +20,15 @@ import (
 	"github.com/afrase/nushi/internal/proctree"
 )
 
+// acpFile is a scenario's ACP recording.
+const acpFile = "acp.jsonl"
+
 // recorder records scenarios: the agent on claude-tee on claude, claude
 // on the fake API, all in throwaway folders.
 type recorder struct {
 	tee    string   // claude-tee
 	claude string   // the claude it runs
 	agent  []string // the ACP agent's command line
-	acp    string   // the ACP recording's file name in a scenario
 	env    []string // more environment for the agent (tests')
 	tmp    string   // where runs' scratch folders go; "" is the temp folder
 	// mcpEcho is claudetest's mcp-echo, built: a scenario's "$mcp-echo"
@@ -59,7 +61,7 @@ func (r *recorder) record(ctx context.Context, dir string) error {
 	if err := r.run(ctx, scratch, script, client, timeout); err != nil {
 		return fmt.Errorf("%w (its run is kept in %s)", err, scratch)
 	}
-	if err := keep(filepath.Join(scratch, "out"), dir, r.acp); err != nil {
+	if err := keep(filepath.Join(scratch, "out"), dir, acpFile); err != nil {
 		return err
 	}
 	return os.RemoveAll(scratch)
@@ -102,7 +104,7 @@ func (r *recorder) run(ctx context.Context, scratch string, script *fakeapi.Scri
 		return err
 	}
 	defer agentLog.Close() //nolint:errcheck // a log
-	acpRec, err := os.Create(filepath.Join(dirs["out"], r.acp))
+	acpRec, err := os.Create(filepath.Join(dirs["out"], acpFile))
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,6 @@ func main() {
 	only := flag.String("only", "all", `the scenarios to record: "all", or names with commas`)
 	tee := flag.String("tee", "", "claude-tee, built")
 	claudePath := flag.String("claude", os.Getenv("CLAUDE_TEE_REAL"), "the claude to record ($CLAUDE_TEE_REAL)")
-	acpName := flag.String("acp", "acp.jsonl", "the ACP recording's file name")
 	mcpEcho := flag.String("mcp-echo", "", "claudetest's mcp-echo, built: the scenarios' $mcp-echo")
 	flag.Parse()
 	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
@@ -49,7 +48,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	context.AfterFunc(ctx, cancel)
-	r := &recorder{tee: *tee, claude: *claudePath, agent: flag.Args(), acp: *acpName, mcpEcho: *mcpEcho, log: log}
+	r := &recorder{tee: *tee, claude: *claudePath, agent: flag.Args(), mcpEcho: *mcpEcho, log: log}
 	if err := run(ctx, *scenarios, *only, r); err != nil {
 		log.Error("claude-record", "err", err)
 		cancel()

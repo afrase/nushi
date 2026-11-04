@@ -14,8 +14,8 @@ import (
 )
 
 // lingeringAgent is an agent that answers initialize and, on its stdin's
-// end, leaves a late writer behind in its process group and exits, as
-// the Node adapter leaves claude writing its transcript.
+// end, leaves a late writer behind in its process group and exits, as an
+// agent may leave claude writing its transcript (the Node adapter did).
 func lingeringAgent() {
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
@@ -58,7 +58,7 @@ func TestRecordWaitsForGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &recorder{tee: "claude-tee", claude: "claude", agent: []string{exe}, acp: "acp-go.jsonl",
+	r := &recorder{tee: "claude-tee", claude: "claude", agent: []string{exe},
 		env: []string{"RECORD_TEST_AGENT=linger"}, tmp: t.TempDir(), log: slog.New(slog.DiscardHandler)}
 	dir := scenario(t, filepath.Join("testdata", "permission"), map[string]string{
 		"api.json":    `{"turns":[]}`,

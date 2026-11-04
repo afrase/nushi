@@ -47,12 +47,12 @@ func TestRecordInterrupted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &recorder{tee: "claude-tee", claude: "claude", agent: []string{exe}, acp: "acp-go.jsonl",
+	r := &recorder{tee: "claude-tee", claude: "claude", agent: []string{exe},
 		env: []string{"RECORD_TEST_AGENT=hang", "RECORD_TEST_HOOK=" + hook.URL}, tmp: t.TempDir(), log: slog.New(slog.DiscardHandler)}
-	old := map[string]string{"cli.jsonl": "an old recording\n", "acp-go.jsonl": "an old one too\n"}
+	old := map[string]string{"cli.jsonl": "an old recording\n", acpFile: "an old one too\n"}
 	dir := scenario(t, filepath.Join("testdata", "permission"), map[string]string{
 		"client.json": `{"timeout":"1h","steps":[{"initialize":{}},{"waitFor":{"method":"never/sent"}},{"pause":"1h"}]}`,
-		"cli.jsonl":   old["cli.jsonl"], "acp-go.jsonl": old["acp-go.jsonl"],
+		"cli.jsonl":   old["cli.jsonl"], acpFile: old[acpFile],
 	})
 	if err := r.record(ctx, dir); !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v", err)
@@ -68,7 +68,7 @@ func TestRecordInterrupted(t *testing.T) {
 func TestRunInterrupted(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	err := run(ctx, "testdata", "all", &recorder{tee: "claude-tee", claude: "claude", agent: []string{"false"}, acp: "acp-go.jsonl", log: slog.New(slog.DiscardHandler)})
+	err := run(ctx, "testdata", "all", &recorder{tee: "claude-tee", claude: "claude", agent: []string{"false"}, log: slog.New(slog.DiscardHandler)})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("got %v", err)
 	}
