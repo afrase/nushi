@@ -25,6 +25,7 @@ class MarkdownStyle {
     required this.link,
     required this.highlight,
     this.inlineCode,
+    this.inlineCodeColor,
     this.languageName,
   });
 
@@ -37,10 +38,13 @@ class MarkdownStyle {
   /// Behind code blocks.
   final Color codeBackground;
 
-  /// Behind inline code and tables' heads: a tint, since a paragraph paints
-  /// its selection under the text and an opaque background would hide it.
-  /// Null takes the body's color, faintly.
+  /// Behind inline code: a tint, since a paragraph paints its selection
+  /// under the text and an opaque background would hide it. Null takes the
+  /// body's color, faintly.
   final Color? inlineCode;
+
+  /// Inline code's text; null leaves it in [code]'s color.
+  final Color? inlineCodeColor;
 
   /// Around code blocks and tables, and a quote's bar.
   final Color border;
@@ -209,8 +213,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
     final size = body.fontSize ?? 14;
     final onTapLink = w.onTapLink;
     final imageBuilder = w.imageBuilder;
-    final inlineCode =
-        s.inlineCode ?? (body.color ?? s.muted).withValues(alpha: 0.07);
+    final faint = (body.color ?? s.muted).withValues(alpha: 0.07);
     return MarkdownBody(
       // The body parses again only for new text or a new style sheet:
       // other links, another body.
@@ -253,8 +256,9 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
         ),
         del: const TextStyle(decoration: TextDecoration.lineThrough),
         code: s.code.copyWith(
+          color: s.inlineCodeColor,
           fontSize: size * 0.92,
-          backgroundColor: inlineCode,
+          backgroundColor: s.inlineCode ?? faint,
         ),
         h1: heading.copyWith(fontSize: size * 1.45),
         h2: heading.copyWith(fontSize: size * 1.25),
@@ -287,8 +291,9 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
           vertical: 4,
         ),
         // A tint: as with inline code, nothing opaque between a find's
-        // marks and the text.
-        tableHeadCellsDecoration: BoxDecoration(color: inlineCode),
+        // marks and the text; the body's own, so a colored inline code's
+        // doesn't color the table.
+        tableHeadCellsDecoration: BoxDecoration(color: faint),
         horizontalRuleDecoration: BoxDecoration(
           border: Border(top: BorderSide(color: s.border)),
         ),

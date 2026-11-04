@@ -120,7 +120,7 @@ void main() {
   });
 
   testWidgets('bold stands out of semibold text; inline code takes its '
-      'own tint', (tester) async {
+      'own tint and color', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: StreamingMarkdown(
@@ -130,6 +130,7 @@ void main() {
             code: TextStyle(),
             codeBackground: Colors.white,
             inlineCode: Color(0x14112233),
+            inlineCodeColor: Color(0xFFAA5500),
             border: Colors.grey,
             muted: Colors.grey,
             link: Colors.blue,
@@ -150,6 +151,7 @@ void main() {
     }
     expect(styles['b']?.fontWeight, FontWeight.w800);
     expect(styles['c']?.backgroundColor, const Color(0x14112233));
+    expect(styles['c']?.color, const Color(0xFFAA5500));
   });
 
   testWidgets('a code block of its own, told whether it is still open', (
