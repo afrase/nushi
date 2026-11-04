@@ -617,6 +617,9 @@ void main() {
       await tester.pump();
     }
     expect(platform.saved?['daemon'], 'moved');
+    // And still connected and kept up, as before the Forget.
+    expect(phone.daemon, isNotNull);
+    expect(phone.link, isNotNull);
     await endPhone(tester, phone);
   });
 

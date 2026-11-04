@@ -390,9 +390,13 @@ class Phone extends ChangeNotifier {
   Future<void> _forget() async {
     // Nothing may write the pairing back meanwhile (a ping answering would
     // keep the last-seen time, and with it the key).
-    // A failure on the way (the storage) leaves it as it was: kept again.
     _forgetting = true;
     try {
+      // The storage first: if it fails, nothing here is forgotten, and the
+      // link still keeps the pairing up. A draft's save still waiting goes
+      // first, so none lands after.
+      await drafts.flush();
+      await platform.clear();
       link?.dispose();
       link = null;
       // The link is gone: a Mac that doesn't answer doesn't hold it up
@@ -413,8 +417,6 @@ class Phone extends ChangeNotifier {
       // The drafts too.
       drafts.ids.toList().forEach(drafts.forget);
       await drafts.flush();
-      // The storage first: if it fails, nothing here looks forgotten.
-      await platform.clear();
       await platform.reset();
       // Pairing again comes next, in this page: its notifications, taps and
       // offline shell need a worker, which reset took away.
