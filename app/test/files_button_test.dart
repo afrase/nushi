@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
@@ -77,6 +78,31 @@ Color? _ink(WidgetTester tester) => tester
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
+/// ⇧⌘E, as pressed.
+Future<void> _shiftCmdE(WidgetTester tester) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+  await tester.pumpAndSettle();
+}
+
+/// Picks View › Files in the menu bar.
+Future<void> _viewFiles(WidgetTester tester) async {
+  final view = tester
+      .widget<PlatformMenuBar>(find.byType(PlatformMenuBar))
+      .menus
+      .whereType<PlatformMenu>()
+      .firstWhere((m) => m.label == 'View');
+  Iterable<PlatformMenuItem> items(PlatformMenuItem m) => switch (m) {
+    PlatformMenuItemGroup(:final members) => members.expand(items),
+    _ => [m],
+  };
+  view.menus.expand(items).firstWhere((m) => m.label == 'Files').onSelected!();
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(loadFonts);
 
@@ -112,6 +138,46 @@ void main() {
     expect(c.tab.value, ChatTab.chat);
     expect(filesChats.value, {'c'});
     expect(find.byType(FilesPane), findsOne);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('⇧⌘E and View › Files light and unlight it as the button '
+      'would', (tester) async {
+    final d = await _app(tester);
+    final t = NushiTheme.of(tester.element(_button)).t;
+    await _shiftCmdE(tester);
+    expect(find.byType(FilesPane), findsOne);
+    expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
+    expect(_ink(tester), t.accentInk);
+    await _viewFiles(tester);
+    expect(find.byType(FilesPane), findsNothing);
+    expect(find.byTooltip('Show files  ⇧⌘E'), findsOne);
+    expect(_ink(tester), t.textSecondary);
+    await _viewFiles(tester);
+    expect(find.byType(FilesPane), findsOne);
+    expect(_ink(tester), t.accentInk);
+    await _shiftCmdE(tester);
+    expect(find.byType(FilesPane), findsNothing);
+    expect(_ink(tester), t.textSecondary);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('⇧⌘E and View › Files on the Changes tab bring the chat back '
+      'with the pane, not close it', (tester) async {
+    final d = await _app(tester, open: true);
+    final c = d.chats['c']!;
+    final t = NushiTheme.of(tester.element(_button)).t;
+    for (final pick in [() => _shiftCmdE(tester), () => _viewFiles(tester)]) {
+      c.tab.value = ChatTab.changes;
+      await tester.pumpAndSettle();
+      expect(_ink(tester), t.textSecondary);
+      await pick();
+      expect(c.tab.value, ChatTab.chat);
+      expect(filesChats.value, {'c'});
+      expect(find.byType(FilesPane), findsOne);
+      expect(find.byTooltip('Hide files  ⇧⌘E'), findsOne);
+      expect(_ink(tester), t.accentInk);
+    }
     await closeView(tester, d);
   }, variant: _mac);
 
