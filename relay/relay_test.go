@@ -434,7 +434,7 @@ func TestPerAddressCaps(t *testing.T) {
 	if !testcheck.Eventually(func() bool {
 		h.mu.Lock()
 		defer h.mu.Unlock()
-		n, total = len(h.sources), h.total
+		n, total = len(h.ws.by), h.total
 		return total == 0
 	}) {
 		t.Fatalf("%d connections still counted", total)

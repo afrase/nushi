@@ -41,9 +41,8 @@ type connKey struct{}
 // plain counts the plain connections.
 type plain struct {
 	conns map[net.Conn]*plainConn
-	by    map[string]*source // per address: conns open and the rate
-	fresh int                // conns without a request yet
-	swept time.Time
+	by    sources // per address: conns open and the rate
+	fresh int     // conns without a request yet
 }
 
 type plainConn struct {
@@ -65,7 +64,7 @@ func (s *server) connState(c net.Conn, st http.ConnState) {
 		key := ""
 		if !s.proxied(c.RemoteAddr().String()) {
 			key = keyOf(c.RemoteAddr().String(), 64)
-			if !s.admitPlain(key, now) {
+			if s.plain.by.admit(key, now, s.lim.PlainPerIP) != 0 {
 				_ = c.Close()
 				return
 			}
@@ -74,7 +73,7 @@ func (s *server) connState(c net.Conn, st http.ConnState) {
 			s.shed(true) // the oldest without a request makes way
 		}
 		if len(s.plain.conns) >= s.lim.Total && !s.shed(true) && !s.shed(false) {
-			s.unPlain(key, now)
+			s.plain.by.leave(key, now)
 			_ = c.Close()
 			return
 		}
@@ -102,7 +101,7 @@ func (s *server) drop(c net.Conn) {
 	pc := s.plain.conns[c]
 	delete(s.plain.conns, c)
 	s.unFresh(pc)
-	s.unPlain(pc.key, time.Now())
+	s.plain.by.leave(pc.key, time.Now())
 }
 
 func (s *server) unFresh(pc *plainConn) {
@@ -140,51 +139,14 @@ func (s *server) served(r *http.Request) bool {
 		return true
 	}
 	now := time.Now()
-	if !s.admitPlain(key, now) {
+	if s.plain.by.admit(key, now, s.lim.PlainPerIP) != 0 {
 		return false
 	}
 	if pc.key != "" {
-		s.unPlain(pc.key, now)
+		s.plain.by.leave(pc.key, now)
 	}
 	pc.key = key
 	return true
-}
-
-// admitPlain counts a plain connection from key, within its caps. Called
-// with s.mu.
-func (s *server) admitPlain(key string, now time.Time) bool {
-	if now.Sub(s.plain.swept) > time.Minute {
-		s.plain.swept = now
-		for k, src := range s.plain.by {
-			if s.refill(src, now); src.conns == 0 && src.tokens >= s.lim.NewBurst {
-				delete(s.plain.by, k)
-			}
-		}
-	}
-	src := s.plain.by[key]
-	if src == nil {
-		src = &source{tokens: s.lim.NewBurst, last: now}
-		s.plain.by[key] = src
-	}
-	if s.refill(src, now); src.tokens < 1 || src.conns >= s.lim.PlainPerIP {
-		return false
-	}
-	src.tokens--
-	src.conns++
-	return true
-}
-
-// unPlain uncounts a plain connection from key. Called with s.mu.
-func (s *server) unPlain(key string, now time.Time) {
-	src := s.plain.by[key]
-	if key == "" || src == nil {
-		return
-	}
-	if src.conns--; src.conns == 0 {
-		if s.refill(src, now); src.tokens >= s.lim.NewBurst {
-			delete(s.plain.by, key)
-		}
-	}
 }
 
 // shed closes the oldest plain connection without a request yet (fresh),

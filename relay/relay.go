@@ -91,9 +91,8 @@ type server struct {
 	mu        sync.Mutex
 	total     int
 	rooms     map[string]*room
-	sources   map[string]*source
+	ws        sources        // the WebSockets' sources
 	listeners map[string]int // listeners by listenerKey
-	swept     time.Time
 	plain     plain
 }
 
@@ -114,8 +113,8 @@ type peer struct {
 // New returns the relay's handler.
 func New(lim Limits) http.Handler {
 	lim.PerIP = min(lim.PerIP, max(1, lim.Total/2))
-	s := &server{lim: lim, rooms: map[string]*room{}, sources: map[string]*source{}, listeners: map[string]int{},
-		plain: plain{conns: map[net.Conn]*plainConn{}, by: map[string]*source{}}}
+	s := &server{lim: lim, rooms: map[string]*room{}, ws: newSources(lim), listeners: map[string]int{},
+		plain: plain{conns: map[net.Conn]*plainConn{}, by: newSources(lim)}}
 	// A page's script may connect only when it is the web app's own: no
 	// other page has a reason to be here.
 	s.up.CheckOrigin = func(r *http.Request) bool {
@@ -250,7 +249,7 @@ func (s *server) join(w http.ResponseWriter, r *http.Request, dialer bool) (stri
 		http.Error(w, "busy", http.StatusServiceUnavailable)
 		return "", "", nil
 	}
-	if code := s.admitSource(src, time.Now()); code != 0 {
+	if code := s.ws.admit(src, time.Now(), s.lim.PerIP); code != 0 {
 		s.mu.Unlock()
 		http.Error(w, "busy", code)
 		return "", "", nil
@@ -275,7 +274,7 @@ func (s *server) leave(src string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.total--
-	s.leaveSource(src)
+	s.ws.leave(src, time.Now())
 }
 
 // enter counts a connection in id's room. Called with s.mu.

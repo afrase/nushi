@@ -106,27 +106,40 @@ func keyOf(addr string, v6bits int) string {
 	return string(h[:16])
 }
 
-// admitSource counts a new connection from key, or says why not: the
-// address opens connections too fast, or holds too many. Called with s.mu.
-func (s *server) admitSource(key string, now time.Time) int {
-	if now.Sub(s.swept) > time.Minute {
-		s.swept = now
-		for k, src := range s.sources {
-			if s.refill(src, now); src.conns == 0 && src.tokens >= s.lim.NewBurst {
-				delete(s.sources, k)
+// sources is the relay's sources of one kind of connection (WebSockets,
+// or plain ones), by key, each with its connections open and a bucket of
+// new ones at lim's rate (ADR 0033).
+type sources struct {
+	lim   Limits
+	by    map[string]*source
+	swept time.Time
+}
+
+// newSources holds none yet, at lim's rate.
+func newSources(lim Limits) sources { return sources{lim: lim, by: map[string]*source{}} }
+
+// admit counts a new connection from key, or says why not: the address
+// opens connections too fast (429), or holds limit already (503). Called
+// with the server's mu.
+func (ss *sources) admit(key string, now time.Time, limit int) int {
+	if now.Sub(ss.swept) > time.Minute {
+		ss.swept = now
+		for k, src := range ss.by {
+			if ss.refill(src, now); src.conns == 0 && src.tokens >= ss.lim.NewBurst {
+				delete(ss.by, k)
 			}
 		}
 	}
-	src := s.sources[key]
+	src := ss.by[key]
 	if src == nil {
-		src = &source{tokens: s.lim.NewBurst, last: now}
-		s.sources[key] = src
+		src = &source{tokens: ss.lim.NewBurst, last: now}
+		ss.by[key] = src
 	}
-	s.refill(src, now)
+	ss.refill(src, now)
 	switch {
 	case src.tokens < 1:
 		return http.StatusTooManyRequests
-	case src.conns >= s.lim.PerIP:
+	case src.conns >= limit:
 		return http.StatusServiceUnavailable
 	}
 	src.tokens--
@@ -134,20 +147,22 @@ func (s *server) admitSource(key string, now time.Time) int {
 	return 0
 }
 
-func (s *server) refill(src *source, now time.Time) {
-	src.tokens = min(s.lim.NewBurst, src.tokens+now.Sub(src.last).Seconds()*s.lim.NewRate)
+// refill adds the tokens src earned since it was last looked at.
+func (ss *sources) refill(src *source, now time.Time) {
+	src.tokens = min(ss.lim.NewBurst, src.tokens+now.Sub(src.last).Seconds()*ss.lim.NewRate)
 	src.last = now
 }
 
-// leaveSource uncounts a connection from key. Called with s.mu.
-func (s *server) leaveSource(key string) {
-	src := s.sources[key]
+// leave uncounts a connection from key, and forgets the address once
+// nothing is counted. Called with the server's mu.
+func (ss *sources) leave(key string, now time.Time) {
+	src := ss.by[key]
 	if src == nil {
 		return
 	}
 	if src.conns--; src.conns == 0 {
-		if s.refill(src, time.Now()); src.tokens >= s.lim.NewBurst {
-			delete(s.sources, key)
+		if ss.refill(src, now); src.tokens >= ss.lim.NewBurst {
+			delete(ss.by, key)
 		}
 	}
 }
