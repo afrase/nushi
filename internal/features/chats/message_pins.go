@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -107,9 +108,10 @@ func titledAs(found, p model.MessagePin, it model.Item) model.MessagePin {
 
 // PinMessage pins one of the agent's messages in a chat (its item's id),
 // or unpins it. Pinning a message already pinned, or unpinning one that
-// isn't, changes nothing. A new pin is titled from the message at once,
-// and by the agent after if it can (titleLocked). Saving tells the clients
-// (Chat.pinned_messages, Chat.message_pins).
+// isn't, changes nothing. The pins are kept in their messages' order. A
+// new pin is titled from the message at once, and by the agent after if it
+// can (titleLocked). Saving tells the clients (Chat.pinned_messages,
+// Chat.message_pins).
 func (s *Service) PinMessage(chatID, itemID string, pinned bool) error {
 	c, err := s.stored(chatID)
 	if err != nil {
@@ -128,7 +130,7 @@ func (s *Service) PinMessage(chatID, itemID string, pinned bool) error {
 		}
 		p := pinOf(c.items, i)
 		p.Title = pinTitle(c.items[i].Text)
-		pins = append(pins, p)
+		pins = inOrder(append(pins, p), c.items)
 	}
 	c.saveLocked(func(s *model.ChatRecord) { s.Pins = orNil(pins) })
 	if pinned {
@@ -153,7 +155,24 @@ func (c *chat) repinLocked(items []model.Item) {
 			pins = append(pins, found)
 		}
 	}
-	c.saveLocked(func(s *model.ChatRecord) { s.Pins = pins })
+	c.saveLocked(func(s *model.ChatRecord) { s.Pins = inOrder(pins, items) })
+}
+
+// inOrder is pins sorted in their messages' order in items, the order the
+// clients list them in: a phone lists those on pages it hasn't taken as
+// the record has them. A pin of an item not there goes last.
+func inOrder(pins []model.MessagePin, items []model.Item) []model.MessagePin {
+	at := make(map[string]int, len(pins))
+	for _, p := range pins {
+		at[p.Item] = len(items)
+	}
+	for i, it := range items {
+		if _, ok := at[it.ID]; ok {
+			at[it.ID] = i
+		}
+	}
+	slices.SortStableFunc(pins, func(a, b model.MessagePin) int { return cmp.Compare(at[a.Item], at[b.Item]) })
+	return pins
 }
 
 // unpinGoneLocked drops the pins of messages the transcript no longer has

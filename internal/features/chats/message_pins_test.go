@@ -13,7 +13,7 @@ import (
 )
 
 // pinned is the chat's pins as the shown items they mark, kind:id (a
-// user message by its text, as describe has it), in the order pinned; a
+// user message by its text, as describe has it), in the record's order; a
 // pin of an item not shown as "gone:id".
 func pinned(c *chat) string {
 	c.mu.Lock()
@@ -73,8 +73,10 @@ func TestPinMessage(t *testing.T) {
 	}
 	pin("agent:m2", true)
 	pin("agent:m1", true)
-	pin("agent:m2", true) // again: it keeps its place
-	if got := pinned(c); got != "agent:m2 agent:m1" {
+	pin("agent:m2", true) // again: nothing changes
+	// In the transcript's order, not the order pinned: a phone lists the
+	// pins on pages it hasn't taken as the record has them.
+	if got := pinned(c); got != "agent:m1 agent:m2" {
 		t.Fatalf("pinned %s", got)
 	}
 	// Only the agent's own messages are pinned: not the user's, nor what
@@ -117,12 +119,12 @@ func TestPinsHoldWithTheCopy(t *testing.T) {
 
 	svc2 := restarted(t, agent, c, store)
 	c2 := reopened(t, svc2, c.id)
-	if got := pinned(c2); got != "agent:m2 agent:m1" {
+	if got := pinned(c2); got != "agent:m1 agent:m2" {
 		t.Fatalf("after a restart: %s", got)
 	}
 	testcheck.NoErr(t, svc2.Reload(c.id))
 	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
-	if got := pinned(c2); got != "agent:m2 agent:m1" || !slices.Equal(c2.record.Pins, ids) {
+	if got := pinned(c2); got != "agent:m1 agent:m2" || !slices.Equal(c2.record.Pins, ids) {
 		t.Errorf("after a reload: %s, %v want %v", got, c2.record.Pins, ids)
 	}
 }
