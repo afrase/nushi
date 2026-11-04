@@ -257,6 +257,24 @@ void main() {
     variant: _mac,
   );
 
+  testWidgets('the file cards in the light theme', (tester) async {
+    final (_, _, chat) = await _box(tester, dark: false);
+    final elsewhere = Directory.systemTemp.createTempSync('plus').path;
+    addTearDown(() => Directory(elsewhere).deleteSync(recursive: true));
+    final notes = _file(chat.folder, 'docs/notes.txt');
+    final spec = _file(elsewhere, 'spec sheet.pdf', bytes: 3 << 20);
+    pickFiles = () async => [XFile(notes), XFile(spec)];
+    await tester.tap(find.byType(TextField));
+    await _cmd(tester, LogicalKeyboardKey.keyU);
+    await tester.pumpAndSettle();
+    expect(find.byType(FileCard), findsNWidgets(2));
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/composer_file_cards_light.png'),
+    );
+    _end();
+  }, variant: _mac);
+
   testWidgets('⌘U held, or pressed again, opens one panel', (tester) async {
     await _box(tester);
     final panel = Completer<List<XFile>>();
