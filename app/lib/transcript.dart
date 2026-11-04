@@ -100,9 +100,8 @@ class Transcript extends StatefulWidget {
   /// page itself, with [EarlierMessages] at its top.
   final VoidCallback? onTop;
 
-  /// Drawn over the list's foot (the chat's turn status and composer):
-  /// the list runs the whole height, its scrollbar to the bottom beside
-  /// it, and its end scrolls clear above it (OverBottom).
+  /// Under the list (the chat's turn status and composer), the list's
+  /// scrollbar running down beside it to the pane's bottom (OverBottom).
   final Widget? bottom;
 
   /// The entries a transcript's first frame builds, and how many more
@@ -691,7 +690,6 @@ class _TranscriptState extends State<Transcript> {
   final _marks = TextMarks();
   int _shownAsk = -1;
   bool _roomAbove = false; // the list starts below the find bar
-  double _inset = 0; // what's drawn over the list's foot (OverBottom)
 
   /// What the find bar covers of the transcript's top: more with its line
   /// saying it looks in what's loaded (FindBar.loadAll).
@@ -746,7 +744,7 @@ class _TranscriptState extends State<Transcript> {
     if (p.maxScrollExtent <= 0) return; // all of it shows
     final shows =
         top >= p.pixels + covered &&
-        top + rect.height <= p.pixels + p.viewportDimension - _inset;
+        top + rect.height <= p.pixels + p.viewportDimension;
     _follower.hold(
       shows
           ? null
@@ -833,7 +831,7 @@ class _TranscriptState extends State<Transcript> {
   /// the start is current at the top, and every pin in the first and last
   /// screens (a short last answer, two) is current somewhere.
   double _pinLine(ScrollPosition p) {
-    final shows = p.viewportDimension - _inset; // above the composer
+    final shows = p.viewportDimension;
     final third = shows / 3;
     final low = shows - 24; // at the bottom, what shows counts
     final top = (p.pixels - p.minScrollExtent).clamp(0, third).toDouble();
@@ -1020,7 +1018,7 @@ class _TranscriptState extends State<Transcript> {
                         controller: _follower.scroll,
                         padding: EdgeInsets.only(
                           top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
-                          bottom: 14 + (_inset = BottomInset.of(box)),
+                          bottom: 14,
                         ),
                         child: _codeBars(
                           behavior,
@@ -1097,7 +1095,7 @@ class _TranscriptState extends State<Transcript> {
             ),
           Positioned(
             right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
-            bottom: 12 + BottomInset.of(box),
+            bottom: 12,
             child: ListenableBuilder(
               listenable: _follower,
               builder: (context, _) => ChipFade(

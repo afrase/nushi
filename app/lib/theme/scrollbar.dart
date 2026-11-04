@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -15,11 +16,17 @@ class MacScrollbar extends RawScrollbar {
     required super.child,
     super.controller,
     super.notificationPredicate,
+    this.past,
     super.key,
   }) : super(interactive: true, mainAxisMargin: 2, crossAxisMargin: 2);
 
   static const thin = 6.0;
   static const wide = 10.0;
+
+  /// How far its track runs on below its list's viewport, beside what's
+  /// under the list (the transcript's composer): a [RawScrollbar]'s track
+  /// is as long as the viewport, so it's padded by as much less.
+  final ValueListenable<double>? past;
 
   @override
   RawScrollbarState<MacScrollbar> createState() => _MacScrollbarState();
@@ -29,6 +36,7 @@ class _MacScrollbarState extends RawScrollbarState<MacScrollbar> {
   // 0 thin, 1 wide: the pointer is near, or the thumb is being dragged.
   late final AnimationController _near;
   bool _dragging = false;
+  EdgeInsets _padding = EdgeInsets.zero; // as RawScrollbar has it
 
   @override
   void initState() {
@@ -37,13 +45,30 @@ class _MacScrollbarState extends RawScrollbarState<MacScrollbar> {
       vsync: this,
       duration: const Duration(milliseconds: 120),
     )..addListener(updateScrollbarPainter);
+    widget.past?.addListener(_pad);
+  }
+
+  @override
+  void didUpdateWidget(MacScrollbar old) {
+    super.didUpdateWidget(old);
+    if (old.past != widget.past) {
+      old.past?.removeListener(_pad);
+      widget.past?.addListener(_pad);
+      _pad();
+    }
   }
 
   @override
   void dispose() {
+    widget.past?.removeListener(_pad);
     _near.dispose();
     super.dispose();
   }
+
+  /// The track the viewport's length and [MacScrollbar.past] more.
+  void _pad() => scrollbarPainter.padding = _padding.copyWith(
+    bottom: _padding.bottom - (widget.past?.value ?? 0),
+  );
 
   @override
   void updateScrollbarPainter() {
@@ -63,6 +88,8 @@ class _MacScrollbarState extends RawScrollbarState<MacScrollbar> {
       ..thickness = thickness
       ..radius = Radius.circular(thickness / 2)
       ..minLength = 24;
+    _padding = scrollbarPainter.padding.resolve(Directionality.of(context));
+    _pad();
   }
 
   void _widen(bool near) {

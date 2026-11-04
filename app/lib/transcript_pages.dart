@@ -62,15 +62,14 @@ class EarlierMessages extends StatelessWidget {
   }
 }
 
-/// A transcript the whole height of its pane, with [bottom] (its chat
-/// view's turn status and composer) drawn over its foot, and its scrollbar
-/// at the right edge of both, as Claude Code's runs to the window's
-/// bottom. [list] lays out with [BottomInset] constraints that say how
-/// tall [bottom] is, in the same layout: room at the end of the list for
-/// it, so the last message scrolls clear of the composer, and the jump
-/// chip above it. The scrollbar moves with [scroll]'s list only, not with
-/// what scrolls in the composer.
-class OverBottom extends StatelessWidget {
+/// A transcript with [bottom] (its chat view's turn status and composer)
+/// under it, and its scrollbar at the right edge of both, the pane's whole
+/// height, as Claude Code's runs to the window's bottom. The list itself
+/// ends above [bottom], so its edge is where a selection's drag scrolls it
+/// and a toolbar over it stays in sight; the scrollbar's track runs on past
+/// it ([MacScrollbar.past]). The scrollbar moves with [scroll]'s list only,
+/// not with what scrolls in the composer.
+class OverBottom extends StatefulWidget {
   const new({
     required this.scroll,
     required this.list,
@@ -83,32 +82,54 @@ class OverBottom extends StatelessWidget {
   final Widget bottom;
 
   @override
-  Widget build(BuildContext context) => MacScrollbar(
-    controller: scroll,
-    notificationPredicate: (n) =>
-        n.depth == 0 &&
-        scroll.hasClients &&
-        n.context == scroll.position.context.notificationContext,
-    child: CustomMultiChildLayout(
-      delegate: _OverBottomLayout(),
-      children: [
-        LayoutId(id: _Part.list, child: list),
-        LayoutId(
-          id: _Part.bottom,
-          // What scrolls under it doesn't show through.
-          child: ColoredBox(
-            color: NushiTheme.of(context).t.base,
-            child: bottom,
+  State<OverBottom> createState() => _OverBottomState();
+}
+
+class _OverBottomState extends State<OverBottom> {
+  // How tall the bottom is, as last laid out: the scrollbar's track runs
+  // past the list's foot by as much.
+  final _below = ValueNotifier<double>(0);
+
+  @override
+  void dispose() {
+    _below.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scroll = widget.scroll;
+    return MacScrollbar(
+      controller: scroll,
+      past: _below,
+      notificationPredicate: (n) =>
+          n.depth == 0 &&
+          scroll.hasClients &&
+          n.context == scroll.position.context.notificationContext,
+      child: CustomMultiChildLayout(
+        delegate: _OverBottomLayout(_below),
+        children: [
+          LayoutId(id: _Part.list, child: widget.list),
+          LayoutId(
+            id: _Part.bottom,
+            child: ColoredBox(
+              color: NushiTheme.of(context).t.base,
+              child: widget.bottom,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 enum _Part { list, bottom }
 
 class _OverBottomLayout extends MultiChildLayoutDelegate {
+  new(this.below);
+
+  final ValueNotifier<double> below;
+
   @override
   void performLayout(Size size) {
     final bottom = layoutChild(
@@ -119,33 +140,16 @@ class _OverBottomLayout extends MultiChildLayoutDelegate {
         maxHeight: size.height,
       ),
     );
-    positionChild(_Part.bottom, Offset(0, size.height - bottom.height));
-    layoutChild(_Part.list, BottomInset(size, bottom.height));
+    final top = size.height - bottom.height;
+    positionChild(_Part.bottom, Offset(0, top));
+    layoutChild(_Part.list, BoxConstraints.tight(Size(size.width, top)));
     positionChild(_Part.list, Offset.zero);
+    // Read as the scrollbar paints, after this layout.
+    below.value = bottom.height;
   }
 
   @override
-  bool shouldRelayout(_OverBottomLayout old) => false;
-}
-
-/// Tight constraints that also say how much of the box's foot something
-/// is drawn over ([OverBottom]): a LayoutBuilder under it builds again
-/// when that changes, in the layout that changed it.
-class BottomInset extends BoxConstraints {
-  new(super.size, this.inset) : super.tight();
-
-  /// How tall what's drawn over the box's foot is.
-  final double inset;
-
-  /// The inset [c] carries, if any.
-  static double of(BoxConstraints c) => c is BottomInset ? c.inset : 0;
-
-  @override
-  bool operator ==(Object other) =>
-      other is BottomInset && other.inset == inset && super == other;
-
-  @override
-  int get hashCode => Object.hash(super.hashCode, inset);
+  bool shouldRelayout(_OverBottomLayout old) => old.below != below;
 }
 
 /// [list] without its own scrollbar (FullHeightScrollbar draws it); what's
