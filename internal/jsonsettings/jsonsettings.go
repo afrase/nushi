@@ -1,10 +1,13 @@
-// Package jsonsettings changes an agent's JSON settings file one key at
-// a time (ADR 0051's way): the rest kept, the file replaced at once.
+// Package jsonsettings reads an agent's settings files, and changes a
+// JSON one a key at a time (ADR 0051's way): the rest kept, the file
+// replaced at once.
 package jsonsettings
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,6 +27,23 @@ var mu sync.Mutex
 // YAML): a regular file of at most 64 MiB, a link to one followed; a
 // fifo or device fails at once rather than waiting.
 func ReadFile(path string) ([]byte, error) { return regularfile.Read(path, maxFile) }
+
+// Read reads the JSON settings file at path into v, through ReadFile; a
+// missing one is empty, leaving v as it was. Its error says the file
+// "doesn't read", as every agent's Skills page words it (NoSwitch).
+func Read(path string, v any) error {
+	b, err := ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err == nil {
+		err = json.Unmarshal(b, v)
+	}
+	if err != nil {
+		return fmt.Errorf("%s doesn't read: %w", path, err)
+	}
+	return nil
+}
 
 // Edit reads the JSON settings file at path, changes it through change
 // (which gets its settings by key; none for a new file) and writes it

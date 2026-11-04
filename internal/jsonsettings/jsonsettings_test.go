@@ -43,3 +43,26 @@ func TestEditMakesPrivateFiles(t *testing.T) {
 		t.Errorf("wrote %q", b)
 	}
 }
+
+// A missing settings file is empty; one that isn't JSON doesn't read.
+func TestRead(t *testing.T) {
+	dir := t.TempDir()
+	v := map[string]int{"kept": 1}
+	if err := Read(filepath.Join(dir, "none.json"), &v); err != nil || v["kept"] != 1 {
+		t.Errorf("missing: %v %v", v, err)
+	}
+	bad := filepath.Join(dir, "bad.json")
+	if err := os.WriteFile(bad, []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Read(bad, &v); err == nil || err.Error() != bad+" doesn't read: unexpected end of JSON input" {
+		t.Errorf("bad: %v", err)
+	}
+	good := filepath.Join(dir, "good.json")
+	if err := os.WriteFile(good, []byte(`{"k":2}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Read(good, &v); err != nil || v["k"] != 2 {
+		t.Errorf("good: %v %v", v, err)
+	}
+}

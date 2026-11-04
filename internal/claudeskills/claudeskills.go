@@ -23,7 +23,6 @@ package claudeskills
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -129,9 +128,7 @@ func settingsFiles(folder, key string) []settings {
 	var out []settings
 	for _, path := range claudemcp.SettingsFiles(folder, key) {
 		s := settings{path: path}
-		if b, err := jsonsettings.ReadFile(path); err == nil {
-			_ = json.Unmarshal(b, &s) // a key of another shape counts as unset
-		}
+		_ = jsonsettings.Read(path, &s) // unreadable, or a key of another shape: unset
 		out = append(out, s)
 	}
 	return out

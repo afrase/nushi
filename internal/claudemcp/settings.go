@@ -69,7 +69,7 @@ func rejected(folder, key string, terminal []string) (out map[string][]string, a
 	out = map[string][]string{}
 	for i, path := range SettingsFiles(folder, key) {
 		var l lists
-		_ = readJSON(path, &l) // an unreadable settings file rejects nothing here
+		_ = jsonsettings.Read(path, &l) // an unreadable settings file rejects nothing here
 		for _, name := range l.Disabled {
 			out[name] = append(out[name], path)
 		}

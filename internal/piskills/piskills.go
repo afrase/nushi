@@ -101,17 +101,8 @@ func (k Skills) projectSettings(folder string) string {
 // readSettings reads a settings file; a missing one is empty.
 func readSettings(file string) (settings, error) {
 	var s settings
-	b, err := jsonsettings.ReadFile(file)
-	if errors.Is(err, os.ErrNotExist) {
-		return s, nil
-	}
-	if err == nil {
-		err = json.Unmarshal(b, &s)
-	}
-	if err != nil {
-		return s, fmt.Errorf("%s doesn't read: %w", file, err)
-	}
-	return s, nil
+	err := jsonsettings.Read(file, &s)
+	return s, err
 }
 
 // trusted says Pi loads folder's own skills: the nearest decision in its
@@ -119,9 +110,7 @@ func readSettings(file string) (settings, error) {
 // settings' defaultProjectTrust "always".
 func (k Skills) trusted(folder string, user settings) bool {
 	var decisions map[string]bool
-	if b, err := jsonsettings.ReadFile(filepath.Join(k.AgentDir(), "trust.json")); err == nil {
-		_ = json.Unmarshal(b, &decisions) // unreadable: no decisions
-	}
+	_ = jsonsettings.Read(filepath.Join(k.AgentDir(), "trust.json"), &decisions) // unreadable: no decisions
 	for dir := git.RealPath(folder); ; dir = filepath.Dir(dir) {
 		if v, ok := decisions[dir]; ok {
 			return v

@@ -17,7 +17,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -74,7 +73,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 		} `json:"projects"`
 	}
 	file := claude.ConfigFile()
-	if err := readJSON(file, &cfg); err != nil {
+	if err := jsonsettings.Read(file, &cfg); err != nil {
 		return nil, nil, err
 	}
 	out = add(nil, cfg.MCPServers, "user", file)
@@ -90,7 +89,7 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 		var mcp struct {
 			MCPServers servers `json:"mcpServers"`
 		}
-		if err := readJSON(path, &mcp); err != nil {
+		if err := jsonsettings.Read(path, &mcp); err != nil {
 			unread = append(unread, Unread{path, err})
 		}
 		for name := range mcp.MCPServers {
@@ -109,24 +108,6 @@ func (Claude) Read(folder string) (out []model.MCPServer, unread []Unread, err e
 			return out, unread, nil
 		}
 	}
-}
-
-// readJSON reads a JSON file into v; a missing file leaves v as it is.
-// Only a regular file is read, as Claude reads it (a link followed), of up
-// to 64 MiB: a repository could bring a link to /dev/zero, or a fifo, in
-// the place of one.
-func readJSON(path string, v any) error {
-	b, err := jsonsettings.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err == nil {
-		err = json.Unmarshal(b, v)
-	}
-	if err != nil {
-		return fmt.Errorf("reading %s: %w", path, err)
-	}
-	return nil
 }
 
 func add(out []model.MCPServer, s servers, scope, source string) []model.MCPServer {

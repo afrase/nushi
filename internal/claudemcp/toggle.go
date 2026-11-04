@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/claude"
+	"github.com/afrase/nushi/internal/jsonsettings"
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
@@ -120,6 +121,6 @@ func projectDisabled(folder string) ([]string, error) {
 			Disabled names `json:"disabledMcpServers"`
 		} `json:"projects"`
 	}
-	err := readJSON(claude.ConfigFile(), &cfg)
+	err := jsonsettings.Read(claude.ConfigFile(), &cfg)
 	return cfg.Projects[Project(folder)].Disabled, err
 }

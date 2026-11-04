@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 	"sync"
@@ -44,21 +43,11 @@ const checkFor = 45 * time.Second
 // the key. A file that isn't JSON, or a key that isn't an object, is an
 // error.
 func read() (map[string]json.RawMessage, error) {
-	file := ante.SettingsFile()
-	b, err := jsonsettings.ReadFile(file)
-	if errors.Is(err, os.ErrNotExist) {
-		return map[string]json.RawMessage{}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
 	var s struct {
 		Servers map[string]json.RawMessage `json:"mcp_servers"`
 	}
-	if err := json.Unmarshal(b, &s); err != nil {
-		return nil, fmt.Errorf("reading %s: %w", file, err)
-	}
-	return s.Servers, nil
+	err := jsonsettings.Read(ante.SettingsFile(), &s)
+	return s.Servers, err
 }
 
 // Servers returns your servers, sorted by name, in user scope: Ante's

@@ -84,12 +84,8 @@ func readSettings(folder string) ([]settings, error) {
 	var errs []error
 	for _, f := range append(files, ante.SettingsFile()) {
 		s := settings{path: f}
-		b, err := jsonsettings.ReadFile(f)
-		if err == nil {
-			err = json.Unmarshal(b, &s)
-		}
-		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			errs = append(errs, fmt.Errorf("%s doesn't read: %w", f, err))
+		if err := jsonsettings.Read(f, &s); err != nil {
+			errs = append(errs, err)
 		}
 		out = append(out, s)
 	}

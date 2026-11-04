@@ -56,12 +56,8 @@ func (Trust) Trusted(folder string, also []string) (bool, error) {
 			Accepted bool `json:"hasTrustDialogAccepted"`
 		} `json:"projects"`
 	}
-	b, err := jsonsettings.ReadFile(claude.ConfigFile())
-	if err == nil {
-		err = json.Unmarshal(b, &cfg)
-	}
-	if err != nil && !os.IsNotExist(err) {
-		return false, fmt.Errorf("reading Claude's config: %w", err)
+	if err := jsonsettings.Read(claude.ConfigFile(), &cfg); err != nil {
+		return false, err
 	}
 	ok := func(dir string) bool { return cfg.Projects[dir].Accepted || slices.Contains(also, dir) }
 	folder = git.RealPath(folder)
@@ -203,15 +199,8 @@ func helper(setting string) bool {
 // env block (the names only) and its helper commands.
 func settingsRuns(path string) ([]model.FolderRun, error) {
 	var s map[string]json.RawMessage
-	b, err := jsonsettings.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil, nil
-	}
-	if err == nil {
-		err = json.Unmarshal(b, &s)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("reading %s: %w", path, err)
+	if err := jsonsettings.Read(path, &s); err != nil {
+		return nil, err
 	}
 	var out []model.FolderRun
 	var hooks map[string][]struct {

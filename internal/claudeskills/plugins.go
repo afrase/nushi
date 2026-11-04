@@ -110,9 +110,7 @@ func (p *plugin) read() {
 		Commands    json.RawMessage `json:"commands"`
 		Agents      json.RawMessage `json:"agents"`
 	}
-	if b, err := jsonsettings.ReadFile(filepath.Join(p.Path, ".claude-plugin", "plugin.json")); err == nil {
-		_ = json.Unmarshal(b, &manifest) // what's missing stays empty
-	}
+	_ = jsonsettings.Read(filepath.Join(p.Path, ".claude-plugin", "plugin.json"), &manifest) // what's missing stays empty
 	p.Description = manifest.Description
 	for _, dir := range p.folders("skills", manifest.Skills) {
 		p.skills = append(p.skills, read(dir, "plugin")...)
