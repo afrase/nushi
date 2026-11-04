@@ -3,6 +3,7 @@ package git
 import (
 	"cmp"
 	"context"
+	"fmt"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -12,9 +13,14 @@ import (
 // neither the branch nor a merge base, as its base is a commit already.
 
 // WorkSince sums up folder's work since commit ("" for HEAD), as Status does
-// with its filters off, at three runs of git.
+// with its filters off, at three runs of git. commit is an object id, as
+// its siblings' are: a stored record's revision never reaches git as an
+// option or a ref's name.
 func WorkSince(ctx context.Context, folder, commit string) (model.FolderStatus, error) {
 	var st model.FolderStatus
+	if commit != "" && !ObjectID(commit) {
+		return st, fmt.Errorf("%q isn't a commit's id", commit)
+	}
 	err := count(ctx, folder, cmp.Or(commit, "HEAD"), &st)
 	return st, err
 }

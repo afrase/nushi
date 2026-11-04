@@ -126,3 +126,25 @@ func TestMerged(t *testing.T) {
 		t.Error("took a flag for a commit")
 	}
 }
+
+// WorkSince takes only a commit's id: a related worktree's stored base
+// that reads as an option (git diff --output=<file>) never reaches git
+// (integrations review 2026-11-04).
+func TestWorkSinceTakesOnlyACommitsID(t *testing.T) {
+	ctx := context.Background()
+	repo := t.TempDir()
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
+	out := filepath.Join(t.TempDir(), "written")
+	for _, base := range []string{"--output=" + out, "main", "HEAD~0"} {
+		if _, err := WorkSince(ctx, repo, base); err == nil {
+			t.Errorf("%q: counted", base)
+		}
+	}
+	if _, err := os.Stat(out); err == nil {
+		t.Error("git wrote a file an option named")
+	}
+	if _, err := WorkSince(ctx, repo, ""); err != nil {
+		t.Errorf("since HEAD: %v", err)
+	}
+}
