@@ -388,6 +388,22 @@ void main() {
     );
     tester.daemonOf().dispose();
   }, variant: macOS);
+
+  testWidgets('⌃` shows and hides the terminal with the focus outside the '
+      'chat (after a click on the sidebar)', (tester) async {
+    await _app(tester, select: 'a');
+    await tester.tap(find.text('Fix the login redirect').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(TerminalView), findsNothing);
+    await _keys(tester, LogicalKeyboardKey.backquote, control: true);
+    expect(terminalChats.value, contains('a'));
+    expect(find.byType(TerminalView), findsOneWidget);
+    await tester.tap(find.text('Fix the login redirect').first);
+    await tester.pumpAndSettle();
+    await _keys(tester, LogicalKeyboardKey.backquote, control: true);
+    expect(terminalChats.value, isNot(contains('a')));
+    tester.daemonOf().dispose();
+  }, variant: macOS);
 }
 
 extension on WidgetTester {

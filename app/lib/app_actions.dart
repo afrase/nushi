@@ -74,7 +74,7 @@ enum Act {
   sidebar(key: sidebarKey, menu: ActMenu.view, menuLabel: 'Hide Sidebar'),
   details,
   chatWidth,
-  terminal(keyText: '⌃`'), // TerminalArea's key: it keeps the focus
+  terminal(key: toggleTerminalKey),
   rewind(keyText: 'Esc Esc'), // the composer's
   sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
   fork(menu: ActMenu.chat, menuLabel: 'Fork Chat'),
