@@ -17,6 +17,8 @@ type Chats interface {
 	// Rest says whether every chat is quiet, and if so takes no prompts
 	// from then on; otherwise it names a chat that isn't.
 	Rest() (ok bool, holding string)
+	// Unrest takes prompts again after Rest, when the restart backs out.
+	Unrest()
 	// Holding says what keeps each chat that isn't quiet busy, changing
 	// nothing.
 	Holding() []model.Hold
@@ -77,10 +79,12 @@ func (s *Service) wait() {
 		holding := "" // a chat's id, or "" for a terminal
 		if !s.terms.Busy() {
 			var ok bool
-			if ok, holding = s.chats.Rest(); ok {
+			if ok, holding = s.chats.Rest(); ok && !s.terms.Busy() {
 				slog.Info("restarting into the newer daemon: nothing runs")
 				close(s.due)
 				return
+			} else if ok { // a command started while the chats came to rest
+				s.chats.Unrest()
 			}
 		}
 		if holding != last {

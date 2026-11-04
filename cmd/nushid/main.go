@@ -184,8 +184,11 @@ func run() error {
 
 	// On SIGINT or SIGTERM, once its app is deleted, or for a restart
 	// into a newer build, stop the agents too: their sessions reopen
-	// through session/load when the daemon is back.
-	closeChats := sync.OnceFunc(func() { chatSvc.Close(); termSvc.CloseAll() })
+	// through session/load when the daemon is back. The terminals end
+	// first: the restart found none running a command a moment ago, and
+	// ending them before the agents (which take up to stopGrace) leaves
+	// none the time to start one.
+	closeChats := sync.OnceFunc(func() { termSvc.CloseAll(); chatSvc.Close() })
 	why, err := serve(srv, ln, restarts.Due(), closeChats)
 	if why != "" {
 		slog.Info("nushid stopping", "why", why)

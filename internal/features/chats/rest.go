@@ -31,6 +31,12 @@ func (s *Service) Rest() (ok bool, holding string) {
 	return true, ""
 }
 
+// Unrest takes prompts again after Rest said every chat was quiet: the
+// restart backs out (a terminal started a command meanwhile).
+func (s *Service) Unrest() {
+	s.resting.Store(false)
+}
+
 // notQuiet returns a chat that isn't quiet, or "".
 func (s *Service) notQuiet() string {
 	s.mu.Lock()
