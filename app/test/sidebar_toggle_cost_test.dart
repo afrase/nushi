@@ -48,6 +48,13 @@ Future<List<_Frame>> _frames(WidgetTester tester, VoidCallback change) async {
 }
 
 void _expectQuiet(List<_Frame> frames, String what) {
+  // The first frame lays the rows out at their new insets; their widgets
+  // stay (only the padding around each is new).
+  expect(
+    frames.first.rows,
+    0,
+    reason: '$what: rows rebuilt on its first frame',
+  );
   for (final (i, f) in frames.indexed.skip(1)) {
     expect(f.rows, 0, reason: '$what: rows rebuilt on frame $i');
     expect(

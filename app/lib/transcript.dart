@@ -248,7 +248,10 @@ class _TranscriptState extends State<Transcript> {
     return widget.chat.unsent.contains(e.id) ? 2 : 1;
   }
 
-  /// An entry's widget, the one built before if its items are the same.
+  /// An entry's widget, the one built before if its items are the same:
+  /// only its place (its insets, which follow the window's width, and the
+  /// gap above it) is new, so a sidebar's slide moves the rows and
+  /// rebuilds none of them.
   Widget _entry(
     Map<String, (List<Object>, Widget)> before,
     Object e, {
@@ -294,9 +297,6 @@ class _TranscriptState extends State<Transcript> {
       pinned,
       pinnable,
       flash,
-      top,
-      sides.left,
-      sides.right,
       ...items,
     ];
     final was = before[key];
@@ -305,62 +305,60 @@ class _TranscriptState extends State<Transcript> {
         was.$1.length == from.length &&
         Iterable<int>.generate(from.length)
             .every((i) => identical(was.$1[i], from[i]));
-    return (_built[key] = same
-            ? was
-            : (
-                from,
-                // Keyed, the item's state follows it as items arrive.
-                Padding(
-                  key: ValueKey(key),
-                  // On the phone a user message's band goes edge to edge.
-                  padding: _isBand(e) && TouchTargets.of(context)
-                      ? EdgeInsets.only(top: top)
-                      : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
-                  // New while the chat is open, it rises in, once.
-                  child: Enter.rise(
-                    play: rise,
-                    child: RepaintBoundary(
-                      // Always there, as Marks is: a pick in the pins'
-                      // list tints the message for a moment.
-                      child: PinFlash(
-                        on: flash,
-                        // Always there, so that a find coming and going
-                        // leaves the entry's state alone.
-                        child: Marks(
-                          entry: key,
-                          // A call's title types out as it comes, or as it
-                          // joins a run; not what the chat opened with.
-                          child: Arriving(
-                            play: rise || was != null,
-                            child: _isBand(e)
-                                ? _Sending(
-                                    state: sending,
-                                    child: _view(
-                                      e,
-                                      live: live,
-                                      still: still,
-                                      rewindable: rewindable,
-                                      pinned: pinned,
-                                      pinnable: pinnable,
-                                    ),
-                                  )
-                                : _view(
-                                    e,
-                                    live: live,
-                                    still: still,
-                                    rewindable: rewindable,
-                                    forkable: forkable,
-                                    pinned: pinned,
-                                    pinnable: pinnable,
-                                  ),
+    final view = same
+        ? was.$2
+        // New while the chat is open, it rises in, once.
+        : Enter.rise(
+            play: rise,
+            child: RepaintBoundary(
+              // Always there, as Marks is: a pick in the pins'
+              // list tints the message for a moment.
+              child: PinFlash(
+                on: flash,
+                // Always there, so that a find coming and going
+                // leaves the entry's state alone.
+                child: Marks(
+                  entry: key,
+                  // A call's title types out as it comes, or as it
+                  // joins a run; not what the chat opened with.
+                  child: Arriving(
+                    play: rise || was != null,
+                    child: _isBand(e)
+                        ? _Sending(
+                            state: sending,
+                            child: _view(
+                              e,
+                              live: live,
+                              still: still,
+                              rewindable: rewindable,
+                              pinned: pinned,
+                              pinnable: pinnable,
+                            ),
+                          )
+                        : _view(
+                            e,
+                            live: live,
+                            still: still,
+                            rewindable: rewindable,
+                            forkable: forkable,
+                            pinned: pinned,
+                            pinnable: pinnable,
                           ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
-              ))
-        .$2;
+              ),
+            ),
+          );
+    _built[key] = (from, view);
+    // Keyed, the item's state follows it as items arrive.
+    return Padding(
+      key: ValueKey(key),
+      // On the phone a user message's band goes edge to edge.
+      padding: _isBand(e) && TouchTargets.of(context)
+          ? EdgeInsets.only(top: top)
+          : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
+      child: view,
+    );
   }
 
   /// An entry's view: an item, a run of tool calls or a subagent.
