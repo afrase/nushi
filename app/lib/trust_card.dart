@@ -47,18 +47,24 @@ class TrustCard extends StatelessWidget {
                     Icon(Icons.warning_amber_rounded, size: 16, color: t.needs),
                     Flexible(
                       child: Text(
-                        '${folderParts(ask.folder).$1} brings its own code '
-                        'to run',
+                        '${ask.shownAs ?? folderParts(ask.folder).$1} '
+                        'brings its own code to run',
                         style: theme.ui(t.text, weight: FontWeight.w600),
                       ),
                     ),
                   ],
                 ),
                 Text(
-                  '${knownAgents[ask.agent]?.title ?? 'The agent'} runs these '
-                  'without asking as soon as a chat starts '
-                  'in ${tildePath(ask.folder)}, and it hasn’t been told to '
-                  'trust the folder. Look before you start.',
+                  ask.shownAs == null
+                      ? '${knownAgents[ask.agent]?.title ?? 'The agent'} '
+                            'runs these without asking as soon as a chat '
+                            'starts in ${tildePath(ask.folder)}, and it '
+                            'hasn’t been told to trust the folder. Look '
+                            'before you start.'
+                      : '${knownAgents[ask.agent]?.title ?? 'The agent'} '
+                            'runs these without asking as soon as a chat '
+                            'starts on its head, which brings them. Look '
+                            'before you start.',
                   style: theme.ui(t.textSecondary, size: 12),
                 ),
                 for (final MapEntry(key: file, value: runs) in byFile.entries)

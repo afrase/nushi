@@ -824,6 +824,9 @@ message StartChatRequest {
   // remote that is its repository (a fork's from refs/pull/<n>/head), on
   // its head's branch (a fork's: pr-<n>-<head>); branch is then unused.
   GitHubLink github = 7;
+  // StartChatResponse.head_runs_key of the card the user said "Start
+  // anyway" to: the pull request's head may run exactly that.
+  string head_runs_key = 8;
 }
 
 message ListAgentSessionsRequest {
@@ -889,9 +892,17 @@ message MoveChatRequest {
 message MoveChatResponse {}
 
 message StartChatResponse {
+  // Empty when head_runs says why nothing started.
   string chat_id = 1;
   // The chat's config options as it starts; changes arrive as events.
   repeated ConfigOption config = 2;
+  // A chat on a pull request whose head brings code for the agent to run
+  // that nobody trusted (a fork's head counts no earlier trust) didn't
+  // start: what the head runs, in the worktree at head_folder (removed
+  // since), for the trust card; start again with head_runs_key to run it.
+  repeated FolderRun head_runs = 3;
+  string head_folder = 4;
+  string head_runs_key = 5;
 }
 
 message SendPromptRequest {

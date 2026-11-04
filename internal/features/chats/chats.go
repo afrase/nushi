@@ -286,12 +286,14 @@ func (s *Service) Start(ctx context.Context, agent, folder string, worktree bool
 // StartOptions are a new chat's: a worktree of its own (on Branch, else
 // a name of Nushi's; from From, a commit or ref, else the folder's HEAD),
 // and the Jira issue or GitHub pull request or issue it's on, which it
-// remembers.
+// remembers. Check, when given, looks at the new worktree before the
+// agent starts there: an error drops the worktree and is StartOn's.
 type StartOptions struct {
 	Worktree     bool
 	Branch, From string
 	Issue        *model.ChatIssue
 	GitHub       *model.ChatGitHub
+	Check        func(folder string) error
 }
 
 // ErrStart is a new chat whose agent didn't start: "couldn't start Codex:
@@ -315,6 +317,11 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	case opts.Worktree:
 		if err = CheckFolder(folder); err == nil {
 			wt, folder, err = s.addWorktree(ctx, folder, opts.Branch, opts.From)
+		}
+		if err == nil && opts.Check != nil {
+			if err = opts.Check(folder); err != nil {
+				s.dropWorktree(wt)
+			}
 		}
 	default:
 		if err = CheckFolder(folder); err == nil && s.worktrees != nil {

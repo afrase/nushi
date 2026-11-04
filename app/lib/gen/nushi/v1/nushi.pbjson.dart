@@ -779,6 +779,7 @@ const StartChatRequest$json = {
       '6': '.nushi.v1.GitHubLink',
       '10': 'github'
     },
+    {'1': 'head_runs_key', '3': 8, '4': 1, '5': 9, '10': 'headRunsKey'},
   ],
 };
 
@@ -787,7 +788,8 @@ final $typed_data.Uint8List startChatRequestDescriptor = $convert.base64Decode(
     'ChBTdGFydENoYXRSZXF1ZXN0EhYKBmZvbGRlchgBIAEoCVIGZm9sZGVyEhQKBWFnZW50GAMgAS'
     'gJUgVhZ2VudBIaCgh3b3JrdHJlZRgCIAEoCFIId29ya3RyZWUSGwoJamlyYV9zaXRlGAQgASgJ'
     'UghqaXJhU2l0ZRIZCghqaXJhX2tleRgFIAEoCVIHamlyYUtleRIWCgZicmFuY2gYBiABKAlSBm'
-    'JyYW5jaBIsCgZnaXRodWIYByABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWI=');
+    'JyYW5jaBIsCgZnaXRodWIYByABKAsyFC5udXNoaS52MS5HaXRIdWJMaW5rUgZnaXRodWISIgoN'
+    'aGVhZF9ydW5zX2tleRgIIAEoCVILaGVhZFJ1bnNLZXk=');
 
 @$core.Deprecated('Use listAgentSessionsRequestDescriptor instead')
 const ListAgentSessionsRequest$json = {
@@ -919,13 +921,25 @@ const StartChatResponse$json = {
       '6': '.nushi.v1.ConfigOption',
       '10': 'config'
     },
+    {
+      '1': 'head_runs',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.nushi.v1.FolderRun',
+      '10': 'headRuns'
+    },
+    {'1': 'head_folder', '3': 4, '4': 1, '5': 9, '10': 'headFolder'},
+    {'1': 'head_runs_key', '3': 5, '4': 1, '5': 9, '10': 'headRunsKey'},
   ],
 };
 
 /// Descriptor for `StartChatResponse`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List startChatResponseDescriptor = $convert.base64Decode(
     'ChFTdGFydENoYXRSZXNwb25zZRIXCgdjaGF0X2lkGAEgASgJUgZjaGF0SWQSLgoGY29uZmlnGA'
-    'IgAygLMhYubnVzaGkudjEuQ29uZmlnT3B0aW9uUgZjb25maWc=');
+    'IgAygLMhYubnVzaGkudjEuQ29uZmlnT3B0aW9uUgZjb25maWcSMAoJaGVhZF9ydW5zGAMgAygL'
+    'MhMubnVzaGkudjEuRm9sZGVyUnVuUghoZWFkUnVucxIfCgtoZWFkX2ZvbGRlchgEIAEoCVIKaG'
+    'VhZEZvbGRlchIiCg1oZWFkX3J1bnNfa2V5GAUgASgJUgtoZWFkUnVuc0tleQ==');
 
 @$core.Deprecated('Use sendPromptRequestDescriptor instead')
 const SendPromptRequest$json = {
@@ -7657,6 +7671,7 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.GetChatItemsResponse': GetChatItemsResponse$json,
   '.nushi.v1.StartChatRequest': StartChatRequest$json,
   '.nushi.v1.StartChatResponse': StartChatResponse$json,
+  '.nushi.v1.FolderRun': FolderRun$json,
   '.nushi.v1.ListAgentsRequest': ListAgentsRequest$json,
   '.nushi.v1.ListAgentsResponse': ListAgentsResponse$json,
   '.nushi.v1.Agent': Agent$json,
@@ -7832,7 +7847,6 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.nushi.v1.CloseTerminalResponse': CloseTerminalResponse$json,
   '.nushi.v1.CheckFolderRequest': CheckFolderRequest$json,
   '.nushi.v1.CheckFolderResponse': CheckFolderResponse$json,
-  '.nushi.v1.FolderRun': FolderRun$json,
   '.nushi.v1.TrustFolderRequest': TrustFolderRequest$json,
   '.nushi.v1.TrustFolderResponse': TrustFolderResponse$json,
   '.nushi.v1.GetRemoteRequest': GetRemoteRequest$json,

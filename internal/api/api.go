@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 104
+const Version = 105
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -295,9 +295,19 @@ func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.Sta
 				return nil, githubErr(err)
 			}
 			opts.Branch, opts.From = co.Branch, co.From
+			agent := s.agent(req.Msg.Agent)
+			opts.Check = func(folder string) error { return s.Trust.Head(agent, folder, co.Fork, req.Msg.HeadRunsKey) }
 		}
 	}
 	id, err := s.Chats.StartOn(ctx, req.Msg.Agent, req.Msg.Folder, opts)
+	var head *trust.UntrustedHead
+	if errors.As(err, &head) { // the app shows its card, and starts again
+		out := &nushiv1.StartChatResponse{HeadFolder: head.Folder, HeadRunsKey: head.Shown}
+		for _, r := range head.Runs {
+			out.HeadRuns = append(out.HeadRuns, &nushiv1.FolderRun{File: r.File, What: r.What, Command: r.Command})
+		}
+		return connect.NewResponse(out), nil
+	}
 	if errors.Is(err, chats.ErrStart) {
 		return nil, because(connect.NewError(connect.CodeFailedPrecondition, err), ReasonAgentStart)
 	} else if err != nil {

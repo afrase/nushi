@@ -14,5 +14,8 @@ Claude Code in a terminal shows a trust dialog before it starts in a folder it h
 - Opening Changes, and making a worktree (a checkout), still run the repository's own filters, as the user's own git would there.
 - An older app (before API 37) starts chats without asking.
 
+## Amendment (2026-11-04): a pull request's head is checked where it starts
+A chat on a pull request starts in a worktree of its head, which the card's folder (the checkout the user picked) doesn't show. The daemon now checks the new worktree before the agent starts there; when it brings anything nobody trusted, the worktree goes, the app shows the card for the head, and "Start anyway" starts again, for exactly what the card showed. A fork's head is an outsider's: no earlier trust counts for it (Claude's is the repository's, which any head would ride on), and "Start anyway" there is for that start only. A head of the repository's own is trusted and remembered as its folder is. An older app (before API 105) gets no card for the head.
+
 ## Alternatives considered
 - Refusing to start until trusted, or writing Claude's trust record on "Start anyway": both take the decision away from the user or from Claude.

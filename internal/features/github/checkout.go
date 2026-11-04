@@ -19,6 +19,7 @@ type Checkout struct {
 	Branch string // the worktree's branch
 	From   string // the ref it starts from
 	Link   model.ChatGitHub
+	Fork   bool // the head is a fork's: an outsider's code
 }
 
 // CheckOut fetches a pull request's head into folder's repository, from
@@ -38,7 +39,7 @@ func (s *Service) CheckOut(ctx context.Context, folder string, ref model.GitHubR
 	if err != nil {
 		return Checkout{}, err
 	}
-	out := Checkout{Link: model.ChatGitHub{GitHubRef: ref, Pull: true, ID: p.ID}}
+	out := Checkout{Link: model.ChatGitHub{GitHubRef: ref, Pull: true, ID: p.ID}, Fork: p.CrossRepo}
 	var refspec string
 	if !p.CrossRepo && s.CheckBranch(p.Head) == nil {
 		out.Branch, out.From = p.Head, "refs/remotes/"+remote+"/"+p.Head

@@ -2920,6 +2920,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     $core.String? jiraKey,
     $core.String? branch,
     GitHubLink? github,
+    $core.String? headRunsKey,
   }) {
     final result = StartChatRequest._();
     if (folder != null) result.folder = folder;
@@ -2929,6 +2930,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     if (jiraKey != null) result.jiraKey = jiraKey;
     if (branch != null) result.branch = branch;
     if (github != null) result.github = github;
+    if (headRunsKey != null) result.headRunsKey = headRunsKey;
     return result;
   }
 
@@ -2953,6 +2955,7 @@ class StartChatRequest extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'branch')
     ..aOM<GitHubLink>(7, _omitFieldNames ? '' : 'github',
         subBuilder: GitHubLink.$_createMessage)
+    ..aOS(8, _omitFieldNames ? '' : 'headRunsKey')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3053,6 +3056,17 @@ class StartChatRequest extends $pb.GeneratedMessage {
   void clearGithub() => $_clearField(7);
   @$pb.TagNumber(7)
   GitHubLink ensureGithub() => $_ensure(6);
+
+  /// StartChatResponse.head_runs_key of the card the user said "Start
+  /// anyway" to: the pull request's head may run exactly that.
+  @$pb.TagNumber(8)
+  $core.String get headRunsKey => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set headRunsKey($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasHeadRunsKey() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearHeadRunsKey() => $_clearField(8);
 }
 
 class ListAgentSessionsRequest extends $pb.GeneratedMessage {
@@ -3672,10 +3686,16 @@ class StartChatResponse extends $pb.GeneratedMessage {
   factory StartChatResponse({
     $core.String? chatId,
     $core.Iterable<ConfigOption>? config,
+    $core.Iterable<FolderRun>? headRuns,
+    $core.String? headFolder,
+    $core.String? headRunsKey,
   }) {
     final result = StartChatResponse._();
     if (chatId != null) result.chatId = chatId;
     if (config != null) result.config.addAll(config);
+    if (headRuns != null) result.headRuns.addAll(headRuns);
+    if (headFolder != null) result.headFolder = headFolder;
+    if (headRunsKey != null) result.headRunsKey = headRunsKey;
     return result;
   }
 
@@ -3695,6 +3715,10 @@ class StartChatResponse extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..pPM<ConfigOption>(2, _omitFieldNames ? '' : 'config',
         subBuilder: ConfigOption.$_createMessage)
+    ..pPM<FolderRun>(3, _omitFieldNames ? '' : 'headRuns',
+        subBuilder: FolderRun.$_createMessage)
+    ..aOS(4, _omitFieldNames ? '' : 'headFolder')
+    ..aOS(5, _omitFieldNames ? '' : 'headRunsKey')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -3719,6 +3743,7 @@ class StartChatResponse extends $pb.GeneratedMessage {
           StartChatResponse.$_createMessage);
   static StartChatResponse? _defaultInstance;
 
+  /// Empty when head_runs says why nothing started.
   @$pb.TagNumber(1)
   $core.String get chatId => $_getSZ(0);
   @$pb.TagNumber(1)
@@ -3731,6 +3756,31 @@ class StartChatResponse extends $pb.GeneratedMessage {
   /// The chat's config options as it starts; changes arrive as events.
   @$pb.TagNumber(2)
   $pb.PbList<ConfigOption> get config => $_getList(1);
+
+  /// A chat on a pull request whose head brings code for the agent to run
+  /// that nobody trusted (a fork's head counts no earlier trust) didn't
+  /// start: what the head runs, in the worktree at head_folder (removed
+  /// since), for the trust card; start again with head_runs_key to run it.
+  @$pb.TagNumber(3)
+  $pb.PbList<FolderRun> get headRuns => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $core.String get headFolder => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set headFolder($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasHeadFolder() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearHeadFolder() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get headRunsKey => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set headRunsKey($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasHeadRunsKey() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearHeadRunsKey() => $_clearField(5);
 }
 
 class SendPromptRequest extends $pb.GeneratedMessage {

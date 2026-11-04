@@ -13,15 +13,7 @@ extension DaemonStart on Daemon {
         CheckFolderRequest(folder: folder, agent: agent),
       );
       if (check.runs.isEmpty) return true;
-      trustAsk?.decide(start: false);
-      final ask = trustAsk = TrustAsk(folder, action, check.runs, agent);
-      settingsOpen = null; // the card is in the window, under Settings
-      _changed();
-      final start = await ask.answer.future;
-      if (trustAsk == ask) {
-        trustAsk = null;
-        _changed();
-      }
+      final start = await _ask(TrustAsk(folder, action, check.runs, agent));
       // A folder without a key is for this start only.
       if (!start || check.key.isEmpty) return start;
       try {
@@ -35,6 +27,20 @@ extension DaemonStart on Daemon {
     }
   }
 
+  /// Shows [ask]'s trust card, in place of one shown, and gives its answer.
+  Future<bool> _ask(TrustAsk ask) async {
+    trustAsk?.decide(start: false);
+    trustAsk = ask;
+    settingsOpen = null; // the card is in the window, under Settings
+    _changed();
+    final start = await ask.answer.future;
+    if (trustAsk == ask) {
+      trustAsk = null;
+      _changed();
+    }
+    return start;
+  }
+
   /// Where the user is: a start that ends elsewhere doesn't take them
   /// to its chat.
   (String?, Place) get _place => (selectedId, place);
@@ -43,8 +49,10 @@ extension DaemonStart on Daemon {
   /// own (''); never in a worktree unless asked, as nothing is remembered
   /// (the "New worktree" chip moves it). A chat on a Jira [issue] remembers
   /// it and takes its worktree choice; its box stays empty (the agent's
-  /// tools say which issue it is). Gives the new chat's id, shown or not,
-  /// or null when the trust card said no.
+  /// tools say which issue it is). A pull request's head that brings code
+  /// of its own asks too, once the daemon has checked it out (ADR 0023).
+  /// Gives the new chat's id, shown or not, or null when the trust card
+  /// said no.
   Future<String?> startChat(
     String folder,
     String agent, {
@@ -56,25 +64,40 @@ extension DaemonStart on Daemon {
     try {
       if (!await _mayRun(folder, 'Start a chat', agent)) return null;
       final before = _place;
-      final StartChatResponse resp;
+      StartChatResponse resp;
       try {
-        resp = await client.startChat(
-          StartChatRequest(
-            agent: agent,
-            folder: folder,
-            worktree: issue?.worktree ?? false,
-            jiraSite: issue?.github == null ? issue?.site : null,
-            jiraKey: issue?.github == null ? issue?.key : null,
-            github: issue?.github,
-            branch:
-                issue != null &&
-                    issue.worktree &&
-                    folder.isNotEmpty &&
-                    issue.github?.pull != true
-                ? issue.branch
-                : null,
-          ),
-        );
+        var shown = '';
+        while (true) {
+          resp = await client.startChat(
+            StartChatRequest(
+              agent: agent,
+              folder: folder,
+              worktree: issue?.worktree ?? false,
+              jiraSite: issue?.github == null ? issue?.site : null,
+              jiraKey: issue?.github == null ? issue?.key : null,
+              github: issue?.github,
+              branch:
+                  issue != null &&
+                      issue.worktree &&
+                      folder.isNotEmpty &&
+                      issue.github?.pull != true
+                  ? issue.branch
+                  : null,
+              headRunsKey: shown,
+            ),
+          );
+          if (resp.headRuns.isEmpty) break;
+          final pull = issue?.github;
+          final ask = TrustAsk(
+            resp.headFolder,
+            'Start a chat',
+            resp.headRuns,
+            agent,
+            shownAs: pull == null ? null : 'Pull request #${pull.number}',
+          );
+          if (!await _ask(ask)) return null;
+          shown = resp.headRunsKey;
+        }
       } on connect.ConnectException catch (e) {
         if (refusedFor(
           e,
