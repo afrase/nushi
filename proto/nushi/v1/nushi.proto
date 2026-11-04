@@ -2397,15 +2397,21 @@ message Remote {
   repeated Device devices = 5;
   // A phone being paired; unset when none.
   Pairing pairing = 6;
-  // The daemon's id at the relay, where its phones dial. It changes when a
-  // device is revoked: a phone that sees another than the one it dials
-  // keeps this one from then on, with key (its old one answers it, with
-  // the old key, for 30 days).
+  // Left empty since the Noise key moves on a revoke too (2026-11-04): a
+  // phone from before then moves to the id here with the key it pinned,
+  // which the new id doesn't answer. It keeps dialing its old id instead
+  // (answered with the old key for 30 days) until its app updates and
+  // reads id. A daemon from before then sets it, and never changes key.
   string rendezvous = 7;
-  // The daemon's Noise public key (32 bytes) at rendezvous, so a phone and
-  // the Mac can show the same fingerprint of it. It changes with
-  // rendezvous when a device is revoked (ADR 0034).
+  // The daemon's Noise public key (32 bytes) at id, so a phone and the Mac
+  // can show the same fingerprint of it. It changes with id when a device
+  // is revoked (ADR 0034).
   bytes key = 8;
+  // The daemon's id at the relay, where its phones dial. It changes, with
+  // key, when a device is revoked: a phone that sees another than the one
+  // it dials keeps this one and key from then on (its old one answers it,
+  // with the old key, for 30 days).
+  string id = 9;
 }
 
 message Device {

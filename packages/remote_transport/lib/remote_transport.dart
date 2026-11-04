@@ -173,8 +173,8 @@ final class RelayTransport implements Http2ClientTransport {
   new(this.daemon, this.device);
 
   /// The daemon to dial. Its id changes when another device is revoked:
-  /// when `Remote.rendezvous` names another, keep that one, and set it
-  /// here for the next channel.
+  /// when `Remote.id` names another, keep that one with `Remote.key`, and
+  /// set it here for the next channel.
   PairedDaemon daemon;
 
   /// The phone's own key.

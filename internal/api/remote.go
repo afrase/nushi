@@ -33,8 +33,12 @@ func (s *server) RevokeDevice(_ context.Context, req *connect.Request[nushiv1.Re
 	return done[nushiv1.RevokeDeviceResponse](s.Remote.Revoke(req.Msg.Id), notFound)
 }
 
+// remoteProto is r for the API. The id goes in Remote.id, not
+// Remote.rendezvous: a phone from before the Noise key moved on a revoke
+// moves to rendezvous with the key it pinned, which the new id doesn't
+// answer, and would be cut off (ADR 0034's 2026-11-04 amendment).
 func remoteProto(r model.Remote) *nushiv1.Remote {
-	out := &nushiv1.Remote{On: r.On, Relay: r.Relay, State: r.State, Error: r.Error, Rendezvous: r.Rendezvous, Key: r.Key}
+	out := &nushiv1.Remote{On: r.On, Relay: r.Relay, State: r.State, Error: r.Error, Id: r.Rendezvous, Key: r.Key}
 	for _, d := range r.Devices {
 		out.Devices = append(out.Devices, &nushiv1.Device{Id: d.ID, Name: d.Name, Paired: d.Paired.UnixMilli(),
 			LastSeen: unixMs(d.LastSeen), Connected: d.Connected, Kind: d.Kind, Push: d.Push != nil})

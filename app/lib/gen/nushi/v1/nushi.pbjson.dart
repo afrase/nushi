@@ -4144,6 +4144,7 @@ const Remote$json = {
     },
     {'1': 'rendezvous', '3': 7, '4': 1, '5': 9, '10': 'rendezvous'},
     {'1': 'key', '3': 8, '4': 1, '5': 12, '10': 'key'},
+    {'1': 'id', '3': 9, '4': 1, '5': 9, '10': 'id'},
   ],
 };
 
@@ -4153,7 +4154,7 @@ final $typed_data.Uint8List remoteDescriptor = $convert.base64Decode(
     'gDIAEoCVIFc3RhdGUSFAoFZXJyb3IYBCABKAlSBWVycm9yEioKB2RldmljZXMYBSADKAsyEC5u'
     'dXNoaS52MS5EZXZpY2VSB2RldmljZXMSKwoHcGFpcmluZxgGIAEoCzIRLm51c2hpLnYxLlBhaX'
     'JpbmdSB3BhaXJpbmcSHgoKcmVuZGV6dm91cxgHIAEoCVIKcmVuZGV6dm91cxIQCgNrZXkYCCAB'
-    'KAxSA2tleQ==');
+    'KAxSA2tleRIOCgJpZBgJIAEoCVICaWQ=');
 
 @$core.Deprecated('Use deviceDescriptor instead')
 const Device$json = {

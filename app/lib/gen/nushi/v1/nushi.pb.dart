@@ -18077,6 +18077,7 @@ class Remote extends $pb.GeneratedMessage {
     Pairing? pairing,
     $core.String? rendezvous,
     $core.List<$core.int>? key,
+    $core.String? id,
   }) {
     final result = Remote._();
     if (on != null) result.on = on;
@@ -18087,6 +18088,7 @@ class Remote extends $pb.GeneratedMessage {
     if (pairing != null) result.pairing = pairing;
     if (rendezvous != null) result.rendezvous = rendezvous;
     if (key != null) result.key = key;
+    if (id != null) result.id = id;
     return result;
   }
 
@@ -18114,6 +18116,7 @@ class Remote extends $pb.GeneratedMessage {
     ..aOS(7, _omitFieldNames ? '' : 'rendezvous')
     ..a<$core.List<$core.int>>(
         8, _omitFieldNames ? '' : 'key', $pb.PbFieldType.OY)
+    ..aOS(9, _omitFieldNames ? '' : 'id')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18192,10 +18195,11 @@ class Remote extends $pb.GeneratedMessage {
   @$pb.TagNumber(6)
   Pairing ensurePairing() => $_ensure(5);
 
-  /// The daemon's id at the relay, where its phones dial. It changes when a
-  /// device is revoked: a phone that sees another than the one it dials
-  /// keeps this one from then on, with key (its old one answers it, with
-  /// the old key, for 30 days).
+  /// Left empty since the Noise key moves on a revoke too (2026-11-04): a
+  /// phone from before then moves to the id here with the key it pinned,
+  /// which the new id doesn't answer. It keeps dialing its old id instead
+  /// (answered with the old key for 30 days) until its app updates and
+  /// reads id. A daemon from before then sets it, and never changes key.
   @$pb.TagNumber(7)
   $core.String get rendezvous => $_getSZ(6);
   @$pb.TagNumber(7)
@@ -18205,9 +18209,9 @@ class Remote extends $pb.GeneratedMessage {
   @$pb.TagNumber(7)
   void clearRendezvous() => $_clearField(7);
 
-  /// The daemon's Noise public key (32 bytes) at rendezvous, so a phone and
-  /// the Mac can show the same fingerprint of it. It changes with
-  /// rendezvous when a device is revoked (ADR 0034).
+  /// The daemon's Noise public key (32 bytes) at id, so a phone and the Mac
+  /// can show the same fingerprint of it. It changes with id when a device
+  /// is revoked (ADR 0034).
   @$pb.TagNumber(8)
   $core.List<$core.int> get key => $_getN(7);
   @$pb.TagNumber(8)
@@ -18216,6 +18220,19 @@ class Remote extends $pb.GeneratedMessage {
   $core.bool hasKey() => $_has(7);
   @$pb.TagNumber(8)
   void clearKey() => $_clearField(8);
+
+  /// The daemon's id at the relay, where its phones dial. It changes, with
+  /// key, when a device is revoked: a phone that sees another than the one
+  /// it dials keeps this one and key from then on (its old one answers it,
+  /// with the old key, for 30 days).
+  @$pb.TagNumber(9)
+  $core.String get id => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set id($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasId() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearId() => $_clearField(9);
 }
 
 class Device extends $pb.GeneratedMessage {

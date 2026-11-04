@@ -281,13 +281,17 @@ class Phone extends ChangeNotifier {
   /// The daemon moved to another id, with a new key (another device was
   /// revoked): dial that one, with that key, from now on (ADR 0034). The
   /// channel it came over is the daemon's, authenticated by the key this
-  /// phone pinned.
+  /// phone pinned. `Remote.id` comes with its key, and an id without a
+  /// key is no move; a daemon from before the key moved too sets only
+  /// `Remote.rendezvous`, and keeps its key.
   void _remoteChanged() {
     final r = remoteState.value;
     final p = paired;
-    final id = r?.rendezvous ?? '';
-    if (p == null || id.isEmpty || id == p.id) return;
-    final key = r!.key.length == 32 ? Uint8List.fromList(r.key) : p.key;
+    if (r == null || p == null) return;
+    final (id, key) = r.id.isNotEmpty
+        ? (r.id, r.key.length == 32 ? Uint8List.fromList(r.key) : null)
+        : (r.rendezvous, p.key);
+    if (id.isEmpty || id == p.id || key == null) return;
     paired = rt.PairedDaemon(p.relay, id, key);
     _transport?.daemon = paired!;
     unawaited(_save());

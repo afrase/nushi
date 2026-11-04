@@ -14026,15 +14026,21 @@ type Remote struct {
 	Devices []*Device `protobuf:"bytes,5,rep,name=devices,proto3" json:"devices,omitempty"`
 	// A phone being paired; unset when none.
 	Pairing *Pairing `protobuf:"bytes,6,opt,name=pairing,proto3" json:"pairing,omitempty"`
-	// The daemon's id at the relay, where its phones dial. It changes when a
-	// device is revoked: a phone that sees another than the one it dials
-	// keeps this one from then on, with key (its old one answers it, with
-	// the old key, for 30 days).
+	// Left empty since the Noise key moves on a revoke too (2026-11-04): a
+	// phone from before then moves to the id here with the key it pinned,
+	// which the new id doesn't answer. It keeps dialing its old id instead
+	// (answered with the old key for 30 days) until its app updates and
+	// reads id. A daemon from before then sets it, and never changes key.
 	Rendezvous string `protobuf:"bytes,7,opt,name=rendezvous,proto3" json:"rendezvous,omitempty"`
-	// The daemon's Noise public key (32 bytes) at rendezvous, so a phone and
-	// the Mac can show the same fingerprint of it. It changes with
-	// rendezvous when a device is revoked (ADR 0034).
-	Key           []byte `protobuf:"bytes,8,opt,name=key,proto3" json:"key,omitempty"`
+	// The daemon's Noise public key (32 bytes) at id, so a phone and the Mac
+	// can show the same fingerprint of it. It changes with id when a device
+	// is revoked (ADR 0034).
+	Key []byte `protobuf:"bytes,8,opt,name=key,proto3" json:"key,omitempty"`
+	// The daemon's id at the relay, where its phones dial. It changes, with
+	// key, when a device is revoked: a phone that sees another than the one
+	// it dials keeps this one and key from then on (its old one answers it,
+	// with the old key, for 30 days).
+	Id            string `protobuf:"bytes,9,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14123,6 +14129,13 @@ func (x *Remote) GetKey() []byte {
 		return x.Key
 	}
 	return nil
+}
+
+func (x *Remote) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
 }
 
 type Device struct {
@@ -24009,7 +24022,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x06folder\x18\x01 \x01(\tR\x06folder\x12\x14\n" +
 	"\x05agent\x18\x02 \x01(\tR\x05agent\x12\x10\n" +
 	"\x03key\x18\x03 \x01(\tR\x03key\"\x15\n" +
-	"\x13TrustFolderResponse\"\xe5\x01\n" +
+	"\x13TrustFolderResponse\"\xf5\x01\n" +
 	"\x06Remote\x12\x0e\n" +
 	"\x02on\x18\x01 \x01(\bR\x02on\x12\x14\n" +
 	"\x05relay\x18\x02 \x01(\tR\x05relay\x12\x14\n" +
@@ -24020,7 +24033,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"rendezvous\x18\a \x01(\tR\n" +
 	"rendezvous\x12\x10\n" +
-	"\x03key\x18\b \x01(\fR\x03key\"\xa7\x01\n" +
+	"\x03key\x18\b \x01(\fR\x03key\x12\x0e\n" +
+	"\x02id\x18\t \x01(\tR\x02id\"\xa7\x01\n" +
 	"\x06Device\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x16\n" +

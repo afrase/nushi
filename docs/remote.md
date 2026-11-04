@@ -48,7 +48,7 @@ Forget this Mac (Settings) forgets the pairing and the device's key on the phone
 
 ### If a phone is lost or stolen
 
-Revoke it on the Mac (Settings › Remote access). The daemon moves to a new id and key at the relay; phones connected then move at once, and the others when they next connect. A paired phone can read any file on the Mac, the daemon's key too, and with it could still answer as the Mac to a phone that hasn't moved yet. So if it may have been used before you revoked it, pair your other phones again (Forget this Mac on each, then pair), and look on the Mac for anything it left (a device paired since, a LaunchAgent, a changed shell profile): it could run anything as you.
+Revoke it on the Mac (Settings › Remote access). The daemon moves to a new id and key at the relay; phones connected then move at once, and the others when they next connect (a phone on a copy of the app from before 2026-11-04 moves once it takes the update: "Nushi was updated", Reload). A paired phone can read any file on the Mac, the daemon's key too, and with it could still answer as the Mac to a phone that hasn't moved yet. So if it may have been used before you revoked it, pair your other phones again (Forget this Mac on each, then pair), and look on the Mac for anything it left (a device paired since, a LaunchAgent, a changed shell profile): it could run anything as you.
 
 ### If the app's code may have been changed
 

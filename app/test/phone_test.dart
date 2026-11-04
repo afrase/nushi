@@ -643,20 +643,27 @@ void main() {
       },
     );
     final key = Uint8List.fromList(List.generate(32, (i) => i + 1));
-    remoteState.value = Remote(rendezvous: 'moved', key: key);
-    for (var i = 0; i < 4; i++) {
-      await tester.pump();
+    Future<void> remote(Remote r) async {
+      remoteState.value = r;
+      for (var i = 0; i < 4; i++) {
+        await tester.pump();
+      }
     }
+
+    await remote(Remote(id: 'moved', key: key));
     expect(platform.saved?['daemon'], 'moved');
     expect(platform.saved?['daemonKey'], key);
     expect(phone.paired?.key, key);
-    // A key that isn't one keeps the old with the new id.
-    final was = phone.paired!.key;
-    remoteState.value = Remote(rendezvous: 'again', key: [1, 2, 3]);
-    for (var i = 0; i < 4; i++) {
-      await tester.pump();
-    }
-    expect((phone.paired?.id, phone.paired?.key), ('again', was));
+    // An id whose key isn't one is no move: dialing it with the old key
+    // would find no answer.
+    await remote(Remote(id: 'bad', key: [1, 2, 3]));
+    expect(phone.paired?.id, 'moved');
+    expect(phone.paired?.key, key);
+    // A daemon from before the key moved too names its id in rendezvous
+    // only, and keeps its key.
+    await remote(Remote(rendezvous: 'older', key: [9, 9, 9]));
+    expect(phone.paired?.id, 'older');
+    expect(phone.paired?.key, key);
     await endPhone(tester, phone);
   });
 
