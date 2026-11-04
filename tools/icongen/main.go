@@ -87,17 +87,13 @@ func main() {
 	defer os.RemoveAll(tmp) //nolint:errcheck // a temp folder
 	set := "app/macos/Runner/Assets.xcassets/AppIcon.appiconset"
 	for i, d := range details {
-		src := filepath.Join(tmp, fmt.Sprintf("icon%d.svg", i))
-		write(src, legacy(d))
+		src, svg := filepath.Join(tmp, fmt.Sprintf("icon%d.svg", i)), legacy(d)
+		write(src, svg)
 		if i == 0 {
-			write("docs/brand/icon.svg", legacy(d))
+			write("docs/brand/icon.svg", svg)
 		}
 		for _, px := range d.pngSizes {
-			out := filepath.Join(set, fmt.Sprintf("app_icon_%d.png", px))
-			cmd := exec.CommandContext(context.Background(), "sips", "-s", "format", "png", "-z", strconv.Itoa(px), strconv.Itoa(px), src, "--out", out)
-			if b, err := cmd.CombinedOutput(); err != nil {
-				log.Fatalf("sips: %v\n%s", err, b) //nolint:gocritic // a failed run may leave its temp folder
-			}
+			png(src, px, filepath.Join(set, fmt.Sprintf("app_icon_%d.png", px)))
 		}
 	}
 
