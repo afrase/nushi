@@ -333,7 +333,7 @@ class _TranscriptState extends State<Transcript> {
     required bool live,
     required bool still,
     required double top,
-    required double width,
+    required EdgeInsets sides,
     bool rise = false,
   }) {
     final key = _key(e);
@@ -347,7 +347,6 @@ class _TranscriptState extends State<Transcript> {
     // A failed turn's button goes by the items before its notice, not by
     // the notice: Continue, Try again, or none ('').
     final again = e is Item ? failedTurnRetry(widget.chat, e)?.label ?? '' : '';
-    final sides = chatSides(context, width);
     final sending = _sendState(e);
     final pinned =
         widget.items == null &&
@@ -376,6 +375,15 @@ class _TranscriptState extends State<Transcript> {
         was.$1.length == from.length &&
         Iterable<int>.generate(from.length)
             .every((i) => identical(was.$1[i], from[i]));
+    Widget item() => _view(
+      e,
+      live: live,
+      still: still,
+      rewindable: rewindable,
+      forkable: forkable,
+      pinned: pinned,
+      pinnable: pinnable,
+    );
     final view = same
         ? was.$2
         // New while the chat is open, it rises in, once.
@@ -395,26 +403,8 @@ class _TranscriptState extends State<Transcript> {
                   child: Arriving(
                     play: rise || was != null,
                     child: _isBand(e)
-                        ? _Sending(
-                            state: sending,
-                            child: _view(
-                              e,
-                              live: live,
-                              still: still,
-                              rewindable: rewindable,
-                              pinned: pinned,
-                              pinnable: pinnable,
-                            ),
-                          )
-                        : _view(
-                            e,
-                            live: live,
-                            still: still,
-                            rewindable: rewindable,
-                            forkable: forkable,
-                            pinned: pinned,
-                            pinnable: pinnable,
-                          ),
+                        ? _Sending(state: sending, child: item())
+                        : item(),
                   ),
                 ),
               ),
@@ -990,84 +980,81 @@ class _TranscriptState extends State<Transcript> {
     final reply = onReply == null ? null : _openReply;
     final behavior = ScrollConfiguration.of(context);
     final view = LayoutBuilder(
-      builder: (context, box) => Stack(
-        children: [
-          NotificationListener(
-            onNotification: _onScroll,
-            // One selection across the transcript, messages included whole;
-            // when a drag or double-click leaves text selected, the popover
-            // shows where the pointer went up.
-            child: Listener(
-              onPointerDown: (e) {
-                _startSelection(e, box.maxWidth);
-                setState(() {
-                  _down = _hold.value = true;
-                  _touch = e.kind != PointerDeviceKind.mouse;
-                  _at = _replyTo = null;
-                });
-              },
-              onPointerUp: (_) => _pointerGone(),
-              onPointerCancel: (_) => _pointerGone(),
-              child: SelectionArea(
-                key: _area,
-                focusNode: _areaFocus,
-                contextMenuBuilder: (context, region) =>
-                    _menu(region, onSide: side, onReply: reply),
-                onSelectionChanged: (c) {
-                  _selected = c?.plainText ?? '';
-                  _hold.value = _down || _selected.isNotEmpty;
-                  _offer();
+      builder: (context, box) {
+        final sides = chatSides(context, box.maxWidth);
+        return Stack(
+          children: [
+            NotificationListener(
+              onNotification: _onScroll,
+              // One selection across the transcript, messages included whole;
+              // when a drag or double-click leaves text selected, the popover
+              // shows where the pointer went up.
+              child: Listener(
+                onPointerDown: (e) {
+                  _startSelection(e, box.maxWidth);
+                  setState(() {
+                    _down = _hold.value = true;
+                    _touch = e.kind != PointerDeviceKind.mouse;
+                    _at = _replyTo = null;
+                  });
                 },
-                // Every item is laid out, so the list knows its exact
-                // height: the scrollbar keeps its size and nothing shifts
-                // as items come into view. Unchanged items keep their
-                // widget, so a streamed chunk rebuilds only its message.
-                child: PacingHold(
-                  notifier: _hold,
-                  // Unseen while it fills in up to a kept place, rather
-                  // than showing each frame what came in above.
-                  child: Opacity(
-                    opacity: _restore == null ? 1 : 0,
-                    child: _ownBar(
-                      context,
-                      SingleChildScrollView(
-                        controller: _follower.scroll,
-                        padding: EdgeInsets.only(
-                          top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
-                          bottom: 14,
-                        ),
-                        child: _codeBars(
-                          behavior,
-                          Column(
-                            key: _column,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (header case final h?)
-                                Padding(
-                                  padding: chatSides(context, box.maxWidth),
-                                  child: h,
-                                ),
-                              for (final (i, e) in entries.indexed.skip(from))
-                                _entry(
-                                  before,
-                                  e,
-                                  live: live && i == entries.length - 1,
-                                  still: chat.waiting,
-                                  top: _gap(
-                                    entries,
-                                    i,
-                                    header: header != null,
-                                    phone: TouchTargets.of(context),
+                onPointerUp: (_) => _pointerGone(),
+                onPointerCancel: (_) => _pointerGone(),
+                child: SelectionArea(
+                  key: _area,
+                  focusNode: _areaFocus,
+                  contextMenuBuilder: (context, region) =>
+                      _menu(region, onSide: side, onReply: reply),
+                  onSelectionChanged: (c) {
+                    _selected = c?.plainText ?? '';
+                    _hold.value = _down || _selected.isNotEmpty;
+                    _offer();
+                  },
+                  // Every item is laid out, so the list knows its exact
+                  // height: the scrollbar keeps its size and nothing shifts
+                  // as items come into view. Unchanged items keep their
+                  // widget, so a streamed chunk rebuilds only its message.
+                  child: PacingHold(
+                    notifier: _hold,
+                    // Unseen while it fills in up to a kept place, rather
+                    // than showing each frame what came in above.
+                    child: Opacity(
+                      opacity: _restore == null ? 1 : 0,
+                      child: _ownBar(
+                        context,
+                        SingleChildScrollView(
+                          controller: _follower.scroll,
+                          padding: EdgeInsets.only(
+                            top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
+                            bottom: 14,
+                          ),
+                          child: _codeBars(
+                            behavior,
+                            Column(
+                              key: _column,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (header case final h?)
+                                  Padding(padding: sides, child: h),
+                                for (final (i, e) in entries.indexed.skip(from))
+                                  _entry(
+                                    before,
+                                    e,
+                                    live: live && i == entries.length - 1,
+                                    still: chat.waiting,
+                                    top: _gap(
+                                      entries,
+                                      i,
+                                      header: header != null,
+                                      phone: TouchTargets.of(context),
+                                    ),
+                                    sides: sides,
+                                    rise: arrived.contains(_key(e)),
                                   ),
-                                  width: box.maxWidth,
-                                  rise: arrived.contains(_key(e)),
-                                ),
-                              if (widget.footer case final f?)
-                                Padding(
-                                  padding: chatSides(context, box.maxWidth),
-                                  child: f,
-                                ),
-                            ],
+                                if (widget.footer case final f?)
+                                  Padding(padding: sides, child: f),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1076,57 +1063,59 @@ class _TranscriptState extends State<Transcript> {
                 ),
               ),
             ),
-          ),
-          if (_at case final at? when onReply != null || onSide != null)
-            Positioned.fill(
-              child: CustomSingleChildLayout(
-                delegate: _Above(at, _replyTo == null ? null : _anchor),
-                child: switch (_replyTo) {
-                  // Its own layer: typing repaints only the box.
-                  final quote? => RepaintBoundary(
-                    child: ReplyBox(
-                      quote: quote,
-                      onReply: onReply!,
-                      onClose: _closeToolbar,
+            if (_at case final at? when onReply != null || onSide != null)
+              Positioned.fill(
+                child: CustomSingleChildLayout(
+                  delegate: _Above(at, _replyTo == null ? null : _anchor),
+                  child: switch (_replyTo) {
+                    // Its own layer: typing repaints only the box.
+                    final quote? => RepaintBoundary(
+                      child: ReplyBox(
+                        quote: quote,
+                        onReply: onReply!,
+                        onClose: _closeToolbar,
+                      ),
                     ),
-                  ),
-                  null => SelectionToolbar(onSide: side, onReply: reply),
-                },
+                    null => SelectionToolbar(onSide: side, onReply: reply),
+                  },
+                ),
               ),
-            ),
-          // In the margin at the top left, where it stays as the text scrolls.
-          if (rail.isNotEmpty)
+            // In the margin at the top left, where it stays as the text
+            // scrolls.
+            if (rail.isNotEmpty)
+              Positioned(
+                left: 0,
+                top: 6,
+                child: PinsRail(
+                  entries: [PinEntry.start, ...rail],
+                  current: _pinAt,
+                  fit: RailFit.of(sides.left),
+                  onPick: (id) => unawaited(_pick(id)),
+                  before: widget.daemon.remote
+                      ? () => loadPinned(widget.daemon, chat)
+                      : null,
+                ),
+              ),
             Positioned(
-              left: 0,
-              top: 6,
-              child: PinsRail(
-                entries: [PinEntry.start, ...rail],
-                current: _pinAt,
-                fit: RailFit.of(chatSides(context, box.maxWidth).left),
-                onPick: (id) => unawaited(_pick(id)),
-                before: widget.daemon.remote
-                    ? () => loadPinned(widget.daemon, chat)
-                    : null,
-              ),
-            ),
-          Positioned(
-            right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
-            bottom: 12,
-            child: ListenableBuilder(
-              listenable: _follower,
-              builder: (context, _) => ChipFade(
-                // It goes as Jump to latest glides down.
-                show: !_follower.following && !_follower.gliding,
-                builder: (context) => JumpChip(
-                  // A prompt waits below: the chip says so.
-                  needs: widget.items == null && chat.waiting,
-                  onTap: () => _follower.follow(glide: !reduceMotion(context)),
+              right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
+              bottom: 12,
+              child: ListenableBuilder(
+                listenable: _follower,
+                builder: (context, _) => ChipFade(
+                  // It goes as Jump to latest glides down.
+                  show: !_follower.following && !_follower.gliding,
+                  builder: (context) => JumpChip(
+                    // A prompt waits below: the chip says so.
+                    needs: widget.items == null && chat.waiting,
+                    onTap: () =>
+                        _follower.follow(glide: !reduceMotion(context)),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
     final under = widget.bottom;
     final list = TextMarksScope(marks: _marks, child: view);
