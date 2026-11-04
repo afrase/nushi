@@ -7,6 +7,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/code_run_view.dart';
 import 'package:nushi/controls.dart' show TouchTargets;
 import 'package:nushi/daemon.dart';
+import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/paced.dart';
@@ -56,11 +57,14 @@ Map<String, String> namedFiles(String markdown, {int max = 100}) {
 /// Which files a chat's messages name are there, as the daemon says
 /// (FindChatFiles): asked once per message for what isn't known yet, and
 /// kept while the app runs; one found missing is asked again after a
-/// minute (the agent may write it later).
+/// minute (the agent may write it later), and those asked while the daemon
+/// was gone once it is back.
 class FileLinks extends ChangeNotifier {
   final _there = <String, bool>{};
   final _missingAt = <String, DateTime>{};
   final _asking = <String>{};
+  final _again = <String>{}; // asked while the daemon was gone
+  VoidCallback? _whenBack;
 
   /// Whether [path] is there: null while not known.
   bool? there(String path) => _there[path];
@@ -97,11 +101,29 @@ class FileLinks extends ChangeNotifier {
         changed |= was != _there[p];
       }
       if (changed) notifyListeners();
-    } on Object {
-      // Not now (the daemon away): asked again on the next build.
+    } on Object catch (e) {
+      // A message's text doesn't change after a restart, so nothing would
+      // ask again: the daemon coming back does, once for all of them.
+      if (daemonGone(e)) _lookWhenBack(daemon, chatId, ask);
     } finally {
       _asking.removeAll(ask);
     }
+  }
+
+  void _lookWhenBack(Daemon daemon, String chatId, List<String> paths) {
+    _again.addAll(paths);
+    _whenBack ??= daemon.whenBack(() {
+      _whenBack = null;
+      final paths = [..._again];
+      _again.clear();
+      unawaited(look(daemon, chatId, paths));
+    });
+  }
+
+  @override
+  void dispose() {
+    _whenBack?.call();
+    super.dispose();
   }
 }
 

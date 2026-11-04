@@ -196,6 +196,50 @@ void main() {
     });
   }
 
+  testWidgets('links asked for while the daemon was gone come once it is '
+      'back', (tester) async {
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        FindChatFilesRequest() => FindChatFilesResponse(
+          found: ['docs/plan.md'],
+        ),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    final chat = ChatState('c', '/Users/me/repo')..agent = 'claude';
+    // The turn ends while the daemon restarts into an update: the one
+    // lookup fails, and the message's text stays the same after.
+    fake.down = true;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: Previews(
+            open: (_) {},
+            child: ItemView(
+              Item(
+                id: 'm',
+                kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+                text: 'Wrote `docs/plan.md`.',
+              ),
+              chat,
+              d,
+              live: false,
+              still: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.byType(FileLink), findsNothing);
+    fake.down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(FileLink, 'plan.md'), findsOneWidget);
+    d.dispose();
+  });
+
   testWidgets('a message still streaming has no links and asks nothing', (
     tester,
   ) async {
