@@ -692,9 +692,14 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       }
     });
     _stages++;
+    final client = daemon.client;
     _staging = _staging.then((_) async {
       if (mounted) {
-        await tryOrShow(context, () => daemon.client.stageFiles(ask));
+        await tryOrShow(context, () => client.stageFiles(ask));
+      } else {
+        // The view gone (another tab) while this waited its turn: the
+        // click still counts, with nowhere to say it failed.
+        await client.stageFiles(ask).then<void>((_) {}, onError: (Object _) {});
       }
       if (--_stages == 0 && mounted) await reload();
     });

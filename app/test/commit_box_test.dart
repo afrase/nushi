@@ -229,6 +229,58 @@ void main() {
     d.dispose();
   });
 
+  testWidgets('a checkbox clicked while another stages is sent, though the '
+      'view goes first', (tester) async {
+    final hold = Completer<void>();
+    var stages = 0;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        GetFolderStatusRequest() => GetFolderStatusResponse(
+          git: true,
+          branch: 'b',
+          defaultBase: 'main',
+        ),
+        GetDiffRequest() => GetDiffResponse(files: _changes(), index: _shown),
+        StageFilesRequest() when ++stages == 1 => hold.future.then(
+          (_) => StageFilesResponse(),
+        ),
+        StageFilesRequest() => StageFilesResponse(),
+        _ => null,
+      };
+    viewport(tester, const Size(1100, 700));
+    paneWidths.value = {};
+    final d = await fake.connect(tester);
+    final state = ChatState('c', '/x')..scope = Scope.uncommitted.name;
+    addTearDown(() => state.scope = null);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: ChangesView(chat: state, daemon: d),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Finder box(String file) => find.descendant(
+      of: find
+          .ancestor(
+            of: find.textContaining(file, findRichText: true),
+            matching: find.byType(Row),
+          )
+          .first,
+      matching: find.byType(Checkbox),
+    );
+    await tester.tap(box('notes.md'));
+    await tester.pump();
+    await tester.tap(box('relay_test.dart'));
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox()); // another tab
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(fake.calls.whereType<StageFilesRequest>(), hasLength(2));
+    d.dispose();
+  });
+
   testWidgets('a commit that fails says why and keeps the message', (
     tester,
   ) async {
