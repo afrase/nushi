@@ -29,6 +29,7 @@ class _SourceViewState extends State<SourceView> {
   String _text = '';
   List<String> _lines = const [];
   List<Uint32List?>? _spans;
+  int _reads = 0; // a highlight lands only for the latest read
 
   @override
   void initState() {
@@ -45,6 +46,7 @@ class _SourceViewState extends State<SourceView> {
 
   void _read() {
     final text = widget.text;
+    final read = ++_reads;
     _text = widget.path.toLowerCase().endsWith('.json')
         ? prettyJson(text)
         : text;
@@ -53,7 +55,7 @@ class _SourceViewState extends State<SourceView> {
     _spans = null;
     if (languageOf(widget.path) case final language?) {
       highlightSides(language, '', _text).then((s) {
-        if (mounted && identical(text, widget.text) && s[1] != null) {
+        if (mounted && read == _reads && s[1] != null) {
           setState(() => _spans = s[1]);
         }
       }).ignore();
