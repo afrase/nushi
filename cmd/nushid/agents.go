@@ -38,9 +38,7 @@ func newAgents(dir string, known []knownagents.Agent) *agents.Service {
 		list = append(list, a.Agent)
 	}
 	removeClaudeAdapter(filepath.Join(dir, "agents", "claude"))
-	svc := agents.New(list, probe, filepath.Join(dir, "agents"), npm.Installer{Environ: shellEnv.Environ})
-	svc.UseEnv(shellEnv)
-	return svc
+	return agents.New(list, probe, shellEnv, filepath.Join(dir, "agents"), npm.Installer{Environ: shellEnv.Environ})
 }
 
 // removeClaudeAdapter removes folder, where Settings › Agents set up

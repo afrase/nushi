@@ -42,6 +42,7 @@ import (
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/pi/pitest"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/transcripts"
 )
@@ -184,7 +185,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	}()
 	restarts := restart.New(svc, terms)
 	restarts.Every = 20 * time.Millisecond
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts}
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))
 	toolAPI := httptest.NewServer(api.Tools(toolSvc))

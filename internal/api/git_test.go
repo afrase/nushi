@@ -12,6 +12,7 @@ import (
 	"github.com/afrase/nushi/internal/features/agents"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -25,7 +26,7 @@ func TestStageAndCommitThroughTheAPI(t *testing.T) {
 	testcheck.Git(t, repo, "config", "user.email", "test@example.com")
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(repo, "f.txt"), []byte("x\n"), 0o600))
 
-	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, "", nil)}))
+	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil)}))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
 	ctx := t.Context()

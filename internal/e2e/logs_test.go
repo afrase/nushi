@@ -27,6 +27,7 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/logs"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/internal/transcripts"
@@ -85,7 +86,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 		Scratch: filepath.Join(data, "scratch"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts})
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
-	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, "", nil), Terms: terms, Hub: hub,
+	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub,
 		Memory: memory.New(svc), LogPrefs: st, Transcripts: st})))
 	go func() {
 		_ = hub.Subscribe(context.Background(), func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())

@@ -12,6 +12,7 @@ import (
 	"testing/fstest"
 
 	"github.com/afrase/nushi/internal/readonly"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -89,11 +90,12 @@ func TestOlder(t *testing.T) {
 	}
 }
 
-// newService finds agents with readonly.Output.
+// newService finds agents with readonly.Output, on the test's own PATH
+// (made after its t.Setenv).
 func newService(agents []Agent, dir string, in Installer, chats Chats) *Service {
 	s := New(agents, func(ctx context.Context, path string, args ...string) ([]byte, error) {
 		return readonly.Output(ctx, nil, path, args...)
-	}, dir, in)
+	}, shellenv.Off(os.Environ()), dir, in)
 	s.UseChats(chats)
 	return s
 }
@@ -165,7 +167,7 @@ func TestSetUp(t *testing.T) {
 	if err := svc.SetUp(context.Background(), "claude"); err != nil || chats.slept != 2 || !slices.Equal(chats.ready, []string{"claude"}) {
 		t.Fatalf("SetUp: %v, %d slept, ready %q", err, chats.slept, chats.ready)
 	}
-	if st := svc.List(context.Background())[0]; !st.Ready || st.Installed != "1.0.0" || st.Program != filepath.Join(dir, "claude", "adapter") {
+	if st := svc.List(context.Background())[0]; !st.Ready || st.Installed != "1.0.0" {
 		t.Errorf("after: %+v", st)
 	}
 	if r, err := svc.Run("claude"); err != nil || r.CLI != filepath.Join(bin, "claude") || r.Program != filepath.Join(dir, "claude", "adapter") {

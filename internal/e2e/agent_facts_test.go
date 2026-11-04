@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 )
 
@@ -58,7 +60,7 @@ func TestTheAppHearsWhatEachAgentHas(t *testing.T) {
 	data := t.TempDir()
 	st := store.New(data)
 	svc := chats.New(t.Context(), kinds, chats.Options{Remembered: st, Sessions: st, Worktrees: git.Worktrees{}, Scratch: filepath.Join(data, "scratch")})
-	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, t.TempDir(), setUp{})
+	agentSvc := agents.New(found, func(context.Context, string, ...string) ([]byte, error) { return nil, nil }, shellenv.Off(os.Environ()), t.TempDir(), setUp{})
 	agentSvc.UseChats(svc)
 	shown := skills.New([]string{"claude", "codex"}, map[string]skills.Reader{"claude": builtInPlugins{}, "codex": noExtras{}}, nil)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agentSvc, MCP: servers, Skills: shown, Transcripts: st})))

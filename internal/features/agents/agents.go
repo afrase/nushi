@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"regexp"
 	"slices"
 	"strconv"
@@ -50,12 +49,12 @@ type Status struct {
 	Problem  string // why it can't run, in a few words; "" when it can
 	SignedIn string // "yes", "no", or "" (unknown)
 	// With an adapter: the version pinned, the one set up ("" when it
-	// isn't), its program, how many packages it installs, and where.
-	Pinned, Installed, Program string
-	Packages                   int
-	Folder                     string
-	Ready                      bool // a chat can start
-	Awake                      int  // its chats whose agent runs
+	// isn't), how many packages it installs, and where.
+	Pinned, Installed string
+	Packages          int
+	Folder            string
+	Ready             bool // a chat can start
+	Awake             int  // its chats whose agent runs
 }
 
 // Env is the environment agents start with (internal/shellenv): the login
@@ -80,31 +79,21 @@ type Service struct {
 	found map[string]string // each agent as last logged
 }
 
-func New(agents []Agent, probe Probe, dir string, installer Installer) *Service {
-	return &Service{agents: agents, probe: probe, dir: dir, installer: installer}
+// New is the agents service: agents found with probe on env's PATH, their
+// adapters set up by installer in dir.
+func New(agents []Agent, probe Probe, env Env, dir string, installer Installer) *Service {
+	return &Service{agents: agents, probe: probe, env: env, dir: dir, installer: installer}
 }
 
 // UseChats gives the service the chats feature, once there is one.
 func (s *Service) UseChats(c Chats) { s.chats = c }
 
-// UseEnv gives agents env rather than the daemon's own environment.
-func (s *Service) UseEnv(env Env) { s.env = env }
-
 // Environ is the environment an agent starts with.
-func (s *Service) Environ() []string {
-	if s.env == nil {
-		return os.Environ()
-	}
-	return s.env.Environ()
-}
+func (s *Service) Environ() []string { return s.env.Environ() }
 
 // Environment reads the shell's environment again if the last reading is
-// older than maxAge, and says how the last went; a zero ShellEnv when
-// agents get the daemon's own.
+// older than maxAge, and says how the last went.
 func (s *Service) Environment(ctx context.Context, maxAge time.Duration) model.ShellEnv {
-	if s.env == nil {
-		return model.ShellEnv{}
-	}
 	s.env.Refresh(ctx, maxAge)
 	return s.env.Status()
 }
@@ -157,7 +146,7 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 	if a.Adapter != nil {
 		st.Folder = s.folder(a.Name)
 		st.Pinned, st.Packages = a.Adapter.pinned()
-		st.Installed, st.Program = s.installer.Installed(st.Folder, a.Adapter.Package, a.Adapter.Bin)
+		st.Installed, _ = s.installer.Installed(st.Folder, a.Adapter.Package, a.Adapter.Bin)
 	}
 	defer func() { st.Ready = st.Problem == "" && (a.Adapter == nil || st.Installed != "") }()
 	if st.Path == "" {
@@ -184,11 +173,7 @@ func (s *Service) find(ctx context.Context, a Agent) (st Status) {
 // lookPath finds name on the agents' PATH, else the first of also that is
 // a program.
 func (s *Service) lookPath(name string, also []string) string {
-	if s.env != nil {
-		if p := s.env.LookPath(name); p != "" {
-			return p
-		}
-	} else if p, err := exec.LookPath(name); err == nil {
+	if p := s.env.LookPath(name); p != "" {
 		return p
 	}
 	for _, p := range also {

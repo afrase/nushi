@@ -19,6 +19,7 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -66,7 +67,7 @@ func badRepo(t *testing.T) (folder, first, second string) {
 // out, the text mended.
 func TestGitCallsTakeWhatIsNotUTF8(t *testing.T) {
 	repo, first, second := badRepo(t)
-	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, "", nil)}))
+	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil)}))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
 	ctx := t.Context()
@@ -124,7 +125,7 @@ func TestListBranchesLeavesOutWhatIsNotUTF8(t *testing.T) {
 	wt := filepath.Join(repo, "wt")
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "wt", wt)
 	testcheck.PutBranch(t, repo, "wt", "bad\xff")
-	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, "", nil)}))
+	srv := httptest.NewServer(New(Services{Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil)}))
 	defer srv.Close()
 	c := nushiv1connect.NewNushiServiceClient(http.DefaultClient, srv.URL)
 	got, err := c.ListBranches(t.Context(), connect.NewRequest(&nushiv1.ListBranchesRequest{Folder: repo}))
