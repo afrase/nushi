@@ -150,6 +150,7 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side := s.newChat(p.kind)
 	side.id, side.agent, side.parent, side.base, side.lastItem = id, agent, p, base, lastItem
 	side.sid, side.canImage = side.id, p.canImage
+	side.copies = nil // nobody sees a side chat again, so Nushi keeps no copy of it
 	side.record = model.ChatRecord{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side chat", Created: time.Now()}
 	p.mu.Lock()
 	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it

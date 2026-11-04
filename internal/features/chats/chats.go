@@ -138,7 +138,7 @@ type chat struct {
 	// owned lists the worktrees and folders that are a chat's own, for
 	// related.go.
 	owned    func(chatID string) ([]string, error)
-	copies   Copies          // the service's
+	copies   Copies          // the service's; nil for a side chat (copies.go)
 	copiesOn func() bool     // and whether it writes them
 	viewers  Viewers         // the service's
 	ctx      context.Context //nolint:containedctx // the service's life, which ends what the chat follows on its own
@@ -232,7 +232,7 @@ func (c *chat) emitLocked(e model.Event) {
 		e.Index = c.indexLocked(e.Item.ID)
 	}
 	c.active = time.Now()
-	if e.Item != nil && c.copies != nil && c.parent == nil {
+	if e.Item != nil && c.copies != nil {
 		c.unsaved[e.Item.ID] = true
 	}
 	c.publish(e)

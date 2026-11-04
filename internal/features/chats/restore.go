@@ -195,7 +195,7 @@ func sameItem(a, b model.Item) bool {
 // for what only shows: the items at its end it lacks are added, or it is
 // written anew.
 func (c *chat) saveCopyLocked(copied, shown []model.Item) {
-	if c.copies == nil || c.parent != nil || !c.copiesOn() {
+	if c.copies == nil || !c.copiesOn() {
 		return
 	}
 	want := slices.DeleteFunc(slices.Clone(shown), shownOnly)

@@ -16,7 +16,8 @@ import (
 // session stays the source: the copy is never sent to it. Items are written
 // as they settle (a message once another item follows it, a tool call once
 // it ended, all of them when a turn ends or the agent stops), not as they
-// stream. Side chats have none: nobody sees them again.
+// stream. Side chats have none (Fork leaves their copies nil): nobody sees
+// them again.
 
 // The notices a merge of a copy and the agent's replay draws.
 const (
@@ -72,7 +73,7 @@ func settled(it *model.Item, last bool) bool {
 // and have settled, or with all every one of them (a turn ended, the agent
 // stopped). While copies are off nothing is written.
 func (c *chat) copyLocked(all bool) {
-	if c.copies == nil || c.parent != nil || len(c.unsaved) == 0 {
+	if c.copies == nil || len(c.unsaved) == 0 {
 		return
 	}
 	if !c.copiesOn() {
@@ -111,7 +112,7 @@ func (c *chat) cutCopyLocked(item string) {
 			delete(c.unsaved, id)
 		}
 	}
-	if c.copies != nil && c.parent == nil {
+	if c.copies != nil {
 		if err := c.copies.Cut(c.id, item); err != nil {
 			c.logLocked().Warn("transcript copy not cut", "err", err)
 		}
@@ -121,7 +122,7 @@ func (c *chat) cutCopyLocked(item string) {
 // dropCopyLocked takes an item that's gone from the transcript out of the
 // copy, if it may be in it.
 func (c *chat) dropCopyLocked(it model.Item) {
-	if c.unsaved[it.ID] || shownOnly(it) || c.copies == nil || c.parent != nil {
+	if c.unsaved[it.ID] || shownOnly(it) || c.copies == nil {
 		delete(c.unsaved, it.ID)
 		return
 	}
