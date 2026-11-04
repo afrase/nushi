@@ -195,3 +195,32 @@ func TestAForkKeepsTheScratchFolder(t *testing.T) {
 		t.Errorf("Delete would remove the fork's folder: %+v, %v", plan, err)
 	}
 }
+
+// A kept side chat is the service's before it is stored: what finds the
+// new id as soon as it's saved (a GitHub poll, a sweep) gets this chat,
+// not a second one made from the record, with an agent of its own.
+func TestKeptSideChatIsFoundOnceStored(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	ctx := context.Background()
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+	sideID, err := svc.Fork(ctx, c.id)
+	testcheck.NoErr(t, err)
+	var known []bool // for each new chat's record, whether the service had it when stored
+	publish := svc.publish
+	svc.publish = func(e model.Event) {
+		if e.Record != nil && e.ChatID != c.id && e.ChatID != sideID {
+			svc.mu.Lock()
+			_, ok := svc.chats[e.ChatID]
+			svc.mu.Unlock()
+			known = append(known, ok)
+		}
+		publish(e)
+	}
+	_, err = svc.KeepSide(ctx, sideID)
+	testcheck.NoErr(t, err)
+	if len(known) == 0 || slices.Contains(known, false) {
+		t.Errorf("stored before the service knew it: %v", known)
+	}
+}

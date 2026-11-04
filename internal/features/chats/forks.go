@@ -259,11 +259,13 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	c.record.Mode, c.record.Picks = mode, picks
 	c.lastItem = lastItem
 	c.forkedLocked(items)
-	c.storeLocked()
 	c.mu.Unlock()
-	s.mu.Lock()
+	s.mu.Lock() // before it's stored: found by id, it must be this one
 	s.chats[c.id] = c
 	s.mu.Unlock()
+	c.mu.Lock()
+	c.storeLocked()
+	c.mu.Unlock()
 	c.log().Info("side chat kept", "from", p.id)
 	return c.id, nil
 }
