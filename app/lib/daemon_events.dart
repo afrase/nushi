@@ -195,6 +195,7 @@ extension DaemonEvents on Daemon {
       ..pin = c.pin
       ..color = ChatColor.named(c.color)
       ..pinnedMessages = c.pinnedMessages
+      ..pinTitles = {for (final p in c.messagePins) p.itemId: p.title}
       ..created = DateTime.fromMillisecondsSinceEpoch(c.createdUnixMs.toInt())
       ..updated = DateTime.fromMillisecondsSinceEpoch(
         (c.updatedUnixMs == 0 ? c.createdUnixMs : c.updatedUnixMs).toInt(),

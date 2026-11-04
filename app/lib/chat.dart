@@ -149,6 +149,17 @@ class ChatState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Its pins' titles, by item id (API 104): a few words the daemon made
+  /// from the message, or the agent's own once it made one. A pin without
+  /// one (an older daemon's) is listed by its message's first line.
+  Map<String, String> get pinTitles => _pinTitles;
+  Map<String, String> _pinTitles = const {};
+  set pinTitles(Map<String, String> v) {
+    if (mapEquals(v, _pinTitles)) return;
+    _pinTitles = Map.unmodifiable(v);
+    notifyListeners();
+  }
+
   DateTime created = DateTime.now();
 
   /// When a message was last sent to it or a turn of it last ended (the

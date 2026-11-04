@@ -103,9 +103,10 @@ service NushiService {
   // name that isn't one of the eight is refused (InvalidArgument). A
   // changed chat comes as an event. (API 99)
   rpc SetChatColor(SetChatColorRequest) returns (SetChatColorResponse);
-  // Pins one of a chat's messages (the user's or the agent's own; another
-  // item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
-  // comes as an event. (API 102)
+  // Pins one of the agent's own messages in a chat (another item, the
+  // user's messages too since API 104, is NotFound), or unpins it
+  // (Chat.pinned_messages, Chat.message_pins). A changed chat comes as an
+  // event, and again when the pin's title from the agent comes. (API 102)
   rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
   // Renames the branch of a chat's worktree (git branch -m; its folder
   // stays), for good: the chat's title no longer names it. Refused during a
@@ -600,6 +601,17 @@ message Chat {
   // neither since the daemon kept it (a client goes by created_unix_ms).
   // What the sidebar sorts by Last updated.
   int64 updated_unix_ms = 20;
+  // Its pinned messages as pinned_messages has them, each with its title:
+  // a few words made from the message at once, replaced by the agent's
+  // own when it can make one (Claude). A client lists a pin by it. API 104.
+  repeated MessagePin message_pins = 21;
+}
+
+// A pinned message: its item, and the title a client lists it by. The
+// title is plain text, at most a line, the agent's model's words.
+message MessagePin {
+  string item_id = 1;
+  string title = 2;
 }
 
 // A git worktree of a repository, on a branch of its own.

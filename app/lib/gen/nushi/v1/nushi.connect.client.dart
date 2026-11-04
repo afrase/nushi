@@ -507,9 +507,10 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
-  /// Pins one of a chat's messages (the user's or the agent's own; another
-  /// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
-  /// comes as an event. (API 102)
+  /// Pins one of the agent's own messages in a chat (another item, the
+  /// user's messages too since API 104, is NotFound), or unpins it
+  /// (Chat.pinned_messages, Chat.message_pins). A changed chat comes as an
+  /// event, and again when the pin's title from the agent comes. (API 102)
   Future<nushiv1nushi.PinMessageResponse> pinMessage(
     nushiv1nushi.PinMessageRequest input, {
     connect.Headers? headers,

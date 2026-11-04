@@ -957,6 +957,7 @@ class Chat extends $pb.GeneratedMessage {
     $core.String? color,
     $core.Iterable<$core.String>? pinnedMessages,
     $fixnum.Int64? updatedUnixMs,
+    $core.Iterable<MessagePin>? messagePins,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -979,6 +980,7 @@ class Chat extends $pb.GeneratedMessage {
     if (color != null) result.color = color;
     if (pinnedMessages != null) result.pinnedMessages.addAll(pinnedMessages);
     if (updatedUnixMs != null) result.updatedUnixMs = updatedUnixMs;
+    if (messagePins != null) result.messagePins.addAll(messagePins);
     return result;
   }
 
@@ -1019,6 +1021,8 @@ class Chat extends $pb.GeneratedMessage {
     ..aOS(18, _omitFieldNames ? '' : 'color')
     ..pPS(19, _omitFieldNames ? '' : 'pinnedMessages')
     ..aInt64(20, _omitFieldNames ? '' : 'updatedUnixMs')
+    ..pPM<MessagePin>(21, _omitFieldNames ? '' : 'messagePins',
+        subBuilder: MessagePin.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1251,6 +1255,81 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasUpdatedUnixMs() => $_has(19);
   @$pb.TagNumber(20)
   void clearUpdatedUnixMs() => $_clearField(20);
+
+  /// Its pinned messages as pinned_messages has them, each with its title:
+  /// a few words made from the message at once, replaced by the agent's
+  /// own when it can make one (Claude). A client lists a pin by it. API 104.
+  @$pb.TagNumber(21)
+  $pb.PbList<MessagePin> get messagePins => $_getList(20);
+}
+
+/// A pinned message: its item, and the title a client lists it by. The
+/// title is plain text, at most a line, the agent's model's words.
+class MessagePin extends $pb.GeneratedMessage {
+  factory MessagePin({
+    $core.String? itemId,
+    $core.String? title,
+  }) {
+    final result = MessagePin._();
+    if (itemId != null) result.itemId = itemId;
+    if (title != null) result.title = title;
+    return result;
+  }
+
+  MessagePin._();
+
+  factory MessagePin.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MessagePin()..mergeFromBuffer(data, registry);
+  factory MessagePin.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      MessagePin()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'MessagePin',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: MessagePin.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'itemId')
+    ..aOS(2, _omitFieldNames ? '' : 'title')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MessagePin clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  MessagePin copyWith(void Function(MessagePin) updates) =>
+      super.copyWith((message) => updates(message as MessagePin)) as MessagePin;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use MessagePin() / MessagePin.new instead')
+  static MessagePin create() => MessagePin._();
+  static $pb.GeneratedMessage $_createMessage() => MessagePin._();
+  @$core.override
+  MessagePin createEmptyInstance() => MessagePin._();
+  @$core.pragma('dart2js:noInline')
+  static MessagePin getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<MessagePin>(MessagePin.$_createMessage);
+  static MessagePin? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get itemId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set itemId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasItemId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearItemId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get title => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set title($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTitle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTitle() => $_clearField(2);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -30120,9 +30199,10 @@ class NushiServiceApi {
       _client.invoke<SetChatColorResponse>(
           ctx, 'NushiService', 'SetChatColor', request, SetChatColorResponse());
 
-  /// Pins one of a chat's messages (the user's or the agent's own; another
-  /// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
-  /// comes as an event. (API 102)
+  /// Pins one of the agent's own messages in a chat (another item, the
+  /// user's messages too since API 104, is NotFound), or unpins it
+  /// (Chat.pinned_messages, Chat.message_pins). A changed chat comes as an
+  /// event, and again when the pin's title from the agent comes. (API 102)
   $async.Future<PinMessageResponse> pinMessage(
           $pb.ClientContext? ctx, PinMessageRequest request) =>
       _client.invoke<PinMessageResponse>(

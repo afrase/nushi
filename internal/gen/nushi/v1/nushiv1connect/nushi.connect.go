@@ -521,9 +521,10 @@ type NushiServiceClient interface {
 	// name that isn't one of the eight is refused (InvalidArgument). A
 	// changed chat comes as an event. (API 99)
 	SetChatColor(context.Context, *connect.Request[v1.SetChatColorRequest]) (*connect.Response[v1.SetChatColorResponse], error)
-	// Pins one of a chat's messages (the user's or the agent's own; another
-	// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
-	// comes as an event. (API 102)
+	// Pins one of the agent's own messages in a chat (another item, the
+	// user's messages too since API 104, is NotFound), or unpins it
+	// (Chat.pinned_messages, Chat.message_pins). A changed chat comes as an
+	// event, and again when the pin's title from the agent comes. (API 102)
 	PinMessage(context.Context, *connect.Request[v1.PinMessageRequest]) (*connect.Response[v1.PinMessageResponse], error)
 	// Renames the branch of a chat's worktree (git branch -m; its folder
 	// stays), for good: the chat's title no longer names it. Refused during a
@@ -2689,9 +2690,10 @@ type NushiServiceHandler interface {
 	// name that isn't one of the eight is refused (InvalidArgument). A
 	// changed chat comes as an event. (API 99)
 	SetChatColor(context.Context, *connect.Request[v1.SetChatColorRequest]) (*connect.Response[v1.SetChatColorResponse], error)
-	// Pins one of a chat's messages (the user's or the agent's own; another
-	// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
-	// comes as an event. (API 102)
+	// Pins one of the agent's own messages in a chat (another item, the
+	// user's messages too since API 104, is NotFound), or unpins it
+	// (Chat.pinned_messages, Chat.message_pins). A changed chat comes as an
+	// event, and again when the pin's title from the agent comes. (API 102)
 	PinMessage(context.Context, *connect.Request[v1.PinMessageRequest]) (*connect.Response[v1.PinMessageResponse], error)
 	// Renames the branch of a chat's worktree (git branch -m; its folder
 	// stays), for good: the chat's title no longer names it. Refused during a

@@ -201,11 +201,18 @@ class FakeDaemon implements Transport {
   }
 
   /// Pins or unpins a message as the daemon does: one pinned again keeps its
-  /// place; a changed chat comes as an event.
+  /// place, titled "Pinned" and its id; a changed chat comes as an event.
   void _pinMessage(PinMessageRequest r) {
-    final ids = chats.firstWhere((c) => c.id == r.chatId).pinnedMessages;
+    final c = chats.firstWhere((c) => c.id == r.chatId);
+    final ids = c.pinnedMessages;
     if (ids.contains(r.itemId) == r.pinned) return;
     r.pinned ? ids.add(r.itemId) : ids.remove(r.itemId);
+    c.messagePins.removeWhere((p) => p.itemId == r.itemId);
+    if (r.pinned) {
+      c.messagePins.add(
+        MessagePin(itemId: r.itemId, title: 'Pinned ${r.itemId}'),
+      );
+    }
     emit(
       EventsResponse(
         chatId: r.chatId,

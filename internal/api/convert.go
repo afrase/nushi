@@ -194,6 +194,7 @@ func chatProto(s model.ChatRecord) *nushiv1.Chat {
 	}
 	for _, p := range s.Pins {
 		out.PinnedMessages = append(out.PinnedMessages, p.Item)
+		out.MessagePins = append(out.MessagePins, &nushiv1.MessagePin{ItemId: p.Item, Title: p.Title})
 	}
 	out.Worktree = worktreeProto(s.Worktree)
 	if is := s.Issue; is != nil {
