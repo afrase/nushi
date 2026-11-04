@@ -77,21 +77,41 @@ func (ts *tools) wholeLocked(stream, id, name string, input json.RawMessage) *to
 		ts.byID[id] = t
 	}
 	t.parent = cmp.Or(t.parent, stream)
-	if len(input) == 0 {
-		input = json.RawMessage(`{}`)
-	}
 	t.whole = true
-	v := toolView(t.name, input, ts.cwd)
-	content := v.content
-	if content == nil {
-		content = []acp.ToolCallContent{}
-	}
-	ts.sendLocked(t, report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input})
+	ts.sendLocked(t, wholeReport(t.name, input, ts.cwd))
 	if r, ok := ts.early[id]; ok {
 		delete(ts.early, id)
 		ts.sendLocked(t, r)
 	}
 	return t
+}
+
+// wholeReport is a call of the tool name shown with its whole input (an
+// empty one is {}), live or replayed, so a reopened chat shows it as the
+// live one did (ADR 0047).
+func wholeReport(name string, input json.RawMessage, cwd string) report {
+	if len(input) == 0 {
+		input = json.RawMessage(`{}`)
+	}
+	v := toolView(name, input, cwd)
+	content := v.content
+	if content == nil {
+		content = []acp.ToolCallContent{}
+	}
+	return report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input}
+}
+
+// resultReport is a call of the tool name ended by its result b,
+// completed or failed, live or replayed.
+func resultReport(name string, b claudeagent.Block) report {
+	r := report{status: acp.ToolCallStatusCompleted, rawOutput: b.Content}
+	if b.IsError {
+		r.status = acp.ToolCallStatusFailed
+	}
+	if content, ok := resultContent(name, b); ok {
+		r.content = content
+	}
+	return r
 }
 
 // callInput is the input of the call id as the client was last shown it,
@@ -115,14 +135,7 @@ func (ts *tools) result(b claudeagent.Block) {
 		return
 	}
 	t.ended = true
-	r := report{status: acp.ToolCallStatusCompleted, rawOutput: b.Content}
-	if b.IsError {
-		r.status = acp.ToolCallStatusFailed
-	}
-	if content, ok := resultContent(t.name, b); ok {
-		r.content = content
-	}
-	ts.sendLocked(t, r)
+	ts.sendLocked(t, resultReport(t.name, b))
 	ts.out.release(t.id) // its work, if it started a subagent claude never named
 }
 

@@ -116,20 +116,7 @@ func (r *replayer) user(stream string, m sessions.Message, msg claudeagent.APIMe
 
 // chunk sends a chunk of a message of the stream of call stream.
 func (r *replayer) chunk(kind, stream, id string, c acp.ContentBlock) {
-	ch := &acp.ContentChunk{Content: c, MessageID: acp.MessageID(id)}
-	if stream != "" {
-		ch.Meta = claudeCodeMeta{ParentToolUseID: stream}.meta()
-	}
-	u := acp.SessionUpdate{SessionUpdate: kind}
-	switch kind {
-	case "user_message_chunk":
-		u.UserMessageChunk = ch
-	case "agent_thought_chunk":
-		u.AgentThoughtChunk = ch
-	default:
-		u.AgentMessageChunk = ch
-	}
-	r.s.kids.emit(stream, u)
+	r.s.kids.emit(stream, chunkUpdate(kind, stream, id, c))
 }
 
 // toolUse shows a call with its whole input; the main agent's plan tools
@@ -142,20 +129,12 @@ func (r *replayer) toolUse(stream string, b claudeagent.Block) {
 	}
 	t := &tool{id: b.ID, name: b.Name, parent: stream, whole: true}
 	r.calls[b.ID] = t
-	input := b.Input
-	if len(input) == 0 {
-		input = json.RawMessage(`{}`)
-	}
+	rep := wholeReport(t.name, b.Input, r.s.tools.cwd)
 	var in launch
-	if json.Unmarshal(input, &in) == nil {
+	if json.Unmarshal(rep.rawInput, &in) == nil {
 		r.inputs[b.ID] = in
 	}
-	v := toolView(t.name, input, r.s.tools.cwd)
-	content := v.content
-	if content == nil {
-		content = []acp.ToolCallContent{}
-	}
-	r.s.tools.show(t, report{title: v.title, kind: v.kind, content: content, locations: v.locations, rawInput: input})
+	r.s.tools.show(t, rep)
 	if a, ok := r.agents[b.ID]; ok {
 		r.subagent(stream, b.ID, a, in)
 	}
@@ -172,13 +151,6 @@ func (r *replayer) toolResult(b claudeagent.Block, structured json.RawMessage) {
 		return
 	}
 	delete(r.calls, b.ToolUseID)
-	rep := report{status: acp.ToolCallStatusCompleted, rawOutput: b.Content}
-	if b.IsError {
-		rep.status = acp.ToolCallStatusFailed
-	}
-	if content, ok := resultContent(t.name, b); ok {
-		rep.content = content
-	}
-	r.s.tools.show(t, rep)
+	r.s.tools.show(t, resultReport(t.name, b))
 	r.called(t, b, structured)
 }

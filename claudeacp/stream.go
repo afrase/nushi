@@ -299,15 +299,25 @@ func (s *session) chunk(kind, parent, msgID string, c acp.ContentBlock) {
 			return
 		}
 	}
+	s.kids.emit(parent, chunkUpdate(kind, parent, msgID, c))
+}
+
+// chunkUpdate is a chunk of a message (kind: user_message_chunk,
+// agent_thought_chunk or agent_message_chunk), live or replayed; one of a
+// subagent's says whose, parent being its Agent call's id.
+func chunkUpdate(kind, parent, msgID string, c acp.ContentBlock) acp.SessionUpdate {
 	ch := &acp.ContentChunk{Content: c, MessageID: acp.MessageID(msgID)}
 	if parent != "" {
 		ch.Meta = claudeCodeMeta{ParentToolUseID: parent}.meta()
 	}
 	u := acp.SessionUpdate{SessionUpdate: kind}
-	if kind == "agent_thought_chunk" {
+	switch kind {
+	case "user_message_chunk":
+		u.UserMessageChunk = ch
+	case "agent_thought_chunk":
 		u.AgentThoughtChunk = ch
-	} else {
+	default:
 		u.AgentMessageChunk = ch
 	}
-	s.kids.emit(parent, u)
+	return u
 }
