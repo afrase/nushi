@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
@@ -31,11 +30,6 @@ class McpView extends StatelessWidget {
       'no off switch (remove a server instead), and a change applies to new '
       '$title sessions.';
 
-  Future<void> _pick() async {
-    final f = await getDirectoryPath(confirmButtonText: 'Show');
-    if (f != null) daemon.showMcp(f);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -45,10 +39,6 @@ class McpView extends StatelessWidget {
       for (final a in agents.isEmpty ? ['claude'] : agents)
         McpServers.of(daemon, folder, agent: a),
     ];
-    final (name, dir) = folderParts(
-      folder,
-      scratch: daemon.chats.values.any((c) => c.scratch && c.folder == folder),
-    );
     return ListenableBuilder(
       listenable: Listenable.merge(lists),
       builder: (context, _) {
@@ -92,27 +82,10 @@ class McpView extends StatelessWidget {
               children: [
                 Text('In ', style: theme.ui(t.textSecondary, size: 12)),
                 Flexible(
-                  child: MenuField(
-                    compact: true,
-                    entries: folderEntries(
-                      daemon,
-                      checked: folder,
-                      onPick: (f) => f == null ? _pick() : daemon.showMcp(f),
-                    ),
-                    label: Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: name,
-                            style: theme.ui(t.text, size: 12),
-                          ),
-                          TextSpan(
-                            text: '  $dir',
-                            style: theme.ui(t.textMuted, size: 12),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: FolderMenuField(
+                    daemon,
+                    folder,
+                    onShow: daemon.showMcp,
                   ),
                 ),
               ],

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
@@ -64,22 +63,11 @@ class _SkillsViewState extends State<SkillsView> {
     super.dispose();
   }
 
-  Future<void> _pick() async {
-    final f = await getDirectoryPath(confirmButtonText: 'Show');
-    if (f != null) widget.daemon.showSkills(f);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final daemon = widget.daemon;
-    final (name, dir) = folderParts(
-      widget.folder,
-      scratch: daemon.chats.values.any(
-        (c) => c.scratch && c.folder == widget.folder,
-      ),
-    );
     final small = theme.ui(t.textSecondary, size: 12);
     return ListenableBuilder(
       listenable: list,
@@ -124,28 +112,10 @@ class _SkillsViewState extends State<SkillsView> {
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: MenuField(
-                        compact: true,
-                        entries: folderEntries(
-                          daemon,
-                          checked: widget.folder,
-                          onPick: (f) =>
-                              f == null ? _pick() : daemon.showSkills(f),
-                        ),
-                        label: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: name,
-                                style: theme.ui(t.text, size: 12),
-                              ),
-                              TextSpan(
-                                text: '  $dir',
-                                style: theme.ui(t.textMuted, size: 12),
-                              ),
-                            ],
-                          ),
-                        ),
+                      child: FolderMenuField(
+                        daemon,
+                        widget.folder,
+                        onShow: daemon.showSkills,
                       ),
                     ),
                   ),

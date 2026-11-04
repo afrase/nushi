@@ -57,6 +57,48 @@ List<MenuEntry> folderEntries(
   ];
 }
 
+/// A settings page's folder field (MCP servers', Skills'): [folder]'s name
+/// and parent, a menu of the recent folders and Choose folder…, each
+/// picked one [onShow]n.
+class FolderMenuField extends StatelessWidget {
+  const new(this.daemon, this.folder, {required this.onShow, super.key});
+
+  final Daemon daemon;
+  final String folder;
+  final ValueChanged<String> onShow;
+
+  Future<void> _choose() async {
+    final f = await getDirectoryPath(confirmButtonText: 'Show');
+    if (f != null) onShow(f);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final (name, dir) = folderParts(
+      folder,
+      scratch: daemon.chats.values.any((c) => c.scratch && c.folder == folder),
+    );
+    return MenuField(
+      compact: true,
+      entries: folderEntries(
+        daemon,
+        checked: folder,
+        onPick: (f) => f == null ? _choose() : onShow(f),
+      ),
+      label: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: name, style: theme.ui(t.text, size: 12)),
+            TextSpan(text: '  $dir', style: theme.ui(t.textMuted, size: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The chat's folder (in a worktree, its repository's): its name, then its
 /// parent path, dimmed, on one line or, [stacked], on two. A click offers
 /// the repository's other [worktrees] (given for a new chat, so it can
