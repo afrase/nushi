@@ -11,6 +11,10 @@ import (
 	"github.com/afrase/nushi/noiseconn"
 )
 
+// maxMoving is how many ids given up the daemon still waits at, each a
+// listener slot at the relay beside its own id's.
+const maxMoving = 8
+
 // rotate gives up the daemon's id and Noise key after revoked was
 // revoked, which knows the id and may have read both keys (a paired
 // device reads any file, ADR 0034): the daemon waits at a new id with a
@@ -24,12 +28,23 @@ func (s *Service) rotate(revoked string) error {
 		m.Devices = slices.DeleteFunc(slices.Clone(m.Devices), func(d string) bool { return d == revoked })
 		moving = append(moving, m)
 	}
+	// The id given up now is the one only the devices waited for nowhere
+	// else know: one still waited for at an older id never came here.
 	var left []string
 	for _, d := range s.devices {
-		left = append(left, d.ID)
+		if !slices.ContainsFunc(moving, func(m model.Moving) bool { return slices.Contains(m.Devices, d.ID) }) {
+			left = append(left, d.ID)
+		}
 	}
 	if len(left) > 0 {
 		moving = append(moving, model.Moving{Listen: s.listen, Private: s.key.Private, Public: s.key.Public, Devices: left, Since: time.Now()})
+	}
+	// Each wait holds one of the relay's listener slots for the daemon's
+	// address (16, ADR 0033), its own id's among them: the oldest past
+	// maxMoving go, and their devices pair again.
+	moving = slices.DeleteFunc(moving, func(m model.Moving) bool { return len(m.Devices) == 0 })
+	if len(moving) > maxMoving {
+		moving = moving[len(moving)-maxMoving:]
 	}
 	key, err := noiseconn.NewKey()
 	if err != nil {
