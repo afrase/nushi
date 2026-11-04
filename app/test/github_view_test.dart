@@ -273,9 +273,6 @@ Future<(FakeDaemon, Daemon)> openView(
                 'Run if [ -f FAIL ]; then\nThe branch has a FAIL file:\n'
                 '##[error]Process completed with exit code 1.',
           ),
-          GetGitHubPromptRequest(:final kind) => GetGitHubPromptResponse(
-            text: 'A $kind message',
-          ),
           _ => null,
         };
   final d = await fake.connect(tester);
@@ -586,7 +583,6 @@ void main() {
     expect(cards.single.quote, contains('Process completed with exit code 1'));
     expect(d.chats['c1']!.draft.text.text, isEmpty);
     expect(d.selectedId, 'c1');
-    expect(fake.calls.whereType<GetGitHubPromptRequest>(), isEmpty);
     expect(fake.calls.whereType<SendPromptRequest>(), isEmpty);
     // Again: the same card once.
     d.go(const GitHubPlace());
@@ -598,7 +594,7 @@ void main() {
   });
 
   testWidgets("To do's threads picked: a reply card each", (tester) async {
-    final (fake, d) = await openView(
+    final (_, d) = await openView(
       tester,
       chats: [
         chat('c1', 'claude', 'Fix Sub')
@@ -630,7 +626,6 @@ void main() {
       'Review comments from @afrase on PR $_repo#1 (GitHub), my pull '
       'request:',
     );
-    expect(fake.calls.whereType<GetGitHubPromptRequest>(), isEmpty);
     await closeView(tester, d);
   });
 

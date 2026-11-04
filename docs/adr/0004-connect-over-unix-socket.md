@@ -14,6 +14,7 @@ The app needs typed calls and a stream of events from the daemon. The daemon kee
 
 ## Consequences
 - A field or method no app uses any more can go; a dropped field's number and name become `reserved`. Removing one an older app still calls needs a new ADR.
+- Removed 2026-11-05: `GetGitHubPrompt`, which only apps up to v0.1.14 call; an app that old reaches a newer daemon only after a downgrade, since an update restarts the daemon (0056). proto can't reserve an rpc or a top-level message, so it and its two messages are simply gone.
 
 ## Alternatives considered
 - gRPC: heavier on the Dart side, no gain.
