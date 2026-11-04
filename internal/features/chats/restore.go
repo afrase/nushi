@@ -132,6 +132,7 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 			items = append(items, it)
 		}
 	}
+	c.repinLocked(items)
 	c.showLocked(items)
 	clear(c.unsaved)
 	c.saveCopyLocked(copied, items)

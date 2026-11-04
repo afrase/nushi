@@ -259,6 +259,16 @@ abstract final class NushiService {
     nushiv1nushi.SetChatColorResponse.new,
   );
 
+  /// Pins one of a chat's messages (the user's or the agent's own; another
+  /// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
+  /// comes as an event. (API 102)
+  static const pinMessage = connect.Spec(
+    '/$name/PinMessage',
+    connect.StreamType.unary,
+    nushiv1nushi.PinMessageRequest.new,
+    nushiv1nushi.PinMessageResponse.new,
+  );
+
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a
   /// turn, for a name git doesn't take or that's taken, and when the branch

@@ -33,7 +33,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 101
+const Version = 102
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -494,6 +494,11 @@ func (s *server) SetChatColor(_ context.Context, req *connect.Request[nushiv1.Se
 		return nil, invalid(err)
 	}
 	return done[nushiv1.SetChatColorResponse](err, notFound)
+}
+
+func (s *server) PinMessage(_ context.Context, req *connect.Request[nushiv1.PinMessageRequest]) (*connect.Response[nushiv1.PinMessageResponse], error) {
+	m := req.Msg
+	return done[nushiv1.PinMessageResponse](s.chats.PinMessage(m.ChatId, m.ItemId, m.Pinned), notFound)
 }
 
 func (s *server) SwitchBranch(ctx context.Context, req *connect.Request[nushiv1.SwitchBranchRequest]) (*connect.Response[nushiv1.SwitchBranchResponse], error) {

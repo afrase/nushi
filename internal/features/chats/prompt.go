@@ -396,6 +396,7 @@ func (c *chat) unsendLocked(id string) {
 		c.dropCopyLocked(c.items[i])
 		c.items = slices.Delete(c.items, i, i+1)
 		c.emitLocked(model.Event{ChatID: c.id, Dropped: id})
+		c.unpinGoneLocked()
 	}
 }
 

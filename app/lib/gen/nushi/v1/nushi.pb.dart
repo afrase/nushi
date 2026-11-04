@@ -955,6 +955,7 @@ class Chat extends $pb.GeneratedMessage {
     GitHubLink? pull,
     $core.int? pin,
     $core.String? color,
+    $core.Iterable<$core.String>? pinnedMessages,
   }) {
     final result = Chat._();
     if (id != null) result.id = id;
@@ -975,6 +976,7 @@ class Chat extends $pb.GeneratedMessage {
     if (pull != null) result.pull = pull;
     if (pin != null) result.pin = pin;
     if (color != null) result.color = color;
+    if (pinnedMessages != null) result.pinnedMessages.addAll(pinnedMessages);
     return result;
   }
 
@@ -1013,6 +1015,7 @@ class Chat extends $pb.GeneratedMessage {
         subBuilder: GitHubLink.$_createMessage)
     ..aI(17, _omitFieldNames ? '' : 'pin')
     ..aOS(18, _omitFieldNames ? '' : 'color')
+    ..pPS(19, _omitFieldNames ? '' : 'pinnedMessages')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1227,6 +1230,12 @@ class Chat extends $pb.GeneratedMessage {
   $core.bool hasColor() => $_has(17);
   @$pb.TagNumber(18)
   void clearColor() => $_clearField(18);
+
+  /// The items' ids of its pinned messages, in the order they were pinned
+  /// (PinMessage); a client shows them in the transcript's order, and an id
+  /// it doesn't have among the items as nothing. API 102.
+  @$pb.TagNumber(19)
+  $pb.PbList<$core.String> get pinnedMessages => $_getList(18);
 }
 
 /// A git worktree of a repository, on a branch of its own.
@@ -5745,6 +5754,130 @@ class SetChatColorResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<SetChatColorResponse>(
           SetChatColorResponse.$_createMessage);
   static SetChatColorResponse? _defaultInstance;
+}
+
+class PinMessageRequest extends $pb.GeneratedMessage {
+  factory PinMessageRequest({
+    $core.String? chatId,
+    $core.String? itemId,
+    $core.bool? pinned,
+  }) {
+    final result = PinMessageRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (itemId != null) result.itemId = itemId;
+    if (pinned != null) result.pinned = pinned;
+    return result;
+  }
+
+  PinMessageRequest._();
+
+  factory PinMessageRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinMessageRequest()..mergeFromBuffer(data, registry);
+  factory PinMessageRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinMessageRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PinMessageRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PinMessageRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'itemId')
+    ..aOB(3, _omitFieldNames ? '' : 'pinned')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinMessageRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinMessageRequest copyWith(void Function(PinMessageRequest) updates) =>
+      super.copyWith((message) => updates(message as PinMessageRequest))
+          as PinMessageRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PinMessageRequest() / PinMessageRequest.new instead')
+  static PinMessageRequest create() => PinMessageRequest._();
+  static $pb.GeneratedMessage $_createMessage() => PinMessageRequest._();
+  @$core.override
+  PinMessageRequest createEmptyInstance() => PinMessageRequest._();
+  @$core.pragma('dart2js:noInline')
+  static PinMessageRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PinMessageRequest>(
+          PinMessageRequest.$_createMessage);
+  static PinMessageRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The message's item.
+  @$pb.TagNumber(2)
+  $core.String get itemId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set itemId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasItemId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearItemId() => $_clearField(2);
+
+  /// False unpins it.
+  @$pb.TagNumber(3)
+  $core.bool get pinned => $_getBF(2);
+  @$pb.TagNumber(3)
+  set pinned($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPinned() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPinned() => $_clearField(3);
+}
+
+class PinMessageResponse extends $pb.GeneratedMessage {
+  factory PinMessageResponse() => PinMessageResponse._();
+
+  PinMessageResponse._();
+
+  factory PinMessageResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinMessageResponse()..mergeFromBuffer(data, registry);
+  factory PinMessageResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      PinMessageResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'PinMessageResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: PinMessageResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinMessageResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  PinMessageResponse copyWith(void Function(PinMessageResponse) updates) =>
+      super.copyWith((message) => updates(message as PinMessageResponse))
+          as PinMessageResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use PinMessageResponse() / PinMessageResponse.new instead')
+  static PinMessageResponse create() => PinMessageResponse._();
+  static $pb.GeneratedMessage $_createMessage() => PinMessageResponse._();
+  @$core.override
+  PinMessageResponse createEmptyInstance() => PinMessageResponse._();
+  @$core.pragma('dart2js:noInline')
+  static PinMessageResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<PinMessageResponse>(
+          PinMessageResponse.$_createMessage);
+  static PinMessageResponse? _defaultInstance;
 }
 
 class ArchiveChatRequest extends $pb.GeneratedMessage {
@@ -29586,6 +29719,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, SetChatColorRequest request) =>
       _client.invoke<SetChatColorResponse>(
           ctx, 'NushiService', 'SetChatColor', request, SetChatColorResponse());
+
+  /// Pins one of a chat's messages (the user's or the agent's own; another
+  /// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
+  /// comes as an event. (API 102)
+  $async.Future<PinMessageResponse> pinMessage(
+          $pb.ClientContext? ctx, PinMessageRequest request) =>
+      _client.invoke<PinMessageResponse>(
+          ctx, 'NushiService', 'PinMessage', request, PinMessageResponse());
 
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a

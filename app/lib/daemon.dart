@@ -50,7 +50,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 101;
+const apiVersion = 102;
 
 /// The API from which the daemon says what an agent has (Agent.go_agent and
 /// mcp_user_only, ListSkillsResponse.has_built_in and has_plugins), which
@@ -64,6 +64,10 @@ const chatColorApi = 100;
 
 /// The API from which a chat's related worktrees can be read (ADR 0081).
 const relatedApi = 101;
+
+/// The API from which the daemon keeps a chat's pinned messages
+/// (Chat.pinned_messages, PinMessage; ADR 0085).
+const messagePinApi = 102;
 
 /// The API from which the daemon keeps which chats are pinned, in order
 /// (Chat.pin, PinChats).

@@ -103,6 +103,10 @@ service NushiService {
   // name that isn't one of the eight is refused (InvalidArgument). A
   // changed chat comes as an event. (API 99)
   rpc SetChatColor(SetChatColorRequest) returns (SetChatColorResponse);
+  // Pins one of a chat's messages (the user's or the agent's own; another
+  // item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
+  // comes as an event. (API 102)
+  rpc PinMessage(PinMessageRequest) returns (PinMessageResponse);
   // Renames the branch of a chat's worktree (git branch -m; its folder
   // stays), for good: the chat's title no longer names it. Refused during a
   // turn, for a name git doesn't take or that's taken, and when the branch
@@ -582,6 +586,10 @@ message Chat {
   // for none (SetChatColor). A client shows a name it doesn't know as none.
   // API 99.
   string color = 18;
+  // The items' ids of its pinned messages, in the order they were pinned
+  // (PinMessage); a client shows them in the transcript's order, and an id
+  // it doesn't have among the items as nothing. API 102.
+  repeated string pinned_messages = 19;
 }
 
 // A git worktree of a repository, on a branch of its own.
@@ -1044,6 +1052,16 @@ message SetChatColorRequest {
 }
 
 message SetChatColorResponse {}
+
+message PinMessageRequest {
+  string chat_id = 1;
+  // The message's item.
+  string item_id = 2;
+  // False unpins it.
+  bool pinned = 3;
+}
+
+message PinMessageResponse {}
 
 message ArchiveChatRequest {
   string chat_id = 1;

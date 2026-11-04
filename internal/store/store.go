@@ -286,6 +286,7 @@ func clone(sess model.ChatRecord) model.ChatRecord {
 	sess.GitHub = copyOf(sess.GitHub)
 	sess.Pull = copyOf(sess.Pull)
 	sess.Picks = maps.Clone(sess.Picks)
+	sess.Pins = slices.Clone(sess.Pins)
 	return sess
 }
 

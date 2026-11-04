@@ -147,13 +147,15 @@ func kept(items []model.Item) []model.Item {
 }
 
 // forkedLocked starts a new chat's transcript with a fork's items, and its
-// copy with them.
+// copy with them; of the pins its record took from its chat's (forkRecord),
+// those of the messages it keeps stay. The caller stores the record.
 func (c *chat) forkedLocked(items []model.Item) {
 	for _, it := range items {
 		c.noteID(it.ID)
 		c.unsaved[it.ID] = true
 	}
 	c.items = items
+	c.record.Pins = pinsIn(c.record.Pins, items)
 	c.copyLocked(true)
 }
 
@@ -165,7 +167,7 @@ func (c *chat) forkedLocked(items []model.Item) {
 func forkRecord(id, sid string, of model.ChatRecord) model.ChatRecord {
 	r := model.ChatRecord{ID: id, SessionID: sid, Agent: of.Agent, Folder: of.Folder, Title: forkTitle(of.Title), Name: forkTitle(of.Name),
 		Mode: of.Mode, Created: time.Now(), HasMessages: true, Issue: of.Issue, GitHub: of.GitHub, Pull: of.Pull,
-		Color: of.Color, Ultracode: of.Ultracode, Picks: maps.Clone(of.Picks)}
+		Color: of.Color, Pins: slices.Clone(of.Pins), Ultracode: of.Ultracode, Picks: maps.Clone(of.Picks)}
 	if of.Worktree != nil {
 		wt := *of.Worktree
 		wt.AutoName = false

@@ -1,0 +1,76 @@
+package e2e
+
+import (
+	"context"
+	"slices"
+	"testing"
+
+	"connectrpc.com/connect"
+
+	"github.com/afrase/nushi/internal/acptest"
+	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+)
+
+func TestPinMessage(t *testing.T) {
+	ctx := context.Background()
+	dataDir, history := t.TempDir(), &acptest.History{}
+	d := startDaemon(t, dataDir, history, nil)
+	a := open(t, d)
+	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
+	a.waitFor("the reply", idle)
+	items := must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items
+	var mine, reply string
+	for _, it := range items {
+		switch it.Kind {
+		case nushiv1.ItemKind_ITEM_KIND_USER_MESSAGE:
+			mine = it.Id
+		case nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE:
+			reply = it.Id
+		default: // the rest can't be pinned
+		}
+	}
+	pinned := func() []string {
+		t.Helper()
+		for _, c := range must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats {
+			if c.Id == id {
+				return c.PinnedMessages
+			}
+		}
+		t.Fatalf("chat %s isn't listed", id)
+		return nil
+	}
+	pin := func(item string, on bool) error {
+		_, err := a.c.PinMessage(ctx, connect.NewRequest(&nushiv1.PinMessageRequest{ChatId: id, ItemId: item, Pinned: on}))
+		return err
+	}
+
+	if err := pin(reply, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := pin(mine, true); err != nil {
+		t.Fatal(err)
+	}
+	a.waitFor("the pins' event", func(e *nushiv1.EventsResponse) bool {
+		return e.ChatId == id && slices.Equal(e.GetChat().GetPinnedMessages(), []string{reply, mine})
+	})
+	if err := pin("nope", true); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("an unknown item = %v, want not_found", err)
+	}
+
+	// Kept across a restart, the chat reopened from Nushi's copy.
+	d.stop()
+	d = startDaemon(t, dataDir, history, nil)
+	a = open(t, d)
+	a.follow(id, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))))
+	if got := pinned(); !slices.Equal(got, []string{reply, mine}) {
+		t.Fatalf("after a restart: %v", got)
+	}
+
+	if err := pin(reply, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := pinned(); !slices.Equal(got, []string{mine}) {
+		t.Fatalf("unpinned: %v", got)
+	}
+}

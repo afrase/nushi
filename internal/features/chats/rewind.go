@@ -129,6 +129,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 			if first { // a chat without messages again
 				s.Title, s.HasMessages = "", false
 			}
+			s.Pins = pinsIn(s.Pins, c.items) // a message cut takes its pin
 		})
 		return c.record.Mode, c.record.Picks, nil
 	}()

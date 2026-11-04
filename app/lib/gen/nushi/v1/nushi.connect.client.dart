@@ -507,6 +507,26 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Pins one of a chat's messages (the user's or the agent's own; another
+  /// item is NotFound), or unpins it (Chat.pinned_messages). A changed chat
+  /// comes as an event. (API 102)
+  Future<nushiv1nushi.PinMessageResponse> pinMessage(
+    nushiv1nushi.PinMessageRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.pinMessage,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Renames the branch of a chat's worktree (git branch -m; its folder
   /// stays), for good: the chat's title no longer names it. Refused during a
   /// turn, for a name git doesn't take or that's taken, and when the branch

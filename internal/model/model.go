@@ -75,6 +75,9 @@ type ChatRecord struct {
 	// Color is the name of the chat's color, "" for none: a stable name, so
 	// each theme draws it its own way (chats.SetColor).
 	Color string `json:",omitempty"`
+	// Pins are the chat's pinned messages, in the order they were pinned
+	// (chats.PinMessage, ADR 0085).
+	Pins []MessagePin `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
 	Scratch bool `json:"-"`
@@ -180,6 +183,18 @@ type WorktreeState struct {
 	Ignored    int  // files and folders git ignores, which removing it deletes too
 	Commits    int  // commits on its branch that its base doesn't have
 	BranchGone bool // its branch was deleted outside Nushi
+}
+
+// MessagePin is a message the user pinned: its item's id, and what finds it
+// again where a reopen gives it another (ADR 0085): its kind, a hash of its
+// opening (its first Runes runes) and how many messages of that kind with
+// the same opening come before it.
+type MessagePin struct {
+	Item  string
+	Kind  ItemKind
+	Start string
+	Runes int
+	Nth   int `json:",omitempty"`
 }
 
 // AgentSession is one of the agent's sessions: its id and folder (cwd).
