@@ -15,11 +15,6 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-func questionPending(e *nushiv1.EventsResponse) bool {
-	it := e.GetItem().GetItem()
-	return it.GetKind() == nushiv1.ItemKind_ITEM_KIND_QUESTION && it.GetStatus() == "pending"
-}
-
 // An Ante chat, through Nushi's bridge on a fake Ante: its modes, model
 // and effort, a permission, a question with an Other, the context
 // breakdown, a rewind (a fork after a turn), a reopen after a daemon

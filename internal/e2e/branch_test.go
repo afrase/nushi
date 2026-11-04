@@ -186,11 +186,3 @@ func TestBranchNamedAfterTheChat(t *testing.T) {
 		t.Error("Delete left the renamed branch")
 	}
 }
-
-// until waits for ok, 5 s at most.
-func until(t *testing.T, what string, ok func() bool) {
-	t.Helper()
-	if !testcheck.Eventually(ok) {
-		t.Fatalf("timed out waiting for %s", what)
-	}
-}

@@ -318,13 +318,6 @@ func (a *app) say(id, text string) {
 	a.waitFor("the reply to "+text, idle)
 }
 
-// settled waits for chat id's turn to end, and returns the chat.
-func (a *app) settled(id string) *nushiv1.GetChatResponse {
-	a.t.Helper()
-	until(a.t, "the turn's end", func() bool { return !a.get(id).Status.Busy })
-	return a.get(id)
-}
-
 // must returns a call's response; a failed call fails the test (by panic).
 func must[T any](resp *connect.Response[T], err error) *T {
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,15 +15,6 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/testcheck"
 )
-
-// gitRepo makes a repository with one commit on main.
-func gitRepo(t *testing.T) string {
-	t.Helper()
-	repo, _ := filepath.EvalSymlinks(t.TempDir())
-	testcheck.Git(t, repo, "init", "-q", "-b", "main")
-	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "init")
-	return repo
-}
 
 func TestChatsInWorktrees(t *testing.T) {
 	ctx := context.Background()
@@ -150,10 +140,6 @@ func TestChatsInWorktrees(t *testing.T) {
 	if branchExists(repo, wts[2].Branch) {
 		t.Error("the branch of the removed worktree is still there")
 	}
-}
-
-func branchExists(repo, branch string) bool {
-	return exec.Command("git", "-C", repo, "rev-parse", "--verify", "-q", "refs/heads/"+branch).Run() == nil
 }
 
 // A chat without messages that moves keeps its worktree when it moves into
