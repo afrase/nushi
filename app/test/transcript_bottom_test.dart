@@ -103,10 +103,25 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
-  for (final width in [1700.0, 720.0]) {
+  // Busy, the turn line shows over the list's foot as well as the
+  // composer: wide, only then is the toolbar placed under them.
+  for (final (width, busy) in [
+    (1700.0, false),
+    (1700.0, true),
+    (720.0, false),
+    (720.0, true),
+  ]) {
     testWidgets('the selection toolbar stays above the turn line, $width '
-        'wide', (tester) async {
+        'wide${busy ? ', a turn running' : ''}', (tester) async {
       final (d, _) = await _window(tester, size: Size(width, 1000));
+      if (busy) {
+        _chat(d)
+          ..busy = true
+          ..started = DateTime.now()
+          ..notifyListeners();
+        await _settle(tester, 20);
+        expect(tester.getSize(find.byType(TurnStatus)).height, greaterThan(0));
+      }
       final p = _scroll(tester);
       p.jumpTo(p.maxScrollExtent / 2);
       await _settle(tester, 4);
@@ -126,7 +141,11 @@ void main() {
       expect(bar, findsOneWidget);
       expect(tester.getRect(bar).bottom, lessThanOrEqualTo(status.top));
       expect(tester.getRect(bar).top, greaterThanOrEqualTo(list.top));
-      await render(tester, find.byType(NushiApp), 'selection_toolbar_$width');
+      await render(
+        tester,
+        find.byType(NushiApp),
+        'selection_toolbar_$width${busy ? '_busy' : ''}',
+      );
       await closeView(tester, d);
     }, variant: _mac);
   }
