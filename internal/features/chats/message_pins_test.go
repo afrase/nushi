@@ -72,20 +72,21 @@ func TestPinMessage(t *testing.T) {
 		testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, what), on))
 	}
 	pin("agent:m2", true)
-	pin("user:one", true)
+	pin("agent:m1", true)
 	pin("agent:m2", true) // again: it keeps its place
-	if got := pinned(c); got != "agent:m2 user:one" {
+	if got := pinned(c); got != "agent:m2 agent:m1" {
 		t.Fatalf("pinned %s", got)
 	}
-	// What isn't a message of the chat's own isn't pinned.
-	for _, id := range []string{"t1", "nope"} {
+	// Only the agent's own messages are pinned: not the user's, nor what
+	// isn't a message.
+	for _, id := range []string{idOf(t, c, "user:one"), "t1", "nope"} {
 		if err := svc.PinMessage(c.id, id, true); !errors.Is(err, ErrNotMessage) {
 			t.Errorf("pinning %s = %v, want ErrNotMessage", id, err)
 		}
 	}
 	pin("agent:m2", false)
 	testcheck.NoErr(t, svc.PinMessage(c.id, "nope", false)) // not pinned: nothing to do
-	if got := pinned(c); got != "user:one" {
+	if got := pinned(c); got != "agent:m1" {
 		t.Fatalf("after an unpin: %s", got)
 	}
 	if err := svc.PinMessage("nope", "m1", true); err == nil || errors.Is(err, ErrNotMessage) {
@@ -93,7 +94,7 @@ func TestPinMessage(t *testing.T) {
 	}
 	side, err := svc.Fork(t.Context(), c.id)
 	testcheck.NoErr(t, err)
-	if err := svc.PinMessage(side, idOf(t, c, "user:one"), true); err == nil {
+	if err := svc.PinMessage(side, "m1", true); err == nil {
 		t.Error("a side chat took a pin")
 	}
 
@@ -110,27 +111,27 @@ func TestPinMessage(t *testing.T) {
 func TestPinsHoldWithTheCopy(t *testing.T) {
 	svc, agent, c, store, _ := newCopyingChat(t)
 	turns(t, svc, agent, c, "t1", "t2")
-	testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, "user:t2"), true))
+	testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, "agent:m2"), true))
 	testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, "agent:m1"), true))
 	ids := slices.Clone(c.record.Pins)
 
 	svc2 := restarted(t, agent, c, store)
 	c2 := reopened(t, svc2, c.id)
-	if got := pinned(c2); got != "user:t2 agent:m1" {
+	if got := pinned(c2); got != "agent:m2 agent:m1" {
 		t.Fatalf("after a restart: %s", got)
 	}
 	testcheck.NoErr(t, svc2.Reload(c.id))
 	eventually(t, c2, func() bool { return !c2.busy && c2.agent != nil })
-	if got := pinned(c2); got != "user:t2 agent:m1" || !slices.Equal(c2.record.Pins, ids) {
+	if got := pinned(c2); got != "agent:m2 agent:m1" || !slices.Equal(c2.record.Pins, ids) {
 		t.Errorf("after a reload: %s, %v want %v", got, c2.record.Pins, ids)
 	}
 }
 
-// Without a copy a reopen names the user's messages anew (the replay's
-// ids, here u1, u2…; Nushi's item-N otherwise): a pin finds its message
-// again by its opening, the right one of several that open alike, and one
-// whose message the replay no longer has goes: the agent's m2 too, though
-// mb opens as it did (the agent's ids hold, so it isn't m2).
+// Without a copy a reopen names the agent's messages anew when it gives
+// them no ids (Nushi's item-N): a pin finds its message again by its
+// opening, the right one of several that open alike, keeping its title;
+// one whose message the replay no longer has goes: the agent's m2 too,
+// though mb opens as it did (the agent's ids hold, so it isn't m2).
 func TestPinsFollowAReopenWithoutTheCopy(t *testing.T) {
 	agent := &fakeAgent{}
 	kinds := []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}}
@@ -139,20 +140,29 @@ func TestPinsFollowAReopenWithoutTheCopy(t *testing.T) {
 	id, err := svc.Start(t.Context(), "", t.TempDir(), false)
 	testcheck.NoErr(t, err)
 	c := svc.chats[id]
-	answered(t, svc, agent, c, "same", "ma")
-	answered(t, svc, agent, c, "t2", "m2")
-	answered(t, svc, agent, c, "same", "mb")
+	reply := func(text string, updates ...acp.SessionUpdate) {
+		t.Helper()
+		agent.updates = updates
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: text}, SendIdle))
+		eventually(t, c, func() bool { return !c.busy })
+	}
+	reply("t1", chunk("", "Same."))
+	reply("t2", chunk("m2", "Other."))
+	reply("t3", chunk("", "Same."))
+	reply("t4", chunk("mb", "Other."))
 	c.mu.Lock()
-	second := c.items[4].ID // the second "same"
+	second := c.items[5].ID // the second "Same."
 	c.mu.Unlock()
+	if !strings.HasPrefix(second, "item-") {
+		t.Fatalf("the agent's message is %s, want one of Nushi's ids", second)
+	}
 	testcheck.NoErr(t, svc.PinMessage(c.id, second, true))
-	testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, "user:t2"), true))
-	testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, "agent:m2"), true))
+	testcheck.NoErr(t, svc.PinMessage(c.id, "m2", true))
 
 	// A restart, and the agent's history lost the second turn.
 	agent.history = slices.DeleteFunc(agent.history, func(u acp.SessionUpdate) bool {
 		m := u.UserMessageChunk
-		return m != nil && m.MessageID == "u2" || u.AgentMessageChunk != nil && u.AgentMessageChunk.MessageID == "m2"
+		return m != nil && m.Content.Text != nil && m.Content.Text.Text == "t2" || u.AgentMessageChunk != nil && u.AgentMessageChunk.MessageID == "m2"
 	})
 	c.mu.Lock()
 	sessions := &memSessions{stored: []model.ChatRecord{c.record}}
@@ -161,13 +171,14 @@ func TestPinsFollowAReopenWithoutTheCopy(t *testing.T) {
 	t.Cleanup(svc2.Close)
 	c2 := reopened(t, svc2, c.id)
 	c2.mu.Lock()
-	want := c2.items[len(c2.items)-2].ID // the last "same", as the replay names it
+	i := slices.IndexFunc(c2.items, func(it model.Item) bool { return it.Kind == model.UserMessage && it.Text == "t3" })
+	want := c2.items[i+1].ID // the second "Same.", as the replay names it
 	c2.mu.Unlock()
 	if want == second {
 		t.Fatalf("the replay kept the id %s: nothing to follow", want)
 	}
-	if got := c2.record.Pins; len(got) != 1 || got[0].Item != want || got[0].Nth != 1 {
-		t.Errorf("pins %+v, want the second \"same\" (%s) alone", got, want)
+	if got := c2.record.Pins; len(got) != 1 || got[0].Item != want || got[0].Nth != 1 || got[0].Title != "Same" {
+		t.Errorf("pins %+v, want the second \"Same.\" (%s) alone", got, want)
 	}
 }
 
@@ -176,13 +187,13 @@ func TestPinsFollowAReopenWithoutTheCopy(t *testing.T) {
 func TestPinsFollowRewindAndFork(t *testing.T) {
 	svc, agent, c, _, _ := newCopyingChat(t)
 	turns(t, svc, agent, c, "t1", "t2", "t3")
-	for _, what := range []string{"user:t1", "agent:m2", "user:t3"} {
+	for _, what := range []string{"agent:m1", "agent:m2", "agent:m3"} {
 		testcheck.NoErr(t, svc.PinMessage(c.id, idOf(t, c, what), true))
 	}
 
 	fork, err := svc.ForkAsChat(t.Context(), c.id, "m2")
 	testcheck.NoErr(t, err)
-	if got := pinned(svc.chats[fork]); got != "user:t1 agent:m2" {
+	if got := pinned(svc.chats[fork]); got != "agent:m1 agent:m2" {
 		t.Errorf("the fork's pins: %s", got)
 	}
 
@@ -190,14 +201,14 @@ func TestPinsFollowRewindAndFork(t *testing.T) {
 	testcheck.NoErr(t, err)
 	kept, err := svc.KeepSide(t.Context(), side)
 	testcheck.NoErr(t, err)
-	if got := pinned(svc.chats[kept]); got != "user:t1 agent:m2 user:t3" {
+	if got := pinned(svc.chats[kept]); got != "agent:m1 agent:m2 agent:m3" {
 		t.Errorf("the kept side chat's pins: %s", got)
 	}
 
 	if _, err := svc.Rewind(t.Context(), c.id, idOf(t, c, "user:t2")); err != nil {
 		t.Fatal(err)
 	}
-	if got := pinned(c); got != "user:t1" {
+	if got := pinned(c); got != "agent:m1" {
 		t.Errorf("after the rewind: %s", got)
 	}
 }

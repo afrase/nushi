@@ -162,6 +162,14 @@ type ContextAsker interface {
 	Context(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID string) (model.ContextUsage, error)
 }
 
+// TitleMaker makes a short title for a piece of a session's text (a pinned
+// message, ADR 0085) with its model, through call (an extension of the
+// agent's: Agent.Call), leaving the session as it was: its own title, its
+// transcript and any running turn. "" when the agent made none.
+type TitleMaker interface {
+	MessageTitle(ctx context.Context, call func(ctx context.Context, method string, params, result any) error, sessionID, text string) (string, error)
+}
+
 // GoneReader says a session/load error means the agent no longer has the
 // session (it deleted it).
 type GoneReader interface {

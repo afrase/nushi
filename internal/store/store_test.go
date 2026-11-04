@@ -88,6 +88,31 @@ func TestOldAndBrokenSessionFiles(t *testing.T) {
 	}
 }
 
+// Pins of the user's messages, kept while they could be pinned, go as the
+// record loads: only the agent's messages are pinned (ADR 0085).
+func TestUserMessagePinsDroppedOnLoad(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	testcheck.NoErr(t, s.SaveSession(model.ChatRecord{ID: "c", SessionID: "c"}))
+	body := `{"ID":"c","SessionID":"c","Pins":[{"Item":"u1","Kind":1,"Start":"x","Runes":3},{"Item":"m1","Kind":2,"Start":"y","Runes":4,"Title":"The plan"}]}`
+	testcheck.Write(t, filepath.Join(dir, "sessions", "c.json"), body)
+	only := `{"ID":"u","SessionID":"u","Pins":[{"Item":"u1","Kind":1,"Start":"x","Runes":3}]}`
+	testcheck.Write(t, filepath.Join(dir, "sessions", "u.json"), only)
+	got, err := New(dir).Sessions()
+	testcheck.NoErr(t, err)
+	pins := map[string][]model.MessagePin{}
+	for _, sess := range got {
+		pins[sess.ID] = sess.Pins
+	}
+	want := map[string][]model.MessagePin{
+		"c": {{Item: "m1", Kind: model.AgentMessage, Start: "y", Runes: 4, Title: "The plan"}},
+		"u": nil,
+	}
+	if !reflect.DeepEqual(pins, want) {
+		t.Errorf("pins %+v, want %+v", pins, want)
+	}
+}
+
 func TestTranscriptSettings(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir)

@@ -48,14 +48,14 @@ func TestPinMessage(t *testing.T) {
 	if err := pin(reply, true); err != nil {
 		t.Fatal(err)
 	}
-	if err := pin(mine, true); err != nil {
-		t.Fatal(err)
-	}
 	a.waitFor("the pins' event", func(e *nushiv1.EventsResponse) bool {
-		return e.ChatId == id && slices.Equal(e.GetChat().GetPinnedMessages(), []string{reply, mine})
+		return e.ChatId == id && slices.Equal(e.GetChat().GetPinnedMessages(), []string{reply})
 	})
-	if err := pin("nope", true); connect.CodeOf(err) != connect.CodeNotFound {
-		t.Fatalf("an unknown item = %v, want not_found", err)
+	// Only the agent's messages are pinned.
+	for _, item := range []string{mine, "nope"} {
+		if err := pin(item, true); connect.CodeOf(err) != connect.CodeNotFound {
+			t.Fatalf("pinning %s = %v, want not_found", item, err)
+		}
 	}
 
 	// Kept across a restart, the chat reopened from Nushi's copy.
@@ -63,14 +63,14 @@ func TestPinMessage(t *testing.T) {
 	d = startDaemon(t, dataDir, history, nil)
 	a = open(t, d)
 	a.follow(id, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))))
-	if got := pinned(); !slices.Equal(got, []string{reply, mine}) {
+	if got := pinned(); !slices.Equal(got, []string{reply}) {
 		t.Fatalf("after a restart: %v", got)
 	}
 
 	if err := pin(reply, false); err != nil {
 		t.Fatal(err)
 	}
-	if got := pinned(); !slices.Equal(got, []string{mine}) {
+	if got := pinned(); len(got) != 0 {
 		t.Fatalf("unpinned: %v", got)
 	}
 }

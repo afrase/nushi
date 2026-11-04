@@ -80,7 +80,7 @@ type ChatRecord struct {
 	// each theme draws it its own way (chats.SetColor).
 	Color string `json:",omitempty"`
 	// Pins are the chat's pinned messages, in the order they were pinned
-	// (chats.PinMessage, ADR 0085).
+	// (chats.PinMessage, ADR 0085): the agent's alone.
 	Pins []MessagePin `json:",omitempty"`
 	// Scratch says Folder is a scratch folder of the chat's own (the chat
 	// has no folder yet); worked out from the folder, not stored.
@@ -192,13 +192,16 @@ type WorktreeState struct {
 // MessagePin is a message the user pinned: its item's id, and what finds it
 // again where a reopen gives it another (ADR 0085): its kind, a hash of its
 // opening (its first Runes runes) and how many messages of that kind with
-// the same opening come before it.
+// the same opening come before it. Title is what a client lists it by:
+// made from the message's text at once, the agent's own when it can make
+// one (chats' pin_titles.go); "" for a pin kept before titles were.
 type MessagePin struct {
 	Item  string
 	Kind  ItemKind
 	Start string
 	Runes int
-	Nth   int `json:",omitempty"`
+	Nth   int    `json:",omitempty"`
+	Title string `json:",omitempty"`
 }
 
 // AgentSession is one of the agent's sessions: its id and folder (cwd).

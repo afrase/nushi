@@ -20,16 +20,18 @@ import (
 // one of Nushi's ids by that when it no longer points at it (repinLocked).
 
 // ErrNotMessage is PinMessage's refusal of an item that isn't one of the
-// chat's messages: the user's or the agent's own, not a subagent's.
-var ErrNotMessage = errors.New("no such message")
+// agent's own messages: not the user's, a subagent's, a tool call or a card.
+var ErrNotMessage = errors.New("no such message of the agent's")
 
 // pinRunes is how much of a message's opening a pin keeps the hash of: a
 // message is told from another by its first lines.
 const pinRunes = 200
 
-// pinnable says an item is a message a pin can mark.
+// pinnable says an item is a message a pin can mark: the agent's own, at
+// the top level (ADR 0085). The user's aren't: what the agent made of them
+// is what's gone back to.
 func pinnable(it model.Item) bool {
-	return it.Parent == "" && (it.Kind == model.UserMessage || it.Kind == model.AgentMessage)
+	return it.Parent == "" && it.Kind == model.AgentMessage
 }
 
 // opening is the hash of text's first n runes, trimmed, and how many runes
@@ -75,7 +77,7 @@ func pinOf(items []model.Item, i int) model.MessagePin {
 // one that's gone is gone, though another may open alike ("Done.").
 func findPin(items []model.Item, p model.MessagePin) (model.MessagePin, bool) {
 	if i := slices.IndexFunc(items, func(it model.Item) bool { return it.ID == p.Item }); i >= 0 && opensAs(p, items[i]) {
-		return pinOf(items, i), true
+		return titledAs(pinOf(items, i), p, items[i]), true
 	}
 	if !strings.HasPrefix(p.Item, "item-") {
 		return p, false
@@ -86,16 +88,28 @@ func findPin(items []model.Item, p model.MessagePin) (model.MessagePin, bool) {
 			continue
 		}
 		if n == p.Nth {
-			return pinOf(items, i), true
+			return titledAs(pinOf(items, i), p, items[i]), true
 		}
 		n++
 	}
 	return p, false
 }
 
-// PinMessage pins one of a chat's messages (its item's id), or unpins it.
-// Pinning a message already pinned, or unpinning one that isn't, changes
-// nothing. Saving tells the clients (Chat.pinned_messages).
+// titledAs is p found again, with the title it had (one from its message,
+// for a pin kept before titles were).
+func titledAs(found, p model.MessagePin, it model.Item) model.MessagePin {
+	found.Title = p.Title
+	if found.Title == "" {
+		found.Title = pinTitle(it.Text)
+	}
+	return found
+}
+
+// PinMessage pins one of the agent's messages in a chat (its item's id),
+// or unpins it. Pinning a message already pinned, or unpinning one that
+// isn't, changes nothing. A new pin is titled from the message at once,
+// and by the agent after if it can (titleLocked). Saving tells the clients
+// (Chat.pinned_messages, Chat.message_pins).
 func (s *Service) PinMessage(chatID, itemID string, pinned bool) error {
 	c, err := s.stored(chatID)
 	if err != nil {
@@ -112,9 +126,14 @@ func (s *Service) PinMessage(chatID, itemID string, pinned bool) error {
 		if len(pins) < len(c.record.Pins) {
 			return nil // pinned already, its place kept
 		}
-		pins = append(pins, pinOf(c.items, i))
+		p := pinOf(c.items, i)
+		p.Title = pinTitle(c.items[i].Text)
+		pins = append(pins, p)
 	}
 	c.saveLocked(func(s *model.ChatRecord) { s.Pins = orNil(pins) })
+	if pinned {
+		c.titleLocked(itemID, c.items[c.indexLocked(itemID)].Text)
+	}
 	return nil
 }
 

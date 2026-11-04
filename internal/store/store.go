@@ -269,6 +269,12 @@ func (s *Store) readSessions() (map[string]model.ChatRecord, error) {
 		} else { // stored before HasMessages was kept
 			sess.HasMessages = sess.Title != "" || s.HadMessages != nil && s.HadMessages(sess)
 		}
+		// Pinned while the user's messages could be: only the agent's are
+		// (ADR 0085's amendment). Saved so with the record's next change.
+		sess.Pins = slices.DeleteFunc(sess.Pins, func(p model.MessagePin) bool { return p.Kind != model.AgentMessage })
+		if len(sess.Pins) == 0 {
+			sess.Pins = nil
+		}
 		read[e.Name()] = sess
 	}
 	return read, nil
