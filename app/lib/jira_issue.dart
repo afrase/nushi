@@ -9,6 +9,7 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
@@ -242,7 +243,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                       )
                     else
                       Text(
-                        '${a.name} · ${(a.size.toInt() / 1024).ceil()} KB',
+                        '${a.name} · ${diskSize(a.size.toInt())}',
                         style: theme.ui(t.text, size: 12),
                       ),
                 ],

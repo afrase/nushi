@@ -212,6 +212,39 @@ void main() {
     d.dispose();
   });
 
+  testWidgets("an attachment's size in MB past a megabyte", (tester) async {
+    final (_, d, _) = await _open(
+      tester,
+      more: (input) => input is GetJiraIssueRequest
+          ? GetJiraIssueResponse(
+              // No images in its text: what they fetch is kept for the
+              // tests after.
+              issue: JiraIssue(
+                key: 'ACME-12',
+                summary: 'Log in with a passkey',
+                attachments: [
+                  JiraAttachment(
+                    id: '10002',
+                    name: 'build.zip',
+                    mimeType: 'application/zip',
+                    size: Int64(5 << 20),
+                  ),
+                  JiraAttachment(
+                    id: '10003',
+                    name: 'notes.txt',
+                    mimeType: 'text/plain',
+                    size: Int64(20480),
+                  ),
+                ],
+              ),
+            )
+          : null,
+    );
+    expect(find.text('build.zip · 5.0 MB'), findsOneWidget);
+    expect(find.text('notes.txt · 20 KB'), findsOneWidget);
+    d.dispose();
+  });
+
   testWidgets('the issue whole; only its attachments load as images', (
     tester,
   ) async {

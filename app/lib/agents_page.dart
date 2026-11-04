@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_rows.dart';
@@ -77,14 +77,6 @@ class _AgentsPageState extends State<AgentsPage> {
   );
 }
 
-/// [path] with the home folder as ~.
-String tilde(String path) {
-  final home = Platform.environment['HOME'] ?? '';
-  return home.isNotEmpty && path.startsWith('$home/')
-      ? '~${path.substring(home.length)}'
-      : path;
-}
-
 String _mb(int bytes) => '${(bytes / 1e6).round()} MB';
 
 /// How far an agent's name sits from its row's padding: past its mark
@@ -116,7 +108,7 @@ class AgentRow extends StatelessWidget {
     final muted = theme.ui(t.textMuted, size: 12);
     final found = [
       if (a.version.isNotEmpty) a.version,
-      tilde(a.path),
+      tildePath(a.path),
     ].join(' · ');
     final problem = switch (a.problem) {
       'Not installed' => '',
@@ -291,7 +283,7 @@ class _SetUpState extends State<_SetUp> {
               '${ad.packages - 1} packages it needs from npm, about '
               '${_mb(ad.downloadBytes.toInt())} '
               '(${_mb(ad.diskBytes.toInt())} on disk), into '
-              '${tilde(ad.folder)}.${_sleeps(a)}',
+              '${tildePath(ad.folder)}.${_sleeps(a)}',
               style: theme.ui(t.text),
             ),
             if (_error case final e?) ...[
@@ -338,8 +330,8 @@ Future<bool> _confirmRemove(
   return await confirm(
     context,
     "Remove ${a.title}'s adapter?",
-    'Removes ${tilde(ad.folder)} (${_mb(ad.diskBytes.toInt())}). ${a.title} '
-        "chats start again once it's set up.${_sleeps(a)}",
+    'Removes ${tildePath(ad.folder)} (${_mb(ad.diskBytes.toInt())}). '
+        "${a.title} chats start again once it's set up.${_sleeps(a)}",
     'Remove',
     destructive: true,
   );
