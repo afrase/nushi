@@ -96,6 +96,8 @@ func TestOrigins(t *testing.T) {
 		"http://[::1]:8090":              "http://[::1]:8090",
 		"https://[2001:db8::1]":          "https://[2001:db8::1]",
 		"https://xn--bcher-kva.example":  "https://xn--bcher-kva.example",
+		"https://relay.example.com:0443": "https://relay.example.com", // as a browser reads the port
+		"https://relay:08443":            "https://relay:8443",
 	} {
 		if got, err := Origin(in); err != nil || got != want {
 			t.Errorf("Origin(%q) = %q, %v; want %q", in, got, err, want)
@@ -103,7 +105,10 @@ func TestOrigins(t *testing.T) {
 	}
 	for _, bad := range []string{"", "relay.example.com", "wss://relay.example.com", "https://relay.example.com/app", "https://u@relay.example.com", "https://relay.example.com/?a", "null",
 		"http://pi.lan:8080", "http://10.0.0.2", // plain http off this machine
-		"https://relay.example.com.", "https://bücher.example"} {
+		"https://relay.example.com.", "https://bücher.example",
+		// Not a host name: it would go into the CSP and the origin check as written.
+		"https://a;b.com", `https://x"y`, "https://_", "https://:", "https://a..b", "https://-a.example", "https://a-.example",
+		"https://" + strings.Repeat("a", 64) + ".example", "https://relay.example.com:0", "https://relay.example.com:65536", "https://1.2.3", "https://010.0.0.1"} {
 		if _, err := Origin(bad); err == nil {
 			t.Errorf("Origin(%q) passed", bad)
 		}

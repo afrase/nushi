@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"os"
 	"path"
@@ -33,9 +34,11 @@ var (
 
 // Origin checks an origin given as a flag and gives it as a browser sends
 // it: lowercase, without a default port or anything after the host. A
-// host is ASCII (an international name as punycode) with no trailing dot;
-// http only for this machine (over plain http anyone on the way could
-// change the app, and so take its key).
+// host is a name of letters, digits and hyphens (an international name as
+// punycode) with no trailing dot, an IP address, or localhost: anything
+// else would go into the CSP and the origin check as written. http only
+// for this machine (over plain http anyone on the way could change the
+// app, and so take its key).
 func Origin(s string) (string, error) {
 	u, err := url.Parse(s)
 	if err != nil || u.Scheme != "https" && u.Scheme != "http" || u.Host == "" || u.User != nil ||
@@ -43,24 +46,60 @@ func Origin(s string) (string, error) {
 		return "", fmt.Errorf("the origin must be scheme://host[:port], not %q", s)
 	}
 	host := strings.ToLower(u.Hostname())
-	for _, r := range host {
-		if r > 0x7f {
-			return "", fmt.Errorf("the origin's host must be ASCII (punycode), not %q", host)
+	ip, ipErr := netip.ParseAddr(host)
+	if ipErr != nil || ip.Zone() != "" {
+		if err := hostName(host); err != nil {
+			return "", err
 		}
 	}
-	if strings.HasSuffix(host, ".") {
-		return "", fmt.Errorf("the origin's host has a trailing dot: %q", host)
-	}
-	if ip := net.ParseIP(host); u.Scheme == "http" && host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+	if u.Scheme == "http" && host != "localhost" && (ipErr != nil || !ip.IsLoopback()) {
 		return "", errors.New("the origin must be https, except on this machine (localhost)")
 	}
-	if p := u.Port(); p != "" && p != map[string]string{"https": "443", "http": "80"}[u.Scheme] {
-		return u.Scheme + "://" + net.JoinHostPort(host, p), nil
+	if ipErr == nil {
+		host = ip.String()
+	}
+	port := 0
+	if p := u.Port(); p != "" {
+		if port, err = strconv.Atoi(p); err != nil || port < 1 || port > 65535 {
+			return "", fmt.Errorf("the origin's port must be 1 to 65535, not %q", p)
+		}
+	}
+	if port != 0 && port != map[string]int{"https": 443, "http": 80}[u.Scheme] {
+		return u.Scheme + "://" + net.JoinHostPort(host, strconv.Itoa(port)), nil
 	}
 	if strings.Contains(host, ":") {
 		host = "[" + host + "]"
 	}
 	return u.Scheme + "://" + host, nil
+}
+
+// hostName checks that host is a DNS name of letters, digits and hyphens:
+// labels of 1 to 63, none starting or ending with a hyphen, 253 in all,
+// the last not all digits (a browser would read it as an IPv4 address).
+func hostName(host string) error {
+	if strings.HasSuffix(host, ".") {
+		return fmt.Errorf("the origin's host has a trailing dot: %q", host)
+	}
+	if host == "" || len(host) > 253 {
+		return fmt.Errorf("the origin's host isn't a host name: %q", host)
+	}
+	for label := range strings.SplitSeq(host, ".") {
+		if label == "" || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
+			return fmt.Errorf("the origin's host isn't a host name: %q", host)
+		}
+		for _, r := range label {
+			if r > 0x7f {
+				return fmt.Errorf("the origin's host must be ASCII (punycode), not %q", host)
+			}
+			if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
+				return fmt.Errorf("the origin's host isn't a host name: %q", host)
+			}
+		}
+	}
+	if last := host[strings.LastIndex(host, ".")+1:]; strings.Trim(last, "0123456789") == "" {
+		return fmt.Errorf("the origin's host isn't a host name: %q", host)
+	}
+	return nil
 }
 
 // file is one of the app's files, ready to serve.
