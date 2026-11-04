@@ -191,9 +191,12 @@ class InboxCards extends StatelessWidget {
   }
 }
 
-/// Whether [a] and [b] are the same item.
+/// Whether [a] and [b] are the same item (one may come from a chat's
+/// link, in its remote's case).
 bool sameRef(GitHubRef a, GitHubRef? b) =>
-    b != null && a.host == b.host && a.repo == b.repo && a.number == b.number;
+    b != null &&
+    a.number == b.number &&
+    repoKey(a.host, a.repo) == repoKey(b.host, b.repo);
 
 /// A row of the inbox: the kind's icon in its state's color, the title,
 /// and under it `owner/repo#123` muted (each cut on its own line, so

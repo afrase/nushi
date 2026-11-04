@@ -54,8 +54,7 @@ Future<void> toAgent(
   }
   if (!context.mounted) return;
   if (picked == null) {
-    final clones =
-        githubFolders.value[(item.ref.host, item.ref.repo)] ?? const [];
+    final clones = clonesOf(item.ref);
     await startOn(
       context,
       daemon,

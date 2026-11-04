@@ -29,8 +29,9 @@ export 'package:nushi/pull_states.dart' show checksIcon, itemColor, itemState;
 /// The chats on a GitHub item (started from it, or on its branch), the
 /// newest first.
 List<ChatState> chatsOnItem(Daemon daemon, GitHubRef ref) {
+  final key = repoKey(ref.host, ref.repo);
   bool on(GitHubLink? l) =>
-      l?.host == ref.host && l?.repo == ref.repo && l?.number == ref.number;
+      l != null && repoKey(l.host, l.repo) == key && l.number == ref.number;
   return daemon.chats.values.where((c) => on(c.github) || on(c.pull)).toList()
     ..sort((a, b) => b.created.compareTo(a.created));
 }
@@ -175,8 +176,7 @@ List<MenuEntry> startEntries(
   Daemon daemon,
   GitHubItem item,
 ) {
-  final clones =
-      githubFolders.value[(item.ref.host, item.ref.repo)] ?? const [];
+  final clones = clonesOf(item.ref);
   return [
     for (final f in clones)
       MenuEntry(
@@ -189,9 +189,19 @@ List<MenuEntry> startEntries(
   ];
 }
 
-/// The folders that are clones of each repository, by host and
-/// owner/name, as the daemon last said (ListGitHubRepos).
+/// The folders that are clones of each repository, by [repoKey], as the
+/// daemon last said (ListGitHubRepos).
 final githubFolders = ValueNotifier<Map<(String, String), List<String>>>({});
+
+/// A repository's key in any case: GitHub's names are unique regardless
+/// of case, and a remote (so ListGitHubRepos, and a chat's pull request
+/// found from its branch) may spell one differently from GitHub's items.
+(String, String) repoKey(String host, String repo) =>
+    (host.toLowerCase(), repo.toLowerCase());
+
+/// The folders that are clones of [ref]'s repository.
+List<String> clonesOf(GitHubRef ref) =>
+    githubFolders.value[repoKey(ref.host, ref.repo)] ?? const [];
 
 /// Asks the daemon which repositories the app's folders are clones of.
 Future<List<GitHubRepo>> loadRepos(Daemon daemon) async {
@@ -199,7 +209,7 @@ Future<List<GitHubRepo>> loadRepos(Daemon daemon) async {
     ListGitHubReposRequest(folders: recentFolders(daemon.chats.values)),
   );
   githubFolders.value = {
-    for (final repo in r.repos) (repo.host, repo.repo): repo.folders,
+    for (final repo in r.repos) repoKey(repo.host, repo.repo): repo.folders,
   };
   return r.repos;
 }
