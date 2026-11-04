@@ -210,7 +210,21 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   /// related worktree is read only for a click, as this runs its filters
   /// (ADR 0081): a turn's end or the tab showing again changes nothing.
   @override
-  Future<void> reload() async {
+  Future<void> reload() => _reloaded = _reload();
+
+  /// The newest [reload], for a commit to wait for what it shows.
+  Future<void> _reloaded = Future.value();
+
+  /// Waits for the newest [reload], and for any started while it ran.
+  Future<void> _reloadsDone() async {
+    Future<void> r;
+    do {
+      r = _reloaded;
+      await r;
+    } while (!identical(r, _reloaded));
+  }
+
+  Future<void> _reload() async {
     final worktree = chat.related.picked;
     if (worktree != null && !chat.related.takeAsked()) {
       if (mounted) setState(() {});
@@ -696,10 +710,13 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     return got.message;
   }
 
-  /// Commits what's staged, once any staging under way is in and read.
+  /// Commits what's staged, once any staging under way is in and read:
+  /// with the index the newest reload read (a turn's may overtake the
+  /// staging's), so the commit isn't refused as the index having moved.
   Future<void> _commit(String message) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
     await _staging;
+    await _reloadsDone();
     try {
       final done = await daemon.client.commitStaged(
         CommitStagedRequest(

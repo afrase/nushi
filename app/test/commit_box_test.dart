@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/changes_span.dart';
@@ -150,6 +152,80 @@ void main() {
     expect(ask.index, _shown);
     expect(state.commitMessage.text, isEmpty);
     expect(find.text('Committed abc1234'), findsOne);
+    d.dispose();
+  });
+
+  testWidgets("Commit waits for a turn's reload that overtook staging's, "
+      'and asks for the index that shows', (tester) async {
+    viewport(tester, const Size(1100, 700));
+    paneWidths.value = {};
+    final asked = <Object?>[];
+    var index = _shown;
+    Completer<void>? gate;
+    final fake = FakeDaemon([])
+      ..answer = (input) {
+        asked.add(input);
+        return switch (input) {
+          GetFolderStatusRequest() => GetFolderStatusResponse(
+            git: true,
+            branch: 'b',
+            defaultBase: 'main',
+          ),
+          GetDiffRequest() => switch (gate) {
+            null => GetDiffResponse(files: _changes(), index: index),
+            final g => g.future.then(
+              (_) => GetDiffResponse(files: _changes(), index: index),
+            ),
+          },
+          StageFilesRequest() => StageFilesResponse(),
+          CommitStagedRequest() => CommitStagedResponse(short: 'abc1234'),
+          _ => null,
+        };
+      };
+    final d = await fake.connect(tester);
+    final state = ChatState('c', '/x')..scope = Scope.uncommitted.name;
+    addTearDown(() => state.scope = null);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: ChangesView(chat: state, daemon: d),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    state.commitMessage.text = 'Shorten the relay wait';
+    // Staged; its reload held.
+    final staging = gate = Completer<void>();
+    await tester.tap(
+      find.descendant(
+        of: find
+            .ancestor(
+              of: find.textContaining('notes.md', findRichText: true),
+              matching: find.byType(Row),
+            )
+            .first,
+        matching: find.byType(Checkbox),
+      ),
+    );
+    await tester.pump();
+    // A turn ends meanwhile: its reload, held too.
+    final turn = gate = Completer<void>();
+    state
+      ..busy = true
+      ..notifyListeners()
+      ..busy = false
+      ..notifyListeners();
+    await tester.pump();
+    await tester.tap(find.text('Commit 3 files'));
+    await tester.pump();
+    index = 'index-2';
+    staging.complete();
+    await tester.pump();
+    index = 'index-3';
+    turn.complete();
+    await tester.pumpAndSettle();
+    expect(asked.whereType<CommitStagedRequest>().single.index, 'index-3');
     d.dispose();
   });
 
