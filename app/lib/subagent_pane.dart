@@ -8,6 +8,7 @@ import 'package:nushi/markdown.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/widgets.dart';
 
@@ -115,28 +116,19 @@ class SubagentPane extends StatelessWidget {
 
 /// The subagent's prompt in a box, folded to a few lines, then its model
 /// and state; and, when its steps weren't kept, a line saying so.
-class _Head extends StatefulWidget {
+class _Head extends StatelessWidget {
   const new(this.chat, this.s);
 
   final ChatState chat;
   final SubagentRun s;
 
   @override
-  State<_Head> createState() => _HeadState();
-}
-
-class _HeadState extends State<_Head> {
-  static const _folded = 5; // lines
-  bool _open = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final s = widget.s;
     final call = s.call;
     final small = theme.ui(t.textMuted, size: 12);
-    final runs = subagentModel(widget.chat, s);
+    final runs = subagentModel(chat, s);
     // A replayed subagent (the daemon didn't see it start) with no steps:
     // the agent didn't send them again.
     final unknown =
@@ -153,37 +145,11 @@ class _HeadState extends State<_Head> {
             Container(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
               decoration: box(t.borderSubtle, fill: t.raised),
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final style = theme.ui(t.text, size: 12.5);
-                  final painter = TextPainter(
-                    text: TextSpan(text: call.prompt, style: style),
-                    maxLines: _folded,
-                    textDirection: TextDirection.ltr,
-                  )..layout(maxWidth: box.maxWidth);
-                  final folds = painter.didExceedMaxLines;
-                  painter.dispose();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        call.prompt,
-                        style: style,
-                        maxLines: _open ? null : _folded,
-                        overflow: _open ? null : TextOverflow.fade,
-                      ),
-                      if (folds)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2),
-                          child: LinkText(
-                            _open ? 'Show less' : 'Show more',
-                            size: 12,
-                            onTap: () => setState(() => _open = !_open),
-                          ),
-                        ),
-                    ],
-                  );
-                },
+              child: FoldedText(
+                call.prompt,
+                style: theme.ui(t.text, size: 12.5),
+                folded: 5,
+                padding: const EdgeInsets.symmetric(vertical: 2),
               ),
             ),
           Padding(

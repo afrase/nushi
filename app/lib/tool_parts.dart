@@ -148,25 +148,17 @@ class ToolSection extends StatelessWidget {
 }
 
 /// Raw text from the agent (a call's input or output), in code type on a
-/// raised box, folded to [folded] lines with "Show all" when longer.
-class RawText extends StatefulWidget {
+/// raised box, folded to [folded] lines ([FoldedText]).
+class RawText extends StatelessWidget {
   const new(this.text, {super.key, this.folded = 4});
 
   final String text;
   final int folded;
 
   @override
-  State<RawText> createState() => _RawTextState();
-}
-
-class _RawTextState extends State<RawText> {
-  bool _open = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final style = theme.code(t.text, size: 12).copyWith(height: 1.35);
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
       decoration: BoxDecoration(
@@ -174,40 +166,72 @@ class _RawTextState extends State<RawText> {
         borderRadius: BorderRadius.circular(NushiTheme.control),
       ),
       child: Marks(
-        child: LayoutBuilder(
-          builder: (context, box) {
-            final painter = TextPainter(
-              text: TextSpan(text: widget.text, style: style),
-              maxLines: widget.folded,
-              textDirection: TextDirection.ltr,
-            )..layout(maxWidth: box.maxWidth);
-            final folds = painter.didExceedMaxLines;
-            painter.dispose();
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.text,
-                  style: style,
-                  maxLines: _open || !folds ? null : widget.folded,
-                  overflow: _open || !folds ? null : TextOverflow.fade,
-                ),
-                if (folds)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: LinkText(
-                      _open ? 'Show less' : 'Show all',
-                      size: 12,
-                      onTap: () => setState(() => _open = !_open),
-                    ),
-                  ),
-              ],
-            );
-          },
+        child: FoldedText(
+          text,
+          style: theme.code(t.text, size: 12).copyWith(height: 1.35),
+          folded: folded,
+          padding: const EdgeInsets.only(top: 2),
         ),
       ),
     );
   }
+}
+
+/// [text] folded to [folded] lines, with "Show all" under it when it's
+/// longer, and "Show less" once it's open; [padding] is the link's.
+class FoldedText extends StatefulWidget {
+  const new(
+    this.text, {
+    required this.style,
+    required this.folded,
+    required this.padding,
+    super.key,
+  });
+
+  final String text;
+  final TextStyle style;
+  final int folded;
+  final EdgeInsets padding;
+
+  @override
+  State<FoldedText> createState() => _FoldedTextState();
+}
+
+class _FoldedTextState extends State<FoldedText> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final painter = TextPainter(
+        text: TextSpan(text: widget.text, style: widget.style),
+        maxLines: widget.folded,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: box.maxWidth);
+      final folds = painter.didExceedMaxLines;
+      painter.dispose();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.text,
+            style: widget.style,
+            maxLines: _open || !folds ? null : widget.folded,
+            overflow: _open || !folds ? null : TextOverflow.fade,
+          ),
+          if (folds)
+            Padding(
+              padding: widget.padding,
+              child: LinkText(
+                _open ? 'Show less' : 'Show all',
+                size: 12,
+                onTap: () => setState(() => _open = !_open),
+              ),
+            ),
+        ],
+      );
+    },
+  );
 }
 
 /// A tool row's Preview: opens [path]'s preview, marked while it's the
