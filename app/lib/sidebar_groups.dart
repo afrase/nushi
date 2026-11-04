@@ -4,7 +4,6 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/card_list.dart' show reordered;
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
-import 'package:nushi/disclosure.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
@@ -193,7 +192,6 @@ class _HeaderState extends State<_Header> {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
-    final t = theme.t;
     final folder = widget.folder;
     final name = folder.isEmpty ? 'No folder' : folderParts(folder).$1;
     return Menu(
@@ -212,45 +210,29 @@ class _HeaderState extends State<_Header> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onSecondaryTapUp: (d) => open(d.localPosition),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 10, 6, 2),
-                child: Row(
-                  children: [
-                    IconTap.drawn(
-                      (size, color) => TurnChevron(
-                        open: !widget.collapsed,
-                        size: size,
-                        color: color,
+              child: GroupHeader(
+                title: name,
+                chats: widget.chats,
+                collapsed: widget.collapsed,
+                onToggle: _toggle,
+                titleWidget: folder.isEmpty
+                    ? _name(theme, name)
+                    : Tooltip(
+                        message: tildePath(folder),
+                        child: _name(theme, name),
                       ),
-                      tooltip: widget.collapsed ? 'Expand' : 'Collapse',
-                      size: 12,
-                      padding: 6,
-                      color: t.textMuted,
-                      onTap: _toggle,
+                trailing: Focus(
+                  canRequestFocus: false,
+                  skipTraversal: true,
+                  onFocusChange: (f) => setState(() => _focus = f),
+                  child: Opacity(
+                    opacity: _hover || _focus ? 1 : 0,
+                    child: IconTap(
+                      Icons.add,
+                      tooltip: 'New chat here',
+                      onTap: widget.onNew,
                     ),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: folder.isEmpty
-                          ? _name(theme, name)
-                          : Tooltip(
-                              message: tildePath(folder),
-                              child: _name(theme, name),
-                            ),
-                    ),
-                    Focus(
-                      canRequestFocus: false,
-                      skipTraversal: true,
-                      onFocusChange: (f) => setState(() => _focus = f),
-                      child: Opacity(
-                        opacity: _hover || _focus ? 1 : 0,
-                        child: IconTap(
-                          Icons.add,
-                          tooltip: 'New chat here',
-                          onTap: widget.onNew,
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -262,38 +244,20 @@ class _HeaderState extends State<_Header> {
 
   Widget _name(NushiTheme theme, String name) {
     final t = theme.t;
-    final chats = widget.chats;
-    return Row(
-      children: [
-        Flexible(
-          child: Text.rich(
+    return Text.rich(
+      TextSpan(
+        text: name,
+        children: [
+          if (widget.twin.isNotEmpty)
             TextSpan(
-              text: name,
-              children: [
-                if (widget.twin.isNotEmpty)
-                  TextSpan(
-                    text: '  · ${widget.twin}',
-                    style: theme.ui(t.textMuted, size: 12),
-                  ),
-              ],
+              text: '  · ${widget.twin}',
+              style: theme.ui(t.textMuted, size: 12),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.text, weight: FontWeight.w600),
-          ),
-        ),
-        if (widget.collapsed)
-          ListenableBuilder(
-            listenable: Listenable.merge([for (final c in chats) c.look]),
-            builder: (context, _) => switch (groupPhase(chats)) {
-              final phase? => Padding(
-                padding: const EdgeInsets.only(left: 5),
-                child: PhaseDot(phase),
-              ),
-              null => const SizedBox.shrink(),
-            },
-          ),
-      ],
+        ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.ui(t.text, weight: FontWeight.w600),
     );
   }
 }
