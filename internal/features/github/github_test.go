@@ -658,6 +658,33 @@ func TestFiles(t *testing.T) {
 	}
 }
 
+// TestFilesPastTheCache: a pull request whose texts pass the cache's 32 MB
+// (lockfiles, generated files) still gets every text it fetched, though
+// the cache drops its first ones before the answer is built.
+func TestFilesPastTheCache(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	_, _ = w.s.Inbox(ctx, "github.com", githubapi.InboxFilter{}, false)
+	c := w.clients["gho_gh"]
+	head := strings.Repeat("b", 40)
+	big := strings.Repeat("x", 900<<10) // under the 1 MB a file
+	for i := range 40 {
+		p := fmt.Sprintf("lock%d.json", i)
+		c.files = append(c.files, githubapi.File{Path: p, Status: "modified"})
+		c.blobs[githubapi.BlobAt{Commit: "base0", Path: p}] = githubapi.Blob{Found: true, Text: big}
+		c.blobs[githubapi.BlobAt{Commit: head, Path: p}] = githubapi.Blob{Found: true, Text: big + "y"}
+	}
+	files, err := w.s.Files(ctx, model.GitHubRef{Host: "github.com", Repo: "a/b", Number: 1}, strings.Repeat("a", 40), head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		if f.Old != big || f.New != big+"y" {
+			t.Fatalf("%s came back with a side empty (%d and %d bytes)", f.Path, len(f.Old), len(f.New))
+		}
+	}
+}
+
 func TestJobTail(t *testing.T) {
 	w := newWorld(t)
 	ref := model.GitHubRef{Host: "github.com", Repo: "a/b"}

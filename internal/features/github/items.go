@@ -108,9 +108,15 @@ func (s *Service) Files(ctx context.Context, ref model.GitHubRef, base, head str
 	}
 	type sides struct{ old, neu *githubapi.BlobAt }
 	want := make([]sides, len(files))
+	// texts are this call's own, read from the cache or fetched: the
+	// answer is built from them, not the cache, which a big pull request
+	// (or another window's) can empty before it is read.
+	texts := map[githubapi.BlobAt]githubapi.Blob{}
 	var ask []githubapi.BlobAt
 	need := func(at githubapi.BlobAt) *githubapi.BlobAt {
-		if !s.blobs.has(ref.Repo, at) {
+		if b, ok := s.blobs.get(ref.Repo, at); ok {
+			texts[at] = b
+		} else {
 			ask = append(ask, at)
 		}
 		return &at
@@ -129,6 +135,7 @@ func (s *Service) Files(ctx context.Context, ref model.GitHubRef, base, head str
 			return nil, err
 		}
 		for at, b := range got {
+			texts[at] = b
 			s.blobs.keep(ref.Repo, at, b)
 		}
 	}
@@ -142,7 +149,7 @@ func (s *Service) Files(ctx context.Context, ref model.GitHubRef, base, head str
 			if at == nil {
 				continue
 			}
-			b := s.blobs.get(ref.Repo, *at)
+			b := texts[*at]
 			*side = b.Text
 			if b.Skipped != "" {
 				fc.Skipped = b.Skipped
@@ -183,17 +190,11 @@ func blobKey(repo string, at githubapi.BlobAt) string {
 	return repo + "\x00" + at.Commit + "\x00" + at.Path
 }
 
-func (b *blobCache) has(repo string, at githubapi.BlobAt) bool {
+func (b *blobCache) get(repo string, at githubapi.BlobAt) (githubapi.Blob, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	_, ok := b.m[blobKey(repo, at)]
-	return ok
-}
-
-func (b *blobCache) get(repo string, at githubapi.BlobAt) githubapi.Blob {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.m[blobKey(repo, at)]
+	blob, ok := b.m[blobKey(repo, at)]
+	return blob, ok
 }
 
 func (b *blobCache) keep(repo string, at githubapi.BlobAt, blob githubapi.Blob) {
