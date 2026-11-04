@@ -281,15 +281,16 @@ Widget markdownImage(Uri uri, String? alt) {
   }
   if (uri.scheme == 'file' ||
       (uri.scheme.isEmpty && uri.path.startsWith('/'))) {
-    // Only a plain path: a host or a query isn't a local file (and
-    // toFilePath throws on them, which would break the whole message).
-    final local = uri.host.isEmpty && !uri.hasQuery && !uri.hasFragment;
+    // Only a plain path: a host, a query or an encoded slash (/a%2Fb.png)
+    // isn't a local file (and toFilePath throws on them, which would break
+    // the whole message).
+    final local =
+        uri.host.isEmpty &&
+        !uri.hasQuery &&
+        !uri.hasFragment &&
+        !uri.pathSegments.any((s) => s.contains('/'));
     if (local && !kIsWeb) {
-      try {
-        return _LocalImage(uri.toFilePath(), '[image: ${alt ?? uri}');
-      } on UnsupportedError {
-        // an encoded slash (/a%2Fb.png): no file path
-      }
+      return _LocalImage(uri.toFilePath(), '[image: ${alt ?? uri}');
     }
     return Text('[image: ${alt ?? uri} (not an image file Nushi reads)]');
   }
