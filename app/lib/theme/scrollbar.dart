@@ -112,17 +112,46 @@ class _MacScrollbarState extends RawScrollbarState<MacScrollbar> {
     _widen(false);
   }
 
+  // A thumb drag's last place, and the list's extent then.
+  Offset? _dragAt;
+  double? _dragExtent;
+
+  double? get _extent => switch (widget.controller) {
+    final c? when c.hasClients => c.position.maxScrollExtent,
+    _ => null,
+  };
+
   @override
   void handleThumbPressStart(Offset localPosition) {
     super.handleThumbPressStart(localPosition);
     _dragging = true;
+    _dragAt = localPosition;
+    _dragExtent = _extent;
     _widen(true);
+  }
+
+  /// A thumb drag goes from where its thumb is: RawScrollbar maps it from
+  /// where it started, against the extent at the time, so with more come
+  /// in above (a transcript's page, ADR 0026) the list would jump to where
+  /// that start falls now. When the extent changed since the last move,
+  /// the drag starts again where the pointer is.
+  @override
+  void handleThumbPressUpdate(Offset localPosition) {
+    if (_dragAt case final at? when _extent != _dragExtent) {
+      super.handleThumbPressEnd(at, Velocity.zero);
+      super.handleThumbPress();
+      super.handleThumbPressStart(at);
+    }
+    super.handleThumbPressUpdate(localPosition);
+    _dragAt = localPosition;
+    _dragExtent = _extent;
   }
 
   @override
   void handleThumbPressEnd(Offset localPosition, Velocity velocity) {
     super.handleThumbPressEnd(localPosition, velocity);
     _dragging = false;
+    _dragAt = _dragExtent = null;
     _widen(
       scrollbarPainter.hitTestInteractive(
         localPosition,

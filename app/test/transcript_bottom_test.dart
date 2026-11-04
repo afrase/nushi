@@ -1,14 +1,20 @@
 // The transcript above the composer (ADR 0026): the scrollbar runs the
 // pane's height beside both, but the list ends above the turn line, so a
-// selection dragged onto the composer scrolls it and its toolbar stays in
-// sight.
+// selection dragged onto the composer scrolls it, its toolbar stays in
+// sight, and the thumb dragged up through a page keeps what's read still.
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/scrollbar.dart';
+import 'package:nushi/transcript_pages.dart';
 import 'package:nushi/turn_status.dart';
 
 import 'fake_daemon.dart';
@@ -50,6 +56,20 @@ ScrollPosition _scroll(WidgetTester tester) => tester
           .first,
     )
     .position;
+
+Element _firstShown(WidgetTester tester) {
+  final top = tester.getRect(find.byType(SelectionArea)).top;
+  return find
+      .byType(ItemView)
+      .evaluate()
+      .firstWhere(
+        (e) =>
+            tester.getRect(find.byElementPredicate((x) => x == e)).top >= top,
+      );
+}
+
+double _topOf(WidgetTester tester, Element e) =>
+    tester.getRect(find.byElementPredicate((x) => x == e)).top;
 
 void main() {
   setUpAll(loadFonts);
@@ -110,4 +130,86 @@ void main() {
       await closeView(tester, d);
     }, variant: _mac);
   }
+
+  testWidgets('the thumb dragged up as a page lands keeps what shows', (
+    tester,
+  ) async {
+    final (d, paged) = await _window(tester, size: const Size(1400, 900));
+    final hold = paged.hold = Completer<void>();
+    final p = _scroll(tester);
+    p.jumpTo(p.viewportDimension * 0.6);
+    await tester.pump();
+    await tester.pump();
+    expect(paged.pages, isNotEmpty); // on its way, held
+    p.jumpTo(p.viewportDimension * 0.9);
+    await tester.pump();
+    final bar = find
+        .descendant(
+          of: find.byType(OverBottom),
+          matching: find.byType(MacScrollbar),
+        )
+        .first;
+    final box = tester.getRect(bar);
+    final painter =
+        tester
+                .widgetList<CustomPaint>(
+                  find.descendant(of: bar, matching: find.byType(CustomPaint)),
+                )
+                .first
+                .foregroundPainter!
+            as ScrollbarPainter;
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: box.center);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(Offset(box.right - 4, box.top + 60));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    Offset? on;
+    for (var y = 0.0; y < box.height && on == null; y++) {
+      if (painter.hitTestOnlyThumbInteractive(
+        Offset(box.width - 6, y),
+        PointerDeviceKind.mouse,
+      )) {
+        on = box.topLeft + Offset(box.width - 6, y + 2);
+      }
+    }
+    await mouse.moveTo(on!);
+    await tester.pump(const Duration(milliseconds: 300));
+    await mouse.down(on);
+    await tester.pump();
+    final seen = _firstShown(tester);
+    // What the drag scrolls (a layout's correction doesn't notify).
+    var px = p.pixels;
+    var user = 0.0;
+    void moved() {
+      user += p.pixels - px;
+      px = p.pixels;
+    }
+
+    p.addListener(moved);
+    for (var i = 0; i < 10; i++) {
+      if (i == 4) {
+        paged.hold = null;
+        hold.complete();
+        await tester.pump();
+        await tester.pump();
+      }
+      final top = _topOf(tester, seen);
+      px = p.pixels;
+      user = 0;
+      await mouse.moveBy(const Offset(0, -0.5));
+      await tester.pump();
+      // What shows moves down by what the drag scrolled up, a few pixels.
+      final by = _topOf(tester, seen) - top;
+      expect(by, inInclusiveRange(0, 40), reason: 'move $i');
+      expect(by + user, closeTo(0, 1), reason: 'move $i');
+    }
+    p.removeListener(moved);
+    expect(_chat(d).older, lessThan(1000));
+    await mouse.up();
+    await _settle(tester, 20);
+    await closeView(tester, d);
+  }, variant: _mac);
 }
+
+ChatState _chat(Daemon d) => d.chats['c']!;
