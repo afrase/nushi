@@ -29,11 +29,9 @@ type Trust struct{}
 // Key is what "Start anyway" for omp is kept under (folderfiles.Key).
 func (Trust) Key(folder string) string { return folderfiles.Key("omp", folder, files(folder)) }
 
-// Trusted says whether "Start anyway" covers folder as it is now.
-func (t Trust) Trusted(folder string, also []string) (bool, error) {
-	key := t.Key(folder)
-	return key != "" && slices.Contains(also, key), nil
-}
+// Trusted is false: omp keeps no trust record, and the trust feature
+// looks for Start anyway's key itself.
+func (Trust) Trusted(string, []string) (bool, error) { return false, nil }
 
 // Runs shows every file omp loads code or settings from for folder.
 func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {

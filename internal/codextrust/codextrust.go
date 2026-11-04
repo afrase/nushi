@@ -42,12 +42,9 @@ func (Trust) Key(folder string) string { return folderfiles.Key("codex", folder,
 // configFile is Codex's own config.
 func configFile() string { return filepath.Join(codex.Home(), "config.toml") }
 
-// Trusted says whether folder is trusted: by Codex, or by one of also,
-// keys Nushi was told to trust.
-func (t Trust) Trusted(folder string, also []string) (bool, error) {
-	if key := t.Key(folder); key != "" && slices.Contains(also, key) {
-		return true, nil
-	}
+// Trusted says whether Codex trusts folder (Start anyway's key is the
+// trust feature's to look for).
+func (Trust) Trusted(folder string, _ []string) (bool, error) {
 	var cfg struct {
 		Projects map[string]struct {
 			TrustLevel string `toml:"trust_level"`

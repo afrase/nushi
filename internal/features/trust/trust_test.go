@@ -21,15 +21,31 @@ func (a *agent) Runs(folder string) ([]model.FolderRun, string, error) {
 	}
 	return []model.FolderRun{{What: "MCP server x"}}, a.key, nil
 }
-func (a *agent) Key(string) string { return a.key }
-func (a *agent) Trusted(_ string, also []string) (bool, error) {
-	return a.trusted || slices.Contains(also, a.key), nil
-}
+func (a *agent) Key(string) string                      { return a.key }
+func (a *agent) Trusted(string, []string) (bool, error) { return a.trusted, nil }
 
 type store struct{ keys []string }
 
 func (s *store) TrustedFolders() ([]string, error) { return s.keys, nil }
 func (s *store) TrustFolder(k string) error        { s.keys = append(s.keys, k); return nil }
+
+// A folder the user started anyway, its key unchanged, shows no card, for
+// an agent whose own Trusted knows nothing of Nushi's keys.
+func TestCheckFindsStartAnywaysKey(t *testing.T) {
+	a, st := &agent{key: "k1"}, &store{}
+	s := New(map[string]Agent{"x": a}, st)
+	if runs, key, err := s.Check("x", "/f"); err != nil || len(runs) != 1 || key != "k1" {
+		t.Fatalf("runs %v, key %q, %v", runs, key, err)
+	}
+	st.keys = []string{"k1"}
+	if runs, key, err := s.Check("x", "/f"); err != nil || len(runs) != 0 || key != "" {
+		t.Errorf("a folder started anyway: runs %v, key %q, %v", runs, key, err)
+	}
+	a.key = ""
+	if runs, _, _ := s.Check("x", "/f"); len(runs) != 1 {
+		t.Error("a folder without a key was trusted")
+	}
+}
 
 // Start anyway keeps the key the card came with, only while the folder
 // still has it; a folder without one is never kept.

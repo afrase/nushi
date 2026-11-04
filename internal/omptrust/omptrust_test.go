@@ -32,12 +32,12 @@ func TestWhatOmpLoads(t *testing.T) {
 	if strings.Join(got, " ") != want || key == "" {
 		t.Errorf("shown %v, key %q\nwant %s", got, key, want)
 	}
-	if ok, _ := tr.Trusted(sub, []string{key}); !ok {
-		t.Error("Start anyway didn't take")
+	if tr.Key(sub) != key {
+		t.Error("the key changed with nothing changed")
 	}
 	testcheck.Write(t, filepath.Join(repo, ".omp", "config.yml"), "shellPath: /bin/evil")
-	if ok, _ := tr.Trusted(sub, []string{key}); ok {
-		t.Error("a file added since is trusted")
+	if tr.Key(sub) == key {
+		t.Error("a file added since kept the key")
 	}
 	testcheck.NoErr(t, os.Symlink(repo, filepath.Join(sub, ".codex")))
 	if _, key, _ := tr.Runs(sub); key != "" {

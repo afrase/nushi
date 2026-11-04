@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/afrase/nushi/internal/model"
@@ -24,6 +25,10 @@ type Agent interface {
 	Runs(folder string) (runs []model.FolderRun, key string, err error)
 	// Key is the key for folder as it is now.
 	Key(folder string) string
+	// Trusted says whether folder is trusted otherwise than by its key
+	// being one of also, which Check has looked for already: by the
+	// agent's own record (Claude's, Codex's), or by a key of also that
+	// covers more than one folder (Claude's, outside git).
 	Trusted(folder string, also []string) (bool, error)
 }
 
@@ -61,6 +66,9 @@ func (s *Service) Check(agent, folder string) ([]model.FolderRun, string, error)
 	also, err := s.store.TrustedFolders()
 	if err != nil {
 		return nil, "", err
+	}
+	if key != "" && slices.Contains(also, key) {
+		return nil, "", nil
 	}
 	if ok, err := a.Trusted(folder, also); ok || err != nil {
 		return nil, "", err

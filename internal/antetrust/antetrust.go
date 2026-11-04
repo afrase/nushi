@@ -26,11 +26,9 @@ type Trust struct{}
 // Key is what "Start anyway" for Ante is kept under (folderfiles.Key).
 func (Trust) Key(folder string) string { return folderfiles.Key("ante", folder, files(folder)) }
 
-// Trusted says whether "Start anyway" covers folder as it is now.
-func (t Trust) Trusted(folder string, also []string) (bool, error) {
-	key := t.Key(folder)
-	return key != "" && slices.Contains(also, key), nil
-}
+// Trusted is false: Ante keeps no trust record, and the trust feature
+// looks for Start anyway's key itself.
+func (Trust) Trusted(string, []string) (bool, error) { return false, nil }
 
 // Runs shows the folder's settings for Ante, if it has any.
 func (Trust) Runs(folder string) ([]model.FolderRun, string, error) {

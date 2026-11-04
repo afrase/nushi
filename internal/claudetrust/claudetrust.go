@@ -46,10 +46,7 @@ type Trust struct{}
 // main checkout; one with a .git file is a worktree of the repository it
 // names only when that repository names it back. Anything else, or a
 // repository that sets core.worktree, keys on the folder itself.
-func (Trust) Key(folder string) string {
-	_, key := git.TrustRoot(git.RealPath(folder))
-	return key
-}
+func (Trust) Key(folder string) string { return claudemcp.Project(folder) }
 
 // Trusted says whether folder is trusted: by Claude (its trust dialog was
 // accepted there), or by one of also, keys Nushi was told to trust.

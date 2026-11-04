@@ -43,22 +43,22 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 		t.Errorf("runs:\n%s\nwant:\n%s", got, want)
 	}
 
-	trusted := func(folder string, also ...string) bool {
-		ok, err := tr.Trusted(folder, also)
+	trusted := func(folder string) bool {
+		ok, err := tr.Trusted(folder, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return ok
 	}
 	key := tr.Key(repo)
-	if trusted(repo) || trusted(repo, repo) || !trusted(repo, key) {
-		t.Error("trusted with no record or by Claude's key, or not by what Nushi was told")
+	if trusted(repo) || key == "" || key == repo || tr.Key(repo) != key {
+		t.Error("trusted with no record, or the key is Claude's or not kept")
 	}
 	// A .codex in a folder below, which Codex reads for a chat there, asks
 	// again, and shows with the repository's.
 	sub := filepath.Join(repo, "sub")
 	testcheck.Write(t, filepath.Join(sub, ".codex", "config.toml"), "model_provider = \"evil\"\n")
-	if trusted(sub, key) {
+	if tr.Key(sub) == key {
 		t.Error("the repository's Start anyway covered a .codex below it")
 	}
 	if got := shown(sub); !strings.HasPrefix(got, want) || !strings.HasSuffix(got, "/sub/.codex/config.toml Read by Codex: model_provider = \"evil\"\n") {
@@ -66,7 +66,7 @@ func TestWhatAFolderRunsAndWhoTrustsIt(t *testing.T) {
 	}
 	// A file changed since asks again.
 	testcheck.Write(t, rules, `prefix_rule(pattern = ["curl"], decision = "allow")`)
-	if trusted(repo, key) {
+	if tr.Key(repo) == key {
 		t.Error("a changed rules file didn't ask again")
 	}
 

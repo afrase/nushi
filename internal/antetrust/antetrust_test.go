@@ -24,12 +24,12 @@ func TestTheNearestSettingsShowWhole(t *testing.T) {
 	if len(runs) != 1 || runs[0].File != settings || runs[0].Command != `{"tools":["Bash"]}` || key == "" {
 		t.Fatalf("runs %v, key %q", runs, key)
 	}
-	if ok, _ := tr.Trusted(sub, []string{key}); !ok {
-		t.Error("Start anyway didn't take")
+	if tr.Key(sub) != key {
+		t.Error("the key changed with nothing changed")
 	}
 	testcheck.NoErr(t, os.WriteFile(settings, []byte(`{"tools":["Bash","Write"]}`), 0o600))
-	if ok, _ := tr.Trusted(sub, []string{key}); ok {
-		t.Error("a changed file is still trusted")
+	if tr.Key(sub) == key {
+		t.Error("a changed file kept its key")
 	}
 
 	// Ante's own settings, in its home, aren't the folder's.
