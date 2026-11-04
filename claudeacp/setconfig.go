@@ -16,7 +16,7 @@ func (a *agent) SetSessionMode(ctx context.Context, req *acp.SetSessionModeReque
 	if err != nil {
 		return nil, err
 	}
-	if err := s.cfg.setMode(ctx, s.cs, claudeagent.PermissionMode(req.ModeID)); err != nil {
+	if err := s.cfg.setMode(ctx, claudeagent.PermissionMode(req.ModeID)); err != nil {
 		return nil, err
 	}
 	return &acp.SetSessionModeResponse{}, nil
@@ -40,13 +40,13 @@ func (a *agent) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionC
 	}
 	switch id := string(req.ConfigID); id {
 	case optMode:
-		err = s.cfg.setMode(ctx, s.cs, claudeagent.PermissionMode(value))
+		err = s.cfg.setMode(ctx, claudeagent.PermissionMode(value))
 	case optModel:
 		// The window is the new model's: asked for last, as
 		// claude-agent-acp asks, so the change's own requests come first.
-		err = s.cfg.setModel(ctx, s.cs, value, func() { s.seedWindow(ctx, 200_000) })
+		err = s.cfg.setModel(ctx, value, func() { s.seedWindow(ctx, 200_000) })
 	case optEffort, optFast, optAgent:
-		err = s.cfg.setFlag(ctx, s.cs, id, value)
+		err = s.cfg.setFlag(ctx, id, value)
 	default:
 		err = invalidParams("no config option %q", id)
 	}
@@ -56,16 +56,9 @@ func (a *agent) SetSessionConfigOption(ctx context.Context, req *acp.SetSessionC
 	return &acp.SetSessionConfigOptionResponse{ConfigOptions: s.cfg.options()}, nil
 }
 
-// claudeSettings are what changes claude's modes and options: its session.
-type claudeSettings interface {
-	SetPermissionMode(ctx context.Context, m claudeagent.PermissionMode) error
-	SetModel(ctx context.Context, model string) error
-	ApplyFlagSettings(ctx context.Context, settings map[string]any) error
-}
-
 // setMode switches claude's permission mode. A claude that refuses to
 // bypass permissions (it started without leave to) no longer offers it.
-func (c *config) setMode(ctx context.Context, claude claudeSettings, mode claudeagent.PermissionMode) error {
+func (c *config) setMode(ctx context.Context, mode claudeagent.PermissionMode) error {
 	c.changing.Lock()
 	defer c.changing.Unlock()
 	c.mu.Lock()
@@ -78,7 +71,7 @@ func (c *config) setMode(ctx context.Context, claude claudeSettings, mode claude
 	case same:
 		return nil
 	}
-	if err := claude.SetPermissionMode(ctx, mode); err != nil {
+	if err := c.claude.SetPermissionMode(ctx, mode); err != nil {
 		if ce := (*claudeagent.ControlError)(nil); errors.As(err, &ce) && ce.Code == "bypass_disabled" {
 			c.mu.Lock()
 			c.bypass = false
@@ -95,7 +88,7 @@ func (c *config) setMode(ctx context.Context, claude claudeSettings, mode claude
 // setModel switches claude's model, then runs changed, still one change
 // at a time. An effort the new model doesn't have goes back to the
 // default.
-func (c *config) setModel(ctx context.Context, claude claudeSettings, value string, changed func()) error {
+func (c *config) setModel(ctx context.Context, value string, changed func()) error {
 	c.changing.Lock()
 	defer c.changing.Unlock()
 	c.mu.Lock()
@@ -112,7 +105,7 @@ func (c *config) setModel(ctx context.Context, claude claudeSettings, value stri
 	if v == defaultValue {
 		model = "" // claude's default model
 	}
-	if err := claude.SetModel(ctx, model); err != nil {
+	if err := c.claude.SetModel(ctx, model); err != nil {
 		return refused("the model", err)
 	}
 	c.mu.Lock()
@@ -125,7 +118,7 @@ func (c *config) setModel(ctx context.Context, claude claudeSettings, value stri
 	c.mu.Unlock()
 	defer changed()
 	if unpin {
-		if err := claude.ApplyFlagSettings(ctx, c.effortSettings(defaultValue)); err != nil {
+		if err := c.claude.ApplyFlagSettings(ctx, c.effortSettings(defaultValue)); err != nil {
 			c.log.Info("putting the effort back to the default", "err", err)
 		}
 	}
@@ -134,7 +127,7 @@ func (c *config) setModel(ctx context.Context, claude claudeSettings, value stri
 
 // setFlag sets the effort, fast mode or the agent, each a flag setting of
 // claude's. The option must be offered, and the value one of its own.
-func (c *config) setFlag(ctx context.Context, claude claudeSettings, id, value string) error {
+func (c *config) setFlag(ctx context.Context, id, value string) error {
 	c.changing.Lock()
 	defer c.changing.Unlock()
 	c.mu.Lock()
@@ -170,7 +163,7 @@ func (c *config) setFlag(ctx context.Context, claude claudeSettings, id, value s
 	case optAgent:
 		flags = map[string]any{"agent": orNull(value)}
 	}
-	if err := claude.ApplyFlagSettings(ctx, flags); err != nil {
+	if err := c.claude.ApplyFlagSettings(ctx, flags); err != nil {
 		return refused("the "+id, err)
 	}
 	c.mu.Lock()

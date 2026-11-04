@@ -39,7 +39,8 @@ const defaultValue = "default"
 type config struct {
 	send     func(acp.SessionUpdate) // to the client, on the session
 	log      *slog.Logger
-	changing sync.Mutex // one change of the modes and options at a time, claude's answer included
+	claude   *claudeagent.Session // what changes claude's modes and options
+	changing sync.Mutex           // one change of the modes and options at a time, claude's answer included
 
 	mu        sync.Mutex
 	mode      claudeagent.PermissionMode

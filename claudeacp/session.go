@@ -108,7 +108,7 @@ func (a *agent) start(ctx context.Context, id string, o claudeagent.Options) (*s
 		return nil, a.startError(o.Resume, o.Cwd, err)
 	}
 	s.cs = cs
-	s.cfg.send, s.cfg.log = s.update, s.log
+	s.cfg.send, s.cfg.log, s.cfg.claude = s.update, s.log, cs
 	s.cfg.init(o, cs.Init(), a.clientCaps().booleans)
 	if ir := cs.Init(); ir != nil {
 		s.cmds.list = ir.Commands
