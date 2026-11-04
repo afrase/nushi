@@ -14,7 +14,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// The phone's app (ADR 0054): pairing until paired, then the chats.
-/// Light or dark as the system is.
+/// Light or dark as the system is, in the theme picked (ADR 0086).
 class PhoneApp extends StatefulWidget {
   const new(this.phone, {super.key});
 
@@ -102,13 +102,21 @@ class _PhoneAppState extends State<PhoneApp> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: widget.phone.theme,
+    builder: (context, theme, _) => _app(theme),
+  );
+
+  Widget _app(ColorTheme theme) => MaterialApp(
     navigatorKey: _navigator,
     navigatorObservers: [_history],
     title: 'Nushi',
     debugShowCheckedModeBanner: false,
-    theme: _phone(const NushiTheme(Tokens.light).toThemeData()),
-    darkTheme: _phone(const NushiTheme(Tokens.dark).toThemeData()),
+    theme: _phone(NushiTheme.forTheme(theme, Brightness.light)),
+    darkTheme: _phone(NushiTheme.forTheme(theme, Brightness.dark)),
+    // The theme kept is read with the pairing, as the chats first show:
+    // no fade from Nushi's into it.
+    themeAnimationDuration: Duration.zero,
     // The Mac's transcript and controls are drawn for a desk: larger text,
     // and targets for a finger, on a phone. Every screen, dialog and sheet
     // keeps clear of the on-screen keyboard.

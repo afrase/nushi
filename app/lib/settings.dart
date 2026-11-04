@@ -18,8 +18,9 @@ import 'package:nushi/file_mode.dart';
 /// groups' order and which are collapsed, each project's chats' order,
 /// whether Pinned is collapsed, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
-/// and Dock badge, the appearance, whether the composer checks spelling,
-/// and the newer release whose toast was dismissed. Each is a [Pref].
+/// and Dock badge, the appearance and the color theme, whether the
+/// composer checks spelling, and the newer release whose toast was
+/// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide: an older `worktrees` or `subagentWide` key is ignored, and
 /// dropped by the next save.
@@ -178,6 +179,10 @@ final appearance = Pref<ThemeMode>(
   (v) => ThemeMode.values.asNameMap()[v] ?? ThemeMode.system,
   write: (mode) => mode.name,
 );
+
+/// The color theme (Settings › General's Theme, ADR 0086): a built-in's
+/// id, or `custom:` and a theme file's name; Nushi's unless picked.
+final Pref<String> colorTheme = _plain('theme', 'nushi');
 
 /// The Mac's notifications (`alerts.dart`), each kind on or off: a chat
 /// needs you (a permission prompt or a question), a turn ends, a turn

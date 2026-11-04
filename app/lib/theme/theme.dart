@@ -2,9 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/theme/scrollbar.dart';
+import 'package:nushi/theme/themes.dart';
 import 'package:nushi/theme/tokens.dart';
 
+export 'diff_colors.dart';
 export 'scrollbar.dart';
+export 'terminal_colors.dart';
+export 'themes.dart';
 export 'tokens.dart';
 
 /// A box outlined in [border], filled with [fill], its corners rounded.
@@ -42,11 +46,18 @@ Widget framed({
 
 /// Carries the [Tokens] and the fonts to widgets: `NushiTheme.of(context)`.
 /// Material's theme is derived from the tokens, never the other way round.
+/// [dark] is the theme's dark set whatever the appearance, for what's dark
+/// in both (the pill over a selection).
 @immutable
 class NushiTheme extends ThemeExtension<NushiTheme> {
-  const new(this.t);
+  const new(this.t, {this._dark});
 
   final Tokens t;
+  final Tokens? _dark;
+
+  /// The theme's dark set: [t] when it's dark, Nushi's unless given.
+  Tokens get dark =>
+      _dark ?? (t.brightness == Brightness.dark ? t : Tokens.dark);
 
   static const uiFont = 'IBM Plex Sans';
   static const codeFont = 'JetBrains Mono';
@@ -88,12 +99,16 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   );
 
   @override
-  NushiTheme copyWith({Tokens? t}) => NushiTheme(t ?? this.t);
+  NushiTheme copyWith({Tokens? t}) => NushiTheme(t ?? this.t, dark: _dark);
 
   // Light and dark switch at once.
   @override
   NushiTheme lerp(NushiTheme? other, double t) =>
       t < 0.5 || other == null ? this : other;
+
+  /// Material's theme for [theme]'s set for [brightness].
+  static ThemeData forTheme(ColorTheme theme, Brightness brightness) =>
+      NushiTheme(theme.of(brightness), dark: theme.dark).toThemeData();
 
   ThemeData toThemeData() {
     final scheme = ColorScheme(

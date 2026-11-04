@@ -37,6 +37,11 @@ final class PhonePlatform {
     drafts = null;
   }
 
+  /// The theme's id as [saveTheme] kept it.
+  String? theme;
+  Future<String?> loadTheme() async => theme;
+  Future<void> saveTheme(String id) async => theme = id;
+
   /// The chats' drafts as [saveDrafts] kept them.
   String? drafts;
   Future<String?> loadDrafts() async => drafts;

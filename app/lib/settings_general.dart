@@ -11,6 +11,7 @@ import 'package:nushi/login_item.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
+import 'package:nushi/settings_theme.dart';
 import 'package:nushi/settings_updates.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
@@ -32,10 +33,10 @@ const _sleepAfter = {
 
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
-/// Settings › General: the appearance, when idle chats sleep, whether the
-/// composer checks spelling, the Mac's notifications, whether the daemon
-/// checks for updates, and whether it starts at login (the packaged app's,
-/// for the usual data folder).
+/// Settings › General: the appearance and the theme, when idle chats
+/// sleep, whether the composer checks spelling, the Mac's notifications,
+/// whether the daemon checks for updates, and whether it starts at login
+/// (the packaged app's, for the usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
   const new({
@@ -54,6 +55,7 @@ class GeneralSection extends StatelessWidget {
     title: 'General',
     children: [
       const _Appearance(),
+      const ThemeGroup(),
       if (settings?.sleepAfterMinutes case final sleep?)
         SettingsGroup(
           title: 'Chats',

@@ -8,6 +8,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - **The sidebar** lists Pinned, then the projects and their chats. Its foot has Jira, GitHub and Settings. ⌘\ or the button at its top hides it, and the main area takes the window; the button at the start of each header, ⌘\, the palette or View › Show Sidebar brings it back. Nushi remembers which, and the sidebar's width. Hidden, ⌘K still goes to any chat, Jira, GitHub and Settings, and a chat's color is a dot in its header.
 - **Settings** (⌘,) takes the chat's place beside the sidebar, its sections in a list on the left. Esc or Close goes back ([ADR 0053](adr/0053-settings-is-a-view.md)). Settings › General's Appearance (Light, Dark, or as the system; also in the View menu) is remembered.
 - **Chat width.** Settings › General or the palette (⌘K): a centered column, or the whole width of the window.
+- **Themes.** Settings › General's Theme picks the palette, each theme shown by its key colors, dark and light; Appearance still picks which of the two shows. A pick repaints at once and is remembered. Built in: Nushi, Vivid (bolder fills), Solarized, Nord and Catppuccin. The phone's Settings picks one of these for the phone. See [Themes](#themes) for your own.
 - **Jump to latest.** Scrolled up, a chip over the transcript's bottom right takes you back down, and the chat follows the agent again. It glides the last screen, however far up you were, so a long chat is as quick as a short one; scroll to stop it. With Reduce Motion it jumps.
 - **Around the composer**, nothing jumps: the turn line grows in as a turn starts and folds away after it, the lines over the box (the plan, queued messages, an error, completions, attachments) grow in and fold away, a queued message's pill pops in and fades where it was as it goes, and the box's buttons pop in. The box itself grows a line at a time at once, as you type. With Reduce Motion they all come and go at once.
 - **The plan.** An agent that keeps a to-do list shows it in the transcript as a checklist ("Plan · 1 of 5 done"), kept up to date in place through the turn, and a later turn gets a card of its own only once the plan changes in it; while the agent works, the line over the box says the step it's on ("1/5 Merging the duplicates"). A step done while you watch draws its check as its words dim, the step being worked on shines beside a working ring, and the line over the box crossfades to the next step; a chat you open shows its plan still, and with Reduce Motion only the colors change. Claude keeps one only with its todo tools on: Nushi turns them on (`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in its environment) unless your shell's environment sets the variable, so `CLAUDE_CODE_ENABLE_TODO_TOOLS=0` there keeps them off.
@@ -21,6 +22,23 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - **Trust.** Before an agent starts in a folder that brings code of its own (hooks, MCP servers, extensions), a trust card shows that code. Going elsewhere while it asks is a no, and a bar over the app says what didn't start ("Didn't start Claude in site: its code wasn't approved.").
 - **Motion.** The sidebar, the details panel, a side chat and the side panes slide in from their edge and back out (the sidebar's button moving with it between its header and the traffic lights, and the header's title with its edge), and the chat's text glides to its new place beside them (in a window too narrow for its column it re-wraps where it goes instead). The terminal slides up from under the chat, the bars over the app slide down, the update toast rises in, and a tab's line slides to the tab picked; what shows changes at once, and nothing waits for the motion. With Reduce Motion (System Settings › Accessibility › Display) everything is where it goes at once.
 - **The status bar**, along the window's bottom, counts working, awake and sleeping agents and shows the memory Nushi takes. A click lists each awake chat's.
+
+## Themes
+
+A theme of your own is a JSON file in the `themes` folder of Nushi's data folder (`~/Library/Application Support/Nushi/themes`). Settings › General's Theme has **New from** (writes the current theme with every color, picks it, and shows the file in Finder) and **Show folder**. Edit the file and the app repaints as you save ([ADR 0086](adr/0086-color-themes.md)).
+
+```json
+{
+  "name": "Midnight",
+  "from": "nord",
+  "dark": { "base": "#1B1F27", "accent": "#5E81AC", "syntax.keyword": "#81A1C1" },
+  "light": { "accentSoft": "#D2DEEC" }
+}
+```
+
+- `from` is the built-in it starts from (`nushi`, `vivid`, `solarized`, `nord`, `catppuccin`; Nushi's if it's left out); what the file doesn't name is that theme's. `name` is what Settings shows (the file's name if left out).
+- `dark` and `light` map token names to `#RRGGBB` or `#AARRGGBB` (the alpha first). The names are `theme/tokens.dart`'s (`base`, `raised`, `text`, `toolTint`, `subagentAccent`, `needs`…), then `avatars.<blue|teal|violet|amber|rust|magenta|slate|green>` (the chat colors), `syntax.<keyword|string|comment|…>`, `terminal.<black|red|…|brightWhite>` and `diff.<insertedLine|deletedWord|…>`. A file from New from lists them all.
+- A key that's no token, a value that's no color, and a file that isn't JSON each get a line under the themes in Settings; the rest still applies. A pair that reads under AA (text under 4.5:1 on a fill it sits on, a mark under 3:1) gets a warning line naming it; the theme still works.
 
 ## Starting and arranging chats
 

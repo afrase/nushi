@@ -205,6 +205,18 @@ final class PhonePlatform {
     );
   }
 
+  /// The theme picked (its id), the record "theme": kept when the Mac is
+  /// forgotten, as it's this device's.
+  Future<String?> loadTheme() async {
+    final v = await _run('readonly', (s) => s.get('theme'.toJS));
+    return v != null && v.isA<JSString>() ? (v as JSString).toDart : null;
+  }
+
+  /// Keeps [id] as the theme picked.
+  Future<void> saveTheme(String id) async {
+    await _run('readwrite', (s) => s.put(id.toJS, 'theme'.toJS));
+  }
+
   /// The page's origin's host, to tell a pairing link for another relay.
   String get host => web.window.location.host;
 

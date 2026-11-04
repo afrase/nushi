@@ -1,0 +1,101 @@
+import 'dart:math';
+
+import 'package:flutter/widgets.dart';
+
+import 'package:nushi/theme/theme_file.dart';
+import 'package:nushi/theme/tokens.dart';
+
+/// The WCAG contrast of [a] and [b].
+double contrast(Color a, Color b) {
+  final (x, y) = (a.computeLuminance(), b.computeLuminance());
+  return (max(x, y) + 0.05) / (min(x, y) + 0.05);
+}
+
+/// The pairs of [t] that read under what the built-in themes are held to
+/// (`tokens_test`, `chat_colors_test`, `code_ink_test`): text AA (4.5:1)
+/// on every fill it sits on, a mark 3:1. Each a line naming the pair, for
+/// a custom theme's warning in Settings; the worst first.
+List<String> contrastWarnings(Tokens t) {
+  Color on(Color tint, Color surface) => Color.alphaBlend(tint, surface);
+  final rows = {
+    'raised': t.raised,
+    'a hovered row': on(t.hover, t.raised),
+    'selected': t.selected,
+    'accentSoft': t.accentSoft,
+    'base': t.base,
+  };
+  final tints = {
+    'toolTint': t.toolTint,
+    'subagentTint': t.subagentTint,
+    'findingsTint': t.findingsTint,
+    'needsSoft': t.needsSoft,
+    'doneSoft': t.doneSoft,
+    'crashedSoft': t.crashedSoft,
+  };
+  final findings = on(t.findingsTint, t.base);
+  final pairs = <(String, Color, String, Color, double)>[
+    for (final (ink, c) in [
+      ('text', t.text),
+      ('textSecondary', t.textSecondary),
+      ('textMuted', t.textMuted),
+    ])
+      for (final MapEntry(key: f, value: b) in {...rows, ...tints}.entries)
+        (ink, c, f, b, 4.5),
+    for (final (ink, c) in [
+      ('needs', t.needs),
+      ('done', t.done),
+      ('running', t.running),
+      ('crashed', t.crashed),
+      ('link', t.link),
+      ('accentInk', t.accentInk),
+    ])
+      for (final MapEntry(key: f, value: b) in rows.entries)
+        (ink, c, f, b, 4.5),
+    for (final MapEntry(key: f, value: b) in rows.entries)
+      ('idle', t.idle, f, b, 3),
+    ('needs', t.needs, 'needsSoft', t.needsSoft, 4.5),
+    ('done', t.done, 'doneSoft', t.doneSoft, 4.5),
+    ('crashed', t.crashed, 'crashedSoft', t.crashedSoft, 4.5),
+    ('userBandText', t.userBandText, 'userBand', t.userBand, 4.5),
+    ('userBandMuted', t.userBandMuted, 'userBand', t.userBand, 4.5),
+    ('subagentAccent', t.subagentAccent, 'subagentTint', t.subagentTint, 4.5),
+    ('findingsAccent', t.findingsAccent, 'findingsTint', t.findingsTint, 4.5),
+    ('toolAccent', t.toolAccent, 'toolTint', t.toolTint, 3),
+    ('onAccent', t.onAccent, 'accent', t.accent, 4.5),
+    for (final (i, c) in t.avatars.indexed)
+      for (final MapEntry(key: f, value: b) in rows.entries)
+        ('avatars.${avatarNames[i]}', c, f, b, 3),
+    for (final (f, b) in [
+      ('base', t.base),
+      ('raised', t.raised),
+      ('codeBlock', t.codeBlock),
+      ('findingsTint', findings),
+      ('a hovered row', on(t.hover, t.raised)),
+      ('selected', t.selected),
+    ])
+      (
+        'inlineCodeText',
+        t.inlineCodeText,
+        '$f under inlineCode',
+        on(t.inlineCode, b),
+        4.5,
+      ),
+    (
+      'inlineCodeText',
+      t.inlineCodeText,
+      'userBand under userBandCode',
+      on(t.userBandCode, t.userBand),
+      4.5,
+    ),
+  ];
+  final low = [
+    for (final (ink, c, fill, b, floor) in pairs)
+      if (contrast(c, b) case final r when r < floor) (r, ink, fill, floor),
+  ]..sort((x, y) => x.$1.compareTo(y.$1));
+  return [
+    for (final (r, ink, fill, floor) in low)
+      '$ink on $fill: ${r.toStringAsFixed(2)}:1, under ${_floor(floor)}:1',
+  ];
+}
+
+String _floor(double f) => f == 3 ? '3' : '4.5';

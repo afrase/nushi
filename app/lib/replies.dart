@@ -187,7 +187,7 @@ class SelectionToolbar extends StatelessWidget {
     final fg = t.selectionBarText;
     Widget action(String label, VoidCallback run) => Theme(
       // The pill is dark in both themes, so its hover is the dark theme's.
-      data: const NushiTheme(Tokens.dark).toThemeData(),
+      data: NushiTheme(theme.dark, dark: theme.dark).toThemeData(),
       child: Tap(
         onTap: run,
         radius: 12, // a whole round end, inset evenly in the pill's

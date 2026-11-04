@@ -14,6 +14,7 @@ import 'package:nushi/phone/phone_drafts.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/remote.dart';
+import 'package:nushi/theme/themes.dart';
 import 'package:nushi/widgets.dart' show errorText;
 import 'package:remote_transport/remote_transport.dart' as rt;
 
@@ -80,6 +81,20 @@ class Phone extends ChangeNotifier {
   /// Whether notifications are on here, as the browser says.
   PushState push = PushState.off;
 
+  /// The color theme, one of the built-ins (ADR 0086): this device's own,
+  /// kept in the browser's storage, read before anything shows.
+  final theme = ValueNotifier<ColorTheme>(nushiTheme);
+
+  /// Picks [t] and keeps it.
+  Future<void> pickTheme(ColorTheme t) async {
+    theme.value = t;
+    try {
+      await platform.saveTheme(t.id);
+    } on Object {
+      // Not kept; it still shows until the page reloads.
+    }
+  }
+
   /// Reads the stored pairing and, if there's one, connects.
   Future<void> start() async {
     platform
@@ -112,6 +127,13 @@ class Phone extends ChangeNotifier {
       }
     } on Object {
       // Nothing usable kept: pair again.
+    }
+    try {
+      if (await platform.loadTheme() case final id?) {
+        theme.value = builtInTheme(id) ?? nushiTheme;
+      }
+    } on Object {
+      // Nushi's, then.
     }
     loaded = true;
     if (paired != null) _connect(rt.RelayTransport(paired!, _key!));

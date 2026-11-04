@@ -1,14 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/remote.dart' show keyFingerprint;
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/theme_strip.dart';
 
-/// The phone's settings: the relay, this device's name, notifications, and
-/// Forget this Mac.
+/// The phone's settings: the relay, this device's name, notifications, the
+/// theme, and Forget this Mac.
 class SettingsScreen extends StatelessWidget {
   const new(this.phone, {super.key});
 
@@ -90,6 +92,8 @@ class SettingsScreen extends StatelessWidget {
                     ? (on) => unawaited(_push(context, on: on))
                     : null,
               ),
+              const PhoneHeading('Theme'),
+              _Themes(phone),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
                 child: PhoneButton(
@@ -133,6 +137,60 @@ class _Line extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The built-in themes (ADR 0086), each its name and its key colors in the
+/// phone's brightness, the one picked checked; a tap picks one at once.
+class _Themes extends StatelessWidget {
+  const new(this.phone);
+
+  final Phone phone;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    return ValueListenableBuilder(
+      valueListenable: phone.theme,
+      builder: (context, picked, _) => Column(
+        children: [
+          for (final c in builtInThemes)
+            Semantics(
+              selected: c.id == picked.id,
+              child: Pressable(
+                onTap: () => unawaited(phone.pickTheme(c)),
+                builder: (context, look) => Container(
+                  constraints: const BoxConstraints(minHeight: touch),
+                  color: look.hover ? t.hover : null,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    spacing: 12,
+                    children: [
+                      SizedBox(
+                        width: 110,
+                        child: Text(c.name, style: phoneText(context)),
+                      ),
+                      Expanded(
+                        child: ThemeStrip(
+                          c.of(t.brightness),
+                          outline: t.borderStrong,
+                          height: 18,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 22,
+                        child: c.id == picked.id
+                            ? Icon(Icons.check, size: 20, color: t.accentInk)
+                            : null,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

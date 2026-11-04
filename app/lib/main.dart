@@ -39,12 +39,16 @@ import 'package:nushi/slides.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/theme_files.dart';
 import 'package:nushi/trust_card.dart';
 import 'package:nushi/update_toast.dart';
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
   catchErrors();
+  themeFiles
+    ..load()
+    ..watch();
   runApp(
     NushiApp(
       daemon: Daemon(drafts: Drafts(DraftFiles(dataDir))),
@@ -214,15 +218,17 @@ class _NushiAppState extends State<NushiApp> {
       // The shown chat's actions, as its ⋯ menu has them.
       PlatformMenu(label: 'Chat', menus: _items(ActMenu.chat)),
     ],
-    child: ValueListenableBuilder(
-      valueListenable: appearance,
-      builder: (context, mode, home) => MaterialApp(
+    // The appearance picks the light or dark set, the theme the palette
+    // (ADR 0086); a change to either, or to the theme's file, repaints.
+    child: ListenableBuilder(
+      listenable: Listenable.merge([appearance, colorTheme, themeFiles]),
+      builder: (context, home) => MaterialApp(
         navigatorKey: _navigator,
         title: 'Nushi',
         debugShowCheckedModeBanner: false,
-        theme: const NushiTheme(Tokens.light).toThemeData(),
-        darkTheme: const NushiTheme(Tokens.dark).toThemeData(),
-        themeMode: mode,
+        theme: NushiTheme.forTheme(pickedTheme(), Brightness.light),
+        darkTheme: NushiTheme.forTheme(pickedTheme(), Brightness.dark),
+        themeMode: appearance.value,
         scrollBehavior: const NativeScroll(),
         // The menu's keys don't reach the menu while Flutter has the keys:
         // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,

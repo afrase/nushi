@@ -17,6 +17,7 @@ import 'package:nushi/pull_cache.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme_files.dart';
 
 import 'harness.dart';
 
@@ -29,8 +30,8 @@ import 'harness.dart';
 /// one frame and pumpAndSettle settles while a call runs; the app's clock
 /// stands at [fixtureNow], so an age a golden shows never moves. No test
 /// sees what another left: the app's prefs as at launch, no pull request
-/// read, no agents, review comments or drafts, remote state or clones
-/// known.
+/// read, no agents, review comments or drafts, remote state, clones or
+/// theme files known.
 /// The test process's data folder goes when its tests end.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
@@ -54,6 +55,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     remoteState.value = null;
     githubFolders.value = {};
     revealWidget.value = null;
+    unawaited(themeFiles.forget());
   });
   tearDownAll(() {
     final dir = Directory(dataDir);

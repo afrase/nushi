@@ -10,6 +10,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/phone/settings_screen.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -122,6 +123,17 @@ void main() {
     final (phone, platform) = await _app(tester);
     await tester.tap(find.bySemanticsLabel('Settings'));
     await tester.pumpAndSettle();
+    // Under the themes, past a small window's bottom.
+    await tester.scrollUntilVisible(
+      find.text('Forget this Mac'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(SettingsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(find.text('Forget this Mac'));
     await tester.pumpAndSettle();
     expect(find.text('Forget this Mac?'), findsOneWidget);
