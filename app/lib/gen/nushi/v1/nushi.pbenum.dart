@@ -46,7 +46,8 @@ class ItemKind extends $pb.ProtobufEnum {
   /// How a turn ended when it didn't end normally, or an error: status is
   /// "cancelled", "refusal", "max_tokens", "max_turn_requests", "turn_failed"
   /// (the agent answered the prompt with an error; while last in the
-  /// transcript the app offers Try again, which sends the last user message
+  /// transcript the app offers Continue, which sends "Continue.", when the
+  /// turn got somewhere, else Try again, which sends the last user message
   /// again) or "error" (anything else that went wrong), and text says it in
   /// words. A reopen that failed has one notice, which
   /// goes once the chat runs again: "not_ready" (its agent isn't set up or

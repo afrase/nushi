@@ -14664,6 +14664,7 @@ class Item extends $pb.GeneratedMessage {
     $core.String? input,
     $core.String? rawOutput,
     $core.bool? forkable,
+    $core.bool? steered,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -14702,6 +14703,7 @@ class Item extends $pb.GeneratedMessage {
     if (input != null) result.input = input;
     if (rawOutput != null) result.rawOutput = rawOutput;
     if (forkable != null) result.forkable = forkable;
+    if (steered != null) result.steered = steered;
     return result;
   }
 
@@ -14763,6 +14765,7 @@ class Item extends $pb.GeneratedMessage {
     ..aOS(34, _omitFieldNames ? '' : 'input')
     ..aOS(35, _omitFieldNames ? '' : 'rawOutput')
     ..aOB(36, _omitFieldNames ? '' : 'forkable')
+    ..aOB(37, _omitFieldNames ? '' : 'steered')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -15126,6 +15129,18 @@ class Item extends $pb.GeneratedMessage {
   $core.bool hasForkable() => $_has(35);
   @$pb.TagNumber(36)
   void clearForkable() => $_clearField(36);
+
+  /// For a user message: it was handed into a turn already running (the
+  /// agent was steered), not the prompt a turn began with; kept in Nushi's
+  /// copy, unknown in a replay.
+  @$pb.TagNumber(37)
+  $core.bool get steered => $_getBF(36);
+  @$pb.TagNumber(37)
+  set steered($core.bool value) => $_setBool(36, value);
+  @$pb.TagNumber(37)
+  $core.bool hasSteered() => $_has(36);
+  @$pb.TagNumber(37)
+  void clearSteered() => $_clearField(37);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when

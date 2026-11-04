@@ -328,6 +328,10 @@ type Item struct {
 	// Rewindable says a rewind to it can fork there (or it is the first).
 	ForkAt     string
 	Rewindable bool
+	// Steered says a user message was handed into a turn already running
+	// (the agent was steered), not the prompt a turn began with. Only
+	// Nushi's copy knows it: a replay doesn't say.
+	Steered bool `json:",omitzero"`
 	// Sent is when a message was sent: a user message through Nushi, an
 	// agent's as it began to arrive, else what the replay (SentMeta) or
 	// the agent's own files (chats' MessageDater) say. Zero when not known.

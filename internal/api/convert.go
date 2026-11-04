@@ -94,7 +94,7 @@ func itemProto(it *model.Item) *nushiv1.Item {
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool, ForkAt: it.ForkAt,
 		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, ToSubagentName: it.ToSubagentName,
 		ToSubagent: it.ToSubagent, ToSubagentState: it.ToSubagentState, PassedOnBy: it.PassedOnBy, ToSubagentStop: it.ToSubagentStop,
-		Rewindable: it.Rewindable, Forkable: chats.Forkable(*it), Report: it.Report, Sent: unixMs(it.Sent),
+		Rewindable: it.Rewindable, Steered: it.Steered, Forkable: chats.Forkable(*it), Report: it.Report, Sent: unixMs(it.Sent),
 		Input: it.Input, RawOutput: it.RawOutput}
 	if sh := it.BackgroundCommand; sh != nil {
 		out.BackgroundCommand = &nushiv1.BackgroundCommand{Id: sh.ID, State: sh.State, Started: unixMs(sh.Started), Ended: unixMs(sh.Ended), Output: sh.Output, End: sh.End}

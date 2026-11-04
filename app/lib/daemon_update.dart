@@ -88,14 +88,16 @@ TurnRetry? failedTurnRetry(ChatState chat, Item notice) {
 /// …" does), a thought, a tool call (a subagent's start among them), a
 /// plan, a permission prompt or a question; at the top level, and not a
 /// subagent's report, since a subagent started earlier may add those to
-/// any turn. Notices aren't the agent's. It reads only what a replay keeps
-/// too (kinds and text, no times or live state), so it holds after the
-/// daemon restarts; a steered message counts as the last message.
+/// any turn. Notices aren't the agent's. A message steered into the turn
+/// is part of it: the turn's work before it counts, and the agent has the
+/// message already. It reads only what a reopen keeps too (kinds, text and
+/// Nushi's copy's steered mark, no times or live state), so it holds after
+/// the daemon restarts.
 bool madeProgress(List<Item> items, Item notice) {
   for (final it in items.reversed.skip(1)) {
     if (it.parent.isNotEmpty || it.report) continue;
     switch (it.kind) {
-      case ItemKind.ITEM_KIND_USER_MESSAGE:
+      case ItemKind.ITEM_KIND_USER_MESSAGE when !it.steered:
         return false;
       case ItemKind.ITEM_KIND_AGENT_MESSAGE:
         final text = it.text.trim();

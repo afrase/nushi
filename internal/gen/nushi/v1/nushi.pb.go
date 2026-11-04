@@ -42,7 +42,8 @@ const (
 	// How a turn ended when it didn't end normally, or an error: status is
 	// "cancelled", "refusal", "max_tokens", "max_turn_requests", "turn_failed"
 	// (the agent answered the prompt with an error; while last in the
-	// transcript the app offers Try again, which sends the last user message
+	// transcript the app offers Continue, which sends "Continue.", when the
+	// turn got somewhere, else Try again, which sends the last user message
 	// again) or "error" (anything else that went wrong), and text says it in
 	// words. A reopen that failed has one notice, which
 	// goes once the chat runs again: "not_ready" (its agent isn't set up or
@@ -11471,7 +11472,11 @@ type Item struct {
 	RawOutput string `protobuf:"bytes,35,opt,name=raw_output,json=rawOutput,proto3" json:"raw_output,omitempty"`
 	// For an agent message: a fork can be cut there (Fork from here,
 	// ForkAsChatRequest.item_id) while status.can_rewind. API 94.
-	Forkable      bool `protobuf:"varint,36,opt,name=forkable,proto3" json:"forkable,omitempty"`
+	Forkable bool `protobuf:"varint,36,opt,name=forkable,proto3" json:"forkable,omitempty"`
+	// For a user message: it was handed into a turn already running (the
+	// agent was steered), not the prompt a turn began with; kept in Nushi's
+	// copy, unknown in a replay.
+	Steered       bool `protobuf:"varint,37,opt,name=steered,proto3" json:"steered,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -11754,6 +11759,13 @@ func (x *Item) GetRawOutput() string {
 func (x *Item) GetForkable() bool {
 	if x != nil {
 		return x.Forkable
+	}
+	return false
+}
+
+func (x *Item) GetSteered() bool {
+	if x != nil {
+		return x.Steered
 	}
 	return false
 }
@@ -23614,7 +23626,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05group\x18\x04 \x01(\tR\x05group\x12\x1d\n" +
 	"\n" +
-	"is_default\x18\x05 \x01(\bR\tisDefault\"\x87\t\n" +
+	"is_default\x18\x05 \x01(\bR\tisDefault\"\xa1\t\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x12.nushi.v1.ItemKindR\x04kind\x12\x12\n" +
@@ -23657,7 +23669,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05input\x18\" \x01(\tR\x05input\x12\x1d\n" +
 	"\n" +
 	"raw_output\x18# \x01(\tR\trawOutput\x12\x1a\n" +
-	"\bforkable\x18$ \x01(\bR\bforkable\"I\n" +
+	"\bforkable\x18$ \x01(\bR\bforkable\x12\x18\n" +
+	"\asteered\x18% \x01(\bR\asteered\"I\n" +
 	"\bFindings\x12\x14\n" +
 	"\x05level\x18\x01 \x01(\tR\x05level\x12'\n" +
 	"\x05items\x18\x02 \x03(\v2\x11.nushi.v1.FindingR\x05items\"\xeb\x01\n" +

@@ -351,6 +351,15 @@ func (c *chat) deliverLocked() {
 	}
 }
 
+// unsteerLocked marks the message id, added as steered, as the prompt of
+// the turn it now starts instead.
+func (c *chat) unsteerLocked(id string) {
+	if i := c.indexLocked(id); i >= 0 {
+		c.items[i].Steered = false
+		c.publishLocked(c.items[i])
+	}
+}
+
 // steerQueue hands the queue's messages to the running turn one at a time,
 // in order; it is the chat's only steering worker while it runs. A message
 // the agent doesn't take because the turn has just ended starts the next
@@ -365,7 +374,9 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		m := c.queue[0]
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
-		id := c.addLocked(userItem(m))
+		it := userItem(m)
+		it.Steered = true
+		id := c.addLocked(it)
 		blocks := c.blocks(m)
 		// The agent's updates may come before its answer: not under the lock;
 		// counted before, as they may be the result of the work it cuts short.
@@ -382,6 +393,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 		case c.indexLocked(id) < 0:
 			return // taken back (Stop) meanwhile: it is in the box
 		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopping && !c.halting && c.sendingNow == 0:
+			c.unsteerLocked(id)
 			c.startLocked(blocks) // the turn ended meanwhile: this starts the next
 			return
 		}

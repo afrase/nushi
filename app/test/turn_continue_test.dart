@@ -175,8 +175,7 @@ void main() {
     ]) {
       expect(_label([_user('u', 'go'), it, _notice()]), 'Try again');
     }
-    // Work before the last message is an earlier turn's (or before a
-    // steer: the steered message is the one that goes again).
+    // Work before the last message is an earlier turn's.
     expect(
       _label([_user('u1', 'one'), _tool('t1'), _user('u2', 'two'), _notice()]),
       'Try again',
@@ -185,6 +184,21 @@ void main() {
       _label([_user('u1', 'one'), _user('u2', 'two'), _tool('t1'), _notice()]),
       'Continue',
     );
+  });
+
+  test('a message steered into the turn is part of it', () {
+    final steered = _user('u2', 'two')..steered = true;
+    // The turn's work before the steer: Continue, not "two" again (the
+    // agent has it).
+    final s = _state([_user('u1', 'one'), _tool('t1'), steered, _notice()]);
+    final retry = failedTurnRetry(s, s.items.last)!;
+    expect(retry.label, 'Continue');
+    expect(retry.request.text, continuePrompt);
+    // Steered before anything came back: Try again, with the last message.
+    final none = _state([_user('u1', 'one'), steered, _notice()]);
+    final again = failedTurnRetry(none, none.items.last)!;
+    expect(again.label, 'Try again');
+    expect(again.request.text, 'two');
   });
 
   test('archived, rewinding or not last: neither', () {

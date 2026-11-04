@@ -125,20 +125,6 @@ func TestMerge(t *testing.T) {
 		"the copy cleared": {"u:three m:m3:c", "U:r1:one m:m1:a U:r3:three m:m3:c", "u:one m:m1 u:three m:m3"},
 		// An agent whose replay gives messages new ids (omp): their text.
 		"new ids": {"u:one m:m1:hello_there", "U:r1:one m:z1:hello_there U:r2:two m:z2:bye", "u:one m:m1 u:two m:z2"},
-		// A failed turn reopened (the daemon restarted): its work stays
-		// before its notice and the notice last, which the app's Continue
-		// and Try again go by; with nothing back, the message is last
-		// before it.
-		"a failed turn that got somewhere": {
-			"u:one t:t1:completed m:m1:on_it n:turn_failed",
-			"U:r1:one t:t1:completed m:m1:on_it",
-			"u:one t:t1:completed m:m1 n:turn_failed",
-		},
-		"a failed turn that got nowhere": {
-			"u:one m:m1:a u:two n:turn_failed",
-			"U:r1:one m:m1:a U:r2:two",
-			"u:one m:m1 u:two n:turn_failed",
-		},
 		// The same short text many times aligns in order, nothing twice.
 		"repeats": {
 			"u:go m:m1:ok u:go m:m2:ok u:go m:m3:ok",
@@ -167,5 +153,20 @@ func TestMergeKeepsTheSummary(t *testing.T) {
 	got := merge(items("u:one m:m1:a"), items("S m:m1:a"), claudeHarness)
 	if got[1].Status != compactedNotice || !strings.HasPrefix(got[1].Text, "This session is being continued") {
 		t.Fatalf("%+v", got)
+	}
+}
+
+// A failed turn reopened (the daemon restarted) keeps what the app's
+// Continue and Try again go by: its work before its notice, the notice
+// last, and a steered message's mark, which only the copy has.
+func TestMergeKeepsAFailedTurn(t *testing.T) {
+	copied := items("u:one t:t1:completed u:two n:turn_failed")
+	copied[2].Steered = true
+	got := merge(copied, items("U:r1:one t:t1:completed U:r2:two"), claudeHarness)
+	if s := short(got); s != "u:one t:t1:completed u:two n:turn_failed" {
+		t.Fatalf("merged %s", s)
+	}
+	if !got[2].Steered || got[0].Steered {
+		t.Errorf("steered marks %v, %v: want only two's", got[0].Steered, got[2].Steered)
 	}
 }

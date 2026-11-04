@@ -3474,6 +3474,7 @@ const Item$json = {
     {'1': 'input', '3': 34, '4': 1, '5': 9, '10': 'input'},
     {'1': 'raw_output', '3': 35, '4': 1, '5': 9, '10': 'rawOutput'},
     {'1': 'forkable', '3': 36, '4': 1, '5': 8, '10': 'forkable'},
+    {'1': 'steered', '3': 37, '4': 1, '5': 8, '10': 'steered'},
   ],
 };
 
@@ -3499,7 +3500,8 @@ final $typed_data.Uint8List itemDescriptor = $convert.base64Decode(
     'Rfb25fYnkYHiABKAlSCnBhc3NlZE9uQnkSLgoIZmluZGluZ3MYHyABKAsyEi5udXNoaS52MS5G'
     'aW5kaW5nc1IIZmluZGluZ3MSKAoQdG9fc3ViYWdlbnRfc3RvcBggIAEoCFIOdG9TdWJhZ2VudF'
     'N0b3ASEgoEc2VudBghIAEoA1IEc2VudBIUCgVpbnB1dBgiIAEoCVIFaW5wdXQSHQoKcmF3X291'
-    'dHB1dBgjIAEoCVIJcmF3T3V0cHV0EhoKCGZvcmthYmxlGCQgASgIUghmb3JrYWJsZQ==');
+    'dHB1dBgjIAEoCVIJcmF3T3V0cHV0EhoKCGZvcmthYmxlGCQgASgIUghmb3JrYWJsZRIYCgdzdG'
+    'VlcmVkGCUgASgIUgdzdGVlcmVk');
 
 @$core.Deprecated('Use findingsDescriptor instead')
 const Findings$json = {

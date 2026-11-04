@@ -98,26 +98,48 @@ func TestAResendGoesBeforeTheHeldQueue(t *testing.T) {
 	}
 }
 
-// A turn that failed after a steered message has that message in the
-// transcript once and not in the queue: the app's Continue (a plain
-// message) goes as the next prompt, and nothing is sent twice.
-func TestContinueAfterAFailedSteeredTurn(t *testing.T) {
+// steeredOf is whether each user message in the transcript is marked as
+// steered into a running turn.
+func steeredOf(c *chat) map[string]bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := map[string]bool{}
+	for _, it := range c.items {
+		if it.Kind == model.UserMessage {
+			out[it.Text] = it.Steered
+		}
+	}
+	return out
+}
+
+// ranTool has the agent run and end a tool call in the chat's turn.
+func ranTool(c *chat, id string) {
+	for _, u := range []acp.SessionUpdate{toolCall(id, "in_progress"), toolDone(id)} {
+		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
+	}
+}
+
+// A message steered into a turn is marked so, which the app's Continue
+// goes by: a turn that got somewhere and then took a steered message
+// before failing offers Continue, not that message again (the agent has
+// it). Continue then goes as the next prompt, and nothing twice.
+func TestAFailedTurnsSteeredMessageIsMarked(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	agent.steerable, c.steer = true, true
 	agent.gate = make(chan struct{})
 	agent.failTurns(errOverloaded)
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
-	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
-		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
-	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
-		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
+	ranTool(c, "t1")
 	eventually(t, c, func() bool { _, steered := agent.texts(); return slices.Equal(steered, []string{"two"}) })
 	agent.release()
 	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
 	want := []string{"user:one", ":", "user:two", "notice:The turn failed: " + errOverloaded.Error()}
 	if got := texts(c); !slices.Equal(got, want) {
 		t.Fatalf("transcript %q", got)
+	}
+	if got := steeredOf(c); !got["two"] || got["one"] {
+		t.Errorf("steered %v, want only two", got)
 	}
 
 	agent.failTurns(nil)
@@ -127,6 +149,30 @@ func TestContinueAfterAFailedSteeredTurn(t *testing.T) {
 	if got, steered := agent.texts(); !slices.Equal(got, []string{"one", "Continue."}) || !slices.Equal(steered, []string{"two"}) {
 		t.Errorf("prompts %q, steered %q", got, steered)
 	}
+}
+
+// A message the agent didn't take because the turn ended meanwhile starts
+// the next turn: it is that turn's prompt, not steered.
+func TestAMessageThatMissedTheSteerIsNotMarked(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	ranTool(c, "t1")
+	eventually(t, c, func() bool { return len(c.queue) == 0 && c.steering }) // "two" is being handed over
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	agent.mu.Lock()
+	agent.refuseSteer = true
+	agent.mu.Unlock()
+	close(agent.steerGate)
+	eventually(t, c, func() bool { got, _ := agent.texts(); return slices.Equal(got, []string{"one", "two"}) })
+	if got := steeredOf(c); got["two"] {
+		t.Errorf("steered %v: the next turn's prompt is marked", got)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
 }
 
 // In a chat put to sleep after a failed turn (credit topped up later), a
