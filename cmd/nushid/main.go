@@ -189,7 +189,9 @@ func run() error {
 	// ending them before the agents (which take up to stopGrace) leaves
 	// none the time to start one.
 	closeChats := sync.OnceFunc(func() { termSvc.CloseAll(); chatSvc.Close() })
-	why, err := serve(srv, ln, restarts.Due(), closeChats)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	why, err := serve(srv, ln, stop, restarts.Due(), closeChats)
 	if why != "" {
 		slog.Info("nushid stopping", "why", why)
 	} else {
@@ -205,29 +207,30 @@ func run() error {
 	return err
 }
 
-// serve serves the API on ln until SIGINT or SIGTERM, until the app the
-// daemon runs from is deleted (appDeleted), or until a restart is due
-// (internal/features/restart), and says why it stopped: "" when Serve
-// failed by itself. For a restart the chats and terminals close first,
-// while the socket still answers (prompts refused, to be sent again): the
-// app starts the new daemon once the socket is gone, so the two never run
-// at once.
-func serve(srv *http.Server, ln net.Listener, restartDue <-chan struct{}, closeChats func()) (string, error) {
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+// serve serves the API on ln until a signal comes on stop (SIGINT or
+// SIGTERM), until the app the daemon runs from is deleted (appDeleted),
+// or until a restart is due (internal/features/restart), and says why it
+// stopped: "" when Serve failed by itself. The chats and terminals close
+// first, while the socket still answers (prompts refused, to be sent
+// again): an app starts a daemon once the socket is gone, and the new one
+// mustn't reopen sessions the old one's agents are still ending (ADR
+// 0056).
+func serve(srv *http.Server, ln net.Listener, stop <-chan os.Signal, restartDue <-chan struct{}, closeChats func()) (string, error) {
 	exe, _ := os.Executable() // "" (never deleted) if macOS can't say
 	deleted := appDeleted(exe, appCheck)
 	why := make(chan string, 1)
 	go func() {
+		var w string
 		select {
 		case sig := <-stop:
-			why <- unix.SignalName(sig.(syscall.Signal)) //nolint:forcetypeassert // signal.Notify sends syscall.Signals
+			w = unix.SignalName(sig.(syscall.Signal)) //nolint:forcetypeassert // signal.Notify sends syscall.Signals
 		case <-deleted:
-			why <- "its app was deleted"
+			w = "its app was deleted"
 		case <-restartDue:
-			closeChats()
-			why <- "restarting into a newer build"
+			w = "restarting into a newer build"
 		}
+		closeChats()
+		why <- w
 		_ = srv.Close() // Serve returns ErrServerClosed
 	}()
 	err := srv.Serve(ln)
