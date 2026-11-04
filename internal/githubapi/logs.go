@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/afrase/nushi/internal/ansi"
 )
 
 // Logs are cut to their end: what's kept of a log as it downloads, at
@@ -75,10 +77,7 @@ func lastBytes(r io.Reader, n int) []byte {
 	}
 }
 
-var (
-	ansiRE  = regexp.MustCompile(`\x1b\[[0-9;?]*[\x20-\x2f]*[\x40-\x7e]`)
-	stampRE = regexp.MustCompile(`^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?`)
-)
+var stampRE = regexp.MustCompile(`^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?`)
 
 // errorMark marks an error's line in a job's log. The last one is where
 // the failed step ended ("Process completed with exit code 1."); what
@@ -107,7 +106,7 @@ func Tail(log string, size int) string {
 	}
 	var b bytes.Buffer
 	for _, l := range lines {
-		b.WriteString(stampRE.ReplaceAllString(ansiRE.ReplaceAllString(l, ""), ""))
+		b.WriteString(stampRE.ReplaceAllString(ansi.Strip(l), ""))
 		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")

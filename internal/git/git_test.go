@@ -524,3 +524,12 @@ func TestCommitThatCantSignFails(t *testing.T) {
 		t.Errorf("committed unsigned: %s commits", got)
 	}
 }
+
+// A hook that writes as to a terminal (a spinner hiding the cursor, an
+// OSC 8 link) leaves none of its escapes in the commit's error.
+func TestLastSaidIsPlain(t *testing.T) {
+	out := "\x1b[?25l\x1b[1;31mlint failed\x1b[0m: see \x1b]8;;https://example.com/x\x1b\\the rules\x1b]8;;\x1b\\\n\x1b[?25h"
+	if got := lastSaid([]byte(out)); got != "lint failed: see the rules" {
+		t.Errorf("%q", got)
+	}
+}

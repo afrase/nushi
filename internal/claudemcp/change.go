@@ -5,11 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/afrase/nushi/internal/ansi"
 	"github.com/afrase/nushi/internal/procgroup"
 )
 
@@ -60,7 +60,7 @@ func (Claude) Logout(ctx context.Context, folder, name string) error {
 // LastLine is the last line of a terminal's output with text, without its
 // escape sequences.
 func LastLine(out string) string {
-	out = ansi.ReplaceAllString(out, "")
+	out = ansi.Strip(out)
 	lines := strings.FieldsFunc(out, func(r rune) bool { return r == '\n' || r == '\r' })
 	for _, line := range slices.Backward(lines) {
 		if l := strings.TrimSpace(line); l != "" {
@@ -69,8 +69,6 @@ func LastLine(out string) string {
 	}
 	return "no output"
 }
-
-var ansi = regexp.MustCompile(`\x1b(\[[0-9;?]*[A-Za-z]|\][^\x07\x1b]*(\x07|\x1b\\)?)`)
 
 // Project is the folder Claude files folder's local servers under.
 func (Claude) Project(folder string) string { return Project(folder) }

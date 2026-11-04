@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/afrase/nushi/internal/ansi"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/procgroup"
 	"github.com/afrase/nushi/internal/secrets"
@@ -33,8 +33,6 @@ const (
 // ErrIndexMoved is a commit refused because what's staged isn't what the
 // app showed: the agent, or a terminal, staged or committed since.
 var ErrIndexMoved = errors.New("what's staged changed since it was shown; look again")
-
-var ansi = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
 
 // Stage adds paths (relative to folder, literal) to the index as they are
 // in the work tree, a deleted file's deletion too, or with on false takes
@@ -145,7 +143,7 @@ func (e *CommitError) Error() string { return "git commit: " + e.Said }
 // lastSaid is the end of a commit's output, which is where a hook's failure
 // is, as plain text.
 func lastSaid(b []byte) string {
-	s := strings.ToValidUTF8(ansi.ReplaceAllString(string(b), ""), "")
+	s := strings.ToValidUTF8(ansi.Strip(string(b)), "")
 	s = strings.Map(func(r rune) rune {
 		if r < 0x20 && r != '\n' && r != '\t' || r == 0x7f {
 			return -1
