@@ -223,7 +223,11 @@ func (c *chat) releaseLocked() {
 	c.notPassedOnLocked()
 	c.copyLocked(true)
 	c.lookRelatedLocked()
-	c.turnEndedLocked(!c.turnStoppedLocked())
+	end := model.TurnDone
+	if c.turnStoppedLocked() {
+		end = model.TurnStopped
+	}
+	c.turnEndedLocked(end, "")
 	c.deliverLocked()
 }
 
@@ -358,9 +362,7 @@ func (c *chat) run(agent Agent, req *acp.PromptRequest, n *notes, sent, done cha
 		c.noticeLocked("max_turn_requests", "The agent stopped: it reached its limit of requests in one turn")
 	}
 	c.lookRelatedLocked()
-	// Done unless stopped or the agent went (watch says so).
-	cancelled := err == nil && resp.StopReason == "cancelled"
-	c.turnEndedLocked(!cancelled && (err == nil || !quit) && !c.turnStoppedLocked())
+	c.turnEndedLocked(c.verdictLocked(resp, err, quit))
 	c.copyLocked(true)
 	// A stopped or failed turn holds the queue until the next one ends.
 	c.held = err != nil || resp.StopReason == "cancelled"

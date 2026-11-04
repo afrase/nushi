@@ -4,6 +4,8 @@ import (
 	"slices"
 	"time"
 
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -39,21 +41,21 @@ func (s *Service) Seen(chatID string) error {
 	return nil
 }
 
-// turnEndedLocked says a turn ended, done (the agent ended it, or it
-// failed) or not (stopped, or the agent went). The chat is updated now
-// (what a list sorts by Last updated), and a done turn marks it done
-// unless a client shows it, before the status, so a client has the mark as
-// the turn ends; the status carries the verdict for the daemon's own
-// followers (push), so they needn't guess it from the events. A side chat
-// isn't stored, nor one being deleted.
-func (c *chat) turnEndedLocked(done bool) {
+// turnEndedLocked says a turn ended, and how (end; failure, with
+// TurnFailed, what ended it). The chat is updated now (what a list sorts
+// by Last updated), and a done or failed turn marks it done unless a client
+// shows it (a failure is one to look at), before the status, so a client
+// has the mark as the turn ends; the status carries the verdict, which
+// push and the clients go by rather than guessing from the events. A side
+// chat isn't stored, nor one being deleted.
+func (c *chat) turnEndedLocked(end model.TurnEnd, failure string) {
 	st := c.statusLocked()
-	st.Ended = model.TurnStopped
-	if done {
-		st.Ended = model.TurnDone
+	st.Ended = end
+	if end == model.TurnFailed {
+		st.Failure = failure
 	}
 	if c.parent == nil && !c.halting {
-		mark := done && c.viewers != nil && !c.viewers.Shown(c.id)
+		mark := end != model.TurnStopped && c.viewers != nil && !c.viewers.Shown(c.id)
 		c.saveLocked(func(s *model.ChatRecord) {
 			s.Updated = time.Now()
 			if mark {
@@ -62,6 +64,25 @@ func (c *chat) turnEndedLocked(done bool) {
 		})
 	}
 	c.emitLocked(model.Event{ChatID: c.id, Status: &st})
+}
+
+// verdictLocked judges how a turn ended from the prompt's answer (resp, or
+// err) and whether its agent went (quit): stopped when the user stopped
+// it or Nushi was stopping its agent, whatever the agent answered (a stop
+// racing the agent's own end is still the user's); failed on an error or
+// when the agent went without answering; otherwise done, as the agent
+// ended it. An agent that answered and then went ended its turn: its quit
+// is the chat's (watch's notice), not the turn's.
+func (c *chat) verdictLocked(resp *acp.PromptResponse, err error, quit bool) (model.TurnEnd, string) {
+	switch {
+	case c.turnStoppedLocked(), err == nil && resp.StopReason == acp.StopReasonCancelled:
+		return model.TurnStopped, ""
+	case err != nil && quit:
+		return model.TurnFailed, "The agent quit mid-turn."
+	case err != nil:
+		return model.TurnFailed, err.Error()
+	}
+	return model.TurnDone, ""
 }
 
 // turnStoppedLocked says the running turn was stopped: the user stopped it,

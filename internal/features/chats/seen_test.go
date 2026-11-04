@@ -3,7 +3,7 @@ package chats
 import (
 	"context"
 	"encoding/json"
-	"slices"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -151,55 +151,86 @@ func TestATurnUpdatesTheChat(t *testing.T) {
 	}
 }
 
-// The status a turn's end publishes says how the chat judged it, for push
-// to tell the phone only of a turn the agent ended: one the user stopped,
-// or whose agent quit mid-turn, says so.
+// The status a turn's end publishes says how the chat judged it, the one
+// verdict push and the clients go by: done when the agent ended it, failed
+// on an error or when the agent quit mid-turn, stopped when the user or
+// Nushi stopped it. A failed turn leaves the chat done, as a done one
+// does: the user should look.
 func TestATurnsEndSaysHowItEnded(t *testing.T) {
-	var mu sync.Mutex
-	var ends []model.TurnEnd
-	agent := &fakeAgent{}
-	testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
-	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{},
-		Viewers: &viewers{shown: map[string]bool{}}, Publish: func(e model.Event) {
-			if e.Status != nil && e.Status.Ended != model.NotEnded {
-				mu.Lock()
-				ends = append(ends, e.Status.Ended)
-				mu.Unlock()
+	for _, tc := range []struct {
+		name    string
+		end     func(svc *Service, agent *fakeAgent, c *chat) error // ends the running turn
+		want    model.TurnEnd
+		failure string
+		done    bool
+	}{
+		{name: "the agent ended it", want: model.TurnDone, done: true,
+			end: func(_ *Service, agent *fakeAgent, _ *chat) error { agent.release(); return nil }},
+		{name: "an error", want: model.TurnFailed, failure: "the model is overloaded", done: true,
+			end: func(_ *Service, agent *fakeAgent, _ *chat) error {
+				agent.mu.Lock()
+				agent.turnErr = errors.New("the model is overloaded")
+				agent.mu.Unlock()
+				agent.release()
+				return nil
+			}},
+		{name: "the agent quit mid-turn", want: model.TurnFailed, failure: "The agent quit mid-turn.", done: true,
+			end: func(_ *Service, agent *fakeAgent, _ *chat) error {
+				agent.mu.Lock()
+				agent.turnErr = acp.ErrClosed // its connection ended: no notice, no stop
+				agent.mu.Unlock()
+				agent.quit()
+				agent.release()
+				return nil
+			}},
+		{name: "the user stopped it", want: model.TurnStopped,
+			end: func(svc *Service, _ *fakeAgent, c *chat) error {
+				_, err := svc.Stop(context.Background(), c.id, false)
+				return err
+			}},
+		{name: "a stop racing the agent's own end", want: model.TurnStopped,
+			end: func(svc *Service, agent *fakeAgent, c *chat) error {
+				agent.mu.Lock()
+				agent.ignoreCancel = true // it answers end_turn, not cancelled
+				agent.mu.Unlock()
+				_, err := svc.Stop(context.Background(), c.id, false)
+				agent.release()
+				return err
+			}},
+		{name: "it slept", want: model.TurnStopped,
+			end: func(svc *Service, _ *fakeAgent, c *chat) error { return svc.Sleep(c.id) }},
+		{name: "it was archived", want: model.TurnStopped,
+			end: func(svc *Service, _ *fakeAgent, c *chat) error { return svc.Archive(c.id, true) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var mu sync.Mutex
+			var ends []model.Status
+			agent := &fakeAgent{}
+			testcheck.NoErr(t, json.Unmarshal([]byte(`{"sessionId":"s1"}`), &agent.session))
+			svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Sessions: &memSessions{},
+				Viewers: &viewers{shown: map[string]bool{}}, Publish: func(e model.Event) {
+					if e.Status != nil && e.Status.Ended != model.NotEnded {
+						mu.Lock()
+						ends = append(ends, *e.Status)
+						mu.Unlock()
+					}
+				}})
+			id, err := svc.Start(t.Context(), "", t.TempDir(), false)
+			testcheck.NoErr(t, err)
+			c := svc.chats[id]
+			agent.gate = make(chan struct{})
+			testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+			eventually(t, c, func() bool { return !c.started.IsZero() })
+			testcheck.NoErr(t, tc.end(svc, agent, c))
+			eventually(t, c, func() bool { return c.started.IsZero() })
+			mu.Lock()
+			defer mu.Unlock()
+			if len(ends) != 1 || ends[0].Ended != tc.want || ends[0].Failure != tc.failure || ends[0].Busy {
+				t.Errorf("turns ended %+v, want one %v (%q)", ends, tc.want, tc.failure)
 			}
-		}})
-	id, err := svc.Start(context.Background(), "", t.TempDir(), false)
-	testcheck.NoErr(t, err)
-	c := svc.chats[id]
-	ended := func(want ...model.TurnEnd) {
-		t.Helper()
-		mu.Lock()
-		defer mu.Unlock()
-		if !slices.Equal(ends, want) {
-			t.Errorf("turns ended %v, want %v", ends, want)
-		}
-	}
-
-	turn(t, svc, c, "one")
-	ended(model.TurnDone)
-
-	agent.gate = make(chan struct{})
-	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendIdle))
-	_, err = svc.Stop(context.Background(), c.id, false)
-	testcheck.NoErr(t, err)
-	eventually(t, c, func() bool { return !c.busy })
-	ended(model.TurnDone, model.TurnStopped)
-
-	testcheck.NoErr(t, svc.Seen(c.id)) // the first turn's mark
-	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendIdle))
-	eventually(t, c, func() bool { return !c.started.IsZero() })
-	agent.mu.Lock()
-	agent.turnErr = acp.ErrClosed // it crashed mid-turn: no notice, no stop
-	agent.mu.Unlock()
-	agent.quit()
-	agent.release()
-	eventually(t, c, func() bool { return c.started.IsZero() })
-	ended(model.TurnDone, model.TurnStopped, model.TurnStopped)
-	if isDone(c) {
-		t.Error("a turn whose agent quit left the chat done")
+			if isDone(c) != tc.done {
+				t.Errorf("the chat is done: %v, want %v", isDone(c), tc.done)
+			}
+		})
 	}
 }

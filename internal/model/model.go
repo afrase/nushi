@@ -645,9 +645,11 @@ type Status struct {
 	// started still run; a turn can end while they do.
 	Background int
 	// Ended is set only on the status published as a turn ends: how the
-	// chat judged it, for the daemon's own followers (push). Clients
-	// aren't sent it.
+	// chat judged it, the one verdict push and every client go by.
 	Ended TurnEnd
+	// Failure is, with TurnFailed, what ended the turn: the agent's error,
+	// or that it quit.
+	Failure string
 }
 
 // TurnEnd is how a chat judged a turn that just ended.
@@ -656,13 +658,16 @@ type TurnEnd int
 const (
 	// NotEnded: the status isn't a turn's end.
 	NotEnded TurnEnd = iota
-	// TurnDone: the agent ended the turn, or it failed; the user may want
-	// to know.
+	// TurnDone: the agent ended the turn (its answer, refusals and limits
+	// included); the user may want to know.
 	TurnDone
-	// TurnStopped: someone stopped the turn, the agent quit mid-turn, or
-	// the chat's agent was being stopped (sleep, archive, move, the daemon
-	// closing): nothing to tell.
+	// TurnStopped: the user stopped the turn, or Nushi was stopping the
+	// chat's agent (sleep, archive, move, delete, the daemon closing):
+	// nothing to tell.
 	TurnStopped
+	// TurnFailed: an error ended the turn, or the agent quit or crashed
+	// mid-turn (the owner's call, 2026-11-05): the user should look.
+	TurnFailed
 )
 
 // Hold is one thing a daemon's restart waits for: a chat that runs or
