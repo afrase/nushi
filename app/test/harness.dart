@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,6 +55,43 @@ Map<String, Object?> pairedRecord() => {
   'daemon': 'ArJKFXeGeF5z4WCydMz-dOXinj4sE99eMxmb-oJ3qLE',
   'daemonKey': Uint8List(32)..[0] = 9,
 };
+
+/// The folder `NUSHI_RENDERS` names, where [render] writes; null without it.
+final String? rendersDir = switch (Platform.environment['NUSHI_RENDERS']) {
+  final dir? when dir.isNotEmpty => dir,
+  _ => null,
+};
+
+/// Writes what [of] shows (the window: `find.byType(NushiApp)`) as
+/// `<name>.png` to [rendersDir], to look at a view at full size; nothing
+/// without it. A render is never compared or committed: only the views
+/// AGENTS.md lists keep a window golden.
+Future<void> render(WidgetTester tester, Finder of, String name) async {
+  final dir = rendersDir;
+  if (dir == null) return;
+  final capture = captureImage(of.evaluate().single);
+  await tester.runAsync(() async {
+    final image = await capture;
+    try {
+      final png = await image.toByteData(format: ui.ImageByteFormat.png);
+      Directory(dir).createSync(recursive: true);
+      File('$dir/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
+    } finally {
+      image.dispose();
+    }
+  });
+}
+
+/// Every text shown inside the window's [width]: none runs off its right
+/// edge (a row too wide for a narrow window, or one pushed past it).
+void expectTextInside(WidgetTester tester, double width) {
+  for (final e in find.byType(RichText).evaluate()) {
+    final box = e.renderObject! as RenderBox;
+    if (!box.hasSize) continue;
+    final right = box.localToGlobal(Offset(box.size.width, 0)).dx;
+    expect(right, lessThanOrEqualTo(width + 0.5), reason: '${e.widget}');
+  }
+}
 
 /// Lets real time pass, pumping between looks, until [done]: for work the
 /// test's fake clock doesn't wait for (an isolate's). Fails after [limit].
