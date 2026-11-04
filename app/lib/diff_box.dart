@@ -208,8 +208,7 @@ class _DiffBoxState extends State<DiffBox> {
   /// The box's height when it fits [d]: at most 15 lines.
   double _heightFor(FileChange d) {
     final rows = max(_lines(d.oldText), _lines(d.newText)).clamp(1, 15);
-    return _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) *
-            rows +
+    return _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) * rows +
         6;
   }
 
