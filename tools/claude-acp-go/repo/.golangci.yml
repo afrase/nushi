@@ -1,0 +1,199 @@
+# golangci-lint v2 (CI runs v2.15.0). Every linter is on unless it's
+# listed under disable with the reason.
+# To silence one report, put //nolint:<linter> // <why> on its line;
+# nolintlint refuses a nolint without both.
+version: "2"
+
+run:
+  relative-path-mode: gitroot
+
+linters:
+  default: all
+  disable:
+    # Formatting and naming style that fights the code as written.
+    - lll # line length is the formatter's business; gofmt sets none
+    - nlreturn # blank lines before return: style only
+    - wsl # blank lines: style only (deprecated, replaced by wsl_v5)
+    - wsl_v5 # the same
+    - varnamelen # short names in short scopes are Go's own style
+    - tagliatelle # JSON tags follow the formats of the files and agents we read
+    - funcorder # where a method sits in a file is the author's choice
+    - embeddedstructfieldcheck # a blank line after embedded fields: style only
+    - musttag # one-off decode structs match keys by field name (encoding/json ignores case); session files' keys are the Go names
+    - nonamedreturns # named results document what a function returns and serve deferred cleanup
+    - inamedparam # an interface's parameter types say what they are (context.Context, acp.PromptRequest)
+    - noinlineerr # if err := f(); err != nil is idiomatic Go
+    # Rules that don't fit this code.
+    - exhaustruct # a struct's zero fields are meant to be zero
+    - exhaustruct_v5 # the same
+    - mnd # numbers in place (sizes, timeouts) read better than a constant per number
+    - goconst # protocol values (ACP's statuses, JSON keys) read better as the literal the spec uses
+    - err113 # plain errors.New and fmt.Errorf; no sentinel error per message (the rebuild's rule)
+    - wrapcheck # errors from os, json and exec already say what failed; wrap where it adds context
+    - gochecknoglobals # package tables, regexps and the log level are globals on purpose
+    - ireturn # features take interfaces from main; the functions that make one return it
+    - testpackage # tests are white-box, in the package they test
+    - paralleltest # tests use t.Setenv and shared fakes; running them in parallel would change them
+    - tparallel # the same
+    - cyclop # gocyclo and gocognit cover complexity, at their defaults
+    - prealloc # make([]T, 0, n) turns a nil result into an empty one, which JSON writes as [] where it wrote null; the lists are short
+    - funlen # length alone isn't a problem; gocognit counts what makes a function hard
+    - nestif # gocognit counts nesting already
+    # Linters that do nothing without configuration of their own.
+    - depguard # no import rules: the module depends on acp-go alone, on purpose
+    - gomodguard # the same (deprecated, replaced by gomodguard_v2)
+    - gomodguard_v2 # the same
+    - goheader # no license header: LICENSE covers the module, and ported files name their source
+
+
+  settings:
+    errcheck:
+      check-type-assertions: false # forcetypeassert covers them
+    errchkjson:
+      check-error-free-encoding: true # a value that can't fail to encode may drop the error
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - hugeParam # passing a struct by value is a choice, not a bug; a pointer would change who can change it
+        - rangeValCopy # the same for range loops
+        - whyNoLint # nolintlint checks nolint comments
+        - unnamedResult # results are named where a name helps
+        - importShadow # a local named after a package is fine where the package isn't used
+        - initClause # `if n--; n == 0` keeps a counter's change beside its test
+        - typeDefFirst # a helper method may sit beside its caller, above its type
+    gosec:
+      excludes:
+        - G104 # unchecked errors: errcheck reports them
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # field order follows meaning, not padding
+        - shadow # a nested `if err :=` shadowing err is idiomatic; every report was that
+    staticcheck:
+      checks:
+        - all
+        - -ST1005 # error strings are shown as they are and may start with a name: "claude refused …"
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    revive:
+      enable-all-rules: true
+      rules:
+        # Covered by another linter.
+        - name: line-length-limit # lll's job, off
+          disabled: true
+        - name: add-constant # mnd and goconst, off
+          disabled: true
+        - name: cyclomatic # gocyclo
+          disabled: true
+        - name: cognitive-complexity # gocognit
+          disabled: true
+        - name: function-length # funlen, off
+          disabled: true
+        - name: unhandled-error # errcheck
+          disabled: true
+        - name: unchecked-type-assertion # forcetypeassert
+          disabled: true
+        - name: max-control-nesting # gocognit
+          disabled: true
+        # Style that doesn't fit this code.
+        - name: nested-structs # anonymous structs decode one-off JSON
+          disabled: true
+        - name: unused-receiver # a method keeps its receiver's name whether it uses it or not
+          disabled: true
+        - name: flag-parameter # a bool parameter is fine for a mode switch
+          disabled: true
+        - name: import-shadowing # a local named after a package is fine where the package isn't used
+          disabled: true
+        - name: confusing-naming # methods that differ only in case (run and Run) are a wrapper and its worker
+          disabled: true
+        - name: enforce-switch-style # a switch with no default is exhaustive where exhaustive says so
+          disabled: true
+        - name: max-public-structs # a package has as many types as it needs
+          disabled: true
+        - name: argument-limit
+          disabled: true
+        - name: function-result-limit
+          disabled: true
+        - name: file-length-limit # files split along their seams, not at a count
+          disabled: true
+        - name: banned-characters
+          disabled: true
+        - name: file-header
+          disabled: true
+        - name: enforce-map-style
+          disabled: true
+        - name: enforce-slice-style
+          disabled: true
+        - name: enforce-repeated-arg-type-style
+          disabled: true
+        - name: filename-format
+          disabled: true
+        - name: package-directory-mismatch # main packages and test peers are named for what they do
+          disabled: true
+        - name: confusing-results # the doc comment says which result is which
+          disabled: true
+        - name: multiline-if-init # a long call in an if's init reads fine wrapped
+          disabled: true
+        - name: struct-tag # `json:",omitempty"` and the others are checked by go vet
+          disabled: true
+
+  exclusions:
+    generated: strict
+    rules:
+      # contextcheck reads a //nolint:contextcheck on a function itself, to
+      # stop the report spreading to every caller; golangci-lint sees no
+      # report there and would call the directive unused.
+      - linters: [nolintlint]
+        text: 'for linter "contextcheck"'
+      # Commands aren't read through godoc.
+      - path: ^cmd/|/cmd/
+        linters: [revive]
+        text: "^exported:"
+      # gosec, where a whole package is about what it reports (each other
+      # report is fixed or marked on its line): tests read and write files
+      # in their own t.TempDir(), run the fakes they set up, and use fake
+      # secrets as markers;
+      - path: _test\.go$
+        linters: [gosec]
+        text: "^G(101|204|301|302|304|306|702|703|704):"
+      # sessions reads, forks and deletes claude's transcripts where claude
+      # keeps them, named from checked session ids.
+      - path: ^claudeagent/sessions/
+        linters: [gosec]
+        text: "^G(304|703):"
+      # Tests are long scripts, one scenario each.
+      - path: _test\.go$
+        linters: [gocognit, gocyclo, maintidx, dupl]
+      # A test or a fake that meets the wrong type panics, which fails the
+      # test as a check would; so does a value it can't encode.
+      - path: _test\.go$
+        linters: [forcetypeassert, errchkjson]
+      # Tests start short commands, and processes and listeners they end
+      # themselves; a context would add nothing.
+      - path: _test\.go$
+        linters: [noctx]
+      # Tests hold what each iteration opens until the test ends.
+      - path: _test\.go$
+        linters: [gocritic]
+        text: "^deferInLoop:"
+      - path: _test\.go$
+        linters: [revive]
+        text: "^defer: prefer not to defer inside loops"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes: [github.com/afrase/claude-acp-go]
+
+issues:
+  uniq-by-line: false
+  max-issues-per-linter: 0
+  max-same-issues: 0

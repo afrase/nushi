@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record claude-acp-go
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -138,6 +138,14 @@ claude-record:
 	go build -o bin/nushid ./cmd/nushid
 	go run ./tools/claude-record -tee bin/claude-tee -mcp-echo bin/mcp-echo -claude "$(CLAUDE_TEE_REAL)" -only "$(SCENARIOS)" -- bin/nushid claude-acp
 	@if [ -f "$(CLAUDE_SCHEMAS)" ]; then bin/claude-tee -schema-diff "$(CLAUDE_SCHEMAS)" internal/features/chats/testdata/claude-parity/*/cli*.jsonl; else echo "no schema drift report: set CLAUDE_SCHEMAS to claude's schemas"; fi
+
+# Claude's Go library (claudeagent, claudeacp) into its own repository,
+# github.com/afrase/claude-acp-go, at CLAUDE_ACP_GO (default
+# ~/Developer/claude-acp-go): the same code under its own import path, with
+# the repository's files from tools/claude-acp-go/repo. Commits nothing.
+CLAUDE_ACP_GO ?= $(HOME)/Developer/claude-acp-go
+claude-acp-go:
+	tools/claude-acp-go/sync.sh "$(CLAUDE_ACP_GO)"
 
 # The API's code from proto/, committed; CI checks it is what this makes.
 # Go's plugins are go.mod's tools; Dart's are pinned in gen-tools, and
