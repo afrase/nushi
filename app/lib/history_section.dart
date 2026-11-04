@@ -369,7 +369,7 @@ class _HistorySectionState extends State<HistorySection> {
                     'its agent no longer replays. Never sent to an agent.',
                 control: SettingsSwitch(
                   value: set.keepTranscripts,
-                  onChanged: (on) => tryOrShow(context, () => _keep(on)),
+                  run: ({required on}) => _keep(on),
                 ),
               ),
             if (list != null)

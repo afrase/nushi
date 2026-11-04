@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/bundled_daemon.dart';
@@ -12,7 +14,7 @@ import 'settings_harness.dart';
 Future<Daemon> _section(
   WidgetTester tester, {
   required bool? debug,
-  required ValueChanged<bool> onDebug,
+  required Future<void> Function({required bool on}) onDebug,
   required Future<void> Function() reveal,
 }) async {
   final d = await FakeDaemon([]).connect(tester);
@@ -51,7 +53,7 @@ void main() {
     final d = await _section(
       tester,
       debug: false,
-      onDebug: set.add,
+      onDebug: ({required on}) async => set.add(on),
       reveal: () async => revealed++,
     );
     await tester.tap(find.text('Show logs'));
@@ -60,6 +62,30 @@ void main() {
     expect(set, [true]);
     expect(find.text('Debug lines'), findsOneWidget);
     expect(find.text('API $apiVersion'), findsOneWidget);
+    d.dispose();
+  });
+
+  testWidgets('the debug switch sends once, however often it is clicked', (
+    tester,
+  ) async {
+    final sent = Completer<void>();
+    var calls = 0;
+    final d = await _section(
+      tester,
+      debug: false,
+      onDebug: ({required on}) {
+        calls++;
+        return sent.future;
+      },
+      reveal: () async {},
+    );
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+    await tester.tap(find.byType(Switch));
+    await tester.pump();
+    expect(calls, 1);
+    sent.complete();
+    await tester.pump();
     d.dispose();
   });
 
@@ -75,7 +101,11 @@ void main() {
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
         home: Scaffold(
-          body: LogsSection(daemon: d, debug: null, onDebug: (_) {}),
+          body: LogsSection(
+            daemon: d,
+            debug: null,
+            onDebug: ({required on}) async {},
+          ),
         ),
       ),
     );
@@ -87,7 +117,7 @@ void main() {
     final d = await _section(
       tester,
       debug: null,
-      onDebug: (_) {},
+      onDebug: ({required on}) async {},
       reveal: () async {},
     );
     expect(find.text('Show logs'), findsOneWidget);

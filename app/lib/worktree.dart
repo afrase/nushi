@@ -107,7 +107,10 @@ List<(String?, Widget)> worktreeRows(
         'New worktree',
         SettingsSwitch(
           value: wt != null,
-          onChanged: can ? (on) => _switch(context, chat, daemon, on) : null,
+          run: can
+              ? ({required on}) =>
+                    daemon.moveChat(chat, chat.home, worktree: on)
+              : null,
         ),
       ),
       // The switch makes a new one: the row only for those there.
@@ -118,7 +121,8 @@ List<(String?, Widget)> worktreeRows(
 }
 
 /// Moves a chat without messages into a new worktree ([on]) or back to its
-/// repository. Not remembered: every new chat starts in the folder itself
+/// repository, as the switch above does. Not remembered: every new chat
+/// starts in the folder itself
 /// (the owner, 2026-10-27; ADR 0016's third amendment).
 void _switch(BuildContext context, ChatState chat, Daemon daemon, bool on) =>
     tryOrShow(context, () => daemon.moveChat(chat, chat.home, worktree: on));

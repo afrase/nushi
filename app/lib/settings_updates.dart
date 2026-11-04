@@ -88,10 +88,7 @@ class _UpdatesGroupState extends State<UpdatesGroup> {
               '2 hours.',
           control: SettingsSwitch(
             value: widget.settings.checkUpdates,
-            onChanged: (on) => tryOrShow(
-              context,
-              () => widget.onChange((s) => s.checkUpdates = on),
-            ),
+            run: ({required on}) => widget.onChange((s) => s.checkUpdates = on),
           ),
         ),
       ],

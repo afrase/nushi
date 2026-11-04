@@ -34,7 +34,7 @@ class LogsSection extends StatelessWidget {
 
   final Daemon daemon;
   final bool? debug;
-  final ValueChanged<bool> onDebug;
+  final Future<void> Function({required bool on}) onDebug;
   final Future<void> Function() reveal;
 
   @override
@@ -55,7 +55,7 @@ class LogsSection extends StatelessWidget {
               SettingsRow(
                 'Debug lines',
                 description: 'Every agent and API call, with timings.',
-                control: SettingsSwitch(value: on, onChanged: onDebug),
+                control: SettingsSwitch(value: on, run: onDebug),
               ),
           ],
         ),

@@ -144,8 +144,7 @@ class _SettingsViewState extends State<SettingsView> {
     SettingsSection.logs => LogsSection(
       daemon: daemon,
       debug: _set?.debugLog,
-      onDebug: (on) =>
-          tryOrShow(context, () => _change((s) => s.debugLog = on)),
+      onDebug: ({required on}) => _change((s) => s.debugLog = on),
     ),
   };
 

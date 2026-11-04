@@ -50,7 +50,7 @@ class _StartAtLoginState extends State<StartAtLogin> {
           descriptionColor: waiting ? t.needs : null,
           control: SettingsSwitch(
             value: status == 'enabled' || waiting,
-            onChanged: (on) => tryOrShow(context, () => _call('set', on)),
+            run: ({required on}) => _call('set', on),
           ),
         ),
         if (waiting)
