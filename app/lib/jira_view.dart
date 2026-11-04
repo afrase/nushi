@@ -25,7 +25,7 @@ const jiraPoll = Duration(minutes: 1);
 
 /// What the view had last: the site (the one used last, kept), and while
 /// the app runs every site's issues instead ([_all]), the list, the JQL
-/// typed, the row picked, and the issue whose details show (with its
+/// typed, the row picked and the issue whose details show (each with its
 /// site): kept whatever the list holds, so an issue opened from a chat, a
 /// subtask or one moved to Done stays open as the list is asked again.
 String? get _site => lastJiraSite.value;
@@ -33,8 +33,8 @@ set _site(String? site) => lastJiraSite.value = site;
 bool _all = false;
 JiraList _list = const MyIssues();
 String _jql = '';
-String? _key;
-({String site, String key})? _details;
+IssueId? _picked;
+IssueId? _details;
 
 /// Forgets what the view had (tests start afresh).
 @visibleForTesting
@@ -42,7 +42,7 @@ void forgetJiraView() {
   _all = false;
   _list = const MyIssues();
   _jql = '';
-  _key = null;
+  _picked = null;
   _details = null;
 }
 
@@ -50,8 +50,7 @@ void forgetJiraView() {
 void showIssue(Daemon daemon, String site, String key) {
   _site = site;
   _all = false;
-  _key = key;
-  _details = (site: site, key: key);
+  _details = _picked = (site: site, key: key);
   daemon.go(const JiraPlace());
 }
 
@@ -102,7 +101,7 @@ class _JiraViewState extends State<JiraView> {
   /// The selected row's Start work menu, for ⌘⏎, and whose it is: the
   /// row registers it as it's built, and a row not built (scrolled away)
   /// can't, so it may be another's.
-  (String, OpenMenu)? _start;
+  (IssueId, OpenMenu)? _start;
 
   JiraSite? get _siteNow {
     final sites = _sites ?? const <JiraSite>[];
@@ -153,18 +152,18 @@ class _JiraViewState extends State<JiraView> {
   /// next row shown (or the last).
   void _keepVisible() {
     final visible = _visible;
-    if (!mounted || visible.any((x) => x.issue.key == _key)) return;
+    if (!mounted || visible.any((x) => idOf(x) == _picked)) return;
     final all = grouped(_tasks, _place);
-    final at = all.indexWhere((x) => x.issue.key == _key);
+    final at = all.indexWhere((x) => idOf(x) == _picked);
     // A row the filter hid: the first shown.
-    if (!_filtered.any((x) => x.issue.key == _key)) {
-      setState(() => _key = visible.firstOrNull?.issue.key);
+    if (!_filtered.any((x) => idOf(x) == _picked)) {
+      setState(() => _picked = visible.map(idOf).firstOrNull);
       return;
     }
     setState(() {
-      _key =
-          all.skip(at + 1).where(visible.contains).firstOrNull?.issue.key ??
-          visible.lastOrNull?.issue.key;
+      _picked =
+          all.skip(at + 1).where(visible.contains).map(idOf).firstOrNull ??
+          visible.map(idOf).lastOrNull;
     });
   }
 
@@ -327,8 +326,8 @@ class _JiraViewState extends State<JiraView> {
     ]);
     _sprint = got.first.sprint;
     // The details stay as they are: the list moves only the row picked.
-    if (!_visible.any((t) => t.issue.key == _key)) {
-      _key = _visible.firstOrNull?.issue.key;
+    if (!_visible.any((t) => idOf(t) == _picked)) {
+      _picked = _visible.map(idOf).firstOrNull;
     }
   }
 
@@ -344,9 +343,9 @@ class _JiraViewState extends State<JiraView> {
   void _move(int by) {
     final visible = _visible;
     if (visible.isEmpty) return;
-    final i = visible.indexWhere((x) => x.issue.key == _key);
+    final i = visible.indexWhere((x) => idOf(x) == _picked);
     final next = (i + by).clamp(0, visible.length - 1);
-    setState(() => _key = visible[next].issue.key);
+    setState(() => _picked = idOf(visible[next]));
     revealRow(_selectedRow, down: by > 0);
   }
 
@@ -356,27 +355,24 @@ class _JiraViewState extends State<JiraView> {
     _selectedRow,
     down: true,
     then: () {
-      if (_start case (final key, final open)
-          when key == _key && _selectedRow.currentContext != null) {
+      if (_start case (final id, final open)
+          when id == _picked && _selectedRow.currentContext != null) {
         open();
       }
     },
   );
 
   void _open(Task task) {
-    setState(() {
-      _key = task.issue.key;
-      _details = (site: task.site, key: task.issue.key);
-    });
+    setState(() => _details = _picked = idOf(task));
     _viewFocus.requestFocus(); // the list, which had it, goes
   }
 
   void _back() {
     setState(() {
       // The issue last shown is picked, when the list has it.
-      if (_details case (:final key, site: _)
-          when _visible.any((t) => t.issue.key == key)) {
-        _key = key;
+      if (_details case final shown?
+          when _visible.any((t) => idOf(t) == shown)) {
+        _picked = shown;
       }
       _details = null;
     });
@@ -438,7 +434,7 @@ class _JiraViewState extends State<JiraView> {
     }
     final k = e.logicalKey;
     final meta = HardwareKeyboard.instance.isMetaPressed;
-    final at = _visible.where((x) => x.issue.key == _key).firstOrNull;
+    final at = _visible.where((x) => idOf(x) == _picked).firstOrNull;
     if (k == LogicalKeyboardKey.enter && at != null) {
       meta ? _startWork() : _open(at);
     } else if (k == LogicalKeyboardKey.arrowDown ||
@@ -634,7 +630,7 @@ class _JiraViewState extends State<JiraView> {
                     daemon: widget.daemon,
                     tasks: rows,
                     place: _place,
-                    selected: _key,
+                    selected: _picked,
                     sites: _every,
                     people: _list is! MyIssues,
                     onOpen: (task) {
@@ -643,7 +639,7 @@ class _JiraViewState extends State<JiraView> {
                     },
                     onMoved: _load,
                     selectedRow: _selectedRow,
-                    startMenu: (key, open) => _start = (key, open),
+                    startMenu: (id, open) => _start = (id, open),
                   ),
           ),
         ),

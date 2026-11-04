@@ -16,6 +16,13 @@ import 'package:nushi/widgets.dart';
 /// An issue in the task list, and the site it's on.
 typedef Task = ({String site, JiraIssue issue});
 
+/// Which issue a row is: its site and key, as a key alone may be on two
+/// sites in every site's list.
+typedef IssueId = ({String site, String key});
+
+/// [task]'s [IssueId].
+IssueId idOf(Task task) => (site: task.site, key: task.issue.key);
+
 /// [tasks] in the order the list shows them: grouped by status, the
 /// groups in the workflow's order as far as Jira tells it (to do, in
 /// progress, done, by the status's category), each group's statuses and
@@ -100,8 +107,8 @@ class TaskList extends StatelessWidget {
   final List<Task> tasks;
   final String place;
 
-  /// The selected issue's key.
-  final String? selected;
+  /// The selected issue.
+  final IssueId? selected;
   final bool sites;
 
   /// With each row's assignee (not in a list of my issues).
@@ -112,9 +119,8 @@ class TaskList extends StatelessWidget {
   /// The selected row's key, to scroll it into view.
   final GlobalKey? selectedRow;
 
-  /// Takes the selected row's Start work menu (and its issue's key), for
-  /// ⌘⏎.
-  final void Function(String key, OpenMenu open) startMenu;
+  /// Takes the selected row's Start work menu (and its issue), for ⌘⏎.
+  final void Function(IssueId id, OpenMenu open) startMenu;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -129,8 +135,6 @@ class TaskList extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final shown = grouped(tasks, place);
-    // The one row [selectedRow] keys (a key may be on two sites).
-    final first = shown.where((x) => x.issue.key == selected).firstOrNull;
     final statuses = statusesOf(shown);
     final collapsed = jiraCollapsed.value[place] ?? const [];
     final columns = (
@@ -186,16 +190,16 @@ class TaskList extends StatelessWidget {
                     if (task.issue.status == status)
                       TaskRow(
                         key:
-                            (identical(task, first) ? selectedRow : null) ??
+                            (idOf(task) == selected ? selectedRow : null) ??
                             ValueKey('${task.site} ${task.issue.key}'),
                         daemon: daemon,
                         task: task,
-                        selected: task.issue.key == selected,
+                        selected: idOf(task) == selected,
                         site: sites,
                         columns: columns,
                         onOpen: () => onOpen(task),
                         onMoved: onMoved,
-                        startMenu: (open) => startMenu(task.issue.key, open),
+                        startMenu: (open) => startMenu(idOf(task), open),
                       ),
                 ],
               ),

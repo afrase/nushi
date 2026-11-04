@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
+import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/settings.dart';
@@ -413,6 +414,36 @@ void main() {
     });
     expect(find.text('Sprint'), findsNothing); // one site's lists
     expect(find.textContaining(other.id, findRichText: true), findsWidgets);
+    await closeView(tester, d);
+  });
+
+  testWidgets('every site’s issues: a key on two sites is two rows, picked '
+      'and opened apart', (tester) async {
+    final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
+    final (fake, d) = await openView(tester, sites: [_site, other]);
+    await tester.tap(find.text(_site.id));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All sites'));
+    await tester.pumpAndSettle();
+    // Both sites answer the same keys: one row selected, not both.
+    List<Task> picked() => [
+      for (final r in tester.widgetList<TaskRow>(find.byType(TaskRow)))
+        if (r.selected) r.task,
+    ];
+    expect(picked(), hasLength(1));
+    final first = picked().single;
+    // ↓ moves to the same key on the other site, and ⏎ opens that one.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    final second = picked().single;
+    expect(second.issue.key, first.issue.key);
+    expect(second.site, isNot(first.site));
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(
+      fake.calls.whereType<GetJiraIssueRequest>().last.site,
+      second.site,
+    );
     await closeView(tester, d);
   });
 
