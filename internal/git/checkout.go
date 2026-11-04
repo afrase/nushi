@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/procgroup"
+	"github.com/afrase/nushi/internal/regularfile"
 )
 
 // RealPath returns path with its symlinks resolved (macOS's /tmp is
@@ -33,7 +34,10 @@ func RealPath(path string) string {
 // steer: the nearest folder up with a .git folder is a main checkout; one
 // with a .git file is a worktree of the repository it names only when
 // that repository names it back. Anything else, or a repository that sets
-// core.worktree, keys on the folder itself. folder is a real path.
+// core.worktree, keys on the folder itself. folder is a real path, and
+// may be a downloaded one: a .git file, and the gitdir record it names,
+// are read only when regular and small (a link to /dev/zero or a fifo
+// keys on the folder itself).
 func TrustRoot(folder string) (top, key string) {
 	for top = folder; ; top = filepath.Dir(top) {
 		if _, err := os.Lstat(filepath.Join(top, ".git")); err == nil {
@@ -50,7 +54,10 @@ func TrustRoot(folder string) (top, key string) {
 		}
 		return top, top
 	}
-	b, _ := os.ReadFile(dotgit)
+	b, err := regularfile.Read(dotgit, gitfileLimit)
+	if err != nil {
+		return top, folder
+	}
 	gitdir, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir: ")
 	if !ok {
 		return top, folder
@@ -59,7 +66,10 @@ func TrustRoot(folder string) (top, key string) {
 		gitdir = filepath.Join(top, gitdir)
 	}
 	gitdir = RealPath(gitdir)
-	b, _ = os.ReadFile(filepath.Join(gitdir, "gitdir"))
+	b, err = regularfile.Read(filepath.Join(gitdir, "gitdir"), gitfileLimit)
+	if err != nil {
+		return top, folder
+	}
 	back := strings.TrimSpace(string(b))
 	if back != "" && !filepath.IsAbs(back) { // worktree.useRelativePaths (git 2.48): relative to the record
 		back = filepath.Join(gitdir, back)
@@ -71,6 +81,10 @@ func TrustRoot(folder string) (top, key string) {
 	}
 	return top, filepath.Dir(common)
 }
+
+// gitfileLimit is the most of a .git file or a worktree's gitdir record
+// TrustRoot reads: each is one line.
+const gitfileLimit = 64 << 10
 
 // worktreeSet says whether a repository's config file sets core.worktree
 // (includes followed); git's own environment is left out. git gets 5 s.
