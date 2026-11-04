@@ -32,3 +32,4 @@ A phone has to reach the daemon on a Mac that is often behind a company network,
 
 ## Amendments
 - 2026-10-27: with `-web` and `-origin` the relay also serves the phone's web app, from memory with a strict CSP, and takes a WebSocket from exactly that app's origin; any other `Origin` is still refused (ADR 0054).
+- 2026-11-04: listening needs only a key of one's own, so a few addresses could hold every connection for an hour at a time; listeners from one address (an IPv4 address or an IPv6 /48) are now capped at 16 (`-listen-per-ip`, 0 for none), far below the 200 connections. A daemon listens on a few ids at once (its own, the ones it gave up that a phone still needs, a pairing's). Filling the relay now takes some 63 addresses or /48s, not five; an allowlist of listen ids or keys would close it but breaks with each pairing and revocation, which take a fresh listen key.

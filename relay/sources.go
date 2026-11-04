@@ -31,8 +31,21 @@ var salt = func() []byte {
 // appends to a list header such as X-Forwarded-For, after whatever the
 // client wrote there, so the address is the IPHops-th from the right.
 func (s *server) sourceKey(r *http.Request) string {
+	return keyOf(s.clientAddr(r), 64)
+}
+
+// listenerKey is the hash of the client's address as listeners are
+// counted: an IPv4 address, or an IPv6 address's /48, which one home or
+// one rented server often has whole, so a /56 of /64s can't take every
+// listener.
+func (s *server) listenerKey(r *http.Request) string {
+	return keyOf(s.clientAddr(r), 48)
+}
+
+// clientAddr is the client's address, as sourceKey says.
+func (s *server) clientAddr(r *http.Request) string {
 	if s.lim.IPHeader == "" {
-		return keyOf(r.RemoteAddr)
+		return r.RemoteAddr
 	}
 	var addrs []string
 	for _, v := range r.Header.Values(s.lim.IPHeader) {
@@ -42,13 +55,14 @@ func (s *server) sourceKey(r *http.Request) string {
 	}
 	hops := max(1, s.lim.IPHops)
 	if len(addrs) < hops {
-		return keyOf("") // not through the proxies said
+		return "" // not through the proxies said
 	}
-	return keyOf(addrs[len(addrs)-hops])
+	return addrs[len(addrs)-hops]
 }
 
-// keyOf is the hash of an address (with or without a port).
-func keyOf(addr string) string {
+// keyOf is the hash of an address (with or without a port), an IPv6 one
+// cut to its first v6bits.
+func keyOf(addr string, v6bits int) string {
 	if host, _, err := net.SplitHostPort(addr); err == nil {
 		addr = host
 	}
@@ -59,9 +73,9 @@ func keyOf(addr string) string {
 	if v4 := ip.To4(); v4 != nil {
 		ip = v4
 	} else {
-		ip = ip.Mask(net.CIDRMask(64, 128))
+		ip = ip.Mask(net.CIDRMask(v6bits, 128))
 	}
-	h := sha256.Sum256(append(append([]byte(nil), salt...), ip...))
+	h := sha256.Sum256(append(append(append([]byte(nil), salt...), byte(v6bits)), ip...))
 	return string(h[:16])
 }
 
@@ -108,5 +122,22 @@ func (s *server) leaveSource(key string) {
 		if s.refill(src, time.Now()); src.tokens >= s.lim.NewBurst {
 			delete(s.sources, key)
 		}
+	}
+}
+
+// admitListener counts a new listener from key, or says it holds
+// ListenPerIP already. Called with s.mu.
+func (s *server) admitListener(key string) bool {
+	if s.lim.ListenPerIP > 0 && s.listeners[key] >= s.lim.ListenPerIP {
+		return false
+	}
+	s.listeners[key]++
+	return true
+}
+
+// leaveListener uncounts a listener from key. Called with s.mu.
+func (s *server) leaveListener(key string) {
+	if s.listeners[key]--; s.listeners[key] <= 0 {
+		delete(s.listeners, key)
 	}
 }

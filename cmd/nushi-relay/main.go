@@ -36,6 +36,7 @@ func main() {
 	flag.DurationVar(&lim.MaxWait, "max-wait", lim.MaxWait, "how long a listener may wait for a dialer")
 	flag.IntVar(&lim.PerID, "per-id", lim.PerID, "connections on one id")
 	flag.IntVar(&lim.PerIP, "per-ip", lim.PerIP, "connections from one address (an IPv6 /64), at most half of -total")
+	flag.IntVar(&lim.ListenPerIP, "listen-per-ip", lim.ListenPerIP, "listeners (daemons' waiting connections) from one address (an IPv6 /48); 0 for no cap")
 	flag.Float64Var(&lim.NewRate, "new-rate", lim.NewRate, "new connections a second from one address")
 	flag.Float64Var(&lim.NewBurst, "new-burst", lim.NewBurst, "new connections from one address at once")
 	flag.StringVar(&lim.IPHeader, "ip-header", "", "behind a reverse proxy: the header holding the client's address (e.g. CF-Connecting-IP for cloudflared, Fly-Client-IP); of a list (X-Forwarded-For), the last entry")

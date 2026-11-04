@@ -39,6 +39,12 @@ type Limits struct {
 	HTTPIdle   time.Duration // a plain HTTP connection (not a WebSocket) waits this long for its next request
 	PlainPerIP int           // plain connections from one address
 	FirstWait  time.Duration // a new connection has this long for its first request's headers
+	// ListenPerIP caps the listeners from one address (an IPv6 /48), 0
+	// for none: listening needs only a key of one's own, so without it
+	// a few addresses could hold every connection for MaxWait at a time.
+	// One daemon listens on a few ids (its own, those it gave up but a
+	// phone still needs, a pairing's).
+	ListenPerIP int
 	// Site is the web app the relay serves too (ADR 0054), or nil. Its
 	// origin is then the only one whose pages may open a WebSocket here.
 	Site *Site
@@ -47,7 +53,7 @@ type Limits struct {
 // Defaults suit one person's phones and Macs.
 // Many people can share one company's address, so PerIP is generous.
 var Defaults = Limits{MaxMessage: 65535, Rate: 1 << 20, Burst: 8 << 20, Idle: 90 * time.Second,
-	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8, FirstWait: 2 * time.Second}
+	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, ListenPerIP: 16, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8, FirstWait: 2 * time.Second}
 
 // minCost is what a message costs against the rate at least, so tiny
 // messages can't flood.
@@ -76,12 +82,13 @@ type server struct {
 	lim Limits
 	up  websocket.Upgrader
 
-	mu      sync.Mutex
-	total   int
-	rooms   map[string]*room
-	sources map[string]*source
-	swept   time.Time
-	plain   plain
+	mu        sync.Mutex
+	total     int
+	rooms     map[string]*room
+	sources   map[string]*source
+	listeners map[string]int // listeners by listenerKey
+	swept     time.Time
+	plain     plain
 }
 
 // room is one rendezvous id: its connections, and its listener still
@@ -101,7 +108,7 @@ type peer struct {
 // New returns the relay's handler.
 func New(lim Limits) http.Handler {
 	lim.PerIP = min(lim.PerIP, max(1, lim.Total/2))
-	s := &server{lim: lim, rooms: map[string]*room{}, sources: map[string]*source{},
+	s := &server{lim: lim, rooms: map[string]*room{}, sources: map[string]*source{}, listeners: map[string]int{},
 		plain: plain{conns: map[net.Conn]*plainConn{}, by: map[string]*source{}}}
 	// A page's script may connect only when it is the web app's own: no
 	// other page has a reason to be here.
@@ -121,6 +128,19 @@ func New(lim Limits) http.Handler {
 }
 
 func (s *server) listen(w http.ResponseWriter, r *http.Request) {
+	lkey := s.listenerKey(r)
+	s.mu.Lock()
+	ok := s.admitListener(lkey)
+	s.mu.Unlock()
+	if !ok {
+		http.Error(w, "busy", http.StatusServiceUnavailable)
+		return
+	}
+	defer func() {
+		s.mu.Lock()
+		s.leaveListener(lkey)
+		s.mu.Unlock()
+	}()
 	id, src, ws := s.join(w, r, false)
 	if ws == nil {
 		return

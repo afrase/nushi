@@ -761,3 +761,53 @@ func TestSlowHeadersFloodDoesntStarve(t *testing.T) {
 		t.Fatalf("a connection without its headers stayed past FirstWait: %v", err)
 	}
 }
+
+// Listening needs only a key of one's own, so listeners from one address,
+// an IPv6 /48 (a /56 of /64s included), are capped far below PerIP: a
+// few addresses can't hold every connection (security review 2026-11-04,
+// L4). Dialers aren't listeners, and a listener that left frees its place.
+func TestListenersPerAddress(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.ListenPerIP = 2
+	lim.NewRate = 1e9
+	h := New(lim).(*server)
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	url := "ws" + strings.TrimPrefix(srv.URL, "http")
+	var open []*websocket.Conn
+	defer func() {
+		for _, ws := range open {
+			_ = ws.Close()
+		}
+	}()
+	listen := func(addr string) int {
+		ws, code := from(url, "listen", newID(), addr)
+		if ws != nil {
+			open = append(open, ws)
+		}
+		return code
+	}
+	for _, addr := range []string{"203.0.113.7", "203.0.113.7", "2001:db8:1:100::1", "2001:db8:1:200::1"} {
+		if code := listen(addr); code != 0 {
+			t.Fatalf("%s refused (%d) under the cap", addr, code)
+		}
+	}
+	for _, addr := range []string{"203.0.113.7", "2001:db8:1:ff00::1"} {
+		if code := listen(addr); code != http.StatusServiceUnavailable {
+			t.Errorf("a third listener from %s: %d", addr, code)
+		}
+	}
+	if code := listen("198.51.100.1"); code != 0 {
+		t.Errorf("another address was refused: %d", code)
+	}
+	if ws, code := from(url, "dial", newID(), "203.0.113.7"); ws == nil {
+		t.Errorf("a dialer from a full address was refused: %d", code)
+	} else {
+		_ = ws.Close()
+	}
+	_ = open[0].Close()
+	if !testcheck.Eventually(func() bool { return listen("203.0.113.7") == 0 }) {
+		t.Error("a listener that left still counts")
+	}
+}

@@ -64,7 +64,7 @@ func (s *server) connState(c net.Conn, st http.ConnState) {
 	case http.StateNew:
 		key := ""
 		if s.lim.IPHeader == "" {
-			key = keyOf(c.RemoteAddr().String())
+			key = keyOf(c.RemoteAddr().String(), 64)
 			if !s.admitPlain(key, now) {
 				_ = c.Close()
 				return
