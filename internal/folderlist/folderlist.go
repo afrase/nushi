@@ -216,15 +216,37 @@ func one(ctx context.Context, r *os.Root, root, rel string, o Options) (Listing,
 }
 
 // inGit says rel inside root is root's .git or a folder in it, reached
-// through a link (Clean refuses it by name). Only what's shown hangs on
-// it: os.Root keeps the read inside root whatever this says.
+// through a link (Clean refuses it by name). Folders are told apart by
+// identity, never by their paths' text: APFS takes .Git for .git. Only
+// what's shown hangs on it: os.Root keeps the read inside root whatever
+// this says.
 func inGit(root, rel string) bool {
+	git, err := os.Stat(filepath.Join(root, ".git"))
+	if err != nil || !git.IsDir() {
+		return false // none, or a worktree's .git file pointing elsewhere
+	}
+	top, err := os.Stat(root)
+	if err != nil {
+		return false
+	}
 	at, err := filepath.EvalSymlinks(filepath.Join(root, rel))
 	if err != nil {
 		return false
 	}
-	git, err := filepath.EvalSymlinks(filepath.Join(root, ".git"))
-	return err == nil && (at == git || strings.HasPrefix(at, git+string(filepath.Separator)))
+	for {
+		fi, err := os.Stat(at)
+		switch {
+		case err != nil || os.SameFile(fi, top):
+			return false
+		case os.SameFile(fi, git):
+			return true
+		}
+		up := filepath.Dir(at)
+		if up == at {
+			return false
+		}
+		at = up
+	}
 }
 
 // isGit says the folder fi is root's .git, reached through a link.

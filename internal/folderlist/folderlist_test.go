@@ -44,7 +44,7 @@ func listOf(t *testing.T, root, rel string, o Options) []Listing {
 
 func TestCleanRefusesWhatLeadsOut(t *testing.T) {
 	for _, p := range []string{"..", "../x", "a/../../x", "/etc", "a//b", "a/", "./a", "a/./b",
-		".git", "a/.git/objects", ".GIT", "a\x00b", strings.Repeat("a/", 3000), "\xff"} {
+		".git", "a/.git/objects", ".GIT", ".Git/config", "a/.gIt", "a\x00b", strings.Repeat("a/", 3000), "\xff"} {
 		if got, err := Clean(p); !errors.Is(err, ErrPath) {
 			t.Errorf("Clean(%q) = %q, %v; want ErrPath", p, got, err)
 		}
@@ -132,10 +132,19 @@ func TestLinksAreFollowedOnlyInside(t *testing.T) {
 	link(".git", "g")
 	link(".git/refs", "refs")
 	testcheck.Git(t, root, "init", "-q")
+	want := []string{"docs/", "docs2/", "refs/", "a.md", "dangling@", "key@", "loop@", "out@"}
+	refused := []string{"out", "loop", "g", "refs", "key"}
+	if _, err := os.Stat(filepath.Join(root, ".GIT")); err == nil {
+		// A case-insensitive disk (APFS): .GIT is .git, and a path's text
+		// can't tell them apart.
+		link(".GIT/objects", "objects")
+		want = slices.Insert(want, 2, "objects/")
+		refused = append(refused, "objects")
+	}
 	ls := listOf(t, root, ".", Options{})
-	// g is .git by another name: left out, and refused below; refs, a
-	// folder in it, is shown but refused too.
-	if got, want := names(ls[0]), []string{"docs/", "docs2/", "refs/", "a.md", "dangling@", "key@", "loop@", "out@"}; !slices.Equal(got, want) {
+	// g is .git by another name: left out, and refused below; refs (and
+	// objects, through .GIT), folders in it, are shown but refused too.
+	if got := names(ls[0]); !slices.Equal(got, want) {
 		t.Errorf("names = %q, want %q", got, want)
 	}
 	for _, e := range ls[0].Entries {
@@ -146,7 +155,7 @@ func TestLinksAreFollowedOnlyInside(t *testing.T) {
 	if got := names(listOf(t, root, "docs2", Options{})[0]); !slices.Equal(got, []string{"a.md"}) {
 		t.Errorf("a link inside: %q", got)
 	}
-	for _, p := range []string{"out", "loop", "g", "refs", "key"} {
+	for _, p := range refused {
 		if ls, err := List(context.Background(), root, p, Options{}); err == nil {
 			t.Errorf("List(%q) = %+v; want refused", p, ls)
 		}
