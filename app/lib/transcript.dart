@@ -63,7 +63,10 @@ List<Object> _entries(List<Item> items) {
 /// to ask a side chat about it, or to reply to it; selected by touch, the
 /// selection's own menu has those beside Copy. Given [items] (a
 /// subagent's steps) it shows those instead, between [header] and
-/// [footer], [live] while more come.
+/// [footer], [live] while more come. A chat's transcript takes its older
+/// pages as it scrolls near the top: on the Mac with [EarlierMessages] at
+/// its top, on the phone ([Daemon.remote]) with its own [header], trying
+/// again on every scroll there after a failed page.
 class Transcript extends StatefulWidget {
   const new({
     required this.chat,
@@ -75,7 +78,6 @@ class Transcript extends StatefulWidget {
     this.live = false,
     this.header,
     this.footer,
-    this.onTop,
     this.bottom,
   });
 
@@ -93,12 +95,6 @@ class Transcript extends StatefulWidget {
   final bool live;
   final Widget? header;
   final Widget? footer;
-
-  /// Called as the user scrolls near the top (the phone takes an older
-  /// page then, and shows its own [header]); what shows stays put as
-  /// items come in above it. Without it a chat's transcript takes the
-  /// page itself, with [EarlierMessages] at its top.
-  final VoidCallback? onTop;
 
   /// Under the list (the chat's turn status and composer), the list's
   /// scrollbar running down beside it to the pane's bottom (OverBottom).
@@ -303,17 +299,17 @@ class _TranscriptState extends State<Transcript> {
 
   /// The user scrolled to within a screen of the top: the page before.
   /// Not while the list fills in (its top isn't built yet).
+  /// What shows stays put as items come in above it.
   void _nearTop() {
-    if (_tail != null) return;
-    if (widget.onTop case final top?) return top();
-    if (_pages && !widget.chat.olderFailed) {
+    if (_tail != null || widget.items != null) return;
+    if (widget.daemon.remote || !widget.chat.olderFailed) {
       unawaited(widget.daemon.loadOlder(widget.chat));
     }
   }
 
-  /// Whether this is a chat's transcript that takes its own pages: the
-  /// Mac's (the phone's has [Transcript.onTop]).
-  bool get _pages => widget.items == null && widget.onTop == null;
+  /// Whether this is the Mac's transcript of a chat, with [EarlierMessages]
+  /// at its top.
+  bool get _pages => widget.items == null && !widget.daemon.remote;
 
   /// An entry's key; a message's echo keeps the key of the message shown
   /// as it was on its way (ChatState.echoes).
@@ -1108,9 +1104,9 @@ class _TranscriptState extends State<Transcript> {
                 current: _pinAt,
                 fit: RailFit.of(chatSides(context, box.maxWidth).left),
                 onPick: (id) => unawaited(_pick(id)),
-                before: widget.onTop == null
-                    ? null
-                    : () => loadPinned(widget.daemon, chat),
+                before: widget.daemon.remote
+                    ? () => loadPinned(widget.daemon, chat)
+                    : null,
               ),
             ),
           Positioned(

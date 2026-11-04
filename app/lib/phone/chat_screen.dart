@@ -85,7 +85,6 @@ class ChatScreen extends StatelessWidget {
                       child: Transcript(
                         chat: chat,
                         daemon: daemon,
-                        onTop: () => unawaited(daemon.loadOlder(chat)),
                         header: chat.older > 0 ? Earlier(daemon, chat) : null,
                         onReply: chat.archived || chat.sessionGone
                             ? null
