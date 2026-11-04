@@ -129,31 +129,32 @@ func pick(copied, replayed model.Item) model.Item {
 // stableID says an item has the agent's id for it, not one Nushi gave it.
 func stableID(it model.Item) bool { return it.ID != "" && !strings.HasPrefix(it.ID, "item-") }
 
-// idKey is what an item is matched by first: the agent's id for it.
-func idKey(it model.Item) []string {
+// idKey is what an item is matched by first: the agent's id for it; ""
+// for none.
+func idKey(it model.Item) string {
 	if stableID(it) {
-		return []string{strconv.Itoa(int(it.Kind)) + "\x00" + it.ID}
+		return strconv.Itoa(int(it.Kind)) + "\x00" + it.ID
 	}
-	return nil
+	return ""
 }
 
 // textKey is what an item is matched by where ids don't tell: its text (a
-// tool call's title and output).
-func textKey(it model.Item) []string {
+// tool call's title and output); "" for none.
+func textKey(it model.Item) string {
 	text := strings.TrimSpace(it.Text)
 	switch {
 	case it.Kind == model.ToolCall && text != "":
-		return []string{"tool\x00" + it.Parent + "\x00" + it.Title + "\x00" + text}
+		return "tool\x00" + it.Parent + "\x00" + it.Title + "\x00" + text
 	case it.Kind == model.UserMessage:
 		if text != "" || len(it.Images) > 0 || len(it.Files) > 0 {
-			return []string{strconv.Itoa(int(it.Kind)) + "\x00" + it.Parent + "\x00" + userText(text)}
+			return strconv.Itoa(int(it.Kind)) + "\x00" + it.Parent + "\x00" + userText(text)
 		}
 	case it.Kind == model.AgentMessage, it.Kind == model.Thought:
 		if text != "" || len(it.Images) > 0 {
-			return []string{strconv.Itoa(int(it.Kind)) + "\x00" + it.Parent + "\x00" + text}
+			return strconv.Itoa(int(it.Kind)) + "\x00" + it.Parent + "\x00" + text
 		}
 	}
-	return nil
+	return ""
 }
 
 var (
@@ -212,13 +213,13 @@ func align(copied, replay []model.Item) []pair {
 	return out
 }
 
-// lcs returns the longest run of items both have by keys, in order (a
+// lcs returns the longest run of items both have by key, in order (a
 // longest common subsequence, found as the longest increasing run of the
 // copy's indexes over the matches, Hunt and Szymanski's way).
-func lcs(copied, replay []model.Item, keys func(model.Item) []string) []pair {
-	at := map[string][]int{}
+func lcs(copied, replay []model.Item, key func(model.Item) string) []pair {
+	at := map[string][]int{} // ascending, each index once
 	for j, it := range copied {
-		for _, k := range keys(it) {
+		if k := key(it); k != "" {
 			at[k] = append(at[k], j)
 		}
 	}
@@ -230,12 +231,10 @@ func lcs(copied, replay []model.Item, keys func(model.Item) []string) []pair {
 	var tails []int // tails[n]: the link ending the best run of n+1 found so far
 	for i, it := range replay {
 		var cands []int
-		for _, k := range keys(it) {
+		if k := key(it); k != "" {
 			js := at[k]
-			cands = append(cands, js[max(0, len(js)-maxCandidates):]...)
+			cands = js[max(0, len(js)-maxCandidates):]
 		}
-		slices.Sort(cands)
-		cands = slices.Compact(cands)
 		// Descending, so one replayed item extends a run once.
 		for _, j := range slices.Backward(cands) {
 			n, _ := slices.BinarySearchFunc(tails, j, func(l, j int) int { return links[l].c - j })
