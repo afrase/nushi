@@ -180,9 +180,6 @@ class _TrustRuns extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    String shown(String file) => file.startsWith('${ask.folder}/')
-        ? file.substring(ask.folder.length + 1)
-        : tildePath(file);
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +195,7 @@ class _TrustRuns extends StatelessWidget {
               spacing: 2,
               children: [
                 Text(
-                  '${r.what} (${shown(r.file)})',
+                  '${r.what} (${trustFileShown(ask, r.file)})',
                   style: phoneText(context, size: 15),
                 ),
                 if (r.command.isNotEmpty)

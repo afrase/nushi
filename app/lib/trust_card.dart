@@ -10,6 +10,13 @@ import 'package:nushi/widgets.dart';
 
 export 'package:nushi/trust_ask.dart';
 
+/// [file], one of [ask]'s, as the card shows it: from the folder when it's
+/// in it, else with the home folder as "~".
+String trustFileShown(TrustAsk ask, String file) =>
+    file.startsWith('${ask.folder}/')
+    ? file.substring(ask.folder.length + 1)
+    : tildePath(file);
+
 /// What a folder would have the agent run on its own, before a chat starts
 /// or moves there: each file and what it runs, exactly, with "Start
 /// anyway" and Cancel. A warning, not a rule (ADR 0023).
@@ -26,9 +33,7 @@ class TrustCard extends StatelessWidget {
     for (final r in ask.runs) {
       (byFile[r.file] ??= []).add(r);
     }
-    String shown(String file) => file.startsWith('${ask.folder}/')
-        ? file.substring(ask.folder.length + 1)
-        : tildePath(file);
+    final agent = agentTitle(ask.agent);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680),
@@ -56,13 +61,11 @@ class TrustCard extends StatelessWidget {
                 ),
                 Text(
                   ask.shownAs == null
-                      ? '${knownAgents[ask.agent]?.title ?? 'The agent'} '
-                            'runs these without asking as soon as a chat '
+                      ? '$agent runs these without asking as soon as a chat '
                             'starts in ${tildePath(ask.folder)}, and it '
                             'hasn’t been told to trust the folder. Look '
                             'before you start.'
-                      : '${knownAgents[ask.agent]?.title ?? 'The agent'} '
-                            'runs these without asking as soon as a chat '
+                      : '$agent runs these without asking as soon as a chat '
                             'starts on its head, which brings them. Look '
                             'before you start.',
                   style: theme.ui(t.textSecondary, size: 12),
@@ -73,7 +76,7 @@ class TrustCard extends StatelessWidget {
                     spacing: 4,
                     children: [
                       Text(
-                        shown(file),
+                        trustFileShown(ask, file),
                         style: theme.code(t.textMuted, size: 11.5),
                       ),
                       for (final r in runs)
