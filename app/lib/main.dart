@@ -229,6 +229,9 @@ class _NushiAppState extends State<NushiApp> {
         theme: NushiTheme.forTheme(pickedTheme(), Brightness.light),
         darkTheme: NushiTheme.forTheme(pickedTheme(), Brightness.dark),
         themeMode: appearance.value,
+        // Light and dark switch at once (NushiTheme.lerp), so no frames of a
+        // theme animation, each a rebuild of what reads the theme.
+        themeAnimationDuration: Duration.zero,
         scrollBehavior: const NativeScroll(),
         // The menu's keys don't reach the menu while Flutter has the keys:
         // they're bound here too, and a terminal, which keeps ⌘ and ⌃ keys,

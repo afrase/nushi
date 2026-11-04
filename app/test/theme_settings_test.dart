@@ -85,6 +85,21 @@ void main() {
     await closeView(tester, again);
   }, variant: _mac);
 
+  testWidgets('a theme picked shows on the next frame, and rebuilding the '
+      'app with the same theme changes nothing below it', (tester) async {
+    final d = await _app(tester);
+    await _tap(tester, find.text('Nord'));
+    await tester.pump();
+    final nord = builtInTheme('nord')!;
+    // No frames of a theme animation, each a rebuild of all that reads it.
+    expect(_painted(tester, find.byType(SettingsView)), same(nord.dark));
+    expect(
+      NushiTheme.forTheme(nord, Brightness.dark),
+      same(NushiTheme.forTheme(nord, Brightness.dark)),
+    );
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('720 wide, the tiles wrap and nothing runs off', (tester) async {
     _file(
       'A long name for a theme.json',

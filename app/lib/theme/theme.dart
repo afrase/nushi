@@ -106,9 +106,16 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   NushiTheme lerp(NushiTheme? other, double t) =>
       t < 0.5 || other == null ? this : other;
 
-  /// Material's theme for [theme]'s set for [brightness].
+  /// Material's theme for [theme]'s set for [brightness], made once per
+  /// theme: the app rebuilt with nothing changed (a theme file read again)
+  /// gets the same one, so nothing below it rebuilds for it.
   static ThemeData forTheme(ColorTheme theme, Brightness brightness) =>
-      NushiTheme(theme.of(brightness), dark: theme.dark).toThemeData();
+      (_made[theme] ??= {})[brightness] ??= NushiTheme(
+        theme.of(brightness),
+        dark: theme.dark,
+      ).toThemeData();
+
+  static final _made = Expando<Map<Brightness, ThemeData>>();
 
   ThemeData toThemeData() {
     final scheme = ColorScheme(

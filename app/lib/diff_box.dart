@@ -88,6 +88,8 @@ class _DiffBoxState extends State<DiffBox> {
   TextDiff? _diffed;
   FileChange? _of; // the change _diffed is of, or is being computed for
   late DiffThemeData _theme;
+  Tokens? _tokens; // what [_theme] was made from
+  double? _dpr;
   double _height = 0;
   bool _selecting = false; // the line selection changed during this click
   bool _went = false; // went to [DiffBox.line] already
@@ -167,8 +169,22 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _theme = diffTheme(NushiTheme.of(context).t);
-    _build();
+    final t = NushiTheme.of(context).t;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    if (identical(t, _tokens) && dpr == _dpr) return;
+    final first = _tokens == null;
+    _tokens = t;
+    _dpr = dpr;
+    _theme = diffTheme(t);
+    final c = _controller;
+    if (first || c == null) {
+      _build();
+      return;
+    }
+    // A new theme or screen: the same view repainted, where it was
+    // scrolled, not made again.
+    c.configure(theme: _theme, devicePixelRatio: dpr);
+    _height = _heightFor(widget.change);
   }
 
   @override
@@ -189,12 +205,18 @@ class _DiffBoxState extends State<DiffBox> {
     }
   }
 
+  /// The box's height when it fits [d]: at most 15 lines.
+  double _heightFor(FileChange d) {
+    final rows = max(_lines(d.oldText), _lines(d.newText)).clamp(1, 15);
+    return _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) *
+            rows +
+        6;
+  }
+
   /// Diffs the change (once per change), then makes the view.
   void _build() {
     final d = widget.change;
-    final rows = max(_lines(d.oldText), _lines(d.newText)).clamp(1, 15);
-    _height =
-        _theme.lineHeightFor(MediaQuery.devicePixelRatioOf(context)) * rows + 6;
+    _height = _heightFor(d);
     if (_of case final of? when _sameDiff(of, d)) {
       if (_diffed case final diff?) _view(diff);
       return;

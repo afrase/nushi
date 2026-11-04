@@ -1,3 +1,4 @@
+import 'package:diff_view/diff_view.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +26,52 @@ void main() {
     await tester.pumpWidget(box(change));
     expect(find.byType(Center), findsOneWidget); // still computing
     await untilReal(tester, () => find.byType(Center).evaluate().isEmpty);
+  });
+
+  testWidgets('an appearance change, or the app rebuilt with the same '
+      'theme, keeps the diff as it was unfolded and scrolled', (tester) async {
+    final old = [for (var i = 0; i < 400; i++) 'line $i'].join('\n');
+    final change = FileChange(
+      path: 'a.txt',
+      oldText: old,
+      newText: '$old\nmore',
+    );
+    final mode = ValueNotifier(ThemeMode.dark);
+    final rebuilds = ValueNotifier(0);
+    addTearDown(mode.dispose);
+    addTearDown(rebuilds.dispose);
+    await tester.pumpWidget(
+      ListenableBuilder(
+        listenable: Listenable.merge([mode, rebuilds]),
+        builder: (context, _) => MaterialApp(
+          theme: NushiTheme.forTheme(nushiTheme, Brightness.light),
+          darkTheme: NushiTheme.forTheme(nushiTheme, Brightness.dark),
+          themeMode: mode.value,
+          home: Scaffold(body: DiffBox(change, fit: false)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // The unchanged lines unfolded, and scrolled into.
+    tester
+        .widget<SideBySideDiff>(find.byType(SideBySideDiff))
+        .controller
+        .toggleFold(0, all: true);
+    await tester.pumpAndSettle();
+    ScrollPosition pos() => tester
+        .stateList<ScrollableState>(find.byType(Scrollable))
+        .map((s) => s.position)
+        .reduce((a, b) => a.maxScrollExtent >= b.maxScrollExtent ? a : b);
+    expect(pos().maxScrollExtent, greaterThan(2000));
+    pos().jumpTo(2000);
+    await tester.pump();
+    // The same mode, rebuilt (a theme file touched).
+    rebuilds.value++;
+    await tester.pumpAndSettle();
+    expect(pos().pixels, 2000);
+    mode.value = ThemeMode.light;
+    await tester.pumpAndSettle();
+    expect(pos().pixels, 2000);
   });
 
   testWidgets('a change too long to diff says so', (tester) async {
