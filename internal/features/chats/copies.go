@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"log/slog"
 	"slices"
@@ -157,7 +158,7 @@ func (s *Service) ListCopies() ([]CopyEntry, error) {
 	for i, c := range list {
 		out[i].TranscriptCopy = c
 		if sess, ok := byID[c.Chat]; ok {
-			out[i].Title, out[i].Agent = cmpTitle(sess), sess.Agent
+			out[i].Title, out[i].Agent = cmp.Or(sess.Name, sess.Title), sess.Agent
 		}
 	}
 	return out, nil

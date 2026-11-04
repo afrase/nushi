@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -116,17 +117,10 @@ func (s *Service) expire(ctx context.Context, c *chat, why string) {
 	}
 	c.log().Info("chat removed: its agent no longer has its session", "why", why)
 	s.mu.Lock()
-	s.removed = append(s.removed, model.RemovedChat{ID: c.id, Agent: c.kind.Name, Title: cmpTitle(sess), Folder: sess.Folder, At: time.Now()})
+	s.removed = append(s.removed, model.RemovedChat{ID: c.id, Agent: c.kind.Name, Title: cmp.Or(sess.Name, sess.Title), Folder: sess.Folder, At: time.Now()})
 	list := slices.Clone(s.removed)
 	s.mu.Unlock()
 	s.publish(model.Event{RemovedChats: &list})
-}
-
-func cmpTitle(sess model.ChatRecord) string {
-	if sess.Name != "" {
-		return sess.Name
-	}
-	return sess.Title
 }
 
 // keeps says why a chat whose session is gone must stay (its worktrees'
