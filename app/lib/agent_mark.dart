@@ -5,7 +5,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/agents.dart';
+import 'package:nushi/chat.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/widgets.dart';
 import 'package:svg_path/svg_path.dart';
 
 /// An agent's mark, [size] square: the agent's own icon where Nushi
@@ -264,3 +267,35 @@ const _codex =
     '4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 '
     '0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 '
     '1.5-2.607-1.5z';
+
+/// The agents of an item's chats (a GitHub item's or a Jira issue's;
+/// three at most, then how many more); a click opens the newest.
+class ChatMarks extends StatelessWidget {
+  const new(this.daemon, this.chats, {super.key});
+
+  final Daemon daemon;
+  final List<ChatState> chats;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final n = chats.length;
+    return Tap(
+      onTap: () => daemon.select(chats.first.id),
+      tooltip: n == 1 ? 'Open its chat' : 'Open its newest chat (it has $n)',
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final c in chats.take(3))
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: AgentMark(c.agent, size: 13),
+            ),
+          if (n > 3) Text('+${n - 3}', style: theme.ui(t.textMuted, size: 11)),
+        ],
+      ),
+    );
+  }
+}

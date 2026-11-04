@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/card_list.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -76,13 +75,6 @@ List<Task> visibleTasks(List<Task> tasks, String place) => [
   for (final t in grouped(tasks, place))
     if (!collapsedGroup(place, t.issue.status)) t,
 ];
-
-/// The chats on an issue, the newest first.
-List<ChatState> chatsOn(Daemon daemon, Task t) =>
-    daemon.chats.values
-        .where((c) => c.jiraSite == t.site && c.jiraKey == t.issue.key)
-        .toList()
-      ..sort((a, b) => b.created.compareTo(a.created));
 
 /// The task list, as Orca's task drawer: [tasks] (already [ordered]) in a
 /// card for each status, the cards in the order they were dragged into
@@ -283,7 +275,7 @@ class _TaskRowState extends State<TaskRow> {
     final task = widget.task;
     final is_ = task.issue;
     final cols = widget.columns;
-    final chats = chatsOn(widget.daemon, task);
+    final chats = chatsOn(widget.daemon, task.site, task.issue.key);
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -324,7 +316,7 @@ class _TaskRowState extends State<TaskRow> {
                     style: theme.ui(t.text),
                   ),
                 ),
-                if (chats.isNotEmpty) _Chats(widget.daemon, chats),
+                if (chats.isNotEmpty) ChatMarks(widget.daemon, chats),
                 if (cols.priority)
                   SizedBox(
                     width: 76,
@@ -396,36 +388,4 @@ class _TaskRowState extends State<TaskRow> {
       );
     },
   );
-}
-
-/// The agents of an issue's chats (three at most, then how many more); a
-/// click opens the newest chat.
-class _Chats extends StatelessWidget {
-  const new(this.daemon, this.chats);
-
-  final Daemon daemon;
-  final List<ChatState> chats;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final n = chats.length;
-    return Tap(
-      onTap: () => daemon.select(chats.first.id),
-      tooltip: n == 1 ? 'Open its chat' : 'Open its newest chat (it has $n)',
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final c in chats.take(3))
-            Padding(
-              padding: const EdgeInsets.only(right: 2),
-              child: AgentMark(c.agent, size: 13),
-            ),
-          if (n > 3) Text('+${n - 3}', style: theme.ui(t.textMuted, size: 11)),
-        ],
-      ),
-    );
-  }
 }

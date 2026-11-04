@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:nushi/agent_mark.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
@@ -226,38 +225,6 @@ Future<void> startOn(
   final f = folder ?? await getDirectoryPath(confirmButtonText: 'Choose');
   if (f == null || !context.mounted) return;
   await newChat(context, daemon, f, issue: IssueChat.github(item));
-}
-
-/// The agents of an item's chats (three at most, then how many more); a
-/// click opens the newest.
-class ChatMarks extends StatelessWidget {
-  const new(this.daemon, this.chats, {super.key});
-
-  final Daemon daemon;
-  final List<ChatState> chats;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final n = chats.length;
-    return Tap(
-      onTap: () => daemon.select(chats.first.id),
-      tooltip: n == 1 ? 'Open its chat' : 'Open its newest chat (it has $n)',
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final c in chats.take(3))
-            Padding(
-              padding: const EdgeInsets.only(right: 2),
-              child: AgentMark(c.agent, size: 13),
-            ),
-          if (n > 3) Text('+${n - 3}', style: theme.ui(t.textMuted, size: 11)),
-        ],
-      ),
-    );
-  }
 }
 
 /// What an image in GitHub's text shows as: a link to it, opened in the

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue_parts.dart';
@@ -10,6 +11,13 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+
+/// The chats on issue [key] of [site], the newest first.
+List<ChatState> chatsOn(Daemon daemon, String site, String key) =>
+    daemon.chats.values
+        .where((c) => c.jiraSite == site && c.jiraKey == key)
+        .toList()
+      ..sort((a, b) => b.created.compareTo(a.created));
 
 /// Starts work on issue [key] of [site] in [folder] (one to choose, when
 /// null): the New chat dialog with the issue picked, a worktree on its

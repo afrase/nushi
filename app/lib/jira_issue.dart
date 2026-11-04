@@ -266,10 +266,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           ListenableBuilder(
             listenable: widget.daemon,
             builder: (context, _) {
-              final chats = [
-                for (final c in widget.daemon.chats.values)
-                  if (c.jiraSite == widget.site && c.jiraKey == i.key) c,
-              ]..sort((a, b) => b.created.compareTo(a.created));
+              final chats = chatsOn(widget.daemon, widget.site, i.key);
               return chats.isEmpty
                   ? const SizedBox.shrink()
                   : section('Chats', [
