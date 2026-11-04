@@ -69,6 +69,9 @@ class PhoneHistory extends NavigatorObserver {
   /// else is asked of the history meanwhile (it would land on the wrong
   /// entry).
   DateTime? _going;
+
+  /// The depth that `go` heads for, while [_going].
+  int? _target;
   bool _scheduled = false;
 
   @override
@@ -121,6 +124,7 @@ class PhoneHistory extends NavigatorObserver {
     final want = _screens.length;
     if (want < _at) {
       _going = DateTime.now();
+      _target = want;
       platform.go(want - _at);
     } else {
       while (_at < want) {
@@ -132,9 +136,13 @@ class PhoneHistory extends NavigatorObserver {
   /// The browser moved to an entry of the app's: back, forward, or the
   /// answer to a `go` of ours.
   void _moved(int depth) {
+    final ours = _going != null && depth == _target;
     _at = depth;
-    _going = null;
-    if (depth < _screens.length) {
+    _going = _target = null;
+    // Our own go's answer, however late: screens opened meanwhile (a
+    // notification's chat) aren't a back's to take away; they get their
+    // entries now.
+    if (!ours && depth < _screens.length) {
       // Back: the screens over it go, without the animation iOS has
       // already shown.
       final nav = navigator;

@@ -107,12 +107,21 @@ final class PhonePlatform {
     at++;
   }
 
+  /// How late a [go]'s popstate comes; null, at once (a test sets it: a
+  /// page waking from the background is slower).
+  Duration? goDelay;
+
   /// What a browser's `history.go` does: the move, and its popstate after.
   void go(int delta) {
     final to = at + delta;
     if (to < 0 || to >= entries.length) return;
     at = to;
-    scheduleMicrotask(() => onEntry?.call(entries[at]));
+    final landed = entries[at];
+    if (goDelay case final d?) {
+      Timer(d, () => onEntry?.call(landed));
+    } else {
+      scheduleMicrotask(() => onEntry?.call(landed));
+    }
   }
 
   /// The browser's back (iOS's edge swipe, Safari's back button): at the
