@@ -20,7 +20,7 @@ import (
 func TestAPromptsFilesAndUploads(t *testing.T) {
 	ctx := context.Background()
 	dataDir := t.TempDir()
-	a := open(t, startDaemon(t, dataDir, &acptest.History{}, nil))
+	a := open(t, startDaemon(t, dataDir, &acptest.History{}))
 	outside := filepath.Join(t.TempDir(), "spec.pdf")
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello",

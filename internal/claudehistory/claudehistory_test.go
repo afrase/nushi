@@ -3,11 +3,8 @@ package claudehistory
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/afrase/nushi/internal/testcheck"
 )
 
 func TestDirNameIsClaudes(t *testing.T) {
@@ -20,75 +17,6 @@ func TestDirNameIsClaudes(t *testing.T) {
 		if got := dirName(folder); got != want {
 			t.Errorf("dirName(%q) = %q, want %q", folder, got, want)
 		}
-	}
-}
-
-// claudeName is Claude's name for a short folder's history, worked out
-// apart from dirName: its real path (/var is /private/var on macOS), each
-// character but a letter or digit a "-".
-func claudeName(t *testing.T, folder string) string {
-	t.Helper()
-	resolved, err := filepath.EvalSymlinks(folder)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return regexp.MustCompile(`[^A-Za-z0-9]`).ReplaceAllString(resolved, "-")
-}
-
-func TestCopyKeepsTheOriginal(t *testing.T) {
-	projects, from, to := t.TempDir(), t.TempDir(), t.TempDir()
-	src, dst := filepath.Join(projects, claudeName(t, from)), filepath.Join(projects, claudeName(t, to))
-	link := filepath.Join(t.TempDir(), "link") // a chat moved to a folder reached through a link
-	testcheck.NoErr(t, os.Symlink(to, link))
-	to = link
-	if err := os.MkdirAll(src, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(src, "s1.jsonl"), []byte("transcript"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	remove, err := local(projects).CopyHistory("s1", from, to)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, path := range []string{filepath.Join(dst, "s1.jsonl"), filepath.Join(src, "s1.jsonl")} {
-		if b, err := os.ReadFile(path); err != nil || string(b) != "transcript" {
-			t.Errorf("%s = %q, %v", path, b, err)
-		}
-	}
-	if _, err := local(projects).CopyHistory("s1", from, to); err != nil {
-		t.Errorf("a copy a move left (all of this one) wasn't replaced: %v", err)
-	}
-	testcheck.NoErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("trans"), 0o600))
-	if _, err := local(projects).CopyHistory("s1", from, to); err != nil {
-		t.Errorf("a copy a move left (the start of this one) wasn't replaced: %v", err)
-	}
-	if b, _ := os.ReadFile(filepath.Join(dst, "s1.jsonl")); string(b) != "transcript" {
-		t.Errorf("copied again: %q", b)
-	}
-	testcheck.NoErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("transcript, and more"), 0o600))
-	if _, err := local(projects).CopyHistory("s1", from, to); err == nil {
-		t.Error("a transcript there that goes on past this one was replaced")
-	}
-	if files, _ := os.ReadDir(dst); len(files) != 1 {
-		t.Errorf("left in the history: %v", files)
-	}
-	testcheck.NoErr(t, os.WriteFile(filepath.Join(dst, "s1.jsonl"), []byte("another"), 0o600))
-	if _, err := local(projects).CopyHistory("s1", from, to); err == nil {
-		t.Error("another transcript already there was replaced")
-	}
-	if err := remove(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(filepath.Join(src, "s1.jsonl")); err != nil {
-		t.Errorf("the original went with the copy: %v", err)
-	}
-	if _, err := local(projects).CopyHistory("missing", from, to); err == nil {
-		t.Error("copying a session that isn't there worked")
-	}
-	if _, err := local(projects).CopyHistory("../s1", from, to); err == nil {
-		t.Error("a session id with a path in it was taken")
 	}
 }
 

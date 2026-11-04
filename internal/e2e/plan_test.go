@@ -20,7 +20,7 @@ import (
 // offers /plan. Another agent's /plan is its own.
 func TestPlanFromThePhone(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	mac, phone := open(t, d), openAt(t, d.devices)
 	get := func(id string) *nushiv1.GetChatResponse {
 		return must(phone.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))

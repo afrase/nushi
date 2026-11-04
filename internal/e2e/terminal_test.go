@@ -58,7 +58,7 @@ func (a *app) attach(ctx context.Context, id, want string) *nushiv1.AttachTermin
 
 func TestTerminalOutlivesTheApp(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	folder, _ := filepath.EvalSymlinks(t.TempDir())
 	first := open(t, d)
 	chatID := must(first.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId

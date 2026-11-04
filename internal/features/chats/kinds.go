@@ -46,7 +46,6 @@ type kind struct {
 	titleMaker     TitleMaker
 	readOnly       ReadOnly
 	goneReader     GoneReader
-	historyCopier  HistoryCopier
 	openFinder     OpenFinder
 	forkFinder     ForkFinder
 	historyChecker HistoryChecker
@@ -61,7 +60,7 @@ func newKind(k Kind) *kind {
 	return &kind{Kind: k, HarnessInfo: h.Info(), forker: can[Forker](h), toolReader: can[ToolReader](h),
 		otherReader: can[OtherReader](h), defaultReader: can[DefaultReader](h), transcript: can[Transcript](h), subagents: can[Subagents](h), toSubagents: can[SubagentMessages](h),
 		background: can[BackgroundTasks](h), contextCommand: can[ContextCommander](h), terminalCmds: can[TerminalCommands](h), contextAsker: can[ContextAsker](h), titleMaker: can[TitleMaker](h), readOnly: can[ReadOnly](h), goneReader: can[GoneReader](h),
-		historyCopier: can[HistoryCopier](h), openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), historyChecker: can[HistoryChecker](h),
+		openFinder: can[OpenFinder](h), forkFinder: can[ForkFinder](h), historyChecker: can[HistoryChecker](h),
 		messageDater: can[MessageDater](h), worktreeFinder: can[WorktreeFinder](h)}
 }
 

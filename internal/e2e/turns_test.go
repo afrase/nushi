@@ -13,7 +13,7 @@ import (
 // Stop reaches the agent: its turn ends as cancelled.
 func TestStopEndsTheAgentsTurn(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "wait"})))
@@ -29,7 +29,7 @@ func TestStopEndsTheAgentsTurn(t *testing.T) {
 // A question goes to the app as a card, and the answer back to the agent.
 func TestAQuestionRoundTrip(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "a question"})))

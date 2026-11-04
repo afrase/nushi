@@ -14,7 +14,7 @@ import (
 // scrolls up; together they are the whole transcript.
 func TestRecentThenOlderPages(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	for _, p := range []string{"one", "two", "three", "four", "five"} {

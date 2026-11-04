@@ -18,7 +18,7 @@ import (
 func TestACodexChat(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	agents := must(a.c.ListAgents(ctx, connect.NewRequest(&nushiv1.ListAgentsRequest{}))).Agents
 	if len(agents) != 8 || agents[1].Name != "claude" || agents[2].Name != "codex" || agents[2].Resume != "codex resume" || !agents[2].DeleteArchives {
@@ -56,7 +56,7 @@ func TestACodexChat(t *testing.T) {
 	}
 
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: first.ChatId})))
 	if got := transcript(a.follow(first.ChatId, snap)); got != want {

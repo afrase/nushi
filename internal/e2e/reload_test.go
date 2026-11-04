@@ -15,7 +15,7 @@ import (
 
 func TestReloadReplaysTheChat(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "hello"})))
@@ -41,12 +41,12 @@ func TestReloadReplaysTheChat(t *testing.T) {
 func TestAnEmptyChatReopensAfterARestart(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	d.stop()
 
-	a = open(t, startDaemon(t, dataDir, history, nil))
+	a = open(t, startDaemon(t, dataDir, history))
 	items := a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))
 	if got := transcript(items); got != "" {
 		t.Errorf("transcript after a restart:\n%s", got)
@@ -63,7 +63,7 @@ func TestAnEmptyChatReopensAfterARestart(t *testing.T) {
 func TestAResponseStoppedBySafeguards(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "safeguards"})))
@@ -77,7 +77,7 @@ func TestAResponseStoppedBySafeguards(t *testing.T) {
 	}
 
 	d.stop()
-	a = open(t, startDaemon(t, dataDir, history, nil))
+	a = open(t, startDaemon(t, dataDir, history))
 	if got := transcript(a.follow(chatID, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))))); got != want {
 		t.Errorf("after a restart:\n%s\nwant:\n%s", got, want)
 	}
@@ -88,7 +88,7 @@ func TestAResponseStoppedBySafeguards(t *testing.T) {
 // file, a way out of the folder or a link out of it.
 func TestFindChatFiles(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	folder, outside := t.TempDir(), t.TempDir()
 	for _, f := range []string{"docs/plan.md", "main.go"} {

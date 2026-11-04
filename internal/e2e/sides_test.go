@@ -20,7 +20,7 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 	ctx := context.Background()
 	history := &acptest.History{}
 	dir := t.TempDir()
-	d := startDaemon(t, dir, history, nil)
+	d := startDaemon(t, dir, history)
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
@@ -49,7 +49,7 @@ func TestSideChatsLeaveNoHistory(t *testing.T) {
 	if !history.Has(s2) {
 		t.Fatal("gone before the chat opened again") // the test proves nothing then
 	}
-	d = startDaemon(t, dir, history, nil)
+	d = startDaemon(t, dir, history)
 	a = open(t, d)
 	must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
 	gone(s2)
@@ -70,7 +70,7 @@ func TestSideChatsStayWhileAPhoneFollows(t *testing.T) {
 	chats.SidesGrace = 10 * time.Millisecond
 	ctx := context.Background()
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history, nil)
+	d := startDaemon(t, t.TempDir(), history)
 	mac, phone := open(t, d), openAt(t, d.devices)
 	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(mac.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))

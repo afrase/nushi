@@ -49,6 +49,11 @@ type HarnessInfo struct {
 	// workflows (Claude Code's ultracode). Nil when the agent has none: the
 	// chat then has no Ultracode option.
 	UltracodeMeta map[string]any
+	// Moves says a chat's session can move to another folder: the agent's
+	// session/fork with the new folder as its cwd finds the session
+	// wherever it is (Claude's Go agent in any folder's history, Codex by
+	// its id), so a moved chat forks it there (ADR 0014).
+	Moves bool
 }
 
 // Info is i itself, so a HarnessInfo is a harness.

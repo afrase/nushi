@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -20,31 +19,8 @@ import (
 func TestMoveAChat(t *testing.T) {
 	ctx := context.Background()
 	dataDir, repo, other, broken := t.TempDir(), t.TempDir(), t.TempDir(), t.TempDir()
-	var mu sync.Mutex
-	var copies []string // the copies of Claude's history there are
-	history := &acptest.History{}
-	made := 0
-	copyHistory := func(id, from, to string) (func() error, error) {
-		mu.Lock()
-		defer mu.Unlock()
-		if to == broken {
-			return nil, errors.New("no room")
-		}
-		removeCopy, err := history.Copy(id, from, to)
-		if err != nil {
-			return nil, err
-		}
-		entry := id + " " + from + " -> " + to
-		copies = append(copies, entry)
-		made++
-		return func() error {
-			mu.Lock()
-			defer mu.Unlock()
-			copies = slices.DeleteFunc(copies, func(c string) bool { return c == entry })
-			return removeCopy()
-		}, nil
-	}
-	d := startDaemon(t, dataDir, history, copyHistory)
+	history := &acptest.History{Full: broken} // a fork there fails
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	chat := func(id string) *nushiv1.Chat {
 		for _, c := range must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats {
@@ -84,8 +60,8 @@ func TestMoveAChat(t *testing.T) {
 		t.Fatal(err)
 	}
 	moved := chat(id)
-	if moved.Folder != repo || moved.SessionId == scratch.SessionId || len(copies) != 0 {
-		t.Fatalf("after the first move: %v (was %v), copies %v", moved, scratch, copies)
+	if moved.Folder != repo || moved.SessionId == scratch.SessionId {
+		t.Fatalf("after the first move: %v (was %v)", moved, scratch)
 	}
 	if !history.Deleted(scratch.SessionId) {
 		t.Error("the empty session wasn't deleted from the agent's history")
@@ -94,8 +70,8 @@ func TestMoveAChat(t *testing.T) {
 		t.Fatalf("reply = %q", got)
 	}
 
-	// After messages, the session is copied to the new folder, forked there
-	// and the copy removed: a new session with the same transcript, new cwd.
+	// After messages, the session is forked into the new folder: a new
+	// session with the same transcript, new cwd; the original stays.
 	before := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Items)
 	if err := move(id, other); err != nil {
 		t.Fatal(err)
@@ -104,8 +80,8 @@ func TestMoveAChat(t *testing.T) {
 	if c := chat(id); c.Folder != other || c.SessionId == moved.SessionId || transcript(snap.Items) != before {
 		t.Fatalf("after moving: %v\n%s\nwant\n%s", c, transcript(snap.Items), before)
 	}
-	if made != 1 || len(copies) != 0 {
-		t.Errorf("%d copies made, left: %v", made, copies)
+	if !history.In(repo, moved.SessionId) || history.In(other, moved.SessionId) {
+		t.Error("the original session moved out of its folder's history")
 	}
 	if got := ask(id, "pwd"); got != "cwd: "+other {
 		t.Fatalf("reply = %q", got)
@@ -138,7 +114,7 @@ func TestMoveAChat(t *testing.T) {
 	// The moved chat reopens after a restart, its whole history replayed
 	// (the agent's: not Nushi's prompts and notices).
 	d.stop()
-	d = startDaemon(t, dataDir, history, copyHistory)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	items = a.follow(id, must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))))
 	got := transcript(items)

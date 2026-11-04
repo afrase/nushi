@@ -23,7 +23,7 @@ import (
 func TestAgentToldOfBranchRename(t *testing.T) {
 	ctx := context.Background()
 	repo, dataDir, history := gitRepo(t), t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	get := func(id string) *nushiv1.GetChatResponse {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
@@ -130,7 +130,7 @@ func TestAgentToldOfBranchRename(t *testing.T) {
 	if err := os.WriteFile(file, b, 0o600); err != nil || !bytes.Contains(b, []byte(`"Told": "-x`)) {
 		t.Fatalf("the session file: %v\n%s", err, b)
 	}
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	r := a.follow(idMany, get(idMany))
 	for _, it := range r {

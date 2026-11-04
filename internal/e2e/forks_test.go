@@ -25,7 +25,7 @@ func idleChat(id string) func(*nushiv1.EventsResponse) bool {
 func TestForkAChat(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
@@ -51,7 +51,7 @@ func TestForkAChat(t *testing.T) {
 	}
 
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	listed := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats
 	if !slices.ContainsFunc(listed, func(c *nushiv1.Chat) bool { return c.Id == fork }) {
@@ -70,7 +70,7 @@ func TestForkAChat(t *testing.T) {
 // conversation up to that message; omp, which can't, is refused cleanly.
 func TestForkFromAMessage(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "pig", Folder: t.TempDir()}))).ChatId
 	for _, text := range []string{"hello", "use a tool"} {
@@ -113,7 +113,7 @@ func TestKeepASideChat(t *testing.T) {
 	chats.SidesGrace = 10 * time.Millisecond
 	ctx := context.Background()
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history, nil)
+	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))

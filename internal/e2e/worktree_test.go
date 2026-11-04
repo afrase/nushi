@@ -29,7 +29,7 @@ func gitRepo(t *testing.T) string {
 func TestChatsInWorktrees(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	chat := func(id string) *nushiv1.Chat {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id}))).Chat
@@ -164,7 +164,7 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 	repo := gitRepo(t)
 	testcheck.NoErr(t, os.MkdirAll(filepath.Join(repo, "newapp"), 0o755))
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(repo, "newapp", "a.txt"), []byte("new\n"), 0o644))
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	if _, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: filepath.Join(repo, "newapp"), Worktree: true})); err == nil {
 		t.Error("a worktree chat in a folder the worktree doesn't have started")
@@ -221,7 +221,7 @@ func TestWorktreeMovesKeepTheWork(t *testing.T) {
 func TestChatOnAnIssue(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	start := func(branch string) (*nushiv1.Chat, error) {
 		r, err := a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: repo, Worktree: true,

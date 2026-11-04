@@ -31,19 +31,17 @@ var (
 	_ chats.GoneReader       = claude.Harness{}
 	_ chats.TitleMaker       = claude.Harness{}
 
-	_ chats.HistoryCopier  = claudehistory.Local{}
 	_ chats.OpenFinder     = claudehistory.Local{}
 	_ chats.ForkFinder     = claudehistory.Local{}
 	_ chats.HistoryChecker = claudehistory.Local{}
 	_ chats.MessageDater   = claudehistory.Local{}
 	_ chats.WorktreeFinder = claudehistory.Local{}
 
-	_ chats.Forker        = codex.Harness{}
-	_ chats.ReadOnly      = codex.Harness{}
-	_ chats.ToolReader    = codex.Harness{}
-	_ chats.OtherReader   = codex.Harness{}
-	_ chats.GoneReader    = codex.Harness{}
-	_ chats.HistoryCopier = codex.Harness{} // nothing to copy, nothing read
+	_ chats.Forker      = codex.Harness{}
+	_ chats.ReadOnly    = codex.Harness{}
+	_ chats.ToolReader  = codex.Harness{}
+	_ chats.OtherReader = codex.Harness{}
+	_ chats.GoneReader  = codex.Harness{}
 
 	_ chats.OpenFinder = codex.Local{}
 	_ chats.ForkFinder = codex.Local{}

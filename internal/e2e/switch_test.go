@@ -33,7 +33,7 @@ func TestSwitchBranchAndOpenAWorktree(t *testing.T) {
 	testcheck.Git(t, repo, "branch", "other")
 	try := filepath.Join(repo, ".worktrees", "cappy", "try-sqrly")
 	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "try-sqrly", try)
-	d := startDaemon(t, t.TempDir(), history, nil)
+	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
 	get := func(id string) *nushiv1.GetChatResponse {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))

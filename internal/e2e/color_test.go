@@ -13,7 +13,7 @@ import (
 func TestSetChatColor(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	color := func() string {
@@ -46,7 +46,7 @@ func TestSetChatColor(t *testing.T) {
 
 	// Kept across a restart.
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	if got := color(); got != "amber" {
 		t.Fatalf("after a restart: %q", got)

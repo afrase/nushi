@@ -13,7 +13,7 @@ import (
 func TestPinChats(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	start := func() string {
 		return must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -58,7 +58,7 @@ func TestPinChats(t *testing.T) {
 
 	// Kept across a restart.
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	want("after a restart", map[string]int32{x: 0, y: 1, z: 0})
 }

@@ -27,7 +27,7 @@ func questionPending(e *nushiv1.EventsResponse) bool {
 func TestAnAnteChat(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	start := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "ante", Folder: t.TempDir()})))
 	var ids []string
@@ -85,7 +85,7 @@ func TestAnAnteChat(t *testing.T) {
 	}
 
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
 	if got := transcript(a.follow(id, snap)); got != "USER_MESSAGE:hello:\nAGENT_MESSAGE:You said: hello:" {
@@ -121,7 +121,7 @@ func subagentView(items []*nushiv1.Item) string {
 func TestAnAnteSubagent(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "ante", Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask a subagent"})))
@@ -144,7 +144,7 @@ func TestAnAnteSubagent(t *testing.T) {
 	}
 
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
 	if got := subagentView(a.follow(id, snap)); got != live {
@@ -153,7 +153,7 @@ func TestAnAnteSubagent(t *testing.T) {
 
 	d.stop()
 	testcheck.NoErr(t, os.RemoveAll(filepath.Join(dataDir, "transcripts")))
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	snap = must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
 	if got := subagentView(a.follow(id, snap)); got != live {
@@ -165,7 +165,7 @@ func TestAnAnteSubagent(t *testing.T) {
 // history (omp has no session/delete).
 func TestAnOmpChat(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "a question"})))

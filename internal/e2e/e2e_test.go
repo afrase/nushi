@@ -48,8 +48,7 @@ import (
 
 // daemon is nushid with fake agents: "fake" (the default), and main's
 // others on fakes (startDaemon). The fake agents share one History, as
-// Claude's sessions outlive its processes. A nil copyHistory copies through
-// the History, as Claude's projects folder would be copied.
+// Claude's sessions outlive its processes.
 type daemon struct {
 	url     string // the API as the Mac's socket serves it
 	devices string // as a paired device's channel does
@@ -61,19 +60,12 @@ type daemon struct {
 	toolAPI string // the tools' endpoint, as the daemon's socket serves it
 }
 
-// copyFunc copies a session's history to another folder (chats.HistoryCopier).
-type copyFunc func(sessionID, from, to string) (remove func() error, err error)
-
 // fakeHarness is the "fake" agent's: Claude's notices, as startDaemon says,
-// and copyFunc's history.
-type fakeHarness struct{ copyFunc }
+// and its moves.
+type fakeHarness struct{}
 
 func (fakeHarness) Info() model.HarnessInfo {
-	return model.HarnessInfo{Name: "fake", NamesSessions: true}
-}
-
-func (h fakeHarness) CopyHistory(id, from, to string) (func() error, error) {
-	return h.copyFunc(id, from, to)
+	return model.HarnessInfo{Name: "fake", NamesSessions: true, Moves: true}
 }
 
 func (fakeHarness) Notice(meta map[string]any, text string) (model.AgentNotice, bool) {
@@ -100,7 +92,7 @@ type pipeAgent struct{ *agentproc.Agent }
 
 func (p pipeAgent) Stop(time.Duration) error { return p.Close() }
 
-func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHistory copyFunc) *daemon {
+func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon {
 	t.Helper()
 	var mu sync.Mutex
 	var kill func()
@@ -129,9 +121,6 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		outR, outW := io.Pipe()
 		go func() { anteStore.Serve(inR, outW); _ = outW.Close() }()
 		return inW, outR, func() { _, _ = inR.Close(), outW.Close() }, nil
-	}
-	if copyHistory == nil {
-		copyHistory = history.Copy
 	}
 	hub := &events.Hub{}
 	st := store.New(dataDir)
@@ -170,7 +159,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History, copyHis
 		"pi":  pis(pi.Pi),
 		"pig": pis(pi.PiG),
 	}
-	kinds := []chats.Kind{{Harness: fakeHarness{copyHistory}, Launch: fake(false, false)}}
+	kinds := []chats.Kind{{Harness: fakeHarness{}, Launch: fake(false, false)}}
 	for _, a := range knownagents.All("") { // no projects folder: Local isn't used
 		if l := launches[a.Agent.Name]; l != nil {
 			kinds = append(kinds, chats.Kind{Harness: a.Harness, Launch: l, MCP: a.MCP != nil})
@@ -347,7 +336,7 @@ func apply(items []*nushiv1.Item, e *nushiv1.EventsResponse) []*nushiv1.Item {
 
 func TestAppQuitsWhileAPromptWaits(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 
 	first := open(t, d)
 	chatID := must(first.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -424,7 +413,7 @@ func (a *app) follow(chatID string, snap *nushiv1.GetChatResponse) []*nushiv1.It
 func TestDaemonRestartReopensChats(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -437,7 +426,7 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	before := transcript(must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: chatID}))).Items)
 
 	d.stop() // the daemon goes, and its agents with it
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 
 	a = open(t, d)
 	list := must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats
@@ -469,7 +458,7 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 
 func TestStopCancelsAWaitingPrompt(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	chatID := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "ask permission"})))
@@ -491,7 +480,7 @@ func TestStopCancelsAWaitingPrompt(t *testing.T) {
 func TestRenameArchiveAndDelete(t *testing.T) {
 	ctx := context.Background()
 	dataDir, history := t.TempDir(), &acptest.History{}
-	d := startDaemon(t, dataDir, history, nil)
+	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	start := func() string {
 		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
@@ -535,7 +524,7 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 	// After a restart the chat is still archived and renamed; unarchived,
 	// it is replayed and carries on.
 	d.stop()
-	d = startDaemon(t, dataDir, history, nil)
+	d = startDaemon(t, dataDir, history)
 	a = open(t, d)
 	if c := list(); len(c) != 1 || !c[kept].Archived || c[kept].Title != "Greeting" {
 		t.Fatalf("chats after restart = %v", c)

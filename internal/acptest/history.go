@@ -13,6 +13,10 @@ import (
 // History holds every session's updates by folder, for session/load, and
 // the sessions deleted.
 type History struct {
+	// Full is a folder whose history takes no more sessions: a fork into
+	// it fails with "no room", as on a full disk.
+	Full string
+
 	mu       sync.Mutex
 	sessions map[key][]json.RawMessage
 	deleted  map[string]bool
@@ -102,38 +106,29 @@ func (h *History) list(cwd string) []map[string]any {
 	return out
 }
 
-// fork gives session to, in folder cwd, a copy of session from's history
-// there; it fails when cwd's history has no from.
-func (h *History) fork(cwd, from, to string) bool {
+// fork gives session to, in folder cwd's history, a copy of session
+// from's history: cwd's own, else the latest of another folder's, as
+// Claude's Go agent forks a session into another folder.
+func (h *History) fork(cwd, from, to string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.Full != "" && keyOf(h.Full, "") == keyOf(cwd, "") {
+		return fmt.Errorf("no room in %s", cwd)
+	}
 	u, ok := h.sessions[keyOf(cwd, from)]
-	if ok {
-		h.sessions[keyOf(cwd, to)] = append([]json.RawMessage(nil), u...)
-	}
-	return ok
-}
-
-// Copy copies session's history in folder from into folder to's, as the
-// daemon does before forking a session in another folder (a
-// chats.CopyHistory), and returns a function that removes the copy.
-func (h *History) Copy(session, from, to string) (remove func() error, err error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	u, ok := h.sessions[keyOf(from, session)]
 	if !ok {
-		return nil, fmt.Errorf("no session %s in %s", session, from)
+		latest := 0
+		for k, v := range h.sessions {
+			if k.session == from && h.last[k] > latest {
+				u, ok, latest = v, true, h.last[k]
+			}
+		}
 	}
-	if _, ok := h.sessions[keyOf(to, session)]; ok {
-		return nil, fmt.Errorf("session %s is in %s already", session, to)
+	if !ok {
+		return fmt.Errorf("session %s not found", from)
 	}
-	h.sessions[keyOf(to, session)] = append([]json.RawMessage(nil), u...)
-	return func() error {
-		h.mu.Lock()
-		defer h.mu.Unlock()
-		delete(h.sessions, keyOf(to, session))
-		return nil
-	}, nil
+	h.sessions[keyOf(cwd, to)] = append([]json.RawMessage(nil), u...)
+	return nil
 }
 
 // Has reports whether session is in the history, in any folder.

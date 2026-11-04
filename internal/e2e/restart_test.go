@@ -29,7 +29,7 @@ func (d *daemon) due(wait time.Duration) bool {
 // again to the new daemon.
 func TestRestartWaitsForTheTurn(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "ask permission"})))
@@ -59,7 +59,7 @@ func TestRestartWaitsForTheTurn(t *testing.T) {
 // once.
 func TestRestartWithNothingRunning(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "hello"})))
@@ -76,7 +76,7 @@ func TestRestartWithNothingRunning(t *testing.T) {
 func TestAPromptAtTheRestartIsntLost(t *testing.T) {
 	ctx := context.Background()
 	for range 5 {
-		d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+		d := startDaemon(t, t.TempDir(), &acptest.History{})
 		a := open(t, d)
 		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 		sent := make(chan error, 1)
@@ -104,7 +104,7 @@ func TestAPromptAtTheRestartIsntLost(t *testing.T) {
 // the daemon); one at its prompt doesn't.
 func TestRestartWaitsForATerminalsCommand(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	term := must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: id, Cols: 80, Rows: 24}))).Terminal
@@ -130,7 +130,7 @@ func TestRestartWaitsForATerminalsCommand(t *testing.T) {
 // daemon is gone.
 func TestARestartNotAskedAgainLapses(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	d.restart.Lease = 100 * time.Millisecond
 	a := open(t, d)
 	id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId

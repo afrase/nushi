@@ -16,10 +16,9 @@ import (
 // already (another of the repository's worktrees) runs the chat in it,
 // as one Nushi didn't make (Found), never removed by Nushi. A chat with
 // messages is told where it went with its next prompt. A chat without messages gets a new
-// session there. A chat with messages gets a fork of its session there: the
-// agent's record of the session is copied into the folder's history, forked
-// with the folder as its cwd (a new session id, with the whole conversation),
-// and the copy removed; the original stays in the old folder's history. The
+// session there. A chat with messages gets a fork of its session there,
+// with the folder as its cwd (a new session id, with the whole
+// conversation); the original stays in the old folder's history. The
 // chat's agent keeps running until the new one is ready, so a move that fails
 // leaves the chat where it was, with a notice saying why. A chat without
 // messages that leaves the worktree it had removes it, if it holds no work;
@@ -72,7 +71,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	case fresh:
 		o, err = c.openSession(ctx, "", folder, false, "")
 	default:
-		o, err = s.fork(ctx, c, sid, from, folder)
+		o, err = s.fork(ctx, c, sid, folder)
 	}
 	if err == nil {
 		c.mu.Lock()
@@ -161,20 +160,12 @@ func within(folder, dir string) bool {
 	return err == nil && filepath.IsLocal(rel)
 }
 
-// fork starts an agent with a fork of session sid in folder to.
-func (s *Service) fork(ctx context.Context, c *chat, sid, from, to string) (opened, error) {
-	if c.kind.historyCopier == nil {
+// fork starts an agent with a fork of session sid in folder to, which the
+// agent finds wherever it is (HarnessInfo.Moves).
+func (s *Service) fork(ctx context.Context, c *chat, sid, to string) (opened, error) {
+	if !c.kind.Moves {
 		return opened{}, errors.New("moving this agent's sessions isn't supported")
 	}
-	remove, err := c.kind.historyCopier.CopyHistory(sid, from, to)
-	if err != nil {
-		return opened{}, err
-	}
-	defer func() {
-		if err := remove(); err != nil {
-			c.log().Warn("removing the history copied for the move", "old", sid, "to", to, "err", err)
-		}
-	}()
 	return c.openSession(ctx, sid, to, true, "")
 }
 

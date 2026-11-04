@@ -1,10 +1,8 @@
-// Package claudehistory reads and copies Claude Code's own record of its
-// sessions: Local is claude.Harness with that, for chats on this Mac. A copy
-// of a session's transcript in another folder's history is where
-// claude-agent-acp's session/fork looks for it. Claude keeps each session's
-// transcript in its projects folder, under a folder named after the
-// session's cwd. This is Claude's private layout (Claude Code 2.1.308,
-// claude-agent-acp 0.94.0): see ADR 0014.
+// Package claudehistory reads Claude Code's own record of its sessions:
+// Local is claude.Harness with that, for chats on this Mac. Claude keeps
+// each session's transcript in its projects folder, under a folder named
+// after the session's cwd. This is Claude's private layout (Claude Code
+// 2.1.308): see ADR 0014.
 package claudehistory
 
 import (
@@ -19,7 +17,6 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/afrase/nushi/internal/atomicfile"
 	"github.com/afrase/nushi/internal/claude"
 )
 
@@ -38,59 +35,6 @@ func Projects() (string, error) {
 		return "", err
 	}
 	return filepath.Join(claude.ConfigDir(), "projects"), nil
-}
-
-// CopyHistory copies session id's transcript (<id>.jsonl) from folder from's
-// history into folder to's, and returns a function that removes the copy
-// again. The original stays. When both folders have the same history
-// folder there is nothing to copy (or remove); a transcript already in to's
-// history is never replaced, unless it is the start of this one: a copy a
-// move left when the daemon died before removing it. The copy is streamed,
-// and replaces at once (atomicfile).
-func (l Local) CopyHistory(id, from, to string) (remove func() error, err error) {
-	none := func() error { return nil }
-	src, dst, err := paths(l.Projects, id, from, to)
-	if err != nil || src == dst {
-		return none, err
-	}
-	in, err := os.Open(src)
-	if err != nil {
-		return nil, fmt.Errorf("Claude's history of the session isn't where Nushi looks for it: %w", err)
-	}
-	defer in.Close() //nolint:errcheck // read-only
-	if there, err := os.Open(dst); !errors.Is(err, fs.ErrNotExist) {
-		start := err == nil && startsWith(in, there)
-		if err == nil {
-			_ = there.Close() // read-only
-		}
-		if _, err := in.Seek(0, io.SeekStart); err != nil || !start {
-			return nil, fmt.Errorf("Claude's history of %s already has session %s", to, id)
-		}
-	}
-	if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
-		return nil, err
-	}
-	if err := atomicfile.ReplaceFrom(dst, in, 0o600); err != nil {
-		return nil, err
-	}
-	return func() error { return os.Remove(dst) }, nil
-}
-
-// startsWith says r begins with all of what prefix reads.
-func startsWith(r, prefix io.Reader) bool {
-	a, b := make([]byte, 64<<10), make([]byte, 64<<10)
-	for {
-		n, err := io.ReadFull(prefix, a)
-		if _, rerr := io.ReadFull(r, b[:n]); rerr != nil || !bytes.Equal(a[:n], b[:n]) {
-			return false
-		}
-		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-			return true
-		}
-		if err != nil {
-			return false
-		}
-	}
 }
 
 // Move moves session id's transcript (and its folder, <id>/) from folder

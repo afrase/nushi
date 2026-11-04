@@ -26,6 +26,9 @@ func TestEveryAgentIsWhole(t *testing.T) {
 		if takes := n == "claude" || n == "codex"; info.ClientMCP != takes {
 			t.Errorf("%s: ClientMCP %v, want %v (ADR 0043)", n, info.ClientMCP, takes)
 		}
+		if moves := n == "claude" || n == "codex"; info.Moves != moves {
+			t.Errorf("%s: Moves %v, want %v (ADR 0014)", n, info.Moves, moves)
+		}
 		if claudes := n == "claude"; (info.InitMeta != nil) != claudes || (info.SessionMeta != nil) != claudes || (info.UltracodeMeta != nil) != claudes {
 			t.Errorf("%s: _meta %v, %v, %v, only Claude's has any", n, info.InitMeta, info.SessionMeta, info.UltracodeMeta)
 		}
@@ -40,7 +43,7 @@ var capabilities = map[string]func(chats.Harness) bool{
 	"Forker": has[chats.Forker], "ToolReader": has[chats.ToolReader],
 	"OtherReader": has[chats.OtherReader], "DefaultReader": has[chats.DefaultReader], "Transcript": has[chats.Transcript],
 	"Subagents": has[chats.Subagents], "SubagentMessages": has[chats.SubagentMessages], "BackgroundTasks": has[chats.BackgroundTasks], "ContextCommander": has[chats.ContextCommander], "ReadOnly": has[chats.ReadOnly],
-	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader], "HistoryCopier": has[chats.HistoryCopier],
+	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader],
 	"OpenFinder": has[chats.OpenFinder], "ForkFinder": has[chats.ForkFinder], "HistoryChecker": has[chats.HistoryChecker], "MessageDater": has[chats.MessageDater],
 	"TitleMaker": has[chats.TitleMaker],
 }
@@ -65,8 +68,8 @@ func listed(h chats.Harness) []string {
 func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
 		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "ReadOnly", "SubagentMessages", "Subagents", "TitleMaker", "ToolReader", "Transcript"},
-			[]string{"ForkFinder", "HistoryChecker", "HistoryCopier", "MessageDater", "OpenFinder"}},
-		"codex": {[]string{"Forker", "GoneReader", "HistoryCopier", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
+			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder"}},
+		"codex": {[]string{"Forker", "GoneReader", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
 		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
 		"omp":   {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
 		"pi":    {[]string{"ContextAsker", "Forker", "GoneReader"}, nil},

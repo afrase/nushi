@@ -23,7 +23,7 @@ import (
 func TestCleanUp(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	start := func(folder string, worktree bool) (string, *nushiv1.Worktree) {
 		id := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder, Worktree: worktree}))).ChatId

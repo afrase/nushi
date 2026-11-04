@@ -78,7 +78,7 @@ func (*replay) RequestPermission(context.Context, *acp.RequestPermissionRequest)
 func TestOpenASessionStartedElsewhere(t *testing.T) {
 	ctx := context.Background()
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history, nil)
+	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
 	dir, _ := filepath.EvalSymlinks(t.TempDir())
 	link := filepath.Join(t.TempDir(), "link") // Nushi's chats spell the folder so
@@ -139,7 +139,7 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 func TestListAcrossFoldersAndPages(t *testing.T) {
 	ctx := context.Background()
 	history := &acptest.History{}
-	d := startDaemon(t, t.TempDir(), history, nil)
+	d := startDaemon(t, t.TempDir(), history)
 	a := open(t, d)
 	dir, _ := filepath.EvalSymlinks(t.TempDir())
 	var mine []string

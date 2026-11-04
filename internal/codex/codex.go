@@ -33,8 +33,9 @@ type Local struct{ Harness }
 
 // Info is what Harness is. The adapter's session/delete archives the thread
 // ($CODEX_HOME/archived_sessions); codex resume offers to unarchive it.
+// Codex finds a session by its id whatever the folder, so it Moves.
 func (Harness) Info() model.HarnessInfo {
-	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true}
+	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true, Moves: true}
 }
 
 // Start starts the adapter, as claude.Harness does Claude's (node, env),
@@ -92,13 +93,6 @@ func (Harness) Gone(err error) bool {
 	}
 	_ = json.Unmarshal(e.Data, &d)
 	return strings.HasPrefix(d.Details, "no rollout found for thread id ")
-}
-
-// CopyHistory makes a session ready to fork into another folder: nothing to
-// do, since Codex finds a session by its id whatever the folder, and forks
-// it with another cwd.
-func (Harness) CopyHistory(_, _, _ string) (remove func() error, err error) {
-	return func() error { return nil }, nil
 }
 
 // ForkAt says how to fork a session at a message, if the agent is the

@@ -22,7 +22,7 @@ import (
 func TestBranchNamedAfterTheChat(t *testing.T) {
 	ctx := context.Background()
 	repo := gitRepo(t)
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a := open(t, d)
 	get := func(id string) *nushiv1.GetChatResponse {
 		return must(a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))

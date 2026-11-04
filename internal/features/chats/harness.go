@@ -176,14 +176,6 @@ type GoneReader interface {
 	Gone(error) bool
 }
 
-// HistoryCopier can move sessions to another folder: CopyHistory copies the
-// agent's own record of a session from one folder's history into another's,
-// where the agent can fork it with the other folder as its cwd, and returns a
-// function that removes the copy again.
-type HistoryCopier interface {
-	CopyHistory(sessionID, from, to string) (remove func() error, err error)
-}
-
 // The agent's own files and processes on this Mac: the interfaces below are
 // met only by an agent package's Local type, never by the Harness tests run,
 // so a test can't read the owner's sessions.

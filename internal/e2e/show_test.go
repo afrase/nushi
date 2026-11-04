@@ -42,7 +42,7 @@ func show(t *testing.T, d *daemon, key, path string) (text string, failed bool) 
 func TestAgentShowsAFile(t *testing.T) {
 	ctx := context.Background()
 	dataDir, folder := t.TempDir(), t.TempDir()
-	d := startDaemon(t, dataDir, &acptest.History{}, nil)
+	d := startDaemon(t, dataDir, &acptest.History{})
 	mac, phone := open(t, d), openAt(t, d.devices)
 	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId
 	testcheck.Write(t, filepath.Join(folder, "report.html"), "<h1>the report</h1>")
@@ -78,7 +78,7 @@ func TestAgentShowsAFile(t *testing.T) {
 // what's inside the chat's folder, never what a path leads to outside it.
 func TestWatchChatFolder(t *testing.T) {
 	ctx := context.Background()
-	d := startDaemon(t, t.TempDir(), &acptest.History{}, nil)
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	folder := t.TempDir()
 	mac, phone := open(t, d), openAt(t, d.devices)
 	id := must(mac.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: folder}))).ChatId

@@ -36,9 +36,10 @@
 // Cancelling a turn (session/cancel) ends "think", "plan" and "many"
 // between their steps, with stop reason "cancelled".
 //
-// Sessions are kept in a History, by folder as Claude keeps them: session/load
-// and session/fork find a session only in the history of the request's cwd
-// (Copy puts a copy of one in another folder's). Agents that share a History
+// Sessions are kept in a History, by folder as Claude keeps them:
+// session/load finds a session only in the history of the request's cwd,
+// session/fork in any folder's, writing the fork into the cwd's (as
+// Claude's Go agent does, ADR 0014). Agents that share a History
 // see each other's sessions, as a restarted agent would. Like Claude's
 // adapter, an agent takes prompts and config changes only for sessions it
 // opened (session/new, load or fork), and session/delete deletes a session
@@ -230,9 +231,11 @@ func (a *Agent) answer(f frame) {
 		id := fmt.Sprintf("fake-%d-%p", a.nextID, a)
 		a.mu.Unlock()
 		// Like Claude, a new session is only kept once it has a message.
-		if f.Method == "session/fork" && !a.History.fork(p.Cwd, p.SessionID, id) {
-			a.fail(f, "Session "+p.SessionID+" not found in "+p.Cwd)
-			return
+		if f.Method == "session/fork" {
+			if err := a.History.fork(p.Cwd, p.SessionID, id); err != nil {
+				a.fail(f, err.Error())
+				return
+			}
 		}
 		a.mu.Lock()
 		a.cwds[id] = p.Cwd
