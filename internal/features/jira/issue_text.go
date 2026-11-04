@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/afrase/nushi/internal/adf"
-	"github.com/afrase/nushi/internal/model"
 )
 
 // recentComments is how many of the latest comments jira_issue gives.
@@ -51,19 +50,15 @@ func (s *Service) issueText(ctx context.Context, id, key string) (string, error)
 	}
 	section("Description", text(is.Description))
 	section("Acceptance criteria", text(is.AcceptanceCriteria))
-	section("Subtasks", refs(is.Subtasks, func(model.JiraIssueRef) string { return "" }))
-	links := make([]model.JiraIssueRef, len(is.Links))
-	for i, l := range is.Links {
-		links[i] = l.Issue
+	var subtasks, links strings.Builder
+	for _, r := range is.Subtasks {
+		fmt.Fprintf(&subtasks, "- %s %s (%s)\n", r.Key, r.Summary, r.Status)
 	}
-	section("Linked issues", refs(links, func(r model.JiraIssueRef) string {
-		for _, l := range is.Links {
-			if l.Issue.Key == r.Key {
-				return l.Relation + " "
-			}
-		}
-		return ""
-	}))
+	section("Subtasks", subtasks.String())
+	for _, l := range is.Links {
+		fmt.Fprintf(&links, "- %s %s %s (%s)\n", l.Relation, l.Issue.Key, l.Issue.Summary, l.Issue.Status)
+	}
+	section("Linked issues", links.String())
 	var remote strings.Builder
 	for _, r := range is.RemoteLinks {
 		fmt.Fprintf(&remote, "- %s\n", adf.Link(cmp.Or(r.Title, r.URL), r.URL))
@@ -75,12 +70,4 @@ func (s *Service) issueText(ctx context.Context, id, key string) (string, error)
 	}
 	section("Recent comments", comments.String())
 	return strings.TrimSpace(b.String()) + "\n", nil
-}
-
-func refs(rs []model.JiraIssueRef, before func(model.JiraIssueRef) string) string {
-	var b strings.Builder
-	for _, r := range rs {
-		fmt.Fprintf(&b, "- %s%s %s (%s)\n", before(r), r.Key, r.Summary, r.Status)
-	}
-	return b.String()
 }

@@ -23,7 +23,8 @@ func (issueClient) Issue(context.Context, string) (model.JiraIssue, error) {
 		Description:        "Let people sign in.\n\n![screen.png](jira-attachment:10000)",
 		AcceptanceCriteria: "- A passkey signs in",
 		Subtasks:           []model.JiraIssueRef{{Key: "ACME-13", Summary: "The API", Status: "Done"}},
-		Links:              []model.JiraLink{{Relation: "is blocked by", Issue: model.JiraIssueRef{Key: "ACME-9", Summary: "Sessions", Status: "To Do"}}},
+		Links: []model.JiraLink{{Relation: "is blocked by", Issue: model.JiraIssueRef{Key: "ACME-9", Summary: "Sessions", Status: "To Do"}},
+			{Relation: "relates to", Issue: model.JiraIssueRef{Key: "ACME-9", Summary: "Sessions", Status: "To Do"}}}, // linked twice
 		RemoteLinks: []model.JiraRemoteLink{{Title: "PR #31", URL: "https://github.com/acme/app/pull/31"},
 			{Title: "![x](https://t.example/p.png)", URL: "javascript:alert(1)"}},
 		Comments: comments}, nil
@@ -48,7 +49,7 @@ func TestIssueText(t *testing.T) {
 		"## Description\n\nLet people sign in.\n\n[image: screen.png]",
 		"## Acceptance criteria\n\n- A passkey signs in",
 		"## Subtasks\n\n- ACME-13 The API (Done)",
-		"## Linked issues\n\n- is blocked by ACME-9 Sessions (To Do)",
+		"## Linked issues\n\n- is blocked by ACME-9 Sessions (To Do)\n- relates to ACME-9 Sessions (To Do)\n",
 		"- [PR #31](https://github.com/acme/app/pull/31)",
 		"- !\\[x\\](https://t.example/p.png)\n", // anyone's title is text, an unsafe URL dropped
 		"**Ann** (2026-10-25):\n\ncomment g",
