@@ -12,14 +12,13 @@ extension DaemonPlaces on Daemon {
       place is ChatPlace &&
       settingsOpen == null;
 
-  /// Shows [to] in the chat's place (picking a chat goes there too), and
-  /// on GitHub, [github]'s details; Settings shuts, as for anything that
-  /// takes the user elsewhere. A trust card asking is left: that's a no.
-  void go(Place to, {GitHubPick? github}) {
+  /// Shows [to] in the chat's place (picking a chat goes there too);
+  /// Settings shuts, as for anything that takes the user elsewhere. A
+  /// trust card asking is left: that's a no.
+  void go(Place to) {
     _leaveTrust();
     settingsOpen = null;
     place = to;
-    githubShow = github;
     _changed();
   }
 

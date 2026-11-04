@@ -8,6 +8,7 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/github_view.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
@@ -338,12 +339,10 @@ class _GitHubChipState extends State<GitHubChip> {
           ].join('\n');
     return Tap(
       tooltip: details,
-      onTap: () => widget.daemon.go(
-        const GitHubPlace(),
-        github: (
-          ref: GitHubRef(host: l.host, repo: l.repo, number: l.number),
-          pull: l.pull,
-        ),
+      onTap: () => showItem(
+        widget.daemon,
+        GitHubRef(host: l.host, repo: l.repo, number: l.number),
+        pull: l.pull,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Row(

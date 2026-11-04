@@ -24,12 +24,25 @@ const githubKey = SingleActivator(LogicalKeyboardKey.keyG, meta: true);
 /// ask: the daemon holds it back while a rate limit runs low).
 const githubPoll = Duration(minutes: 1);
 
+/// A pull request or an issue the GitHub view shows the details of: which
+/// it is goes with it, so the pane stays one whatever the inbox holds.
+typedef GitHubPick = ({GitHubRef ref, bool pull});
+
 /// What the view had last, while the app runs: the host, the item picked,
 /// and the one whose details show: kept whatever the inbox holds, so a
 /// pull request that leaves Review requested stays a pull request.
 String? _host;
 GitHubRef? _picked;
 GitHubPick? _details;
+
+/// Shows [ref] in the GitHub view: its details (a pull request's when
+/// [pull]), whatever the inbox holds.
+void showItem(Daemon daemon, GitHubRef ref, {required bool pull}) {
+  _host = ref.host;
+  _picked = ref;
+  _details = (ref: ref, pull: pull);
+  daemon.go(const GitHubPlace());
+}
 
 /// The cards whose older items show too ("Show"), until Nushi quits or
 /// the span or host changes.
@@ -110,12 +123,6 @@ class _GitHubViewState extends State<GitHubView> {
   @override
   void initState() {
     super.initState();
-    if (widget.daemon.githubShow case final show?) {
-      _picked = show.ref;
-      _details = show;
-      _host = show.ref.host;
-      widget.daemon.githubShow = null;
-    }
     unawaited(_loadHosts());
     _poll = Timer.periodic(githubPoll, (_) => unawaited(_load(quiet: true)));
     _underSettings = widget.daemon.settingsOpen != null;

@@ -86,10 +86,6 @@ const updatesApi = 86;
 /// asked (RestartWhenIdle).
 const restartWhenIdleApi = 77;
 
-/// A pull request or an issue the GitHub view shows the details of: which
-/// it is goes with it, so the pane stays one whatever the inbox holds.
-typedef GitHubPick = ({GitHubRef ref, bool pull});
-
 /// The app's link to nushid. [connected] follows a ping every few seconds;
 /// while connected, daemon events keep [chats] current. When no daemon
 /// answers, the bundled one is started; a running daemon is only ever
@@ -206,10 +202,6 @@ class Daemon extends ChangeNotifier {
 
   /// The section Settings opens on: the last one shown while the app runs.
   SettingsSection lastSettings = SettingsSection.general;
-
-  /// What the GitHub view is to show when it opens next (a chat's pull
-  /// request or issue), taken by the view.
-  GitHubPick? githubShow;
 
   /// The folder whose MCP servers Settings › MCP servers shows: the one
   /// picked there, else the open chat's, else the home folder.

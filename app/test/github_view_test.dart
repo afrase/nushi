@@ -786,6 +786,9 @@ void main() {
         GetGitHubStatesRequest() => GetGitHubStatesResponse(
           items: [item(1, 'Add Sub and Neg', checks: 'failure', unresolved: 2)],
         ),
+        ListGitHubHostsRequest() => ListGitHubHostsResponse(
+          hosts: [GitHubHost(host: 'github.com', login: 'me', source: 'gh')],
+        ),
         _ => null,
       };
     final d = await fake.connect(tester);
@@ -812,10 +815,17 @@ void main() {
     final asked = fake.calls.whereType<GetGitHubStatesRequest>().single;
     expect((asked.items.single.id, asked.quiet), ('PR_1', false));
     await tester.tap(find.text('#1'));
-    expect(
-      (d.place, d.githubShow?.ref.number, d.githubShow?.pull),
-      (const GitHubPlace(), 1, true),
+    expect(d.place, const GitHubPlace());
+    // The view, as the app mounts it there: the pull request's details.
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(body: GitHubView(d)),
+      ),
     );
+    await tester.pumpAndSettle();
+    final pane = tester.widget<GitHubPullPane>(find.byType(GitHubPullPane));
+    expect((pane.ref.repo, pane.ref.number), (_repo, 1));
     await closeView(tester, d);
   });
 
