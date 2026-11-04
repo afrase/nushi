@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/github_files.dart';
+import 'package:nushi/github_thread.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
