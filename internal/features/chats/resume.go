@@ -200,7 +200,8 @@ func (s *Service) AgentReady(agent string) {
 
 // load starts the chat's agent and has it replay the session, then puts the
 // session back on the chat's picks and in the mode it was last in (an agent
-// may reopen a session on its defaults: Claude does). A chat that never had
+// may reopen a session on its defaults: Claude does); one it refuses is
+// logged, since the chat runs. A chat that never had
 // a message may have nothing to replay (Claude keeps a session only once it
 // has one): it gets a new session instead.
 func (s *Service) load(ctx context.Context, c *chat) error {
@@ -255,7 +256,13 @@ func (s *Service) load(ctx context.Context, c *chat) error {
 	mode, picks, throwaway := c.record.Mode, c.record.Picks, slices.Clone(c.record.Throwaway)
 	c.mu.Unlock()
 	go s.discard(c, throwaway) //nolint:gosec // discarding outlives the request; left by an agent that stopped before it could
-	return c.reapply(ctx, o.agent, o.sid, mode, picks)
+	// The agent runs the session now: a mode or pick it refuses leaves
+	// the chat on its own, as for a start, a fork or an open, and the
+	// chat's record keeps the remembered one for the next reopen.
+	if err := c.reapply(ctx, o.agent, o.sid, mode, picks); err != nil {
+		c.log().Warn("mode after reopening", "err", err)
+	}
+	return nil
 }
 
 // folderGone says why a chat can't run when its folder no longer exists

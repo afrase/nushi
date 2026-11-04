@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"os"
@@ -156,4 +157,48 @@ func TestAChatWhoseFolderIsGone(t *testing.T) {
 	testcheck.NoErr(t, os.Mkdir(folder, 0o700))
 	testcheck.NoErr(t, svc.Reopen(c.id))
 	eventually(t, c, func() bool { return c.agent != nil && !c.busy })
+}
+
+// modeRefuser is a fake agent's process whose session/set_mode fails.
+type modeRefuser struct{ *proc }
+
+func (modeRefuser) SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+	return nil, errors.New("mode refused")
+}
+
+// A reopen whose agent loaded the session but refused the remembered
+// mode runs the chat on the agent's own: it isn't marked as failed to
+// reopen, and once that agent quits the chat sleeps and reopens when
+// shown, as any other.
+func TestReopenRefusedModeStillRuns(t *testing.T) {
+	agent := &fakeAgent{history: []acp.SessionUpdate{chunk("m1", "before")}}
+	agent.session.Modes = &acp.SessionModeState{CurrentModeID: "default", AvailableModes: []acp.SessionMode{{ID: "default", Name: "Default"}, {ID: "plan", Name: "Plan"}}}
+	launch := func(h acp.Client, log *slog.Logger) (Agent, error) {
+		a, err := agent.launch(h, log)
+		if err != nil {
+			return nil, err
+		}
+		return modeRefuser{a.(*proc)}, nil
+	}
+	sessions := &memSessions{stored: []model.ChatRecord{{ID: "c", SessionID: "s1", Agent: "fake", Folder: t.TempDir(), HasMessages: true, Mode: "plan"}}}
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "fake"}, Launch: launch}}, Options{Sessions: sessions})
+	if _, err := svc.Get("c"); err != nil {
+		t.Fatal(err)
+	}
+	c := svc.chats["c"]
+	eventually(t, c, func() bool { return !c.busy })
+	c.mu.Lock()
+	running, failed, mode := c.agent != nil, c.reopenFailed, c.record.Mode
+	c.mu.Unlock()
+	if !running || failed || len(notices(c)) > 0 {
+		t.Errorf("running %v, marked failed %v, notices %q", running, failed, notices(c))
+	}
+	if mode != "plan" {
+		t.Errorf("the record's mode is %q: the next reopen should try plan again", mode)
+	}
+	agent.quit()
+	eventually(t, c, func() bool { return c.agent == nil })
+	if st := svc.Status(c.record); !st.Asleep || st.ReopenFailed {
+		t.Errorf("after its agent quit: %+v", st)
+	}
 }
