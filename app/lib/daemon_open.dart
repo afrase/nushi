@@ -17,12 +17,13 @@ extension DaemonOpen on Daemon {
     try {
       // The recent part first, older pages on scrolling up (DaemonPages):
       // a long chat opens fast, on a slow link too. Taken again (the
-      // daemon restarted, the link came back), as much as it had, so
-      // what shows stays.
+      // daemon restarted, the link came back, or it was let go scrolled
+      // up), as much as it had, so what shows, or its place, stays.
+      final had = max(chat.items.length, chat.keptItems);
       final snapshot = await client.getChat(
         GetChatRequest(
           chatId: chat.id,
-          recent: pages ? max(pageItems, chat.items.length) : 0,
+          recent: pages ? max(pageItems, had) : 0,
         ),
       );
       if (load == chat.loads) chat.load(snapshot);

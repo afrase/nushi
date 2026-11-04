@@ -1,5 +1,6 @@
 // What reaches past a long chat's recent part (ADR 0026): a pane open on
-// an early subagent outlives the chat going back to its recent part.
+// an early subagent outlives the chat going back to its recent part, and a
+// chat let go scrolled up reopens where it was.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -65,6 +66,62 @@ void main() {
     expect(c.pane.value, 'c-sa3');
     expect(c.items.any((it) => it.id == 'c-sa3'), isTrue);
     expect(find.text('This subagent is no longer in the chat.'), findsNothing);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('left scrolled to its start and let go (not among the last '
+      'six), a chat reopens where it was', (tester) async {
+    viewport(tester, const Size(1400, 900));
+    showDetails.value = false;
+    final c = chat('c', 'claude', 'A long chat');
+    final paged = PagedChat(c, longChat('c', turns: 100));
+    final others = [
+      for (var i = 0; i < 7; i++) chat('s$i', 'claude', 'Short $i', age: 5 + i),
+    ];
+    final fake = FakeDaemon([c, ...others])
+      ..answer = (input) =>
+          paged.answer(input) ??
+          (input is GetChatRequest
+              ? GetChatResponse(
+                  chat: others.firstWhere((o) => o.id == input.chatId),
+                  items: longChat(input.chatId, turns: 1),
+                )
+              : null);
+    final d = await fake.connect(tester);
+    d.select('c');
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await _settle(tester);
+    final cs = d.chats['c']!;
+    await d.loadOlder(cs, all: true);
+    await _settle(tester);
+    ScrollPosition scroll() => tester
+        .state<ScrollableState>(
+          find
+              .descendant(
+                of: find.byType(SelectionArea),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        )
+        .position;
+    scroll().jumpTo(0); // reading its start
+    await _settle(tester);
+    for (final o in others) {
+      d.select(o.id);
+      await _settle(tester);
+    }
+    expect(cs.items, isEmpty, reason: 'let go');
+    d.select('c');
+    await _settle(tester);
+    await _settle(tester);
+    expect(cs.older, 0);
+    expect(scroll().pixels, lessThan(1));
+    final list = tester.getRect(find.byType(SelectionArea));
+    final start = tester.getRect(
+      find.textContaining('Turn 0:', findRichText: true).first,
+    );
+    expect(start.top, greaterThanOrEqualTo(list.top));
+    expect(start.bottom, lessThanOrEqualTo(list.bottom));
     await closeView(tester, d);
   }, variant: _mac);
 }

@@ -384,6 +384,10 @@ class ChatState extends ChangeNotifier {
   /// when it was left at its bottom. In the app's memory only.
   double? kept;
 
+  /// How many items it had when it was let go scrolled up ([letGo]): it
+  /// loads as many again, so the place [kept] names is there.
+  int keptItems = 0;
+
   /// The tab its pane shows on the Mac (Chat whenever the pane opens):
   /// here so the app's keys and the palette reach it wherever the focus is.
   final tab = ValueNotifier<ChatTab>(ChatTab.chat);
@@ -594,6 +598,7 @@ class ChatState extends ChangeNotifier {
   /// again when opened, as at launch (Daemon.keptChats).
   void letGo() {
     unload();
+    keptItems = kept == null ? 0 : items.length;
     items.clear();
     sending.clear();
     unsent.clear();
