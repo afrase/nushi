@@ -170,3 +170,45 @@ func TestMergeKeepsAFailedTurn(t *testing.T) {
 		t.Errorf("steered marks %v, %v: want only two's", got[0].Steered, got[2].Steered)
 	}
 }
+
+// A message with files is the copy's, chips and all, whichever way the
+// agent wrote the files' links into the text it replays, at the end and
+// mid-transcript (where the replay's message has an id of its own).
+func TestMergeMessagesWithFiles(t *testing.T) {
+	const up = "/Users/x/Library/Application Support/Nushi/uploads/c/r/IMG 1.pdf"
+	for name, replayed := range map[string]string{
+		"Claude":  "read this[@IMG 1.pdf](file:///Users/x/Library/Application%20Support/Nushi/uploads/c/r/IMG%201.pdf)[@a.md](file:///w/docs/a.md)",
+		"Codex":   "read this [@" + up + "](file:///Users/x/Library/Application%20Support/Nushi/uploads/c/r/IMG%201.pdf) [@docs/a.md](file:///w/docs/a.md)",
+		"Pi":      `read this @"` + up + `" @/w/docs/a.md`,
+		"Ante":    `read this @/Users/x/Library/Application\ Support/Nushi/uploads/c/r/IMG\ 1.pdf @/w/docs/a.md`,
+		"omp":     "read this\n\n" + up + "\n\ndocs/a.md",
+		"mention": "read this @docs/a.md[@a.md](file:///w/docs/a.md)",
+	} {
+		t.Run(name, func(t *testing.T) {
+			text := "read this"
+			if name == "mention" {
+				text = "read this @docs/a.md"
+			}
+			msg := model.Item{ID: "item-z", Kind: model.UserMessage, Text: text, Files: []string{up, "docs/a.md"}}
+			copied := append([]model.Item{msg}, items("m:m1:ok u:more m:m2:done")...)
+			replay := append([]model.Item{{ID: "r1", Kind: model.UserMessage, Text: replayed}}, items("m:m1:ok U:r2:more m:m2:done")...)
+			got := merge(copied, replay, claudeHarness)
+			if s := short(got); s != "u:"+strings.ReplaceAll(text, " ", "_")+" m:m1 u:more m:m2" {
+				t.Fatalf("got %s", s)
+			}
+			if len(got[0].Files) != 2 {
+				t.Errorf("the copy's files went: %+v", got[0])
+			}
+			// The same message mid-transcript, both before and after it.
+			copied = append(items("u:hi m:m0:hey"), copied...)
+			replay = append(items("U:r0:hi m:m0:hey"), replay...)
+			if s := short(merge(copied, replay, claudeHarness)); s != "u:hi m:m0 u:"+strings.ReplaceAll(text, " ", "_")+" m:m1 u:more m:m2" {
+				t.Errorf("mid-transcript: %s", s)
+			}
+		})
+	}
+	// Mentions apart, different messages stay different.
+	if userText("look at @a.go") != userText("look at @b.go") || userText("look at this") == userText("look at that") {
+		t.Error("userText")
+	}
+}

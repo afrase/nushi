@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,7 +14,8 @@ import (
 //
 // The two are lined up item by item, by the agent's ids where it gave
 // them (its messages' and tool calls' ids are the same live and replayed),
-// else by text (a user message: Nushi names it, the replay names it again),
+// else by text (a user message: Nushi names it, the replay names it again;
+// its mentions and files' links apart, see userText),
 // as the longest run in order both have. Where they agree the copy's items
 // stand, with what only the copy has between them (prompts, questions,
 // notices, subagents' steps, which no replay brings back), and what only
@@ -142,12 +144,43 @@ func textKey(it model.Item) []string {
 	switch {
 	case it.Kind == model.ToolCall && text != "":
 		return []string{"tool\x00" + it.Parent + "\x00" + it.Title + "\x00" + text}
-	case it.Kind == model.UserMessage, it.Kind == model.AgentMessage, it.Kind == model.Thought:
+	case it.Kind == model.UserMessage:
+		if text != "" || len(it.Images) > 0 || len(it.Files) > 0 {
+			return []string{strconv.Itoa(int(it.Kind)) + "\x00" + it.Parent + "\x00" + userText(text)}
+		}
+	case it.Kind == model.AgentMessage, it.Kind == model.Thought:
 		if text != "" || len(it.Images) > 0 {
 			return []string{strconv.Itoa(int(it.Kind)) + "\x00" + it.Parent + "\x00" + text}
 		}
 	}
 	return nil
+}
+
+var (
+	// fileLink is a file's link as Claude and Codex replay it: [@name](file://…).
+	fileLink = regexp.MustCompile(`\[@[^\]\n]*\]\(file://[^)\s]*\)`)
+	// atPath is an @ mention, as typed and as Pi and Ante replay a file:
+	// @path, @"a path", @a\ path.
+	atPath = regexp.MustCompile(`(^|\s)@(?:"[^"\n]*"|(?:\\\s|\S)+)`)
+)
+
+// userText is a user message's text as merge matches it: without the
+// mentions and file links in it, so the copy's message (its text, the
+// files apart) is the replay's, which has the files' links written in by
+// the agent. omp adds each link's name as a paragraph of its own at the
+// end: a path, which goes too.
+func userText(text string) string {
+	text = fileLink.ReplaceAllString(text, " ")
+	paras := strings.Split(text, "\n\n")
+	for len(paras) > 1 {
+		last := strings.TrimSpace(paras[len(paras)-1])
+		if strings.Contains(last, "\n") || !strings.HasPrefix(last, "/") && (strings.ContainsAny(last, " \t") || !strings.ContainsAny(last, "./")) {
+			break
+		}
+		paras = paras[:len(paras)-1]
+	}
+	text = atPath.ReplaceAllString(strings.Join(paras, "\n\n"), "$1")
+	return strings.Join(strings.Fields(text), " ")
 }
 
 // pair is an item both have: its index in the copy and in the replay.
