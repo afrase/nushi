@@ -1,7 +1,6 @@
 package git
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"crypto/sha256"
@@ -54,15 +53,7 @@ func Stage(ctx context.Context, folder string, paths []string, on bool) error {
 	cmd := command(ctx, folder, nil, append(args, "--pathspec-from-file=-", "--pathspec-file-nul")...)
 	cmd.Env = append(cmd.Env, "GIT_LITERAL_PATHSPECS=1")
 	cmd.Stdin = strings.NewReader(strings.Join(paths, "\x00"))
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		if _, ok := errors.AsType[*exec.ExitError](err); ok {
-			return fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
-		}
-		return err
-	}
-	return nil
+	return finish(cmd, args[0])
 }
 
 // StagedDiff is what's staged in folder as a patch, for an agent to read:

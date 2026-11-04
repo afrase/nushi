@@ -156,7 +156,7 @@ func Changes(ctx context.Context, folder string, span Span) ([]model.FileChange,
 func numstat(ctx context.Context, folder string, blank []string, revs ...string) (map[string][2]int, error) {
 	// Without --ignore-submodules=dirty, git runs a status in each
 	// submodule, which runs the submodule's own filters.
-	out, err := runWith(ctx, folder, blank, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--ignore-submodules=dirty", "--no-ext-diff", "--no-textconv")...)
+	out, err := runTo(ctx, folder, blank, nil, append(append([]string{"diff"}, revs...), "--numstat", "-z", "-M", "--relative", "--ignore-submodules=dirty", "--no-ext-diff", "--no-textconv")...)
 	if err != nil {
 		return nil, err
 	}
@@ -348,28 +348,35 @@ func Files(ctx context.Context, folder string, limit int) ([]string, error) {
 // noFilters turns them off: Changes shows what git shows, as the user's
 // own git diff would.
 func run(ctx context.Context, dir string, args ...string) ([]byte, error) {
-	return runWith(ctx, dir, nil, args...)
+	return runTo(ctx, dir, nil, nil, args...)
 }
 
-// runWith is run with the config settings named in blank set empty. They
-// go through GIT_CONFIG_KEY_<n>, which keeps a name apart from its value
-// whatever it holds ("=" too, which -c would split at).
-func runWith(ctx context.Context, dir string, blank []string, args ...string) ([]byte, error) {
-	return runTo(ctx, dir, blank, nil, args...)
-}
-
-// runTo is runWith with the output going to out, unless out is nil.
+// runTo is run with the config settings named in blank set empty, and the
+// output going to out unless out is nil. The settings go through
+// GIT_CONFIG_KEY_<n>, which keeps a name apart from its value whatever it
+// holds ("=" too, which -c would split at).
 func runTo(ctx context.Context, dir string, blank []string, out io.Writer, args ...string) ([]byte, error) {
 	cmd := command(ctx, dir, blank, args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = cmp.Or[io.Writer](out, &stdout), &stderr
-	if err := cmd.Run(); err != nil {
-		if _, ok := errors.AsType[*exec.ExitError](err); ok {
-			return nil, fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
-		}
+	var stdout bytes.Buffer
+	cmd.Stdout = cmp.Or[io.Writer](out, &stdout)
+	if err := finish(cmd, args[0]); err != nil {
 		return nil, err
 	}
 	return stdout.Bytes(), nil
+}
+
+// finish runs cmd, git's subcommand what; when git fails, the error is
+// what it said.
+func finish(cmd *exec.Cmd, what string) error {
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if _, ok := errors.AsType[*exec.ExitError](err); ok {
+			return fmt.Errorf("git %s: %s", what, strings.TrimSpace(stderr.String()))
+		}
+		return err
+	}
+	return nil
 }
 
 // command is git in dir as run runs it, with the settings named in blank
