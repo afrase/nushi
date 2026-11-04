@@ -19,7 +19,7 @@ import (
 // A device's files (the phone's, which aren't on the Mac) come whole with a
 // message. Each is saved in the chat's uploads folder, in a folder of its
 // own so it keeps its name, and goes to the agent as a link to that copy,
-// as a file on the Mac does (ADR 0089). The folder is the daemon's, outside
+// as a file on the Mac does (ADR 0091). The folder is the daemon's, outside
 // any repository; the chat's deletion takes it, and a chat keeps at most
 // maxChatUploads of them, the oldest going first.
 const (

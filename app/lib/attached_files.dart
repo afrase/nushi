@@ -17,7 +17,7 @@ import 'package:nushi/widgets.dart';
 import 'package:pasteboard/pasteboard.dart';
 
 /// The first daemon that takes a file outside the chat's folder by its
-/// absolute path, and a device's files whole (ADR 0089).
+/// absolute path, and a device's files whole (ADR 0091).
 const attachApi = 103;
 
 /// The most files one message attaches (the daemon's `chats.MaxUploads`).
@@ -42,7 +42,7 @@ const int maxLinkedFileBytes = 100 << 20;
 /// A file attached to the prompt being written, shown as a file card: one
 /// on the Mac by its absolute [path], which the agent gets a link to, or
 /// one from the phone with its bytes ([data]), which the daemon saves
-/// first (ADR 0089). [size] is -1 when not known (a message taken back).
+/// first (ADR 0091). [size] is -1 when not known (a message taken back).
 @immutable
 class AttachedFile {
   const new({
@@ -441,7 +441,7 @@ class FileChip extends StatelessWidget {
 }
 
 /// A sent message's attached files as chips: those of [item]'s files its
-/// text doesn't mention as @path (ADR 0089); null when there are none.
+/// text doesn't mention as @path (ADR 0091); null when there are none.
 Widget? messageFiles(BuildContext context, Item item, ChatState chat) {
   final attached = [
     for (final f in item.files)

@@ -95,7 +95,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Commit box** | Under Uncommitted's files: what's staged, the message, Commit. | `CommitBox`, `StageCheck`, `StageFiles`, `CommitStaged` | 0079 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
 | **Run** (a code block's) | ▷ on an agent's shell block: the block typed into the chat's terminal, its newest output under the block, its exit once it ends. | `CodeRuns`, `CodeRun`, `RunnableBlock`, `ShellMarks` | 0084 |
-| **File card** | A file attached to the message being written, in the box: its kind, name and size. Sent as a link to the file; the phone's go whole. In a sent message, a **file chip**. | `AttachedFile`, `FileCard`, `FileChip`, `Draft.files`, `SendPromptRequest.uploads` | 0089 |
+| **File card** | A file attached to the message being written, in the box: its kind, name and size. Sent as a link to the file; the phone's go whole. In a sent message, a **file chip**. | `AttachedFile`, `FileCard`, `FileChip`, `Draft.files`, `SendPromptRequest.uploads` | 0091 |
 | **Output card** | A run's output in the box, sent after your next message's text: only from a run that ended on its own. | `OutputCard`, `Draft.outputs`, `RunOutput`, `withOutputs` | 0084 |
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |

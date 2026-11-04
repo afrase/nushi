@@ -26,7 +26,7 @@ func sent(t *testing.T, c *chat, agent *fakeAgent) []acp.ContentBlock {
 
 // A file inside the chat's folder goes by its path there, one outside it
 // by its absolute path, as its URI and as its name: omp reads only the
-// name (ADR 0089).
+// name (ADR 0091).
 func TestAttachedFilesAreLinks(t *testing.T) {
 	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
 	outside := filepath.Join(t.TempDir(), "spec sheet.pdf")

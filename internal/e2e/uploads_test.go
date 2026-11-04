@@ -16,7 +16,7 @@ import (
 
 // A file sent whole (the phone's) is saved in the chat's uploads folder;
 // the transcript's message lists it with the files picked on the Mac, the
-// one outside the folder by its absolute path (ADR 0089).
+// one outside the folder by its absolute path (ADR 0091).
 func TestAPromptsFilesAndUploads(t *testing.T) {
 	ctx := context.Background()
 	dataDir := t.TempDir()

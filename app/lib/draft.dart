@@ -32,7 +32,7 @@ class Draft extends ChangeNotifier {
   final Replies replies = ValueNotifier(const []);
   final images = Attachments();
 
-  /// The files attached as file cards (ADR 0089); [images] counts their
+  /// The files attached as file cards (ADR 0091); [images] counts their
   /// reads too ([Attachments.track]).
   final files = ValueNotifier<List<AttachedFile>>(const []);
 
