@@ -34,23 +34,22 @@ import (
 // supported until 2028-03-10).
 const Version = "2022-11-28"
 
-// endpoints are a host's REST base, GraphQL endpoint and web address:
-// api.github.com for github.com, api.<host> for a GHE.com tenancy, and
-// <host>/api/v3 and /api/graphql for an Enterprise server.
-func endpoints(host string) (rest, graphql, web string) {
+// endpoints are a host's REST base and GraphQL endpoint: api.github.com
+// for github.com, api.<host> for a GHE.com tenancy, and <host>/api/v3 and
+// /api/graphql for an Enterprise server.
+func endpoints(host string) (rest, graphql string) {
 	switch {
 	case host == "github.com":
-		return "https://api.github.com", "https://api.github.com/graphql", "https://github.com"
+		return "https://api.github.com", "https://api.github.com/graphql"
 	case strings.HasSuffix(host, ".ghe.com"):
-		return "https://api." + host, "https://api." + host + "/graphql", "https://" + host
+		return "https://api." + host, "https://api." + host + "/graphql"
 	}
-	return "https://" + host + "/api/v3", "https://" + host + "/api/graphql", "https://" + host
+	return "https://" + host + "/api/v3", "https://" + host + "/api/graphql"
 }
 
 // Client calls one host as one token's user.
 type Client struct {
 	Host string
-	Web  string // https://github.com, for links
 	rest string
 	gql  string
 	auth string
@@ -64,10 +63,10 @@ type Client struct {
 
 // New makes a client of host for token; transport may be nil.
 func New(host, token string, transport http.RoundTripper) *Client {
-	rest, gql, web := endpoints(host)
+	rest, gql := endpoints(host)
 	noRedirect := func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	return &Client{
-		Host: host, Web: web, rest: rest, gql: gql,
+		Host: host, rest: rest, gql: gql,
 		auth:  "Bearer " + token,
 		http:  &http.Client{Transport: transport, Timeout: 30 * time.Second, CheckRedirect: noRedirect},
 		plain: &http.Client{Transport: transport, Timeout: 60 * time.Second, CheckRedirect: noRedirect},

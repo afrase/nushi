@@ -748,11 +748,9 @@ type MCPServer struct {
 }
 
 // ShellEnv is how reading the login shell's environment, which agents
-// start with, went last (ADR 0048): the shell, when it ended and how long
-// it took, and why it failed ("" when it worked). Nothing of the
-// environment itself.
+// start with, went last (ADR 0048): the shell, when it ended, and why it
+// failed ("" when it worked). Nothing of the environment itself.
 type ShellEnv struct {
 	Shell, Problem string
 	Read           time.Time
-	Took           time.Duration
 }

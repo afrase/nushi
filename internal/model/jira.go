@@ -4,7 +4,7 @@ import "time"
 
 // JiraUser is who a Jira site's token belongs to.
 type JiraUser struct {
-	AccountID, Name, Email string
+	AccountID, Name string
 }
 
 // JiraIssue is an issue as lists and the issue view show it. Text fields

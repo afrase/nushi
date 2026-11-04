@@ -109,7 +109,6 @@ type GitHubPull struct {
 	// on GitHub (one made in the browser), with its comments' count.
 	PendingReview   string
 	PendingComments int
-	CanComment      bool
 	Merge           GitHubMerge
 }
 

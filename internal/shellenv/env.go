@@ -29,7 +29,6 @@ type Env struct {
 	vars    []string  // the last reading that worked; nil before one has
 	read    time.Time // when the last reading ended, worked or not
 	problem string    // why it didn't, "" when it did
-	took    time.Duration
 }
 
 // New is the environment of shell over base (the daemon's), not read yet:
@@ -77,11 +76,10 @@ func (e *Env) Refresh(ctx context.Context, maxAge time.Duration) {
 	}
 	start := time.Now()
 	vars, err := Read(context.WithoutCancel(ctx), e.shell, e.base, Timeout) // a client gone mid-way doesn't make it a failure
-	took := time.Since(start)
-	log := slog.With("shell", e.shell, "took", took.Round(time.Millisecond))
+	log := slog.With("shell", e.shell, "took", time.Since(start).Round(time.Millisecond))
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.read, e.took = time.Now(), took
+	e.read = time.Now()
 	if err != nil {
 		e.problem = err.Error()
 		log.Warn("shell environment not read; agents start with the last read or the daemon's", "why", err) // never what it printed
@@ -132,5 +130,5 @@ func (e *Env) LookPath(name string) string { return LookPath(name, e.Environ()) 
 func (e *Env) Status() model.ShellEnv {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	return model.ShellEnv{Shell: e.shell, Read: e.read, Took: e.took, Problem: e.problem}
+	return model.ShellEnv{Shell: e.shell, Read: e.read, Problem: e.problem}
 }

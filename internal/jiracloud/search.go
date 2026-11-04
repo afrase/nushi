@@ -18,7 +18,7 @@ import (
 func (c *Client) Myself(ctx context.Context) (model.JiraUser, error) {
 	var u rawUser
 	err := c.do(ctx, http.MethodGet, "/rest/api/3/myself", nil, nil, nil, &u)
-	return model.JiraUser{AccountID: u.AccountID, Name: u.DisplayName, Email: u.EmailAddress}, err
+	return model.JiraUser{AccountID: u.AccountID, Name: u.DisplayName}, err
 }
 
 // listFields are what a list of issues shows (its rows: the summary,
@@ -154,9 +154,8 @@ func (c *Client) Suggestions(ctx context.Context, field, prefix string) ([]model
 }
 
 type rawUser struct {
-	AccountID    string `json:"accountId"`
-	DisplayName  string `json:"displayName"`
-	EmailAddress string `json:"emailAddress"`
+	AccountID   string `json:"accountId"`
+	DisplayName string `json:"displayName"`
 }
 
 func (u *rawUser) name() string {

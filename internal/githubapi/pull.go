@@ -23,7 +23,7 @@ const pullQuery = `query PullRequest($owner: String!, $name: String!, $number: I
       ...PullRow
       body authorAssociation baseRefName headRefName baseRefOid headRefOid isCrossRepository
       headRepository { nameWithOwner }
-      mergeable mergeStateStatus additions deletions changedFiles viewerCanUpdate
+      mergeable mergeStateStatus additions deletions changedFiles
       ` + mergeFields + `
       commitCount: commits { totalCount }
       reviewRequests(first: 30) { nodes { asCodeOwner requestedReviewer { __typename ... on User { login } ... on Bot { login } ... on Mannequin { login } ... on Team { slug } } } }
@@ -210,7 +210,6 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 				Additions        int    `json:"additions"`
 				Deletions        int    `json:"deletions"`
 				ChangedFiles     int    `json:"changedFiles"`
-				ViewerCanUpdate  bool   `json:"viewerCanUpdate"`
 				mergeNode
 				CommitCount struct {
 					TotalCount int `json:"totalCount"`
@@ -267,7 +266,7 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 	out := model.GitHubPull{GitHubItem: p.item(c.Host), Body: Markdown(p.Body), Association: p.AuthorAssociation,
 		Base: p.BaseRefName, Head: p.HeadRefName, BaseOID: p.BaseRefOid, HeadOID: p.HeadRefOid, CrossRepo: p.IsCrossRepository,
 		Mergeable: strings.ToLower(p.Mergeable), MergeState: strings.ToLower(p.MergeStateStatus), Additions: p.Additions,
-		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Commits: p.CommitCount.TotalCount, CanComment: p.ViewerCanUpdate, Merge: p.merge()}
+		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Commits: p.CommitCount.TotalCount, Merge: p.merge()}
 	if p.HeadRepository != nil {
 		out.HeadRepo = p.HeadRepository.NameWithOwner
 	}
@@ -323,7 +322,7 @@ func (c *Client) Pull(ctx context.Context, repo string, number int) (model.GitHu
 const issueQuery = `query Issue($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     issue(number: $number) {
-      __typename ...IssueRow body authorAssociation viewerCanUpdate
+      __typename ...IssueRow body authorAssociation
       labels(first: 20) { nodes { name } }
       assignees(first: 10) { nodes { login } }
       comments(last: 100) { nodes { id url author { login __typename } authorAssociation body createdAt } }

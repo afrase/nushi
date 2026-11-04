@@ -115,13 +115,13 @@ func limited(w http.ResponseWriter, resource string, remaining int, reset time.T
 
 func TestEndpoints(t *testing.T) {
 	for host, want := range map[string]string{
-		"github.com":         "https://api.github.com https://api.github.com/graphql https://github.com",
-		"octo.ghe.com":       "https://api.octo.ghe.com https://api.octo.ghe.com/graphql https://octo.ghe.com",
-		"git.example.com":    "https://git.example.com/api/v3 https://git.example.com/api/graphql https://git.example.com",
-		"git.example.com:84": "https://git.example.com:84/api/v3 https://git.example.com:84/api/graphql https://git.example.com:84",
+		"github.com":         "https://api.github.com https://api.github.com/graphql",
+		"octo.ghe.com":       "https://api.octo.ghe.com https://api.octo.ghe.com/graphql",
+		"git.example.com":    "https://git.example.com/api/v3 https://git.example.com/api/graphql",
+		"git.example.com:84": "https://git.example.com:84/api/v3 https://git.example.com:84/api/graphql",
 	} {
-		rest, gql, web := endpoints(host)
-		if got := rest + " " + gql + " " + web; got != want {
+		rest, gql := endpoints(host)
+		if got := rest + " " + gql; got != want {
 			t.Errorf("%s: %s, want %s", host, got, want)
 		}
 	}
