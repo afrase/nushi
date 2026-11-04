@@ -135,7 +135,8 @@ function fontSums() {
 // A chat's id, as the daemon makes them; anything else opens the list.
 const chatId = (v) => (typeof v === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(v) ? v : "");
 
-// A push says only what happened ("Claude finished") and the chat to open.
+// A push says only what happened ("Claude finished", "Claude's turn failed")
+// and the chat to open.
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -145,7 +146,7 @@ self.addEventListener("push", (event) => {
   }
   const title = typeof data.title === "string" && data.title ? data.title.slice(0, 80) : "Nushi";
   const chat = chatId(data.chat);
-  const kind = ["finished", "question", "permission", "test"].includes(data.kind) ? data.kind : "";
+  const kind = ["finished", "failed", "question", "permission", "test"].includes(data.kind) ? data.kind : "";
   event.waitUntil(
     self.registration.showNotification(title, {
       // One per chat and kind: a question doesn't silently replace a turn's end.

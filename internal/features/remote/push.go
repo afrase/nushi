@@ -155,7 +155,7 @@ func (s *Service) connectedLocked(device string) bool {
 // chat but its id.
 type payload struct {
 	Title string `json:"title"`          // "Claude finished"
-	Kind  string `json:"kind"`           // "finished", "question", "permission", "test"
+	Kind  string `json:"kind"`           // "finished", "failed", "question", "permission", "test"
 	Agent string `json:"agent,omitzero"` // "Claude"
 	Chat  string `json:"chat,omitzero"`  // the chat to open
 }
@@ -180,11 +180,11 @@ func (s *Service) send(ctx context.Context, device string, p payload) error {
 	body, _ := json.Marshal(p)
 	topic := sha256.Sum256([]byte(p.Chat + "\x00" + p.Kind))
 	// A prompt or question goes stale: an hour; a turn's end can wait.
-	ttl := time.Hour
-	if p.Kind == "finished" {
+	ttl, ended := time.Hour, p.Kind == "finished" || p.Kind == "failed"
+	if ended {
 		ttl = 4 * time.Hour
 	}
-	m := webpush.Message{Payload: body, Topic: base64.RawURLEncoding.EncodeToString(topic[:24]), Urgent: p.Kind != "finished", TTL: ttl}
+	m := webpush.Message{Payload: body, Topic: base64.RawURLEncoding.EncodeToString(topic[:24]), Urgent: !ended, TTL: ttl}
 	ctx, cancel := context.WithTimeout(ctx, s.timing.push)
 	defer cancel()
 	err := send(ctx, subject, webpush.Subscription{Endpoint: sub.Endpoint, P256DH: sub.P256DH, Auth: sub.Auth}, m)
@@ -214,9 +214,10 @@ func subjectOf(relay string) string {
 	return "mailto:nushi@users.noreply.github.com"
 }
 
-// notifier turns chats' events into pushes: a turn the chat says ended
-// done (not stopped, its agent didn't go), unless the agent went straight
-// on, and each permission prompt or question when it comes.
+// notifier turns chats' events into pushes: a turn's end as the chat
+// judged it, "finished" or "failed" (none for a stopped one), unless the
+// agent went straight on, and each permission prompt or question when it
+// comes.
 type notifier struct {
 	mu        sync.Mutex
 	asked     map[string]map[string]bool // per chat, prompts already pushed
@@ -264,10 +265,11 @@ func (s *Service) Follow(e model.Event) {
 	case e.Status != nil && e.Status.Ended != model.NotEnded:
 		delete(n.asked, chat)
 		n.unfinishLocked(chat)
-		if e.Status.Ended == model.TurnDone {
+		kind := map[model.TurnEnd]string{model.TurnDone: "finished", model.TurnFailed: "failed"}[e.Status.Ended]
+		if kind != "" {
 			off := make(chan struct{})
 			n.finishing[chat] = off
-			if !s.spawn(func() { s.finish(chat, off) }) { // closed
+			if !s.spawn(func() { s.finish(chat, kind, off) }) { // closed
 				delete(n.finishing, chat)
 			}
 		}
@@ -287,10 +289,11 @@ func (s *Service) Follow(e model.Event) {
 	}
 }
 
-// finish pushes "finished" for chatID once its turn's end has waited
-// timing.finished, unless the wait is called off (off closed: the agent
-// went on, or the chat went) or the service closes first.
-func (s *Service) finish(chatID string, off <-chan struct{}) {
+// finish pushes kind ("finished" or "failed") for chatID once its turn's
+// end has waited timing.finished, unless the wait is called off (off
+// closed: the agent went on, or the chat went) or the service closes
+// first.
+func (s *Service) finish(chatID, kind string, off <-chan struct{}) {
 	wait := time.NewTimer(s.timing.finished)
 	defer wait.Stop()
 	select {
@@ -308,11 +311,11 @@ func (s *Service) finish(chatID string, off <-chan struct{}) {
 	}
 	n.mu.Unlock()
 	if waited {
-		s.notify(chatID, "finished")
+		s.notify(chatID, kind)
 	}
 }
 
-// unfinishLocked calls off chatID's wait for "finished", if one runs.
+// unfinishLocked calls off chatID's wait for its turn's end, if one runs.
 // Called with n.mu.
 func (n *notifier) unfinishLocked(chatID string) {
 	if off := n.finishing[chatID]; off != nil {
@@ -345,7 +348,7 @@ func (s *Service) notify(chatID, kind string) {
 		return // a side chat, or one that's gone
 	}
 	p := payload{Kind: kind, Agent: title, Chat: chatID, Title: title + map[string]string{
-		"finished": " finished", "question": " has a question", "permission": " needs you"}[kind]}
+		"finished": " finished", "failed": "'s turn failed", "question": " has a question", "permission": " needs you"}[kind]}
 	for _, d := range to {
 		s.queue(d, p)
 	}

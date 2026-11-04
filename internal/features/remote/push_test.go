@@ -210,16 +210,31 @@ func TestSubscriptionsOnlyToPushServices(t *testing.T) {
 	}
 }
 
-// A turn the chat says was stopped (the user stopped it, its agent quit
-// mid-turn, it was being archived), and a turn the agent goes straight on
-// from (the next queued message), aren't "finished"; nor is a status that
+// A turn the chat says failed (an error, or its agent quit mid-turn) is
+// pushed as failed, as the Mac says it, and nothing of the error goes.
+func TestAFailedTurnPushesFailed(t *testing.T) {
+	s, p, _, _ := pushing(t)
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Busy: true, Started: time.Now()}})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed, Failure: "SECRET the agent's error"}})
+	got := p.settle(t, 1)
+	if want := (payload{Title: "Claude's turn failed", Kind: "failed", Agent: "Claude", Chat: "c1"}); len(got) != 1 || got[0] != want {
+		t.Fatalf("pushed %+v, want %+v", got, want)
+	}
+}
+
+// A turn the chat says was stopped (the user stopped it, its agent was
+// being archived or put to sleep), and a turn the agent goes straight on
+// from (the next queued message), aren't pushed; nor is a status that
 // merely has no turn running.
 func TestNoFinishedForAStopOrAQueue(t *testing.T) {
 	s, p, _, _ := pushing(t)
 	started := &model.Status{Busy: true, Started: time.Now()}
 	s.Follow(model.Event{ChatID: "c1", Status: started})
-	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnStopped}}) // its agent quit: no notice came
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnStopped}})
 	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{}})
+	s.Follow(model.Event{ChatID: "c1", Status: started})
+	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnFailed}})
+	s.Follow(model.Event{ChatID: "c1", Status: started}) // Try again, at once
 	s.Follow(model.Event{ChatID: "c1", Status: started})
 	s.Follow(model.Event{ChatID: "c1", Status: &model.Status{Ended: model.TurnDone}})
 	s.Follow(model.Event{ChatID: "c1", Status: started}) // the queue's next
