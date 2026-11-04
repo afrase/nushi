@@ -175,7 +175,7 @@ class _TodoRowState extends State<TodoRow> {
         _Tag('Changes requested', t.crashed, soft: true),
         r.body.isEmpty
             ? 'No text: their review threads say what'
-            : _firstLine(plainText(r.body)),
+            : plainText(r.body),
       ),
       ThreadTodo(thread: final x) => (
         Icons.forum_outlined,
@@ -334,9 +334,6 @@ String _checkDetail(GitHubCheck c) {
   if (c.title.isNotEmpty) return c.title;
   return c.state == 'timed_out' ? 'Timed out' : 'Failed';
 }
-
-/// [text]'s first line (a review's summary, in one line).
-String _firstLine(String text) => text.trim().split('\n').first.trim();
 
 /// Whose an item is: a thread's authors (and a bot's review when its
 /// finding is on the same lines), a finding's review; and when. A check
