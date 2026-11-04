@@ -118,7 +118,7 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 	var st model.WorktreeState
 	if _, err := os.Stat(wt.Path); errors.Is(err, fs.ErrNotExist) {
 		st.Gone = true
-	} else if changes, err := statusEntries(ctx, wt.Path, true); err != nil {
+	} else if changes, err := removalEntries(ctx, wt.Path); err != nil {
 		return st, err
 	} else if ignored, err := run(ctx, wt.Path, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"); err != nil {
 		return st, err

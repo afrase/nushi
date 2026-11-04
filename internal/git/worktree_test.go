@@ -188,6 +188,39 @@ func TestInspectCountsARenameOnce(t *testing.T) {
 	}
 }
 
+// Inspect's status stays out of submodules (ADR 0023), so it can't see
+// what changed in one; a checked-out submodule is a change to Inspect and
+// to Changes, as to git worktree remove, so removing the worktree asks for
+// force rather than losing its work for an ignored file's force.
+func TestInspectCountsACheckedOutSubmodule(t *testing.T) {
+	ctx := context.Background()
+	root, _ := filepath.EvalSymlinks(t.TempDir())
+	lib, repo := filepath.Join(root, "lib"), filepath.Join(root, "repo")
+	for _, dir := range []string{lib, repo} {
+		testcheck.Git(t, root, "init", "-q", "-b", "main", dir)
+		write(t, filepath.Join(dir, "a.txt"), "a\n")
+		write(t, filepath.Join(dir, ".gitignore"), "out/\n")
+		testcheck.Git(t, dir, "add", ".")
+		testcheck.Git(t, dir, "commit", "-q", "-m", "init")
+	}
+	testcheck.Git(t, repo, "-c", "protocol.file.allow=always", "submodule", "add", "-q", lib, "vendor/lib")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "lib")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	testcheck.NoErr(t, err)
+	st, err := Worktrees{}.Inspect(ctx, wt)
+	if err != nil || st.Changed != 0 {
+		t.Fatalf("Inspect before the submodule's checkout = %+v, %v", st, err)
+	}
+	testcheck.Git(t, wt.Path, "-c", "protocol.file.allow=always", "submodule", "update", "-q", "--init")
+	write(t, filepath.Join(wt.Path, "vendor", "lib", "a.txt"), "edited\n")
+	write(t, filepath.Join(wt.Path, "out", "bin"), "built\n")
+	st, err = Worktrees{}.Inspect(ctx, wt)
+	changes, cerr := Worktrees{}.Changes(ctx, wt.Path, 10)
+	if err != nil || cerr != nil || st.Changed != 1 || st.Ignored != 1 || len(changes) != 1 || changes[0] != "submodule vendor/lib" {
+		t.Errorf("Inspect = %+v, %v; Changes = %q, %v", st, err, changes, cerr)
+	}
+}
+
 // A bare repository has no main worktree: List marks none of its linked
 // ones Main.
 func TestListOfABareRepository(t *testing.T) {

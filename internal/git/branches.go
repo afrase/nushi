@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -241,16 +242,43 @@ func statusEntries(ctx context.Context, folder string, untracked bool) ([]string
 	return list, nil
 }
 
-// Changes lists folder's first n uncommitted changes, untracked files
-// included, as git status --short says each ("M a.go", "?? b.txt").
+// Changes lists the first n of what removing the worktree at folder would
+// lose (removalEntries).
 func (Worktrees) Changes(ctx context.Context, folder string, n int) ([]string, error) {
+	list, err := removalEntries(ctx, folder)
+	return list[:min(n, len(list))], err
+}
+
+// removalEntries are what removing the worktree at folder would lose: its
+// uncommitted changes, untracked files included, as git status --short
+// says each ("M a.go", "?? b.txt"), and each checked-out submodule
+// ("submodule vendor/lib"). The status stays out of submodules (ADR
+// 0023), so it can't tell whether one holds work; git worktree remove
+// takes force for any checked-out one, and these count it as a change.
+func removalEntries(ctx context.Context, folder string) ([]string, error) {
 	entries, err := statusEntries(ctx, folder, true)
 	if err != nil {
 		return nil, err
 	}
-	var list []string
-	for _, f := range entries[:min(n, len(entries))] {
+	list := make([]string, 0, len(entries))
+	listed := map[string]bool{}
+	for _, f := range entries {
 		list = append(list, strings.TrimSpace(f[:2])+" "+f[3:])
+		listed[f[3:]] = true
+	}
+	out, err := run(ctx, folder, "ls-files", "-z", "--stage")
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range split(out) { // "160000 <commit> <stage>\t<path>" for a submodule
+		meta, path, _ := strings.Cut(f, "\t")
+		if !strings.HasPrefix(meta, "160000 ") || listed[path] {
+			continue
+		}
+		if _, err := os.Lstat(filepath.Join(folder, path, ".git")); err == nil {
+			list = append(list, "submodule "+path)
+			listed[path] = true
+		}
 	}
 	return list, nil
 }
