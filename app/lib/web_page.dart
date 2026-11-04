@@ -39,8 +39,10 @@ Future<void> Function(Uri url) openInBrowser = (url) async {
   }
 };
 
-/// How long ago the user last pressed, let go or typed in a web view in
-/// the window, null if never: the Swift side's event monitor sees it, as
+/// How long ago the user last pressed, let go, or hit Return, Enter or
+/// Space in a web view in the window, null if never or since the last ask
+/// (each press lets one navigation out): the Swift side's event monitor
+/// sees it, as
 /// Flutter doesn't (WebKit takes a press inside its view, and the plugin
 /// doesn't give WebKit's navigation type). Tests set their own.
 Future<Duration?> Function() sincePressInPage = () async {

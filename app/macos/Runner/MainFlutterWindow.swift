@@ -61,7 +61,11 @@ class MainFlutterWindow: NSWindow {
     FlutterMethodChannel(name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
       .setMethodCallHandler { [weak self] call, result in
         if call.method == "sincePress" {
-          return result(self?.webPressedAt.map { ProcessInfo.processInfo.systemUptime - $0 })
+          // A press lets one navigation leave the page, never a second:
+          // asking takes it.
+          let at = self?.webPressedAt
+          self?.webPressedAt = nil
+          return result(at.map { ProcessInfo.processInfo.systemUptime - $0 })
         }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
         guard let text = call.arguments as? String, let url = URL(string: text),
@@ -153,7 +157,11 @@ class MainFlutterWindow: NSWindow {
         self.pressed = event.type == .leftMouseDown
         if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
       case .keyDown:
-        if Self.inWebView(self.firstResponder as? NSView) { self.webPressedAt = event.timestamp }
+        // Only the keys that activate a focused link or button: Return,
+        // the keypad's Enter, Space. Typing in a page lets nothing open.
+        if [36, 76, 49].contains(event.keyCode), Self.inWebView(self.firstResponder as? NSView) {
+          self.webPressedAt = event.timestamp
+        }
       default:
         if NSEvent.pressedMouseButtons & 1 == 0 { self.letGoInFlutter() }
       }
