@@ -113,8 +113,10 @@ Future<void> _type(WidgetTester tester, String text) async {
   await tester.pump();
 }
 
+/// [text] in the transcript's list (its composer is drawn over its foot,
+/// under the same Transcript).
 Finder _inTranscript(String text) =>
-    find.descendant(of: find.byType(Transcript), matching: find.text(text));
+    find.descendant(of: find.byType(SelectionArea), matching: find.text(text));
 
 void main() {
   testWidgets('sent, it shows at once, faint; the echo takes its place '

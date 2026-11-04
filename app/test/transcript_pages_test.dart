@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_view.dart';
+import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
@@ -19,8 +20,10 @@ import 'package:nushi/message_pins.dart';
 import 'package:nushi/pins_rail.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/scrollbar.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/transcript_pages.dart';
+import 'package:nushi/turn_status.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -406,6 +409,78 @@ void main() {
     expect(c.items.length, had);
     await closeView(tester, d);
   }, variant: _mac);
+
+  for (final width in [1700.0, 720.0]) {
+    testWidgets('the scrollbar runs down past the composer to the pane’s '
+        'bottom, $width wide; the last message clears the composer', (
+      tester,
+    ) async {
+      final (d, _) = await _window(tester, size: Size(width, 900));
+      final pane = tester.getRect(find.byType(ChatView));
+      // The transcript's, over the composer too.
+      final bar = find
+          .descendant(
+            of: find.ancestor(
+              of: find.byType(Composer),
+              matching: find.byType(OverBottom),
+            ),
+            matching: find.byType(MacScrollbar),
+          )
+          .first;
+      // Its only one: the list draws none of its own under it.
+      final list = find
+          .descendant(
+            of: find.byType(SelectionArea),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      expect(
+        find.ancestor(of: list, matching: find.byType(MacScrollbar)),
+        findsOneWidget,
+      );
+      expect(tester.getRect(bar).bottom, pane.bottom);
+      expect(tester.getRect(bar).right, pane.right);
+      // At the end, the thumb sits at the bottom, beside the composer's row.
+      final painter =
+          tester
+                  .widgetList<CustomPaint>(
+                    find.descendant(
+                      of: bar,
+                      matching: find.byType(CustomPaint),
+                    ),
+                  )
+                  .first
+                  .foregroundPainter!
+              as ScrollbarPainter;
+      final box = tester.getRect(bar);
+      // Shown: the pointer near its bottom.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: box.center);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(box.bottomRight - const Offset(4, 8));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        painter.hitTestOnlyThumbInteractive(
+          Offset(box.width - 6, box.height - 8),
+          PointerDeviceKind.mouse,
+        ),
+        isTrue,
+      );
+      final words = tester.getRect(
+        find
+            .textContaining('Want me to look at the logout', findRichText: true)
+            .last,
+      );
+      final status = tester.getRect(find.byType(TurnStatus));
+      expect(words.bottom, lessThanOrEqualTo(status.top));
+      expect(
+        tester.getRect(find.byType(Composer)).top,
+        greaterThanOrEqualTo(status.bottom),
+      );
+      await closeView(tester, d);
+    }, variant: _mac);
+  }
 
   for (final b in Brightness.values) {
     for (final width in [1700.0, 720.0]) {

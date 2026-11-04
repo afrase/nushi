@@ -76,6 +76,7 @@ class Transcript extends StatefulWidget {
     this.header,
     this.footer,
     this.onTop,
+    this.bottom,
   });
 
   final ChatState chat;
@@ -98,6 +99,11 @@ class Transcript extends StatefulWidget {
   /// items come in above it. Without it a chat's transcript takes the
   /// page itself, with [EarlierMessages] at its top.
   final VoidCallback? onTop;
+
+  /// Drawn over the list's foot (the chat's turn status and composer):
+  /// the list runs the whole height, its scrollbar to the bottom beside
+  /// it, and its end scrolls clear above it (OverBottom).
+  final Widget? bottom;
 
   /// The entries a transcript's first frame builds, and how many more
   /// each frame after it adds, while it fills in.
@@ -685,6 +691,7 @@ class _TranscriptState extends State<Transcript> {
   final _marks = TextMarks();
   int _shownAsk = -1;
   bool _roomAbove = false; // the list starts below the find bar
+  double _inset = 0; // what's drawn over the list's foot (OverBottom)
 
   /// What the find bar covers of the transcript's top: more with its line
   /// saying it looks in what's loaded (FindBar.loadAll).
@@ -739,7 +746,7 @@ class _TranscriptState extends State<Transcript> {
     if (p.maxScrollExtent <= 0) return; // all of it shows
     final shows =
         top >= p.pixels + covered &&
-        top + rect.height <= p.pixels + p.viewportDimension;
+        top + rect.height <= p.pixels + p.viewportDimension - _inset;
     _follower.hold(
       shows
           ? null
@@ -825,9 +832,10 @@ class _TranscriptState extends State<Transcript> {
   /// screen's scroll and down to the bottom over the last two thirds, so
   /// the start is current at the top, and every pin in the first and last
   /// screens (a short last answer, two) is current somewhere.
-  static double _pinLine(ScrollPosition p) {
-    final third = p.viewportDimension / 3;
-    final low = p.viewportDimension - 24; // at the bottom, what shows counts
+  double _pinLine(ScrollPosition p) {
+    final shows = p.viewportDimension - _inset; // above the composer
+    final third = shows / 3;
+    final low = shows - 24; // at the bottom, what shows counts
     final top = (p.pixels - p.minScrollExtent).clamp(0, third).toDouble();
     final toBottom = max(0, p.maxScrollExtent - p.pixels);
     final bottom = low - toBottom * (low - third) / (2 * third);
@@ -966,6 +974,7 @@ class _TranscriptState extends State<Transcript> {
             onSide(selected);
           };
     final reply = onReply == null ? null : _openReply;
+    final behavior = ScrollConfiguration.of(context);
     final view = LayoutBuilder(
       builder: (context, box) => Stack(
         children: [
@@ -1005,42 +1014,48 @@ class _TranscriptState extends State<Transcript> {
                   // than showing each frame what came in above.
                   child: Opacity(
                     opacity: _restore == null ? 1 : 0,
-                    child: SingleChildScrollView(
-                      controller: _follower.scroll,
-                      padding: EdgeInsets.only(
-                        top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
-                        bottom: 14,
-                      ),
-                      child: Column(
-                        key: _column,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (header case final h?)
-                            Padding(
-                              padding: chatSides(context, box.maxWidth),
-                              child: h,
-                            ),
-                          for (final (i, e) in entries.indexed.skip(from))
-                            _entry(
-                              before,
-                              e,
-                              live: live && i == entries.length - 1,
-                              still: chat.waiting,
-                              top: _gap(
-                                entries,
-                                i,
-                                header: header != null,
-                                phone: TouchTargets.of(context),
-                              ),
-                              width: box.maxWidth,
-                              rise: arrived.contains(_key(e)),
-                            ),
-                          if (widget.footer case final f?)
-                            Padding(
-                              padding: chatSides(context, box.maxWidth),
-                              child: f,
-                            ),
-                        ],
+                    child: _ownBar(
+                      context,
+                      SingleChildScrollView(
+                        controller: _follower.scroll,
+                        padding: EdgeInsets.only(
+                          top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
+                          bottom: 14 + (_inset = BottomInset.of(box)),
+                        ),
+                        child: _codeBars(
+                          behavior,
+                          Column(
+                            key: _column,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (header case final h?)
+                                Padding(
+                                  padding: chatSides(context, box.maxWidth),
+                                  child: h,
+                                ),
+                              for (final (i, e) in entries.indexed.skip(from))
+                                _entry(
+                                  before,
+                                  e,
+                                  live: live && i == entries.length - 1,
+                                  still: chat.waiting,
+                                  top: _gap(
+                                    entries,
+                                    i,
+                                    header: header != null,
+                                    phone: TouchTargets.of(context),
+                                  ),
+                                  width: box.maxWidth,
+                                  rise: arrived.contains(_key(e)),
+                                ),
+                              if (widget.footer case final f?)
+                                Padding(
+                                  padding: chatSides(context, box.maxWidth),
+                                  child: f,
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1082,7 +1097,7 @@ class _TranscriptState extends State<Transcript> {
             ),
           Positioned(
             right: TouchTargets.of(context) ? 20 : NushiTheme.gutter,
-            bottom: 12,
+            bottom: 12 + BottomInset.of(box),
             child: ListenableBuilder(
               listenable: _follower,
               builder: (context, _) => ChipFade(
@@ -1099,8 +1114,22 @@ class _TranscriptState extends State<Transcript> {
         ],
       ),
     );
-    return TextMarksScope(marks: _marks, child: view);
+    final under = widget.bottom;
+    final list = TextMarksScope(marks: _marks, child: view);
+    return under == null
+        ? list
+        : OverBottom(scroll: _follower.scroll, list: list, bottom: under);
   }
+
+  /// The list, without its own scrollbar under a [Transcript.bottom]:
+  /// OverBottom draws it.
+  Widget _ownBar(BuildContext context, Widget list) =>
+      widget.bottom == null ? list : withoutOwnScrollbar(context, list);
+
+  /// What's in the list (a code block's sideways scroll) with the app's
+  /// scrollbars, as [behavior] had them above the list.
+  Widget _codeBars(ScrollBehavior behavior, Widget child) =>
+      widget.bottom == null ? child : ownScrollbars(behavior, child);
 }
 
 /// An entry's key: a call and the group it becomes keep their place (and

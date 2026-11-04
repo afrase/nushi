@@ -116,69 +116,71 @@ class _ChatViewState extends State<ChatView> {
           },
           child: ListenableBuilder(
             listenable: Listenable.merge([chat, chat.forking, chatFullWidth]),
-            builder: (context, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            builder: (context, _) => Stack(
               children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Positioned.fill(
-                        child: Transcript(
-                          chat: chat,
-                          daemon: widget.daemon,
-                          onReply: chat.archived || chat.sessionGone
-                              ? null
-                              : (r) => replies.value = [...replies.value, r],
-                          onSide: chat.archived || chat.sessionGone
-                              ? null
-                              : _ask,
+                Positioned.fill(
+                  child: Transcript(
+                    chat: chat,
+                    daemon: widget.daemon,
+                    onReply: chat.archived || chat.sessionGone
+                        ? null
+                        : (r) => replies.value = [...replies.value, r],
+                    onSide: chat.archived || chat.sessionGone ? null : _ask,
+                    // Under it, its scrollbar running down beside them.
+                    bottom: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TurnStatus(
+                          chat,
+                          what: chat.forking.value
+                              ? 'Starting a side chat'
+                              : null,
                         ),
-                      ),
-                      // ⌘F: the find bar, over the transcript's top right.
-                      ListenableBuilder(
-                        listenable: chat.find,
-                        builder: (context, _) => chat.find.query == null
-                            ? const SizedBox.shrink()
-                            : Align(
-                                alignment: Alignment.topRight,
-                                child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    NushiTheme.gutter,
-                                    8,
-                                    NushiTheme.gutter,
-                                    0,
-                                  ),
-                                  child: FindBar(
-                                    chat.find,
-                                    loadAll: chat.older > 0
-                                        ? () => unawaited(
-                                            widget.daemon.loadOlder(
-                                              chat,
-                                              all: true,
-                                            ),
-                                          )
-                                        : null,
-                                    loading: chat.loadingOlder,
-                                  ),
-                                ),
-                              ),
-                      ),
-                    ],
+                        if (chat.mcpChanged && !chat.archived)
+                          _McpChanged(chat, widget.daemon),
+                        if (!chat.archived && !chat.sessionGone)
+                          UnsentReview(chat),
+                        if (chat.archived)
+                          _Archived(chat, widget.daemon)
+                        else if (chat.sessionGone)
+                          _Expired(chat, widget.daemon)
+                        else
+                          Composer(
+                            chat: chat,
+                            daemon: widget.daemon,
+                            folder: true,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-                TurnStatus(
-                  chat,
-                  what: chat.forking.value ? 'Starting a side chat' : null,
+                // ⌘F: the find bar, over the transcript's top right.
+                ListenableBuilder(
+                  listenable: chat.find,
+                  builder: (context, _) => chat.find.query == null
+                      ? const SizedBox.shrink()
+                      : Align(
+                          alignment: Alignment.topRight,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              NushiTheme.gutter,
+                              8,
+                              NushiTheme.gutter,
+                              0,
+                            ),
+                            child: FindBar(
+                              chat.find,
+                              loadAll: chat.older > 0
+                                  ? () => unawaited(
+                                      widget.daemon.loadOlder(chat, all: true),
+                                    )
+                                  : null,
+                              loading: chat.loadingOlder,
+                            ),
+                          ),
+                        ),
                 ),
-                if (chat.mcpChanged && !chat.archived)
-                  _McpChanged(chat, widget.daemon),
-                if (!chat.archived && !chat.sessionGone) UnsentReview(chat),
-                if (chat.archived)
-                  _Archived(chat, widget.daemon)
-                else if (chat.sessionGone)
-                  _Expired(chat, widget.daemon)
-                else
-                  Composer(chat: chat, daemon: widget.daemon, folder: true),
               ],
             ),
           ),
