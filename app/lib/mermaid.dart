@@ -32,7 +32,7 @@ class DrawnDiagram {
 }
 
 /// Draws a diagram as a picture: on the Mac, mermaid.js in one hidden web
-/// view (`nushi/mermaid`, MainFlutterWindow.swift), `width` points wide at
+/// view (`nushi/mermaid`, Diagrams.swift), `width` points wide at
 /// most, in the colors given. Tests set their own.
 ///
 /// The web view gives each diagram 10 s, so a slow one doesn't hold the
