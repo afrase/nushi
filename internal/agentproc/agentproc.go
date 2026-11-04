@@ -1,7 +1,8 @@
 // Package agentproc runs an agent's process and speaks ACP to it through
 // acp-go, with what Nushi logs of it (ADR 0038): its start and exit, each
 // line of its stderr, what it is once initialized, the sessions it opens,
-// and the calls that failed or were slow; never what they carried.
+// and the calls that failed or were slow; never what they carried. Pipe
+// starts the program a bridge speaks another protocol to (pipe.go).
 package agentproc
 
 import (

@@ -6,9 +6,9 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
-	"syscall"
+
+	"github.com/afrase/nushi/internal/agentproc"
 )
 
 // Server is a Spawn of bin (`ante serve --stdio`) with env (nil: this
@@ -18,26 +18,11 @@ import (
 // are dropped.
 func Server(bin string, env []string, stderr io.Writer) Spawn {
 	return func(cwd string) (io.WriteCloser, io.Reader, func(), error) {
-		cmd := exec.Command(bin, "serve", "--stdio") //nolint:noctx // lives until the session or the check ends, which kills it
-		cmd.Dir, cmd.Env, cmd.Stderr = cwd, env, stderr
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		in, err := cmd.StdinPipe()
+		p, err := agentproc.Pipe(bin, []string{"serve", "--stdio"}, cwd, env, stderr) // lives until the session or the check ends, which kills it
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		out, err := cmd.StdoutPipe()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		if err := cmd.Start(); err != nil {
-			return nil, nil, nil, err
-		}
-		exited := make(chan struct{})
-		go func() { _ = cmd.Wait(); close(exited) }() // its end is all that matters here
-		return in, out, func() {
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the group may be gone already
-			<-exited
-		}, nil
+		return p.In, p.Out, p.Kill, nil
 	}
 }
 

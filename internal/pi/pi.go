@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -181,72 +180,23 @@ func numbers(v string) []int {
 }
 
 // spawn starts the program with args in cwd, in a process group of its own, its
-// stderr to the bridge's (its last lines kept); its start and exit go to
+// stderr to the bridge's (its last line kept); its start and exit go to
 // the log.
 func spawn(bin, cwd string, args []string) (Program, error) {
-	cmd := exec.Command(bin, args...) //nolint:gosec,noctx // lives until Stop or Close, not a context; the user's pi (ADR 0039)
-	cmd.Dir = cwd
-	said := &lastLines{}
-	cmd.Stderr = io.MultiWriter(os.Stderr, said)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	in, err := cmd.StdinPipe()
+	p, err := agentproc.Pipe(bin, args, cwd, nil, os.Stderr) // the user's pi (ADR 0039)
 	if err != nil {
-		return Program{}, err
-	}
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		return Program{}, err
-	}
-	if err := cmd.Start(); err != nil {
 		return Program{}, err
 	}
 	started := time.Now()
-	warnf("started pid=%d args=%q", cmd.Process.Pid, args)
-	exited := make(chan struct{})
+	warnf("started pid=%d args=%q", p.Pid, args)
 	go func() {
 		status := "exit status 0"
-		if err := cmd.Wait(); err != nil {
+		if err := p.Wait(); err != nil {
 			status = err.Error() // "exit status 1", "signal: killed"
 		}
-		warnf("exited pid=%d ran=%s %s", cmd.Process.Pid, time.Since(started).Round(100*time.Millisecond), status)
-		close(exited)
+		warnf("exited pid=%d ran=%s %s", p.Pid, time.Since(started).Round(100*time.Millisecond), status)
 	}()
-	kill := func() {
-		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the group may be gone already
-		<-exited
-	}
-	return Program{In: in, Out: out, Kill: kill, Said: said.String}, nil
-}
-
-// lastLines keeps the start of the last line written to it that has
-// anything in it ("Error: Failed to load extension …").
-type lastLines struct {
-	mu   sync.Mutex
-	line []byte
-	last string
-}
-
-func (l *lastLines) Write(p []byte) (int, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	for _, c := range p {
-		switch {
-		case c == '\n':
-			if s := strings.TrimSpace(string(l.line)); s != "" && !strings.HasPrefix(s, "Hint:") {
-				l.last = s
-			}
-			l.line = l.line[:0]
-		case len(l.line) < 500:
-			l.line = append(l.line, c)
-		}
-	}
-	return len(p), nil
-}
-
-func (l *lastLines) String() string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.last
+	return Program{In: p.In, Out: p.Out, Kill: p.Kill, Said: p.Said}, nil
 }
 
 // DirsFromEnv finds f's sessions folder as the program does (and as
