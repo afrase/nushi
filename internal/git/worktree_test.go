@@ -166,6 +166,28 @@ func TestCheckBranch(t *testing.T) {
 	}
 }
 
+// A rename is one change to Inspect, as to Changes and Changed: git
+// status gives its old path as a field of its own.
+func TestInspectCountsARenameOnce(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := filepath.EvalSymlinks(t.TempDir())
+	testcheck.Git(t, repo, "init", "-q", "-b", "main")
+	write(t, filepath.Join(repo, "a.txt"), "a\n")
+	testcheck.Git(t, repo, "add", ".")
+	testcheck.Git(t, repo, "commit", "-q", "-m", "init")
+	wt, _, err := Worktrees{}.Add(ctx, repo, "calm-heron", "", "")
+	testcheck.NoErr(t, err)
+	testcheck.Git(t, wt.Path, "mv", "a.txt", "b.txt")
+	changes, err := Worktrees{}.Changes(ctx, wt.Path, 10)
+	testcheck.NoErr(t, err)
+	changed, err := Worktrees{}.Changed(ctx, wt.Path)
+	testcheck.NoErr(t, err)
+	st, err := Worktrees{}.Inspect(ctx, wt)
+	if err != nil || len(changes) != 1 || changes[0] != "R b.txt" || changed != 1 || st.Changed != 1 {
+		t.Errorf("Changes %q, Changed %d, Inspect %+v %v", changes, changed, st, err)
+	}
+}
+
 // A bare repository has no main worktree: List marks none of its linked
 // ones Main.
 func TestListOfABareRepository(t *testing.T) {

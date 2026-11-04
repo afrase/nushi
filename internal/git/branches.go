@@ -202,24 +202,42 @@ func Branches(ctx context.Context, folder string, limit int) ([]model.Branch, er
 	return list, nil
 }
 
-// Changes lists folder's first n uncommitted changes, untracked files
-// included, as git status --short says each ("M a.go", "?? b.txt").
-func (Worktrees) Changes(ctx context.Context, folder string, n int) ([]string, error) {
-	out, err := run(ctx, folder, "status", "--porcelain", "-z", "--untracked-files=all", "--ignore-submodules=dirty")
+// statusEntries are folder's uncommitted changes as git status
+// --porcelain gives each ("XY path"), untracked files with untracked. A
+// rename's or copy's old path, a field of its own, isn't one; nor is what
+// changed inside a submodule, where git would run a status (ADR 0023).
+func statusEntries(ctx context.Context, folder string, untracked bool) ([]string, error) {
+	files := "--untracked-files=no"
+	if untracked {
+		files = "--untracked-files=all"
+	}
+	out, err := run(ctx, folder, "status", "--porcelain", "-z", files, "--ignore-submodules=dirty")
 	if err != nil {
 		return nil, err
 	}
 	var list []string
 	fields := split(out)
-	for i := 0; i < len(fields) && len(list) < n; i++ {
-		f := fields[i]
-		if len(f) <= 3 {
-			continue
+	for i := 0; i < len(fields); i++ {
+		if f := fields[i]; len(f) > 3 {
+			list = append(list, f)
+			if f[0] == 'R' || f[0] == 'C' {
+				i++
+			}
 		}
+	}
+	return list, nil
+}
+
+// Changes lists folder's first n uncommitted changes, untracked files
+// included, as git status --short says each ("M a.go", "?? b.txt").
+func (Worktrees) Changes(ctx context.Context, folder string, n int) ([]string, error) {
+	entries, err := statusEntries(ctx, folder, true)
+	if err != nil {
+		return nil, err
+	}
+	var list []string
+	for _, f := range entries[:min(n, len(entries))] {
 		list = append(list, strings.TrimSpace(f[:2])+" "+f[3:])
-		if f[0] == 'R' || f[0] == 'C' {
-			i++
-		}
 	}
 	return list, nil
 }
@@ -227,20 +245,8 @@ func (Worktrees) Changes(ctx context.Context, folder string, n int) ([]string, e
 // Changed counts folder's checkout's uncommitted changes to tracked files
 // (staged or not); untracked files go along with a switch.
 func (Worktrees) Changed(ctx context.Context, folder string) (int, error) {
-	out, err := run(ctx, folder, "status", "--porcelain", "-z", "--untracked-files=no", "--ignore-submodules=dirty")
-	if err != nil {
-		return 0, err
-	}
-	n, fields := 0, split(out)
-	for i := 0; i < len(fields); i++ {
-		if f := fields[i]; len(f) > 3 {
-			n++
-			if f[0] == 'R' || f[0] == 'C' { // its old path follows, as a field of its own
-				i++
-			}
-		}
-	}
-	return n, nil
+	entries, err := statusEntries(ctx, folder, false)
+	return len(entries), err
 }
 
 // Branch is the branch folder has checked out; "" when HEAD is detached

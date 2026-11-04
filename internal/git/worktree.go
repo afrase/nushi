@@ -118,12 +118,12 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 	var st model.WorktreeState
 	if _, err := os.Stat(wt.Path); errors.Is(err, fs.ErrNotExist) {
 		st.Gone = true
-	} else if out, err := run(ctx, wt.Path, "status", "--porcelain", "-z", "--untracked-files=all"); err != nil {
+	} else if changes, err := statusEntries(ctx, wt.Path, true); err != nil {
 		return st, err
 	} else if ignored, err := run(ctx, wt.Path, "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory"); err != nil {
 		return st, err
 	} else {
-		st.Changed, st.Ignored = len(split(out)), len(split(ignored))
+		st.Changed, st.Ignored = len(changes), len(split(ignored))
 	}
 	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err != nil {
 		st.BranchGone = true
