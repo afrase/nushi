@@ -115,6 +115,23 @@ void main() {
     expect(mac.platform, TargetPlatform.macOS);
   });
 
+  testWidgets("a theme file saved as it was tells no one; one that changed "
+      'does', (tester) async {
+    final file = _file('Harbor.json', '{"from": "nord"}');
+    themeFiles.load();
+    var told = 0;
+    void count() => told++;
+    themeFiles.addListener(count);
+    addTearDown(() => themeFiles.removeListener(count));
+    file.writeAsStringSync('{"from": "nord"}'); // an editor's save
+    themeFiles.load();
+    expect(told, 0);
+    file.writeAsStringSync('{"from": "solarized"}');
+    themeFiles.load();
+    expect(told, 1);
+    expect(themeFiles.value.single.file, 'Harbor.json');
+  });
+
   testWidgets('720 wide, the tiles wrap and nothing runs off', (tester) async {
     _file(
       'A long name for a theme.json',

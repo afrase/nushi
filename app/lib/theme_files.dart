@@ -47,10 +47,22 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
   /// Each file's path, by the name it's shown as.
   final _paths = <String, String>{};
 
-  /// Reads them all again.
-  void load() => value = _read();
+  /// What [load] read last, file by file: its name and text (or why it has
+  /// none), so a save that changed nothing tells no one (every listener
+  /// rebuilds the app's theme).
+  List<(String, String)> _readAs = const [];
 
-  List<ThemeFile> _read() {
+  /// Reads them all again.
+  void load() {
+    final read = _read();
+    final as = [for (final (f, text) in read) (f.file, text)];
+    if (listEquals(as, _readAs)) return;
+    _readAs = as;
+    value = [for (final (f, _) in read) f];
+  }
+
+  /// Each file read, and its text.
+  List<(ThemeFile, String)> _read() {
     _paths.clear();
     final List<File> files;
     try {
@@ -72,7 +84,7 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
     ];
   }
 
-  ThemeFile _readOne(File f, String name) {
+  (ThemeFile, String) _readOne(File f, String name) {
     _paths[name] = f.path;
     try {
       // At most one byte past the limit: a file that grew since it was
@@ -85,14 +97,14 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
         raf.closeSync();
       }
       if (bytes.length > themeFileLimit) {
-        return ThemeFile(
-          file: name,
-          notes: const ['Over ${themeFileLimit ~/ 1024} KB: not read.'],
-        );
+        const note = 'Over ${themeFileLimit ~/ 1024} KB: not read.';
+        return (ThemeFile(file: name, notes: const [note]), '\u0000$note');
       }
-      return readThemeFile(name, utf8.decode(bytes, allowMalformed: true));
+      final text = utf8.decode(bytes, allowMalformed: true);
+      return (readThemeFile(name, text), text);
     } on FileSystemException {
-      return ThemeFile(file: name, notes: const ["Couldn't be read."]);
+      const note = "Couldn't be read.";
+      return (ThemeFile(file: name, notes: const [note]), '\u0000$note');
     }
   }
 
@@ -160,6 +172,7 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
   @visibleForTesting
   Future<void> forget() async {
     await stop();
+    _readAs = const [];
     value = const [];
   }
 }
