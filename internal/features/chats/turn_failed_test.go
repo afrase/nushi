@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"strings"
@@ -94,6 +95,37 @@ func TestAResendGoesBeforeTheHeldQueue(t *testing.T) {
 	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
 	if got, _ := agent.texts(); !slices.Equal(got, []string{"one", "one", "one", "queued"}) {
 		t.Errorf("prompts %q", got)
+	}
+}
+
+// A turn that failed after a steered message has that message in the
+// transcript once and not in the queue: the app's Continue (a plain
+// message) goes as the next prompt, and nothing is sent twice.
+func TestContinueAfterAFailedSteeredTurn(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.gate = make(chan struct{})
+	agent.failTurns(errOverloaded)
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call",
+		ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}}})
+	_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: acp.SessionUpdate{SessionUpdate: "tool_call_update",
+		ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}}})
+	eventually(t, c, func() bool { _, steered := agent.texts(); return slices.Equal(steered, []string{"two"}) })
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy && len(c.queue) == 0 })
+	want := []string{"user:one", ":", "user:two", "notice:The turn failed: " + errOverloaded.Error()}
+	if got := texts(c); !slices.Equal(got, want) {
+		t.Fatalf("transcript %q", got)
+	}
+
+	agent.failTurns(nil)
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "Continue."}, SendIdle))
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	if got, steered := agent.texts(); !slices.Equal(got, []string{"one", "Continue."}) || !slices.Equal(steered, []string{"two"}) {
+		t.Errorf("prompts %q, steered %q", got, steered)
 	}
 }
 

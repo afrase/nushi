@@ -125,6 +125,20 @@ func TestMerge(t *testing.T) {
 		"the copy cleared": {"u:three m:m3:c", "U:r1:one m:m1:a U:r3:three m:m3:c", "u:one m:m1 u:three m:m3"},
 		// An agent whose replay gives messages new ids (omp): their text.
 		"new ids": {"u:one m:m1:hello_there", "U:r1:one m:z1:hello_there U:r2:two m:z2:bye", "u:one m:m1 u:two m:z2"},
+		// A failed turn reopened (the daemon restarted): its work stays
+		// before its notice and the notice last, which the app's Continue
+		// and Try again go by; with nothing back, the message is last
+		// before it.
+		"a failed turn that got somewhere": {
+			"u:one t:t1:completed m:m1:on_it n:turn_failed",
+			"U:r1:one t:t1:completed m:m1:on_it",
+			"u:one t:t1:completed m:m1 n:turn_failed",
+		},
+		"a failed turn that got nowhere": {
+			"u:one m:m1:a u:two n:turn_failed",
+			"U:r1:one m:m1:a U:r2:two",
+			"u:one m:m1 u:two n:turn_failed",
+		},
 		// The same short text many times aligns in order, nothing twice.
 		"repeats": {
 			"u:go m:m1:ok u:go m:m2:ok u:go m:m3:ok",
