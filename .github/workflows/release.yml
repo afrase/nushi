@@ -23,6 +23,8 @@ concurrency:
 
 env:
   TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  # The Flutter every job builds with; ci.yml names the same one (the release builds with CI's, ADR 0055).
+  NUSHI_FLUTTER_VERSION: 3.47.7
 
 jobs:
   tag:
@@ -92,7 +94,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.47.7
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
       - run: tools/release.sh "$VERSION" app
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -149,7 +151,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.47.7
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
       # make web's fallback fonts (21 MB from Google's font host, each checked against fonts.lock's sha256).
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

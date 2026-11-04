@@ -30,6 +30,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # The Flutter every job builds with; release.yml names the same one (the release builds with CI's, ADR 0055).
+  NUSHI_FLUTTER_VERSION: 3.47.7
+
 jobs:
   go:
     name: Go lint and tests (macOS)
@@ -91,7 +95,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.47.7
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
       - run: make lint-dart
       # The committed API code is what make gen makes from the protos, with the plugins it pins.
@@ -117,7 +121,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.47.7
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
       - run: make test-packages
 
@@ -150,7 +154,7 @@ jobs:
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.47.7
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
           cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
       - run: make test-app
@@ -193,7 +197,7 @@ jobs:
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: stable
-          flutter-version: 3.47.7
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
           cache: true
           cache-key: flutter-:os:-:channel:-:version:-:arch:-:hash:-lean
       - run: make test-web
