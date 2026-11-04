@@ -199,4 +199,44 @@ void main() {
     expect(find.text('Rename', findRichText: true), findsOne);
     d.dispose();
   });
+
+  testWidgets('folded into a menu, only the open tab is checked', (
+    tester,
+  ) async {
+    final d = await FakeDaemon([]).connect(tester);
+    final chat = ChatState('c', '/Users/me/repo')
+      ..agent = 'claude'
+      ..title = 'Fix the login redirect'
+      ..pull = GitHubLink(number: 12, pull: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 460,
+              child: ChatHeader(
+                chat,
+                d,
+                tab: ChatTab.changes,
+                onTab: (_) {},
+                panel: false,
+                onPanel: null,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final menu = tester.widget<MenuField>(find.byType(MenuField));
+    expect(
+      [
+        for (final e in menu.entries)
+          if (e.checked) e.label,
+      ],
+      ['Changes'],
+    );
+    d.dispose();
+  });
 }

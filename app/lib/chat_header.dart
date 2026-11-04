@@ -286,12 +286,12 @@ class ChatHeader extends StatelessWidget {
                     compact: true,
                     tooltip: '⌃⇥ the next tab, ⌃⇧⇥ the one before',
                     entries: [
-                      for (final (tab, label) in _tabs(chat))
+                      for (final (each, label) in _tabs(chat))
                         MenuEntry(
                           label,
-                          detail: keyLabel(tabKey(tab)),
-                          checked: tab == tab,
-                          onPick: () => onTab(tab),
+                          detail: keyLabel(tabKey(each)),
+                          checked: each == tab,
+                          onPick: () => onTab(each),
                         ),
                     ],
                     label: Text(_tabs(chat).firstWhere((s) => s.$1 == tab).$2),
