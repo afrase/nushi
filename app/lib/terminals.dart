@@ -238,7 +238,8 @@ class TermSession extends ChangeNotifier {
     // ignore: close_sinks
     final utf8 = const Utf8Decoder(allowMalformed: true)
         .startChunkedConversion(StringConversionSink.fromStringSink(text));
-    _sub = client
+    late final StreamSubscription<pb.AttachTerminalResponse> sub;
+    _sub = sub = client
         .attachTerminal(pb.AttachTerminalRequest(terminalId: id))
         .listen(
           (m) {
@@ -251,17 +252,19 @@ class TermSession extends ChangeNotifier {
             if (s.isNotEmpty) terminal.write(s);
             _replaying = false;
           },
-          onError: (_) => _retry(),
-          onDone: _retry,
+          onError: (_) => _retry(sub),
+          onDone: () => _retry(sub),
         );
   }
 
   // The stream ends when the shell exits; otherwise (the daemon went away,
-  // or this client fell behind) attach again while the terminal is listed.
-  void _retry() {
+  // this client fell behind, the terminal restarted) attach again while
+  // the terminal is listed, unless this session attached anew meanwhile
+  // (a restart here): one more would replay the screen twice.
+  void _retry(StreamSubscription<pb.AttachTerminalResponse> ended) {
     if (_disposed) return;
     Timer(const Duration(seconds: 1), () {
-      if (!_disposed && !_exited) attach();
+      if (!_disposed && !_exited && _sub == ended) attach();
     });
   }
 
