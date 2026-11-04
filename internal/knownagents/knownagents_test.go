@@ -1,6 +1,9 @@
 package knownagents
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"reflect"
 	"slices"
 	"testing"
@@ -45,7 +48,23 @@ var capabilities = map[string]func(chats.Harness) bool{
 	"Subagents": has[chats.Subagents], "SubagentMessages": has[chats.SubagentMessages], "BackgroundTasks": has[chats.BackgroundTasks], "ContextCommander": has[chats.ContextCommander], "ReadOnly": has[chats.ReadOnly],
 	"ContextAsker": has[chats.ContextAsker], "GoneReader": has[chats.GoneReader],
 	"OpenFinder": has[chats.OpenFinder], "ForkFinder": has[chats.ForkFinder], "HistoryChecker": has[chats.HistoryChecker], "MessageDater": has[chats.MessageDater],
-	"TitleMaker": has[chats.TitleMaker],
+	"TitleMaker": has[chats.TitleMaker], "TerminalCommands": has[chats.TerminalCommands], "WorktreeFinder": has[chats.WorktreeFinder],
+}
+
+// Every capability chats declares is in capabilities, so a harness can't
+// gain one unchecked.
+func TestCapabilitiesAreChats(t *testing.T) {
+	f, err := parser.ParseFile(token.NewFileSet(), "../features/chats/harness.go", nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range f.Decls {
+		for _, spec := range d.(*ast.GenDecl).Specs {
+			if ts, ok := spec.(*ast.TypeSpec); ok && ts.Name.Name != "Harness" && capabilities[ts.Name.Name] == nil {
+				t.Errorf("chats.%s isn't in capabilities", ts.Name.Name)
+			}
+		}
+	}
 }
 
 func has[T any](h chats.Harness) bool { _, ok := h.(T); return ok }
@@ -67,8 +86,8 @@ func listed(h chats.Harness) []string {
 // tests run Harness, so they can never read the owner's files.
 func TestEachHarnessHasWhatItHasAndNoMore(t *testing.T) {
 	want := map[string]struct{ harness, local []string }{
-		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "ReadOnly", "SubagentMessages", "Subagents", "TitleMaker", "ToolReader", "Transcript"},
-			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder"}},
+		"claude": {[]string{"BackgroundTasks", "ContextCommander", "DefaultReader", "Forker", "GoneReader", "OtherReader", "ReadOnly", "SubagentMessages", "Subagents", "TerminalCommands", "TitleMaker", "ToolReader", "Transcript"},
+			[]string{"ForkFinder", "HistoryChecker", "MessageDater", "OpenFinder", "WorktreeFinder"}},
 		"codex": {[]string{"Forker", "GoneReader", "OtherReader", "ReadOnly", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
 		"ante":  {[]string{"ContextAsker", "Forker", "OtherReader", "Subagents", "ToolReader"}, []string{"MessageDater", "OpenFinder"}},
 		"omp":   {[]string{"OtherReader", "ToolReader"}, []string{"ForkFinder", "OpenFinder"}},
