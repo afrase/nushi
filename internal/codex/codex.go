@@ -38,7 +38,7 @@ func (Harness) Info() model.HarnessInfo {
 	return model.HarnessInfo{Name: "codex", Title: "Codex", Resume: "codex resume", ClientMCP: true, DeleteArchives: true, OneWriter: true, Moves: true}
 }
 
-// Start starts the adapter, as claude.Harness does Claude's (node, env),
+// Start starts the adapter, as claude.Harness does Claude's,
 // running r's CLI, the user's Codex (codex-acp's CODEX_PATH). Codex reads
 // its own config and login ($CODEX_HOME, else ~/.codex); Nushi never does.
 func (Harness) Start(dir string, r model.AgentRun, client acp.Client, log *slog.Logger) (*agentproc.Agent, error) {

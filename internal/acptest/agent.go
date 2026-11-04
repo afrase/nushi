@@ -1,7 +1,7 @@
 // Package acptest is a fake ACP agent for tests, shaped like Claude's
-// adapter (or like Codex's, with Agent.Codex: codex.go; or like omp, with
-// Agent.Omp: omp.go). It answers prompts
-// by script, keyed on the prompt's text:
+// agent (or like Codex's adapter, with Agent.Codex: codex.go; or like omp,
+// with Agent.Omp: omp.go). It answers prompts by script, keyed on the
+// prompt's text:
 //
 //   - containing "permission": a tool call that asks permission (options
 //     "allow" and "reject"), then a message naming the option picked, or
@@ -13,7 +13,7 @@
 //   - containing "many": 150 messages, each after a tool call, quickly;
 //   - containing "pwd": "cwd: <the session's cwd>";
 //   - containing "wait": nothing, until the turn is cancelled (10 s at most);
-//   - containing "subagent": a subagent, as Claude's adapter shows one
+//   - containing "subagent": a subagent, as claude-agent-acp showed one
 //     without its own session, that runs the prompt as a command and ends;
 //   - containing "tool": a command run with the prompt as its input and
 //     output;
@@ -41,7 +41,7 @@
 // session/fork in any folder's, writing the fork into the cwd's (as
 // Claude's Go agent does, ADR 0014). Agents that share a History
 // see each other's sessions, as a restarted agent would. Like Claude's
-// adapter, an agent takes prompts and config changes only for sessions it
+// agent, an agent takes prompts and config changes only for sessions it
 // opened (session/new, load or fork), and session/delete deletes a session
 // in whichever folder has it. session/list lists the History's sessions,
 // titled with their first prompt.

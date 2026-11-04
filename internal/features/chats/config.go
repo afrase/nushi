@@ -30,7 +30,7 @@ type Remembered interface {
 }
 
 // configFrom turns the agent's config options and legacy modes into options.
-// An agent that publishes its mode both ways (claude-agent-acp does) gets one
+// An agent that publishes its mode both ways (claudeacp does) gets one
 // mode option: the config option.
 func (c *chat) configFrom(opts []acp.SessionConfigOption, modes *acp.SessionModeState) []model.ConfigOption {
 	out := []model.ConfigOption{}
