@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/gestures.dart';
@@ -588,6 +590,36 @@ void main() {
       findsNothing,
     );
     expect(find.text('Log in with a passkey'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
+  testWidgets('an older list answer never shows under the list picked '
+      'since, which has nothing to ask', (tester) async {
+    final hold = Completer<void>();
+    var mine = 0;
+    final (_, d) = await openView(
+      tester,
+      more: (input) =>
+          input is ListJiraIssuesRequest &&
+              input.list == 'mine' &&
+              !input.cached &&
+              ++mine == 2
+          ? hold.future.then(
+              (_) => ListJiraIssuesResponse(
+                issues: [issue('ACME-77', 'From Mine', 'To Do', 'new')],
+              ),
+            )
+          : null,
+    );
+    // ⌘R on Mine, held; then JQL, with nothing typed.
+    await tester.tap(find.byTooltip('Refresh (⌘R)'));
+    await tester.pump();
+    await tester.tap(find.text('JQL'));
+    await tester.pump();
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('From Mine'), findsNothing);
+    expect(find.text('Type JQL, then Enter'), findsOneWidget);
     await closeView(tester, d);
   });
 

@@ -184,7 +184,11 @@ class _GitHubViewState extends State<GitHubView> {
   Future<void> _load({bool quiet = false}) async {
     final host = _hostNow;
     if (host == null || host.needsOk || host.needsRestart) {
-      return; // its token can't be read yet: the notice says why
+      // Its token can't be read yet (the notice says why), and an inbox
+      // still asked for is another host's.
+      _asked++;
+      if (_loading) setState(() => _loading = _slow = false);
+      return;
     }
     final n = ++_asked;
     final req = ListGitHubInboxRequest(

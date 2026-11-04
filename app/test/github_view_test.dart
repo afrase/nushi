@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectrpc/connect.dart';
 import 'package:diff_view/diff_view.dart';
 import 'package:fixnum/fixnum.dart';
@@ -7,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
+import 'package:nushi/github_bar.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
@@ -789,6 +792,38 @@ void main() {
     d.closeSettings();
     await tester.pumpAndSettle();
     expect(find.text('Add Sub and Neg'), findsOneWidget);
+    await closeView(tester, d);
+  });
+
+  testWidgets("another host's inbox, answered late, never shows under a "
+      'host whose token needs an OK', (tester) async {
+    final hold = Completer<void>();
+    var asked = 0;
+    final (_, d) = await openView(
+      tester,
+      hosts: [
+        GitHubHost(host: 'github.com', login: 'afrase', source: 'gh'),
+        GitHubHost(host: 'ghe.example', login: 'me', needsOk: true),
+      ],
+      more: (input) =>
+          input is ListGitHubInboxRequest && !input.cached && ++asked == 2
+          ? hold.future.then(
+              (_) => ListGitHubInboxResponse(
+                mine: [item(9, 'From github.com')],
+                atMs: Int64(testNow.millisecondsSinceEpoch),
+              ),
+            )
+          : null,
+    );
+    GitHubBar bar() => tester.widget<GitHubBar>(find.byType(GitHubBar));
+    bar().onHost('github.com'); // asked again, held
+    await tester.pump();
+    bar().onHost('ghe.example');
+    await tester.pump();
+    hold.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Allow…'), findsOneWidget);
+    expect(find.text('From github.com'), findsNothing);
     await closeView(tester, d);
   });
 

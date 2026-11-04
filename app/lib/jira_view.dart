@@ -233,10 +233,12 @@ class _JiraViewState extends State<JiraView> {
     if (site == null ||
         _list is Jql && _jql.isEmpty ||
         _list is Sprint && site.board == 0) {
+      _asked++; // a list still asked for is no longer wanted
       setState(() {
         _tasks = const [];
         _error = null;
         _shown = _cachedAt = null;
+        _loading = _slow = false;
       });
       return;
     }
