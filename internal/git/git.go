@@ -201,7 +201,7 @@ func repo(ctx context.Context, folder string) (hasHead bool, err error) {
 	if _, err := run(ctx, folder, "rev-parse", "--show-toplevel"); err != nil {
 		return false, fmt.Errorf("%s is %w", folder, ErrNotRepository)
 	}
-	_, err = run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
+	_, err = verify(ctx, folder, "HEAD")
 	return err == nil, nil
 }
 
@@ -239,7 +239,7 @@ func ends(ctx context.Context, folder string, span Span) (from, to string, err e
 		return span.After, span.Commit, nil
 	}
 	from = since + "^"
-	if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", from); err != nil {
+	if _, err := verify(ctx, folder, from); err != nil {
 		// The first commit: from nothing.
 		out, err := run(ctx, folder, "hash-object", "-t", "tree", "/dev/null")
 		if err != nil {

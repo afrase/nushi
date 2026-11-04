@@ -59,11 +59,8 @@ func Fetch(ctx context.Context, folder, remote, refspec string) error {
 // HeadCommit is the commit folder has checked out, its full id; "" when the
 // folder isn't a repository or has no commit yet.
 func HeadCommit(ctx context.Context, folder string) string {
-	out, err := run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD^{commit}")
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
+	id, _ := verify(ctx, folder, "HEAD^{commit}")
+	return id
 }
 
 // Head is the branch folder has checked out ("" when HEAD is detached or

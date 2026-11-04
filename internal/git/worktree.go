@@ -51,16 +51,16 @@ func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (mo
 	if _, err := os.Lstat(wt.Path); err == nil {
 		return wt, "", fmt.Errorf("%s: %w", wt.Path, fs.ErrExist)
 	}
-	if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err == nil {
+	if hasBranch(ctx, folder, wt.Branch) {
 		return wt, "", fmt.Errorf("branch %s: %w", wt.Branch, fs.ErrExist)
 	}
 	add := []string{"worktree", "add", "-q"}
 	if from == "" {
-		out, err := run(ctx, folder, "rev-parse", "--verify", "-q", "HEAD")
+		head, err := verify(ctx, folder, "HEAD")
 		if err != nil {
 			return wt, "", errors.New("the repository has no commits yet")
 		}
-		wt.BaseCommit, wt.Base = strings.TrimSpace(string(out)), strings.TrimSpace(string(out)) // detached
+		wt.BaseCommit, wt.Base = head, head // detached
 		if out, err := run(ctx, folder, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
 			wt.Base = strings.TrimSpace(string(out))
 		}
@@ -69,13 +69,13 @@ func (Worktrees) Add(ctx context.Context, folder, name, branch, from string) (mo
 		if !strings.HasPrefix(from, "refs/") {
 			return wt, "", fmt.Errorf("%q isn't a ref", from)
 		}
-		out, err := run(ctx, folder, "rev-parse", "--verify", "-q", from+"^{commit}")
+		at, err := verify(ctx, folder, from+"^{commit}")
 		if err != nil {
 			return wt, "", fmt.Errorf("%s isn't in the repository", from)
 		}
 		// Work is counted from what was fetched: what the branch has past
 		// it is what pushing would add.
-		wt.BaseCommit, wt.Base = strings.TrimSpace(string(out)), from
+		wt.BaseCommit, wt.Base = at, from
 		if strings.HasPrefix(from, "refs/remotes/") {
 			add = append(add, "--track")
 		}
@@ -125,9 +125,9 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 	} else {
 		st.Changed, st.Ignored = len(changes), len(split(ignored))
 	}
-	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+wt.Branch); err != nil {
+	if !hasBranch(ctx, wt.Repo, wt.Branch) {
 		st.BranchGone = true
-		return st, nil //nolint:nilerr // --verify failing is the answer: the branch is gone
+		return st, nil
 	}
 	out, err := run(ctx, wt.Repo, "rev-list", "--count", "refs/heads/"+wt.Branch, "--not", baseOf(ctx, wt))
 	if err != nil {
@@ -141,7 +141,7 @@ func (Worktrees) Inspect(ctx context.Context, wt model.Worktree) (model.Worktree
 // the commit it started from once that branch is gone (merged and
 // deleted, say).
 func baseOf(ctx context.Context, wt model.Worktree) string {
-	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", wt.Base+"^{commit}"); err != nil && wt.BaseCommit != "" {
+	if _, err := verify(ctx, wt.Repo, wt.Base+"^{commit}"); err != nil && wt.BaseCommit != "" {
 		return wt.BaseCommit
 	}
 	return wt.Base
@@ -219,7 +219,7 @@ func (w Worktrees) RenameBranch(ctx context.Context, wt model.Worktree, to strin
 	if err := w.CheckBranch(ctx, wt.Repo, to); err != nil {
 		return err
 	}
-	if _, err := run(ctx, wt.Repo, "rev-parse", "--verify", "-q", "refs/heads/"+to); err == nil {
+	if hasBranch(ctx, wt.Repo, to) {
 		return fmt.Errorf("a branch named %s: %w", to, fs.ErrExist)
 	}
 	if has, err := remoteHas(ctx, wt.Repo, to); err != nil || has {

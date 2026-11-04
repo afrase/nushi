@@ -23,7 +23,7 @@ func DefaultBase(ctx context.Context, folder string) string {
 		return strings.TrimSpace(string(out))
 	}
 	for _, b := range []string{"main", "master"} {
-		if _, err := run(ctx, folder, "rev-parse", "--verify", "-q", "refs/heads/"+b); err == nil {
+		if hasBranch(ctx, folder, b) {
 			return b
 		}
 	}

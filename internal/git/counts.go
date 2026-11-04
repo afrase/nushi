@@ -39,6 +39,6 @@ func HasCommit(ctx context.Context, folder, id string) bool {
 	if !ObjectID(id) {
 		return false
 	}
-	_, err := run(ctx, folder, "rev-parse", "--verify", "-q", id+"^{commit}")
+	_, err := verify(ctx, folder, id+"^{commit}")
 	return err == nil
 }

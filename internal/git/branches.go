@@ -174,6 +174,19 @@ func (Worktrees) Merged(ctx context.Context, folder, base string, tips []string)
 	return slices.DeleteFunc(there, func(tip string) bool { return slices.Contains(left, tip) }), nil
 }
 
+// hasBranch says repo has a local branch named name.
+func hasBranch(ctx context.Context, repo, name string) bool {
+	_, err := verify(ctx, repo, "refs/heads/"+name)
+	return err == nil
+}
+
+// verify is the object id rev names in folder's repository (git rev-parse
+// --verify); an error when it names none.
+func verify(ctx context.Context, folder, rev string) (string, error) {
+	out, err := run(ctx, folder, "rev-parse", "--verify", "-q", rev)
+	return strings.TrimSpace(string(out)), err
+}
+
 // ObjectID says s is a whole object id, SHA-1's or SHA-256's.
 func ObjectID(s string) bool {
 	if len(s) != 40 && len(s) != 64 {
@@ -264,11 +277,10 @@ func (w Worktrees) Switch(ctx context.Context, folder, branch string, create boo
 	if err := w.CheckBranch(ctx, folder, branch); err != nil {
 		return err
 	}
-	_, err := run(ctx, folder, "rev-parse", "--verify", "-q", "refs/heads/"+branch)
-	switch {
-	case create && err == nil:
+	switch has := hasBranch(ctx, folder, branch); {
+	case create && has:
 		return fmt.Errorf("a branch named %s: %w", branch, fs.ErrExist)
-	case !create && err != nil:
+	case !create && !has:
 		return fmt.Errorf("no branch named %s: %w", branch, fs.ErrNotExist)
 	}
 	args := []string{"switch", "-q", "--no-guess", branch}
