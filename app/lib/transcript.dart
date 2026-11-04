@@ -156,9 +156,11 @@ class _TranscriptState extends State<Transcript> {
   List<String> _laidKeys = const [];
   bool _hadHeader = false;
 
-  // The first entry's key at the last build: a page that comes in above it
-  // fills in a few frames, as the chat does when it opens.
-  String? _firstKey;
+  // The first item of the first entry at the last build: a page that comes
+  // in above it fills in a few frames, as the chat does when it opens. An
+  // item, not an entry's key: a call that joins a run the page brings
+  // changes the run's key.
+  String? _firstItem;
 
   /// How many of the last entries are built, while the transcript fills
   /// in; null once all of it is. A chat opens at its bottom, so its first
@@ -281,12 +283,12 @@ class _TranscriptState extends State<Transcript> {
   /// and [Transcript.moreEntries] more. Not while a find looks or a pin is
   /// gone to, which need all of it.
   void _pageFills(List<Object> entries) {
-    final was = _firstKey;
-    _firstKey = entries.isEmpty ? null : _key(entries.first);
-    if (_tail != null || was == null || was == _firstKey) return;
+    final was = _firstItem;
+    _firstItem = entries.isEmpty ? null : _itemsOf(entries.first).first.id;
+    if (_tail != null || was == null || was == _firstItem) return;
     if (_goTo != null) return;
     if ((widget.chat.find.query ?? '').isNotEmpty) return;
-    final at = entries.indexWhere((e) => _key(e) == was);
+    final at = entries.indexWhere((e) => _itemsOf(e).any((it) => it.id == was));
     if (at > Transcript.moreEntries) {
       _tail = entries.length - at + Transcript.moreEntries;
     }
@@ -333,11 +335,7 @@ class _TranscriptState extends State<Transcript> {
     bool rise = false,
   }) {
     final key = _key(e);
-    final items = switch (e) {
-      final List<Item> run => run,
-      final SubagentRun s => [s.call, ...s.items],
-      _ => [e],
-    };
+    final items = _itemsOf(e);
     final rewindable = e is Item && canRewindTo(widget.chat, e);
     final forkable =
         widget.items == null &&
@@ -551,7 +549,7 @@ class _TranscriptState extends State<Transcript> {
       _keep(old.chat);
       _restore = null;
       _laidKeys = const [];
-      _firstKey = null;
+      _firstItem = null;
       if (widget.items == null) _follower.follow();
       _openAtKept();
       if (_follower.following || _restore != null) {
@@ -1129,6 +1127,13 @@ class _TranscriptState extends State<Transcript> {
   Widget _codeBars(ScrollBehavior behavior, Widget child) =>
       widget.bottom == null ? child : ownScrollbars(behavior, child);
 }
+
+/// An entry's items: a run's calls, a subagent's call and steps, or one.
+List<Item> _itemsOf(Object e) => switch (e) {
+  final List<Item> run => run,
+  final SubagentRun s => [s.call, ...s.items],
+  _ => [e as Item],
+};
 
 /// An entry's key: a call and the group it becomes keep their place (and
 /// state).
