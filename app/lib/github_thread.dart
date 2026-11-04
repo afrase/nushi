@@ -9,6 +9,48 @@ import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// The key of thread [x]'s reply box, on pull request [ref]: the Files
+/// tab's card and To do's row share it.
+String threadDraft(GitHubRef ref, GitHubThread x) =>
+    githubDraft(ref, 'thread ${x.id}');
+
+/// Thread [thread]'s reply box: posts the reply, then [onClose]s and asks
+/// for the pull request again ([onChanged]); Cancel [onClose]s.
+class ThreadReplyBox extends StatelessWidget {
+  const new({
+    required this.daemon,
+    required this.ref,
+    required this.thread,
+    required this.onClose,
+    required this.onChanged,
+    super.key,
+  });
+
+  final Daemon daemon;
+
+  /// The pull request it's on.
+  final GitHubRef ref;
+  final GitHubThread thread;
+  final VoidCallback onClose;
+  final Future<void> Function() onChanged;
+
+  @override
+  Widget build(BuildContext context) => CommentBox(
+    draft: threadDraft(ref, thread),
+    hint: 'Reply (Markdown; ⌘⏎ posts it)',
+    label: 'Reply',
+    autofocus: true,
+    onCancel: onClose,
+    onPost: (text) async {
+      await daemon.client.replyGitHubThread(
+        ReplyGitHubThreadRequest(host: ref.host, thread: thread.id, body: text),
+      );
+      if (context.mounted) onClose();
+      await onChanged();
+    },
+  );
+}
+
 /// A note's frame under its lines.
 class Inlay extends StatelessWidget {
   const new({required this.child, super.key});
@@ -51,14 +93,9 @@ class ThreadCard extends StatefulWidget {
 }
 
 class _ThreadCardState extends State<ThreadCard> {
-  /// The key of its reply box: To do's too.
-  late final String _draft = githubDraft(
-    widget.ref,
-    'thread ${widget.thread.id}',
-  );
-
   /// The reply box shows: opened, or a reply written there not posted yet.
-  late bool _replying = commentDraft(_draft).isNotEmpty;
+  late bool _replying = commentDraft(threadDraft(widget.ref, widget.thread))
+      .isNotEmpty;
   late bool _open = !widget.thread.resolved || _replying;
   bool _busy = false;
 
@@ -129,27 +166,15 @@ class _ThreadCardState extends State<ThreadCard> {
             ),
           ),
           if (_open) ...[
-            for (final c in x.comments)
-              CommentEntry(c, sendable: false),
+            for (final c in x.comments) CommentEntry(c, sendable: false),
             const SizedBox(height: 8),
             if (_replying)
-              CommentBox(
-                draft: _draft,
-                hint: 'Reply (Markdown; ⌘⏎ posts it)',
-                label: 'Reply',
-                autofocus: true,
-                onCancel: () => setState(() => _replying = false),
-                onPost: (text) async {
-                  await widget.daemon.client.replyGitHubThread(
-                    ReplyGitHubThreadRequest(
-                      host: widget.ref.host,
-                      thread: x.id,
-                      body: text,
-                    ),
-                  );
-                  if (mounted) setState(() => _replying = false);
-                  await widget.onChanged();
-                },
+              ThreadReplyBox(
+                daemon: widget.daemon,
+                ref: widget.ref,
+                thread: x,
+                onClose: () => setState(() => _replying = false),
+                onChanged: widget.onChanged,
               )
             else
               Row(

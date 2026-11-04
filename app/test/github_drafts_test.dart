@@ -11,6 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/github_thread.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -71,8 +72,9 @@ Future<(FakeDaemon, Daemon)> _files(
 Finder _box(String text) => find.widgetWithText(TextField, text);
 
 /// Thread [id]'s draft.
-String _draft(String id) =>
-    commentDraft(githubDraft(pull().item.ref, 'thread $id'));
+String _draft(String id) => commentDraft(
+  threadDraft(pull().item.ref, pull().threads.firstWhere((x) => x.id == id)),
+);
 
 Future<void> _post(WidgetTester tester) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
@@ -91,8 +93,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Half a reply');
     await _lookAtChat(tester, d);
-    // Back on Files, the box open with the text (in To do's row too).
-    expect(_box('Half a reply'), findsWidgets);
+    // Back on Files, the box open with the text, and in To do's row: one
+    // draft.
+    expect(_box('Half a reply'), findsNWidgets(2));
     expect(_draft('T1'), 'Half a reply');
     // The outdated thread's box starts empty, and keeps its own.
     Finder inT2(Finder f) =>

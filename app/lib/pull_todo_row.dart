@@ -6,7 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
-import 'package:nushi/github_review.dart';
+import 'package:nushi/github_thread.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/review_findings.dart';
 import 'package:nushi/send_to_agent.dart';
@@ -102,13 +102,11 @@ class _TodoRowState extends State<TodoRow> {
 
   /// The reply box shows: opened, or a reply written there not posted yet.
   late bool _replying = switch (widget.item) {
-    ThreadTodo(:final thread) => commentDraft(_draft(thread)).isNotEmpty,
+    ThreadTodo(:final thread) => commentDraft(
+      threadDraft(widget.pull.item.ref, thread),
+    ).isNotEmpty,
     _ => false,
   };
-
-  /// The key of thread [x]'s reply box: the Files tab's too.
-  String _draft(GitHubThread x) =>
-      githubDraft(widget.pull.item.ref, 'thread ${x.id}');
 
   Future<void> _toggleLog(GitHubCheck c) async {
     setState(() => _log = !_log);
@@ -330,23 +328,12 @@ class _TodoRowState extends State<TodoRow> {
           if (_replying && i is ThreadTodo)
             Padding(
               padding: const EdgeInsets.fromLTRB(50, 6, 0, 0),
-              child: CommentBox(
-                draft: _draft(i.thread),
-                hint: 'Reply (Markdown; ⌘⏎ posts it)',
-                label: 'Reply',
-                autofocus: true,
-                onCancel: () => setState(() => _replying = false),
-                onPost: (text) async {
-                  await widget.daemon.client.replyGitHubThread(
-                    ReplyGitHubThreadRequest(
-                      host: widget.pull.item.ref.host,
-                      thread: i.thread.id,
-                      body: text,
-                    ),
-                  );
-                  if (mounted) setState(() => _replying = false);
-                  await widget.onChanged();
-                },
+              child: ThreadReplyBox(
+                daemon: widget.daemon,
+                ref: widget.pull.item.ref,
+                thread: i.thread,
+                onClose: () => setState(() => _replying = false),
+                onChanged: widget.onChanged,
               ),
             ),
         ],
