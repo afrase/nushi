@@ -93,6 +93,30 @@ const _harness = '''
         out.kept = await kept(version, main);
         break;
       }
+      case "honest install": {
+        let done;
+        on.install({ waitUntil: (p) => { done = p; } });
+        out.installed = await done.then(() => true, () => false);
+        out.kept = await kept(version, main);
+        break;
+      }
+      case "altered hit": {
+        // The server's own answer at its URL (type "basic"), kept while
+        // the server served it altered; the build's sum is the fixed one's.
+        const here = location.href.split("#")[0];
+        const real = await globalThis.fetch(here);
+        network.set(here, "fixed");
+        sums[here] = await hex("fixed");
+        code = src;
+        put('const VERSION = "nushi-dev";', "const VERSION = " + JSON.stringify(version) + ";", true);
+        put('const FONTS = "nushi-fonts-dev";', "const FONTS = " + JSON.stringify(fonts) + ";", true);
+        put("const SUMS = {};", "const SUMS = " + JSON.stringify(sums) + ";", false);
+        new Function("self", "caches", "fetch", code)(self, caches, fetch);
+        await (await caches.open(version)).put(here, real);
+        out.served = await get(here);
+        out.kept = await kept(version, here);
+        break;
+      }
       case "font cache navigation":
         await plant(fonts, font, "<script>evil()</script>");
         out.served = await get(font, "navigate");
@@ -156,6 +180,18 @@ void main() {
 
   test("a file that isn't the build's fails the install", () async {
     expect(await run('altered at install'), {'installed': false, 'kept': null});
+  });
+
+  test("the build's files install when they match", () async {
+    expect(await run('honest install'), {
+      'installed': true,
+      'kept': 'honest()',
+    });
+  });
+
+  test("the server's own answer that isn't the build's is dropped and "
+      'fetched again', () async {
+    expect(await run('altered hit'), {'served': 'fixed', 'kept': null});
   });
 
   test('the fonts cache never answers a navigation', () async {
