@@ -188,18 +188,14 @@ void main() {
         ..iPhone = true
         ..installed = true;
       await tester.pump();
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/phone_pair_$name.png'),
-      );
+      expect(find.text('Pair with a Mac'), findsOneWidget);
+      await render(tester, find.byType(PhoneApp), 'phone_pair_$name');
       phone
         ..pairing = PairingCode('491 207')
         ..notifyListeners();
       await tester.pump();
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/phone_pair_code_$name.png'),
-      );
+      expect(find.textContaining('491 207'), findsOneWidget);
+      await render(tester, find.byType(PhoneApp), 'phone_pair_code_$name');
       await endPhone(tester, phone);
     });
 
@@ -210,10 +206,10 @@ void main() {
       final (phone, _) = await _app(tester, fake, brightness: b);
       await tester.tap(find.bySemanticsLabel('Settings'));
       await tester.pumpAndSettle();
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/phone_settings_$name.png'),
-      );
+      for (final words in ['Mac', 'Notifications', 'Forget this Mac']) {
+        expect(find.text(words), findsWidgets);
+      }
+      await render(tester, find.byType(PhoneApp), 'phone_settings_$name');
       await endPhone(tester, phone);
     });
   }
@@ -235,19 +231,13 @@ void main() {
       final settings = tester.getRect(find.bySemanticsLabel('Settings'));
       expect(settings.right, closeTo(size.width - 4, 1));
       expect(settings.top, greaterThanOrEqualTo(0));
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/phone_chats_at_$name.png'),
-      );
+      await render(tester, find.byType(PhoneApp), 'phone_chats_at_$name');
       await tester.tap(find.text('Review the Noise channel'));
       await tester.pumpAndSettle();
       final box = tester.getRect(find.byType(TextField).last);
       expect(box.bottom, lessThanOrEqualTo(size.height));
       expect(box.bottom, greaterThan(size.height - 120));
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/phone_question_at_$name.png'),
-      );
+      await render(tester, find.byType(PhoneApp), 'phone_question_at_$name');
       await endPhone(tester, phone);
     });
   }
@@ -299,10 +289,7 @@ void main() {
     );
     expect(paragraph.didExceedMaxLines, isFalse);
     expect(tester.getSize(text).height, greaterThan(20)); // two lines
-    await expectLater(
-      find.byType(PhoneApp),
-      matchesGoldenFile('goldens/phone_permission_390.png'),
-    );
+    await render(tester, find.byType(PhoneApp), 'phone_permission_390');
     await endPhone(tester, phone);
   });
 
@@ -334,10 +321,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Read-only: Nushi’s copy of the transcript.'), findsOne);
-    await expectLater(
-      find.byType(PhoneApp),
-      matchesGoldenFile('goldens/phone_expired_390.png'),
-    );
+    await render(tester, find.byType(PhoneApp), 'phone_expired_390');
     await tester.tap(find.text('New chat here'));
     await tester.pumpAndSettle();
     // The New chat screen, its folder first.
@@ -426,10 +410,7 @@ void main() {
     expect(find.text('Opus 5.5'), findsWidgets); // the box's picker too
     expect(find.text('nushi  /Users/me'), findsOne);
     expect(find.text('Pin'), findsOne); // the daemon keeps pins (API 90)
-    await expectLater(
-      find.byType(PhoneApp),
-      matchesGoldenFile('goldens/phone_chat_sheet_390.png'),
-    );
+    await render(tester, find.byType(PhoneApp), 'phone_chat_sheet_390');
     await tester.tap(find.text('Rename…'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Relay test fixed');
@@ -465,9 +446,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Chat'));
       await tester.pumpAndSettle();
-      await expectLater(
+      await render(
+        tester,
         find.byType(PhoneApp),
-        matchesGoldenFile('goldens/phone_chat_sheet_fork_${b.name}.png'),
+        'phone_chat_sheet_fork_${b.name}',
       );
       await tester.tap(find.text('Fork'));
       await tester.pumpAndSettle();
@@ -693,10 +675,7 @@ void main() {
     expect(await nav.maybePop(), isFalse);
     await tester.pump();
     expect(find.text('Pair with a Mac'), findsNothing);
-    await expectLater(
-      find.byType(PhoneApp),
-      matchesGoldenFile('goldens/phone_root_390.png'),
-    );
+    await render(tester, find.byType(PhoneApp), 'phone_root_390');
     await endPhone(tester, phone);
   });
 

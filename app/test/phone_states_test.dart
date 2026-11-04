@@ -141,13 +141,10 @@ void main() {
         await tester.pump();
         await tester.pump();
         expect(find.text('Reconnecting…'), findsOneWidget);
-        await expectLater(
-          find.byType(PhoneApp),
-          matchesGoldenFile('goldens/phone_reconnecting_$name.png'),
-        );
+        await render(tester, find.byType(PhoneApp), 'phone_reconnecting_$name');
 
         await p.link!.check();
-        // Today at 10:42 (the golden's time; another day adds the date).
+        // Today at 10:42 (the render's time; another day adds the date).
         p.link!.seen = DateTime(
           fixtureNow.year,
           fixtureNow.month,
@@ -175,10 +172,7 @@ void main() {
         );
         expect(find.textContaining('last seen'), findsOneWidget);
         _inside(tester, find.byType(ConnectionBar), phone);
-        await expectLater(
-          find.byType(PhoneApp),
-          matchesGoldenFile('goldens/phone_cant_reach_$name.png'),
-        );
+        await render(tester, find.byType(PhoneApp), 'phone_cant_reach_$name');
 
         // Back: the bar goes.
         down = false;
@@ -200,10 +194,7 @@ void main() {
         expect(find.text('Scan QR code'), findsOneWidget);
         expect(find.bySemanticsLabel('Back'), findsNothing);
         _inside(tester, find.text('Pair').last, phone);
-        await expectLater(
-          find.byType(PhoneApp),
-          matchesGoldenFile('goldens/phone_pair_scan_$name.png'),
-        );
+        await render(tester, find.byType(PhoneApp), 'phone_pair_scan_$name');
         await _end(tester, p);
       });
 
@@ -221,10 +212,7 @@ void main() {
         expect(find.text('Open Nushi from your Home Screen'), findsOneWidget);
         expect(find.text('Copy link'), findsOneWidget);
         expect(find.text('Scan QR code'), findsNothing);
-        await expectLater(
-          find.byType(PhoneApp),
-          matchesGoldenFile('goldens/phone_pair_safari_$name.png'),
-        );
+        await render(tester, find.byType(PhoneApp), 'phone_pair_safari_$name');
         await _end(tester, p);
       });
 
@@ -248,10 +236,7 @@ void main() {
           reason: 'the recent part first',
         );
         _inside(tester, find.byType(TextField).last, phone);
-        await expectLater(
-          find.byType(PhoneApp),
-          matchesGoldenFile('goldens/phone_chat_loading_$name.png'),
-        );
+        await render(tester, find.byType(PhoneApp), 'phone_chat_loading_$name');
         await _end(tester, p);
       });
 
@@ -303,10 +288,7 @@ void main() {
           findsOneWidget,
         );
         _inside(tester, find.byType(TextField).last, phone);
-        await expectLater(
-          find.byType(PhoneApp),
-          matchesGoldenFile('goldens/phone_chat_older_$name.png'),
-        );
+        await render(tester, find.byType(PhoneApp), 'phone_chat_older_$name');
         await _end(tester, p);
       });
     }
