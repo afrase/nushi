@@ -157,7 +157,7 @@ func (s *session) inject(ctx context.Context, content []claudeagent.Block) (bool
 	id := s.a.newID()
 	t.ids[id], t.steers[id] = true, true
 	priority := claudeagent.PriorityNow
-	if s.asks > 0 {
+	if len(s.open) > 0 {
 		priority = claudeagent.PriorityLater
 	}
 	s.mu.Unlock()

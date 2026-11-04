@@ -153,10 +153,7 @@ func (s *session) opened(ctx context.Context, agent string) (context.Context, fu
 	ctx, cancel := context.WithCancel(ctx)
 	a := &ask{cancel: cancel, agent: agent}
 	s.mu.Lock()
-	s.asks++
-	s.lastAsk++
-	n := s.lastAsk
-	s.open[n] = a
+	s.open[a] = struct{}{}
 	s.mu.Unlock()
 	if agent != "" {
 		s.kids.asking(agent, 1, false)
@@ -164,8 +161,7 @@ func (s *session) opened(ctx context.Context, agent string) (context.Context, fu
 	return ctx, func() {
 		cancel()
 		s.mu.Lock()
-		s.asks--
-		delete(s.open, n)
+		delete(s.open, a)
 		withdrawn := a.withdrawn
 		s.mu.Unlock()
 		if agent != "" {
@@ -182,7 +178,7 @@ func (s *session) withdraw(which func(*ask) bool) {
 }
 
 func (s *session) withdrawLocked(which func(*ask) bool) {
-	for _, a := range s.open {
+	for a := range s.open {
 		if which(a) {
 			a.withdrawn = true
 			a.cancel()

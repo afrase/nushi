@@ -39,9 +39,10 @@ func TestSteer(t *testing.T) {
 			wait(t, taken, "the prompt taken")
 			eventually(t, "the prompt running", func() bool { _, a := p.queue(t, sid); return a == "id2" })
 			s, _ := p.agent.session(sid)
-			s.mu.Lock()
-			s.asks = tc.asks
-			s.mu.Unlock()
+			for range tc.asks {
+				_, done := s.opened(t.Context(), "")
+				defer done()
+			}
 			outcome, err := steering.Steer(t.Context(), p.AgentConn, string(sid), steerText("also"))
 			if err != nil || outcome != steering.Injected {
 				t.Fatalf("%s %v", outcome, err)
