@@ -13,6 +13,8 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_bar.dart';
+import 'package:nushi/github_checks.dart';
+import 'package:nushi/github_files.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
@@ -986,8 +988,13 @@ void main() {
         find.byType(GitHubView),
         matchesGoldenFile('goldens/github_pull_$name.png'),
       );
+      // The tabs sit near the window's foot: scrolled to, and the tab
+      // checked, so a tap that misses fails here, not as a golden that
+      // repeats the one above.
+      await tester.ensureVisible(find.text('Checks · 1 failing'));
       await tester.tap(find.text('Checks · 1 failing'));
       await tester.pumpAndSettle();
+      expect(find.byType(GitHubChecks), findsOneWidget);
       await tester.tap(
         find.textContaining('on-demand', findRichText: true).last,
       );
@@ -996,8 +1003,10 @@ void main() {
         find.byType(GitHubView),
         matchesGoldenFile('goldens/github_checks_$name.png'),
       );
+      await tester.ensureVisible(find.text('Files 3'));
       await tester.tap(find.text('Files 3'));
       await tester.pumpAndSettle();
+      expect(find.byType(GitHubFiles), findsOneWidget);
       await expectLater(
         find.byType(GitHubView),
         matchesGoldenFile('goldens/github_files_$name.png'),
