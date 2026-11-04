@@ -736,6 +736,11 @@ func TestRepos(t *testing.T) {
 	if len(repos) != 4 || repos[0].Repo != "me/one" || repos[1].Repo != "afrase/one" || len(repos[1].Folders) != 1 {
 		t.Fatalf("%+v", repos)
 	}
+	// Remotes spelling one repository in two cases are one repository.
+	repos = w.s.Repos(t.Context(), []string{"one", "One"})
+	if len(repos) != 2 || repos[0].Repo != "me/one" || !slices.Equal(repos[1].Folders, []string{"one", "One"}) {
+		t.Fatalf("%+v", repos)
+	}
 }
 
 // TestUnknownHosts: a host that's neither github.com, nor gh's, nor given

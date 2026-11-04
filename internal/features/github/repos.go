@@ -52,13 +52,14 @@ func parseRemote(remote string) (host, repo string, ok bool) {
 }
 
 // Repos are the GitHub repositories folders are clones of (by their
-// remotes), each with its folders. A
-// folder's remotes are read again after a minute.
+// remotes), each with its folders. A repository's name takes any case
+// (as GitHub's does): one spelled two ways is one, as the first spells
+// it. A folder's remotes are read again after a minute.
 func (s *Service) Repos(ctx context.Context, folders []string) []Repo {
 	var out []Repo
 	for _, f := range folders {
 		for _, r := range s.remotesOf(ctx, f) {
-			i := slices.IndexFunc(out, func(x Repo) bool { return x.Host == r[0] && x.Repo == r[1] })
+			i := slices.IndexFunc(out, func(x Repo) bool { return x.Host == r[0] && strings.EqualFold(x.Repo, r[1]) })
 			if i < 0 {
 				out = append(out, Repo{Host: r[0], Repo: r[1]})
 				i = len(out) - 1
