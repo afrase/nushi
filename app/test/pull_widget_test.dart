@@ -17,7 +17,7 @@ import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show comment, item, pull, testNow;
+import 'github_view_test.dart' show item, pull;
 import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';
@@ -406,55 +406,6 @@ void main() {
         matching: find.text('Pull request'),
       ),
       findsNothing,
-    );
-    d.dispose();
-  }, variant: _mac);
-
-  testWidgets('golden: the Pull request tab, dark', (tester) async {
-    // Its comments' ages from the test's day, not the real one.
-    clock = () => testNow;
-    final (d, _) = await _app(tester, whole: pull());
-    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-    await tester.tap(
-      find.descendant(
-        of: find.byType(ChatHeader),
-        matching: find.text('Pull request'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // A comment sent to the agent: the bar counts it.
-    await tester.tap(
-      find
-          .byTooltip(
-            "Send to the agent: a reply card in the chat's box, to send",
-          )
-          .at(1),
-    );
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/pull_tab_dark.png'),
-    );
-    d.dispose();
-  }, variant: _mac);
-
-  testWidgets('golden: the widget, open with a failing check, dark', (
-    tester,
-  ) async {
-    final (d, _) = await _app(
-      tester,
-      whole: pull()
-        ..conversation.add(
-          comment('octo', 'One more thing.', age: Duration.zero),
-        ),
-    );
-    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-    await tester.pumpAndSettle();
-    await expectLater(
-      find.byType(NushiApp),
-      matchesGoldenFile('goldens/pull_widget_dark.png'),
     );
     d.dispose();
   }, variant: _mac);

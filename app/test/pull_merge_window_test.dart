@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/pull_merge.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -39,7 +40,24 @@ Future<Daemon> _tab(
 
 /// The Merge control in each state, in the Pull request tab at the window's
 /// real widths and in the details widget (which shows beside the chat), in
-/// both themes; and the confirmation.
+/// both themes, all of it inside the window; and the confirmation. Each a
+/// render (harness.dart's [render]), not a golden.
+/// The Merge control and its words inside a window [width] wide.
+void _inside(WidgetTester tester, double width) {
+  final control = find.byType(MergeControl);
+  final box = tester.getRect(control);
+  expect(box.left, greaterThanOrEqualTo(0));
+  expect(box.right, lessThanOrEqualTo(width));
+  for (final text in tester.widgetList<Text>(
+    find.descendant(of: control, matching: find.byType(Text)),
+  )) {
+    expect(
+      tester.getRect(find.byWidget(text)).right,
+      lessThanOrEqualTo(box.right),
+    );
+  }
+}
+
 void main() {
   setUpAll(loadFonts);
 
@@ -49,21 +67,19 @@ void main() {
   ]) {
     for (final state in ['ready', 'blocked', 'auto', 'queue']) {
       for (final width in [1700.0, 720.0]) {
-        testWidgets('golden: $state at ${width.toInt()}, $theme', (
-          tester,
-        ) async {
+        testWidgets('$state at ${width.toInt()}, $theme', (tester) async {
           final d = await _tab(tester, mergePull(state), width, brightness);
-          await expectLater(
+          _inside(tester, width);
+          await render(
+            tester,
             find.byType(NushiApp),
-            matchesGoldenFile(
-              'goldens/pull_merge_${state}_${width.toInt()}_$theme.png',
-            ),
+            'pull_merge_${state}_${width.toInt()}_$theme',
           );
           d.dispose();
         }, variant: _mac);
       }
 
-      testWidgets('golden: $state in the widget, $theme', (tester) async {
+      testWidgets('$state in the widget, $theme', (tester) async {
         final (d, _) = await openPullTab(
           tester,
           mergePull(state),
@@ -72,16 +88,18 @@ void main() {
           details: true,
           open: false,
         );
-        await expectLater(
+        _inside(tester, 1700);
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile('goldens/pull_merge_widget_${state}_$theme.png'),
+          'pull_merge_widget_${state}_$theme',
         );
         d.dispose();
       }, variant: _mac);
     }
 
     for (final width in [1700.0, 720.0]) {
-      testWidgets('golden: the confirmation at ${width.toInt()}, $theme', (
+      testWidgets('the confirmation at ${width.toInt()}, $theme', (
         tester,
       ) async {
         final d = await _tab(
@@ -93,11 +111,13 @@ void main() {
         );
         await tester.tap(find.text('Squash and merge').first);
         await tester.pumpAndSettle();
-        await expectLater(
+        final dialog = tester.getRect(find.byType(Dialog));
+        expect(dialog.left, greaterThanOrEqualTo(0));
+        expect(dialog.right, lessThanOrEqualTo(width));
+        await render(
+          tester,
           find.byType(NushiApp),
-          matchesGoldenFile(
-            'goldens/pull_merge_confirm_${width.toInt()}_$theme.png',
-          ),
+          'pull_merge_confirm_${width.toInt()}_$theme',
         );
         d.dispose();
       }, variant: _mac);

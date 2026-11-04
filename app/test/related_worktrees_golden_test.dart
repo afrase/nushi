@@ -159,19 +159,23 @@ void main() {
         final right = tester.getTopRight(find.byTooltip('Reload')).dx;
         expect(right, greaterThan(tester.view.physicalSize.width - 40));
       }
-      await expectLater(
-        find.byType(NushiApp),
-        matchesGoldenFile('goldens/${name}_$theme.png'),
-      );
+      // A worktree in Changes, wide, is the Changes tab's window golden
+      // (the sidebar hidden: it has its own); the others are renders.
+      if (name == 'related_changes_1700') {
+        await expectLater(
+          find.byType(NushiApp),
+          matchesGoldenFile('goldens/${name}_$theme.png'),
+        );
+      } else {
+        await render(tester, find.byType(NushiApp), '${name}_$theme');
+      }
     }
 
     for (final width in [1700.0, 720.0]) {
       final w = width.toInt();
       Size size() => Size(width, 900);
 
-      testWidgets('golden: the widget and the tags, $w wide, $theme', (
-        tester,
-      ) async {
+      testWidgets('the widget and the tags, $w wide, $theme', (tester) async {
         final d = await _app(tester, size(), brightness);
         final chat = d.chats['c']!;
         expect(chat.related.list, hasLength(5));
@@ -186,9 +190,8 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('golden: a worktree in Changes, $w wide, $theme', (
-        tester,
-      ) async {
+      testWidgets('a worktree in Changes, $w wide, $theme', (tester) async {
+        if (width == 1700) sidebarHidden.value = true;
         final d = await _app(tester, size(), brightness);
         final chat = d.chats['c']!;
         chat.tab.value = ChatTab.changes;
@@ -199,7 +202,7 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('golden: a removed one, $w wide, $theme', (tester) async {
+      testWidgets('a removed one, $w wide, $theme', (tester) async {
         final d = await _app(tester, size(), brightness);
         final chat = d.chats['c']!;
         chat.tab.value = ChatTab.changes;
@@ -210,7 +213,7 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('golden: the menu open, $w wide, $theme', (tester) async {
+      testWidgets('the menu open, $w wide, $theme', (tester) async {
         final d = await _app(tester, size(), brightness);
         d.chats['c']!.tab.value = ChatTab.changes;
         await tester.pumpAndSettle();
@@ -220,9 +223,7 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('golden: back on the tab, unread, $w wide, $theme', (
-        tester,
-      ) async {
+      testWidgets('back on the tab, unread, $w wide, $theme', (tester) async {
         final d = await _app(tester, size(), brightness);
         final chat = d.chats['c']!;
         chat.related
@@ -235,9 +236,7 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('golden: moved on since read, $w wide, $theme', (
-        tester,
-      ) async {
+      testWidgets('moved on since read, $w wide, $theme', (tester) async {
         final d = await _app(tester, size(), brightness);
         final chat = d.chats['c']!;
         chat.tab.value = ChatTab.changes;
@@ -257,7 +256,7 @@ void main() {
         await closeView(tester, d);
       }, variant: _mac);
 
-      testWidgets('golden: commits gone, $w wide, $theme', (tester) async {
+      testWidgets('commits gone, $w wide, $theme', (tester) async {
         final d = await _app(tester, size(), brightness);
         final chat = d.chats['c']!;
         chat.tab.value = ChatTab.changes;

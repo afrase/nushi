@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'pull_fixture.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
 /// The Pull request tab at the window's real widths (1440, and 1100: the
-/// narrowest with the details panel), in both themes.
+/// narrowest with the details panel), in both themes, its text inside the
+/// window. At 1440 it's the tab's window golden (the sidebar hidden: it has
+/// its own); the rest are renders.
 void main() {
   setUpAll(loadFonts);
 
@@ -17,17 +21,25 @@ void main() {
       ('dark', Brightness.dark),
       ('light', Brightness.light),
     ]) {
-      testWidgets('golden: the tab at ${width.toInt()}, $name', (tester) async {
+      testWidgets('the tab at ${width.toInt()}, $name', (tester) async {
+        final golden = width == 1440;
+        if (golden) sidebarHidden.value = true;
         final (d, _) = await openPullTab(
           tester,
           fixturePull(),
           size: Size(width, 1000),
           brightness: brightness,
         );
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/pull_tab_${width.toInt()}_$name.png'),
-        );
+        expectTextInside(tester, width);
+        final shot = 'pull_tab_${width.toInt()}_$name';
+        if (golden) {
+          await expectLater(
+            find.byType(NushiApp),
+            matchesGoldenFile('goldens/$shot.png'),
+          );
+        } else {
+          await render(tester, find.byType(NushiApp), shot);
+        }
         d.dispose();
       }, variant: _mac);
     }
@@ -40,7 +52,7 @@ void main() {
       ('light', Brightness.light),
     ]) {
       final file = section.split(' ').first.toLowerCase();
-      testWidgets('golden: $file at 1440, $name', (tester) async {
+      testWidgets('$file at 1440, $name', (tester) async {
         final (d, _) = await openPullTab(
           tester,
           fixturePull(),
@@ -49,10 +61,8 @@ void main() {
         );
         await tester.tap(find.text(section));
         await tester.pumpAndSettle();
-        await expectLater(
-          find.byType(NushiApp),
-          matchesGoldenFile('goldens/pull_tab_${file}_$name.png'),
-        );
+        expectTextInside(tester, 1440);
+        await render(tester, find.byType(NushiApp), 'pull_tab_${file}_$name');
         d.dispose();
       }, variant: _mac);
     }

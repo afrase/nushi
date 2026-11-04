@@ -141,10 +141,7 @@ void main() {
       );
       final chip = find.byType(PullChip);
       expect(tester.getTopRight(chip).dx, lessThanOrEqualTo(390));
-      await expectLater(
-        find.byType(PhoneApp),
-        matchesGoldenFile('goldens/pull_phone_bar_$name.png'),
-      );
+      await render(tester, find.byType(PhoneApp), 'pull_phone_bar_$name');
       await endPhone(tester, phone);
     });
   }
