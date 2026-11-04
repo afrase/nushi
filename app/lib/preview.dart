@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/preview_text.dart';
@@ -227,7 +228,7 @@ Widget? previewStatus(
   if (f.missing) return const PreviewNote('The file isn’t there (yet).');
   if (f.tooLarge && capped) {
     return PreviewNote(
-      'Too large to preview (${sizeText(f.size.toInt())}).',
+      'Too large to preview (${diskSize(f.size.toInt())}).',
       action: onReveal == null
           ? null
           : Button(
@@ -384,13 +385,6 @@ class PreviewBody extends StatelessWidget {
     );
   }
 }
-
-/// A file's size as a preview says it: "640 bytes", "12 KB", "1.4 MB".
-String sizeText(int n) => n < 1024
-    ? '$n bytes'
-    : n < 1 << 20
-    ? '${(n / 1024).toStringAsFixed(0)} KB'
-    : '${(n / (1 << 20)).toStringAsFixed(1)} MB';
 
 /// One of a chat's images, read (and kept current) through the daemon.
 class _ChatImage extends StatefulWidget {

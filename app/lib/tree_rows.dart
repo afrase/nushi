@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart';
+import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -163,7 +164,7 @@ class TreeRowView extends StatelessWidget {
   String _tooltip(TreeRow r) {
     final what = [
       r.path,
-      if (r.kind == TreeRowKind.file) sizeText(r.size),
+      if (r.kind == TreeRowKind.file) diskSize(r.size),
       if (r.modified case final m?) ago(clock().difference(m), m),
       if (wrote && r.kind == TreeRowKind.folder) 'holds files the chat wrote',
       if (wrote && r.kind != TreeRowKind.folder) 'the chat wrote it',

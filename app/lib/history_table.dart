@@ -8,8 +8,9 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// A size on disk: "840 KB", "12.4 MB", "1.2 GB".
+/// A size on disk: "500 bytes", "840 KB", "12.4 MB", "1.2 GB".
 String diskSize(int n) => switch (n) {
+  < 1024 => '$n bytes',
   < 1 << 20 => '${(n / 1024).ceil()} KB',
   < 1 << 30 => '${(n / (1 << 20)).toStringAsFixed(1)} MB',
   _ => '${(n / (1 << 30)).toStringAsFixed(1)} GB',
