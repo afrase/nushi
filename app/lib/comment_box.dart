@@ -45,7 +45,8 @@ void forgetCommentDrafts() => _drafts.clear();
 /// A box to write a comment in and post it (Jira's and GitHub's, a
 /// conversation's, a reply's or a review's): ⌘⏎ or its button posts it,
 /// Esc cancels when it can; the button waits for some text. A post that
-/// fails keeps the text and says why under it. With a [draft] key, what's
+/// fails keeps the text and says why under it (in a snack bar when the
+/// box has gone meanwhile). With a [draft] key, what's
 /// written outlives the box until it's posted, emptied or cancelled.
 class CommentBox extends StatefulWidget {
   const new({
@@ -163,15 +164,39 @@ class _CommentBoxState extends State<CommentBox> {
     // it posts, so that box can't post it again, and is back if it fails.
     final key = widget.draft;
     final written = _text.text;
+    final messenger = ScaffoldMessenger.maybeOf(context);
     if (key != null) _keepOwn(key, '');
     try {
       await widget.onPost(md);
       if (mounted) _text.clear();
     } on Object catch (e) {
-      if (key != null && commentDraft(key).isEmpty) {
-        keepCommentDraft(key, written);
+      final why = errorText(e);
+      if (key != null) {
+        // A comment begun meanwhile in the box opened again stays, after
+        // the refused one.
+        final since = commentDraft(key);
+        keepCommentDraft(
+          key,
+          since.trim().isEmpty || since == written
+              ? written
+              : '$written\n\n$since',
+        );
       }
-      if (mounted) setState(() => _error = errorText(e));
+      if (mounted) {
+        setState(() => _error = why);
+      } else if (messenger != null && messenger.mounted) {
+        // Its box is gone, and with it the line that would say so.
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              key == null
+                  ? "A comment wasn't posted: $why"
+                  : "A comment wasn't posted: $why. Its text is back in "
+                        'its box.',
+            ),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

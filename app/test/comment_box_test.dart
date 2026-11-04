@@ -112,4 +112,42 @@ void main() {
     expect(find.widgetWithText(TextField, 'Again'), findsOneWidget);
     expect(posts, 2);
   });
+
+  testWidgets('a post refused after a new comment was started in the box '
+      'opened again keeps both, and says it failed', (tester) async {
+    forgetCommentDrafts();
+    final hold = Completer<void>();
+    // The app stays; only the box goes and comes back.
+    Widget box({bool shown = true}) => MaterialApp(
+      theme: const NushiTheme(Tokens.light).toThemeData(),
+      home: Scaffold(
+        body: shown
+            ? CommentBox(draft: 'jira s A-2', onPost: (_) => hold.future)
+            : const SizedBox(),
+      ),
+    );
+
+    await tester.pumpWidget(box());
+    await tester.enterText(find.byType(TextField), 'Long first comment');
+    await tester.pump();
+    await tester.tap(find.text('Comment'));
+    await tester.pump();
+    // Away and back while it posts; a second comment begun meanwhile.
+    await tester.pumpWidget(box(shown: false));
+    await tester.pumpWidget(box());
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'second');
+    await tester.pump();
+
+    hold.completeError(StateError('down'));
+    await tester.pump();
+    expect(commentDraft('jira s A-2'), 'Long first comment\n\nsecond');
+    expect(
+      find.widgetWithText(TextField, 'Long first comment\n\nsecond'),
+      findsOneWidget,
+    );
+    await tester.pump();
+    expect(find.textContaining("wasn't posted"), findsOneWidget);
+    expect(find.textContaining('Bad state: down'), findsOneWidget);
+  });
 }
