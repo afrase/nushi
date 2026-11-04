@@ -180,8 +180,13 @@ class _TranscriptState extends State<Transcript> {
       // Not under a press: a selection's edges are kept by the scroll
       // offset, which each entry coming in above would move.
       if (mounted && _tail != null && !_down) {
-        // Filling in to a kept place, unseen (see build): more a frame.
-        final more = Transcript.moreEntries * (_restore == null ? 1 : 4);
+        // Filling in to a kept place (unseen, see build), a message gone
+        // to or a find, which wait for it: more a frame.
+        final waits =
+            _restore != null ||
+            _goTo != null ||
+            (widget.chat.find.query ?? '').isNotEmpty;
+        final more = Transcript.moreEntries * (waits ? 4 : 1);
         setState(() => _tail = _tail! + more);
       }
     });
@@ -270,9 +275,13 @@ class _TranscriptState extends State<Transcript> {
       final top = topOfChild(column, row + next);
       if (top == null) return;
       final to = at + (header ? 1 : 0) + next;
-      _follower.shift = () => switch (topOfChild(column, to)) {
-        final now? => now - top,
-        null => 0,
+      _follower.shift = () {
+        final by = switch (topOfChild(column, to)) {
+          final now? => now - top,
+          null => 0.0,
+        };
+        _pickedAt += by; // a pick's place moves with what it shows
+        return by;
       };
       return;
     }
@@ -280,14 +289,12 @@ class _TranscriptState extends State<Transcript> {
 
   /// A page that came in above what's built builds over the next frames,
   /// as the chat fills in when it opens: the first frame only what it was
-  /// and [Transcript.moreEntries] more. Not while a find looks or a pin is
-  /// gone to, which need all of it.
+  /// and [Transcript.moreEntries] more. A find or a pin gone to waits for
+  /// what it needs to be built, faster ([_grow]).
   void _pageFills(List<Object> entries) {
     final was = _firstItem;
     _firstItem = entries.isEmpty ? null : _itemsOf(entries.first).first.id;
     if (_tail != null || was == null || was == _firstItem) return;
-    if (_goTo != null) return;
-    if ((widget.chat.find.query ?? '').isNotEmpty) return;
     final at = entries.indexWhere((e) => _itemsOf(e).any((it) => it.id == was));
     if (at > Transcript.moreEntries) {
       _tail = entries.length - at + Transcript.moreEntries;
@@ -524,7 +531,14 @@ class _TranscriptState extends State<Transcript> {
     if (widget.items == null) widget.chat.find.addListener(_findChanged);
     _follower.scroll.addListener(_findPinAt);
     _marks.onFound = (marks) {
-      widget.chat.find.found([for (final m in marks) m.key]);
+      final find = widget.chat.find;
+      // Found only once more came in above (Load all): brought into view.
+      if (find.hits.isEmpty &&
+          marks.isNotEmpty &&
+          widget.chat.older < _findOlder) {
+        _shownAsk = -1;
+      }
+      find.found([for (final m in marks) m.key]);
       _showCurrent();
     };
   }
@@ -534,6 +548,7 @@ class _TranscriptState extends State<Transcript> {
     if (q == _marks.query) {
       _showCurrent();
     } else {
+      _findOlder = widget.chat.older;
       setState(() {}); // the build looks for it
     }
   }
@@ -546,6 +561,7 @@ class _TranscriptState extends State<Transcript> {
       return;
     }
     if (old.chat != widget.chat) {
+      _findOlder = widget.chat.older;
       _keep(old.chat);
       _restore = null;
       _laidKeys = const [];
@@ -687,6 +703,8 @@ class _TranscriptState extends State<Transcript> {
   // keys), and the last time the find asked for its current one to show.
   final _marks = TextMarks();
   int _shownAsk = -1;
+  // What was above what's loaded as the find's query was asked.
+  late int _findOlder = widget.chat.older;
   bool _roomAbove = false; // the list starts below the find bar
 
   /// What the find bar covers of the transcript's top: more with its line
@@ -849,8 +867,9 @@ class _TranscriptState extends State<Transcript> {
       );
     }
     if (!mounted) return;
+    // What's above what's built builds over a few frames up to it ([_go]
+    // waits), not at once: a pin near a long chat's start is most of it.
     setState(() {
-      _tail = null; // all of it, to know where it is
       _goTo = id;
       _goTries = 0;
     });
@@ -863,6 +882,7 @@ class _TranscriptState extends State<Transcript> {
     if (id == null || !mounted || !_follower.scroll.hasClients) return;
     final p = _follower.scroll.position;
     if (id.isEmpty) {
+      if (_tail != null) return; // the start isn't built yet
       _goTo = null;
       _pickedAt = p.minScrollExtent;
       _picked = id;
@@ -875,6 +895,8 @@ class _TranscriptState extends State<Transcript> {
     final boxes = column is RenderFlex ? column.getChildrenAsList() : null;
     final at = i + (_hadHeader ? 1 : 0);
     if (i < 0 || boxes == null || at >= boxes.length) {
+      // Above what's built while it fills in: the next frames build it.
+      if (_tail != null && widget.chat.items.any((it) => it.id == id)) return;
       // Not laid out yet (an older page coming in): a frame or two more.
       if (++_goTries < 4) {
         setState(() {});
@@ -912,9 +934,6 @@ class _TranscriptState extends State<Transcript> {
               )
             : null);
     _pageFills(entries);
-    // A find looks in all of it, and needs its place to go to it: what's
-    // still to come in comes now. Not under a press (_grow).
-    if (query.isNotEmpty && !_down) _tail = null;
     if (chat.find.query == null) _roomAbove = false;
     // While it fills in, the entries above what's built wait.
     final tail = _tail;
@@ -951,13 +970,17 @@ class _TranscriptState extends State<Transcript> {
     _follower.stick();
     _restoreAfterLayout();
     final t = NushiTheme.of(context).t;
-    _marks.look(
-      tail == null ? query : '',
-      query.isEmpty ? const [] : [for (final e in entries) _key(e)],
-      hit: t.needs.withValues(alpha: 0.3),
-      now: t.accent.withValues(alpha: 0.4),
-      edge: t.accent,
-    );
+    // A find looks in all of it, once it's built: while it fills in, what
+    // it found stays as it was.
+    if (_tail == null || query.isEmpty) {
+      _marks.look(
+        query,
+        query.isEmpty ? const [] : [for (final e in entries) _key(e)],
+        hit: t.needs.withValues(alpha: 0.3),
+        now: t.accent.withValues(alpha: 0.4),
+        edge: t.accent,
+      );
+    }
     final before = _built;
     _built = {};
     final onReply = widget.onReply;
