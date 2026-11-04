@@ -67,6 +67,9 @@ type rawDetail struct {
 // Issue is an issue whole: its fields, comments (the latest 100) and
 // remote links, text as Markdown. The three are asked at once (the
 // fields after the site's acceptance criteria field, looked up once).
+// The first to fail cancels the others, and its error is the answer:
+// the others' would only say they were cancelled (a gone issue would
+// read as an unreachable site).
 func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -74,25 +77,29 @@ func (c *Client) Issue(ctx context.Context, key string) (model.JiraIssue, error)
 		wg       sync.WaitGroup
 		comments []rawComment
 		links    []model.JiraRemoteLink
-		errs     [2]error
+		once     sync.Once
+		first    error
 	)
-	wg.Go(func() {
-		if comments, errs[0] = c.comments(ctx, key); errs[0] != nil {
-			cancel()
+	fail := func(err error) {
+		if err != nil {
+			once.Do(func() { first = err; cancel() })
 		}
+	}
+	wg.Go(func() {
+		var err error
+		comments, err = c.comments(ctx, key)
+		fail(err)
 	})
 	wg.Go(func() {
-		if links, errs[1] = c.remoteLinks(ctx, key); errs[1] != nil {
-			cancel()
-		}
+		var err error
+		links, err = c.remoteLinks(ctx, key)
+		fail(err)
 	})
 	is, names, err := c.fields(ctx, key)
-	if err != nil {
-		cancel()
-	}
+	fail(err)
 	wg.Wait()
-	if err := cmp.Or(err, errs[0], errs[1]); err != nil {
-		return is, err
+	if first != nil {
+		return is, first
 	}
 	is.RemoteLinks = links
 	is.Comments = make([]model.JiraComment, 0, len(comments))

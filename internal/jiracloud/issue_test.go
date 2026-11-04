@@ -3,10 +3,12 @@ package jiracloud
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -70,6 +72,24 @@ func TestIssue(t *testing.T) {
 	}
 	if len(is.RemoteLinks) != 1 || is.RemoteLinks[0].URL != "https://github.com/example/repo/pull/1" {
 		t.Errorf("remote links %+v", is.RemoteLinks)
+	}
+}
+
+// TestIssueNotFound: an issue that's gone, or hidden, says so. Its
+// comments and remote links answer 404 while the site's field list is
+// still on its way; their failure cancels that read, and the 404, not the
+// cancelled read, is the answer.
+func TestIssueNotFound(t *testing.T) {
+	f := newFake(t)
+	f.routes["GET /rest/api/3/field"] = func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+			_, _ = w.Write([]byte(`[]`))
+		}
+	}
+	if _, err := f.client().Issue(t.Context(), "GONE-1"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
 
