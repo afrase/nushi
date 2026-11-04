@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/theme/diff_colors.dart';
+import 'package:nushi/theme/terminal_colors.dart';
+
 /// The kinds of code that take a color of their own, in diffs and code
 /// blocks; `syntax.dart` says which highlight.js scopes are which.
 enum Capture {
@@ -29,9 +32,11 @@ class CodeInk {
   final bool bold;
 }
 
-/// The POC's Workbench colors for one brightness. Code's colors are
-/// JetBrains' New UI Dark and Light schemes' (RubyMine's for symbols and
-/// parameters, which the platform leaves plain).
+/// Every color of one set of a theme, for one brightness: a widget's
+/// colors come only from here. [light] and [dark] are the Nushi theme's,
+/// the POC's Workbench colors; their code colors are JetBrains' New UI
+/// Dark and Light schemes' (RubyMine's for symbols and parameters, which
+/// the platform leaves plain).
 @immutable
 class Tokens {
   const new({
@@ -96,6 +101,10 @@ class Tokens {
     required this.monogramText,
     required this.avatars,
     required this.syntax,
+    this._hover,
+    this._pressed,
+    this._terminal,
+    this._diff,
   });
 
   final Brightness brightness;
@@ -224,16 +233,47 @@ class Tokens {
   /// How [c] looks.
   CodeInk ink(Capture c) => syntax[c]!;
 
-  /// The tint of a row or button under the pointer: lighter on the dark
-  /// theme, where every row's text and status color must still read AA on
-  /// it (`tokens_test`).
+  /// The tint of a row or button under the pointer: the text's, lighter on
+  /// the dark theme, where every row's text and status color must still
+  /// read AA on it (`tokens_test`), unless a theme gives its own.
   Color get hover =>
+      _hover ??
       text.withValues(alpha: brightness == Brightness.dark ? 0.075 : 0.09);
+  final Color? _hover;
 
   /// The tint of a row or button while the pointer is down on it: a click
   /// shows before what it does is done.
   Color get pressed =>
+      _pressed ??
       text.withValues(alpha: brightness == Brightness.dark ? 0.14 : 0.16);
+  final Color? _pressed;
+
+  /// The terminal's ANSI colors: VS Code's unless a theme gives its own.
+  TerminalColors get terminal =>
+      _terminal ??
+      (brightness == Brightness.dark
+          ? TerminalColors.vsCodeDark
+          : TerminalColors.vsCodeLight);
+  final TerminalColors? _terminal;
+
+  /// A diff's colors: drawn from the surfaces and status colors unless a
+  /// theme gives its own (Nushi's are `diff_view`'s).
+  DiffColors get diff =>
+      _diff ??
+      DiffColors.derived(
+        brightness: brightness,
+        base: base,
+        raised: raised,
+        selected: selected,
+        text: text,
+        textSecondary: textSecondary,
+        textMuted: textMuted,
+        accent: accent,
+        accentInk: accentInk,
+        done: done,
+        needs: needs,
+      );
+  final DiffColors? _diff;
 
   /// The accent's fill while a primary button is pressed: a shade darker.
   Color get accentPressed => Color.alphaBlend(const Color(0x2E000000), accent);
@@ -325,6 +365,7 @@ class Tokens {
       // JetBrains underlines it; nothing here can.
       Capture.docTag: CodeInk(Color(0xFF8C8C8C), italic: true, bold: true),
     },
+    diff: DiffColors.intelliJLight,
   );
 
   static const dark = Tokens(
@@ -413,5 +454,6 @@ class Tokens {
       Capture.comment: CodeInk(Color(0xFF7A7E85)),
       Capture.docTag: CodeInk(Color(0xFF67A37C)),
     },
+    diff: DiffColors.darcula,
   );
 }

@@ -329,14 +329,12 @@ class SyntaxLines implements DiffLineSource {
   void removeListener(void Function() listener) => _listeners.remove(listener);
 }
 
-/// The diff theme for [t]: diff_view's light or dark one, with the
-/// transcript's code colors.
+/// The diff theme for [t]: its diff colors, with the transcript's code
+/// colors.
 DiffThemeData diffTheme(Tokens t) {
-  final d = t.brightness == Brightness.dark
-      ? DiffThemeData.dark()
-      : DiffThemeData.light();
+  final d = t.diff;
   return DiffThemeData(
-    brightness: d.brightness,
+    brightness: t.brightness,
     background: d.background,
     text: d.text,
     gutterBackground: d.gutterBackground,

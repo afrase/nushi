@@ -195,31 +195,30 @@ class TerminalScreen extends StatelessWidget {
   }
 }
 
-/// The app's colors with VS Code's ANSI palettes, for one brightness.
+/// The app's colors with the theme's ANSI palette ([Tokens.terminal]).
 TerminalTheme terminalTheme(Tokens t) {
-  final dark = t.brightness == Brightness.dark;
-  Color c(int light, int darkColor) => Color(dark ? darkColor : light);
+  final a = t.terminal;
   return TerminalTheme(
     cursor: t.text,
     selection: t.accent.withValues(alpha: 0.3),
     foreground: t.text,
     background: t.base,
-    black: c(0xFF000000, 0xFF000000),
-    red: c(0xFFCD3131, 0xFFCD3131),
-    green: c(0xFF00BC00, 0xFF0DBC79),
-    yellow: c(0xFF949800, 0xFFE5E510),
-    blue: c(0xFF0451A5, 0xFF2472C8),
-    magenta: c(0xFFBC05BC, 0xFFBC3FBC),
-    cyan: c(0xFF0598BC, 0xFF11A8CD),
-    white: c(0xFF555555, 0xFFE5E5E5),
-    brightBlack: c(0xFF666666, 0xFF666666),
-    brightRed: c(0xFFCD3131, 0xFFF14C4C),
-    brightGreen: c(0xFF14CE14, 0xFF23D18B),
-    brightYellow: c(0xFFB5BA00, 0xFFF5F543),
-    brightBlue: c(0xFF0451A5, 0xFF3B8EEA),
-    brightMagenta: c(0xFFBC05BC, 0xFFD670D6),
-    brightCyan: c(0xFF0598BC, 0xFF29B8DB),
-    brightWhite: c(0xFFA5A5A5, 0xFFE5E5E5),
+    black: a.black,
+    red: a.red,
+    green: a.green,
+    yellow: a.yellow,
+    blue: a.blue,
+    magenta: a.magenta,
+    cyan: a.cyan,
+    white: a.white,
+    brightBlack: a.brightBlack,
+    brightRed: a.brightRed,
+    brightGreen: a.brightGreen,
+    brightYellow: a.brightYellow,
+    brightBlue: a.brightBlue,
+    brightMagenta: a.brightMagenta,
+    brightCyan: a.brightCyan,
+    brightWhite: a.brightWhite,
     searchHitBackground: t.needsSoft,
     searchHitBackgroundCurrent: t.needs,
     searchHitForeground: t.text,
