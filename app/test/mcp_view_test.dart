@@ -127,28 +127,30 @@ void main() {
     await closeView(tester, d);
   });
 
-  testWidgets('a check whose call fails leaves the servers not checked, '
-      'with Try again', (tester) async {
+  testWidgets('a check cut short by a lost daemon leaves the servers not '
+      'checked; Try again asks again; once the daemon is back the list '
+      'refreshes and the error goes', (tester) async {
+    var down = false; // the daemon gone: pings fail
     var checks = 0;
     final fake = FakeDaemon([])
       ..answer = (input) {
+        final gone = ConnectException(
+          Code.unavailable,
+          'daemon unavailable: connection lost',
+        );
+        if (input is PingRequest && down) throw gone;
         if (input is! ListMcpServersRequest) return null;
         if (!input.checkHealth) {
           return ListMcpServersResponse(
             servers: [for (final s in _servers()) s.deepCopy()..clearState()],
           );
         }
-        if (checks++ == 0) {
-          throw ConnectException(
-            Code.unavailable,
-            'daemon unavailable: connection lost',
-          );
-        }
+        if (checks++ < 2) throw gone; // the first check and Try again's
         return ListMcpServersResponse(servers: _servers());
       };
     fake.agents.first.mcp = true;
     final d = await fake.connect(tester);
-    final chat = ChatState('c1', '/Users/me/cut')..agent = 'claude';
+    final chat = ChatState('c1', '/Users/me/lost')..agent = 'claude';
     await tester.binding.setSurfaceSize(const Size(340, 500));
     await tester.pumpWidget(
       MaterialApp(
@@ -164,6 +166,18 @@ void main() {
     await tester.tap(find.text('Try again'));
     await tester.pumpAndSettle();
     expect(checks, 2);
+    expect(find.text('Try again'), findsOneWidget);
+
+    // The daemon restarts: gone for a ping, then back.
+    down = true;
+    await tester.pump(const Duration(seconds: 2));
+    expect(d.connected, isFalse);
+    expect(checks, 2); // nothing asked while it's away
+    down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(d.connected, isTrue);
+    expect(checks, 3);
     expect(find.text('daemon unavailable: connection lost'), findsNothing);
     expect(find.text('Connected'), findsNWidgets(4));
     await closeView(tester, d);

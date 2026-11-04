@@ -7,14 +7,16 @@ import 'package:nushi/agents.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/widgets.dart' show errorText;
+import 'package:nushi/widgets.dart' show daemonGone, errorText;
 
 /// The MCP servers an agent's config gives a folder, from the daemon (API
 /// 32; Ante's from API 80): read from the config at once, then checked
 /// (the agent connects to each, a few seconds), which fills in their
 /// states. One per agent and folder, shared by the view and the panel widget
 /// while the app runs; asked for again once it is a few minutes old, since
-/// servers connect, sign in and change outside Nushi too.
+/// servers connect, sign in and change outside Nushi too, and once the
+/// daemon is back after it was lost during a refresh (a restart into an
+/// update cuts a check short).
 class McpServers extends ChangeNotifier {
   factory of(Daemon daemon, String folder, {String agent = 'claude'}) {
     final list = _byFolder[(agent, folder)] ??= McpServers._(
@@ -56,6 +58,7 @@ class McpServers extends ChangeNotifier {
 
   bool _again = false; // refresh once the running one is done
   DateTime? _at; // when the last refresh ended
+  VoidCallback? _back; // refreshes once the lost daemon is back
 
   Future<void> refresh() async {
     if (checking) {
@@ -63,6 +66,8 @@ class McpServers extends ChangeNotifier {
       return;
     }
     checking = true;
+    _back?.call();
+    _back = null;
     notifyListeners();
     do {
       _again = false;
@@ -72,6 +77,7 @@ class McpServers extends ChangeNotifier {
       } on Object catch (e) {
         _unchecked();
         error = errorText(e);
+        if (daemonGone(e) && !_again) _back = daemon.whenBack(refresh);
       }
     } while (_again);
     checking = false;

@@ -82,6 +82,7 @@ extension DaemonLink on Daemon {
       final was = connected;
       connected = ok;
       if (ok) {
+        if (!was || build != _build) _links++;
         daemonApi = api; // kept while away: the app stays as it was
         _build = build;
         daemonVersion = version;
@@ -121,6 +122,23 @@ extension DaemonLink on Daemon {
       );
     }
     return ok;
+  }
+
+  /// Calls [load] once the daemon is back: connected again after it was
+  /// lost, or another build answering (it restarted, as into an update,
+  /// while the app wasn't looking). For what a call that failed because
+  /// the daemon was gone ([daemonGone]) left on screen; the function it
+  /// returns cancels it.
+  VoidCallback whenBack(VoidCallback load) {
+    final at = _links;
+    late final VoidCallback back;
+    back = () {
+      if (!connected || _links == at) return;
+      removeListener(back);
+      load();
+    };
+    addListener(back);
+    return () => removeListener(back);
   }
 
   /// The link to the daemon was dropped (the phone's, after a ping went

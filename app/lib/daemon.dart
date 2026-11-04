@@ -144,6 +144,7 @@ class Daemon extends ChangeNotifier {
   Object? pingError;
   int daemonApi = 0; // the daemon's API version
   String _build = ''; // the running daemon's build
+  int _links = 0; // times the daemon was reached anew ([whenBack])
   String daemonVersion = ''; // its release, "" when it isn't one (API 74)
 
   /// The running daemon's build: its program's `<size>-<mtime in ms>`.
