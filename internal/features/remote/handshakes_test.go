@@ -15,6 +15,7 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/store"
+	"github.com/afrase/nushi/internal/testcheck"
 	"github.com/afrase/nushi/relay"
 )
 
@@ -88,7 +89,40 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 	}
 	waitFor(t, func() bool { return total.Load() >= MaxConns })
 	time.Sleep(time.Second)
-	if n := total.Load(); n > MaxConns {
+	// MaxConns handshakes, and the next dialer waiting for a slot.
+	if n := total.Load(); n > MaxConns+1 {
 		t.Fatalf("the daemon opened %d connections to the relay with none past its handshake (cap %d)", n, MaxConns)
+	}
+}
+
+// Waits at the relay hold no handshake slot: with more ids given up than
+// MaxConns (one wait each), a phone still connects at the daemon's own id
+// again and again, rather than once and then never.
+func TestManyOldIDsLeaveTheIDSlots(t *testing.T) {
+	url := startRelay(t)
+	dir := t.TempDir()
+	st := store.New(dir)
+	k, b, c := newKey(t), newKey(t), newKey(t)
+	listen := newListenKey()
+	var moving []model.Moving
+	for range MaxConns + 4 { // b never moves from any
+		moving = append(moving, model.Moving{Listen: newListenKey(), Private: k.Private, Public: k.Public, Devices: []string{"b"}, Since: time.Now()})
+	}
+	testcheck.NoErr(t, st.SaveRemoteKey(model.RemoteKey{Private: k.Private, Public: k.Public, Listen: listen, Moving: moving}))
+	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "b", Name: "b", Key: b.Public, Paired: time.Now()},
+		{ID: "c", Name: "c", Key: c.Public, Paired: time.Now()}}))
+	startRemote(t, dir, url)
+	for i := range 4 {
+		ok := false
+		for deadline := time.Now().Add(5 * time.Second); !ok && time.Now().Before(deadline); {
+			conn, err := phoneConnect(url, listenID(listen), k.Public, c)
+			ok = err == nil && talks(conn)
+			if conn != nil {
+				_ = conn.Close()
+			}
+		}
+		if !ok {
+			t.Fatalf("connection %d at the daemon's id failed", i)
+		}
 	}
 }

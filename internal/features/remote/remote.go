@@ -32,10 +32,9 @@ type Store interface {
 	SaveDevices([]model.Device) error
 }
 
-// MaxConns caps the live connections, and apart from them the waits at
-// the relay and handshakes not yet past their first transport message: a
-// dishonest relay can hand the daemon a replayed first message as fast as
-// it listens (ADR 0033).
+// MaxConns caps the live connections, and apart from them the handshakes
+// not yet past their first transport message: a dishonest relay can hand
+// the daemon a replayed first message as fast as it listens (ADR 0033).
 const MaxConns = 16
 
 // timing is remote access's waits: a field of the service, not package
@@ -78,9 +77,8 @@ type Service struct {
 	ctx    context.Context //nolint:containedctx // the service's life, which Close ends
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
-	// pending holds a slot for each wait at the relay and each handshake
-	// it led to, until that handshake ends: link waits for one before it
-	// listens again.
+	// pending holds a slot for each handshake until it ends: link waits
+	// for one before it answers a dialer and listens again.
 	pending chan struct{}
 
 	mu        sync.Mutex
@@ -289,14 +287,8 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 	id := listenID(listen)
 	backoff := time.Second
 	for ctx.Err() == nil && s.waits(id) {
-		select {
-		case s.pending <- struct{}{}:
-		case <-ctx.Done():
-			return
-		}
 		c, err := s.dialer.Listen(ctx, relayURL, listen)
 		if err != nil {
-			<-s.pending
 			wait := jitter(backoff)
 			s.setState(ctx, id, "error", err.Error())
 			slog.Info("relay: trying again", "in", wait.Round(time.Second), "id", short(id))
@@ -319,7 +311,6 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			// The relay ended the wait (its limit, a restart) or the network
 			// went: wait again, at a random moment so many daemons don't
 			// come back at once. The Mac shows it reconnecting meanwhile.
-			<-s.pending
 			wait := jitter(backoff)
 			slog.Info("relay dropped the wait", "err", err, "id", short(id), "again_in", wait.Round(time.Second))
 			s.setState(ctx, id, "reconnecting", err.Error())
@@ -327,6 +318,16 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 			sleep(ctx, wait)
 			backoff = min(2*backoff, s.timing.maxBackoff)
 			continue
+		}
+		// The handshake takes a slot before the id listens again, so a
+		// relay handing over replayed first messages gets at most MaxConns
+		// answered at once (ADR 0033). The waits take none: one per id,
+		// they'd leave the daemon's own id none to answer in.
+		select {
+		case s.pending <- struct{}{}:
+		case <-ctx.Done():
+			_ = c.Close()
+			return
 		}
 		s.wg.Go(func() { // link is one of wg's: Close can't be waiting at zero
 			defer func() { <-s.pending }()
