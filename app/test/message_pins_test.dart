@@ -381,6 +381,31 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a call opened above a pin moves it: the current entry '
+      'follows, though nothing scrolled', (tester) async {
+    final items = [
+      for (final it in _items)
+        it.id == 't1'
+            ? (it.deepCopy()
+                ..text = [for (var i = 0; i < 60; i++) 'out $i'].join('\n'))
+            : it,
+    ];
+    final (d, _) = await _window(tester, pins: ['a1', 'a2'], items: items);
+    final third = _scroll(tester).viewportDimension / 3;
+    await _scrollTo(tester, _topOf(tester, 'The tests, line 0') - third + 30);
+    expect(_current(tester, 3), 2);
+    final call = find.text('Read relay/relay.go').first;
+    final list = tester.getRect(find.byType(SelectionArea));
+    expect(list.contains(tester.getCenter(call)), isTrue, reason: 'in view');
+    final before = _scroll(tester).pixels;
+    await tester.tap(call);
+    await tester.pumpAndSettle();
+    expect(_scroll(tester).pixels, before, reason: 'nothing scrolled');
+    expect(_topOf(tester, 'The tests, line 0') - before, greaterThan(third));
+    expect(_current(tester, 3), 1);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('the pointer over the rail opens its menu; leaving both '
       'closes it; a pick goes there', (tester) async {
     final (d, _) = await _window(tester, pins: ['a3', 'a1', 'a2']);

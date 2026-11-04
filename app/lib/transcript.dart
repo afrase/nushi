@@ -209,6 +209,9 @@ class _TranscriptState extends State<Transcript> {
       _clearSelection();
       if (_at != null) setState(() => _at = null);
     }
+    // The list's height changed with no scroll and no build of all of it
+    // (a call opened above a pin): the pins may have moved past the line.
+    if (n is ScrollMetricsNotification && n.depth == 0) _findPinAt();
     return _follower.onNotification(n);
   }
 
@@ -702,7 +705,8 @@ class _TranscriptState extends State<Transcript> {
   double _padTop = 0;
 
   /// Finds the current entry from where the pinned messages are laid out:
-  /// a few offsets read, on each scroll and after each layout, nothing
+  /// a few offsets read, on each scroll, after each build and when the
+  /// list's height changes, nothing
   /// rebuilt but the rail, and only when it changes. A pin not laid out
   /// (above what's built while the transcript fills in, or on a page the
   /// phone hasn't taken) is above all that is.
