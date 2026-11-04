@@ -25,6 +25,12 @@ func TestPinTitle(t *testing.T) {
 		{"```\nonly code\n```", "Message"},
 		{"", "Message"},
 		{"v0.3.1 is live on the Pi (nushi-relay 0.3.1). Next", "v0.3.1 is live on the Pi (nushi-relay…"},
+		// The agent's text, so printable only: no bidi override, escape,
+		// NUL or zero-width space; nothing visible left is "Message".
+		{"\u202eevil text here. More", "evil text here"},
+		{"Fixed \x1b[31mred\x1b[0m bug. Next", "Fixed [31mred[0m bug"},
+		{"## Title\twith a\x00nul", "Title with anul"},
+		{"## \u200b\u200b\n\u200b\u200b", "Message"},
 	} {
 		if got := pinTitle(tc.text); got != tc.want {
 			t.Errorf("pinTitle(%q) = %q, want %q", tc.text, got, tc.want)

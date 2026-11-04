@@ -34,7 +34,9 @@ var (
 
 // pinTitle is a message's title from its text: its first Markdown heading,
 // else its first sentence, without the Markdown, cut at a word near
-// titleRunes; "Message" when it has no words outside code.
+// titleRunes; "Message" when it has no words outside code. The message is
+// the agent's text, so the title is one line of printable text, as an
+// agent's own title is (agentTitle).
 func pinTitle(text string) string {
 	var first string
 	fenced := false
@@ -48,7 +50,7 @@ func pinTitle(text string) string {
 			continue
 		}
 		if m := heading.FindStringSubmatch(line); m != nil {
-			if t := plainTitle(m[1]); t != "" {
+			if t := printable(plainTitle(m[1])); t != "" {
 				return cutTitle(t)
 			}
 			continue
@@ -57,7 +59,7 @@ func pinTitle(text string) string {
 			first = line
 		}
 	}
-	plain := plainTitle(lineMarks.ReplaceAllString(first, ""))
+	plain := printable(plainTitle(lineMarks.ReplaceAllString(first, "")))
 	if s := sentence.FindString(plain); s != "" {
 		plain = strings.TrimSpace(s)
 	}
@@ -91,11 +93,11 @@ func cutTitle(s string) string {
 	return strings.TrimRightFunc(s[:cut], func(r rune) bool { return unicode.IsSpace(r) || unicode.IsPunct(r) }) + "…"
 }
 
-// agentTitle is a title an agent made, as a pin keeps it: one line of
-// printable text, cut as pinTitle's are; "" when nothing's left. It's the
-// model's text, so it is bounded and shown as plain text only.
-func agentTitle(s string) string {
-	s = strings.Map(func(r rune) rune {
+// printable is s as one line of printable text, trimmed: its spaces and
+// line breaks spaces, its control, format (a bidi override, a zero-width
+// space) and other unprintable characters gone.
+func printable(s string) string {
+	return strings.TrimSpace(strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {
 			return ' '
 		}
@@ -103,8 +105,14 @@ func agentTitle(s string) string {
 			return -1
 		}
 		return r
-	}, s)
-	s = strings.Trim(strings.TrimSpace(s), `"'“”`)
+	}, s))
+}
+
+// agentTitle is a title an agent made, as a pin keeps it: one line of
+// printable text, cut as pinTitle's are; "" when nothing's left. It's the
+// model's text, so it is bounded and shown as plain text only.
+func agentTitle(s string) string {
+	s = strings.Trim(printable(s), `"'“”`)
 	if s == "" {
 		return ""
 	}
