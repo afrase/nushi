@@ -169,15 +169,13 @@ class ChatHeader extends StatelessWidget {
     final around = roomy ? NushiTheme.groupGap : 6.0;
     return SizedBox(
       height: PaneHeader.height,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: t.borderSubtle)),
-            ),
+      child: WindowDrag(
+        background: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: t.borderSubtle)),
           ),
-          const WindowDrag(),
+        ),
+        children: [
           Padding(
             padding: EdgeInsets.fromLTRB(
               shut ? hiddenHeaderStart : NushiTheme.gutter,

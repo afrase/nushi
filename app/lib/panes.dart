@@ -212,16 +212,14 @@ class PaneHeader extends StatelessWidget {
           final shut = plain && sidebarShut;
           return SizedBox(
             height: height,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: plain ? null : t.raised,
-                    border: Border(bottom: BorderSide(color: t.borderSubtle)),
-                  ),
+            child: WindowDrag(
+              background: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: plain ? null : t.raised,
+                  border: Border(bottom: BorderSide(color: t.borderSubtle)),
                 ),
-                const WindowDrag(),
+              ),
+              children: [
                 Padding(
                   padding: EdgeInsets.only(
                     left: shut
