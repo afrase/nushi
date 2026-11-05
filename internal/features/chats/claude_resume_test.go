@@ -8,7 +8,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/afrase/nushi/claudeagent"
+	"github.com/afrase/claude-acp-go/claudeagent"
+
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )

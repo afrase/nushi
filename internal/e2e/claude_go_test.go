@@ -12,9 +12,10 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/afrase/nushi/claudeagent"
-	"github.com/afrase/nushi/claudeagent/claudetest"
-	"github.com/afrase/nushi/claudeagent/sessions"
+	"github.com/afrase/claude-acp-go/claudeagent"
+	"github.com/afrase/claude-acp-go/claudeagent/claudetest"
+	"github.com/afrase/claude-acp-go/claudeagent/sessions"
+
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/testcheck"

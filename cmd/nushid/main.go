@@ -25,7 +25,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/afrase/nushi/claudeacp"
+	"github.com/afrase/claude-acp-go/claudeacp"
+
 	"github.com/afrase/nushi/internal/ante"
 	"github.com/afrase/nushi/internal/api"
 	"github.com/afrase/nushi/internal/claude"

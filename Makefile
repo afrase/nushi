@@ -133,8 +133,8 @@ SCENARIOS ?= all
 CLAUDE_SCHEMAS ?=
 claude-record:
 	@test -n "$(CLAUDE_TEE_REAL)" || { echo "set CLAUDE_TEE_REAL to the claude to record"; exit 2; }
-	go build -o bin/claude-tee ./claudeagent/claudetest/cmd/claude-tee
-	go build -o bin/mcp-echo ./claudeagent/claudetest/cmd/mcp-echo
+	go build -o bin/claude-tee github.com/afrase/claude-acp-go/claudeagent/claudetest/cmd/claude-tee
+	go build -o bin/mcp-echo github.com/afrase/claude-acp-go/claudeagent/claudetest/cmd/mcp-echo
 	go build -o bin/nushid ./cmd/nushid
 	go run ./tools/claude-record -tee bin/claude-tee -mcp-echo bin/mcp-echo -claude "$(CLAUDE_TEE_REAL)" -only "$(SCENARIOS)" -- bin/nushid claude-acp
 	@if [ -f "$(CLAUDE_SCHEMAS)" ]; then bin/claude-tee -schema-diff "$(CLAUDE_SCHEMAS)" internal/features/chats/testdata/claude-parity/*/cli*.jsonl; else echo "no schema drift report: set CLAUDE_SCHEMAS to claude's schemas"; fi

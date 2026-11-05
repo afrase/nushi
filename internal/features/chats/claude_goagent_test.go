@@ -19,11 +19,11 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+	"github.com/afrase/claude-acp-go/claudeacp"
+	"github.com/afrase/claude-acp-go/claudeagent"
+	"github.com/afrase/claude-acp-go/claudeagent/claudetest"
+	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 
-	"github.com/afrase/nushi/claudeacp"
-	"github.com/afrase/nushi/claudeagent"
-	"github.com/afrase/nushi/claudeagent/claudetest"
-	"github.com/afrase/nushi/claudeagent/sessions"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 

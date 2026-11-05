@@ -14,8 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/afrase/nushi/claudeagent/claudetest/fakeapi"
-	"github.com/afrase/nushi/claudeagent/sessions"
+	"github.com/afrase/claude-acp-go/claudeagent/claudetest/fakeapi"
+	"github.com/afrase/claude-acp-go/claudeagent/sessions"
+
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/proctree"
 )

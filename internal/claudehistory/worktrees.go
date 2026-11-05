@@ -3,7 +3,7 @@ package claudehistory
 import (
 	"path/filepath"
 
-	"github.com/afrase/nushi/claudeagent/sessions"
+	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 )
 
 // SubagentWorktrees says which worktree claude made for each subagent of

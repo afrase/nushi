@@ -14,7 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/afrase/nushi/claudeagent/sessions"
+	"github.com/afrase/claude-acp-go/claudeagent/sessions"
+
 	"github.com/afrase/nushi/internal/claude"
 )
 

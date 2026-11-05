@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/claudeagent/sessions"
+	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 )
 
 // Of a recorded session's three isolated subagents (testdata/claude-parity,

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/afrase/nushi/claudeagent/claudetest/fakeapi"
+	"github.com/afrase/claude-acp-go/claudeagent/claudetest/fakeapi"
 )
 
 // parity is the parity scenarios' folder.

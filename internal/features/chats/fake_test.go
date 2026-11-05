@@ -15,8 +15,8 @@ import (
 	"time"
 
 	acp "github.com/afrase/acp-go/unstable"
+	"github.com/afrase/claude-acp-go/claudeacp"
 
-	"github.com/afrase/nushi/claudeacp"
 	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 )

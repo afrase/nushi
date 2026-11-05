@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/claudeacp"
-	"github.com/afrase/nushi/claudeagent/claudetest"
+	"github.com/afrase/claude-acp-go/claudeacp"
+	"github.com/afrase/claude-acp-go/claudeagent/claudetest"
 )
 
 // The test binary is three programs: the tests; Nushi's Go agent for
@@ -45,7 +45,7 @@ func testRecorder(t *testing.T) *recorder {
 	t.Helper()
 	bin := t.TempDir()
 	tee := filepath.Join(bin, "claude-tee")
-	if out, err := exec.CommandContext(t.Context(), "go", "build", "-o", tee, "github.com/afrase/nushi/claudeagent/claudetest/cmd/claude-tee").CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(t.Context(), "go", "build", "-o", tee, "github.com/afrase/claude-acp-go/claudeagent/claudetest/cmd/claude-tee").CombinedOutput(); err != nil {
 		t.Fatalf("build claude-tee: %v: %s", err, out)
 	}
 	exe, err := os.Executable()

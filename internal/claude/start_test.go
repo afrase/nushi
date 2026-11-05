@@ -7,7 +7,7 @@ import (
 
 	acp "github.com/afrase/acp-go/unstable"
 
-	"github.com/afrase/nushi/claudeacp"
+	"github.com/afrase/claude-acp-go/claudeacp"
 )
 
 // Fork-at goes to Nushi's Go agent, which reads the extension, and to no

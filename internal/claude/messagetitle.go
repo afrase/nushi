@@ -3,7 +3,7 @@ package claude
 import (
 	"context"
 
-	"github.com/afrase/nushi/claudeacp"
+	"github.com/afrase/claude-acp-go/claudeacp"
 )
 
 // MessageTitle asks Claude's Go agent, through call, for a short title for

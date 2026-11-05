@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/afrase/nushi/claudeagent/claudetest"
+	"github.com/afrase/claude-acp-go/claudeagent/claudetest"
 )
 
 // goAgentHooks are the callback ids the Go agent gives its hooks
