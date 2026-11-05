@@ -191,7 +191,7 @@ func TestWebHeaders(t *testing.T) {
 		}
 	}
 	csp := resp.Header.Get("Content-Security-Policy")
-	for _, part := range []string{"default-src 'none'", "script-src 'self' 'wasm-unsafe-eval';", "connect-src 'self' wss://relay.example.com;", "frame-ancestors 'none'", "object-src 'none'", "require-trusted-types-for 'script'"} {
+	for _, part := range []string{"default-src 'none'", "script-src 'self' 'wasm-unsafe-eval';", "connect-src 'self' blob: wss://relay.example.com;", "frame-ancestors 'none'", "object-src 'none'", "require-trusted-types-for 'script'"} {
 		if !strings.Contains(csp, part) {
 			t.Errorf("the CSP lacks %q: %s", part, csp)
 		}

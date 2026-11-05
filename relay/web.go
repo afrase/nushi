@@ -266,14 +266,15 @@ func typeOf(name string) string {
 // csp is the pages' Content-Security-Policy: everything from the app's own
 // origin, and WebSockets to it. CanvasKit needs WebAssembly, and Flutter
 // sets styles on the elements it makes. Frames only of the app's own files:
-// framePage.
+// framePage. connect-src takes blob: because a picked file or photo is read
+// through its blob: URL (cross_file's XHR); only this origin mints its own.
 func csp(origin string) string {
 	ws := "wss://" + strings.TrimPrefix(origin, "https://")
 	if host, ok := strings.CutPrefix(origin, "http://"); ok {
 		ws = "ws://" + host
 	}
 	return "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
-		"img-src 'self' blob:; font-src 'self'; connect-src 'self' " + ws + "; " +
+		"img-src 'self' blob:; font-src 'self'; connect-src 'self' blob: " + ws + "; " +
 		"frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; " +
 		"require-trusted-types-for 'script'; trusted-types flutter-js flutter-engine nushi"
 }
