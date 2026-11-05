@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
@@ -90,4 +92,94 @@ void main() {
       await closeView(tester, d);
     }, variant: macOnly);
   }
+
+  testWidgets('an opened "n finished" stays open as a task finishes', (
+    tester,
+  ) async {
+    final (d, fake) = await railApp(tester);
+    await tester.tap(inRail(find.text('3 finished')));
+    await tester.pumpAndSettle();
+    expect(inRail(find.text('Find every PanelWidget')), findsOne);
+    // make check-app (the busy chat's 10th item) ends.
+    fake.emit(
+      EventsResponse(
+        chatId: 'c',
+        seq: Int64(1),
+        item: ItemEvent(
+          index: 9,
+          item: Item(
+            id: 'b1',
+            kind: ItemKind.ITEM_KIND_TOOL_CALL,
+            toolKind: 'execute',
+            title: 'make check-app',
+            status: 'completed',
+            backgroundCommand: BackgroundCommand(
+              id: 'b1',
+              state: 'done',
+              started: Int64(fixtureNow.millisecondsSinceEpoch - 300000),
+              ended: Int64(fixtureNow.millisecondsSinceEpoch),
+              end: 'exited with code 0',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(inRail(find.text('4 finished')), findsOne);
+    expect(inRail(find.text('Find every PanelWidget')), findsOne);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  testWidgets('every task row, running or finished, on one pitch; four '
+      'running, then Show more', (tester) async {
+    final (d, _) = await railApp(
+      tester,
+      size: const Size(1700, 1400),
+      items: [
+        ...busyItems,
+        for (var i = 0; i < 4; i++)
+          Item(
+            id: 'r$i',
+            kind: ItemKind.ITEM_KIND_TOOL_CALL,
+            agent: 'general-purpose',
+            title: 'Running $i',
+            status: 'in_progress',
+            agentId: 'agent-r$i',
+            subagent: Subagent(state: 'running'),
+          ),
+      ],
+    );
+    // Six running: four, then Show more.
+    expect(inRail(find.text('Running 3')), findsNothing);
+    expect(inRail(find.text('make check-app')), findsNothing);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(ShowMore),
+        matching: find.text('Show more'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(inRail(find.text('Running 3')), findsOne);
+    await tester.tap(inRail(find.text('3 finished')));
+    await tester.pumpAndSettle();
+    final names = [
+      'Review the rail against the screenshot',
+      'Running 0',
+      'Running 1',
+      'Running 2',
+      'Running 3', // shown by Show more
+      'make check-app',
+    ];
+    double y(String s) => tester.getCenter(inRail(find.text(s))).dy;
+    final pitch = y(names[1]) - y(names[0]);
+    expect(pitch, closeTo(30, 0.5));
+    for (final (i, n) in names.indexed.skip(1)) {
+      expect(y(n) - y(names[i - 1]), closeTo(pitch, 0.5), reason: n);
+    }
+    // The finished: the same pitch from their line and between them.
+    final finished = ['Check the phone sheet', 'Find every PanelWidget'];
+    expect(y(finished[0]) - y('3 finished'), closeTo(pitch, 0.5));
+    expect(y(finished[1]) - y(finished[0]), closeTo(pitch, 0.5));
+    await closeView(tester, d);
+  }, variant: macOnly);
 }

@@ -554,11 +554,18 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('2 finished'));
       await tester.pump();
-      // In the first line and the widget's first row, the other has none.
-      expect(find.text('a-branch'), findsNWidgets(2));
+      // In the first line, and the widget's first row's tooltip (the row
+      // keeps its room for the task); the other has none.
+      expect(find.text('a-branch'), findsOneWidget);
+      bool tagged(Tap t) => t.tooltip.contains('In the worktree a-branch');
+      expect(
+        tester.widgetList<Tap>(find.byType(Tap)).where(tagged),
+        hasLength(1),
+      );
       chatState.related.take([]);
       await tester.pump();
-      expect(find.text('a-branch'), findsOneWidget); // the widget's rows are
+      // The line follows; the widget's rows are built again by the panel.
+      expect(find.text('a-branch'), findsNothing);
       await closeView(tester, daemon);
     });
   });

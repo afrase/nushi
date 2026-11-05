@@ -188,6 +188,9 @@ class PanelWidget extends StatelessWidget {
               children: [
                 for (final (label, v) in rows)
                   Padding(
+                    // A row's own key: its state (a list it opened) stays
+                    // as rows come and go above it.
+                    key: v is Widget && v.key is LocalKey ? v.key : null,
                     padding: const EdgeInsets.symmetric(
                       vertical: PanelType.rowGap,
                     ),

@@ -12,10 +12,12 @@ import 'package:nushi/widgets.dart';
 
 /// The panel's Background tasks widget, as Claude Code's rail lists them:
 /// the chat's running subagents and background commands, a row each (its
-/// icon, its task or command, how long it has run, its Stop); then "n
-/// finished", which opens the others, the latest first: they stay, to go
-/// back into what one did. A row's tooltip says what it's doing, or how it
-/// ended. Null (no widget) before the chat has any.
+/// icon, its task or command, how long it has run, its Stop), [shownTasks]
+/// of them and "Show more" for the rest; then "n finished", a row of its
+/// own, which opens the others, the latest first: they stay, to go back
+/// into what one did. A row's tooltip says what it's doing, or how it
+/// ended, and the worktree it works in. Null (no widget) before the chat
+/// has any.
 PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
   final subs = subagentsOf(chat.withRunning);
   final commands = backgroundCommandsOf(chat.withRunning);
@@ -46,19 +48,39 @@ PanelWidget? backgroundTasksWidget(ChatState chat, Daemon daemon) {
       },
     ),
     rows: [
-      for (final r in running) (null, r),
-      if (rest.isNotEmpty) (null, MoreRows(more, rest, open: false)),
+      for (final r in running.take(shownTasks)) (null, r),
+      if (running.length > shownTasks)
+        (
+          null,
+          ShowMore(
+            running.skip(shownTasks).toList(),
+            key: const ValueKey('running'),
+          ),
+        ),
+      if (rest.isNotEmpty)
+        (
+          null,
+          MoreRows(
+            more,
+            rest,
+            open: false,
+            icon: Icons.task_alt,
+            key: const ValueKey('finished'),
+          ),
+        ),
     ],
   );
 }
+
+/// How many running tasks show before "Show more", as Claude's rail has it.
+const shownTasks = 4;
 
 /// A row's room for its Stop, kept on a finished one too, so the times
 /// line up.
 const _stopRoom = 22.0;
 
-/// A task's row: [icon], [name] (which takes what's left), what [after] it
-/// (a worktree's tag), [time], and [stop] while it runs; a click opens its
-/// pane ([open]).
+/// A task's row: [icon], [name] (which takes what's left), [time], and
+/// [stop] while it runs; a click opens its pane ([open]).
 Widget _row(
   BuildContext context, {
   required IconData icon,
@@ -66,7 +88,6 @@ Widget _row(
   required Widget time,
   required VoidCallback open,
   required String tooltip,
-  Widget? after,
   Widget? stop,
 }) {
   final t = NushiTheme.of(context).t;
@@ -82,7 +103,6 @@ Widget _row(
         children: [
           Icon(icon, size: 15, color: t.textMuted),
           Expanded(child: name),
-          ?after,
           time,
           SizedBox.square(
             dimension: _stopRoom,
@@ -159,8 +179,9 @@ class _CommandRow extends StatelessWidget {
   }
 }
 
-/// A subagent: its task, the branch of the worktree it works in, if it has
-/// one, how long it ran; a click opens its pane.
+/// A subagent: its task, how long it ran, and in its tooltip the branch of
+/// the worktree it works in, if it has one (the name keeps the row's room,
+/// as Claude's); a click opens its pane.
 class _AgentRow extends StatelessWidget {
   const new(this.chat, this.daemon, this.s);
 
@@ -183,12 +204,6 @@ class _AgentRow extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: theme.ui(theme.t.text),
       ),
-      after: tag.isEmpty
-          ? null
-          : ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 80),
-              child: WorktreeTag(tag),
-            ),
       time: _time(
         context,
         started: sa.started.toInt(),
@@ -201,6 +216,7 @@ class _AgentRow extends StatelessWidget {
         if (s.call.agent.isNotEmpty) s.call.agent,
         subagentState(s),
         'Model ${settingText(runs.model)}, effort ${settingText(runs.effort)}',
+        if (tag.isNotEmpty) 'In the worktree $tag',
       ].join('\n'),
       stop: subagentStoppable(s)
           ? stopButton(context, daemon, chat, s.call.id)
@@ -209,14 +225,16 @@ class _AgentRow extends StatelessWidget {
   }
 }
 
-/// "n finished", a chevron before it, which opens to list them, [open] to
-/// start with.
+/// "n finished" (or "n more"), which opens to list them, [open] to start
+/// with: a row as a task's, its [icon] where a task's is, or else a
+/// chevron before it. The rows it opens keep a task row's room.
 class MoreRows extends StatefulWidget {
-  const new(this.label, this.rows, {required this.open, super.key});
+  const new(this.label, this.rows, {required this.open, super.key, this.icon});
 
   final String label;
   final List<Widget> rows;
   final bool open;
+  final IconData? icon;
 
   @override
   State<MoreRows> createState() => _MoreRowsState();
@@ -229,22 +247,88 @@ class _MoreRowsState extends State<MoreRows> {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
+    final icon = widget.icon;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Tap(
           onTap: () => setState(() => _open = !_open),
           tint: false,
-          padding: const EdgeInsets.symmetric(vertical: PanelType.rowGap),
-          child: Row(
-            spacing: 8,
-            children: [
-              SizedBox(width: 15, child: Chevron(open: _open)),
-              Text(widget.label, style: theme.ui(t.textSecondary)),
-            ],
+          padding: EdgeInsets.symmetric(
+            vertical: icon == null ? PanelType.rowGap : 1,
+          ),
+          child: SizedBox(
+            height: icon == null ? null : _stopRoom,
+            child: Row(
+              spacing: 8,
+              children: [
+                SizedBox(
+                  width: 15,
+                  child: icon == null
+                      ? Chevron(open: _open)
+                      : Icon(icon, size: 15, color: t.textMuted),
+                ),
+                Text(
+                  widget.label,
+                  style: theme.ui(icon == null ? t.textSecondary : t.text),
+                ),
+              ],
+            ),
           ),
         ),
-        if (_open) ...widget.rows,
+        if (_open) ..._spaced(widget.rows),
+      ],
+    );
+  }
+}
+
+/// [rows], each with the room the panel gives a row of its own.
+Iterable<Widget> _spaced(List<Widget> rows) => [
+  for (final r in rows)
+    Padding(
+      padding: const EdgeInsets.only(top: 2 * PanelType.rowGap),
+      child: r,
+    ),
+];
+
+/// The rows past the first few, shown by "Show more" in place and folded
+/// again by "Show less", as Claude's rail and the Artifacts widget have it.
+class ShowMore extends StatefulWidget {
+  const new(this.rows, {super.key});
+
+  final List<Widget> rows;
+
+  @override
+  State<ShowMore> createState() => _ShowMoreState();
+}
+
+class _ShowMoreState extends State<ShowMore> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_open) ...[
+          for (final r in widget.rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2 * PanelType.rowGap),
+              child: r,
+            ),
+        ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Tap(
+            onTap: () => setState(() => _open = !_open),
+            tint: false,
+            child: Text(
+              _open ? 'Show less' : 'Show more',
+              style: theme.ui(theme.t.textMuted),
+            ),
+          ),
+        ),
       ],
     );
   }
