@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/preview_text.dart';
+import 'package:nushi/source_view.dart';
 
 import 'harness.dart';
 

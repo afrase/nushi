@@ -11,6 +11,7 @@ import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/preview_text.dart';
+import 'package:nushi/source_view.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 

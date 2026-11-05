@@ -20,6 +20,7 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/source_view.dart';
 import 'package:nushi/web_page.dart';
 
 import 'fake_daemon.dart';
