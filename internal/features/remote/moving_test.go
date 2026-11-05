@@ -1,8 +1,13 @@
 package remote
 
 import (
+	"bytes"
+	"slices"
 	"testing"
+	"time"
 
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
@@ -70,5 +75,31 @@ func TestASecondRevokeWaitsWhereADeviceWasTold(t *testing.T) {
 			})
 			waitFor(t, func() bool { s.mu.Lock(); defer s.mu.Unlock(); return len(s.moving) == 0 })
 		})
+	}
+}
+
+// remote-key.json from an older daemon can list an id per revoke: they
+// are cut to the newest maxMoving at start, and saved so.
+func TestMovingFromBeforeIsCutAtStart(t *testing.T) {
+	dir := t.TempDir()
+	st := store.New(dir)
+	k, b := newKey(t), newKey(t)
+	var moving []model.Moving
+	for i := range maxMoving + 4 {
+		moving = append(moving, model.Moving{Listen: newListenKey(), Devices: []string{"b"}, Since: time.Now().Add(time.Duration(i-20) * time.Minute)})
+	}
+	testcheck.NoErr(t, st.SaveRemoteKey(model.RemoteKey{Private: k.Private, Public: k.Public, Listen: newListenKey(), Moving: moving}))
+	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "b", Name: "b", Key: b.Public, Paired: time.Now()}}))
+	s := startRemote(t, dir, startRelay(t))
+	s.mu.Lock()
+	kept := slices.Clone(s.moving)
+	s.mu.Unlock()
+	if len(kept) != maxMoving || !bytes.Equal(kept[0].Listen, moving[4].Listen) {
+		t.Fatalf("%d ids kept; want the newest %d", len(kept), maxMoving)
+	}
+	saved, _, err := st.RemoteKey()
+	testcheck.NoErr(t, err)
+	if len(saved.Moving) != maxMoving {
+		t.Errorf("%d ids saved", len(saved.Moving))
 	}
 }

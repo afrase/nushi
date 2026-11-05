@@ -97,10 +97,11 @@ func TestReplayedHandshakesAreCapped(t *testing.T) {
 
 // Waits at the relay hold no handshake slot: with more ids given up than
 // MaxConns (one wait each), a phone still connects at the daemon's own id
-// again and again, rather than once and then never. The relay here caps
-// no listeners: the relay's own cap (ListenPerIP, 16 from one address)
-// would refuse some of these MaxConns+5 waits, which is the relay's
-// limit, not the daemon's slots this tests.
+// again and again, rather than once and then never. The daemon keeps
+// at most maxMoving such ids (fewer than MaxConns), so these are put in
+// after it starts. The relay here caps no listeners: the relay's own cap
+// (ListenPerIP) would refuse some of these MaxConns+5 waits, which is the
+// relay's limit, not the daemon's slots this tests.
 func TestManyOldIDsLeaveTheIDSlots(t *testing.T) {
 	lim := relay.Defaults
 	lim.DialWait = 300 * time.Millisecond
@@ -116,10 +117,14 @@ func TestManyOldIDsLeaveTheIDSlots(t *testing.T) {
 	for range MaxConns + 4 { // b never moves from any
 		moving = append(moving, model.Moving{Listen: newListenKey(), Private: k.Private, Public: k.Public, Devices: []string{"b"}, Since: time.Now()})
 	}
-	testcheck.NoErr(t, st.SaveRemoteKey(model.RemoteKey{Private: k.Private, Public: k.Public, Listen: listen, Moving: moving}))
+	testcheck.NoErr(t, st.SaveRemoteKey(model.RemoteKey{Private: k.Private, Public: k.Public, Listen: listen}))
 	testcheck.NoErr(t, st.SaveDevices([]model.Device{{ID: "b", Name: "b", Key: b.Public, Paired: time.Now()},
 		{ID: "c", Name: "c", Key: c.Public, Paired: time.Now()}}))
-	startRemote(t, dir, url)
+	s := startRemote(t, dir, url)
+	s.mu.Lock()
+	s.moving = moving
+	s.relink()
+	s.mu.Unlock()
 	for i := range 4 {
 		ok := false
 		for deadline := time.Now().Add(5 * time.Second); !ok && time.Now().Before(deadline); {

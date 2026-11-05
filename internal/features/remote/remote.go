@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"net/url"
+	"slices"
 	"sync"
 	"time"
 
@@ -131,6 +132,13 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 	for i := range k.Moving { // given up before the Noise key moved too: it was the daemon's
 		if len(k.Moving[i].Private) == 0 {
 			k.Moving[i].Private, k.Moving[i].Public = k.Private, k.Public
+		}
+	}
+	// An older daemon listed an id per revoke, past maxMoving.
+	if kept := newest(slices.Clone(k.Moving)); len(kept) != len(k.Moving) {
+		k.Moving = kept
+		if err := st.SaveRemoteKey(k); err != nil {
+			return nil, err
 		}
 	}
 	settings, err := st.Remote()
