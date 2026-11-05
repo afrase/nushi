@@ -87,6 +87,27 @@ if let close = covered.standardWindowButton(.closeButton), let bar = close.super
   print("FAIL: no close button")
 }
 
+// HeaderDrag: which of a header's pans move the window.
+func moves(_ event: NSEvent.EventType = .leftMouseDragged, held: Bool = true, began: TimeInterval? = 10,
+           clicks: Int = 1, moved: CGFloat = 2) -> Bool {
+  HeaderDrag.moves(event: event, held: held, began: began, downAt: 10, clicks: clicks, moved: moved)
+}
+expect(moves(), true, "a press held, dragged")
+expect(moves(.leftMouseDown, moved: 0), true, "a press held, not moved yet")
+expect(moves(began: nil), true, "no time said")
+expect(moves(began: 9.9995), true, "the engine's rounding")
+expect(moves(held: false), false, "let go")
+expect(moves(.leftMouseUp), false, "a release current")
+expect(moves(began: 9), false, "a later press held")
+// A double click's second press: its release is the header's double click,
+// until it goes past a click's slop; then it's a drag, as a title bar's.
+expect(moves(clicks: 2), false, "a second press moved 2 points")
+expect(moves(clicks: 3, moved: 2), false, "a third press moved 2 points")
+expect(moves(clicks: 2, moved: HeaderDrag.clickSlop), false, "a second press at the slop")
+expect(moves(clicks: 2, moved: 20), true, "a second press moved 20 points")
+expect(moves(clicks: 3, moved: 20), true, "a third press moved 20 points")
+expect(moves(held: false, clicks: 2, moved: 20), false, "a second press let go")
+
 if failed > 0 {
   print("\(failed) title bar check(s) failed")
   exit(1)

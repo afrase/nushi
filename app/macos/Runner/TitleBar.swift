@@ -33,3 +33,31 @@ final class TitleBarCover: NSView {
   override func isAccessibilityElement() -> Bool { false }
 }
 
+/// When a header's "drag" (lib/window_drag.dart) moves the window.
+enum HeaderDrag {
+  /// How far a press moves before it's no click, in points: Flutter's
+  /// kTouchSlop, which a header counts its clicks within.
+  static let clickSlop: CGFloat = 18
+
+  /// Whether the drag of a pan whose press went down at [began] (nil: not
+  /// said) moves the window, with [event] the window's current event, the
+  /// left button [held] or not, and the window's last press down at
+  /// [downAt], macOS's [clicks] of it, the pointer [moved] that far from
+  /// where it went down. The channel is late: only a press still held
+  /// moves the window, or it would follow a pointer already let go, and
+  /// only the press the pan began on (a millisecond spares the engine's
+  /// rounding down), or a pan of a press let go would move the window with
+  /// the next one held (on a sidebar row, say). And a double click's second
+  /// press only once it's gone past a click's slop: a window drag takes its
+  /// release, so the header would miss the double click (a press that moved
+  /// a point or two between its clicks is a pan in Flutter, and Flutter
+  /// counts its release still), but a press that far is no click, and a
+  /// click then a drag at once moves the window as a title bar's does.
+  static func moves(
+    event: NSEvent.EventType, held: Bool, began: TimeInterval?, downAt: TimeInterval, clicks: Int,
+    moved: CGFloat
+  ) -> Bool {
+    (event == .leftMouseDragged || event == .leftMouseDown) && held
+      && (began.map { $0 + 0.001 >= downAt } ?? true) && (clicks < 2 || moved > clickSlop)
+  }
+}

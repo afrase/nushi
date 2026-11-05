@@ -38,19 +38,10 @@ class MainFlutterWindow: NSWindow {
       .setMethodCallHandler { [weak self] call, result in
         switch call.method {
         case "drag":
-          // The channel is late: only a press still held moves the window,
-          // or it would follow a pointer already let go, and only the press
-          // the pan began on (its event's time, in the engine's
-          // microseconds of NSEvent.timestamp), or a pan of a press let go
-          // would move the window with the next one held (on a sidebar
-          // row, say). A millisecond spares the engine's rounding down.
-          let began = (call.arguments as? NSNumber).map { $0.doubleValue / 1_000_000 }
-          if let self, let event = self.currentEvent, event.type == .leftMouseDragged || event.type == .leftMouseDown,
-            NSEvent.pressedMouseButtons & 1 != 0, began.map({ $0 + 0.001 >= self.downAt }) ?? true {
-            self.placement.dragBegan()
-            self.performDrag(with: event)
-            self.letGoInFlutter()
-          }
+          // The pan's press went down at its event's time, in the engine's
+          // microseconds of NSEvent.timestamp (HeaderDrag says which pans
+          // move the window).
+          self?.drag(began: (call.arguments as? NSNumber).map { $0.doubleValue / 1_000_000 })
           result(nil)
         case "zoom":
           self?.titleBarDoubleClick()
@@ -156,12 +147,23 @@ class MainFlutterWindow: NSWindow {
     // It also notes when a press, its release or a key goes to a web view,
     // which is a user's own act in a page (a preview's link opens in the
     // browser only right after one).
-    pressMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .mouseMoved, .keyDown]) { [weak self] event in
+    pressMonitor = NSEvent.addLocalMonitorForEvents(
+      matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .mouseMoved, .keyDown]
+    ) { [weak self] event in
       guard let self, event.window === self else { return event }
       switch event.type {
+      case .leftMouseDragged:
+        // A header's drag waiting for a second press to go past a click.
+        if let began = self.dragLater, self.moved(event) > HeaderDrag.clickSlop {
+          self.dragLater = nil
+          DispatchQueue.main.async { [weak self] in self?.drag(began: began) }
+        }
       case .leftMouseDown, .leftMouseUp:
         self.pressed = event.type == .leftMouseDown
-        if event.type == .leftMouseDown { self.downAt = event.timestamp }
+        self.dragLater = nil
+        if event.type == .leftMouseDown {
+          (self.downAt, self.downClicks, self.downPoint) = (event.timestamp, event.clickCount, event.locationInWindow)
+        }
         if event.type == .leftMouseUp { self.lastUp = (event.clickCount, event.timestamp) }
         if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
       case .keyDown:
@@ -240,6 +242,38 @@ class MainFlutterWindow: NSWindow {
   /// When the last press went down (NSEvent.timestamp): a header's late
   /// "drag" for an earlier press moves nothing.
   private var downAt: TimeInterval = 0
+  /// macOS's click count of that press: a double click's second press
+  /// moves the window only once it's gone past a click.
+  private var downClicks = 0
+  /// Where that press went down, in the window.
+  private var downPoint = NSPoint.zero
+  /// The press time of a header's drag that a second press hasn't moved
+  /// far enough for yet: it moves the window once it does.
+  private var dragLater: TimeInterval??
+
+  /// How far [event] is from where the last press went down.
+  private func moved(_ event: NSEvent) -> CGFloat {
+    hypot(event.locationInWindow.x - downPoint.x, event.locationInWindow.y - downPoint.y)
+  }
+
+  /// A header's drag (lib/window_drag.dart) of the pan whose press went
+  /// down at [began]: the window moves now if HeaderDrag says so, or once
+  /// the press goes past a click if that's all it waits for.
+  private func drag(began: TimeInterval?) {
+    guard let event = currentEvent else { return }
+    let held = NSEvent.pressedMouseButtons & 1 != 0
+    func moves(_ moved: CGFloat) -> Bool {
+      HeaderDrag.moves(event: event.type, held: held, began: began, downAt: downAt, clicks: downClicks, moved: moved)
+    }
+    if moves(moved(event)) {
+      placement.dragBegan()
+      performDrag(with: event)
+      letGoInFlutter()
+    } else if moves(.infinity) {
+      dragLater = .some(began)
+    }
+  }
+
   /// The last release's click count and timestamp, for the header's
   /// double click.
   private var lastUp: (count: Int, at: TimeInterval)?
