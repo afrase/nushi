@@ -207,6 +207,22 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a pane too narrow for its buttons has wrapping in its ⋯', (
+    tester,
+  ) async {
+    final d = await _app(tester);
+    paneWidths.value = {'preview': 300};
+    await tester.pumpAndSettle();
+    expect(_wrapButton, findsNothing);
+    await tester.tap(_inPane(find.byTooltip('More')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Don’t wrap lines'));
+    await tester.pumpAndSettle();
+    expect(wrapLines.value, isFalse);
+    expect(_across(tester), isNotNull);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('wrap off, a long line runs on: the view scrolls sideways '
       'and the numbers stay put', (tester) async {
     wrapLines.value = false;
