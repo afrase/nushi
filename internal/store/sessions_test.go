@@ -134,3 +134,62 @@ func refs(t reflect.Type) bool {
 	}
 	return false
 }
+
+func TestOldAndBrokenSessionFiles(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	s.HadMessages = func(sess model.ChatRecord) bool { return sess.SessionID == "in-history" }
+	if err := s.SaveSession(model.ChatRecord{ID: "new", SessionID: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{
+		"titled.json":     `{"ID":"titled","SessionID":"t","Title":"Fix it"}`, // before the flag
+		"image.json":      `{"ID":"image","SessionID":"in-history"}`,          // an image-only first message
+		"empty.json":      `{"ID":"empty","SessionID":"e"}`,
+		"broken.json":     `{"ID":`,
+		"unreadable.json": ``,
+		".nushi-123":      `{"ID":"orphan"}`, // a write's temporary file, left by a crash
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, "sessions", name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	testcheck.NoErr(t, os.Chmod(filepath.Join(dir, "sessions", "unreadable.json"), 0))
+	got, err := s.Sessions()
+	if err != nil {
+		t.Fatal(err)
+	}
+	has := map[string]bool{}
+	for _, sess := range got {
+		has[sess.ID] = sess.HasMessages
+	}
+	if want := map[string]bool{"new": false, "titled": true, "image": true, "empty": false}; !reflect.DeepEqual(has, want) {
+		t.Errorf("has messages = %v, want %v", has, want)
+	}
+}
+
+// Pins of the user's messages, kept while they could be pinned, go as the
+// record loads: only the agent's messages are pinned (ADR 0085).
+func TestUserMessagePinsDroppedOnLoad(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	testcheck.NoErr(t, s.SaveSession(model.ChatRecord{ID: "c", SessionID: "c"}))
+	body := `{"ID":"c","SessionID":"c","Pins":[{"Item":"u1","Kind":1,"Start":"x","Runes":3},{"Item":"m1","Kind":2,"Start":"y","Runes":4,"Title":"The plan"}]}`
+	testcheck.Write(t, filepath.Join(dir, "sessions", "c.json"), body)
+	only := `{"ID":"u","SessionID":"u","Pins":[{"Item":"u1","Kind":1,"Start":"x","Runes":3}]}`
+	testcheck.Write(t, filepath.Join(dir, "sessions", "u.json"), only)
+	got, err := New(dir).Sessions()
+	testcheck.NoErr(t, err)
+	pins := map[string][]model.MessagePin{}
+	for _, sess := range got {
+		pins[sess.ID] = sess.Pins
+	}
+	want := map[string][]model.MessagePin{
+		"c": {{Item: "m1", Kind: model.AgentMessage, Start: "y", Runes: 4, Title: "The plan"}},
+		"u": nil,
+	}
+	if !reflect.DeepEqual(pins, want) {
+		t.Errorf("pins %+v, want %+v", pins, want)
+	}
+}
