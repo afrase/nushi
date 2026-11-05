@@ -21,15 +21,13 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     // The installed monospaced font families, for the terminal's font setting.
+    // Worked out once, off the main thread: making an NSFont of every family
+    // to ask it took about a second on a Mac with many fonts, and the window
+    // froze for it each time Settings › Terminal opened.
     FlutterMethodChannel(name: "nushi/fonts", binaryMessenger: flutterViewController.engine.binaryMessenger)
       .setMethodCallHandler { call, result in
         guard call.method == "monospaced" else { return result(FlutterMethodNotImplemented) }
-        let fonts = NSFontManager.shared
-        result(fonts.availableFontFamilies.filter { family in
-          guard !family.hasPrefix("."), let name = fonts.availableMembers(ofFontFamily: family)?.first?[0] as? String
-          else { return false }
-          return NSFont(name: name, size: 12)?.isFixedPitch ?? false
-        })
+        Self.monospaced { families in result(families) }
       }
 
     // What a title bar did (lib/window_drag.dart).
@@ -212,6 +210,31 @@ class MainFlutterWindow: NSWindow {
     }
     if UserDefaults.standard.bool(forKey: key) {
       DispatchQueue.main.async { [weak self] in self?.toggleFullScreen(nil) }
+    }
+  }
+
+  /// The installed monospaced families, once found.
+  private static var monospacedFamilies: [String]?
+
+  /// Finds the installed monospaced families, by the fixed-pitch trait of
+  /// each family's first member (no font is made), on a background queue the
+  /// first time; [done] runs on the main queue.
+  private static func monospaced(_ done: @escaping ([String]) -> Void) {
+    if let found = monospacedFamilies { return done(found) }
+    DispatchQueue.global(qos: .userInitiated).async {
+      let fonts = NSFontManager.shared
+      let fixed = NSFontTraitMask.fixedPitchFontMask.rawValue
+      let found = fonts.availableFontFamilies.filter { family in
+        // The family's first member is the face a family name gets (Osaka's
+        // is proportional though Osaka-Mono is fixed).
+        guard !family.hasPrefix("."), let first = fonts.availableMembers(ofFontFamily: family)?.first,
+          first.count > 3 else { return false }
+        return ((first[3] as? NSNumber)?.uintValue ?? 0) & fixed != 0
+      }
+      DispatchQueue.main.async {
+        monospacedFamilies = found
+        done(found)
+      }
     }
   }
 
