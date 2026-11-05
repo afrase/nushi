@@ -268,6 +268,36 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
+    // A laptop's chat area, 1468 wide, holds the preview beside the details
+    // but not beside the Files pane too (ADR 0068: never over the box).
+    testWidgets('with the details and the Files pane open, the transcript '
+        'stays; the row opens it', (tester) async {
+      final (fake, d) = await _app(
+        tester,
+        size: const Size(1728, 1000),
+        items: [_show('a', 'docs/report.md', text: 'Shown.')],
+      );
+      // The Files pane's listing stays open, as a daemon's does.
+      final listing = StreamController<WatchChatFolderResponse>();
+      addTearDown(listing.close);
+      final files = fake.streams!;
+      fake.streams = (i) =>
+          i is WatchChatFolderRequest ? listing.stream : files(i);
+      showDetails.value = true;
+      await tester.pumpAndSettle();
+      filesChats.value = {'c'};
+      await tester.pumpAndSettle();
+      await _shows(tester, fake, 'docs/report.md');
+      expect(find.byType(PreviewPane), findsNothing);
+      expect(_chat(d).showAsked.value, isNull);
+      // With the Files pane closed, it fits.
+      filesChats.value = {};
+      await tester.pumpAndSettle();
+      await _shows(tester, fake, 'docs/report.md');
+      expect(find.byType(PreviewPane), findsOneWidget);
+      await closeView(tester, d);
+    }, variant: _mac);
+
     testWidgets('leaves another chat alone; the latest opens on coming back', (
       tester,
     ) async {

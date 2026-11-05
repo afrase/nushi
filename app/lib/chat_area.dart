@@ -5,6 +5,9 @@ import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
+import 'package:nushi/files_pane.dart';
+import 'package:nushi/folder_tree.dart' show filesApi;
+import 'package:nushi/panes.dart' show paneWidth;
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/settings.dart';
@@ -27,6 +30,11 @@ class _ChatAreaState extends State<ChatArea> {
 
   /// Its pull request, looked for while the chat shows (for the tab).
   late final ChatPull _pull;
+
+  /// The area's width and whether the details panel shows, as last built:
+  /// what the preview's room is worked out from when the agent asks.
+  double _width = double.infinity;
+  bool _panel = false;
 
   @override
   void initState() {
@@ -71,7 +79,28 @@ class _ChatAreaState extends State<ChatArea> {
     final path = chat.showAsked.value;
     if (path == null || chat.shownTab != ChatTab.chat) return;
     chat.showAsked.value = null;
-    if (chat.previewFits) chat.openPreview(path);
+    if (_previewFits()) chat.openPreview(path);
+  }
+
+  /// Whether the preview opens beside the transcript and leaves it
+  /// [ChatView.leastBesideWide], as `Beside` works it out: the details
+  /// panel, the side chat and the Files pane each take their widths. It is
+  /// read when asked, since a side chat or the Files pane opens without
+  /// building this area again.
+  bool _previewFits() {
+    final chat = widget.chat;
+    final side =
+        chat.side.value != null && !chat.archived && !chat.sideHidden.value;
+    final files = filesOpen(chat) && widget.daemon.daemonApi >= filesApi;
+    // The widths ChatView's side chat and Files pane open at, as dragged.
+    final panes =
+        (side ? paneWidth('side', 380).clamp(300, 640) : 0) +
+        (files ? paneWidth('files', 260).clamp(200, 480) : 0);
+    return _width -
+            (_panel ? DetailsPanel.width : 0) -
+            panes -
+            ChatView.previewWidth >=
+        ChatView.leastBesideWide;
   }
 
   /// A file to show (ChatState.showFile, from a review's finding) shows in
@@ -93,11 +122,9 @@ class _ChatAreaState extends State<ChatArea> {
         // The pull request's tab goes with its link.
         final tab = widget.chat.shownTab;
         final panel = show && fits && tab == ChatTab.chat;
-        widget.chat.previewFits =
-            box.maxWidth -
-                (panel ? DetailsPanel.width : 0) -
-                ChatView.previewWidth >=
-            ChatView.leastBesideWide;
+        _width = box.maxWidth;
+        _panel = panel;
+        widget.chat.previewFits = _previewFits();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
