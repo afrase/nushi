@@ -16,7 +16,7 @@ The owner, with a screenshot of Claude Code's desktop right rail (`claude-right-
 ## Consequences
 - Just above where it hides, the transcript is up to 56 points narrower than before. The panel's rows' second lines (a subagent's step, a command's last line, a file's folder) moved to tooltips.
 - The update toast takes the panel's text width (288) and side margin.
-
+- A subagent's pane or the preview, dragged as wide as it's wanted, lies over the transcript at a window 56 points wider than beside the 264-point panel: beside them the transcript keeps 360 whatever else shows, and narrowing that to keep the old switch would leave a column too narrow to read.
 ## Alternatives considered
 - Keeping the drag with a narrower default: the owner agreed with Claude's rule.
 - Hiding where the transcript keeps 556 beside it (876 for the chat): windows 1080 to 1135 wide with the sidebar lost the panel they had.
