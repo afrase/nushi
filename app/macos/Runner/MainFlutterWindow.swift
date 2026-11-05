@@ -44,7 +44,7 @@ class MainFlutterWindow: NSWindow {
           }
           result(nil)
         case "zoom":
-          self?.performZoom(nil)
+          self?.titleBarDoubleClick()
           result(nil)
         default: result(FlutterMethodNotImplemented)
         }
@@ -152,6 +152,7 @@ class MainFlutterWindow: NSWindow {
       switch event.type {
       case .leftMouseDown, .leftMouseUp:
         self.pressed = event.type == .leftMouseDown
+        if event.type == .leftMouseUp { self.lastUp = (event.clickCount, event.timestamp) }
         if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
       case .keyDown:
         // Only the keys that activate a focused link or button: Return,
@@ -224,6 +225,27 @@ class MainFlutterWindow: NSWindow {
   private var swipeMonitor: Any?
   private var pressMonitor: Any?
   private var pressed = false
+  /// The last release's click count and timestamp, for the header's
+  /// double click.
+  private var lastUp: (count: Int, at: TimeInterval)?
+
+  /// A double click in a header's empty space (lib/window_drag.dart), as a
+  /// title bar's: what the system's setting says (Desktop & Dock's
+  /// double-click a title bar), and only when macOS counted the release as
+  /// the second click (its own interval and distance; a third is no
+  /// second). Flutter counts two taps by when it handles them, so two
+  /// clicks a stall bunched up zoomed the window unasked (ADR 0093). The
+  /// channel comes late: the release may be up to half a second old.
+  private func titleBarDoubleClick() {
+    guard let up = lastUp, up.count == 2,
+      ProcessInfo.processInfo.systemUptime - up.at < NSEvent.doubleClickInterval + 0.5 else { return }
+    lastUp = nil
+    switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+    case "Minimize": miniaturize(nil)
+    case "None": break
+    default: zoom(nil)
+    }
+  }
   /// When a press, its release or a key last went to a web view (an
   /// event's timestamp: seconds since the system started).
   private var webPressedAt: TimeInterval?
