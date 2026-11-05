@@ -113,6 +113,31 @@ func TestCloseKillsChildren(t *testing.T) {
 	}
 }
 
+// A second Close leaves alone what runs on the terminal's device by then:
+// the first freed it, and the next terminal opened is given it.
+func TestASecondCloseLeavesTheNextShell(t *testing.T) {
+	var a, b *Terminal
+	var out *output
+	for range 20 {
+		a, _ = shell(t)
+		a.Close()
+		b, out = shell(t)
+		if b.tty == a.tty {
+			break
+		}
+		b.Close() // something else took the device; try again
+	}
+	if b.tty != a.tty {
+		t.Skip("no device was given out again")
+	}
+	a.Close()
+	if exited, _ := b.Exit(); exited {
+		t.Fatal("the next shell exited")
+	}
+	_ = b.Write([]byte("echo alive-$((40+2))\n"))
+	out.wait(t, `alive-42`)
+}
+
 // No process started after a terminal holds its master: it could type
 // into the terminal.
 func TestLaterProcessesDontGetTheTerminal(t *testing.T) {

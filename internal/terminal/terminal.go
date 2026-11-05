@@ -33,6 +33,7 @@ type Terminal struct {
 	tty     int32 // the terminal's device, to find what runs on it
 	changed func()
 	done    chan struct{} // closed once the program has exited
+	closing sync.Once     // Close's work, done once
 
 	mu      sync.Mutex
 	output  []byte // the last output, about scrollback bytes of it
@@ -316,8 +317,14 @@ func (t *Terminal) Attach(stop <-chan struct{}, fn func([]byte) bool) {
 }
 
 // Close hangs up: everything running on the terminal gets SIGHUP, and what
-// still runs after a short grace is killed.
-func (t *Terminal) Close() {
+// still runs after a short grace is killed. Only the first call does it, and
+// later ones wait for it: once the master is closed the device is free, and
+// the next terminal opened on this Mac (another test's shell, a Terminal.app
+// tab) may be given it, so listing what runs on it then would find theirs.
+func (t *Terminal) Close() { t.closing.Do(t.hangUp) }
+
+// hangUp is Close's work.
+func (t *Terminal) hangUp() {
 	// Listed while the program still holds the terminal: what it leaves
 	// running loses the terminal when it exits.
 	var pids []int
