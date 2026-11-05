@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/commit_box.dart';
@@ -11,10 +10,10 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/file_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/jira_people.dart' show plainName;
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/plain_tabs.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/jira_people.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/pull_lights.dart';
 import 'package:nushi/settings.dart';
 

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-
 import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/jira_people.dart' show plainName;
 import 'package:nushi/panel_widgets.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';

@@ -11,6 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_work.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 

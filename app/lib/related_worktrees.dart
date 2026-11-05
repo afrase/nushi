@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/jira_people.dart' show plainName;
+import 'package:nushi/plain_text.dart';
 
 /// A chat's related worktrees (ADR 0081), as the daemon says them: the list,
 /// which of them the Changes view shows, and each one's stats, for what's on

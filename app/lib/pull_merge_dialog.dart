@@ -4,7 +4,7 @@ import 'package:connectrpc/connect.dart' show ConnectException;
 import 'package:flutter/material.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/jira_people.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/pull_merge_state.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';

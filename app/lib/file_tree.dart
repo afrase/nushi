@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/commit_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/jira_people.dart' show plainName;
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
