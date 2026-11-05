@@ -7,8 +7,8 @@ import 'package:nushi/run_text.dart';
 import 'package:nushi/shell_marks.dart';
 import 'package:nushi/terminals.dart';
 
-import 'code_run_harness.dart';
 import 'fake_daemon.dart';
+import 'fake_shells.dart';
 
 // A shell block's run: what it types, where its output starts and ends
 // (fish's OSC 133 marks, as fish 4.9 sends them), and what goes to the

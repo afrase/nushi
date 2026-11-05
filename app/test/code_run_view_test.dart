@@ -12,8 +12,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
-import 'code_run_harness.dart';
 import 'fake_daemon.dart';
+import 'fake_shells.dart';
 import 'harness.dart';
 
 // ▷ on an agent's shell block: it types the block into the chat's
