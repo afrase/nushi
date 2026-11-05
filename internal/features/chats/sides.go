@@ -158,6 +158,10 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side.copies = nil      // nobody sees a side chat again, so Nushi keeps no copy of it
 	side.record = model.ChatRecord{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side chat", Created: time.Now()}
 	side.modeLocked(&side.record) // the fork's mode, as the agent says, until reapply
+	// The app hears of the side chat from Fork's answer, then loads it:
+	// what it says before (putting the chat's mode and picks on it) would
+	// reach the app as a chat of the sidebar's.
+	side.publish = func(model.Event) {}
 	p.mu.Lock()
 	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it
 		p.mu.Unlock()
@@ -177,6 +181,9 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	if err := side.reapply(ctx, agent, side.sid, mode, picks); err != nil {
 		side.log().Warn("mode of the side chat", "err", err)
 	}
+	side.mu.Lock()
+	side.publish = s.publish
+	side.mu.Unlock()
 	if ctx.Err() != nil { // the app went meanwhile: nobody will show it
 		_ = s.CloseSide(side.id)
 		return "", ctx.Err()
