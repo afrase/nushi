@@ -53,6 +53,11 @@ type Limits struct {
 	// (8 at most), a pairing's: 26, which the default's 32 holds with
 	// room for handshakes under way.
 	ListenPerIP int
+	// PerNet caps the WebSockets from one IPv6 /48 (an IPv4 address is
+	// its own), at most half of Total, 0 for that half: dialing needs no
+	// key, and the rate and PerIP count each of a /48's 65,536 /64s apart,
+	// so one /48's silent dialers could otherwise fill Total.
+	PerNet int
 	// Site is the web app the relay serves too (ADR 0054), or nil. Its
 	// origin is then the only one whose pages may open a WebSocket here.
 	Site *Site
@@ -61,7 +66,7 @@ type Limits struct {
 // Defaults suit one person's phones and Macs.
 // Many people can share one company's address, so PerIP is generous.
 var Defaults = Limits{MaxMessage: 65535, Rate: 1 << 20, Burst: 8 << 20, Idle: 90 * time.Second,
-	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, ListenPerIP: 32, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8, FirstWait: 2 * time.Second}
+	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, PerNet: 250, ListenPerIP: 32, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8, FirstWait: 2 * time.Second}
 
 // minCost is what a message costs against the rate at least, so tiny
 // messages can't flood.
@@ -94,7 +99,8 @@ type server struct {
 	total     int
 	rooms     map[string]*room
 	ws        sources        // the WebSockets' sources
-	listeners map[string]int // listeners by listenerKey
+	nets      map[string]int // WebSockets by netKey
+	listeners map[string]int // listeners by netKey
 	plain     plain
 }
 
@@ -115,7 +121,10 @@ type peer struct {
 // New returns the relay's handler.
 func New(lim Limits) http.Handler {
 	lim.PerIP = min(lim.PerIP, max(1, lim.Total/2))
-	s := &server{lim: lim, rooms: map[string]*room{}, ws: newSources(lim), listeners: map[string]int{},
+	if half := max(1, lim.Total/2); lim.PerNet <= 0 || lim.PerNet > half {
+		lim.PerNet = half
+	}
+	s := &server{lim: lim, rooms: map[string]*room{}, ws: newSources(lim), nets: map[string]int{}, listeners: map[string]int{},
 		plain: plain{conns: map[net.Conn]*plainConn{}, by: newSources(lim)}}
 	// A page's script may connect only when it is the web app's own: no
 	// other page has a reason to be here.
@@ -135,7 +144,7 @@ func New(lim Limits) http.Handler {
 }
 
 func (s *server) listen(w http.ResponseWriter, r *http.Request) {
-	lkey := s.listenerKey(r)
+	lkey := s.netKey(r)
 	s.mu.Lock()
 	ok := s.admitListener(lkey)
 	s.mu.Unlock()
@@ -238,25 +247,26 @@ func (s *server) dial(w http.ResponseWriter, r *http.Request) {
 // join admits a connection within the caps and upgrades it: a dialer
 // joins id's room at once, within PerID; a listener only once it has
 // proven its key.
-func (s *server) join(w http.ResponseWriter, r *http.Request, dialer bool) (string, string, *websocket.Conn) {
+func (s *server) join(w http.ResponseWriter, r *http.Request, dialer bool) (string, keys, *websocket.Conn) {
 	id := r.PathValue("id")
 	if !validID.MatchString(id) {
 		http.NotFound(w, r)
-		return "", "", nil
+		return "", keys{}, nil
 	}
-	src := s.sourceKey(r)
+	src := keys{s.sourceKey(r), s.netKey(r)}
 	s.mu.Lock()
-	if s.total >= s.lim.Total || dialer && s.rooms[id] != nil && s.rooms[id].dialers >= s.lim.PerID {
+	if s.total >= s.lim.Total || s.nets[src.net] >= s.lim.PerNet || dialer && s.rooms[id] != nil && s.rooms[id].dialers >= s.lim.PerID {
 		s.mu.Unlock()
 		http.Error(w, "busy", http.StatusServiceUnavailable)
-		return "", "", nil
+		return "", keys{}, nil
 	}
-	if code := s.ws.admit(src, time.Now(), s.lim.PerIP); code != 0 {
+	if code := s.ws.admit(src.addr, time.Now(), s.lim.PerIP); code != 0 {
 		s.mu.Unlock()
 		http.Error(w, "busy", code)
-		return "", "", nil
+		return "", keys{}, nil
 	}
 	s.total++
+	s.nets[src.net]++
 	if dialer {
 		s.enter(id, true)
 	}
@@ -267,16 +277,23 @@ func (s *server) join(w http.ResponseWriter, r *http.Request, dialer bool) (stri
 			s.exit(id, true)
 		}
 		s.leave(src)
-		return "", "", nil
+		return "", keys{}, nil
 	}
 	return id, src, ws
 }
 
-func (s *server) leave(src string) {
+// keys are where a WebSocket came from, as counted: its address's
+// (sourceKey) and its /48's (netKey).
+type keys struct{ addr, net string }
+
+func (s *server) leave(src keys) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.total--
-	s.ws.leave(src, time.Now())
+	if s.nets[src.net]--; s.nets[src.net] <= 0 {
+		delete(s.nets, src.net)
+	}
+	s.ws.leave(src.addr, time.Now())
 }
 
 // enter counts a connection in id's room. Called with s.mu.

@@ -957,3 +957,35 @@ func TestListenerCapUnderTheBelievedAddress(t *testing.T) {
 		t.Errorf("a third listener from one client behind a trusted proxy: %d", code)
 	}
 }
+
+// Dialers need no key, and an IPv6 /48 holds 65,536 /64s: what one /48
+// opens is counted together, under half of Total, so silent dialers from
+// its /64s can't fill the relay and keep a daemon's wait out.
+func TestOne48CantFillTheRelay(t *testing.T) {
+	lim := Defaults
+	lim.IPHeader = "X-Test-IP"
+	lim.Total = 40 // and so PerIP 20
+	lim.NewRate = 1e9
+	url := start(t, lim)
+	var open []*websocket.Conn
+	defer func() {
+		for _, ws := range open {
+			_ = ws.Close()
+		}
+	}()
+	for n := range 10 {
+		for range 3 {
+			if ws, _ := from(url, "dial", newID(), fmt.Sprintf("2001:db8:42:%x::1", n)); ws != nil {
+				open = append(open, ws)
+			}
+		}
+	}
+	if len(open) > lim.Total/2 {
+		t.Fatalf("one /48 holds %d of %d", len(open), lim.Total)
+	}
+	ws, code := from(url, "dial", newID(), "2001:db8:43::1")
+	if ws == nil {
+		t.Fatalf("another /48 refused: %d", code)
+	}
+	open = append(open, ws)
+}

@@ -36,12 +36,13 @@ func (s *server) sourceKey(r *http.Request) string {
 	return keyOf(s.clientAddr(r), 64)
 }
 
-// listenerKey is the hash of the client's address as listeners are
-// counted: an IPv4 address, or an IPv6 address's /48, which one home or
-// one rented server often has whole, so a /56 of /64s can't take every
-// listener. It is the same address as sourceKey's, so a peer that isn't
-// a trusted proxy can't spread its listeners over made-up addresses.
-func (s *server) listenerKey(r *http.Request) string {
+// netKey is the hash of the client's address as listeners, and all
+// WebSockets together (PerNet), are counted: an IPv4 address, or an IPv6
+// address's /48, which one home or one rented server often has whole, so
+// a /56 of /64s can't take every listener or connection. It is the same
+// address as sourceKey's, so a peer that isn't a trusted proxy can't
+// spread its connections over made-up addresses.
+func (s *server) netKey(r *http.Request) string {
 	return keyOf(s.clientAddr(r), 48)
 }
 
