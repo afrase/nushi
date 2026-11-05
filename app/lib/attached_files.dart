@@ -23,10 +23,11 @@ const maxAttachedFiles = 10;
 /// The most a file sent whole from the phone may weigh (`chats.MaxUpload`).
 const int maxUploadBytes = 8 << 20;
 
-/// The most the phone's files and photos may weigh together in one message
-/// (a photo yet to be read counted at the most it's sent as,
-/// [maxImageBytes]), so the
-/// request stays under the daemon's 32 MB (`api.MaxRequest`).
+/// The most a message's images and the phone's files may weigh together (a
+/// photo yet to be read counted at the most it's sent as, [maxImageBytes]),
+/// on the Mac too, whose images go as bytes as well: the request stays
+/// under the daemon's 32 MB (`api.MaxRequest`) and the images under what
+/// the agent takes in one message (about 22 MB for Claude's).
 const int maxUploadTotal = 20 << 20;
 
 /// The most an image file may weigh to be read and sent as an image; a
@@ -111,6 +112,9 @@ Future<String> pasteFiles(ChatState chat, {required int api}) =>
       }
       if (chat.canImages) {
         if (await clipboardImage() case final image?) {
+          if (_sent(chat.draft) + maxImageBytes > maxUploadTotal) {
+            return 'the picture pasted: $_tooMuch';
+          }
           await chat.draft.images.add(image);
         }
       }
@@ -161,11 +165,8 @@ Future<String> attachFiles(
       if (chat.canImages &&
           isImageFile(name) &&
           await f.length() <= maxImageFileBytes) {
-        if (sendWhole && _sent(draft) + maxImageBytes > maxUploadTotal) {
-          refused.add(
-            '${plainPath(name)}: a message sends '
-            '${maxUploadTotal >> 20} MB at most',
-          );
+        if (_sent(draft) + maxImageBytes > maxUploadTotal) {
+          refused.add('${plainPath(name)}: $_tooMuch');
           continue;
         }
         try {
@@ -203,7 +204,10 @@ Future<void> attached(BuildContext context, Future<String> attaching) async {
   }
 }
 
-/// What a phone's [draft] sends already: its files' and photos' bytes.
+/// Why an image or a phone's file is refused past [maxUploadTotal].
+const _tooMuch = 'a message sends ${maxUploadTotal >> 20} MB at most';
+
+/// What [draft] sends already: its images' bytes and a phone's files'.
 int _sent(Draft draft) =>
     draft.files.value.fold(0, (n, f) => n + (f.data?.length ?? 0)) +
     draft.images.value.fold(0, (n, i) => n + i.data.length);
@@ -228,9 +232,7 @@ Future<AttachedFile?> _upload(
     return null;
   }
   if (_sent(draft) + size > maxUploadTotal) {
-    refused.add(
-      '${plainPath(name)}: a message sends ${maxUploadTotal >> 20} MB at most',
-    );
+    refused.add('${plainPath(name)}: $_tooMuch');
     return null;
   }
   return AttachedFile(name: name, size: size, data: await f.readAsBytes());

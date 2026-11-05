@@ -102,12 +102,19 @@ class _ReadCount extends XFile {
   }
 }
 
-/// [pickFiles], [clipboardFiles] and [sendWhole] as they were, after the test.
+/// [pickFiles], [clipboardFiles], [clipboardImage] and [sendWhole] as they
+/// were, after the test.
 void _restoreFakes() {
-  final (pick, files, whole) = (pickFiles, clipboardFiles, sendWhole);
+  final (pick, files, image, whole) = (
+    pickFiles,
+    clipboardFiles,
+    clipboardImage,
+    sendWhole,
+  );
   addTearDown(() {
     pickFiles = pick;
     clipboardFiles = files;
+    clipboardImage = image;
     sendWhole = whole;
   });
 }
@@ -464,6 +471,30 @@ void main() {
       'one more.jpg: a message sends 20 MB at most',
     );
     expect(photo.reads, 0);
+    _end();
+  }, variant: _mac);
+
+  testWidgets('the Mac caps what images a message sends too', (tester) async {
+    // The images go as bytes from the Mac as well: past about 22 MB the
+    // agent refuses the message, with no word of what to take out.
+    final (_, _, chat) = await _box(tester);
+    chat.draft.images.value = [
+      for (var i = 0; i < 5; i++)
+        ImageData(mimeType: 'image/jpeg', data: Uint8List(maxImageBytes)),
+    ];
+    final photo = _ReadCount(_file(chat.folder, 'one more.jpg', bytes: 10));
+    expect(
+      await tester.runAsync(() => attachFiles(chat, [photo], api: apiVersion)),
+      'one more.jpg: a message sends 20 MB at most',
+    );
+    expect(photo.reads, 0);
+    clipboardFiles = () async => const [];
+    clipboardImage = () async => Uint8List(10);
+    expect(
+      await pasteFiles(chat, api: apiVersion),
+      'the picture pasted: a message sends 20 MB at most',
+    );
+    expect(chat.draft.images.value, hasLength(5));
     _end();
   }, variant: _mac);
 
