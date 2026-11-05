@@ -244,6 +244,9 @@ void main() {
       c.openPreview('./docs/b.md');
       expect(c.previewFiles.value, ['docs/a.md', 'docs/b.md']);
       expect(c.preview.value, 'docs/b.md');
+      c.openPreview('/Users/me//nushi/./docs//a.md');
+      expect(c.previewFiles.value, ['docs/a.md', 'docs/b.md']);
+      expect(c.preview.value, 'docs/a.md');
     });
 
     test('closing the one showing shows the one after it, or the last', () {

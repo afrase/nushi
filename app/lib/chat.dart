@@ -334,21 +334,18 @@ class ChatState extends ChangeNotifier {
   final showAsked = ValueNotifier<String?>(null);
 
   /// Shows [path] in the preview: the tab of the same file if it has one,
-  /// however each is named (relative to the folder, or absolute), or a new
-  /// one last.
+  /// however each is named ([relativeIn]: relative to the folder or
+  /// absolute, with `.`, `..` and doubled slashes), or a new one last.
   void openPreview(String path) {
     pane.value = null;
-    final file = _absolute(path);
+    final file = relativeIn(folder, path);
     final open = previewFiles.value
-        .where((f) => _absolute(f) == file)
+        .where((f) => relativeIn(folder, f) == file)
         .firstOrNull;
     if (open == null) previewFiles.value = [...previewFiles.value, path];
     preview.value = open ?? path;
     sawFile(path);
   }
-
-  String _absolute(String path) =>
-      Uri.file(absoluteIn(folder, path)).normalizePath().path;
 
   /// Closes [file]'s tab. If it showed, the one after it shows, or the last;
   /// with none left the preview closes.
