@@ -157,7 +157,7 @@ linters:
         text: "^exported:"
       # cgo: the linters read the C preamble's NULLs and the "C" import's
       # generated aliases as Go (duplicate words, imports, expressions).
-      - path: ^internal/keychain/
+      - path: ^internal/(keychain/|listeners/libproc\.go)
         linters: [dupword, gocritic]
       # gosec, where a whole package is about what it reports (each other
       # report is fixed or marked on its line):
