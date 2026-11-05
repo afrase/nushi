@@ -53,6 +53,10 @@ class _SourceViewState extends State<SourceView> {
   ScrollController _down = ScrollController();
   final _across = ScrollController();
 
+  /// Each list's selection, which copies the whole text after Select All.
+  late final _wholeWrapped = _Whole(() => _text);
+  late final _wholeRunOn = _Whole(() => _text);
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +75,8 @@ class _SourceViewState extends State<SourceView> {
   void dispose() {
     _down.dispose();
     _across.dispose();
+    _wholeWrapped.dispose();
+    _wholeRunOn.dispose();
     super.dispose();
   }
 
@@ -219,22 +225,25 @@ class _SourceViewState extends State<SourceView> {
     String number(int i) => '${i + 1}'.padLeft(digits);
     if (widget.wrap) {
       return SelectionArea(
-        child: ListView.builder(
-          key: _wrapped,
-          controller: _down,
-          padding: widget.padding,
-          itemCount: _lines.length,
-          itemBuilder: (context, i) => Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SelectionContainer.disabled(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 14),
-                  child: Text(number(i), style: gutter),
+        child: SelectionContainer(
+          delegate: _wholeWrapped,
+          child: ListView.builder(
+            key: _wrapped,
+            controller: _down,
+            padding: widget.padding,
+            itemCount: _lines.length,
+            itemBuilder: (context, i) => Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SelectionContainer.disabled(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 14),
+                    child: Text(number(i), style: gutter),
+                  ),
                 ),
-              ),
-              Expanded(child: _Line(Text.rich(text(i)))),
-            ],
+                Expanded(child: _Line(Text.rich(text(i)))),
+              ],
+            ),
           ),
         ),
       );
@@ -256,53 +265,60 @@ class _SourceViewState extends State<SourceView> {
             behavior: ScrollConfiguration.of(context)
                 .copyWith(scrollbars: false),
             child: SelectionArea(
-              child: SingleChildScrollView(
-                controller: _across,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: max(box.maxWidth, width),
-                  child: ListView.builder(
-                    key: _runOn,
-                    controller: _down,
-                    padding: EdgeInsets.only(top: pad.top, bottom: pad.bottom),
-                    itemExtent: _lineHeight,
-                    itemCount: _lines.length,
-                    itemBuilder: (context, i) => Stack(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(left: numbers),
-                          child: _Line(Text.rich(text(i), softWrap: false)),
-                        ),
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: numbers,
-                          child: SelectionContainer.disabled(
-                            child: ListenableBuilder(
-                              listenable: _across,
-                              builder: (context, child) => Transform.translate(
-                                offset: Offset(
-                                  _across.hasClients ? _across.offset : 0,
-                                  0,
-                                ),
-                                child: child,
-                              ),
-                              child: ColoredBox(
-                                color: t.base,
-                                child: Padding(
-                                  padding: EdgeInsets.only(left: pad.left),
-                                  child: Text(
-                                    number(i),
-                                    style: gutter,
-                                    softWrap: false,
+              child: SelectionContainer(
+                delegate: _wholeRunOn,
+                child: SingleChildScrollView(
+                  controller: _across,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: max(box.maxWidth, width),
+                    child: ListView.builder(
+                      key: _runOn,
+                      controller: _down,
+                      padding: EdgeInsets.only(
+                        top: pad.top,
+                        bottom: pad.bottom,
+                      ),
+                      itemExtent: _lineHeight,
+                      itemCount: _lines.length,
+                      itemBuilder: (context, i) => Stack(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.only(left: numbers),
+                            child: _Line(Text.rich(text(i), softWrap: false)),
+                          ),
+                          Positioned(
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: numbers,
+                            child: SelectionContainer.disabled(
+                              child: ListenableBuilder(
+                                listenable: _across,
+                                builder: (context, child) =>
+                                    Transform.translate(
+                                      offset: Offset(
+                                        _across.hasClients ? _across.offset : 0,
+                                        0,
+                                      ),
+                                      child: child,
+                                    ),
+                                child: ColoredBox(
+                                  color: t.base,
+                                  child: Padding(
+                                    padding: EdgeInsets.only(left: pad.left),
+                                    child: Text(
+                                      number(i),
+                                      style: gutter,
+                                      softWrap: false,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -313,6 +329,27 @@ class _SourceViewState extends State<SourceView> {
       ),
     );
   }
+}
+
+/// A list's selection that copies the whole text after Select All: the
+/// list builds only the lines in sight, and only those would copy.
+class _Whole extends StaticSelectionContainerDelegate {
+  new(this.text);
+
+  final String Function() text;
+
+  /// Whether the last selection was Select All, not since changed.
+  bool _all = false;
+
+  @override
+  SelectionResult dispatchSelectionEvent(SelectionEvent event) {
+    _all = event.type == SelectionEventType.selectAll;
+    return super.dispatchSelectionEvent(event);
+  }
+
+  @override
+  SelectedContent? getSelectedContent() =>
+      _all ? SelectedContent(plainText: text()) : super.getSelectedContent();
 }
 
 /// A line's text, copied with its line break when it's selected to its
