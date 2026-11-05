@@ -10,9 +10,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
-import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/phone/platform.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/sidebar_button.dart';
@@ -543,15 +540,7 @@ void main() {
     viewport(tester, const Size(390, 844), ratio: 2);
     sidebarHidden.value = true;
     final fake = FakeDaemon(_chats());
-    final phone = Phone(
-      PhonePlatform()..saved = pairedRecord(),
-      connectTo: (_) => Daemon(transport: fake, remote: true),
-    );
-    await tester.pumpWidget(PhoneApp(phone));
-    await phone.start();
-    for (var i = 0; i < 8; i++) {
-      await tester.pump();
-    }
+    final phone = await startPhone(tester, fake);
     expect(find.byType(SidebarButton), findsNothing);
     await tester.tap(find.text(_title));
     await tester.pumpAndSettle();

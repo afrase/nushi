@@ -512,15 +512,7 @@ void main() {
       addTearDown(tester.platformDispatcher.clearAllTestValues);
       final platform = PhonePlatform()..saved = pairedRecord();
       final fake = _fake({});
-      final p = Phone(
-        platform,
-        connectTo: (_) => Daemon(transport: fake, remote: true),
-      );
-      await tester.pumpWidget(PhoneApp(p));
-      await p.start();
-      for (var i = 0; i < 8; i++) {
-        await tester.pump();
-      }
+      final p = await startPhone(tester, fake, platform: platform);
       await tester.tap(find.text('The landing page'));
       await tester.pumpAndSettle();
       return p;

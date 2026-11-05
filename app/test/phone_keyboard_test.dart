@@ -4,11 +4,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/keyboard.dart';
 import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 
 import 'fake_daemon.dart';
@@ -51,15 +49,7 @@ Future<(Phone, PhonePlatform)> _app(
     for (var i = 0; i < 8; i++)
       chat('f$i', 'claude', 'Elsewhere $i', folder: '/Users/me/p$i', age: i),
   ])..answer = (input) => input is GetChatRequest ? _items() : null;
-  final phone = Phone(
-    platform,
-    connectTo: (_) => Daemon(transport: fake, remote: true),
-  );
-  await tester.pumpWidget(PhoneApp(phone));
-  await phone.start();
-  for (var i = 0; i < 8; i++) {
-    await tester.pump();
-  }
+  final phone = await startPhone(tester, fake, platform: platform);
   return (phone, platform);
 }
 

@@ -15,8 +15,6 @@ import 'package:nushi/main.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/phone/artifacts_screen.dart';
-import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview_pane.dart';
@@ -336,15 +334,7 @@ void main() {
     addTearDown(tester.platformDispatcher.clearAllTestValues);
     final platform = PhonePlatform()..saved = pairedRecord();
     final fake = _fake();
-    final phone = Phone(
-      platform,
-      connectTo: (_) => Daemon(transport: fake, remote: true),
-    );
-    await tester.pumpWidget(PhoneApp(phone));
-    await phone.start();
-    for (var i = 0; i < 8; i++) {
-      await tester.pump();
-    }
+    final phone = await startPhone(tester, fake, platform: platform);
     await tester.tap(find.text('Write the report'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Artifacts 3'));

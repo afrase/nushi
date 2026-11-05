@@ -2,11 +2,14 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:connectrpc/connect.dart' show Transport;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/phone.dart';
+import 'package:nushi/phone/phone_app.dart';
+import 'package:nushi/phone/platform.dart';
 
 /// The time the app sees in every test ([clock], set before each by
 /// `flutter_test_config.dart`): fixed, so an age a golden shows never moves.
@@ -45,6 +48,27 @@ Future<void> endPhone(
   await phone.close();
   await tester.pumpWidget(const SizedBox());
   await tester.pump(wait);
+}
+
+/// A phone on [platform] (paired, as [pairedRecord] has it, unless given)
+/// whose daemon answers through [fake], its app shown, started and pumped
+/// a few frames. The window's size and the accessibility features (Reduce
+/// Motion) stay the caller's to set.
+Future<Phone> startPhone(
+  WidgetTester tester,
+  Transport fake, {
+  PhonePlatform? platform,
+}) async {
+  final phone = Phone(
+    platform ?? (PhonePlatform()..saved = pairedRecord()),
+    connectTo: (_) => Daemon(transport: fake, remote: true),
+  );
+  await tester.pumpWidget(PhoneApp(phone));
+  await phone.start();
+  for (var i = 0; i < 8; i++) {
+    await tester.pump();
+  }
+  return phone;
 }
 
 /// A paired browser: what IndexedDB would hold.

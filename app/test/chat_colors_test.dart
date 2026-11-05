@@ -12,9 +12,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/phone/chats_screen.dart';
-import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/phone/platform.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
@@ -406,15 +404,7 @@ void main() {
     testWidgets('the phone’s list, 390×844 (${b.name})', (tester) async {
       viewport(tester, const Size(390, 844), ratio: 2, brightness: b);
       final fake = FakeDaemon(_chats());
-      final phone = Phone(
-        PhonePlatform()..saved = pairedRecord(),
-        connectTo: (_) => Daemon(transport: fake, remote: true),
-      );
-      await tester.pumpWidget(PhoneApp(phone));
-      await phone.start();
-      for (var i = 0; i < 8; i++) {
-        await tester.pump();
-      }
+      final phone = await startPhone(tester, fake);
       expect(find.byType(ChatRow), findsNWidgets(9));
       expect(tester.takeException(), isNull);
       final tokens = b == Brightness.dark ? Tokens.dark : Tokens.light;

@@ -15,9 +15,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/phone/platform.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -405,15 +402,7 @@ void main() {
               ],
             )
           : null);
-    final phone = Phone(
-      PhonePlatform()..saved = pairedRecord(),
-      connectTo: (_) => Daemon(transport: fake, remote: true),
-    );
-    await tester.pumpWidget(PhoneApp(phone));
-    await phone.start();
-    for (var i = 0; i < 8; i++) {
-      await tester.pump();
-    }
+    final phone = await startPhone(tester, fake);
     await tester.tap(find.text('Fix the login redirect'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));

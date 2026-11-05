@@ -13,7 +13,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/settings.dart';
@@ -139,16 +138,7 @@ void main() {
       viewport(tester, size, ratio: 3);
       final platform = PhonePlatform()..saved = pairedRecord();
       final fake = _fake();
-      late Daemon daemon;
-      final phone = Phone(
-        platform,
-        connectTo: (_) => daemon = Daemon(transport: fake, remote: true),
-      );
-      await tester.pumpWidget(PhoneApp(phone));
-      await phone.start();
-      for (var i = 0; i < 8; i++) {
-        await tester.pump();
-      }
+      final phone = await startPhone(tester, fake, platform: platform);
       await tester.tap(find.text('Read the spec'));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip(plusTooltip));
@@ -158,7 +148,7 @@ void main() {
       await render(tester, find.byType(PhoneApp), 'plus_menu_phone_$name');
       await tester.tap(find.text('Mention a file'));
       await tester.pumpAndSettle();
-      await _attach(tester, daemon);
+      await _attach(tester, phone.daemon!);
       await tester.pumpAndSettle();
       expect(find.byType(FileCard), findsNWidgets(2));
       await render(tester, find.byType(PhoneApp), 'plus_files_phone_$name');

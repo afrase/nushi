@@ -10,8 +10,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/transcript.dart';
@@ -224,15 +222,7 @@ void main() {
     viewport(tester, const Size(390, 844), ratio: 3);
     final platform = PhonePlatform()..saved = pairedRecord();
     final (fake, sends) = _fake();
-    final phone = Phone(
-      platform,
-      connectTo: (_) => Daemon(transport: fake, remote: true),
-    );
-    await tester.pumpWidget(PhoneApp(phone));
-    await phone.start();
-    for (var i = 0; i < 8; i++) {
-      await tester.pump();
-    }
+    final phone = await startPhone(tester, fake, platform: platform);
     await tester.tap(find.text('Fix the login'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'Add a test for it');

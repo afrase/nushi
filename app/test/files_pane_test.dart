@@ -12,9 +12,7 @@ import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/phone/files_screen.dart';
-import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
@@ -410,15 +408,7 @@ void main() {
         }
       });
       final fake = _fake(folder, previews);
-      final phone = Phone(
-        PhonePlatform()..saved = pairedRecord(),
-        connectTo: (_) => Daemon(transport: fake, remote: true),
-      );
-      await tester.pumpWidget(PhoneApp(phone));
-      await phone.start();
-      for (var i = 0; i < 8; i++) {
-        await tester.pump();
-      }
+      final phone = await startPhone(tester, fake);
       await tester.tap(find.text('Write the report'));
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Chat'));

@@ -5,10 +5,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/settings_screen.dart';
 
@@ -26,15 +24,11 @@ Future<(Phone, PhonePlatform)> _app(WidgetTester tester) async {
       const FakeAccessibilityFeatures(disableAnimations: true);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
   final platform = PhonePlatform()..saved = pairedRecord();
-  final phone = Phone(
-    platform,
-    connectTo: (_) => Daemon(transport: FakeDaemon(_chats), remote: true),
+  final phone = await startPhone(
+    tester,
+    FakeDaemon(_chats),
+    platform: platform,
   );
-  await tester.pumpWidget(PhoneApp(phone));
-  await phone.start();
-  for (var i = 0; i < 8; i++) {
-    await tester.pump();
-  }
   return (phone, platform);
 }
 

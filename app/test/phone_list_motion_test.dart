@@ -4,13 +4,10 @@
 // with it and folds once none needs you; with Reduce Motion, at once.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/phone/phone.dart';
-import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/phone/platform.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -29,15 +26,7 @@ Future<Phone> _app(
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       FakeAccessibilityFeatures(disableAnimations: still);
   addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-  final phone = Phone(
-    PhonePlatform()..saved = pairedRecord(),
-    connectTo: (_) => Daemon(transport: fake, remote: true),
-  );
-  await tester.pumpWidget(PhoneApp(phone));
-  await phone.start();
-  for (var i = 0; i < 8; i++) {
-    await tester.pump();
-  }
+  final phone = await startPhone(tester, fake);
   return phone;
 }
 

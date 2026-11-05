@@ -77,15 +77,7 @@ Future<Phone> _app(
     );
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearAllTestValues);
-  final p = Phone(
-    platform ?? (PhonePlatform()..saved = pairedRecord()),
-    connectTo: (_) => Daemon(transport: fake, remote: true),
-  );
-  await tester.pumpWidget(PhoneApp(p));
-  await p.start();
-  for (var i = 0; i < 8; i++) {
-    await tester.pump();
-  }
+  final p = await startPhone(tester, fake, platform: platform);
   return p;
 }
 

@@ -11,9 +11,7 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
@@ -389,15 +387,7 @@ void main() {
           _ask('mcp__nushi__show', '{\n  "path": "docs/report.html"\n}'),
         ],
       );
-      final phone = Phone(
-        PhonePlatform()..saved = pairedRecord(),
-        connectTo: (_) => Daemon(transport: fake, remote: true),
-      );
-      await tester.pumpWidget(PhoneApp(phone));
-      await phone.start();
-      for (var i = 0; i < 8; i++) {
-        await tester.pump();
-      }
+      final phone = await startPhone(tester, fake);
       await tester.tap(find.text('Write the release report'));
       await tester.pumpAndSettle();
       await _shows(tester, fake, 'docs/report.md');

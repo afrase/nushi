@@ -2,7 +2,6 @@
 // in the browser's storage and read before anything shows.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -21,15 +20,7 @@ Future<(Phone, PhonePlatform)> _phone(
   final platform = PhonePlatform()
     ..saved = pairedRecord()
     ..theme = theme;
-  final phone = Phone(
-    platform,
-    connectTo: (_) => Daemon(transport: fake, remote: true),
-  );
-  await tester.pumpWidget(PhoneApp(phone));
-  await phone.start();
-  for (var i = 0; i < 8; i++) {
-    await tester.pump();
-  }
+  final phone = await startPhone(tester, fake, platform: platform);
   return (phone, platform);
 }
 
