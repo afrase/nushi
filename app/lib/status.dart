@@ -102,6 +102,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
   AnimationController? _hop; // once, as the chat starts waiting
   AnimationController? _check; // drawn, held, then the ring again
   DateTime? _since; // when the running turn started, as last known
+  late bool _ran = widget.chat.started != null; // a turn ran, not a reopen
   bool _sparks = false; // the check's sparks fly
 
   static const _checkFor = Duration(milliseconds: 2700);
@@ -121,6 +122,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     _busy = widget.chat.busy;
     _waiting = widget.chat.waiting;
     _phase = widget.chat.phase;
+    _ran = widget.chat.started != null;
     _hop?.value = 1;
     _check?.value = 1;
   }
@@ -142,14 +144,18 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     final c = widget.chat;
     if (c.busy && !_busy) {
       _stopped = false;
+      _ran = false;
       _check?.value = 1; // a new turn: the check goes
     }
     if (c.busy) _since = c.started ?? _since ?? clock();
+    if (c.busy && c.started != null) _ran = true;
     if (c.stopping) _stopped = true;
     if (c.waiting && !_waiting && !reduceMotion(context)) {
       (_hop ??= _once(hopFor)).forward(from: 0).ignore();
     }
-    final end = _busy && !c.busy ? turnEnd(c, stopped: _stopped) : null;
+    final end = _busy && !c.busy
+        ? turnEnd(c, stopped: _stopped, ran: _ran)
+        : null;
     // A done turn's check only: a check reads as success, wrong for a
     // failure (its alert and notice say so) and a stop.
     if (end == TurnEnd.TURN_END_DONE && !c.waiting) {
@@ -287,11 +293,15 @@ Widget _waitingDot(Tokens t) => Padding(
 
 /// How the turn that just ended ended, for what marks it (a receipt, a
 /// check, sparks): as the daemon judged it ([ChatState.ended], API 107),
-/// which knows of a stop from anywhere; from an older daemon, a guess:
-/// [stopped] when the app stopped it, failed on an error notice in it.
-TurnEnd turnEnd(ChatState c, {required bool stopped}) =>
+/// which knows of a stop from anywhere. Unspecified when no turn [ran]:
+/// the chat was busy with no turn's start ([reopening]). Else, from an
+/// older daemon, a guess: [stopped] when the app stopped it, failed on an
+/// error notice in it.
+TurnEnd turnEnd(ChatState c, {required bool stopped, required bool ran}) =>
     c.ended != TurnEnd.TURN_END_UNSPECIFIED
     ? c.ended
+    : !ran
+    ? TurnEnd.TURN_END_UNSPECIFIED
     : stopped
     ? TurnEnd.TURN_END_STOPPED
     : turnFailed(c.items)
@@ -409,6 +419,11 @@ DateTime? msTime(int ms) =>
 String elapsed(Duration d) => d.inMinutes == 0
     ? '${d.inSeconds}s'
     : '${d.inMinutes}m ${(d.inSeconds % 60).toString().padLeft(2, '0')}s';
+
+/// Whether [c] is busy with no turn running: the daemon reopening its
+/// session (opened after a restart or a sleep, reloaded, moved, rewound),
+/// the agent replaying the chat. A turn always has its start.
+bool reopening(ChatState c) => c.busy && c.started == null;
 
 /// What the agent is doing now, from what it reported last in the turn: a
 /// running tool call ("Reading notes.md", "Running make test"), else

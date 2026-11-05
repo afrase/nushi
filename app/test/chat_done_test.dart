@@ -1,3 +1,4 @@
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -111,7 +112,16 @@ void main() {
     tester,
   ) async {
     final fake = FakeDaemon([
-      chat('a', 'claude', 'A', status: ChatStatus(busy: true)),
+      // A turn runs: busy since its start (busy with none is a reopen).
+      chat(
+        'a',
+        'claude',
+        'A',
+        status: ChatStatus(
+          busy: true,
+          started: Int64(fixtureNow.millisecondsSinceEpoch),
+        ),
+      ),
     ]);
     final d = await fake.connect(tester);
     await tester.pumpWidget(_app(Sidebar(daemon: d)));

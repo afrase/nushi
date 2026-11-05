@@ -40,6 +40,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
   late final Timer _tick;
   late bool _busy = widget.chat.busy;
   DateTime? _since; // when the running turn started, as last known
+  late bool _ran = widget.chat.started != null; // a turn ran, not a reopen
   bool _stopped = false; // someone stopped it
   String? _receipt; // "Done in 2m 30s", while it shows
   String _last = ''; // what the line said last, folding away
@@ -64,6 +65,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     old.chat.removeListener(_changed);
     widget.chat.addListener(_changed);
     _busy = widget.chat.busy;
+    _ran = widget.chat.started != null;
     _receipt = null;
     stopRun();
   }
@@ -80,6 +82,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     if (c.busy) {
       if (!_busy) {
         _stopped = false;
+        _ran = false;
         _receipt = null;
         // From what shows of a line still folding, if one is.
         _growFrom = running ? _shows : 0;
@@ -88,6 +91,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
         if (_growing) runFor(TurnStatus.foldFor);
       }
       _since = c.started ?? _since ?? clock();
+      _ran |= c.started != null;
       _stopped |= c.stopping;
     } else if (_busy) {
       _ended();
@@ -102,7 +106,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     final still = reduceMotion(context);
     _growing = false;
     _receipt =
-        turnEnd(c, stopped: _stopped) == TurnEnd.TURN_END_DONE &&
+        turnEnd(c, stopped: _stopped, ran: _ran) == TurnEnd.TURN_END_DONE &&
             !c.waiting &&
             sparksFor(lasted)
         ? 'Done in ${elapsed(lasted)}'
@@ -193,7 +197,12 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
     final started = chat.started;
     final what = folding
         ? _last
-        : widget.what ?? (waiting ? 'Waiting for you' : doing(chat.items));
+        : widget.what ??
+              (waiting
+                  ? 'Waiting for you'
+                  : reopening(chat)
+                  ? 'Opening the session'
+                  : doing(chat.items));
     if (!folding) _last = what;
     return _row(
       CustomPaint(

@@ -256,4 +256,45 @@ void main() {
       await tester.pumpAndSettle();
     });
   }
+
+  testWidgets('a reopen is no turn: it says so, and leaves no receipt, check '
+      'or sparks', (tester) async {
+    final chat = ChatState('c', '/x')
+      ..loaded = true
+      ..items.addAll([
+        Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
+        Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Done.'),
+      ]);
+    await tester.pumpWidget(
+      _app(
+        Column(
+          children: [
+            TurnStatus(chat),
+            ChatDot(chat: chat, sparks: true),
+          ],
+        ),
+      ),
+    );
+    // The daemon reopens the chat (after a restart, a sleep): busy with no
+    // turn's start while the agent replays it, then idle with no verdict.
+    chat
+      ..status(ChatStatus(busy: true))
+      ..notifyListeners();
+    await tester.pump();
+    expect(find.text('Opening the session'), findsOneWidget);
+    expect(find.text('Writing'), findsNothing);
+    final was = clock;
+    clock = () => was().add(const Duration(seconds: 12));
+    addTearDown(() => clock = was);
+    chat
+      ..status(ChatStatus())
+      ..notifyListeners();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('Done in'), findsNothing);
+    expect(_check(tester, TurnStatus), isNull);
+    expect(_check(tester, ChatDot), isNull);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(find.byType(TurnStatus)).height, 0);
+  });
 }
