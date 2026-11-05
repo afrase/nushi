@@ -8,19 +8,16 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/turn_status.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
-    MaterialApp(
-      theme: NushiTheme(tokens).toThemeData(),
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: still),
-        child: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(width: 520, child: child),
-          ),
-        ),
+    themed(
+      Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(width: 520, child: child),
       ),
+      tokens: tokens,
+      still: still,
     );
 
 ChatState _working(Duration ran) {

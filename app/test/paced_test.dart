@@ -9,13 +9,7 @@ import 'package:nushi/transcript.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-Widget _app(Widget child, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(body: child),
-  ),
-);
+Widget _app(Widget child, {bool still = false}) => themed(child, still: still);
 
 const _words =
     'I split the app tests into two shards so the slowest job takes half '

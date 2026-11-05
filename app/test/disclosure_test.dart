@@ -4,23 +4,18 @@ import 'package:nushi/card_list.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/thinking.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
-Widget _app(Widget child, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(
-      body: Align(
-        alignment: Alignment.topLeft,
-        child: SizedBox(width: 300, child: child),
-      ),
-    ),
+Widget _app(Widget child, {bool still = false}) => themed(
+  Align(
+    alignment: Alignment.topLeft,
+    child: SizedBox(width: 300, child: child),
   ),
+  still: still,
 );
 
 /// A box that opens and closes [_Body] with its chevron, as every

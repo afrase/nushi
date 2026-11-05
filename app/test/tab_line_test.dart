@@ -2,27 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/plain_tabs.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 // The tabs' line slides to the tab picked (TabLine): the fluidity review's
 // idea 12.
 
 Widget _tabs(int value, ValueChanged<int> onChanged, {bool still = false}) =>
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: still),
-        child: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: PlainTabs<int>(
-              value: value,
-              tabs: const [(0, 'Chat'), (1, 'Changes'), (2, 'Pull request')],
-              onChanged: onChanged,
-            ),
-          ),
+    themed(
+      Align(
+        alignment: Alignment.topLeft,
+        child: PlainTabs<int>(
+          value: value,
+          tabs: const [(0, 'Chat'), (1, 'Changes'), (2, 'Pull request')],
+          onChanged: onChanged,
         ),
       ),
+      still: still,
     );
 
 /// The tabs' 2 px lines, as drawn.

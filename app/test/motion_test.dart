@@ -19,14 +19,10 @@ Item _call(String status) => Item(
 );
 
 Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
-    MaterialApp(
-      theme: NushiTheme(tokens).toThemeData(),
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: still),
-        child: Scaffold(
-          body: Padding(padding: const EdgeInsets.all(12), child: child),
-        ),
-      ),
+    themed(
+      Padding(padding: const EdgeInsets.all(12), child: child),
+      tokens: tokens,
+      still: still,
     );
 
 /// The opacity [text]'s item is drawn at, as it rises in.

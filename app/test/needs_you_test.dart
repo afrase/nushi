@@ -11,13 +11,7 @@ import 'package:nushi/transcript.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-Widget _app(Widget child, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(body: child),
-  ),
-);
+Widget _app(Widget child, {bool still = false}) => themed(child, still: still);
 
 Item _ask({String status = 'pending'}) => Item(
   id: 'p',

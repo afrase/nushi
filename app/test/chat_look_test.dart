@@ -6,7 +6,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/status_bar.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -56,20 +55,15 @@ void main() {
     ]);
     final d = await fake.connect(tester);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: MediaQuery(
-          data: const MediaQueryData(disableAnimations: true),
-          child: Scaffold(
-            body: SizedBox(
-              width: 260,
-              child: ListenableBuilder(
-                listenable: d,
-                builder: (context, _) => Sidebar(daemon: d),
-              ),
-            ),
+      themed(
+        SizedBox(
+          width: 260,
+          child: ListenableBuilder(
+            listenable: d,
+            builder: (context, _) => Sidebar(daemon: d),
           ),
         ),
+        still: true,
       ),
     );
     d.select('a'); // loaded, so its events apply

@@ -2,34 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/slides.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 // Bars that slide open and shut (BarSlide, on Presence): the fluidity
 // review's idea 11.
 
 /// A bar of 30 saying [text], or none, over a strip whose top says how
 /// tall the bar is.
-Widget _bar(String? text, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BarSlide(
-            child: text == null
-                ? null
-                : SizedBox(
-                    height: 30,
-                    child: TextButton(onPressed: () {}, child: Text(text)),
-                  ),
-          ),
-          const SizedBox(key: ValueKey('below'), height: 10),
-        ],
+Widget _bar(String? text, {bool still = false}) => themed(
+  Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      BarSlide(
+        child: text == null
+            ? null
+            : SizedBox(
+                height: 30,
+                child: TextButton(onPressed: () {}, child: Text(text)),
+              ),
       ),
-    ),
+      const SizedBox(key: ValueKey('below'), height: 10),
+    ],
   ),
+  still: still,
 );
 
 double _height(WidgetTester tester) =>

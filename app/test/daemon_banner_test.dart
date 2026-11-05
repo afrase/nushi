@@ -9,19 +9,15 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 
 Widget _app(Daemon d, {bool still = false, Tokens tokens = Tokens.dark}) =>
-    MaterialApp(
-      theme: NushiTheme(tokens).toThemeData(),
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: still),
-        child: Scaffold(
-          body: Column(
-            children: [
-              RepaintBoundary(child: DaemonBanner(d)),
-              const Expanded(child: SizedBox()),
-            ],
-          ),
-        ),
+    themed(
+      Column(
+        children: [
+          RepaintBoundary(child: DaemonBanner(d)),
+          const Expanded(child: SizedBox()),
+        ],
       ),
+      tokens: tokens,
+      still: still,
     );
 
 const _lost = 'Lost the connection to the daemon; reconnecting…';

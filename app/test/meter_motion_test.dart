@@ -5,21 +5,18 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
 
-Widget _app(double fill, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(
-      body: Center(
-        child: ContextMeter(
-          Usage(
-            contextSize: Int64(1000),
-            contextUsed: Int64((fill * 1000).round()),
-          ),
-        ),
+import 'harness.dart';
+
+Widget _app(double fill, {bool still = false}) => themed(
+  Center(
+    child: ContextMeter(
+      Usage(
+        contextSize: Int64(1000),
+        contextUsed: Int64((fill * 1000).round()),
       ),
     ),
   ),
+  still: still,
 );
 
 double _width(WidgetTester tester) => tester

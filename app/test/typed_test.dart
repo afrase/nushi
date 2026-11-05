@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 import 'package:nushi/typed.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Item _call(String id, String title, {String kind = 'execute'}) => Item(
   id: id,
@@ -16,13 +16,7 @@ Item _call(String id, String title, {String kind = 'execute'}) => Item(
   status: 'in_progress',
 );
 
-Widget _app(Widget child, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(body: child),
-  ),
-);
+Widget _app(Widget child, {bool still = false}) => themed(child, still: still);
 
 /// The visible part of [title]'s row: its text up to the first character
 /// painted clear.

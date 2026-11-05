@@ -5,17 +5,11 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/subagents.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
-Widget _app(Widget child, {bool still = false}) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: MediaQuery(
-    data: MediaQueryData(disableAnimations: still),
-    child: Scaffold(body: child),
-  ),
-);
+Widget _app(Widget child, {bool still = false}) => themed(child, still: still);
 
 SubagentRun _run(String state) => (
   call: Item(

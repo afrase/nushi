@@ -8,22 +8,16 @@ import 'package:nushi/thought_line.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-Widget _app(String text, {required bool live, bool still = false}) =>
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: still),
-        child: Scaffold(
-          body: SizedBox(
-            width: 360,
-            child: ThoughtView(
-              Item(id: 't', kind: ItemKind.ITEM_KIND_THOUGHT, text: text),
-              live: live,
-            ),
-          ),
-        ),
-      ),
-    );
+Widget _app(String text, {required bool live, bool still = false}) => themed(
+  SizedBox(
+    width: 360,
+    child: ThoughtView(
+      Item(id: 't', kind: ItemKind.ITEM_KIND_THOUGHT, text: text),
+      live: live,
+    ),
+  ),
+  still: still,
+);
 
 void main() {
   setUpAll(loadFonts);

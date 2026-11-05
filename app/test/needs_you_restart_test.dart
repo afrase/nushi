@@ -8,9 +8,9 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -60,15 +60,7 @@ void main() {
       if (shown) d.select('a');
       final alerts = MacAlerts(d)..focused = false;
       await tester.pumpWidget(
-        MaterialApp(
-          theme: const NushiTheme(Tokens.dark).toThemeData(),
-          home: MediaQuery(
-            data: const MediaQueryData(disableAnimations: true),
-            child: Scaffold(
-              body: SizedBox(width: 260, child: Sidebar(daemon: d)),
-            ),
-          ),
-        ),
+        themed(SizedBox(width: 260, child: Sidebar(daemon: d)), still: true),
       );
       events.add(
         EventsResponse(

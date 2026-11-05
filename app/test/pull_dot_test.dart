@@ -13,14 +13,10 @@ import 'github_fixture.dart' show item;
 import 'harness.dart';
 
 Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>
-    MaterialApp(
-      theme: NushiTheme(tokens).toThemeData(),
-      home: MediaQuery(
-        data: MediaQueryData(disableAnimations: still),
-        child: Scaffold(
-          body: Align(alignment: Alignment.topLeft, child: child),
-        ),
-      ),
+    themed(
+      Align(alignment: Alignment.topLeft, child: child),
+      tokens: tokens,
+      still: still,
     );
 
 final _link = GitHubLink(

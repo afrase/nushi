@@ -6,9 +6,9 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/chats_screen.dart';
 import 'package:nushi/status.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// A chat in each state, by the word both say.
 final Map<String, Chat> _chats = {
@@ -47,25 +47,20 @@ void main() {
   ) async {
     final d = await FakeDaemon(_chats.values.toList()).connect(tester);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: MediaQuery(
-          data: const MediaQueryData(disableAnimations: true),
-          child: Scaffold(
-            body: ListView(
-              children: [
-                for (final c in _chats.values) ...[
-                  ChatRow(d.chats[c.id]!, onTap: () {}),
-                  ChatStatusWord(
-                    d.chats[c.id]!,
-                    key: Key('mac ${c.id}'),
-                    style: const TextStyle(),
-                  ),
-                ],
-              ],
-            ),
-          ),
+      themed(
+        ListView(
+          children: [
+            for (final c in _chats.values) ...[
+              ChatRow(d.chats[c.id]!, onTap: () {}),
+              ChatStatusWord(
+                d.chats[c.id]!,
+                key: Key('mac ${c.id}'),
+                style: const TextStyle(),
+              ),
+            ],
+          ],
         ),
+        still: true,
       ),
     );
     await tester.pump();
