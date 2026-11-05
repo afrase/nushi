@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -656,21 +657,43 @@ func TestForwardedForFromTheRight(t *testing.T) {
 	}
 }
 
+// counted counts a listener's accepted connections.
+type counted struct {
+	net.Listener
+	n atomic.Int64
+}
+
+func (a *counted) Accept() (net.Conn, error) {
+	c, err := a.Listener.Accept()
+	if err == nil {
+		a.n.Add(1)
+	}
+	return c, err
+}
+
 // A flood of idle sockets from many addresses (behind a proxy, which only
 // the header tells apart) doesn't keep a daemon and a phone from meeting:
-// the ones idle longest make way.
+// the ones idle longest make way. The flood is twice Total, dialled no
+// faster than the relay accepts (macOS's backlog is 128, and a loaded
+// machine accepts slowly), and all of it in before the pair comes, so the
+// pair is the newest and nothing still queued sheds it.
 func TestIdleFloodDoesntStarve(t *testing.T) {
 	lim := Defaults
 	lim.IPHeader = "X-Test-IP"
 	lim.Total = 50
 	srv := NewServer(lim)
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	inner, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
+	ln := &counted{Listener: inner}
 	go func() { _ = srv.Serve(ln) }()
 	defer func() { _ = srv.Close() }()
-	for i := range 200 {
+	const flood = 100
+	for i := range flood {
+		if !testcheck.Eventually(func() bool { return int64(i)-ln.n.Load() < 32 }) {
+			t.Fatal("the relay stopped accepting")
+		}
 		c, err := net.Dial("tcp", ln.Addr().String())
 		if err != nil {
 			t.Fatal(err)
@@ -679,6 +702,9 @@ func TestIdleFloodDoesntStarve(t *testing.T) {
 		if i%2 == 0 { // half of them asked once, from an address each, and wait
 			_, _ = fmt.Fprintf(c, "GET /healthz HTTP/1.1\r\nHost: relay\r\nX-Test-IP: 198.51.%d.%d\r\n\r\n", i/256, i%256) // one the relay dropped already is part of the flood
 		}
+	}
+	if !testcheck.Eventually(func() bool { return ln.n.Load() >= flood }) {
+		t.Fatal("the flood wasn't all accepted")
 	}
 	l, d := pair(t, "ws://"+ln.Addr().String(), newKey())
 	send(t, d, "through")
