@@ -107,3 +107,67 @@ class _RenameBranchDialogState extends State<RenameBranchDialog> {
     );
   }
 }
+
+/// The name of a new branch, from the folder's [from]; the daemon checks
+/// it as git does.
+class NewBranchDialog extends StatefulWidget {
+  const new({required this.from, super.key});
+
+  final String from;
+
+  @override
+  State<NewBranchDialog> createState() => _NewBranchDialogState();
+}
+
+class _NewBranchDialogState extends State<NewBranchDialog> {
+  final _name = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  String get _new => _name.text.trim();
+
+  void _create() {
+    if (_new.isNotEmpty) Navigator.pop(context, _new);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return nushiDialog(
+      'New branch',
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 8,
+        children: [
+          TextField(
+            controller: _name,
+            autofocus: true,
+            autocorrect: false,
+            enableSuggestions: false,
+            style: theme.code(t.text),
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => _create(),
+          ),
+          Text(
+            'From ${widget.from}; uncommitted changes go along.',
+            style: theme.ui(t.textMuted, size: 12),
+          ),
+        ],
+      ),
+      [
+        Button(label: 'Cancel', onPressed: () => Navigator.pop(context)),
+        Button(
+          label: 'Create',
+          kind: ButtonKind.primary,
+          onPressed: _new.isEmpty ? null : _create,
+        ),
+      ],
+    );
+  }
+}
