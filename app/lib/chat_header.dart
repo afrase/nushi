@@ -80,7 +80,8 @@ class ChatHeader extends StatelessWidget {
     // the panel can't show, the tabs into a menu field, the status word
     // (the dot's tooltip says it), then the terminal's, the files' and the
     // details' buttons into ⋯. Changes counts the review comments not sent
-    // yet (14 points more); a hidden side chat's chip takes its own room.
+    // yet (14 points more); a hidden side chat's chip, the Jira key and the
+    // GitHub chip take their own room.
     return ListenableBuilder(
       listenable: Listenable.merge([
         chat.renaming,
@@ -109,6 +110,21 @@ class ChatHeader extends StatelessWidget {
                       chat.jiraKey,
                       theme.code(t.text, size: 12),
                     );
+          // The GitHub chip, and its gap: its number as wide as it is, and
+          // room for every badge a pull request's can load, so it never
+          // pushes ⋯ past the edge when its states land.
+          final github = switch (chat.github) {
+            null => 0.0,
+            final link =>
+              NushiTheme.barGap +
+                  githubChipRoom +
+                  (link.pull ? githubBadgesRoom : githubIssueBadgesRoom) +
+                  _textWidth(
+                    context,
+                    '#${link.number}',
+                    theme.code(t.link, size: 12),
+                  ),
+          };
           final folds = headerFolds(
             width,
             pull: chat.pull != null,
@@ -118,6 +134,7 @@ class ChatHeader extends StatelessWidget {
             comments: comments,
             side: side,
             jira: jira,
+            github: github,
           );
           final shown = modelName != null && !folds.model;
           // What the title and the model (its gap taken out) share.
@@ -420,6 +437,19 @@ class ChatHeader extends StatelessWidget {
 /// The room the chat's color's dot takes, its gap to the title in it.
 const _dotRoom = 16.0;
 
+/// The GitHub chip without its number: its padding, icon and the gap to the
+/// number (`GitHubChip`).
+const double githubChipRoom = 4 + 13 + 3 + 4.0;
+
+/// The most a pull request's chip's badges take once loaded: the gap to
+/// them, the checks' icon, the review's, and the unresolved threads' icon
+/// and a count of two figures (`ItemBadges`, not wide).
+const double githubBadgesRoom = 6 + 14 + 8 + 13 + 8 + 13 + 3 + 14.0;
+
+/// What an issue's chip adds once loaded: only the gap to its (empty)
+/// badges.
+const githubIssueBadgesRoom = 6.0;
+
 /// Measured: the header's row without its title and model takes about this
 /// (oh-my-pi's name, "in background"), with what it has always spent on gaps.
 const headerRow = 455.0;
@@ -432,7 +462,7 @@ const headerGaps = 82.0;
 /// points that frees of the row's [headerRow] (the model's aren't in it),
 /// what the row takes past [headerRow] (`more`: the Pull request tab, the
 /// unsent comments' count, a hidden side chat's chip, the Files button, the
-/// Jira key),
+/// Jira key, the GitHub chip),
 /// whether nothing is near folding, so the row has the bar's gaps, and
 /// what those add (`gaps`).
 typedef HeaderFolds = ({
@@ -455,7 +485,8 @@ typedef HeaderFolds = ({
 /// Pull request tab; [panel]: the details panel can show; [files]: the
 /// Files button shows; [model]: the header names a model (40 points at
 /// least, and its gap); [side]: a hidden side chat's chip shows; [jira]:
-/// what the chat's Jira key takes, its gap with it.
+/// what the chat's Jira key takes, its gap with it; [github]: what its
+/// GitHub chip takes, its gap with it.
 HeaderFolds headerFolds(
   double width, {
   required bool pull,
@@ -465,6 +496,7 @@ HeaderFolds headerFolds(
   bool comments = false,
   bool side = false,
   double jira = 0,
+  double github = 0,
 }) {
   // The Pull request tab is 88 more, the comments' count 14, the Files
   // button 26 (and the bar's gap after it).
@@ -474,7 +506,8 @@ HeaderFolds headerFolds(
       (comments ? 14.0 : 0.0) +
       (side ? SideChip.width : 0.0) +
       (files ? button : 0.0) +
-      jira;
+      jira +
+      github;
   final gaps = headerGaps + (files ? NushiTheme.iconGap : 0);
   final need = headerRow + more + 80 + (model ? 50 : 0);
   var saved = 0.0;

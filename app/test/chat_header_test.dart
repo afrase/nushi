@@ -89,19 +89,46 @@ void main() {
     tester,
   ) async {
     viewport(tester, const Size(1400, 300));
-    final d = await FakeDaemon([]).connect(tester);
+    // A linked pull request has every badge its chip can show.
+    final fake = FakeDaemon([])
+      ..answer = (i) => i is GetGitHubStatesRequest
+          ? GetGitHubStatesResponse(
+              items: [
+                for (final l in i.items)
+                  GitHubItem(
+                    id: l.id,
+                    pull: l.pull,
+                    state: 'open',
+                    checks: l.pull ? 'failure' : '',
+                    review: l.pull ? 'changes_requested' : '',
+                    unresolved: l.pull ? 12 : 0,
+                  ),
+              ],
+            )
+          : null;
+    final d = await fake.connect(tester);
     const model = 'claude-opus-5-5[1m]';
+    final issue = GitHubLink(id: 'I_1', repo: 'o/r', number: 4321);
+    final pullItem = GitHubLink(
+      id: 'PR_1',
+      repo: 'o/r',
+      number: 12345,
+      pull: true,
+    );
     for (final pull in [false, true]) {
       for (final panel in [false, true]) {
-        for (final (agent, failed, background, jira) in [
-          ('claude', false, 0, ''),
-          ('omp', true, 0, ''),
-          ('omp', false, 2, ''), // "in background"
-          ('claude', false, 0, 'PLATFORM-12345'),
+        for (final (agent, failed, background, jira, github) in [
+          ('claude', false, 0, '', null),
+          ('omp', true, 0, '', null),
+          ('omp', false, 2, '', null), // "in background"
+          ('claude', false, 0, 'PLATFORM-12345', null),
+          // The chat's issue, or its pull request with its badges.
+          ('claude', false, 0, '', pull ? pullItem : issue),
         ]) {
           final chat = ChatState('c', '/Users/me/repo')
             ..agent = agent
             ..jiraKey = jira
+            ..github = github
             ..background = background
             ..title = 'Fix the login redirect after the session expires'
             ..reopenFailed =
@@ -115,9 +142,14 @@ void main() {
                 values: [ConfigValue(value: model, name: model)],
               ),
             ];
-          // A Jira key never folds: everything else folded, a long one
-          // fits from about 380.
-          final least = jira.isEmpty ? 320.0 : 400.0;
+          // A Jira key and a GitHub chip never fold: everything else
+          // folded, a long key fits from about 380, an issue's chip from
+          // 350, a pull request's with its badges from 430.
+          final least = switch ((jira, github)) {
+            (_, final GitHubLink l) => l.pull ? 430.0 : 350.0,
+            ('', _) => 320.0,
+            _ => 400.0,
+          };
           for (var width = least; width <= 1200; width += 10) {
             await tester.pumpWidget(
               themed(
@@ -137,7 +169,11 @@ void main() {
                 ),
               ),
             );
-            final why = '$width wide, pull $pull, panel $panel, jira $jira';
+            // The chip's states land.
+            if (github != null) await tester.pump();
+            final why =
+                '$width wide, pull $pull, panel $panel, jira $jira, '
+                'github ${github?.number}';
             expect(tester.takeException(), isNull, reason: why);
             final menu = tester.getRect(find.byTooltip('Chat menu'));
             expect(menu.right, width - NushiTheme.gutter, reason: why);
@@ -147,6 +183,62 @@ void main() {
     }
     d.dispose();
   });
+
+  // A chat on a pull request, its chip's badges loaded, in the chat areas
+  // a laptop leaves (the sidebar and details open) and a wide window.
+  for (final width in [460.0, 700.0, 1400.0]) {
+    testWidgets('a pull request’s chip fits the header, $width wide', (
+      tester,
+    ) async {
+      viewport(tester, Size(width, 100));
+      final fake = FakeDaemon([])
+        ..answer = (i) => i is GetGitHubStatesRequest
+            ? GetGitHubStatesResponse(
+                items: [
+                  GitHubItem(
+                    id: 'PR_1',
+                    pull: true,
+                    state: 'open',
+                    checks: 'failure',
+                    review: 'changes_requested',
+                    unresolved: 12,
+                  ),
+                ],
+              )
+            : null;
+      final d = await fake.connect(tester);
+      final chat = ChatState('c', '/Users/me/repo')
+        ..agent = 'claude'
+        ..title = 'Fix the login redirect after the session expires'
+        ..github = GitHubLink(
+          id: 'PR_1',
+          repo: 'o/r',
+          number: 12345,
+          pull: true,
+        )
+        ..pull = GitHubLink(number: 12345, pull: true);
+      await tester.pumpWidget(
+        themed(
+          ChatHeader(
+            chat,
+            d,
+            tab: ChatTab.chat,
+            onTab: (_) {},
+            panel: true,
+            onPanel: () {},
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(find.byIcon(Icons.forum_outlined), findsOne);
+      expectTextInside(tester, width);
+      final menu = tester.getRect(find.byTooltip('Chat menu'));
+      expect(menu.right, width - NushiTheme.gutter);
+      await render(tester, find.byType(ChatHeader), 'header_pull_$width');
+      d.dispose();
+    });
+  }
 
   testWidgets('at 460 the tabs are a menu, at 330 the terminal is in ⋯; '
       'wide, they are buttons', (tester) async {
