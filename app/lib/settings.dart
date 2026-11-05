@@ -253,7 +253,8 @@ final Pref<bool> checkSpelling = _plain('checkSpelling', true);
 
 /// Whether a file's source in the preview wraps its long lines (on at
 /// first); off, they run on and the view scrolls sideways. One for every
-/// preview, Mac and phone.
+/// preview. The phone's button flips it too, in its own memory: a browser
+/// has no `app.json`, so there it lasts until the page reloads.
 final Pref<bool> wrapLines = _plain('wrap', true);
 
 /// The newer release whose toast was dismissed ("0.1.17"): it shows again

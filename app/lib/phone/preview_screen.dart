@@ -13,9 +13,8 @@ import 'package:nushi/theme/theme.dart';
 
 /// A file the agent wrote, full screen on the phone, from its tool row's
 /// Preview: Back, Live, wrapping the lines or not while it shows a source
-/// (the Mac's
-/// preference, [wrapLines]; no key), and Preview or Source for a file
-/// that renders.
+/// ([wrapLines], kept only until the page reloads; no key), and Preview or
+/// Source for a file that renders.
 /// A page (HTML, SVG) shows in a sandboxed frame ([PageFrame]) without the
 /// files beside it, a Mermaid diagram in one too ([DiagramFrame]); a PDF
 /// only on the Mac. Read-only.

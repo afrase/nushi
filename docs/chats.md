@@ -194,7 +194,7 @@ A file a chat's agent (or one of its subagents) wrote previews beside the chat, 
 
 Markdown, HTML, SVG and CSV have Preview and Source.
 
-**Wrapping.** A source's long lines wrap at first. The wrap button in the pane's title row (left of Preview and Source; in its ⋯ when the pane is narrow), ⌥Z once you've clicked in the source, View › Wrap Lines or the palette turn it off: long lines run on and the view scrolls sideways (with Shift and the wheel, or the trackpad), the line numbers staying put. It's one choice for every preview, remembered, and the phone's preview has the same button. Rendered Markdown and pages, Changes and the code in messages always wrap.
+**Wrapping.** A source's long lines wrap at first. The wrap button in the pane's title row (left of Preview and Source; in its ⋯ when the pane is narrow), ⌥Z once you've clicked in the source, View › Wrap Lines or the palette turn it off: long lines run on and the view scrolls sideways (with Shift and the wheel, or the trackpad), the line numbers staying put. It's one choice for every preview, remembered. The phone's preview has the same button; its choice lasts until the page reloads. Rendered Markdown and pages, Changes and the code in messages always wrap.
 
 **Artifacts** are the files made to be looked at: everything but code and text, which Changes shows. Open one from:
 
