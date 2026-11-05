@@ -1,9 +1,11 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -102,6 +104,30 @@ void main() {
     await _press(tester, LogicalKeyboardKey.digit3);
     expect(d.selectedId, 'c');
     expect(d.place, const ChatPlace());
+    d.dispose();
+  }, variant: macOS);
+
+  // Under None, the one group is headed "Chats" only below Pinned or a
+  // section; without its header it can't be collapsed, so a collapse kept
+  // from before leaves its chats in the order the keys go through.
+  testWidgets('None’s group, collapsed, then without its header', (
+    tester,
+  ) async {
+    final d = await _app(tester);
+    sidebarGroupBy.value = GroupBy.none;
+    d.chats['c']!.pin = 1;
+    d.listChanged();
+    await tester.pumpAndSettle();
+    expect(find.text('Chats'), findsOneWidget);
+    sidebarCollapsed.toggle('none');
+    await tester.pumpAndSettle();
+    expect(chatOrder(d).map((c) => c.id), ['c']);
+    d.chats['c']!.pin = 0;
+    d.listChanged();
+    await tester.pumpAndSettle();
+    expect(find.text('Chats'), findsNothing);
+    expect(find.text('Release notes'), findsOneWidget);
+    expect(chatOrder(d).map((c) => c.id), ['b', 'a', 'c']);
     d.dispose();
   }, variant: macOS);
 }

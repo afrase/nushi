@@ -13,8 +13,8 @@ import 'package:nushi/sidebar_view.dart';
 
 /// The chats as the sidebar shows them, top to bottom, Pinned first, then
 /// the sections and the groups, the archived (in their collapsed group)
-/// and those of collapsed sections and groups left out but the selected
-/// one: what ⌘1–⌘9, ⌘[ and ⌘] go through.
+/// and those of collapsed sections and headed groups left out but the
+/// selected one: what ⌘1–⌘9, ⌘[ and ⌘] go through.
 List<ChatState> chatOrder(Daemon daemon) {
   final view = arrangeSidebar(daemon);
   final selected = daemon.selectedId;
@@ -24,7 +24,10 @@ List<ChatState> chatOrder(Daemon daemon) {
       ...section.collapsed ? chats.where((c) => c.id == selected) : chats,
     for (final MapEntry(key: folder, value: chats) in view.projects.entries)
       ...shownChats(folder, chats, selected),
-    for (final g in view.groups) ...shownChats(g.key, g.chats, selected),
+    // None's one group has no header but under Pinned or a section, and
+    // a group without one can't be collapsed (GroupedChats).
+    for (final g in view.groups)
+      ...g.label.isEmpty ? g.chats : shownChats(g.key, g.chats, selected),
   ];
 }
 
