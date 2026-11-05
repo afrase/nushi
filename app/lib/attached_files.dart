@@ -12,7 +12,6 @@ import 'package:nushi/images.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/widgets.dart';
-import 'package:pasteboard/pasteboard.dart';
 
 /// The first daemon that takes a file outside the chat's folder by its
 /// absolute path, and a device's files whole (ADR 0091).
@@ -92,10 +91,12 @@ Future<List<XFile>> Function() pickFiles = () =>
 const _clipboard = MethodChannel('nushi/clipboard');
 
 /// The clipboard's files (Finder's copy: file URLs only, not a copied web
-/// link) and its image; tests put fakes in their places.
+/// link) and its picture as PNG (none when it holds text too: cells copied
+/// from Numbers carry a PDF of themselves); tests put fakes in their places.
 Future<List<String>> Function() clipboardFiles = () async =>
     await _clipboard.invokeListMethod<String>('files') ?? [];
-Future<Uint8List?> Function() clipboardImage = () => Pasteboard.image;
+Future<Uint8List?> Function() clipboardImage = () =>
+    _clipboard.invokeMethod<Uint8List>('image');
 
 /// Attaches what ⌘V pastes beside its text: the clipboard's files, or else
 /// its image when the agent takes images. Returns what wasn't attached,

@@ -22,6 +22,7 @@ class AppDelegate: FlutterAppDelegate {
         .setMethodCallHandler { call, result in
           switch call.method {
           case "files": result(Clipboard.files())
+          case "image": result(Clipboard.image().map(FlutterStandardTypedData.init(bytes:)))
           default: result(FlutterMethodNotImplemented)
           }
         }

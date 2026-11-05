@@ -32,6 +32,31 @@ expect(Clipboard.files(board), ["/etc/hosts"], "a web link and a file")
 holding(["/etc/hosts" as NSString])
 expect(Clipboard.files(board), [], "text")
 
+// A picture: as PNG. A 2 by 2 bitmap, as TIFF (a screenshot's or Copy
+// Image's), and a PDF (Numbers' cells carry one beside their text).
+let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 2, pixelsHigh: 2, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+let tiff = bitmap.tiffRepresentation!
+let pdf = NSView(frame: NSRect(x: 0, y: 0, width: 20, height: 10)).dataWithPDF(inside: NSRect(x: 0, y: 0, width: 20, height: 10))
+
+/// [board] holding [types] with their data only.
+func holdingData(_ types: [(NSPasteboard.PasteboardType, Data)]) {
+  board.clearContents()
+  board.declareTypes(types.map(\.0), owner: nil)
+  for (type, data) in types { board.setData(data, forType: type) }
+}
+
+let text = Data("A1\tB1".utf8)
+holdingData([(.string, text)])
+expect(Clipboard.image(board) == nil, true, "text, no picture")
+holdingData([(.tiff, tiff)])
+expect(Clipboard.image(board).flatMap(NSBitmapImageRep.init(data:))?.pixelsWide, 2, "a picture")
+holdingData([(.pdf, pdf)])
+expect(Clipboard.image(board) != nil, true, "a PDF alone")
+holdingData([(.string, text), (.rtf, text), (.pdf, pdf)])
+expect(Clipboard.image(board) == nil, true, "cells: text with a PDF of it")
+holdingData([(.string, text), (.tiff, tiff)])
+expect(Clipboard.image(board) == nil, true, "text with a picture")
+
 board.releaseGlobally()
 if failed > 0 {
   print("\(failed) failed")

@@ -19,7 +19,6 @@ dependencies:
     sdk: flutter
   markdown_view:
     path: ../packages/markdown
-  pasteboard: ^0.5.0
   protobuf: ^6.1.0
   qr: ^4.0.0
   re_highlight: ^0.0.3
