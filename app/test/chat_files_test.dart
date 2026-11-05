@@ -40,6 +40,15 @@ Item _call(
   parent: parent,
 );
 
+Item _show(String id, String path) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  toolKind: 'other',
+  title: 'mcp__nushi__show',
+  status: 'completed',
+  input: jsonEncode({'path': path}),
+);
+
 final _items = <Item>[
   Item(
     id: 'u',
@@ -178,19 +187,11 @@ void main() {
 
   test('a file written, then shown by its absolute path, is one artifact; '
       'deleted by it, none', () {
-    Item show(String id, String path) => Item(
-      id: id,
-      kind: ItemKind.ITEM_KIND_TOOL_CALL,
-      toolKind: 'other',
-      title: 'mcp__nushi__show',
-      status: 'completed',
-      input: jsonEncode({'path': path}),
-    );
     final items = [
       _call('w', 'page.html'),
       _call('o', 'docs/other.md'),
-      show('s', '/Users/me/nushi/page.html'),
-      show('s2', '/Users/me/elsewhere/out.html'),
+      _show('s', '/Users/me/nushi/page.html'),
+      _show('s2', '/Users/me/elsewhere/out.html'),
     ];
     expect(chatFiles(items, folder: '/Users/me/nushi'), [
       '/Users/me/elsewhere/out.html',
@@ -206,10 +207,26 @@ void main() {
     );
     // Moved, the chat's files are named again against its new folder.
     final chat = ChatState('c', '/Users/me/old')
-      ..load(GetChatResponse(items: [show('s', '/Users/me/new/a.html')]));
+      ..load(GetChatResponse(items: [_show('s', '/Users/me/new/a.html')]));
     expect(chatFilesOf(chat), ['/Users/me/new/a.html']);
     chat.folder = '/Users/me/new';
     expect(chatFilesOf(chat), ['a.html']);
+  });
+
+  test('a file the agent only showed is an artifact, not one it wrote', () {
+    final chat = ChatState('c', '/Users/me/nushi')
+      ..load(
+        GetChatResponse(
+          items: [
+            _call('w', 'page.html'),
+            _call('n', 'main.go'),
+            _show('s', '/Users/me/nushi/docs/readme.html'),
+            _show('s2', 'notes.md'),
+          ],
+        ),
+      );
+    expect(chatFilesOf(chat), ['notes.md', 'docs/readme.html', 'page.html']);
+    expect(chatWrote(chat), {'page.html', 'main.go'});
   });
 
   test("a chat's files are worked out again when its items change, not as "

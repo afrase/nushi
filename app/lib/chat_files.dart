@@ -14,8 +14,9 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
-/// The artifacts ([isArtifact]) [items] wrote or edited (a subagent's
-/// calls too), or with [any] every file, each once, the one changed last
+/// The artifacts ([isArtifact]) [items] wrote, edited or showed (a
+/// subagent's calls too), or with [any] every file they wrote or edited
+/// (one only shown wasn't written), each once, the one changed last
 /// first; a file deleted since is left out. Each by one name, however the
 /// agent named it ([relativeIn] the chat's [folder]): relative to it when
 /// inside it, as the daemon names a written file.
@@ -31,7 +32,7 @@ List<String> chatFiles(
       continue;
     }
     if (isShow(it)) {
-      if (previewPath(it) case final p?) {
+      if (previewPath(it) case final p? when !any) {
         files
           ..remove(name(p))
           ..add(name(p));
