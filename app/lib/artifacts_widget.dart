@@ -5,17 +5,20 @@ import 'package:flutter/rendering.dart' show OverflowBoxFit;
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
+import 'package:nushi/clock.dart';
+import 'package:nushi/commits.dart' show ago;
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// The panel's Artifacts widget: the files the chat wrote as [chatArtifacts]
-/// sorts them, the pinned and the recent, then "Older (n)" folding the
-/// rest; each its name and, muted, its folder and when it changed, with a
-/// pin on hover (always on a pinned one); a click opens its preview, the
-/// open one's row marked. Collapsed, it counts the pinned and recent. Null
-/// (no widget) when there are none.
+/// The panel's Artifacts widget, as Claude Code's rail lists what a
+/// session made: the files the chat wrote in [chatArtifacts]' order (the
+/// pinned, the recent, the older), five of them and "Show more" for the
+/// rest; each its icon, its name and, on the right, its kind, with a pin on
+/// hover (always on a pinned one) and its folder and when it changed in its
+/// tooltip. A click opens its preview, the open one's row marked.
+/// Collapsed, it counts them. Null (no widget) when there are none.
 PanelWidget? artifactsWidget(ChatState chat) {
   if (chatFilesOf(chat).isEmpty) return null;
   return PanelWidget(
@@ -26,8 +29,8 @@ PanelWidget? artifactsWidget(ChatState chat) {
         final theme = NushiTheme.of(context);
         final a = chatArtifacts(chat);
         return Text(
-          '${a.pinned.length + a.recent.length}',
-          style: theme.ui(theme.t.textMuted, size: 12),
+          '${a.pinned.length + a.recent.length + a.older.length}',
+          style: theme.ui(theme.t.textMuted),
         );
       },
     ),
@@ -35,8 +38,11 @@ PanelWidget? artifactsWidget(ChatState chat) {
   );
 }
 
-/// The widget's rows: the pinned and the recent, then "Older (n)", which
-/// opens the rest in place.
+/// How many rows show before "Show more", as Claude's rail has it.
+const shownFiles = 5;
+
+/// The widget's rows: the first [shownFiles], then "Show more", which
+/// opens the rest in place (and "Show less" folds them again).
 class FileRows extends StatefulWidget {
   const new(this.chat, {super.key});
 
@@ -50,7 +56,7 @@ class FileRows extends StatefulWidget {
 const _inset = 6.0;
 
 class _FileRowsState extends State<FileRows> {
-  bool _older = false;
+  bool _more = false;
 
   late final Timer _tick;
 
@@ -110,40 +116,37 @@ class _FileRowsState extends State<FileRows> {
   Widget _rows(NushiTheme theme, Artifacts a) {
     final t = theme.t;
     final open = widget.chat.preview.value;
+    final all = [...a.pinned, ...a.recent, ...a.older];
+    final more = all.length > shownFiles;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final f in [...a.pinned, ...a.recent])
+        for (final f in more && !_more ? all.take(shownFiles) : all)
           _FileRow(widget.chat, f, open: f == open, changed: _changedOf(f)),
-        if (a.older.isNotEmpty) ...[
-          Tap(
-            onTap: () => setState(() => _older = !_older),
-            padding: const EdgeInsets.symmetric(
-              horizontal: _inset,
-              vertical: 3,
-            ),
-            child: Row(
-              spacing: 4,
-              children: [
-                Text(
-                  'Older (${a.older.length})',
-                  style: theme.ui(t.textMuted, size: 12),
-                ),
-                Chevron(open: _older),
-              ],
+        if (more)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Tap(
+              onTap: () => setState(() => _more = !_more),
+              tint: false,
+              padding: const EdgeInsets.symmetric(
+                horizontal: _inset,
+                vertical: PanelType.rowGap,
+              ),
+              child: Text(
+                _more ? 'Show less' : 'Show more',
+                style: theme.ui(t.textMuted),
+              ),
             ),
           ),
-          if (_older)
-            for (final f in a.older)
-              _FileRow(widget.chat, f, open: f == open, changed: _changedOf(f)),
-        ],
       ],
     );
   }
 }
 
-/// A file's row: its name and, muted, its folder and when it [changed];
-/// its pin at the right end on hover, or always when pinned.
+/// A file's row: its kind's icon (its pin there on hover, or always when
+/// pinned), its name, its kind on the right; its folder and when it
+/// [changed] in its tooltip.
 class _FileRow extends StatelessWidget {
   const new(this.chat, this.file, {required this.open, required this.changed});
 
@@ -157,37 +160,43 @@ class _FileRow extends StatelessWidget {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final f = file;
-    final detail = fileDetail(f, changed);
+    final kind = previewKind(f);
+    final when = changed;
     return Hover(
       builder: (context, {required hover}) => Tap(
         onTap: () => chat.openPreview(f),
         selected: open,
-        tooltip: f,
-        padding: const EdgeInsets.fromLTRB(_inset, 3, 0, 3),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    baseName(f),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.ui(t.text, size: 12),
-                  ),
-                  if (detail.isNotEmpty)
-                    Text(
-                      detail,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.ui(t.textMuted, size: 11.5),
-                    ),
-                ],
+        tooltip: [
+          f,
+          if (when != null) ago(clock().difference(when), when),
+        ].join(' · '),
+        padding: const EdgeInsets.symmetric(horizontal: _inset, vertical: 1),
+        child: SizedBox(
+          height: 22,
+          child: Row(
+            spacing: 8,
+            children: [
+              pinMark(
+                chat,
+                f,
+                hover: hover,
+                icon: Icon(
+                  kind?.icon ?? Icons.description_outlined,
+                  size: 15,
+                  color: t.textMuted,
+                ),
               ),
-            ),
-            pinMark(chat, f, hover: hover),
-          ],
+              Expanded(
+                child: Text(
+                  baseName(f),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.ui(t.text),
+                ),
+              ),
+              if (kind != null) Text(kind.label, style: theme.ui(t.textMuted)),
+            ],
+          ),
         ),
       ),
     );

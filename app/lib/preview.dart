@@ -51,6 +51,18 @@ enum PreviewKind {
   /// (Changes shows what the agent did to them).
   bool get artifact => this != code;
 
+  /// What it is, in a word: the Artifacts widget's rows say it.
+  String get label => switch (this) {
+    markdown => 'Markdown',
+    image => 'Image',
+    html => 'HTML',
+    svg => 'SVG',
+    pdf => 'PDF',
+    csv => 'CSV',
+    mermaid => 'Diagram',
+    code => 'Code',
+  };
+
   /// Its icon, in the preview's header and the Files pane's rows.
   IconData get icon => switch (this) {
     image => Icons.image_outlined,

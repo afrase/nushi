@@ -125,18 +125,31 @@ Finder _inRows(Finder f) => find.descendant(of: _rows, matching: f);
 /// The names the widget lists, top to bottom.
 List<String> _names(WidgetTester tester) => [
   for (final e in _inRows(find.byType(Text)).evaluate())
-    if ((e.widget as Text).data case final s?
-        when !s.contains('ago') && !s.startsWith('Older'))
-      s,
+    if ((e.widget as Text).data case final s? when s.contains('.')) s,
 ];
+
+/// The tooltip of [name]'s row.
+String _tip(WidgetTester tester, String name) => tester
+    .widget<Tap>(
+      find
+          .ancestor(of: _inRows(find.text(name)), matching: find.byType(Tap))
+          .first,
+    )
+    .tooltip;
+
+Future<void> _more(WidgetTester tester) async {
+  await tester.tap(_inRows(find.text('Show more')));
+  await tester.pumpAndSettle();
+}
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
 void main() {
   setUpAll(loadFonts);
 
-  testWidgets('the Artifacts widget lists files, newest first; a click opens '
-      'the preview and marks its row; a new file joins it', (tester) async {
+  testWidgets('the Artifacts widget lists files, newest first, each its kind '
+      'on the right; a click opens the preview and marks its row; a new '
+      'file joins it', (tester) async {
     final (d, fake) = await _app(tester, _three);
     final panel = find.byType(DetailsPanel);
     expect(
@@ -144,8 +157,11 @@ void main() {
       findsOneWidget,
     );
     expect(_names(tester), ['notes.md', 'chart.png', 'report.md']);
-    expect(_inRows(find.text('docs/img · 15m ago')), findsOneWidget);
-    expect(_inRows(find.text('2m ago')), findsOneWidget); // at the top
+    expect(_inRows(find.text('Markdown')), findsNWidgets(2));
+    expect(_inRows(find.text('Image')), findsOneWidget);
+    // Its folder and when it changed, in its tooltip.
+    expect(_tip(tester, 'chart.png'), 'docs/img/chart.png · 15m ago');
+    expect(_inRows(find.text('Show more')), findsNothing);
     await tester.tap(_inRows(find.text('chart.png')));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.preview.value, 'docs/img/chart.png');
@@ -189,13 +205,17 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets("the last turn's files are recent, the others fold under "
-      '"Older (n)", newest first', (tester) async {
+  testWidgets("five, the last turn's first, then Show more for the rest, "
+      'newest first; Show less folds them again', (tester) async {
     final (d, _) = await _app(tester, _turns);
-    expect(_names(tester), ['chart.png', 'report.md']);
-    expect(_inRows(find.text('Older (6)')), findsOneWidget);
-    await tester.tap(_inRows(find.text('Older (6)')));
-    await tester.pumpAndSettle();
+    expect(_names(tester), [
+      'chart.png',
+      'report.md',
+      'notes.md',
+      'map.svg',
+      'list.html',
+    ]);
+    await _more(tester);
     expect(_names(tester), [
       'chart.png',
       'report.md',
@@ -206,15 +226,17 @@ void main() {
       'flows.md',
       'brief.md',
     ]);
+    await tester.tap(_inRows(find.text('Show less')));
+    await tester.pumpAndSettle();
+    expect(_names(tester), hasLength(5));
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('pinned first, in the order pinned, with a pin on hover; kept '
-      'in app.json', (tester) async {
+  testWidgets("pinned first, in the order pinned, the pin in the icon's "
+      'place on hover; kept in app.json', (tester) async {
     Directory(dataDir).createSync(recursive: true); // the tests' own
     final (d, _) = await _app(tester, _turns);
-    await tester.tap(_inRows(find.text('Older (6)')));
-    await tester.pumpAndSettle();
+    await _more(tester);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     addTearDown(mouse.removePointer);
@@ -235,7 +257,6 @@ void main() {
       'report.md',
     ]);
     expect(_inRows(find.byIcon(Icons.push_pin)), findsNWidgets(2));
-    expect(_inRows(find.text('Older (4)')), findsOneWidget);
     expect(pinnedFiles.value, {
       'c': ['mock/home.html', 'docs/brief.md'],
     });
@@ -244,7 +265,6 @@ void main() {
     await tester.tap(_inRows(find.byIcon(Icons.push_pin)).first);
     await tester.pumpAndSettle();
     expect(_names(tester).first, 'brief.md');
-    expect(_inRows(find.text('Older (5)')), findsOneWidget);
     d.dispose();
   }, variant: _mac);
 
@@ -261,61 +281,55 @@ void main() {
     (d, _) = await _app(tester, _turns);
     pinnedFiles.value = savedPins(saved);
     await tester.pumpAndSettle();
-    expect(_names(tester), ['flows.md', 'chart.png', 'report.md']);
+    expect(_names(tester).take(3), ['flows.md', 'chart.png', 'report.md']);
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('a file opened stays recent for an hour', (tester) async {
+  testWidgets('a file opened stays among the first for an hour', (
+    tester,
+  ) async {
     final start = DateTime(2026, 10, 28, 9);
     clock = () => start;
     final (d, _) = await _app(tester, _turns);
     final c = d.chats['c']!;
-    await tester.tap(_inRows(find.text('Older (6)')));
-    await tester.pumpAndSettle();
+    await _more(tester);
     await tester.tap(_inRows(find.text('flows.md')));
     await tester.pumpAndSettle();
-    await tester.tap(_inRows(find.text('Older (5)'))); // fold it again
+    await tester.tap(_inRows(find.text('Show less')));
     await tester.pumpAndSettle();
-    expect(_names(tester), ['chart.png', 'report.md', 'flows.md']);
+    expect(_names(tester).take(3), ['chart.png', 'report.md', 'flows.md']);
     // Closed, it stays recent for the hour.
     c.preview.value = null;
     clock = () => start.add(const Duration(minutes: 59));
     await tester.pump(const Duration(minutes: 1)); // the widget's tick
-    expect(_names(tester), ['chart.png', 'report.md', 'flows.md']);
+    expect(_names(tester).take(3), ['chart.png', 'report.md', 'flows.md']);
     clock = () => start.add(const Duration(minutes: 61));
     await tester.pump(const Duration(minutes: 1));
-    expect(_names(tester), ['chart.png', 'report.md']);
-    expect(_inRows(find.text('Older (6)')), findsOneWidget);
+    expect(_names(tester), isNot(contains('flows.md')));
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('nothing pinned or recent: the 3 newest', (tester) async {
-    final (d, _) = await _app(tester, [
-      ..._turns.take(7), // the first turn
-      _say('u2', 'Thanks, that will do for now.'),
-      Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Glad to.'),
-    ]);
-    expect(_names(tester), ['notes.md', 'map.svg', 'list.html']);
-    expect(_inRows(find.text('Older (3)')), findsOneWidget);
-    d.dispose();
-  }, variant: _mac);
-
-  testWidgets('the widget with a pin, two recent and Older (5), dark', (
-    tester,
-  ) async {
-    final (d, _) = await _app(tester, _turns);
-    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
-    togglePin(d.chats['c']!, 'mock/home.html');
-    d.chats['c']!.openPreview('docs/report.md');
-    await tester.pumpAndSettle();
-    expect(_inRows(find.text('Older (5)')), findsOneWidget);
-    // The widget on its own is its golden; the window a render.
-    await expectLater(
-      find.ancestor(of: _rows, matching: find.byType(PanelWidget)),
-      matchesGoldenFile('goldens/artifacts_card_dark.png'),
-    );
-    await render(tester, find.byType(NushiApp), 'artifacts_widget_dark');
-    d.dispose();
-  }, variant: _mac);
+  for (final (name, mode) in [
+    ('dark', Brightness.dark),
+    ('light', Brightness.light),
+  ]) {
+    testWidgets('golden: the widget with a pin and Show more, $name', (
+      tester,
+    ) async {
+      final (d, _) = await _app(tester, _turns);
+      tester.platformDispatcher.platformBrightnessTestValue = mode;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      togglePin(d.chats['c']!, 'mock/home.html');
+      d.chats['c']!.openPreview('docs/report.md');
+      await tester.pumpAndSettle();
+      expect(_inRows(find.text('Show more')), findsOneWidget);
+      // The widget on its own is its golden; the window a render.
+      await expectLater(
+        find.ancestor(of: _rows, matching: find.byType(PanelWidget)),
+        matchesGoldenFile('goldens/artifacts_widget_$name.png'),
+      );
+      await render(tester, find.byType(NushiApp), 'artifacts_widget_$name');
+      d.dispose();
+    }, variant: _mac);
+  }
 }

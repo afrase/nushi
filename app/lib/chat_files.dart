@@ -168,17 +168,22 @@ void togglePin(ChatState chat, String file) {
   };
 }
 
-/// A row's pin: filled and always shown when pinned, else an outline shown
-/// only while [hover] (on the Mac, over its row).
-Widget pinMark(ChatState chat, String file, {required bool hover}) {
+/// A row's pin, in its icon's place ([icon], 15 square): filled and
+/// always shown when pinned, else an outline shown only while [hover] (on
+/// the Mac, over its row).
+Widget pinMark(
+  ChatState chat,
+  String file, {
+  required bool hover,
+  required Widget icon,
+}) {
   final on = pinned(chat, file);
-  // The same room shown or not, so a row's text doesn't move.
-  if (!on && !hover) return const SizedBox(width: 19);
+  if (!on && !hover) return icon;
   return Builder(
     builder: (context) => IconTap(
       on ? Icons.push_pin : Icons.push_pin_outlined,
       size: 13,
-      padding: 3,
+      padding: 1,
       color: on ? NushiTheme.of(context).t.text : null,
       tooltip: on ? 'Unpin' : 'Pin: always first',
       onTap: () => togglePin(chat, file),
