@@ -7,9 +7,9 @@ import WebKit
 /// mermaid.html with its pinned mermaid.min.js, nothing else loaded (any
 /// other navigation is refused). Each is drawn at the width asked, then
 /// snapshot as a PNG at the screen's scale. One that takes longer than
-/// jobTimeout fails, and its web view goes (its process with it): a fresh
+/// jobTimeout fails, its web view goes and its process is killed: a fresh
 /// one draws the rest, so someone else's slow diagram (GitHub's, Jira's)
-/// can't hold every later one.
+/// can't hold every later one, nor keep a core busy.
 final class Diagrams: NSObject, WKNavigationDelegate {
   /// The page, among the app's Flutter assets.
   static let page = Bundle.main.privateFrameworksURL!
@@ -73,7 +73,7 @@ final class Diagrams: NSObject, WKNavigationDelegate {
     drawing = job
     DispatchQueue.main.asyncAfter(deadline: .now() + Diagrams.jobTimeout) { [weak self] in
       guard let self, self.current == id, let job = self.drawing else { return }
-      self.letGo()
+      self.letGo(killing: true)
       job.answer(["error": "The diagram took too long to draw"])
       self.next()
     }
@@ -161,9 +161,18 @@ final class Diagrams: NSObject, WKNavigationDelegate {
     fail(nil)
   }
 
-  /// Drops the web view, and its process with it (a diagram still
-  /// drawing there stops), and any answer still to come from it.
-  private func letGo() {
+  /// Drops the web view and any answer still to come from it. Released, a
+  /// web view's process still runs a diagram drawing there to its end
+  /// (mermaid's own limits end even the slowest found, after about half a
+  /// minute), so [killing] one stuck past jobTimeout ends its process:
+  /// its pid is WebKit's `_webProcessIdentifier`, and where a WebKit lacks
+  /// that, the process is left to finish.
+  private func letGo(killing: Bool = false) {
+    let selector = NSSelectorFromString("_webProcessIdentifier")
+    if killing, let web, web.responds(to: selector),
+      let pid = (web.value(forKey: "_webProcessIdentifier") as? NSNumber)?.int32Value, pid > 0 {
+      kill(pid, SIGKILL)
+    }
     current += 1
     drawing = nil
     web?.navigationDelegate = nil
