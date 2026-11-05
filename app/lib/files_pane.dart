@@ -265,10 +265,9 @@ class _FilesPaneState extends State<FilesPane> {
       }
     } else {
       _rows = _tree.rows();
-      // A file shown from elsewhere (the preview's name), once its row's in.
-      if (_tree.revealing case final path?
-          when _rows.any((r) => r.path == path)) {
-        _tree.revealing = null;
+      // A file shown from elsewhere (the preview's name), once its row's
+      // in, or the folder it'd be in.
+      if (_tree.settleReveal(_rows) case final path? when path.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(path));
       }
     }

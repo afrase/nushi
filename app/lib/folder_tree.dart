@@ -93,6 +93,34 @@ class FolderTree extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Takes [revealing] once it can, [rows] being the tree's as it shows:
+  /// the file's path once its row is in. Its folder listed without it (a
+  /// file git ignores while they're hidden, one past the listing's end, one
+  /// gone), the deepest folder above it that shows is selected in its place
+  /// ('' for the chat's own, nothing to scroll to). Null while it's being
+  /// listed, or with nothing to reveal.
+  String? settleReveal(List<TreeRow> rows) {
+    final path = revealing;
+    if (path == null) return null;
+    final shown = {
+      for (final r in rows)
+        if (r.entry) r.path,
+    };
+    if (!shown.contains(path)) {
+      var at = '';
+      for (final f in _ancestors(path)) {
+        if (!shown.contains(f)) break;
+        at = f;
+      }
+      if (!_listed.containsKey(at) && !_refused.containsKey(at)) return null;
+      selected = at.isEmpty ? null : at;
+      revealing = null;
+      return at;
+    }
+    revealing = null;
+    return path;
+  }
+
   /// The folders whose entries show: the chat's, and each open one whose
   /// folders above are open too.
   Set<String> get _shown => {

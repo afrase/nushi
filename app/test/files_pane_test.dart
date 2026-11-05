@@ -319,6 +319,48 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a file git ignores, while they’re hidden: the pane opens at '
+      'its folder, and nothing scrolls to it later', (tester) async {
+    final (d, folder) = await _app(tester, open: false);
+    folder.tree['docs']!.add(_file('draft.md', ignored: true));
+    final c = d.chats['c']!..openPreview('docs/draft.md');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(PreviewPane),
+        matching: find.text('draft.md'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_pane, findsOneWidget);
+    expect(_names(tester), isNot(contains('draft.md')));
+    expect(_view(tester, 'docs').selected, isTrue, reason: 'its folder');
+    expect(folderTreeOf(c).revealing, isNull, reason: 'given up');
+    // Shown now, it's listed where it is, and the keys stay put.
+    filesIgnored.value = true;
+    await tester.pumpAndSettle();
+    expect(_names(tester), contains('draft.md'));
+    expect(_view(tester, 'draft.md').selected, isFalse);
+    expect(_view(tester, 'docs').selected, isTrue);
+    // In an ignored folder, nothing above it shows: nothing is selected.
+    filesIgnored.value = false;
+    folder.tree['node_modules/left-pad'] = [_file('index.md', ignored: true)];
+    c
+      ..closePreviewFile('docs/draft.md')
+      ..openPreview('node_modules/left-pad/index.md');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(PreviewPane),
+        matching: find.text('index.md'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(folderTreeOf(c).revealing, isNull);
+    expect(folderTreeOf(c).selected, isNull);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('a file outside the chat’s folder: its name does nothing', (
     tester,
   ) async {
