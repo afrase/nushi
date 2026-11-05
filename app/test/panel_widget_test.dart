@@ -14,24 +14,37 @@ void main() {
   setUpAll(loadFonts);
   _goldens();
 
-  testWidgets('the title row: the open hand, no grip, the summary while '
-      'folded', (tester) async {
+  testWidgets('the title row: the open hand, the grip only under the '
+      'pointer, the summary while folded', (tester) async {
     collapsedWidgets.value = {'Context'};
     await tester.pumpWidget(_widgets(Tokens.dark));
     expect(find.text('57%'), findsOneWidget);
-    expect(find.byType(DragGrip), findsNothing);
+    expect(_grips(tester), everyElement(0.0), reason: 'flat at rest');
 
     final mouse = await _pointer(tester);
-    await mouse.moveTo(tester.getCenter(find.text('Context')));
-    await tester.pump();
+    final title = tester.getRect(find.text('Context'));
+    await mouse.moveTo(title.center);
+    await tester.pumpAndSettle();
     expect(_cursor(), SystemMouseCursors.grab);
-    expect(find.byType(DragGrip), findsNothing); // ADR 0092: no grip
+    expect(_shownGrips(tester), 1, reason: "the pointed widget's alone");
+    final grip = tester.getRect(_grip(tester));
+    expect(grip.right, lessThanOrEqualTo(title.left), reason: 'left of it');
+    expect(
+      title.left,
+      tester.getRect(find.text('Background tasks')).left,
+      reason: "the title doesn't move for it",
+    );
     expect(find.text('57%'), findsOneWidget);
 
-    // The body isn't the handle.
+    // Anywhere over the widget shows it; the body isn't the handle.
     await mouse.moveTo(tester.getCenter(find.text('npm test')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(_cursor(), isNot(SystemMouseCursors.grab));
+    expect(_shownGrips(tester), 1);
+
+    await mouse.moveTo(const Offset(1, 1));
+    await tester.pumpAndSettle();
+    expect(_grips(tester), everyElement(0.0));
   });
 
   testWidgets('a title folds its widget, remembered', (tester) async {
@@ -66,7 +79,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
     }
     expect(_cursor(), SystemMouseCursors.grabbing);
-    expect(find.byType(DragGrip), findsNothing);
+    expect(_shownGrips(tester), greaterThanOrEqualTo(1), reason: 'dragged');
     await mouse.up();
     await tester.pumpAndSettle();
     expect(widgetOrder.value, ['Background tasks', 'Context']);
@@ -180,3 +193,22 @@ void _goldens() {
     expect(note.center.dy, closeTo(title.center.dy, 1)); // one line
   });
 }
+
+/// Each widget's grip's opacity.
+List<double> _grips(WidgetTester tester) => [
+  for (final o in tester.widgetList<AnimatedOpacity>(
+    find.ancestor(
+      of: find.byType(DragGrip),
+      matching: find.byType(AnimatedOpacity),
+    ),
+  ))
+    o.opacity,
+];
+
+int _shownGrips(WidgetTester tester) =>
+    _grips(tester).where((o) => o == 1).length;
+
+/// The grip that shows.
+Finder _grip(WidgetTester tester) => find.byWidgetPredicate(
+  (w) => w is AnimatedOpacity && w.opacity == 1 && w.child is DragGrip,
+);

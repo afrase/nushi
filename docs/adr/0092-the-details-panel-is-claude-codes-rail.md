@@ -22,3 +22,5 @@ The owner, with a screenshot of Claude Code's desktop right rail (`claude-right-
 - Hiding where the transcript keeps 556 beside it (876 for the chat): windows 1080 to 1135 wide with the sidebar lost the panel they had.
 - 300 points, to hide later: the Context columns and the merge control cut, and Claude's own is 320.
 - Reading /context's lists in the daemon, as its categories are (ADR 0017): the right place in the end, but it needs an API field; the app has the markdown already.
+
+**Amendment (2026-11-05): the grip under the pointer.** The owner: "When I mouse over the widgets they should show the 6 dots thing." A widget under the pointer, or being dragged, shows the six-dot grip in the side padding left of its title; at rest the rail stays flat. The grip only says the title drags: the title is still the handle, and nothing moves when it shows.

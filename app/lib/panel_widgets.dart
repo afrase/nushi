@@ -63,7 +63,8 @@ class PanelWidgets extends StatelessWidget {
 /// right (a row without a label is a line of its own). With [onTap] the
 /// rows are a button; [action] (a small button) sits on the title's right
 /// while open. The title drags it among the others: the open hand over
-/// it, the closed one while dragged, no grip.
+/// it, the closed one while dragged, and the grip beside it under the
+/// pointer.
 class PanelWidget extends StatelessWidget {
   const new({
     required this.title,
@@ -208,8 +209,11 @@ class PanelWidget extends StatelessWidget {
 /// A widget's look ([PanelWidget]): a hairline over it unless it's the
 /// first ([index] 0), a [title] row that folds it ([onToggle]; a triangle
 /// after the title while it [folds]) and drags it, [trailing] on that
-/// row's right, then [body] while [open].
-class _Section extends StatelessWidget {
+/// row's right, then [body] while [open]. Under the pointer, or while
+/// dragged, the [DragGrip] shows in the side padding left of the title
+/// (ADR 0092's amendment): the rail stays flat at rest, and the grip says
+/// the title drags.
+class _Section extends StatefulWidget {
   const new({
     required this.title,
     required this.open,
@@ -229,48 +233,80 @@ class _Section extends StatelessWidget {
   final int index;
 
   @override
+  State<_Section> createState() => _SectionState();
+}
+
+class _SectionState extends State<_Section> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final dragged = DraggedCard.of(context);
+    final w = widget;
     // On the panel's background, dragged too.
-    return Container(
-      color: t.base,
-      padding: const EdgeInsets.symmetric(horizontal: PanelType.side),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (index > 0 && !dragged)
-            SizedBox(height: 1, child: ColoredBox(color: t.borderSubtle)),
-          ReorderableDragStartListener(
-            index: index,
-            child: Tap(
-              onTap: onToggle,
-              cursor: dragged
-                  ? SystemMouseCursors.grabbing
-                  : SystemMouseCursors.grab,
-              tint: false,
-              padding: const EdgeInsets.only(top: 12, bottom: 6),
-              child: Row(
-                children: [
-                  title,
-                  if (folds) ...[
-                    const SizedBox(width: 2),
-                    _Triangle(open: open),
-                  ],
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: trailing,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Container(
+        color: t.base,
+        padding: const EdgeInsets.symmetric(horizontal: PanelType.side),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (w.index > 0 && !dragged)
+              SizedBox(height: 1, child: ColoredBox(color: t.borderSubtle)),
+            ReorderableDragStartListener(
+              index: w.index,
+              child: Tap(
+                onTap: w.onToggle,
+                cursor: dragged
+                    ? SystemMouseCursors.grabbing
+                    : SystemMouseCursors.grab,
+                tint: false,
+                padding: const EdgeInsets.only(top: 12, bottom: 6),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Row(
+                      children: [
+                        w.title,
+                        if (w.folds) ...[
+                          const SizedBox(width: 2),
+                          _Triangle(open: w.open),
+                        ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: w.trailing,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    // In the side padding, so nothing moves when it shows.
+                    Positioned(
+                      left: -12,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: AnimatedOpacity(
+                          opacity: _hovered || dragged ? 1 : 0,
+                          duration: reduceMotion(context)
+                              ? Duration.zero
+                              : Motion.quick,
+                          child: const DragGrip(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          Disclosure(open: open, child: body),
-          const SizedBox(height: 10),
-        ],
+            Disclosure(open: w.open, child: w.body),
+            const SizedBox(height: 10),
+          ],
+        ),
       ),
     );
   }
