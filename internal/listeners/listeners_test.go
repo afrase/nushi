@@ -2,6 +2,7 @@ package listeners
 
 import (
 	"bufio"
+	"context"
 	"net"
 	"net/netip"
 	"os"
@@ -226,6 +227,57 @@ func TestTakes(t *testing.T) {
 	} {
 		if c.l.Takes(lo4) != c.on4 || c.l.Takes(lo6) != c.on6 {
 			t.Errorf("%+v takes 127.0.0.1: %v, ::1: %v; want %v, %v", c.l, c.l.Takes(lo4), c.l.Takes(lo6), c.on4, c.on6)
+		}
+	}
+}
+
+// TestListenProbeMissesListener keeps the package doc's finding checked:
+// with another process listening where a connection to localhost reaches
+// it, a dial on each family the listener takes connects. Whether Go's
+// net.Listen probe still binds beside it is only logged: a macOS that
+// refuses it some day changes nothing, since dialing first is right
+// either way.
+func TestListenProbeMissesListener(t *testing.T) {
+	cases := []struct{ other, probe string }{
+		{"any4", "127.0.0.1"},
+		{"any4", ""},
+		{"ipv4", ""},
+		{"dual", "127.0.0.1"},
+		{"dual", "::1"},
+		{"any6", "::1"},
+		{"ipv6", ""},
+	}
+	others := make([]string, len(cases))
+	for i, c := range cases {
+		others[i] = c.other
+	}
+	pid, ports := listenElsewhere(t, others...)
+	ls, err := List()
+	testcheck.NoErr(t, err)
+	for i, c := range cases {
+		p := strconv.Itoa(int(ports[i]))
+		l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", net.JoinHostPort(c.probe, p))
+		if err != nil {
+			t.Logf("other on %s: a listen on %q:%s was refused (%v)", c.other, c.probe, p, err)
+		} else {
+			t.Logf("other on %s: a listen on %q:%s bound beside it", c.other, c.probe, p)
+			_ = l.Close()
+		}
+		other := ofPid(OnPort(ls, ports[i]), pid)
+		if len(other) != 1 {
+			t.Fatalf("other on %s: listed %v for the helper on port %s", c.other, other, p)
+		}
+		for _, host := range []string{"127.0.0.1", "::1"} {
+			dst := netip.AddrPortFrom(netip.MustParseAddr(host), ports[i])
+			if !other[0].Takes(dst) {
+				continue
+			}
+			d, err := net.Dial("tcp", dst.String())
+			if err != nil {
+				t.Errorf("other on %s: a dial to %v failed: %v", c.other, dst, err)
+				continue
+			}
+			_ = d.Close()
 		}
 	}
 }

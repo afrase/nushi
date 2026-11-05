@@ -12,6 +12,18 @@
 // two listed the same sockets. lsof's -Fpn also writes an IPv4 and an
 // IPv6 wildcard alike (`*:p`) and never says whether an IPv6 one takes
 // IPv4; libproc's flags do.
+//
+// A free port is told by dialing it, not by listening on it: Go's
+// net.Listen sets SO_REUSEADDR, and macOS then lets it bind beside another
+// process's listener a connection to localhost reaches. Seen on the same
+// Mac (TestListenProbeMissesListener keeps it checked), Go's probe called
+// the port free with the other process on 0.0.0.0:p and a probe on
+// 127.0.0.1:p or ":p"; on 127.0.0.1:p and a probe on ":p" or (tcp4)
+// 0.0.0.0:p; on a dual-stack [::]:p and a probe on 127.0.0.1:p or
+// [::1]:p; on an IPv6-only [::]:p and a probe on [::1]:p; on [::1]:p and
+// a probe on ":p". The other socket's own SO_REUSEADDR made no difference.
+// A dial to 127.0.0.1:p and to [::1]:p connected in each case the
+// listener takes connections on that family.
 package listeners
 
 import (
