@@ -15,7 +15,7 @@ import 'package:pasteboard/pasteboard.dart';
 
 /// The first daemon that takes a file outside the chat's folder by its
 /// absolute path, and a device's files whole (ADR 0091).
-const attachApi = 103;
+const attachApi = 106;
 
 /// The most files one message attaches (the daemon's `chats.MaxUploads`).
 const maxAttachedFiles = 10;

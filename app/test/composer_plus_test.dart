@@ -131,6 +131,26 @@ void main() {
   setUpAll(loadFonts);
   setUp(_restoreFakes);
 
+  test('attachApi is the API that brought the fields it gates', () {
+    // An older daemon drops an upload as an unknown field, or takes an
+    // absolute path as one inside the folder: the gate is the API the
+    // proto names for SendPromptRequest's files and uploads.
+    final proto = File('../proto/nushi/v1/nushi.proto').readAsStringSync();
+    for (final field in [
+      'repeated string files = 3;',
+      'repeated FileUpload uploads = 8;',
+    ]) {
+      // The field's comment: the lines of // right above it.
+      final lines = proto.substring(0, proto.indexOf(field)).split('\n')
+        ..removeLast();
+      final comment = lines.reversed
+          .takeWhile((l) => l.trim().startsWith('//'))
+          .join(' ');
+      final api = RegExp(r'\(API (\d+)\)').firstMatch(comment)?.group(1);
+      expect(api, '$attachApi', reason: field);
+    }
+  });
+
   for (final dark in [true, false]) {
     testWidgets(
       'the menu: its rows, icons and key (${dark ? 'dark' : 'light'})',
