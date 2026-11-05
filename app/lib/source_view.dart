@@ -241,7 +241,7 @@ class _SourceViewState extends State<SourceView> {
                     child: Text(number(i), style: gutter),
                   ),
                 ),
-                Expanded(child: _Line(Text.rich(text(i)))),
+                Expanded(child: _Line(Text.rich(text(i)), whole: _lines[i])),
               ],
             ),
           ),
@@ -285,7 +285,10 @@ class _SourceViewState extends State<SourceView> {
                         children: [
                           Padding(
                             padding: EdgeInsets.only(left: numbers),
-                            child: _Line(Text.rich(text(i), softWrap: false)),
+                            child: _Line(
+                              Text.rich(text(i), softWrap: false),
+                              whole: _lines[i],
+                            ),
                           ),
                           Positioned(
                             left: 0,
@@ -356,9 +359,13 @@ class _Whole extends StaticSelectionContainerDelegate {
 /// end: each line is a text of its own, and a selection across them
 /// otherwise runs them together.
 class _Line extends StatefulWidget {
-  const new(this.text);
+  const new(this.text, {required this.whole});
 
   final Widget text;
+
+  /// The line as the file has it: a line cut at [_maxLine] copies its
+  /// own text to its end, not the note that stands for the rest.
+  final String whole;
 
   @override
   State<_Line> createState() => _LineState();
@@ -374,20 +381,29 @@ class _LineState extends State<_Line> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      SelectionContainer(delegate: _delegate, child: widget.text);
+  Widget build(BuildContext context) {
+    _delegate.whole = widget.whole;
+    return SelectionContainer(delegate: _delegate, child: widget.text);
+  }
 }
 
 class _LineEnd extends StaticSelectionContainerDelegate {
+  String whole = '';
+
   @override
   SelectedContent? getSelectedContent() {
     final content = super.getSelectedContent();
     final range = getSelection();
     if (range == null) return content;
+    final start = min(range.startOffset, range.endOffset);
     final end = max(range.startOffset, range.endOffset);
-    if (end < contentLength) return content;
-    final text = content?.plainText.replaceAll(_blank, '') ?? '';
-    return SelectedContent(plainText: '$text\n');
+    // Into a cut line's note: the line's own text from the start on.
+    final note = whole.length > _maxLine && end > _maxLine;
+    if (end < contentLength && !note) return content;
+    final text = note
+        ? whole.substring(min(start, _maxLine))
+        : content?.plainText.replaceAll(_blank, '') ?? '';
+    return SelectedContent(plainText: end < contentLength ? text : '$text\n');
   }
 }
 

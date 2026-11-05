@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -101,4 +102,34 @@ void main() {
       expect(copied.last, isNot(text));
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
+
+  testWidgets('a line cut short copies its own text, not the note', (
+    tester,
+  ) async {
+    viewport(tester, const Size(800, 600));
+    final long = '${'a' * 5100}END';
+    await tester.pumpWidget(
+      themed(SourceView('$long\nb\n', path: 'min.js', wrap: false)),
+    );
+    await tester.pump();
+    expect(find.textContaining('(103 more)', findRichText: true), findsOne);
+    final copied = _clipboard(tester);
+    // From the long line's start to the next one's: all of it selected.
+    final from = find.textContaining('aaaa', findRichText: true).first;
+    final to = find.text('b', findRichText: true).first;
+    final drag = await tester.startGesture(
+      tester.getTopLeft(from) + const Offset(1, 4),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pump();
+    await drag.moveTo(tester.getTopLeft(to) + const Offset(0, 4));
+    await tester.pump();
+    await drag.up();
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyC);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pump();
+    expect(copied.last, '$long\n');
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }
