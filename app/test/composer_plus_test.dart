@@ -676,6 +676,22 @@ void main() {
     expect(mentionsPath('see @a.mdx', 'a.md'), isFalse);
     expect(mentionsPath('see @lib/a.md/b', 'lib/a.md'), isFalse);
     expect(mentionsPath('see a.md', 'a.md'), isFalse);
+    // Only what could go on a path ends the mention there: anything else
+    // after it (CJK, Markdown, a dash, an ellipsis) keeps a picked file.
+    for (final text in [
+      '@a.mdを見て',
+      '`@a.md`',
+      '**@a.md**',
+      '@a.md—ok',
+      '@a.md>',
+      '@a.md...',
+      '@a.md.',
+    ]) {
+      expect(mentionsPath(text, 'a.md'), isTrue, reason: text);
+    }
+    for (final text in ['@a.md_b', '@a.md-b', '@a.md2', '@a.md.b']) {
+      expect(mentionsPath(text, 'a.md'), isFalse, reason: text);
+    }
   });
 
   testWidgets('a sent message’s attached files are chips, its mentions not', (

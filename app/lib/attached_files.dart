@@ -141,24 +141,19 @@ Future<String> pasteFiles(ChatState chat, {required int api}) =>
 
 /// Whether [text] mentions [path] as `@path`: the whole path, not the
 /// start of a longer one (`@notes.md.orig` isn't notes.md), so a file
-/// attached as a card isn't taken for a mention and dropped.
+/// attached as a card isn't taken for a mention and dropped. Only what
+/// could go on a path ends it there (a letter or digit, `_`, `-`, `/`, a
+/// `.` before one of the first three); anything else after it (CJK text,
+/// Markdown's backticks, a dash) leaves a mention picked from @ in place.
 bool mentionsPath(String text, String path) {
   final at = '@$path';
   for (var i = text.indexOf(at); i >= 0; i = text.indexOf(at, i + 1)) {
-    final end = i + at.length;
-    final next = end < text.length ? text[end] : '';
-    final after = end + 1 < text.length ? text[end + 1] : '';
-    if (next.isEmpty ||
-        _space.hasMatch(next) ||
-        ',;:!?)]}"\''.contains(next) ||
-        next == '.' && (after.isEmpty || _space.hasMatch(after))) {
-      return true;
-    }
+    if (!text.startsWith(_goesOn, i + at.length)) return true;
   }
   return false;
 }
 
-final _space = RegExp(r'\s');
+final _goesOn = RegExp(r'[A-Za-z0-9_\-/]|\.[A-Za-z0-9_\-]');
 
 /// [path] relative to [folder] when it's inside it, else null.
 String? insideFolder(String path, String folder) {
