@@ -293,3 +293,24 @@ func TestPathspecMagicNamesDontHideIgnores(t *testing.T) {
 		t.Errorf("names = %q, want %q", got, want)
 	}
 }
+
+// Depth stops at maxEntries over the whole listing, not one folder past
+// it: the folder that crosses it is cut there, the rest counted.
+func TestDepthSendsAtMostMaxEntries(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{"a", "b", "c"} {
+		testcheck.NoErr(t, os.Mkdir(filepath.Join(root, d), 0o700))
+		for i := range MaxLimit {
+			testcheck.NoErr(t, os.WriteFile(filepath.Join(root, d, fmt.Sprintf("f%04d", i)), nil, 0o600))
+		}
+	}
+	ls := listOf(t, root, ".", Options{Depth: 2, Limit: MaxLimit})
+	sent, more := 0, 0
+	for _, l := range ls {
+		sent += len(l.Entries)
+		more += l.More
+	}
+	if sent != maxEntries || sent+more != 3+3*MaxLimit {
+		t.Errorf("%d sent, %d more; want %d sent, %d in all", sent, more, maxEntries, 3+3*MaxLimit)
+	}
+}

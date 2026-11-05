@@ -36,7 +36,7 @@ const (
 	// isn't counted either, so a folder of millions stays fast.
 	readCap = 50_000
 	// maxEntries is the most entries one listing sends over all its
-	// folders: depth stops descending past it.
+	// folders: the folder that reaches it is cut there, and depth stops.
 	maxEntries = 5000
 	// maxPath bounds a path asked for, past what macOS would open.
 	maxPath = 4096
@@ -148,6 +148,12 @@ func list(ctx context.Context, r *os.Root, root, rel string, o Options) ([]Listi
 				sub, err := one(ctx, r, root, join(l.Path, e.Name), o)
 				if err != nil {
 					continue
+				}
+				// The folder that crosses the cap sends up to it and
+				// counts the rest.
+				if room := maxEntries - sent; len(sub.Entries) > room {
+					sub.More += len(sub.Entries) - room
+					sub.Entries = sub.Entries[:room]
 				}
 				sent += len(sub.Entries)
 				next = append(next, sub)
