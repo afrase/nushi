@@ -123,6 +123,12 @@ final class WindowPlacement {
         $0.scheduleSave()
       }
     }
+    // Home's display came back while in full screen, which screensChanged
+    // leaves alone: out of it, the window goes home (or, on it already,
+    // is no longer lost).
+    on(NSWindow.didExitFullScreenNotification, window) {
+      if $0.lost { $0.screensChanged() }
+    }
     on(NSWindow.willCloseNotification, window) { $0.saveNow() }
     on(NSApplication.willTerminateNotification, nil) { $0.saveNow() }
     on(NSApplication.didChangeScreenParametersNotification, nil) { $0.screensChanging() }
