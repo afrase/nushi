@@ -222,7 +222,13 @@ class _ChatViewState extends State<ChatView> {
       main: transcript,
       // The text's column glides as a pane opens or closes beside it.
       columnSides: (width) => chatSides(context, width),
-      least: wide ? ChatView.leastBesideWide : ChatView.minWidth,
+      // Beside the details it keeps less, so the panes lie over it where
+      // they did by the 264-point panel (ADR 0092).
+      least: wide
+          ? ChatView.leastBesideWide
+          : details != null
+          ? ChatView.leastBesideDetails
+          : ChatView.minWidth,
       panes: [
         if (side != null)
           SidePane(

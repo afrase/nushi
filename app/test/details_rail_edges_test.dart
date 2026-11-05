@@ -6,12 +6,15 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/background_tasks_widget.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/context_report.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/side_chat.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript.dart';
 
 import 'details_rail_fixture.dart';
 import 'fake_daemon.dart';
@@ -90,6 +93,35 @@ void main() {
       expectTextInside(tester, width);
       if (width == 1080) {
         await render(tester, find.byType(NushiApp), 'details_rail_1080_sb');
+      }
+      await closeView(tester, d);
+    }, variant: macOnly);
+  }
+
+  // A side chat lies over the transcript where it did by the 264-point
+  // panel: beside it at 1470 with the sidebar (1210 for the chat, 510 left
+  // beside the panel and the side chat), over it at 1450 (490).
+  for (final (width, beside) in [(1470.0, true), (1450.0, false)]) {
+    testWidgets('with the sidebar and a side chat, ${width.toInt()} wide: '
+        'the side chat lies ${beside ? 'beside' : 'over'} the transcript', (
+      tester,
+    ) async {
+      final (d, _) = await railApp(tester, size: Size(width, 900));
+      sidebarHidden.value = false;
+      d.chats['c']!.side.value = ChatState('s', '/Users/me')..title = 'Side';
+      await tester.pumpAndSettle();
+      expect(railPanel, findsOne);
+      final side = tester.getRect(find.byType(SideChat));
+      final transcript = tester.getRect(
+        find.byWidgetPredicate((w) => w is Transcript && w.items == null).first,
+      );
+      expect(side.right, tester.getRect(railPanel).left);
+      expect(
+        transcript.right,
+        beside ? lessThanOrEqualTo(side.left) : greaterThan(side.left),
+      );
+      if (beside) {
+        await render(tester, find.byType(NushiApp), 'details_rail_1470_side');
       }
       await closeView(tester, d);
     }, variant: macOnly);
