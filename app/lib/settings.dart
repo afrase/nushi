@@ -24,7 +24,8 @@ import 'package:nushi/file_mode.dart';
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
 /// and Dock badge, the appearance and the color theme, whether the
 /// composer checks spelling, whether a preview's source wraps its lines,
-/// and the newer release whose toast was dismissed. Each is a [Pref].
+/// what reply cards ask the agent, and the newer release whose toast was
+/// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide: an older `worktrees` or `subagentWide` key is ignored, and
 /// dropped by the next save.
@@ -105,6 +106,15 @@ final Pref<String> githubFindingHeadings = _plain(
   findingHeadingsDefault,
 );
 const findingHeadingsDefault = 'Key findings, Must address';
+
+/// What reply cards ask the agent (Settings › GitHub), by kind (a
+/// `CardAsk`'s name): the user's own words in place of that kind's
+/// default. A kind not named here asks the default; `CardAsk.text` reads
+/// it, and refuses what isn't plain text.
+final Pref<Map<String, String>> cardAsks = Pref(
+  'cardAsks',
+  (v) => _entries(v, (s) => s is String ? s : null),
+);
 
 /// The merge method picked last, by host and repository (`host owner/name`):
 /// it comes before what GitHub says the viewer used last, for as long as the
