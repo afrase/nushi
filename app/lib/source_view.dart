@@ -184,8 +184,13 @@ class _SourceViewState extends State<SourceView> {
     final style = theme.code(t.text, size: 12);
     final gutter = theme.code(t.textMuted, size: 12);
     final digits = '${_lines.length}'.length;
+    // Measured as a Text draws it, over the DefaultTextStyle: its letter
+    // spacing widens each character, and the run-on width must hold them.
     final zero = TextPainter(
-      text: TextSpan(text: '0', style: style),
+      text: TextSpan(
+        text: '0',
+        style: DefaultTextStyle.of(context).style.merge(style),
+      ),
       textDirection: TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
     )..layout();
