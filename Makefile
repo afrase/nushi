@@ -210,15 +210,19 @@ test-app:
 	cd app && flutter test $(FLUTTER_TEST_FLAGS) $(APP_TESTS)
 
 # The Mac window's placement maths (app/macos/Runner/Placement.swift, ADR
-# 0093) and what ⌘V attaches (Clipboard.swift, on a pasteboard of its own)
-# with their tests, built by swiftc and run with no window: RunnerTests is
-# hosted by the app, so xcodebuild test would launch Nushi (macOS).
+# 0093), what ⌘V attaches (Clipboard.swift, on a pasteboard of its own)
+# and what AppKit takes for its title bar (TitleBar.swift, a window never
+# shown) with their tests, built by swiftc and run with no window on
+# screen: RunnerTests is hosted by the app, so xcodebuild test would launch
+# Nushi (macOS).
 test-window:
 	@mkdir -p bin
 	xcrun swiftc -o bin/placement-test app/macos/Runner/Placement.swift app/macos/PlacementTests/main.swift
 	bin/placement-test
 	xcrun swiftc -o bin/clipboard-test app/macos/Runner/Clipboard.swift app/macos/ClipboardTests/main.swift
 	bin/clipboard-test
+	xcrun swiftc -o bin/titlebar-test app/macos/Runner/TitleBar.swift app/macos/TitleBarTests/main.swift
+	bin/titlebar-test
 
 # The web app in Chrome with the real nushid and nushi-relay (macOS).
 test-web:

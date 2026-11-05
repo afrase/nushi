@@ -15,6 +15,9 @@ class MainFlutterWindow: NSWindow {
     self.titlebarAppearsTransparent = true
     self.titleVisibility = .hidden
     self.styleMask.insert(.fullSizeContentView)
+    // And AppKit's title bar keeps off the content under it: the headers
+    // are the title bar (lib/window_drag.dart).
+    TitleBarCover.cover(flutterViewController.view)
     placement.restore()
     keepFullScreen()
 
