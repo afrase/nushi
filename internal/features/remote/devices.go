@@ -132,6 +132,23 @@ func (s *Service) add(name, kind string, key []byte) (string, error) {
 	return d.ID, nil
 }
 
+// unpair forgets a device just added whose phone was never told so: it
+// knows no id, so no revoke and no move follows, and no id given up
+// waits for it.
+func (s *Service) unpair(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	devices := slices.DeleteFunc(slices.Clone(s.devices), func(d model.Device) bool { return d.ID == id })
+	if len(devices) == len(s.devices) || s.st.SaveDevices(devices) != nil {
+		return
+	}
+	s.devices = devices
+	delete(s.told, id)
+	s.moved(id) // out of the ids given up
+	s.changed()
+	slog.Info("pairing undone: the phone wasn't told", "device", id)
+}
+
 // Revoke unpairs a device and drops its connections at once.
 func (s *Service) Revoke(id string) error {
 	s.mu.Lock()

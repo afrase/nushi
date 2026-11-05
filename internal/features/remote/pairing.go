@@ -125,11 +125,18 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		case <-ctx.Done():
 			return
 		}
+		// Allow can come as the pairing ends (a revoke, remote access
+		// off, another relay): the device is kept only while it's still
+		// under way, and dropped again if the phone can't be told.
 		s.mu.Lock()
 		var id string
 		var err error
 		if allow {
-			id, err = s.add(name, p.kind, conn.Peer())
+			if s.pairing != p {
+				err = errEnded
+			} else {
+				id, err = s.add(name, p.kind, conn.Peer())
+			}
 		}
 		daemon := s.id
 		s.mu.Unlock()
@@ -141,7 +148,12 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 			return
 		}
 		reply, _ := json.Marshal(map[string]string{"daemon": daemon})
-		if _, err := conn.Write(reply); err != nil || !stop() {
+		if _, err := conn.Write(reply); err != nil {
+			s.unpair(id) // the phone never heard it was paired
+			_ = conn.Close()
+			return
+		}
+		if !stop() { // ended once told: paired, and the phone dials back
 			_ = conn.Close()
 			return
 		}
@@ -150,6 +162,9 @@ func (s *Service) pair(ctx context.Context, p *pairing, relayURL string) {
 		return
 	}
 }
+
+// errEnded refuses an Allow that came as its pairing ended.
+var errEnded = errors.New("the pairing ended")
 
 // hello is a phone's first message when pairing: its name, and "web" for
 // the web app.
