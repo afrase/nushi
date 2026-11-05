@@ -50,13 +50,14 @@ jobs:
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
       # CI has usually checked this commit already; only a commit without a passing CI run (one cancelled by a
-      # newer push) is checked here, by the ci job.
+      # newer push) is checked here, by the ci job. Only a push's run counts: a pull request's run is listed under
+      # its head commit but tested the merge of it into the base.
       - id: ci
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ steps.tag.outputs.sha }}
         run: |
-          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --commit "$SHA" --status success --json databaseId --jq length)
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --event push --commit "$SHA" --status success --json databaseId --jq length)
           if [ "$passed" -gt 0 ]; then echo "CI passed on $SHA."; echo "checked=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           echo "No passing CI run for $SHA; the ci job checks it."
           echo "checked=false" >> "$GITHUB_OUTPUT"
