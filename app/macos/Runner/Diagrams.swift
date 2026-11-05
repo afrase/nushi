@@ -18,16 +18,47 @@ final class Diagrams: NSObject, WKNavigationDelegate {
   /// How long one diagram may take to draw.
   static let jobTimeout: TimeInterval = 10
 
+  /// A diagram to draw, and everyone waiting for it.
+  private final class Job {
+    let source: String
+    let args: [String: Any]
+    var dones: [FlutterResult]
+
+    init(source: String, args: [String: Any], done: @escaping FlutterResult) {
+      self.source = source
+      self.args = args
+      dones = [done]
+    }
+
+    /// Whether it draws the same picture as [source] with [args].
+    func same(_ source: String, _ args: [String: Any]) -> Bool {
+      source == self.source && args["dark"] as? Bool == self.args["dark"] as? Bool
+        && args["background"] as? String == self.args["background"] as? String
+        && args["foreground"] as? String == self.args["foreground"] as? String
+        && args["width"] as? Double == self.args["width"] as? Double
+    }
+
+    func answer(_ value: Any) { for done in dones { done(value) } }
+  }
+
   private var web: WKWebView?
   private var window: NSWindow?
   private var loaded = false
-  private var queue: [(source: String, args: [String: Any], done: FlutterResult)] = []
+  private var queue: [Job] = []
   private var busy = false
-  private var drawing: FlutterResult? // the answer of the job drawing
+  private var drawing: Job? // the job drawing
   private var current = 0 // the job drawing, counted: a late answer of one let go is dropped
 
+  /// Queues a diagram, or joins the job already drawing or waiting for the
+  /// same one: the app asks again for one it gave up waiting on (its
+  /// diagramWait, the queue included), and a copy would only be drawn
+  /// again before the rest.
   func draw(source: String, args: [String: Any], done: @escaping FlutterResult) {
-    queue.append((source, args, done))
+    if let job = ([drawing].compactMap { $0 } + queue).first(where: { $0.same(source, args) }) {
+      job.dones.append(done)
+      return
+    }
+    queue.append(Job(source: source, args: args, done: done))
     next()
   }
 
@@ -39,11 +70,11 @@ final class Diagrams: NSObject, WKNavigationDelegate {
     current += 1
     let id = current
     let job = queue.removeFirst()
-    drawing = job.done
+    drawing = job
     DispatchQueue.main.asyncAfter(deadline: .now() + Diagrams.jobTimeout) { [weak self] in
-      guard let self, self.current == id, let done = self.drawing else { return }
+      guard let self, self.current == id, let job = self.drawing else { return }
       self.letGo()
-      done(["error": "The diagram took too long to draw"])
+      job.answer(["error": "The diagram took too long to draw"])
       self.next()
     }
     let width = min(max(job.args["width"] as? Double ?? 600, 120), 2400)
@@ -82,16 +113,16 @@ final class Diagrams: NSObject, WKNavigationDelegate {
   }
 
   private func finish(_ answer: [String: Any]) {
-    guard let done = drawing else { return }
+    guard let job = drawing else { return }
     drawing = nil
-    done(answer)
+    job.answer(answer)
     busy = false
     next()
   }
 
   private func start() -> WKWebView? {
     guard FileManager.default.fileExists(atPath: Diagrams.page.path) else {
-      for job in queue { job.done(["error": "This build has no Mermaid (make mermaid)"]) }
+      for job in queue { job.answer(["error": "This build has no Mermaid (make mermaid)"]) }
       queue = []
       return nil
     }
@@ -144,10 +175,10 @@ final class Diagrams: NSObject, WKNavigationDelegate {
   }
 
   private func fail(_ error: Error?) {
-    let pending = (drawing.map { [$0] } ?? []) + queue.map(\.done)
+    let pending = [drawing].compactMap { $0 } + queue
     queue = []
     letGo()
     // Not the diagrams' fault: the app asks for them again (retry).
-    for done in pending { done(["error": error?.localizedDescription ?? "The diagram's web view stopped", "retry": true]) }
+    for job in pending { job.answer(["error": error?.localizedDescription ?? "The diagram's web view stopped", "retry": true]) }
   }
 }
