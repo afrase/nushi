@@ -123,3 +123,60 @@ func TestQueueWaitsOutASubagentsSteps(t *testing.T) {
 	agent.release()
 	eventually(t, c, func() bool { return !c.busy })
 }
+
+// A stopped turn holds the queue: a tool call the stop fails, ending
+// before the agent's answer, is no chance to steer the next message in.
+func TestAToolEndAfterStopSteersNothing(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.ignoreCancel = true
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	update(c, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}})
+	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	update(c, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "failed"}})
+	eventually(t, c, func() bool { return !c.steering })
+	if _, steered := agent.texts(); len(steered) > 0 {
+		t.Errorf("steered %q into the stopped turn", steered)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.held || len(c.queue) != 1 || c.queue[0].Text != "two" {
+		t.Errorf("held %v, queue %+v", c.held, c.queue)
+	}
+}
+
+// A Stop while a steered message is out ends the hand-off: the agent may
+// take that one, the rest stays in the queue, held.
+func TestStopEndsTheSteering(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	agent.steerable, c.steer = true, true
+	agent.ignoreCancel = true
+	agent.gate, agent.steerGate = make(chan struct{}), make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "two"}, SendQueue))
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "three"}, SendQueue))
+	update(c, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}})
+	update(c, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
+	eventually(t, c, func() bool { return len(c.queue) == 1 }) // "two" is out
+	if _, err := svc.Stop(context.Background(), c.id, false); err != nil {
+		t.Fatal(err)
+	}
+	close(agent.steerGate) // the agent took "two" before the stop reached it
+	eventually(t, c, func() bool { return !c.steering })
+	if _, steered := agent.texts(); !reflect.DeepEqual(steered, []string{"two"}) {
+		t.Errorf("steered %q", steered)
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.held || len(c.queue) != 1 || c.queue[0].Text != "three" {
+		t.Errorf("held %v, queue %+v", c.held, c.queue)
+	}
+}

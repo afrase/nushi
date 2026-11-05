@@ -12,7 +12,9 @@ import (
 
 // deliverLocked hands the queue to the agent at its chance: while a turn
 // runs, into the turn when the agent can be steered; when the chat is
-// idle, the first message as the next prompt.
+// idle, the first message as the next prompt. A turn the user stopped
+// takes nothing more: its end holds the queue (run), and a tool call the
+// stop fails would otherwise steer the next message into it.
 func (c *chat) deliverLocked() {
 	switch {
 	case len(c.queue) == 0 || c.agent == nil || c.stopping || c.halting || c.held || c.steering || c.sendingNow > 0:
@@ -21,7 +23,7 @@ func (c *chat) deliverLocked() {
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
 		c.sendLocked(m)
-	case c.steer && !c.started.IsZero():
+	case c.steer && !c.started.IsZero() && !c.stopped:
 		c.steering = true
 		go c.steerQueue(c.agent, acp.SessionID(c.sid))
 	}
@@ -39,14 +41,15 @@ func (c *chat) unsteerLocked(id string) {
 // steerQueue hands the queue's messages to the running turn one at a time,
 // in order; it is the chat's only steering worker while it runs. A message
 // the agent doesn't take because the turn has just ended starts the next
-// turn, unless the turn was stopped: then it goes back to the queue.
+// turn, unless the turn was stopped: then it goes back to the queue. A
+// Stop while a message is out ends the hand-off there: the rest waits.
 //
 //nolint:contextcheck // a queued message is steered in after the request that queued it
 func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	defer func() { c.steering = false }()
-	for len(c.queue) > 0 && c.agent == agent && !c.stopping && !c.halting && !c.started.IsZero() {
+	for len(c.queue) > 0 && c.agent == agent && !c.stopping && !c.halting && !c.stopped && !c.started.IsZero() {
 		m := c.queue[0]
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
@@ -68,7 +71,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 			continue
 		case c.indexLocked(id) < 0:
 			return // taken back (Stop) meanwhile: it is in the box
-		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopping && !c.halting && c.sendingNow == 0:
+		case err == nil && !c.busy && c.agent == agent && !c.held && !c.stopped && !c.stopping && !c.halting && c.sendingNow == 0:
 			c.unsteerLocked(id)
 			c.startLocked(blocks) // the turn ended meanwhile: this starts the next
 			return

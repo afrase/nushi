@@ -126,7 +126,7 @@ Nothing is rewound, and the box keeps what you've typed. The button shows while 
 
 A message from the queue steered into the turn is part of it: when the turn got somewhere before it, the button is Continue, as the agent already has that message; when nothing came back at all, Try again sends it.
 
-Messages waiting in the queue stay held after a failed turn. Continue, Try again, or any message you send, goes first, and the queue follows once that turn ends well, each message once; in a chat that went to sleep meanwhile too, as it wakes.
+Messages waiting in the queue stay held after a failed turn, or one you stopped: once you press Stop, none is steered into the turn as it ends. Continue, Try again, or any message you send, goes first, and the queue follows once that turn ends well, each message once; in a chat that went to sleep meanwhile too, as it wakes.
 
 ## Writing a message
 
