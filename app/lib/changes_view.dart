@@ -23,17 +23,17 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 
-/// The chat folder's changes in a [Scope]: a toolbar, the changed files
-/// (under the branch's commits in Commits) and the picked one side by
-/// side. It reloads when the agent finishes a turn. With related worktrees
-/// (ADR 0081) the toolbar's menu shows one of them instead, read-only, and
-/// read only on a click.
 /// From this wide the Changes bar has the bar's gaps and gutters.
 const double _roomyFrom = 560;
 
 /// The switcher's name for what the chat itself runs in.
 const _ownFolder = "Chat's folder";
 
+/// The chat folder's changes in a [Scope]: a toolbar, the changed files
+/// (under the branch's commits in Commits) and the picked one side by
+/// side. It reloads when the agent finishes a turn. With related worktrees
+/// (ADR 0081) the toolbar's menu shows one of them instead, read-only, and
+/// read only on a click.
 class ChangesView extends StatefulWidget {
   const new({required this.chat, required this.daemon, super.key});
 
