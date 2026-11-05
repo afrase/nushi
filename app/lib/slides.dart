@@ -348,11 +348,23 @@ Widget paneSlide(Animation<double> run, Widget child, {bool left = false}) =>
 /// keeps its width: a column that re-wraps (a narrow window) just shows
 /// where it is. Its pointer goes where it's drawn. A change mid-glide
 /// glides from where it is; under Reduce Motion it doesn't glide.
+///
+/// With [clip], what's drawn off its box while it glides is cut there:
+/// the chat's transcript, whose foot (the composer's backdrop) is its full
+/// width and would otherwise lie over the sidebar left of it as it glides.
+/// At rest nothing is clipped, and nothing is a layer more.
 class Glide extends StatefulWidget {
-  const new({required this.token, required this.child, super.key, this.sides});
+  const new({
+    required this.token,
+    required this.child,
+    super.key,
+    this.sides,
+    this.clip = false,
+  });
 
   final Object? token;
   final EdgeInsets Function(double width)? sides;
+  final bool clip;
   final Widget child;
 
   @override
@@ -388,6 +400,7 @@ class _GlideState extends State<Glide> with SingleTickerProviderStateMixin {
     run: _curved,
     armed: _armed,
     sides: widget.sides,
+    clip: widget.clip,
     child: RepaintBoundary(child: widget.child),
   );
 }
@@ -397,28 +410,33 @@ class _Glide extends SingleChildRenderObjectWidget {
     required this.run,
     required this.armed,
     required this.sides,
+    required this.clip,
     super.child,
   });
 
   final Animation<double> run;
   final int armed;
   final EdgeInsets Function(double width)? sides;
+  final bool clip;
 
   @override
   RenderObject createRenderObject(BuildContext context) =>
-      _RenderGlide(run, armed, sides);
+      _RenderGlide(run, armed, sides, clip: clip);
 
   @override
   void updateRenderObject(BuildContext context, _RenderGlide render) => render
     ..sides = sides
+    ..clip = clip
     ..armed = armed;
 }
 
 class _RenderGlide extends RenderProxyBox {
-  new(this._run, this._armed, this.sides);
+  new(this._run, this._armed, this.sides, {required this.clip});
 
   final Animation<double> _run;
   EdgeInsets Function(double width)? sides;
+  bool clip;
+  final _clip = LayerHandle<ClipRectLayer>();
 
   int _armed;
   int get armed => _armed;
@@ -463,6 +481,15 @@ class _RenderGlide extends RenderProxyBox {
   }
 
   @override
+  void dispose() {
+    _clip.layer = null;
+    super.dispose();
+  }
+
+  /// Whether it's drawn off its box, and cut to it.
+  bool get _clipped => clip && _drawn != 0;
+
+  @override
   void paint(PaintingContext context, Offset offset) {
     if (_was case (final x, final width)?) {
       _was = null;
@@ -472,10 +499,26 @@ class _RenderGlide extends RenderProxyBox {
     }
     if (_run.isCompleted) _from = 0;
     _drawn = _dx;
-    if (child case final child?) {
+    final child = this.child;
+    if (child == null) return;
+    if (!_clipped) {
+      _clip.layer = null;
       context.paintChild(child, offset + Offset(_drawn, 0));
+      return;
     }
+    _clip.layer = context.pushClipRect(
+      needsCompositing,
+      offset,
+      Offset.zero & size,
+      (context, offset) =>
+          context.paintChild(child, offset + Offset(_drawn, 0)),
+      oldLayer: _clip.layer,
+    );
   }
+
+  @override
+  Rect? describeApproximatePaintClip(RenderObject child) =>
+      _clipped ? Offset.zero & size : null;
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>

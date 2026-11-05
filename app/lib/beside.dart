@@ -184,6 +184,9 @@ class _BesideState extends State<Beside> {
               child: Glide(
                 token: token,
                 sides: widget.columnSides,
+                // Its foot is its full width: cut to its slot as it glides,
+                // it doesn't lie over the sidebar or the panes' slots.
+                clip: true,
                 child: widget.main,
               ),
             ),
