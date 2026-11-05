@@ -3,6 +3,8 @@ package chats
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"slices"
 	"sync"
 	"testing"
 
@@ -47,6 +49,65 @@ func TestASideChatIsUnheardOfUntilForkAnswers(t *testing.T) {
 	testcheck.NoErr(t, svc.SetConfig(ctx, side, "mode", "default"))
 	if heardOf() == 0 {
 		t.Error("the side chat's change reached nobody")
+	}
+}
+
+// While its chat's session is opened again (a reopen, move or rewind),
+// the agent reports the new session's defaults, not the chat's mode: a
+// side chat isn't opened then, as Fork chat isn't, nor when that begins
+// while the side chat's session forks.
+func TestNoSideChatWhileItsChatSettles(t *testing.T) {
+	settle := map[string]func(c *chat){
+		"reopening": func(c *chat) { c.busy = true },
+		"its mode not back on it": func(c *chat) {
+			c.reapplying, c.config[modeIndex(c.config)].Current = true, "auto"
+		},
+	}
+	for name, settle := range settle {
+		for when, during := range map[string]bool{"before": false, "during the fork": true} {
+			t.Run(name+", "+when, func(t *testing.T) {
+				svc, agent, c := newChat(t, claudeSession, &memModes{})
+				ctx := context.Background()
+				testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "mode", "plan"))
+				in := func() {
+					c.mu.Lock()
+					settle(c)
+					c.mu.Unlock()
+				}
+				if during {
+					agent.forkHook = in
+				} else {
+					in()
+				}
+				id, err := svc.Fork(ctx, c.id)
+				c.mu.Lock()
+				c.busy, c.reapplying = false, false
+				c.mu.Unlock()
+				if !errors.Is(err, errSettling) {
+					t.Fatalf("Fork = %q, %v; want %v", id, err, errSettling)
+				}
+				if during && !slices.Contains(agent.deleted, "fork1") {
+					t.Error("the fork made meanwhile was kept")
+				}
+			})
+		}
+	}
+}
+
+// A mode picked in the chat while its side chat's session forks is the
+// one the side chat starts in.
+func TestASideChatStartsInAModePickedAsItForks(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	ctx := context.Background()
+	testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "mode", "plan"))
+	agent.forkHook = func() { testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "mode", "default")) }
+	id, err := svc.Fork(ctx, c.id)
+	testcheck.NoErr(t, err)
+	side := svc.chats[id]
+	side.mu.Lock()
+	defer side.mu.Unlock()
+	if mode := current(side, "mode"); mode != "default" {
+		t.Errorf("the side chat starts in %q, the chat is in default", mode)
 	}
 }
 

@@ -130,6 +130,7 @@ type fakeAgent struct {
 	deleteGate   chan struct{} // when set, deleting a session waits until it is closed
 	loadGate     chan struct{} // when set, session/load waits until it is closed
 	forkGate     chan struct{} // when set, session/fork waits until it is closed
+	forkHook     func()        // when set, runs as session/fork reaches it
 	loadErr      error
 	forkErr      error              // session/fork fails
 	turnErr      error              // a prompt's turn fails
@@ -395,6 +396,9 @@ func (f *fakeAgent) CanFork() bool { return true }
 func (f *fakeAgent) ForkSession(ctx context.Context, req *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error) {
 	if f.forkGate != nil {
 		<-f.forkGate
+	}
+	if f.forkHook != nil {
+		f.forkHook()
 	}
 	if ctx.Err() != nil {
 		return nil, ctx.Err()

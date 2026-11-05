@@ -130,13 +130,13 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	can := p.canFork && p.parent == nil
 	base, _ := p.finishedLocked() // the side chat forks the whole session
 	lastItem := p.lastItem        // the side chat's own items come after
-	mode, picks := p.record.Mode, maps.Clone(p.record.Picks)
-	if i := modeIndex(p.config); i >= 0 {
-		mode = p.config[i].Current // what the agent says the chat is on now
-	}
+	reopening := p.settlingLocked()
 	p.mu.Unlock()
-	if agent == nil || !can {
+	switch {
+	case agent == nil || !can:
 		return "", errors.New("the agent can't fork this chat")
+	case reopening:
+		return "", errSettling
 	}
 	id, config, err := p.forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
@@ -163,10 +163,20 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	// reach the app as a chat of the sidebar's.
 	side.publish = func(model.Event) {}
 	p.mu.Lock()
-	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it
+	switch {
+	case p.agent != agent: // it ended meanwhile (reload, move, archive): the fork with it
 		p.mu.Unlock()
 		s.throwAway(p, agent, id)
 		return "", errors.New("the agent stopped")
+	case p.settlingLocked(): // a rewind or move began meanwhile: the chat's mode isn't back on it
+		p.mu.Unlock()
+		s.throwAway(p, agent, id)
+		return "", errSettling
+	}
+	// Read now, not before the fork: a change made meanwhile is carried.
+	mode, picks := p.record.Mode, maps.Clone(p.record.Picks)
+	if i := modeIndex(p.config); i >= 0 {
+		mode = p.config[i].Current // what the agent says the chat is on
 	}
 	p.sides[side.id] = side
 	side.commands = slices.Clone(p.commands) // the agent's, which it told only the chat
@@ -197,6 +207,13 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side.log().Info("side chat opened")
 	return side.id, nil
 }
+
+var errSettling = errors.New("the chat is reopening, moving or rewinding; open a side chat once that's done")
+
+// settlingLocked says the chat's session is being opened again (a reopen,
+// move or rewind) and its mode and picks aren't back on it yet: what the
+// agent reports is the new session's defaults.
+func (c *chat) settlingLocked() bool { return c.reopeningLocked() || c.reapplying }
 
 // CloseSide ends a side chat: its running turn stops, and the agent deletes
 // its session, history and all.
