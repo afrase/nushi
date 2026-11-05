@@ -161,7 +161,10 @@ func list(ctx context.Context, r *os.Root, root, rel string, o Options) ([]Listi
 
 // one lists one folder.
 func one(ctx context.Context, r *os.Root, root, rel string, o Options) (Listing, error) {
-	l := Listing{Path: strings.TrimPrefix(rel, ".")}
+	l := Listing{Path: rel}
+	if rel == "." {
+		l.Path = "" // the folder itself; a dot-folder keeps its dot
+	}
 	fi, err := r.Stat(rel)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):

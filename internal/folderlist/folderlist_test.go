@@ -241,3 +241,40 @@ func TestWatchSendsAChange(t *testing.T) {
 	cancel()
 	testcheck.NoErr(t, <-done)
 }
+
+// A dot-folder keeps its dot: the app looks its listing up by the path it
+// asked for, and Watch stats that path to tell a change.
+func TestDotFolderKeepsItsPath(t *testing.T) {
+	root := t.TempDir()
+	testcheck.Write(t, filepath.Join(root, ".github", "workflows", "ci.yml"), "")
+	testcheck.Write(t, filepath.Join(root, "github", "other.md"), "")
+	ls := listOf(t, root, ".github", Options{Depth: 2})
+	if len(ls) != 2 || ls[0].Path != ".github" || ls[1].Path != ".github/workflows" {
+		t.Fatalf("paths: %+v", ls)
+	}
+	if got := names(ls[1]); !slices.Equal(got, []string{"ci.yml"}) {
+		t.Errorf("workflows: %q", got)
+	}
+	if ls := listOf(t, root, ".", Options{}); ls[0].Path != "" {
+		t.Errorf("the folder itself: %q", ls[0].Path)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sends := make(chan struct{}, 64)
+	done := make(chan error, 1)
+	go func() {
+		done <- Watch(ctx, root, ".github", Options{}, 5*time.Millisecond, func([]Listing) error {
+			sends <- struct{}{}
+			return nil
+		})
+	}()
+	<-sends
+	select {
+	case <-sends:
+		t.Error("sent again with no change")
+	case <-time.After(100 * time.Millisecond):
+	}
+	cancel()
+	testcheck.NoErr(t, <-done)
+}
