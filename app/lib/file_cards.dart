@@ -201,7 +201,7 @@ Widget? messageFiles(BuildContext context, Item item, ChatState chat) {
       for (final f in attached)
         FileChip(
           absoluteIn(chat.folder, f),
-          onOpen: open != null && !f.startsWith('/') && previewKind(f) != null
+          onOpen: open != null && !f.startsWith('/') && opensInPreview(f)
               ? () => open(f)
               : null,
           onReveal: kIsWeb || !f.startsWith('/') && chat.folder.isEmpty

@@ -73,7 +73,7 @@ class _OpenFileBoxState extends State<OpenFileBox> {
       _all = {
         ...widget.chat,
         for (final p in r.paths)
-          if (previewKind(p) != null) p,
+          if (opensInPreview(p)) p,
       }.toList();
     } on Object catch (e) {
       _error = errorText(e);

@@ -135,7 +135,7 @@ Messages waiting in the queue stay held after a failed turn. Continue, Try again
 - **The + at the box's left** opens a menu above it: **Add files or photos** (⌘U, from the box without the menu too) opens a file panel for any files; **Mention a file** starts an `@` mention; **Slash commands** puts a `/` before what you've written and lists the chat's commands, as typing it would. The phone has the same menu, without the keys.
 - **Files of any kind** come by the menu, by dropping them on the chat or by ⌘V of files copied in Finder. An image goes as an image when the agent takes them (a thumbnail); anything else, or an image the agent can't take, is a file card in the box (its kind, name and size; × takes it out). The agent gets a link to the file where it is, inside the chat's folder by its path there, and reads it with its own tools when it needs it (Claude asks first for a file outside its folder) ([ADR 0091](adr/0091-attached-files-go-as-links.md)). A message takes ten files at most; a folder can't be attached (mention it with @), nor a file over 100 MB.
 - **The phone's files** aren't on the Mac, so they go whole, 8 MB each at most: the Mac keeps them in Nushi's data folder for the agent to read, until the chat is deleted (100 MB a chat, the oldest dropped first). Against a Mac on an older Nushi the phone sends photos only.
-- **Your message lists its files** as chips over its text (those it doesn't @mention); a click opens one in the preview when it's in the chat's folder and the preview shows its kind, or else shows it in Finder.
+- **Your message lists its files** as chips over its text (those it doesn't @mention); a click opens one in the preview when it's in the chat's folder and its name doesn't say it's binary (as the Files pane's, below), or else shows it in Finder.
 
 - **Lists continue.** A line started after a list item begins the next one, as in GitHub's and Slack's boxes: `2. ` after `1. `, the same `-` or `*` after a bullet, at the same indent. On an item with nothing in it yet, the marker goes instead and the line is left blank, which ends the list. ⌘Z takes a line and its marker back at once. Only the line key does this: pasted text and lines typed any other way stay as they are.
 - **Code shows as code.** In the composer, text between a pair of single backticks on one line is drawn in the code font on the tint the transcript gives inline code, its backticks muted; a fenced block (from a line starting ```` ``` ```` to the next) is in the code font, its fences muted. An open backtick or fence changes nothing until it's closed. Words in code aren't spell checked.
@@ -195,6 +195,8 @@ A file a chat's agent (or one of its subagents) wrote previews beside the chat, 
 
 Markdown, HTML, SVG and CSV have Preview and Source.
 
+**A file its name doesn't place** (a script with no extension such as `scripts/deploy`, `LICENSE`, a dotfile such as `.envrc` or `.editorconfig`, an unknown extension) opens from the Files pane, Open file and your message's chips, and the preview reads it: text (valid UTF-8, no NUL byte in its first 8 KB) shows as source, highlighted for the program its first line's `#!` names (`#!/bin/bash`, `#!/usr/bin/env python3`, node, deno, ruby, perl, lua, osascript and more), else by its name (`Dockerfile`, `Gemfile`, `.envrc` as shell), else plain. Anything else says "Can’t show this file: it isn’t text." with Show in Finder.
+
 **Wrapping.** A source's long lines wrap at first. The wrap button in the pane's title row (left of Preview and Source; in its ⋯ when the pane is narrow), ⌥Z once you've clicked in the source, View › Wrap Lines or the palette turn it off: long lines run on and the view scrolls sideways (with Shift and the wheel, or the trackpad), the line numbers staying put. It's one choice for every preview, remembered. The phone's preview has the same button; its choice lasts until the page reloads. Rendered Markdown and pages, Changes and the code in messages always wrap.
 
 **Artifacts** are the files made to be looked at: everything but code and text, which Changes shows. Open one from:
@@ -219,16 +221,16 @@ The preview's file name shows its path when the pointer is over it; a click show
 **Files** (⇧⌘E, the folder button in the chat's header, View › Files or the palette) opens a tree of the chat's folder (its worktree, for a worktree chat) beside the chat, left of the preview; Nushi remembers it per chat. The button is lit while the pane shows; from Changes or Pull request it goes back to the chat with the pane open. In a header too narrow for its buttons, Show files is in the chat's ⋯ with the terminal's and the details'.
 
 - Folders open with a click or →, and close with a click or ←; ↑↓ move, ⏎ opens. The tree keeps up as files come and go, and keeps what's open and selected.
-- A file that previews opens in the preview as an artifact does, in a tab of its own. One the preview can't show (a zip, say) is dimmed. Nothing is edited here.
+- A file opens in the preview as an artifact does, in a tab of its own. Only a file whose name says it's binary is dimmed and doesn't open: archives and disk images (`.zip`, `.tar`, `.gz`, `.dmg`, `.jar`…), executables, libraries and object files (`.exe`, `.dylib`, `.so`, `.o`, `.pyc`, `.wasm`…), fonts, audio and video, databases (`.sqlite`, `.db`), Office documents, images the preview doesn't draw (`.ico`, `.tiff`, `.heic`, `.psd`…), and `.DS_Store`. Nothing is edited here.
 - The files the chat wrote or edited have a green dot, and so do the folders holding them.
 - What git ignores is left out; the eye in the pane's header shows it, dimmed. `.git` never shows.
 - A folder with more than 500 entries shows the first 500 and "N more".
 - **Filter files** over the tree finds any file in the folder by name, in folders not opened too: the start of its name first, then anywhere in its name or path, then its letters in order ("trvw" finds `tree_view.dart`). The matches show as a tree, the best one picked; ⏎ opens it, Esc clears the filter.
 - On the phone, the chat's ⋯ › Files shows the same tree; a file opens full screen ([ADR 0090](adr/0090-a-files-pane-beside-the-chat.md)).
 
-**Open file** (⌘P, File › Open File…) opens any file that previews (code and text too) in the chat's folder that git doesn't ignore, matched as you type.
+**Open file** (⌘P, File › Open File…) opens any file in the chat's folder that git doesn't ignore, but those the Files pane dims, matched as you type.
 
-**Paths in messages.** A path in an agent's message, in code or plain text (`lib/a.dart:12` too), that names a file that previews, in the chat's folder or one the chat wrote, opens it too. It's underlined when the pointer is over it; on the phone it opens the full-screen preview.
+**Paths in messages.** A path in an agent's message, in code or plain text (`lib/a.dart:12` too), that names a file that previews by its name (one with no extension, such as `scripts/deploy`, stays a word), in the chat's folder or one the chat wrote, opens it too. It's underlined when the pointer is over it; on the phone it opens the full-screen preview.
 
 ### Mermaid diagrams
 

@@ -89,7 +89,7 @@ class _PreviewPaneState extends State<PreviewPane> {
   /// Whether it shows the file's text, a source view: code, or the Source
   /// of one that renders. Only then do its lines wrap or not.
   bool get _showsSource =>
-      _kind == PreviewKind.code || _kind.rendered && _source;
+      _kind == PreviewKind.code && !_watch.notText || _kind.rendered && _source;
 
   KeyEventResult _key(FocusNode _, KeyEvent e) {
     if (e is KeyUpEvent || !_showsSource) return KeyEventResult.ignored;

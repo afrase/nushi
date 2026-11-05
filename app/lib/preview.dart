@@ -10,6 +10,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/preview_sniff.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
@@ -118,8 +119,10 @@ const _codeNames = {
   'Brewfile', 'Vagrantfile', 'Tiltfile', 'BUILD', 'WORKSPACE',
 };
 
-/// How [path] previews, or null for a file the preview can't show (a
-/// binary, an unknown type).
+/// How [path] previews by its name, or null when the name doesn't say (no
+/// extension, a dotfile, an unknown type, a binary). What needs a sure
+/// answer asks this: the file links in messages, Artifacts. What lists a
+/// folder's files asks [opensInPreview].
 PreviewKind? previewKind(String path) {
   final name = baseName(path);
   if (_codeNames.contains(name)) return PreviewKind.code;
@@ -128,6 +131,13 @@ PreviewKind? previewKind(String path) {
   final ext = name.substring(dot + 1).toLowerCase();
   return artifactKinds[ext] ?? (_code.contains(ext) ? PreviewKind.code : null);
 }
+
+/// Whether the Files pane and ⌘P open [path] in the preview: a kind
+/// [previewKind] names, or any file not surely binary by its name
+/// ([surelyBinary]); the preview reads such a file's bytes to tell
+/// whether it's text ([FileWatch.notText]).
+bool opensInPreview(String path) =>
+    previewKind(path) != null || !surelyBinary(baseName(path));
 
 /// Whether [path] is an artifact: a file of a kind that renders
 /// ([PreviewKind.artifact]).
@@ -176,6 +186,12 @@ class FileWatch extends ChangeNotifier {
   WatchChatFileResponse? file;
   String error = ''; // why the daemon won't read it
   bool live = false;
+
+  /// Whether the file came and isn't text, by its bytes ([isText]): asked
+  /// only of one whose name doesn't say what it is ([previewKind]), each
+  /// time it comes.
+  bool notText = false;
+
   StreamSubscription<WatchChatFileResponse>? _sub;
   bool _disposed = false;
 
@@ -185,6 +201,11 @@ class FileWatch extends ChangeNotifier {
         .listen(
           (f) {
             file = f;
+            notText =
+                previewKind(path) == null &&
+                !f.missing &&
+                !f.tooLarge &&
+                !isText(f.data);
             error = '';
             live = true;
             notifyListeners();
@@ -344,6 +365,18 @@ class PreviewBody extends StatelessWidget {
           return status;
         }
         final f = watch.file!;
+        if (watch.notText) {
+          return PreviewNote(
+            'Can’t show this file: it isn’t text.',
+            action: onReveal == null
+                ? null
+                : Button(
+                    label: 'Show in Finder',
+                    icon: Icons.folder_open_outlined,
+                    onPressed: onReveal,
+                  ),
+          );
+        }
         if (kind == PreviewKind.image) {
           return Padding(
             padding: padding,

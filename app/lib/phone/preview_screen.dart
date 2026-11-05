@@ -59,7 +59,7 @@ class _PreviewScreenState extends State<PreviewScreen> {
   /// Whether it shows the file's text: code, or the Source of one that
   /// renders (a PDF shows nothing here).
   bool get _showsSource => switch (previewKind(widget.path)) {
-    PreviewKind.code || null => true,
+    PreviewKind.code || null => !_watch.notText,
     final k => k.rendered && _source,
   };
 

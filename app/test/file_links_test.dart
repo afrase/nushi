@@ -33,6 +33,15 @@ void main() {
       '/tmp/out.html': '/tmp/out.html',
       './a.py': './a.py',
     });
+    // The Files pane opens these, but a message's word with no extension
+    // could be anything: only a name that says what it is links.
+    expect(
+      namedFiles(
+        'Ran `scripts/deploy`, then bin/release; see `.envrc`, `LICENSE` '
+        'and deploy.',
+      ),
+      isEmpty,
+    );
   });
 
   for (final (name, tokens) in [

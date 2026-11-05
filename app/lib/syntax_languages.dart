@@ -12,7 +12,10 @@ Map<String, Mode> get syntaxLanguages => {
 /// Tags and file names that read well enough in another language's grammar,
 /// by that language. A name is a file's extension or its whole name.
 const syntaxAliases = {
-  'bash': ['zsh', 'fish', 'ksh', 'env'],
+  'bash': [
+    'zsh', 'fish', 'ksh', 'env', 'envrc', 'bashrc', 'zshrc', 'zshenv', //
+    'zprofile', 'profile', 'bash_profile',
+  ],
   'clojure': ['cljs', 'cljc', 'edn'],
   'django': ['j2', 'jinja2'],
   'dockerfile': ['containerfile'],
@@ -20,7 +23,7 @@ const syntaxAliases = {
   'fsharp': ['fsx'],
   'glsl': ['vert', 'frag', 'wgsl'],
   'haskell': ['lhs'],
-  'ini': ['conf', 'cfg', 'editorconfig'],
+  'ini': ['conf', 'cfg', 'editorconfig', 'npmrc', 'gitconfig', 'gitmodules'],
   'javascript': ['cts', 'mts'],
   'json': ['jsonc', 'json5', 'jsonl', 'ndjson', 'ipynb'],
   'julia': ['jl'],
@@ -42,6 +45,63 @@ const syntaxAliases = {
   'vhdl': ['vhd'],
   'xml': ['htm', 'svelte', 'astro'],
 };
+
+/// The programs a script's first line names (`#!/bin/bash`,
+/// `#!/usr/bin/env python3`), by the language they run; a version on the
+/// name (`python3.12`, `ruby2.7`) is dropped first.
+const _interpreters = {
+  'bash': ['sh', 'bash', 'dash', 'ash', 'ksh', 'mksh', 'zsh', 'fish'],
+  'python': ['python', 'pypy', 'uv'],
+  'javascript': ['node', 'nodejs'],
+  'typescript': ['deno', 'bun', 'tsx', 'ts-node'],
+  'ruby': ['ruby'],
+  'perl': ['perl'],
+  'php': ['php'],
+  'lua': ['lua', 'luajit'],
+  'applescript': ['osascript'],
+  'awk': ['awk', 'gawk', 'mawk'],
+  'tcl': ['tclsh', 'wish'],
+  'r': ['rscript'],
+  'julia': ['julia'],
+  'elixir': ['elixir'],
+  'erlang': ['escript'],
+  'haskell': ['runghc', 'runhaskell'],
+  'swift': ['swift'],
+  'groovy': ['groovy'],
+  'kotlin': ['kotlin'],
+  'scala': ['scala'],
+  'makefile': ['make'],
+};
+
+/// The language of a script by its first line's `#!`, if it names a
+/// program [_interpreters] knows: past `env` and its flags and settings
+/// (`#!/usr/bin/env -S deno run`).
+String? shebangLanguage(String text) {
+  if (!text.startsWith('#!')) return null;
+  final end = text.indexOf('\n');
+  final words = text
+      .substring(2, end < 0 ? text.length : end)
+      .trim()
+      .split(RegExp(r'\s+'));
+  var i = 0;
+  String program() => words[i].substring(words[i].lastIndexOf('/') + 1);
+  if (words.isEmpty || words.first.isEmpty) return null;
+  if (program() == 'env') {
+    i++;
+    while (i < words.length &&
+        (words[i].startsWith('-') || words[i].contains('='))) {
+      // `-u NAME` and `-P PATH` take the next word.
+      final takes = words[i] == '-u' || words[i] == '-P';
+      i += takes ? 2 : 1;
+    }
+    if (i >= words.length) return null;
+  }
+  final name = program().toLowerCase().replaceFirst(RegExp(r'[\d.]+$'), '');
+  for (final MapEntry(key: language, value: names) in _interpreters.entries) {
+    if (names.contains(name)) return language;
+  }
+  return null;
+}
 
 Mode _strings(List<Mode> inside) => Mode(
   className: 'string',

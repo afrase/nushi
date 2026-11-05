@@ -81,11 +81,12 @@ FakeDaemon _fake() {
       GetChatRequest() => GetChatResponse(chat: _chat, items: _items),
       ListFilesRequest() => ListFilesResponse(
         paths: [
-          'go.mod',
+          'dist/app.zip',
           'docs/plan.md',
           'docs/report.md',
           'logo.png',
           'internal/api/api.go',
+          'scripts/deploy',
         ],
       ),
       _ => null,
@@ -253,9 +254,10 @@ void main() {
     final box = find.byType(OpenFileBox);
     expect(box, findsOneWidget);
     Finder inBox(Finder f) => find.descendant(of: box, matching: f);
-    // Empty: the chat's files first, then the folder's that preview.
+    // Empty: the chat's files first, then the folder's that open (not
+    // a binary).
     expect(
-      inBox(find.textContaining('go.mod', findRichText: true)),
+      inBox(find.textContaining('app.zip', findRichText: true)),
       findsNothing,
     );
     expect(
@@ -296,6 +298,21 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(_inPane(find.text('api.go')), findsOneWidget);
+    // A script with no extension: listed, and it opens.
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+    await tester.pumpAndSettle();
+    await tester.enterText(inBox(find.byType(TextField)), 'deploy');
+    await tester.pumpAndSettle();
+    expect(
+      inBox(find.textContaining('deploy   scripts', findRichText: true)),
+      findsOneWidget,
+    );
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(_inPane(find.text('deploy')), findsOneWidget);
+    expect(d.chats['c']!.preview.value, 'scripts/deploy');
     d.dispose();
   }, variant: _mac);
 

@@ -15,10 +15,11 @@ const _maxLine = 5000;
 const _blank = '\u200B';
 
 /// A file's text, highlighted for its language (by [path]'s name, as diffs
-/// are; off the UI thread, plain until then and past 200,000 characters),
-/// its lines numbered and built as they scroll into view. JSON is
-/// pretty-printed. With [wrap] off a long line runs on and the view scrolls
-/// sideways, the line numbers staying put; a switch keeps the top line.
+/// are, or a script's `#!` line: [sourceLanguage]; off the UI thread, plain
+/// until then and past 200,000 characters), its lines numbered and built as
+/// they scroll into view. JSON is pretty-printed. With [wrap] off a long
+/// line runs on and the view scrolls sideways, the line numbers staying
+/// put; a switch keeps the top line.
 class SourceView extends StatefulWidget {
   const new(
     this.text, {
@@ -83,7 +84,7 @@ class _SourceViewState extends State<SourceView> {
     if (_lines.length > 1 && _lines.last.isEmpty) _lines.removeLast();
     _spans = null;
     _columns = null;
-    if (languageOf(widget.path) case final language?) {
+    if (sourceLanguage(widget.path, _text) case final language?) {
       highlightSides(language, '', _text).then((s) {
         if (mounted && read == _reads && s[1] != null) {
           setState(() => _spans = s[1]);

@@ -160,6 +160,18 @@ String? languageOf(String path) {
   return null;
 }
 
+/// The language of a file at [path] holding [text]: by its extension when
+/// it has one there's a grammar for, else by its first line's `#!`
+/// ([shebangLanguage]: `scripts/deploy`, whose name could be anything),
+/// else by its name (`Dockerfile`, `.envrc`).
+String? sourceLanguage(String path, String text) {
+  final name = path.split('/').last;
+  if (name.lastIndexOf('.') > 0) {
+    if (languageOf(path) case final language?) return language;
+  }
+  return shebangLanguage(text) ?? languageOf(path);
+}
+
 /// The syntax spans of each line of [old] and [neu] in [language], each side
 /// highlighted as a whole, so multi-line strings and comments come out
 /// right. Off the UI thread; null for a side too large to highlight.

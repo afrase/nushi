@@ -61,7 +61,7 @@ class TreeRow {
   bool get entry => kind != TreeRowKind.more && kind != TreeRowKind.note;
 
   /// Whether a click opens it in the preview.
-  bool get opens => kind == TreeRowKind.file && previewKind(path) != null;
+  bool get opens => kind == TreeRowKind.file && opensInPreview(path);
 }
 
 /// One row of the tree: indented by its depth, a folder's chevron or a
@@ -165,7 +165,7 @@ class TreeRowView extends StatelessWidget {
       if (r.linked) 'a link',
       if (r.kind == TreeRowKind.link)
         'a link that leads out of the folder, or nowhere',
-      if (r.kind == TreeRowKind.file && !r.opens) 'no preview for this type',
+      if (r.kind == TreeRowKind.file && !r.opens) 'not text: no preview',
     ];
     return what.join(' · ');
   }
