@@ -68,9 +68,12 @@ func (s *Service) Items(chatID, before string, n int) ([]model.Item, int, error)
 
 // maxReach is how far before its n items a page reaches back for a
 // subagent's call: a subagent that ran beside thousands of items would
-// otherwise bring them all into every page. Its steps then show without
-// it until the page that has its call is loaded, and a running one comes
-// with the recent part anyway (RecentPart.Running).
+// otherwise bring them all into every page. Its steps then come without
+// it until the page that has its call is loaded, and today's app shows
+// them as loose tool calls, as if the chat's own agent made them, even
+// for a running one: its call comes with the recent part
+// (RecentPart.Running), but the app's transcript groups steps only under
+// a call among its items.
 const maxReach = 500
 
 // pageStart is where a page of items ending before end starts: n items
