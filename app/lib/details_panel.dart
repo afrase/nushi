@@ -6,6 +6,7 @@ import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/context_cache.dart';
+import 'package:nushi/context_report.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -70,6 +71,23 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
   /// Whether the agent can be asked what fills its context: the daemon
   /// says so, and the chat is idle.
   bool get _canAsk => chat.canAskContext && !chat.busy && !chat.archived;
+
+  /// Whether Compact session is offered: the agent lists a `compact`
+  /// command (Claude's), and the chat is idle.
+  bool get _canCompact =>
+      !chat.busy &&
+      !chat.archived &&
+      chat.commands.any((c) => c.name == 'compact');
+
+  /// Has the agent compact its context, as `/compact` typed would.
+  void _compact() => unawaited(
+    tryOrShow(
+      context,
+      () => daemon.sendPrompt(
+        SendPromptRequest(chatId: chat.id, text: '/compact'),
+      ),
+    ),
+  );
 
   /// Asks the agent, unseen, what fills its context.
   Future<void> _askContext() async {
@@ -289,8 +307,27 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
           rows: [
             if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
               (null, 'Not reported yet'),
-            // Why there's no breakdown yet.
-            if (_context == null && (u.contextSize > 0 || _asking))
+            // As Claude's rail: the line, the bar, what fills it.
+            switch (_context) {
+              final c? when c.categories.isEmpty && c.markdown.isNotEmpty => (
+                null,
+                AgentMarkdown(c.markdown),
+              ),
+              _ when u.contextSize > 0 || _context != null => (
+                null,
+                ContextReport(
+                  u,
+                  // As last asked, brought up to the agent's latest count.
+                  categories: liveCategories(_context?.categories ?? [], u),
+                  lists: contextLists(_context?.markdown ?? ''),
+                  onCompact: _canCompact ? _compact : null,
+                ),
+              ),
+              _ => (null, const SizedBox.shrink()),
+            },
+            // Why there's no breakdown yet, for an agent that can say.
+            if (_context == null &&
+                (_asking || u.contextSize > 0 && chat.canAskContext))
               (
                 null,
                 _asking
@@ -299,35 +336,8 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
                     ? 'What fills it, once the chat is awake'
                     : chat.busy
                     ? 'What fills it, after this turn'
-                    : _canAsk
-                    ? 'What fills it, in a moment'
-                    : "The agent can't say what fills it",
+                    : 'What fills it, in a moment',
               ),
-            // "4% used … 37.4k / 1M", then the bar.
-            if (u.contextSize > 0)
-              (
-                null,
-                Row(
-                  children: [
-                    Expanded(child: ContextUsed(u)),
-                    Text(
-                      '${tokens(u.contextUsed.toInt())} / '
-                      '${tokens(u.contextSize.toInt())}',
-                      style: theme.ui(t.text, size: 12),
-                    ),
-                  ],
-                ),
-              ),
-            switch (_context) {
-              final c? when c.categories.isNotEmpty => (
-                null,
-                // As last asked, brought up to the agent's latest count.
-                ContextBreakdown(liveCategories(c.categories, u)),
-              ),
-              final c? => (null, AgentMarkdown(c.markdown)),
-              null when u.contextSize > 0 => (null, UsageBar(u)),
-              null => (null, const SizedBox.shrink()),
-            },
             if (lastTurn(u).isNotEmpty)
               (
                 'Last turn',
