@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:nushi/chat.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload;
@@ -87,9 +88,13 @@ bool sendWhole = kIsWeb;
 Future<List<XFile>> Function() pickFiles = () =>
     openFiles(confirmButtonText: 'Attach');
 
-/// The clipboard's files (Finder's copy) and its image; tests put fakes in
-/// their places.
-Future<List<String>> Function() clipboardFiles = Pasteboard.files;
+/// The Mac's clipboard for what ⌘V attaches (`macos/Runner/Clipboard.swift`).
+const _clipboard = MethodChannel('nushi/clipboard');
+
+/// The clipboard's files (Finder's copy: file URLs only, not a copied web
+/// link) and its image; tests put fakes in their places.
+Future<List<String>> Function() clipboardFiles = () async =>
+    await _clipboard.invokeListMethod<String>('files') ?? [];
 Future<Uint8List?> Function() clipboardImage = () => Pasteboard.image;
 
 /// Attaches what ⌘V pastes beside its text: the clipboard's files, or else
