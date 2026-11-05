@@ -5,8 +5,9 @@ import 'package:nushi/disclosure.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// Cards ([CardShell]s, each keyed and told its index) in a list, each
-/// moved by dragging its title row, without a lifted look.
+/// Cards ([CardShell]s, or the details panel's widgets, each keyed and
+/// told its index) in a list, each moved by dragging its title row,
+/// without a lifted look; the one dragged is under a [DraggedCard].
 class CardList extends StatelessWidget {
   const new({
     required this.children,
@@ -40,7 +41,7 @@ class CardList extends StatelessWidget {
     padding: padding,
     buildDefaultDragHandles: false,
     // The card being dragged keeps its grip and the closed hand.
-    proxyDecorator: (child, _, _) => _Dragged(child: child),
+    proxyDecorator: (child, _, _) => DraggedCard(child: child),
     onReorderItem: onReorder,
     scrollCacheExtent: buildAll ? const ScrollCacheExtent.pixels(1e6) : null,
     children: children,
@@ -48,14 +49,15 @@ class CardList extends StatelessWidget {
 }
 
 /// Marks the card a [CardList] is dragging (the copy under the pointer).
-class _Dragged extends InheritedWidget {
-  const new({required super.child});
+class DraggedCard extends InheritedWidget {
+  const new({required super.child, super.key});
 
+  /// Whether [context] is in the card being dragged.
   static bool of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_Dragged>() != null;
+      context.dependOnInheritedWidgetOfExactType<DraggedCard>() != null;
 
   @override
-  bool updateShouldNotify(_Dragged old) => false;
+  bool updateShouldNotify(DraggedCard old) => false;
 }
 
 /// A card's look: rounded, a [title] row that collapses it ([onToggle])
@@ -73,11 +75,9 @@ class CardShell extends StatefulWidget {
     super.key,
     this.trailing,
     this.index = 0,
-    this.chevron = true,
   });
 
   final Widget title;
-  final bool chevron; // false: a one-line card, nothing to open
   final bool open;
   final VoidCallback onToggle;
   final Widget body;
@@ -94,7 +94,7 @@ class _CardShellState extends State<CardShell> {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final dragged = _Dragged.of(context);
+    final dragged = DraggedCard.of(context);
     final grip = _hover || dragged;
     final cursor = dragged
         ? SystemMouseCursors.grabbing
@@ -124,8 +124,7 @@ class _CardShellState extends State<CardShell> {
                   children: [
                     widget.title,
                     const SizedBox(width: 2),
-                    if (widget.chevron)
-                      TurnChevron(open: widget.open, size: 15),
+                    TurnChevron(open: widget.open, size: 15),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Align(

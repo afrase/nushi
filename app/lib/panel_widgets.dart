@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
-
-import 'package:nushi/card_list.dart' show reordered;
+import 'package:nushi/card_list.dart';
 import 'package:nushi/disclosure.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
@@ -43,32 +41,18 @@ class PanelWidgets extends StatelessWidget {
         ...saved.where(byTitle.containsKey),
         ...byTitle.keys.where((k) => !saved.contains(k)),
       ];
-      return ReorderableListView(
+      return CardList(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        buildDefaultDragHandles: false,
-        // The one being dragged: the closed hand, no lift.
-        proxyDecorator: (child, _, _) => _Dragged(child: child),
-        onReorderItem: (from, to) =>
-            widgetOrder.value = reordered(saved, titles, from, to),
         // A widget asked for is there to scroll to.
-        scrollCacheExtent: const ScrollCacheExtent.pixels(1e6),
+        buildAll: true,
+        onReorder: (from, to) =>
+            widgetOrder.value = reordered(saved, titles, from, to),
         children: [
           for (final (i, title) in titles.indexed) byTitle[title]!.at(i),
         ],
       );
     },
   );
-}
-
-/// Marks the widget [PanelWidgets] is dragging (the copy under the pointer).
-class _Dragged extends InheritedWidget {
-  const new({required super.child});
-
-  static bool of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<_Dragged>() != null;
-
-  @override
-  bool updateShouldNotify(_Dragged old) => false;
 }
 
 /// One of the details panel's widgets, as Claude Code's right rail draws a
@@ -247,7 +231,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final dragged = _Dragged.of(context);
+    final dragged = DraggedCard.of(context);
     // On the panel's background, dragged too.
     return Container(
       color: t.base,
