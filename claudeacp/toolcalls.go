@@ -87,8 +87,8 @@ func (ts *tools) wholeLocked(stream, id, name string, input json.RawMessage) *to
 }
 
 // wholeReport is a call of the tool name shown with its whole input (an
-// empty one is {}), live or replayed, so a reopened chat shows it as the
-// live one did (ADR 0047).
+// empty one is {}), live or replayed, so a reopened session shows it as
+// the live one did.
 func wholeReport(name string, input json.RawMessage, cwd string) report {
 	if len(input) == 0 {
 		input = json.RawMessage(`{}`)
