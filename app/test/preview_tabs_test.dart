@@ -312,6 +312,31 @@ void main() {
     expect(tabLabel('a.md', files), 'a.md');
   });
 
+  // A name is anyone's: a bidi override in it shows (docs/security.md), so
+  // invoice\u202efdp.sh can't read as invoicehs.pdf.
+  const bidi = 'docs/invoice\u202efdp.sh';
+  const shown = 'invoice\ufffdfdp.sh';
+
+  test('a label shows a bidi override', () {
+    expect(tabLabel(bidi, const [bidi, 'a.md']), shown);
+  });
+
+  testWidgets('the one file’s name and its tabs show a bidi override', (
+    tester,
+  ) async {
+    var d = await _app(tester, files: const [bidi]);
+    expect(_inPane(find.text(shown)), findsOneWidget);
+    expect(
+      find.byTooltip('/Users/me/nushi/docs/invoice\ufffdfdp.sh'),
+      findsOneWidget,
+    );
+    d.dispose();
+    d = await _app(tester, files: const [bidi, 'docs/plan.md']);
+    expect(_tab(shown), findsOneWidget);
+    expect(find.byTooltip('docs/invoice\ufffdfdp.sh'), findsOneWidget);
+    d.dispose();
+  }, variant: _mac);
+
   group('the pane', () {
     testWidgets('one file: its name, plain, its path in a tooltip; no tabs, '
         'no menu', (tester) async {

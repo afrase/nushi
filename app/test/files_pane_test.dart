@@ -477,6 +477,28 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a row shows a bidi override in its name and its tooltip', (
+    tester,
+  ) async {
+    // invoice\u202efdp.sh would read as invoicehs.pdf (docs/security.md).
+    const name = 'invoice\u202efdp.sh';
+    await tester.pumpWidget(
+      themed(
+        TreeRowView(
+          const TreeRow('docs/$name', name, 1, TreeRowKind.file),
+          selected: false,
+          showing: false,
+          wrote: false,
+          onTap: () {},
+        ),
+      ),
+    );
+    expect(find.text('invoice\ufffdfdp.sh'), findsOneWidget);
+    expect(find.textContaining('\u202e'), findsNothing);
+    final tip = tester.widget<Tooltip>(find.byType(Tooltip));
+    expect(tip.message, startsWith('docs/invoice\ufffdfdp.sh'));
+  });
+
   test('matchScore: the name before the path, its start first, letters in '
       'order last', () {
     int s(String p, String q) => matchScore(p, q)!;

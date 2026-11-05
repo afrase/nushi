@@ -14,6 +14,7 @@ import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart';
 
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
@@ -348,7 +349,7 @@ class _Name extends StatelessWidget {
     final inside = inFiles(daemon, chat, path);
     return Pressable(
       onTap: inside == null ? null : () => showInFiles(chat, inside),
-      tooltip: tooltip,
+      tooltip: plainPath(tooltip),
       // Tinted under the pointer and ringed with the keys on it, as a
       // control is; the text stays where a tab's is.
       builder: (context, look) => Container(
@@ -361,7 +362,7 @@ class _Name extends StatelessWidget {
             : null,
         foregroundDecoration: focusRing(t, look),
         child: Text(
-          baseName(path),
+          plainPath(baseName(path)),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.code(t.text, size: 12),

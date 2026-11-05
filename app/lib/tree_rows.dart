@@ -5,6 +5,7 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/widgets.dart';
 
 /// What a row of the tree is.
@@ -136,7 +137,9 @@ class TreeRowView extends StatelessWidget {
           ),
           Flexible(
             child: Text(
-              r.name,
+              // Anyone's name: its bidi marks show, so it can't pose as
+              // another (docs/security.md).
+              plainPath(r.name),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.ui(dim ? t.textMuted : t.text, size: text),
@@ -156,7 +159,7 @@ class TreeRowView extends StatelessWidget {
   /// The row's path, and what's known of it.
   String _tooltip(TreeRow r) {
     final what = [
-      r.path,
+      plainPath(r.path),
       if (r.kind == TreeRowKind.file) diskSize(r.size),
       if (r.modified case final m?) ago(clock().difference(m), m),
       if (wrote && r.kind == TreeRowKind.folder) 'holds files the chat wrote',

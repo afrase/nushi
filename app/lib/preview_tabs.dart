@@ -8,6 +8,7 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/widgets.dart';
 
 // The preview pane's tabs (ADR 0070), in its title row in place of the file
@@ -15,8 +16,12 @@ import 'package:nushi/widgets.dart';
 // the row.
 
 /// What the tab of [file] says: its name, with as much of its folder as
-/// tells it from the others of that name in [files] ("plan.md · docs").
-String tabLabel(String file, List<String> files) {
+/// tells it from the others of that name in [files] ("plan.md · docs"),
+/// its bidi marks shown (plainPath).
+String tabLabel(String file, List<String> files) =>
+    plainPath(_label(file, files));
+
+String _label(String file, List<String> files) {
   final name = baseName(file);
   final others = [
     for (final f in files)
@@ -217,7 +222,7 @@ class _Tab extends StatelessWidget {
             Expanded(
               child: Pressable(
                 onTap: () => chat.openPreview(file),
-                tooltip: file,
+                tooltip: plainPath(file),
                 builder: (context, look) => Container(
                   alignment: Alignment.centerLeft,
                   padding: const EdgeInsets.only(left: previewNameInset),
