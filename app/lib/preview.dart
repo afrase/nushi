@@ -148,10 +148,17 @@ class Previews extends InheritedWidget {
     required super.child,
     super.key,
     this.current,
+    this.name,
   });
 
   final void Function(String path)? open;
   final ValueListenable<String?>? current;
+
+  /// The chat's one name for a file however a row or the preview named it
+  /// (`relativeIn`): a show call's path is the agent's, often absolute,
+  /// and the file may be open by the Artifacts widget's relative name.
+  /// Without it, names are compared as given.
+  final String Function(String path)? name;
 
   static Previews? of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<Previews>();

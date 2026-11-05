@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
@@ -16,6 +15,7 @@ import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 
 import 'fake_daemon.dart';
@@ -391,6 +391,31 @@ void main() {
       _chat(d).tab.value = ChatTab.chat;
       await tester.pumpAndSettle();
       expect(find.byType(PreviewPane), findsOneWidget);
+      d.dispose();
+    }, variant: _mac);
+
+    testWidgets('its Preview is marked while its file shows, by either name', (
+      tester,
+    ) async {
+      final (_, d) = await _app(
+        tester,
+        items: [_show('a', '/Users/me/nushi/docs/report.md', text: 'Shown.')],
+      );
+      final button = find.byType(PreviewButton);
+      bool lit() {
+        final t = NushiTheme.of(tester.element(button)).t;
+        final box = tester.widget<Container>(
+          find.descendant(of: button, matching: find.byType(Container)).first,
+        );
+        return (box.decoration! as BoxDecoration).color == t.accentSoft;
+      }
+
+      expect(lit(), isFalse);
+      // As the Artifacts widget's row opens it: by the artifact's name.
+      _chat(d).openPreview(chatArtifacts(_chat(d)).recent.single);
+      await tester.pumpAndSettle();
+      expect(_chat(d).preview.value, 'docs/report.md');
+      expect(lit(), isTrue);
       d.dispose();
     }, variant: _mac);
 

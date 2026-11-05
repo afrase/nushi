@@ -190,6 +190,7 @@ class _ChatViewState extends State<ChatView> {
     return Previews(
       open: chat.openPreview,
       current: chat.preview,
+      name: (path) => relativeIn(chat.folder, path),
       child: ListenableBuilder(
         listenable: Listenable.merge([
           chat.pane,

@@ -275,11 +275,13 @@ class PreviewButton extends StatelessWidget {
       ),
     );
     final current = previews?.current;
+    final name = previews?.name ?? (p) => p;
     return current == null
         ? pill(on: false)
         : ValueListenableBuilder(
             valueListenable: current,
-            builder: (context, v, _) => pill(on: v == path),
+            builder: (context, v, _) =>
+                pill(on: v != null && name(v) == name(path)),
           );
   }
 }
