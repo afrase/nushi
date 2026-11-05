@@ -9,10 +9,12 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
 
+	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
@@ -79,8 +81,18 @@ func (l logCalls) ended(procedure string, took time.Duration, err error) {
 // loggable is err as the log says it: GitHub's refusal by its status, never
 // its words, which can quote what someone else wrote or what was sent; a
 // failed commit without what its hooks printed, which can quote the
-// message.
+// message; an upload without its file's name (its path is in the error
+// too), only the system's reason.
 func loggable(err error) any {
+	if up, ok := errors.AsType[*chats.UploadError](err); ok {
+		if up.Large {
+			return "an upload was too large"
+		}
+		if errno, ok := errors.AsType[syscall.Errno](up.Err); ok {
+			return "an upload couldn't be saved: " + errno.Error()
+		}
+		return "an upload couldn't be saved"
+	}
 	if api, ok := errors.AsType[*githubapi.APIError](err); ok {
 		return "GitHub answered " + strconv.Itoa(api.Status)
 	}

@@ -45,7 +45,7 @@ func (s *Service) checkUploads(m model.Message) error {
 	}
 	for _, u := range m.Uploads {
 		if len(u.Data) > MaxUpload {
-			return fmt.Errorf("%s is too large to send: at most %d MB a file", uploadName(u.Name), MaxUpload>>20)
+			return &UploadError{Name: uploadName(u.Name), Large: true}
 		}
 	}
 	if s.uploads == "" {
@@ -53,6 +53,24 @@ func (s *Service) checkUploads(m model.Message) error {
 	}
 	return nil
 }
+
+// UploadError is an upload refused as too large, or one that couldn't be
+// saved. Its text names the file, for the app; the daemon's log says only
+// what went wrong (api's loggable), as a name can say what the file holds.
+type UploadError struct {
+	Name  string // the file's name, as it would be saved
+	Large bool   // over MaxUpload; else saving it failed with Err
+	Err   error
+}
+
+func (e *UploadError) Error() string {
+	if e.Large {
+		return fmt.Sprintf("%s is too large to send: at most %d MB a file", e.Name, MaxUpload>>20)
+	}
+	return fmt.Sprintf("saving %s: %v", e.Name, e.Err)
+}
+
+func (e *UploadError) Unwrap() error { return e.Err }
 
 // saveUploadsLocked writes m's uploads into the chat's uploads folder and
 // adds their paths to its files; when one can't be saved, none is. It runs
@@ -78,7 +96,7 @@ func (s *Service) saveUploadsLocked(c *chat, m *model.Message) error {
 		}
 		if err != nil {
 			s.dropUploads(c.id, saved)
-			return fmt.Errorf("saving %s: %w", uploadName(u.Name), err)
+			return &UploadError{Name: uploadName(u.Name), Err: err}
 		}
 	}
 	m.Files = append(m.Files, saved...)

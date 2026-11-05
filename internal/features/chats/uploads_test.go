@@ -3,6 +3,7 @@ package chats
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,6 +86,8 @@ func TestUploadsAreCapped(t *testing.T) {
 	big := model.Message{Text: "x", Uploads: []model.Upload{{Name: "a.txt", Data: []byte("a")}, {Name: "big.bin", Data: make([]byte, MaxUpload+1)}}}
 	if err := svc.Prompt(t.Context(), c.id, big, SendIdle); err == nil || !strings.Contains(err.Error(), "big.bin is too large") {
 		t.Errorf("a large file: %v", err)
+	} else if up, ok := errors.AsType[*UploadError](err); !ok || !up.Large {
+		t.Errorf("a large file's refusal isn't an UploadError (the log names no file by it): %v", err)
 	}
 	svc.uploads = t.TempDir()
 	many := model.Message{Text: "x", Uploads: make([]model.Upload, MaxUploads+1)}
