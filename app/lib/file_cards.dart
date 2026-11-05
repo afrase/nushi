@@ -190,7 +190,7 @@ class FileChip extends StatelessWidget {
 Widget? messageFiles(BuildContext context, Item item, ChatState chat) {
   final attached = [
     for (final f in item.files)
-      if (!item.text.contains('@$f')) f,
+      if (!mentionsPath(item.text, f)) f,
   ];
   if (attached.isEmpty) return null;
   final open = Previews.of(context)?.open;

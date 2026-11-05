@@ -621,6 +621,63 @@ void main() {
     _end();
   }, variant: _mac);
 
+  testWidgets('@ and a longer path doesn’t mention an attached file', (
+    tester,
+  ) async {
+    final (fake, _, chat) = await _box(tester);
+    final notes = _file(chat.folder, 'notes.md');
+    pickFiles = () async => [XFile(notes)];
+    await _openMenu(tester);
+    await tester.tap(find.text('Add files or photos'));
+    await tester.pump();
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'diff @notes.md.orig');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    final sent = _sent(fake);
+    expect(sent.files, ['notes.md']);
+
+    // Its chip shows, and Up brings it back as a card.
+    final item = Item(
+      kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+      text: sent.text,
+      files: sent.files,
+    );
+    late Widget? chips;
+    await tester.pumpWidget(
+      themed(
+        Builder(
+          builder: (context) {
+            chips = messageFiles(context, item, chat);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    expect(chips, isNotNull);
+    _end();
+    final (_, _, again) = await _box(tester);
+    again.items.add(item);
+    await tester.tap(find.byType(TextField));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(again.draft.mentions, isEmpty);
+    expect([for (final f in again.draft.files.value) f.name], ['notes.md']);
+    _end();
+  }, variant: _mac);
+
+  test('mentionsPath: the whole path after @', () {
+    expect(mentionsPath('see @a.md', 'a.md'), isTrue);
+    expect(mentionsPath('see @a.md, then', 'a.md'), isTrue);
+    expect(mentionsPath('see @a.md. Then', 'a.md'), isTrue);
+    expect(mentionsPath('(@a.md)', 'a.md'), isTrue);
+    expect(mentionsPath('@a.md.orig and @a.md', 'a.md'), isTrue);
+    expect(mentionsPath('see @a.md.orig', 'a.md'), isFalse);
+    expect(mentionsPath('see @a.mdx', 'a.md'), isFalse);
+    expect(mentionsPath('see @lib/a.md/b', 'lib/a.md'), isFalse);
+    expect(mentionsPath('see a.md', 'a.md'), isFalse);
+  });
+
   testWidgets('a sent message’s attached files are chips, its mentions not', (
     tester,
   ) async {

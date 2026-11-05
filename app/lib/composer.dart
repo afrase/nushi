@@ -219,7 +219,7 @@ class _ComposerState extends State<Composer> {
     _draft.replies.value = [..._draft.replies.value, ...replies];
     final folder = widget.chat.folder;
     for (final f in files) {
-      if (text.contains('@$f')) {
+      if (mentionsPath(text, f)) {
         _mentions.add(f);
       } else {
         final card = AttachedFile.at(absoluteIn(folder, f));
@@ -324,11 +324,12 @@ class _ComposerState extends State<Composer> {
     final m = _draft.take();
     final text = m.text;
     final (paths, uploads) = sendable(m.files, widget.chat.folder);
-    final files = [
+    // The mentions still in the text, then the cards: one both is listed once.
+    final mentioned = [
       for (final f in m.mentions)
-        if (text.contains('@$f')) f,
-      ...paths.where((p) => !text.contains('@$p')),
+        if (mentionsPath(text, f)) f,
     ];
+    final files = [...mentioned, ...paths.where((p) => !mentioned.contains(p))];
     final chat = widget.chat;
     final message = withOutputs(withReplies(m.replies, text), m.outputs);
     // To an idle chat it shows in the transcript at once, faint until the
