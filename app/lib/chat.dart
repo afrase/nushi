@@ -511,7 +511,7 @@ class ChatState extends ChangeNotifier {
     var start = recentStart(items, items.length, n);
     if (pane.value case final id?) {
       final i = items.indexWhere((it) => it.id == id);
-      if (i >= 0 && i < start) start = i;
+      if (i >= 0 && i < start) start = _withCalls(items, i, items.length);
     }
     if (start == 0) return false;
     // A task that runs among them stays listed.
@@ -685,13 +685,20 @@ bool _runs(Item it) =>
 /// (a background subagent's, as the chat goes on), so its card is there to
 /// answer (internal/api's pageStart).
 int recentStart(List<Item> items, int end, int n) {
-  var start = max(0, end - n);
+  final start = max(0, end - n);
+  final waits = items.take(start).toList().indexWhere(_waits);
+  return _withCalls(items, waits < 0 ? start : waits, end);
+}
+
+/// [from], or further back to the call of a subagent whose steps are
+/// among [items] from it to [end]: a step kept always keeps its call.
+int _withCalls(List<Item> items, int from, int end) {
+  var start = from;
   final index = {for (final (i, it) in items.take(end).indexed) it.id: i};
   for (var i = end - 1; i >= start; i--) {
     if (index[items[i].parent] case final j? when j < start) start = j;
   }
-  final waits = items.take(start).toList().indexWhere(_waits);
-  return waits < 0 ? start : waits;
+  return start;
 }
 
 /// Whether [it] is a permission or a question still waiting for its answer.

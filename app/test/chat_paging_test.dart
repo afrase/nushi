@@ -192,4 +192,37 @@ void main() {
       expect(answered.items.map((i) => i.id), ['i18', 'i19']);
     }
   });
+
+  test("trimmed back to a waiting prompt or the pane's call, a subagent "
+      'step kept there keeps its call', () {
+    // y runs a subagent; s, its step, comes after the prompt p (or the
+    // call x the pane shows), all above the last 3.
+    ChatState loaded(Item mid) => ChatState('c', '/f')
+      ..load(
+        GetChatResponse(
+          items: [
+            _msg(0),
+            Item(
+              id: 'y',
+              kind: ItemKind.ITEM_KIND_TOOL_CALL,
+              subagent: Subagent(state: 'running'),
+            ),
+            mid,
+            Item(id: 's', kind: ItemKind.ITEM_KIND_TOOL_CALL, parent: 'y'),
+            for (var i = 1; i < 6; i++) _msg(i),
+          ],
+          seq: Int64(5),
+        ),
+      );
+    final waiting = loaded(
+      Item(id: 'p', kind: ItemKind.ITEM_KIND_PERMISSION, status: 'pending'),
+    );
+    expect(waiting.trim(3), isTrue);
+    expect(waiting.items.first.id, 'y');
+    expect(waiting.runningBefore, isEmpty);
+    final shown = loaded(Item(id: 'x', kind: ItemKind.ITEM_KIND_TOOL_CALL))
+      ..pane.value = 'x';
+    expect(shown.trim(3), isTrue);
+    expect(shown.items.first.id, 'y');
+  });
 }
