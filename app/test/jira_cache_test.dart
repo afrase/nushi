@@ -8,7 +8,7 @@ import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-import 'jira_view_test.dart' show issue, openView;
+import 'jira_fixture.dart' show issue, openView;
 
 /// Five minutes before the view's now.
 final _kept = Int64(DateTime(2026, 10, 25, 11, 55).millisecondsSinceEpoch);

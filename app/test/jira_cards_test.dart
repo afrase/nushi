@@ -11,7 +11,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-import 'jira_view_test.dart' show openView, shown;
+import 'jira_fixture.dart' show openView, shown;
 
 const _site = 'acme.atlassian.net';
 

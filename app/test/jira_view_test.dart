@@ -6,142 +6,17 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_issue.dart';
 import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
-
-final _site = JiraSite(
-  id: 'acme.atlassian.net',
-  url: 'https://acme.atlassian.net',
-  name: 'Test User',
-  board: Int64(1),
-  boardName: 'ACME board',
-  searches: [JiraSearch(name: 'Bugs', jql: 'type = Bug')],
-);
-
-JiraIssue issue(String key, String summary, String status, String cat) =>
-    JiraIssue(
-      key: key,
-      summary: summary,
-      type: 'Task',
-      status: status,
-      statusCategory: cat,
-      assignee: 'Test User',
-      priority: 'Medium',
-    );
-
-/// The Jira view on a fake daemon with one site; what each list holds. In
-/// the app's window with [window], else on its own.
-Future<(FakeDaemon, Daemon)> openView(
-  WidgetTester tester, {
-  List<JiraSite>? sites,
-  List<Chat> chats = const [],
-  Size size = const Size(1000, 560),
-  Tokens tokens = Tokens.dark,
-  Object? Function(Object input)? more,
-  Map<String, List<String>> groups = const {},
-  Map<String, List<String>> collapsed = const {},
-  bool window = false,
-}) async {
-  // As app.json had them at launch.
-  jiraGroupOrder.value = groups;
-  jiraCollapsed.value = collapsed;
-  final fake = FakeDaemon(chats)
-    ..answer = (input) =>
-        more?.call(input) ??
-        switch (input) {
-          ListJiraSitesRequest() => ListJiraSitesResponse(
-            sites: sites ?? [_site],
-          ),
-          ListJiraIssuesRequest(list: 'mine') => ListJiraIssuesResponse(
-            issues: [
-              issue(
-                'ACME-12',
-                'Log in with a passkey',
-                'In Progress',
-                'indeterminate',
-              ),
-              issue(
-                'ACME-9',
-                'The sidebar flickers when a chat starts',
-                'To Do',
-                'new',
-              ),
-              issue('ACME-3', 'Write the release notes', 'Done', 'done'),
-            ],
-          ),
-          ListJiraIssuesRequest(list: 'sprint') => ListJiraIssuesResponse(
-            sprint: 'Sprint 4',
-            issues: [
-              issue(
-                'ACME-12',
-                'Log in with a passkey',
-                'In Progress',
-                'indeterminate',
-              ),
-            ],
-          ),
-          ListJiraIssuesRequest() => ListJiraIssuesResponse(
-            issues: [issue('ACME-1', 'Found by JQL', 'To Do', 'new')],
-          ),
-          GetJiraIssueRequest(:final key) => GetJiraIssueResponse(
-            issue: issue(
-              key,
-              'Log in with a passkey',
-              'In Progress',
-              'indeterminate',
-            )..description = 'Let people sign in with a **passkey**.',
-          ),
-          GetJiraJqlRequest() => GetJiraJqlResponse(
-            fields: [
-              JiraJqlField(
-                name: 'status',
-                display: 'Status',
-                operators: ['=', 'in'],
-              ),
-            ],
-          ),
-          _ => null,
-        };
-  final d = await fake.connect(tester);
-  forgetJiraView(); // it keeps what it had while the app runs
-  await tester.binding.setSurfaceSize(size);
-  if (window) {
-    // The window on the view, the sidebar hidden (it has its own goldens).
-    viewport(
-      tester,
-      size,
-      brightness: tokens == Tokens.dark ? Brightness.dark : Brightness.light,
-    );
-    sidebarHidden.value = true;
-    d.go(const JiraPlace());
-    await tester.pumpWidget(NushiApp(daemon: d));
-  } else {
-    clock = () => DateTime(2026, 10, 25, 12);
-    await tester.pumpWidget(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: NushiTheme(tokens).toThemeData(),
-        home: Scaffold(body: JiraView(d)),
-      ),
-    );
-  }
-  await tester.pumpAndSettle();
-  return (fake, d);
-}
-
-/// The issue the view shows.
-String shown(WidgetTester tester) =>
-    tester.widget<JiraIssuePane>(find.byType(JiraIssuePane)).issueKey;
+import 'jira_fixture.dart';
 
 void main() {
   setUpAll(loadFonts);
@@ -208,7 +83,7 @@ void main() {
         FindJiraIssuesRequest(:final text) => FindJiraIssuesResponse(
           issues: [
             FoundJiraIssue(
-              site: _site.id,
+              site: testSite.id,
               issue: issue(text, 'Issue', 'To Do', 'new'),
               branch: text,
             ),
@@ -309,10 +184,10 @@ void main() {
       tester,
       chats: [
         chat('c1', 'claude', 'Passkeys', age: 5)
-          ..jiraSite = _site.id
+          ..jiraSite = testSite.id
           ..jiraKey = 'ACME-12',
         chat('c2', 'codex', 'Passkeys again', age: 1)
-          ..jiraSite = _site.id
+          ..jiraSite = testSite.id
           ..jiraKey = 'ACME-12',
       ],
       more: (input) => switch (input) {
@@ -322,7 +197,7 @@ void main() {
         FindJiraIssuesRequest(:final text) => FindJiraIssuesResponse(
           issues: [
             FoundJiraIssue(
-              site: _site.id,
+              site: testSite.id,
               issue: issue(text, 'Log in with a passkey', 'To Do', 'new'),
               branch: '$text-log-in-with-a-passkey',
             ),
@@ -404,14 +279,14 @@ void main() {
 
   testWidgets('every site’s issues, each row naming its site', (tester) async {
     final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
-    final (fake, d) = await openView(tester, sites: [_site, other]);
-    await tester.tap(find.text(_site.id));
+    final (fake, d) = await openView(tester, sites: [testSite, other]);
+    await tester.tap(find.text(testSite.id));
     await tester.pumpAndSettle();
     await tester.tap(find.text('All sites'));
     await tester.pumpAndSettle();
     final asked = fake.calls.whereType<ListJiraIssuesRequest>().toList();
     expect(asked.reversed.take(2).map((r) => r.site).toSet(), {
-      _site.id,
+      testSite.id,
       other.id,
     });
     expect(find.text('Sprint'), findsNothing); // one site's lists
@@ -422,8 +297,8 @@ void main() {
   testWidgets('every site’s issues: a key on two sites is two rows, picked '
       'and opened apart', (tester) async {
     final other = JiraSite(id: 'other.atlassian.net', url: 'https://other');
-    final (fake, d) = await openView(tester, sites: [_site, other]);
-    await tester.tap(find.text(_site.id));
+    final (fake, d) = await openView(tester, sites: [testSite, other]);
+    await tester.tap(find.text(testSite.id));
     await tester.pumpAndSettle();
     await tester.tap(find.text('All sites'));
     await tester.pumpAndSettle();
@@ -494,7 +369,7 @@ void main() {
         return switch (input) {
           ListJiraSitesRequest() => ListJiraSitesResponse(
             sites: [
-              _site.deepCopy()
+              testSite.deepCopy()
                 ..searches.clear()
                 ..searches.addAll(searches),
             ],
@@ -529,7 +404,7 @@ void main() {
     final (_, d) = await openView(tester);
     await tester.pumpWidget(const SizedBox());
     // Not in Mine: a chat's issue, say, assigned to someone else.
-    showIssue(d, _site.id, 'ACME-77');
+    showIssue(d, testSite.id, 'ACME-77');
     await tester.pumpWidget(
       MaterialApp(
         theme: const NushiTheme(Tokens.dark).toThemeData(),
@@ -549,7 +424,7 @@ void main() {
     expect(shown(tester), 'ACME-78');
     expect(
       tester.widget<JiraIssuePane>(find.byType(JiraIssuePane)).site,
-      _site.id,
+      testSite.id,
     );
     // Back: the list.
     await tester.tap(find.byTooltip('The list (Esc)'));
@@ -572,7 +447,7 @@ void main() {
   testWidgets('the sprint list asks for its board first', (tester) async {
     final (fake, d) = await openView(
       tester,
-      sites: [_site.deepCopy()..board = Int64.ZERO],
+      sites: [testSite.deepCopy()..board = Int64.ZERO],
     );
     await tester.tap(find.text('Sprint'));
     await tester.pumpAndSettle();
@@ -589,11 +464,14 @@ void main() {
   testWidgets('a token the keychain wants an OK for', (tester) async {
     final (fake, d) = await openView(
       tester,
-      sites: [_site.deepCopy()..needsOk = true],
+      sites: [testSite.deepCopy()..needsOk = true],
     );
     await tester.tap(find.text('Allow…'));
     await tester.pumpAndSettle();
-    expect(fake.calls.whereType<AllowJiraTokenRequest>().single.site, _site.id);
+    expect(
+      fake.calls.whereType<AllowJiraTokenRequest>().single.site,
+      testSite.id,
+    );
     await closeView(tester, d);
   });
 
@@ -612,7 +490,7 @@ void main() {
     );
     d.openSettings(section: SettingsSection.jira);
     await tester.pumpAndSettle();
-    sites = [_site];
+    sites = [testSite];
     d.closeSettings();
     await tester.pumpAndSettle();
     expect(
@@ -734,7 +612,7 @@ void main() {
           chats: [
             for (final (id, agent) in [('c1', 'claude'), ('c2', 'codex')])
               chat(id, agent, 'Passkeys')
-                ..jiraSite = _site.id
+                ..jiraSite = testSite.id
                 ..jiraKey = 'ACME-12',
           ],
         );
