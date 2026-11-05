@@ -78,7 +78,9 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 		old := c.agent
 		c.dropPromptsLocked() // what ran on the old agent ends with it
 		c.orphanLocked(true)
+		held := c.held // a queue held after a stopped or failed turn stays held, as in load
 		s.useLocked(c, o)
+		c.held = held
 		c.saveLocked(func(s *model.ChatRecord) {
 			if !fresh { // an empty session is just dropped, not something the chat had
 				s.Earlier = append(slices.Clip(s.Earlier), model.AgentSession{ID: s.SessionID, Folder: s.Folder})
