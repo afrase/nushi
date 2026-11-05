@@ -405,12 +405,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     // Not in Mine: a chat's issue, say, assigned to someone else.
     showIssue(d, testSite.id, 'ACME-77');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: JiraView(d)),
-      ),
-    );
+    await tester.pumpWidget(themed(JiraView(d)));
     await tester.pumpAndSettle();
     expect(shown(tester), 'ACME-77');
     await tester.pump(jiraPoll);

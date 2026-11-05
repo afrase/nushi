@@ -62,11 +62,9 @@ void main() {
       final daemon = await fake.connect(tester);
       chat.showFile('calc/calc.go', line: 40);
       await tester.pumpWidget(
-        MaterialApp(
-          theme: NushiTheme(tokens).toThemeData(),
-          home: Scaffold(
-            body: ChangesView(chat: chat, daemon: daemon),
-          ),
+        themed(
+          ChangesView(chat: chat, daemon: daemon),
+          tokens: tokens,
         ),
       );
       await tester.pumpAndSettle();
@@ -123,14 +121,7 @@ void main() {
     final chat = ChatState('c', '/x')..scope = 'uncommitted';
     addTearDown(() => chat.scope = null);
     final daemon = await fake.connect(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ChangesView(chat: chat, daemon: daemon),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(ChangesView(chat: chat, daemon: daemon)));
     await tester.pumpAndSettle();
     chat.showFile('calc/util.go', line: 70);
     await tester.pumpAndSettle();

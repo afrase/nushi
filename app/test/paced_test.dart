@@ -195,25 +195,23 @@ void main() {
           Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
         );
       await tester.pumpWidget(
-        MaterialApp(
-          theme: NushiTheme(tokens).toThemeData(),
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: enlarged(
-                const Size(420, 150),
-                2,
-                ColoredBox(
-                  color: tokens.base,
-                  child: ListenableBuilder(
-                    listenable: chat,
-                    builder: (context, _) =>
-                        Transcript(chat: chat, daemon: d, onReply: null),
-                  ),
+        themed(
+          Align(
+            alignment: Alignment.topLeft,
+            child: enlarged(
+              const Size(420, 150),
+              2,
+              ColoredBox(
+                color: tokens.base,
+                child: ListenableBuilder(
+                  listenable: chat,
+                  builder: (context, _) =>
+                      Transcript(chat: chat, daemon: d, onReply: null),
                 ),
               ),
             ),
           ),
+          tokens: tokens,
         ),
       );
       stream(chat, _words);

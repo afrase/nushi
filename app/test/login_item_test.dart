@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/login_item.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 void main() {
   const channel = MethodChannel('nushi/login');
@@ -25,12 +26,8 @@ void main() {
         .setMockMethodCallHandler(channel, null),
   );
 
-  Future<void> show(WidgetTester tester) => tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: const Scaffold(body: StartAtLogin()),
-    ),
-  );
+  Future<void> show(WidgetTester tester) =>
+      tester.pumpWidget(themed(const StartAtLogin()));
 
   testWidgets('the switch registers and unregisters the login item', (
     tester,

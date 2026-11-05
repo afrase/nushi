@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/markdown.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 void main() {
   test('only web links open', () {
@@ -57,12 +57,9 @@ void main() {
 
   testWidgets('clicking one says where it goes first', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: const Scaffold(
-          body: AgentMarkdown(
-            '[https://github.com/org/repo/pull/12](https://evil.example/login)',
-          ),
+      themed(
+        const AgentMarkdown(
+          '[https://github.com/org/repo/pull/12](https://evil.example/login)',
         ),
       ),
     );

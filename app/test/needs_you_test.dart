@@ -173,24 +173,22 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: NushiTheme(tokens).toThemeData(),
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: enlarged(
-                const Size(300, 140),
-                2,
-                ColoredBox(
-                  color: tokens.base,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: PermissionCard(_ask(), onAnswer: (_) async {}),
-                  ),
+        themed(
+          Align(
+            alignment: Alignment.topLeft,
+            child: enlarged(
+              const Size(300, 140),
+              2,
+              ColoredBox(
+                color: tokens.base,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: PermissionCard(_ask(), onAnswer: (_) async {}),
                 ),
               ),
             ),
           ),
+          tokens: tokens,
         ),
       );
       await expectLater(

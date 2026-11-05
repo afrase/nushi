@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 void main() {
   testWidgets('Ultracode shows beside the pickers while on, and is in ⋯', (
@@ -12,28 +12,25 @@ void main() {
   ) async {
     Future<void> pick(String current) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: const NushiTheme(Tokens.dark).toThemeData(),
-          home: Scaffold(
-            body: Pickers(
-              options: [
-                ConfigOption(
-                  id: 'model',
-                  category: 'model',
-                  current: 'opus',
-                  values: [ConfigValue(value: 'opus', name: 'Opus 5.5')],
-                ),
-                ConfigOption(
-                  id: 'nushi:ultracode',
-                  name: 'Ultracode',
-                  category: 'ultracode',
-                  type: 'boolean',
-                  current: current,
-                  description: 'Standing multi-agent workflows',
-                ),
-              ],
-              onPick: (id, value) async {},
-            ),
+        themed(
+          Pickers(
+            options: [
+              ConfigOption(
+                id: 'model',
+                category: 'model',
+                current: 'opus',
+                values: [ConfigValue(value: 'opus', name: 'Opus 5.5')],
+              ),
+              ConfigOption(
+                id: 'nushi:ultracode',
+                name: 'Ultracode',
+                category: 'ultracode',
+                type: 'boolean',
+                current: current,
+                description: 'Standing multi-agent workflows',
+              ),
+            ],
+            onPick: (id, value) async {},
           ),
         ),
       );
@@ -57,23 +54,20 @@ void main() {
       for (final v in 'abcdef'.split('')) v: 'Model ${v.toUpperCase()}',
     };
     Future<void> show() => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Pickers(
-            options: [
-              ConfigOption(
-                id: 'model',
-                category: 'model',
-                current: current,
-                values: [
-                  for (final MapEntry(:key, :value) in names.entries)
-                    ConfigValue(value: key, name: value),
-                ],
-              ),
-            ],
-            onPick: (id, value) async => current = value,
-          ),
+      themed(
+        Pickers(
+          options: [
+            ConfigOption(
+              id: 'model',
+              category: 'model',
+              current: current,
+              values: [
+                for (final MapEntry(:key, :value) in names.entries)
+                  ConfigValue(value: key, name: value),
+              ],
+            ),
+          ],
+          onPick: (id, value) async => current = value,
         ),
       ),
     );

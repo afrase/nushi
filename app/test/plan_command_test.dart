@@ -36,14 +36,7 @@ Future<(FakeDaemon, Daemon, ChatState)> _box(WidgetTester tester) async {
     ..loaded = true
     ..commands = [Command(name: 'compact', description: 'Compact'), _plan];
   d.chats['c'] = chat;
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Composer(chat: chat, daemon: d),
-      ),
-    ),
-  );
+  await tester.pumpWidget(themed(Composer(chat: chat, daemon: d)));
   await tester.pump();
   return (fake, d, chat);
 }

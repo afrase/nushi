@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 void main() {
   testWidgets('a long menu filters as you type; arrows and Enter pick', (
@@ -12,17 +13,14 @@ void main() {
     String? picked;
     final names = ['apple', 'banana', 'cherry', 'date', 'elderberry', 'fig'];
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: MenuField(
-            entries: [
-              for (final n in names)
-                for (final c in ['red', 'green'])
-                  MenuEntry('$c $n', onPick: () => picked = '$c $n'),
-            ],
-            label: const Text('open'),
-          ),
+      themed(
+        MenuField(
+          entries: [
+            for (final n in names)
+              for (final c in ['red', 'green'])
+                MenuEntry('$c $n', onPick: () => picked = '$c $n'),
+          ],
+          label: const Text('open'),
         ),
       ),
     );

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview_marks.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -11,10 +10,7 @@ import 'harness.dart';
 
 const _labels = [(0, 'Chat'), (1, 'Changes 12'), (2, 'Pull request')];
 
-Widget _themed(Widget child) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: Scaffold(body: Center(child: child)),
-);
+Widget _themed(Widget child) => themed(Center(child: child));
 
 PlainTabs<int> _tabs(ValueChanged<int> onChanged, {bool fill = false}) =>
     PlainTabs(value: 0, tabs: _labels, onChanged: onChanged, fill: fill);

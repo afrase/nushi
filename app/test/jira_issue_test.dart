@@ -194,12 +194,8 @@ void main() {
                 : GetJiraAttachmentResponse(mimeType: 'application/pdf')
           : null;
     final d = await fake.connect(tester);
-    Widget image() => MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: AttachmentImage(d.client, 'retry.example', '7', size: 100),
-      ),
-    );
+    Widget image() =>
+        themed(AttachmentImage(d.client, 'retry.example', '7', size: 100));
     await tester.pumpWidget(image());
     await tester.pump();
     expect(find.byIcon(Icons.broken_image), findsOneWidget);

@@ -111,12 +111,7 @@ void main() {
       ..agent = 'claude'
       ..mcpChanged = true;
     await tester.binding.setSurfaceSize(const Size(340, 500));
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PanelWidgets([mcpWidget(chat, d)])),
-      ),
-    );
+    await tester.pumpWidget(themed(PanelWidgets([mcpWidget(chat, d)])));
     await tester.pumpAndSettle();
     expect(find.byType(Switch), findsNWidgets(4));
     expect(find.text('/mcp only'), findsNWidgets(2));
@@ -152,12 +147,7 @@ void main() {
     final d = await fake.connect(tester);
     final chat = ChatState('c1', '/Users/me/lost')..agent = 'claude';
     await tester.binding.setSurfaceSize(const Size(340, 500));
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PanelWidgets([mcpWidget(chat, d)])),
-      ),
-    );
+    await tester.pumpWidget(themed(PanelWidgets([mcpWidget(chat, d)])));
     await tester.pumpAndSettle();
     expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
     expect(find.text('Checking…'), findsNothing);

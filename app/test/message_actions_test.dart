@@ -8,7 +8,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/message_actions.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -54,20 +53,17 @@ Future<(Daemon, List<String>)> _hovered(
     ..loaded = true
     ..items.addAll(items);
   await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: SizedBox(
-          width: 800,
-          child: ItemView(
-            item,
-            chat,
-            d,
-            live: false,
-            still: false,
-            onRewind: onRewind,
-            onFork: onFork,
-          ),
+    themed(
+      SizedBox(
+        width: 800,
+        child: ItemView(
+          item,
+          chat,
+          d,
+          live: false,
+          still: false,
+          onRewind: onRewind,
+          onFork: onFork,
         ),
       ),
     ),

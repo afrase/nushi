@@ -288,15 +288,12 @@ void main() {
     final d = await fake.connect(tester);
     final picked = <String>[];
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: IssuePicker(
-            daemon: d,
-            sites: [JiraSite(id: _acme)],
-            onPick: (f) => picked.add(f.issue.key),
-            onBack: () {},
-          ),
+      themed(
+        IssuePicker(
+          daemon: d,
+          sites: [JiraSite(id: _acme)],
+          onPick: (f) => picked.add(f.issue.key),
+          onBack: () {},
         ),
       ),
     );

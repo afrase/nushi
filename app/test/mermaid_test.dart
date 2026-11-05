@@ -9,6 +9,7 @@ import 'package:nushi/mermaid.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 const _flow = 'graph TD\n  A[Start] --> B[End]';
 
@@ -46,14 +47,12 @@ Future<void> _show(
   bool live = false,
   Tokens tokens = Tokens.dark,
 }) => tester.pumpWidget(
-  MaterialApp(
-    theme: NushiTheme(tokens).toThemeData(),
-    home: Scaffold(
-      body: SizedBox(
-        width: 600,
-        child: SingleChildScrollView(child: AgentMarkdown(text, live: live)),
-      ),
+  themed(
+    SizedBox(
+      width: 600,
+      child: SingleChildScrollView(child: AgentMarkdown(text, live: live)),
     ),
+    tokens: tokens,
   ),
 );
 

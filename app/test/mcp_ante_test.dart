@@ -101,12 +101,7 @@ void main() {
     final (fake, d) = await _daemon(tester);
     await tester.binding.setSurfaceSize(const Size(1000, 900));
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: McpView(daemon: d, folder: '/Users/me/ante'),
-        ),
-      ),
+      themed(McpView(daemon: d, folder: '/Users/me/ante')),
     );
     await tester.pumpAndSettle();
     final asked = fake.calls.whereType<ListMcpServersRequest>();
@@ -133,12 +128,7 @@ void main() {
     final (fake, d) = await _signIn(tester);
     await tester.binding.setSurfaceSize(const Size(1000, 900));
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: McpView(daemon: d, folder: '/Users/me/sign-in'),
-        ),
-      ),
+      themed(McpView(daemon: d, folder: '/Users/me/sign-in')),
     );
     await tester.pumpAndSettle();
     expect(find.text('Needs login'), findsOneWidget);
@@ -158,12 +148,7 @@ void main() {
     final (_, d) = await _daemon(tester, api: agentFactsApi - 1);
     await tester.binding.setSurfaceSize(const Size(1000, 900));
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: McpView(daemon: d, folder: '/Users/me/old'),
-        ),
-      ),
+      themed(McpView(daemon: d, folder: '/Users/me/old')),
     );
     await tester.pumpAndSettle();
     expect(find.text(McpView.userOnlyAbout('Ante')), findsOneWidget);
@@ -175,12 +160,7 @@ void main() {
     final (fake, d) = await _daemon(tester);
     final chat = ChatState('c1', '/Users/me/ante-card')..agent = 'ante';
     await tester.binding.setSurfaceSize(const Size(340, 500));
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PanelWidgets([mcpWidget(chat, d)])),
-      ),
-    );
+    await tester.pumpWidget(themed(PanelWidgets([mcpWidget(chat, d)])));
     await tester.pumpAndSettle();
     expect(find.textContaining('its own config'), findsNothing);
     expect(find.text('fs'), findsOneWidget);

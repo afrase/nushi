@@ -67,17 +67,14 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: const Scaffold(
-          body: SizedBox(
-            width: 320,
-            child: PanelWidget(
-              title: 'Context',
-              summary: Text('4%'),
-              action: Icon(Icons.refresh),
-              rows: [(null, 'a row')],
-            ),
+      themed(
+        const SizedBox(
+          width: 320,
+          child: PanelWidget(
+            title: 'Context',
+            summary: Text('4%'),
+            action: Icon(Icons.refresh),
+            rows: [(null, 'a row')],
           ),
         ),
       ),
@@ -96,26 +93,24 @@ void main() {
   });
 }
 
-Widget _widgets(Tokens tokens) => MaterialApp(
-  theme: NushiTheme(tokens).toThemeData(),
-  home: Scaffold(
-    body: SizedBox(
-      width: 300,
-      child: PanelWidgets([
-        const PanelWidget(
-          title: 'Context',
-          summary: Text('57%'),
-          rows: [(null, 'a row')],
-        ),
-        PanelWidget(
-          title: 'Background tasks',
-          summary: const Text('1 running'),
-          action: Text('Stop all', style: NushiTheme(tokens).ui(tokens.link)),
-          rows: const [(null, 'npm test')],
-        ),
-      ]),
-    ),
+Widget _widgets(Tokens tokens) => themed(
+  SizedBox(
+    width: 300,
+    child: PanelWidgets([
+      const PanelWidget(
+        title: 'Context',
+        summary: Text('57%'),
+        rows: [(null, 'a row')],
+      ),
+      PanelWidget(
+        title: 'Background tasks',
+        summary: const Text('1 running'),
+        action: Text('Stop all', style: NushiTheme(tokens).ui(tokens.link)),
+        rows: const [(null, 'npm test')],
+      ),
+    ]),
   ),
+  tokens: tokens,
 );
 
 Future<TestGesture> _pointer(WidgetTester tester) async {
@@ -151,16 +146,13 @@ void _goldens() {
   testWidgets('a widget with a note is one line: its title and the note, '
       'nothing to open', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: const Scaffold(
-          body: SizedBox(
-            width: 300,
-            child: PanelWidget(
-              title: 'Changes',
-              note: 'Not a git repository',
-              rows: [(null, 'hidden')],
-            ),
+      themed(
+        const SizedBox(
+          width: 300,
+          child: PanelWidget(
+            title: 'Changes',
+            note: 'Not a git repository',
+            rows: [(null, 'hidden')],
           ),
         ),
       ),

@@ -6,9 +6,9 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/logs_section.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'settings_harness.dart';
 
 Future<Daemon> _section(
@@ -19,16 +19,8 @@ Future<Daemon> _section(
 }) async {
   final d = await FakeDaemon([]).connect(tester);
   await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: LogsSection(
-          daemon: d,
-          debug: debug,
-          onDebug: onDebug,
-          reveal: reveal,
-        ),
-      ),
+    themed(
+      LogsSection(daemon: d, debug: debug, onDebug: onDebug, reveal: reveal),
     ),
   );
   return d;
@@ -98,15 +90,8 @@ void main() {
           : null;
     final d = await fake.connect(tester);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: LogsSection(
-            daemon: d,
-            debug: null,
-            onDebug: ({required on}) async {},
-          ),
-        ),
+      themed(
+        LogsSection(daemon: d, debug: null, onDebug: ({required on}) async {}),
       ),
     );
     expect(find.text('Version 1.2.0 · API $apiVersion'), findsOneWidget);

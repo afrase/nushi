@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -111,12 +110,9 @@ void main() {
       ),
       checks: checks,
     );
-    Widget at(GitHubPull p) => MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: SingleChildScrollView(
-          child: GitHubChecks(daemon: d, pull: p),
-        ),
+    Widget at(GitHubPull p) => themed(
+      SingleChildScrollView(
+        child: GitHubChecks(daemon: d, pull: p),
       ),
     );
     GitHubCheck failed(int id, String name) =>

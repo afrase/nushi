@@ -6,7 +6,6 @@ import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_states.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_fixture.dart' show item, pull;
@@ -134,10 +133,7 @@ void main() {
     final d = await fake.connect(tester);
     final opened = <String>[];
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PullChip(d, d.chats['a']!, onOpen: opened.add)),
-      ),
+      themed(PullChip(d, d.chats['a']!, onOpen: opened.add)),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byType(PullChip));
@@ -157,12 +153,7 @@ void main() {
         _ => _states(input),
       };
     final d = await fake.connect(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: PullChip(d, d.chats['c']!, onOpen: (_) {})),
-      ),
-    );
+    await tester.pumpWidget(themed(PullChip(d, d.chats['c']!, onOpen: (_) {})));
     await tester.pumpAndSettle();
     int asked() => fake.calls.whereType<GetGitHubPullRequest>().length;
     expect(asked(), 1);
