@@ -264,26 +264,55 @@ class _MemoryButton extends StatelessWidget {
 }
 
 /// Restarts the daemon (the bundled one), first asking when that stops
-/// something: a turn running, or a chat with an agent or a terminal.
+/// something: a turn running, a chat with an agent, or a terminal running
+/// a command (in any chat, an asleep one's too: its terminals end with the
+/// daemon).
 Future<void> restartDaemonAsking(BuildContext context, Daemon daemon) async {
   final awake = daemon.chats.values
       .where((c) => !c.asleep && !c.archived && c.canSleep)
       .length;
   final busy = daemon.chats.values.where((c) => c.busy).length;
-  if (busy + awake > 0 &&
-      !await confirm(
-        context,
-        'Restart the daemon?',
-        busy > 0
-            ? 'It stops $busy running turn${busy == 1 ? '' : 's'} and closes '
-                  'terminals. Chats reopen when you next use them.'
-            : "Chats' agents stop and terminals close; chats reopen when "
-                  'you next use them.',
-        'Restart',
-        destructive: busy > 0,
-      )) {
-    return;
+  final running = await _runningTerminals(daemon);
+  if (!context.mounted) return;
+  final programs = running?.map((p) => '“$p”').join(', ');
+  if (busy + awake > 0 || running == null || running.isNotEmpty) {
+    final what = busy > 0
+        ? 'It stops $busy running turn${busy == 1 ? '' : 's'} and closes '
+              'terminals. Chats reopen when you next use them.'
+        : awake > 0
+        ? "Chats' agents stop and terminals close; chats reopen when "
+              'you next use them.'
+        : 'Terminals close.';
+    final ok = await confirm(
+      context,
+      'Restart the daemon?',
+      programs == null || programs.isEmpty
+          ? what
+          : '$what It ends what runs in them: $programs.',
+      'Restart',
+      destructive: busy > 0,
+    );
+    if (!ok) return;
   }
   if (!context.mounted) return;
   await tryOrShow(context, daemon.restartDaemon);
+}
+
+/// What runs in the chats' terminals (each foreground program), or null
+/// when the daemon couldn't say.
+Future<List<String>?> _runningTerminals(Daemon daemon) async {
+  try {
+    final lists = await Future.wait([
+      for (final c in daemon.chats.values)
+        if (!c.archived)
+          daemon.client.listTerminals(ListTerminalsRequest(chatId: c.id)),
+    ]);
+    return [
+      for (final l in lists)
+        for (final t in l.terminals)
+          if (t.program.isNotEmpty && !t.exited) t.program,
+    ];
+  } on Object {
+    return null;
+  }
 }
