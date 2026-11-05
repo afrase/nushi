@@ -501,10 +501,10 @@ class ChatState extends ChangeNotifier {
   }
 
   /// Lets go of all but its last [n] items, reaching back to the call of a
-  /// subagent whose steps are among them as the daemon's pages do, and to
-  /// the call its [pane] shows: a long chat left at its bottom goes back to
-  /// its recent part. Not while a find looks in what it has. Whether any
-  /// went.
+  /// subagent whose steps are among them and to a prompt still waiting as
+  /// the daemon's pages do, and to the call its [pane] shows: a long chat
+  /// left at its bottom goes back to its recent part. Not while a find
+  /// looks in what it has. Whether any went.
   bool trim(int n) {
     if (!loaded || outbox.sending.isNotEmpty) return false;
     if ((find.query ?? '').isNotEmpty) return false;
@@ -681,15 +681,24 @@ bool _runs(Item it) =>
 
 /// Where the last [n] of [items] before [end] start: [n] back, and further
 /// back to the call that started a subagent whose steps are among them, so
-/// the subagent shows whole (internal/api's pageStart).
+/// the subagent shows whole, and to a permission or question still waiting
+/// (a background subagent's, as the chat goes on), so its card is there to
+/// answer (internal/api's pageStart).
 int recentStart(List<Item> items, int end, int n) {
   var start = max(0, end - n);
   final index = {for (final (i, it) in items.take(end).indexed) it.id: i};
   for (var i = end - 1; i >= start; i--) {
     if (index[items[i].parent] case final j? when j < start) start = j;
   }
-  return start;
+  final waits = items.take(start).toList().indexWhere(_waits);
+  return waits < 0 ? start : waits;
 }
+
+/// Whether [it] is a permission or a question still waiting for its answer.
+bool _waits(Item it) =>
+    (it.kind == ItemKind.ITEM_KIND_PERMISSION ||
+        it.kind == ItemKind.ITEM_KIND_QUESTION) &&
+    it.status == 'pending';
 
 /// [path] (relative to [folder], or absolute) as an absolute path.
 String absoluteIn(String folder, String path) =>

@@ -161,4 +161,35 @@ void main() {
     expect(chat.runningBefore, isEmpty);
     expect(chat.items.where((it) => it.id == 'dev').length, 1);
   });
+
+  test('trimmed, a permission or question still waiting stays, with what '
+      'came after it; one answered goes', () {
+    Item prompt(String id, ItemKind kind, String status) =>
+        Item(id: id, kind: kind, status: status);
+    ChatState loaded(Item asks) => ChatState('c', '/f')
+      ..load(
+        GetChatResponse(
+          items: [
+            for (var i = 0; i < 5; i++) _msg(i),
+            asks,
+            for (var i = 5; i < 20; i++) _msg(i),
+          ],
+          older: 5,
+          seq: Int64(5),
+        ),
+      );
+    for (final kind in [
+      ItemKind.ITEM_KIND_PERMISSION,
+      ItemKind.ITEM_KIND_QUESTION,
+    ]) {
+      final waiting = loaded(prompt('p', kind, 'pending'));
+      expect(waiting.trim(2), isTrue);
+      expect(waiting.items.first.id, 'p');
+      expect(waiting.items.length, 16);
+      expect(waiting.older, 10);
+      final answered = loaded(prompt('p', kind, 'allowed'));
+      expect(answered.trim(2), isTrue);
+      expect(answered.items.map((i) => i.id), ['i18', 'i19']);
+    }
+  });
 }
