@@ -101,10 +101,28 @@ class _RenderContent extends RenderProxyBox {
       Offset(position.dx, middle),
       Offset(position.dx - WindowDrag.near, middle),
       Offset(position.dx + WindowDrag.near, middle),
-    ].any(
-      (p) =>
-          size.contains(p) && child!.hitTest(BoxHitTestResult(), position: p),
+    ].any((p) => size.contains(p) && _on(p));
+  }
+
+  /// Whether something in the bar is under [p]. A text is only where its
+  /// words are: one in an `Expanded` is as wide as the room it was given,
+  /// and the rest of that room is the bar's empty space.
+  bool _on(Offset p) {
+    final result = BoxHitTestResult();
+    if (!child!.hitTest(result, position: p)) return false;
+    final text = result.path
+        .map((e) => e.target)
+        .whereType<RenderParagraph>()
+        .firstOrNull;
+    if (text == null || text.didExceedMaxLines) return true;
+    final x = text.globalToLocal(p, ancestor: this).dx;
+    final all = TextSelection(
+      baseOffset: 0,
+      extentOffset: text.text.toPlainText().length,
     );
+    return text
+        .getBoxesForSelection(all)
+        .any((b) => x >= b.left && x <= b.right);
   }
 
   /// A control shows its own pointer over it; a tooltip's region or a

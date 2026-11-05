@@ -230,4 +230,48 @@ void main() {
     await _double(tester, header.center);
     expect(calls, ['zoom']);
   });
+
+  testWidgets('a name given the room up to the buttons (the Files pane’s '
+      'folder) zooms nothing on its words, but the room past them zooms; a '
+      'name cut short zooms nothing to its end', (tester) async {
+    final calls = _windowCalls();
+    Future<void> pane(String name) => tester.pumpWidget(
+      themed(
+        SizedBox(
+          width: 600,
+          child: PaneHeader(
+            child: Row(
+              spacing: 6,
+              children: [
+                const Icon(Icons.folder_outlined, size: 14),
+                const Text('Files'),
+                Expanded(
+                  child: Text(
+                    name,
+                    key: const Key('name'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconTap(Icons.close, tooltip: 'Close', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await pane('repo');
+    final box = tester.getRect(find.byKey(const Key('name')));
+    expect(box.width, greaterThan(400)); // the Expanded's whole room
+    await _double(tester, box.centerLeft + const Offset(12, 0)); // its words
+    expect(calls, isEmpty);
+    await _double(tester, Offset(box.center.dx + 100, box.center.dy));
+    expect(calls, ['zoom']);
+
+    calls.clear();
+    await pane('a-folder-name-far-too-long-for-the-room-it-is-given-' * 4);
+    await _double(tester, box.centerRight - const Offset(10, 0));
+    expect(calls, isEmpty);
+  });
 }
