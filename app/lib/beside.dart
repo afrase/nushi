@@ -119,7 +119,9 @@ class _BesideState extends State<Beside> {
             ? SizedBox(
                 key: ValueKey(p.name),
                 width: p.width,
+                // Over the pane, whose own fill would hide it.
                 child: DecoratedBox(
+                  position: DecorationPosition.foreground,
                   decoration: BoxDecoration(
                     border: Border(left: BorderSide(color: t.borderSubtle)),
                   ),
