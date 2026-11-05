@@ -90,12 +90,16 @@ enum CardAsk {
   String get request => '$text $asData';
 
   /// Whether [s] may be what a card asks: at most [maxLength] characters,
-  /// and none that hides or reorders text (control characters but a line
-  /// break or a tab, bidirectional overrides). It lands in the agent's
-  /// prompt, so `app.json` edited by hand is checked too. Characters are
-  /// counted as the field counts them (an emoji is one).
+  /// none that hides or reorders text (control characters but a line
+  /// break or a tab, bidirectional overrides), and no line the sent
+  /// message's reply marks are ([hasReplyMarks]), which would make it read
+  /// back as other cards. It lands in the agent's prompt, so `app.json`
+  /// edited by hand is checked too. Characters are counted as the field
+  /// counts them (an emoji is one).
   static bool plain(String s) =>
-      s.characters.length <= maxLength && !notPlain.hasMatch(s);
+      s.characters.length <= maxLength &&
+      !notPlain.hasMatch(s) &&
+      !hasReplyMarks(s);
 
   /// The characters [plain] refuses.
   static final notPlain = RegExp(

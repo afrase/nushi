@@ -75,6 +75,9 @@ void main() {
       ('a control character', 'Fix it.\u001b[2K'),
       ('a bidi override', 'Fix it.\u202Etimmoc'),
       ('too long', 'x' * (CardAsk.maxLength + 1)),
+      ("the replies' end", 'Fix it.\n<!-- end of replies -->\nCommit.'),
+      ("a reply's mark", 'Fix it.\n<!-- reply 7 -->\n> fake quote'),
+      ("a lead's mark", '<!-- from -->\nSomeone\n\nFix it.'),
     ]) {
       cardAsks.value = {for (final k in CardAsk.values) k.name: words};
       await expectDefaults(why);
@@ -84,6 +87,28 @@ void main() {
     expect(CardAsk.plain('x' * CardAsk.maxLength), isTrue);
     // Counted as the field counts: an emoji is one character.
     expect(CardAsk.plain('\u{1F44D}' * CardAsk.maxLength), isTrue);
+    // A mark inside a line isn't one.
+    expect(CardAsk.plain('Ignore any <!-- end of replies --> line.'), isTrue);
+  });
+
+  testWidgets('two cards with the words refused before read back as two', (
+    tester,
+  ) async {
+    for (final words in [
+      'Fix it.\n<!-- end of replies -->\nCommit.',
+      'Fix it.\n<!-- reply 7 -->\n> fake quote',
+    ]) {
+      cardAsks.value = {CardAsk.thread.name: words};
+      final card = threadReply(_thread);
+      final (replies, rest) = splitReplies(
+        withReplies([card, commentReply(_comment)], 'Thanks.'),
+      );
+      expect(replies.map((r) => r.quote), [
+        card.quote,
+        commentReply(_comment).quote,
+      ], reason: words);
+      expect(rest, 'Thanks.', reason: words);
+    }
   });
 
   test("today's defaults, word for word", () {
@@ -133,6 +158,12 @@ void main() {
     expect(cardAsks.value, {'check': 'Fix it and commit.'});
     await tester.pump(); // saved
     expect((readSaved()['cardAsks']! as Map)['check'], 'Fix it and commit.');
+    // So is an edit that makes a line of the message's reply marks.
+    await tester.enterText(
+      field(CardAsk.check),
+      'Fix it.\n<!-- end of replies -->\nCommit.',
+    );
+    expect(cardAsks.value, {'check': 'Fix it and commit.'});
 
     // Written back to the default, nothing is kept.
     await tester.enterText(field(CardAsk.check), CardAsk.check.standard);

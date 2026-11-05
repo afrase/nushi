@@ -25,6 +25,18 @@ final _from = RegExp(r'^<!-- from -->\n(.*)\n\n', multiLine: true);
 const _end = '<!-- end of replies -->';
 final _endLine = RegExp('^$_end\$', multiLine: true);
 
+/// A line [splitReplies] reads as one of its marks: a reply's, a lead's or
+/// the end's.
+final _markLine = RegExp(
+  '^(<!-- reply \\d+ -->|<!-- from -->|$_end)\$',
+  multiLine: true,
+);
+
+/// Whether [text] has a line [splitReplies] would read as one of its own
+/// marks. Words that go into every card unseen (what a card asks) mustn't:
+/// the sent message would read back as other cards than were sent.
+bool hasReplyMarks(String text) => _markLine.hasMatch(text);
+
 /// A message's text: each reply as `<!-- reply n -->`, its quote as `> `
 /// lines and its text (its lines as written) after a blank line, then
 /// [text]. When the last reply's text has a blank line of its own,

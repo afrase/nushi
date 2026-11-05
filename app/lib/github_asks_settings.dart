@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/replies.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
@@ -120,6 +121,10 @@ class _AskField extends StatelessWidget {
             inputFormatters: [
               FilteringTextInputFormatter.deny(CardAsk.notPlain),
               LengthLimitingTextInputFormatter(CardAsk.maxLength),
+              // An edit that makes a reply mark's line is refused whole.
+              TextInputFormatter.withFunction(
+                (old, next) => hasReplyMarks(next.text) ? old : next,
+              ),
             ],
             decoration: InputDecoration(hintText: ask.standard, isDense: true),
             onChanged: onChanged,
