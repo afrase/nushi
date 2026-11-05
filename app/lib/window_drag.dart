@@ -37,6 +37,19 @@ class _WindowDragState extends State<WindowDrag> {
   DoubleClick _click = DoubleClick();
   final GlobalKey _content = GlobalKey();
 
+  /// Where each primary press on the drag area went down, until its
+  /// release: a click is told by the pointer's own down and up, not by a
+  /// tap, which a pan beats once the press moves two points (a click on a
+  /// trackpad often does), so such a double click zoomed nothing.
+  final Map<int, Offset> _downs = {};
+
+  void _up(PointerUpEvent e) {
+    final down = _downs.remove(e.pointer);
+    if (down != null && (e.position - down).distance <= kTouchSlop) {
+      _clicked(e.position);
+    }
+  }
+
   void _send(String method, [Object? arguments]) =>
       _channel.invokeMethod<void>(method, arguments).ignore();
 
@@ -62,14 +75,24 @@ class _WindowDragState extends State<WindowDrag> {
         if (kIsWeb)
           layers // the phone's headers: no window to move
         else ...[
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            // When the pan's press was, in the engine's microseconds of the
-            // event's own timestamp: the call can come late, after that
-            // press is let go and another one is held, and the window
-            // moves only with the press the pan began on.
-            onPanStart: (d) => _send('drag', d.sourceTimeStamp?.inMicroseconds),
-            onTapUp: (d) => _clicked(d.globalPosition),
+          Listener(
+            onPointerDown: (e) {
+              if (e.buttons == kPrimaryButton) _downs[e.pointer] = e.position;
+            },
+            onPointerUp: _up,
+            onPointerCancel: (e) => _downs.remove(e.pointer),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              // When the pan's press was, in the engine's microseconds of
+              // the event's own timestamp: the call can come late, after
+              // that press is let go and another one is held, and the
+              // window moves only with the press the pan began on.
+              onPanStart: (d) =>
+                  _send('drag', d.sourceTimeStamp?.inMicroseconds),
+              // A tap in the arena, so the pan wins only once the press
+              // moves: alone there, it would start a drag at every press.
+              onTap: () {},
+            ),
           ),
           _Content(key: _content, child: layers),
         ],

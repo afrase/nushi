@@ -117,6 +117,37 @@ void main() {
       d.dispose();
     });
 
+    // A press that moves two points is a pan in Flutter, which beat the tap:
+    // a click on a trackpad often moves that much.
+    testWidgets('a double click in its empty space zooms even when a press '
+        'moves a point or two', (tester) async {
+      final calls = _windowCalls();
+      final (d, _) = await _header(tester);
+      final word = tester.getRect(find.byType(ChatStatusWord));
+      final tabs = tester.getRect(find.text('Chat'));
+      final at = Offset((word.right + tabs.left) / 2, word.center.dy);
+
+      Future<void> click({required bool moves}) async {
+        final g = await tester.startGesture(at, kind: PointerDeviceKind.mouse);
+        if (moves) await g.moveBy(const Offset(3, 1));
+        await g.up();
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+
+      for (final (first, second) in [(false, true), (true, false)]) {
+        calls.clear();
+        await click(moves: first);
+        await click(moves: second);
+        await tester.pumpAndSettle();
+        expect(calls.where((c) => c == 'zoom'), hasLength(1));
+        // A click on the status word, so the next pair starts afresh (the
+        // clicks come faster than a double click's time).
+        await tester.tapAt(word.center);
+        await tester.pumpAndSettle();
+      }
+      d.dispose();
+    });
+
     testWidgets('a double click on what isn’t a control, or just beside it, '
         'zooms nothing; a drag from it moves the window', (tester) async {
       final calls = _windowCalls();
