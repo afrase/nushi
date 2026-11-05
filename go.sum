@@ -4,8 +4,8 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/afrase/acp-go v0.2.0 h1:wlim+WXqZjrT0b92dNpQNXY7NZBrza1qye8oEULU8iQ=
 github.com/afrase/acp-go v0.2.0/go.mod h1:2hnKbsiivwv5De01NUb/0wuTZkmgxxp+kBHasqMuSwM=
-github.com/afrase/claude-acp-go v0.2.0 h1:hXFafLh8NvZoV35LQVSR3fkWXuMIRe3vbk7gM/tD2OY=
-github.com/afrase/claude-acp-go v0.2.0/go.mod h1:kwlcbPkvKt+Yy4MX/OqfKkt1o/WItHcldNwVJBJVALU=
+github.com/afrase/claude-acp-go v0.2.1 h1:cqpTWPLytlGkMcC6oMrCyQckBM59SymaCy45cK2WQLA=
+github.com/afrase/claude-acp-go v0.2.1/go.mod h1:kwlcbPkvKt+Yy4MX/OqfKkt1o/WItHcldNwVJBJVALU=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
 github.com/andybalholm/brotli v1.2.0/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/cli/go-gh/v2 v2.17.0 h1:F24s1Ow/6pgWO0FXXSTi7l4YLkcuS94XPv7npEGkrQc=
