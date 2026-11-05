@@ -108,7 +108,7 @@ class _TerminalAreaState extends State<TerminalArea> {
     final diff = await widget.daemon.client.getDiff(
       span.scope == Scope.commits
           ? GetDiffRequest(folder: chat.folder)
-          : span.diff(chat.folder),
+          : span.diff(),
     );
     if (!mounted || !diff.files.any((f) => f.path == rel)) return false;
     if (span.scope == Scope.commits) chat.scope = Scope.uncommitted.name;

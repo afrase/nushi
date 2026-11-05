@@ -168,7 +168,6 @@ class ChangeSpan {
     final picked = pickedCommits(commits, first, last);
     if (scope == Scope.commits && picked == null) return [];
     final req = diff(
-      folder,
       commit: picked == null ? null : commits[picked.$1].hash,
       since: picked == null || picked.$1 == picked.$2
           ? null
@@ -181,22 +180,21 @@ class ChangeSpan {
 
   /// What GetDiff lists for the scope; in Commits, what the commits from
   /// [since] to [commit] changed.
-  GetDiffRequest diff(String folder, {String? commit, String? since}) =>
-      switch (scope) {
-        Scope.uncommitted => GetDiffRequest(folder: folder),
-        // Its commits alone: `since` would count its base's own change.
-        Scope.branch when head.isNotEmpty => GetDiffRequest(
-          folder: folder,
-          after: base,
-          commit: head,
-        ),
-        Scope.branch => GetDiffRequest(folder: folder, base: base),
-        Scope.commits => GetDiffRequest(
-          folder: folder,
-          commit: commit,
-          since: since,
-        ),
-      };
+  GetDiffRequest diff({String? commit, String? since}) => switch (scope) {
+    Scope.uncommitted => GetDiffRequest(folder: folder),
+    // Its commits alone: `since` would count its base's own change.
+    Scope.branch when head.isNotEmpty => GetDiffRequest(
+      folder: folder,
+      after: base,
+      commit: head,
+    ),
+    Scope.branch => GetDiffRequest(folder: folder, base: base),
+    Scope.commits => GetDiffRequest(
+      folder: folder,
+      commit: commit,
+      since: since,
+    ),
+  };
 }
 
 /// The commits picked, a click's ([a]) and a shift-click's ([b]), as
