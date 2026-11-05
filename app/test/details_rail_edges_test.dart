@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'details_rail_fixture.dart';
@@ -68,4 +69,25 @@ void main() {
     );
     await closeView(tester, d);
   }, variant: macOnly);
+
+  // The panel hides when the window narrows as it did at 264 points wide:
+  // the transcript gives up some of its least width to keep it.
+  for (final (width, shows) in [
+    (1070.0, false),
+    (1080.0, true),
+    (1120.0, true),
+  ]) {
+    testWidgets('with the sidebar, ${width.toInt()} wide: the panel '
+        '${shows ? 'shows' : 'hides'}', (tester) async {
+      final (d, _) = await railApp(tester, size: Size(width, 900));
+      sidebarHidden.value = false;
+      await tester.pumpAndSettle();
+      expect(railPanel, shows ? findsOne : findsNothing);
+      expectTextInside(tester, width);
+      if (width == 1080) {
+        await render(tester, find.byType(NushiApp), 'details_rail_1080_sb');
+      }
+      await closeView(tester, d);
+    }, variant: macOnly);
+  }
 }

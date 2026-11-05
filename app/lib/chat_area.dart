@@ -87,7 +87,8 @@ class _ChatAreaState extends State<ChatArea> {
       builder: (context, _) {
         final show = showDetails.value;
         // The panel goes when the chat would get too narrow.
-        final fits = box.maxWidth >= DetailsPanel.width + ChatView.minWidth;
+        final fits =
+            box.maxWidth >= DetailsPanel.width + ChatView.leastBesideDetails;
         widget.chat.panelFits = fits;
         // The pull request's tab goes with its link.
         final tab = widget.chat.shownTab;

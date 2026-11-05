@@ -50,6 +50,11 @@ class ChatView extends StatefulWidget {
   /// The narrowest the transcript gets beside a panel.
   static const minWidth = 556.0;
 
+  /// The narrowest the transcript gets beside the details panel: the
+  /// window that held the old 264-point panel beside [minWidth] still
+  /// holds the 320-point one (ADR 0092).
+  static const leastBesideDetails = 500.0;
+
   /// The narrowest the transcript gets beside a pane dragged as wide as
   /// it's wanted (a subagent's, or the preview).
   static const leastBesideWide = 360.0;
