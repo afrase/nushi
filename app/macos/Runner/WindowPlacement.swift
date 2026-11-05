@@ -203,10 +203,12 @@ final class WindowPlacement {
     }
     guard lost, !window.styleMask.contains(.fullScreen) else { return }
     lost = false
-    guard let frame = Placement.returnFrame(home: home, screens: screens, current: window.screen.map(Self.id))
+    guard let back = Placement.returnFrame(home: home, screens: screens, current: window.screen.map(Self.id))
     else { return }
+    // A zoom then goes back to the user's frame where the display is now.
+    user = back.user
     restoring = true
-    window.setFrame(frame, display: true)
+    window.setFrame(back.frame, display: true)
     restoring = false
     if let screen = window.screen { write(window.frame, on: Self.screen(screen)) }
   }

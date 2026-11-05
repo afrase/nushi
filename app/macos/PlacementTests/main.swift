@@ -84,10 +84,17 @@ expect(z.target, r(3560, 100, 800, 600), "user frame fitted")
 
 // returnFrame: home's display back and the window elsewhere.
 let home = Placement.Saved(frame: small, display: "B", screen: b.frame, user: nil)
-expect(Placement.returnFrame(home: home, screens: both, current: "MAIN"), small, "back to B")
-expect(Placement.returnFrame(home: home, screens: both, current: "B"), nil, "already on B")
-expect(Placement.returnFrame(home: home, screens: [main], current: "MAIN"), nil, "B still missing")
-expect(Placement.returnFrame(home: migrated, screens: both, current: "B"), nil, "no home display")
+expect(Placement.returnFrame(home: home, screens: both, current: "MAIN")?.frame, small, "back to B")
+expect(Placement.returnFrame(home: home, screens: both, current: "B")?.frame, nil, "already on B")
+expect(Placement.returnFrame(home: home, screens: [main], current: "MAIN")?.frame, nil, "B still missing")
+expect(Placement.returnFrame(home: migrated, screens: both, current: "B")?.frame, nil, "no home display")
+// B moved 500 to the right in the arrangement while it was gone: the frame
+// a zoom goes back to moves with the window.
+let filled = Placement.Saved(frame: b.visible, display: "B", screen: b.frame, user: r(1900, 100, 1200, 800))
+let movedB = Placement.Screen(id: "B", frame: r(2300, 0, 2560, 1440), visible: r(2300, 0, 2560, 1415))
+let back = Placement.returnFrame(home: filled, screens: [main, movedB], current: "MAIN")
+expect(back?.frame, movedB.visible, "filled, on B as moved")
+expect(back?.user, r(2400, 100, 1200, 800), "its user frame moved with it")
 
 if failed > 0 {
   print("\(failed) failed")

@@ -114,12 +114,13 @@ enum Placement {
   }
 
   /// Where the window goes back to when its own display ([home]'s) is
-  /// connected again after the system moved it off: home's place, unless
-  /// the window is on that display already ([current]). Nil when home's
-  /// display is still missing.
-  static func returnFrame(home: Saved, screens: [Screen], current: String?) -> CGRect? {
-    guard !home.display.isEmpty, current != home.display, screens.contains(where: { $0.id == home.display })
-    else { return nil }
-    return place(home, on: screens)?.frame
+  /// connected again after the system moved it off: home's place, and the
+  /// user frame moved as far as the display did, unless the window is on
+  /// that display already ([current]). Nil when home's display is still
+  /// missing.
+  static func returnFrame(home: Saved, screens: [Screen], current: String?) -> (frame: CGRect, user: CGRect?)? {
+    guard !home.display.isEmpty, current != home.display, screens.contains(where: { $0.id == home.display }),
+      let placed = place(home, on: screens) else { return nil }
+    return (placed.frame, placed.user)
   }
 }
