@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/arrangement.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -121,4 +123,36 @@ void main() {
       d.dispose();
     }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
   }
+
+  // An idle app's sidebar goes on with the clock: the ages its rows show,
+  // and the Date groups past midnight.
+  testWidgets('the rows’ ages and the Date groups follow the clock', (
+    tester,
+  ) async {
+    viewport(tester, const Size(1200, 700));
+    // The fake's chats count from noon on the 25th.
+    final noon = DateTime(2026, 10, 25, 12);
+    clock = () => noon;
+    sidebarShows.value = {...defaultRowParts, RowPart.time};
+    final d = await FakeDaemon([
+      chat('a', 'claude', 'Fix the login redirect', age: 2),
+    ]).connect(tester);
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await tester.pumpAndSettle();
+    expect(find.text('2m'), findsOneWidget);
+    clock = () => noon.add(const Duration(hours: 3));
+    await tester.pump(const Duration(minutes: 1));
+    expect(find.text('3h'), findsOneWidget);
+
+    sidebarShows.value = defaultRowParts;
+    sidebarGroupBy.value = GroupBy.date;
+    await tester.pumpAndSettle();
+    expect(find.text('Today'), findsOneWidget);
+    clock = () => DateTime(2026, 10, 26, 0, 30);
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Today'), findsNothing);
+    expect(find.text('Yesterday'), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

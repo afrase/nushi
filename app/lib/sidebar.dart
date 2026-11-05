@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:nushi/arrangement.dart';
@@ -55,18 +57,47 @@ class _SidebarState extends State<Sidebar> {
   /// the list shows.
   late final PullStates _pulls;
 
+  /// Counts the minutes while the list reads the clock (its rows' ages,
+  /// the Date groups), so an idle app's ages go on and a chat leaves Today
+  /// at midnight; nothing else would build it again.
+  final _minute = ValueNotifier<int>(0);
+  Timer? _ticks;
+
   @override
   void initState() {
     super.initState();
     _pulls = PullStates.of(widget.daemon)..watch();
+    sidebarShows.addListener(_tick);
+    sidebarGroupBy.addListener(_tick);
+    _tick();
   }
 
   @override
   void dispose() {
+    sidebarShows.removeListener(_tick);
+    sidebarGroupBy.removeListener(_tick);
+    _ticks?.cancel();
+    _minute.dispose();
     _hold.dispose();
     _hover.dispose();
     _pulls.unwatch();
     super.dispose();
+  }
+
+  /// Starts or ends [_minute]'s count, as the list reads the clock or not.
+  void _tick() {
+    final reads =
+        sidebarShows.value.contains(RowPart.time) ||
+        sidebarGroupBy.value == GroupBy.date;
+    if (!reads) {
+      _ticks?.cancel();
+      _ticks = null;
+    } else {
+      _ticks ??= Timer.periodic(
+        const Duration(minutes: 1),
+        (_) => _minute.value++,
+      );
+    }
   }
 
   void _new(String folder) => newChat(context, widget.daemon, folder);
@@ -137,6 +168,7 @@ class _SidebarState extends State<Sidebar> {
                     sidebarAscending,
                     sidebarShows,
                     sidebarSections,
+                    _minute,
                     // Grouped by state, a chat regroups as its state
                     // changes, not at each streamed chunk.
                     if (group == GroupBy.status)
