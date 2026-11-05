@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
@@ -143,7 +144,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
       _stopped = false;
       _check?.value = 1; // a new turn: the check goes
     }
-    if (c.busy) _since = c.started ?? _since ?? DateTime.now();
+    if (c.busy) _since = c.started ?? _since ?? clock();
     if (c.stopping) _stopped = true;
     if (c.waiting && !_waiting && !reduceMotion(context)) {
       (_hop ??= _once(hopFor)).forward(from: 0).ignore();
@@ -152,7 +153,7 @@ class _ChatDotState extends State<ChatDot> with TickerProviderStateMixin {
     // A done turn's check only: a check reads as success, wrong for a
     // failure (its alert and notice say so) and a stop.
     if (end == TurnEnd.TURN_END_DONE && !c.waiting) {
-      final lasted = DateTime.now().difference(_since ?? DateTime.now());
+      final lasted = clock().difference(_since ?? clock());
       _sparks = widget.sparks && sparksFor(lasted);
       (_check ??= _once(_checkFor)).forward(from: 0).ignore();
     }

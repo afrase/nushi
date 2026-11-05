@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -86,7 +87,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
         _growing = !reduceMotion(context) && _growFrom < 1;
         if (_growing) runFor(TurnStatus.foldFor);
       }
-      _since = c.started ?? _since ?? DateTime.now();
+      _since = c.started ?? _since ?? clock();
       _stopped |= c.stopping;
     } else if (_busy) {
       _ended();
@@ -97,7 +98,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
   /// The turn ended: a receipt if it's one to see, then the line folds.
   void _ended() {
     final c = widget.chat;
-    final lasted = DateTime.now().difference(_since ?? DateTime.now());
+    final lasted = clock().difference(_since ?? clock());
     final still = reduceMotion(context);
     _growing = false;
     _receipt =
@@ -221,7 +222,7 @@ class _TurnStatusState extends State<TurnStatus> with ClockRun {
       ),
       started != null && !waiting && !folding
           ? Text(
-              elapsed(DateTime.now().difference(started)),
+              elapsed(clock().difference(started)),
               style: theme.ui(t.textMuted, size: 12),
             )
           : null,

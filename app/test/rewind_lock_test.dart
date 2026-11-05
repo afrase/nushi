@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/composer_plus.dart';
@@ -40,7 +41,7 @@ ChatState _chat(String id) => ChatState(id, '/Users/me/app')
 /// A chat whose running turn the agent hasn't answered.
 ChatState _unanswered() => _chat('c')
   ..busy = true
-  ..started = DateTime.now()
+  ..started = clock()
   ..items.add(_you('u2', 'Now the tests'));
 
 /// A box on a chat, the daemon's rewinds and stops held on [held].
@@ -319,7 +320,7 @@ void main() {
         tester,
         chat: _chat('c')
           ..busy = true
-          ..started = DateTime.now(),
+          ..started = clock(),
       );
       await _stop(tester, b);
       expect(_field(tester).readOnly, isFalse);

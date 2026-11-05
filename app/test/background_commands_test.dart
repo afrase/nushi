@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/background_commands.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
+import 'harness.dart';
+
 void main() {
   test('a background command in a few words', () {
     Item command(
@@ -27,6 +29,13 @@ void main() {
     );
     expect(commandState(command('stopped', end: 'killed')), 'stopped');
     expect(commandState(command('started')), 'started');
+    // A running command's time counts to the app's clock, so a test or a
+    // golden of one never moves with the real date.
+    final ms = fixtureNow.subtract(const Duration(seconds: 12));
+    expect(
+      commandState(command('running', ms: ms.millisecondsSinceEpoch)),
+      'running · 12s',
+    );
     expect(lastLine(command('running', out: 'a\nb  \n\n')), 'b');
     expect(
       backgroundCommandsOf([Item(id: 'x'), command('done')]).single.id,

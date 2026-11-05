@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -59,7 +60,7 @@ void main() {
     expect(_height(tester, find.byType(TurnStatus)), 0);
     chat
       ..busy = true
-      ..started = DateTime.now()
+      ..started = clock()
       ..notifyListeners();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
@@ -84,7 +85,7 @@ void main() {
     final (d, chat) = await _box(tester);
     chat
       ..busy = true
-      ..started = DateTime.now()
+      ..started = clock()
       ..error = 'The agent stopped.'
       ..queue = [QueuedMessage(id: 'q1', text: 'Then docs')]
       ..notifyListeners();

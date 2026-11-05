@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status.dart';
@@ -24,7 +25,7 @@ ChatState _working(Duration ran) {
   final chat = ChatState('c', '/x')
     ..loaded = true
     ..busy = true
-    ..started = DateTime.now().subtract(ran)
+    ..started = clock().subtract(ran)
     ..items.addAll([
       Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
       Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'Done.'),
@@ -39,7 +40,7 @@ final _ran = Expando<Duration>();
 
 void _end(ChatState chat, {bool stopped = false}) {
   chat
-    ..started = DateTime.now().subtract(_ran[chat]!)
+    ..started = clock().subtract(_ran[chat]!)
     ..stopping = stopped
     ..notifyListeners()
     ..busy = false
@@ -52,7 +53,7 @@ void _end(ChatState chat, {bool stopped = false}) {
 /// judged it, and the app's own stop (ChatState.stopping) isn't seen.
 void _judged(ChatState chat, TurnEnd end) {
   chat
-    ..started = DateTime.now().subtract(_ran[chat]!)
+    ..started = clock().subtract(_ran[chat]!)
     ..notifyListeners()
     ..status(ChatStatus(ended: end))
     ..notifyListeners();

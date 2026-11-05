@@ -8,6 +8,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
@@ -117,7 +118,7 @@ void main() {
       if (busy) {
         _chat(d)
           ..busy = true
-          ..started = DateTime.now()
+          ..started = clock()
           ..notifyListeners();
         await _settle(tester, 20);
         expect(tester.getSize(find.byType(TurnStatus)).height, greaterThan(0));

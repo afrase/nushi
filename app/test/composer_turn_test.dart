@@ -2,6 +2,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -30,7 +31,7 @@ Future<(FakeDaemon, Daemon, ChatState)> _box(WidgetTester tester) async {
     ..agent = 'claude'
     ..loaded = true
     ..busy = true
-    ..started = DateTime.now()
+    ..started = clock()
     ..queue = [QueuedMessage(id: 'q1', text: 'Then docs')];
   d.chats['c'] = chat;
   await tester.pumpWidget(

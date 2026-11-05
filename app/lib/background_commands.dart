@@ -26,7 +26,7 @@ bool commandRunning(Item it) => it.backgroundCommand.state == 'running';
 String commandState(Item it) {
   final sh = it.backgroundCommand;
   final since = msTime(sh.started.toInt());
-  final end = commandRunning(it) ? DateTime.now() : msTime(sh.ended.toInt());
+  final end = commandRunning(it) ? clock() : msTime(sh.ended.toInt());
   return switch (sh.state) {
     'started' => [
       'started',
