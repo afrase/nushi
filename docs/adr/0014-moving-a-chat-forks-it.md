@@ -1,6 +1,6 @@
 # 0014. Moving a chat forks its Claude session
 
-Amended 2026-11-05: the copy is gone (below).
+Amended 2026-11-05: the copy is gone; the transcript's files are named from the new folder (below).
 
 ## Context
 A chat can start without a folder (a scratch folder of its own) and move to another folder later. ACP fixes a session's `cwd` when the session is created. claude-agent-acp 0.94.0's `session/fork` with a new `cwd` looks for the source session in the new folder's history (`~/.claude/projects/<folder name>/`), so across folders it fails. A copy of the session's transcript in the new folder's history, reopened there with `session/load` and the same session id, does resume (Claude remembers, and runs in the new folder), but the adapter replays a loaded session from whichever copy of that id it finds first among all folders: after a daemon restart a moved chat could show the old folder's, shorter, transcript.
@@ -23,3 +23,6 @@ A chat can start without a folder (a scratch folder of its own) and move to anot
 
 ## Amendment (2026-11-05): the fork finds the session, no copy
 Claude runs through Nushi's Go agent ([0066](0066-claude-through-nushis-go-agent.md)), whose `session/fork` with a new `cwd` finds the session in the open session's folder, else in any folder's history, and writes the fork into the new folder's. So a move is that fork alone: nothing is copied or removed, and the original stays. `model.HarnessInfo.Moves` says an agent's sessions move this way (Claude; Codex, which finds a session by its id); another agent's chat refuses the move. One edge: a copy an older daemon left in some folder's history when it died mid-move is the start of the session, and the fork may find it first and lack the turns after it. How a folder's history is named is now `claudeagent/sessions`' (`Store.ProjectDir`), which `internal/claudehistory` uses; the rest of Claude's layout Nushi reads stays in that package, in more than one file.
+
+## Amendment (2026-11-05): the transcript names its files from the new folder
+A chat names the files its items give (a tool call's `Paths` and `Diffs`, a user message's `Files`, a queued message's) relative to its folder when inside it, else absolute. A move carries no file along (a new worktree has only what's committed), so after it each such relative path is the old folder's file: the move names it again as an update would now (absolute, or relative to the new folder when the file is inside it too), leaves a message's absolute files as they are (uploads are known by their path in the uploads folder), sends each changed item, and writes Nushi's copy ([0047](0047-nushis-copy-of-transcripts.md)) the same way, which a reopen's merge prefers to the replay. Kept relative, they would name the new folder's files, and a file the agent wrote and later named absolute would show as two.

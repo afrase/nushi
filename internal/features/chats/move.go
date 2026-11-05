@@ -91,6 +91,7 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 			// Told where it is with the next prompt; a fresh chat's session starts there.
 			s.Moved, s.BranchFrom = !fresh, ""
 		})
+		c.movedLocked(from)
 		if replay {
 			c.agent = nil // reopened below
 		}
@@ -135,6 +136,123 @@ func (s *Service) Move(ctx context.Context, chatID, folder string, worktree bool
 	c.statusChangedLocked()
 	c.deliverLocked()
 	return err
+}
+
+// movedLocked names the files the chat's items and queued messages name
+// again, now that its folder is no longer from (ADR 0014): each is named
+// relative to the folder when inside it, else absolute, as the agent's
+// live updates and a replay name them (chat.rel). A move carries no file
+// along (a new worktree has only what's committed), so a path the items
+// gave relative to from still means that file in from, absolute unless it
+// is in the new folder too. A message's files absolute already stay so,
+// as no live message's are named again: the uploads among them are known
+// by their absolute path in the uploads folder (forks adopt, and pruning
+// keeps, only those). The clients are sent each item that changed, and the
+// copy of the transcript (ADR 0047) gets the same names, whether copies
+// are on or not, as a cut does: a reopen's merge takes the copy's item
+// over the replay's, which already names the tool calls' files this way.
+func (c *chat) movedLocked(from string) {
+	moved := movedNames{
+		path: func(p string) string {
+			if p == "" {
+				return p
+			}
+			if !filepath.IsAbs(p) {
+				p = filepath.Join(from, p)
+			}
+			return c.rel(p)
+		},
+		file: func(f string) string {
+			if f == "" || filepath.IsAbs(f) {
+				return f
+			}
+			return c.rel(filepath.Join(from, f))
+		},
+	}
+	for i := range c.items {
+		if it, ok := movedItem(c.items[i], moved); ok {
+			c.items[i] = it
+			c.publishLocked(it)
+		}
+	}
+	queued := false
+	for i, m := range c.queue {
+		if files, ok := movedPaths(m.Files, moved.file); ok {
+			c.queue[i].Files, queued = files, true
+		}
+	}
+	if queued {
+		c.queueChangedLocked()
+	}
+	if c.copies == nil {
+		return
+	}
+	items, err := c.copies.Read(c.id)
+	changed := false
+	for i := range items {
+		if it, ok := movedItem(items[i], moved); ok {
+			items[i], changed = it, true
+		}
+	}
+	if err == nil && changed {
+		err = c.copies.Replace(c.id, items)
+	}
+	if err != nil {
+		c.logLocked().Warn("transcript copy: files not named after the move", "err", err)
+	}
+}
+
+// movedNames is how a move names a file again: path a tool call's (Paths,
+// Diffs), file a message's (Files).
+type movedNames struct {
+	path, file func(string) string
+}
+
+// movedItem is it with each file it names (a tool call's Paths and Diffs,
+// a user message's Files) as moved names it, and whether one changed. It
+// shares no slice with it, which snapshots handed out may hold.
+func movedItem(it model.Item, moved movedNames) (model.Item, bool) {
+	paths, changed := movedPaths(it.Paths, moved.path)
+	files, ok := movedPaths(it.Files, moved.file)
+	changed = changed || ok
+	var diffs []model.FileChange
+	for i, d := range it.Diffs {
+		path, old := moved.path(d.Path), moved.path(d.OldPath)
+		if path == d.Path && old == d.OldPath {
+			continue
+		}
+		if diffs == nil {
+			diffs = slices.Clone(it.Diffs)
+		}
+		diffs[i].Path, diffs[i].OldPath = path, old
+	}
+	if diffs == nil {
+		diffs = it.Diffs
+	} else {
+		changed = true
+	}
+	if changed {
+		it.Paths, it.Files, it.Diffs = paths, files, diffs
+	}
+	return it, changed
+}
+
+// movedPaths is paths as moved names them, and whether one changed; a
+// new slice when one did.
+func movedPaths(paths []string, moved func(string) string) ([]string, bool) {
+	var out []string
+	for i, p := range paths {
+		if m := moved(p); m != p {
+			if out == nil {
+				out = slices.Clone(paths)
+			}
+			out[i] = m
+		}
+	}
+	if out == nil {
+		return paths, false
+	}
+	return out, true
 }
 
 // foundWorktree is the worktree a chat moving to folder runs in when folder
