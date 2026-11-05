@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/panes.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -83,16 +84,20 @@ class _SettingsModalState extends State<SettingsModal> {
         ),
         if (widget.open) ...[
           Positioned.fill(
-            child: GestureDetector(
-              key: const ValueKey('settings-dim'),
-              behavior: HitTestBehavior.opaque,
+            // The dim covers the headers, so its top moves the window.
+            child: TitleBand(
               onTap: widget.daemon.closeSettings,
-              // The scrim's black, a good deal lighter than over an image
-              // (more on a dark set, where less shows): the app stays in
-              // sight, and a theme picked shows on it.
-              child: ColoredBox(
-                color: t.scrim.withValues(
-                  alpha: t.brightness == Brightness.dark ? 0.42 : 0.24,
+              child: GestureDetector(
+                key: const ValueKey('settings-dim'),
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.daemon.closeSettings,
+                // The scrim's black, a good deal lighter than over an image
+                // (more on a dark set, where less shows): the app stays in
+                // sight, and a theme picked shows on it.
+                child: ColoredBox(
+                  color: t.scrim.withValues(
+                    alpha: t.brightness == Brightness.dark ? 0.42 : 0.24,
+                  ),
                 ),
               ),
             ),

@@ -318,21 +318,24 @@ class _Shell extends StatelessWidget {
       final theme = NushiTheme.of(context);
       // Never connected yet: nothing to show. Once it was, a lost
       // connection is a banner over the app, which keeps what's open.
+      // Neither has a header: a band moves the window.
       if (!daemon.connected && daemon.daemonApi == 0) {
-        return Center(
-          child: Text(
-            bundledDaemon == null
-                ? 'Daemon not running'
-                : daemon.launchFailed
-                ? "Couldn't start the daemon. Its log: "
-                      '${tildePath('$dataDir/nushid.log')}'
-                : 'Starting the daemon…',
-            style: theme.ui(theme.t.textSecondary),
+        return TitleBand(
+          child: Center(
+            child: Text(
+              bundledDaemon == null
+                  ? 'Daemon not running'
+                  : daemon.launchFailed
+                  ? "Couldn't start the daemon. Its log: "
+                        '${tildePath('$dataDir/nushid.log')}'
+                  : 'Starting the daemon…',
+              style: theme.ui(theme.t.textSecondary),
+            ),
           ),
         );
       }
       if (daemon.outdated && !daemon.updatesWhenIdle) {
-        return OutdatedScreen(daemon);
+        return TitleBand(child: OutdatedScreen(daemon));
       }
       final chat = daemon.selected;
       final shut = sidebarShut;
