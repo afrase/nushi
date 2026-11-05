@@ -24,12 +24,7 @@ const toggleTerminalKey = SingleActivator(
 );
 
 /// Shows or hides a chat's terminal panel.
-void toggleTerminal(String chatId) {
-  final open = terminalChats.value;
-  terminalChats.value = open.contains(chatId)
-      ? ({...open}..remove(chatId))
-      : {...open, chatId};
-}
+void toggleTerminal(String chatId) => terminalChats.toggle(chatId);
 
 /// Opens a terminal for [chat] in [folder] and shows its panel.
 Future<void> openTerminalIn(

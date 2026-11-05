@@ -44,9 +44,7 @@ class GroupedChats extends StatelessWidget {
               title: g.label,
               chats: g.chats,
               collapsed: collapsed,
-              onToggle: () => sidebarCollapsed.value = collapsed
-                  ? ({...sidebarCollapsed.value}..remove(g.key))
-                  : {...sidebarCollapsed.value, g.key},
+              onToggle: () => sidebarCollapsed.toggle(g.key),
               lead: g.agent.isNotEmpty
                   ? AgentMark(g.agent)
                   : g.key.startsWith('status:') && g.chats.isNotEmpty

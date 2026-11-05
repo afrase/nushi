@@ -318,6 +318,14 @@ final class Pref<T> extends ValueNotifier<T> {
   void _reset() => value = _read(_saved[key]);
 }
 
+/// A set pref's toggle, for what's kept as a set of ids or names (the
+/// collapsed groups and widgets, the chats with a terminal).
+extension SetPrefToggle<T> on Pref<Set<T>> {
+  /// Takes [x] out of the set if it's there, else puts it in.
+  void toggle(T x) =>
+      value = value.contains(x) ? ({...value}..remove(x)) : {...value, x};
+}
+
 /// The prefs made so far (read or set in this run), in that order.
 final _made = <Pref<Object?>>[];
 

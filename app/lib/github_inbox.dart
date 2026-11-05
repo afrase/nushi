@@ -135,9 +135,7 @@ class InboxCards extends StatelessWidget {
             key: ValueKey(s.id),
             index: i,
             open: !collapsed.contains(s.id),
-            onToggle: () => githubCollapsed.value = collapsed.contains(s.id)
-                ? ({...collapsed}..remove(s.id))
-                : {...collapsed, s.id},
+            onToggle: () => githubCollapsed.toggle(s.id),
             title: Text(
               '${s.title}  '
               '${s.total > s.items.length ? '${s.items.length} of ' : ''}'

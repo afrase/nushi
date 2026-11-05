@@ -185,9 +185,7 @@ class _HeaderState extends State<_Header> {
   bool _hover = false;
   bool _focus = false; // the + has keyboard focus
 
-  void _toggle() => sidebarCollapsed.value = widget.collapsed
-      ? ({...sidebarCollapsed.value}..remove(widget.folder))
-      : {...sidebarCollapsed.value, widget.folder};
+  void _toggle() => sidebarCollapsed.toggle(widget.folder);
 
   @override
   Widget build(BuildContext context) {

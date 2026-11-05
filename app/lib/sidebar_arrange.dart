@@ -99,9 +99,7 @@ List<MenuEntry> arrangeEntries(BuildContext context, Daemon daemon) {
           MenuEntry(
             p.label,
             checked: shows.contains(p),
-            onPick: () => sidebarShows.value = shows.contains(p)
-                ? ({...shows}..remove(p))
-                : {...shows, p},
+            onPick: () => sidebarShows.toggle(p),
           ),
       ],
     ),

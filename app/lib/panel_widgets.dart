@@ -140,9 +140,7 @@ class PanelWidget extends StatelessWidget {
         return CardShell(
           index: index,
           open: open,
-          onToggle: () => collapsedWidgets.value = open
-              ? {...collapsed, title}
-              : ({...collapsed}..remove(title)),
+          onToggle: () => collapsedWidgets.toggle(title),
           title: titleText,
           trailing: open ? action : summary,
           body: Tap(
