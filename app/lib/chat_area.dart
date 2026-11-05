@@ -5,7 +5,6 @@ import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_tab.dart';
 import 'package:nushi/settings.dart';
@@ -88,16 +87,14 @@ class _ChatAreaState extends State<ChatArea> {
       builder: (context, _) {
         final show = showDetails.value;
         // The panel goes when the chat would get too narrow.
-        final fits =
-            box.maxWidth >=
-            paneWidth('details', DetailsPanel.width) + ChatView.minWidth;
+        final fits = box.maxWidth >= DetailsPanel.width + ChatView.minWidth;
         widget.chat.panelFits = fits;
         // The pull request's tab goes with its link.
         final tab = widget.chat.shownTab;
         final panel = show && fits && tab == ChatTab.chat;
         widget.chat.previewFits =
             box.maxWidth -
-                (panel ? paneWidth('details', DetailsPanel.width) : 0) -
+                (panel ? DetailsPanel.width : 0) -
                 ChatView.previewWidth >=
             ChatView.leastBesideWide;
         return Column(

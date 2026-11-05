@@ -17,21 +17,32 @@ class SidePane {
     required this.min,
     required this.cap,
     required this.child,
-  });
+  }) : fixed = false;
+
+  /// A pane of one [width], with no edge to drag: the details panel
+  /// (ADR 0092), which shows or hides only.
+  new fixed(this.name, {required double width, required this.child})
+    : initial = width,
+      min = width,
+      cap = width,
+      fixed = true;
 
   final String name;
   final double initial;
   final double min;
   final double cap;
+  final bool fixed;
   final Widget child;
 
-  double get width => paneWidth(name, initial).clamp(min, cap);
+  double get width =>
+      fixed ? initial : paneWidth(name, initial).clamp(min, cap);
 }
 
 /// [main] with [panes] beside it, left to right, and [details] at the
-/// right, each resizable. When [main] would get narrower than [least], the
-/// panes lie over it, by the details, rather than beside it: the details
-/// stay, and so does [main]'s width under the panes.
+/// right, each resizable but a [SidePane.fixed] one, which has a hairline
+/// at its left instead of an edge to drag. When [main] would get narrower
+/// than [least], the panes lie over it, by the details, rather than beside
+/// it: the details stay, and so does [main]'s width under the panes.
 ///
 /// A pane slides its full width in from the right as it opens and out as
 /// it closes ([Presence], [paneSlide]); one closing keeps its place until
@@ -104,15 +115,26 @@ class _BesideState extends State<Beside> {
         _built = true;
         _seen.addAll(now);
         _shown = now;
-        Widget resizable(SidePane p, double most) => Resizable(
-          key: ValueKey(p.name),
-          name: p.name,
-          initial: p.initial,
-          min: p.min,
-          max: min(p.cap, most),
-          left: true,
-          child: p.child,
-        );
+        Widget resizable(SidePane p, double most) => p.fixed
+            ? SizedBox(
+                key: ValueKey(p.name),
+                width: p.width,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(left: BorderSide(color: t.borderSubtle)),
+                  ),
+                  child: p.child,
+                ),
+              )
+            : Resizable(
+                key: ValueKey(p.name),
+                name: p.name,
+                initial: p.initial,
+                min: p.min,
+                max: min(p.cap, most),
+                left: true,
+                child: p.child,
+              );
         Widget pane(String slot, Widget? child) => LayoutId(
           key: ValueKey(slot),
           id: slot,

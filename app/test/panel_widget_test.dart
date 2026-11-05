@@ -14,53 +14,66 @@ void main() {
   setUpAll(loadFonts);
   _goldens();
 
-  testWidgets('the title row: the open hand, and the grip while hovered, '
-      "in a collapsed widget in its summary's place", (tester) async {
+  testWidgets('the title row: the open hand, no grip, the summary while '
+      'folded', (tester) async {
     collapsedWidgets.value = {'Context'};
     await tester.pumpWidget(_widgets(Tokens.dark));
-    expect(find.byType(DragGrip), findsNothing);
     expect(find.text('57%'), findsOneWidget);
+    expect(find.byType(DragGrip), findsNothing);
 
     final mouse = await _pointer(tester);
     await mouse.moveTo(tester.getCenter(find.text('Context')));
     await tester.pump();
     expect(_cursor(), SystemMouseCursors.grab);
-    expect(find.byType(DragGrip), findsOneWidget);
-    expect(find.text('57%'), findsNothing); // the grip in its place
-
-    // An open widget keeps its action; the grip goes beside it.
-    await mouse.moveTo(tester.getCenter(find.text('Background tasks')));
-    await tester.pump();
-    expect(_cursor(), SystemMouseCursors.grab);
+    expect(find.byType(DragGrip), findsNothing); // ADR 0092: no grip
     expect(find.text('57%'), findsOneWidget);
-    expect(find.text('Stop all'), findsOneWidget);
-    expect(find.byType(DragGrip), findsOneWidget);
-    expect(
-      tester.getCenter(find.byType(DragGrip)).dx,
-      greaterThan(tester.getCenter(find.text('Stop all')).dx),
-    );
 
     // The body isn't the handle.
     await mouse.moveTo(tester.getCenter(find.text('npm test')));
     await tester.pump();
-    expect(find.byType(DragGrip), findsNothing);
     expect(_cursor(), isNot(SystemMouseCursors.grab));
   });
 
-  testWidgets('dragged: the closed hand and the grip', (tester) async {
+  testWidgets('a title folds its widget, remembered', (tester) async {
+    collapsedWidgets.value = {};
+    await tester.pumpWidget(_widgets(Tokens.light));
+    expect(find.text('npm test'), findsOneWidget);
+    await tester.tap(find.text('Background tasks'));
+    await tester.pumpAndSettle();
+    expect(find.text('npm test'), findsNothing);
+    expect(find.text('1 running'), findsOneWidget); // its summary instead
+    expect(collapsedWidgets.value, {'Background tasks'});
+    await tester.pumpAndSettle();
+    expect(readSaved()['collapsed'], ['Background tasks']);
+    await tester.tap(find.text('Background tasks'));
+    await tester.pumpAndSettle();
+    expect(find.text('npm test'), findsOneWidget);
+  });
+
+  testWidgets('dragged by its title: the closed hand, then its new place, '
+      'remembered', (tester) async {
+    widgetOrder.value = [];
     await tester.pumpWidget(_widgets(Tokens.light));
     final mouse = await _pointer(tester);
-    await mouse.moveTo(tester.getCenter(find.text('Context')));
-    await mouse.down(tester.getCenter(find.text('Context')));
+    final from = tester.getCenter(find.text('Context'));
+    await mouse.moveTo(from);
+    await mouse.down(from);
     await tester.pump(kLongPressTimeout);
     await mouse.moveBy(const Offset(0, 30));
     await tester.pump();
-    await mouse.moveBy(const Offset(0, 10));
-    await tester.pump();
+    for (var i = 0; i < 6; i++) {
+      await mouse.moveBy(const Offset(0, 20));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     expect(_cursor(), SystemMouseCursors.grabbing);
-    expect(find.byType(DragGrip), findsOneWidget);
+    expect(find.byType(DragGrip), findsNothing);
     await mouse.up();
     await tester.pumpAndSettle();
+    expect(widgetOrder.value, ['Background tasks', 'Context']);
+    expect(
+      tester.getTopLeft(find.text('Background tasks')).dy,
+      lessThan(tester.getTopLeft(find.text('Context')).dy),
+    );
   });
 
   testWidgets("a widget's action sits on its title row while open", (
@@ -95,7 +108,7 @@ void main() {
 
 Widget _widgets(Tokens tokens) => themed(
   SizedBox(
-    width: 300,
+    width: 320,
     child: PanelWidgets([
       const PanelWidget(
         title: 'Context',
@@ -128,8 +141,10 @@ void _goldens() {
     ('dark', Tokens.dark),
     ('light', Tokens.light),
   ]) {
-    testWidgets("golden, a widget's grip on hover, $name", (tester) async {
-      viewport(tester, const Size(300, 190), ratio: 2);
+    testWidgets('golden, a folded widget and an open one, $name', (
+      tester,
+    ) async {
+      viewport(tester, const Size(320, 190), ratio: 2);
       collapsedWidgets.value = {'Context'};
       await tester.pumpWidget(_widgets(tokens));
       final mouse = await _pointer(tester);
@@ -137,7 +152,7 @@ void _goldens() {
       await tester.pumpAndSettle();
       await expectLater(
         find.byType(PanelWidgets),
-        matchesGoldenFile('goldens/widget_grip_$name.png'),
+        matchesGoldenFile('goldens/panel_widgets_$name.png'),
       );
     });
   }

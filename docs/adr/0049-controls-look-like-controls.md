@@ -22,3 +22,6 @@ The owner couldn't tell what was clickable: Settings › General's terminal font
 - Keep the ghost kind for toolbars and dialogs' Cancel: it's what the owner couldn't read as a button.
 - `borderSubtle` for fields' outlines, as first asked: on a dialog's raised fill it nearly vanishes in light; the field tokens sit between it and `borderStrong`.
 - Keep ⌘1–9 local to the terminal and the Jira view while they have the focus: the sidebar's numbers would then lie there.
+
+## Amendment (2026-11-05)
+The details panel's widgets are flat sections now, dragged by the title with the open hand and no grip ([ADR 0092](0092-the-details-panel-is-claude-codes-rail.md)); DragGrip stays on the GitHub and Jira cards.

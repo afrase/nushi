@@ -181,7 +181,7 @@ void main() {
         final (d, _) = await openPullTab(
           tester,
           states[state]!(),
-          size: const Size(1100, 760),
+          size: const Size(1160, 760),
           details: true,
           open: false,
           brightness: brightness,

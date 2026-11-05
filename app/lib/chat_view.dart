@@ -54,6 +54,10 @@ class ChatView extends StatefulWidget {
   /// it's wanted (a subagent's, or the preview).
   static const leastBesideWide = 360.0;
 
+  /// The width a subagent's or a command's pane opens at, until dragged:
+  /// the details panel's before it took its own (ADR 0092).
+  static const taskPaneWidth = 264.0;
+
   /// The preview pane's width, as dragged.
   static double get previewWidth =>
       paneWidth('preview', 560).clamp(300, double.infinity);
@@ -246,7 +250,7 @@ class _ChatViewState extends State<ChatView> {
           SidePane(
             // Named as the old Wider one was: a width dragged then stays.
             'subagent',
-            initial: DetailsPanel.width,
+            initial: ChatView.taskPaneWidth,
             min: 220,
             cap: double.infinity,
             child: _pane(id),
@@ -269,11 +273,9 @@ class _ChatViewState extends State<ChatView> {
       ],
       details: details == null
           ? null
-          : SidePane(
+          : SidePane.fixed(
               'details',
-              initial: DetailsPanel.width,
-              min: 220,
-              cap: 480,
+              width: DetailsPanel.width,
               child: details,
             ),
     );

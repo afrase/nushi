@@ -12,8 +12,9 @@ import 'package:nushi/file_mode.dart';
 /// What the app remembers across launches, in `app.json` in the data folder:
 /// whether the details panel shows (its toolbar button), which of its widgets
 /// are collapsed and their order, what each chat's Changes view shows, the
-/// panes' widths, whether changed files show flat, which chats show their
-/// terminals and their Files pane, whether it lists ignored files, the
+/// side panes' widths (not the details panel's, which is fixed), whether
+/// changed files show flat, which chats show their terminals and their
+/// Files pane, whether it lists ignored files, the
 /// terminal's font, whether the chat takes the whole width,
 /// whether the sidebar is hidden, the Jira task list's groups and assignee
 /// filters, the GitHub view's cards and filters, the sidebar's project
@@ -208,10 +209,12 @@ final Pref<Map<String, int>> pullSeen = _byChat(
 /// menu still has it.
 final Pref<Set<String>> cleanUpLater = _set('cleanUpLater', chats: true);
 
-/// The widths panes were dragged to, by pane (see `Resizable`).
+/// The widths panes were dragged to, by pane (see `Resizable`). Not the
+/// details panel's, which is fixed (ADR 0092): an older `details` width is
+/// ignored, and dropped by the next save.
 final paneWidths = Pref<Map<String, double>>(
   'panes',
-  (v) => _entries(v, (w) => w is num ? w.toDouble() : null),
+  (v) => _entries(v, (w) => w is num ? w.toDouble() : null)..remove('details'),
 );
 
 /// Whether the chat takes the pane's whole width rather than a column in

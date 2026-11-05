@@ -102,12 +102,12 @@ void openRelease(Daemon d) => openWeb(d.update.url);
 class UpdateToast extends StatefulWidget {
   const new(this.daemon, {super.key});
 
-  /// As wide as the details panel's widgets, over whose empty bottom it
-  /// sits in a wide window.
-  static const width = 240.0;
+  /// As wide as the details panel's text, over whose empty bottom it sits
+  /// in a wide window: the panel's width inside its side margins.
+  static const width = 288.0;
 
-  /// Its room from the window's right edge: the cards' own.
-  static const inset = 12.0;
+  /// Its room from the window's right edge: the panel's side margin.
+  static const inset = 16.0;
 
   final Daemon daemon;
 

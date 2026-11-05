@@ -55,7 +55,7 @@ final _saved = <String, Object?>{
   },
   'pullSeen': {'x': 3000, 'y': 4000},
   'cleanUpLater': ['x', 'y'],
-  'panes': {'details': 360.5},
+  'panes': {'details': 360.5, 'preview': 600.0},
   'termFont': 'Menlo',
   'termSize': 14.0,
   'appearance': 'dark',
@@ -125,7 +125,8 @@ void main() {
       "old keys go; only the user's (0600)", () async {
     expect(showDetails.value, isFalse);
     expect(terminalChats.value, {'x', 'y'});
-    expect(paneWidths.value, {'details': 360.5});
+    // The details panel's width is fixed now (ADR 0092): an older one goes.
+    expect(paneWidths.value, {'preview': 600});
     expect(terminalFontSize.value, 14);
     expect(githubDays.value, 30);
     expect(dismissedUpdate.value, '0.1.17');
@@ -138,6 +139,7 @@ void main() {
         ..remove('worktrees')
         ..remove('subagentWide')),
       'details': true,
+      'panes': {'preview': 600.0},
     });
     expect(_appJson.statSync().mode & 0x1ff, 0x180);
   });

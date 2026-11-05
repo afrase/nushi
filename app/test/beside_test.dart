@@ -147,22 +147,24 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('each keeps its own width', (tester) async {
+  testWidgets('the pane keeps its own width; the details have theirs', (
+    tester,
+  ) async {
     final d = await _app(tester);
     paneWidths.value = {'subagent': 300, 'details': 240};
     await _openPane(tester);
     expect(tester.getRect(_pane).width, 300);
-    expect(tester.getRect(_details).width, 240);
+    expect(tester.getRect(_details).width, DetailsPanel.width); // ADR 0092
     d.dispose();
   }, variant: _mac);
 
   testWidgets('too narrow for both: the pane lies over the transcript', (
     tester,
   ) async {
-    // 840 for the chat: the details (264) fit beside the transcript
+    // 900 for the chat: the details (320) fit beside the transcript
     // (556), the pane too, but not with the transcript at its least
     // beside the pane (360).
-    final d = await _app(tester, width: 1100);
+    final d = await _app(tester, width: 1160);
     await _openPane(tester);
     final pane = tester.getRect(_pane);
     final details = tester.getRect(_details);
@@ -188,7 +190,7 @@ void main() {
       findsNothing,
     );
     // Its edge, dragged far left: the pane goes over the transcript until
-    // 48 of it is left (1400 less the sidebar's 260 and the details' 264).
+    // 48 of it is left (1400 less the sidebar's 260 and the details' 320).
     final drag = await tester.startGesture(
       tester.getTopLeft(_pane) + const Offset(2, 200),
     );
@@ -201,7 +203,7 @@ void main() {
     await tester.pump();
     await drag.up();
     await tester.pumpAndSettle();
-    const most = 1400 - 260 - 264 - 48;
+    const most = 1400 - 260 - DetailsPanel.width - 48;
     expect(tester.getRect(_pane).width, most);
     expect(tester.getRect(_pane).right, tester.getRect(_details).left);
     expect((readSaved()['panes']! as Map)['subagent'], most);

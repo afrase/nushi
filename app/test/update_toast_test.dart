@@ -139,18 +139,17 @@ void main() {
           );
           expect(find.text('Download'), brew ? findsNothing : findsOneWidget);
           final box = tester.getRect(_toast);
-          expect(box.right, width - 12);
+          expect(box.right, width - UpdateToast.inset);
           final status = tester.getRect(find.byType(StatusBar));
-          expect(box.bottom, status.top - 12);
+          expect(box.bottom, status.top - UpdateToast.inset);
           final last = tester.getRect(
             find.text(brew ? 'Release notes' : 'Download'),
           );
           expect(last.right, lessThan(box.right - 10)); // not clipped
           if (width == 1700) {
-            // Over the details panel's empty bottom, its cards' width.
-            final card = tester.getRect(find.text('Environment')).left;
-            expect(box.left, lessThan(card));
-            expect(box.left, greaterThan(card - 20));
+            // Over the details panel's empty bottom, its text's width.
+            final text = tester.getRect(find.text('Environment')).left;
+            expect(box.left, text);
           }
           await render(
             tester,

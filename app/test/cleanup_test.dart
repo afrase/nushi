@@ -57,7 +57,7 @@ Future<(Daemon, FakeDaemon)> _open(
     worktree: _wt,
     busy: busy,
     brightness: brightness,
-    size: const Size(1100, 760),
+    size: const Size(1160, 760),
     more: (input) =>
         more?.call(input) ??
         switch (input) {

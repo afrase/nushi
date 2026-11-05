@@ -129,7 +129,7 @@ void main() {
   // The whole window, wide and as narrow as shows the panel: the menu
   // opens under the row, inside the window; the row's ▾ at the panel's
   // right edge.
-  for (final width in [1700.0, 1100.0]) {
+  for (final width in [1700.0, 1140.0]) {
     testWidgets('the Branch menu in a ${width.round()} window', (tester) async {
       viewport(tester, Size(width, 620));
       showDetails.value = true;
@@ -439,8 +439,8 @@ void main() {
   ) async {
     final d = await _panel(tester, _fake(), _chat(), tokens: Tokens.light);
     final environment = find.widgetWithText(PanelWidget, 'Environment');
-    // Inside the widget's border and right inset, where text values end.
-    final edge = tester.getRect(environment).right - 11;
+    // Inside the panel's side margin, where text values end.
+    final edge = tester.getRect(environment).right - PanelType.side;
     final carets = find.descendant(
       of: find.descendant(of: environment, matching: find.byType(FlushMenus)),
       matching: find.byWidgetPredicate(
