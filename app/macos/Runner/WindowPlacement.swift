@@ -182,9 +182,14 @@ final class WindowPlacement {
 
   /// The displays changed: a reconnect comes in steps, so this waits for
   /// them to stop. A display that only sleeps stays connected, and nothing
-  /// happens.
+  /// happens. Home's display missing is seen at once, not after the wait:
+  /// one that drops and comes back within it (a dock or a KVM that
+  /// flaps) has still had the window moved off it.
   private func screensChanging() {
     screensChangedAt = ProcessInfo.processInfo.systemUptime
+    if let home = saved, !home.display.isEmpty, !Self.screens().contains(where: { $0.id == home.display }) {
+      lost = true
+    }
     pendingScreens?.cancel()
     let work = DispatchWorkItem { [weak self] in self?.screensChanged() }
     pendingScreens = work
