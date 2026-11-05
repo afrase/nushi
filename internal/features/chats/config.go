@@ -41,7 +41,7 @@ func (c *chat) configFrom(opts []acp.SessionConfigOption, modes *acp.SessionMode
 		}
 		out = append(out, co)
 	}
-	if c.kind.UltracodeMeta != nil {
+	if c.kind.UltracodeMeta != nil && c.parent == nil { // a side chat has its chat's
 		out = append(out, c.ultracodeOption())
 	}
 	if modes != nil && modeIndex(out) < 0 {
@@ -111,6 +111,8 @@ func (s *Service) Config(chatID string) []model.ConfigOption {
 // SetConfig sets one of a chat's options. When the user picks a mode the
 // agent accepts, new chats with this agent start in it; any other option
 // is one of the chat's picks, and new chats with this agent start on it too.
+// A side chat's change is its own session's: an aside, it changes neither
+// its chat nor what new chats start on.
 func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error {
 	c, err := s.chat(chatID)
 	if err == nil && id == ultracodeID {
@@ -136,13 +138,17 @@ func (s *Service) SetConfig(ctx context.Context, chatID, id, value string) error
 	}
 	c.mu.Lock()
 	isMode := modeIndex(c.config) >= 0 && c.config[modeIndex(c.config)].ID == id
+	side := c.parent != nil
+	if !isMode {
+		c.saveLocked(func(s *model.ChatRecord) { s.Picks = withPick(s.Picks, id, value) })
+	}
 	c.mu.Unlock()
-	if isMode {
+	switch {
+	case side:
+		return nil
+	case isMode:
 		return s.remembered.SetMode(c.kind.Name, value)
 	}
-	c.mu.Lock()
-	c.saveLocked(func(s *model.ChatRecord) { s.Picks = withPick(s.Picks, id, value) })
-	c.mu.Unlock()
 	return s.remembered.SetPick(c.kind.Name, id, value)
 }
 

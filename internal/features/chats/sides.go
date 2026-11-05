@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -129,14 +130,20 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	can := p.canFork && p.parent == nil
 	base, _ := p.finishedLocked() // the side chat forks the whole session
 	lastItem := p.lastItem        // the side chat's own items come after
+	mode, picks := p.record.Mode, maps.Clone(p.record.Picks)
+	if i := modeIndex(p.config); i >= 0 {
+		mode = p.config[i].Current // what the agent says the chat is on now
+	}
 	p.mu.Unlock()
 	if agent == nil || !can {
 		return "", errors.New("the agent can't fork this chat")
 	}
-	id, _, err := p.forkSession(ctx, agent, sid, folder, nil)
+	id, config, err := p.forkSession(ctx, agent, sid, folder, nil)
 	if err != nil {
 		return "", err
 	}
+	// Ultracode is the chat's, its agent's process's: not the side chat's to change.
+	config = slices.DeleteFunc(config, func(o model.ConfigOption) bool { return o.ID == ultracodeID })
 	p.mu.Lock()
 	p.throwawayLocked([]string{id}, false)
 	p.mu.Unlock()
@@ -146,9 +153,11 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	}
 	side := s.newChat(p.kind)
 	side.id, side.agent, side.parent, side.base, side.lastItem = id, agent, p, base, lastItem
-	side.sid, side.canImage = side.id, p.canImage
-	side.copies = nil // nobody sees a side chat again, so Nushi keeps no copy of it
+	side.sid, side.canImage, side.config = side.id, p.canImage, config
+	side.reapplying = true // until reapply: the fork's own options aren't picks
+	side.copies = nil      // nobody sees a side chat again, so Nushi keeps no copy of it
 	side.record = model.ChatRecord{ID: side.id, SessionID: side.sid, Agent: p.kind.Name, Folder: folder, Title: "Side chat", Created: time.Now()}
+	side.modeLocked(&side.record) // the fork's mode, as the agent says, until reapply
 	p.mu.Lock()
 	if p.agent != agent { // it ended meanwhile (reload, move, archive): the fork with it
 		p.mu.Unlock()
@@ -161,6 +170,17 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	s.mu.Lock()
 	s.chats[side.id] = side
 	s.mu.Unlock()
+	// It starts on the chat's mode and picks, as a fork does (ForkAsChat):
+	// the mode is the agent's permission control, and an aside asked in a
+	// chat in Manual mustn't run in the agent's default (ADR 0060's
+	// amendment). What the agent then reports is what it shows.
+	if err := side.reapply(ctx, agent, side.sid, mode, picks); err != nil {
+		side.log().Warn("mode of the side chat", "err", err)
+	}
+	if ctx.Err() != nil { // the app went meanwhile: nobody will show it
+		_ = s.CloseSide(side.id)
+		return "", ctx.Err()
+	}
 	side.log().Info("side chat opened")
 	return side.id, nil
 }

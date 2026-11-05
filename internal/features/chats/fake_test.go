@@ -102,7 +102,9 @@ type fakeAgent struct {
 	loadMeta map[string]any  // the last session/load's _meta
 	updates  []acp.SessionUpdate
 	session  acp.NewSessionResponse
-	set      []string // config changes asked for, as id=value
+	set      []string        // config changes asked for, as id=value
+	setIn    []acp.SessionID // the session of each of set
+	setErr   error           // config changes fail with it
 	prompt   []acp.ContentBlock
 	usage    *acp.Usage // the prompt response's
 	deleted  []acp.SessionID
@@ -432,12 +434,18 @@ func (f *fakeAgent) SetSessionConfigOption(_ context.Context, req *acp.SetSessio
 	case req.Boolean != nil:
 		value = strconv.FormatBool(req.Boolean.Value)
 	}
-	f.set = append(f.set, string(req.ConfigID)+"="+value)
+	if f.setErr != nil {
+		return nil, f.setErr
+	}
+	f.set, f.setIn = append(f.set, string(req.ConfigID)+"="+value), append(f.setIn, req.SessionID)
 	return &acp.SetSessionConfigOptionResponse{}, nil
 }
 
 func (f *fakeAgent) SetSessionMode(_ context.Context, req *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
-	f.set = append(f.set, "mode="+string(req.ModeID))
+	if f.setErr != nil {
+		return nil, f.setErr
+	}
+	f.set, f.setIn = append(f.set, "mode="+string(req.ModeID)), append(f.setIn, req.SessionID)
 	return &acp.SetSessionModeResponse{}, nil
 }
 

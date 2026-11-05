@@ -84,3 +84,30 @@ func TestSideChatsStayWhileAPhoneFollows(t *testing.T) {
 		t.Error("the side chat outlived every app")
 	}
 }
+
+// A side chat starts in its chat's mode, the agent's permission control,
+// not the agent's default; a mode picked in it is its own: the chat stays
+// in its mode, and new chats start in the one picked last in a chat.
+func TestASideChatStartsInItsChatsMode(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Agent: "codex", Folder: t.TempDir()})
+	a.say(id, "hello")
+	setMode := func(chat, mode string) {
+		must(a.c.SetConfigOption(ctx, connect.NewRequest(&nushiv1.SetConfigOptionRequest{ChatId: chat, ConfigId: "mode", Value: mode})))
+	}
+	setMode(id, "read-only")
+	side := must(a.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
+	if mode := modeOf(a.get(side).Config); mode != "read-only" {
+		t.Fatalf("the side chat starts in %q, want its chat's read-only", mode)
+	}
+	setMode(side, "agent-full-access")
+	if side, chat := modeOf(a.get(side).Config), modeOf(a.get(id).Config); side != "agent-full-access" || chat != "read-only" {
+		t.Errorf("side chat in %q, chat in %q; want full access, read-only", side, chat)
+	}
+	next := must(a.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Agent: "codex", Folder: t.TempDir()})))
+	if mode := modeOf(next.Config); mode != "read-only" {
+		t.Errorf("a new chat starts in %q: the side chat's mode was remembered", mode)
+	}
+}
