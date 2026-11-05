@@ -11,7 +11,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/artifacts_widget.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -314,11 +313,20 @@ void main() {
   });
 
   group('the pane', () {
-    testWidgets('one file: its name and menu, no tabs', (tester) async {
+    testWidgets('one file: its name, plain, its path in a tooltip; no tabs, '
+        'no menu', (tester) async {
       final d = await _app(tester, files: _three.take(1).toList());
       expect(find.byType(PreviewTabs), findsNothing);
-      expect(_inPane(find.byType(FilesMenu)), findsOneWidget);
       expect(_inPane(find.text('report.md')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _inPane(find.byType(PaneHeader)),
+          matching: find.byIcon(Icons.keyboard_arrow_down),
+        ),
+        findsNothing,
+      );
+      expect(_inPane(find.byType(MenuAnchor)), findsNothing);
+      expect(find.byTooltip('/Users/me/nushi/docs/report.md'), findsOneWidget);
       d.dispose();
     }, variant: _mac);
 
@@ -403,7 +411,7 @@ void main() {
       expect(c.preview.value, 'site/notes.md');
       await _tap(tester, _closeOf('notes.md'));
       expect(find.byType(PreviewTabs), findsNothing, reason: 'one left');
-      expect(_inPane(find.byType(FilesMenu)), findsOneWidget);
+      expect(_inPane(find.text('report.md')), findsOneWidget);
       d.dispose();
     }, variant: _mac);
 
@@ -517,7 +525,7 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
-    testWidgets('the Files list, and the name’s menu', (tester) async {
+    testWidgets('the Files list opens a tab', (tester) async {
       final d = await _app(tester, details: true);
       final c = d.chats['c']!;
       await _tap(
@@ -528,8 +536,13 @@ void main() {
         ),
       );
       expect(c.previewFiles.value, ['docs/plan.md']);
-      await _tap(tester, _inPane(find.byType(FilesMenu)));
-      await _tap(tester, find.text('report.md').last);
+      await _tap(
+        tester,
+        find.descendant(
+          of: find.byType(FileRows),
+          matching: find.text('report.md'),
+        ),
+      );
       expect(c.previewFiles.value, ['docs/plan.md', 'docs/report.md']);
       expect(c.preview.value, 'docs/report.md');
       d.dispose();

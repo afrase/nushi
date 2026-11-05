@@ -199,8 +199,7 @@ Markdown, HTML, SVG and CSV have Preview and Source.
 **Artifacts** are the files made to be looked at: everything but code and text, which Changes shows. Open one from:
 
 - its tool row's Preview;
-- the Artifacts widget in the details panel, the open one marked. The palette's Artifacts… shows the panel and the widget, or lists them in a window too narrow for the panel;
-- the preview's own name, while one file is open.
+- the Artifacts widget in the details panel, the open one marked. The palette's Artifacts… shows the panel and the widget, or lists them in a window too narrow for the panel.
 
 Each list shows the files the chat wrote that way, each with its folder and when it changed, in the same order:
 
@@ -209,6 +208,8 @@ Each list shows the files the chat wrote that way, each with its folder and when
 3. the rest, folded under "Older (n)".
 
 The widget, collapsed, counts the pinned and recent; with none of either, the three newest show. The phone's Artifacts list the same way, without pins.
+
+The preview's file name shows its path when the pointer is over it; a click shows the file in the Files pane (below), the folders above it opened.
 
 **An agent can open a preview itself.** Claude and Codex have a `show` tool, for a finished page, document or image. Their own permission prompt asks first, as for any MCP tool, and names the file; opening an HTML page runs it, so allowing the tool for good means pages open unasked. The file opens beside the chat if that chat's transcript is showing. If you're in another chat, in Changes or in a view, nothing moves: the latest file opens when you next come back to the transcript, and the row ("Showed report.html") keeps its Preview button either way. The phone doesn't open anything by itself; use the row's Preview. A file can be shown only if Preview could open it: an artifact inside the chat's folder or worktree, or one the chat wrote.
 

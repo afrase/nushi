@@ -80,6 +80,19 @@ class FolderTree extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// A file to scroll to once its row is listed, for the pane to take.
+  String? revealing;
+
+  /// Opens the folders above [path], puts the keys on it, and asks the pane
+  /// to scroll to it ([revealing]).
+  void reveal(String path) {
+    for (final f in _ancestors(path)) {
+      setOpen(f, open: true);
+    }
+    selected = revealing = path;
+    notifyListeners();
+  }
+
   /// The folders whose entries show: the chat's, and each open one whose
   /// folders above are open too.
   Set<String> get _shown => {

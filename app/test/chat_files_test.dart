@@ -242,32 +242,6 @@ void main() {
     d.dispose();
   }, variant: _mac);
 
-  testWidgets('the pane’s name switches files, the open one checked', (
-    tester,
-  ) async {
-    final d = await _app(tester);
-    d.chats['c']!.openPreview('docs/report.md');
-    await tester.pumpAndSettle();
-    await tester.tap(_inPane(find.text('report.md')));
-    await tester.pumpAndSettle();
-    final checked = find.byIcon(Icons.check);
-    expect(checked, findsOneWidget);
-    expect(
-      tester.getCenter(checked).dy,
-      closeTo(
-        tester
-            .getCenter(find.textContaining('docs · 2m', findRichText: true))
-            .dy,
-        4,
-      ),
-    );
-    await tester.tap(find.textContaining('chart.png', findRichText: true));
-    await tester.pumpAndSettle();
-    expect(_inPane(find.text('chart.png')), findsOneWidget);
-    expect(d.chats['c']!.preview.value, 'docs/img/chart.png');
-    d.dispose();
-  }, variant: _mac);
-
   testWidgets('⌘P: Open file matches what’s typed and opens it', (
     tester,
   ) async {

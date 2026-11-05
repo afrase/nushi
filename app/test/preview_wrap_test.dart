@@ -9,7 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
@@ -18,6 +17,7 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
+import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -383,9 +383,37 @@ void main() {
     }
 
     testWidgets('the title row with the wrap button, $name', (tester) async {
-      final d = await _app(tester, brightness: brightness);
+      viewport(tester, const Size(700, 200));
+      final d = await _fake().connect(tester);
+      final c = d.chats['c']!..openPreview('src/tea.go');
+      // The row on its own: the pane, as tall as its title row.
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: NushiTheme(
+            brightness == Brightness.dark ? Tokens.dark : Tokens.light,
+          ).toThemeData(),
+          home: Scaffold(
+            body: Center(
+              child: RepaintBoundary(
+                key: const ValueKey('row'),
+                child: SizedBox(
+                  width: 560,
+                  height: 44,
+                  child: PreviewPane(
+                    chat: c,
+                    daemon: d,
+                    path: 'src/tea.go',
+                    onClose: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
       await expectLater(
-        _inPane(find.byType(PaneHeader)),
+        find.byKey(const ValueKey('row')),
         matchesGoldenFile('goldens/preview_title_row_$name.png'),
       );
       await closeView(tester, d);

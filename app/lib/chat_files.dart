@@ -9,7 +9,6 @@ import 'package:nushi/commits.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -212,83 +211,3 @@ String fileDetail(String path, DateTime? changed) => [
   folderOf(path),
   if (changed != null) ago(clock().difference(changed), changed),
 ].where((s) => s.isNotEmpty).join(' · ');
-
-/// A menu of [chat]'s artifacts ([chatArtifacts]): the pinned, the recent,
-/// then "Older (n)" opening the rest beside it; [current], the file the
-/// preview shows, checked, first when it isn't one of them. Each row's pin
-/// shows on hover. Opened from [label], with [tooltip], in a compact field;
-/// a pick opens the file's preview. When each changed is read as it opens.
-class FilesMenu extends StatefulWidget {
-  const new({
-    required this.chat,
-    required this.label,
-    required this.current,
-    required this.tooltip,
-    super.key,
-  });
-
-  final ChatState chat;
-  final Widget label;
-  final String current;
-  final String tooltip;
-
-  @override
-  State<FilesMenu> createState() => _FilesMenuState();
-}
-
-class _FilesMenuState extends State<FilesMenu> {
-  Map<String, DateTime?> _changed = const {};
-
-  void _read(List<String> files) => setState(
-    () => _changed = {
-      for (final f in files) f: fileChanged(absoluteIn(widget.chat.folder, f)),
-    },
-  );
-
-  MenuEntry _entry(String f) => MenuEntry(
-    baseName(f),
-    detail: fileDetail(f, _changed[f]),
-    checked: f == widget.current,
-    tooltip: f,
-    onPick: () => widget.chat.openPreview(f),
-    action: ({required hover}) => ListenableBuilder(
-      listenable: pinnedFiles,
-      builder: (context, _) => pinMark(widget.chat, f, hover: hover),
-    ),
-  );
-
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: artifactsOf(widget.chat),
-    builder: (context, _) {
-      final a = chatArtifacts(widget.chat);
-      final shown = [
-        if (!a.pinned.contains(widget.current) &&
-            !a.recent.contains(widget.current))
-          widget.current,
-        ...a.pinned,
-        ...a.recent,
-      ];
-      final older = [
-        for (final f in a.older)
-          if (f != widget.current) f,
-      ];
-      return MenuField(
-        compact: true,
-        tooltip: widget.tooltip,
-        label: widget.label,
-        onOpen: () => _read([...shown, ...older]),
-        entries: [
-          for (final f in shown) _entry(f),
-          if (older.isNotEmpty) ...[
-            if (shown.isNotEmpty) MenuEntry.divider,
-            MenuEntry(
-              'Older (${older.length})',
-              submenu: [for (final f in older) _entry(f)],
-            ),
-          ],
-        ],
-      );
-    },
-  );
-}

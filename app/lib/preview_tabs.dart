@@ -37,9 +37,9 @@ String tabLabel(String file, List<String> files) {
 /// How narrow a tab gets before the row scrolls instead.
 const double previewTabLeast = 88;
 
-/// The text's inset in a tab, the same as the file name's in [FilesMenu], so
-/// the first name stays where the one file's name was.
-const double _nameInset = 5;
+/// The text's inset in a tab, and the one file's name's in the pane's
+/// title row, so the first name stays where the one file's name was.
+const double previewNameInset = 5;
 
 /// The room a tab keeps for its ✕, shown or not, so its name doesn't move.
 const double _closeRoom = 18;
@@ -110,7 +110,7 @@ class _PreviewTabsState extends State<PreviewTabs> {
     )..layout();
     final width = text.width.ceilToDouble();
     text.dispose();
-    return width + _nameInset + _closeRoom;
+    return width + previewNameInset + _closeRoom;
   }
 
   /// Scrolls no further than it takes to show from [start] to [end].
@@ -217,7 +217,7 @@ class _Tab extends StatelessWidget {
                 tooltip: file,
                 builder: (context, look) => Container(
                   alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: _nameInset),
+                  padding: const EdgeInsets.only(left: previewNameInset),
                   foregroundDecoration: focusRing(t, look),
                   child: Text(
                     label,

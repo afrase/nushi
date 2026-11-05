@@ -280,6 +280,63 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a click on the preview’s name opens the pane at its file: '
+      'the folders above it open, its row selected', (tester) async {
+    final (d, folder) = await _app(tester, open: false);
+    final c = d.chats['c']!..openPreview('app/lib/main.dart');
+    await tester.pumpAndSettle();
+    expect(_pane, findsNothing);
+    final name = find.descendant(
+      of: find.byType(PreviewPane),
+      matching: find.text('main.dart'),
+    );
+    await tester.tap(name);
+    await tester.pumpAndSettle();
+    expect(_pane, findsOneWidget);
+    expect(filesChats.value, {'c'});
+    expect(
+      folder.asked.map((r) => r.path),
+      containsAll(['', 'app', 'app/lib']),
+    );
+    expect(_names(tester).take(4), ['app', 'lib', 'main.dart', 'pubspec.yaml']);
+    expect(_view(tester, 'main.dart').selected, isTrue);
+    expect(_view(tester, 'main.dart').showing, isTrue);
+    expect(c.preview.value, 'app/lib/main.dart', reason: 'the preview stays');
+    // Open already, it goes to another file the same way.
+    c
+      ..closePreviewFile('app/lib/main.dart')
+      ..openPreview('docs/report.md');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(PreviewPane),
+        matching: find.text('report.md'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_view(tester, 'report.md').selected, isTrue);
+    expect(_view(tester, 'main.dart').selected, isFalse);
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  testWidgets('a file outside the chat’s folder: its name does nothing', (
+    tester,
+  ) async {
+    final (d, _) = await _app(tester, open: false);
+    d.chats['c']!.openPreview('/Users/me/elsewhere/notes.md');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(PreviewPane),
+        matching: find.text('notes.md'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_pane, findsNothing);
+    expect(filesChats.value, isEmpty);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('↑↓ move, → opens a folder and goes in, ← closes it and goes '
       'up, ⏎ opens a file', (tester) async {
     final (d, _) = await _app(tester);

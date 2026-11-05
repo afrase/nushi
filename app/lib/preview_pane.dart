@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_files.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diagram_page.dart';
+import 'package:nushi/files_pane.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
@@ -17,13 +17,13 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart';
 
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
-/// its name (a menu of the chat's other files; with several files open, the
-/// tabs of them all, [PreviewTabs]), Live while the daemon keeps it current,
-/// wrapping the lines or not while it shows a source ([WrapButton], and
-/// ⌥Z with the focus in the pane), Preview or Source (a file that renders),
-/// Reload and Open in browser (a page, not a diagram), Show in Finder and
-/// Close, which closes every tab. Read-only. It's one file's view, made
-/// again as its tab shows.
+/// its name (a click shows it in the Files pane; with several files open,
+/// the tabs of them all, [PreviewTabs]), Live while the daemon keeps it
+/// current, wrapping the lines or not while it shows a source
+/// ([WrapButton], and ⌥Z with the focus in the pane), Preview or Source (a
+/// file that renders), Reload and Open in browser (a page, not a diagram),
+/// Show in Finder and Close, which closes every tab. Read-only. It's one
+/// file's view, made again as its tab shows.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -184,8 +184,9 @@ class _PreviewPaneState extends State<PreviewPane> {
                                     size: 14,
                                     color: t.textSecondary,
                                   ),
-                                  // The name opens the chat's other files;
-                                  // several open, their tabs take its place.
+                                  // The name shows the file in the Files
+                                  // pane; several open, their tabs take its
+                                  // place.
                                   Expanded(
                                     child: tabs
                                         ? PreviewTabs(
@@ -196,19 +197,13 @@ class _PreviewPaneState extends State<PreviewPane> {
                                           )
                                         : Align(
                                             alignment: Alignment.centerLeft,
-                                            child: FilesMenu(
+                                            child: _Name(
+                                              daemon: widget.daemon,
                                               chat: widget.chat,
-                                              current: widget.path,
+                                              path: widget.path,
                                               tooltip:
                                                   _watch.file?.path ??
                                                   widget.path,
-                                              label: Text(
-                                                baseName(widget.path),
-                                                style: theme.code(
-                                                  t.text,
-                                                  size: 12,
-                                                ),
-                                              ),
                                             ),
                                           ),
                                   ),
@@ -324,6 +319,43 @@ class _PreviewPaneState extends State<PreviewPane> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The one file's name, plain, its absolute path ([tooltip]) in a tooltip:
+/// a click shows it in the Files pane ([showInFiles]) when the file is in
+/// the chat's folder, and does nothing otherwise. Its text sits where a
+/// tab's would ([PreviewTabs]), so a second file opening moves nothing.
+class _Name extends StatelessWidget {
+  const new({
+    required this.daemon,
+    required this.chat,
+    required this.path,
+    required this.tooltip,
+  });
+
+  final Daemon daemon;
+  final ChatState chat;
+  final String path;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final inside = inFiles(daemon, chat, path);
+    return Pressable(
+      onTap: inside == null ? null : () => showInFiles(chat, inside),
+      tooltip: tooltip,
+      builder: (context, look) => Padding(
+        padding: const EdgeInsets.fromLTRB(previewNameInset, 1, 3, 1),
+        child: Text(
+          baseName(path),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.code(theme.t.text, size: 12),
+        ),
       ),
     );
   }

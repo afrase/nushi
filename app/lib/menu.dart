@@ -11,11 +11,10 @@ import 'package:nushi/theme/theme.dart';
 /// [checked]; in red when it
 /// is [danger] (it deletes or loses something). Picking it runs [onPick]; with
 /// [submenu] it opens those rows beside it instead. Without either it
-/// shows unavailable. [tooltip] shows on hover. [action] is a small
-/// control at its right end (a pin), built knowing whether the row is
-/// under the pointer or focused. [controls], for a row that isn't one choice
-/// (a chat's color): what it holds after its [label], given what closes the
-/// menu; each picks for itself, and the row itself does nothing.
+/// shows unavailable. [tooltip] shows on hover. [controls], for a row that
+/// isn't one choice (a chat's color): what it holds after its [label], given
+/// what closes the menu; each picks for itself, and the row itself does
+/// nothing.
 class MenuEntry {
   const new(
     this.label, {
@@ -24,7 +23,6 @@ class MenuEntry {
     this.onPick,
     this.submenu,
     this.tooltip = '',
-    this.action,
     this.icon,
     this.line,
     this.mark,
@@ -42,7 +40,6 @@ class MenuEntry {
       onPick = null,
       submenu = null,
       tooltip = '',
-      action = null,
       icon = null,
       line = null,
       mark = null,
@@ -63,7 +60,6 @@ class MenuEntry {
   final List<MenuEntry>? submenu;
   final String tooltip;
   final bool heading;
-  final Widget Function({required bool hover})? action;
   final IconData? icon;
 
   /// A drawn icon, in [icon]'s place.
@@ -400,24 +396,6 @@ Widget _row(
       child: label,
     );
   }
-  if (e.action case final action?) {
-    return _Hovered(
-      key: key,
-      builder: ({required hover, required onHover, required onFocus}) =>
-          _button(
-            theme,
-            e,
-            label,
-            digit: digit,
-            lit: lit,
-            icon: icon,
-            checks: checks,
-            action: action(hover: hover),
-            onHover: onHover,
-            onFocus: onFocus,
-          ),
-    );
-  }
   return _button(
     theme,
     e,
@@ -440,9 +418,6 @@ Widget _button(
   required bool checks,
   bool keepFocus = false,
   Widget? icon,
-  Widget? action,
-  ValueChanged<bool>? onHover,
-  ValueChanged<bool>? onFocus,
   Key? key,
 }) {
   final t = theme.t;
@@ -451,14 +426,11 @@ Widget _button(
     onPressed: e.onPick,
     autofocus: e.autofocus,
     requestFocusOnHover: !keepFocus,
-    onHover: onHover,
-    onFocusChange: onFocus,
     leadingIcon: icon,
     style: lit ? MenuItemButton.styleFrom(backgroundColor: t.hover) : null,
     trailingIcon: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        ?action,
         if (e.shortcut.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 24),
@@ -490,34 +462,6 @@ Widget _button(
       ],
     ),
     child: Padding(padding: const EdgeInsets.only(right: 12), child: label),
-  );
-}
-
-/// A row with an action, built again as the pointer or the focus comes and
-/// goes.
-class _Hovered extends StatefulWidget {
-  const new({required this.builder, super.key});
-
-  final Widget Function({
-    required bool hover,
-    required ValueChanged<bool> onHover,
-    required ValueChanged<bool> onFocus,
-  })
-  builder;
-
-  @override
-  State<_Hovered> createState() => _HoveredState();
-}
-
-class _HoveredState extends State<_Hovered> {
-  bool _pointer = false;
-  bool _focus = false;
-
-  @override
-  Widget build(BuildContext context) => widget.builder(
-    hover: _pointer || _focus,
-    onHover: (h) => setState(() => _pointer = h),
-    onFocus: (f) => setState(() => _focus = f),
   );
 }
 

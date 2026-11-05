@@ -265,6 +265,12 @@ class _FilesPaneState extends State<FilesPane> {
       }
     } else {
       _rows = _tree.rows();
+      // A file shown from elsewhere (the preview's name), once its row's in.
+      if (_tree.revealing case final path?
+          when _rows.any((r) => r.path == path)) {
+        _tree.revealing = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _reveal(path));
+      }
     }
     final open = widget.chat.preview.value;
     return MacScrollbar(
@@ -294,6 +300,26 @@ class _FilesPaneState extends State<FilesPane> {
       ),
     );
   }
+}
+
+/// [path] (as the preview names it) as [chat]'s Files pane does, relative
+/// to the chat's folder; null for a file outside it, or a daemon without
+/// the pane.
+String? inFiles(Daemon daemon, ChatState chat, String path) {
+  if (daemon.daemonApi < filesApi) return null;
+  final folder = '${chat.folder}/';
+  final inside = path.startsWith('/')
+      ? (path.startsWith(folder) ? path.substring(folder.length) : null)
+      : path.replaceFirst(RegExp(r'^(\./)+'), '');
+  return inside == null || inside.isEmpty ? null : inside;
+}
+
+/// Shows [inFiles]' file in [chat]'s Files pane: the pane opens on the Chat
+/// tab, the folders above it open, its row selected and scrolled to.
+void showInFiles(ChatState chat, String inside) {
+  folderTreeOf(chat).reveal(inside);
+  chat.tab.value = ChatTab.chat;
+  if (!filesOpen(chat)) toggleFiles(chat);
 }
 
 /// Whether [chat]'s Files pane is open: a [Listenable] with it.
