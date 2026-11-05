@@ -349,10 +349,13 @@ Widget paneSlide(Animation<double> run, Widget child, {bool left = false}) =>
 /// where it is. Its pointer goes where it's drawn. A change mid-glide
 /// glides from where it is; under Reduce Motion it doesn't glide.
 ///
-/// With [clip], what's drawn off its box while it glides is cut there:
-/// the chat's transcript, whose foot (the composer's backdrop) is its full
-/// width and would otherwise lie over the sidebar left of it as it glides.
-/// At rest nothing is clipped, and nothing is a layer more.
+/// With [clip], what's drawn left of its box while it glides is cut at its
+/// left edge: the chat's transcript, whose foot (the composer's backdrop)
+/// is its full width and would otherwise lie over the sidebar, drawn under
+/// it, as it glides. Drawn right of its box it isn't cut: it slides under
+/// the panes, drawn over it, as they slide in, and a cut there would chop
+/// what's still in view. At rest nothing is clipped, and nothing is a
+/// layer more.
 class Glide extends StatefulWidget {
   const new({
     required this.token,
@@ -486,8 +489,9 @@ class _RenderGlide extends RenderProxyBox {
     super.dispose();
   }
 
-  /// Whether it's drawn off its box, and cut to it.
-  bool get _clipped => clip && _drawn != 0;
+  /// Whether it's drawn left of its box, and cut there. Drawn that way,
+  /// its right edge is inside its box, so the box is the cut.
+  bool get _clipped => clip && _drawn < 0;
 
   @override
   void paint(PaintingContext context, Offset offset) {

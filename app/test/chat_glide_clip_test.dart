@@ -20,8 +20,12 @@ import 'harness.dart';
 // and goes (slides.dart's Glide): it's laid out at its new width and drawn
 // from where its text was. The composer at its foot, with its backdrop the
 // pane's full width (OverBottom), is drawn with it, and nothing of it may
-// show outside the transcript's own slot: closing the details on a wide
+// show left of the transcript's own slot: closing the details on a wide
 // window drew the composer's foot over the sidebar for the glide's length.
+// Drawn right of its slot it slides under the panes, drawn over it, and
+// isn't cut: a pane opening at the right on a wide window has barely come
+// in on its first frames, and a cut at the slot's edge chopped the
+// composer, its border and its corner, in plain sight.
 
 final _items = [
   Item(
@@ -67,8 +71,9 @@ Future<Daemon> _app(WidgetTester tester, double width) async {
 }
 
 /// The part of [box] that shows, in the window: its bounds as drawn,
-/// through every transform above it, cut by every clip above it.
-Rect _shown(RenderBox box) {
+/// through every transform above it, cut by every clip above it unless
+/// [clips] is false.
+Rect _shown(RenderBox box, {bool clips = true}) {
   var rect = Offset.zero & box.size;
   RenderObject child = box;
   for (var parent = box.parent; parent != null; parent = parent.parent) {
@@ -76,7 +81,8 @@ Rect _shown(RenderBox box) {
     final m = Matrix4.identity();
     parent.applyPaintTransform(child, m);
     rect = MatrixUtils.transformRect(m, rect);
-    if (parent.describeApproximatePaintClip(child) case final clip?) {
+    if (parent.describeApproximatePaintClip(child) case final clip?
+        when clips) {
       rect = rect.intersect(clip);
     }
     child = parent;
@@ -113,8 +119,9 @@ Iterable<RenderBox> _composer(WidgetTester tester) sync* {
 }
 
 /// Runs [change] and, frame by frame through the glide, notes in [spills]
-/// what of the composer shows outside the transcript's slot or left of the
-/// sidebar's edge, rendering a few of the frames as [name].
+/// what of the composer shows left of the transcript's slot or the
+/// sidebar's edge, and what of the composer's own box is cut at its right,
+/// rendering a few of the frames as [name].
 Future<void> _glide(
   WidgetTester tester,
   List<String> spills,
@@ -133,7 +140,7 @@ Future<void> _glide(
     final out = _composer(tester)
         .map(_shown)
         .where((r) => !r.isEmpty)
-        .where((r) => r.left < left - 0.5 || r.right > slot.right + 0.5);
+        .where((r) => r.left < left - 0.5);
     if (out.isNotEmpty) {
       final r = out.reduce((a, b) => a.expandToInclude(b));
       spills.add(
@@ -141,7 +148,18 @@ Future<void> _glide(
         'the transcript ${slot.left}..${slot.right}, sidebar to $edge',
       );
     }
-    if (i == 2 || i == 5 || i == 9) {
+    final box = tester.renderObject<RenderBox>(
+      find.descendant(of: _main, matching: find.byType(Composer)),
+    );
+    final drawn = _shown(box, clips: false);
+    final shown = _shown(box);
+    if (shown.right < drawn.right - 0.5) {
+      spills.add(
+        '$name frame $i: the composer drawn to ${drawn.right}, '
+        'cut at ${shown.right}',
+      );
+    }
+    if (i == 0 || i == 2 || i == 5 || i == 9) {
       await render(tester, find.byType(NushiApp), '${name}_f$i');
     }
   }
@@ -153,8 +171,8 @@ void main() {
 
   for (final width in [1700.0, 1400.0, 1100.0]) {
     final w = width.toInt();
-    testWidgets('$w wide with the sidebar: the composer stays in the '
-        'transcript as the details slide in and out', (tester) async {
+    testWidgets('$w wide with the sidebar: the composer stays off the '
+        'sidebar, uncut, as the details slide in and out', (tester) async {
       final d = await _app(tester, width);
       final spills = <String>[];
       await _glide(tester, spills, 'glide_${w}_details_in', () {
@@ -167,8 +185,10 @@ void main() {
       expect(spills, isEmpty);
     }, variant: _mac);
 
-    testWidgets('$w wide: the composer stays in the transcript as the '
-        'sidebar, the Files pane and a side chat come and go', (tester) async {
+    testWidgets('$w wide: the composer stays off the sidebar, uncut, as '
+        'the sidebar, the Files pane and a side chat come and go', (
+      tester,
+    ) async {
       final d = await _app(tester, width);
       final spills = <String>[];
       await _glide(tester, spills, 'glide_${w}_sidebar_out', () {
