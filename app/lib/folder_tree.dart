@@ -36,6 +36,17 @@ class FolderTree extends ChangeNotifier {
   final _refused = <String, String>{};
 
   final _subs = <String, StreamSubscription<WatchChatFolderResponse>>{};
+
+  /// Counts each change the tree tells: what a filter worked out from its
+  /// listings holds while this stays (the filter's FilterMemo).
+  int revision = 0;
+
+  @override
+  void notifyListeners() {
+    revision++;
+    super.notifyListeners();
+  }
+
   Daemon? _daemon;
   int _users = 0;
   String _folder; // the chat's, as listed: a moved chat starts again
@@ -149,6 +160,7 @@ class FolderTree extends ChangeNotifier {
   void _sync() {
     if (chat.folder != _folder) {
       _folder = chat.folder;
+      revision++; // during a build: no one's told
       _listed.clear();
       _refused.clear();
       for (final s in _subs.values) {
@@ -227,6 +239,7 @@ class FolderTree extends ChangeNotifier {
     _subs.clear();
     _refused.clear();
     _sync();
+    notifyListeners();
   }
 
   /// Every file listed in the folders that show (the ignored too, while

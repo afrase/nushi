@@ -88,6 +88,28 @@ const filterShows = 200;
   return (rows: rows, best: hits.firstOrNull);
 }
 
+/// [filterRows] of a tree's listings and git's list, worked out again only
+/// when the query, the tree ([FolderTree.revision]) or git's list changes:
+/// a pane rebuilds at every chunk its chat streams, and the filter of a
+/// large folder takes 10 to 25 ms.
+class FilterMemo {
+  Object? _key;
+  ({List<TreeRow> rows, String? best})? _found;
+
+  /// The rows for [query] in [tree] and [git].
+  ({List<TreeRow> rows, String? best}) of(
+    FolderTree tree,
+    GitFiles git,
+    String query,
+  ) {
+    // git's list is replaced, never changed: the same list is the same.
+    final key = (query, tree.revision, git.paths);
+    if (_found case final found? when key == _key) return found;
+    _key = key;
+    return _found = filterRows(filterPaths(tree, git.paths), query);
+  }
+}
+
 class _Dir {
   final dirs = <String, _Dir>{};
   final files = <String>[];

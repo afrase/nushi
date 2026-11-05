@@ -28,6 +28,7 @@ class _FilesScreenState extends State<FilesScreen> {
   late final FolderTree _tree = folderTreeOf(widget.chat);
   final _query = TextEditingController();
   final _git = GitFiles();
+  final _filter = FilterMemo();
 
   @override
   void initState() {
@@ -102,9 +103,7 @@ class _FilesScreenState extends State<FilesScreen> {
   Widget _list(BuildContext context) {
     final q = _query.text.trim();
     final filtering = q.isNotEmpty;
-    final rows = filtering
-        ? filterRows(filterPaths(_tree, _git.paths), q).rows
-        : _tree.rows();
+    final rows = filtering ? _filter.of(_tree, _git, q).rows : _tree.rows();
     final marks = writtenMarks(widget.chat);
     if (rows.isEmpty) {
       return Padding(

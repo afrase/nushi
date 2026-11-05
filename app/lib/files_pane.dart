@@ -55,6 +55,7 @@ class _FilesPaneState extends State<FilesPane> {
   final _scroll = ScrollController();
 
   final _git = GitFiles();
+  final _filter = FilterMemo();
 
   /// The rows as last built: what the keys move through.
   List<TreeRow> _rows = const [];
@@ -252,7 +253,7 @@ class _FilesPaneState extends State<FilesPane> {
     final t = theme.t;
     final marks = writtenMarks(widget.chat);
     if (_q.isNotEmpty) {
-      final found = filterRows(filterPaths(_tree, _git.paths), _q);
+      final found = _filter.of(_tree, _git, _q);
       _rows = found.rows;
       if (_filterAt == null || !_rows.any((r) => r.path == _filterAt)) {
         _filterAt = found.best;

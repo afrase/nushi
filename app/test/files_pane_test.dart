@@ -435,6 +435,24 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a filter isn’t worked out again as the chat streams, only '
+      'as the query, the tree or git’s list changes', (tester) async {
+    final (d, folder) = await _app(tester);
+    final field = find.descendant(of: _pane, matching: find.byType(TextField));
+    await tester.enterText(field, 'tree');
+    await tester.pumpAndSettle();
+    final row = _view(tester, 'tree_view.dart').row;
+    // A chunk of the agent's text: the chat notifies, the pane rebuilds.
+    d.chats['c']!.notifyListeners();
+    await tester.pump();
+    expect(_view(tester, 'tree_view.dart').row, same(row));
+    // The tree lists again: worked out again.
+    folder.changed('');
+    await tester.pumpAndSettle();
+    expect(_view(tester, 'tree_view.dart').row, isNot(same(row)));
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('a change comes in: the tree keeps what is open and selected', (
     tester,
   ) async {
