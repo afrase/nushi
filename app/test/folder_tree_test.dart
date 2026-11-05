@@ -170,4 +170,52 @@ void main() {
     await tester.pump();
     await closeView(tester, d);
   });
+
+  testWidgets('an open folder git ignores is watched again as soon as the '
+      'listing above has it, with no rows asked (a filter typed)', (
+    tester,
+  ) async {
+    final live = <String>{};
+    final fake = FakeDaemon([])
+      ..streams = (input) {
+        if (input is! WatchChatFolderRequest) return null;
+        final s = StreamController<WatchChatFolderResponse>();
+        addTearDown(s.close);
+        live.add(input.path);
+        final entries = switch (input.path) {
+          '' => [
+            if (input.ignored)
+              FolderEntry(name: 'build', kind: 'folder', ignored: true),
+            FolderEntry(name: 'main.dart', kind: 'file'),
+          ],
+          'build' => [FolderEntry(name: 'out.js', kind: 'file', ignored: true)],
+          _ => <FolderEntry>[],
+        };
+        s
+          ..onCancel = (() => live.remove(input.path))
+          ..add(
+            WatchChatFolderResponse(
+              folders: [FolderListing(path: input.path, entries: entries)],
+            ),
+          );
+        return s.stream;
+      };
+    final d = await fake.connect(tester);
+    filesIgnored.value = true;
+    final tree = folderTreeOf(ChatState('c', '/tmp/c'))..attach(d);
+    await tester.pump();
+    tree.setOpen('build', open: true);
+    await tester.pump();
+    expect(live, {'', 'build'});
+    filesIgnored.value = false;
+    await tester.pump();
+    filesIgnored.value = true;
+    await tester.pump();
+    await tester.pump();
+    expect(live, {'', 'build'});
+    expect(tree.listedFiles, contains('build/out.js'));
+    tree.detach();
+    await tester.pump();
+    await closeView(tester, d);
+  });
 }

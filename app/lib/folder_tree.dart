@@ -194,6 +194,9 @@ class FolderTree extends ChangeNotifier {
             for (final l in r.folders) {
               _listed[l.path] = l;
             }
+            // What shows follows the listing above, not only rows(): the
+            // filter asks for none.
+            _sync();
             notifyListeners();
           },
           onError: (Object e) {
@@ -202,6 +205,7 @@ class FolderTree extends ChangeNotifier {
             // (the daemon went away): list again.
             if (e is ConnectException && e.code != Code.unavailable) {
               _refused[folder] = e.message;
+              _sync();
               notifyListeners();
             } else {
               _again(folder);
