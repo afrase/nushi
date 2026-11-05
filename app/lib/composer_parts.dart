@@ -2,9 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/code_run_view.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/draft.dart';
+import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/images.dart';
+import 'package:nushi/motion.dart';
+import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind.dart';
+import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Stops the chat's running turn. If the agent hasn't answered the last
@@ -158,4 +165,130 @@ class EnterSends extends StatelessWidget {
     onKeyEvent: (_, e) => enterKey(e, controller, onEnter),
     child: child,
   );
+}
+
+/// The cards over the box's text: the subagent it goes to, the replies,
+/// the outputs, the files and the images of [draft]. Shown only when
+/// there are some.
+class DraftCards extends StatelessWidget {
+  const new(this.draft, {required this.chat, required this.onDone, super.key});
+
+  final Draft draft;
+  final ChatState chat;
+
+  /// A reply card done with (the focus back to the box).
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
+    child: Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        if (draft.toSubagent.value case (_, final agent)?)
+          Chip(
+            label: Text('To $agent, through ${chat.agentName}'),
+            onDeleted: () => draft.toSubagent.value = null,
+            visualDensity: VisualDensity.compact,
+          ),
+        // Only when there are some: an empty one still takes a spacing,
+        // which put the first row 6pt right of the rows wrapped under it.
+        if (draft.replies.value.isNotEmpty)
+          ReplyCards(draft.replies, onDone: onDone),
+        for (final o in draft.outputs.value)
+          OutputCard(
+            o,
+            onRemove: () => draft.outputs.value = [
+              ...draft.outputs.value.where((n) => n != o),
+            ],
+          ),
+        for (final f in draft.files.value)
+          FileCard(
+            f,
+            onRemove: () =>
+                draft.files.value = [...draft.files.value.where((n) => n != f)],
+          ),
+        if (draft.images.value.isNotEmpty)
+          Thumbnails(draft.images.value, onRemove: draft.images.removeAt),
+      ],
+    ),
+  );
+}
+
+/// The box's buttons on its right: Queue and Stop and send while a turn
+/// runs and something is [written], Stop while it runs, else Send. Those
+/// coming pop in once the box is there ([pop]).
+class SendButtons extends StatelessWidget {
+  const new(
+    this.chat,
+    this.daemon, {
+    required this.written,
+    required this.pop,
+    required this.onSend,
+    super.key,
+  });
+
+  final ChatState chat;
+  final Daemon daemon;
+  final bool written;
+  final bool pop;
+
+  /// Sends the box's message; `now` stops the turn first.
+  final Future<void> Function({bool now}) onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    final touch = TouchTargets.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Queue (after this turn) and Stop and send (stop it, and this goes
+        // now): a phone's only way, the Mac's ⏎ and ⌘⏎ as buttons. One
+        // coming pops in (Enter.pop).
+        if (written && chat.busy) ...[
+          Enter.pop(
+            key: const ValueKey('queue'),
+            play: pop,
+            child: boxButton(
+              touch ? 'Queue' : 'Queue (⏎)',
+              onSend,
+              Icon(Icons.queue, size: 16, color: t.textSecondary),
+            ),
+          ),
+          if (chat.started != null)
+            Enter.pop(
+              key: const ValueKey('now'),
+              play: pop,
+              child: boxButton(
+                touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
+                () => onSend(now: true),
+                Icon(Icons.fast_forward, size: 16, color: t.textSecondary),
+              ),
+            ),
+        ],
+        if (chat.started != null)
+          Enter.pop(
+            key: const ValueKey('stop'),
+            play: pop,
+            child: boxButton(
+              'Stop (esc)',
+              () => stopTurn(context, chat, daemon),
+              stopIcon(t.textSecondary),
+            ),
+          )
+        else if (written && !chat.busy)
+          Enter.pop(
+            key: const ValueKey('send'),
+            play: pop,
+            child: boxButton(
+              'Send (⏎)',
+              onSend,
+              Icon(Icons.keyboard_return, size: 16, color: t.textSecondary),
+            ),
+          ),
+      ],
+    );
+  }
 }

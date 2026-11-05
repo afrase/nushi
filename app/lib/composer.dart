@@ -6,14 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
-import 'package:nushi/code_run_view.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
-import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
@@ -22,7 +20,6 @@ import 'package:nushi/pickers.dart';
 import 'package:nushi/plan_view.dart';
 import 'package:nushi/queue.dart';
 import 'package:nushi/replies.dart';
-import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/run_text.dart';
 import 'package:nushi/spell_check.dart';
@@ -454,55 +451,10 @@ class _ComposerState extends State<Composer> {
                             _draft.outputs.value.isEmpty &&
                             _draft.toSubagent.value == null
                         ? null
-                        : Padding(
-                            padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                if (_draft.toSubagent.value
-                                    case (_, final agent)?)
-                                  Chip(
-                                    label: Text(
-                                      'To $agent, through ${chat.agentName}',
-                                    ),
-                                    onDeleted: () =>
-                                        _draft.toSubagent.value = null,
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                // Only when there are some: an empty one
-                                // still takes a spacing, which put the first
-                                // row 6pt right of the rows wrapped under it.
-                                if (_draft.replies.value.isNotEmpty)
-                                  ReplyCards(
-                                    _draft.replies,
-                                    onDone: _focus.requestFocus,
-                                  ),
-                                for (final o in _draft.outputs.value)
-                                  OutputCard(
-                                    o,
-                                    onRemove: () => _draft.outputs.value = [
-                                      ..._draft.outputs.value.where(
-                                        (n) => n != o,
-                                      ),
-                                    ],
-                                  ),
-                                for (final f in _draft.files.value)
-                                  FileCard(
-                                    f,
-                                    onRemove: () => _draft.files.value = [
-                                      ..._draft.files.value.where(
-                                        (n) => n != f,
-                                      ),
-                                    ],
-                                  ),
-                                if (_images.value.isNotEmpty)
-                                  Thumbnails(
-                                    _images.value,
-                                    onRemove: _images.removeAt,
-                                  ),
-                              ],
-                            ),
+                        : DraftCards(
+                            _draft,
+                            chat: chat,
+                            onDone: _focus.requestFocus,
                           ),
                   ),
                   Row(
@@ -563,58 +515,13 @@ class _ComposerState extends State<Composer> {
                           ),
                         ),
                       ),
-                      // Queue (after this turn) and Stop and send (stop it,
-                      // and this goes now): a phone's only way, the Mac's ⏎
-                      // and ⌘⏎ as buttons. One coming pops in (Enter.pop).
-                      if (written && chat.busy) ...[
-                        Enter.pop(
-                          key: const ValueKey('queue'),
-                          play: pop,
-                          child: boxButton(
-                            touch ? 'Queue' : 'Queue (⏎)',
-                            _send,
-                            Icon(Icons.queue, size: 16, color: t.textSecondary),
-                          ),
-                        ),
-                        if (chat.started != null)
-                          Enter.pop(
-                            key: const ValueKey('now'),
-                            play: pop,
-                            child: boxButton(
-                              touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
-                              () => _send(now: true),
-                              Icon(
-                                Icons.fast_forward,
-                                size: 16,
-                                color: t.textSecondary,
-                              ),
-                            ),
-                          ),
-                      ],
-                      if (chat.started != null)
-                        Enter.pop(
-                          key: const ValueKey('stop'),
-                          play: pop,
-                          child: boxButton(
-                            'Stop (esc)',
-                            () => stopTurn(context, chat, widget.daemon),
-                            stopIcon(t.textSecondary),
-                          ),
-                        )
-                      else if (written && !chat.busy)
-                        Enter.pop(
-                          key: const ValueKey('send'),
-                          play: pop,
-                          child: boxButton(
-                            'Send (⏎)',
-                            _send,
-                            Icon(
-                              Icons.keyboard_return,
-                              size: 16,
-                              color: t.textSecondary,
-                            ),
-                          ),
-                        ),
+                      SendButtons(
+                        chat,
+                        widget.daemon,
+                        written: written,
+                        pop: pop,
+                        onSend: _send,
+                      ),
                     ],
                   ),
                 ],
