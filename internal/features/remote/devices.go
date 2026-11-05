@@ -132,9 +132,10 @@ func (s *Service) add(name, kind string, key []byte) (string, error) {
 	return d.ID, nil
 }
 
-// unpair forgets a device just added whose phone was never told so: it
-// knows no id, so no revoke and no move follows, and no id given up
-// waits for it.
+// unpair forgets a device just added whose phone was never told so, and
+// drops what it opened meanwhile, as Revoke does (ADR 0034): once it's off
+// the list nothing could revoke it. A phone told no id needs no new one;
+// one that was served at s.id knows it, so the id moves as on a revoke.
 func (s *Service) unpair(id string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -143,10 +144,24 @@ func (s *Service) unpair(id string) {
 		return
 	}
 	s.devices = devices
+	delete(s.views, id)
 	delete(s.told, id)
-	s.moved(id) // out of the ids given up
+	served := false
+	for c, d := range s.conns {
+		if d == id {
+			delete(s.conns, c)
+			_ = c.Close()
+			served = true
+		}
+	}
+	var err error
+	if served {
+		err = s.rotate(id)
+	} else {
+		s.moved(id) // out of the ids given up
+	}
 	s.changed()
-	slog.Info("pairing undone: the phone wasn't told", "device", id)
+	slog.Info("pairing undone: the phone wasn't told", "device", id, "served", served, "err", err)
 }
 
 // Revoke unpairs a device and drops its connections at once.

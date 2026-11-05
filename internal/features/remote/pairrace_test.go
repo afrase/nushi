@@ -4,11 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"maps"
 	"slices"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
+	"github.com/afrase/nushi/noiseconn"
 )
 
 // Allow on the Mac at the same moment as a revoke (another phone's
@@ -53,5 +55,41 @@ func TestAllowRacingARevokeLeavesNoGhost(t *testing.T) {
 		if waited {
 			t.Fatal("an id given up still waits for the device the Mac dropped")
 		}
+	}
+}
+
+// A phone that knew the daemon's id and connected between Allow and a
+// reply that couldn't be written: unpairing it drops that session too, as
+// a revoke would (it's off the list, so nothing could revoke it later),
+// and the id it was served at moves.
+func TestUnpairDropsWhatTheDeviceOpened(t *testing.T) {
+	url := startRelay(t)
+	s := startRemote(t, t.TempDir(), url)
+	b := newKey(t)
+	s.mu.Lock()
+	id, err := s.add("b", "app", b.Public)
+	daemon, key := s.id, s.key.Public
+	s.mu.Unlock()
+	testcheck.NoErr(t, err)
+	var conn *noiseconn.Conn
+	waitFor(t, func() bool {
+		c, err := phoneConnect(url, daemon, key, b)
+		if err != nil || !talks(c) {
+			return false
+		}
+		conn = c
+		return true
+	})
+	defer func() { _ = conn.Close() }()
+	s.unpair(id)
+	s.mu.Lock()
+	open := slices.Contains(slices.Collect(maps.Values(s.conns)), id)
+	moved := s.id != daemon
+	s.mu.Unlock()
+	if open || !moved {
+		t.Fatalf("after unpair: a session still open %v, the id moved %v", open, moved)
+	}
+	if talks(conn) {
+		t.Fatal("the unpaired phone's session still talks")
 	}
 }
