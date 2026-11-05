@@ -121,11 +121,12 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	}
 	queue := c.reopeningLocked() || c.busy && how == SendQueue
 	switch {
+	case len(m.Images) > 0 && !c.canImage && !c.reopeningLocked():
+		// Reopening, the agent's answer isn't known yet: the queue checks.
+		return errors.New("the agent doesn't take images")
 	case queue:
 	case c.busy:
 		return errors.New("the agent is still working on the last prompt")
-	case len(m.Images) > 0 && !c.canImage:
-		return errors.New("the agent doesn't take images")
 	}
 	// Taken: its uploads are saved now, under the lock, and nothing refuses
 	// it after them.

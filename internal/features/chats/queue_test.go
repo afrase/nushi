@@ -3,6 +3,8 @@ package chats
 import (
 	"context"
 	"reflect"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -178,5 +180,57 @@ func TestStopEndsTheSteering(t *testing.T) {
 	defer c.mu.Unlock()
 	if !c.held || len(c.queue) != 1 || c.queue[0].Text != "three" {
 		t.Errorf("held %v, queue %+v", c.held, c.queue)
+	}
+}
+
+// A message with images for an agent that takes none is refused while the
+// chat is busy as when it is idle; one queued while the chat reopened, before
+// that was known, goes without them, steered or as the next prompt, and the
+// chat says so.
+func TestQueuedImagesGoOnlyToAnAgentThatTakesThem(t *testing.T) {
+	for _, steer := range []bool{false, true} {
+		svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+		agent.steerable, c.steer = steer, steer
+		agent.gate = make(chan struct{})
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+		eventually(t, c, func() bool { return !c.started.IsZero() })
+		pic := model.Message{Text: "pic", Images: []model.Image{{MimeType: "image/png", Data: []byte("png")}}}
+		c.mu.Lock()
+		c.canImage = false
+		c.mu.Unlock()
+		if svc.Prompt(t.Context(), c.id, pic, SendQueue) == nil {
+			t.Fatal("queued images for an agent that takes none")
+		}
+		c.mu.Lock()
+		pic.ID = "q1" // as queued while the chat reopened
+		c.queue = append(c.queue, pic)
+		c.mu.Unlock()
+		if steer {
+			update(c, acp.SessionUpdate{SessionUpdate: "tool_call", ToolCall: &acp.ToolCall{ToolCallID: "t1", Title: "ls", Status: "in_progress"}})
+			update(c, acp.SessionUpdate{SessionUpdate: "tool_call_update", ToolCallUpdate: &acp.ToolCallUpdate{ToolCallID: "t1", Status: "completed"}})
+			eventually(t, c, func() bool { _, steered := agent.texts(); return len(steered) == 1 })
+		} else {
+			agent.release()
+			eventually(t, c, func() bool { prompts, _ := agent.texts(); return len(prompts) == 2 })
+		}
+		agent.mu.Lock()
+		last := agent.prompt
+		agent.mu.Unlock()
+		for _, b := range last {
+			if b.Image != nil && !steer {
+				t.Error("an image went to an agent that takes none")
+			}
+		}
+		agent.release()
+		eventually(t, c, func() bool { return !c.busy })
+		// The message as the transcript has it is what went: its blocks are made from it.
+		c.mu.Lock()
+		i := slices.IndexFunc(c.items, func(it model.Item) bool { return it.Text == "pic" })
+		withImages := i < 0 || len(c.items[i].Images) > 0
+		said := slices.ContainsFunc(c.items, func(it model.Item) bool { return it.Kind == model.Notice && strings.Contains(it.Text, "without them") })
+		c.mu.Unlock()
+		if withImages || !said {
+			t.Errorf("steer %v: the message went with its images (%v), or the chat doesn't say they didn't (%v): %q", steer, withImages, !said, texts(c))
+		}
 	}
 }

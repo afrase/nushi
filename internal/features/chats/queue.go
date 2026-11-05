@@ -22,11 +22,24 @@ func (c *chat) deliverLocked() {
 		m := c.queue[0]
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
-		c.sendLocked(m)
+		c.sendLocked(c.imagesTakenLocked(m))
 	case c.steer && !c.started.IsZero() && !c.stopped:
 		c.steering = true
 		go c.steerQueue(c.agent, acp.SessionID(c.sid))
 	}
+}
+
+// imagesTakenLocked is a queued message as it goes to the agent: without
+// its images, said so, when the agent takes none. Whether it does is known
+// only once the chat has its agent, so a message queued while the chat
+// reopened is checked as it goes, not as it was queued.
+func (c *chat) imagesTakenLocked(m model.Message) model.Message {
+	if len(m.Images) == 0 || c.canImage {
+		return m
+	}
+	c.noticeLocked("error", "The agent doesn't take images: your queued message went without them.")
+	m.Images = nil
+	return m
 }
 
 // unsteerLocked marks the message id, added as steered, as the prompt of
@@ -50,7 +63,7 @@ func (c *chat) steerQueue(agent Agent, sid acp.SessionID) {
 	defer c.mu.Unlock()
 	defer func() { c.steering = false }()
 	for len(c.queue) > 0 && c.agent == agent && !c.stopping && !c.halting && !c.stopped && !c.started.IsZero() {
-		m := c.queue[0]
+		m := c.imagesTakenLocked(c.queue[0])
 		c.queue = c.queue[1:]
 		c.queueChangedLocked()
 		it := userItem(m)
