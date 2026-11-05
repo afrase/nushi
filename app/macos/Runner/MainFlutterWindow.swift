@@ -39,6 +39,7 @@ class MainFlutterWindow: NSWindow {
           // or it would follow a pointer already let go.
           if let self, let event = self.currentEvent, event.type == .leftMouseDragged || event.type == .leftMouseDown,
             NSEvent.pressedMouseButtons & 1 != 0 {
+            self.placement.dragBegan()
             self.performDrag(with: event)
             self.letGoInFlutter()
           }

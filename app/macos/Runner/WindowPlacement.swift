@@ -24,6 +24,11 @@ final class WindowPlacement {
   private var lost = false
   /// Since the last save, a move the user made (a drag, a live resize, a zoom).
   private var userMoved = false
+  /// A drag of the user's is under way, watched until its button is up:
+  /// the window server may send didMove only after that.
+  private var dragWatch: Timer?
+  /// When the last drag's button came up.
+  private var dragEndedAt: TimeInterval = -.infinity
   private var zoomUntil: TimeInterval = 0
   private var screensChangedAt: TimeInterval = -.infinity
   /// Until when a full-screen transition may still be moving the window
@@ -35,7 +40,10 @@ final class WindowPlacement {
 
   init(window: NSWindow) { self.window = window }
 
-  deinit { observers.forEach(NotificationCenter.default.removeObserver) }
+  deinit {
+    observers.forEach(NotificationCenter.default.removeObserver)
+    dragWatch?.invalidate()
+  }
 
   /// Puts the window back where it was saved, before it's ordered in (and
   /// before full screen goes back on: that keeps the frame from before).
@@ -78,12 +86,30 @@ final class WindowPlacement {
     scheduleSave()
   }
 
+  /// The user pressed to drag the window (a header's drag, before
+  /// performDrag): its moves are the user's, however late they come.
+  func dragBegan() {
+    guard !restoring, dragWatch == nil else { return }
+    let watch = Timer(timeInterval: 0.1, repeats: true) { [weak self] timer in
+      guard NSEvent.pressedMouseButtons & 1 == 0 else { return }
+      timer.invalidate()
+      self?.dragWatch = nil
+      self?.dragEndedAt = ProcessInfo.processInfo.systemUptime
+    }
+    RunLoop.main.add(watch, forMode: .common)
+    dragWatch = watch
+  }
+
   private func observe() {
     let center = NotificationCenter.default
     func on(_ name: Notification.Name, _ object: Any?, _ act: @escaping (WindowPlacement) -> Void) {
       observers.append(center.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
         if let self { act(self) }
       })
+    }
+    // Posted as a title-bar drag starts, with the button still held.
+    on(NSWindow.willMoveNotification, window) {
+      if NSEvent.pressedMouseButtons & 1 != 0 { $0.dragBegan() }
     }
     for name in [NSWindow.didMoveNotification, NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification] {
       on(name, window) { $0.noteMoved() }
@@ -102,12 +128,17 @@ final class WindowPlacement {
     on(NSApplication.didChangeScreenParametersNotification, nil) { $0.screensChanging() }
   }
 
-  /// A move or a resize: whether it's the user's is known only now (the
-  /// left button held, which a drag and a live resize keep, or our zoom);
-  /// the save waits for the moves to stop.
+  /// A move or a resize: the user's during a drag of theirs or up to a
+  /// second after its button came up (a drag's didMove may come only
+  /// then), with the left button held (a live resize) or in our zoom. A
+  /// press that moved nothing leaves no drag behind. The save waits for
+  /// the moves to stop.
   private func noteMoved() {
     guard !restoring else { return }
-    if NSEvent.pressedMouseButtons & 1 != 0 || ProcessInfo.processInfo.systemUptime < zoomUntil { userMoved = true }
+    let now = ProcessInfo.processInfo.systemUptime
+    if dragWatch != nil || now - dragEndedAt < 1 || NSEvent.pressedMouseButtons & 1 != 0 || now < zoomUntil {
+      userMoved = true
+    }
     scheduleSave()
   }
 

@@ -16,7 +16,7 @@ The window kept its frame under the autosave name "Nushi". On macOS 27 setting t
 
 ## Consequences
 - AppKit still does the drag, live resize, full screen (ADR 0080's `keepFullScreen`; the saved frame is the one from before), tiling, Stage Manager, Spaces, minimizing and moving windows off a display that went.
-- A move while the home display is gone counts as the user's only with the left button held (a drag or a live resize) or a zoom: one made from the green button's tiling menu then isn't saved.
+- A move while the home display is gone counts as the user's only during a drag of theirs or up to a second after its button comes up (willMove, posted as a title-bar drag starts, or a header's drag; the window server may post a drag's didMove only at its end, with the button already up), with the left button held (a live resize) or in a zoom: one made from the green button's tiling menu then isn't saved.
 - The frame is saved 0.3 s after moves stop, and on close and quit.
 
 ## Alternatives considered
