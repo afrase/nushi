@@ -157,8 +157,10 @@ class MainFlutterWindow: NSWindow {
         if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
       case .keyDown:
         // Only the keys that activate a focused link or button: Return,
-        // the keypad's Enter, Space. Typing in a page lets nothing open.
-        if [36, 76, 49].contains(event.keyCode), Self.inWebView(self.firstResponder as? NSView) {
+        // the keypad's Enter, Space, and only as pressed, not as a held
+        // key repeats (Space held to scroll would let out one navigation a
+        // repeat). Typing in a page lets nothing open.
+        if !event.isARepeat, [36, 76, 49].contains(event.keyCode), Self.inWebView(self.firstResponder as? NSView) {
           self.webPressedAt = event.timestamp
         }
       default:
