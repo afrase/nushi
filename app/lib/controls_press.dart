@@ -144,3 +144,97 @@ class _PressableState extends State<Pressable> {
         : Tooltip(message: widget.tooltip, child: control);
   }
 }
+
+/// A quiet pressable area: a light tint under the pointer (unless not
+/// [tint]: a card's title, which shows its grip instead) or when
+/// [selected], a deeper one from the pointer's going down (a click shows
+/// at once, before what it opens is built), no ripple.
+class Tap extends StatefulWidget {
+  const new({
+    required this.onTap,
+    required this.child,
+    super.key,
+    this.onSecondaryTapUp,
+    this.selected = false,
+    this.padding = EdgeInsets.zero,
+    this.radius = NushiTheme.control,
+    this.tooltip = '',
+    this.cursor,
+    this.tint = true,
+    this.fill,
+  });
+
+  final VoidCallback? onTap;
+  final GestureTapUpCallback? onSecondaryTapUp;
+  final Widget child;
+  final bool selected;
+
+  /// What it's filled with, selected or not, in the place of the selected
+  /// color and of nothing: the pointer's tints go over it (a chat's color).
+  final Color? fill;
+  final EdgeInsetsGeometry padding;
+  final double radius;
+  final String tooltip;
+
+  /// The pointer over it, when not the pointing hand (a drag's open hand).
+  final MouseCursor? cursor;
+
+  /// Whether the pointer over it tints it.
+  final bool tint;
+
+  @override
+  State<Tap> createState() => _TapState();
+}
+
+class _TapState extends State<Tap> {
+  bool _hover = false;
+  bool _down = false;
+
+  void _press(bool down) {
+    if (mounted && down != _down) setState(() => _down = down);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    final on = widget.onTap != null;
+    final rest = widget.fill ?? (widget.selected ? t.selected : null);
+    final tap = MouseRegion(
+      cursor:
+          widget.cursor ?? (on ? SystemMouseCursors.click : MouseCursor.defer),
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: PressWatch(
+        onPress: (down) => _press(down && on),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onSecondaryTapUp: widget.onSecondaryTapUp,
+          child: Container(
+            padding: widget.padding,
+            constraints: TouchTargets.of(context)
+                ? const BoxConstraints(minHeight: TouchTargets.size)
+                : null,
+            alignment: TouchTargets.of(context)
+                ? AlignmentDirectional.centerStart
+                : null,
+            decoration: BoxDecoration(
+              color: _down && on
+                  ? (rest == null
+                        ? t.pressed
+                        : Color.alphaBlend(t.pressed, rest))
+                  : !widget.selected && _hover && on && widget.tint
+                  ? (rest == null ? t.hover : Color.alphaBlend(t.hover, rest))
+                  : rest,
+              borderRadius: BorderRadius.circular(widget.radius),
+            ),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+    return widget.tooltip.isEmpty
+        ? tap
+        : Tooltip(message: widget.tooltip, child: tap);
+  }
+}

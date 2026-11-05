@@ -18,9 +18,10 @@ part 'controls_small.dart';
 // somewhere from within text, [IconTap] where an icon alone is clear,
 // [DragGrip] where something can be moved. Plain text is never clickable;
 // all of these show the pointing hand. Their parts: `controls_press`
-// (pressing, touch targets), `controls_buttons`, `controls_menus` and
-// `controls_small` (links, icons, swatches, grips, key hints); what they
-// share is here.
+// (pressing, touch targets, and [Tap] for rows and tabs),
+// `controls_buttons`, `controls_menus` and `controls_small` (links,
+// icons, swatches, grips, key hints, [Segmented]); what they share is
+// here.
 
 /// A button's and a field's height.
 const controlHeight = 26.0;

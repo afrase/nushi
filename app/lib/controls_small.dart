@@ -267,3 +267,46 @@ Widget keyText(String keys, TextStyle style) => Text.rich(
   style: style,
   strutStyle: StrutStyle.fromTextStyle(style, forceStrutHeight: true),
 );
+
+/// One value of a few for a form to save or send (a server's scope, a
+/// review's verdict). Views of the same thing are `PlainTabs` (ADR 0071).
+class Segmented<T> extends StatelessWidget {
+  const new({
+    required this.value,
+    required this.segments,
+    required this.onChanged,
+    super.key,
+  });
+
+  final T value;
+  final List<(T, String)> segments;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: box(t.borderSubtle, fill: t.base, radius: NushiTheme.control),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (v, text) in segments)
+            Tap(
+              onTap: () => onChanged(v),
+              selected: v == value,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
+              child: Text(
+                text,
+                style: theme.ui(
+                  v == value ? t.text : t.textSecondary,
+                  size: 12,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
