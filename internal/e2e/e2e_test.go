@@ -10,8 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -195,6 +197,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 			s.CloseClientConnections()
 			s.Close()
 		}
+		terms.CloseAll() // as main does: the shells don't outlive the daemon
 		svc.Close()
 	}
 	t.Cleanup(stop)
@@ -551,4 +554,24 @@ func TestRenameArchiveAndDelete(t *testing.T) {
 	if c := list()[kept]; c.Archived || c.Title != "hello" {
 		t.Errorf("chat = %v, want the first prompt's title back", c)
 	}
+}
+
+// A daemon that stops ends its terminals' shells, as main's does (ADR
+// 0022): they don't outlive it.
+func TestStopEndsTheTerminals(t *testing.T) {
+	ctx := context.Background()
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	term := must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: id, Cols: 80, Rows: 24}))).Terminal
+	pidFile := filepath.Join(t.TempDir(), "pid")
+	must(a.c.WriteTerminal(ctx, connect.NewRequest(&nushiv1.WriteTerminalRequest{TerminalId: term.Id, Data: []byte("echo $$ > " + pidFile + "\n")})))
+	var pid int
+	until(t, "the shell's pid", func() bool {
+		b, err := os.ReadFile(pidFile)
+		pid, _ = strconv.Atoi(strings.TrimSpace(string(b)))
+		return err == nil && pid > 0
+	})
+	d.stop()
+	until(t, "the shell to end", func() bool { return syscall.Kill(pid, 0) != nil })
 }
