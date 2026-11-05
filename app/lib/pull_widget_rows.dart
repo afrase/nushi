@@ -110,11 +110,8 @@ class PullRows extends StatelessWidget {
                 ),
               ),
           ],
-          Padding(
-            padding: const EdgeInsets.only(top: 9),
-            child: Divider(height: 1, color: t.borderSubtle),
-          ),
-          const SizedBox(height: 6),
+          // Room, not a rule: in the panel a hairline is between widgets.
+          const SizedBox(height: 16),
           ..._rows(context, p, unread),
           if (it.draft && it.url.isNotEmpty)
             Padding(
