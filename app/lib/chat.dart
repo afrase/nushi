@@ -369,8 +369,10 @@ class ChatState extends ChangeNotifier {
   /// artifacts (`chatArtifacts`).
   final opened = ValueNotifier<Map<String, DateTime>>(const {});
 
-  /// Notes that the user opened [path] now (the phone's preview too).
-  void sawFile(String path) => opened.value = {...opened.value, path: clock()};
+  /// Notes that the user opened [path] now (the phone's preview too), by
+  /// the name its artifacts have ([relativeIn]).
+  void sawFile(String path) =>
+      opened.value = {...opened.value, relativeIn(folder, path): clock()};
 
   /// The agent's name to show: "Claude".
   String get agentName => agentTitle(agent);
@@ -710,3 +712,32 @@ bool _waits(Item it) =>
 /// [path] (relative to [folder], or absolute) as an absolute path.
 String absoluteIn(String folder, String path) =>
     path.startsWith('/') ? path : '$folder/$path';
+
+/// [path] (relative to [folder], or absolute) as the daemon names a tool
+/// call's file (chats' `rel`): relative to [folder] when inside it, else
+/// absolute; lexically, links not followed. A show call's path is the
+/// agent's own, often absolute, and one file must have one name wherever
+/// the chat's artifacts are compared.
+String relativeIn(String folder, String path) {
+  if (!folder.startsWith('/')) return path;
+  final file = _cleaned(absoluteIn(folder, path));
+  final root = _cleaned(folder);
+  final inside = root == '/' ? '/' : '$root/';
+  return file.length > inside.length && file.startsWith(inside)
+      ? file.substring(inside.length)
+      : file;
+}
+
+/// An absolute [path] without its empty, `.` and `..` parts, as Go's
+/// `filepath.Clean` makes it.
+String _cleaned(String path) {
+  final parts = <String>[];
+  for (final p in path.split('/')) {
+    if (p == '..') {
+      if (parts.isNotEmpty) parts.removeLast();
+    } else if (p.isNotEmpty && p != '.') {
+      parts.add(p);
+    }
+  }
+  return '/${parts.join('/')}';
+}

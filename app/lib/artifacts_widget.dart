@@ -115,7 +115,7 @@ class _FileRowsState extends State<FileRows> {
 
   Widget _rows(NushiTheme theme, Artifacts a) {
     final t = theme.t;
-    final open = widget.chat.preview.value;
+    final open = openArtifact(widget.chat);
     final all = [...a.pinned, ...a.recent, ...a.older];
     final more = all.length > shownFiles;
     return Column(

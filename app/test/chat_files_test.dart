@@ -151,6 +151,67 @@ void main() {
     expect(folderOf('report.md'), '');
   });
 
+  test('a file has one name, as the daemon gives it: relative to the '
+      "chat's folder when inside it, else absolute", () {
+    const folder = '/Users/me/nushi';
+    expect(relativeIn(folder, '/Users/me/nushi/docs/a.html'), 'docs/a.html');
+    expect(relativeIn(folder, './docs//a.html'), 'docs/a.html');
+    expect(relativeIn(folder, '/Users/me/nushi/x/../a.html'), 'a.html');
+    expect(relativeIn('$folder/', 'docs/a.html'), 'docs/a.html');
+    // Outside it, even by a name that starts the same, or by `..`.
+    expect(
+      relativeIn(folder, '/Users/me/nushi2/a.html'),
+      '/Users/me/nushi2/a.html',
+    );
+    expect(relativeIn(folder, '../other/a.html'), '/Users/me/other/a.html');
+    expect(relativeIn(folder, '/Users/me/nushi'), '/Users/me/nushi');
+    // A worktree chat's folder is its worktree.
+    expect(
+      relativeIn(
+        '/Users/me/nushi/.claude/worktrees/w',
+        '/Users/me/nushi/a.html',
+      ),
+      '/Users/me/nushi/a.html',
+    );
+    expect(relativeIn('', 'a.html'), 'a.html'); // no folder known
+  });
+
+  test('a file written, then shown by its absolute path, is one artifact; '
+      'deleted by it, none', () {
+    Item show(String id, String path) => Item(
+      id: id,
+      kind: ItemKind.ITEM_KIND_TOOL_CALL,
+      toolKind: 'other',
+      title: 'mcp__nushi__show',
+      status: 'completed',
+      input: jsonEncode({'path': path}),
+    );
+    final items = [
+      _call('w', 'page.html'),
+      _call('o', 'docs/other.md'),
+      show('s', '/Users/me/nushi/page.html'),
+      show('s2', '/Users/me/elsewhere/out.html'),
+    ];
+    expect(chatFiles(items, folder: '/Users/me/nushi'), [
+      '/Users/me/elsewhere/out.html',
+      'page.html',
+      'docs/other.md',
+    ]);
+    expect(
+      chatFiles([
+        ...items,
+        _call('d', '/Users/me/nushi/page.html', kind: 'delete'),
+      ], folder: '/Users/me/nushi'),
+      ['/Users/me/elsewhere/out.html', 'docs/other.md'],
+    );
+    // Moved, the chat's files are named again against its new folder.
+    final chat = ChatState('c', '/Users/me/old')
+      ..load(GetChatResponse(items: [show('s', '/Users/me/new/a.html')]));
+    expect(chatFilesOf(chat), ['/Users/me/new/a.html']);
+    chat.folder = '/Users/me/new';
+    expect(chatFilesOf(chat), ['a.html']);
+  });
+
   test("a chat's files are worked out again when its items change, not as "
       'text streams into one', () {
     final chat = ChatState('c', '/x')

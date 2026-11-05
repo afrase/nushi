@@ -30,6 +30,16 @@ Item _write(String id, String path) => Item(
   paths: [path],
 );
 
+/// A show call that ran, naming [path] as the agent did.
+Item _show(String id, String path) => Item(
+  id: id,
+  kind: ItemKind.ITEM_KIND_TOOL_CALL,
+  toolKind: 'other',
+  title: 'mcp__nushi__show',
+  status: 'completed',
+  input: jsonEncode({'path': path}),
+);
+
 Item _say(String id, String text) =>
     Item(id: id, kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: text);
 
@@ -195,6 +205,50 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(_names(tester), ['plan.md', 'notes.md', 'chart.png', 'report.md']);
+    d.dispose();
+  }, variant: _mac);
+
+  testWidgets('a file written, then shown by its absolute path, is one '
+      'row, marked when the show opens it, its old pin kept', (tester) async {
+    // The daemon names the written file relative to the chat's folder; the
+    // show call's path is the agent's own (a page as the owner saw it, but
+    // Markdown: a test has no web view).
+    const page = '/Users/me/nushi/mock/page.md';
+    pinnedFiles.value = {};
+    final (d, fake) = await _app(tester, [
+      ..._three,
+      _write('w4', 'mock/page.md'),
+      _show('s', page),
+      _show('s2', './notes.md'),
+    ]);
+    expect(_names(tester), ['notes.md', 'page.md', 'chart.png', 'report.md']);
+    fake.emit(EventsResponse(chatId: 'c', show: page));
+    await tester.pumpAndSettle();
+    final c = d.chats['c']!;
+    expect(c.preview.value, page);
+    expect(
+      tester
+          .widget<Tap>(
+            find
+                .ancestor(
+                  of: _inRows(find.text('page.md')),
+                  matching: find.byType(Tap),
+                )
+                .first,
+          )
+          .selected,
+      isTrue,
+    );
+    expect(c.opened.value.keys, ['mock/page.md']);
+    // A pin made by the absolute name, when the file was listed twice.
+    pinnedFiles.value = {
+      'c': [page],
+    };
+    await tester.pumpAndSettle();
+    expect(chatArtifacts(c).pinned, ['mock/page.md']);
+    expect(pinned(c, 'mock/page.md'), isTrue);
+    togglePin(c, 'mock/page.md');
+    expect(pinnedFiles.value, isEmpty);
     d.dispose();
   }, variant: _mac);
 

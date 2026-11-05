@@ -16,9 +16,15 @@ import 'package:nushi/tool_calls.dart';
 
 /// The artifacts ([isArtifact]) [items] wrote or edited (a subagent's
 /// calls too), or with [any] every file, each once, the one changed last
-/// first; a file deleted since is left out. As the tool rows name them:
-/// relative to the chat's folder when inside it.
-List<String> chatFiles(Iterable<Item> items, {bool any = false}) {
+/// first; a file deleted since is left out. Each by one name, however the
+/// agent named it ([relativeIn] the chat's [folder]): relative to it when
+/// inside it, as the daemon names a written file.
+List<String> chatFiles(
+  Iterable<Item> items, {
+  String folder = '',
+  bool any = false,
+}) {
+  String name(String p) => relativeIn(folder, p);
   final files = <String>{}; // in the order last changed
   for (final it in items) {
     if (it.kind != ItemKind.ITEM_KIND_TOOL_CALL || it.status == 'failed') {
@@ -27,13 +33,16 @@ List<String> chatFiles(Iterable<Item> items, {bool any = false}) {
     if (isShow(it)) {
       if (previewPath(it) case final p?) {
         files
-          ..remove(p)
-          ..add(p);
+          ..remove(name(p))
+          ..add(name(p));
       }
     } else if (it.toolKind == 'delete') {
-      files.removeAll(it.paths);
+      files.removeAll(it.paths.map(name));
     } else if (it.toolKind == 'edit' || it.diffs.isNotEmpty) {
-      for (final p in {...it.paths, for (final d in it.diffs) d.path}) {
+      for (final p in {
+        ...it.paths.map(name),
+        for (final d in it.diffs) name(d.path),
+      }) {
         if (!any && !isArtifact(p)) continue;
         files
           ..remove(p)
@@ -46,9 +55,10 @@ List<String> chatFiles(Iterable<Item> items, {bool any = false}) {
 
 /// [chatFiles] of a chat's items, all of them and those of its last turn
 /// (from the last message of the user's on), and every file it wrote, as
-/// of its items' revision.
+/// of its items' revision and its folder (a chat can move).
 typedef _Written = ({
   int revision,
+  String folder,
   List<String> all,
   Set<String> last,
   Set<String> any,
@@ -58,16 +68,20 @@ final _written = Expando<_Written>();
 
 _Written _writtenBy(ChatState chat) {
   final had = _written[chat];
-  if (had != null && had.revision == chat.revision) return had;
+  final folder = chat.folder;
+  if (had != null && had.revision == chat.revision && had.folder == folder) {
+    return had;
+  }
   final items = chat.items;
   final turn = items.lastIndexWhere(
     (it) => it.kind == ItemKind.ITEM_KIND_USER_MESSAGE && it.parent.isEmpty,
   );
   return _written[chat] = (
     revision: chat.revision,
-    all: chatFiles(items),
-    last: chatFiles(items.skip(turn + 1)).toSet(),
-    any: chatFiles(items, any: true).toSet(),
+    folder: folder,
+    all: chatFiles(items, folder: folder),
+    last: chatFiles(items.skip(turn + 1), folder: folder).toSet(),
+    any: chatFiles(items, folder: folder, any: true).toSet(),
   );
 }
 
@@ -136,31 +150,50 @@ Artifacts sortArtifacts(
 }
 
 /// [chat]'s artifacts sorted ([sortArtifacts]) now, with its pins unless
-/// not [pins] (the phone: they're kept in the Mac's `app.json`).
+/// not [pins] (the phone: they're kept in the Mac's `app.json`). The open
+/// file and the pins go by the artifacts' names ([relativeIn]): a show
+/// call's row opens its file by the agent's.
 Artifacts chatArtifacts(ChatState chat, {bool pins = true}) {
   final written = _writtenBy(chat);
   return sortArtifacts(
     written.all,
     last: written.last,
     now: clock(),
-    pins: pins ? pinnedFiles.value[chat.id] ?? const [] : const [],
-    open: chat.preview.value,
+    pins: [
+      ...{
+        if (pins)
+          for (final p in pinnedFiles.value[chat.id] ?? const <String>[])
+            relativeIn(chat.folder, p),
+      },
+    ],
+    open: openArtifact(chat),
     opened: chat.opened.value,
   );
 }
+
+/// The file [chat]'s preview shows, by its artifact's name ([relativeIn]).
+String? openArtifact(ChatState chat) => switch (chat.preview.value) {
+  final p? => relativeIn(chat.folder, p),
+  null => null,
+};
 
 /// What [chatArtifacts] reads, to build again when it changes.
 Listenable artifactsOf(ChatState chat) =>
     Listenable.merge([chat, chat.preview, chat.opened, pinnedFiles]);
 
-/// Whether [file] is pinned in [chat].
+/// Whether [file] is pinned in [chat], by whatever name it was.
 bool pinned(ChatState chat, String file) =>
-    pinnedFiles.value[chat.id]?.contains(file) ?? false;
+    pinnedFiles.value[chat.id]?.any(
+      (p) => relativeIn(chat.folder, p) == file,
+    ) ??
+    false;
 
 /// Pins [file] in [chat] (last of its pins), or unpins it.
 void togglePin(ChatState chat, String file) {
   final pins = [...?pinnedFiles.value[chat.id]];
-  if (!pins.remove(file)) pins.add(file);
+  final had = pins.length;
+  pins.removeWhere((p) => relativeIn(chat.folder, p) == file);
+  if (pins.length == had) pins.add(file);
   pinnedFiles.value = {
     for (final MapEntry(:key, :value) in pinnedFiles.value.entries)
       if (key != chat.id) key: value,
