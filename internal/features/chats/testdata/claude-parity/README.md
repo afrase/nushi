@@ -4,7 +4,7 @@ Each folder is a scenario of `TestClaudeParity` (`../../claude_parity_test.go`):
 
 A scenario is two scripts, written by hand:
 
-- `api.json`: what the model answers. `make claude-record` serves it from a fake Messages API (`claudeagent/claudetest/fakeapi`), so no one's login takes part and every run gets the same answers.
+- `api.json`: what the model answers. `make claude-record` serves it from a fake Messages API (`claudeagent/claudetest/fakeapi` in `github.com/afrase/claude-acp-go`), so no one's login takes part and every run gets the same answers.
 - `client.json`: what Nushi does: the requests it sends the agent, its answers to the agent's requests, and when.
 
 and the recordings `make claude-record` writes from them (never edit them by hand):
@@ -90,7 +90,7 @@ For each scenario, `tools/claude-record`:
 3. plays `client.json`;
 4. closes the agent's stdin, waits for it to end (then stops its process group), and checks that every turn of `api.json` was asked for, and nothing the scripts don't cover was.
 
-Only a run that went as the scripts say replaces the scenario's recordings. A failed one says why and keeps its folder (the recordings, `agent.log`: the agent's stderr, `fakeapi.log`: each API call and how it was answered) for a look. Then `claude-tee -schema-diff` reports message kinds and fields the recordings have that claude 2.1.312's schemas don't (`claudeagent/claudetest/cmd/claude-tee/testdata`); it never fails the build.
+Only a run that went as the scripts say replaces the scenario's recordings. A failed one says why and keeps its folder (the recordings, `agent.log`: the agent's stderr, `fakeapi.log`: each API call and how it was answered) for a look. Then `claude-tee -schema-diff` reports message kinds and fields the recordings have that claude 2.1.312's schemas don't (the library's `claudeagent/claudetest/cmd/claude-tee/testdata`); it never fails the build.
 
 ## `api.json`
 
@@ -153,7 +153,7 @@ Each step has one verb. Requests wait for their answer unless they have `async` 
 | `{"request": "method", "params": {…}}` | any request; `"$s1"` in params is that session's id, `"$cwd"` the run's folder |
 | `{"notify": "method", "params": {…}}` | any notification, the same way |
 
-`meta` on `new`, `load`, `resume` and `fork` joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
+`meta` on `new`, `load`, `resume` and `fork` joins Nushi's session `_meta`, objects merged key by key (`{"claudeCode": {"options": {"settings": {"ultracode": true}}}}`). `settings` there is claude's own settings for the session, which the scenarios use to allow the tools they don't ask about (`{"permissions": {"allow": ["Bash"]}}`). `mcpServers` on the same steps is the session's MCP servers as ACP gives them (`[]` when not given); `"$mcp-echo"` in it is the library's `claudetest/cmd/mcp-echo`, a stdio server with one tool, `echo`, which `make claude-record` builds.
 
 | Step | Does |
 |---|---|
