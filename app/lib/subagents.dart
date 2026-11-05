@@ -198,20 +198,6 @@ class _LiveTextState extends State<LiveText> {
   );
 }
 
-/// [line] with the branch of the worktree the subagent works in at its end,
-/// if it has one.
-Widget subagentStateLine(ChatState chat, SubagentRun s, Widget line) {
-  final tag = chat.related.tagFor(s.call.id);
-  if (tag.isEmpty) return line;
-  return Row(
-    spacing: 8,
-    children: [
-      Expanded(child: line),
-      Flexible(child: WorktreeTag(tag)),
-    ],
-  );
-}
-
 /// A related worktree's branch, as a tag on its subagent.
 class WorktreeTag extends StatelessWidget {
   const new(this.branch, {super.key});
