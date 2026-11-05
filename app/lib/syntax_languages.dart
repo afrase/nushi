@@ -9,6 +9,19 @@ Map<String, Mode> get syntaxLanguages => {
   'zig': _zig(),
 };
 
+/// Files named without an extension that are surely code, each a name a
+/// grammar or [syntaxAliases] has. Any other such name could be anything
+/// (`scripts/build` is a script, not Bazel's `BUILD`).
+const codeNames = {
+  'Makefile',
+  'Dockerfile',
+  'Containerfile',
+  'Justfile',
+  'Gemfile',
+  'Rakefile', //
+  'Brewfile', 'Vagrantfile', 'Tiltfile', 'BUILD', 'WORKSPACE',
+};
+
 /// Tags and file names that read well enough in another language's grammar,
 /// by that language. A name is a file's extension or its whole name.
 const syntaxAliases = {

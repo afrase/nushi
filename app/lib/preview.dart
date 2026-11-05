@@ -14,6 +14,7 @@ import 'package:nushi/preview_sniff.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
+import 'package:nushi/syntax_languages.dart' show codeNames;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -108,24 +109,13 @@ const _code = {
   'just', 'rake', 'cts', 'mts', 'cljs', 'mli', 'wgsl', //
 };
 
-/// Files named without an extension that are code.
-const _codeNames = {
-  'Makefile',
-  'Dockerfile',
-  'Containerfile',
-  'Justfile',
-  'Gemfile',
-  'Rakefile', //
-  'Brewfile', 'Vagrantfile', 'Tiltfile', 'BUILD', 'WORKSPACE',
-};
-
 /// How [path] previews by its name, or null when the name doesn't say (no
 /// extension, a dotfile, an unknown type, a binary). What needs a sure
 /// answer asks this: the file links in messages, Artifacts. What lists a
 /// folder's files asks [opensInPreview].
 PreviewKind? previewKind(String path) {
   final name = baseName(path);
-  if (_codeNames.contains(name)) return PreviewKind.code;
+  if (codeNames.contains(name)) return PreviewKind.code;
   final dot = name.lastIndexOf('.');
   if (dot < 0) return null;
   final ext = name.substring(dot + 1).toLowerCase();

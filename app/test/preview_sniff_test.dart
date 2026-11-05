@@ -234,6 +234,21 @@ void main() {
     expect(sourceLanguage('scripts/deploy', 'plain words\n'), isNull);
     // A name a grammar has, but the #! says otherwise.
     expect(sourceLanguage('scripts/build', '#!/bin/bash\n'), 'bash');
+    // Without a #!, a name a grammar has is plain text unless it's surely
+    // code: these are scripts, not Bazel, Clean, Go, R or nginx.
+    for (final path in [
+      'scripts/build',
+      'scripts/clean',
+      'scripts/go',
+      'scripts/r',
+      'bin/nginx',
+      'bin/workspace',
+    ]) {
+      expect(sourceLanguage(path, 'echo hi\n'), isNull, reason: path);
+    }
+    expect(sourceLanguage('tools/BUILD', 'go_library()\n'), 'build');
+    expect(sourceLanguage('Makefile', 'all:\n'), 'makefile');
+    expect(sourceLanguage('deploy.prod', '#!/bin/bash\n'), 'bash');
     expect(sourceLanguage('Dockerfile', 'FROM scratch\n'), 'dockerfile');
     expect(sourceLanguage('.envrc', 'export A=1\n'), 'envrc'); // bash's
     expect(sourceLanguage('.npmrc', 'save-exact=true\n'), 'npmrc'); // ini's
