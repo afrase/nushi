@@ -162,14 +162,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tapAt(empty);
       await tester.pump();
-      expect(calls, ['zoom']);
+      expect(calls, ['arm', 'arm', 'zoom']);
       await tester.timedDragFrom(
         empty,
         const Offset(60, 30),
         const Duration(milliseconds: 200),
       );
       await tester.pumpAndSettle();
-      expect(calls, ['zoom', 'drag']);
+      expect(calls, ['arm', 'arm', 'zoom', 'arm']);
       expect(sidebarHidden.value, isFalse);
 
       // Past the double-click's time, a click on the button is the button's.
@@ -188,19 +188,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       await tester.tapAt(const Offset(800, 8));
       await tester.pump();
-      expect(calls, ['zoom']);
+      expect(calls, ['arm', 'arm', 'zoom']);
       await tester.timedDragFrom(
         const Offset(800, 8),
         const Offset(60, 30),
         const Duration(milliseconds: 200),
       );
       await tester.pumpAndSettle();
-      expect(calls, ['zoom', 'drag']);
+      expect(calls, ['arm', 'arm', 'zoom', 'arm']);
       await tester.pump(const Duration(seconds: 1));
       await tester.tapAt(show.center);
       await tester.pumpAndSettle();
       expect(sidebarHidden.value, isFalse);
-      expect(calls, ['zoom', 'drag']);
+      expect(calls, ['arm', 'arm', 'zoom', 'arm']);
       d.dispose();
     }, variant: _mac);
   });

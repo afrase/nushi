@@ -18,7 +18,8 @@ import 'harness.dart';
 
 const _model = 'claude-opus-5-5';
 
-/// What the headers asked of `nushi/window`.
+/// What the headers asked of `nushi/window`: a press on a drag area arms
+/// the window ('arm'), and the Mac moves it if the press moves.
 List<String> _windowCalls() {
   final calls = <String>[];
   final messenger =
@@ -37,6 +38,10 @@ List<String> _windowCalls() {
   );
   return calls;
 }
+
+/// What the headers asked besides arming.
+List<String> _besides(List<String> calls) =>
+    calls.where((c) => c != 'arm').toList();
 
 /// Two clicks at [at], as close together as a double click.
 Future<void> _double(WidgetTester tester, Offset at) async {
@@ -106,14 +111,14 @@ void main() {
       expect(tabs.left - word.right, greaterThan(100));
 
       await _double(tester, Offset(x, word.center.dy));
-      expect(calls, ['zoom']);
+      expect(calls, ['arm', 'arm', 'zoom']);
       // A click on the status word between: the test's clicks come faster
       // than a double click's time, and a third would count as a second
       // here (macOS counts it a third, and the window does nothing).
       await tester.tapAt(word.center);
       await tester.pumpAndSettle();
       await _double(tester, Offset(x, 3));
-      expect(calls, ['zoom', 'zoom']);
+      expect(_besides(calls), ['zoom', 'zoom']);
       d.dispose();
     });
 
@@ -165,27 +170,33 @@ void main() {
       };
       for (final MapEntry(key: name, value: at) in spots.entries) {
         await _double(tester, at);
-        expect(calls, isEmpty, reason: name);
+        expect(_besides(calls), isEmpty, reason: name);
       }
       for (final MapEntry(key: name, value: at) in spots.entries) {
         calls.clear();
         await _drag(tester, at);
-        expect(calls, ['drag'], reason: name);
+        expect(calls, ['arm'], reason: name);
       }
       d.dispose();
     });
 
-    // The call is late in a stall, after its press is let go and another
-    // is held: it carries when its press was, in the engine's microseconds,
-    // so the Mac moves the window only with that press (MainFlutterWindow).
-    testWidgets('a drag says when its press was', (tester) async {
-      final sent = <Object?>[];
+    // The Mac moves the window from its own events, as the press's dragged
+    // event comes, while its button is held: a drag started from a call,
+    // which comes late, could reach the window server after the release,
+    // and the window followed the pointer. The header only arms the press
+    // as it goes down, once, with when it went down in the engine's
+    // microseconds, so the Mac moves the window only with that press
+    // (HeaderDrag in TitleBar.swift).
+    testWidgets('a press arms the window as it goes down, with when, once', (
+      tester,
+    ) async {
+      final sent = <(String, Object?)>[];
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             ..setMockMethodCallHandler(const MethodChannel('nushi/window'), (
               c,
             ) async {
-              sent.add(c.arguments);
+              sent.add((c.method, c.arguments));
               return null;
             });
       addTearDown(
@@ -197,8 +208,10 @@ void main() {
       final (d, _) = await _header(tester);
       final at = tester.getCenter(find.text('Fix the login'));
       final pointer = TestPointer(1, PointerDeviceKind.mouse);
-      const down = Duration(seconds: 500);
+      const down = Duration(seconds: 500, microseconds: 123);
       await tester.sendEventToBinding(pointer.down(at, timeStamp: down));
+      await tester.pump();
+      expect(sent, [('arm', down.inMicroseconds)]);
       for (var i = 1; i <= 5; i++) {
         await tester.sendEventToBinding(
           pointer.move(
@@ -211,17 +224,7 @@ void main() {
         pointer.up(timeStamp: down + const Duration(milliseconds: 100)),
       );
       await tester.pumpAndSettle();
-      expect(sent, hasLength(1));
-      expect(
-        sent.single,
-        allOf(
-          isA<int>(),
-          inInclusiveRange(
-            down.inMicroseconds,
-            (down + const Duration(milliseconds: 100)).inMicroseconds,
-          ),
-        ),
-      );
+      expect(sent, [('arm', down.inMicroseconds)]);
       d.dispose();
     });
 
@@ -245,12 +248,12 @@ void main() {
       final title = tester.getCenter(find.text('Fix the login'));
 
       await _drag(tester, title);
-      expect(calls, ['drag']);
+      expect(calls, ['arm']);
       expect(chat.renaming.value, isFalse);
       await _double(tester, title);
       expect(chat.renaming.value, isTrue);
       expect(find.byType(RenameField), findsOne);
-      expect(calls, ['drag']);
+      expect(calls, ['arm', 'arm', 'arm']);
       d.dispose();
     });
   });
@@ -297,12 +300,12 @@ void main() {
     };
     for (final MapEntry(key: name, value: at) in spots.entries) {
       await _double(tester, at);
-      expect(calls, isEmpty, reason: name);
+      expect(_besides(calls), isEmpty, reason: name);
     }
     for (final MapEntry(key: name, value: at) in spots.entries) {
       calls.clear();
       await _drag(tester, at);
-      expect(calls, ['drag'], reason: name);
+      expect(calls, ['arm'], reason: name);
     }
 
     calls.clear();
@@ -311,7 +314,7 @@ void main() {
     expect(calls, isEmpty);
     final header = tester.getRect(find.byType(PaneHeader));
     await _double(tester, header.center);
-    expect(calls, ['zoom']);
+    expect(calls, ['arm', 'arm', 'zoom']);
   });
 
   testWidgets('a name given the room up to the buttons (the Files pane’s '
@@ -348,14 +351,14 @@ void main() {
     final box = tester.getRect(find.byKey(const Key('name')));
     expect(box.width, greaterThan(400)); // the Expanded's whole room
     await _double(tester, box.centerLeft + const Offset(12, 0)); // its words
-    expect(calls, isEmpty);
+    expect(_besides(calls), isEmpty);
     await _double(tester, Offset(box.center.dx + 100, box.center.dy));
-    expect(calls, ['zoom']);
+    expect(_besides(calls), ['zoom']);
 
     calls.clear();
     await pane('a-folder-name-far-too-long-for-the-room-it-is-given-' * 4);
     await _double(tester, box.centerRight - const Offset(10, 0));
-    expect(calls, isEmpty);
+    expect(_besides(calls), isEmpty);
   });
 
   testWidgets('the preview pane’s tabs zoom nothing; the room past the last '
@@ -391,6 +394,6 @@ void main() {
       tester,
       Offset((last.right + close.left) / 2, last.center.dy),
     );
-    expect(calls, ['zoom']);
+    expect(calls, ['arm', 'arm', 'zoom']);
   });
 }

@@ -95,26 +95,82 @@ if let close = covered.standardWindowButton(.closeButton), let bar = close.super
   print("FAIL: no close button")
 }
 
-// HeaderDrag: which of a header's pans move the window.
-func moves(_ event: NSEvent.EventType = .leftMouseDragged, held: Bool = true, began: TimeInterval? = 10,
-           clicks: Int = 1, moved: CGFloat = 2) -> Bool {
-  HeaderDrag.moves(event: event, held: held, began: began, downAt: 10, clicks: clicks, moved: moved)
+// HeaderDrag: a header's press, from its down to Flutter's release.
+let at = CGPoint(x: 300, y: 580)
+func point(_ dx: CGFloat) -> CGPoint { CGPoint(x: at.x + dx, y: at.y) }
+
+/// A press down at 10 s, the header's arm for it, and its moves past the
+/// given distances: the steps of each move.
+func press(clicks: Int = 1, armed: TimeInterval? = 10, moves: [CGFloat], held: Bool = true) -> (HeaderDrag, [HeaderDrag.Step]) {
+  var d = HeaderDrag()
+  _ = d.down(at: 10, clicks: clicks, at: at)
+  if let armed { d.arm(began: armed) }
+  let steps = moves.map { d.dragged(to: point($0), held: held) }
+  return (d, steps)
 }
-expect(moves(), true, "a press held, dragged")
-expect(moves(.leftMouseDown, moved: 0), true, "a press held, not moved yet")
-expect(moves(began: nil), true, "no time said")
-expect(moves(began: 9.9995), true, "the engine's rounding")
-expect(moves(held: false), false, "let go")
-expect(moves(.leftMouseUp), false, "a release current")
-expect(moves(began: 9), false, "a later press held")
-// A double click's second press: its release is the header's double click,
-// until it goes past a click's slop; then it's a drag, as a title bar's.
-expect(moves(clicks: 2), false, "a second press moved 2 points")
-expect(moves(clicks: 3, moved: 2), false, "a third press moved 2 points")
-expect(moves(clicks: 2, moved: HeaderDrag.clickSlop), false, "a second press at the slop")
-expect(moves(clicks: 2, moved: 20), true, "a second press moved 20 points")
-expect(moves(clicks: 3, moved: 20), true, "a third press moved 20 points")
-expect(moves(held: false, clicks: 2, moved: 20), false, "a second press let go")
+
+do {
+  // The window moves from the dragged event that goes past the pan's
+  // slop, once: the later ones go on to Flutter.
+  var (d, steps) = press(moves: [1, HeaderDrag.panSlop, 3, 40])
+  expect(steps, [.pass, .pass, .moveWindow, .pass], "an armed press moved past the pan's slop")
+  expect(d.dragging, true, "the window server has the press")
+  // The window server takes the release: the button seen up is Flutter's
+  // release, once, and the real release, if it comes later, is dropped.
+  expect(d.letGo(held: true), false, "still held: no release")
+  expect(d.letGo(held: false), true, "let go: Flutter's release")
+  expect(d.letGo(held: false), false, "no second release")
+  expect(d.up(), .drop, "the real release after Flutter had one")
+  expect(d.down(at: 12, clicks: 1, at: at), .pass, "the next press goes as it is")
+}
+do {
+  // The real release first: it's Flutter's one, and no click.
+  var (d, _) = press(moves: [3])
+  expect(d.up(), .dragReleased, "the real release of a drag")
+  expect(d.letGo(held: false), false, "nothing more to let go")
+}
+do {
+  // No release came, and the next press did: Flutter is let go first, or
+  // it would take the press for a move of the last one.
+  var (d, _) = press(moves: [3])
+  expect(d.down(at: 11, clicks: 1, at: at), .releaseFirst, "a press while Flutter holds the last")
+  expect(d.up(), .pass, "that press's release")
+}
+
+// A click never moves the window, nor a press the header never armed, one
+// armed after its release, or one armed for an earlier press.
+expect(press(moves: [1, HeaderDrag.panSlop]).1, [.pass, .pass], "a click")
+expect(press(armed: nil, moves: [3, 40]).1, [.pass, .pass], "not armed: a control's press")
+expect(press(armed: 9, moves: [3, 40]).1, [.pass, .pass], "armed for an earlier press")
+expect(press(armed: 9.9995, moves: [3]).1, [.moveWindow], "the engine's rounding down")
+do {
+  var d = HeaderDrag()
+  _ = d.down(at: 10, clicks: 1, at: at)
+  expect(d.up(), .pass, "a click's release")
+  d.arm(began: 10)
+  expect(d.dragged(to: point(40), held: true), .pass, "armed after its release")
+  expect(d.letGo(held: false), false, "no press to let go")
+}
+// The button up already (its release still queued): no drag, which would
+// follow the pointer with no button held.
+expect(press(moves: [3, 40], held: false).1, [.pass, .pass], "the button already up")
+
+// A double click's second press (or third): its release is the header's
+// double click, until it goes past a click's slop; then it's a drag, as a
+// title bar's.
+expect(press(clicks: 2, moves: [3, HeaderDrag.clickSlop, 20]).1, [.pass, .pass, .moveWindow], "a second press")
+expect(press(clicks: 3, moves: [3, 20]).1, [.pass, .moveWindow], "a third press")
+
+// A press whose release Flutter never got (a web view's tracking took it):
+// the pointer moving with no button is the sign, as for a drag's, but its
+// real release, if it comes after all, goes on.
+do {
+  var d = HeaderDrag()
+  _ = d.down(at: 10, clicks: 1, at: at)
+  expect(d.letGo(held: true), false, "held: no release")
+  expect(d.letGo(held: false), true, "moved with no button: Flutter's release")
+  expect(d.up(), .pass, "a release of no drag goes on")
+}
 
 if failed > 0 {
   print("\(failed) title bar check(s) failed")

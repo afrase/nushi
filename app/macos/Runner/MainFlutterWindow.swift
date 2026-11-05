@@ -37,11 +37,11 @@ class MainFlutterWindow: NSWindow {
     FlutterMethodChannel(name: "nushi/window", binaryMessenger: flutterViewController.engine.binaryMessenger)
       .setMethodCallHandler { [weak self] call, result in
         switch call.method {
-        case "drag":
-          // The pan's press went down at its event's time, in the engine's
-          // microseconds of NSEvent.timestamp (HeaderDrag says which pans
-          // move the window).
-          self?.drag(began: (call.arguments as? NSNumber).map { $0.doubleValue / 1_000_000 })
+        case "arm":
+          // A press on a header's drag area, at its down's time in the
+          // engine's microseconds of NSEvent.timestamp: it may move the
+          // window, which the press monitor does (HeaderDrag).
+          if let began = call.arguments as? NSNumber { self?.headerDrag.arm(began: began.doubleValue / 1_000_000) }
           result(nil)
         case "zoom":
           self?.titleBarDoubleClick()
@@ -141,30 +141,35 @@ class MainFlutterWindow: NSWindow {
       return nil
     }
 
-    // A press whose release Flutter never gets leaves it dragging: what
-    // moves the window takes the release, and a web view's own tracking can.
-    // The pointer then moves with no button held, which is the sign.
-    // It also notes when a press, its release or a key goes to a web view,
-    // which is a user's own act in a page (a preview's link opens in the
-    // browser only right after one).
+    // A header's press moves the window here, as its dragged event comes
+    // (HeaderDrag, ADR 0080). A press whose release Flutter never gets
+    // leaves it dragging: what moves the window takes the release, and a
+    // web view's own tracking can. The pointer then moves with no button
+    // held, or the next press comes, which is the sign. It also notes when
+    // a press, its release or a key goes to a web view, which is a user's
+    // own act in a page (a preview's link opens in the browser only right
+    // after one).
     pressMonitor = NSEvent.addLocalMonitorForEvents(
       matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .mouseMoved, .keyDown]
     ) { [weak self] event in
       guard let self, event.window === self else { return event }
       switch event.type {
       case .leftMouseDragged:
-        // A header's drag waiting for a second press to go past a click.
-        if let began = self.dragLater, self.moved(event) > HeaderDrag.clickSlop {
-          self.dragLater = nil
-          DispatchQueue.main.async { [weak self] in self?.drag(began: began) }
+        if self.headerDrag.dragged(to: event.locationInWindow, held: NSEvent.pressedMouseButtons & 1 != 0) == .moveWindow {
+          self.moveWindow(with: event)
         }
       case .leftMouseDown, .leftMouseUp:
-        self.pressed = event.type == .leftMouseDown
-        self.dragLater = nil
         if event.type == .leftMouseDown {
-          (self.downAt, self.downClicks, self.downPoint) = (event.timestamp, event.clickCount, event.locationInWindow)
+          if self.headerDrag.down(at: event.timestamp, clicks: event.clickCount, at: event.locationInWindow) == .releaseFirst {
+            self.releaseInFlutter()
+          }
+        } else {
+          switch self.headerDrag.up() {
+          case .drop: return nil
+          case .dragReleased: self.lastUp = nil // a drag's: no click
+          default: self.lastUp = (event.clickCount, event.timestamp)
+          }
         }
-        if event.type == .leftMouseUp { self.lastUp = (event.clickCount, event.timestamp) }
         if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
       case .keyDown:
         // Only the keys that activate a focused link or button: Return,
@@ -175,7 +180,7 @@ class MainFlutterWindow: NSWindow {
           self.webPressedAt = event.timestamp
         }
       default:
-        if NSEvent.pressedMouseButtons & 1 == 0 { self.letGoInFlutter() }
+        self.letGoInFlutter()
       }
       return event
     }
@@ -238,40 +243,28 @@ class MainFlutterWindow: NSWindow {
 
   private var swipeMonitor: Any?
   private var pressMonitor: Any?
-  private var pressed = false
-  /// When the last press went down (NSEvent.timestamp): a header's late
-  /// "drag" for an earlier press moves nothing.
-  private var downAt: TimeInterval = 0
-  /// macOS's click count of that press: a double click's second press
-  /// moves the window only once it's gone past a click.
-  private var downClicks = 0
-  /// Where that press went down, in the window.
-  private var downPoint = NSPoint.zero
-  /// The press time of a header's drag that a second press hasn't moved
-  /// far enough for yet: it moves the window once it does.
-  private var dragLater: TimeInterval??
+  /// The window's presses; a header's moves the window (lib/window_drag.dart).
+  private var headerDrag = HeaderDrag()
+  /// Looks at the button while the window server drags the window, which
+  /// may send no event when it's let go.
+  private var releaseWatch: Timer?
 
-  /// How far [event] is from where the last press went down.
-  private func moved(_ event: NSEvent) -> CGFloat {
-    hypot(event.locationInWindow.x - downPoint.x, event.locationInWindow.y - downPoint.y)
-  }
-
-  /// A header's drag (lib/window_drag.dart) of the pan whose press went
-  /// down at [began]: the window moves now if HeaderDrag says so, or once
-  /// the press goes past a click if that's all it waits for.
-  private func drag(began: TimeInterval?) {
-    guard let event = currentEvent else { return }
-    let held = NSEvent.pressedMouseButtons & 1 != 0
-    func moves(_ moved: CGFloat) -> Bool {
-      HeaderDrag.moves(event: event.type, held: held, began: began, downAt: downAt, clicks: downClicks, moved: moved)
+  /// Moves the window with a header's press, from the monitor as it handles
+  /// [event], the press's dragged event, before any later one is taken
+  /// (the release among them): the window server then has the drag while
+  /// the button is held. Flutter gets the press's release once the button
+  /// is up: the real one, or one from the window if none came.
+  private func moveWindow(with event: NSEvent) {
+    placement.dragBegan()
+    lastUp = nil
+    performDrag(with: event)
+    releaseWatch?.invalidate()
+    let watch = Timer(timeInterval: 0.02, repeats: true) { [weak self] timer in
+      guard let self, self.headerDrag.dragging else { return timer.invalidate() }
+      self.letGoInFlutter()
     }
-    if moves(moved(event)) {
-      placement.dragBegan()
-      performDrag(with: event)
-      letGoInFlutter()
-    } else if moves(.infinity) {
-      dragLater = .some(began)
-    }
+    RunLoop.main.add(watch, forMode: .common)
+    releaseWatch = watch
   }
 
   /// The last release's click count and timestamp, for the header's
@@ -310,10 +303,13 @@ class MainFlutterWindow: NSWindow {
     return false
   }
 
-  /// Tells Flutter of a release it missed, if it did.
+  /// Tells Flutter of a release it missed, if the button is up and it did.
   private func letGoInFlutter() {
-    guard pressed else { return }
-    pressed = false
+    if headerDrag.letGo(held: NSEvent.pressedMouseButtons & 1 != 0) { releaseInFlutter() }
+  }
+
+  /// Tells Flutter its press was let go, here and now.
+  private func releaseInFlutter() {
     let up = NSEvent.mouseEvent(
       with: .leftMouseUp, location: mouseLocationOutsideOfEventStream, modifierFlags: [],
       timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: windowNumber, context: nil,

@@ -77,20 +77,28 @@ class _WindowDragState extends State<WindowDrag> {
         else ...[
           Listener(
             onPointerDown: (e) {
-              if (e.buttons == kPrimaryButton) _downs[e.pointer] = e.position;
+              if (e.buttons != kPrimaryButton) return;
+              _downs[e.pointer] = e.position;
+              // The press may move the window: the Mac moves it from its
+              // own events, once the press goes past the pan's slop, while
+              // its button is held (HeaderDrag in TitleBar.swift). A drag
+              // started from this call, which comes late, could start
+              // after the release, and the window followed the pointer.
+              // It says when the press went down, in the engine's
+              // microseconds of the event's own timestamp: a call for a
+              // press already let go moves nothing.
+              _send('arm', e.timeStamp.inMicroseconds);
             },
             onPointerUp: _up,
             onPointerCancel: (e) => _downs.remove(e.pointer),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              // When the pan's press was, in the engine's microseconds of
-              // the event's own timestamp: the call can come late, after
-              // that press is let go and another one is held, and the
-              // window moves only with the press the pan began on.
-              onPanStart: (d) =>
-                  _send('drag', d.sourceTimeStamp?.inMicroseconds),
-              // A tap in the arena, so the pan wins only once the press
-              // moves: alone there, it would start a drag at every press.
+              // The window's drag in the arena, as a pan: a press that moves
+              // is no click of what's in the bar (TitleBand's tap), as the
+              // window takes its moves and Flutter sees only the first.
+              onPanStart: (_) {},
+              // A tap in the arena too, so the pan wins only once the press
+              // moves: alone there, it would win every press at once.
               onTap: () {},
             ),
           ),

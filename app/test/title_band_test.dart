@@ -1,4 +1,5 @@
 import 'package:connectrpc/connect.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
@@ -83,10 +84,19 @@ void main() {
     );
     const top = Offset(1500, 20);
     await _drag(tester, top);
-    expect(calls, ['drag']);
+    expect(calls, ['arm']);
     // Below the band, the dim's a drag of nothing.
     await _drag(tester, const Offset(1500, 120));
-    expect(calls, ['drag']);
+    expect(calls, ['arm']);
+    expect(d.settingsOpen, isNotNull);
+    // What Flutter sees of a press that moved the window: its first move
+    // past the pan's slop, then its release about there (the window took
+    // the moves between). No click of the band's.
+    final g = await tester.startGesture(top, kind: PointerDeviceKind.mouse);
+    await g.moveBy(const Offset(3, 0));
+    await tester.pump(const Duration(milliseconds: 300));
+    await g.up();
+    await tester.pumpAndSettle();
     expect(d.settingsOpen, isNotNull);
 
     await tester.tapAt(top);
@@ -104,13 +114,13 @@ void main() {
     expect(find.text('Daemon not running'), findsOne);
     const top = Offset(600, 20);
     await _drag(tester, top);
-    expect(calls, ['drag']);
+    expect(calls, ['arm']);
     await tester.pump(const Duration(seconds: 1));
     await _double(tester, top);
-    expect(calls, ['drag', 'zoom']);
+    expect(calls, ['arm', 'arm', 'arm', 'zoom']);
     // The middle of the window is no title bar.
     await _drag(tester, const Offset(600, 300));
-    expect(calls, ['drag', 'zoom']);
+    expect(calls, ['arm', 'arm', 'arm', 'zoom']);
     d.dispose();
   }, variant: mac);
 
@@ -124,7 +134,7 @@ void main() {
     );
     expect(find.byType(OutdatedScreen), findsOne);
     await _drag(tester, const Offset(600, 20));
-    expect(calls, ['drag']);
+    expect(calls, ['arm']);
     d.dispose();
   }, variant: mac);
 }
