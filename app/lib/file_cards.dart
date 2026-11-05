@@ -51,7 +51,7 @@ IconData fileKindIcon(String name) {
 }
 
 /// What a file card says under the name: its kind and size ("PDF · 1.2 MB").
-String fileDetail(AttachedFile f) {
+String fileCardDetail(AttachedFile f) {
   final ext = f.name.contains('.') ? f.name.split('.').last.toUpperCase() : '';
   final kind = ext.isEmpty || ext.length > 5 ? 'File' : ext;
   return f.size < 0 ? kind : '$kind · ${diskSize(f.size)}';
@@ -118,7 +118,7 @@ class FileCard extends StatelessWidget {
                         style: theme.ui(t.text, size: 12.5),
                       ),
                       Text(
-                        fileDetail(file),
+                        fileCardDetail(file),
                         maxLines: 1,
                         style: theme.ui(t.textMuted, size: 11),
                       ),
