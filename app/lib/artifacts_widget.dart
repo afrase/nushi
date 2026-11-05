@@ -170,7 +170,11 @@ class _FileRow extends StatelessWidget {
           f,
           if (when != null) ago(clock().difference(when), when),
         ].join(' · '),
-        padding: const EdgeInsets.symmetric(horizontal: _inset, vertical: 1),
+        // A background task's room, as Claude's Outputs and its tasks share.
+        padding: const EdgeInsets.symmetric(
+          horizontal: _inset,
+          vertical: 1 + PanelType.rowGap,
+        ),
         child: SizedBox(
           height: 22,
           child: Row(
