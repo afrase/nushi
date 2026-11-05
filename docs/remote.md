@@ -145,7 +145,7 @@ app = "my-nushi-relay"
 ```
 
 - Fly's edge then sees what the relay sees (ids, timing, sizes, addresses), and may log requests.
-- Fly's proxy doesn't reach the relay over loopback, so the relay believes `Fly-Client-IP` only from the `-trusted-proxy` range. Fly doesn't document the proxy's address; its community reports 172.16.x.x, hence 172.16.0.0/12 above. Check it on your machine before relying on it (`ss -tn` in a debug image of the app while a phone connects). A range that misses the proxy counts every client under the proxy's one address (one per-address cap and rate for all, and 16 listeners for every daemon behind it); one too wide lets anything in it that reaches port 8080 name its own address (your organization's other machines come over its private IPv6 network, outside this range).
+- Fly's proxy doesn't reach the relay over loopback, so the relay believes `Fly-Client-IP` only from the `-trusted-proxy` range. Fly doesn't document the proxy's address; its community reports 172.16.x.x, hence 172.16.0.0/12 above. Check it on your machine before relying on it (`ss -tn` in a debug image of the app while a phone connects). A range that misses the proxy counts every client under the proxy's one address (one per-address cap and rate for all, and one `-listen-per-ip` cap of listeners for every daemon behind it); one too wide lets anything in it that reaches port 8080 name its own address (your organization's other machines come over its private IPv6 network, outside this range).
 - For TLS of the relay's own, give the port no handlers, run `-host` with `-cert-cache` on a volume, and copy `/etc/ssl/certs/ca-certificates.crt` into the image (autocert talks to Let's Encrypt over HTTPS).
 
 ### The client's address
