@@ -44,6 +44,17 @@ Future<Map<CardAsk, Reply>> _cards(WidgetTester tester) async {
 }
 
 void main() {
+  test('a card made before the settings changed is still the same '
+      "item's card in the box", () {
+    final before = threadReply(_thread);
+    cardAsks.value = {CardAsk.thread.name: 'Fix it and commit.'};
+    addTearDown(() => cardAsks.value = const {});
+    final after = threadReply(_thread);
+    expect(after.text, isNot(before.text), reason: 'the new words');
+    expect(inBox([before], after), isTrue);
+    expect(inBox([before], changesRequestedReply(_comment)), isFalse);
+  });
+
   setUpAll(loadFonts);
 
   testWidgets("each kind's card asks the user's words, then the data line", (

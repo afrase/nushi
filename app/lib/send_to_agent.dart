@@ -31,10 +31,12 @@ class SendToAgent extends InheritedWidget {
       old.onSend != onSend || old.box != box;
 }
 
-/// Whether [box] holds [r]'s card (its quote and request; the lead line
-/// is the box's own).
-bool inBox(List<Reply> box, Reply r) =>
-    box.any((b) => b.quote == r.quote && b.text == r.text);
+/// Whether [box] holds [r]'s card: one with its quote, which names the
+/// item (a thread's place and comments, a check and its log). Not its
+/// request, which the user's settings may have changed since that card
+/// was made (Settings › GitHub › What reply cards ask), nor the lead line,
+/// which is the box's own.
+bool inBox(List<Reply> box, Reply r) => box.any((b) => b.quote == r.quote);
 
 /// GitHub's text is anyone's who can push or comment: every card says so,
 /// outside the quote and after what it asks, whatever the user made that

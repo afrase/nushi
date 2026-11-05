@@ -99,6 +99,9 @@ Future<int> putReplies(
       author: author,
       me: me,
     );
+    // A card for the same item is in the box already, perhaps with what
+    // it asked before the settings changed: one card per item.
+    if (inBox(chat.draft.replies.value, card)) continue;
     if (chat.draft.addReply(card)) added++;
   }
   return added;
