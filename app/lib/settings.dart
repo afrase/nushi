@@ -22,8 +22,8 @@ import 'package:nushi/file_mode.dart';
 /// what rows show) and sections, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
 /// and Dock badge, the appearance and the color theme, whether the
-/// composer checks spelling, and the newer release whose toast was
-/// dismissed. Each is a [Pref].
+/// composer checks spelling, whether a preview's source wraps its lines,
+/// and the newer release whose toast was dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
 /// shows wide: an older `worktrees` or `subagentWide` key is ignored, and
 /// dropped by the next save.
