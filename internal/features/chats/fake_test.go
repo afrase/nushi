@@ -102,9 +102,10 @@ type fakeAgent struct {
 	loadMeta map[string]any  // the last session/load's _meta
 	updates  []acp.SessionUpdate
 	session  acp.NewSessionResponse
-	set      []string        // config changes asked for, as id=value
-	setIn    []acp.SessionID // the session of each of set
-	setErr   error           // config changes fail with it
+	set      []string            // config changes asked for, as id=value
+	setIn    []acp.SessionID     // the session of each of set
+	setErr   error               // config changes fail with it
+	setHook  func(acp.SessionID) // when set, runs as each config change reaches it
 	prompt   []acp.ContentBlock
 	usage    *acp.Usage // the prompt response's
 	deleted  []acp.SessionID
@@ -434,6 +435,9 @@ func (f *fakeAgent) SetSessionConfigOption(_ context.Context, req *acp.SetSessio
 	case req.Boolean != nil:
 		value = strconv.FormatBool(req.Boolean.Value)
 	}
+	if f.setHook != nil {
+		f.setHook(req.SessionID)
+	}
 	if f.setErr != nil {
 		return nil, f.setErr
 	}
@@ -442,6 +446,9 @@ func (f *fakeAgent) SetSessionConfigOption(_ context.Context, req *acp.SetSessio
 }
 
 func (f *fakeAgent) SetSessionMode(_ context.Context, req *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error) {
+	if f.setHook != nil {
+		f.setHook(req.SessionID)
+	}
 	if f.setErr != nil {
 		return nil, f.setErr
 	}

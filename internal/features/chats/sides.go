@@ -184,7 +184,13 @@ func (s *Service) Fork(ctx context.Context, chatID string) (string, error) {
 	side.mu.Lock()
 	side.publish = s.publish
 	side.mu.Unlock()
-	if ctx.Err() != nil { // the app went meanwhile: nobody will show it
+	p.mu.Lock()
+	dropped := p.sides[side.id] != side // its agent stopped meanwhile (dropSides discards it)
+	p.mu.Unlock()
+	switch {
+	case dropped:
+		return "", errors.New("the agent stopped")
+	case ctx.Err() != nil: // the app went meanwhile: nobody will show it
 		_ = s.CloseSide(side.id)
 		return "", ctx.Err()
 	}

@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 
+	acp "github.com/afrase/acp-go/unstable"
+
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -45,5 +47,23 @@ func TestASideChatIsUnheardOfUntilForkAnswers(t *testing.T) {
 	testcheck.NoErr(t, svc.SetConfig(ctx, side, "mode", "default"))
 	if heardOf() == 0 {
 		t.Error("the side chat's change reached nobody")
+	}
+}
+
+// A side chat whose chat's agent stops as its mode is put on it (a
+// reload, move or archive drops it) isn't returned: the app would open a
+// side chat that is gone.
+func TestASideChatDroppedAsItOpensIsntReturned(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	ctx := context.Background()
+	testcheck.NoErr(t, svc.SetConfig(ctx, c.id, "mode", "plan"))
+	agent.setHook = func(sid acp.SessionID) {
+		if sid == "fork1" {
+			agent.setHook = nil
+			svc.dropSides(c)
+		}
+	}
+	if id, err := svc.Fork(ctx, c.id); err == nil {
+		t.Fatalf("Fork returned %q, a side chat already gone", id)
 	}
 }
