@@ -89,10 +89,17 @@ class RailFit {
   int get hashCode => Object.hash(margin, inset, long);
 }
 
+/// The first daemon that sends each pin's title with its chat
+/// (`Chat.message_pins`). Against an older one the phone takes the pages
+/// its pins are on before the rail's menu opens, to list them by their
+/// first lines; against this one the menu opens at once, and a pick takes
+/// the page it goes to.
+const pinTitlesApi = 104;
+
 /// The rail: [entries] (the start first, then the pins in the transcript's
 /// order) as dashes, [current]'s long and bright. Its menu lists them;
 /// [onPick] goes to the one picked (its id, '' for the start). [before]
-/// runs as it opens (the phone takes the pages its pins are on). [fit] is
+/// runs as it opens, the menu showing once it's done ([pinTitlesApi]). [fit] is
 /// where the dashes stand from its left edge, which is the transcript's,
 /// and how long they are.
 class PinsRail extends StatefulWidget {

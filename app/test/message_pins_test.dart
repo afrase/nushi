@@ -721,8 +721,8 @@ void main() {
     (const Size(844, 390), Brightness.dark),
   ]) {
     final name = '${size.width.toInt()}x${size.height.toInt()}_${b.name}';
-    testWidgets('the phone: a tap on the rail takes the older page a pin is '
-        'on and opens its menu ($name)', (tester) async {
+    testWidgets('the phone: a tap on the rail opens its menu at once, and '
+        'a pick takes the older page its pin is on ($name)', (tester) async {
       viewport(tester, size, ratio: 2, brightness: b);
       final c = _chat(['a1', 'a3', 'a2']);
       final pages = <String>[];
@@ -753,11 +753,14 @@ void main() {
       expect(_gapToWords(tester), greaterThanOrEqualTo(RailFit.gap));
       await render(tester, find.byType(PhoneApp), 'message_pins_phone_$name');
 
+      // A tall screen takes the older page to fill itself.
+      final filled = [...pages];
       await tester.tap(_railDashes.first);
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 50));
       }
-      expect(pages, ['u2']);
+      // Listed by its title, no page taken for it.
+      expect(pages, filled);
       expect(_row('Relay restart plan'), findsOneWidget);
       expect(tester.takeException(), isNull);
       if (size.width == 390) {
@@ -777,6 +780,7 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 50));
       }
+      expect(pages, ['u2']); // by the pick, or the fill before
       final at = tester.getRect(
         find.textContaining('The relay, line 0', findRichText: true).first,
       );
@@ -785,4 +789,40 @@ void main() {
       await endPhone(tester, phone);
     });
   }
+
+  testWidgets('the phone on a daemon without pin titles takes the pages its '
+      'pins are on before the menu opens', (tester) async {
+    viewport(tester, const Size(390, 844), ratio: 2);
+    final c = _chat(['a1', 'a3', 'a2'])..messagePins.clear();
+    final pages = <String>[];
+    final fake = FakeDaemon([c])
+      ..answer = (input) {
+        if (input is GetChatItemsRequest) pages.add(input.before);
+        return switch (input) {
+          PingRequest() => PingResponse(apiVersion: pinTitlesApi - 1),
+          GetChatRequest() => GetChatResponse(
+            chat: c,
+            items: _items.sublist(3),
+            older: 3,
+          ),
+          GetChatItemsRequest() => GetChatItemsResponse(
+            items: _items.sublist(0, 3),
+          ),
+          _ => null,
+        };
+      };
+    final phone = await startPhone(tester, fake);
+    await tester.tap(find.text('Relay restarts'));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.tap(_railDashes.first);
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    // Listed by its first line, from the page it's on.
+    expect(pages, ['u2']);
+    expect(_row('The plan'), findsOneWidget);
+    await endPhone(tester, phone);
+  });
 }
