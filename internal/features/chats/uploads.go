@@ -213,8 +213,8 @@ func (s *Service) adoptUploads(chatID string, items []model.Item) {
 		for j, f := range files {
 			own := filepath.Dir(f)
 			from := filepath.Dir(own)
-			if !filepath.IsAbs(f) || filepath.Dir(from) != root || filepath.Base(from) == chatID {
-				continue
+			if f != filepath.Clean(f) || filepath.Dir(from) != root || filepath.Base(from) == chatID {
+				continue // not one of the uploads, as saved
 			}
 			to := filepath.Join(root, chatID, filepath.Base(own), filepath.Base(f))
 			if err := linkUpload(f, to); err == nil {
@@ -228,6 +228,9 @@ func (s *Service) adoptUploads(chatID string, items []model.Item) {
 // linkUpload makes to the same file as from, a hard link, or a copy where
 // one can't be made.
 func linkUpload(from, to string) error {
+	if fi, err := os.Lstat(from); err != nil || !fi.Mode().IsRegular() {
+		return errors.New("not an upload: " + from)
+	}
 	if err := os.MkdirAll(filepath.Dir(to), 0o700); err != nil {
 		return err
 	}
