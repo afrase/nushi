@@ -4,8 +4,9 @@ import 'package:nushi/status.dart';
 
 // How the sidebar arranges its chats (its Arrange menu): what it groups
 // them by, how it sorts them, what each row shows, and the sections of
-// the user's own. The choices and the arranging itself, apart from the
-// prefs that keep them (`settings.dart`) and the widgets that show them.
+// the user's own. The choices, and grouping and sorting chats by them;
+// the prefs that keep them are `settings.dart`'s, the sidebar arranged
+// by them `sidebar_view.dart`'s, and the widgets that show them apart.
 
 /// What the sidebar groups its chats by. [project] is the default: a
 /// folder's chats under it, in the order they were dragged into.

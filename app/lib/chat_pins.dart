@@ -1,7 +1,7 @@
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/sidebar_view.dart';
 
 // Pinned chats: the daemon keeps which and in what order (PinChats), so
 // the phone shows them too; the app sends the whole order each time.

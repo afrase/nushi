@@ -11,6 +11,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
+import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';

@@ -16,6 +16,7 @@ import 'package:nushi/sidebar_groups.dart';
 import 'package:nushi/sidebar_row.dart';
 import 'package:nushi/sidebar_rows.dart';
 import 'package:nushi/sidebar_sections.dart';
+import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';

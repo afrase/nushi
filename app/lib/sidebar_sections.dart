@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
-import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_pins.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar_rows.dart';
+import 'package:nushi/sidebar_view.dart';
 import 'package:nushi/slide_list.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
