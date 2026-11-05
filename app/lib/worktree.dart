@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:nushi/branch_dialogs.dart';
 import 'package:nushi/branch_menu.dart';
-import 'package:nushi/branch_rename.dart';
 import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';

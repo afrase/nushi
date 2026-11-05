@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/branch_rename.dart';
+import 'package:nushi/branch_dialogs.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
