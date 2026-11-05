@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 
@@ -210,5 +211,26 @@ func TestMergeMessagesWithFiles(t *testing.T) {
 	// Mentions apart, different messages stay different.
 	if userText("look at @a.go") != userText("look at @b.go") || userText("look at this") == userText("look at that") {
 		t.Error("userText")
+	}
+}
+
+// A file's link is found by its URI, whatever its name holds: a message
+// with one is the copy's, and what was typed around it stays.
+func TestUserTextTakesLinksWithBrackets(t *testing.T) {
+	link := func(name string) string {
+		return "[@" + name + "](" + (&url.URL{Scheme: "file", Path: "/u/" + name}).String() + ")"
+	}
+	for _, name := range []string{"spec.pdf", "report (1).pdf", "[DRAFT] spec.pdf", "photo [edited].jpg", "a[b.pdf", "notes[", "]x.md"} {
+		if got, want := userText("read this"+link(name)+link("b.md")), userText("read this"); got != want {
+			t.Errorf("%s: %q, want %q", name, got, want)
+		}
+	}
+	if got, want := userText("see [@foo] then"+link("b.md")), userText("see [@foo] then"); got != want {
+		t.Errorf("typed text went with the link: %q, want %q", got, want)
+	}
+	copied := []model.Item{{ID: "item-1", Kind: model.UserMessage, Text: "read this", Files: []string{"/u/[DRAFT] spec.pdf"}}, {ID: "m1", Kind: model.AgentMessage, Text: "ok"}}
+	replay := []model.Item{{ID: "u1", Kind: model.UserMessage, Text: "read this" + link("[DRAFT] spec.pdf")}, {ID: "m1", Kind: model.AgentMessage, Text: "ok"}}
+	if s := short(merge(copied, replay, claudeHarness)); s != "u:read_this m:m1" {
+		t.Errorf("merged %s", s)
 	}
 }

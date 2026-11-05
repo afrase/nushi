@@ -159,7 +159,10 @@ func textKey(it model.Item) string {
 
 var (
 	// fileLink is a file's link as Claude and Codex replay it: [@name](file://…).
-	fileLink = regexp.MustCompile(`\[@[^\]\n]*\]\(file://[^)\s]*\)`)
+	// It is found by its URI, as the name is the file's and may hold brackets
+	// ([DRAFT] spec.pdf); only a [@ starts none inside it, so a [@ typed
+	// earlier on the line isn't taken for a link's start.
+	fileLink = regexp.MustCompile(`\[@(?:[^\n\[]|\[[^@\n])*?\[?\]\(file://[^)\s]*\)`)
 	// atPath is an @ mention, as typed and as Pi and Ante replay a file:
 	// @path, @"a path", @a\ path.
 	atPath = regexp.MustCompile(`(^|\s)@(?:"[^"\n]*"|(?:\\\s|\S)+)`)
