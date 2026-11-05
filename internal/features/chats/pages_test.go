@@ -1,6 +1,7 @@
 package chats
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -41,5 +42,26 @@ func TestRunningIn(t *testing.T) {
 	}
 	if len(got) != 2 || got[0] != "dev" || got[1] != "agent" {
 		t.Errorf("running: %v, want [dev agent]", got)
+	}
+}
+
+// A subagent that runs beside many items doesn't bring them all into each
+// page: a page reaches back maxReach items at most for a call, and one
+// further back leaves the page as it is.
+func TestAPageReachesBackSoFar(t *testing.T) {
+	items := []model.Item{{ID: "call"}}
+	for i := range 3 * maxReach {
+		it := model.Item{ID: fmt.Sprint("i", i)}
+		if i%10 == 0 {
+			it.Parent = "call"
+		}
+		items = append(items, it)
+	}
+	end := len(items)
+	if got := pageStart(items, end, 80); got != end-80 {
+		t.Errorf("pageStart(%d, 80) = %d, want %d: the call is out of reach", end, got, end-80)
+	}
+	if got := pageStart(items, maxReach, 80); got != 0 {
+		t.Errorf("a call within reach: pageStart = %d, want 0", got)
 	}
 }

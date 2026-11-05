@@ -63,12 +63,21 @@ func (s *Service) Items(chatID, before string, n int) ([]model.Item, int, error)
 	return slices.Clone(c.items[start:end]), start, nil
 }
 
+// maxReach is how far before its n items a page reaches back for a
+// subagent's call: a subagent that ran beside thousands of items would
+// otherwise bring them all into every page. Its steps then show without
+// it until the page that has its call is loaded, and a running one comes
+// with the recent part anyway (RecentPart.Running).
+const maxReach = 500
+
 // pageStart is where a page of items ending before end starts: n items
 // back, and further back to the call that started a subagent whose steps
-// are in the page (and that call's own), so the subagent shows whole. It
-// looks back only for the calls it wants, without an index of the items.
+// are in the page (and that call's own), so the subagent shows whole,
+// within maxReach of it. It looks back only for the calls it
+// wants, without an index of the items.
 func pageStart(items []model.Item, end, n int) int {
 	start := max(0, end-n)
+	floor := max(0, start-maxReach)
 	want := map[string]bool{}
 	// take adds items[from:to] to the page: their calls are wanted, unless
 	// they are in it already.
@@ -83,7 +92,7 @@ func pageStart(items []model.Item, end, n int) int {
 		}
 	}
 	take(start, end)
-	for i := start - 1; i >= 0 && len(want) > 0; i-- {
+	for i := start - 1; i >= floor && len(want) > 0; i-- {
 		if want[items[i].ID] {
 			take(i, start)
 			start = i
