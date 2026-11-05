@@ -3,10 +3,7 @@ package chats
 
 import (
 	"context"
-	"crypto/rand"
-	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,51 +17,6 @@ import (
 
 	"github.com/afrase/nushi/internal/model"
 )
-
-// Agent is a connection to a running agent (an *agentproc.Agent).
-type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of its agent, which each Kind fills
-	Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error)
-	NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error)
-	LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
-	// StartPrompt returns once the prompt is written; wait returns its result.
-	StartPrompt(context.Context, *acp.PromptRequest) (wait func(context.Context) (*acp.PromptResponse, error), err error)
-	SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
-	SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error)
-	ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error)
-	Cancel(context.Context, *acp.CancelNotification) error
-	CanSteer() bool
-	Steer(context.Context, acp.SessionID, []acp.ContentBlock) (bool, error)
-	CanFork() bool
-	ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
-	CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error)
-	DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error)
-	Close() error // kills it
-	// Stop ends it gently: it gets up to grace to end its sessions, then
-	// is killed.
-	Stop(grace time.Duration) error
-	Done() <-chan struct{} // closed when the agent's process ends
-	Pid() int              // its process, the root of the processes it runs; 0 when unknown
-	// Call sends a request for one of the agent's extensions.
-	Call(ctx context.Context, method string, params, result any) error
-}
-
-// stopGrace is how long a stopping agent gets to end a turn, and then its
-// sessions.
-var stopGrace = 5 * time.Second
-
-// cancelTurn sends session/cancel, waiting at most stopGrace for the agent
-// to read it.
-//
-//nolint:contextcheck // a cancel goes out on its own, as its turn ran: a stop outlives the request that asked for it
-func cancelTurn(agent Agent, n *acp.CancelNotification) error {
-	ctx, done := context.WithTimeout(context.Background(), stopGrace)
-	defer done()
-	return agent.Cancel(ctx, n)
-}
-
-// Launch starts an agent; what it sends goes to client, and what happens
-// to it to log.
-type Launch func(client acp.Client, log *slog.Logger) (Agent, error)
 
 // Sessions stores what Nushi keeps of each chat.
 type Sessions interface {
@@ -280,76 +232,6 @@ func (c *chat) commandsLocked() []model.Command {
 		return c.kind.withTerminalCommands(c.remembered.Commands(c.kind.Name))
 	}
 	return slices.Clone(c.commands)
-}
-
-// StartOptions are a new chat's: a worktree of its own (on Branch, else
-// a name of Nushi's; from From, a commit or ref, else the folder's HEAD),
-// and the Jira issue or GitHub pull request or issue it's on, which it
-// remembers. Check, when given, looks at the new worktree before the
-// agent starts there: an error drops the worktree and is StartOn's.
-type StartOptions struct {
-	Worktree     bool
-	Branch, From string
-	Issue        *model.ChatIssue
-	GitHub       *model.ChatGitHub
-	Check        func(folder string) error
-}
-
-// ErrStart is a new chat whose agent didn't start: "couldn't start Codex:
-// " and why.
-var ErrStart = errors.New("couldn't start")
-
-// StartOn opens a chat with agent ("" for the default) in folder, or in a
-// new scratch folder of its own when folder is "", as opts say.
-func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartOptions) (string, error) {
-	k, err := s.kindOf(agent)
-	if err != nil {
-		return "", err
-	}
-	c := s.newChat(k)
-	c.id, c.issue = rand.Text(), opts.Issue
-	scratch := folder == ""
-	var wt *model.Worktree
-	switch {
-	case scratch:
-		folder = filepath.Join(s.scratch, c.id)
-		err = os.MkdirAll(folder, 0o700)
-	case opts.Worktree:
-		if err = checkFolder(folder); err == nil {
-			wt, folder, err = s.addWorktree(ctx, folder, opts.Branch, opts.From)
-		}
-		if err == nil && opts.Check != nil {
-			if err = opts.Check(folder); err != nil {
-				s.dropWorktree(wt)
-			}
-		}
-	default:
-		if err = checkFolder(folder); err == nil && s.worktrees != nil {
-			wt = s.worktrees.Found(ctx, folder) // a worktree that was there: listed under its repository
-		}
-	}
-	if err != nil {
-		return "", err
-	}
-	o, err := c.openSession(ctx, "", folder, false, "")
-	if err != nil {
-		err = fmt.Errorf("%w %s: %w", ErrStart, k.Title, err)
-		if scratch {
-			_ = os.Remove(folder) // a scratch folder: empty, or left for the user
-		}
-		s.dropWorktree(wt)
-		return "", err
-	}
-	c.mu.Lock()
-	c.record = model.ChatRecord{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
-	s.useLocked(c, o)
-	c.mu.Unlock()
-	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
-		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
-	}
-	s.register(c)
-	c.log().Info("chat created", "scratch", scratch, "worktree", wt != nil)
-	return c.id, nil
 }
 
 // checkFolder refuses a folder that isn't an absolute path to an existing

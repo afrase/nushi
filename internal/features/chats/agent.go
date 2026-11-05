@@ -14,6 +14,51 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
+// Agent is a connection to a running agent (an *agentproc.Agent).
+type Agent interface { //nolint:interfacebloat // the ACP calls a chat makes of its agent, which each Kind fills
+	Initialize(context.Context, *acp.InitializeRequest) (*acp.InitializeResponse, error)
+	NewSession(context.Context, *acp.NewSessionRequest) (*acp.NewSessionResponse, error)
+	LoadSession(context.Context, *acp.LoadSessionRequest) (*acp.LoadSessionResponse, error)
+	// StartPrompt returns once the prompt is written; wait returns its result.
+	StartPrompt(context.Context, *acp.PromptRequest) (wait func(context.Context) (*acp.PromptResponse, error), err error)
+	SetSessionConfigOption(context.Context, *acp.SetSessionConfigOptionRequest) (*acp.SetSessionConfigOptionResponse, error)
+	SetSessionMode(context.Context, *acp.SetSessionModeRequest) (*acp.SetSessionModeResponse, error)
+	ListSessions(context.Context, *acp.ListSessionsRequest) (*acp.ListSessionsResponse, error)
+	Cancel(context.Context, *acp.CancelNotification) error
+	CanSteer() bool
+	Steer(context.Context, acp.SessionID, []acp.ContentBlock) (bool, error)
+	CanFork() bool
+	ForkSession(context.Context, *acp.ForkSessionRequest) (*acp.ForkSessionResponse, error)
+	CloseSession(context.Context, *acp.CloseSessionRequest) (*acp.CloseSessionResponse, error)
+	DeleteSession(context.Context, *acp.DeleteSessionRequest) (*acp.DeleteSessionResponse, error)
+	Close() error // kills it
+	// Stop ends it gently: it gets up to grace to end its sessions, then
+	// is killed.
+	Stop(grace time.Duration) error
+	Done() <-chan struct{} // closed when the agent's process ends
+	Pid() int              // its process, the root of the processes it runs; 0 when unknown
+	// Call sends a request for one of the agent's extensions.
+	Call(ctx context.Context, method string, params, result any) error
+}
+
+// stopGrace is how long a stopping agent gets to end a turn, and then its
+// sessions.
+var stopGrace = 5 * time.Second
+
+// cancelTurn sends session/cancel, waiting at most stopGrace for the agent
+// to read it.
+//
+//nolint:contextcheck // a cancel goes out on its own, as its turn ran: a stop outlives the request that asked for it
+func cancelTurn(agent Agent, n *acp.CancelNotification) error {
+	ctx, done := context.WithTimeout(context.Background(), stopGrace)
+	defer done()
+	return agent.Cancel(ctx, n)
+}
+
+// Launch starts an agent; what it sends goes to client, and what happens
+// to it to log.
+type Launch func(client acp.Client, log *slog.Logger) (Agent, error)
+
 // opened is an agent with a session open.
 type opened struct {
 	agent  Agent
