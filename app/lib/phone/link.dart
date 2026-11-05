@@ -13,12 +13,15 @@ import 'package:remote_transport/remote_transport.dart' show Unreachable;
 /// slept may hold a socket the network already dropped) and tried again
 /// after 1 s, then twice as long each time up to 30 s; at once when the
 /// page shows again, the network comes back, or on Try again. What the
-/// screen shows is fetched again once it's back (Daemon.relink).
+/// screen shows is fetched again once it's back (Daemon.relink). A ping
+/// late behind a large upload on a slow uplink isn't a dead channel while
+/// the channel still moves bytes ([moved]).
 class Link extends ChangeNotifier {
   new(
     this.daemon, {
     required this.reset,
     required this.live,
+    this.moved,
     this.seen,
     this.onSeen,
   });
@@ -31,6 +34,10 @@ class Link extends ChangeNotifier {
   /// Drops the channel: calls on it fail, and the next one dials again.
   final Future<void> Function() reset;
 
+  /// The bytes the channel has moved either way so far
+  /// (`RelayTransport.moved`), or null when not known.
+  final int Function()? moved;
+
   /// When the Mac last answered (kept across launches by the phone).
   DateTime? seen;
   final void Function(DateTime seen)? onSeen;
@@ -39,7 +46,8 @@ class Link extends ChangeNotifier {
   static const every = Duration(seconds: 15);
 
   /// How long a ping on a live channel may take before the channel counts
-  /// as dead; one that has to dial first gets the dial's own limits.
+  /// as dead, unless it moved bytes meanwhile (then it waits on, [dial] in
+  /// all); one that has to dial first gets the dial's own limits.
   static const answer = Duration(seconds: 8);
   static const dial = Duration(seconds: 50);
 
@@ -89,7 +97,7 @@ class Link extends ChangeNotifier {
     next = null;
     trying = true;
     _notify();
-    final ok = await daemon.ping(wait: live() ? answer : dial);
+    final ok = await _ping();
     trying = false;
     if (_disposed) return ok;
     if (ok) {
@@ -116,6 +124,29 @@ class Link extends ChangeNotifier {
     }
     _notify();
     return ok;
+  }
+
+  /// Pings the Mac. On a live channel the answer may wait behind an
+  /// upload: a slow uplink takes over 8 s for the megabyte HTTP/2 lets
+  /// queue ahead of it. So while the channel moves bytes in each [answer],
+  /// the ping waits on, up to [dial]; silent for one, the channel is
+  /// dropped, which ends the ping.
+  Future<bool> _ping() async {
+    final moved = this.moved;
+    if (!live() || moved == null) {
+      return await daemon.ping(wait: live() ? answer : dial);
+    }
+    final ping = daemon.ping(wait: dial);
+    for (var was = moved(); ; was = moved()) {
+      final done = await ping
+          .then((_) => true)
+          .timeout(answer, onTimeout: () => false);
+      if (done) return await ping;
+      if (moved() == was) {
+        await reset();
+        return await ping;
+      }
+    }
   }
 
   void _schedule(Duration d) {

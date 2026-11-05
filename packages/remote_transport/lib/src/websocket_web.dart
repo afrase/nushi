@@ -81,6 +81,10 @@ final class RelaySocket {
     if (!_closed) _messages.add(bytes);
   }
 
+  /// The bytes sent but not yet handed to the network (the browser's
+  /// `bufferedAmount`): a send buffer that drains is a link that moves.
+  int get buffered => _ws.bufferedAmount;
+
   /// Sends one binary message.
   void send(List<int> data) {
     if (data.length > maxMessage) throw ArgumentError('message too long');

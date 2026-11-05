@@ -222,6 +222,7 @@ class Phone extends ChangeNotifier {
       d,
       reset: transport.reset,
       live: () => transport.live,
+      moved: () => transport.moved,
       seen: _seen,
       onSeen: (seen) {
         // Kept once a minute at most: it's for "last seen" after a relaunch.

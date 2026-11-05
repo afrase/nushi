@@ -82,6 +82,15 @@ void main() {
     },
   );
 
+  test('moved counts the sealed bytes each way', () async {
+    final ch = await _open(await _peer([]));
+    expect(ch.moved, 0); // the handshake isn't counted
+    ch.outgoing.add(List.filled(100, 7));
+    expect(await ch.read(), List.filled(100, 7));
+    expect(ch.moved, 2 * (100 + 16)); // each with its tag
+    await ch.close();
+  });
+
   test('pairing with the secret', () async {
     final peer = await _peer(['-psk']);
     final ch = await _open(peer, secret: _b64(peer['psk']!));

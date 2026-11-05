@@ -62,6 +62,10 @@ final class RelaySocket {
     }
   }
 
+  /// The bytes sent but not yet handed to the network: dart:io doesn't
+  /// say, so always 0.
+  int get buffered => 0;
+
   /// Sends one binary message.
   void send(List<int> data) {
     if (data.length > maxMessage) throw ArgumentError('message too long');

@@ -181,6 +181,7 @@ final class RelayTransport implements Http2ClientTransport {
   final KeyPair device;
 
   http2.ClientTransportConnection? _live;
+  Channel? _channel; // _live's
   Future<http2.ClientTransportConnection>? _dialing;
   int _generation = 0; // a reset starts another: a dial from before is dropped
   bool _closed = false;
@@ -202,6 +203,11 @@ final class RelayTransport implements Http2ClientTransport {
   /// Whether a channel is up (it may still turn out dead: a phone that
   /// was asleep holds sockets the network dropped).
   bool get live => _live?.isOpen ?? false;
+
+  /// The bytes the live channel has moved either way ([Channel.moved]), 0
+  /// with none: a ping late behind an upload is told from a dead link by
+  /// this growing meanwhile.
+  int get moved => _live == null ? 0 : _channel?.moved ?? 0;
 
   /// Closes the channel for good: calls still open on it fail, and no
   /// call dials again.
@@ -262,6 +268,7 @@ final class RelayTransport implements Http2ClientTransport {
       ch.outgoing,
     );
     _live = conn;
+    _channel = ch;
     conn.onActiveStateChanged = (_) {
       if (!conn.isOpen) _drop(conn);
     };

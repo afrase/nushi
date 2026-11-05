@@ -34,6 +34,14 @@ final class Channel {
   final _out = StreamController<List<int>>();
   int _sent = 0;
   int _got = 0;
+  int _bytesIn = 0;
+  int _bytesOut = 0;
+
+  /// The bytes that have come in or gone out to the network on the channel
+  /// so far (a sent one counts once the socket's buffer let it go). It
+  /// grows while the link moves anything, either way: an answer that's
+  /// late behind a large upload on a slow uplink isn't a dead link.
+  int get moved => _bytesIn + _bytesOut - _ws.buffered;
 
   /// Runs the handshake on [ws], which is closed if it fails; the daemon
   /// has [wait] to answer (the relay alone waits 10 s for it to be there).
@@ -87,6 +95,7 @@ final class Channel {
   Future<Uint8List?> read() async {
     try {
       if (!await _messages.moveNext()) return null;
+      _bytesIn += _messages.current.length;
       final m = await _hs.receive.decryptWithAd(const [], _messages.current);
       if (++_got % rekeyEvery == 0) await _hs.receive.rekey();
       return m;
@@ -112,7 +121,9 @@ final class Channel {
       await for (final data in _out.stream) {
         for (var at = 0; at < data.length; at += maxPlaintext) {
           final chunk = data.sublist(at, min(at + maxPlaintext, data.length));
-          _ws.send(await _hs.send.encryptWithAd(const [], chunk));
+          final sealed = await _hs.send.encryptWithAd(const [], chunk);
+          _bytesOut += sealed.length;
+          _ws.send(sealed);
           if (++_sent % rekeyEvery == 0) await _hs.send.rekey();
         }
       }
