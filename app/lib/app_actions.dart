@@ -21,6 +21,7 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
+import 'package:nushi/preview_marks.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
 import 'package:nushi/review.dart';
@@ -84,6 +85,8 @@ enum Act {
   details,
   files(key: filesKey, menu: ActMenu.view, menuLabel: 'Files'),
   chatWidth,
+  // The preview's own key: elsewhere ⌥Z types a character.
+  wrap(keyText: wrapKeyText, menu: ActMenu.view, menuLabel: 'Wrap Lines'),
   terminal(key: toggleTerminalKey),
   rewind(keyText: 'Esc Esc'), // the composer's
   sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
@@ -257,6 +260,11 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       .chatWidth,
       chatFullWidth.value ? 'Center the chat' : 'Show the chat at full width',
       run: () => chatFullWidth.value = !chatFullWidth.value,
+    ),
+    AppAction(
+      .wrap,
+      '${wrapLabel(wrap: wrapLines.value)} in the preview',
+      run: toggleWrap,
     ),
     AppAction(
       .terminal,

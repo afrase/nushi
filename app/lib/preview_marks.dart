@@ -1,8 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
+import 'package:nushi/controls.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/plain_tabs.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
+
+/// ⌥Z, while the Mac's preview has the focus and shows a file's source:
+/// its lines wrap, or run on (VS Code's key for Word Wrap). Not the app's:
+/// elsewhere ⌥Z types Ω.
+const wrapKey = SingleActivator(LogicalKeyboardKey.keyZ, alt: true);
+
+/// [wrapKey] as menus write it.
+const wrapKeyText = '⌥Z';
+
+/// Wraps the lines of every preview's source, or stops wrapping them.
+void toggleWrap() => wrapLines.value = !wrapLines.value;
+
+/// What wrapping's button and palette row say: what they'll do.
+String wrapLabel({required bool wrap}) =>
+    wrap ? 'Don’t wrap lines' : 'Wrap lines';
+
+/// The button over a file's source in the Mac's preview that wraps its
+/// lines or not ([wrapLines]), held while they wrap, [wrapKey] in its
+/// tooltip.
+class WrapButton extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: wrapLines,
+    builder: (context, wrap, _) => IconTap(
+      Icons.wrap_text,
+      tooltip: '${wrapLabel(wrap: wrap)}  $wrapKeyText',
+      size: 15,
+      held: wrap,
+      onTap: toggleWrap,
+    ),
+  );
+}
 
 /// The Preview and Source tabs over a file that renders.
 class SourceSwitch extends StatelessWidget {

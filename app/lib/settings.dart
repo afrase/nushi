@@ -251,6 +251,11 @@ final Pref<bool> dockBadge = _plain('dockBadge', true);
 /// nothing and flags nothing.
 final Pref<bool> checkSpelling = _plain('checkSpelling', true);
 
+/// Whether a file's source in the preview wraps its long lines (on at
+/// first); off, they run on and the view scrolls sideways. One for every
+/// preview, Mac and phone.
+final Pref<bool> wrapLines = _plain('wrap', true);
+
 /// The newer release whose toast was dismissed ("0.1.17"): it shows again
 /// only for a newer one.
 final Pref<String?> dismissedUpdate = _plain('dismissedUpdate', null);

@@ -64,6 +64,7 @@ final _saved = <String, Object?>{
   'alertFailed': false,
   'alertSound': true,
   'dockBadge': false,
+  'wrap': false,
   'dismissedUpdate': '0.1.17',
   'fromANewerApp': {'kept': true},
   'worktrees': ['/a'],
@@ -109,6 +110,7 @@ List<ValueNotifier<Object?>> get _all => [
   alertFailed,
   alertSound,
   dockBadge,
+  wrapLines,
   dismissedUpdate,
 ];
 
@@ -127,7 +129,8 @@ void main() {
     expect(terminalFontSize.value, 14);
     expect(githubDays.value, 30);
     expect(dismissedUpdate.value, '0.1.17');
-    expect(_all.map((p) => p.value), hasLength(38)); // each made
+    expect(wrapLines.value, isFalse);
+    expect(_all.map((p) => p.value), hasLength(39)); // each made
     showDetails.value = true;
     await pumpEventQueue();
     expect(readSaved(), {

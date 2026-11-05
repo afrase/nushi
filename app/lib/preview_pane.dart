@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
@@ -10,6 +11,7 @@ import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_tabs.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart';
@@ -17,9 +19,11 @@ import 'package:nushi/web_page.dart';
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
 /// its name (a menu of the chat's other files; with several files open, the
 /// tabs of them all, [PreviewTabs]), Live while the daemon keeps it current,
-/// Preview or Source (a file that renders), Reload and Open in browser (a
-/// page, not a diagram), Show in Finder and Close, which closes every tab.
-/// Read-only. It's one file's view, made again as its tab shows.
+/// wrapping the lines or not while it shows a source ([WrapButton], and
+/// ⌥Z with the focus in the pane), Preview or Source (a file that renders),
+/// Reload and Open in browser (a page, not a diagram), Show in Finder and
+/// Close, which closes every tab. Read-only. It's one file's view, made
+/// again as its tab shows.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -66,9 +70,11 @@ class _PreviewPaneState extends State<PreviewPane> {
       ? newDiagramHost()
       : null;
   late bool _source = widget.chat.previewSources.contains(widget.path);
+  final _focus = FocusNode(debugLabel: 'preview');
 
   @override
   void dispose() {
+    _focus.dispose();
     _watch.dispose();
     _page?.dispose();
     _diagram?.dispose();
@@ -79,6 +85,20 @@ class _PreviewPaneState extends State<PreviewPane> {
       _watch.file?.path ?? absoluteIn(widget.chat.folder, widget.path);
 
   void _reveal() => revealInFinder(_abs).ignore();
+
+  /// Whether it shows the file's text, a source view: code, or the Source
+  /// of one that renders. Only then do its lines wrap or not.
+  bool get _showsSource =>
+      _kind == PreviewKind.code || _kind.rendered && _source;
+
+  KeyEventResult _key(FocusNode _, KeyEvent e) {
+    if (e is KeyUpEvent || !_showsSource) return KeyEventResult.ignored;
+    if (!wrapKey.accepts(e, HardwareKeyboard.instance)) {
+      return KeyEventResult.ignored;
+    }
+    toggleWrap();
+    return KeyEventResult.handled;
+  }
 
   void _showSource(bool source) {
     setState(() => _source = source);
@@ -108,176 +128,203 @@ class _PreviewPaneState extends State<PreviewPane> {
         ),
       ],
     ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LayoutBuilder(
-          builder: (context, pane) {
-            // The gutters where the row has room for them, and the bar's
-            // full gaps where it has more (ADR 0072). Narrower, what it has
-            // always had, so it keeps the name's room and folds where it did.
-            final roomy =
-                pane.maxWidth >=
-                (page == null ? _roomyFrom : _roomyWithPageFrom);
-            final wide = pane.maxWidth >= _gapsFrom;
-            // What a group adds to the row's 8. The tabs' end needs none
-            // short of wide: a last tab keeps a ✕'s room.
-            final group = wide
-                ? NushiTheme.groupGap - 8
-                : roomy
-                ? NushiTheme.barGap - 8
-                : 0.0;
-            return PaneHeader(
-              inset: roomy ? NushiTheme.gutter : 12,
-              end: roomy ? NushiTheme.gutter : 4,
-              child: LayoutBuilder(
-                builder: (context, box) => ListenableBuilder(
-                  listenable: Listenable.merge([
-                    _watch,
-                    widget.chat.previewFiles,
-                  ]),
-                  builder: (context, _) {
-                    final files = widget.chat.previewFiles.value;
-                    final tabs = files.length > 1;
-                    // A tab's file on its way keeps Live's room: a pick would
-                    // otherwise widen the tabs' row for a moment, and move it.
-                    final coming =
-                        tabs && _watch.file == null && _watch.error.isEmpty;
-                    return Row(
-                      spacing: 8,
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.only(right: wide ? group : 0),
-                            child: Row(
-                              spacing: roomy ? 6 : 8,
-                              children: [
-                                Icon(
-                                  kind.icon,
-                                  size: 14,
-                                  color: t.textSecondary,
-                                ),
-                                // The name opens the chat's other files;
-                                // several open, their tabs take its place.
-                                Expanded(
-                                  child: tabs
-                                      ? PreviewTabs(
-                                          key: widget.tabsKey,
-                                          chat: widget.chat,
-                                          files: files,
-                                          current: widget.path,
-                                        )
-                                      : Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: FilesMenu(
+    return Focus(
+      focusNode: _focus,
+      onKeyEvent: _key,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, pane) {
+              // The gutters where the row has room for them, and the bar's
+              // full gaps where it has more (ADR 0072). Narrower, what it has
+              // always had, so it keeps the name's room and folds where it did.
+              final roomy =
+                  pane.maxWidth >=
+                  (page == null ? _roomyFrom : _roomyWithPageFrom);
+              final wide = pane.maxWidth >= _gapsFrom;
+              // What a group adds to the row's 8. The tabs' end needs none
+              // short of wide: a last tab keeps a ✕'s room.
+              final group = wide
+                  ? NushiTheme.groupGap - 8
+                  : roomy
+                  ? NushiTheme.barGap - 8
+                  : 0.0;
+              return PaneHeader(
+                inset: roomy ? NushiTheme.gutter : 12,
+                end: roomy ? NushiTheme.gutter : 4,
+                child: LayoutBuilder(
+                  builder: (context, box) => ListenableBuilder(
+                    listenable: Listenable.merge([
+                      _watch,
+                      widget.chat.previewFiles,
+                      wrapLines,
+                    ]),
+                    builder: (context, _) {
+                      final files = widget.chat.previewFiles.value;
+                      final tabs = files.length > 1;
+                      // A tab's file on its way keeps Live's room: a pick
+                      // would otherwise widen the tabs' row for a moment,
+                      // and move it.
+                      final coming =
+                          tabs && _watch.file == null && _watch.error.isEmpty;
+                      final folds = box.maxWidth < _foldsBelow;
+                      final wraps = _showsSource;
+                      return Row(
+                        spacing: 8,
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.only(right: wide ? group : 0),
+                              child: Row(
+                                spacing: roomy ? 6 : 8,
+                                children: [
+                                  Icon(
+                                    kind.icon,
+                                    size: 14,
+                                    color: t.textSecondary,
+                                  ),
+                                  // The name opens the chat's other files;
+                                  // several open, their tabs take its place.
+                                  Expanded(
+                                    child: tabs
+                                        ? PreviewTabs(
+                                            key: widget.tabsKey,
                                             chat: widget.chat,
+                                            files: files,
                                             current: widget.path,
-                                            tooltip:
-                                                _watch.file?.path ??
-                                                widget.path,
-                                            label: Text(
-                                              baseName(widget.path),
-                                              style: theme.code(
-                                                t.text,
-                                                size: 12,
+                                          )
+                                        : Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: FilesMenu(
+                                              chat: widget.chat,
+                                              current: widget.path,
+                                              tooltip:
+                                                  _watch.file?.path ??
+                                                  widget.path,
+                                              label: Text(
+                                                baseName(widget.path),
+                                                style: theme.code(
+                                                  t.text,
+                                                  size: 12,
+                                                ),
                                               ),
                                             ),
                                           ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          if (_watch.live || coming)
+                            Visibility.maintain(
+                              visible: _watch.live,
+                              child: LiveMark(version: _watch.file),
+                            ),
+                          // Left of the switch, so Source showing it moves
+                          // nothing under the pointer.
+                          if (wraps && !folds) const WrapButton(),
+                          if (kind.rendered)
+                            SourceSwitch(
+                              source: _source,
+                              onChanged: _showSource,
+                            ),
+                          Padding(
+                            padding: EdgeInsets.only(left: group),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: wide ? NushiTheme.iconGap : 0,
+                              children: [
+                                if (folds)
+                                  MenuIcon.line(
+                                    LineIcon.more,
+                                    tooltip: 'More',
+                                    filter: false,
+                                    entries: [
+                                      if (wraps)
+                                        MenuEntry(
+                                          wrapLabel(wrap: wrapLines.value),
+                                          icon: Icons.wrap_text,
+                                          onPick: toggleWrap,
                                         ),
+                                      for (final (icon, tooltip, _, onTap)
+                                          in actions)
+                                        MenuEntry(
+                                          tooltip,
+                                          icon: icon,
+                                          onPick: onTap,
+                                        ),
+                                      MenuEntry(
+                                        'Show in Finder',
+                                        line: LineIcon.folderOpen,
+                                        onPick: _reveal,
+                                      ),
+                                    ],
+                                  )
+                                else ...[
+                                  for (final (icon, tooltip, size, onTap)
+                                      in actions)
+                                    IconTap(
+                                      icon,
+                                      tooltip: tooltip,
+                                      size: size,
+                                      onTap: onTap,
+                                    ),
+                                  IconTap.line(
+                                    LineIcon.folderOpen,
+                                    tooltip: 'Show in Finder',
+                                    size: 14,
+                                    onTap: _reveal,
+                                  ),
+                                ],
+                                IconTap.line(
+                                  LineIcon.close,
+                                  tooltip: 'Close',
+                                  size: 15,
+                                  onTap: widget.onClose,
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        if (_watch.live || coming)
-                          Visibility.maintain(
-                            visible: _watch.live,
-                            child: LiveMark(version: _watch.file),
-                          ),
-                        if (kind.rendered)
-                          SourceSwitch(source: _source, onChanged: _showSource),
-                        Padding(
-                          padding: EdgeInsets.only(left: group),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: wide ? NushiTheme.iconGap : 0,
-                            children: [
-                              if (box.maxWidth < _foldsBelow)
-                                MenuIcon.line(
-                                  LineIcon.more,
-                                  tooltip: 'More',
-                                  filter: false,
-                                  entries: [
-                                    for (final (icon, tooltip, _, onTap)
-                                        in actions)
-                                      MenuEntry(
-                                        tooltip,
-                                        icon: icon,
-                                        onPick: onTap,
-                                      ),
-                                    MenuEntry(
-                                      'Show in Finder',
-                                      line: LineIcon.folderOpen,
-                                      onPick: _reveal,
-                                    ),
-                                  ],
-                                )
-                              else ...[
-                                for (final (icon, tooltip, size, onTap)
-                                    in actions)
-                                  IconTap(
-                                    icon,
-                                    tooltip: tooltip,
-                                    size: size,
-                                    onTap: onTap,
-                                  ),
-                                IconTap.line(
-                                  LineIcon.folderOpen,
-                                  tooltip: 'Show in Finder',
-                                  size: 14,
-                                  onTap: _reveal,
-                                ),
-                              ],
-                              IconTap.line(
-                                LineIcon.close,
-                                tooltip: 'Close',
-                                size: 15,
-                                onTap: widget.onClose,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          Expanded(
+            // A click in a source takes the focus to the pane, for ⌥Z;
+            // a page's web view keeps its own.
+            child: Listener(
+              onPointerDown: (_) {
+                if (_showsSource && !_focus.hasFocus) _focus.requestFocus();
+              },
+              child: ColoredBox(
+                color: t.base,
+                child: PreviewBody(
+                  watch: _watch,
+                  source: _source,
+                  onReveal: _reveal,
+                  page: switch ((page, diagram)) {
+                    (final page?, _) => (watch) => WebPage(
+                      host: page,
+                      watch: watch,
+                      roots: [widget.chat.folder, ?widget.chat.worktree?.path],
+                    ),
+                    (_, final diagram?) => (watch) => DiagramView(
+                      host: diagram,
+                      watch: watch,
+                    ),
+                    _ => null,
                   },
                 ),
               ),
-            );
-          },
-        ),
-        Expanded(
-          child: ColoredBox(
-            color: t.base,
-            child: PreviewBody(
-              watch: _watch,
-              source: _source,
-              onReveal: _reveal,
-              page: switch ((page, diagram)) {
-                (final page?, _) => (watch) => WebPage(
-                  host: page,
-                  watch: watch,
-                  roots: [widget.chat.folder, ?widget.chat.worktree?.path],
-                ),
-                (_, final diagram?) => (watch) => DiagramView(
-                  host: diagram,
-                  watch: watch,
-                ),
-                _ => null,
-              },
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

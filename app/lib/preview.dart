@@ -11,6 +11,7 @@ import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/preview_text.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -284,7 +285,8 @@ class PreviewNote extends StatelessWidget {
 /// What a preview shows of [watch]'s file, by its kind ([previewKind]):
 /// Markdown rendered, an image, a CSV's table, a page through [page] (the
 /// Mac's web view or the phone's frame, which follow [watch] themselves),
-/// or, for code and with [source], its text highlighted ([SourceView]).
+/// or, for code and with [source], its text highlighted ([SourceView]),
+/// its lines wrapped as [wrapLines] says.
 class PreviewBody extends StatelessWidget {
   const new({
     required this.watch,
@@ -353,7 +355,15 @@ class PreviewBody extends StatelessWidget {
           return CsvTable(text, padding: padding);
         }
         if (kind != PreviewKind.markdown || source) {
-          return SourceView(text, path: watch.path, padding: padding);
+          return ValueListenableBuilder(
+            valueListenable: wrapLines,
+            builder: (context, wrap, _) => SourceView(
+              text,
+              path: watch.path,
+              padding: padding,
+              wrap: wrap,
+            ),
+          );
         }
         return SelectionArea(
           child: SingleChildScrollView(

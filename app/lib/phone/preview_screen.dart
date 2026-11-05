@@ -8,10 +8,14 @@ import 'package:nushi/phone/page_frame.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A file the agent wrote, full screen on the phone, from its tool row's
-/// Preview: Back, Live, and Preview or Source for a file that renders.
+/// Preview: Back, Live, wrapping the lines or not while it shows a source
+/// (the Mac's
+/// preference, [wrapLines]; no key), and Preview or Source for a file
+/// that renders.
 /// A page (HTML, SVG) shows in a sandboxed frame ([PageFrame]) without the
 /// files beside it, a Mermaid diagram in one too ([DiagramFrame]); a PDF
 /// only on the Mac. Read-only.
@@ -53,6 +57,13 @@ class _PreviewScreenState extends State<PreviewScreen> {
     super.dispose();
   }
 
+  /// Whether it shows the file's text: code, or the Source of one that
+  /// renders (a PDF shows nothing here).
+  bool get _showsSource => switch (previewKind(widget.path)) {
+    PreviewKind.code || null => true,
+    final k => k.rendered && _source,
+  };
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _watch,
@@ -63,6 +74,30 @@ class _PreviewScreenState extends State<PreviewScreen> {
           LiveMark(size: 13, version: _watch.file),
           const SizedBox(width: 10),
         ],
+        if (_showsSource)
+          ValueListenableBuilder(
+            valueListenable: wrapLines,
+            // Tinted while they wrap, as the Mac's button is held.
+            builder: (context, wrap, _) => Stack(
+              alignment: Alignment.center,
+              children: [
+                if (wrap)
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: NushiTheme.of(context).t.hover,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                PhoneIcon(
+                  Icons.wrap_text,
+                  label: wrapLabel(wrap: wrap),
+                  onTap: toggleWrap,
+                ),
+              ],
+            ),
+          ),
         if (previewKind(widget.path)?.rendered ?? false)
           SourceSwitch(
             source: _source,
