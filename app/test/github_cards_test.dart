@@ -13,8 +13,8 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'github_fixture.dart' show openView;
 import 'github_inbox_test.dart' show inboxForTests;
-import 'github_view_test.dart' show openView;
 import 'harness.dart';
 
 /// The cards' titles, top to bottom.

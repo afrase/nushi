@@ -9,7 +9,7 @@ import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show item;
+import 'github_fixture.dart' show item;
 import 'harness.dart';
 
 Widget _app(Widget child, {Tokens tokens = Tokens.dark, bool still = false}) =>

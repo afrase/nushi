@@ -16,7 +16,7 @@ import 'package:nushi/github_view.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show openView, pull, testNow;
+import 'github_fixture.dart' show openView, pull, testNow;
 import 'harness.dart';
 
 /// The GitHub view in the chat's place as the app has it (main.dart's

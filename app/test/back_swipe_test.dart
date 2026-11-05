@@ -7,7 +7,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_pull.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show openView;
+import 'github_fixture.dart' show openView;
 import 'harness.dart';
 
 /// Two fingers on the trackpad at [at], panning [pan] in five moves; let

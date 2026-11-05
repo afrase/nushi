@@ -11,7 +11,7 @@ import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show item, pull;
+import 'github_fixture.dart' show item, pull;
 import 'harness.dart';
 
 GitHubLink _link(int n) => GitHubLink(

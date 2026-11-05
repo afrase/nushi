@@ -12,7 +12,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show pull;
+import 'github_fixture.dart' show pull;
 import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';

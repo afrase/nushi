@@ -17,7 +17,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show item, openView, testNow;
+import 'github_fixture.dart' show item, openView, testNow;
 import 'harness.dart';
 
 /// An inbox with new and old items, long titles and every badge.

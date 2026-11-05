@@ -17,7 +17,7 @@ import 'package:nushi/pull_widget_parts.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
-import 'github_view_test.dart' show item, pull;
+import 'github_fixture.dart' show item, pull;
 import 'harness.dart';
 
 const _repo = 'afrase/nushi-gh-test';
