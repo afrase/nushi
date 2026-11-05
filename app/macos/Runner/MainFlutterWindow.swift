@@ -36,9 +36,14 @@ class MainFlutterWindow: NSWindow {
         switch call.method {
         case "drag":
           // The channel is late: only a press still held moves the window,
-          // or it would follow a pointer already let go.
+          // or it would follow a pointer already let go, and only the press
+          // the pan began on (its event's time, in the engine's
+          // microseconds of NSEvent.timestamp), or a pan of a press let go
+          // would move the window with the next one held (on a sidebar
+          // row, say). A millisecond spares the engine's rounding down.
+          let began = (call.arguments as? NSNumber).map { $0.doubleValue / 1_000_000 }
           if let self, let event = self.currentEvent, event.type == .leftMouseDragged || event.type == .leftMouseDown,
-            NSEvent.pressedMouseButtons & 1 != 0 {
+            NSEvent.pressedMouseButtons & 1 != 0, began.map({ $0 + 0.001 >= self.downAt }) ?? true {
             self.placement.dragBegan()
             self.performDrag(with: event)
             self.letGoInFlutter()
@@ -153,6 +158,7 @@ class MainFlutterWindow: NSWindow {
       switch event.type {
       case .leftMouseDown, .leftMouseUp:
         self.pressed = event.type == .leftMouseDown
+        if event.type == .leftMouseDown { self.downAt = event.timestamp }
         if event.type == .leftMouseUp { self.lastUp = (event.clickCount, event.timestamp) }
         if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
       case .keyDown:
@@ -228,6 +234,9 @@ class MainFlutterWindow: NSWindow {
   private var swipeMonitor: Any?
   private var pressMonitor: Any?
   private var pressed = false
+  /// When the last press went down (NSEvent.timestamp): a header's late
+  /// "drag" for an earlier press moves nothing.
+  private var downAt: TimeInterval = 0
   /// The last release's click count and timestamp, for the header's
   /// double click.
   private var lastUp: (count: Int, at: TimeInterval)?

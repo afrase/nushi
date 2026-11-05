@@ -37,7 +37,8 @@ class _WindowDragState extends State<WindowDrag> {
   DoubleClick _click = DoubleClick();
   final GlobalKey _content = GlobalKey();
 
-  void _send(String method) => _channel.invokeMethod<void>(method).ignore();
+  void _send(String method, [Object? arguments]) =>
+      _channel.invokeMethod<void>(method, arguments).ignore();
 
   /// A click: on or beside the bar's content it's no click of the bar's,
   /// and the next one starts a double click afresh.
@@ -63,7 +64,11 @@ class _WindowDragState extends State<WindowDrag> {
         else ...[
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onPanStart: (_) => _send('drag'),
+            // When the pan's press was, in the engine's microseconds of the
+            // event's own timestamp: the call can come late, after that
+            // press is let go and another one is held, and the window
+            // moves only with the press the pan began on.
+            onPanStart: (d) => _send('drag', d.sourceTimeStamp?.inMicroseconds),
             onTapUp: (d) => _clicked(d.globalPosition),
           ),
           _Content(key: _content, child: layers),

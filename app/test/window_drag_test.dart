@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -140,6 +141,56 @@ void main() {
         await _drag(tester, at);
         expect(calls, ['drag'], reason: name);
       }
+      d.dispose();
+    });
+
+    // The call is late in a stall, after its press is let go and another
+    // is held: it carries when its press was, in the engine's microseconds,
+    // so the Mac moves the window only with that press (MainFlutterWindow).
+    testWidgets('a drag says when its press was', (tester) async {
+      final sent = <Object?>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            ..setMockMethodCallHandler(const MethodChannel('nushi/window'), (
+              c,
+            ) async {
+              sent.add(c.arguments);
+              return null;
+            });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(
+          const MethodChannel('nushi/window'),
+          null,
+        ),
+      );
+      final (d, _) = await _header(tester);
+      final at = tester.getCenter(find.text('Fix the login'));
+      final pointer = TestPointer(1, PointerDeviceKind.mouse);
+      const down = Duration(seconds: 500);
+      await tester.sendEventToBinding(pointer.down(at, timeStamp: down));
+      for (var i = 1; i <= 5; i++) {
+        await tester.sendEventToBinding(
+          pointer.move(
+            at + Offset(i * 10.0, 0),
+            timeStamp: down + Duration(milliseconds: i * 16),
+          ),
+        );
+      }
+      await tester.sendEventToBinding(
+        pointer.up(timeStamp: down + const Duration(milliseconds: 100)),
+      );
+      await tester.pumpAndSettle();
+      expect(sent, hasLength(1));
+      expect(
+        sent.single,
+        allOf(
+          isA<int>(),
+          inInclusiveRange(
+            down.inMicroseconds,
+            (down + const Duration(milliseconds: 100)).inMicroseconds,
+          ),
+        ),
+      );
       d.dispose();
     });
 
