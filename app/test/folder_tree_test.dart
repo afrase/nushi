@@ -79,4 +79,49 @@ void main() {
     expect(git.paths, ['new.dart']);
     await closeView(tester, d);
   });
+
+  testWidgets('revealing a file in a folder git ignores, while they’re '
+      'hidden, watches no folder that has no row', (tester) async {
+    final live = <String>{};
+    final fake = FakeDaemon([])
+      ..streams = (input) {
+        if (input is! WatchChatFolderRequest) return null;
+        final s = StreamController<WatchChatFolderResponse>();
+        addTearDown(s.close);
+        live.add(input.path);
+        s
+          ..onCancel = (() => live.remove(input.path))
+          // What git ignores is left out: the chat's folder shows src/ only.
+          ..add(
+            WatchChatFolderResponse(
+              folders: [
+                FolderListing(
+                  path: input.path,
+                  entries: [
+                    if (input.path.isEmpty)
+                      FolderEntry(name: 'src', kind: 'folder'),
+                  ],
+                ),
+              ],
+            ),
+          );
+        return s.stream;
+      };
+    final d = await fake.connect(tester);
+    final tree = folderTreeOf(ChatState('c', '/tmp/c'))..attach(d);
+    await tester.pump();
+    tree.reveal('node_modules/pkg/dist/index.js');
+    await tester.pump();
+    expect(tree.settleReveal(tree.rows()), '');
+    await tester.pump();
+    expect(live, {''});
+    // Opened before the folder above lists, it's let go once that comes.
+    tree.reveal('build/out/a.js');
+    expect(tree.rows().map((r) => r.path), ['src']);
+    await tester.pump();
+    expect(live, {''});
+    tree.detach();
+    await tester.pump();
+    await closeView(tester, d);
+  });
 }

@@ -122,12 +122,29 @@ class FolderTree extends ChangeNotifier {
   }
 
   /// The folders whose entries show: the chat's, and each open one whose
-  /// folders above are open too.
-  Set<String> get _shown => {
-    '',
-    for (final f in open)
-      if (_ancestors(f).every(open.contains)) f,
-  };
+  /// folder shows and lists it as a folder (or isn't listed yet). One a
+  /// reveal opened that has no row (git ignores it while they're hidden,
+  /// or it's past the listing's end) isn't watched: no row shows it, and
+  /// none could close it.
+  Set<String> get _shown {
+    final shown = {''};
+    // A folder's path is longer than those above it: they come first.
+    for (final f in [...open]..sort((a, b) => a.length - b.length)) {
+      final parent = parentOf(f);
+      if (shown.contains(parent) && _hasRow(parent, f)) shown.add(f);
+    }
+    return shown;
+  }
+
+  /// Whether [parent]'s listing has [folder] as a folder's row; true while
+  /// it hasn't come.
+  bool _hasRow(String parent, String folder) {
+    if (_refused.containsKey(parent)) return false;
+    final l = _listed[parent];
+    if (l == null) return true;
+    final name = folder.substring(folder.lastIndexOf('/') + 1);
+    return l.entries.any((e) => e.name == name && e.kind == 'folder');
+  }
 
   void _sync() {
     if (chat.folder != _folder) {
