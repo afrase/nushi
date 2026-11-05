@@ -8,7 +8,7 @@ The owner asked for the composer's + to attach any file, not only images (2026-1
 - **No embedded text, even for a small text file to an agent that takes it.** The agents replay a user message as they were sent it, so an embedded file would come back as the user's words, whole, on every reopen; and an agent that reads by path costs one tool call for it.
 - **An image goes as an image** when the agent takes images, as before; to one that doesn't, it is a file like any other.
 - **No sandbox stands between an agent and a linked file**: Nushi runs no agent under `sandbox-exec` (`readonly` runs only a CLI's `--version`, and allows reads anyway), and Codex's read-only mode limits writes, not reads.
-- **The phone's files come whole** (`SendPromptRequest.uploads`): the daemon saves each in its data folder's `uploads/<chat>/<random>/<name>` (the name's last part only, 0600) and links that copy. At most 8 MB a file and 10 files a message; a chat keeps 100 MB of them, the oldest removed first, and deleting the chat removes them.
+- **The phone's files come whole** (`SendPromptRequest.uploads`): the daemon saves each in its data folder's `uploads/<chat>/<random>/<name>` (the name's last part only, 0600) and links that copy. At most 8 MB a file and 10 files a message; a chat keeps 100 MB of them, the oldest removed first (never a queued message's, which the agent hasn't had), and deleting the chat removes them.
 - The transcript's user message lists its files (`Item.files`); those its text doesn't mention as `@path` show as file chips.
 
 ## Consequences

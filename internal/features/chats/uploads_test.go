@@ -107,7 +107,7 @@ func TestUploadsKeepTheNewest(t *testing.T) {
 		at := time.Now().Add(time.Duration(i-3) * time.Hour)
 		testcheck.NoErr(t, os.Chtimes(filepath.Join(dir, name, name+".bin"), at, at))
 	}
-	pruneUploads(dir, 20)
+	pruneUploads(dir, 20, nil)
 	entries, _ := os.ReadDir(dir)
 	var left []string
 	for _, e := range entries {
@@ -138,5 +138,91 @@ func TestUploadName(t *testing.T) {
 	}
 	if got := uploadName(long); len(got) > 120 || !strings.HasSuffix(got, ".pdf") || !strings.HasPrefix(got, "é") {
 		t.Errorf("a long name: %q (%d bytes)", got, len(got))
+	}
+}
+
+// A message the chat refuses saves none of its uploads: the agent is busy
+// and it isn't queued, or the chat is archived.
+func TestARefusedMessageSavesNoUploads(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc.uploads = t.TempDir()
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.started.IsZero() })
+	up := model.Message{Text: "two", Uploads: []model.Upload{{Name: "a.txt", Data: []byte("secret")}}}
+	if svc.Prompt(t.Context(), c.id, up, SendIdle) == nil {
+		t.Fatal("a busy chat took a message without queueing it")
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	c.mu.Lock()
+	c.record.Archived = true
+	c.mu.Unlock()
+	if svc.Prompt(t.Context(), c.id, up, SendQueue) == nil {
+		t.Fatal("an archived chat took a message")
+	}
+	if entries, _ := os.ReadDir(filepath.Join(svc.uploads, c.id)); len(entries) != 0 {
+		t.Errorf("refused messages left %d uploads", len(entries))
+	}
+}
+
+// Pruning a chat's uploads leaves those of the messages in its queue: the
+// agent hasn't had them yet.
+func TestPruningLeavesTheQueuesUploads(t *testing.T) {
+	was := maxChatUploads
+	maxChatUploads = 10
+	t.Cleanup(func() { maxChatUploads = was })
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc.uploads = t.TempDir()
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.started.IsZero() })
+	for _, name := range []string{"first.txt", "second.txt"} {
+		up := model.Message{Text: name, Uploads: []model.Upload{{Name: name, Data: []byte("8 bytes!")}}}
+		testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up, SendQueue))
+	}
+	c.mu.Lock()
+	queued := c.queuedUploadsLocked()
+	c.mu.Unlock()
+	for _, f := range queued {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("a queued message's file went: %v", err)
+		}
+	}
+	if len(queued) != 2 {
+		t.Errorf("queued files %q", queued)
+	}
+	for n := 2; n <= 3; n++ {
+		agent.release()
+		eventually(t, c, func() bool { prompts, _ := agent.texts(); return len(prompts) == n })
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+}
+
+// A terminal command's uploads go with the prompt after it, and none is
+// left behind when the command's message is refused.
+func TestACommandsUploads(t *testing.T) {
+	svc, agent, c := newChat(t, claudeSession, &memModes{})
+	svc.uploads = t.TempDir()
+	agent.gate = make(chan struct{})
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.started.IsZero() })
+	up := func(text string) model.Message {
+		return model.Message{Text: text, Uploads: []model.Upload{{Name: "a.txt", Data: []byte("hi")}}}
+	}
+	if svc.Prompt(t.Context(), c.id, up("/plan now"), SendIdle) == nil {
+		t.Fatal("a busy chat took the command's prompt")
+	}
+	if entries, _ := os.ReadDir(filepath.Join(svc.uploads, c.id)); len(entries) != 0 {
+		t.Errorf("a refused command left %d uploads", len(entries))
+	}
+	agent.release()
+	eventually(t, c, func() bool { return !c.busy })
+	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, up("/plan"), SendIdle))
+	eventually(t, c, func() bool { prompts, _ := agent.texts(); return len(prompts) == 2 })
+	agent.release()
+	if p := sent(t, c, agent); len(p) != 2 || p[1].ResourceLink == nil || !strings.HasSuffix(p[1].ResourceLink.URI, "/a.txt") {
+		t.Errorf("prompt %+v", p)
 	}
 }

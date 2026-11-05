@@ -28,26 +28,42 @@ const (
 )
 
 // Prompt sends a message to the chat's agent, with links to the files it
-// mentions or attaches (a device's uploads saved first) and its images. The turn runs in the background; its progress
+// mentions or attaches (a device's uploads saved once the chat takes it)
+// and its images. The turn runs in the background; its progress
 // arrives as events. A chat whose agent isn't running is reopened, and the
 // message waits in the queue until it is. SendNow waits for the stopped
 // turn to end, or for ctx: an agent that ignores the cancel doesn't keep
 // the call. A message that is one of the commands Nushi runs in the agent's
 // place (TerminalCommands) is run here instead.
 func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, how Send) error {
-	if len(m.Uploads) > 0 {
-		c, err := s.chat(chatID)
-		if err != nil {
-			return err
-		}
-		if err := s.saveUploads(c, &m); err != nil {
-			return err
-		}
+	if err := s.checkUploads(m); err != nil {
+		return err
 	}
 	if c, cmd, ok := s.terminalCommandOf(chatID, m); ok {
-		return s.terminalCommand(ctx, c, m, cmd, how)
+		return s.uploadThenCommand(ctx, c, m, cmd, how)
 	}
-	return s.prompt(ctx, chatID, m, how)
+	return s.prompt(ctx, chatID, m, how) // saves the uploads once the chat takes m
+}
+
+// uploadThenCommand runs a terminal command whose message uploads files:
+// they are saved first, as the command goes by its files too, and go again
+// when the message doesn't.
+func (s *Service) uploadThenCommand(ctx context.Context, c *chat, m model.Message, cmd model.OptionCommand, how Send) error {
+	n := len(m.Files)
+	c.mu.Lock()
+	err := s.refusesLocked(c)
+	if err == nil {
+		err = s.saveUploadsLocked(c, &m)
+	}
+	c.mu.Unlock()
+	if err != nil {
+		return err
+	}
+	if err := s.terminalCommand(ctx, c, m, cmd, how); err != nil {
+		s.dropUploads(c.id, m.Files[n:])
+		return err
+	}
+	return nil
 }
 
 // prompt is Prompt's, for a message that goes to the agent as it is.
@@ -103,6 +119,19 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 	if err := c.toSubagentOfLocked(&m); err != nil {
 		return err
 	}
+	queue := c.reopeningLocked() || c.busy && how == SendQueue
+	switch {
+	case queue:
+	case c.busy:
+		return errors.New("the agent is still working on the last prompt")
+	case len(m.Images) > 0 && !c.canImage:
+		return errors.New("the agent doesn't take images")
+	}
+	// Taken: its uploads are saved now, under the lock, and nothing refuses
+	// it after them.
+	if err := s.saveUploadsLocked(c, &m); err != nil {
+		return err
+	}
 	switch {
 	case c.reopeningLocked() && c.held:
 		// A new message is the held queue's chance, and goes ahead of it,
@@ -112,14 +141,10 @@ func (s *Service) prompt(ctx context.Context, chatID string, m model.Message, ho
 		c.queue = append([]model.Message{m}, c.queue...)
 		c.queueChangedLocked()
 		c.held = false
-	case c.reopeningLocked() || c.busy && how == SendQueue:
+	case queue:
 		m.ID = rand.Text()
 		c.queue = append(c.queue, m)
 		c.queueChangedLocked()
-	case c.busy:
-		return errors.New("the agent is still working on the last prompt")
-	case len(m.Images) > 0 && !c.canImage:
-		return errors.New("the agent doesn't take images")
 	default:
 		c.sendLocked(m)
 		sent = true
