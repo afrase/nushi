@@ -352,14 +352,29 @@ func IgnoredOf(ctx context.Context, folder string, paths []string) map[string]bo
 	if len(paths) == 0 {
 		return nil
 	}
+	// check-ignore reads each line as a pathspec, and refuses the whole
+	// run (exit 128) on magic such as ":!x": a name starting with ":" is
+	// asked as "./" and its name, which git echoes back as given.
+	// GIT_LITERAL_PATHSPECS doesn't reach check-ignore.
+	asked, as := make([]string, len(paths)), map[string]string{}
+	for i, p := range paths {
+		asked[i] = p
+		if strings.HasPrefix(p, ":") {
+			asked[i] = "./" + p
+			as[asked[i]] = p
+		}
+	}
 	cmd := command(ctx, folder, nil, "check-ignore", "-z", "--stdin")
-	cmd.Stdin = strings.NewReader(strings.Join(paths, "\x00") + "\x00")
+	cmd.Stdin = strings.NewReader(strings.Join(asked, "\x00") + "\x00")
 	out, err := cmd.Output() // exit 1: none ignored; 128: not a repository
 	if err != nil {
 		return nil
 	}
 	ignored := map[string]bool{}
 	for _, p := range split(out) {
+		if named, ok := as[p]; ok {
+			p = named
+		}
 		ignored[p] = true
 	}
 	return ignored

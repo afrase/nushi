@@ -278,3 +278,18 @@ func TestDotFolderKeepsItsPath(t *testing.T) {
 	cancel()
 	testcheck.NoErr(t, <-done)
 }
+
+// A name git would read as pathspec magic (":!x") doesn't stop git saying
+// what the rest of its folder ignores.
+func TestPathspecMagicNamesDontHideIgnores(t *testing.T) {
+	root := t.TempDir()
+	testcheck.Git(t, root, "init", "-q")
+	testcheck.Write(t, filepath.Join(root, ".gitignore"), "*.log\n:(exclude)*\n")
+	testcheck.Write(t, filepath.Join(root, "a.log"), "")
+	testcheck.Write(t, filepath.Join(root, ":!notes"), "")
+	testcheck.Write(t, filepath.Join(root, ":(exclude)x", "b.md"), "")
+	want := []string{":(exclude)x/!", ".gitignore", ":!notes", "a.log!"}
+	if got := names(listOf(t, root, ".", Options{Ignored: true})[0]); !slices.Equal(got, want) {
+		t.Errorf("names = %q, want %q", got, want)
+	}
+}
