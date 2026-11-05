@@ -209,6 +209,18 @@ class FolderTree extends ChangeNotifier {
   /// Lists everything again for what [filesIgnored] says: what shows
   /// meanwhile stays, so nothing blinks.
   void _ignoredChanged() {
+    // Hidden now: what git ignores goes from what's kept at once, from the
+    // rows and the filter alike; the rest stays till listed again.
+    if (!filesIgnored.value) {
+      _listed.updateAll(
+        (_, l) => FolderListing(
+          path: l.path,
+          entries: l.entries.where((e) => !e.ignored),
+          more: l.more,
+          missing: l.missing,
+        ),
+      );
+    }
     for (final s in _subs.values) {
       unawaited(s.cancel());
     }
@@ -217,10 +229,13 @@ class FolderTree extends ChangeNotifier {
     _sync();
   }
 
-  /// Every file listed so far (the ignored too, while they show), by
-  /// path: what a filter looks through besides git's list.
+  /// Every file listed in the folders that show (the ignored too, while
+  /// they show), by path: what a filter looks through besides git's list.
+  /// A closed folder's last listing is left out: it may be long gone.
   Iterable<String> get listedFiles sync* {
+    final shown = _shown;
     for (final l in _listed.values) {
+      if (!shown.contains(l.path)) continue;
       for (final e in l.entries) {
         if (e.kind == 'file') {
           yield l.path.isEmpty ? e.name : '${l.path}/${e.name}';

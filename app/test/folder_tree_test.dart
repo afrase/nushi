@@ -10,6 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/file_filter.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -120,6 +121,51 @@ void main() {
     expect(tree.rows().map((r) => r.path), ['src']);
     await tester.pump();
     expect(live, {''});
+    tree.detach();
+    await tester.pump();
+    await closeView(tester, d);
+  });
+
+  testWidgets('the filter looks only in folders that show, and drops what '
+      'git ignores as they hide', (tester) async {
+    var asked = 0;
+    final fake = FakeDaemon([])
+      ..streams = (input) {
+        if (input is! WatchChatFolderRequest) return null;
+        final s = StreamController<WatchChatFolderResponse>();
+        addTearDown(s.close);
+        // Asked again with the ignored hidden, it hasn't answered yet.
+        if (asked++ > 1) return s.stream;
+        final all = switch (input.path) {
+          '' => [
+            FolderEntry(name: 'build', kind: 'folder', ignored: true),
+            FolderEntry(name: 'debug.log', kind: 'file', ignored: true),
+            FolderEntry(name: 'main.dart', kind: 'file'),
+          ],
+          'build' => [FolderEntry(name: 'out.js', kind: 'file', ignored: true)],
+          _ => <FolderEntry>[],
+        };
+        s.add(
+          WatchChatFolderResponse(
+            folders: [FolderListing(path: input.path, entries: all)],
+          ),
+        );
+        return s.stream;
+      };
+    final d = await fake.connect(tester);
+    filesIgnored.value = true;
+    final tree = folderTreeOf(ChatState('c', '/tmp/c'))..attach(d);
+    await tester.pump();
+    tree.setOpen('build', open: true);
+    await tester.pump();
+    expect(tree.listedFiles, containsAll(['build/out.js', 'debug.log']));
+    tree.setOpen('build', open: false);
+    await tester.pump();
+    expect(tree.listedFiles, isNot(contains('build/out.js')));
+    filesIgnored.value = false;
+    await tester.pump();
+    expect(tree.listedFiles, ['main.dart']);
+    expect(tree.rows().map((r) => r.path), ['main.dart']);
     tree.detach();
     await tester.pump();
     await closeView(tester, d);

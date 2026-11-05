@@ -124,8 +124,8 @@ class GitFiles extends ChangeNotifier {
 }
 
 /// The paths a filter looks through: the folder's files as git lists them
-/// ([GitFiles]), and every file listed so far, the ignored too while they
-/// show.
+/// ([GitFiles]), and every file listed in the folders that show, the
+/// ignored too while they show.
 Set<String> filterPaths(FolderTree tree, List<String> gitFiles) => {
   ...gitFiles,
   ...tree.listedFiles,
