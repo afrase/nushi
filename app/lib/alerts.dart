@@ -179,7 +179,15 @@ class MacAlerts {
   /// when there is one.
   void _post(String id, AlertKind kind, [String detail = '']) {
     final chat = daemon.chats[id];
-    if (!kind.on || chat == null || chat.archived) return;
+    if (chat == null || chat.archived) return;
+    if (!kind.on) {
+      // A turn's end the user doesn't want still takes the place of the
+      // one before: a Try again that worked leaves no failure behind.
+      if (kind.slot == 'ended' && _posted.contains(id)) {
+        channel.invokeMethod<Object?>('withdraw', ['$id/ended']).ignore();
+      }
+      return;
+    }
     if (_focused && daemon.macView.showing == id) return;
     _posted.add(id);
     if (kind == AlertKind.permission || kind == AlertKind.question) {

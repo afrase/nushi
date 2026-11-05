@@ -256,6 +256,35 @@ void main() {
     d.dispose();
   });
 
+  // A turn's end takes the place of the one before even when its kind is
+  // off: a Try again that worked (on the phone, say) leaves no stale
+  // failure.
+  testWidgets('with "A turn ends" off, a turn that then ends well takes '
+      'back the failure before it', (tester) async {
+    final swift = _fake();
+    final (fake, d, alerts) = await _connect(tester);
+    alertFinished.value = false;
+    fake
+      ..emit(_status('a', running: true))
+      ..emit(_ended('a', TurnEnd.TURN_END_FAILED, 'overloaded'));
+    await tester.pump(const Duration(seconds: 3));
+    expect(swift.posted(), ["Claude's turn failed"]);
+    fake
+      ..emit(_status('a', running: true))
+      ..emit(_ended('a', TurnEnd.TURN_END_DONE));
+    await tester.pump(const Duration(seconds: 3));
+    expect(swift.posted(), ["Claude's turn failed"]);
+    final withdrawn = [
+      for (final c in swift.calls)
+        if (c.method == 'withdraw') c.arguments,
+    ];
+    expect(withdrawn, [
+      ['a/ended'],
+    ]);
+    alerts.dispose();
+    d.dispose();
+  });
+
   testWidgets('the Dock badge counts the chats that need you, and goes '
       'when turned off', (tester) async {
     final swift = _fake();
