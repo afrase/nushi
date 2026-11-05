@@ -334,7 +334,11 @@ class _ComposerState extends State<Composer> {
     // To an idle chat it shows in the transcript at once, faint until the
     // daemon's echo; not a queued one (a pill) nor one for a subagent.
     final shown = !busy && m.toSubagent == null && !chat.asleep
-        ? chat.send(message, m.images, files: files) // uploads once saved
+        ? chat.outbox.send(
+            message,
+            m.images,
+            files: files, // uploads once saved
+          )
         : null;
     try {
       final r = await widget.daemon.sendPrompt(
@@ -350,12 +354,14 @@ class _ComposerState extends State<Composer> {
         ),
       );
       // A command the daemon ran (Claude's /plan) has no echo to wait for.
-      if (shown != null) r.ranCommand ? chat.ran(shown) : chat.sent(shown);
+      if (shown != null) {
+        r.ranCommand ? chat.outbox.ran(shown) : chat.outbox.sent(shown);
+      }
     } on Object catch (e) {
       // It fades out of the transcript as it goes back in the box.
       if (shown != null) {
         final still = mounted && reduceMotion(context);
-        chat.unsend(shown, fade: still ? Duration.zero : Motion.exit);
+        chat.outbox.unsend(shown, fade: still ? Duration.zero : Motion.exit);
       }
       // Back in the draft (it outlives the box), before what was typed since.
       _draft.putBack(m);

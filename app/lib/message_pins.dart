@@ -29,7 +29,7 @@ bool canPinMessage(Daemon d, ChatState chat, Item item, {required bool live}) =>
     identical(d.chats[chat.id], chat) &&
     _pinnable(item) &&
     !live &&
-    !chat.sending.contains(item);
+    !chat.outbox.sending.contains(item);
 
 /// [chat]'s pins as the rail lists them, in the transcript's order: those
 /// on pages not loaded yet first (which are older), then those

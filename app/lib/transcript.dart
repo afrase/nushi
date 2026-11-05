@@ -312,15 +312,15 @@ class _TranscriptState extends State<Transcript> {
   bool get _pages => widget.items == null && !widget.daemon.remote;
 
   /// An entry's key; a message's echo keeps the key of the message shown
-  /// as it was on its way (ChatState.echoes).
+  /// as it was on its way (Outbox.echoes).
   String _key(Object e) =>
-      e is Item ? widget.chat.echoes[e.id] ?? e.id : _keyOf(e);
+      e is Item ? widget.chat.outbox.echoes[e.id] ?? e.id : _keyOf(e);
 
   /// Where a message this app sent is: 0 shown by the daemon (or not a
   /// message on its way), 1 on its way, 2 failed and going.
   int _sendState(Object e) {
-    if (e is! Item || !widget.chat.sending.contains(e)) return 0;
-    return widget.chat.unsent.contains(e.id) ? 2 : 1;
+    if (e is! Item || !widget.chat.outbox.sending.contains(e)) return 0;
+    return widget.chat.outbox.unsent.contains(e.id) ? 2 : 1;
   }
 
   /// An entry's widget, the one built before if its items are the same:
@@ -908,7 +908,9 @@ class _TranscriptState extends State<Transcript> {
   Widget build(BuildContext context) {
     final chat = widget.chat;
     // What this app sent shows at once, after the items, until its echo.
-    final entries = _entries(widget.items ?? [...chat.items, ...chat.sending]);
+    final entries = _entries(
+      widget.items ?? [...chat.items, ...chat.outbox.sending],
+    );
     final query = widget.items == null ? chat.find.query ?? '' : '';
     final header =
         widget.header ??

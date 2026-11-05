@@ -83,14 +83,14 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
     expect(fake.calls.whereType<SendPromptRequest>().single.text, '/plan');
-    expect(chat.sending, isEmpty);
+    expect(chat.outbox.sending, isEmpty);
 
     // Any other message waits for its echo, as before.
     await tester.enterText(find.byType(TextField), 'hello');
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pump();
-    expect(chat.sending.map((it) => it.text), ['hello']);
+    expect(chat.outbox.sending.map((it) => it.text), ['hello']);
     d.dispose();
   }, variant: _mac);
 
