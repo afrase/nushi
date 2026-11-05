@@ -6,6 +6,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'harness.dart';
+
 Item _subagent(String state) => Item(
   id: 'a',
   kind: ItemKind.ITEM_KIND_TOOL_CALL,
@@ -19,21 +21,19 @@ void main() {
   Future<bool?> ask(WidgetTester tester, ChatState chat) async {
     bool? answer;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.light).toThemeData(),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async => answer = await stopsBackground(
-                context,
-                chat,
-                'Sleep the chat?',
-                'Sleep',
-              ),
-              child: const Text('go'),
+      themed(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => answer = await stopsBackground(
+              context,
+              chat,
+              'Sleep the chat?',
+              'Sleep',
             ),
+            child: const Text('go'),
           ),
         ),
+        tokens: Tokens.light,
       ),
     );
     await tester.tap(find.text('go'));
@@ -95,14 +95,11 @@ void main() {
 
   testWidgets('a subagent stopped with its agent says so', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SubagentLine((
-            call: _subagent('stopped'),
-            items: <Item>[],
-          ), ChatState('c', '/x')),
-        ),
+      themed(
+        SubagentLine((
+          call: _subagent('stopped'),
+          items: <Item>[],
+        ), ChatState('c', '/x')),
       ),
     );
     expect(find.text('stopped'), findsOneWidget);

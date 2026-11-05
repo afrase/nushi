@@ -16,25 +16,23 @@ import 'harness.dart';
 
 /// The banner over an empty app, and a button running [onGo].
 Widget _app(Tokens tokens, Daemon d, [void Function(BuildContext)? onGo]) =>
-    MaterialApp(
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Scaffold(
-        body: Column(
-          children: [
-            RepaintBoundary(child: DaemonBanner(d)),
-            Expanded(
-              child: Builder(
-                builder: (context) => Center(
-                  child: TextButton(
-                    onPressed: () => onGo?.call(context),
-                    child: const Text('go'),
-                  ),
+    themed(
+      Column(
+        children: [
+          RepaintBoundary(child: DaemonBanner(d)),
+          Expanded(
+            child: Builder(
+              builder: (context) => Center(
+                child: TextButton(
+                  onPressed: () => onGo?.call(context),
+                  child: const Text('go'),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+      tokens: tokens,
     );
 
 /// A daemon whose ping answers as [phase] says: 'old', 'gone' (none

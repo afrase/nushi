@@ -17,18 +17,16 @@ void main() {
     testWidgets('golden, a failed call, $name', (tester) async {
       viewport(tester, const Size(240, 56), ratio: 4);
       await tester.pumpWidget(
-        MaterialApp(
-          theme: NushiTheme(tokens).toThemeData(),
-          home: const Scaffold(
-            body: Padding(
-              padding: EdgeInsets.all(12),
-              child: Collapsible(
-                header: Text(r'$ cd ~/x'),
-                body: SizedBox(height: 20),
-                failed: true,
-              ),
+        themed(
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Collapsible(
+              header: Text(r'$ cd ~/x'),
+              body: SizedBox(height: 20),
+              failed: true,
             ),
           ),
+          tokens: tokens,
         ),
       );
       await expectLater(

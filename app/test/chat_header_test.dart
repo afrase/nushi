@@ -29,19 +29,16 @@ void main() {
           ),
         ];
       await tester.pumpWidget(
-        MaterialApp(
-          theme: const NushiTheme(Tokens.dark).toThemeData(),
-          home: Scaffold(
-            body: SizedBox(
-              width: width,
-              child: ChatHeader(
-                chat,
-                d,
-                tab: ChatTab.chat,
-                onTab: (_) {},
-                panel: true,
-                onPanel: () {},
-              ),
+        themed(
+          SizedBox(
+            width: width,
+            child: ChatHeader(
+              chat,
+              d,
+              tab: ChatTab.chat,
+              onTab: (_) {},
+              panel: true,
+              onPanel: () {},
             ),
           ),
         ),
@@ -68,19 +65,16 @@ void main() {
         ),
       ];
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SizedBox(
-            width: 1200,
-            child: ChatHeader(
-              chat,
-              d,
-              tab: ChatTab.chat,
-              onTab: (_) {},
-              panel: true,
-              onPanel: () {},
-            ),
+      themed(
+        SizedBox(
+          width: 1200,
+          child: ChatHeader(
+            chat,
+            d,
+            tab: ChatTab.chat,
+            onTab: (_) {},
+            panel: true,
+            onPanel: () {},
           ),
         ),
       ),
@@ -126,21 +120,18 @@ void main() {
           final least = jira.isEmpty ? 320.0 : 400.0;
           for (var width = least; width <= 1200; width += 10) {
             await tester.pumpWidget(
-              MaterialApp(
-                theme: const NushiTheme(Tokens.dark).toThemeData(),
-                home: Scaffold(
-                  body: Align(
-                    alignment: Alignment.topLeft,
-                    child: SizedBox(
-                      width: width,
-                      child: ChatHeader(
-                        chat,
-                        d,
-                        tab: ChatTab.chat,
-                        onTab: (_) {},
-                        panel: false,
-                        onPanel: panel ? () {} : null,
-                      ),
+              themed(
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: width,
+                    child: ChatHeader(
+                      chat,
+                      d,
+                      tab: ChatTab.chat,
+                      onTab: (_) {},
+                      panel: false,
+                      onPanel: panel ? () {} : null,
                     ),
                   ),
                 ),
@@ -166,21 +157,18 @@ void main() {
       ..pull = GitHubLink(number: 12, pull: true);
     ChatTab? picked;
     Future<void> pump(double width) => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: width,
-              child: ChatHeader(
-                chat,
-                d,
-                tab: ChatTab.chat,
-                onTab: (t) => picked = t,
-                panel: false,
-                onPanel: null,
-              ),
+      themed(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: width,
+            child: ChatHeader(
+              chat,
+              d,
+              tab: ChatTab.chat,
+              onTab: (t) => picked = t,
+              panel: false,
+              onPanel: null,
             ),
           ),
         ),
@@ -214,21 +202,18 @@ void main() {
       ..title = 'Fix the login redirect'
       ..pull = GitHubLink(number: 12, pull: true);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: 460,
-              child: ChatHeader(
-                chat,
-                d,
-                tab: ChatTab.changes,
-                onTab: (_) {},
-                panel: false,
-                onPanel: null,
-              ),
+      themed(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 460,
+            child: ChatHeader(
+              chat,
+              d,
+              tab: ChatTab.changes,
+              onTab: (_) {},
+              panel: false,
+              onPanel: null,
             ),
           ),
         ),

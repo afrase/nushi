@@ -68,18 +68,16 @@ Future<Daemon> _panel(
 }) async {
   final d = await fake.connect(tester);
   await tester.pumpWidget(
-    MaterialApp(
-      theme: NushiTheme(tokens).toThemeData(),
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.topLeft,
-          child: SizedBox(
-            width: width,
-            height: 520,
-            child: DetailsPanel(chat: chat, daemon: d, onChanges: () {}),
-          ),
+    themed(
+      Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: width,
+          height: 520,
+          child: DetailsPanel(chat: chat, daemon: d, onChanges: () {}),
         ),
       ),
+      tokens: tokens,
     ),
   );
   await tester.pumpAndSettle();
@@ -235,12 +233,7 @@ void main() {
       text: 'Branch renamed to nushi/bump-go-1-27-3',
     );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ItemView(note, _chat(), d, live: false, still: true),
-        ),
-      ),
+      themed(ItemView(note, _chat(), d, live: false, still: true)),
     );
     expect(find.byIcon(Icons.account_tree_outlined), findsOneWidget);
     final icon = tester.widget<Icon>(find.byIcon(Icons.account_tree_outlined));

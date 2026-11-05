@@ -463,14 +463,7 @@ void main() {
     final fake = _fake();
     final d = await fake.connect(tester);
     final chat = ChatState('c', _repo)..load(GetChatResponse());
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: NewChatBar(chat: chat, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(NewChatBar(chat: chat, daemon: d)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('cappy'));
     await tester.pumpAndSettle();
@@ -506,14 +499,7 @@ void main() {
     gone = true;
     final d2 = await fake.connect(tester);
     final chat = ChatState('c', _repo)..load(GetChatResponse());
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: NewChatBar(chat: chat, daemon: d2),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(NewChatBar(chat: chat, daemon: d2)));
     await tester.pumpAndSettle();
     expect(find.text('New worktree'), findsNothing);
     gone = false;

@@ -7,10 +7,10 @@ import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// Switching what the Changes view shows: a load that takes a moment dims
 /// what's shown under a spinner; a quick one doesn't; an answer overtaken
@@ -52,14 +52,7 @@ void main() {
     chat = ChatState('c', '/x')..scope = 'uncommitted';
     addTearDown(() => chat.scope = null);
     daemon = await fake.connect(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ChangesView(chat: chat, daemon: daemon),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(ChangesView(chat: chat, daemon: daemon)));
     await tester.pump();
     diffs['']!.complete(files(['uncommitted.txt']));
     await tester.pump();
@@ -102,14 +95,7 @@ void main() {
     final chat = ChatState('c', '/lost')..scope = 'uncommitted';
     addTearDown(() => chat.scope = null);
     final d = await fake.connect(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ChangesView(chat: chat, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(ChangesView(chat: chat, daemon: d)));
     await tester.pumpAndSettle();
     expect(find.text('daemon unavailable: connection lost'), findsOneWidget);
     gone = false;

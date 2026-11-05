@@ -81,18 +81,15 @@ void main() {
   testWidgets('an action menu of more than ten rows has no filter field', (
     tester,
   ) async {
-    Widget menu({required bool filter}) => MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Menu(
-          filter: filter,
-          entries: [
-            for (var i = 0; i < 12; i++)
-              MenuEntry('Row $i', icon: Icons.edit_outlined, onPick: () {}),
-          ],
-          builder: (context, open) =>
-              TextButton(onPressed: open, child: const Text('open')),
-        ),
+    Widget menu({required bool filter}) => themed(
+      Menu(
+        filter: filter,
+        entries: [
+          for (var i = 0; i < 12; i++)
+            MenuEntry('Row $i', icon: Icons.edit_outlined, onPick: () {}),
+        ],
+        builder: (context, open) =>
+            TextButton(onPressed: open, child: const Text('open')),
       ),
     );
     await tester.pumpWidget(menu(filter: false));

@@ -5,7 +5,6 @@ import 'package:nushi/background_tasks_widget.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -24,13 +23,10 @@ void main() {
   Future<void> show(WidgetTester tester, ChatState chat, Daemon d) async {
     final widget = backgroundTasksWidget(chat, d)!;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: Column(
-              children: [for (final r in widget.rows) r.$2 as Widget],
-            ),
+      themed(
+        SingleChildScrollView(
+          child: Column(
+            children: [for (final r in widget.rows) r.$2 as Widget],
           ),
         ),
       ),

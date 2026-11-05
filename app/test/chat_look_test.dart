@@ -122,12 +122,7 @@ void main() {
       'starting does', (tester) async {
     final fake = FakeDaemon([chat('a', 'claude', 'Fix the login redirect')]);
     final d = await fake.connect(tester);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: StatusBar(d)),
-      ),
-    );
+    await tester.pumpWidget(themed(StatusBar(d)));
     d.select('a'); // loaded, so its events apply
     await tester.pumpAndSettle();
     var seq = 1;

@@ -7,9 +7,9 @@ import 'package:nushi/alerts_settings.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// The Swift side, faked: what it was asked, and its answer to "status".
 class _Swift {
@@ -292,12 +292,7 @@ void main() {
       'to its settings', (tester) async {
     final swift = _fake()..status = 'denied';
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: const Scaffold(
-          body: SingleChildScrollView(child: NotificationsGroup()),
-        ),
-      ),
+      themed(const SingleChildScrollView(child: NotificationsGroup())),
     );
     await tester.pump();
     expect(
