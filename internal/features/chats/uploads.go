@@ -197,6 +197,50 @@ func pruneUploads(dir string, most int64, keep []string) {
 	}
 }
 
+// adoptUploads gives a new chat made from another's items (a fork, a kept
+// side chat) uploads of its own: each upload the items name is hard-linked
+// into the new chat's folder (copied where it can't be), and the item names
+// that, so deleting the chat they came from, or its pruning, leaves them
+// (ADR 0067). One already gone keeps its path. The agent's own history of
+// the forked session still names the first path.
+func (s *Service) adoptUploads(chatID string, items []model.Item) {
+	if s.uploads == "" {
+		return
+	}
+	root := filepath.Clean(s.uploads)
+	for i := range items {
+		files := slices.Clone(items[i].Files) // the items' files are the chat's too
+		for j, f := range files {
+			own := filepath.Dir(f)
+			from := filepath.Dir(own)
+			if !filepath.IsAbs(f) || filepath.Dir(from) != root || filepath.Base(from) == chatID {
+				continue
+			}
+			to := filepath.Join(root, chatID, filepath.Base(own), filepath.Base(f))
+			if err := linkUpload(f, to); err == nil {
+				files[j] = to
+			}
+		}
+		items[i].Files = files
+	}
+}
+
+// linkUpload makes to the same file as from, a hard link, or a copy where
+// one can't be made.
+func linkUpload(from, to string) error {
+	if err := os.MkdirAll(filepath.Dir(to), 0o700); err != nil {
+		return err
+	}
+	if err := os.Link(from, to); err == nil || errors.Is(err, os.ErrExist) {
+		return nil
+	}
+	data, err := os.ReadFile(from) //nolint:gosec // one of the daemon's own uploads, 8 MB at most
+	if err != nil {
+		return err
+	}
+	return atomicfile.Replace(to, data, 0o600)
+}
+
 // removeUploads takes a deleted chat's uploads.
 func (s *Service) removeUploads(chatID string) error {
 	if s.uploads == "" {

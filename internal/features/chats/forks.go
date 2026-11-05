@@ -57,6 +57,7 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 	if err != nil {
 		return "", fmt.Errorf("couldn't fork the chat: %w", err)
 	}
+	s.adoptUploads(c.id, items)
 	c.mu.Lock()
 	c.record = forkRecord(c.id, o.sid, of)
 	s.useLocked(c, o)
@@ -245,6 +246,7 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	c := s.newChat(p.kind)
 	c.id, c.sid, c.issue = rand.Text(), sid, of.Issue
 	c.ultracode.Store(of.Ultracode)
+	s.adoptUploads(c.id, items)
 	c.mu.Lock()
 	c.record = forkRecord(c.id, sid, of)
 	c.record.Mode, c.record.Picks = mode, picks

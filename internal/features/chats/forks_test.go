@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"os"
 	"slices"
 	"testing"
 
@@ -222,5 +223,52 @@ func TestKeptSideChatIsFoundOnceStored(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if len(known) == 0 || slices.Contains(known, false) {
 		t.Errorf("stored before the service knew it: %v", known)
+	}
+}
+
+// A fork, and a kept side chat, have uploads of their own: deleting the
+// chat they came from leaves the files their messages link.
+func TestForksKeepTheirUploads(t *testing.T) {
+	svc, agent, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	svc.uploads = t.TempDir()
+	ctx := context.Background()
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	testcheck.NoErr(t, svc.Prompt(ctx, c.id, model.Message{Text: "see", Uploads: []model.Upload{{Name: "a.txt", Data: []byte("data")}}}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+	sideID, err := svc.Fork(ctx, c.id)
+	testcheck.NoErr(t, err)
+	side := svc.chats[sideID]
+	agent.updates = []acp.SessionUpdate{chunk("a1", "aside")}
+	testcheck.NoErr(t, svc.Prompt(ctx, sideID, model.Message{Text: "and", Uploads: []model.Upload{{Name: "b.txt", Data: []byte("more")}}}, SendIdle))
+	eventually(t, side, func() bool { return !side.busy })
+	fork, err := svc.ForkAsChat(ctx, c.id, "")
+	testcheck.NoErr(t, err)
+	kept, err := svc.KeepSide(ctx, sideID)
+	testcheck.NoErr(t, err)
+	files := func(id string) []string {
+		k := svc.chats[id]
+		k.mu.Lock()
+		defer k.mu.Unlock()
+		var out []string
+		for _, it := range k.items {
+			out = append(out, it.Files...)
+		}
+		return out
+	}
+	original := files(c.id)
+	testcheck.NoErr(t, svc.Delete(ctx, c.id, nil))
+	for id, want := range map[string]int{fork: 1, kept: 2} {
+		got := files(id)
+		if len(got) != want {
+			t.Fatalf("%s links %q", id, got)
+		}
+		for _, f := range got {
+			if slices.Contains(original, f) {
+				t.Errorf("%s links the deleted chat's own %s", id, f)
+			}
+			if _, err := os.Stat(f); err != nil {
+				t.Errorf("%s's file is gone with the chat it came from: %v", id, err)
+			}
+		}
 	}
 }
