@@ -104,6 +104,10 @@ type Service struct {
 	// given up they may dial it. Kept in memory: after a start every
 	// device counts, as nothing says which weren't.
 	told map[string]bool
+	// yield ends the waits at ids given up when the own id's fails
+	// (giveWay), and giveUp ends it.
+	yield  context.Context //nolint:containedctx // a signal the waits share, as long as the service
+	giveUp context.CancelFunc
 }
 
 // New loads remote access and, if it was on, starts it.
@@ -298,14 +302,22 @@ func (s *Service) setState(ctx context.Context, id, state, err string) {
 
 // link waits at the relay for phones on listen's id, one waiting
 // connection at a time, until ctx ends or the id is given up; a failed
-// connection is tried again after a backoff.
+// connection is tried again after a backoff. A wait at an id given up
+// comes after the daemon's own (behindOwn).
 func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.PrivateKey) {
 	id := listenID(listen)
 	backoff := time.Second
 	for ctx.Err() == nil && s.waits(id) {
+		yield, ok := s.behindOwn(id)
+		if !ok {
+			sleep(ctx, jitter(backoff))
+			backoff = min(2*backoff, s.timing.maxBackoff)
+			continue
+		}
 		c, err := s.dialer.Listen(ctx, relayURL, listen)
 		if err != nil {
 			wait := jitter(backoff)
+			s.giveWay(id)
 			s.setState(ctx, id, "error", err.Error())
 			slog.Info("relay: trying again", "in", wait.Round(time.Second), "id", short(id))
 			sleep(ctx, wait)
@@ -315,8 +327,13 @@ func (s *Service) link(ctx context.Context, relayURL string, listen ed25519.Priv
 		s.setState(ctx, id, "connected", "")
 		since := time.Now()
 		stop := context.AfterFunc(ctx, func() { _ = c.Close() })
+		stopYield := func() bool { return false }
+		if yield != nil {
+			stopYield = context.AfterFunc(yield, func() { _ = c.Close() }) //nolint:contextcheck // yield is the service's (behindOwn), a signal beside ctx
+		}
 		err = c.Wait()
 		stop()
+		stopYield()
 		// A wait that held a while starts the backoff over; one dropped at
 		// once (another daemon with this key taking its place, a relay
 		// turning it away) keeps backing off rather than flap each second.

@@ -49,7 +49,9 @@ type Limits struct {
 	// a few addresses could hold every connection for MaxWait at a time.
 	// A listener counts until its connection ends, a phone's session on
 	// it included (ADR 0033): one daemon holds its waiting one, one per
-	// live session, those it gave up but a phone still needs, a pairing's.
+	// live session (16 at most), those it gave up but a phone still needs
+	// (8 at most), a pairing's: 26, which the default's 32 holds with
+	// room for handshakes under way.
 	ListenPerIP int
 	// Site is the web app the relay serves too (ADR 0054), or nil. Its
 	// origin is then the only one whose pages may open a WebSocket here.
@@ -59,7 +61,7 @@ type Limits struct {
 // Defaults suit one person's phones and Macs.
 // Many people can share one company's address, so PerIP is generous.
 var Defaults = Limits{MaxMessage: 65535, Rate: 1 << 20, Burst: 8 << 20, Idle: 90 * time.Second,
-	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, ListenPerIP: 16, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8, FirstWait: 2 * time.Second}
+	DialWait: 10 * time.Second, MaxWait: time.Hour, PerID: 16, PerIP: 200, ListenPerIP: 32, NewRate: 2, NewBurst: 60, Total: 1000, HTTPIdle: 5 * time.Second, PlainPerIP: 8, FirstWait: 2 * time.Second}
 
 // minCost is what a message costs against the rate at least, so tiny
 // messages can't flood.

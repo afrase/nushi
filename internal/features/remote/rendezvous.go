@@ -142,6 +142,39 @@ func (s *Service) waits(id string) bool {
 	})
 }
 
+// behindOwn says whether the wait at id may listen now, and what else
+// than its link's context ends that wait (until a phone comes). The
+// daemon's own id always may, ended by nothing else (nil). An id given up
+// may only while the own id's wait is up, and gives its slot back when
+// that wait next fails (giveWay): each wait holds one of the relay's
+// listener slots for the Mac's address (ADR 0033), and past its cap
+// (several Macs behind one address) the own id, which every phone told
+// of a move dials, comes first.
+func (s *Service) behindOwn(id string) (context.Context, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id == s.id {
+		return nil, true
+	}
+	if s.state != "connected" {
+		return nil, false
+	}
+	if s.yield == nil || s.yield.Err() != nil {
+		s.yield, s.giveUp = context.WithCancel(s.ctx)
+	}
+	return s.yield, true
+}
+
+// giveWay ends the waits at ids given up when id, the daemon's own,
+// failed to wait: their slots at the relay are its to take.
+func (s *Service) giveWay(id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id == s.id && s.giveUp != nil {
+		s.giveUp()
+	}
+}
+
 // relink starts the waits at the relay again: at the daemon's id, and at
 // each id given up that a device still needs. Called with s.mu.
 //
