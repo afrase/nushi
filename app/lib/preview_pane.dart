@@ -344,17 +344,27 @@ class _Name extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
+    final t = theme.t;
     final inside = inFiles(daemon, chat, path);
     return Pressable(
       onTap: inside == null ? null : () => showInFiles(chat, inside),
       tooltip: tooltip,
-      builder: (context, look) => Padding(
-        padding: const EdgeInsets.fromLTRB(previewNameInset, 1, 3, 1),
+      // Tinted under the pointer and ringed with the keys on it, as a
+      // control is; the text stays where a tab's is.
+      builder: (context, look) => Container(
+        padding: const EdgeInsets.fromLTRB(previewNameInset, 3, 3, 3),
+        decoration: look.hover
+            ? BoxDecoration(
+                color: look.pressed ? t.pressed : t.hover,
+                borderRadius: BorderRadius.circular(NushiTheme.control),
+              )
+            : null,
+        foregroundDecoration: focusRing(t, look),
         child: Text(
           baseName(path),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: theme.code(theme.t.text, size: 12),
+          style: theme.code(t.text, size: 12),
         ),
       ),
     );

@@ -330,6 +330,50 @@ void main() {
       d.dispose();
     }, variant: _mac);
 
+    for (final (name, brightness) in [
+      ('light', Brightness.light),
+      ('dark', Brightness.dark),
+    ]) {
+      testWidgets('the name wears a control’s ring with the keys on it, and '
+          'its tint under the pointer, $name', (tester) async {
+        final d = await _app(
+          tester,
+          brightness: brightness,
+          files: _three.take(1).toList(),
+        );
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.alwaysTraditional;
+        addTearDown(
+          () => FocusManager.instance.highlightStrategy =
+              FocusHighlightStrategy.automatic,
+        );
+        final label = _inPane(find.text('report.md'));
+        Container box() => tester.widget<Container>(
+          find.ancestor(of: label, matching: find.byType(Container)).first,
+        );
+        expect(box().foregroundDecoration, isNull);
+        expect(box().decoration, isNull);
+        Focus.of(tester.element(label)).requestFocus();
+        await tester.pump(); // the focus moves; the ring is the next frame's
+        await tester.pump();
+        final t = NushiTheme.of(tester.element(label)).t;
+        expect(
+          (box().foregroundDecoration! as BoxDecoration).border,
+          Border.all(color: t.focus, width: 2),
+        );
+        final row = _inPane(find.byType(PaneHeader));
+        await render(tester, row, 'preview_name_focus_$name');
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: Offset.zero);
+        addTearDown(mouse.removePointer);
+        await mouse.moveTo(tester.getCenter(label));
+        await tester.pump();
+        expect((box().decoration! as BoxDecoration).color, t.hover);
+        await render(tester, row, 'preview_name_hover_$name');
+        d.dispose();
+      }, variant: _mac);
+    }
+
     for (final width in [1700.0, 720.0]) {
       testWidgets('nothing moves from one file to three, ${width.toInt()} '
           'wide', (tester) async {
