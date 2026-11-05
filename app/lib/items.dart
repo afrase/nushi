@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:nushi/attached_files.dart';
-
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
+import 'package:nushi/file_cards.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/findings.dart';
 import 'package:nushi/findings_card.dart';

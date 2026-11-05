@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/phone/phone.dart';
