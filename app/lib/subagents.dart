@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -87,7 +88,7 @@ String subagentState(SubagentRun s) {
       .length;
   final running = subagentRunning(s);
   final since = msTime(sa.started.toInt());
-  final end = running ? DateTime.now() : msTime(sa.ended.toInt());
+  final end = running ? clock() : msTime(sa.ended.toInt());
   return [
     if (running) doing(s.items) else sa.state,
     if (calls > 0) '$calls tool call${calls == 1 ? '' : 's'}',

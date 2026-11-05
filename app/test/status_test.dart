@@ -1,8 +1,11 @@
+import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/subagents.dart';
+
+import 'harness.dart';
 
 void main() {
   test('what the agent is doing, from the turn so far', () {
@@ -63,6 +66,23 @@ void main() {
     expect([for (final s in subs) s.call.id], ['a']);
     expect([for (final it in subs.single.items) it.id], ['r', 's']);
     expect(subagentState(subs.single), 'done · 1 tool call');
+  });
+
+  test("a running subagent's time counts to the app's clock", () {
+    final started = fixtureNow.subtract(const Duration(minutes: 3));
+    final subs = subagentsOf([
+      Item(
+        id: 'a',
+        kind: ItemKind.ITEM_KIND_TOOL_CALL,
+        agent: 'Explore',
+        status: 'in_progress',
+        subagent: Subagent(
+          state: 'running',
+          started: Int64(started.millisecondsSinceEpoch),
+        ),
+      ),
+    ]);
+    expect(subagentState(subs.single), 'Thinking · 3m 00s');
   });
 
   test("what a subagent runs on: asked for, else the chat's", () {
