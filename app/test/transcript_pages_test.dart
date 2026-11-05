@@ -219,6 +219,27 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets('a page that fails after a fresh snapshot leaves it unfailed', (
+    tester,
+  ) async {
+    final (d, paged) = await _window(tester);
+    final c = _chat(d);
+    paged.hold = Completer();
+    unawaited(d.loadOlder(c));
+    await tester.pump();
+    // A reload meanwhile (a cut before the loaded part, a reconnect), then
+    // the old page fails: its item is gone, the daemon's ErrNoItem.
+    c.stale!();
+    await _settle(tester);
+    paged.fail = true;
+    paged.hold!.complete();
+    paged.hold = null;
+    await _settle(tester);
+    expect(c.olderFailed, isFalse);
+    expect(find.text('Couldn’t load earlier messages · '), findsNothing);
+    await closeView(tester, d);
+  }, variant: _mac);
+
   testWidgets('a pin on a message not loaded yet goes there', (tester) async {
     final (d, paged) = await _window(tester, pins: ['c-a2']);
     expect(_chat(d).items.any((it) => it.id == 'c-a2'), isFalse);

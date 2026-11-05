@@ -67,8 +67,10 @@ extension DaemonPages on Daemon {
       }
     } on Object {
       // The phone asks again on its next scroll up; the Mac says so at the
-      // transcript's top, with Try again.
-      failed = true;
+      // transcript's top, with Try again. A page asked of a snapshot since
+      // replaced fails for that one only (its item may be gone): the new
+      // one hasn't failed.
+      failed = chat.loaded && chat.snapshots == snapshot;
     } finally {
       chat.olderDone(failed: failed);
       done.complete();
