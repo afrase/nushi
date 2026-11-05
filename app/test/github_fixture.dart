@@ -288,3 +288,52 @@ Future<(FakeDaemon, Daemon)> openView(
   await tester.pumpAndSettle();
   return (fake, d);
 }
+
+/// An inbox with new and old items, long titles and every badge.
+ListGitHubInboxResponse inboxForTests() => ListGitHubInboxResponse(
+  review: [
+    item(
+      41,
+      'Speed up the diff of long files by caching the tokenizer per language',
+      repo: 'octo/tools',
+      checks: 'pending',
+      review: 'review_required',
+      age: const Duration(minutes: 20),
+    ),
+    item(
+      7,
+      'Retry flaky uploads',
+      repo: 'octo/infrastructure-terraform',
+      checks: 'failure',
+      review: 'changes_requested',
+      unresolved: 12,
+      age: const Duration(days: 12),
+    ),
+    item(
+      3,
+      'Move the build to the new runners',
+      repo: 'octo/tools',
+      checks: 'success',
+      review: 'approved',
+      age: const Duration(days: 40),
+    ),
+  ],
+  mine: [
+    item(
+      1,
+      'Add Sub and Neg',
+      checks: 'failure',
+      unresolved: 2,
+      age: const Duration(hours: 3),
+    ),
+    item(5, 'Try a merge queue', draft: true, age: const Duration(days: 100)),
+  ],
+  assigned: [
+    item(2, 'Add a Mul function', pull: false, age: const Duration(days: 340)),
+    item(9, 'Old idea', pull: false, age: const Duration(days: 400)),
+  ],
+  reviewTotal: 3,
+  mineTotal: 2,
+  assignedTotal: 2,
+  atMs: Int64(testNow.millisecondsSinceEpoch),
+);

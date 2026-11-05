@@ -11,8 +11,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart' show item, openView, testNow;
-import 'github_inbox_test.dart' show inboxForTests;
+import 'github_fixture.dart' show inboxForTests, item, openView, testNow;
 import 'harness.dart';
 
 /// The asks that reach GitHub, not those for what the daemon kept.
