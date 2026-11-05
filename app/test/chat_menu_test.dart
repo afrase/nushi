@@ -4,7 +4,9 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/review.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -105,4 +107,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOne);
   });
+
+  // The row builds its menu when it opens, so what changed since (a review
+  // comment added, which doesn't rebuild the sidebar) is in it.
+  testWidgets(
+    'a row’s menu offers the review comments added since it '
+    'was built',
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    (tester) async {
+      viewport(tester, const Size(1200, 700));
+      final d = await FakeDaemon([
+        chat('a', 'claude', 'Fix the login redirect', age: 2),
+        chat('b', 'codex', 'Bump the API version', age: 1),
+      ]).connect(tester);
+      await tester.pumpWidget(NushiApp(daemon: d));
+      await tester.pumpAndSettle();
+      addTearDown(() => setComments('a', []));
+      setComments('a', [
+        ReviewComment(
+          id: 'r1',
+          where: 'uncommitted',
+          path: 'main.go',
+          old: false,
+          start: 1,
+          end: 1,
+          quote: 'x',
+          text: 'Rename this',
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text('Fix the login redirect'),
+        buttons: kSecondaryButton,
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Send review comments'), findsOneWidget);
+      await closeView(tester, d);
+    },
+  );
 }

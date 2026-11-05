@@ -90,7 +90,13 @@ class _SidebarRowState extends State<SidebarRow> {
               color: chat.color,
               child: Tap(
                 onTap: () => daemon.select(chat.id),
-                onSecondaryTapUp: (d) => open(d.localPosition),
+                // Built again as it opens: what its entries read (the
+                // review comments, the side chat, a clean-up running) can
+                // change without the row building again.
+                onSecondaryTapUp: (d) {
+                  setState(() {});
+                  open(d.localPosition);
+                },
                 selected: selected,
                 // The open chat in the accent's soft fill: the plain selected
                 // gray is hardly apart from the sidebar's own.
