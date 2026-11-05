@@ -1,0 +1,9 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "my-app",
+      "url": "https://app.localhost:3000"
+    }
+  ]
+}

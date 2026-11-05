@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "server",
+      "program": "server.js",
+      "args": ["--verbose"],
+      "port": 4000
+    }
+  ]
+}
