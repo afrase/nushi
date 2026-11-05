@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/bottom_follower.dart';
@@ -17,17 +15,16 @@ import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/paced.dart';
 import 'package:nushi/pins_rail.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
-import 'package:nushi/selection_lines.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript_entries.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/transcript_pages.dart';
+import 'package:nushi/transcript_selection.dart';
 import 'package:nushi/turn_retry.dart';
 import 'package:nushi/widgets.dart';
 
@@ -83,9 +80,6 @@ class Transcript extends StatefulWidget {
   State<Transcript> createState() => _TranscriptState();
 }
 
-/// How wide the scrollbar's strip is, at the transcript's right edge.
-const _scrollbarEdge = 16.0;
-
 /// What the find bar covers of the transcript's top right.
 const double _findBarWidth = 340.0 + NushiTheme.gutter;
 
@@ -98,24 +92,7 @@ const _flashFor = Duration(milliseconds: 1400);
 
 class _TranscriptState extends State<Transcript> {
   final _follower = BottomFollower();
-  final _area = GlobalKey<SelectionAreaState>();
-  // A click outside (the composer) takes the focus and clears the
-  // selection without reporting it: the toolbar goes with it. An open reply
-  // box stays, its quote kept.
-  late final FocusNode _areaFocus =
-      FocusNode(debugLabel: 'transcript', onKeyEvent: _copy)..addListener(() {
-        if (!_areaFocus.hasFocus && _at != null && _replyTo == null) {
-          _closeToolbar();
-        }
-      });
-  String _selected = '';
   bool _down = false; // a pointer is down on the transcript
-  // Pacing holds while a pointer is down or text is selected.
-  final _hold = ValueNotifier<bool>(false);
-  bool _touch = false; // the last pointer down was a finger (or a pen)
-  Rect? _at; // the selection's top and bottom middle, where the toolbar shows
-  String? _replyTo; // the selection a reply is being written to
-  _Anchor _anchor = _Anchor(); // where the reply box opened
 
   // The widget built for each entry, by key, and what it was built from.
   var _built = <String, (List<Object>, Widget)>{};
@@ -162,6 +139,13 @@ class _TranscriptState extends State<Transcript> {
     });
   }
 
+  /// A pointer went down on the transcript, or up: it doesn't fill in
+  /// under a press, and goes on once it's up.
+  void _pressed(bool down) {
+    _down = down;
+    if (!down && _tail != null) setState(() {}); // it goes on filling in
+  }
+
   // The entries' keys at the last build, once the chat had loaded: what
   // comes in after them rises in. Not what a load or an older page brings.
   List<String>? _shown;
@@ -196,16 +180,6 @@ class _TranscriptState extends State<Transcript> {
     };
     if (near != null && near.extentBefore < near.viewportDimension) {
       _nearTop();
-    }
-    // A code block's sideways scroll tells nobody where its text went: what
-    // shows of a selection there would sit where it was.
-    if (n is ScrollUpdateNotification &&
-        n.depth > 0 &&
-        n.metrics.axis == Axis.horizontal &&
-        _selected.isNotEmpty &&
-        _replyTo == null) {
-      _clearSelection();
-      if (_at != null) setState(() => _at = null);
     }
     // The list's height changed with no scroll and no build of all of it
     // (a call opened above a pin): the pins may have moved past the line.
@@ -552,112 +526,8 @@ class _TranscriptState extends State<Transcript> {
     _pinAt.dispose();
     widget.chat.find.removeListener(_findChanged);
     _marks.dispose();
-    _hold.dispose();
     _follower.dispose();
-    _areaFocus.dispose();
     super.dispose();
-  }
-
-  // The selection is reported a frame after the pointer goes up: offer the
-  // toolbar once both have happened.
-  // On touch the selection's own menu offers the actions instead (_menu).
-  void _offer() {
-    if (_touch || _down || _at != null || _selected.trim().isEmpty) return;
-    if (_anchors() case final at?) setState(() => _at = at);
-  }
-
-  /// The selection's top and bottom middle, in the transcript's box.
-  Rect? _anchors() {
-    final a = _area.currentState?.selectableRegion.contextMenuAnchors;
-    final box = context.findRenderObject() as RenderBox?;
-    if (a == null || box == null) return null;
-    return Rect.fromPoints(
-      box.globalToLocal(a.primaryAnchor),
-      box.globalToLocal(a.secondaryAnchor ?? a.primaryAnchor),
-    );
-  }
-
-  void _openReply() => setState(() {
-    _at ??= _anchors();
-    _replyTo = _selectedText();
-    _anchor = _Anchor();
-  });
-
-  /// The selection's menu: as the platform's on a mouse; on touch, one menu
-  /// of Copy, Side chat and Reply where the platform draws its own, so
-  /// nothing of Nushi's sits under it (iOS's Copy | Select All hid the
-  /// toolbar on the phone).
-  Widget _menu(
-    SelectableRegionState region, {
-    required VoidCallback? onSide,
-    required VoidCallback? onReply,
-  }) {
-    if (!_touch || (onSide == null && onReply == null)) {
-      return AdaptiveTextSelectionToolbar.selectableRegion(
-        selectableRegionState: region,
-      );
-    }
-    VoidCallback then(VoidCallback run) => () {
-      region.hideToolbar();
-      run();
-    };
-    return AdaptiveTextSelectionToolbar.buttonItems(
-      anchors: region.contextMenuAnchors,
-      buttonItems: [
-        ...region.contextMenuButtonItems.where(
-          (b) => b.type == ContextMenuButtonType.copy,
-        ),
-        if (onSide != null)
-          ContextMenuButtonItem(label: 'Side chat', onPressed: then(onSide)),
-        if (onReply != null)
-          ContextMenuButtonItem(label: 'Reply', onPressed: then(onReply)),
-      ],
-    );
-  }
-
-  void _closeToolbar() => setState(() => _at = _replyTo = null);
-
-  /// A press of the mouse starts a new selection, so the last one goes
-  /// first: its edges otherwise carry into the new one. Shift extends it,
-  /// and one on the scrollbar, at the edge of [width], starts none.
-  void _startSelection(PointerDownEvent e, double width) {
-    if (e.kind == PointerDeviceKind.mouse &&
-        e.buttons == kPrimaryButton &&
-        e.localPosition.dx < width - _scrollbarEdge &&
-        !HardwareKeyboard.instance.isShiftPressed) {
-      _clearSelection();
-    }
-  }
-
-  /// The selection's text with its lines (selectionLines).
-  String _selectedText() {
-    final box = _area.currentContext?.findRenderObject();
-    final lines = box == null ? '' : selectionLines(box);
-    return lines.isEmpty ? _selected : lines;
-  }
-
-  /// ⌘C: the selection with its lines, not the run-together text the
-  /// selection area itself copies.
-  KeyEventResult _copy(FocusNode _, KeyEvent e) {
-    final keys = HardwareKeyboard.instance;
-    if (e is KeyUpEvent ||
-        e.logicalKey != LogicalKeyboardKey.keyC ||
-        !(keys.isMetaPressed || keys.isControlPressed) ||
-        _selected.isEmpty) {
-      return KeyEventResult.ignored;
-    }
-    unawaited(Clipboard.setData(ClipboardData(text: _selectedText())));
-    return KeyEventResult.handled;
-  }
-
-  void _clearSelection() =>
-      _area.currentState?.selectableRegion.clearSelection();
-
-  void _pointerGone() {
-    _down = false;
-    _hold.value = _selected.isNotEmpty;
-    _offer();
-    if (_tail != null) setState(() {}); // it goes on filling in
   }
 
   // A find's matches in the text as it's laid out (ChatState.find has their
@@ -946,94 +816,61 @@ class _TranscriptState extends State<Transcript> {
     }
     final before = _built;
     _built = {};
-    final onReply = widget.onReply;
-    final onSide = chat.canFork ? widget.onSide : null;
-    final side = onSide == null
-        ? null
-        : () {
-            final selected = _selectedText();
-            _closeToolbar();
-            onSide(selected);
-          };
-    final reply = onReply == null ? null : _openReply;
     final behavior = ScrollConfiguration.of(context);
     final view = LayoutBuilder(
       builder: (context, box) {
         final sides = chatSides(context, box.maxWidth);
         return Stack(
           children: [
-            NotificationListener(
-              onNotification: _onScroll,
-              // One selection across the transcript, messages included whole;
-              // when a drag or double-click leaves text selected, the popover
-              // shows where the pointer went up.
-              child: Listener(
-                onPointerDown: (e) {
-                  _startSelection(e, box.maxWidth);
-                  setState(() {
-                    _down = _hold.value = true;
-                    _touch = e.kind != PointerDeviceKind.mouse;
-                    _at = _replyTo = null;
-                  });
-                },
-                onPointerUp: (_) => _pointerGone(),
-                onPointerCancel: (_) => _pointerGone(),
-                child: SelectionArea(
-                  key: _area,
-                  focusNode: _areaFocus,
-                  contextMenuBuilder: (context, region) =>
-                      _menu(region, onSide: side, onReply: reply),
-                  onSelectionChanged: (c) {
-                    _selected = c?.plainText ?? '';
-                    _hold.value = _down || _selected.isNotEmpty;
-                    _offer();
-                  },
-                  // Every item is laid out, so the list knows its exact
-                  // height: the scrollbar keeps its size and nothing shifts
-                  // as items come into view. Unchanged items keep their
-                  // widget, so a streamed chunk rebuilds only its message.
-                  child: PacingHold(
-                    notifier: _hold,
-                    // Unseen while it fills in up to a kept place, rather
-                    // than showing each frame what came in above.
-                    child: Opacity(
-                      opacity: _restore == null ? 1 : 0,
-                      child: _ownBar(
-                        context,
-                        SingleChildScrollView(
-                          controller: _follower.scroll,
-                          padding: EdgeInsets.only(
-                            top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
-                            bottom: 14,
-                          ),
-                          child: _codeBars(
-                            behavior,
-                            Column(
-                              key: _column,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (header case final h?)
-                                  Padding(padding: sides, child: h),
-                                for (final (i, e) in entries.indexed.skip(from))
-                                  _entry(
-                                    before,
-                                    e,
-                                    live: live && i == entries.length - 1,
-                                    still: chat.waiting,
-                                    top: entryGap(
-                                      entries,
-                                      i,
-                                      header: header != null,
-                                      phone: TouchTargets.of(context),
-                                    ),
-                                    sides: sides,
-                                    rise: arrived.contains(_key(e)),
-                                  ),
-                                if (widget.footer case final f?)
-                                  Padding(padding: sides, child: f),
-                              ],
-                            ),
-                          ),
+            TranscriptSelection(
+              width: box.maxWidth,
+              onReply: widget.onReply,
+              onSide: chat.canFork ? widget.onSide : null,
+              onPress: _pressed,
+              // Every item is laid out, so the list knows its exact height:
+              // the scrollbar keeps its size and nothing shifts as items come
+              // into view. Unchanged items keep their widget, so a streamed
+              // chunk rebuilds only its message.
+              child: NotificationListener(
+                onNotification: _onScroll,
+                // Unseen while it fills in up to a kept place, rather than
+                // showing each frame what came in above.
+                child: Opacity(
+                  opacity: _restore == null ? 1 : 0,
+                  child: _ownBar(
+                    context,
+                    SingleChildScrollView(
+                      controller: _follower.scroll,
+                      padding: EdgeInsets.only(
+                        top: _padTop = _roomAbove ? _findBarHeight + 8 : 2,
+                        bottom: 14,
+                      ),
+                      child: _codeBars(
+                        behavior,
+                        Column(
+                          key: _column,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (header case final h?)
+                              Padding(padding: sides, child: h),
+                            for (final (i, e) in entries.indexed.skip(from))
+                              _entry(
+                                before,
+                                e,
+                                live: live && i == entries.length - 1,
+                                still: chat.waiting,
+                                top: entryGap(
+                                  entries,
+                                  i,
+                                  header: header != null,
+                                  phone: TouchTargets.of(context),
+                                ),
+                                sides: sides,
+                                rise: arrived.contains(_key(e)),
+                              ),
+                            if (widget.footer case final f?)
+                              Padding(padding: sides, child: f),
+                          ],
                         ),
                       ),
                     ),
@@ -1041,23 +878,6 @@ class _TranscriptState extends State<Transcript> {
                 ),
               ),
             ),
-            if (_at case final at? when onReply != null || onSide != null)
-              Positioned.fill(
-                child: CustomSingleChildLayout(
-                  delegate: _Above(at, _replyTo == null ? null : _anchor),
-                  child: switch (_replyTo) {
-                    // Its own layer: typing repaints only the box.
-                    final quote? => RepaintBoundary(
-                      child: ReplyBox(
-                        quote: quote,
-                        onReply: onReply!,
-                        onClose: _closeToolbar,
-                      ),
-                    ),
-                    null => SelectionToolbar(onSide: side, onReply: reply),
-                  },
-                ),
-              ),
             // In the margin at the top left, where it stays as the text
             // scrolls.
             if (rail.isNotEmpty)
@@ -1111,51 +931,4 @@ class _TranscriptState extends State<Transcript> {
   /// scrollbars, as [behavior] had them above the list.
   Widget _codeBars(ScrollBehavior behavior, Widget child) =>
       widget.bottom == null ? child : ownScrollbars(behavior, child);
-}
-
-/// Where a reply box's bottom edge went when it opened: it stays there as
-/// the box grows a line at a time, so the box grows upward, as Claude's.
-class _Anchor {
-  double? bottom;
-}
-
-/// Places its child centered just above [at] (a selection's top and bottom
-/// middle), or below it when there is no room above, inside the box. With
-/// an [anchor] (the reply box) the child keeps the bottom edge it first
-/// had, kept inside too.
-class _Above extends SingleChildLayoutDelegate {
-  new(this.at, [this.anchor]);
-
-  final Rect at;
-  final _Anchor? anchor;
-
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints c) => BoxConstraints(
-    maxWidth: max(0, c.maxWidth - 16),
-    maxHeight: max(0, c.maxHeight - 8),
-  );
-
-  @override
-  Offset getPositionForChild(Size size, Size child) {
-    double inside(double y) =>
-        y.clamp(4, max(4, size.height - child.height - 4));
-    final double y;
-    if (anchor?.bottom case final bottom?) {
-      y = inside(bottom - child.height);
-    } else {
-      final above = at.top - child.height - 6;
-      y = inside(above < 4 ? at.bottom + 6 : above);
-      anchor?.bottom = y + child.height;
-    }
-    return Offset(
-      (at.center.dx - child.width / 2).clamp(
-        8,
-        max(8, size.width - child.width - 8),
-      ),
-      y,
-    );
-  }
-
-  @override
-  bool shouldRelayout(_Above old) => old.at != at || old.anchor != anchor;
 }
