@@ -22,6 +22,7 @@ A chat is a conversation with one agent, in one folder. This page covers the win
 - **`/copy`** puts the agent's last message on the clipboard as Markdown; `/copy 2` the one before ([ADR 0075](adr/0075-copy-is-nushis-own-command.md)).
 - **Tabs.** A chat opens on the tab it was left on (Chat, Changes, Pull request), and on Chat when it needs you.
 - **Trust.** Before an agent starts in a folder that brings code of its own (hooks, MCP servers, extensions), a trust card shows that code. A chat on a pull request asks about what its head brings, once Nushi has checked it out, and a fork's head asks every time. Going elsewhere while it asks is a no, and a bar over the app says what didn't start ("Didn't start Claude in site: its code wasn't approved.").
+- **The details panel** (the header's panel button, or Show details in the palette) lies at the window's right, as Claude Code's rail: one width, shown or hidden, never dragged wider ([ADR 0092](adr/0092-the-details-panel-is-claude-codes-rail.md)). It goes when the chat would get narrower than its least beside it. Its widgets (Environment, Context, Changes, Pull request, Worktrees, Background tasks, MCP, Artifacts) lie one under another; a title's triangle folds its widget and Nushi remembers it, and dragging a title moves the widget. **Context** says how full the agent's context is ("55% used", "545.5k / 1M") over a bar split by what fills it; for Claude, a row per kind with its share, the deferred tools dimmed, the lists /context gives (MCP tools, custom agents) to open, how far it is from compacting, and **Compact**, which sends `/compact` as if typed. **Background tasks** lists what still runs, each with how long and its Stop; the finished fold under "N finished".
 - **Motion.** The sidebar, the details panel, a side chat and the side panes slide in from their edge and back out (the sidebar's button moving with it between its header and the traffic lights, and the header's title with its edge), and the chat's text glides to its new place beside them (in a window too narrow for its column it re-wraps where it goes instead). The terminal slides up from under the chat, the bars over the app slide down, the update toast rises in, and a tab's line slides to the tab picked; what shows changes at once, and nothing waits for the motion. With Reduce Motion (System Settings › Accessibility › Display) everything is where it goes at once.
 - **The status bar**, along the window's bottom, counts working, awake and sleeping agents and shows the memory Nushi takes. A click lists each awake chat's.
 
@@ -201,13 +202,13 @@ Markdown, HTML, SVG and CSV have Preview and Source.
 - its tool row's Preview;
 - the Artifacts widget in the details panel, the open one marked. The palette's Artifacts… shows the panel and the widget, or lists them in a window too narrow for the panel.
 
-Each list shows the files the chat wrote that way, each with its folder and when it changed, in the same order:
+Each list shows the files the chat wrote that way, in the same order:
 
 1. those you pinned (the pin shows when the pointer is over a row; pins are kept per chat);
 2. the recent: what the agent wrote in the last turn, the file open now, and those you opened in the last hour, newest first;
-3. the rest, folded under "Older (n)".
+3. the rest, newest first.
 
-The widget, collapsed, counts the pinned and recent; with none of either, the three newest show. The phone's Artifacts list the same way, without pins.
+The widget shows five, each its kind on the right (its folder and when it changed when the pointer is over it), then Show more; collapsed, it counts them. The phone's Artifacts list shows the recent and folds the rest under "Older (n)" (with none of either, the three newest), without pins.
 
 The preview's file name shows its path when the pointer is over it; a click shows the file in the Files pane (below), the folders above it opened.
 
