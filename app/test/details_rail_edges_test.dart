@@ -3,7 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/markdown.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'details_rail_fixture.dart';
@@ -48,4 +50,22 @@ void main() {
       await closeView(tester, d);
     }, variant: macOnly);
   }
+
+  testWidgets("an answer the daemon can't read kinds from keeps the line and "
+      'the bar, its words under them', (tester) async {
+    final (d, _) = await railApp(
+      tester,
+      context: GetContextUsageResponse(
+        markdown: '## Context Usage\n\nA format Nushi has not seen.',
+      ),
+    );
+    expect(inRail(find.text('55% used')), findsOne);
+    expect(inRail(find.text('545.5k / 1M')), findsOne);
+    expect(inRail(find.byType(AgentMarkdown)), findsOne);
+    expect(
+      tester.getTopLeft(inRail(find.byType(AgentMarkdown))).dy,
+      greaterThan(tester.getBottomLeft(inRail(find.text('55% used'))).dy),
+    );
+    await closeView(tester, d);
+  }, variant: macOnly);
 }

@@ -235,6 +235,10 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
     final status = _status;
     final muted = theme.ui(t.textMuted, size: 12);
     final commits = _scope == Scope.commits;
+    final unread = switch (_context) {
+      final c? => c.categories.isEmpty && c.markdown.isNotEmpty,
+      null => false,
+    };
     final (added, removed) = commits
         ? _commits.fold((0, 0), (n, c) => (n.$1 + c.added, n.$2 + c.removed))
         : (status?.added ?? 0, status?.removed ?? 0);
@@ -308,23 +312,20 @@ class _DetailsPanelState extends State<DetailsPanel> with FollowsChanges {
             if (u.contextSize == 0 && cost(u).isEmpty && _context == null)
               (null, 'Not reported yet'),
             // As Claude's rail: the line, the bar, what fills it.
-            switch (_context) {
-              final c? when c.categories.isEmpty && c.markdown.isNotEmpty => (
-                null,
-                AgentMarkdown(c.markdown),
-              ),
-              _ when u.contextSize > 0 || _context != null => (
+            if (u.contextSize > 0 || _context != null)
+              (
                 null,
                 ContextReport(
                   u,
                   // As last asked, brought up to the agent's latest count.
                   categories: liveCategories(_context?.categories ?? [], u),
-                  lists: contextLists(_context?.markdown ?? ''),
+                  lists: unread ? [] : contextLists(_context?.markdown ?? ''),
                   onCompact: _canCompact ? _compact : null,
                 ),
               ),
-              _ => (null, const SizedBox.shrink()),
-            },
+            // An answer the daemon couldn't read kinds from: as the agent
+            // wrote it, under the line and the bar.
+            if (unread) (null, AgentMarkdown(_context!.markdown)),
             // Why there's no breakdown yet, for an agent that can say.
             if (_context == null &&
                 (_asking || u.contextSize > 0 && chat.canAskContext))
