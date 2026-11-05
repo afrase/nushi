@@ -159,6 +159,9 @@ class _PreviewTabsState extends State<PreviewTabs> {
           child: SingleChildScrollView(
             controller: _scroll,
             scrollDirection: Axis.horizontal,
+            // Past the last tab is the header's empty space, which zooms the
+            // window (ADR 0080); the row scrolls only when tabs fill it.
+            hitTestBehavior: HitTestBehavior.deferToChild,
             child: TabLine(
               value: widget.current,
               child: Row(

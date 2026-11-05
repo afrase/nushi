@@ -9,6 +9,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/status.dart';
 
 import 'fake_daemon.dart';
@@ -273,5 +274,41 @@ void main() {
     await pane('a-folder-name-far-too-long-for-the-room-it-is-given-' * 4);
     await _double(tester, box.centerRight - const Offset(10, 0));
     expect(calls, isEmpty);
+  });
+
+  testWidgets('the preview pane’s tabs zoom nothing; the room past the last '
+      'one zooms', (tester) async {
+    final calls = _windowCalls();
+    final chat = ChatState('c', '/Users/me/repo');
+    await tester.pumpWidget(
+      themed(
+        SizedBox(
+          width: 600,
+          child: PaneHeader(
+            child: Row(
+              children: [
+                Expanded(
+                  child: PreviewTabs(
+                    chat: chat,
+                    files: const ['docs/a.md', 'docs/b.md'],
+                    current: 'docs/a.md',
+                  ),
+                ),
+                IconTap(Icons.close, tooltip: 'Close', onTap: () {}),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    final last = tester.getRect(find.byKey(const ValueKey('docs/b.md')));
+    final close = tester.getRect(find.byTooltip('Close'));
+    expect(close.left - last.right, greaterThan(200));
+
+    await _double(
+      tester,
+      Offset((last.right + close.left) / 2, last.center.dy),
+    );
+    expect(calls, ['zoom']);
   });
 }
