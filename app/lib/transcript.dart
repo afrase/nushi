@@ -820,7 +820,10 @@ class _TranscriptState extends State<Transcript> {
     final view = LayoutBuilder(
       builder: (context, box) {
         final sides = chatSides(context, box.maxWidth);
+        // The selection gets the transcript's own box, as tall as the window
+        // on a short chat, to place its toolbar and reply box in.
         return Stack(
+          fit: StackFit.passthrough,
           children: [
             TranscriptSelection(
               width: box.maxWidth,

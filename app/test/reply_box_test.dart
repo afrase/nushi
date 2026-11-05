@@ -221,6 +221,34 @@ void main() {
     await end();
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
+  // The reply box is placed in the transcript's whole box, not the strip a
+  // short chat's few messages fill: there it was cut to that strip's height.
+  testWidgets('on a short chat the box grows past the messages, every line '
+      'showing', (tester) async {
+    final (_, end) = await _open(tester, size: const Size(1400, 900));
+    await _reply(tester);
+    final messages = tester.getRect(find.byType(SelectionArea));
+    await tester.enterText(
+      _field,
+      [for (var i = 1; i <= 8; i++) 'Line $i of a long reply'].join('\n'),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.byType(ReplyBox)).height,
+      greaterThan(messages.height),
+    );
+    final lines = find.descendant(
+      of: find.byType(ReplyBox),
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(lines.first).position.maxScrollExtent,
+      0,
+      reason: 'every line shows',
+    );
+    await end();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
   for (final (name, brightness) in [
     ('dark', Brightness.dark),
     ('light', Brightness.light),
