@@ -183,7 +183,7 @@ lint-dart:
 
 check: lint test
 
-test: test-go test-packages test-app test-web
+test: test-go test-packages test-app test-web test-window
 
 # With the race detector: about twice the time, still under the app's
 # tests in CI, and a goroutine nothing waits for shows up here first.
@@ -208,6 +208,14 @@ test-packages:
 APP_TESTS = $(if $(SHARD),$(shell cd app && find test -name '*_test.dart' ! -path 'test/web/*' | LC_ALL=C sort | awk -v s='$(SHARD)' 'BEGIN { split(s, a, "/") } (NR - 1) % a[2] == a[1] - 1'))
 test-app:
 	cd app && flutter test $(FLUTTER_TEST_FLAGS) $(APP_TESTS)
+
+# The Mac window's placement maths (app/macos/Runner/Placement.swift, ADR
+# 0093) with its test, built by swiftc and run with no window: RunnerTests
+# is hosted by the app, so xcodebuild test would launch Nushi (macOS).
+test-window:
+	@mkdir -p bin
+	xcrun swiftc -o bin/placement-test app/macos/Runner/Placement.swift app/macos/PlacementTests/main.swift
+	bin/placement-test
 
 # The web app in Chrome with the real nushid and nushi-relay (macOS).
 test-web:

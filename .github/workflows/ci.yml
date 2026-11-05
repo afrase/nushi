@@ -1,6 +1,7 @@
 # What make check runs, as parallel jobs (one job of 12 minutes before, until 2026-10-27). macOS for what needs it, in four
 # jobs (the account runs five macOS jobs at once, and a release or another repository's CI needs one too): the
-# daemon (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests; the web app's end-to-end test
+# daemon (proc_info, sandbox-exec, launchd, the keychain's cgo), so Go's lint and tests, with the window's placement
+# maths (swiftc); the web app's end-to-end test
 # (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
 # rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
 # protos' and Dart's lint, the Dart packages' tests, and the packages that also run elsewhere (the relay, the Noise
@@ -75,6 +76,8 @@ jobs:
       # The tests run when the lint fails too, to see both.
       - if: ${{ !cancelled() }}
         run: make test-go
+      - if: ${{ !cancelled() }}
+        run: make test-window
 
   lint:
     name: Proto and Dart lint (Linux)

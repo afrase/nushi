@@ -31,6 +31,8 @@
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
 		33CC11162044BFA00003C045 /* Alerts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11172044BFA00003C045 /* Alerts.swift */; };
 		33CC11182044BFA00003C045 /* Diagrams.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11192044BFA00003C045 /* Diagrams.swift */; };
+		33CC111A2044BFA00003C045 /* Placement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC111B2044BFA00003C045 /* Placement.swift */; };
+		33CC111C2044BFA00003C045 /* WindowPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC111D2044BFA00003C045 /* WindowPlacement.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 /* End PBXBuildFile section */
 
@@ -79,6 +81,8 @@
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
 		33CC11172044BFA00003C045 /* Alerts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alerts.swift; sourceTree = "<group>"; };
 		33CC11192044BFA00003C045 /* Diagrams.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagrams.swift; sourceTree = "<group>"; };
+		33CC111B2044BFA00003C045 /* Placement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placement.swift; sourceTree = "<group>"; };
+		33CC111D2044BFA00003C045 /* WindowPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPlacement.swift; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
 		33CEB47722A0578A004F2AC0 /* Flutter-Generated.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = "Flutter-Generated.xcconfig"; path = "ephemeral/Flutter-Generated.xcconfig"; sourceTree = "<group>"; };
@@ -180,6 +184,8 @@
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				33CC11172044BFA00003C045 /* Alerts.swift */,
 				33CC11192044BFA00003C045 /* Diagrams.swift */,
+				33CC111B2044BFA00003C045 /* Placement.swift */,
+				33CC111D2044BFA00003C045 /* WindowPlacement.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -371,6 +377,8 @@
 				33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */,
 				33CC11162044BFA00003C045 /* Alerts.swift in Sources */,
 				33CC11182044BFA00003C045 /* Diagrams.swift in Sources */,
+				33CC111A2044BFA00003C045 /* Placement.swift in Sources */,
+				33CC111C2044BFA00003C045 /* WindowPlacement.swift in Sources */,
 				33CC10F12044A3C60003C045 /* AppDelegate.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);

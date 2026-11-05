@@ -15,7 +15,7 @@ class MainFlutterWindow: NSWindow {
     self.titlebarAppearsTransparent = true
     self.titleVisibility = .hidden
     self.styleMask.insert(.fullSizeContentView)
-    restoreFrame()
+    placement.restore()
     keepFullScreen()
 
     RegisterGeneratedPlugins(registry: flutterViewController)
@@ -168,32 +168,15 @@ class MainFlutterWindow: NSWindow {
     super.awakeFromNib()
   }
 
-  /// Keeps the window's size and place across launches, under the autosave
-  /// name "Nushi". AppKit's own restore from that name (seen on macOS 27)
-  /// puts the window on the main screen, fitted to it, even when the screen
-  /// it was saved on is connected, and saves that over the frame; so the
-  /// frame is read first and put back here, on the connected screen most of
-  /// it lies on, fitted to that screen. On none, AppKit's placement stands.
-  /// macOS's window restoration is off: when "Close windows when quitting"
-  /// is off it puts its own copy of the frame back after this one.
-  private func restoreFrame() {
-    let key = "NSWindow Frame Nushi"
-    let saved = UserDefaults.standard.string(forKey: key)?.split(separator: " ").prefix(4).compactMap { Double($0) }
-    isRestorable = false
-    setFrameAutosaveName("Nushi")
-    guard let saved, saved.count == 4 else { return }
-    var frame = NSRect(x: saved[0], y: saved[1], width: saved[2], height: saved[3])
-    func overlap(_ screen: NSScreen) -> CGFloat {
-      let shared = screen.visibleFrame.intersection(frame)
-      return shared.isNull ? 0 : shared.width * shared.height
-    }
-    guard let screen = NSScreen.screens.max(by: { overlap($0) < overlap($1) }), overlap(screen) > 0 else { return }
-    let room = screen.visibleFrame
-    frame.size = NSSize(width: min(frame.width, room.width), height: min(frame.height, room.height))
-    frame.origin = NSPoint(x: min(max(frame.minX, room.minX), room.maxX - frame.width),
-                           y: min(max(frame.minY, room.minY), room.maxY - frame.height))
-    setFrame(frame, display: false)
-  }
+  /// The window's place across launches and displays (ADR 0093).
+  private lazy var placement = WindowPlacement(window: self)
+
+  /// Every zoom is Nushi's, on the window's own screen (ADR 0093): AppKit's
+  /// went back to a frame it kept from where it first put the window.
+  override func zoom(_ sender: Any?) { placement.zoom() }
+
+  /// The menu's Zoom: the same zoom.
+  override func performZoom(_ sender: Any?) { zoom(sender) }
 
   /// Full screen across launches too, which the saved frame doesn't say
   /// (it keeps the frame from before full screen): a default of its own,

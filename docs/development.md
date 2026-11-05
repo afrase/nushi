@@ -12,7 +12,7 @@ How to build, run and test Nushi from source. The rules for working in this repo
 ```sh
 make run         # starts nushid in the background (if it isn't running), then the app
 make stop        # stops nushid
-make test        # all tests (test-go, test-packages, test-app, test-web)
+make test        # all tests (test-go, test-packages, test-app, test-web, test-window)
 make lint        # the linters and format checks, below (lint-go, lint-dart)
 make check       # lint, then test
 make gen         # regenerate the API code after editing proto/
@@ -72,7 +72,7 @@ With a `go.work`, `make lint` builds golangci-lint into `bin/` because `go tool 
 
 CI (`.github/workflows/ci.yml`) runs the same parts as `make check`, as parallel jobs, in under 3 minutes:
 
-- on macOS: Go's lint and tests, the web app's end-to-end test, and the app's tests in two shards (`make test-app SHARD=1/2`: every second test file);
+- on macOS: Go's lint and tests and the window's placement maths, the web app's end-to-end test, and the app's tests in two shards (`make test-app SHARD=1/2`: every second test file);
 - on Linux: the protos' and Dart's lint, the Dart packages' tests, and the relay's and the Noise channel's Go tests.
 
 ## Install, releases, logs
