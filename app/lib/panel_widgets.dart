@@ -63,8 +63,8 @@ class PanelWidgets extends StatelessWidget {
 /// right (a row without a label is a line of its own). With [onTap] the
 /// rows are a button; [action] (a small button) sits on the title's right
 /// while open. The title drags it among the others: the open hand over
-/// it, the closed one while dragged, and the grip beside it under the
-/// pointer.
+/// it, the closed one while dragged, and the grip on the right under the
+/// pointer, in its summary's place.
 class PanelWidget extends StatelessWidget {
   const new({
     required this.title,
@@ -165,6 +165,7 @@ class PanelWidget extends StatelessWidget {
           onToggle: () => collapsedWidgets.toggle(title),
           title: titleText,
           trailing: open ? action : summary,
+          acts: open && action != null,
           body: Tap(
             onTap: onTap,
             tint: false,
@@ -210,9 +211,10 @@ class PanelWidget extends StatelessWidget {
 /// first ([index] 0), a [title] row that folds it ([onToggle]; a triangle
 /// after the title while it [folds]) and drags it, [trailing] on that
 /// row's right, then [body] while [open]. Under the pointer, or while
-/// dragged, the [DragGrip] shows in the side padding left of the title
-/// (ADR 0092's amendment): the rail stays flat at rest, and the grip says
-/// the title drags.
+/// dragged, the [DragGrip] takes [trailing]'s place on the right (ADR
+/// 0092's amendment): the rail stays flat at rest, and the grip says the
+/// title drags. A [trailing] that [acts] (a button) stays, the grip left
+/// of it, so it can still be clicked.
 class _Section extends StatefulWidget {
   const new({
     required this.title,
@@ -221,6 +223,7 @@ class _Section extends StatefulWidget {
     required this.body,
     required this.index,
     this.trailing,
+    this.acts = false,
     this.folds = true,
   });
 
@@ -230,6 +233,7 @@ class _Section extends StatefulWidget {
   final VoidCallback? onToggle;
   final Widget body;
   final Widget? trailing;
+  final bool acts;
   final int index;
 
   @override
@@ -265,38 +269,29 @@ class _SectionState extends State<_Section> {
                     : SystemMouseCursors.grab,
                 tint: false,
                 padding: const EdgeInsets.only(top: 12, bottom: 6),
-                child: Stack(
-                  clipBehavior: Clip.none,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        w.title,
-                        if (w.folds) ...[
-                          const SizedBox(width: 2),
-                          _Triangle(open: w.open),
-                        ],
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: w.trailing,
-                          ),
-                        ),
-                      ],
-                    ),
-                    // In the side padding, so nothing moves when it shows.
-                    Positioned(
-                      left: -12,
-                      top: 0,
-                      bottom: 0,
-                      child: Center(
-                        child: AnimatedOpacity(
-                          opacity: _hovered || dragged ? 1 : 0,
-                          duration: reduceMotion(context)
-                              ? Duration.zero
-                              : Motion.quick,
-                          child: const DragGrip(),
-                        ),
+                    w.title,
+                    if (w.folds) ...[
+                      const SizedBox(width: 2),
+                      _Triangle(open: w.open),
+                    ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: !(_hovered || dragged)
+                            ? w.trailing
+                            : w.acts && w.trailing != null
+                            ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const DragGrip(),
+                                  const SizedBox(width: 10),
+                                  w.trailing!,
+                                ],
+                              )
+                            : const DragGrip(),
                       ),
                     ),
                   ],
