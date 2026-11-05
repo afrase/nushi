@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -5,6 +6,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/background_tasks_widget.dart';
+import 'package:nushi/context_report.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/markdown.dart';
@@ -182,4 +184,27 @@ void main() {
     expect(y(finished[1]) - y(finished[0]), closeTo(pitch, 0.5));
     await closeView(tester, d);
   }, variant: macOnly);
+
+  // Claude's rail colors System tools orange and the System prompt gold;
+  // a light theme darkens both its orange and its amber to brown to read
+  // as text, so the prompt takes a swatch's gold there (old: 55 apart).
+  test('System tools and System prompt are two colors in every theme', () {
+    double apart(Color a, Color b) {
+      final (r, g, bl) = (a.r - b.r, a.g - b.g, a.b - b.b);
+      return 255 * sqrt(r * r + g * g + bl * bl);
+    }
+
+    for (final theme in builtInThemes) {
+      for (final b in Brightness.values) {
+        final t = theme.of(b);
+        Color of(String name) =>
+            ContextReport.colorOf(t, ContextCategory(name: name));
+        expect(
+          apart(of('System tools'), of('System prompt')),
+          greaterThan(b == Brightness.light ? 80 : 40),
+          reason: '${theme.id} ${b.name}',
+        );
+      }
+    }
+  });
 }

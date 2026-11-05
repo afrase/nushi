@@ -142,7 +142,7 @@ class ContextReport extends StatelessWidget {
     'Messages' => t.accent,
     'System tools' => t.claude,
     'Skills' => t.done,
-    'System prompt' => t.needs,
+    'System prompt' => t.gold,
     'Autocompact buffer' => t.borderStrong,
     _ => t.textMuted,
   };

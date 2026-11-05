@@ -248,6 +248,14 @@ class Tokens {
       text.withValues(alpha: brightness == Brightness.dark ? 0.14 : 0.16);
   final Color? _pressed;
 
+  /// A gold mark beside [claude]'s orange (Context's System prompt, as
+  /// Claude's rail colors it): [needs] on a dark theme; on a light one,
+  /// whose [needs] and [claude] are both darkened to brown to read as
+  /// text, [ante]'s gold at half lightness, a swatch's, not a text's.
+  Color get gold => brightness == Brightness.dark
+      ? needs
+      : HSLColor.fromColor(ante).withLightness(0.5).toColor();
+
   /// The terminal's ANSI colors: VS Code's unless a theme gives its own.
   TerminalColors get terminal =>
       _terminal ??
