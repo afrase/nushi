@@ -73,6 +73,7 @@ func (s *Service) run(conn *noiseconn.Conn, device, id string) {
 	}
 	slog.Info("device connected", "device", device, "moved", id != s.id)
 	s.conns[conn] = device
+	s.told[device] = true // Remote tells it s.id
 	if id == s.id {
 		s.moved(device)
 	}
@@ -127,6 +128,7 @@ func (s *Service) add(name, kind string, key []byte) (string, error) {
 		return "", err
 	}
 	s.devices = devices
+	s.told[d.ID] = true // its pairing's reply says s.id
 	return d.ID, nil
 }
 
@@ -143,6 +145,7 @@ func (s *Service) Revoke(id string) error {
 	}
 	s.devices = devices
 	delete(s.views, id)
+	delete(s.told, id)
 	for c, d := range s.conns {
 		if d == id {
 			delete(s.conns, c)

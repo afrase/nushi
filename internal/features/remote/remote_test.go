@@ -649,11 +649,13 @@ func (f writerFunc) Write(p []byte) (int, error) { return f(p) }
 // Revokes in a row while a device stays away: the id it knows is waited
 // at once, never again under each newer id it never heard of, and the
 // waits stay few enough to leave the daemon's own id a slot at the relay.
+// (A device connected meanwhile hears of each, so it's away from here.)
 func TestRevokesInARowWaitOnlyWhereDevicesAre(t *testing.T) {
 	url := startRelay(t)
 	s := startRemote(t, t.TempDir(), url)
 	away := newKey(t)
 	o, first := pairOne(t, s, away)
+	dropConns(t, s)
 	for i := range maxMoving + 4 {
 		s.mu.Lock()
 		_, err := s.add(fmt.Sprintf("p%d", i), "web", newKey(t).Public)

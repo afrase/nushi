@@ -28,11 +28,14 @@ func (s *Service) rotate(revoked string) error {
 		m.Devices = slices.DeleteFunc(slices.Clone(m.Devices), func(d string) bool { return d == revoked })
 		moving = append(moving, m)
 	}
-	// The id given up now is the one only the devices waited for nowhere
-	// else know: one still waited for at an older id never came here.
+	// The id given up now is waited at for the devices that may dial it:
+	// those waited for nowhere else (they moved here, or paired here), and
+	// those told it at an older id, which a phone then keeps as its only
+	// one. One still waited for at an older id that hasn't been told this
+	// one never comes here.
 	var left []string
 	for _, d := range s.devices {
-		if !slices.ContainsFunc(moving, func(m model.Moving) bool { return slices.Contains(m.Devices, d.ID) }) {
+		if s.told[d.ID] || !slices.ContainsFunc(moving, func(m model.Moving) bool { return slices.Contains(m.Devices, d.ID) }) {
 			left = append(left, d.ID)
 		}
 	}
@@ -59,6 +62,11 @@ func (s *Service) rotate(revoked string) error {
 	}
 	s.endPairing()
 	s.listen, s.id, s.moving = listen, listenID(listen), moving
+	// The devices connected now hear of the new id at once.
+	s.told = map[string]bool{}
+	for _, d := range s.conns {
+		s.told[d] = true
+	}
 	if s.settings.On {
 		s.relink()
 	}

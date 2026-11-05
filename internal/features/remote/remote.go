@@ -98,6 +98,11 @@ type Service struct {
 	push      *Push           // nil until UsePush
 	views     map[string]view // the chat each device shows
 	notes     notifier        // Follow's own
+	// told holds the devices told id (Remote's rendezvous) since it became
+	// the daemon's: connected at any id, or paired, since. Once id is
+	// given up they may dial it. Kept in memory: after a start every
+	// device counts, as nothing says which weren't.
+	told map[string]bool
 }
 
 // New loads remote access and, if it was on, starts it.
@@ -139,7 +144,10 @@ func newService(st Store, dialer *relay.Dialer, serve func(net.Conn), awake func
 	s := &Service{st: st, dialer: dialer, serve: serve, awake: awake, publish: publish, timing: tm,
 		key: noise.DHKey{Private: k.Private, Public: k.Public}, listen: k.Listen, id: listenID(k.Listen), moving: k.Moving,
 		settings: settings, state: "off", devices: devices, conns: map[*noiseconn.Conn]string{}, views: map[string]view{},
-		pending: make(chan struct{}, MaxConns)}
+		pending: make(chan struct{}, MaxConns), told: map[string]bool{}}
+	for _, d := range devices {
+		s.told[d.ID] = true
+	}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.mu.Lock()
 	s.apply()
