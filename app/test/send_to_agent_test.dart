@@ -9,7 +9,6 @@ import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'github_fixture.dart' show pull;
@@ -184,13 +183,10 @@ void main() {
         thread: pull().threads.first,
         onChanged: () async {},
       );
-      return MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: tab
-              ? SendToAgent(onSend: (r, _) => sent.addAll(r), child: thread)
-              : thread,
-        ),
+      return themed(
+        tab
+            ? SendToAgent(onSend: (r, _) => sent.addAll(r), child: thread)
+            : thread,
       );
     }
 

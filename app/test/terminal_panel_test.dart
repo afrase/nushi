@@ -9,7 +9,6 @@ import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminals.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart' show loadFonts;
 import 'harness.dart';
@@ -75,15 +74,12 @@ Future<void> _panel(
   VoidCallback? onHide,
 }) async {
   await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: TerminalPanel(
-          chatId: 'chat',
-          terms: terms,
-          onHide: onHide ?? () {},
-          showChange: (_) async => false,
-        ),
+    themed(
+      TerminalPanel(
+        chatId: 'chat',
+        terms: terms,
+        onHide: onHide ?? () {},
+        showChange: (_) async => false,
       ),
     ),
   );

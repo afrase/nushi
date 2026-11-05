@@ -19,19 +19,17 @@ void main() {
     ) async {
       viewport(tester, const Size(240, 80));
       await tester.pumpWidget(
-        MaterialApp(
-          theme: NushiTheme(tokens).toThemeData(),
-          home: Scaffold(
-            body: Center(
-              child: RepaintBoundary(
-                key: const Key('bar'),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: SelectionToolbar(onSide: () {}, onReply: () {}),
-                ),
+        themed(
+          Center(
+            child: RepaintBoundary(
+              key: const Key('bar'),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: SelectionToolbar(onSide: () {}, onReply: () {}),
               ),
             ),
           ),
+          tokens: tokens,
         ),
       );
       final pointer = await tester.createGesture(kind: PointerDeviceKind.mouse);

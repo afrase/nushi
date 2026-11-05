@@ -6,6 +6,7 @@ import 'package:nushi/pull_summary.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 import 'pull_fixture.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -60,14 +61,12 @@ GitHubPull _optionalFailing() => mergePull('ready')
   ..checks.add(check('lint', state: 'failure'));
 
 /// [pullSummary] of [p] on its own.
-Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => MaterialApp(
-  theme: NushiTheme(tokens).toThemeData(),
-  home: Scaffold(
-    body: Builder(
-      builder: (context) =>
-          pullSummary(NushiTheme.of(context), number: 412, pull: p),
-    ),
+Widget _summary(GitHubPull p, {Tokens tokens = Tokens.dark}) => themed(
+  Builder(
+    builder: (context) =>
+        pullSummary(NushiTheme.of(context), number: 412, pull: p),
   ),
+  tokens: tokens,
 );
 
 void main() {

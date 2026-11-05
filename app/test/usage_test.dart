@@ -2,8 +2,9 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/usage.dart';
+
+import 'harness.dart';
 
 void main() {
   test('deferred rows stay out of the bar, and the shares add up', () {
@@ -43,12 +44,8 @@ void main() {
 
   testWidgets('the meter: a percentage from the usage, else from /context, '
       'else nothing', (tester) async {
-    Future<void> show(ContextMeter m) => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: Center(child: m)),
-      ),
-    );
+    Future<void> show(ContextMeter m) =>
+        tester.pumpWidget(themed(Center(child: m)));
     await show(
       ContextMeter(
         Usage(contextUsed: Int64(105100), contextSize: Int64(1000000)),

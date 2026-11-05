@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktree.dart';
 
 import 'fake_daemon.dart';
@@ -59,14 +57,7 @@ void main() {
     expect(fake.started.last.worktree, isFalse);
 
     final chat = _fresh('c');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: NewChatBar(chat: chat, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(NewChatBar(chat: chat, daemon: d)));
     await tester.pumpAndSettle();
     await tester.tap(find.text('New worktree'));
     await tester.pumpAndSettle();

@@ -11,7 +11,6 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/subagents.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/worktrees_widget.dart';
 
 import 'fake_daemon.dart';
@@ -102,12 +101,7 @@ void main() {
 
   Future<void> showChanges(WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ChangesView(chat: chatState, daemon: daemon),
-        ),
-      ),
+      themed(ChangesView(chat: chatState, daemon: daemon)),
     );
     await tester.pumpAndSettle();
   }
@@ -457,13 +451,10 @@ void main() {
     Future<void> showWidget(WidgetTester tester, {VoidCallback? onOpen}) async {
       final w = worktreesWidget(chatState, onChanges: onOpen ?? () {})!;
       await tester.pumpWidget(
-        MaterialApp(
-          theme: const NushiTheme(Tokens.dark).toThemeData(),
-          home: Scaffold(
-            body: SizedBox(
-              width: 240,
-              child: Column(children: [for (final r in w.rows) r.$2 as Widget]),
-            ),
+        themed(
+          SizedBox(
+            width: 240,
+            child: Column(children: [for (final r in w.rows) r.$2 as Widget]),
           ),
         ),
       );
@@ -549,17 +540,14 @@ void main() {
       chatState.related.take([_worktree('a-branch', call: 'x')]);
       final runs = subagentsOf(chatState.items);
       await tester.pumpWidget(
-        MaterialApp(
-          theme: const NushiTheme(Tokens.dark).toThemeData(),
-          home: Scaffold(
-            body: Column(
-              children: [
-                SubagentLine(runs[0], chatState),
-                SubagentLine(runs[1], chatState),
-                for (final r in backgroundTasksWidget(chatState, daemon)!.rows)
-                  r.$2 as Widget,
-              ],
-            ),
+        themed(
+          Column(
+            children: [
+              SubagentLine(runs[0], chatState),
+              SubagentLine(runs[1], chatState),
+              for (final r in backgroundTasksWidget(chatState, daemon)!.rows)
+                r.$2 as Widget,
+            ],
           ),
         ),
       );

@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/trust_card.dart';
 
 import 'fake_daemon.dart';
@@ -34,12 +33,7 @@ void main() {
         command: 'https://e.com',
       ),
     ], 'claude');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: TrustCard(ask)),
-      ),
-    );
+    await tester.pumpWidget(themed(TrustCard(ask)));
     expect(find.text('.mcp.json'), findsOneWidget); // in the folder: relative
     expect(find.text('/src/.mcp.json'), findsOneWidget); // above it: whole
     expect(find.textContaining('echo hi', findRichText: true), findsOneWidget);

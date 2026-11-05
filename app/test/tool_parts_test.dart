@@ -32,18 +32,16 @@ const _input =
     '    "jql": "project = ABC AND status = Open",\n'
     '    "fields": [\n      "summary",\n      "status"\n    ]\n  }\n}';
 
-Widget _rows(List<Item> calls, {Tokens tokens = Tokens.dark}) => MaterialApp(
-  theme: NushiTheme(tokens).toThemeData(),
-  home: Scaffold(
-    body: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: 8,
-        children: [for (final c in calls) ToolCallView(c)],
-      ),
+Widget _rows(List<Item> calls, {Tokens tokens = Tokens.dark}) => themed(
+  Padding(
+    padding: const EdgeInsets.all(12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 8,
+      children: [for (final c in calls) ToolCallView(c)],
     ),
   ),
+  tokens: tokens,
 );
 
 void main() {

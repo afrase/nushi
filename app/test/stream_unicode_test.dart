@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
@@ -72,14 +71,11 @@ void main() {
         Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Go'),
       );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ListenableBuilder(
-            listenable: chat,
-            builder: (context, _) =>
-                Transcript(chat: chat, daemon: d, onReply: null),
-          ),
+      themed(
+        ListenableBuilder(
+          listenable: chat,
+          builder: (context, _) =>
+              Transcript(chat: chat, daemon: d, onReply: null),
         ),
       ),
     );

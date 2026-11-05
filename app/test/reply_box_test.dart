@@ -10,7 +10,6 @@ import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
@@ -264,12 +263,7 @@ void main() {
   testWidgets('a reply edited from its card grows too: Shift-Enter starts '
       'a line, Enter saves it', (tester) async {
     final replies = Replies([(quote: _quote, text: _lines.first, from: '')]);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: ReplyCards(replies, onDone: () {})),
-      ),
-    );
+    await tester.pumpWidget(themed(ReplyCards(replies, onDone: () {})));
     await tester.tap(find.text(_lines.first));
     await tester.pumpAndSettle();
     final field = find.descendant(

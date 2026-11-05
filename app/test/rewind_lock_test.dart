@@ -281,12 +281,7 @@ void main() {
 
     // The other chat's box, shown instead, stays live.
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Composer(key: UniqueKey(), chat: other, daemon: b.daemon),
-        ),
-      ),
+      themed(Composer(key: UniqueKey(), chat: other, daemon: b.daemon)),
     );
     await tester.pump();
     expect(_field(tester).readOnly, isFalse);

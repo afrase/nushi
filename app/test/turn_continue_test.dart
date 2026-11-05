@@ -66,15 +66,12 @@ Future<Daemon> _show(
   viewport(tester, const Size(760, 400));
   final d = await fake.connect(tester);
   await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Column(
-          children: [
-            for (final it in state.items)
-              ItemView(it, state, d, live: false, still: true),
-          ],
-        ),
+    themed(
+      Column(
+        children: [
+          for (final it in state.items)
+            ItemView(it, state, d, live: false, still: true),
+        ],
       ),
     ),
   );

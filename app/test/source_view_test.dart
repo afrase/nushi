@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/preview_text.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'harness.dart';
 
@@ -17,10 +16,7 @@ int _spans(WidgetTester tester) {
   return n;
 }
 
-Widget _host(String text) => MaterialApp(
-  theme: const NushiTheme(Tokens.dark).toThemeData(),
-  home: Scaffold(body: SourceView(text, path: 'a.dart')),
-);
+Widget _host(String text) => themed(SourceView(text, path: 'a.dart'));
 
 void main() {
   const code = 'void main() {\n  final x = 1;\n  print("hi \$x");\n}\n';

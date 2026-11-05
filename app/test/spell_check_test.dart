@@ -332,14 +332,7 @@ void main() {
     final d = await FakeDaemon([]).connect(tester);
     final chat = ChatState('c', '/Users/me/project')..loaded = true;
     d.chats['c'] = chat;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Composer(chat: chat, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(Composer(chat: chat, daemon: d)));
     expect(speller, isNull); // tests run as Android unless they say
     await tester.enterText(find.byType(TextField), 'chekc thrid ');
     await checked(tester);

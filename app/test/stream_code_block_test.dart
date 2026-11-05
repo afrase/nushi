@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 /// 300 lines of Python, as an agent writes a file out for copying.
 String _code() {
@@ -61,14 +61,11 @@ void main() {
       );
     await tester.binding.setSurfaceSize(const Size(1200, 900));
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ListenableBuilder(
-            listenable: chat,
-            builder: (context, _) =>
-                Transcript(chat: chat, daemon: d, onReply: null),
-          ),
+      themed(
+        ListenableBuilder(
+          listenable: chat,
+          builder: (context, _) =>
+              Transcript(chat: chat, daemon: d, onReply: null),
         ),
       ),
     );

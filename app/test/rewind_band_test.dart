@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/rewind.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 void main() {
   testWidgets('a message that can be rewound keeps its row width', (
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ListView(
-            children: [
-              RewindTarget(
-                onRewind: () {},
-                child: const ColoredBox(
-                  key: ValueKey('band'),
-                  color: Colors.blue,
-                  child: Text('short'),
-                ),
+      themed(
+        ListView(
+          children: [
+            RewindTarget(
+              onRewind: () {},
+              child: const ColoredBox(
+                key: ValueKey('band'),
+                color: Colors.blue,
+                child: Text('short'),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

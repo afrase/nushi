@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/subagents.dart';
-import 'package:nushi/theme/theme.dart';
+
+import 'harness.dart';
 
 void main() {
   testWidgets('a subagent line keeps its state at the end, by its mark', (
@@ -21,12 +22,7 @@ void main() {
       items: <Item>[],
     );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SubagentLine(run, ChatState('c', '/x'), still: true),
-        ),
-      ),
+      themed(SubagentLine(run, ChatState('c', '/x'), still: true)),
     );
     final state = tester.getRect(find.text('done'));
     final chevron = tester.getRect(find.byIcon(Icons.chevron_right));

@@ -165,12 +165,7 @@ void main() {
     final d = await fake.connect(tester);
     await tester.binding.setSurfaceSize(const Size(1000, 860));
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SkillsView(daemon: d, folder: '/Users/me/lost'),
-        ),
-      ),
+      themed(SkillsView(daemon: d, folder: '/Users/me/lost')),
     );
     await tester.pumpAndSettle();
     expect(find.text('daemon unavailable: connection lost'), findsOneWidget);

@@ -6,10 +6,10 @@ import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/question_card.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Field choice(
   String id,
@@ -30,27 +30,24 @@ void main() {
   ) async {
     final question = 'I stopped the service. Its files are still there: ' * 6;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 500,
-              child: QuestionCard(
-                Item(
-                  id: 'q',
-                  kind: ItemKind.ITEM_KIND_QUESTION,
-                  status: 'answered',
-                  text: question,
-                  fields: [
-                    choice('question_0', 'Files', ['Delete all'])
-                      ..values.add('Delete all'),
-                  ],
-                ),
-                agent: 'Claude',
-                draft: QuestionDraft(),
-                onAnswer: (_) async {},
+      themed(
+        Center(
+          child: SizedBox(
+            width: 500,
+            child: QuestionCard(
+              Item(
+                id: 'q',
+                kind: ItemKind.ITEM_KIND_QUESTION,
+                status: 'answered',
+                text: question,
+                fields: [
+                  choice('question_0', 'Files', ['Delete all'])
+                    ..values.add('Delete all'),
+                ],
               ),
+              agent: 'Claude',
+              draft: QuestionDraft(),
+              onAnswer: (_) async {},
             ),
           ),
         ),
@@ -85,15 +82,12 @@ void main() {
       ],
     );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: QuestionCard(
-            item,
-            agent: 'Claude',
-            draft: QuestionDraft(),
-            onAnswer: (a) async => sent = a,
-          ),
+      themed(
+        QuestionCard(
+          item,
+          agent: 'Claude',
+          draft: QuestionDraft(),
+          onAnswer: (a) async => sent = a,
         ),
       ),
     );
@@ -166,10 +160,7 @@ void main() {
       ],
     );
     Future<void> show() => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: ItemView(item, chat, d, live: false, still: true)),
-      ),
+      themed(ItemView(item, chat, d, live: false, still: true)),
     );
     await show();
     await tester.pump();
@@ -212,15 +203,12 @@ void main() {
       ],
     );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: QuestionCard(
-            item,
-            agent: 'Claude',
-            draft: QuestionDraft(),
-            onAnswer: (a) async => sent = a,
-          ),
+      themed(
+        QuestionCard(
+          item,
+          agent: 'Claude',
+          draft: QuestionDraft(),
+          onAnswer: (a) async => sent = a,
         ),
       ),
     );
@@ -252,21 +240,18 @@ void main() {
       ],
     );
     Future<void> show({required bool card}) => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Column(
-            children: [
-              if (card)
-                QuestionCard(
-                  item,
-                  agent: 'Claude',
-                  draft: QuestionDraft(),
-                  onAnswer: (a) async => sent = a,
-                ),
-              TextField(controller: draft, focusNode: draftFocus),
-            ],
-          ),
+      themed(
+        Column(
+          children: [
+            if (card)
+              QuestionCard(
+                item,
+                agent: 'Claude',
+                draft: QuestionDraft(),
+                onAnswer: (a) async => sent = a,
+              ),
+            TextField(controller: draft, focusNode: draftFocus),
+          ],
         ),
       ),
     );
@@ -304,28 +289,25 @@ void main() {
       ],
     );
     Future<void> show({required bool card}) => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Column(
-            children: [
-              if (card)
-                QuestionCard(
-                  item,
-                  agent: 'Claude',
-                  draft: QuestionDraft(),
-                  onAnswer: (a) async => sent = a,
-                ),
-              Focus(
-                focusNode: terminal,
-                onKeyEvent: (_, e) {
-                  if (e is KeyDownEvent) keys.add(e.logicalKey);
-                  return KeyEventResult.handled;
-                },
-                child: const SizedBox(height: 40),
+      themed(
+        Column(
+          children: [
+            if (card)
+              QuestionCard(
+                item,
+                agent: 'Claude',
+                draft: QuestionDraft(),
+                onAnswer: (a) async => sent = a,
               ),
-            ],
-          ),
+            Focus(
+              focusNode: terminal,
+              onKeyEvent: (_, e) {
+                if (e is KeyDownEvent) keys.add(e.logicalKey);
+                return KeyEventResult.handled;
+              },
+              child: const SizedBox(height: 40),
+            ),
+          ],
         ),
       ),
     );

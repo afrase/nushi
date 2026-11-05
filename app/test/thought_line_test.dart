@@ -6,6 +6,7 @@ import 'package:nushi/thinking.dart';
 import 'package:nushi/thought_line.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 Widget _app(String text, {required bool live, bool still = false}) =>
     MaterialApp(
@@ -106,34 +107,32 @@ void main() {
   ]) {
     testWidgets('golden, a thought streaming, folded, $name', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          theme: NushiTheme(tokens).toThemeData(),
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: enlarged(
-                const Size(320, 60),
-                2,
-                ColoredBox(
-                  color: tokens.base,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: ThoughtView(
-                      Item(
-                        id: 't',
-                        kind: ItemKind.ITEM_KIND_THOUGHT,
-                        text:
-                            'The CI job takes about 13 minutes. Splitting by '
-                            'file keeps each golden with its test, and every '
-                            'second file should balance the shards',
-                      ),
-                      live: true,
+        themed(
+          Align(
+            alignment: Alignment.topLeft,
+            child: enlarged(
+              const Size(320, 60),
+              2,
+              ColoredBox(
+                color: tokens.base,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: ThoughtView(
+                    Item(
+                      id: 't',
+                      kind: ItemKind.ITEM_KIND_THOUGHT,
+                      text:
+                          'The CI job takes about 13 minutes. Splitting by '
+                          'file keeps each golden with its test, and every '
+                          'second file should balance the shards',
                     ),
+                    live: true,
                   ),
                 ),
               ),
             ),
           ),
+          tokens: tokens,
         ),
       );
       await expectLater(

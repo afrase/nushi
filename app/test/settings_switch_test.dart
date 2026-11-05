@@ -5,25 +5,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'harness.dart';
+
 void main() {
   testWidgets('a switch whose change is a call: tapped twice while it runs, '
       'it sends once; its error shows', (tester) async {
     final asked = <bool>[];
     var call = Completer<void>();
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.light).toThemeData(),
-        home: Scaffold(
-          body: Center(
-            child: SettingsSwitch(
-              value: false,
-              run: ({required on}) {
-                asked.add(on);
-                return call.future;
-              },
-            ),
+      themed(
+        Center(
+          child: SettingsSwitch(
+            value: false,
+            run: ({required on}) {
+              asked.add(on);
+              return call.future;
+            },
           ),
         ),
+        tokens: Tokens.light,
       ),
     );
     Switch shown() => tester.widget<Switch>(find.byType(Switch));
