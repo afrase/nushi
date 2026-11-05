@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -81,6 +83,43 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     expect(find.text('Restart the daemon?'), findsNothing);
+    await closeView(tester, d);
+  });
+
+  // A stuck daemon, a reason to restart, takes the call and never answers:
+  // after a short wait the restart asks, as for a daemon that couldn't say.
+  testWidgets('it asks once a daemon leaves the terminals unanswered', (
+    tester,
+  ) async {
+    final never = Completer<Object?>();
+    final fake = FakeDaemon([
+      Chat(
+        id: 'c',
+        agent: 'claude',
+        folder: '/x',
+        status: ChatStatus(asleep: true),
+      ),
+    ])..answer = (i) => i is ListTerminalsRequest ? never.future : null;
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => restartDaemonAsking(context, d),
+            child: const Text('go'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('Restart the daemon?'), findsOneWidget);
+    expect(find.text('Terminals close.'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    never.complete(ListTerminalsResponse());
     await closeView(tester, d);
   });
 }

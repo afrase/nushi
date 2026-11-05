@@ -299,14 +299,16 @@ Future<void> restartDaemonAsking(BuildContext context, Daemon daemon) async {
 }
 
 /// What runs in the chats' terminals (each foreground program), or null
-/// when the daemon couldn't say.
+/// when the daemon couldn't say. A daemon that doesn't answer within
+/// [_terminalsWait] couldn't say: a stuck one is a reason to restart, and
+/// Restart would otherwise do nothing at all.
 Future<List<String>?> _runningTerminals(Daemon daemon) async {
   try {
     final lists = await Future.wait([
       for (final c in daemon.chats.values)
         if (!c.archived)
           daemon.client.listTerminals(ListTerminalsRequest(chatId: c.id)),
-    ]);
+    ]).timeout(_terminalsWait);
     return [
       for (final l in lists)
         for (final t in l.terminals)
@@ -316,3 +318,6 @@ Future<List<String>?> _runningTerminals(Daemon daemon) async {
     return null;
   }
 }
+
+/// How long Restart waits for the chats' terminals before asking anyway.
+const _terminalsWait = Duration(seconds: 2);
