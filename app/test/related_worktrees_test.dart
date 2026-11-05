@@ -552,6 +552,8 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.tap(find.text('2 finished'));
+      await tester.pump();
       // In the first line and the widget's first row, the other has none.
       expect(find.text('a-branch'), findsNWidgets(2));
       chatState.related.take([]);

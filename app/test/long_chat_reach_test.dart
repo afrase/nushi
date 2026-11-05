@@ -194,8 +194,8 @@ void main() {
     final c = d.chats['c']!;
     expect(c.older, greaterThan(0));
     expect(c.items.any((it) => it.id == 'bg'), isFalse);
-    expect(find.text(r'$ npm run dev'), findsOneWidget);
-    expect(find.text('running'), findsOneWidget);
+    expect(find.text('npm run dev'), findsOneWidget);
+    expect(find.byTooltip('Stop'), findsOneWidget); // it runs
     // It ends: its event, before the recent part, still reaches it.
     c.apply(
       EventsResponse(
@@ -213,7 +213,7 @@ void main() {
     );
     await _settle(tester);
     expect(c.runningBefore.single.backgroundCommand.state, 'completed');
-    expect(find.text('running'), findsNothing);
+    expect(find.byTooltip('Stop'), findsNothing);
     await closeView(tester, d);
   }, variant: _mac);
 }

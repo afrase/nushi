@@ -169,18 +169,23 @@ void main() {
       find.textContaining('stopped · 2 tool calls · 1m 02s'),
       findsWidgets,
     );
-    expect(find.textContaining('Running go test'), findsWidgets);
-    expect(_stops, findsNothing); // until under the pointer
+    final card = find.byType(DetailsPanel);
+    final cardStops = find.descendant(of: card, matching: _stops);
+    // The card's running ones show theirs, as Claude's rail; the rows
+    // none until under the pointer.
+    expect(cardStops, findsNWidgets(2));
+    expect(_stops, findsNWidgets(2));
 
     // The running one's row: under the pointer, its mark is its Stop.
     final mouse = await _hover(tester, _line('b'));
-    expect(_stops, findsOneWidget);
-    await tester.tap(_stops);
+    expect(_stops, findsNWidgets(3));
+    final rowStop = find.descendant(of: _line('b'), matching: _stops);
+    await tester.tap(rowStop);
     await _pump(tester);
     expect(fake.calls.whereType<StopTaskRequest>().map((r) => r.callId), ['b']);
     await mouse.moveTo(tester.getCenter(_line('a')));
     await _pump(tester);
-    expect(_stops, findsNothing); // the stopped one has none
+    expect(_stops, findsNWidgets(2)); // the stopped one has none
 
     // Its pane has Stop beside Close; the stopped one's none.
     await tester.tap(_line('b'));
@@ -195,20 +200,9 @@ void main() {
       findsWidgets,
     );
 
-    // The card's rows: the subagent's and the command's, under the pointer.
-    final card = find.byType(DetailsPanel);
-    for (final row in [
-      'Build ClickHouse time binding (Opus)',
-      r'$ make watch',
-    ]) {
-      await mouse.moveTo(
-        tester.getCenter(
-          find.descendant(of: card, matching: find.textContaining(row)),
-        ),
-      );
-      await _pump(tester);
-      expect(find.descendant(of: card, matching: _stops), findsOneWidget);
-      await tester.tap(find.descendant(of: card, matching: _stops));
+    // The card's rows: the subagent's and the command's.
+    for (final i in [0, 1]) {
+      await tester.tap(cardStops.at(i));
       await _pump(tester);
     }
     expect(fake.calls.whereType<StopTaskRequest>().map((r) => r.callId), [

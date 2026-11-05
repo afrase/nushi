@@ -33,24 +33,28 @@ void main() {
     );
   }
 
-  testWidgets('a finished subagent stays, and opens again', (tester) async {
+  testWidgets('a finished subagent stays, folded under "1 finished", and '
+      'opens again', (tester) async {
     final d = Daemon(transport: FakeDaemon([]));
     final chat = ChatState('c', '/x');
     expect(backgroundTasksWidget(chat, d), isNull); // none yet
     chat.items.add(_subagent('a', 'done'));
     await show(tester, chat, d);
+    expect(find.textContaining('Task a'), findsNothing);
+    await tester.tap(find.text('1 finished'));
+    await tester.pump();
     await tester.tap(find.textContaining('Task a'));
     expect(chat.pane.value, 'a');
     await closeView(tester, d);
   });
 
-  testWidgets('a running task holds still as the pointer crosses it', (
-    tester,
-  ) async {
+  testWidgets('a running task shows its Stop, and holds still as the pointer '
+      'crosses it', (tester) async {
     final d = Daemon(transport: FakeDaemon([]));
     final chat = ChatState('c', '/x');
     chat.items.add(_subagent('a', 'running')..agentId = 'agent-a');
     await show(tester, chat, d);
+    expect(find.byTooltip('Stop'), findsOneWidget); // as Claude's rail
     Rect row() => tester.getRect(find.textContaining('Task a'));
     final before = row();
     final height = tester.getSize(find.byType(Tap).first).height;
