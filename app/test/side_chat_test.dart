@@ -238,6 +238,79 @@ void main() {
     await closeView(tester, d);
   }, variant: _mac);
 
+  testWidgets("its composer has the chat's pickers, which set the side "
+      "chat's own options", (tester) async {
+    final (d, fake, _) = await _app(tester);
+    fake.emit(_config);
+    await tester.pumpAndSettle();
+    final mode = find.descendant(
+      of: find.byType(SideChat),
+      matching: find.text('Plan'),
+    );
+    expect(mode, findsOne);
+    expect(
+      find.descendant(
+        of: find.byType(SideChat),
+        matching: find.textContaining('Sonnet', findRichText: true),
+      ),
+      findsOne,
+    );
+    await tester.tap(mode);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Manual').last);
+    await tester.pumpAndSettle();
+    final set = fake.calls.whereType<SetConfigOptionRequest>().single;
+    expect((set.chatId, set.configId, set.value), ('s', 'mode', 'default'));
+    await closeView(tester, d);
+  }, variant: _mac);
+
+  for (final (name, brightness) in [
+    ('light', Brightness.light),
+    ('dark', Brightness.dark),
+  ]) {
+    testWidgets('the side chat with its pickers ($name)', (tester) async {
+      final (d, fake, _) = await _app(tester);
+      tester.platformDispatcher.platformBrightnessTestValue = brightness;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      fake.emit(_config);
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(SideChat),
+        matchesGoldenFile('goldens/side_chat_pickers_$name.png'),
+      );
+      await closeView(tester, d);
+    }, variant: _mac);
+
+    for (final (what, size) in [
+      ('wide', const Size(1700, 900)),
+      ('narrow', const Size(720, 800)),
+    ]) {
+      testWidgets('the pickers, $what ($name)', (tester) async {
+        final (d, fake, _) = await _app(tester, size: size);
+        tester.platformDispatcher.platformBrightnessTestValue = brightness;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        fake.emit(_config);
+        await tester.pumpAndSettle();
+        expectTextInside(tester, size.width);
+        final pane = tester.getRect(find.byType(SideChat));
+        final effort = tester.getRect(
+          find.descendant(
+            of: find.byType(SideChat),
+            matching: find.textContaining('Sonnet', findRichText: true),
+          ),
+        );
+        expect(effort.right, lessThanOrEqualTo(pane.right));
+        expect(effort.right, greaterThan(pane.right - 60));
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'side_chat_pickers_${what}_$name',
+        );
+        await closeView(tester, d);
+      }, variant: _mac);
+    }
+  }
+
   for (final (name, brightness) in [
     ('light', Brightness.light),
     ('dark', Brightness.dark),
@@ -302,3 +375,46 @@ EventsResponse _status(int seq, {bool busy = false}) => EventsResponse(
   seq: Int64(seq),
   status: ChatStatus(busy: busy),
 );
+
+/// The side chat's options, as the daemon sends them.
+EventsResponse get _config => EventsResponse(
+  chatId: 's',
+  seq: Int64(1),
+  config: ChatConfig(options: _sideConfig),
+);
+
+/// A side chat's options as Claude's Go agent has them: its chat's Plan
+/// mode, and the model with its effort.
+final _sideConfig = [
+  ConfigOption(
+    id: 'mode',
+    name: 'Mode',
+    category: 'mode',
+    current: 'plan',
+    values: [
+      ConfigValue(value: 'default', name: 'Manual'),
+      ConfigValue(value: 'plan', name: 'Plan'),
+      ConfigValue(value: 'auto', name: 'Auto'),
+    ],
+  ),
+  ConfigOption(
+    id: 'model',
+    name: 'Model',
+    category: 'model',
+    current: 'sonnet',
+    values: [
+      ConfigValue(value: 'opus', name: 'Opus 5.5'),
+      ConfigValue(value: 'sonnet', name: 'Sonnet 5'),
+    ],
+  ),
+  ConfigOption(
+    id: 'effort',
+    name: 'Effort',
+    category: 'thought_level',
+    current: 'high',
+    values: [
+      ConfigValue(value: 'medium', name: 'Medium'),
+      ConfigValue(value: 'high', name: 'High'),
+    ],
+  ),
+];
