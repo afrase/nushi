@@ -1,7 +1,3 @@
-import 'dart:async';
-import 'dart:convert';
-
-import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,56 +6,23 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminals.dart';
 
-import 'fake_daemon.dart' show loadFonts;
+import 'fake_daemon.dart' show FakeDaemon, loadFonts;
+import 'fake_shells.dart';
 import 'harness.dart';
 
-/// A daemon with two terminals that records what the app asks of it.
-class _Daemon implements Transport {
-  final calls = <String>[];
-  final written = <String>[];
-  int opened = 0;
-  String replay = r'$ ';
-  String? live; // what the shell writes after the replay
-
-  @override
-  Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
-    Spec<I, O> spec,
-    I input, [
-    CallOptions? options,
-  ]) async {
-    final name = spec.procedure.split('/').last;
-    calls.add(name);
-    Object out = spec.outputFactory();
-    switch (input) {
-      case ListTerminalsRequest():
-        out = ListTerminalsResponse(terminals: [_term('a'), _term('b')]);
-      case OpenTerminalRequest():
-        out = OpenTerminalResponse(terminal: _term('new${opened++}'));
-      case WriteTerminalRequest(:final data):
-        written.add(utf8.decode(data));
-    }
-    return UnaryResponse(spec, Headers(), out as O, Headers());
-  }
-
-  @override
-  Future<StreamResponse<I, O>> stream<I extends Object, O extends Object>(
-    Spec<I, O> spec,
-    Stream<I> input, [
-    CallOptions? options,
-  ]) async {
-    // Handed to the response, whose stream the test reads.
-    // ignore: close_sinks
-    final out = StreamController<O>()
-      ..add(AttachTerminalResponse(data: utf8.encode(replay)) as O);
-    if (live case final live?) {
-      out.add(AttachTerminalResponse(data: utf8.encode(live)) as O);
-    }
-    return StreamResponse(spec, Headers(), out.stream, Headers());
-  }
-
-  static Terminal _term(String id) =>
-      Terminal(id: id, chatId: 'chat', folder: '/tmp/veg', shell: 'zsh');
+/// Two terminals of the chat on a fake daemon, each first showing
+/// [replay], and [live] after it once attached; a new one shows [replay].
+(FakeDaemon, FakeShells) _daemon({String replay = r'$ ', String? live}) {
+  final fake = FakeDaemon([]);
+  final shells = FakeShells(fake, terminals: [_term('a'), _term('b')])
+    ..newReplay = replay
+    ..replay.addAll({'a': replay, 'b': replay});
+  if (live != null) shells.onAttach.addAll({'a': live, 'b': live});
+  return (fake, shells);
 }
+
+Terminal _term(String id) =>
+    Terminal(id: id, chatId: 'chat', folder: '/tmp/veg', shell: 'zsh');
 
 Future<void> _meta(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
@@ -92,8 +55,8 @@ void main() {
   testWidgets('tabs, and the keys the panel keeps from the shell', (
     tester,
   ) async {
-    final daemon = _Daemon();
-    final terms = Terminals(NushiServiceClient(daemon));
+    final (fake, shells) = _daemon();
+    final terms = Terminals(NushiServiceClient(fake));
     var hidden = false;
     await _panel(tester, terms, onHide: () => hidden = true);
     expect(find.text('zsh — veg'), findsNWidgets(2));
@@ -104,7 +67,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyB); // Option as Meta
     await tester.sendKeyUpEvent(LogicalKeyboardKey.altLeft);
     await tester.pumpAndSettle();
-    expect(daemon.written.join(), 'l\x1bb');
+    expect(shells.typedAll.join(), 'l\x1bb');
 
     await _meta(tester, LogicalKeyboardKey.keyF); // find in the scrollback
     await tester.pumpAndSettle();
@@ -122,11 +85,11 @@ void main() {
     expect(terms.active['chat'], 'a');
     await _meta(tester, LogicalKeyboardKey.keyT);
     await tester.pumpAndSettle();
-    expect(daemon.calls, contains('OpenTerminal'));
+    expect(fake.calls, contains(isA<OpenTerminalRequest>()));
     expect(terms.active['chat'], 'new0');
     await _meta(tester, LogicalKeyboardKey.keyW);
-    expect(daemon.calls.last, 'CloseTerminal');
-    expect(daemon.written.join(), 'l\x1bb'); // none of those reached the shell
+    expect(fake.calls.last, isA<CloseTerminalRequest>());
+    expect(shells.typedAll.join(), 'l\x1bb'); // none of those reached the shell
 
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.backquote);
@@ -136,8 +99,8 @@ void main() {
 
   testWidgets('⌘F in a terminal starts at the latest match; ⏎ goes down '
       '(round to the first), ⇧⏎ up', (tester) async {
-    final daemon = _Daemon()..replay = 'one x\r\ntwo x\r\nthree x\r\n\$ ';
-    final terms = Terminals(NushiServiceClient(daemon));
+    final (fake, shells) = _daemon(replay: 'one x\r\ntwo x\r\nthree x\r\n\$ ');
+    final terms = Terminals(NushiServiceClient(fake));
     await _panel(tester, terms);
     await _meta(tester, LogicalKeyboardKey.keyF);
     await tester.pumpAndSettle();
@@ -169,37 +132,37 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyL); // the shell's again
     await tester.pumpAndSettle();
-    expect(daemon.written.join(), 'l');
+    expect(shells.typedAll.join(), 'l');
   });
 
   // fish waits 10 seconds for an answer to the query it starts with.
   testWidgets('only a shell opened here gets answers to its replayed queries', (
     tester,
   ) async {
-    final daemon = _Daemon()..replay = '\x1b[c\$ ';
-    final terms = Terminals(NushiServiceClient(daemon));
+    final (fake, shells) = _daemon(replay: '\x1b[c\$ ');
+    final terms = Terminals(NushiServiceClient(fake));
     await _panel(tester, terms);
-    expect(daemon.written, isEmpty); // answered when it was opened
+    expect(shells.typedAll, isEmpty); // answered when it was opened
     await _meta(tester, LogicalKeyboardKey.keyT);
     await tester.pumpAndSettle();
-    expect(daemon.written.join(), startsWith('\x1b[?'));
+    expect(shells.typedAll.join(), startsWith('\x1b[?'));
   });
 
   testWidgets('a query after an empty replay is live, and answered', (
     tester,
   ) async {
-    final daemon = _Daemon()
-      ..replay = ''
-      ..live = '\x1b[c';
-    await _panel(tester, Terminals(NushiServiceClient(daemon)));
-    expect(daemon.written.join(), startsWith('\x1b[?'));
+    final (fake, shells) = _daemon(replay: '', live: '\x1b[c');
+    await _panel(tester, Terminals(NushiServiceClient(fake)));
+    expect(shells.typedAll.join(), startsWith('\x1b[?'));
   });
 
   testWidgets("output can't have its title typed at the prompt", (
     tester,
   ) async {
-    final daemon = _Daemon()..live = '\x1b]2;s; echo hi #\x07\x1b[21t\x1b[20t';
-    await _panel(tester, Terminals(NushiServiceClient(daemon)));
-    expect(daemon.written.join(), isNot(contains('echo hi')));
+    final (fake, shells) = _daemon(
+      live: '\x1b]2;s; echo hi #\x07\x1b[21t\x1b[20t',
+    );
+    await _panel(tester, Terminals(NushiServiceClient(fake)));
+    expect(shells.typedAll.join(), isNot(contains('echo hi')));
   });
 }

@@ -5,9 +5,10 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 import 'fake_daemon.dart';
 
-/// A chat's terminals as the daemon keeps them, for code block runs: what
-/// each one kept ([replay]), what its shell writes next ([write]), and
-/// what the app typed into each ([typed]).
+/// A chat's terminals as the daemon keeps them, for code block runs and
+/// the terminal panel: what each one kept ([replay]), what its shell
+/// writes as it's attached ([onAttach]) and next ([write]), and what the
+/// app typed into each ([typed]; into any, in order, [typedAll]).
 class FakeShells {
   new(this.fake, {List<Terminal>? terminals}) {
     list.addAll(terminals ?? const []);
@@ -20,6 +21,11 @@ class FakeShells {
   final list = <Terminal>[];
   final replay = <String, String>{};
   final typed = <String, List<String>>{};
+  final typedAll = <String>[];
+
+  /// What each terminal's shell writes as soon as it's attached, after
+  /// its replay.
+  final onAttach = <String, String>{};
   final _live = <String, StreamController<AttachTerminalResponse>>{};
 
   /// Each new terminal's first output: fish's first prompt, marked.
@@ -63,6 +69,7 @@ class FakeShells {
 
   WriteTerminalResponse _typed(String id, String s) {
     (typed[id] ??= []).add(s);
+    typedAll.add(s);
     return WriteTerminalResponse();
   }
 
@@ -75,6 +82,9 @@ class FakeShells {
         StreamController<AttachTerminalResponse>.broadcast();
     Stream<AttachTerminalResponse> attach() async* {
       yield AttachTerminalResponse(data: utf8.encode(replay[id] ?? ''));
+      if (onAttach[id] case final s?) {
+        yield AttachTerminalResponse(data: utf8.encode(s));
+      }
       yield* live.stream;
     }
 
