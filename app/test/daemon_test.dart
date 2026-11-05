@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:connectrpc/connect.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
@@ -10,62 +9,34 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 
-/// A daemon with chat "a" and its events in [events].
-class _Fake implements Transport {
-  // The test's stream, which lives as long as the test.
-  // ignore: close_sinks
-  final events = StreamController<EventsResponse>();
+import 'fake_daemon.dart';
 
-  /// When set, the chat list answers once it completes; StartChat too.
-  Completer<ListChatsResponse>? list;
-  Completer<StartChatResponse>? start;
-
-  /// Every call's request, in order.
-  final asked = <Object>[];
-
-  @override
-  Future<UnaryResponse<I, O>> unary<I extends Object, O extends Object>(
-    Spec<I, O> spec,
-    I input, [
-    CallOptions? options,
-  ]) async {
-    asked.add(input);
-    final out = switch (input) {
-      PingRequest() => PingResponse(apiVersion: apiVersion),
-      ListChatsRequest() =>
-        await list?.future ??
-            ListChatsResponse(
-              chats: [Chat(id: 'a', folder: '/x', agent: 'claude')],
-            ),
-      GetChatRequest() => GetChatResponse(seq: Int64(1)),
-      StartChatRequest() => await start!.future,
-      CheckFolderRequest() => CheckFolderResponse(),
-      ForkChatRequest() => ForkChatResponse(chatId: 'side'),
-      _ => spec.outputFactory(),
-    };
-    return UnaryResponse(spec, Headers(), out as O, Headers());
-  }
-
-  @override
-  Future<StreamResponse<I, O>> stream<I extends Object, O extends Object>(
-    Spec<I, O> spec,
-    Stream<I> input, [
-    CallOptions? options,
-  ]) async =>
-      StreamResponse(spec, Headers(), events.stream as Stream<O>, Headers());
-}
+/// A daemon with chat "a"; the chat list and StartChat answer once [list]
+/// and [start] complete, when given.
+FakeDaemon _fake({
+  Completer<ListChatsResponse>? list,
+  Completer<StartChatResponse>? start,
+}) =>
+    FakeDaemon([Chat(id: 'a', folder: '/x', agent: 'claude')])
+      ..answer = (input) => switch (input) {
+        ListChatsRequest() when list != null => list.future,
+        GetChatRequest() => GetChatResponse(seq: Int64(1)),
+        StartChatRequest() when start != null => start.future,
+        ForkChatRequest() => ForkChatResponse(chatId: 'side'),
+        _ => null,
+      };
 
 void main() {
   test('events go to their chat, side chat or terminals', () async {
-    final fake = _Fake();
+    final fake = _fake();
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
     Future<void> send(EventsResponse e) async {
-      fake.events.add(e);
+      fake.emit(e);
       await pumpEventQueue();
     }
 
-    await send(EventsResponse()); // live: the chats are listed
+    await pumpEventQueue(); // live: the chats are listed
     expect(d.chats.keys, ['a']);
     expect(d.chats['a']!.agentName, 'Claude');
 
@@ -126,7 +97,7 @@ void main() {
   test('places: Settings opens over the place and shuts leaving it; '
       'going elsewhere or picking a chat shuts it; Jira and GitHub go back '
       'to the chat', () {
-    final d = Daemon(transport: _Fake());
+    final d = Daemon(transport: _fake());
     addTearDown(d.dispose);
     d
       ..go(const JiraPlace())
@@ -159,18 +130,18 @@ void main() {
 
   test('a side chat: one fork at a time; closing it tells the daemon and '
       'the chat', () async {
-    final fake = _Fake();
+    final fake = _fake();
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
     final chat = ChatState('a', '/x')..agent = 'claude';
     // The second while the first forks: no second fork.
     await Future.wait([d.openSide(chat), d.openSide(chat)]);
-    expect(fake.asked.whereType<ForkChatRequest>(), hasLength(1));
+    expect(fake.calls.whereType<ForkChatRequest>(), hasLength(1));
     final side = chat.side.value!;
     expect((side.id, side.agent), ('side', 'claude'));
     expect(d.sides.keys, ['side']);
     await d.openSide(chat); // it has one
-    expect(fake.asked.whereType<ForkChatRequest>(), hasLength(1));
+    expect(fake.calls.whereType<ForkChatRequest>(), hasLength(1));
 
     var told = 0;
     chat.side.addListener(() => told++);
@@ -178,7 +149,7 @@ void main() {
     expect((chat.side.value, told), (null, 1));
     expect(d.sides, isEmpty);
     await pumpEventQueue();
-    expect(fake.asked.whereType<CloseSideChatRequest>().single.chatId, 'side');
+    expect(fake.calls.whereType<CloseSideChatRequest>().single.chatId, 'side');
   });
 
   test('a chat deleted while the app was away: what was kept goes', () async {
@@ -215,11 +186,10 @@ void main() {
     rememberContext('gone', context);
     addTearDown(() => forgetContext('a'));
 
-    final fake = _Fake();
+    final fake = _fake();
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
-    fake.events.add(EventsResponse()); // live: the chats are listed
-    await pumpEventQueue();
+    await pumpEventQueue(); // live: the chats are listed
     expect(d.chats.keys, ['a']);
     expect(changeScopes.value.keys, ['a']);
     expect(terminalChats.value, {'a'});
@@ -233,29 +203,29 @@ void main() {
   });
 
   test('events while the list is on its way come after it', () async {
-    final fake = _Fake()..list = Completer();
+    final list = Completer<ListChatsResponse>();
+    final fake = _fake(list: list);
     final d = Daemon(transport: fake);
     addTearDown(d.dispose);
-    fake.events.add(EventsResponse()); // live: the chats are listed
-    await pumpEventQueue();
+    await pumpEventQueue(); // live: the chats are listed
     // The turn ends after the list was read, and before it arrives; a chat
     // starts meanwhile too.
-    fake.events
-      ..add(
+    fake
+      ..emit(
         EventsResponse(
           chatId: 'a',
           seq: Int64(9),
           status: ChatStatus(busy: false),
         ),
       )
-      ..add(
+      ..emit(
         EventsResponse(
           chatId: 'b',
           chat: Chat(id: 'b', folder: '/y'),
         ),
       );
     await pumpEventQueue();
-    fake.list!.complete(
+    list.complete(
       ListChatsResponse(
         chats: [Chat(id: 'a', folder: '/x', status: ChatStatus(busy: true))],
       ),
@@ -266,15 +236,14 @@ void main() {
   });
 
   test('a slow start leaves the chat the user went to', () async {
-    final fake = _Fake()..start = Completer();
-    final d = Daemon(transport: fake);
+    final start = Completer<StartChatResponse>();
+    final d = Daemon(transport: _fake(start: start));
     addTearDown(d.dispose);
-    fake.events.add(EventsResponse());
     await pumpEventQueue();
     final started = d.startChat('/z', 'claude');
     await pumpEventQueue();
     d.select('a');
-    fake.start!.complete(StartChatResponse(chatId: 'new'));
+    start.complete(StartChatResponse(chatId: 'new'));
     expect(await started, 'new'); // whether it shows or not
     expect(d.selectedId, 'a');
     expect(d.chats.containsKey('new'), isTrue);
