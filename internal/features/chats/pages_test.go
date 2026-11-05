@@ -2,9 +2,11 @@ package chats
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/testcheck"
 )
 
 // A page reaches back to the call that started a subagent whose steps are
@@ -27,21 +29,26 @@ func TestPageStart(t *testing.T) {
 	}
 }
 
-// The recent part comes with what runs before it: a background command or
-// subagent still running, not one that ended.
+// The recent part comes with what runs or asks before it: a background
+// command or subagent still running, a permission prompt or question still
+// pending; not one that ended or was answered.
 func TestRunningIn(t *testing.T) {
 	items := []model.Item{
 		{ID: "dev", BackgroundCommand: &model.BackgroundCommand{State: "running"}},
 		{ID: "done", BackgroundCommand: &model.BackgroundCommand{State: "completed"}},
 		{ID: "a"},
 		{ID: "agent", Subagent: &model.Subagent{State: "running"}},
+		{ID: "ask", Kind: model.Permission, Status: "pending"},
+		{ID: "asked", Kind: model.Permission, Status: "answered"},
+		{ID: "form", Kind: model.Question, Status: "pending"},
+		{ID: "call", Kind: model.ToolCall, Status: "pending"},
 	}
 	var got []string
 	for _, it := range runningIn(items) {
 		got = append(got, it.ID)
 	}
-	if len(got) != 2 || got[0] != "dev" || got[1] != "agent" {
-		t.Errorf("running: %v, want [dev agent]", got)
+	if want := []string{"dev", "agent", "ask", "form"}; !slices.Equal(got, want) {
+		t.Errorf("running: %v, want %v", got, want)
 	}
 }
 
@@ -63,5 +70,22 @@ func TestAPageReachesBackSoFar(t *testing.T) {
 	}
 	if got := pageStart(items, maxReach, 80); got != 0 {
 		t.Errorf("a call within reach: pageStart = %d, want 0", got)
+	}
+}
+
+// A background subagent's permission prompt far above a long chat's recent
+// part comes with it: the chat waits on it, so its card must show.
+func TestTheRecentPartBringsAPendingAsk(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	c.mu.Lock()
+	c.items = []model.Item{{ID: "ask", Kind: model.Permission, Status: "pending", Parent: "sub"}}
+	for i := range 300 {
+		c.items = append(c.items, model.Item{ID: fmt.Sprint("i", i), Kind: model.AgentMessage, Text: "x"})
+	}
+	c.mu.Unlock()
+	part, err := svc.Recent(c.id, 80)
+	testcheck.NoErr(t, err)
+	if part.Older != 221 || len(part.Running) != 1 || part.Running[0].ID != "ask" {
+		t.Errorf("older %d, running %+v", part.Older, part.Running)
 	}
 }

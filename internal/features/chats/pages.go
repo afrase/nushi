@@ -15,13 +15,15 @@ var ErrNoItem = errors.New("no such item: the chat changed")
 type RecentPart struct {
 	Chat    model.Chat   // its Items are the recent part
 	Older   int          // how many items come before them
-	Running []model.Item // those before them whose subagent or background command runs
+	Running []model.Item // those before them whose subagent or background command runs, or that ask the user
 }
 
 // Recent returns a snapshot of a chat with only its last n items, reaching
 // back as a page does (pageStart), with the items before them still
-// running: a chat's background tasks show (and stop) before their page is
-// loaded. Only those items are copied (ADR 0026).
+// running or asking: a chat's background tasks show (and stop) before their
+// page is loaded, and so does a permission prompt or question a background
+// subagent asked long ago, which the chat waits on. Only those items are
+// copied (ADR 0026).
 func (s *Service) Recent(chatID string, n int) (RecentPart, error) {
 	c, err := s.open(chatID)
 	if err != nil {
@@ -33,11 +35,12 @@ func (s *Service) Recent(chatID string, n int) (RecentPart, error) {
 	return RecentPart{Chat: c.snapshotLocked(start), Older: start, Running: runningIn(c.items[:start])}, nil
 }
 
-// runningIn is those of items whose subagent or background command runs.
+// runningIn is those of items whose subagent or background command runs,
+// or that ask the user and are still pending.
 func runningIn(items []model.Item) []model.Item {
 	var out []model.Item
 	for i := range items {
-		if running(items[i]) {
+		if running(items[i]) || asking(items[i]) {
 			out = append(out, items[i])
 		}
 	}
