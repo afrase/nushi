@@ -35,7 +35,9 @@ class PullTab extends StatelessWidget {
     if (l == null) return const SizedBox.shrink();
     final ref = l.asRef;
     final source = ChatPull.of(daemon, chat);
-    // A toast says what went in.
+    // What went in shows on its rows ("In the box ✓") and in the bar at
+    // the foot, with its Go to chat; a toast says only that nothing new
+    // did, which neither of those would show.
     Future<void> send(
       ScaffoldMessengerState? toast,
       double side,
@@ -50,17 +52,16 @@ class PullTab extends StatelessWidget {
         replies: replies,
       );
       if (replies.isEmpty) return;
-      toast
-        ?..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            // 520 wide at most, centred, above the bar that counts the
-            // cards.
-            margin: EdgeInsets.fromLTRB(side, 0, side, 64),
-            content: Text(sentWords(replies.length, added, what)),
-            action: SnackBarAction(label: 'Go to chat', onPressed: onChat),
-          ),
-        );
+      toast?.hideCurrentSnackBar();
+      if (added > 0) return;
+      toast?.showSnackBar(
+        SnackBar(
+          // 520 wide at most, centred, above the bar that counts the
+          // cards.
+          margin: EdgeInsets.fromLTRB(side, 0, side, 64),
+          content: Text(sentWords(replies.length, added, what)),
+        ),
+      );
     }
 
     final side = ((MediaQuery.sizeOf(context).width - 520) / 2).clamp(

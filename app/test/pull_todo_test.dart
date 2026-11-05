@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/review_findings.dart';
@@ -288,8 +289,8 @@ void main() {
       box.value.single.from,
       endsWith('on PR octo/notes#412 (GitHub), my pull request:'),
     );
-    expect(toast("Added to the chat's box: CI / rubocop"), findsOneWidget);
-    expect(toast('Go to chat'), findsOneWidget);
+    // The row and the bar say it went in; no toast besides.
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('In the box ✓'), findsOneWidget);
     expect(find.text('Send'), findsNWidgets(5));
     // The bar, at the tab's foot.
@@ -307,17 +308,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(box.value.length, 3);
     expect(box.value.last.from, startsWith('Changes requested by @mona'));
-    expect(toast("Added 2 to the chat's box"), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Send 2 picked'), findsNothing); // unpicked once sent
     expect(find.text('In the box ✓'), findsNWidgets(3));
     await tester.tap(find.text('Send all 6 to agent'));
     await tester.pumpAndSettle();
     expect(box.value.length, 6); // the same card once
-    expect(
-      toast("Added 3 to the chat's box; 3 were there already"),
-      findsOneWidget,
-    );
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Send'), findsNothing);
+    // All of them there already: only a toast can say so.
+    await tester.tap(find.text('Send all 6 to agent'));
+    await tester.pumpAndSettle();
+    expect(toast("All 6 are in the chat's box already"), findsOneWidget);
+    expect(toast('Go to chat'), findsNothing);
     // A card taken out: its row can send again; all sent: every row can.
     box.value = box.value.sublist(1);
     await tester.pumpAndSettle();
@@ -326,10 +329,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('In the box ✓'), findsNothing);
     expect(bar, findsNothing);
-    // Go to chat, from the toast.
+    // Go to chat, from the bar.
     await tester.tap(find.text('Send').first);
     await tester.pumpAndSettle();
-    await tester.tap(toast('Go to chat'));
+    await tester.tap(find.widgetWithText(Button, 'Go to chat'));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.tab.value.name, 'chat');
     d.dispose();
