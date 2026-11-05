@@ -316,6 +316,35 @@ void main() {
     d.dispose();
   });
 
+  // A click on a notification left from before launches Nushi, and its
+  // "open" comes before the daemon has listed any chat.
+  testWidgets("a click that launches Nushi opens its chat once it's listed", (
+    tester,
+  ) async {
+    _fake();
+    final d = Daemon(
+      transport: FakeDaemon([
+        chat('a', 'claude', 'Fix the login'),
+        chat('b', 'codex', 'Tidy the docs', age: 1),
+      ]),
+    );
+    final alerts = MacAlerts(d);
+    expect(d.chatsListed, isFalse);
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
+          alertsChannel.name,
+          alertsChannel.codec.encodeMethodCall(const MethodCall('open', 'b')),
+          (_) {},
+        );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump();
+    }
+    expect(d.chatsListed, isTrue);
+    expect(d.selectedId, 'b');
+    alerts.dispose();
+    d.dispose();
+  });
+
   testWidgets('Settings: the switches set each kind, a failure taking in an '
       'agent that quits mid-turn; macOS having them off says so with a way '
       'to its settings', (tester) async {

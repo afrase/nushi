@@ -90,6 +90,10 @@ class MacAlerts {
   final _needs = <String, bool>{};
   String? _badgeShown;
 
+  /// The chat a click asked for before the daemon listed its chats (a
+  /// notification left from before launched Nushi): it opens once listed.
+  String? _opening;
+
   void dispose() {
     daemon
       ..onEvent = null
@@ -205,6 +209,10 @@ class MacAlerts {
   /// The daemon changed (a chat picked, listed, gone): the badge, and the
   /// shown chat's notifications cleared.
   void _changed() {
+    if (_opening case final id? when daemon.chatsListed) {
+      _opening = null;
+      if (daemon.chats.containsKey(id)) daemon.select(id);
+    }
     _badge();
     _clearShown();
   }
@@ -246,11 +254,16 @@ class MacAlerts {
     );
   }
 
-  /// A notification clicked: its chat opens.
+  /// A notification clicked: its chat opens, or once the daemon has listed
+  /// the chats, when it hasn't yet.
   Future<Object?> _called(MethodCall call) async {
     if (call.method == 'open' && call.arguments is String) {
       final id = call.arguments as String;
-      if (daemon.chats.containsKey(id)) daemon.select(id);
+      if (daemon.chats.containsKey(id)) {
+        daemon.select(id);
+      } else if (!daemon.chatsListed) {
+        _opening = id;
+      }
     }
     return null;
   }
