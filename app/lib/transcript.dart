@@ -15,7 +15,6 @@ import 'package:nushi/fork_chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
-import 'package:nushi/message_actions.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/paced.dart';
@@ -26,36 +25,11 @@ import 'package:nushi/selection_lines.dart';
 import 'package:nushi/subagents.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/transcript_entries.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/transcript_pages.dart';
 import 'package:nushi/turn_retry.dart';
 import 'package:nushi/widgets.dart';
-
-/// Whether [e] is a tool call that shows as a row, and can join a run of
-/// them (a review's findings show as a card of their own).
-bool _row(Object? e) =>
-    e is Item && e.kind == ItemKind.ITEM_KIND_TOOL_CALL && !e.hasFindings();
-
-/// The items, with each run of tool calls as one list, and each subagent
-/// as one [SubagentRun] with what it did.
-List<Object> _entries(List<Item> items) {
-  final subs = {for (final s in subagentsOf(items)) s.call.id: s};
-  final out = <Object>[];
-  for (final it in items) {
-    final last = out.lastOrNull;
-    if (subs.containsKey(it.parent)) continue;
-    if (subs[it.id] case final sub?) {
-      out.add(sub);
-    } else if (_row(it) && last is List<Item>) {
-      last.add(it);
-    } else if (_row(it) && _row(last)) {
-      out.last = [last! as Item, it];
-    } else {
-      out.add(it);
-    }
-  }
-  return out;
-}
 
 /// A chat's items, built as they scroll into view. It opens at the bottom
 /// and follows it while the agent writes; scrolled up, it stays put and
@@ -289,9 +263,11 @@ class _TranscriptState extends State<Transcript> {
   /// what it needs to be built, faster ([_grow]).
   void _pageFills(List<Object> entries) {
     final was = _firstItem;
-    _firstItem = entries.isEmpty ? null : _itemsOf(entries.first).first.id;
+    _firstItem = entries.isEmpty ? null : entryItems(entries.first).first.id;
     if (_tail != null || was == null || was == _firstItem) return;
-    final at = entries.indexWhere((e) => _itemsOf(e).any((it) => it.id == was));
+    final at = entries.indexWhere(
+      (e) => entryItems(e).any((it) => it.id == was),
+    );
     if (at > Transcript.moreEntries) {
       _tail = entries.length - at + Transcript.moreEntries;
     }
@@ -314,7 +290,7 @@ class _TranscriptState extends State<Transcript> {
   /// An entry's key; a message's echo keeps the key of the message shown
   /// as it was on its way (Outbox.echoes).
   String _key(Object e) =>
-      e is Item ? widget.chat.outbox.echoes[e.id] ?? e.id : _keyOf(e);
+      e is Item ? widget.chat.outbox.echoes[e.id] ?? e.id : entryKey(e);
 
   /// Where a message this app sent is: 0 shown by the daemon (or not a
   /// message on its way), 1 on its way, 2 failed and going.
@@ -337,7 +313,7 @@ class _TranscriptState extends State<Transcript> {
     bool rise = false,
   }) {
     final key = _key(e);
-    final items = _itemsOf(e);
+    final items = entryItems(e);
     final rewindable = e is Item && canRewindTo(widget.chat, e);
     final forkable =
         widget.items == null &&
@@ -402,8 +378,8 @@ class _TranscriptState extends State<Transcript> {
                   // joins a run; not what the chat opened with.
                   child: Arriving(
                     play: rise || was != null,
-                    child: _isBand(e)
-                        ? _Sending(state: sending, child: item())
+                    child: isBand(e)
+                        ? SendingEntry(state: sending, child: item())
                         : item(),
                   ),
                 ),
@@ -415,7 +391,7 @@ class _TranscriptState extends State<Transcript> {
     return Padding(
       key: ValueKey(key),
       // On the phone a user message's band goes edge to edge.
-      padding: _isBand(e) && TouchTargets.of(context)
+      padding: isBand(e) && TouchTargets.of(context)
           ? EdgeInsets.only(top: top)
           : EdgeInsets.fromLTRB(sides.left, top, sides.right, 0),
       child: view,
@@ -908,7 +884,7 @@ class _TranscriptState extends State<Transcript> {
   Widget build(BuildContext context) {
     final chat = widget.chat;
     // What this app sent shows at once, after the items, until its echo.
-    final entries = _entries(
+    final entries = transcriptEntries(
       widget.items ?? [...chat.items, ...chat.outbox.sending],
     );
     final query = widget.items == null ? chat.find.query ?? '' : '';
@@ -1044,7 +1020,7 @@ class _TranscriptState extends State<Transcript> {
                                     e,
                                     live: live && i == entries.length - 1,
                                     still: chat.waiting,
-                                    top: _gap(
+                                    top: entryGap(
                                       entries,
                                       i,
                                       header: header != null,
@@ -1136,96 +1112,6 @@ class _TranscriptState extends State<Transcript> {
   Widget _codeBars(ScrollBehavior behavior, Widget child) =>
       widget.bottom == null ? child : ownScrollbars(behavior, child);
 }
-
-/// An entry's items: a run's calls, a subagent's call and steps, or one.
-List<Item> _itemsOf(Object e) => switch (e) {
-  final List<Item> run => run,
-  final SubagentRun s => [s.call, ...s.items],
-  _ => [e as Item],
-};
-
-/// An entry's key: a call and the group it becomes keep their place (and
-/// state).
-String _keyOf(Object e) => switch (e) {
-  final List<Item> run => run.first.id,
-  final SubagentRun s => 'agent ${s.call.id}',
-  _ => (e as Item).id,
-};
-
-/// A message of yours: faint while on its way ([state] 1), then whole over
-/// [Motion.quick] as the daemon shows it; one whose send failed (2) fades
-/// out and folds away over [Motion.exit] (the transcript then drops it).
-/// With Reduce Motion it's faint, then whole, and goes at once.
-class _Sending extends StatelessWidget {
-  const new({required this.state, required this.child});
-
-  final int state;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final still = reduceMotion(context);
-    final shown = AnimatedOpacity(
-      opacity: state == 1 ? 0.7 : 1,
-      duration: still ? Duration.zero : Motion.quick,
-      child: child,
-    );
-    if (state != 2 || still) return shown;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 1, end: 0),
-      duration: Motion.exit,
-      curve: Motion.leave,
-      builder: (context, v, child) => ClipRect(
-        child: Align(
-          alignment: Alignment.topCenter,
-          heightFactor: v,
-          child: Opacity(opacity: 0.7 * v, child: child),
-        ),
-      ),
-      child: IgnorePointer(child: shown),
-    );
-  }
-}
-
-bool _isBand(Object e) =>
-    e is Item && e.kind == ItemKind.ITEM_KIND_USER_MESSAGE;
-
-/// A user message's band, the agent starting on its own, or where a
-/// reopened chat's history comes from changes.
-bool _opens(Object e) =>
-    _isBand(e) ||
-    e is Item &&
-        e.kind == ItemKind.ITEM_KIND_NOTICE &&
-        const {'own_turn', 'compacted', 'history_differs'}.contains(e.status);
-
-/// The room above entry [i]: more around what opens a chapter than between
-/// the agent's steps, so each exchange reads as one.
-double _gap(
-  List<Object> entries,
-  int i, {
-  required bool header,
-  required bool phone,
-}) {
-  final gap = _opens(entries[i])
-      ? (i == 0 && !header
-            ? 8.0
-            : phone
-            ? 28.0
-            : 32.0)
-      : (!phone
-            ? 16.0
-            : i > 0 && _opens(entries[i - 1])
-            ? 18.0
-            : 12.0);
-  // A message's actions keep their room under it.
-  final after = !phone && i > 0 && _hasActions(entries[i - 1]);
-  return after ? max(0, gap - messageActionsHeight) : gap;
-}
-
-bool _hasActions(Object e) =>
-    e is Item &&
-    (e.kind == ItemKind.ITEM_KIND_USER_MESSAGE ||
-        e.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE);
 
 /// Where a reply box's bottom edge went when it opened: it stays there as
 /// the box grows a line at a time, so the box grows upward, as Claude's.
