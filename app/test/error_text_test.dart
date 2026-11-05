@@ -3,8 +3,9 @@
 import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+
+import 'harness.dart';
 
 void main() {
   test('a daemon error is its message; anything else its text', () {
@@ -17,18 +18,15 @@ void main() {
 
   testWidgets('a snack bar says the message, not its code', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => Button(
-              label: 'Go',
-              onPressed: () => tryOrShow(
-                context,
-                () async => throw ConnectException(
-                  Code.failedPrecondition,
-                  'the folder is gone',
-                ),
+      themed(
+        Builder(
+          builder: (context) => Button(
+            label: 'Go',
+            onPressed: () => tryOrShow(
+              context,
+              () async => throw ConnectException(
+                Code.failedPrecondition,
+                'the folder is gone',
               ),
             ),
           ),

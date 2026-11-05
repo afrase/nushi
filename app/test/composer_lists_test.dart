@@ -7,7 +7,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -170,15 +169,12 @@ void main() {
     final text = TextEditingController();
     addTearDown(text.dispose);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ReplyField(
-            text,
-            autofocus: true,
-            onEnter: () {},
-            decoration: const InputDecoration(),
-          ),
+      themed(
+        ReplyField(
+          text,
+          autofocus: true,
+          onEnter: () {},
+          decoration: const InputDecoration(),
         ),
       ),
     );

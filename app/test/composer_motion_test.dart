@@ -6,7 +6,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/theme/theme.dart';
 import 'package:nushi/turn_status.dart';
 
 import 'fake_daemon.dart';
@@ -22,23 +21,20 @@ Future<(Daemon, ChatState)> _box(WidgetTester tester) async {
     ..loaded = true;
   d.chats['c'] = chat;
   await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.bottomCenter,
-          child: SizedBox(
-            width: 640,
-            child: ListenableBuilder(
-              listenable: chat,
-              builder: (context, _) => Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TurnStatus(chat),
-                  Composer(chat: chat, daemon: d),
-                ],
-              ),
+    themed(
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: SizedBox(
+          width: 640,
+          child: ListenableBuilder(
+            listenable: chat,
+            builder: (context, _) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TurnStatus(chat),
+                Composer(chat: chat, daemon: d),
+              ],
             ),
           ),
         ),

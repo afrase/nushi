@@ -205,21 +205,18 @@ void main() {
       ..agent = 'claude'
       ..title = 'Fix the login redirect';
     Future<void> pump(double width) => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Align(
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: width,
-              child: ChatHeader(
-                c,
-                d,
-                tab: ChatTab.chat,
-                onTab: (_) {},
-                panel: false,
-                onPanel: () {},
-              ),
+      themed(
+        Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: width,
+            child: ChatHeader(
+              c,
+              d,
+              tab: ChatTab.chat,
+              onTab: (_) {},
+              panel: false,
+              onPanel: () {},
             ),
           ),
         ),

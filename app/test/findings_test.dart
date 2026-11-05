@@ -55,14 +55,9 @@ Finding _f(
 
 Future<void> _pump(WidgetTester tester, Widget card, Tokens tokens) =>
     tester.pumpWidget(
-      MaterialApp(
-        theme: NushiTheme(tokens).toThemeData(),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: card,
-          ),
-        ),
+      themed(
+        SingleChildScrollView(padding: const EdgeInsets.all(20), child: card),
+        tokens: tokens,
       ),
     );
 

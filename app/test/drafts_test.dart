@@ -12,7 +12,6 @@ import 'package:nushi/drafts_mac.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone_drafts.dart';
 import 'package:nushi/phone/platform.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -35,14 +34,7 @@ Future<(FakeDaemon, Daemon, Drafts)> _app(
   final drafts = Drafts(DraftFiles(dir.path));
   final d = await fake.connect(tester, drafts: drafts);
   final chat = d.chats['c']!..loaded = true;
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Composer(chat: chat, daemon: d),
-      ),
-    ),
-  );
+  await tester.pumpWidget(themed(Composer(chat: chat, daemon: d)));
   return (fake, d, drafts);
 }
 

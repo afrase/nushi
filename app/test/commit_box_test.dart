@@ -185,14 +185,7 @@ void main() {
     final d = await fake.connect(tester);
     final state = ChatState('c', '/x')..scope = Scope.uncommitted.name;
     addTearDown(() => state.scope = null);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ChangesView(chat: state, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(ChangesView(chat: state, daemon: d)));
     await tester.pumpAndSettle();
     state.commitMessage.text = 'Shorten the relay wait';
     // Staged; its reload held.
@@ -252,14 +245,7 @@ void main() {
     final d = await fake.connect(tester);
     final state = ChatState('c', '/x')..scope = Scope.uncommitted.name;
     addTearDown(() => state.scope = null);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ChangesView(chat: state, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(ChangesView(chat: state, daemon: d)));
     await tester.pumpAndSettle();
     Finder box(String file) => find.descendant(
       of: find

@@ -211,22 +211,19 @@ void main() {
     // lookup fails, and the message's text stays the same after.
     fake.down = true;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Previews(
-            open: (_) {},
-            child: ItemView(
-              Item(
-                id: 'm',
-                kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-                text: 'Wrote `docs/plan.md`.',
-              ),
-              chat,
-              d,
-              live: false,
-              still: false,
+      themed(
+        Previews(
+          open: (_) {},
+          child: ItemView(
+            Item(
+              id: 'm',
+              kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+              text: 'Wrote `docs/plan.md`.',
             ),
+            chat,
+            d,
+            live: false,
+            still: false,
           ),
         ),
       ),
@@ -247,22 +244,15 @@ void main() {
     final d = await fake.connect(tester);
     final chat = ChatState('c', '/Users/me/repo');
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Previews(
-            open: (_) {},
-            child: ItemView(
-              Item(
-                id: 'm',
-                kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-                text: _text,
-              ),
-              chat,
-              d,
-              live: true,
-              still: false,
-            ),
+      themed(
+        Previews(
+          open: (_) {},
+          child: ItemView(
+            Item(id: 'm', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: _text),
+            chat,
+            d,
+            live: true,
+            still: false,
           ),
         ),
       ),

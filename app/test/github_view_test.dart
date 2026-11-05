@@ -560,12 +560,9 @@ void main() {
       pull: true,
     );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Center(
-            child: GitHubChip(daemon: d, link: link),
-          ),
+      themed(
+        Center(
+          child: GitHubChip(daemon: d, link: link),
         ),
       ),
     );
@@ -577,12 +574,7 @@ void main() {
     await tester.tap(find.text('#1'));
     expect(d.place, const GitHubPlace());
     // The view, as the app mounts it there: the pull request's details.
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: GitHubView(d)),
-      ),
-    );
+    await tester.pumpWidget(themed(GitHubView(d)));
     await tester.pumpAndSettle();
     final pane = tester.widget<GitHubPullPane>(find.byType(GitHubPullPane));
     expect((pane.ref.repo, pane.ref.number), (testRepo, 1));

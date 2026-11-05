@@ -4,7 +4,6 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/details_panel.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -20,12 +19,7 @@ void main() {
         EventsResponse(status: ChatStatus(busy: true, canAskContext: true)),
       );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: DetailsPanel(chat: chat, daemon: d, onChanges: () {}),
-        ),
-      ),
+      themed(DetailsPanel(chat: chat, daemon: d, onChanges: () {})),
     );
     await tester.pump(const Duration(seconds: 2));
     int asked() => fake.calls.whereType<GetContextUsageRequest>().length;

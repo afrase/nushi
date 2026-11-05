@@ -11,7 +11,6 @@ import 'package:nushi/reply_cards.dart';
 import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/subagent_pane.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -74,15 +73,12 @@ void main() {
     final text = TextEditingController();
     addTearDown(text.dispose);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ReplyField(
-            text,
-            autofocus: true,
-            onEnter: () => sent.add(text.text),
-            decoration: const InputDecoration(),
-          ),
+      themed(
+        ReplyField(
+          text,
+          autofocus: true,
+          onEnter: () => sent.add(text.text),
+          decoration: const InputDecoration(),
         ),
       ),
     );
@@ -107,12 +103,7 @@ void main() {
     final replies = Replies([
       (quote: 'kept as a DateTime', text: 'abcd', from: ''),
     ]);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(body: ReplyCards(replies, onDone: () {})),
-      ),
-    );
+    await tester.pumpWidget(themed(ReplyCards(replies, onDone: () {})));
     await tester.tap(find.text('abcd'));
     await tester.pumpAndSettle();
     final field = find.descendant(
@@ -173,15 +164,12 @@ void main() {
     final text = TextEditingController();
     addTearDown(text.dispose);
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: ReviewCommentBox(
-            lines: 'Line 3',
-            controller: text,
-            onSave: saved.add,
-            onCancel: () => dropped = true,
-          ),
+      themed(
+        ReviewCommentBox(
+          lines: 'Line 3',
+          controller: text,
+          onSave: saved.add,
+          onCancel: () => dropped = true,
         ),
       ),
     );
@@ -220,12 +208,7 @@ void main() {
         ),
       );
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: SubagentPane(chat: c, daemon: d, id: 'a', onClose: () {}),
-        ),
-      ),
+      themed(SubagentPane(chat: c, daemon: d, id: 'a', onClose: () {})),
     );
     await tester.pump();
     final field = find.byType(TextField);

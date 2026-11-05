@@ -576,27 +576,24 @@ void main() {
     viewport(tester, const Size(640, 200));
     final chat = ChatState('c', '/Users/me/nushi');
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) =>
-                messageFiles(
-                  context,
-                  Item(
-                    kind: ItemKind.ITEM_KIND_USER_MESSAGE,
-                    text: 'see @lib/a.dart',
-                    files: [
-                      'lib/a.dart',
-                      'docs/b.md',
-                      '/tmp/c.pdf',
-                      '/tmp/d\u202efdp.sh',
-                    ],
-                  ),
-                  chat,
-                ) ??
-                const SizedBox(),
-          ),
+      themed(
+        Builder(
+          builder: (context) =>
+              messageFiles(
+                context,
+                Item(
+                  kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+                  text: 'see @lib/a.dart',
+                  files: [
+                    'lib/a.dart',
+                    'docs/b.md',
+                    '/tmp/c.pdf',
+                    '/tmp/d\u202efdp.sh',
+                  ],
+                ),
+                chat,
+              ) ??
+              const SizedBox(),
         ),
       ),
     );

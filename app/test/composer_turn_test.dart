@@ -9,6 +9,7 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 // UX review, finding 16: while a turn runs, the Mac's box has Queue and
 // Stop and send as buttons too (they were ⏎ and ⌘⏎ only), and a queued message
@@ -33,23 +34,20 @@ Future<(FakeDaemon, Daemon, ChatState)> _box(WidgetTester tester) async {
     ..queue = [QueuedMessage(id: 'q1', text: 'Then docs')];
   d.chats['c'] = chat;
   await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Align(
-          alignment: Alignment.bottomCenter,
-          child: RepaintBoundary(
-            key: const Key('box'),
-            child: Container(
-              width: 640,
-              color: Tokens.dark.base,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                // As the chat's view, which builds it again as it changes.
-                child: ListenableBuilder(
-                  listenable: chat,
-                  builder: (context, _) => Composer(chat: chat, daemon: d),
-                ),
+    themed(
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: RepaintBoundary(
+          key: const Key('box'),
+          child: Container(
+            width: 640,
+            color: Tokens.dark.base,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              // As the chat's view, which builds it again as it changes.
+              child: ListenableBuilder(
+                listenable: chat,
+                builder: (context, _) => Composer(chat: chat, daemon: d),
               ),
             ),
           ),

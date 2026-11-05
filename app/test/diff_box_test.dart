@@ -11,10 +11,7 @@ import 'package:nushi/tool_calls.dart';
 import 'harness.dart';
 
 void main() {
-  Widget box(FileChange c) => MaterialApp(
-    theme: const NushiTheme(Tokens.dark).toThemeData(),
-    home: Scaffold(body: DiffBox(c, fit: false)),
-  );
+  Widget box(FileChange c) => themed(DiffBox(c, fit: false));
 
   testWidgets('a long diff is computed off the UI thread', (tester) async {
     final old = [for (var i = 0; i < 3000; i++) 'line $i'].join('\n');
@@ -107,15 +104,12 @@ void main() {
       ),
     ]);
     addTearDown(() => setComments('c', []));
-    Widget view(String where) => MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: DiffBox(
-          change,
-          key: const ValueKey('f.txt'),
-          fit: false,
-          review: (chat: 'c', where: where, agent: 'Claude'),
-        ),
+    Widget view(String where) => themed(
+      DiffBox(
+        change,
+        key: const ValueKey('f.txt'),
+        fit: false,
+        review: (chat: 'c', where: where, agent: 'Claude'),
       ),
     );
     await tester.pumpWidget(view('uncommitted'));

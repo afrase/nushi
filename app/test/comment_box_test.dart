@@ -7,6 +7,8 @@ import 'package:nushi/comment_box.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
 
+import 'harness.dart';
+
 void main() {
   testWidgets('the box: its button waits for text; ⌘⏎ posts it; a refused '
       'post keeps the text and says why; Esc cancels', (tester) async {
@@ -14,19 +16,17 @@ void main() {
     var cancelled = 0;
     var refuse = true;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.light).toThemeData(),
-        home: Scaffold(
-          body: CommentBox(
-            label: 'Reply',
-            autofocus: true,
-            onCancel: () => cancelled++,
-            onPost: (md) async {
-              if (refuse) throw StateError('no');
-              posted.add(md);
-            },
-          ),
+      themed(
+        CommentBox(
+          label: 'Reply',
+          autofocus: true,
+          onCancel: () => cancelled++,
+          onPost: (md) async {
+            if (refuse) throw StateError('no');
+            posted.add(md);
+          },
         ),
+        tokens: Tokens.light,
       ),
     );
     Button reply() =>
@@ -63,17 +63,15 @@ void main() {
     forgetCommentDrafts();
     var posts = 0;
     var hold = Completer<void>();
-    Widget box() => MaterialApp(
-      theme: const NushiTheme(Tokens.light).toThemeData(),
-      home: Scaffold(
-        body: CommentBox(
-          draft: 'jira s A-1',
-          onPost: (_) async {
-            posts++;
-            await hold.future;
-          },
-        ),
+    Widget box() => themed(
+      CommentBox(
+        draft: 'jira s A-1',
+        onPost: (_) async {
+          posts++;
+          await hold.future;
+        },
       ),
+      tokens: Tokens.light,
     );
     Button comment() =>
         tester.widget<Button>(find.widgetWithText(Button, 'Comment'));
@@ -118,13 +116,11 @@ void main() {
     forgetCommentDrafts();
     final hold = Completer<void>();
     // The app stays; only the box goes and comes back.
-    Widget box({bool shown = true}) => MaterialApp(
-      theme: const NushiTheme(Tokens.light).toThemeData(),
-      home: Scaffold(
-        body: shown
-            ? CommentBox(draft: 'jira s A-2', onPost: (_) => hold.future)
-            : const SizedBox(),
-      ),
+    Widget box({bool shown = true}) => themed(
+      shown
+          ? CommentBox(draft: 'jira s A-2', onPost: (_) => hold.future)
+          : const SizedBox(),
+      tokens: Tokens.light,
     );
 
     await tester.pumpWidget(box());

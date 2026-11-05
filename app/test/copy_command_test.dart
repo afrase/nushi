@@ -7,9 +7,9 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/copy_command.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
+import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -48,14 +48,7 @@ Future<(FakeDaemon, Daemon, List<String>)> _box(
   final fake = FakeDaemon([]);
   final d = await fake.connect(tester);
   d.chats['c'] = chat;
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: const NushiTheme(Tokens.dark).toThemeData(),
-      home: Scaffold(
-        body: Composer(chat: chat, daemon: d),
-      ),
-    ),
-  );
+  await tester.pumpWidget(themed(Composer(chat: chat, daemon: d)));
   await tester.pump();
   return (fake, d, copied);
 }

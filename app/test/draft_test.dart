@@ -11,7 +11,6 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/run_text.dart';
-import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -45,13 +44,8 @@ void main() {
     final daemon = Daemon();
     final chat = ChatState('c', '/tmp');
     Future<void> show({required bool box}) => tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: box
-              ? Composer(chat: chat, daemon: daemon)
-              : const Text('Changes'),
-        ),
+      themed(
+        box ? Composer(chat: chat, daemon: daemon) : const Text('Changes'),
       ),
     );
     await show(box: true);
@@ -76,14 +70,7 @@ void main() {
         text: 'Look at the tests too',
         toSubagentName: 'Explore',
       );
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Composer(chat: chat, daemon: daemon),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(Composer(chat: chat, daemon: daemon)));
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(chat.draft.text.text, 'Look at the tests too');
@@ -214,14 +201,7 @@ void main() {
       ..files.value = [_file('a.txt')]
       ..outputs.value = [_output('k1', 'one')]
       ..toSubagent.value = ('call1', 'Explore');
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: const NushiTheme(Tokens.dark).toThemeData(),
-        home: Scaffold(
-          body: Composer(chat: chat, daemon: d),
-        ),
-      ),
-    );
+    await tester.pumpWidget(themed(Composer(chat: chat, daemon: d)));
     await tester.pump();
     await tester.showKeyboard(find.byType(TextField));
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);

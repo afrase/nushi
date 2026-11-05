@@ -41,10 +41,7 @@ final _controls = <String, Widget Function({required bool on})>{
       IconTap(Icons.close, tooltip: 'Close', onTap: on ? () {} : null),
 };
 
-Widget _app(Tokens tokens, Widget child) => MaterialApp(
-  theme: NushiTheme(tokens).toThemeData(),
-  home: Scaffold(body: child),
-);
+Widget _app(Tokens tokens, Widget child) => themed(child, tokens: tokens);
 
 void main() {
   testWidgets('a shortcut keeps its line as high with ⌘ a size up', (
