@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_bar.dart';
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -18,7 +19,9 @@ void main() {
 
   Finder outside() => find.descendant(
     of: find.byType(BrowserBar),
-    matching: find.byIcon(Icons.open_in_new),
+    matching: find.byWidgetPredicate(
+      (w) => w is IconTap && w.line == LineIcon.openOutside,
+    ),
   );
 
   testWidgets('the host alone, centred in the field; the whole address in '
@@ -39,7 +42,7 @@ void main() {
       ),
       findsNothing,
     );
-    final field = tester.getRect(addressField);
+    final field = tester.getRect(addressBox);
     expect(tester.getCenter(host).dx, closeTo(field.center.dx, 1));
     await tester.tap(addressField);
     await tester.pump();
@@ -60,7 +63,7 @@ void main() {
     expect(outside(), findsOneWidget);
     expect(find.byTooltip('Open in Google Chrome'), findsOneWidget);
     // At the field's right end, inside it.
-    final field = tester.getRect(addressField);
+    final field = tester.getRect(addressBox);
     final button = tester.getRect(outside());
     expect(button.right, lessThanOrEqualTo(field.right));
     expect(field.right - button.right, lessThan(8));

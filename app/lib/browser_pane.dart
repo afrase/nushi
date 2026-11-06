@@ -11,7 +11,6 @@ import 'package:nushi/panes.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/tool_parts.dart' show plainPath;
 
 /// The chat header's browser button (ADR 0094): it shows the preview's last
 /// browser tab, or a new one, on the Chat tab; lit while one shows there.
@@ -43,11 +42,12 @@ class BrowserButton extends StatelessWidget {
 /// What a new browser tab says under its address field.
 const browserHint = 'Enter an address, like example.com or localhost:3000';
 
-/// A browser tab in the preview pane (ADR 0094): the pane's title row (its
-/// tabs, or the one tab's title, a + that opens a new browser tab, Close,
-/// which closes every tab), then [BrowserBar], then the page, or for a new
-/// tab a hint. Like a file's view it's made again as its tab shows: the
-/// page loads again from the tab's address.
+/// A browser tab in the preview pane (ADR 0094), as Claude desktop's
+/// browser: the pane's title row (its tabs as chips, a + that opens a new
+/// browser tab; at the right Close, which
+/// closes every tab), then [BrowserBar], then the page, or for a new tab a
+/// hint. Like a file's view it's made again as its tab shows: the page
+/// loads again from the tab's address.
 class BrowserPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -186,15 +186,16 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PaneHeader(
+          inset: previewChipInset,
+          end: previewChipInset,
           child: Row(
-            spacing: 8,
+            spacing: 6,
             children: [
-              LineIcon.globe.view(size: 14, color: t.textSecondary),
               Expanded(child: _tabs()),
               IconTap.line(
                 LineIcon.close,
                 tooltip: 'Close',
-                size: 15,
+                size: 17,
                 onTap: widget.onClose,
               ),
             ],
@@ -217,25 +218,25 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     );
   }
 
-  /// The tabs (or the one tab's title) and the + right after them.
+  /// The tabs, chips even when there's one, as Claude's, and the + right
+  /// after them.
   Widget _tabs() => ValueListenableBuilder(
     valueListenable: widget.chat.previewTabs,
     builder: (context, open, _) => Row(
+      spacing: 2,
       children: [
         Flexible(
-          child: open.length > 1
-              ? PreviewTabs(
-                  key: widget.tabsKey,
-                  chat: widget.chat,
-                  tabs: open,
-                  current: _tab,
-                )
-              : _Title(_tab),
+          child: PreviewTabs(
+            key: widget.tabsKey,
+            chat: widget.chat,
+            tabs: open.isEmpty ? [_tab] : open,
+            current: _tab,
+          ),
         ),
         IconTap.line(
           LineIcon.plus,
           tooltip: 'New browser tab',
-          size: 14,
+          size: 18,
           padding: 4,
           onTap: widget.chat.openBrowserTab,
         ),
@@ -255,35 +256,6 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       ),
     ],
   );
-}
-
-/// The one browser tab's title, plain, where a tab's would be, its address
-/// in a tooltip.
-class _Title extends StatelessWidget {
-  const new(this.tab);
-
-  final BrowserTab tab;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    return ListenableBuilder(
-      listenable: Listenable.merge([tab.title, tab.address]),
-      builder: (context, _) => Tooltip(
-        message: plainPath(tab.address.value),
-        child: Padding(
-          padding: const EdgeInsets.only(left: previewNameInset, right: 4),
-          child: Text(
-            tab.label,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(theme.t.text, size: 12),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// A new tab's page: what to type.

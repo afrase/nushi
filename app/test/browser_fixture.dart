@@ -204,6 +204,9 @@ Finder get addressField => find.descendant(
   matching: find.byType(TextField),
 );
 
+/// The address field's box, its border and fill: where it lies.
+Finder get addressBox => find.byKey(BrowserBar.fieldKey);
+
 Future<void> typeAddress(WidgetTester tester, String text) async {
   await tester.enterText(addressField, text);
   await tester.testTextInput.receiveAction(TextInputAction.go);

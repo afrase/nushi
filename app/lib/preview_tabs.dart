@@ -15,7 +15,8 @@ import 'package:nushi/widgets.dart';
 // The preview pane's tabs (ADR 0070), in its title row in place of the file
 // name when more than one tab is open: what each says, how wide it is, and
 // the row. A browser tab (ADR 0094) is a tab like a file's, named for its
-// page.
+// page; with one in the row every tab is a chip, as Claude desktop's
+// browser draws its tabs ([previewChips]).
 
 /// What the tab of [file] says: its name, with as much of its folder as
 /// tells it from the others of that name in [files] ("plan.md · docs"),
@@ -50,6 +51,25 @@ const double previewNameInset = 5;
 
 /// The room a tab keeps for its ✕, shown or not, so its name doesn't move.
 const double _closeRoom = 18;
+
+/// Whether [tabs] are drawn as chips: with a browser tab among them, as
+/// Claude desktop's browser draws its tabs (a rounded fill, an icon, the
+/// name, a ✕), a file's tab beside one a chip too so the row reads as one
+/// (ADR 0094); files alone keep plain tabs (ADR 0071).
+bool previewChips(List<PreviewEntry> tabs) => tabs.any((e) => e is BrowserTab);
+
+/// The room at the ends of a title row of chips, the browser's (as
+/// Claude's, a little in from the pane's edges).
+const double previewChipInset = 8;
+
+/// A chip's height, the room between chips, its icon's size and the room
+/// around it, and the most a chip's name takes before it's cut: one long
+/// title leaves the others their room, as Claude's chips do.
+const double previewChipHeight = 28;
+const double _chipGap = 4;
+const double _chipIcon = 14;
+const double _chipStart = 8;
+const double _chipNameMost = 180;
 
 /// How wide tabs that would like [widths] are in [room]. The widest give way
 /// first, down to [previewTabLeast]; past that they add up to more than
@@ -106,8 +126,10 @@ class _PreviewTabsState extends State<PreviewTabs> {
   }
 
   /// A tab's width with all its name showing: measured as a [Text] draws it,
-  /// over the [DefaultTextStyle] (its letter spacing widens a name).
-  double _fullWidth(String label, TextStyle face) {
+  /// over the [DefaultTextStyle] (its letter spacing widens a name). A
+  /// [chip]'s takes its icon and the gap after it too, its name at most
+  /// [_chipNameMost].
+  double _fullWidth(String label, TextStyle face, {required bool chip}) {
     final style = DefaultTextStyle.of(context).style.merge(face);
     final text = TextPainter(
       text: TextSpan(text: label, style: style),
@@ -116,7 +138,14 @@ class _PreviewTabsState extends State<PreviewTabs> {
     )..layout();
     final width = text.width.ceilToDouble();
     text.dispose();
-    return width + previewNameInset + _closeRoom;
+    if (!chip) return width + previewNameInset + _closeRoom;
+    return _chipStart +
+        _chipIcon +
+        6 +
+        min(width, _chipNameMost) +
+        _closeRoom +
+        4 +
+        _chipGap;
   }
 
   /// Scrolls no further than it takes to show from [start] to [end].
@@ -163,12 +192,13 @@ class _PreviewTabsState extends State<PreviewTabs> {
           final BrowserTab b => b.label,
         },
     ];
+    final chips = previewChips(tabs);
     TextStyle face(PreviewEntry e, Color color) => e is BrowserTab
-        ? theme.ui(color, size: 12)
+        ? theme.ui(color, size: chips ? 12.5 : 12)
         : theme.code(color, size: 12);
     final widths = fitTabs([
       for (final (i, e) in tabs.indexed)
-        _fullWidth(labels[i], face(e, theme.t.text)),
+        _fullWidth(labels[i], face(e, theme.t.text), chip: chips),
     ], box.maxWidth);
     final at = tabs.indexOf(widget.current);
     final seen = (widget.current, tabs.length, box.maxWidth);
@@ -191,7 +221,7 @@ class _PreviewTabsState extends State<PreviewTabs> {
           // window (ADR 0080); the row scrolls only when tabs fill it.
           hitTestBehavior: HitTestBehavior.deferToChild,
           child: TabLine(
-            value: widget.current,
+            value: chips ? null : widget.current,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -212,6 +242,7 @@ class _PreviewTabsState extends State<PreviewTabs> {
                       },
                       face: (color) => face(e, color),
                       showing: e == widget.current,
+                      chip: chips,
                     ),
                   ),
               ],
@@ -225,7 +256,8 @@ class _PreviewTabsState extends State<PreviewTabs> {
 
 /// A tab: its name, which shows it, and a ✕ always on the one showing, on the
 /// others under the pointer. Neither a box nor a tint: the one showing is the
-/// primary text with a line under it, the rest muted.
+/// primary text with a line under it, the rest muted. A [chip] is Claude
+/// desktop's browser's tab instead ([_Chip]).
 class _Tab extends StatelessWidget {
   const new({
     required this.chat,
@@ -234,6 +266,7 @@ class _Tab extends StatelessWidget {
     required this.tooltip,
     required this.face,
     required this.showing,
+    this.chip = false,
   });
 
   final ChatState chat;
@@ -242,10 +275,12 @@ class _Tab extends StatelessWidget {
   final String tooltip;
   final TextStyle Function(Color color) face;
   final bool showing;
+  final bool chip;
 
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    if (chip) return _Chip(this);
     return Hover(
       builder: (context, {required hover}) => TabFace(
         showing: showing,
@@ -284,6 +319,100 @@ class _Tab extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A tab as Claude desktop's browser draws one: a rounded chip, filled on
+/// the one showing and tinted under the pointer, its kind's icon (a globe,
+/// a file's), its name, and a ✕, always on the one showing, on the others
+/// under the pointer.
+class _Chip extends StatelessWidget {
+  const new(this.tab);
+
+  final _Tab tab;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = NushiTheme.of(context).t;
+    final showing = tab.showing;
+    final round = BorderRadius.circular(NushiTheme.card);
+    return Padding(
+      padding: const EdgeInsets.only(right: _chipGap),
+      child: Center(
+        child: Hover(
+          builder: (context, {required hover}) {
+            final ink = tabText(t, showing: showing, hover: hover);
+            return Container(
+              height: previewChipHeight,
+              decoration: BoxDecoration(
+                color: showing
+                    ? t.selected
+                    : hover
+                    ? t.hover
+                    : null,
+                borderRadius: round,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Pressable(
+                      onTap: () => tab.chat.showPreviewTab(tab.tab),
+                      tooltip: tab.tooltip,
+                      builder: (context, look) => Container(
+                        padding: const EdgeInsets.only(left: _chipStart),
+                        foregroundDecoration: focusRing(t, look, radius: round),
+                        child: Row(
+                          spacing: 6,
+                          children: [
+                            switch (tab.tab) {
+                              BrowserTab() => LineIcon.globe.view(
+                                size: _chipIcon,
+                                color: ink,
+                              ),
+                              PreviewFile(:final path) => Icon(
+                                (previewKind(path) ?? PreviewKind.code).icon,
+                                size: _chipIcon,
+                                color: ink,
+                              ),
+                            },
+                            Flexible(
+                              child: Text(
+                                tab.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
+                                style: tab.face(ink),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: SizedBox(
+                      width: _closeRoom,
+                      child: Opacity(
+                        opacity: hover || showing ? 1 : 0,
+                        child: IconTap.line(
+                          LineIcon.close,
+                          size: 12,
+                          padding: 3,
+                          color: ink,
+                          tooltip: 'Close tab',
+                          onTap: () => tab.chat.closePreview(tab.tab),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

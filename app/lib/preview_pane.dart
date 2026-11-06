@@ -153,9 +153,26 @@ class _PreviewPaneState extends State<PreviewPane> {
                   : roomy
                   ? NushiTheme.barGap - 8
                   : 0.0;
-              return PaneHeader(
-                inset: roomy ? NushiTheme.gutter : 12,
-                end: roomy ? NushiTheme.gutter : 4,
+              return ValueListenableBuilder(
+                valueListenable: widget.chat.previewTabs,
+                // Beside a browser tab its row's ends are the browser's, so
+                // going from one tab to the other moves no chip (ADR 0094).
+                builder: (context, open, row) {
+                  final chips = open.length > 1 && previewChips(open);
+                  return PaneHeader(
+                    inset: chips
+                        ? previewChipInset
+                        : roomy
+                        ? NushiTheme.gutter
+                        : 12,
+                    end: chips
+                        ? previewChipInset
+                        : roomy
+                        ? NushiTheme.gutter
+                        : 4,
+                    child: row!,
+                  );
+                },
                 child: LayoutBuilder(
                   builder: (context, box) => ListenableBuilder(
                     listenable: Listenable.merge([
@@ -182,11 +199,13 @@ class _PreviewPaneState extends State<PreviewPane> {
                               child: Row(
                                 spacing: roomy ? 6 : 8,
                                 children: [
-                                  Icon(
-                                    kind.icon,
-                                    size: 14,
-                                    color: t.textSecondary,
-                                  ),
+                                  // A chip has its own icon.
+                                  if (!tabs || !previewChips(open))
+                                    Icon(
+                                      kind.icon,
+                                      size: 14,
+                                      color: t.textSecondary,
+                                    ),
                                   // The name shows the file in the Files
                                   // pane; several open, their tabs take its
                                   // place.

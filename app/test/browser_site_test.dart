@@ -96,10 +96,10 @@ void main() {
     await typeAddress(tester, 'http://example.com');
     expect(mark, findsOneWidget);
     // Between the buttons and the field, the field still to the edge.
-    final field = tester.getRect(addressField);
+    final field = tester.getRect(addressBox);
     expect(tester.getRect(mark).right, lessThanOrEqualTo(field.left));
     final pane = tester.getRect(find.byType(BrowserPane));
-    expect(field.right, closeTo(pane.right - 8, 0.5));
+    expect(field.right, closeTo(pane.right - BrowserBar.inset, 0.5));
     // Typing elsewhere leaves it: the page is still the http one.
     await tester.enterText(addressField, 'example.com');
     await tester.pump();
@@ -220,7 +220,7 @@ void main() {
     );
     expect(
       tester.getRect(text).right,
-      lessThanOrEqualTo(tester.getRect(addressField).right),
+      lessThanOrEqualTo(tester.getRect(addressBox).right),
     );
     // In the field's focus, the whole address, to edit.
     await tester.tap(addressField);

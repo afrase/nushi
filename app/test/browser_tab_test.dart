@@ -161,7 +161,7 @@ void main() {
       expect(plus, findsOneWidget);
       // Right after the last tab.
       final tabs = tester.getRect(find.byType(PreviewTabs));
-      expect(tester.getRect(plus).left, tabs.right);
+      expect(tester.getRect(plus).left, closeTo(tabs.right + 2, 0.5));
       await tester.tap(plus);
       await tester.pumpAndSettle();
       expect(c.previewTabs.value, hasLength(3));
@@ -513,8 +513,8 @@ void main() {
           final bar = tester.getRect(find.byType(BrowserBar));
           expect((bar.left, bar.right), (pane.left, pane.right));
           expect(
-            tester.getRect(addressField).right,
-            closeTo(pane.right - 8, 0.5),
+            tester.getRect(addressBox).right,
+            closeTo(pane.right - BrowserBar.inset, 0.5),
           );
           await render(
             tester,
