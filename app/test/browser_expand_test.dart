@@ -181,9 +181,7 @@ void main() {
           find.byType(NushiApp),
           'browser_menu_${width.toInt()}_$name',
         );
-        await tester.tap(
-          find.text('Local network access   Blocked', findRichText: true),
-        );
+        await tester.tap(find.text('Local network access'));
         await tester.pumpAndSettle();
         await render(
           tester,

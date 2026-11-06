@@ -65,6 +65,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
   // Corner radii: controls (buttons, fields) and cards.
   static const control = 4.0;
   static const card = 6.0;
+  static const panel = 10.0; // a menu's and a dialog's corners, as Claude's
 
   // The Mac's chat area's spacing (ADR 0072). The phone keeps its own values,
   // decided where the two share a widget (TouchTargets).
@@ -200,7 +201,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           side: WidgetStatePropertyAll(BorderSide(color: t.borderStrong)),
           shape: const WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(card)),
+              borderRadius: BorderRadius.all(Radius.circular(panel)),
             ),
           ),
         ),
@@ -212,8 +213,9 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
           minimumSize: const Size(0, 30),
           padding: const EdgeInsets.symmetric(horizontal: 10),
           visualDensity: VisualDensity.standard,
+          // Inside the panel's round, by its padding.
           shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(control)),
+            borderRadius: BorderRadius.all(Radius.circular(card)),
           ),
         ),
       ),
@@ -223,7 +225,7 @@ class NushiTheme extends ThemeExtension<NushiTheme> {
         elevation: 3,
         shadowColor: t.shadow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(panel),
           side: BorderSide(color: t.borderStrong),
         ),
         titleTextStyle: ui(t.text, size: 15, weight: FontWeight.w600),

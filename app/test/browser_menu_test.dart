@@ -64,6 +64,12 @@ Finder _row(String label) => find.ancestor(
   ),
 );
 
+/// What the Local network access row says at its end.
+Finder _access(String state) => find.descendant(
+  of: _row('Local network access'),
+  matching: find.text(state),
+);
+
 bool _enabled(WidgetTester tester, String label) =>
     switch (tester.widget(_row(label))) {
       MenuItemButton(:final onPressed) => onPressed != null,
@@ -84,7 +90,7 @@ void main() {
       'Save screenshot',
       'Open links in built-in browser',
       'Manage allowed sites…',
-      'Local network access   Blocked',
+      'Local network access',
       'Cookies',
       'Clear browsing data',
     ];
@@ -194,10 +200,9 @@ void main() {
       browserFakes();
       final c = await _pane(tester);
       await _open(tester, c, 'https://Router.example/admin');
-      expect(_enabled(tester, 'Local network access   Blocked'), isTrue);
-      await tester.tap(
-        find.text('Local network access   Blocked', findRichText: true),
-      );
+      expect(_access('Blocked'), findsOneWidget);
+      expect(_enabled(tester, 'Local network access'), isTrue);
+      await tester.tap(find.text('Local network access'));
       await tester.pumpAndSettle();
       // It names the site it's for (the bar's host is the other).
       expect(find.text('router.example'), findsNWidgets(2));
@@ -206,9 +211,8 @@ void main() {
       expect(localNetworkSites.value, {'router.example'});
       await tester.tap(find.byTooltip('More'));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.text('Local network access   Allowed', findRichText: true),
-      );
+      expect(_access('Allowed'), findsOneWidget);
+      await tester.tap(find.text('Local network access'));
       await tester.pumpAndSettle();
       // The one in force is checked.
       expect(
@@ -229,11 +233,8 @@ void main() {
       browserFakes();
       final c = await _pane(tester);
       await _open(tester, c, 'http://localhost:3000');
-      expect(
-        find.text('Local network access   Allowed', findRichText: true),
-        findsOneWidget,
-      );
-      expect(_enabled(tester, 'Local network access   Allowed'), isFalse);
+      expect(_access('Allowed'), findsOneWidget);
+      expect(_enabled(tester, 'Local network access'), isFalse);
     }, variant: macOnly);
 
     testWidgets('a new tab has none', (tester) async {

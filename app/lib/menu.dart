@@ -10,7 +10,9 @@ import 'package:nushi/theme/theme.dart';
 /// the same line, its key [shortcut] and a check on the right when
 /// [checked]; in red when it
 /// is [danger] (it deletes or loses something). Picking it runs [onPick]; with
-/// [submenu] it opens those rows beside it instead. Without either it
+/// [submenu] it opens those rows beside it instead, its [detail] (the value
+/// it sets) at the right before a chevron, as macOS and Claude draw one; an
+/// empty [submenu] is one that can't be changed now. Without either it
 /// shows unavailable. [tooltip] shows on hover. [controls], for a row that
 /// isn't one choice (a chat's color): what it holds after its [label], given
 /// what closes the menu; each picks for itself, and the row itself does
@@ -77,6 +79,9 @@ class MenuEntry {
   /// Takes the focus as the menu opens, so Esc, the arrows and Enter work
   /// the menu at once, wherever the focus was (a chip over the transcript).
   final bool autofocus;
+
+  /// Whether it can be picked or opened.
+  bool get _on => onPick != null || (submenu?.isNotEmpty ?? false);
 
   bool get _pickable => onPick != null && submenu == null;
 
@@ -299,6 +304,12 @@ const _filterPast = 10;
 /// The height of the line between a menu's groups.
 const _dividerHeight = 11.0;
 
+/// A row's text's inset from the panel's padding (the menu buttons' theme).
+const _rowInset = 10.0;
+
+/// The width of a row's check, and of a submenu's chevron under it.
+const _check = 14.0;
+
 List<Widget> _rows(
   BuildContext context,
   List<MenuEntry> entries,
@@ -322,7 +333,12 @@ List<Widget> _rows(
   return [
     for (final e in entries)
       if (identical(e, MenuEntry.divider))
-        const Divider(height: _dividerHeight, indent: 6, endIndent: 6)
+        // From the rows' text to their end, as Claude's.
+        const Divider(
+          height: _dividerHeight,
+          indent: _rowInset,
+          endIndent: _rowInset,
+        )
       else if (e.heading)
         Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
@@ -401,7 +417,7 @@ Widget _row(
 }) {
   final theme = NushiTheme.of(context);
   final t = theme.t;
-  final on = e.onPick != null || e.submenu != null;
+  final on = e._on;
   final color = !on
       ? t.textMuted
       : e.danger
@@ -440,10 +456,10 @@ Widget _row(
             text: e.label,
             style: theme.ui(color, size: 13.5, weight: FontWeight.w400),
           ),
-          if (e.detail.isNotEmpty)
+          if (e.detail.isNotEmpty && e.submenu == null)
             TextSpan(
               text: '   ${e.detail}',
-              style: theme.ui(t.textMuted, size: 12.5),
+              style: theme.ui(t.textMuted, size: 12.5, weight: FontWeight.w400),
             ),
         ],
       ),
@@ -453,11 +469,29 @@ Widget _row(
   );
   if (e.tooltip.isNotEmpty) label = Tooltip(message: e.tooltip, child: label);
   if (e.submenu case final sub?) {
+    // Its value and chevron as the one decoration, so the row's space
+    // goes before them and they sit at its end.
+    final end = Row(
+      mainAxisSize: MainAxisSize.min,
+      spacing: 10,
+      children: [
+        if (e.detail.isNotEmpty)
+          Text(
+            e.detail,
+            style: theme.ui(t.textMuted, size: 12.5, weight: FontWeight.w400),
+          ),
+        LineIcon.chevron.view(
+          size: _check,
+          color: on ? t.textSecondary : color,
+        ),
+      ],
+    );
     return SubmenuButton(
       key: key,
       leadingIcon: icon,
+      submenuIcon: WidgetStatePropertyAll(end),
       menuChildren: _rows(context, sub, close),
-      child: label,
+      child: Padding(padding: const EdgeInsets.only(right: 12), child: label),
     );
   }
   return _button(
@@ -508,10 +542,11 @@ Widget _button(
             ),
           ),
         if (checks)
+          // The accent's, as Claude's and the app's other checks.
           SizedBox(
-            width: 14,
+            width: _check,
             child: e.checked
-                ? Icon(Icons.check, size: 14, color: t.text)
+                ? Icon(Icons.check, size: _check, color: t.accentInk)
                 : null,
           ),
         if (digit != null)

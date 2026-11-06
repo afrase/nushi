@@ -67,7 +67,10 @@ enum LineIcon {
   expand,
 
   /// Collapse: the same arrows in from the corners.
-  collapse;
+  collapse,
+
+  /// A submenu's: a chevron to the right.
+  chevron;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -245,6 +248,11 @@ enum LineIcon {
         ..lineTo(4, 14)
         ..moveTo(4, 20)
         ..lineTo(10, 14),
+    chevron =>
+      Path()
+        ..moveTo(9.5, 6)
+        ..lineTo(15.5, 12)
+        ..lineTo(9.5, 18),
     collapse =>
       Path()
         ..moveTo(14, 4)
@@ -270,9 +278,10 @@ enum LineIcon {
             ..translateByDouble(-12, -12, 0, 1))
           .storage;
 
-  /// A dot at [x], closed up by the stroke.
+  /// A dot at [x], filled by the stroke: about twice its width, as solid
+  /// as Claude's dots beside its strokes.
   static Rect _dot(double x) =>
-      Rect.fromCircle(center: Offset(x, 12), radius: 0.4);
+      Rect.fromCircle(center: Offset(x, 12), radius: 0.8);
 
   /// The icon, [size] square, in the room an [Icon] of that size takes.
   Widget view({required double size, required Color color}) => SizedBox.square(
