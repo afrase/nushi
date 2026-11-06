@@ -355,15 +355,23 @@ class ChatState extends ChangeNotifier {
   }
 
   /// Opens a new browser tab last, at [address] ('' for a new tab's page),
-  /// and shows it. Browser tabs are never matched up: each open is its own.
+  /// and shows it, on the Chat tab (the pane is beside the chat). Browser
+  /// tabs are never matched up: each open is its own.
   BrowserTab openBrowserTab([String address = '']) {
-    final tab = BrowserTab(address);
-    _show(tab);
-    return tab;
+    final browser = BrowserTab(address);
+    tab.value = ChatTab.chat;
+    _show(browser);
+    return browser;
   }
 
-  /// Shows the last browser tab opened, or a new one if it has none.
+  /// Whether a browser tab shows: the preview's, on the Chat tab.
+  bool get browserShown =>
+      preview.value is BrowserTab && shownTab == ChatTab.chat;
+
+  /// Shows the last browser tab opened, or a new one if it has none, on the
+  /// Chat tab.
   void showBrowser() {
+    tab.value = ChatTab.chat;
     if (preview.value is BrowserTab) return;
     final last = previewTabs.value.whereType<BrowserTab>().lastOrNull;
     if (last == null) {
