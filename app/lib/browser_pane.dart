@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_bar.dart';
+import 'package:nushi/browser_menu.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
@@ -44,7 +45,7 @@ const browserHint = 'Enter an address, like example.com or localhost:3000';
 
 /// A browser tab in the preview pane (ADR 0094), as Claude desktop's
 /// browser: the pane's title row (its tabs as chips, a + that opens a new
-/// browser tab; at the right Close, which
+/// browser tab; at the right ⋯ ([BrowserMenu]) and Close, which
 /// closes every tab), then [BrowserBar], then the page, or for a new tab a
 /// hint. Like a file's view it's made again as its tab shows: the page
 /// loads again from the tab's address.
@@ -192,6 +193,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
             spacing: 6,
             children: [
               Expanded(child: _tabs()),
+              BrowserMenu(tab: _tab, host: host),
               IconTap.line(
                 LineIcon.close,
                 tooltip: 'Close',

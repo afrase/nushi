@@ -57,7 +57,8 @@ class MainFlutterWindow: NSWindow {
     // pressed or typed in a web view (lib/web_page.dart): Flutter never sees
     // those, WebKit takes them. A file preview's web view made cookieless
     // (PreviewCookies). A browser tab's loads as they commit (CommitWatch), and
-    // its block on the local network (LocalNetwork).
+    // its block on the local network (LocalNetwork). Its ⋯ menu's screenshot
+    // and Clear browsing data (BrowserData).
     let browserChannel = FlutterMethodChannel(
       name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
     browserChannel
@@ -101,6 +102,13 @@ class MainFlutterWindow: NSWindow {
           }
           return result(CommitWatch.historyItem(id, by: (args["by"] as? NSNumber)?.intValue ?? 0, registry: registry))
         }
+        if call.method == "snapshot" {
+          guard let id = (call.arguments as? NSNumber)?.int64Value, let registry = flutterViewController else {
+            return result(FlutterError(code: "refused", message: "No web view", details: nil))
+          }
+          return BrowserData.snapshot(id, registry: registry, result)
+        }
+        if call.method == "clearData" { return BrowserData.clear(result) }
         if call.method == "browserName" {
           // The name of the app "open" opens with, for a browser tab's Open
           // in button: as Finder shows it, less ".app".
@@ -450,6 +458,36 @@ enum LocalNetwork {
         install(list)
       }
     }
+  }
+}
+
+/// What a browser tab's ⋯ menu asks of WebKit (lib/browser_menu.dart): the
+/// page in sight as a PNG, and every site's data gone from WebKit's default
+/// store, the one browser tabs and file previews share (docs/security.md).
+enum BrowserData {
+  /// The plugin's web view [id] as it's on screen, the part in sight only,
+  /// as PNG data, or an error.
+  static func snapshot(_ id: Int64, registry: FlutterPluginRegistry, _ result: @escaping FlutterResult) {
+    guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry) else {
+      return result(FlutterError(code: "refused", message: "No such web view", details: nil))
+    }
+    web.takeSnapshot(with: nil) { image, error in
+      guard let image, let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),
+        let png = bitmap.representation(using: .png, properties: [:])
+      else {
+        return result(FlutterError(code: "failed", message: error?.localizedDescription ?? "No picture", details: nil))
+      }
+      result(FlutterStandardTypedData(bytes: png))
+    }
+  }
+
+  /// Removes every kind of website data (cookies, local storage, IndexedDB,
+  /// caches, service workers) of every site from the default store, then
+  /// answers nil.
+  static func clear(_ result: @escaping FlutterResult) {
+    WKWebsiteDataStore.default().removeData(
+      ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast
+    ) { result(nil) }
   }
 }
 

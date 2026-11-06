@@ -46,6 +46,10 @@ abstract interface class BrowserHost {
   /// each time one is, for the pane to say so.
   ValueListenable<Uri?> get blockedLocal;
 
+  /// The page as it's on screen, the part in sight only, as a PNG (the ⋯
+  /// menu's Save screenshot).
+  Future<Uint8List> snapshot();
+
   void dispose();
 }
 
@@ -153,6 +157,21 @@ Future<void> lookUpDefaultBrowser() async {
     defaultBrowser.value = null; // "your browser"
   }
 }
+
+/// The page in sight in the plugin's web view `id` as a PNG: WebKit's
+/// `takeSnapshot`, on the Swift side (`BrowserData`). Tests set their own.
+Future<Uint8List> Function(int id) pageSnapshot = (id) async {
+  final png = await _browser.invokeMethod<Uint8List>('snapshot', id);
+  if (png == null) throw StateError('The page gave no picture');
+  return png;
+};
+
+/// Removes every site's data from WebKit's default store, the one browser
+/// tabs and file previews share (cookies, storage, caches), on the Swift
+/// side (`BrowserData`): the ⋯ menu's Clear browsing data. Tests set their
+/// own.
+Future<void> Function() clearBrowsingData = () =>
+    _browser.invokeMethod<void>('clearData');
 
 const _browser = MethodChannel('nushi/browser');
 final _commits = <int, ValueChanged<String>>{};
@@ -264,6 +283,12 @@ class BrowserPage implements BrowserHost {
   static const _unwatched =
       'Nushi couldn’t follow this tab’s page, or keep it off your local '
       'network, so it loads nothing.';
+
+  @override
+  Future<Uint8List> snapshot() async {
+    await _ready;
+    return await pageSnapshot(_id!);
+  }
 
   @override
   Future<void> reload() async {

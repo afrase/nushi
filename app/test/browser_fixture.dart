@@ -77,6 +77,15 @@ class FakeBrowserHost implements BrowserHost {
   @override
   Future<void> reload() async => reloads++;
 
+  /// How many times the page's picture was taken.
+  int snapshots = 0;
+
+  @override
+  Future<Uint8List> snapshot() async {
+    snapshots++;
+    return fakePng;
+  }
+
   @override
   Future<void> back() async {}
 
@@ -86,6 +95,12 @@ class FakeBrowserHost implements BrowserHost {
   @override
   void dispose() {}
 }
+
+/// A page's picture as the fakes take it: a PNG of one white pixel.
+final Uint8List fakePng = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/'
+  'PchI7wAAAABJRU5ErkJggg==',
+);
 
 /// A page as a dev server might draw it: a heading and a line on white.
 class _Page extends StatelessWidget {
