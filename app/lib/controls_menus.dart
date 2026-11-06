@@ -149,7 +149,7 @@ class MenuButton extends StatelessWidget {
 
 /// An icon that opens a menu ("More": ⋯). With [heldOpen] it stays tinted
 /// while its menu is open, as a macOS toolbar's button and Claude desktop's
-/// browser ⋯ do.
+/// browser ⋯ do. [color] and [padding] are its [IconTap]'s.
 class MenuIcon extends StatefulWidget {
   const new(
     IconData this.icon, {
@@ -158,6 +158,8 @@ class MenuIcon extends StatefulWidget {
     super.key,
     this.size = 16,
     this.onClose,
+    this.color,
+    this.padding = 5,
     this.filter = true,
     this.heldOpen = false,
   }) : line = null;
@@ -170,6 +172,8 @@ class MenuIcon extends StatefulWidget {
     super.key,
     this.size = 16,
     this.onClose,
+    this.color,
+    this.padding = 5,
     this.filter = true,
     this.heldOpen = false,
   }) : icon = null;
@@ -179,6 +183,8 @@ class MenuIcon extends StatefulWidget {
   final String tooltip;
   final List<MenuEntry> entries;
   final double size;
+  final Color? color;
+  final double padding;
   final VoidCallback? onClose;
 
   /// Whether a long list gets a filter field ([Menu.filter]).
@@ -214,6 +220,8 @@ class _MenuIconState extends State<MenuIcon> {
           line,
           tooltip: widget.tooltip,
           size: widget.size,
+          color: widget.color,
+          padding: widget.padding,
           held: _open,
           onTap: onTap,
         ),
@@ -221,6 +229,8 @@ class _MenuIconState extends State<MenuIcon> {
           widget.icon!,
           tooltip: widget.tooltip,
           size: widget.size,
+          color: widget.color,
+          padding: widget.padding,
           held: _open,
           onTap: onTap,
         ),

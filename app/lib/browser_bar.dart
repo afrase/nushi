@@ -49,6 +49,11 @@ class BrowserBar extends StatelessWidget {
   /// The room at the bar's ends.
   static const inset = 8.0;
 
+  /// Back, Forward and Reload's glyphs and the room around each: as large
+  /// as Claude's, in the text's ink, so a disabled one (muted) stands out.
+  static const _icon = 21.0;
+  static const _iconPadding = 4.0;
+
   /// The key of the address field's box, its fill and border.
   static const ValueKey<String> fieldKey = ValueKey('address field');
 
@@ -67,7 +72,9 @@ class BrowserBar extends StatelessWidget {
       builder: (context, on, _) => IconTap.line(
         icon,
         tooltip: tooltip,
-        size: 18,
+        size: _icon,
+        padding: _iconPadding,
+        color: t.text,
         onTap: on ? () => go().ignore() : null,
       ),
     );
@@ -79,7 +86,7 @@ class BrowserBar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: t.borderSubtle)),
       ),
       child: Row(
-        spacing: 4,
+        spacing: 3,
         children: [
           step(LineIcon.back, 'Back', host?.canBack, () => host!.back()),
           step(
@@ -91,7 +98,9 @@ class BrowserBar extends StatelessWidget {
           IconTap.line(
             LineIcon.reload,
             tooltip: 'Reload  ${Act.reloadPage.shortcut}',
-            size: 18,
+            size: _icon,
+            padding: _iconPadding,
+            color: t.text,
             onTap: host == null ? null : () => host.reload().ignore(),
           ),
           ValueListenableBuilder(
@@ -228,7 +237,9 @@ class _Outside extends StatelessWidget {
     builder: (context, name, _) => IconTap.line(
       LineIcon.openOutside,
       tooltip: name == null ? 'Open in your browser' : 'Open in $name',
+      size: 18,
       padding: 4,
+      color: NushiTheme.of(context).t.text,
       onTap: () {
         if (Uri.tryParse(page.value) case final url? when isWebPage(url)) {
           openInBrowser(url).ignore();

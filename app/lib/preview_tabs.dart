@@ -62,14 +62,37 @@ bool previewChips(List<PreviewEntry> tabs) => tabs.any((e) => e is BrowserTab);
 /// Claude's, a little in from the pane's edges).
 const double previewChipInset = 8;
 
-/// A chip's height, the room between chips, its icon's size and the room
-/// around it, and the most a chip's name takes before it's cut: one long
-/// title leaves the others their room, as Claude's chips do.
+/// A chip's height, the room between chips, its icon's size, the room
+/// before it and after it, the room a chip keeps for its ✕ and after it,
+/// and the most a chip's name takes before it's cut: one long title leaves
+/// the others their room, as Claude's chips do. Its name, icon and ✕ are
+/// as large as Claude's, the name the address field's size.
 const double previewChipHeight = 28;
 const double _chipGap = 4;
-const double _chipIcon = 14;
-const double _chipStart = 8;
+const double _chipIcon = 16;
+const double _chipStart = 9;
+const double _chipIconGap = 7;
+const double _chipCloseRoom = 24;
+const double _chipEnd = 1;
 const double _chipNameMost = 180;
+
+/// The + after a row of chips, which opens a new browser tab: Claude's is
+/// always there, after a file's chip too.
+class NewBrowserTab extends StatelessWidget {
+  const new({required this.chat, super.key});
+
+  final ChatState chat;
+
+  @override
+  Widget build(BuildContext context) => IconTap.line(
+    LineIcon.plus,
+    tooltip: 'New browser tab',
+    size: 20,
+    padding: 4,
+    color: NushiTheme.of(context).t.text,
+    onTap: chat.openBrowserTab,
+  );
+}
 
 /// How wide tabs that would like [widths] are in [room]. The widest give way
 /// first, down to [previewTabLeast]; past that they add up to more than
@@ -141,10 +164,10 @@ class _PreviewTabsState extends State<PreviewTabs> {
     if (!chip) return width + previewNameInset + _closeRoom;
     return _chipStart +
         _chipIcon +
-        6 +
+        _chipIconGap +
         min(width, _chipNameMost) +
-        _closeRoom +
-        4 +
+        _chipCloseRoom +
+        _chipEnd +
         _chipGap;
   }
 
@@ -194,8 +217,8 @@ class _PreviewTabsState extends State<PreviewTabs> {
     ];
     final chips = previewChips(tabs);
     TextStyle face(PreviewEntry e, Color color) => e is BrowserTab
-        ? theme.ui(color, size: chips ? 12.5 : 12)
-        : theme.code(color, size: 12);
+        ? theme.ui(color, size: chips ? 14 : 12)
+        : theme.code(color, size: chips ? 13 : 12);
     final widths = fitTabs([
       for (final (i, e) in tabs.indexed)
         _fullWidth(labels[i], face(e, theme.t.text), chip: chips),
@@ -365,7 +388,7 @@ class _Chip extends StatelessWidget {
                         padding: const EdgeInsets.only(left: _chipStart),
                         foregroundDecoration: focusRing(t, look, radius: round),
                         child: Row(
-                          spacing: 6,
+                          spacing: _chipIconGap,
                           children: [
                             switch (tab.tab) {
                               BrowserTab() => LineIcon.globe.view(
@@ -393,18 +416,20 @@ class _Chip extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(right: 4),
+                    padding: const EdgeInsets.only(right: _chipEnd),
                     child: SizedBox(
-                      width: _closeRoom,
+                      width: _chipCloseRoom,
                       child: Opacity(
                         opacity: hover || showing ? 1 : 0,
-                        child: IconTap.line(
-                          LineIcon.close,
-                          size: 12,
-                          padding: 3,
-                          color: ink,
-                          tooltip: 'Close tab',
-                          onTap: () => tab.chat.closePreview(tab.tab),
+                        child: Center(
+                          child: IconTap.line(
+                            // IconTap's 16: an ✕ as tall as the name's caps.
+                            LineIcon.close,
+                            padding: 2,
+                            color: ink,
+                            tooltip: 'Close tab',
+                            onTap: () => tab.chat.closePreview(tab.tab),
+                          ),
                         ),
                       ),
                     ),

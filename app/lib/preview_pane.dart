@@ -211,12 +211,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                                   // place.
                                   Expanded(
                                     child: tabs
-                                        ? PreviewTabs(
-                                            key: widget.tabsKey,
-                                            chat: widget.chat,
-                                            tabs: open,
-                                            current: PreviewFile(widget.path),
-                                          )
+                                        ? _tabs(open)
                                         : Align(
                                             alignment: Alignment.centerLeft,
                                             child: _Name(
@@ -342,6 +337,26 @@ class _PreviewPaneState extends State<PreviewPane> {
           ),
         ],
       ),
+    );
+  }
+
+  /// The tabs of [open], this file's showing; as chips, the + after them,
+  /// as a browser tab's title row has it, so the row keeps its shape as
+  /// you move between the two.
+  Widget _tabs(List<PreviewEntry> open) {
+    final tabs = PreviewTabs(
+      key: widget.tabsKey,
+      chat: widget.chat,
+      tabs: open,
+      current: PreviewFile(widget.path),
+    );
+    if (!previewChips(open)) return tabs;
+    return Row(
+      spacing: 2,
+      children: [
+        Flexible(child: tabs),
+        NewBrowserTab(chat: widget.chat),
+      ],
     );
   }
 }

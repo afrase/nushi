@@ -220,21 +220,27 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
           inset: previewChipInset,
           end: previewChipInset,
           child: Row(
-            spacing: 6,
             children: [
               Expanded(child: _tabs()),
-              BrowserMenu(tab: _tab, host: host),
+              const SizedBox(width: 6),
+              // Each in a box of one size, the glyphs as large as Claude's
+              // and in the text's ink, a disabled one muted (IconTap).
+              BrowserMenu(tab: _tab, host: host, size: 20, padding: _boxed(20)),
               if (expand != null)
                 IconTap.line(
                   widget.expanded ? LineIcon.collapse : LineIcon.expand,
                   tooltip: widget.expanded ? 'Collapse' : 'Expand',
-                  size: 17,
+                  size: 18,
+                  padding: _boxed(18),
+                  color: t.text,
                   onTap: expand,
                 ),
               IconTap.line(
                 LineIcon.close,
                 tooltip: 'Close',
-                size: 17,
+                size: 22,
+                padding: _boxed(22),
+                color: t.text,
                 onTap: widget.onClose,
               ),
             ],
@@ -266,6 +272,12 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     );
   }
 
+  /// The side of each button's box at the title row's right end.
+  static const _box = 32.0;
+
+  /// The padding that sets an icon of [size] in a [_box].
+  static double _boxed(double size) => (_box - size) / 2;
+
   /// The tabs, chips even when there's one, as Claude's, and the + right
   /// after them.
   Widget _tabs() => ValueListenableBuilder(
@@ -281,13 +293,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
             current: _tab,
           ),
         ),
-        IconTap.line(
-          LineIcon.plus,
-          tooltip: 'New browser tab',
-          size: 18,
-          padding: 4,
-          onTap: widget.chat.openBrowserTab,
-        ),
+        NewBrowserTab(chat: widget.chat),
       ],
     ),
   );

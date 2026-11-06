@@ -24,12 +24,22 @@ import 'package:nushi/widgets.dart';
 /// while it's open, reached from the keyboard like the app's other menus
 /// (Tab to it, Return or Space, the arrows).
 class BrowserMenu extends StatelessWidget {
-  const new({required this.tab, required this.host, super.key});
+  const new({
+    required this.tab,
+    required this.host,
+    super.key,
+    this.size = 18,
+    this.padding = 5,
+  });
 
   final BrowserTab tab;
 
   /// The page's host, null for a new tab.
   final BrowserHost? host;
+
+  /// Its glyph's size and the room around it ([IconTap]'s).
+  final double size;
+  final double padding;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -43,7 +53,9 @@ class BrowserMenu extends StatelessWidget {
       child: MenuIcon.line(
         LineIcon.more,
         tooltip: 'More',
-        size: 18,
+        size: size,
+        padding: padding,
+        color: NushiTheme.of(context).t.text,
         filter: false,
         heldOpen: true,
         entries: _entries(context),

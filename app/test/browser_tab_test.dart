@@ -146,9 +146,8 @@ void main() {
       await closeView(tester, d);
     }, variant: macOnly);
 
-    testWidgets('+ shows with a browser tab showing, never on a file’s', (
-      tester,
-    ) async {
+    testWidgets('+ shows after chips, on a file’s too, never with files '
+        'alone', (tester) async {
       browserFakes();
       final d = await browserApp(tester);
       final c = d.chats['c']!..openPreview('docs/a.md');
@@ -166,7 +165,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(c.previewTabs.value, hasLength(3));
       expect(find.text(browserHint), findsOneWidget);
-      // Back on the file's tab: no +.
+      // Back on the file's chip: the row keeps its +, as Claude's.
       await tester.tap(
         find.descendant(
           of: find.byType(PreviewTabs),
@@ -175,7 +174,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(PreviewPane), findsOneWidget);
-      expect(find.byTooltip('New browser tab'), findsNothing);
+      expect(
+        tester.getRect(plus).left,
+        closeTo(tester.getRect(find.byType(PreviewTabs)).right + 2, 0.5),
+      );
       await closeView(tester, d);
     }, variant: macOnly);
 
