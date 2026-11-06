@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
@@ -65,7 +66,7 @@ class BrowserBar extends StatelessWidget {
           ),
           IconTap(
             Icons.refresh,
-            tooltip: 'Reload',
+            tooltip: 'Reload  ${Act.reloadPage.shortcut}',
             size: 15,
             onTap: host == null ? null : () => host.reload().ignore(),
           ),
