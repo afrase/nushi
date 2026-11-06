@@ -47,7 +47,27 @@ enum LineIcon {
 
   /// A browser tab (ADR 0094): a globe, its meridian a lens and its
   /// equator a line.
-  globe;
+  globe,
+
+  /// A browser tab's Back: an arrow to the left.
+  back,
+
+  /// A browser tab's Forward: an arrow to the right.
+  forward,
+
+  /// A browser tab's Reload: a circle's arrow turning clockwise, its head
+  /// at the top right.
+  reload,
+
+  /// Open outside (a page in the default browser): an arrow out of a box's
+  /// top right corner.
+  openOutside,
+
+  /// Expand (the browser over the chat): two arrows out to the corners.
+  expand,
+
+  /// Collapse: the same arrows in from the corners.
+  collapse;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -175,6 +195,68 @@ enum LineIcon {
         ..arcToPoint(const Offset(12, 3), radius: _r(13))
         ..moveTo(3, 12)
         ..lineTo(21, 12),
+    back =>
+      Path()
+        ..moveTo(19, 12)
+        ..lineTo(5, 12)
+        ..moveTo(11, 6)
+        ..lineTo(5, 12)
+        ..lineTo(11, 18),
+    forward =>
+      Path()
+        ..moveTo(5, 12)
+        ..lineTo(19, 12)
+        ..moveTo(13, 6)
+        ..lineTo(19, 12)
+        ..lineTo(13, 18),
+    // From the right, clockwise round to the top, on to the head.
+    reload =>
+      Path()
+        ..moveTo(20, 12)
+        ..arcToPoint(const Offset(12, 4), radius: _r(8), largeArc: true)
+        ..quadraticBezierTo(16.5, 4, 19.5, 7.5)
+        ..moveTo(20, 3.5)
+        ..lineTo(20, 8)
+        ..lineTo(15.5, 8),
+    openOutside =>
+      Path()
+        ..moveTo(18, 13.5)
+        ..lineTo(18, 18)
+        ..quadraticBezierTo(18, 20, 16, 20)
+        ..lineTo(6, 20)
+        ..quadraticBezierTo(4, 20, 4, 18)
+        ..lineTo(4, 8)
+        ..quadraticBezierTo(4, 6, 6, 6)
+        ..lineTo(10.5, 6)
+        ..moveTo(14.5, 4)
+        ..lineTo(20, 4)
+        ..lineTo(20, 9.5)
+        ..moveTo(20, 4)
+        ..lineTo(11, 13),
+    expand =>
+      Path()
+        ..moveTo(14, 4)
+        ..lineTo(20, 4)
+        ..lineTo(20, 10)
+        ..moveTo(20, 4)
+        ..lineTo(14, 10)
+        ..moveTo(10, 20)
+        ..lineTo(4, 20)
+        ..lineTo(4, 14)
+        ..moveTo(4, 20)
+        ..lineTo(10, 14),
+    collapse =>
+      Path()
+        ..moveTo(14, 4)
+        ..lineTo(14, 10)
+        ..lineTo(20, 10)
+        ..moveTo(14, 10)
+        ..lineTo(20, 4)
+        ..moveTo(10, 20)
+        ..lineTo(10, 14)
+        ..lineTo(4, 14)
+        ..moveTo(10, 14)
+        ..lineTo(4, 20),
   };
 
   static Radius _r(double r) => Radius.circular(r);

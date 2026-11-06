@@ -70,10 +70,10 @@ class IconTap extends StatelessWidget {
     this.size = 16,
     this.color,
     this.padding = 5,
+    this.held = false,
   }) : icon = null,
        glyph = null,
-       _working = false,
-       held = false;
+       _working = false;
 
   /// The same button with [glyph] drawn in the icon's place, at the
   /// icon's size and in its color (a chevron that turns).

@@ -147,8 +147,10 @@ class MenuButton extends StatelessWidget {
   );
 }
 
-/// An icon that opens a menu ("More": ⋯).
-class MenuIcon extends StatelessWidget {
+/// An icon that opens a menu ("More": ⋯). With [heldOpen] it stays tinted
+/// while its menu is open, as a macOS toolbar's button and Claude desktop's
+/// browser ⋯ do.
+class MenuIcon extends StatefulWidget {
   const new(
     IconData this.icon, {
     required this.tooltip,
@@ -157,6 +159,7 @@ class MenuIcon extends StatelessWidget {
     this.size = 16,
     this.onClose,
     this.filter = true,
+    this.heldOpen = false,
   }) : line = null;
 
   /// The same button with a drawn [LineIcon].
@@ -168,6 +171,7 @@ class MenuIcon extends StatelessWidget {
     this.size = 16,
     this.onClose,
     this.filter = true,
+    this.heldOpen = false,
   }) : icon = null;
 
   final IconData? icon;
@@ -180,21 +184,46 @@ class MenuIcon extends StatelessWidget {
   /// Whether a long list gets a filter field ([Menu.filter]).
   final bool filter;
 
+  /// Whether it's tinted while its menu is open.
+  final bool heldOpen;
+
+  @override
+  State<MenuIcon> createState() => _MenuIconState();
+}
+
+class _MenuIconState extends State<MenuIcon> {
+  bool _open = false;
+
+  void _opened(bool open) {
+    if (widget.heldOpen && mounted) setState(() => _open = open);
+  }
+
   @override
   Widget build(BuildContext context) => Menu(
-    entries: entries,
-    onClose: onClose,
-    filter: filter,
+    entries: widget.entries,
+    onOpen: () => _opened(true),
+    onClose: () {
+      _opened(false);
+      widget.onClose?.call();
+    },
+    filter: widget.filter,
     builder: (context, open) {
-      final onTap = entries.isEmpty ? null : open;
-      return switch (line) {
+      final onTap = widget.entries.isEmpty ? null : open;
+      return switch (widget.line) {
         final line? => IconTap.line(
           line,
-          tooltip: tooltip,
-          size: size,
+          tooltip: widget.tooltip,
+          size: widget.size,
+          held: _open,
           onTap: onTap,
         ),
-        null => IconTap(icon!, tooltip: tooltip, size: size, onTap: onTap),
+        null => IconTap(
+          widget.icon!,
+          tooltip: widget.tooltip,
+          size: widget.size,
+          held: _open,
+          onTap: onTap,
+        ),
       };
     },
   );
