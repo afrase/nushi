@@ -26,9 +26,10 @@ final class PreviewFile extends PreviewEntry {
   String toString() => 'PreviewFile($path)';
 }
 
-/// A browser tab (ADR 0094): a page of a web server on this Mac. It's the
-/// same tab however it navigates, so it's told apart by identity; its view
-/// sets its address and title as the page moves.
+/// A browser tab (ADR 0094): a web page at an address, any site or a
+/// server on this Mac. It's the same tab however it navigates, so it's
+/// told apart by identity; its view sets its address and title as the page
+/// moves.
 final class BrowserTab extends PreviewEntry {
   new([String address = '']) : address = ValueNotifier(address);
 
