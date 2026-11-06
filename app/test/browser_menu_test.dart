@@ -124,6 +124,23 @@ void main() {
     expect(file.readAsBytesSync(), fakePng);
   }, variant: macOnly);
 
+  testWidgets('a save that fails says so and writes nothing', (tester) async {
+    browserFakes();
+    final dir = Directory.systemTemp.createTempSync('nushi-test-shot');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final was = screenshotPath;
+    addTearDown(() => screenshotPath = was);
+    // A folder that isn't there: the write fails.
+    screenshotPath = (name) async => '${dir.path}/gone/$name';
+    final c = await _pane(tester);
+    await _open(tester, c, 'https://example.com');
+    await tester.tap(find.text('Save screenshot'));
+    await tester.pumpAndSettle();
+    await untilReal(tester, () => find.byType(SnackBar).evaluate().isNotEmpty);
+    expect(find.textContaining('Couldn’t save the screenshot'), findsOneWidget);
+    expect(dir.listSync(recursive: true), isEmpty);
+  }, variant: macOnly);
+
   testWidgets('a cancelled save writes nothing; a new tab has none', (
     tester,
   ) async {
@@ -301,8 +318,15 @@ void main() {
     final more = find.byTooltip('More');
     // The button's own focus: the nearest above its icon.
     final icon = find.descendant(of: more, matching: find.byType(CustomPaint));
-    Focus.of(tester.element(icon.first)).requestFocus();
+    final button = Focus.of(tester.element(icon.first));
+    // Tab from the address field, round past the page, to the ⋯.
+    await tester.tap(addressBox);
     await tester.pump();
+    for (var i = 0; i < 12 && !button.hasPrimaryFocus; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+    }
+    expect(button.hasPrimaryFocus, isTrue);
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await tester.pumpAndSettle();
     expect(find.text('Save screenshot'), findsOneWidget);
