@@ -23,8 +23,9 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart';
 
 import 'fake_daemon.dart';
-import 'github_fixture.dart';
+import 'github_fixture.dart' show openView;
 import 'harness.dart';
+import 'jira_fixture.dart' as jira;
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
@@ -158,6 +159,14 @@ Future<Daemon> _app(
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();
   return d;
+}
+
+/// The page's Reload doesn't apply with a view in the chat's place (its
+/// browser tab out of sight), so the view's ⌘R is the view's.
+void _reloadOff(WidgetTester tester, Daemon d, Finder inView) {
+  expect(d.chatShows, isFalse);
+  final acts = appActions(tester.element(inView), d);
+  expect(acts.firstWhere((a) => a.act == Act.reloadPage).enabled, isFalse);
 }
 
 Future<void> _meta(WidgetTester tester, LogicalKeyboardKey key) async {
@@ -451,14 +460,42 @@ void main() {
       );
       // A browser tab in the chat behind the view.
       d.chats['c1']!.openBrowserTab('http://localhost:3000');
+      await tester.pumpAndSettle();
       int asked() => fake.calls.whereType<ListGitHubInboxRequest>().length;
       final before = asked();
       // The focus in the view, as a click there leaves it.
-      Focus.of(tester.element(find.text('Review requested  1'))).requestFocus();
+      final inView = find.text('Review requested  1');
+      Focus.of(tester.element(inView)).requestFocus();
       await tester.pump();
+      _reloadOff(tester, d, inView);
       await _meta(tester, LogicalKeyboardKey.keyR);
       expect(asked(), before + 1);
-      expect(fakes.hosts, isEmpty); // no page was made, or reloaded
+      expect(fakes.hosts, isEmpty);
+      await closeView(tester, d);
+    }, variant: _mac);
+
+    testWidgets('Jira keeps its ⌘R too', (tester) async {
+      final fakes = _fakes();
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final (fake, d) = await jira.openView(
+        tester,
+        chats: [chat('c1', 'claude', 'Fix Sub')],
+        window: true,
+      );
+      d.chats['c1']!.openBrowserTab('http://localhost:3000');
+      await tester.pumpAndSettle();
+      int asked() => fake.calls.whereType<ListJiraIssuesRequest>().length;
+      final before = asked();
+      // The focus in the view, as a click on its list leaves it.
+      final inView = find.byWidgetPredicate(
+        (w) => w is Focus && w.focusNode?.debugLabel == 'jira view',
+      );
+      tester.widget<Focus>(inView).focusNode!.requestFocus();
+      await tester.pump();
+      _reloadOff(tester, d, inView);
+      await _meta(tester, LogicalKeyboardKey.keyR);
+      expect(asked(), greaterThan(before));
+      expect(fakes.hosts, isEmpty);
       await closeView(tester, d);
     }, variant: _mac);
 
