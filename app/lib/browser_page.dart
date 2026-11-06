@@ -109,16 +109,17 @@ Future<PageNavigation> browserPageNavigation(
 /// another site for the default browser (not here), or nothing either may
 /// open (null: a file, a script, an empty field). Without a scheme it's
 /// http (`localhost:3000`); a port alone is localhost's (`3000`, `:3000`).
+/// A port past 1–65535 names nothing.
 ({Uri url, bool here})? addressOf(String text) {
   var a = text.trim();
   if (a.isEmpty) return null;
-  if (RegExp(r'^:?\d{1,5}$').hasMatch(a)) {
+  if (RegExp(r'^:?\d+$').hasMatch(a)) {
     a = 'localhost:${a.replaceFirst(':', '')}';
   }
   // A scheme, unless what follows its colon is a port (`localhost:3000`).
   final schemed = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d)').hasMatch(a);
   final u = Uri.tryParse(schemed ? a : 'http://$a');
-  if (u == null) return null;
+  if (u == null || (u.hasPort && (u.port < 1 || u.port > 65535))) return null;
   if (isLocalPage(u)) return (url: u, here: true);
   if ((u.scheme == 'http' || u.scheme == 'https') && u.host.isNotEmpty) {
     return (url: u, here: false);
