@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/background_commands.dart';
 import 'package:nushi/beside.dart';
+import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
 import 'package:nushi/chat_menu.dart';
@@ -283,8 +284,13 @@ class _ChatViewState extends State<ChatView> {
                 tabsKey: _previewTabs,
                 onClose: () => chat.preview.value = null,
               ),
-              // Nothing opens a browser tab's pane yet.
-              BrowserTab() => const SizedBox.shrink(),
+              final BrowserTab tab => BrowserPane(
+                key: ObjectKey(tab),
+                chat: chat,
+                tab: tab,
+                tabsKey: _previewTabs,
+                onClose: () => chat.preview.value = null,
+              ),
             },
           ),
       ],
