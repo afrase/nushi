@@ -81,9 +81,12 @@ class BrowserMenu extends StatelessWidget {
               : allowed
               ? 'A page on your Mac or local network always reaches it'
               : 'This site’s address can’t be allowed',
+          // The site it's for, over its choices: the page may move while
+          // the menu is open, and the rows follow it.
           submenu: fixed
               ? null
               : [
+                  MenuEntry.heading(site.toLowerCase()),
                   MenuEntry(
                     'Blocked',
                     checked: !allowed,

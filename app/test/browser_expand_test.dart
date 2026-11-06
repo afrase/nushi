@@ -157,7 +157,17 @@ void main() {
           find.byType(NushiApp),
           'browser_menu_${width.toInt()}_$name',
         );
+        await tester.tap(
+          find.text('Local network access   Blocked', findRichText: true),
+        );
+        await tester.pumpAndSettle();
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'browser_submenu_${width.toInt()}_$name',
+        );
         // A file's tab beside it, showing: chips too.
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
         final c = d.chats['c']!;

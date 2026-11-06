@@ -182,6 +182,8 @@ void main() {
         find.text('Local network access   Blocked', findRichText: true),
       );
       await tester.pumpAndSettle();
+      // It names the site it's for (the bar's host is the other).
+      expect(find.text('router.example'), findsNWidgets(2));
       await tester.tap(find.text('Allowed for this site'));
       await tester.pumpAndSettle();
       expect(localNetworkSites.value, {'router.example'});
