@@ -10,6 +10,7 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/status.dart';
 
@@ -375,8 +376,11 @@ void main() {
                 Expanded(
                   child: PreviewTabs(
                     chat: chat,
-                    files: const ['docs/a.md', 'docs/b.md'],
-                    current: 'docs/a.md',
+                    tabs: const [
+                      PreviewFile('docs/a.md'),
+                      PreviewFile('docs/b.md'),
+                    ],
+                    current: const PreviewFile('docs/a.md'),
                   ),
                 ),
                 IconTap(Icons.close, tooltip: 'Close', onTap: () {}),

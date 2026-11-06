@@ -309,7 +309,7 @@ void main() {
       expect(_chat(d).preview.value, isNull);
       d.select('c');
       await tester.pumpAndSettle();
-      expect(_chat(d).preview.value, 'docs/report.md');
+      expect(_chat(d).previewFile, 'docs/report.md');
       expect(find.byType(PreviewPane), findsOneWidget);
       // Once: going away and back doesn't open it again.
       await tester.tap(find.byTooltip('Close'));
@@ -354,11 +354,11 @@ void main() {
       final c = _chat(d)..openPreview('docs/first.md');
       await tester.pumpAndSettle();
       await _shows(tester, fake, 'docs/report.md');
-      expect(c.previewFiles.value, ['docs/first.md', 'docs/report.md']);
-      expect(c.preview.value, 'docs/report.md');
+      expect(c.previewNames, ['docs/first.md', 'docs/report.md']);
+      expect(c.previewFile, 'docs/report.md');
       await _shows(tester, fake, '/Users/me/nushi/docs/first.md');
-      expect(c.previewFiles.value, ['docs/first.md', 'docs/report.md']);
-      expect(c.preview.value, 'docs/first.md');
+      expect(c.previewNames, ['docs/first.md', 'docs/report.md']);
+      expect(c.previewFile, 'docs/first.md');
       d.dispose();
     }, variant: _mac);
 
@@ -370,12 +370,12 @@ void main() {
         ..tab.value = ChatTab.changes;
       await tester.pumpAndSettle();
       await _shows(tester, fake, 'docs/report.md');
-      expect(c.previewFiles.value, ['docs/first.md']);
+      expect(c.previewNames, ['docs/first.md']);
       c.tab.value = ChatTab.chat;
       await tester.pumpAndSettle();
       expect(c.previewFits, isFalse);
       expect(c.showAsked.value, isNull, reason: 'the ask is spent');
-      expect(c.previewFiles.value, ['docs/first.md']);
+      expect(c.previewNames, ['docs/first.md']);
       d.dispose();
     }, variant: _mac);
 
@@ -414,7 +414,7 @@ void main() {
       // As the Artifacts widget's row opens it: by the artifact's name.
       _chat(d).openPreview(chatArtifacts(_chat(d)).recent.single);
       await tester.pumpAndSettle();
-      expect(_chat(d).preview.value, 'docs/report.md');
+      expect(_chat(d).previewFile, 'docs/report.md');
       expect(lit(), isTrue);
       d.dispose();
     }, variant: _mac);

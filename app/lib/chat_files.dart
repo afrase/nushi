@@ -173,7 +173,7 @@ Artifacts chatArtifacts(ChatState chat, {bool pins = true}) {
 }
 
 /// The file [chat]'s preview shows, by its artifact's name ([relativeIn]).
-String? openArtifact(ChatState chat) => switch (chat.preview.value) {
+String? openArtifact(ChatState chat) => switch (chat.previewFile) {
   final p? => relativeIn(chat.folder, p),
   null => null,
 };

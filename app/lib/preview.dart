@@ -10,6 +10,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_sniff.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
@@ -152,7 +153,7 @@ class Previews extends InheritedWidget {
   });
 
   final void Function(String path)? open;
-  final ValueListenable<String?>? current;
+  final ValueListenable<PreviewEntry?>? current;
 
   /// The chat's one name for a file however a row or the preview named it
   /// (`relativeIn`): a show call's path is the agent's, often absolute,
