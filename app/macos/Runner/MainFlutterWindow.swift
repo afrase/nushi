@@ -55,9 +55,11 @@ class MainFlutterWindow: NSWindow {
     // its links): the app that opens https, for a file too, so a file a page
     // links is never run by the app its type has. How long ago the user last
     // pressed or typed in a web view (lib/web_page.dart): Flutter never sees
-    // those, WebKit takes them. And a file preview's web view made cookieless
-    // (PreviewCookies).
-    FlutterMethodChannel(name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
+    // those, WebKit takes them. A file preview's web view made cookieless
+    // (PreviewCookies). And a browser tab's loads as they commit (CommitWatch).
+    let browserChannel = FlutterMethodChannel(
+      name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
+    browserChannel
       .setMethodCallHandler { [weak self, weak flutterViewController] call, result in
         if call.method == "sincePress" {
           // A press lets one navigation leave the page, never a second:
@@ -75,6 +77,13 @@ class MainFlutterWindow: NSWindow {
             return result(FlutterError(code: "refused", message: "No web view", details: nil))
           }
           return PreviewCookies.block(id, registry: registry, result)
+        }
+        if call.method == "watchCommits" {
+          // The channel is held here, for the app's life: it tells of commits.
+          guard let id = (call.arguments as? NSNumber)?.int64Value, let registry = flutterViewController else {
+            return result(FlutterError(code: "refused", message: "No web view", details: nil))
+          }
+          return CommitWatch.watch(id, registry: registry, channel: browserChannel, result)
         }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
         guard let text = call.arguments as? String, let url = URL(string: text),
@@ -368,5 +377,55 @@ enum PreviewCookies {
         result(nil)
       }
     }
+  }
+}
+
+/// A browser tab's loads as they commit (lib/browser_address.dart's
+/// PageAddress): the plugin passes on WebKit's URL, which is a navigation's
+/// from its start, before anything of it loads, and no commit. This stands in
+/// front of the plugin's navigation delegate, passes it everything, and tells
+/// the app ("committed") where each main-frame load committed.
+final class CommitWatch: NSObject, WKNavigationDelegate {
+  private static var key: UInt8 = 0
+  // Strong: a web view holds its delegate weakly. WebKit reads which of a
+  // delegate's methods it has as it's set, and this one has the plugin's.
+  private let inner: WKNavigationDelegate
+  private let committed: (URL?) -> Void
+
+  private init(inner: WKNavigationDelegate, committed: @escaping (URL?) -> Void) {
+    self.inner = inner
+    self.committed = committed
+  }
+
+  /// Puts a watch in front of the plugin's web view [id]'s navigation
+  /// delegate (set by then), then answers: nil once it holds, an error when
+  /// it can't, and the tab then loads nothing.
+  static func watch(
+    _ id: Int64, registry: FlutterPluginRegistry, channel: FlutterMethodChannel, _ result: @escaping FlutterResult
+  ) {
+    guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry),
+      let inner = web.navigationDelegate
+    else { return result(FlutterError(code: "refused", message: "No such web view", details: nil)) }
+    if inner is CommitWatch { return result(nil) }
+    let watch = CommitWatch(inner: inner) { [weak channel] url in
+      channel?.invokeMethod("committed", arguments: ["id": NSNumber(value: id), "url": url?.absoluteString ?? ""])
+    }
+    // It lives as long as its web view.
+    objc_setAssociatedObject(web, &key, watch, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    web.navigationDelegate = watch
+    result(nil)
+  }
+
+  override func responds(to aSelector: Selector!) -> Bool {
+    super.responds(to: aSelector) || inner.responds(to: aSelector)
+  }
+
+  override func forwardingTarget(for aSelector: Selector!) -> Any? {
+    inner.responds(to: aSelector) ? inner : nil
+  }
+
+  func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+    inner.webView?(webView, didCommit: navigation)
+    committed(webView.url)
   }
 }

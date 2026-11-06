@@ -96,7 +96,11 @@ void main() {
     final d = await browserApp(tester);
     d.chats['c']!.openBrowserTab('https://self-signed.badssl.com/');
     await tester.pumpAndSettle();
-    fakes.hosts.single.failure.value = (code: -1202, reason: _untrusted);
+    fakes.hosts.single.failure.value = (
+      code: -1202,
+      reason: _untrusted,
+      url: 'https://self-signed.badssl.com/',
+    );
     await tester.pump();
     expect(
       find.text('self-signed.badssl.com’s certificate isn’t valid'),
@@ -107,6 +111,66 @@ void main() {
     fakes.hosts.single.failure.value = null;
     await tester.pump();
     expect(find.textContaining('certificate'), findsNothing);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  // Fix review 2026-11-06: the bar followed WebKit's URL, which is a
+  // navigation's as soon as it starts. A page could start one to a site
+  // that never answers and keep its own fake form up, and take input, under
+  // that site's name, its "Not secure" gone.
+  testWidgets('the bar stays on the page shown until a load commits', (
+    tester,
+  ) async {
+    final fakes = browserFakes();
+    final d = await browserApp(tester);
+    final tab = d.chats['c']!.openBrowserTab('http://evil.example/');
+    await tester.pumpAndSettle();
+    final host = fakes.hosts.single;
+    final mark = find.descendant(
+      of: find.byType(BrowserBar),
+      matching: find.text('Not secure'),
+    );
+    String field() => addressEditable(tester).widget.controller.text;
+    expect(mark, findsOneWidget);
+    // A navigation starts, and never finishes.
+    host.urlChanged('https://www.mybank.com:444/');
+    await tester.pump();
+    expect(tab.address.value, 'http://evil.example/');
+    expect(field(), 'http://evil.example/');
+    expect(mark, findsOneWidget);
+    // The page's own history moves the bar.
+    host.urlChanged('http://evil.example/step2#top');
+    await tester.pump();
+    expect(field(), 'http://evil.example/step2#top');
+    // A load that commits moves it anywhere.
+    host.committed('https://www.mybank.com/');
+    await tester.pump();
+    expect(field(), 'https://www.mybank.com/');
+    expect(mark, findsNothing);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  // Fix review 2026-11-06: a provisional load that fails puts WebKit's URL
+  // back on the page shown, and the heading named that page.
+  testWidgets('a failure names the address that failed, not the tab’s', (
+    tester,
+  ) async {
+    final fakes = browserFakes();
+    final d = await browserApp(tester);
+    d.chats['c']!.openBrowserTab('https://good.example/');
+    await tester.pumpAndSettle();
+    final host = fakes.hosts.single..urlChanged('https://expired.badssl.com/');
+    host.failure.value = (
+      code: -1201,
+      reason: 'The certificate for this server has expired.',
+      url: 'https://expired.badssl.com/',
+    );
+    await tester.pump();
+    expect(
+      find.text('expired.badssl.com’s certificate isn’t valid'),
+      findsOneWidget,
+    );
+    expect(host.tab.address.value, 'https://good.example/');
     await closeView(tester, d);
   }, variant: macOnly);
 
@@ -158,7 +222,11 @@ void main() {
           const Size(560, 300),
           'https://self-signed.badssl.com/',
         );
-        host.failure.value = (code: -1202, reason: _untrusted);
+        host.failure.value = (
+          code: -1202,
+          reason: _untrusted,
+          url: 'https://self-signed.badssl.com/',
+        );
         await tester.pumpAndSettle();
         await expectLater(
           find.byKey(const ValueKey('pane')),
@@ -188,7 +256,11 @@ void main() {
           // An https page whose certificate WebKit refused.
           fakes.hosts.single
             ..tab.address.value = 'https://self-signed.badssl.com/'
-            ..failure.value = (code: -1202, reason: _untrusted);
+            ..failure.value = (
+              code: -1202,
+              reason: _untrusted,
+              url: 'https://self-signed.badssl.com/',
+            );
           await tester.pumpAndSettle();
           expectTextInside(tester, width);
           await render(

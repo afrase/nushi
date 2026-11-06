@@ -1,16 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:nushi/browser_address.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
-// A browser tab's page (ADR 0094): what it may load, what the address field
-// takes, and the web view that shows it. A file's preview keeps its own
-// rules (`WebKitPage`, ADR 0068).
+// A browser tab's page (ADR 0094): where it may go, and the web view that
+// shows it; its addresses are `browser_address.dart`'s. A file's preview
+// keeps its own rules (`WebKitPage`, ADR 0068).
 
 /// What draws a browser tab's page: on the Mac a WKWebView ([BrowserPage]);
 /// tests make their own ([newBrowserHost]).
@@ -38,8 +40,9 @@ abstract interface class BrowserHost {
 }
 
 /// Why a page didn't load: WebKit's error code (`NSURLErrorDomain`'s, as
-/// -1202 for a certificate it doesn't trust) and its words.
-typedef PageFailure = ({int code, String reason});
+/// -1202 for a certificate it doesn't trust), its words, and the address
+/// that failed (not the tab's, which stays on the page last shown).
+typedef PageFailure = ({int code, String reason, String url});
 
 /// What the pane says of a page at [where] (its host) that didn't load
 /// with WebKit's [code]: a certificate WebKit refused, which has no way
@@ -60,35 +63,28 @@ String failedHeading(int code, String where) {
 /// Makes the [BrowserHost] for a browser tab's view.
 BrowserHost Function(BrowserTab tab) newBrowserHost = BrowserPage.new;
 
-/// Whether [host] is this Mac itself: `localhost`, 127.0.0.0/8 or `::1`.
-bool isLoopback(String host) {
-  final h = host.toLowerCase();
-  if (h == 'localhost' || h == '::1') return true;
-  final four = h.split('.');
-  return four.length == 4 &&
-      four.first == '127' &&
-      four.every(
-        (p) => switch (int.tryParse(p)) {
-          final n? => n <= 255 && '$n' == p,
-          null => false,
-        },
-      );
-}
+/// Has the Swift side tell `onCommit` the address of each load that
+/// commits in the plugin's web view `id` (`webViewIdentifier`), until
+/// [forgetCommits]: the plugin passes on no commit, only WebKit's URL,
+/// which is a navigation's from its start ([PageAddress]).
+Future<void> Function(int id, ValueChanged<String> onCommit) watchCommits =
+    (id, onCommit) async {
+      if (_commits.isEmpty) _browser.setMethodCallHandler(_committed);
+      _commits[id] = onCommit;
+      await _browser.invokeMethod<void>('watchCommits', id);
+    };
 
-/// Whether a browser tab shows [url] (ADR 0094): http or https to any
-/// host, or a blank page. A file, a script and every other scheme don't.
-bool inBrowserTab(Uri url) => switch (url.scheme) {
-  'about' => url.path == 'blank',
-  'http' || 'https' => url.host.isNotEmpty,
-  _ => false,
-};
+/// Stops telling a web view's commits ([watchCommits]).
+void forgetCommits(int id) => _commits.remove(id);
 
-/// Whether the page at [address] came over plain http from another machine,
-/// which anyone on the way can read or change: the bar says so. This Mac's
-/// own pages don't leave it.
-bool notSecure(String address) {
-  final u = Uri.tryParse(address);
-  return u != null && u.scheme == 'http' && !isLoopback(u.host);
+const _browser = MethodChannel('nushi/browser');
+final _commits = <int, ValueChanged<String>>{};
+
+Future<void> _committed(MethodCall call) async {
+  if (call.method != 'committed') return;
+  if (call.arguments case {'id': final int id, 'url': final String url}) {
+    _commits[id]?.call(url);
+  }
 }
 
 /// What a navigation to [url] does in a browser tab, the user having last
@@ -127,53 +123,15 @@ Future<PageNavigation> browserPageNavigation(
   );
 }
 
-/// The page the address field's text names, or null when it names none (a
-/// file, a script, a word, an empty field): the field says so, and searches
-/// nothing. An http or https address is kept as typed. Without a scheme
-/// it's https, but http where TLS is rare and the network is the user's
-/// ([_plainHttp]): `localhost:3000`, `192.168.1.20`, `printer.local`; a
-/// port alone is localhost's (`3000`, `:3000`). A word that isn't a host
-/// (no dot, no port, not localhost), an email address, and a port past
-/// 1–65535 name nothing.
-Uri? addressOf(String text) {
-  var a = text.trim();
-  if (a.isEmpty || a.contains(RegExp(r'\s'))) return null;
-  if (RegExp(r'^:?\d+$').hasMatch(a)) {
-    a = 'localhost:${a.replaceFirst(':', '')}';
-  }
-  // A scheme, unless what follows its colon is a port (`localhost:3000`).
-  final schemed = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d)').hasMatch(a);
-  final u = Uri.tryParse(schemed ? a : 'http://$a');
-  if (u == null || (u.hasPort && (u.port < 1 || u.port > 65535))) return null;
-  if (schemed) return inBrowserTab(u) ? u : null;
-  final host = u.host;
-  if (host.isEmpty || u.userInfo.isNotEmpty) return null;
-  final ported = RegExp(r':\d+$').hasMatch(a.split(RegExp('[/?#]')).first);
-  if (!host.contains('.') && !host.contains(':') && !ported) {
-    return host == 'localhost' ? u : null;
-  }
-  return _plainHttp(host) ? u : u.replace(scheme: 'https');
-}
-
-/// Whether a typed [host] gets http, not https: this Mac, an IP address,
-/// a `.local` or `.localhost` name, or a single name (`devbox:8080`; one
-/// gets here only with a port), where a server seldom has a certificate.
-bool _plainHttp(String host) =>
-    !host.contains('.') ||
-    host.contains(':') || // IPv6
-    RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host) ||
-    host.endsWith('.local') ||
-    host.endsWith('.localhost') ||
-    isLoopback(host);
-
 /// A WKWebView for a browser tab: web pages only ([browserNavigation]),
 /// no window a script opens by itself (a link with a target loads in the
 /// tab), and like a file's preview no script message handlers, so nothing
 /// from the page reaches Nushi. It shares WebKit's default data store with
-/// file previews (docs/security.md). It tells [tab] its address and title
-/// as the page moves.
+/// file previews (docs/security.md). It tells [tab] its address (as a load
+/// commits, [PageAddress]) and title as the page moves, and loads nothing
+/// if it can't see the commits.
 class BrowserPage implements BrowserHost {
-  new(this.tab) {
+  new(this.tab) : _page = PageAddress(tab) {
     final nav = WebKitNavigationDelegate(
       const PlatformNavigationDelegateCreationParams(),
     );
@@ -184,19 +142,36 @@ class BrowserPage implements BrowserHost {
       }),
     );
     unawaited(nav.setOnPageFinished((_) => unawaited(_moved())));
-    unawaited(nav.setOnUrlChange((c) => unawaited(_moved(c.url))));
+    unawaited(
+      nav.setOnUrlChange((c) {
+        if (_gone) return;
+        if (c.url case final url?) _page.changed(url);
+        unawaited(_moved());
+      }),
+    );
     unawaited(nav.setOnWebResourceError(_error));
     // No setOnSSlAuthError: a certificate WebKit doesn't trust fails the
     // page (WebKit's default handling), with no way past it (ADR 0094).
-    unawaited(_c.setPlatformNavigationDelegate(nav));
     // The camera and microphone, refused: the plugin's default asks macOS,
     // and Nushi declares neither (docs/security.md).
     unawaited(_c.setOnPlatformPermissionRequest((r) => unawaited(r.deny())));
-    // Also where the plugin sets javaScriptCanOpenWindowsAutomatically.
-    unawaited(_c.setJavaScriptMode(JavaScriptMode.unrestricted));
+    // The Swift side stands in front of the plugin's navigation delegate,
+    // so it goes on once that's set; the native view exists once a call to
+    // it has come back. setJavaScriptMode is also where the plugin sets
+    // javaScriptCanOpenWindowsAutomatically.
+    _ready =
+        _c
+            .setPlatformNavigationDelegate(nav)
+            .then((_) => _c.setJavaScriptMode(JavaScriptMode.unrestricted))
+            .then((_) => watchCommits(_id = _c.webViewIdentifier, _commit))
+          // Its error is open's to meet, not the zone's.
+          ..ignore();
   }
 
   final BrowserTab tab;
+  final PageAddress _page;
+  late final Future<void> _ready;
+  int? _id; // the plugin's for the web view, once watched
   final _c = WebKitWebViewController(
     WebKitWebViewControllerCreationParams(
       javaScriptCanOpenWindowsAutomatically: false,
@@ -221,12 +196,24 @@ class BrowserPage implements BrowserHost {
           .build(context);
 
   @override
-  Future<void> open(Uri url) {
-    if (!inBrowserTab(url)) return Future.value();
+  Future<void> open(Uri url) async {
+    if (!inBrowserTab(url)) return;
     _loaded = true;
+    // What the user asked for shows at once, as in a browser.
     tab.address.value = '$url';
-    return _c.loadRequest(LoadRequestParams(uri: url));
+    try {
+      await _ready;
+    } on Object {
+      if (!_gone) {
+        _failed.value = (code: 0, reason: _unwatched, url: '$url');
+      }
+      return;
+    }
+    await _c.loadRequest(LoadRequestParams(uri: url));
   }
+
+  static const _unwatched =
+      'Nushi couldn’t follow this tab’s page, so it loads nothing.';
 
   @override
   Future<void> reload() async {
@@ -240,16 +227,21 @@ class BrowserPage implements BrowserHost {
   @override
   Future<void> forward() => _c.goForward();
 
-  /// The page moved (a link, Back, a script's history): its address and
-  /// title to the tab, and what Back and Forward can do.
-  Future<void> _moved([String? to]) async {
+  /// A load committed at [url] (the Swift side's [watchCommits]).
+  void _commit(String url) {
     if (_gone) return;
-    final String? url;
+    _page.committed(url);
+    unawaited(_moved());
+  }
+
+  /// The page moved (a link, Back, a script's history): its title to the
+  /// tab, and what Back and Forward can do.
+  Future<void> _moved() async {
+    if (_gone) return;
     final String? title;
     final bool back;
     final bool forward;
     try {
-      url = to ?? await _c.currentUrl();
       title = await _c.getTitle();
       back = await _c.canGoBack();
       forward = await _c.canGoForward();
@@ -257,7 +249,6 @@ class BrowserPage implements BrowserHost {
       return; // the view is gone
     }
     if (_gone) return;
-    if (url != null && url != 'about:blank') tab.address.value = url;
     tab.title.value = title ?? '';
     _canBack.value = back;
     _canForward.value = forward;
@@ -268,7 +259,11 @@ class BrowserPage implements BrowserHost {
     // isn't the page failing.
     if (!(e.isForMainFrame ?? true) || e.errorCode == -999) return;
     if (e.errorCode == 102 || _gone) return; // 102: "interrupted by policy"
-    _failed.value = (code: e.errorCode, reason: e.description);
+    _failed.value = (
+      code: e.errorCode,
+      reason: e.description,
+      url: e.url ?? tab.address.value,
+    );
   }
 
   Future<NavigationDecision> _decide(NavigationRequest r) async {
@@ -287,6 +282,7 @@ class BrowserPage implements BrowserHost {
   @override
   void dispose() {
     _gone = true;
+    if (_id case final id?) forgetCommits(id);
     _canBack.dispose();
     _canForward.dispose();
     _failed.dispose();

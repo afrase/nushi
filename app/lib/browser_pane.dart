@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_bar.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/chat.dart';
@@ -228,7 +229,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       ValueListenableBuilder(
         valueListenable: host.failed,
         builder: (context, failed, _) =>
-            failed == null ? const SizedBox.shrink() : _Failed(_tab, failed),
+            failed == null ? const SizedBox.shrink() : _Failed(failed),
       ),
     ],
   );
@@ -291,19 +292,19 @@ class _NewTab extends StatelessWidget {
   }
 }
 
-/// Over a page that didn't load: where it was going, what went wrong
-/// ([failedHeading]), and WebKit's reason.
+/// Over a page that didn't load: where it was going (the address that
+/// failed, not the tab's), what went wrong ([failedHeading]), and WebKit's
+/// reason.
 class _Failed extends StatelessWidget {
-  const new(this.tab, this.failure);
+  const new(this.failure);
 
-  final BrowserTab tab;
   final PageFailure failure;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final where = Uri.tryParse(tab.address.value)?.authority ?? '';
+    final where = hostOf(failure.url);
     return ColoredBox(
       color: t.base,
       child: Center(

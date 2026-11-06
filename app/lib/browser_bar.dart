@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/app_actions.dart';
+import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';

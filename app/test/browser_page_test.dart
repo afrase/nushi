@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
 
 // What a browser tab loads and what its address field takes (ADR 0094).
@@ -186,5 +188,42 @@ void main() {
       'Can’t reach localhost:3000',
     );
     expect(failedHeading(-1202, ''), 'The page didn’t load');
+  });
+
+  test('a host as people read it, never a user name', () {
+    expect(hostOf('https://example.com/docs'), 'example.com');
+    expect(hostOf('http://localhost:3000/'), 'localhost:3000');
+    expect(hostOf('http://[::1]:4000/'), '[::1]:4000');
+    expect(hostOf('https://www.paypal.com@evil.example/'), 'evil.example');
+    expect(hostOf('https://a:b@evil.example:8443/'), 'evil.example:8443');
+    expect(hostOf('about:blank'), '');
+    expect(hostOf(''), '');
+  });
+
+  // Fix review 2026-11-06: WebKit's URL is a navigation's from its start.
+  test('the address moves on a commit, and within the origin shown', () {
+    final tab = BrowserTab('https://bank.example/');
+    final page = PageAddress(tab)
+      // Nothing committed yet: WebKit's URL isn't taken.
+      ..changed('https://elsewhere.example/');
+    expect(tab.address.value, 'https://bank.example/');
+    page.committed('http://evil.example/');
+    expect(tab.address.value, 'http://evil.example/');
+    for (final away in [
+      'https://www.mybank.com:444/', // another host
+      'https://evil.example/', // another scheme
+      'http://evil.example:8080/', // another port
+      'not a url %',
+    ]) {
+      page.changed(away);
+      expect(tab.address.value, 'http://evil.example/', reason: away);
+    }
+    page.changed('http://EVIL.example:80/two?x#y'); // its own history
+    expect(tab.address.value, 'http://EVIL.example:80/two?x#y');
+    // A blank page over it keeps the address, and the origin.
+    page
+      ..committed('about:blank')
+      ..changed('http://evil.example/three');
+    expect(tab.address.value, 'http://evil.example/three');
   });
 }

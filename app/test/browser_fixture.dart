@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_bar.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/daemon.dart';
@@ -25,11 +26,14 @@ import 'harness.dart';
 final macOnly = TargetPlatformVariant.only(TargetPlatform.macOS);
 
 /// A page host that loads nothing: it says what it was asked and plays a
-/// page's part (its address, a title, Back once it moved).
+/// page's part (its address, a title, Back once it moved). What WebKit says
+/// as a page moves goes through the app's own [PageAddress], as
+/// `BrowserPage`'s does: [urlChanged] and [committed].
 class FakeBrowserHost implements BrowserHost {
-  new(this.tab);
+  new(this.tab) : _page = PageAddress(tab);
 
   final BrowserTab tab;
+  final PageAddress _page;
   final opened = <Uri>[];
   int reloads = 0;
   final _back = ValueNotifier<bool>(false);
@@ -52,9 +56,17 @@ class FakeBrowserHost implements BrowserHost {
   Future<void> open(Uri url) async {
     opened.add(url);
     tab.address.value = '$url';
+    committed('$url');
     tab.title.value = 'Tea shop · dev';
     _back.value = opened.length > 1;
   }
+
+  /// WebKit's URL moved to [url] (a navigation starting, or the page's own
+  /// history).
+  void urlChanged(String url) => _page.changed(url);
+
+  /// A load committed at [url].
+  void committed(String url) => _page.committed(url);
 
   @override
   Future<void> reload() async => reloads++;
