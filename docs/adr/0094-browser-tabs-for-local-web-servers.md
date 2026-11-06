@@ -16,6 +16,7 @@ The owner wants Claude desktop's browser beside the chat: look at the dev server
 ## Consequences
 - Switching tabs or chats reloads a page and loses its state and history; an app-wide keep-alive of a few views is the next step (docs/roadmap.md).
 - Until the pane draws its own, a page's dialogs get the plugin's answers (an `alert` shows nothing, `confirm` is no, `prompt` is empty), and a self-signed certificate or basic auth gets WebKit's default handling, which fails; the swipe back is the app's, not the page's.
+- A page's camera and microphone requests are refused (the plugin's default would ask macOS, and the app declares neither); a location request gets WebKit's default, untested.
 - A page's title is read when its address changes and when it finishes loading; a single-page app that only changes its title isn't seen (the plugin has no title observer).
 - Nothing opens a browser tab for the agent yet: `show {url}` and the dev servers are later work.
 
