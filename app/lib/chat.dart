@@ -322,9 +322,13 @@ class ChatState extends ChangeNotifier {
   /// Whether its pane, as last laid out, has room for the details panel.
   bool panelFits = true;
 
-  /// Whether its pane, as last laid out, has room for a preview beside the
-  /// transcript.
-  bool previewFits = true;
+  /// Whether its pane has room for a preview beside the transcript, worked
+  /// out when asked (its chat area's, which sets it): a side chat or the
+  /// Files pane opens without laying the area out again.
+  bool Function() previewFits = fitsAlways;
+
+  /// [previewFits] before a chat area works it out.
+  static bool fitsAlways() => true;
 
   /// The tabs it has: Pull request only while it has one.
   List<ChatTab> get tabs => [.chat, .changes, if (pull != null) .pull];

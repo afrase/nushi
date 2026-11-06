@@ -59,6 +59,10 @@ class _ChatAreaState extends State<ChatArea> {
     widget.chat.preview.removeListener(_showPreview);
     widget.chat.showAsked.removeListener(_showAsked);
     _tab.removeListener(_showAsked);
+    // Gone, it has no room to say; the chat shows nowhere until it's back.
+    if (widget.chat.previewFits == _previewFits) {
+      widget.chat.previewFits = ChatState.fitsAlways;
+    }
     _pull.unfollow();
     super.dispose();
   }
@@ -124,7 +128,7 @@ class _ChatAreaState extends State<ChatArea> {
         final panel = show && fits && tab == ChatTab.chat;
         _width = box.maxWidth;
         _panel = panel;
-        widget.chat.previewFits = _previewFits();
+        widget.chat.previewFits = _previewFits;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

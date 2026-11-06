@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_pane.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
@@ -47,8 +50,13 @@ void main() {
   }
 
   /// The app at [width] on a chat whose agent replied with a link, and
-  /// ran a tool whose output has one.
-  Future<Daemon> app(WidgetTester tester, {double width = 1700}) async {
+  /// ran a tool whose output has one; with [listing], its folder's
+  /// listing for the Files pane stays open, as a daemon's does.
+  Future<Daemon> app(
+    WidgetTester tester, {
+    double width = 1700,
+    bool listing = false,
+  }) async {
     viewport(tester, Size(width, 900));
     showDetails.value = false;
     paneWidths.value = {};
@@ -73,6 +81,11 @@ void main() {
               ],
             )
           : null;
+    if (listing) {
+      final files = StreamController<WatchChatFolderResponse>();
+      addTearDown(files.close);
+      fake.streams = (i) => i is WatchChatFolderRequest ? files.stream : null;
+    }
     final d = await fake.connect(tester);
     d.select('c');
     await tester.pumpWidget(NushiApp(daemon: d));
@@ -138,10 +151,29 @@ void main() {
     browserFakes();
     final browser = outside();
     final d = await app(tester, width: 720);
-    expect(d.chats['c']!.previewFits, isFalse);
+    expect(d.chats['c']!.previewFits(), isFalse);
     await tapLink(tester, 'the dev server');
     expect(browser, [Uri.parse('http://localhost:5173/')]);
     expect(d.chats['c']!.preview.value, isNull);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  testWidgets('with the Files pane and a side chat opened since, the default '
+      'browser', (tester) async {
+    browserFakes();
+    final browser = outside();
+    final d = await app(tester, width: 1200, listing: true);
+    final c = d.chats['c']!;
+    expect(c.previewFits(), isTrue);
+    // Neither lays the chat area out again: the room is worked out as the
+    // link is clicked.
+    filesChats.value = {'c'};
+    c.side.value = ChatState('s', '/Users/me')..title = 'Side';
+    await tester.pumpAndSettle();
+    expect(c.previewFits(), isFalse);
+    await tapLink(tester, 'the dev server');
+    expect(browser, [Uri.parse('http://localhost:5173/')]);
+    expect(c.preview.value, isNull);
     await closeView(tester, d);
   }, variant: macOnly);
 

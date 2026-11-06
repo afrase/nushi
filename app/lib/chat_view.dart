@@ -192,7 +192,7 @@ class _ChatViewState extends State<ChatView> {
     return Previews(
       open: chat.openPreview,
       browse: (url) => chat.openBrowserTab('$url'),
-      browseFits: () => chat.previewFits,
+      browseFits: () => chat.previewFits(),
       current: chat.preview,
       name: (path) => relativeIn(chat.folder, path),
       child: ListenableBuilder(

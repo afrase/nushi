@@ -373,7 +373,7 @@ void main() {
       expect(c.previewNames, ['docs/first.md']);
       c.tab.value = ChatTab.chat;
       await tester.pumpAndSettle();
-      expect(c.previewFits, isFalse);
+      expect(c.previewFits(), isFalse);
       expect(c.showAsked.value, isNull, reason: 'the ask is spent');
       expect(c.previewNames, ['docs/first.md']);
       d.dispose();
