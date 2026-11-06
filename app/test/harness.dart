@@ -5,11 +5,13 @@ import 'dart:ui' as ui;
 import 'package:connectrpc/connect.dart' show Transport;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// The time the app sees in every test ([clock], set before each by
@@ -150,4 +152,16 @@ Future<void> untilReal(
     await tester.runAsync(() => Future<void>.delayed(step));
     await tester.pump();
   }
+}
+
+/// A chat's preview tabs by name: a file's as its tab names it, a browser
+/// tab's address.
+extension PreviewNames on ChatState {
+  List<String> get previewNames => [
+    for (final e in previewTabs.value)
+      switch (e) {
+        PreviewFile(:final path) => path,
+        final BrowserTab b => b.address.value,
+      },
+  ];
 }

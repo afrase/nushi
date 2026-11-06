@@ -20,6 +20,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/review_cards.dart';
 import 'package:nushi/settings.dart';
@@ -273,14 +274,18 @@ class _ChatViewState extends State<ChatView> {
             initial: 560,
             min: 300,
             cap: double.infinity,
-            child: PreviewPane(
-              key: ValueKey(preview),
-              chat: chat,
-              daemon: widget.daemon,
-              path: preview,
-              tabsKey: _previewTabs,
-              onClose: () => chat.preview.value = null,
-            ),
+            child: switch (preview) {
+              PreviewFile(:final path) => PreviewPane(
+                key: ValueKey(path),
+                chat: chat,
+                daemon: widget.daemon,
+                path: path,
+                tabsKey: _previewTabs,
+                onClose: () => chat.preview.value = null,
+              ),
+              // Nothing opens a browser tab's pane yet.
+              BrowserTab() => const SizedBox.shrink(),
+            },
           ),
       ],
       details: details == null

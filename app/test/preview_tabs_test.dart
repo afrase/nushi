@@ -19,6 +19,7 @@ import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_pane.dart';
 import 'package:nushi/preview_tabs.dart';
@@ -239,14 +240,14 @@ void main() {
         ..openPreview('docs/a.md')
         ..openPreview('docs/b.md')
         ..openPreview('/Users/me/nushi/docs/a.md');
-      expect(c.previewFiles.value, ['docs/a.md', 'docs/b.md']);
-      expect(c.preview.value, 'docs/a.md');
+      expect(c.previewNames, ['docs/a.md', 'docs/b.md']);
+      expect(c.previewFile, 'docs/a.md');
       c.openPreview('./docs/b.md');
-      expect(c.previewFiles.value, ['docs/a.md', 'docs/b.md']);
-      expect(c.preview.value, 'docs/b.md');
+      expect(c.previewNames, ['docs/a.md', 'docs/b.md']);
+      expect(c.previewFile, 'docs/b.md');
       c.openPreview('/Users/me//nushi/./docs//a.md');
-      expect(c.previewFiles.value, ['docs/a.md', 'docs/b.md']);
-      expect(c.preview.value, 'docs/a.md');
+      expect(c.previewNames, ['docs/a.md', 'docs/b.md']);
+      expect(c.previewFile, 'docs/a.md');
     });
 
     test('closing the one showing shows the one after it, or the last', () {
@@ -255,24 +256,24 @@ void main() {
         ..openPreview('b.md')
         ..openPreview('c.md')
         ..openPreview('b.md')
-        ..closePreviewFile('b.md');
-      expect(c.preview.value, 'c.md');
-      c.closePreviewFile('c.md');
-      expect(c.preview.value, 'a.md');
-      c.closePreviewFile('a.md');
+        ..closePreview(const PreviewFile('b.md'));
+      expect(c.previewFile, 'c.md');
+      c.closePreview(const PreviewFile('c.md'));
+      expect(c.previewFile, 'a.md');
+      c.closePreview(const PreviewFile('a.md'));
       expect(c.preview.value, isNull);
-      expect(c.previewFiles.value, isEmpty);
+      expect(c.previewNames, isEmpty);
     });
 
     test('closing another leaves the one showing', () {
       final c = state()
         ..openPreview('a.md')
         ..openPreview('b.md')
-        ..closePreviewFile('a.md');
-      expect(c.preview.value, 'b.md');
-      expect(c.previewFiles.value, ['b.md']);
-      c.closePreviewFile('nothing.md');
-      expect(c.previewFiles.value, ['b.md']);
+        ..closePreview(const PreviewFile('a.md'));
+      expect(c.previewFile, 'b.md');
+      expect(c.previewNames, ['b.md']);
+      c.closePreview(const PreviewFile('nothing.md'));
+      expect(c.previewNames, ['b.md']);
     });
 
     test('a subagent’s pane closes the preview, tabs and all', () {
@@ -281,10 +282,10 @@ void main() {
         ..openPreview('b.md');
       c.pane.value = 'agent';
       expect(c.preview.value, isNull);
-      expect(c.previewFiles.value, isEmpty);
+      expect(c.previewNames, isEmpty);
       c.openPreview('c.md');
       expect(c.pane.value, isNull);
-      expect(c.previewFiles.value, ['c.md']);
+      expect(c.previewNames, ['c.md']);
     });
   });
 
@@ -473,14 +474,14 @@ void main() {
       final d = await _app(tester, files: _three);
       final c = d.chats['c']!;
       await _tap(tester, _inPane(find.text('plan.md')));
-      expect(c.preview.value, 'docs/plan.md');
+      expect(c.previewFile, 'docs/plan.md');
       expect(
         _inPane(find.text('Title of plan.md', findRichText: true)),
         findsOneWidget,
       );
       await _tap(tester, _closeOf('plan.md'));
-      expect(c.previewFiles.value, ['docs/report.md', 'site/notes.md']);
-      expect(c.preview.value, 'site/notes.md');
+      expect(c.previewNames, ['docs/report.md', 'site/notes.md']);
+      expect(c.previewFile, 'site/notes.md');
       await _tap(tester, _closeOf('notes.md'));
       expect(find.byType(PreviewTabs), findsNothing, reason: 'one left');
       expect(_inPane(find.text('report.md')), findsOneWidget);
@@ -515,7 +516,7 @@ void main() {
       final c = d.chats['c']!;
       await _tap(tester, _inPane(find.byTooltip('Close')));
       expect(find.byType(PreviewPane), findsNothing);
-      expect(c.previewFiles.value, isEmpty);
+      expect(c.previewNames, isEmpty);
       c.openPreview('site/notes.md');
       await tester.pumpAndSettle();
       expect(find.byType(PreviewTabs), findsNothing);
@@ -587,13 +588,13 @@ void main() {
         matching: find.byType(PreviewButton),
       );
       await _tap(tester, preview('r'));
-      expect(c.previewFiles.value, ['docs/report.md']);
+      expect(c.previewNames, ['docs/report.md']);
       await _tap(tester, preview('p'));
-      expect(c.previewFiles.value, ['docs/report.md', 'docs/plan.md']);
+      expect(c.previewNames, ['docs/report.md', 'docs/plan.md']);
       expect(find.byType(PreviewTabs), findsOneWidget);
       await _tap(tester, preview('r'));
-      expect(c.previewFiles.value, hasLength(2));
-      expect(c.preview.value, 'docs/report.md');
+      expect(c.previewNames, hasLength(2));
+      expect(c.previewFile, 'docs/report.md');
       d.dispose();
     }, variant: _mac);
 
@@ -607,7 +608,7 @@ void main() {
           matching: find.text('plan.md'),
         ),
       );
-      expect(c.previewFiles.value, ['docs/plan.md']);
+      expect(c.previewNames, ['docs/plan.md']);
       await _tap(
         tester,
         find.descendant(
@@ -615,8 +616,8 @@ void main() {
           matching: find.text('report.md'),
         ),
       );
-      expect(c.previewFiles.value, ['docs/plan.md', 'docs/report.md']);
-      expect(c.preview.value, 'docs/report.md');
+      expect(c.previewNames, ['docs/plan.md', 'docs/report.md']);
+      expect(c.previewFile, 'docs/report.md');
       d.dispose();
     }, variant: _mac);
   });
@@ -628,7 +629,7 @@ void main() {
       final d = await _app(tester, files: _three.take(2).toList());
       final c = d.chats['c']!;
       await _key(tester, LogicalKeyboardKey.keyW, meta: true);
-      expect(c.previewFiles.value, ['docs/plan.md']);
+      expect(c.previewNames, ['docs/plan.md']);
       await _key(tester, LogicalKeyboardKey.keyW, meta: true);
       expect(find.byType(PreviewPane), findsNothing);
       await _key(tester, LogicalKeyboardKey.keyW, meta: true);
@@ -641,7 +642,7 @@ void main() {
       final c = d.chats['c']!..tab.value = ChatTab.changes;
       await tester.pumpAndSettle();
       await _key(tester, LogicalKeyboardKey.keyW, meta: true);
-      expect(c.previewFiles.value, hasLength(2));
+      expect(c.previewNames, hasLength(2));
       d.dispose();
     }, variant: _mac);
 
@@ -650,7 +651,7 @@ void main() {
       final d = await _app(tester, files: _three.take(2).toList());
       await _tap(tester, find.byType(TerminalView));
       await _key(tester, LogicalKeyboardKey.keyW, meta: true);
-      expect(d.chats['c']!.previewFiles.value, hasLength(2));
+      expect(d.chats['c']!.previewNames, hasLength(2));
       d.dispose();
     }, variant: _mac);
 
@@ -662,16 +663,16 @@ void main() {
       await _key(tester, LogicalKeyboardKey.keyK, meta: true);
       expect(find.byType(Palette), findsOneWidget);
       await _key(tester, LogicalKeyboardKey.keyW, meta: true);
-      expect(c.previewFiles.value, hasLength(2));
+      expect(c.previewNames, hasLength(2));
       // File › Close Tab, where a ⌘W no widget takes goes (a web page's).
       final navigator = tester.element(find.byType(Navigator).first);
       runAct(navigator, d, Act.closeTab);
       await tester.pumpAndSettle();
-      expect(c.previewFiles.value, hasLength(2));
+      expect(c.previewNames, hasLength(2));
       await _key(tester, LogicalKeyboardKey.escape);
       runAct(navigator, d, Act.closeTab);
       await tester.pumpAndSettle();
-      expect(c.previewFiles.value, ['docs/plan.md']);
+      expect(c.previewNames, ['docs/plan.md']);
       d.dispose();
     }, variant: _mac);
   });
@@ -754,7 +755,7 @@ void main() {
       final at = _row(tester).pixels;
       expect(at, greaterThan(0));
       await _tap(tester, _inPane(find.text('seven.md')));
-      expect(d.chats['c']!.preview.value, 'docs/seven.md');
+      expect(d.chats['c']!.previewFile, 'docs/seven.md');
       expect(tester.state(find.byType(PreviewTabs)), same(before));
       expect(_row(tester).pixels, at);
       d.dispose();

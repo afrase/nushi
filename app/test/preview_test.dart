@@ -328,11 +328,11 @@ void main() {
 
   test('a preview and a subagent take one place', () {
     final c = ChatState('c', '/Users/me/nushi')..openPreview('a.md');
-    expect(c.preview.value, 'a.md');
+    expect(c.previewFile, 'a.md');
     c.pane.value = 'agent';
     expect(c.preview.value, isNull);
     c.openPreview('b.md');
-    expect((c.pane.value, c.preview.value), (null, 'b.md'));
+    expect((c.pane.value, c.previewFile), (null, 'b.md'));
   });
 
   testWidgets('the pane with a Markdown file, dark, wide', (tester) async {

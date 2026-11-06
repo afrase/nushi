@@ -271,7 +271,7 @@ void main() {
 
     await tester.tap(_row('deploy'));
     await tester.pumpAndSettle();
-    expect(d.chats['c']!.preview.value, 'scripts/deploy');
+    expect(d.chats['c']!.previewFile, 'scripts/deploy');
     expect(_inPane(find.byType(SourceView)), findsOneWidget);
     expect(_inPane(find.byType(WrapButton)), findsOneWidget);
     final plain = _spans(tester);

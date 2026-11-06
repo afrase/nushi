@@ -9,6 +9,7 @@ import 'package:nushi/files_pane.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/settings.dart';
@@ -23,8 +24,9 @@ import 'package:nushi/web_page.dart';
 /// current, wrapping the lines or not while it shows a source
 /// ([WrapButton], and ⌥Z with the focus in the pane), Preview or Source (a
 /// file that renders), Reload and Open in browser (a page, not a diagram),
-/// Show in Finder and Close, which closes every tab. Read-only. It's one
-/// file's view, made again as its tab shows.
+/// Show in Finder and Close, which closes every tab (browser tabs too,
+/// `BrowserPane`). Read-only. It's one file's view, made again as its tab
+/// shows.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -158,12 +160,12 @@ class _PreviewPaneState extends State<PreviewPane> {
                   builder: (context, box) => ListenableBuilder(
                     listenable: Listenable.merge([
                       _watch,
-                      widget.chat.previewFiles,
+                      widget.chat.previewTabs,
                       wrapLines,
                     ]),
                     builder: (context, _) {
-                      final files = widget.chat.previewFiles.value;
-                      final tabs = files.length > 1;
+                      final open = widget.chat.previewTabs.value;
+                      final tabs = open.length > 1;
                       // A tab's file on its way keeps Live's room: a pick
                       // would otherwise widen the tabs' row for a moment,
                       // and move it.
@@ -193,8 +195,8 @@ class _PreviewPaneState extends State<PreviewPane> {
                                         ? PreviewTabs(
                                             key: widget.tabsKey,
                                             chat: widget.chat,
-                                            files: files,
-                                            current: widget.path,
+                                            tabs: open,
+                                            current: PreviewFile(widget.path),
                                           )
                                         : Align(
                                             alignment: Alignment.centerLeft,

@@ -13,6 +13,7 @@ import 'package:nushi/draft.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/outbox.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/transcript_find.dart';
@@ -47,7 +48,7 @@ class ChatState extends ChangeNotifier {
     });
     // However the preview closes, its tabs go with it.
     preview.addListener(() {
-      if (preview.value == null) previewFiles.value = const [];
+      if (preview.value == null) previewTabs.value = const [];
     });
   }
 
@@ -282,14 +283,21 @@ class ChatState extends ChangeNotifier {
   /// BackgroundCommandPane).
   final pane = ValueNotifier<String?>(null);
 
-  /// The file (as its tool row names it) whose preview shows in [pane]'s
-  /// place: one or the other.
-  final preview = ValueNotifier<String?>(null);
+  /// The preview tab showing in [pane]'s place, one or the other: a file
+  /// (as its tool row names it) or a browser tab (ADR 0094).
+  final preview = ValueNotifier<PreviewEntry?>(null);
 
-  /// The files open in the preview, in the order opened, [preview] the one
-  /// showing: with two or more the pane shows tabs (ADR 0070). In the app's
-  /// memory, as [preview] is, and empty when it's null.
-  final previewFiles = ValueNotifier<List<String>>(const []);
+  /// The preview's tabs, in the order opened, [preview] the one showing:
+  /// with two or more the pane shows them (ADR 0070). In the app's memory,
+  /// as [preview] is, and empty when it's null.
+  final previewTabs = ValueNotifier<List<PreviewEntry>>(const []);
+
+  /// The file the preview shows, as its tab names it; null when it shows
+  /// none (closed, or a browser tab).
+  String? get previewFile => switch (preview.value) {
+    PreviewFile(:final path) => path,
+    _ => null,
+  };
 
   /// The files whose preview shows its Source, while the app runs: a file's
   /// view is made again each time it shows.
@@ -337,28 +345,61 @@ class ChatState extends ChangeNotifier {
   /// however each is named ([relativeIn]: relative to the folder or
   /// absolute, with `.`, `..` and doubled slashes), or a new one last.
   void openPreview(String path) {
-    pane.value = null;
     final file = relativeIn(folder, path);
-    final open = previewFiles.value
-        .where((f) => relativeIn(folder, f) == file)
+    final open = previewTabs.value
+        .whereType<PreviewFile>()
+        .where((f) => relativeIn(folder, f.path) == file)
         .firstOrNull;
-    if (open == null) previewFiles.value = [...previewFiles.value, path];
-    preview.value = open ?? path;
+    _show(open ?? PreviewFile(path));
     sawFile(path);
   }
 
-  /// Closes [file]'s tab. If it showed, the one after it shows, or the last;
-  /// with none left the preview closes.
-  void closePreviewFile(String file) {
-    final at = previewFiles.value.indexOf(file);
+  /// Opens a new browser tab last, at [address] ('' for a new tab's page),
+  /// and shows it. Browser tabs are never matched up: each open is its own.
+  BrowserTab openBrowserTab([String address = '']) {
+    final tab = BrowserTab(address);
+    _show(tab);
+    return tab;
+  }
+
+  /// Shows the last browser tab opened, or a new one if it has none.
+  void showBrowser() {
+    if (preview.value is BrowserTab) return;
+    final last = previewTabs.value.whereType<BrowserTab>().lastOrNull;
+    if (last == null) {
+      openBrowserTab();
+    } else {
+      _show(last);
+    }
+  }
+
+  /// Shows [tab], one of the preview's tabs.
+  void showPreviewTab(PreviewEntry tab) => switch (tab) {
+    PreviewFile(:final path) => openPreview(path),
+    BrowserTab() => _show(tab),
+  };
+
+  /// Shows [entry], adding its tab last if it has none.
+  void _show(PreviewEntry entry) {
+    pane.value = null;
+    if (!previewTabs.value.contains(entry)) {
+      previewTabs.value = [...previewTabs.value, entry];
+    }
+    preview.value = entry;
+  }
+
+  /// Closes [tab]. If it showed, the one after it shows, or the last; with
+  /// none left the preview closes.
+  void closePreview(PreviewEntry tab) {
+    final at = previewTabs.value.indexOf(tab);
     if (at < 0) return;
-    final rest = [...previewFiles.value]..removeAt(at);
+    final rest = [...previewTabs.value]..removeAt(at);
     if (rest.isEmpty) {
       preview.value = null;
       return;
     }
-    previewFiles.value = rest;
-    if (preview.value == file) preview.value = rest[min(at, rest.length - 1)];
+    previewTabs.value = rest;
+    if (preview.value == tab) preview.value = rest[min(at, rest.length - 1)];
   }
 
   /// When the user last opened each file (as [preview] names it), while

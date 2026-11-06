@@ -174,7 +174,7 @@ void main() {
     expect(_inRows(find.text('Show more')), findsNothing);
     await tester.tap(_inRows(find.text('chart.png')));
     await tester.pumpAndSettle();
-    expect(d.chats['c']!.preview.value, 'docs/img/chart.png');
+    expect(d.chats['c']!.previewFile, 'docs/img/chart.png');
     expect(
       find.descendant(
         of: find.byType(PreviewPane),
@@ -225,7 +225,7 @@ void main() {
     fake.emit(EventsResponse(chatId: 'c', show: page));
     await tester.pumpAndSettle();
     final c = d.chats['c']!;
-    expect(c.preview.value, page);
+    expect(c.previewFile, page);
     expect(
       tester
           .widget<Tap>(
