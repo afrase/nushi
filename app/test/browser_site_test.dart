@@ -53,11 +53,32 @@ void main() {
       await typeAddress(tester, text);
       expect(find.textContaining('Not an address'), findsOneWidget);
     }
-    await typeAddress(tester, 'file:///etc/passwd');
-    expect(find.textContaining('A file opens in a file’s tab'), findsOneWidget);
+    await typeAddress(tester, 'file://server/share/a.md');
+    expect(find.textContaining('Not a file on this Mac'), findsOneWidget);
     expect(fakes.hosts, isEmpty);
     expect(fakes.opened, isEmpty);
     expect(find.text(browserHint), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  testWidgets('a typed file address, or a path from /, opens the file’s '
+      'preview, the browser tab kept', (tester) async {
+    final fakes = browserFakes();
+    final d = await browserApp(tester);
+    final c = d.chats['c']!;
+    final tab = c.openBrowserTab('https://example.com/');
+    await tester.pumpAndSettle();
+    await typeAddress(tester, 'file:///Users/me/nushi/docs/My%20plan.md');
+    expect(c.previewFile, '/Users/me/nushi/docs/My plan.md');
+    expect(c.previewTabs.value.first, tab);
+    expect(tab.address.value, 'https://example.com/');
+    // The tab's page loaded only what it was opened at.
+    expect(fakes.hosts.single.opened, [Uri.parse('https://example.com/')]);
+    c.showPreviewTab(tab);
+    await tester.pumpAndSettle();
+    await typeAddress(tester, '/Users/me/nushi/README.md');
+    expect(c.previewFile, '/Users/me/nushi/README.md');
+    expect(fakes.opened, isEmpty);
     await closeView(tester, d);
   }, variant: macOnly);
 

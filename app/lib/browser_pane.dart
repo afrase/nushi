@@ -115,9 +115,15 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     unawaited(host.open(url));
   }
 
-  /// The field's text on Return: a page loads here, and what isn't an
-  /// address is refused, saying why (nothing is searched for).
+  /// The field's text on Return: a page loads here, a file's address opens
+  /// the file's preview ([fileAddressOf]), and what isn't an address is
+  /// refused, saying why (nothing is searched for).
   void _go(String text) {
+    if (fileAddressOf(text) case final path?) {
+      _field.unfocus();
+      widget.chat.openPreview(path);
+      return;
+    }
     final url = addressOf(text);
     if (url != null) {
       _field.unfocus();
@@ -130,7 +136,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
         SnackBar(
           content: Text(
             text.trim().toLowerCase().startsWith('file:')
-                ? 'A file opens in a file’s tab: from the Files pane, or ⌘P'
+                ? 'Not a file on this Mac: try file:///path, or /path'
                 : 'Not an address: try one like example.com or localhost:3000',
           ),
         ),

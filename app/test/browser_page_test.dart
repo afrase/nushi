@@ -220,6 +220,47 @@ void main() {
     expect(hostOf(''), '');
   });
 
+  test('what the address field opens as a file', () {
+    for (final (text, path) in [
+      ('file:///Users/me/a.md', '/Users/me/a.md'),
+      ('  FILE:///Users/me/a.md ', '/Users/me/a.md'),
+      ('file://localhost/etc/hosts', '/etc/hosts'),
+      ('file:///Users/me/My%20plan.md', '/Users/me/My plan.md'),
+      ('/Users/me/nushi/README.md', '/Users/me/nushi/README.md'),
+      ('/Users/me/My plan.md', '/Users/me/My plan.md'),
+      ('/', '/'),
+      // Dart reads a bad escape as the characters themselves.
+      ('file:///bad%zz', '/bad%zz'),
+    ]) {
+      expect(fileAddressOf(text), path, reason: text);
+    }
+    for (final text in [
+      'file://server/share/a.md', // another machine's
+      'file:a.md',
+      'file:',
+      'file:///not-utf8-%FF',
+      '//example.com/a',
+      'a.md',
+      '~/a.md',
+      'https://example.com/a.md',
+      'localhost:3000',
+      '',
+    ]) {
+      expect(fileAddressOf(text), isNull, reason: text);
+    }
+  });
+
+  test('a page’s file: link still goes nowhere, a press or not', () {
+    final pressed = clock().subtract(const Duration(milliseconds: 100));
+    for (final url in ['file:///etc/passwd', 'file://localhost/etc/hosts']) {
+      expect(
+        browserNavigation(url, mainFrame: true, pressed: pressed),
+        PageNavigation.drop,
+      );
+      expect(browserNavigation(url, mainFrame: false), PageNavigation.drop);
+    }
+  });
+
   test('a web page is http or https to a host, not a blank page', () {
     for (final url in [
       'https://example.com/',

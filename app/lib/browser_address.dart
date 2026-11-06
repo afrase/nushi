@@ -74,6 +74,29 @@ Uri? addressOf(String text) {
   return _plainHttp(host) ? u : u.replace(scheme: 'https');
 }
 
+/// The file the address field's text names, for a file's preview in
+/// place of the tab (ADR 0094): a `file:` address of this Mac (no host, or
+/// `localhost`), decoded, or a path from the root (`/Users/me/a.md`, spaces
+/// and all). Null for anything else, a `//` path included. Only what the
+/// user types: a page's `file:` link still goes nowhere
+/// (`browserNavigation`).
+String? fileAddressOf(String text) {
+  final a = text.trim();
+  if (a.startsWith('/')) return a.startsWith('//') ? null : a;
+  // `file:a.md` would read as `/a.md`.
+  if (!a.toLowerCase().startsWith('file://')) return null;
+  final u = Uri.tryParse(a);
+  if (u == null || !u.path.startsWith('/') || u.path.startsWith('//')) {
+    return null;
+  }
+  if (u.host.isNotEmpty && u.host != 'localhost') return null;
+  try {
+    return Uri.decodeComponent(u.path);
+  } on Object {
+    return null; // not UTF-8
+  }
+}
+
 /// Whether a typed [host] gets http, not https: this Mac, an IP address,
 /// a `.local` or `.localhost` name, or a single name (`devbox:8080`; one
 /// gets here only with a port), where a server seldom has a certificate.
