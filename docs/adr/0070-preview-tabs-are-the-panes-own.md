@@ -16,6 +16,7 @@ The owner wants to look at more than one file at a time. A first build (3b39a57,
 ## Consequences
 - With tabs up, the name's menu of the chat's other files isn't in the row; the Artifacts widget, Artifacts… and ⌘P remain.
 - Amended 2026-11-05: the menu is gone with one file open too. The owner: "this dropdown here I don't think makes sense". Tabs, the Files pane (ADR 0090), ⌘P and the Artifacts widget (with its pins) open every file it listed, and a menu on the name was a second way to switch that worked only with one file open. The name is plain text, its path in a tooltip; a click shows the file in the Files pane, folders above it opened, when it's in the chat's folder.
+- Amended by [0094](0094-browser-tabs-for-local-web-servers.md): a tab is a file or a browser tab (`PreviewEntry`), in one row in the order opened. A browser tab is a page, not a file, so it gets what a file's tab doesn't: a + at the row's end, shown only while a browser tab shows, opens a new one (a second way to open, for what has no other: the header's globe and the palette's New browser tab are the rest). Files keep plain-name tabs and no other control. One view at a time holds for both: a browser tab's page loads again when it shows.
 - Tabs live only in the pane's width, so they can't give a file the whole window. That went with the header tabs, along with their keys (⌃⌘4–9), restored tabs across launches, and the pane's Open in a tab.
 - The phone is unchanged: its previews are full screen.
 
