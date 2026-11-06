@@ -56,7 +56,8 @@ class MainFlutterWindow: NSWindow {
     // links is never run by the app its type has, and that app's name. How long ago the user last
     // pressed or typed in a web view (lib/web_page.dart): Flutter never sees
     // those, WebKit takes them. A file preview's web view made cookieless
-    // (PreviewCookies). And a browser tab's loads as they commit (CommitWatch).
+    // (PreviewCookies). A browser tab's loads as they commit (CommitWatch), and
+    // its block on the local network (LocalNetwork).
     let browserChannel = FlutterMethodChannel(
       name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
     browserChannel
@@ -84,6 +85,12 @@ class MainFlutterWindow: NSWindow {
             return result(FlutterError(code: "refused", message: "No web view", details: nil))
           }
           return CommitWatch.watch(id, registry: registry, channel: browserChannel, result)
+        }
+        if call.method == "blockLocal" {
+          guard let args = call.arguments as? [String: Any], let id = (args["id"] as? NSNumber)?.int64Value,
+            let rules = args["rules"] as? String, let registry = flutterViewController
+          else { return result(FlutterError(code: "refused", message: "No web view", details: nil)) }
+          return LocalNetwork.block(id, rules: rules, registry: registry, result)
         }
         if call.method == "browserName" {
           // The name of the app "open" opens with, for a browser tab's Open
@@ -384,6 +391,46 @@ enum PreviewCookies {
         list = compiled
         web.configuration.userContentController.add(compiled)
         result(nil)
+      }
+    }
+  }
+}
+
+/// A browser tab's block on this Mac and the local network (docs/security.md):
+/// a content rule list, made by lib/browser_local.dart, that blocks every load
+/// of a local address unless the page on top is local, or a site let through.
+/// One list at a time per web view: a new one (the sites changed) takes the
+/// old one's place once it's compiled, so there's never a moment without.
+enum LocalNetwork {
+  private static var compiled: (rules: String, list: WKContentRuleList)?
+  private static var key: UInt8 = 0
+
+  /// Puts [rules] on the plugin's web view [id], then answers: nil once it
+  /// holds, an error when it can't, and the tab then loads nothing.
+  static func block(_ id: Int64, rules: String, registry: FlutterPluginRegistry, _ result: @escaping FlutterResult) {
+    guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry) else {
+      return result(FlutterError(code: "refused", message: "No such web view", details: nil))
+    }
+    func install(_ list: WKContentRuleList) {
+      let content = web.configuration.userContentController
+      let old = objc_getAssociatedObject(web, &key) as? WKContentRuleList
+      if old !== list {
+        content.add(list)
+        if let old { content.remove(old) }
+        objc_setAssociatedObject(web, &key, list, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+      }
+      result(nil)
+    }
+    if let compiled, compiled.rules == rules { return install(compiled.list) }
+    WKContentRuleListStore.default().compileContentRuleList(
+      forIdentifier: "nushi.browser-local-network", encodedContentRuleList: rules
+    ) { list, error in
+      DispatchQueue.main.async {
+        guard let list else {
+          return result(FlutterError(code: "failed", message: error?.localizedDescription ?? "No rule list", details: nil))
+        }
+        compiled = (rules, list)
+        install(list)
       }
     }
   }

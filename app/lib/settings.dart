@@ -24,7 +24,8 @@ import 'package:nushi/file_mode.dart';
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
 /// and Dock badge, the appearance and the color theme, whether the
 /// composer checks spelling, whether a chat's links open in a browser
-/// tab, whether a preview's source wraps its lines,
+/// tab and which sites there may reach the local network, whether a
+/// preview's source wraps its lines,
 /// what reply cards ask the agent, and the newer release whose toast was
 /// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
@@ -270,6 +271,12 @@ final Pref<bool> checkSpelling = _plain('checkSpelling', true);
 /// desktop's "Open links in built-in browser"; ADR 0094), rather than in
 /// the default browser; `openWebLink`.
 final Pref<bool> linksInBrowserTab = _plain('linksInBrowserTab', true);
+
+/// The sites (hosts, lowercase) whose pages in a browser tab may reach
+/// this Mac and the local network (ADR 0094): none at first. Each is a
+/// rule's exception (`localNetworkRules`); `allowLocalNetwork` and
+/// `disallowLocalNetwork` change it.
+final Pref<Set<String>> localNetworkSites = _set('localNetworkSites');
 
 /// Whether a file's source in the preview wraps its long lines (on at
 /// first); off, they run on and the view scrolls sideways. One for every

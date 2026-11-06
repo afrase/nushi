@@ -4,15 +4,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/browser_address.dart';
+import 'package:nushi/browser_local.dart';
+import 'package:nushi/browser_navigation.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/preview_entry.dart';
+import 'package:nushi/settings.dart' show localNetworkSites;
 import 'package:nushi/web_page.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
-// A browser tab's page (ADR 0094): where it may go, and the web view that
-// shows it; its addresses are `browser_address.dart`'s. A file's preview
-// keeps its own rules (`WebKitPage`, ADR 0068).
+export 'package:nushi/browser_navigation.dart';
+
+// A browser tab's page (ADR 0094): the web view that shows it. Where it
+// may go is `browser_navigation.dart`'s, its addresses
+// `browser_address.dart`'s, its block on the local network
+// `browser_local.dart`'s. A file's preview keeps its own rules
+// (`WebKitPage`, ADR 0068).
 
 /// What draws a browser tab's page: on the Mac a WKWebView ([BrowserPage]);
 /// tests make their own ([newBrowserHost]).
@@ -35,6 +42,10 @@ abstract interface class BrowserHost {
 
   /// Why the page didn't load (null while it loads, or did).
   ValueListenable<PageFailure?> get failed;
+
+  /// A local address the page tried to go to, refused ([blocksLocal]): set
+  /// each time one is, for the pane to say so.
+  ValueListenable<Uri?> get blockedLocal;
 
   void dispose();
 }
@@ -77,6 +88,28 @@ Future<void> Function(int id, ValueChanged<String> onCommit) watchCommits =
 /// Stops telling a web view's commits ([watchCommits]).
 void forgetCommits(int id) => _commits.remove(id);
 
+/// Puts the content rule list `rules` (`localNetworkRules`) on the plugin's
+/// web view `id`, in place of the one it had: the Swift side compiles it
+/// and answers once it holds, or with an error, and the tab then loads
+/// nothing. Tests set their own.
+Future<void> Function(int id, String rules) blockLocalNetwork = (id, rules) =>
+    _browser.invokeMethod<void>('blockLocal', {'id': id, 'rules': rules});
+
+/// Lets pages at [host] reach this Mac and the local network from a
+/// browser tab ([localNetworkSites]); the tabs' rules follow at once. A
+/// host a rule can't hold safely ([allowableHost]) is refused.
+bool allowLocalNetwork(String host) {
+  final h = host.toLowerCase();
+  if (!allowableHost(h)) return false;
+  localNetworkSites.value = {...localNetworkSites.value, h};
+  return true;
+}
+
+/// Takes [host] off the sites let reach the local network.
+void disallowLocalNetwork(String host) =>
+    localNetworkSites.value = {...localNetworkSites.value}
+      ..remove(host.toLowerCase());
+
 /// The default browser's name ("Google Chrome"), as the bar's button
 /// names it: null until [lookUpDefaultBrowser] has it, or when the Mac
 /// can't say.
@@ -107,49 +140,14 @@ Future<void> _committed(MethodCall call) async {
   }
 }
 
-/// What a navigation to [url] does in a browser tab, the user having last
-/// pressed in a page at [pressed]: a web page stays, wherever it is; a mail
-/// address opens in the default app, but only right after a press, so a
-/// page can't open one on its own; a file, and every other scheme, goes
-/// nowhere. A frame inside the page loads anything but a file.
-PageNavigation browserNavigation(
-  String url, {
-  required bool mainFrame,
-  DateTime? pressed,
-}) {
-  final u = Uri.tryParse(url);
-  if (u == null || u.scheme == 'file') return PageNavigation.drop;
-  if (!mainFrame || inBrowserTab(u)) return PageNavigation.stay;
-  return u.scheme == 'mailto' &&
-          pressed != null &&
-          clock().difference(pressed) <= userGesture
-      ? PageNavigation.open
-      : PageNavigation.drop;
-}
-
-/// [browserNavigation], with when the user last pressed in a page, asked
-/// only for a mail address, and only a pointer's press counting: people
-/// type into a page, and a key there (Space, Return) is the page's
-/// script's to see first.
-Future<PageNavigation> browserPageNavigation(
-  String url, {
-  required bool mainFrame,
-}) async {
-  final asks = mainFrame && Uri.tryParse(url)?.scheme == 'mailto';
-  return browserNavigation(
-    url,
-    mainFrame: mainFrame,
-    pressed: asks ? await lastPressInPage(pointerOnly: true) : null,
-  );
-}
-
 /// A WKWebView for a browser tab: web pages only ([browserNavigation]),
 /// no window a script opens by itself (a link with a target loads in the
 /// tab), and like a file's preview no script message handlers, so nothing
 /// from the page reaches Nushi. It shares WebKit's default data store with
 /// file previews (docs/security.md). It tells [tab] its address (as a load
 /// commits, [PageAddress]) and title as the page moves, and loads nothing
-/// if it can't see the commits.
+/// if it can't see the commits or block the local network
+/// ([blockLocalNetwork]) before its first load.
 class BrowserPage implements BrowserHost {
   new(this.tab) : _page = PageAddress(tab) {
     final nav = WebKitNavigationDelegate(
@@ -184,8 +182,10 @@ class BrowserPage implements BrowserHost {
             .setPlatformNavigationDelegate(nav)
             .then((_) => _c.setJavaScriptMode(JavaScriptMode.unrestricted))
             .then((_) => watchCommits(_id = _c.webViewIdentifier, _commit))
+            .then((_) => _block())
           // Its error is open's to meet, not the zone's.
           ..ignore();
+    localNetworkSites.addListener(_sitesChanged);
   }
 
   final BrowserTab tab;
@@ -200,7 +200,9 @@ class BrowserPage implements BrowserHost {
   final _canBack = ValueNotifier<bool>(false);
   final _canForward = ValueNotifier<bool>(false);
   final _failed = ValueNotifier<PageFailure?>(null);
+  final _blocked = ValueNotifier<Uri?>(null);
   bool _loaded = false;
+  DateTime? _askedAt; // when the user last asked for a load
   bool _gone = false; // disposed: the view's last callbacks change nothing
 
   @override
@@ -209,6 +211,8 @@ class BrowserPage implements BrowserHost {
   ValueListenable<bool> get canForward => _canForward;
   @override
   ValueListenable<PageFailure?> get failed => _failed;
+  @override
+  ValueListenable<Uri?> get blockedLocal => _blocked;
 
   @override
   Widget view(BuildContext context) =>
@@ -229,23 +233,63 @@ class BrowserPage implements BrowserHost {
       }
       return;
     }
+    _asked();
     await _c.loadRequest(LoadRequestParams(uri: url));
   }
 
   static const _unwatched =
-      'Nushi couldn’t follow this tab’s page, so it loads nothing.';
+      'Nushi couldn’t follow this tab’s page, or keep it off your local '
+      'network, so it loads nothing.';
 
   @override
   Future<void> reload() async {
-    if (_loaded) return await _c.reload();
-    if (Uri.tryParse(tab.address.value) case final url?) await open(url);
+    if (!_loaded) {
+      if (Uri.tryParse(tab.address.value) case final url?) await open(url);
+      return;
+    }
+    _asked();
+    await _c.reload();
   }
 
   @override
-  Future<void> back() => _c.goBack();
+  Future<void> back() {
+    _asked();
+    return _c.goBack();
+  }
 
   @override
-  Future<void> forward() => _c.goForward();
+  Future<void> forward() {
+    _asked();
+    return _c.goForward();
+  }
+
+  /// The user asked for the load about to start: the next main frame's
+  /// navigation, within [userGesture], may go to a local address.
+  void _asked() => _askedAt = clock();
+
+  /// Whether the user asked for this main frame's navigation, once.
+  bool _takeAsked() {
+    final at = _askedAt;
+    _askedAt = null;
+    return at != null && clock().difference(at) <= userGesture;
+  }
+
+  /// Puts the local network's block on the web view (`localNetworkRules`),
+  /// with the sites let through as they are now.
+  Future<void> _block() =>
+      blockLocalNetwork(_id!, localNetworkRules(localNetworkSites.value));
+
+  /// The sites let reach the local network changed: the rules follow. If
+  /// they can't, the page goes, rather than keep the rules it had.
+  void _sitesChanged() => unawaited(
+    _ready.then((_) => _block()).catchError((Object _) {
+      if (_gone) return;
+      unawaited(
+        _c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))),
+      );
+      _failed.value = (code: 0, reason: _unwatched, url: tab.address.value);
+    }),
+  );
 
   /// A load committed at [url] (the Swift side's [watchCommits]).
   void _commit(String url) {
@@ -287,14 +331,32 @@ class BrowserPage implements BrowserHost {
   }
 
   Future<NavigationDecision> _decide(NavigationRequest r) async {
-    switch (await browserPageNavigation(r.url, mainFrame: r.isMainFrame)) {
+    final asked = r.isMainFrame && _takeAsked();
+    final shown = tab.address.value;
+    final allowed = localNetworkSites.value;
+    final url = Uri.tryParse(r.url);
+    switch (await browserPageNavigation(
+      r.url,
+      mainFrame: r.isMainFrame,
+      shown: shown,
+      asked: asked,
+      allowed: allowed,
+    )) {
       case PageNavigation.stay:
         return NavigationDecision.navigate;
       case PageNavigation.open:
-        if (Uri.tryParse(r.url) case final url?) {
-          unawaited(openInBrowser(url).catchError((_) {}));
-        }
+        if (url != null) unawaited(openInBrowser(url).catchError((_) {}));
       case PageNavigation.drop:
+        if (url != null &&
+            r.isMainFrame &&
+            !asked &&
+            !_gone &&
+            blocksLocal(url, shown: shown, allowed: allowed)) {
+          // Set again even for the same address: the pane says so each time.
+          _blocked
+            ..value = null
+            ..value = url;
+        }
     }
     return NavigationDecision.prevent;
   }
@@ -302,10 +364,12 @@ class BrowserPage implements BrowserHost {
   @override
   void dispose() {
     _gone = true;
+    localNetworkSites.removeListener(_sitesChanged);
     if (_id case final id?) forgetCommits(id);
     _canBack.dispose();
     _canForward.dispose();
     _failed.dispose();
+    _blocked.dispose();
     // The view goes with its widget; the page stops with it.
     unawaited(_c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))));
   }

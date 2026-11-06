@@ -11,8 +11,11 @@ void main() {
     // The test's clock stands still once a test runs (fixtureNow).
     DateTime press() => clock().subtract(const Duration(milliseconds: 200));
     DateTime old() => clock().subtract(const Duration(seconds: 5));
+    // From a dev server's page, which may go anywhere, the local network
+    // too (browser_local_test has the rest).
+    const shown = 'http://localhost:3000/';
     PageNavigation main(String url, [DateTime? pressed]) =>
-        browserNavigation(url, mainFrame: true, pressed: pressed);
+        browserNavigation(url, mainFrame: true, pressed: pressed, shown: shown);
 
     test('web pages anywhere, and a blank one, stay in the tab', () {
       for (final url in [
@@ -81,7 +84,7 @@ void main() {
         return const Duration(milliseconds: 100);
       };
       Future<PageNavigation> go(String url) =>
-          browserPageNavigation(url, mainFrame: true);
+          browserPageNavigation(url, mainFrame: true, shown: shown);
       expect(await go('http://localhost:3000/'), PageNavigation.stay);
       expect(await go('https://example.com/'), PageNavigation.stay);
       expect(await go('file:///etc/passwd'), PageNavigation.drop);

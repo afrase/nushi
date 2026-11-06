@@ -96,7 +96,9 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     if (identical(_tab.view, this)) _tab.view = null;
     _tab.address.removeListener(_moved);
     _field.removeListener(_moved);
-    _host?.dispose();
+    _host
+      ?..blockedLocal.removeListener(_blocked)
+      ..dispose();
     _address.dispose();
     _field.dispose();
     super.dispose();
@@ -111,9 +113,26 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   }
 
   void _open(Uri url) {
-    final host = _host ??= newBrowserHost(_tab);
+    final host = _host ??= newBrowserHost(_tab)
+      ..blockedLocal.addListener(_blocked);
     unawaited(host.open(url));
   }
+
+  /// The page went for a local address and was refused: the pane says so,
+  /// and how to go there anyway.
+  void _blocked() {
+    final url = _host?.blockedLocal.value;
+    if (url == null || !mounted) return;
+    _note(
+      'This site can’t open ${hostOf('$url')}: it’s on your Mac or local '
+      'network. Type the address to open it.',
+    );
+  }
+
+  /// Says [text] under the pane, in place of what it said last.
+  void _note(String text) => ScaffoldMessenger.maybeOf(context)
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
 
   /// The field's text on Return: a page loads here, a file's address opens
   /// the file's preview ([fileAddressOf]), and what isn't an address is
@@ -130,17 +149,11 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       setState(() => _open(url));
       return;
     }
-    ScaffoldMessenger.maybeOf(context)
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            text.trim().toLowerCase().startsWith('file:')
-                ? 'Not a file on this Mac: try file:///path, or /path'
-                : 'Not an address: try one like example.com or localhost:3000',
-          ),
-        ),
-      );
+    _note(
+      text.trim().toLowerCase().startsWith('file:')
+          ? 'Not a file on this Mac: try file:///path, or /path'
+          : 'Not an address: try one like example.com or localhost:3000',
+    );
   }
 
   @override

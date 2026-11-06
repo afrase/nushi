@@ -25,6 +25,7 @@ What isn't built yet and the decisions still open, each checked against the code
 ### Previews
 
 - **A Files view's rest** (the owner, 2026-10-27; the use case is seeing what the agent made, like Claude Code's artifacts): missing is the web view's hardening past WebKit's free defaults (the Files pane, ADR 0090, has the tree). The owner trusts what the agent writes as much as a page they'd open in a browser (2026-10-28), so the network stays on, no switch. Read-only (editing beside a writing agent: ADR 0019's reasons). Mocks: https://claude.ai/artifact/TP8YD5rSCSi2L28hnsdPGP (the owner liked them).
+- **A browser tab's ⋯ menu**, as Claude desktop's (the owner's screenshots, 2026-11-06): a site's Local network access among its items. The list it changes is there (`localNetworkSites` in `app.json`, `allowLocalNetwork` and `disallowLocalNetwork`, compiled into each tab's content rules at once, ADR 0094); nothing in the UI reaches it yet.
 
 ### Changes and review
 

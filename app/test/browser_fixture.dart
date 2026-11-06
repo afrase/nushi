@@ -42,6 +42,12 @@ class FakeBrowserHost implements BrowserHost {
   /// Why the page didn't load, as a test says.
   final failure = ValueNotifier<PageFailure?>(null);
 
+  /// A local address the page went for, refused, as a test says.
+  final blocked = ValueNotifier<Uri?>(null);
+
+  @override
+  ValueListenable<Uri?> get blockedLocal => blocked;
+
   @override
   ValueListenable<bool> get canBack => _back;
   @override
