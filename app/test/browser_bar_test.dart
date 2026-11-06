@@ -73,9 +73,7 @@ void main() {
     await closeView(tester, d);
   }, variant: macOnly);
 
-  testWidgets('with no name from the Mac it says your browser', (
-    tester,
-  ) async {
+  testWidgets('with no name from the Mac it says your browser', (tester) async {
     browserFakes();
     final d = await browserApp(tester);
     d.chats['c']!.openBrowserTab('https://example.com/');

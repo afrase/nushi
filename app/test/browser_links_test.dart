@@ -113,10 +113,10 @@ void main() {
     await tester.pumpAndSettle();
     await tapLink(tester, 'the list');
     final tabs = d.chats['c']!.previewTabs.value.cast<BrowserTab>();
-    expect([for (final t in tabs) t.address.value], [
-      'http://localhost:5173/',
-      'https://tea.example/list',
-    ]);
+    expect(
+      [for (final t in tabs) t.address.value],
+      ['http://localhost:5173/', 'https://tea.example/list'],
+    );
     expect(browser, isEmpty);
     await closeView(tester, d);
   }, variant: macOnly);
@@ -156,9 +156,7 @@ void main() {
     expect(browser, [Uri.parse('https://jira.example/T-1')]);
   });
 
-  testWidgets('Settings › General has the switch, on at first', (
-    tester,
-  ) async {
+  testWidgets('Settings › General has the switch, on at first', (tester) async {
     final fake = FakeDaemon([])..settings = Settings(sleepAfterMinutes: 30);
     final d = await fake.connect(tester);
     await pumpSettings(tester, d, SettingsSection.general);
