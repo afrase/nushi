@@ -34,14 +34,16 @@ class FakeBrowserHost implements BrowserHost {
   int reloads = 0;
   final _back = ValueNotifier<bool>(false);
   final _forward = ValueNotifier<bool>(false);
-  final _failed = ValueNotifier<String>('');
+
+  /// Why the page didn't load, as a test says.
+  final failure = ValueNotifier<PageFailure?>(null);
 
   @override
   ValueListenable<bool> get canBack => _back;
   @override
   ValueListenable<bool> get canForward => _forward;
   @override
-  ValueListenable<String> get failed => _failed;
+  ValueListenable<PageFailure?> get failed => failure;
 
   @override
   Widget view(BuildContext context) => const _Page();

@@ -150,4 +150,41 @@ void main() {
       expect(addressOf(no), isNull, reason: no);
     }
   });
+
+  test('a page over plain http from another machine is marked', () {
+    for (final a in [
+      'http://example.com/',
+      'http://192.168.7.5:3000/',
+      'http://printer.local/',
+    ]) {
+      expect(notSecure(a), isTrue, reason: a);
+    }
+    for (final a in [
+      '',
+      'https://example.com/',
+      'http://localhost:3000/',
+      'http://127.0.0.1/',
+      'http://[::1]:4000/',
+      'about:blank',
+    ]) {
+      expect(notSecure(a), isFalse, reason: a);
+    }
+  });
+
+  test('a page that didn’t load says why', () {
+    expect(
+      failedHeading(-1202, 'self-signed.badssl.com'),
+      'self-signed.badssl.com’s certificate isn’t valid',
+    );
+    expect(failedHeading(-1201, 'expired.example'), contains('certificate'));
+    expect(
+      failedHeading(-1200, 'example.com'),
+      'Can’t connect securely to example.com',
+    );
+    expect(
+      failedHeading(-1004, 'localhost:3000'),
+      'Can’t reach localhost:3000',
+    );
+    expect(failedHeading(-1202, ''), 'The page didn’t load');
+  });
 }

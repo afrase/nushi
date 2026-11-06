@@ -177,7 +177,13 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
             ],
           ),
         ),
-        BrowserBar(host: host, address: _address, focus: _field, onGo: _go),
+        BrowserBar(
+          host: host,
+          page: _tab.address,
+          address: _address,
+          focus: _field,
+          onGo: _go,
+        ),
         Expanded(
           child: ColoredBox(
             color: t.base,
@@ -222,7 +228,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       ValueListenableBuilder(
         valueListenable: host.failed,
         builder: (context, failed, _) =>
-            failed.isEmpty ? const SizedBox.shrink() : _Failed(_tab, failed),
+            failed == null ? const SizedBox.shrink() : _Failed(_tab, failed),
       ),
     ],
   );
@@ -285,12 +291,13 @@ class _NewTab extends StatelessWidget {
   }
 }
 
-/// Over a page that didn't load: where it was going, and WebKit's reason.
+/// Over a page that didn't load: where it was going, what went wrong
+/// ([failedHeading]), and WebKit's reason.
 class _Failed extends StatelessWidget {
-  const new(this.tab, this.reason);
+  const new(this.tab, this.failure);
 
   final BrowserTab tab;
-  final String reason;
+  final PageFailure failure;
 
   @override
   Widget build(BuildContext context) {
@@ -307,12 +314,12 @@ class _Failed extends StatelessWidget {
             spacing: 6,
             children: [
               Text(
-                where.isEmpty ? 'The page didn’t load' : 'Can’t reach $where',
+                failedHeading(failure.code, where),
                 textAlign: TextAlign.center,
                 style: theme.ui(t.text, weight: FontWeight.w500),
               ),
               Text(
-                reason,
+                failure.reason,
                 textAlign: TextAlign.center,
                 style: theme.ui(t.textSecondary, size: 12),
               ),

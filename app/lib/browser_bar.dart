@@ -7,11 +7,14 @@ import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A browser tab's bar, under the pane's title row (ADR 0094): Back,
-/// Forward and Reload, then the address field, which takes the rest. A new
-/// tab has no page yet ([host] null): only its field works.
+/// Forward and Reload, "Not secure" for a page that came over plain http
+/// from another machine ([notSecure]), then the address field, which
+/// takes the rest. A new tab has no page yet ([host] null): only its field
+/// works.
 class BrowserBar extends StatelessWidget {
   const new({
     required this.host,
+    required this.page,
     required this.address,
     required this.focus,
     required this.onGo,
@@ -19,6 +22,10 @@ class BrowserBar extends StatelessWidget {
   });
 
   final BrowserHost? host;
+
+  /// The page's address (the tab's), which the mark follows; [address] is
+  /// the field's text, which may be being typed.
+  final ValueListenable<String> page;
   final TextEditingController address;
   final FocusNode focus;
 
@@ -70,7 +77,20 @@ class BrowserBar extends StatelessWidget {
             size: 15,
             onTap: host == null ? null : () => host.reload().ignore(),
           ),
-          const SizedBox(width: 6),
+          ValueListenableBuilder(
+            valueListenable: page,
+            builder: (context, at, _) => notSecure(at)
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 6, right: 2),
+                    child: Text(
+                      'Not secure',
+                      maxLines: 1,
+                      softWrap: false,
+                      style: theme.ui(t.textSecondary, size: 11.5),
+                    ),
+                  )
+                : const SizedBox(width: 6),
+          ),
           Expanded(
             child: SizedBox(
               height: 26,

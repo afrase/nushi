@@ -31,10 +31,30 @@ abstract interface class BrowserHost {
   ValueListenable<bool> get canBack;
   ValueListenable<bool> get canForward;
 
-  /// Why the page didn't load ('' while it loads, or did).
-  ValueListenable<String> get failed;
+  /// Why the page didn't load (null while it loads, or did).
+  ValueListenable<PageFailure?> get failed;
 
   void dispose();
+}
+
+/// Why a page didn't load: WebKit's error code (`NSURLErrorDomain`'s, as
+/// -1202 for a certificate it doesn't trust) and its words.
+typedef PageFailure = ({int code, String reason});
+
+/// What the pane says of a page at [where] (its host) that didn't load
+/// with WebKit's [code]: a certificate WebKit refused, which has no way
+/// past it (ADR 0094), else that the host can't be reached.
+String failedHeading(int code, String where) {
+  if (where.isEmpty) return 'The page didn’t load';
+  return switch (code) {
+    // NSURLErrorServerCertificate…: bad date, untrusted, unknown root, not
+    // yet valid.
+    -1201 || -1202 || -1203 || -1204 => '$where’s certificate isn’t valid',
+    // NSURLErrorSecureConnectionFailed, and a client certificate rejected
+    // or asked for.
+    -1200 || -1205 || -1206 => 'Can’t connect securely to $where',
+    _ => 'Can’t reach $where',
+  };
 }
 
 /// Makes the [BrowserHost] for a browser tab's view.
@@ -62,6 +82,14 @@ bool inBrowserTab(Uri url) => switch (url.scheme) {
   'http' || 'https' => url.host.isNotEmpty,
   _ => false,
 };
+
+/// Whether the page at [address] came over plain http from another machine,
+/// which anyone on the way can read or change: the bar says so. This Mac's
+/// own pages don't leave it.
+bool notSecure(String address) {
+  final u = Uri.tryParse(address);
+  return u != null && u.scheme == 'http' && !isLoopback(u.host);
+}
 
 /// What a navigation to [url] does in a browser tab, the user having last
 /// pressed in a page at [pressed]: a web page stays, wherever it is; a mail
@@ -152,12 +180,14 @@ class BrowserPage implements BrowserHost {
     unawaited(nav.setOnNavigationRequest(_decide));
     unawaited(
       nav.setOnPageStarted((_) {
-        if (!_gone) _failed.value = '';
+        if (!_gone) _failed.value = null;
       }),
     );
     unawaited(nav.setOnPageFinished((_) => unawaited(_moved())));
     unawaited(nav.setOnUrlChange((c) => unawaited(_moved(c.url))));
     unawaited(nav.setOnWebResourceError(_error));
+    // No setOnSSlAuthError: a certificate WebKit doesn't trust fails the
+    // page (WebKit's default handling), with no way past it (ADR 0094).
     unawaited(_c.setPlatformNavigationDelegate(nav));
     // The camera and microphone, refused: the plugin's default asks macOS,
     // and Nushi declares neither (docs/security.md).
@@ -174,7 +204,7 @@ class BrowserPage implements BrowserHost {
   );
   final _canBack = ValueNotifier<bool>(false);
   final _canForward = ValueNotifier<bool>(false);
-  final _failed = ValueNotifier<String>('');
+  final _failed = ValueNotifier<PageFailure?>(null);
   bool _loaded = false;
   bool _gone = false; // disposed: the view's last callbacks change nothing
 
@@ -183,7 +213,7 @@ class BrowserPage implements BrowserHost {
   @override
   ValueListenable<bool> get canForward => _canForward;
   @override
-  ValueListenable<String> get failed => _failed;
+  ValueListenable<PageFailure?> get failed => _failed;
 
   @override
   Widget view(BuildContext context) =>
@@ -238,7 +268,7 @@ class BrowserPage implements BrowserHost {
     // isn't the page failing.
     if (!(e.isForMainFrame ?? true) || e.errorCode == -999) return;
     if (e.errorCode == 102 || _gone) return; // 102: "interrupted by policy"
-    _failed.value = e.description;
+    _failed.value = (code: e.errorCode, reason: e.description);
   }
 
   Future<NavigationDecision> _decide(NavigationRequest r) async {
