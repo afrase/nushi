@@ -6,7 +6,7 @@ import 'package:nushi/mermaid.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/web_page.dart' show blockCookies;
+import 'package:nushi/web_page.dart' show CookielessLoads, blockCookies;
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
@@ -60,20 +60,20 @@ class WebKitDiagram implements DiagramHost {
   bool _loaded = false;
   String? _pending; // the script to run once loaded
 
-  Future<void> _load() async {
-    // The native view exists once a call to it has come back; nothing loads
-    // until its cookies are off, and nothing at all if they can't be.
-    await _c.setJavaScriptMode(JavaScriptMode.unrestricted);
-    await blockCookies(_c.webViewIdentifier);
-    _page = await diagramPage();
-    if (_page.isEmpty) return;
-    await _c.loadFileWithParams(
-      WebKitLoadFileParams(
-        absoluteFilePath: _page,
-        readAccessPath: _page.substring(0, _page.lastIndexOf('/')),
-      ),
-    );
-  }
+  Future<void> _load() =>
+      CookielessLoads(
+        _c.setJavaScriptMode(JavaScriptMode.unrestricted),
+        () => _c.webViewIdentifier,
+      ).load(() async {
+        _page = await diagramPage();
+        if (_page.isEmpty) return;
+        await _c.loadFileWithParams(
+          WebKitLoadFileParams(
+            absoluteFilePath: _page,
+            readAccessPath: _page.substring(0, _page.lastIndexOf('/')),
+          ),
+        );
+      });
 
   void _finished(String url) {
     _loaded = true;

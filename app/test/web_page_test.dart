@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_page.dart';
@@ -96,6 +98,43 @@ void main() {
     );
     await blockCookies(42);
     expect(asked.map((c) => (c.method, c.arguments)), [('noCookies', 42)]);
+  });
+
+  // Fix review 2026-11-06: nothing showed that a preview waits for its
+  // cookies to be off before it loads, or loads nothing when they can't be.
+  test('a preview loads only once its cookies are off, and never if they '
+      'can’t be', () async {
+    final was = blockCookies;
+    addTearDown(() => blockCookies = was);
+    final made = Completer<void>();
+    final off = Completer<void>();
+    final asked = <int>[];
+    blockCookies = (id) {
+      asked.add(id);
+      return off.future;
+    };
+    final loads = CookielessLoads(made.future, () => 7);
+    var loaded = 0;
+    final done = loads.load(() async => loaded++);
+    await pumpEventQueue();
+    expect(asked, isEmpty); // no native view yet
+    expect(loaded, 0);
+    made.complete();
+    await pumpEventQueue();
+    expect(asked, [7]);
+    expect(loaded, 0); // its cookies still on
+    off.complete();
+    await done;
+    expect(loaded, 1);
+    await loads.load(() async => loaded++);
+    expect(asked, [7]); // asked once
+    expect(loaded, 2);
+    // The rule can't be added: nothing loads, now or later.
+    blockCookies = (id) => Future.error(PlatformException(code: 'failed'));
+    final refused = CookielessLoads(Future.value(), () => 8);
+    await expectLater(refused.load(() async => loaded++), throwsException);
+    await expectLater(refused.load(() async => loaded++), throwsException);
+    expect(loaded, 2);
   });
 
   // Browser tabs load any site now (ADR 0094) and share WebKit's store

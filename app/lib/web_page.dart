@@ -60,6 +60,26 @@ Future<Duration?> Function({bool pointerOnly}) sincePressInPage =
 Future<void> Function(int id) blockCookies = (id) =>
     const MethodChannel('nushi/browser').invokeMethod<void>('noCookies', id);
 
+/// A preview's web view's loads, held until its cookies are off: none
+/// before `made` (a call to the native view that has come back, so it
+/// exists) and [blockCookies] for the web view the plugin numbers `id`, and
+/// none at all if they can't be.
+final class CookielessLoads {
+  new(Future<void> made, int Function() id)
+    : _ready = made.then((_) => blockCookies(id()))
+        // Its error is load's to meet, not the zone's.
+        ..ignore();
+
+  final Future<void> _ready;
+
+  /// Runs [load] once the cookies are off; throws, loading nothing, if
+  /// they can't be.
+  Future<void> load(Future<void> Function() load) async {
+    await _ready;
+    await load();
+  }
+}
+
 /// A WKWebView with only its free defaults (the owner's call), and no
 /// cookies ([blockCookies]): no script message handlers (nothing from the
 /// page reaches Nushi), file reads inside the root it's given, the network
@@ -74,20 +94,16 @@ class WebKitPage implements PageHost {
     unawaited(nav.setOnNavigationRequest(_decide));
     unawaited(nav.setOnPageFinished(_finished));
     unawaited(_c.setPlatformNavigationDelegate(nav));
-    // The native view exists once a call to it has come back; nothing loads
-    // until its cookies are off, and nothing at all if they can't be.
-    _ready =
-        _c
-            .setJavaScriptMode(JavaScriptMode.unrestricted)
-            .then((_) => blockCookies(_c.webViewIdentifier))
-          // Its error is load's to meet, not the zone's.
-          ..ignore();
+    _loads = CookielessLoads(
+      _c.setJavaScriptMode(JavaScriptMode.unrestricted),
+      () => _c.webViewIdentifier,
+    );
   }
 
   final _c = WebKitWebViewController(
     const PlatformWebViewControllerCreationParams(),
   );
-  late final Future<void> _ready;
+  late final CookielessLoads _loads;
   String _path = '';
   String _root = '';
   bool _loaded = false;
@@ -102,9 +118,10 @@ class WebKitPage implements PageHost {
   Future<void> load(String path, String root) async {
     _path = path;
     _root = root;
-    await _ready;
-    await _c.loadFileWithParams(
-      WebKitLoadFileParams(absoluteFilePath: path, readAccessPath: root),
+    await _loads.load(
+      () => _c.loadFileWithParams(
+        WebKitLoadFileParams(absoluteFilePath: path, readAccessPath: root),
+      ),
     );
   }
 
