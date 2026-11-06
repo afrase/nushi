@@ -59,9 +59,13 @@ class MainFlutterWindow: NSWindow {
       .setMethodCallHandler { [weak self] call, result in
         if call.method == "sincePress" {
           // A press lets one navigation leave the page, never a second:
-          // asking takes it.
+          // asking takes it. A browser tab asks for a pointer's only
+          // ("pointer"): people type into a local page's forms, and a
+          // Space or Return there would let the page's script out.
           let at = self?.webPressedAt
+          let byKey = self?.webPressByKey ?? false
           self?.webPressedAt = nil
+          if byKey, call.arguments as? String == "pointer" { return result(nil) }
           return result(at.map { ProcessInfo.processInfo.systemUptime - $0 })
         }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
@@ -170,7 +174,10 @@ class MainFlutterWindow: NSWindow {
           default: self.lastUp = (event.clickCount, event.timestamp)
           }
         }
-        if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) { self.webPressedAt = event.timestamp }
+        if Self.inWebView(self.contentView?.hitTest(event.locationInWindow)) {
+          self.webPressedAt = event.timestamp
+          self.webPressByKey = false
+        }
       case .keyDown:
         // Only the keys that activate a focused link or button: Return,
         // the keypad's Enter, Space, and only as pressed, not as a held
@@ -178,6 +185,7 @@ class MainFlutterWindow: NSWindow {
         // repeat). Typing in a page lets nothing open.
         if !event.isARepeat, [36, 76, 49].contains(event.keyCode), Self.inWebView(self.firstResponder as? NSView) {
           self.webPressedAt = event.timestamp
+          self.webPressByKey = true
         }
       default:
         self.letGoInFlutter()
@@ -291,6 +299,9 @@ class MainFlutterWindow: NSWindow {
   /// When a press, its release or a key last went to a web view (an
   /// event's timestamp: seconds since the system started).
   private var webPressedAt: TimeInterval?
+
+  /// Whether that was a key (Return, Enter, Space), not the pointer.
+  private var webPressByKey = false
 
   /// Whether a view is a web view or inside one. AppKit gives a press to
   /// the view its hit test finds, so this is where WebKit took it.

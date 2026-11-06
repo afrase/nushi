@@ -41,15 +41,16 @@ Future<void> Function(Uri url) openInBrowser = (url) async {
 
 /// How long ago the user last pressed, let go, or hit Return, Enter or
 /// Space in a web view in the window, null if never or since the last ask
-/// (each press lets one navigation out): the Swift side's event monitor
-/// sees it, as
+/// (each press lets one navigation out); asked for a pointer's only, null
+/// too when the last was a key. The Swift side's event monitor sees it, as
 /// Flutter doesn't (WebKit takes a press inside its view, and the plugin
 /// doesn't give WebKit's navigation type). Tests set their own.
-Future<Duration?> Function() sincePressInPage = () async {
-  final s = await const MethodChannel('nushi/browser')
-      .invokeMethod<double>('sincePress');
-  return s == null ? null : Duration(microseconds: (s * 1e6).round());
-};
+Future<Duration?> Function({bool pointerOnly}) sincePressInPage =
+    ({pointerOnly = false}) async {
+      final s = await const MethodChannel('nushi/browser')
+          .invokeMethod<double>('sincePress', pointerOnly ? 'pointer' : null);
+      return s == null ? null : Duration(microseconds: (s * 1e6).round());
+    };
 
 /// A WKWebView with only its free defaults (the owner's call):
 /// no script message handlers (nothing from the page reaches Nushi), file
@@ -173,10 +174,11 @@ Future<PageNavigation> pageNavigation(
 }
 
 /// When the user last pressed in a web view, from [sincePressInPage]: null
-/// if never, since the last ask, or with no answer.
-Future<DateTime?> lastPressInPage() async {
+/// if never, since the last ask, or with no answer; with [pointerOnly], a
+/// key's press counts for nothing.
+Future<DateTime?> lastPressInPage({bool pointerOnly = false}) async {
   try {
-    final ago = await sincePressInPage();
+    final ago = await sincePressInPage(pointerOnly: pointerOnly);
     return ago == null ? null : clock().subtract(ago);
   } on Object {
     return null; // no answer: no press

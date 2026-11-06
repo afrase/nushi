@@ -64,12 +64,17 @@ void main() {
       expect(frame('file:///etc/passwd'), PageNavigation.drop);
     });
 
-    test('the press is asked only for what the browser may take', () async {
+    // Fix review 2026-11-06: a Space or Return typed into a local page's
+    // form let the page's script send the default browser anywhere; only
+    // the pointer's press counts for a browser tab.
+    test('the press is asked only for what the browser may take, and only '
+        'a pointer’s', () async {
       final since = sincePressInPage;
       addTearDown(() => sincePressInPage = since);
       var asked = 0;
-      sincePressInPage = () async {
+      sincePressInPage = ({pointerOnly = false}) async {
         asked++;
+        expect(pointerOnly, isTrue);
         return const Duration(milliseconds: 100);
       };
       Future<PageNavigation> go(String url) =>
