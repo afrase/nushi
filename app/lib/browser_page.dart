@@ -6,7 +6,6 @@ import 'package:flutter/widgets.dart';
 import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_local.dart';
 import 'package:nushi/browser_navigation.dart';
-import 'package:nushi/clock.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/settings.dart' show localNetworkSites;
 import 'package:nushi/web_page.dart';
@@ -94,6 +93,31 @@ void forgetCommits(int id) => _commits.remove(id);
 /// nothing. Tests set their own.
 Future<void> Function(int id, String rules) blockLocalNetwork = (id, rules) =>
     _browser.invokeMethod<void>('blockLocal', {'id': id, 'rules': rules});
+
+/// What WebKit told of the main frame's navigation to `url` in the
+/// plugin's web view `id` as it decided on it (`CommitWatch`), taken once:
+/// its kind and whether it's a redirect, or null when it told nothing (the
+/// navigation is then judged as the page's own). Tests set their own.
+Future<MainNavigation?> Function(int id, String url) mainNavigation =
+    (id, url) async {
+      final told = await _browser.invokeMethod<Map<Object?, Object?>>(
+        'navigation',
+        {'id': id, 'url': url},
+      );
+      return switch (told) {
+        {'type': final int type, 'redirect': final bool redirect} => (
+          type: type,
+          redirect: redirect,
+        ),
+        _ => null,
+      };
+    };
+
+/// The address of the history item `by` steps from the page in the
+/// plugin's web view `id` (-1 Back, 1 Forward, 0 the page itself, which
+/// Reload loads), or null when there's none. Tests set their own.
+Future<String?> Function(int id, int by) historyItem = (id, by) =>
+    _browser.invokeMethod<String>('historyItem', {'id': id, 'by': by});
 
 /// Lets pages at [host] reach this Mac and the local network from a
 /// browser tab ([localNetworkSites]); the tabs' rules follow at once. A
@@ -201,8 +225,8 @@ class BrowserPage implements BrowserHost {
   final _canForward = ValueNotifier<bool>(false);
   final _failed = ValueNotifier<PageFailure?>(null);
   final _blocked = ValueNotifier<Uri?>(null);
+  final _source = NavigationSource();
   bool _loaded = false;
-  DateTime? _askedAt; // when the user last asked for a load
   bool _gone = false; // disposed: the view's last callbacks change nothing
 
   @override
@@ -233,7 +257,7 @@ class BrowserPage implements BrowserHost {
       }
       return;
     }
-    _asked();
+    _source.asked(NavigationSource.typed, '$url');
     await _c.loadRequest(LoadRequestParams(uri: url));
   }
 
@@ -247,31 +271,35 @@ class BrowserPage implements BrowserHost {
       if (Uri.tryParse(tab.address.value) case final url?) await open(url);
       return;
     }
-    _asked();
-    await _c.reload();
+    await _step(0, _c.reload);
   }
 
   @override
-  Future<void> back() {
-    _asked();
-    return _c.goBack();
-  }
+  Future<void> back() => _step(-1, _c.goBack);
 
   @override
-  Future<void> forward() {
-    _asked();
-    return _c.goForward();
-  }
+  Future<void> forward() => _step(1, _c.goForward);
 
-  /// The user asked for the load about to start: the next main frame's
-  /// navigation, within [userGesture], may go to a local address.
-  void _asked() => _askedAt = clock();
-
-  /// Whether the user asked for this main frame's navigation, once.
-  bool _takeAsked() {
-    final at = _askedAt;
-    _askedAt = null;
-    return at != null && clock().difference(at) <= userGesture;
+  /// Back, Forward or Reload ([by] -1, 1 or 0), asked by the user: the load
+  /// of the history item it goes to may go to a local address
+  /// ([NavigationSource]). With no item to go to, Back and Forward do
+  /// nothing; when WebKit can't say which, the load goes unasked.
+  Future<void> _step(int by, Future<void> Function() go) async {
+    String? to;
+    if (_id case final id?) {
+      try {
+        to = await historyItem(id, by);
+      } on Object {
+        to = null;
+      }
+    }
+    if (_gone) return;
+    _source.asked(
+      by == 0 ? NavigationSource.reload : NavigationSource.step,
+      to,
+    );
+    if (to == null && by != 0) return;
+    await go();
   }
 
   /// Puts the local network's block on the web view (`localNetworkRules`),
@@ -295,6 +323,7 @@ class BrowserPage implements BrowserHost {
   void _commit(String url) {
     if (_gone) return;
     _page.committed(url);
+    _source.committed(url);
     unawaited(_moved());
   }
 
@@ -322,6 +351,7 @@ class BrowserPage implements BrowserHost {
     // A load this tab stopped (a navigation dropped, or one in its place)
     // isn't the page failing.
     if (!(e.isForMainFrame ?? true) || e.errorCode == -999) return;
+    _source.flight = ''; // no redirect of it follows
     if (e.errorCode == 102 || _gone) return; // 102: "interrupted by policy"
     _failed.value = (
       code: e.errorCode,
@@ -331,18 +361,28 @@ class BrowserPage implements BrowserHost {
   }
 
   Future<NavigationDecision> _decide(NavigationRequest r) async {
-    final asked = r.isMainFrame && _takeAsked();
-    final shown = tab.address.value;
+    MainNavigation? nav;
+    if (_id case final id? when r.isMainFrame) {
+      try {
+        nav = await mainNavigation(id, r.url);
+      } on Object {
+        nav = null; // judged as the page's own
+      }
+    }
+    final (:asked, :from) = r.isMainFrame
+        ? _source.take(r.url, nav)
+        : (asked: false, from: '');
     final allowed = localNetworkSites.value;
     final url = Uri.tryParse(r.url);
     switch (await browserPageNavigation(
       r.url,
       mainFrame: r.isMainFrame,
-      shown: shown,
+      from: from,
       asked: asked,
       allowed: allowed,
     )) {
       case PageNavigation.stay:
+        if (r.isMainFrame) _source.flight = r.url;
         return NavigationDecision.navigate;
       case PageNavigation.open:
         if (url != null) unawaited(openInBrowser(url).catchError((_) {}));
@@ -351,7 +391,7 @@ class BrowserPage implements BrowserHost {
             r.isMainFrame &&
             !asked &&
             !_gone &&
-            blocksLocal(url, shown: shown, allowed: allowed)) {
+            blocksLocal(url, from: from, allowed: allowed)) {
           // Set again even for the same address: the pane says so each time.
           _blocked
             ..value = null

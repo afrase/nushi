@@ -15,7 +15,7 @@ void main() {
     // too (browser_local_test has the rest).
     const shown = 'http://localhost:3000/';
     PageNavigation main(String url, [DateTime? pressed]) =>
-        browserNavigation(url, mainFrame: true, pressed: pressed, shown: shown);
+        browserNavigation(url, mainFrame: true, pressed: pressed, from: shown);
 
     test('web pages anywhere, and a blank one, stay in the tab', () {
       for (final url in [
@@ -84,7 +84,7 @@ void main() {
         return const Duration(milliseconds: 100);
       };
       Future<PageNavigation> go(String url) =>
-          browserPageNavigation(url, mainFrame: true, shown: shown);
+          browserPageNavigation(url, mainFrame: true, from: shown);
       expect(await go('http://localhost:3000/'), PageNavigation.stay);
       expect(await go('https://example.com/'), PageNavigation.stay);
       expect(await go('file:///etc/passwd'), PageNavigation.drop);

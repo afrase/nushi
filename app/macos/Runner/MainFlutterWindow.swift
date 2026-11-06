@@ -92,6 +92,15 @@ class MainFlutterWindow: NSWindow {
           else { return result(FlutterError(code: "refused", message: "No web view", details: nil)) }
           return LocalNetwork.block(id, rules: rules, registry: registry, result)
         }
+        if call.method == "navigation" || call.method == "historyItem" {
+          guard let args = call.arguments as? [String: Any], let id = (args["id"] as? NSNumber)?.int64Value,
+            let registry = flutterViewController
+          else { return result(FlutterError(code: "refused", message: "No web view", details: nil)) }
+          if call.method == "navigation" {
+            return result(CommitWatch.navigation(id, url: args["url"] as? String ?? "", registry: registry))
+          }
+          return result(CommitWatch.historyItem(id, by: (args["by"] as? NSNumber)?.intValue ?? 0, registry: registry))
+        }
         if call.method == "browserName" {
           // The name of the app "open" opens with, for a browser tab's Open
           // in button: as Finder shows it, less ".app".
@@ -440,13 +449,23 @@ enum LocalNetwork {
 /// PageAddress): the plugin passes on WebKit's URL, which is a navigation's
 /// from its start, before anything of it loads, and no commit. This stands in
 /// front of the plugin's navigation delegate, passes it everything, and tells
-/// the app ("committed") where each main-frame load committed.
+/// the app ("committed") where each main-frame load committed. It also keeps
+/// what the plugin doesn't pass on of each main frame's navigation it
+/// decides, its kind and whether it's a redirect, for the app to ask
+/// ("navigation") as it decides: its block on the local network
+/// (lib/browser_navigation.dart's NavigationSource) needs both.
 final class CommitWatch: NSObject, WKNavigationDelegate {
   private static var key: UInt8 = 0
+  // WebKit says a navigation is a server's redirect only privately (seen in a
+  // probe app, 2026-11-06). Without it none is, and the app judges a redirect
+  // by the page on screen, which is stricter.
+  private static let isRedirect = NSSelectorFromString("_isRedirect")
   // Strong: a web view holds its delegate weakly. WebKit reads which of a
   // delegate's methods it has as it's set, and this one has the plugin's.
   private let inner: WKNavigationDelegate
   private let committed: (URL?) -> Void
+  // The main frame's navigations waiting on the app, oldest first.
+  private var deciding: [(url: String, type: Int, redirect: Bool)] = []
 
   private init(inner: WKNavigationDelegate, committed: @escaping (URL?) -> Void) {
     self.inner = inner
@@ -470,6 +489,42 @@ final class CommitWatch: NSObject, WKNavigationDelegate {
     objc_setAssociatedObject(web, &key, watch, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     web.navigationDelegate = watch
     result(nil)
+  }
+
+  /// What WebKit said of the main frame's navigation to [url] in web view
+  /// [id], taken: its `WKNavigationType`'s raw value and whether it's a
+  /// redirect, or nil when nothing waits for it. Those before it go too.
+  static func navigation(_ id: Int64, url: String, registry: FlutterPluginRegistry) -> [String: Any]? {
+    guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry),
+      let watch = objc_getAssociatedObject(web, &key) as? CommitWatch,
+      let at = watch.deciding.firstIndex(where: { $0.url == url })
+    else { return nil }
+    let told = watch.deciding[at]
+    watch.deciding.removeSubrange(...at)
+    return ["type": told.type, "redirect": told.redirect]
+  }
+
+  /// The address of the history item [by] steps from web view [id]'s page
+  /// (0 is the page's own, which a reload loads), or nil when there's none.
+  static func historyItem(_ id: Int64, by: Int, registry: FlutterPluginRegistry) -> String? {
+    FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry)?
+      .backForwardList.item(at: by)?.url.absoluteString
+  }
+
+  func webView(
+    _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+    decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+  ) {
+    // The plugin's decision asks the app, which asks here: kept first.
+    if action.targetFrame?.isMainFrame == true, let url = action.request.url?.absoluteString {
+      let redirect = action.responds(to: Self.isRedirect) && (action.value(forKey: "_isRedirect") as? Bool ?? false)
+      deciding.append((url, action.navigationType.rawValue, redirect))
+      if deciding.count > 16 { deciding.removeFirst() }
+    }
+    // The plugin has it; were it ever not to, nothing loads.
+    if inner.webView?(webView, decidePolicyFor: action, decisionHandler: decisionHandler) == nil {
+      decisionHandler(.cancel)
+    }
   }
 
   override func responds(to aSelector: Selector!) -> Bool {

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_local.dart';
 import 'package:nushi/browser_page.dart';
+import 'package:nushi/clock.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/web_page.dart' show PageNavigation;
 
@@ -167,18 +168,18 @@ void main() {
   test('where a page’s own navigation may go', () {
     PageNavigation go(
       String url,
-      String shown, {
+      String from, {
       bool asked = false,
       Set<String> allowed = const {},
     }) => browserNavigation(
       url,
       mainFrame: true,
-      shown: shown,
+      from: from,
       asked: asked,
       allowed: allowed,
     );
     const dev = 'http://localhost:5173/';
-    for (final (url, shown, asked, allowed, to) in [
+    for (final (url, from, asked, allowed, to) in [
       // A site's page can't send the tab to this Mac or the network.
       (dev, 'https://evil.example/', false, <String>{}, PageNavigation.drop),
       (
@@ -228,16 +229,139 @@ void main() {
       ),
     ]) {
       expect(
-        go(url, shown, asked: asked, allowed: allowed),
+        go(url, from, asked: asked, allowed: allowed),
         to,
-        reason: '$url from $shown, asked $asked',
+        reason: '$url from $from, asked $asked',
       );
     }
     // A frame is the content rules' to stop.
     expect(
-      browserNavigation(dev, mainFrame: false, shown: 'https://evil.example/'),
+      browserNavigation(dev, mainFrame: false, from: 'https://evil.example/'),
       PageNavigation.stay,
     );
+  });
+
+  group('who sent the main frame', () {
+    const evil = 'https://evil.example/';
+    const dev = 'http://localhost:5173/';
+    const router = 'http://192.168.1.1/cgi-bin/reboot';
+    const typed = (type: NavigationSource.typed, redirect: false);
+    const step = (type: NavigationSource.step, redirect: false);
+    const redirect = (type: NavigationSource.typed, redirect: true);
+
+    /// What a main frame's navigation to [url], told [nav], does in a tab
+    /// whose [source] says who sent it; one let go is told it went.
+    PageNavigation decide(
+      NavigationSource source,
+      String url,
+      MainNavigation? nav,
+    ) {
+      final (:asked, :from) = source.take(url, nav);
+      final to = browserNavigation(
+        url,
+        mainFrame: true,
+        from: from,
+        asked: asked,
+      );
+      if (to == PageNavigation.stay) source.flight = url;
+      return to;
+    }
+
+    test('a typed load is the user’s; a script’s meanwhile isn’t', () {
+      // The site's page on screen, the user's local load still to commit
+      // (the bar shows it already): the page's own `location` to the
+      // router comes first and goes nowhere, and takes nothing.
+      final s = NavigationSource()
+        ..committed(evil)
+        ..asked(NavigationSource.typed, 'http://localhost:5173');
+      expect(decide(s, router, typed), PageNavigation.drop);
+      expect(decide(s, dev, typed), PageNavigation.stay);
+      // Once: the same load again is the page's.
+      expect(decide(s, dev, typed), PageNavigation.drop);
+      // Its own redirect comes from it, so stays local.
+      s.asked(NavigationSource.typed, dev);
+      expect(decide(s, dev, typed), PageNavigation.stay);
+      expect(decide(s, '${dev}login', redirect), PageNavigation.stay);
+    });
+
+    test('Back is the user’s only for the item it goes to', () {
+      // Back to the dev server: the page's script, sending the tab to the
+      // router as the user presses it, gets no ask, of either kind.
+      final s = NavigationSource()
+        ..committed(evil)
+        ..asked(NavigationSource.step, dev);
+      expect(decide(s, router, typed), PageNavigation.drop);
+      expect(decide(s, router, step), PageNavigation.drop);
+      expect(decide(s, dev, step), PageNavigation.stay);
+      // Back with no item to go to asks nothing, and takes back the ask
+      // before it.
+      s
+        ..asked(NavigationSource.step, dev)
+        ..asked(NavigationSource.step, null);
+      expect(decide(s, dev, step), PageNavigation.drop);
+      // A reload of the page on screen; a form sent again counts.
+      s.asked(NavigationSource.reload, dev);
+      expect(
+        decide(s, dev, (type: NavigationSource.resent, redirect: false)),
+        PageNavigation.stay,
+      );
+      // An ask goes stale.
+      s.asked(NavigationSource.typed, dev);
+      clock = () => fixtureNow.add(const Duration(seconds: 2));
+      expect(decide(s, dev, typed), PageNavigation.drop);
+    });
+
+    test('a redirect comes from the address that redirected', () {
+      // The dev server on screen; its link (or Forward) to a site that
+      // redirects to the router: dropped, as the site sent it.
+      final s = NavigationSource()..committed(dev);
+      expect(decide(s, 'https://evil.example/r', typed), PageNavigation.stay);
+      expect(decide(s, router, redirect), PageNavigation.drop);
+      // A site's page's redirect to another site goes.
+      expect(decide(s, 'https://evil.example/r', typed), PageNavigation.stay);
+      expect(decide(s, 'https://b.example/', redirect), PageNavigation.stay);
+      // Committed, the site is the page on screen.
+      s.committed('https://b.example/');
+      expect(decide(s, dev, typed), PageNavigation.drop);
+      // The dev server's own redirect goes where it likes.
+      s.committed(dev);
+      expect(decide(s, '${dev}a', typed), PageNavigation.stay);
+      expect(
+        decide(s, 'http://localhost:3000/', redirect),
+        PageNavigation.stay,
+      );
+      // A failed load has no redirect to follow: one judged as from the
+      // page on screen.
+      s
+        ..committed(evil)
+        ..flight = dev
+        ..flight = '';
+      expect(decide(s, router, redirect), PageNavigation.drop);
+    });
+
+    test('without WebKit’s word, the page on screen sent it', () {
+      final s = NavigationSource()
+        ..committed(evil)
+        ..asked(NavigationSource.typed, dev);
+      expect(decide(s, dev, null), PageNavigation.drop);
+      // A blank page keeps the page that opened it.
+      final t = NavigationSource()
+        ..committed(dev)
+        ..committed('about:blank');
+      expect(decide(t, router, typed), PageNavigation.stay);
+    });
+
+    test('an address as WebKit writes it', () {
+      for (final (a, b, same) in [
+        ('http://localhost:5173', 'http://localhost:5173/', true),
+        ('http://LocalHost:80/a', 'http://localhost/a', true),
+        ('http://localhost/a#f', 'http://localhost/a#f', true),
+        ('http://localhost/a', 'http://localhost/b', false),
+        ('http://localhost:1/', 'http://localhost:2/', false),
+      ]) {
+        expect(sameAddress(a, b), same, reason: '$a $b');
+      }
+    });
   });
 
   test('a site is let through, and taken off, by its host', () {
