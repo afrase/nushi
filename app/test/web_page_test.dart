@@ -51,8 +51,9 @@ void main() {
     addTearDown(() => sincePressInPage = since);
     var asked = 0;
     Duration? ago;
-    sincePressInPage = () async {
+    sincePressInPage = ({pointerOnly = false}) async {
       asked++;
+      expect(pointerOnly, isFalse); // a key in a file's page counts
       return ago;
     };
     expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
@@ -66,7 +67,8 @@ void main() {
       PageNavigation.stay,
     );
     expect(asked, 3); // not asked for one that stays
-    sincePressInPage = () => Future.error(StateError('no window'));
+    sincePressInPage = ({pointerOnly = false}) =>
+        Future.error(StateError('no window'));
     expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
   });
 }
