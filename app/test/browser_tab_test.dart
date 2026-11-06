@@ -411,6 +411,33 @@ void main() {
       await closeView(tester, d);
     }, variant: _mac);
 
+    // Fix review 2026-11-06: asked for the focus it had, the field took
+    // nothing back, so with WebKit holding the keys ⌘L only selected.
+    testWidgets('⌘L with the field already focused opens its text input '
+        'again', (tester) async {
+      _fakes();
+      final d = await _app(tester);
+      d.chats['c']!.openBrowserTab('http://localhost:3000');
+      await tester.pumpAndSettle();
+      await tester.tap(_field);
+      await tester.pumpAndSettle();
+      final field = _editable(tester).widget;
+      expect(field.focusNode.hasFocus, isTrue);
+      tester.testTextInput.log.clear();
+      await _meta(tester, LogicalKeyboardKey.keyL);
+      expect(field.focusNode.hasFocus, isTrue);
+      final calls = tester.testTextInput.log.map((c) => c.method);
+      expect(calls, containsAllInOrder(['TextInput.setClient']));
+      expect(
+        field.controller.selection,
+        const TextSelection(
+          baseOffset: 0,
+          extentOffset: 'http://localhost:3000'.length,
+        ),
+      );
+      await closeView(tester, d);
+    }, variant: _mac);
+
     testWidgets('GitHub keeps its ⌘R: the page’s act doesn’t apply there', (
       tester,
     ) async {
