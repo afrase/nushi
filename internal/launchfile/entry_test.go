@@ -99,6 +99,8 @@ func TestNames(t *testing.T) {
 		{`{"runtimeExecutable": "make"}`, "preview", true, true},
 		{`{"runtimeExecutable": "node", "runtimeArgs": ["app.min.js"]}`, "app.min", true, true},
 		{`{"runtimeExecutable": "node", "runtimeArgs": [".env"]}`, "preview", true, true},
+		{`{"runtimeExecutable": "node", "runtimeArgs": ["é"]}`, "preview", true, true},
+		{`{"runtimeExecutable": "node", "runtimeArgs": ["🚀"]}`, "🚀", true, false},
 		{`{"url": "http://localhost:3000"}`, "localhost:3000", true, true},
 		{`{"url": "https://app.localhost:443"}`, "app.localhost", true, true},
 		{`{"url": "http://[::1]:8080"}`, "[::1]:8080", true, false},
@@ -163,6 +165,26 @@ func TestCwd(t *testing.T) {
 		}
 		if want == "" && !strings.HasPrefix(e.Cwd, p.folder) {
 			t.Errorf("%q: cwd %q", cwd, e.Cwd)
+		}
+	}
+}
+
+// CheckCwd catches a cwd swapped for a link out of the folder after Read.
+func TestCheckCwd(t *testing.T) {
+	p := project(t)
+	e := p.entry(json.RawMessage(`{"name": "a", "program": "a.js", "cwd": "web"}`))
+	if e.Problem != "" {
+		t.Fatalf("problem %q", e.Problem)
+	}
+	testcheck.NoErr(t, CheckCwd(p.folder, e.Cwd))
+	testcheck.NoErr(t, os.Remove(filepath.Join(p.folder, "web")))
+	testcheck.NoErr(t, os.Symlink(t.TempDir(), filepath.Join(p.folder, "web")))
+	if err := CheckCwd(p.folder, e.Cwd); err == nil || !strings.Contains(err.Error(), "through no link out of it") {
+		t.Errorf("a swapped cwd: %v", err)
+	}
+	for _, c := range [][2]string{{p.folder, "web"}, {"rel", e.Cwd}, {p.folder, "/tmp"}} {
+		if CheckCwd(c[0], c[1]) == nil {
+			t.Errorf("%q in %q passed", c[1], c[0])
 		}
 	}
 }
