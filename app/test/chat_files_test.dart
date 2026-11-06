@@ -295,7 +295,7 @@ void main() {
     expect(view.contains(tester.getCenter(row)), isTrue); // in view
     await tester.tap(row);
     await tester.pumpAndSettle();
-    expect(d.chats['c']!.preview.value, 'notes/sub.md');
+    expect(d.chats['c']!.previewFile, 'notes/sub.md');
     d.dispose();
   }, variant: _mac);
 
@@ -316,7 +316,7 @@ void main() {
       find.descendant(of: find.byType(Palette), matching: find.text('sub.md')),
     );
     await tester.pumpAndSettle();
-    expect(d.chats['c']!.preview.value, 'notes/sub.md');
+    expect(d.chats['c']!.previewFile, 'notes/sub.md');
     expect(showDetails.value, isFalse);
     d.dispose();
   }, variant: _mac);
@@ -390,7 +390,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(_inPane(find.text('deploy')), findsOneWidget);
-    expect(d.chats['c']!.preview.value, 'scripts/deploy');
+    expect(d.chats['c']!.previewFile, 'scripts/deploy');
     d.dispose();
   }, variant: _mac);
 

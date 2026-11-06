@@ -10,6 +10,7 @@ import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/preview.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -281,7 +282,7 @@ class PreviewButton extends StatelessWidget {
         : ValueListenableBuilder(
             valueListenable: current,
             builder: (context, v, _) =>
-                pill(on: v != null && name(v) == name(path)),
+                pill(on: v is PreviewFile && name(v.path) == name(path)),
           );
   }
 }
