@@ -25,7 +25,6 @@ void main() {
         'http://example.com/login',
         'http://192.168.7.5:3000/',
         'http://localhost.example.com/',
-        'http://localhost@example.com/', // the host is example.com
         'http://0.0.0.0:3000/',
         'about:blank',
       ]) {
@@ -52,6 +51,10 @@ void main() {
         'x-apple.systempreferences:',
         'zoommtg://zoom.us/join',
         'http:///no-host',
+        // A user name reads as the host (fix review 2026-11-06).
+        'http://localhost@example.com/',
+        'https://www.paypal.com@evil.example/signin',
+        'https://user:pass@example.com/',
       ]) {
         expect(main(url, press()), PageNavigation.drop, reason: url);
       }
@@ -134,6 +137,7 @@ void main() {
       'how to brew tea',
       'example .com',
       'me@example.com',
+      'https://me@example.com/',
       // Not for the tab.
       'file:///etc/passwd',
       'javascript:alert(1)',
@@ -200,6 +204,31 @@ void main() {
     expect(hostOf(''), '');
   });
 
+  test('what the bar shows out of the field: the host apart', () {
+    expect(addressParts('https://example.com/'), (
+      host: 'example.com',
+      rest: '',
+    ));
+    expect(addressParts('http://localhost:3000/app?x=1#top'), (
+      host: 'localhost:3000',
+      rest: '/app?x=1#top',
+    ));
+    expect(addressParts('https://example.com?q=1'), (
+      host: 'example.com',
+      rest: '?q=1',
+    ));
+    expect(addressParts('https://u@evil.example/signin'), (
+      host: 'evil.example',
+      rest: '/signin',
+    ));
+    expect(addressParts('https://example.com/\u202egnp.exe'), (
+      host: 'example.com',
+      rest: '/�gnp.exe',
+    ));
+    expect(addressParts('about:blank'), isNull);
+    expect(addressParts(''), isNull);
+  });
+
   // Fix review 2026-11-06: WebKit's URL is a navigation's from its start.
   test('the address moves on a commit, and within the origin shown', () {
     final tab = BrowserTab('https://bank.example/');
@@ -225,5 +254,9 @@ void main() {
       ..committed('about:blank')
       ..changed('http://evil.example/three');
     expect(tab.address.value, 'http://evil.example/three');
+    page.committed('https://www.paypal.com@evil.example/signin');
+    expect(tab.address.value, 'https://evil.example/signin');
+    page.changed('https://x@evil.example/again');
+    expect(tab.address.value, 'https://evil.example/again');
   });
 }

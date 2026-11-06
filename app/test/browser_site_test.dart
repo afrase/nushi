@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_bar.dart';
 import 'package:nushi/browser_pane.dart';
@@ -150,6 +151,73 @@ void main() {
     await closeView(tester, d);
   }, variant: macOnly);
 
+  // Fix review 2026-11-06: a page could send the tab to
+  // https://www.paypal.com@evil.example/, and the bar and a failure's
+  // heading read the user name as the host.
+  testWidgets('the bar never shows a user name, and keeps the host’s end '
+      'in sight', (tester) async {
+    final fakes = browserFakes();
+    final d = await browserApp(tester, width: 720);
+    d.chats['c']!.openBrowserTab('https://example.com/');
+    await tester.pumpAndSettle();
+    final host = fakes.hosts.single;
+    final bar = find.byType(BrowserBar);
+    String shown() => tester
+        .widgetList<RichText>(
+          find.descendant(of: bar, matching: find.byType(RichText)),
+        )
+        .map((t) => t.text.toPlainText())
+        .join('|');
+    host.committed('https://www.paypal.com@evil.example/signin');
+    await tester.pump();
+    expect(
+      addressEditable(tester).widget.controller.text,
+      'https://evil.example/signin',
+    );
+    expect(shown(), isNot(contains('paypal')));
+    expect(shown(), contains('evil.example/signin'));
+    // A host longer than the field loses its start, not its end.
+    const long =
+        'www.paypal.com.account-verify.secure-login.support-centre.billing'
+        '.customer-service.evil.example';
+    host.committed('https://$long/signin');
+    await tester.pump();
+    final text = find.descendant(
+      of: bar,
+      matching: find.byWidgetPredicate(
+        (w) => w is RichText && w.text.toPlainText().endsWith('evil.example'),
+      ),
+    );
+    expect(text, findsOneWidget);
+    expect(tester.widget<RichText>(text).text.toPlainText(), startsWith('…'));
+    // Its end drawn, not cut by the ellipsis at the right.
+    expect(
+      tester.renderObject<RenderParagraph>(text).didExceedMaxLines,
+      isFalse,
+    );
+    expect(
+      tester.getRect(text).right,
+      lessThanOrEqualTo(tester.getRect(addressField).right),
+    );
+    // In the field's focus, the whole address, to edit.
+    await tester.tap(addressField);
+    await tester.pump();
+    expect(text, findsNothing);
+    expect(
+      addressEditable(tester).widget.controller.text,
+      'https://$long/signin',
+    );
+    // A failure names the address that failed, by its host.
+    host.failure.value = (
+      code: -1004,
+      reason: 'Could not connect to the server.',
+      url: 'https://www.paypal.com@evil.example:8443/',
+    );
+    await tester.pump();
+    expect(find.text('Can’t reach evil.example:8443'), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
   // Fix review 2026-11-06: a provisional load that fails puts WebKit's URL
   // back on the page shown, and the heading named that page.
   testWidgets('a failure names the address that failed, not the tab’s', (
@@ -267,6 +335,20 @@ void main() {
             tester,
             find.byType(NushiApp),
             'browser_certificate_${width.toInt()}_$name',
+          );
+          // A host made to read as another site's, longer than the field.
+          fakes.hosts.single
+            ..failure.value = null
+            ..committed(
+              'https://www.paypal.com.account-verify.secure-login'
+              '.support-centre.billing.evil.example/signin?next=%2Fhome',
+            );
+          await tester.pumpAndSettle();
+          expectTextInside(tester, width);
+          await render(
+            tester,
+            find.byType(NushiApp),
+            'browser_long_host_${width.toInt()}_$name',
           );
           await closeView(tester, d);
         }, variant: macOnly);

@@ -2,8 +2,8 @@ import 'package:nushi/preview_entry.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 
 // A browser tab's addresses (ADR 0094): which it loads, what the address
-// field takes, and where the page is. A page chooses where it goes, so
-// what the bar shows of that is guarded as a browser's is.
+// field takes, and what the bar shows of where the page is. A page chooses
+// where it goes, so what the bar shows of that is guarded as a browser's is.
 
 /// Whether [host] is this Mac itself: `localhost`, 127.0.0.0/8 or `::1`.
 bool isLoopback(String host) {
@@ -21,10 +21,12 @@ bool isLoopback(String host) {
 }
 
 /// Whether a browser tab shows [url] (ADR 0094): http or https to any
-/// host, or a blank page. A file, a script and every other scheme don't.
+/// host, or a blank page. A file, a script and every other scheme don't,
+/// nor an address with a user name in it (`https://bank.example@evil.example`
+/// reads as the name, not the host).
 bool inBrowserTab(Uri url) => switch (url.scheme) {
   'about' => url.path == 'blank',
-  'http' || 'https' => url.host.isNotEmpty,
+  'http' || 'https' => url.host.isNotEmpty && url.userInfo.isEmpty,
   _ => false,
 };
 
@@ -84,6 +86,20 @@ String hostOf(String url) {
   return plainPath(u.hasPort ? '$host:${u.port}' : host);
 }
 
+/// What the bar shows of [address] while no one types in it: its host
+/// apart from the rest (the path, query and fragment; a bare `/` dropped),
+/// with no scheme (the "Not secure" mark says http) and no user name.
+/// Null for a page with no host (`about:blank`), shown as it is.
+({String host, String rest})? addressParts(String address) {
+  final u = Uri.tryParse(address);
+  final host = hostOf(address);
+  if (u == null || host.isEmpty) return null;
+  final after = address.indexOf('//') + 2;
+  final cut = address.indexOf(RegExp('[/?#]'), after);
+  final rest = cut < 0 ? '' : address.substring(cut);
+  return (host: host, rest: rest == '/' ? '' : plainPath(rest));
+}
+
 /// Where a browser tab's page is, from WebKit's moves (ADR 0094). The tab's
 /// address is the page on screen, never where a navigation is headed: a
 /// page can start one to a site that never answers and stay up, taking
@@ -118,9 +134,11 @@ final class PageAddress {
     }
   }
 
-  /// Shows [url] ([u] parsed), a web page's.
+  /// Shows [url] ([u] parsed), a web page's, without a user name: the tab
+  /// loads none with one ([inBrowserTab]), and should one come some other
+  /// way the bar still never shows it.
   void _show(String url, Uri u) {
     if (u.scheme != 'http' && u.scheme != 'https') return;
-    tab.address.value = url;
+    tab.address.value = u.userInfo.isEmpty ? url : '${u.replace(userInfo: '')}';
   }
 }
