@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/browser_pane.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
@@ -283,23 +284,26 @@ void main() {
       expect(terminal.left - tabs.right, NushiTheme.groupGap);
       final menu = tester.getRect(find.byTooltip('Chat menu'));
       final files = tester.getRect(find.byType(FilesButton));
+      final browser = tester.getRect(find.byType(BrowserButton));
       final details = tester.getRect(find.byTooltip('Show details'));
       expect(files.left - terminal.right, NushiTheme.iconGap);
-      expect(details.left - files.right, NushiTheme.iconGap);
+      expect(browser.left - files.right, NushiTheme.iconGap);
+      expect(details.left - browser.right, NushiTheme.iconGap);
       expect(menu.left - details.right, NushiTheme.iconGap);
       await closeView(tester, d);
     }, variant: _mac);
 
     test('the bar’s gaps never fold anything', () {
       // Where each case first folded before them: 455 for the row, 80 for
-      // the title, then what the case adds (the Files button 26, its gap 2).
+      // the title, the browser's button 26, then what the case adds (the
+      // Files button 26); each button's gap 2.
       for (final (pull, model, files, first) in [
-        (false, false, false, 535.0),
-        (true, false, false, 623.0),
-        (false, true, false, 585.0),
-        (true, true, false, 673.0),
-        (false, false, true, 561.0),
-        (true, true, true, 699.0),
+        (false, false, false, 561.0),
+        (true, false, false, 649.0),
+        (false, true, false, 611.0),
+        (true, true, false, 699.0),
+        (false, false, true, 587.0),
+        (true, true, true, 725.0),
       ]) {
         for (final panel in [false, true]) {
           HeaderFolds at(double width) => headerFolds(
@@ -309,7 +313,10 @@ void main() {
             files: files,
             model: model,
           );
-          final gaps = headerGaps + (files ? NushiTheme.iconGap : 0);
+          final gaps =
+              headerGaps +
+              NushiTheme.iconGap +
+              (files ? NushiTheme.iconGap : 0);
           expect(at(first).any, isFalse);
           expect(at(first - 1).any, isTrue);
           expect(at(first).roomy, isFalse);

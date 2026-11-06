@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/controls.dart';
@@ -186,9 +187,12 @@ void main() {
     final d = await _app(tester);
     final terminal = tester.getRect(find.byType(TerminalButton));
     final files = tester.getRect(_button);
+    final browser = tester.getRect(find.byType(BrowserButton));
     final details = tester.getRect(find.byTooltip('Hide details'));
     expect(files.left - terminal.right, NushiTheme.iconGap);
-    expect(details.left - files.right, NushiTheme.iconGap);
+    // The browser's (ADR 0094) between it and the details'.
+    expect(browser.left - files.right, NushiTheme.iconGap);
+    expect(details.left - browser.right, NushiTheme.iconGap);
     expect(files.size, terminal.size);
     await tester.tap(find.byTooltip('Chat menu'));
     await tester.pumpAndSettle();

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
 import 'package:nushi/app_actions.dart';
+import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
@@ -28,8 +29,8 @@ import 'package:nushi/window_drag.dart';
 
 /// The chat's header: its title (double-click renames it), the agent, its
 /// model and status, the Chat | Changes (| Pull request, while it has one)
-/// switch, the terminal's, the Files pane's and the panel's buttons and the
-/// chat's menu. (Its
+/// switch, the terminal's, the Files pane's, the browser's (ADR 0094) and
+/// the panel's buttons and the chat's menu. (Its
 /// folder is in the sidebar and the details panel's Environment widget; the
 /// files it wrote are in Artifacts.) With the sidebar hidden it starts past
 /// the traffic lights and the button that shows the sidebar, and the chat's
@@ -72,16 +73,18 @@ class ChatHeader extends StatelessWidget {
     final titleStyle = theme.ui(t.text, weight: FontWeight.w600);
     // The title and the model (a Codex model id is long) share what the
     // rest of the row leaves (it takes about 455 points, the Pull request
-    // tab 88 more, the Files button 26), so a narrow window cuts them
+    // tab 88 more, the Files and browser buttons 26 each), so a narrow
+    // window cuts them
     // short rather than overflow. Where all of it fits with room over, the
     // row opens up to the bar's gaps (ADR 0072). Narrower still, the least
     // needed parts fold, so the chat's menu (⋯) stays at the row's end: the
-    // model, the agent's name (its mark stays), the details button while
+    // browser's button into ⋯ (the palette and the pane's + open tabs too),
+    // the model, the agent's name (its mark stays), the details button while
     // the panel can't show, the tabs into a menu field, the status word
     // (the dot's tooltip says it), then the terminal's, the files' and the
-    // details' buttons into ⋯. Changes counts the review comments not sent
-    // yet (14 points more); a hidden side chat's chip, the Jira key and the
-    // GitHub chip take their own room.
+    // details' buttons into ⋯. Changes counts the review
+    // comments not sent yet (14 points more); a hidden side chat's chip,
+    // the Jira key and the GitHub chip take their own room.
     return ListenableBuilder(
       listenable: Listenable.merge([
         chat.renaming,
@@ -341,13 +344,17 @@ class ChatHeader extends StatelessWidget {
                   ),
                 SizedBox(width: roomy ? NushiTheme.groupGap : 4),
                 // In the order of what they show, the terminal under the
-                // chat, then the Files pane and the details panel beside it,
-                // left to right.
+                // chat, then the Files pane, the preview's browser tab and
+                // the details panel beside it, left to right.
                 if (!folds.buttons) ...[
                   TerminalButton(chat: chat, daemon: daemon),
                   if (roomy) const SizedBox(width: NushiTheme.iconGap),
                   if (_files) ...[
                     FilesButton(chat: chat),
+                    if (roomy) const SizedBox(width: NushiTheme.iconGap),
+                  ],
+                  if (!folds.browser) ...[
+                    BrowserButton(chat: chat),
                     if (roomy) const SizedBox(width: NushiTheme.iconGap),
                   ],
                 ],
@@ -369,6 +376,10 @@ class ChatHeader extends StatelessWidget {
                   tooltip: 'Chat menu',
                   filter: false,
                   entries: [
+                    if (folds.browser && !folds.buttons) ...[
+                      _browserEntry,
+                      MenuEntry.divider,
+                    ],
                     if (folds.buttons) ...[
                       if (!chat.archived)
                         MenuEntry(
@@ -386,6 +397,7 @@ class ChatHeader extends StatelessWidget {
                           line: LineIcon.folder,
                           onPick: () => showOrHideFiles(chat),
                         ),
+                      _browserEntry,
                       if (onPanel case final toggle?)
                         MenuEntry(
                           panel ? 'Hide details' : 'Show details',
@@ -424,6 +436,13 @@ class ChatHeader extends StatelessWidget {
     return width;
   }
 
+  /// The browser's button as a row of ⋯, once it folds there.
+  MenuEntry get _browserEntry => MenuEntry(
+    BrowserButton.tooltip,
+    line: LineIcon.globe,
+    onPick: chat.showBrowser,
+  );
+
   List<(ChatTab, String)> _tabs(ChatState chat) => [
     (ChatTab.chat, 'Chat'),
     switch (unsentComments(chat.id).length) {
@@ -461,12 +480,13 @@ const headerGaps = 82.0;
 /// What of the chat's header folds at a width, the least needed first, the
 /// points that frees of the row's [headerRow] (the model's aren't in it),
 /// what the row takes past [headerRow] (`more`: the Pull request tab, the
-/// unsent comments' count, a hidden side chat's chip, the Files button, the
-/// Jira key, the GitHub chip),
+/// unsent comments' count, a hidden side chat's chip, the Files and browser
+/// buttons, the Jira key, the GitHub chip),
 /// whether nothing is near folding, so the row has the bar's gaps, and
 /// what those add (`gaps`).
 typedef HeaderFolds = ({
   bool roomy,
+  bool browser,
   bool model,
   bool name,
   bool word,
@@ -499,21 +519,25 @@ HeaderFolds headerFolds(
   double github = 0,
 }) {
   // The Pull request tab is 88 more, the comments' count 14, the Files
-  // button 26 (and the bar's gap after it).
+  // button 26 and the browser's 26 (each with the bar's gap after it).
   const button = 26.0;
   final more =
       (pull ? 88.0 : 0.0) +
       (comments ? 14.0 : 0.0) +
       (side ? SideChip.width : 0.0) +
       (files ? button : 0.0) +
+      button +
       jira +
       github;
-  final gaps = headerGaps + (files ? NushiTheme.iconGap : 0);
+  final gaps =
+      headerGaps + NushiTheme.iconGap + (files ? NushiTheme.iconGap : 0);
   final need = headerRow + more + 80 + (model ? 50 : 0);
   var saved = 0.0;
   final folds = <String>{};
-  // Each part and about how much folding it frees.
+  // Each part and about how much folding it frees. The browser's button
+  // goes first: what the header had before it then folds where it did.
   for (final (part, points) in [
+    ('browser', button),
     if (model) ('model', 50.0),
     ('name', 48.0),
     if (!panel) ('panel', 26.0),
@@ -528,6 +552,7 @@ HeaderFolds headerFolds(
   final roomy = width >= need + gaps;
   return (
     roomy: roomy,
+    browser: folds.contains('browser'),
     model: folds.contains('model'),
     name: folds.contains('name'),
     word: folds.contains('word'),
