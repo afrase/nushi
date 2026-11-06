@@ -92,7 +92,9 @@ typedef OpenMenu = void Function([Offset? at]);
 /// left edge, and one with no room on its right it pushes back from the
 /// window's edge by the room it was laid out in, at least the theme's
 /// least width, though it draws narrower at that room's left: so a short
-/// menu ended left of a button at the window's right.
+/// menu ended left of a button at the window's right. Only for menus their
+/// button opens: one opened at a point (a right-click) would be laid out
+/// from that point the other way.
 class TrailingMenus extends InheritedWidget {
   const new({required super.child, super.key});
 
