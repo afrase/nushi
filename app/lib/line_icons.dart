@@ -43,7 +43,11 @@ enum LineIcon {
   at,
 
   /// Slash commands: a slash in the box.
-  slashBox;
+  slashBox,
+
+  /// A browser tab (ADR 0094): a globe, its meridian a lens and its
+  /// equator a line.
+  globe;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -163,6 +167,14 @@ enum LineIcon {
         ..addRRect(_box)
         ..moveTo(14.5, 7.5)
         ..lineTo(9.5, 16.5),
+    globe =>
+      Path()
+        ..addOval(Rect.fromCircle(center: const Offset(12, 12), radius: 9))
+        ..moveTo(12, 3)
+        ..arcToPoint(const Offset(12, 21), radius: _r(13))
+        ..arcToPoint(const Offset(12, 3), radius: _r(13))
+        ..moveTo(3, 12)
+        ..lineTo(21, 12),
   };
 
   static Radius _r(double r) => Radius.circular(r);
