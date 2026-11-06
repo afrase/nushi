@@ -100,6 +100,8 @@ void main() {
     expect(here('localhost:3000'), 'http://localhost:3000');
     expect(here('3000'), 'http://localhost:3000');
     expect(here(':5173'), 'http://localhost:5173');
+    expect(here('1'), 'http://localhost:1');
+    expect(here('65535'), 'http://localhost:65535');
     expect(here(' 127.0.0.1:8080/app '), 'http://127.0.0.1:8080/app');
     expect(here('[::1]:3000'), 'http://[::1]:3000');
     expect(here('https://localhost:8443/'), 'https://localhost:8443/');
@@ -117,6 +119,12 @@ void main() {
       'ftp://localhost/',
       'mailto:me@example.com',
       'javascript://%0aalert(1)',
+      // No such port: the field says why, not WebKit.
+      '99999',
+      '0',
+      ':65536',
+      'localhost:99999',
+      'example.com:70000',
     ]) {
       expect(addressOf(no), isNull, reason: no);
     }
