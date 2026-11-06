@@ -138,10 +138,14 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   @override
   void focusAddress() {
     // WebKit may hold the keys while Flutter still thinks the field has the
-    // focus: asked again, the field takes them back.
-    _field
-      ..unfocus()
-      ..requestFocus();
+    // focus (a click into the page doesn't tell Flutter). Asking for the
+    // focus a node already has does nothing, so the field lets it go first,
+    // at once, and then takes it again, which opens its text input anew.
+    if (_field.hasFocus) {
+      _field.unfocus();
+      FocusManager.instance.applyFocusChangesIfNeeded();
+    }
+    _field.requestFocus();
     _address.selection = TextSelection(
       baseOffset: 0,
       extentOffset: _address.text.length,
