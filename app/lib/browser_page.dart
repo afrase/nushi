@@ -148,6 +148,9 @@ class BrowserPage implements BrowserHost {
     unawaited(nav.setOnUrlChange((c) => unawaited(_moved(c.url))));
     unawaited(nav.setOnWebResourceError(_error));
     unawaited(_c.setPlatformNavigationDelegate(nav));
+    // The camera and microphone, refused: the plugin's default asks macOS,
+    // and Nushi declares neither (docs/security.md).
+    unawaited(_c.setOnPlatformPermissionRequest((r) => unawaited(r.deny())));
     // Also where the plugin sets javaScriptCanOpenWindowsAutomatically.
     unawaited(_c.setJavaScriptMode(JavaScriptMode.unrestricted));
   }
