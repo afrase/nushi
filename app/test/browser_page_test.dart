@@ -220,29 +220,24 @@ void main() {
     expect(hostOf(''), '');
   });
 
-  test('what the bar shows out of the field: the host apart', () {
-    expect(addressParts('https://example.com/'), (
-      host: 'example.com',
-      rest: '',
-    ));
-    expect(addressParts('http://localhost:3000/app?x=1#top'), (
-      host: 'localhost:3000',
-      rest: '/app?x=1#top',
-    ));
-    expect(addressParts('https://example.com?q=1'), (
-      host: 'example.com',
-      rest: '?q=1',
-    ));
-    expect(addressParts('https://u@evil.example/signin'), (
-      host: 'evil.example',
-      rest: '/signin',
-    ));
-    expect(addressParts('https://example.com/\u202egnp.exe'), (
-      host: 'example.com',
-      rest: '/�gnp.exe',
-    ));
-    expect(addressParts('about:blank'), isNull);
-    expect(addressParts(''), isNull);
+  test('a web page is http or https to a host, not a blank page', () {
+    for (final url in [
+      'https://example.com/',
+      'http://localhost:3000/app',
+      'http://[::1]:4000/',
+    ]) {
+      expect(isWebPage(Uri.parse(url)), isTrue, reason: url);
+    }
+    for (final url in [
+      'about:blank',
+      'file:///etc/passwd',
+      'https://u@evil.example/',
+      'mailto:me@example.com',
+      'http:///no-host',
+    ]) {
+      expect(isWebPage(Uri.parse(url)), isFalse, reason: url);
+    }
+    expect(isWebPage(null), isFalse);
   });
 
   // Fix review 2026-11-06: WebKit's URL is a navigation's from its start.

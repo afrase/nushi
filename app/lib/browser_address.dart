@@ -31,6 +31,13 @@ bool inBrowserTab(Uri url) => switch (url.scheme) {
   _ => false,
 };
 
+/// Whether [url] is a web page, http or https: what a browser tab shows
+/// ([inBrowserTab]) less a blank page.
+bool isWebPage(Uri? url) =>
+    url != null &&
+    (url.scheme == 'http' || url.scheme == 'https') &&
+    inBrowserTab(url);
+
 /// Whether the page at [address] came over plain http from another machine,
 /// which anyone on the way can read or change: the bar says so. This Mac's
 /// own pages don't leave it.
@@ -84,20 +91,6 @@ String hostOf(String url) {
   if (u == null || u.host.isEmpty) return '';
   final host = u.host.contains(':') ? '[${u.host}]' : u.host;
   return plainPath(u.hasPort ? '$host:${u.port}' : host);
-}
-
-/// What the bar shows of [address] while no one types in it: its host
-/// apart from the rest (the path, query and fragment; a bare `/` dropped),
-/// with no scheme (the "Not secure" mark says http) and no user name.
-/// Null for a page with no host (`about:blank`), shown as it is.
-({String host, String rest})? addressParts(String address) {
-  final u = Uri.tryParse(address);
-  final host = hostOf(address);
-  if (u == null || host.isEmpty) return null;
-  final after = address.indexOf('//') + 2;
-  final cut = address.indexOf(RegExp('[/?#]'), after);
-  final rest = cut < 0 ? '' : address.substring(cut);
-  return (host: host, rest: rest == '/' ? '' : plainPath(rest));
 }
 
 /// Where a browser tab's page is, from WebKit's moves (ADR 0094). The tab's

@@ -175,7 +175,9 @@ void main() {
       'https://evil.example/signin',
     );
     expect(shown(), isNot(contains('paypal')));
-    expect(shown(), contains('evil.example/signin'));
+    // The host only, as Claude desktop's bar.
+    expect(shown(), contains('evil.example'));
+    expect(shown(), isNot(contains('/signin')));
     // A host longer than the field loses its start, not its end.
     const long =
         'www.paypal.com.account-verify.secure-login.support-centre.billing'

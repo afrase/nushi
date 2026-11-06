@@ -77,6 +77,26 @@ Future<void> Function(int id, ValueChanged<String> onCommit) watchCommits =
 /// Stops telling a web view's commits ([watchCommits]).
 void forgetCommits(int id) => _commits.remove(id);
 
+/// The default browser's name ("Google Chrome"), as the bar's button
+/// names it: null until [lookUpDefaultBrowser] has it, or when the Mac
+/// can't say.
+final defaultBrowser = ValueNotifier<String?>(null);
+
+/// Asks the Swift side for the default browser's name, the app that opens
+/// https, which a browser tab's button opens its page in (`openInBrowser`).
+/// Tests set their own.
+Future<String?> Function() defaultBrowserName = () =>
+    _browser.invokeMethod<String>('browserName');
+
+/// Sets [defaultBrowser] afresh: the user may have changed it meanwhile.
+Future<void> lookUpDefaultBrowser() async {
+  try {
+    defaultBrowser.value = await defaultBrowserName();
+  } on Object {
+    defaultBrowser.value = null; // "your browser"
+  }
+}
+
 const _browser = MethodChannel('nushi/browser');
 final _commits = <int, ValueChanged<String>>{};
 

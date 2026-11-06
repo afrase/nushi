@@ -6,14 +6,17 @@ import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_page.dart' show openInBrowser;
 
 /// A browser tab's bar, under the pane's title row (ADR 0094): Back,
 /// Forward and Reload, "Not secure" for a page that came over plain http
 /// from another machine ([notSecure]), then the address field, which
-/// takes the rest. Out of the field's focus it shows the page's host apart
-/// from the rest, the host's end always in sight ([_Shown]); in it, the
-/// whole address to edit. A new tab has no page yet ([host] null): only
-/// its field works.
+/// takes the rest, as Claude desktop's: out of the field's focus it shows
+/// only the page's host, centred, the host's end always in sight
+/// ([_Shown]); in it, the whole address to edit; at its right end, for a
+/// web page, a button that opens the page in the default browser
+/// ([_Outside]). A new tab has no page yet ([host] null): only its field
+/// works.
 class BrowserBar extends StatelessWidget {
   const new({
     required this.host,
@@ -99,10 +102,14 @@ class BrowserBar extends StatelessWidget {
               height: 26,
               child: ListenableBuilder(
                 listenable: Listenable.merge([focus, page]),
-                builder: (context, _) => _field(
-                  theme,
-                  focus.hasFocus ? null : addressParts(page.value),
-                ),
+                builder: (context, _) {
+                  final shown = hostOf(page.value);
+                  return _field(
+                    theme,
+                    focus.hasFocus || shown.isEmpty ? null : shown,
+                    outside: isWebPage(Uri.tryParse(page.value)),
+                  );
+                },
               ),
             ),
           ),
@@ -112,11 +119,15 @@ class BrowserBar extends StatelessWidget {
   }
 
   /// The field, and over it, while [shown] (no one types in it), the
-  /// page's address as [_Shown] draws it, the field's own text hidden
-  /// under it; a click goes through to the field.
-  Widget _field(NushiTheme theme, ({String host, String rest})? shown) {
+  /// page's host as [_Shown] draws it, centred, the field's own text hidden
+  /// under it; a click goes through to the field. At its right end, for a
+  /// web page, the button that opens it in the default browser ([_Outside]).
+  Widget _field(NushiTheme theme, String? shown, {required bool outside}) {
     final t = theme.t;
     final style = theme.ui(t.text, size: 12);
+    // Room for the button, and as much on the left, so the host centres
+    // in the field.
+    final side = outside ? _Outside.room : 8.0;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -130,53 +141,78 @@ class BrowserBar extends StatelessWidget {
           autocorrect: false,
           enableSuggestions: false,
           spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             isDense: true,
             hintText: 'Enter an address',
-            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            contentPadding: EdgeInsets.fromLTRB(8, 6, side, 6),
           ),
           onSubmitted: onGo,
         ),
         if (shown != null)
           IgnorePointer(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: _Shown(
-                  shown,
-                  host: style,
-                  rest: style.copyWith(color: t.textSecondary),
-                ),
-              ),
+              padding: EdgeInsets.symmetric(horizontal: side),
+              child: Align(child: _Shown(shown, style: style)),
             ),
+          ),
+        if (outside)
+          Align(
+            alignment: Alignment.centerRight,
+            child: _Outside(page: page),
           ),
       ],
     );
   }
 }
 
-/// A page's address out of the field's focus: its host in the text's
-/// color and the rest muted, cut at the right; a host too long for the
-/// field loses its start instead, behind an ellipsis, so the end of the
-/// host, the part a page can't choose freely (`….evil.example`), stays in
-/// sight, as browsers keep the site's own domain on screen.
-class _Shown extends StatelessWidget {
-  const new(this.parts, {required this.host, required this.rest});
+/// The button at the address field's right end that opens the tab's page
+/// in the default browser, named in its tooltip as Claude desktop's is
+/// ("Open in Google Chrome", [defaultBrowser]).
+class _Outside extends StatelessWidget {
+  const new({required this.page});
 
-  final ({String host, String rest}) parts;
-  final TextStyle host;
-  final TextStyle rest;
+  final ValueListenable<String> page;
+
+  /// The field's room for it, at its right end.
+  static const room = 26.0;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: defaultBrowser,
+    builder: (context, name, _) => IconTap(
+      Icons.open_in_new,
+      tooltip: name == null ? 'Open in your browser' : 'Open in $name',
+      size: 13,
+      padding: 4,
+      onTap: () {
+        if (Uri.tryParse(page.value) case final url? when isWebPage(url)) {
+          openInBrowser(url).ignore();
+        }
+      },
+    ),
+  );
+}
+
+/// A page's host out of the field's focus, centred as Claude desktop's
+/// is; a host too long for the field loses its start, behind an ellipsis,
+/// so the end of the host, the part a page can't choose freely
+/// (`….evil.example`), stays in sight, as browsers keep the site's own
+/// domain on screen.
+class _Shown extends StatelessWidget {
+  const new(this.host, {required this.style});
+
+  final String host;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       final scale = MediaQuery.textScalerOf(context);
       // Measured as the Text below draws it: over the default style.
-      final style = DefaultTextStyle.of(context).style.merge(host);
+      final measured = DefaultTextStyle.of(context).style.merge(style);
       double width(String text) {
         final p = TextPainter(
-          text: TextSpan(text: text, style: style),
+          text: TextSpan(text: text, style: measured),
           textDirection: TextDirection.ltr,
           textScaler: scale,
           maxLines: 1,
@@ -186,7 +222,7 @@ class _Shown extends StatelessWidget {
         return w;
       }
 
-      var name = parts.host;
+      var name = host;
       if (width(name) > box.maxWidth) {
         // The longest end of the host that fits after the ellipsis.
         var (lo, hi) = (1, name.length);
@@ -205,13 +241,9 @@ class _Shown extends StatelessWidget {
         }
         name = '…${name.substring(lo)}';
       }
-      return Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(text: name, style: host),
-            if (name == parts.host) TextSpan(text: parts.rest, style: rest),
-          ],
-        ),
+      return Text(
+        name,
+        style: style,
         maxLines: 1,
         softWrap: false,
         overflow: TextOverflow.ellipsis,

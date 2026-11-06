@@ -53,7 +53,7 @@ class MainFlutterWindow: NSWindow {
 
     // Opens an address in the default browser (a preview's Open in browser and
     // its links): the app that opens https, for a file too, so a file a page
-    // links is never run by the app its type has. How long ago the user last
+    // links is never run by the app its type has, and that app's name. How long ago the user last
     // pressed or typed in a web view (lib/web_page.dart): Flutter never sees
     // those, WebKit takes them. A file preview's web view made cookieless
     // (PreviewCookies). And a browser tab's loads as they commit (CommitWatch).
@@ -84,6 +84,15 @@ class MainFlutterWindow: NSWindow {
             return result(FlutterError(code: "refused", message: "No web view", details: nil))
           }
           return CommitWatch.watch(id, registry: registry, channel: browserChannel, result)
+        }
+        if call.method == "browserName" {
+          // The name of the app "open" opens with, for a browser tab's Open
+          // in button: as Finder shows it, less ".app".
+          guard let app = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "https://example.com")!) else {
+            return result(nil)
+          }
+          let name = FileManager.default.displayName(atPath: app.path)
+          return result(name.hasSuffix(".app") ? String(name.dropLast(4)) : name)
         }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
         guard let text = call.arguments as? String, let url = URL(string: text),

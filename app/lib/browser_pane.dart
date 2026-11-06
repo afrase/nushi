@@ -80,6 +80,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       ..view = this
       ..address.addListener(_moved);
     _field.addListener(_moved);
+    unawaited(lookUpDefaultBrowser());
     if (addressOf(_tab.address.value) case final url?) {
       _open(url);
     } else {

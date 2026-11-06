@@ -113,21 +113,37 @@ class _Page extends StatelessWidget {
   );
 }
 
+/// The default browser's name the fakes give, as the Mac's might.
+const browserName = 'Google Chrome';
+
+/// What the fakes' Mac says the default browser is from now on, until the
+/// test ends ([browserName] at first; null: it can't say).
+void defaultBrowserNameIs(String? name) => _browserName = name;
+String? _browserName = browserName;
+
 /// The hosts made, and the addresses sent to the default browser, while
-/// the test runs.
+/// the test runs; the default browser is [browserName].
 ({List<FakeBrowserHost> hosts, List<Uri> opened}) browserFakes() {
   final hosts = <FakeBrowserHost>[];
   final opened = <Uri>[];
-  final (wasHost, wasOpen) = (newBrowserHost, openInBrowser);
+  final (wasHost, wasOpen, wasName) = (
+    newBrowserHost,
+    openInBrowser,
+    defaultBrowserName,
+  );
   newBrowserHost = (tab) {
     final h = FakeBrowserHost(tab);
     hosts.add(h);
     return h;
   };
   openInBrowser = (url) async => opened.add(url);
+  defaultBrowserName = () async => _browserName;
   addTearDown(() {
     newBrowserHost = wasHost;
     openInBrowser = wasOpen;
+    defaultBrowserName = wasName;
+    defaultBrowser.value = null;
+    _browserName = browserName;
   });
   return (hosts: hosts, opened: opened);
 }
