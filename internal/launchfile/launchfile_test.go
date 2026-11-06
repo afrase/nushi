@@ -113,6 +113,28 @@ func TestMerge(t *testing.T) {
 	}
 }
 
+// A derived name neither hides a written one nor is a repeat: only a
+// written name claims.
+func TestMergeDerived(t *testing.T) {
+	dir := folder(t, map[string]string{
+		AgentsFile: `{"configurations": [
+			{"runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"]},
+			{"runtimeExecutable": "npm", "runtimeArgs": ["start", "x"]},
+			{"runtimeExecutable": "npm", "runtimeArgs": ["start", "y"]},
+		]}`,
+		ClaudeFile: `{"configurations": [{"name": "dev", "runtimeExecutable": "vite", "port": 5173}]}`,
+	})
+	l := read(t, dir)
+	var got []string
+	for _, e := range l.Entries {
+		got = append(got, e.Name+" "+e.Command+" "+e.Problem)
+	}
+	want := []string{"dev npm ", "preview npm ", "preview npm ", "dev vite "}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
+	}
+}
+
 // A worktree with neither file reads the main checkout's, resolved in the
 // worktree; one with either file reads only its own.
 func TestMainCheckout(t *testing.T) {
@@ -178,7 +200,8 @@ func TestFiles(t *testing.T) {
 		{`{"configurations": null}`, `"configurations" must be a list`, 0},
 		{`[]`, "not a JSON object", 0},
 		{`null`, "not a JSON object", 0},
-		{`{"configurations": [`, "not JSON with comments", 0},
+		{`{"configurations": [`, "not JSON with comments (line 1, column 21)", 0},
+		{"{\n \u202e}", "not JSON with comments (line 2, column 2)", 0},
 	} {
 		l := read(t, folder(t, map[string]string{ClaudeFile: c.text}))
 		var err string
@@ -198,5 +221,8 @@ func TestFiles(t *testing.T) {
 	}
 	if _, err := Read("relative", ""); err == nil {
 		t.Error("a relative folder read")
+	}
+	if _, err := Read(folder(t, nil), "relative/main"); err == nil {
+		t.Error("a relative main checkout read")
 	}
 }

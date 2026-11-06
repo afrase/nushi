@@ -27,10 +27,11 @@ const maxFile = 1 << 20
 
 // Launch is what a folder's launch files say.
 type Launch struct {
-	// Entries are the dev servers, merged by name (without case) with
-	// .agents' winning: .agents' in their order, then .claude's not named
-	// there. A server is addressed by its index here, never by a name
-	// that fails ValidName.
+	// Entries are the dev servers, merged by written name (without case)
+	// with .agents' winning: .agents' in their order, then .claude's not
+	// named there. A derived name may repeat another entry's (Claude
+	// takes the first of a name). A server is addressed by its index
+	// here, never by a name that fails ValidName.
 	Entries []Entry
 	// Files are the launch files found, each with what kept it from being
 	// read, if anything.
@@ -53,10 +54,13 @@ type File struct {
 // neither launch file, the main checkout's are read in their place (read
 // only, and resolved in folder). A missing file is no error; one that
 // can't be read is listed with its error, and a wrong entry with its
-// Problem. The error is folder's own.
+// Problem. The error is folder's own, or a main that isn't absolute.
 func Read(folder, main string) (Launch, error) {
 	if !filepath.IsAbs(folder) {
 		return Launch{}, fmt.Errorf("launch files: %s is not an absolute path", folder)
+	}
+	if main != "" && !filepath.IsAbs(main) {
+		return Launch{}, fmt.Errorf("launch files: main checkout %s is not an absolute path", main)
 	}
 	folder = filepath.Clean(folder)
 	root, err := os.OpenRoot(folder)
@@ -79,8 +83,10 @@ func Read(folder, main string) (Launch, error) {
 		for i, raw := range f.configurations {
 			e := at.entry(raw)
 			e.Source = Source{Path: f.Path, FromMain: f.FromMain, Index: i}
+			// Only a written name claims: a derived one (two nameless
+			// entries' "preview") may repeat, and never hides another.
 			key := strings.ToLower(e.Name)
-			if e.Name != "" {
+			if e.Name != "" && !e.NameDerived {
 				switch won[key] {
 				case "":
 					won[key] = f.Path
@@ -127,7 +133,7 @@ func readFiles(root *os.Root, fromMain bool) []found {
 func configurations(b []byte) ([]json.RawMessage, error) {
 	std, err := hujson.Standardize(b)
 	if err != nil {
-		return nil, fmt.Errorf("not JSON with comments: %w", err)
+		return nil, syntaxError(err)
 	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(std, &top); err != nil || top == nil {
@@ -142,4 +148,14 @@ func configurations(b []byte) ([]json.RawMessage, error) {
 		return nil, errors.New(`"configurations" must be a list`)
 	}
 	return list, nil
+}
+
+// syntaxError is hujson's err in fixed words with only its place: its
+// own text quotes a character of the file.
+func syntaxError(err error) error {
+	var line, column int
+	if _, scanErr := fmt.Sscanf(err.Error(), "hujson: line %d, column %d:", &line, &column); scanErr != nil {
+		return errors.New("not JSON with comments")
+	}
+	return fmt.Errorf("not JSON with comments (line %d, column %d)", line, column)
 }
