@@ -26,6 +26,8 @@ What isn't built yet and the decisions still open, each checked against the code
 
 - **A Files view's rest** (the owner, 2026-10-27; the use case is seeing what the agent made, like Claude Code's artifacts): missing is the web view's hardening past WebKit's free defaults (the Files pane, ADR 0090, has the tree). The owner trusts what the agent writes as much as a page they'd open in a browser (2026-10-28), so the network stays on, no switch. Read-only (editing beside a writing agent: ADR 0019's reasons). Mocks: https://claude.ai/artifact/TP8YD5rSCSi2L28hnsdPGP (the owner liked them).
 
+- **Browser tabs' rest** (ADR 0094): each view kept alive, a few across the app, so a page keeps its state and history when its tab or chat changes; a page's dialogs, a local self-signed certificate and basic auth drawn in the pane; the swipe back routed to a page under the pointer; a ⋯ with Copy address, Open in browser and Clear browsing data; `show` taking a local address; the dev servers from the project's launch files. Whether a tab may load any site is the owner's call: logins would share WebKit's store with file previews.
+
 ### Changes and review
 
 - **Review comments by an agent** (from JetBrains AIR): a side chat reviews the changes and posts comments through a small MCP tool (`add_comment(file, line, text)`); they show in Changes, and those picked go to the main chat.

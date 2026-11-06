@@ -13,6 +13,31 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart' show openInBrowser;
 
+/// The chat header's browser button (ADR 0094): it shows the preview's last
+/// browser tab, or a new one, lit while one shows.
+class BrowserButton extends StatelessWidget {
+  const new({required this.chat, super.key});
+
+  final ChatState chat;
+
+  /// What it says, and its row in the header's ⋯ when it folds there.
+  static const tooltip = 'Browser';
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: chat.preview,
+    builder: (context, showing, _) {
+      final t = NushiTheme.of(context).t;
+      return IconTap.line(
+        LineIcon.globe,
+        tooltip: tooltip,
+        color: showing is BrowserTab ? t.accentInk : t.textSecondary,
+        onTap: chat.showBrowser,
+      );
+    },
+  );
+}
+
 /// What a new browser tab says under its address field.
 const browserHint = 'Enter a local address, like localhost:3000';
 

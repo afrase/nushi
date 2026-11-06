@@ -311,6 +311,33 @@ void main() {
       await closeView(tester, d);
     }, variant: _mac);
 
+    testWidgets('the header’s globe opens a browser tab and is lit while it '
+        'shows; the palette’s New browser tab adds one', (tester) async {
+      _fakes();
+      final d = await _app(tester);
+      final globe = find.byType(BrowserButton);
+      Color ink() => tester
+          .widget<IconTap>(
+            find.descendant(of: globe, matching: find.byType(IconTap)),
+          )
+          .color!;
+      final t = NushiTheme.of(tester.element(globe)).t;
+      expect(ink(), t.textSecondary);
+      await tester.tap(globe);
+      await tester.pumpAndSettle();
+      final c = d.chats['c']!;
+      expect(c.preview.value, isA<BrowserTab>());
+      expect(find.byType(BrowserPane), findsOneWidget);
+      expect(ink(), t.accentInk);
+      await tester.tap(globe);
+      await tester.pumpAndSettle();
+      expect(c.previewTabs.value, hasLength(1));
+      runAct(tester.element(globe), d, Act.newBrowserTab);
+      await tester.pumpAndSettle();
+      expect(c.previewTabs.value, hasLength(2));
+      await closeView(tester, d);
+    }, variant: _mac);
+
     testWidgets('⌘R reloads the page, ⌘L takes the focus to its address; '
         '⌘W closes the tab', (tester) async {
       final fakes = _fakes();
