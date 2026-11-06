@@ -5,10 +5,11 @@ import 'package:nushi/tool_parts.dart' show plainPath;
 // field takes, and what the bar shows of where the page is. A page chooses
 // where it goes, so what the bar shows of that is guarded as a browser's is.
 
-/// Whether [host] is this Mac itself: `localhost`, 127.0.0.0/8 or `::1`.
+/// Whether [host] is this Mac itself: `localhost` and its names
+/// (`app.localhost`, which macOS resolves to loopback), 127.0.0.0/8 or `::1`.
 bool isLoopback(String host) {
   final h = host.toLowerCase();
-  if (h == 'localhost' || h == '::1') return true;
+  if (h == 'localhost' || h.endsWith('.localhost') || h == '::1') return true;
   final four = h.split('.');
   return four.length == 4 &&
       four.first == '127' &&
@@ -74,7 +75,6 @@ bool _plainHttp(String host) =>
     host.contains(':') || // IPv6
     RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host) ||
     host.endsWith('.local') ||
-    host.endsWith('.localhost') ||
     isLoopback(host);
 
 /// [url]'s host as people read it, its port after it (`[::1]:4000`), or ''

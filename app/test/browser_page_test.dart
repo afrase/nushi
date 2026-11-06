@@ -91,11 +91,26 @@ void main() {
       expect(asked, 1);
     });
 
-    test('loopback is localhost, 127.0.0.0/8 and ::1 only', () {
-      for (final h in ['localhost', '127.0.0.1', '127.255.0.9', '::1']) {
+    test('loopback is localhost and its names, 127.0.0.0/8 and ::1 only', () {
+      for (final h in [
+        'localhost',
+        'app.localhost',
+        'A.B.LOCALHOST',
+        '127.0.0.1',
+        '127.255.0.9',
+        '::1',
+      ]) {
         expect(isLoopback(h), isTrue, reason: h);
       }
-      for (final h in ['', '127.0.0', '127.0.0.01', '128.0.0.1', '::2']) {
+      for (final h in [
+        '',
+        '127.0.0',
+        '127.0.0.01',
+        '128.0.0.1',
+        '::2',
+        'localhost.example.com',
+        'notlocalhost',
+      ]) {
         expect(isLoopback(h), isFalse, reason: h);
       }
     });
@@ -171,6 +186,7 @@ void main() {
       'http://localhost:3000/',
       'http://127.0.0.1/',
       'http://[::1]:4000/',
+      'http://app.localhost:5173/',
       'about:blank',
     ]) {
       expect(notSecure(a), isFalse, reason: a);
