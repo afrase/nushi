@@ -29,27 +29,50 @@ var kinds = map[string][2]string{
 }
 
 // TestHelperProcess is the other process the tests listen from: it opens
-// a listener of each kind NUSHI_LISTENERS_KINDS names (comma-separated),
-// writes their ports on a line, and holds them until its input closes.
+// a listener of each kind NUSHI_LISTENERS_KINDS names (comma-separated; a
+// kind@port on that port, not a free one), writes their ports on a line,
+// answers each connection with its pid, and holds them until its input
+// closes.
 func TestHelperProcess(t *testing.T) {
 	names := os.Getenv("NUSHI_LISTENERS_KINDS")
 	if names == "" {
 		t.Skip("run by the other tests")
 	}
 	var ports []string
-	for kind := range strings.SplitSeq(names, ",") {
+	for name := range strings.SplitSeq(names, ",") {
+		kind, port, _ := strings.Cut(name, "@")
 		k := kinds[kind]
-		l, err := net.Listen(k[0], k[1])
+		addr := k[1]
+		if port != "" {
+			host, _, err := net.SplitHostPort(addr)
+			testcheck.NoErr(t, err)
+			addr = net.JoinHostPort(host, port)
+		}
+		l, err := net.Listen(k[0], addr)
 		testcheck.NoErr(t, err)
 		defer func() { _ = l.Close() }()
+		go answerPid(l)
 		ports = append(ports, strconv.Itoa(l.Addr().(*net.TCPAddr).Port))
 	}
 	_, _ = os.Stdout.WriteString(strings.Join(ports, ",") + "\n")
 	_, _ = bufio.NewReader(os.Stdin).ReadString('\n')
 }
 
-// listenElsewhere starts the helper listening on each of kinds, and returns its pid and the
-// ports in kinds' order; it ends with the test.
+// answerPid writes this process's pid to each connection l takes, until
+// l closes.
+func answerPid(l net.Listener) {
+	for {
+		c, err := l.Accept()
+		if err != nil {
+			return
+		}
+		_, _ = c.Write([]byte(strconv.Itoa(os.Getpid()) + "\n"))
+		_ = c.Close()
+	}
+}
+
+// listenElsewhere starts a helper listening on each of kinds, and returns
+// its pid and the ports in kinds' order; it ends with the test.
 func listenElsewhere(t *testing.T, kinds ...string) (int, []uint16) {
 	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcess$")
@@ -133,8 +156,8 @@ func TestListLeavesOutOtherInterfaces(t *testing.T) {
 	}
 }
 
-// TestListInTree finds a child's listener with its pid, in the tree
-// proctree reads below this process and not in another.
+// TestListInTree finds a child's listener with its pid, in the processes
+// proctree reads below this process and not in those of another.
 func TestListInTree(t *testing.T) {
 	pid, ports := listenElsewhere(t, "ipv4")
 	port := ports[0]
@@ -147,16 +170,19 @@ func TestListInTree(t *testing.T) {
 	}
 	below, err := proctree.Tree{}.Under(os.Getpid())
 	testcheck.NoErr(t, err)
-	if in, _ := (Tree{Root: os.Getpid(), Below: below}).Split(on); !slices.Equal(in, helpers) {
-		t.Fatalf("in this tree: %v, want %v", in, helpers)
+	if in, _ := (Procs{Root: os.Getpid(), Below: below}).Split(on); !slices.Equal(in, helpers) {
+		t.Fatalf("in this process's: %v, want %v", in, helpers)
 	}
-	if in, _ := (Tree{Root: 1}).Split(on); len(in) != 0 {
-		t.Fatalf("in a tree of launchd alone: %v", in)
+	other, _ := listenElsewhere(t, "ipv4")
+	below, err = proctree.Tree{}.Under(other)
+	testcheck.NoErr(t, err)
+	if in, _ := (Procs{Root: other, Below: below}).Split(on); len(in) != 0 {
+		t.Fatalf("in another helper's (%d): %v", other, in)
 	}
 }
 
-func TestTreeSplit(t *testing.T) {
-	tree := Tree{Root: 100, Below: []model.Process{{Pid: 101, Pgid: 101}, {Pid: 102, Pgid: 101}}}
+func TestProcsSplit(t *testing.T) {
+	tree := Procs{Root: 100, Below: []model.Process{{Pid: 101, Pgid: 101}, {Pid: 102, Pgid: 101}}}
 	at := func(pid int, addr string) Listener {
 		return Listener{Pid: pid, Addr: netip.MustParseAddrPort(addr)}
 	}
@@ -175,8 +201,11 @@ func TestTreeSplit(t *testing.T) {
 	}
 }
 
-// TestSockListener reads socket records as libproc gave them on a Mac
-// (family, vflag, the kernel's address bytes, port).
+// TestSockListener reads socket records (family, vflag, the kernel's
+// address bytes, port). The first six are as libproc gave them on a Mac
+// on 2026-11-06, for Go's five kinds of listener and JetBrains Toolbox's
+// Java socket; the rest are made up, for what must be left out and a
+// v4-mapped record kept as IPv6, which no socket showed.
 func TestSockListener(t *testing.T) {
 	v4 := func(a, b, c, d byte) [16]byte { return [16]byte{12: a, 13: b, 14: c, 15: d} }
 	mapped := func(a, b, c, d byte) [16]byte { return [16]byte{10: 0xff, 11: 0xff, 12: a, 13: b, 14: c, 15: d} }
@@ -186,14 +215,15 @@ func TestSockListener(t *testing.T) {
 		want string // "" for left out
 		dual bool
 	}{
-		{"IPv4 loopback", sock{syscall.AF_INET, iniIPv4, v4(127, 0, 0, 1), 7790}, "127.0.0.1:7790", false},
-		{"IPv4 wildcard", sock{syscall.AF_INET, iniIPv4, [16]byte{}, 7000}, "0.0.0.0:7000", false},
-		{"IPv6 loopback", sock{syscall.AF_INET6, iniIPv6, [16]byte{15: 1}, 32222}, "[::1]:32222", false},
-		{"IPv6 wildcard, v6 only", sock{syscall.AF_INET6, iniIPv6, [16]byte{}, 7000}, "[::]:7000", false},
-		{"IPv6 wildcard, dual-stack", sock{syscall.AF_INET6, iniIPv4 | iniIPv6, [16]byte{}, 53647}, "[::]:53647", true},
+		{"IPv4 loopback", sock{syscall.AF_INET, iniIPv4, v4(127, 0, 0, 1), 55756}, "127.0.0.1:55756", false},
+		{"IPv6 loopback", sock{syscall.AF_INET6, iniIPv6, [16]byte{15: 1}, 55759}, "[::1]:55759", false},
+		{"IPv4 wildcard", sock{syscall.AF_INET, iniIPv4, [16]byte{}, 55760}, "0.0.0.0:55760", false},
+		{"IPv6 wildcard, v6 only", sock{syscall.AF_INET6, iniIPv6, [16]byte{}, 55761}, "[::]:55761", false},
+		{"IPv6 wildcard, dual-stack", sock{syscall.AF_INET6, iniIPv4 | iniIPv6, [16]byte{}, 55762}, "[::]:55762", true},
 		// Java's: an IPv6 socket on a v4-mapped address, kept as IPv4.
 		{"v4-mapped, kept as IPv4", sock{syscall.AF_INET6, iniIPv4, v4(127, 0, 0, 1), 57644}, "127.0.0.1:57644", false},
 		{"v4-mapped, kept as IPv6", sock{syscall.AF_INET6, iniIPv6, mapped(127, 0, 0, 1), 57645}, "127.0.0.1:57645", false},
+		{"another loopback address", sock{syscall.AF_INET, iniIPv4, v4(127, 0, 0, 2), 8080}, "", false},
 		{"another interface", sock{syscall.AF_INET, iniIPv4, v4(192, 168, 7, 20), 8080}, "", false},
 		{"another IPv6 interface", sock{syscall.AF_INET6, iniIPv6, [16]byte{0: 0xfe, 1: 0x80, 15: 9}, 8080}, "", false},
 		{"no port", sock{syscall.AF_INET, iniIPv4, v4(127, 0, 0, 1), 0}, "", false},
@@ -229,6 +259,87 @@ func TestTakes(t *testing.T) {
 			t.Errorf("%+v takes 127.0.0.1: %v, ::1: %v; want %v, %v", c.l, c.l.Takes(lo4), c.l.Takes(lo6), c.on4, c.on6)
 		}
 	}
+}
+
+func TestReaching(t *testing.T) {
+	at := func(pid int, addr string, dual bool) Listener {
+		return Listener{Pid: pid, Addr: netip.MustParseAddrPort(addr), DualStack: dual}
+	}
+	lo4, lo6 := netip.MustParseAddrPort("127.0.0.1:3000"), netip.MustParseAddrPort("[::1]:3000")
+	any4, dual, exact4, exact6 := at(1, "0.0.0.0:3000", false), at(2, "[::]:3000", true), at(3, "127.0.0.1:3000", false), at(4, "[::1]:3000", false)
+	for _, c := range []struct {
+		name     string
+		ls       []Listener
+		on4, on6 []Listener
+	}{
+		{"a wildcard alone", []Listener{dual}, []Listener{dual}, []Listener{dual}},
+		{"loopback beside a wildcard", []Listener{dual, exact4}, []Listener{exact4}, []Listener{dual}},
+		{"both loopbacks beside a wildcard", []Listener{exact6, dual, exact4}, []Listener{exact4}, []Listener{exact6}},
+		{"two wildcards", []Listener{any4, dual}, []Listener{any4, dual}, []Listener{dual}},
+		{"another port", []Listener{at(5, "127.0.0.1:3001", false)}, nil, nil},
+	} {
+		if got := Reaching(c.ls, lo4); !slices.Equal(got, c.on4) {
+			t.Errorf("%s: reaching 127.0.0.1: %v, want %v", c.name, got, c.on4)
+		}
+		if got := Reaching(c.ls, lo6); !slices.Equal(got, c.on6) {
+			t.Errorf("%s: reaching ::1: %v, want %v", c.name, got, c.on6)
+		}
+	}
+}
+
+// TestReachingTwoProcesses checks Reaching against where macOS sends a
+// dial, with two processes listening on one port: the first on a free
+// one, the second beside it (Go's SO_REUSEADDR lets it bind). Reaching
+// must name only the process the dial reached, but for two wildcards
+// (either, the host whose dial may land on both).
+func TestReachingTwoProcesses(t *testing.T) {
+	for _, c := range []struct{ first, second, either string }{
+		{"ipv4", "dual", ""}, // a dev server's ":p" beside another app's 127.0.0.1:p
+		{"any4", "ipv4", ""},
+		{"dual", "ipv4", ""},
+		{"dual", "ipv6", ""},
+		{"any4", "dual", "127.0.0.1"},
+	} {
+		t.Run(c.first+"+"+c.second, func(t *testing.T) {
+			first, ports := listenElsewhere(t, c.first)
+			second, _ := listenElsewhere(t, c.second+"@"+strconv.Itoa(int(ports[0])))
+			ls, err := List()
+			testcheck.NoErr(t, err)
+			ls = slices.DeleteFunc(OnPort(ls, ports[0]), func(l Listener) bool { return l.Pid != first && l.Pid != second })
+			for _, host := range []string{"127.0.0.1", "::1"} {
+				dst := netip.AddrPortFrom(netip.MustParseAddr(host), ports[0])
+				reach := Reaching(ls, dst)
+				got, ok := answeringPid(t, dst)
+				if !ok {
+					if len(reach) != 0 {
+						t.Errorf("a dial to %v failed, but Reaching says %v", dst, reach)
+					}
+					continue
+				}
+				others := slices.ContainsFunc(reach, func(l Listener) bool { return l.Pid != got })
+				if !slices.ContainsFunc(reach, func(l Listener) bool { return l.Pid == got }) || others && host != c.either {
+					t.Errorf("a dial to %v reached pid %d, but Reaching says %v (listed %v)", dst, got, reach, ls)
+				}
+			}
+		})
+	}
+}
+
+// answeringPid dials dst and reads the pid a helper answers with; false
+// when the dial fails (another process holding the port's other family is
+// no helper and fails the test).
+func answeringPid(t *testing.T, dst netip.AddrPort) (int, bool) {
+	t.Helper()
+	c, err := net.Dial("tcp", dst.String())
+	if err != nil {
+		return 0, false
+	}
+	defer func() { _ = c.Close() }()
+	line, err := bufio.NewReader(c).ReadString('\n')
+	testcheck.NoErr(t, err)
+	pid, err := strconv.Atoi(strings.TrimSpace(line))
+	testcheck.NoErr(t, err)
+	return pid, true
 }
 
 // TestListenProbeMissesListener keeps the package doc's finding checked:

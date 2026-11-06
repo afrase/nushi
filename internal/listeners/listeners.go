@@ -1,7 +1,8 @@
 // Package listeners lists the TCP sockets listening for connections to
-// this Mac's localhost, with the process holding each, and tells whether
-// a port's listener is in a process tree (proctree's processes): what a
-// dev server's identity check and spotting need.
+// this Mac's localhost (127.0.0.1 and ::1), with the process holding
+// each, and tells which of them a connection reaches and whether they are
+// in a process tree (proctree's processes): what a dev server's identity
+// check and spotting need.
 //
 // It reads them through libproc (cgo: proc_listpids, then each process's
 // descriptors with PROC_PIDLISTFDS and each socket's with
@@ -46,10 +47,18 @@ type Listener struct {
 	DualStack bool
 }
 
-// local is whether a connection to localhost can reach l.
+// The addresses localhost resolves to.
+var (
+	loopback4 = netip.AddrFrom4([4]byte{127, 0, 0, 1})
+	loopback6 = netip.IPv6Loopback()
+)
+
+// local is whether a connection to localhost can reach l: one on
+// 127.0.0.1 or ::1, or a wildcard (another of 127.0.0.0/8, 127.0.0.2 say,
+// isn't reached by one).
 func (l Listener) local() bool {
 	a := l.Addr.Addr()
-	return a.IsLoopback() || a.IsUnspecified()
+	return a == loopback4 || a == loopback6 || a.IsUnspecified()
 }
 
 // Takes reports whether a connection to dst (127.0.0.1:p or [::1]:p,
@@ -83,24 +92,51 @@ func OnPort(ls []Listener, port uint16) []Listener {
 	return out
 }
 
-// Tree is a process and the processes below it, as proctree's Under reads
-// them.
-type Tree struct {
+// Reaching is those of ls a connection to dst (127.0.0.1:p or [::1]:p)
+// can land on. macOS gives it to a listener bound to dst's own address
+// before any wildcard, whichever bound first (seen with two processes on
+// one port: beside 0.0.0.0:p or ":p", a dial to 127.0.0.1 reached
+// 127.0.0.1:p; beside ":p", one to ::1 reached [::1]:p), so those alone
+// when there are any; otherwise every wildcard that Takes dst, since
+// which of two the kernel picks (0.0.0.0:p beside a dual-stack ":p")
+// isn't told here. A dev server's identity check asks it for each family
+// the browser tab dials: every listener it returns must be in the
+// server's Procs, and an empty one means nothing answers there.
+func Reaching(ls []Listener, dst netip.AddrPort) []Listener {
+	var exact, wild []Listener
+	for _, l := range ls {
+		switch {
+		case !l.Takes(dst):
+		case l.Addr.Addr().IsUnspecified():
+			wild = append(wild, l)
+		default:
+			exact = append(exact, l)
+		}
+	}
+	if len(exact) > 0 {
+		return exact
+	}
+	return wild
+}
+
+// Procs is a process and the processes below it, as proctree's Under
+// reads them.
+type Procs struct {
 	Root  int
 	Below []model.Process
 }
 
-// Has reports whether pid is the tree's root or below it.
-func (t Tree) Has(pid int) bool {
-	return pid == t.Root || slices.ContainsFunc(t.Below, func(p model.Process) bool { return p.Pid == pid })
+// Has reports whether pid is the root or below it.
+func (p Procs) Has(pid int) bool {
+	return pid == p.Root || slices.ContainsFunc(p.Below, func(q model.Process) bool { return q.Pid == pid })
 }
 
-// Split parts ls into those a process of the tree holds and the rest: on
-// one port, a dev server's own listener, and a foreign one beside it (on
-// the other family, say).
-func (t Tree) Split(ls []Listener) (in, out []Listener) {
+// Split parts ls into those a process of p holds and the rest: of what
+// Reaching returns, a dev server's own listener, and a foreign one a
+// connection to the server's port may land on instead.
+func (p Procs) Split(ls []Listener) (in, out []Listener) {
 	for _, l := range ls {
-		if t.Has(l.Pid) {
+		if p.Has(l.Pid) {
 			in = append(in, l)
 		} else {
 			out = append(out, l)
