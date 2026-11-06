@@ -438,9 +438,9 @@ class ChatHeader extends StatelessWidget {
 
   /// The browser's button as a row of ⋯, once it folds there.
   MenuEntry get _browserEntry => MenuEntry(
-    BrowserButton.tooltip,
+    BrowserButton.tooltip(shown: chat.browserShown),
     line: LineIcon.globe,
-    onPick: chat.showBrowser,
+    onPick: chat.showOrHideBrowser,
   );
 
   List<(ChatTab, String)> _tabs(ChatState chat) => [
