@@ -89,9 +89,11 @@ func TestReadLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// acp-go gives it a second to exit before it kills the group, and
+	// waits up to a second more for it: on a busy CI runner 5s was too few.
 	select {
 	case <-a.Done():
-	case <-time.After(5 * time.Second):
+	case <-time.After(20 * time.Second):
 		t.Fatal("the agent wasn't ended")
 	}
 	waitLog(t, b, `msg="agent ended: it sent a message over the read limit"`)
