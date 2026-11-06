@@ -91,7 +91,9 @@ bool _elsewhere(Uri url) => switch (url.scheme) {
 };
 
 /// [browserNavigation], with when the user last pressed in a page, asked
-/// only for one the browser may take.
+/// only for one the browser may take, and only a pointer's press counting:
+/// people type into a local page, and a key there (Space, Return) is the
+/// page's script's to see first.
 Future<PageNavigation> browserPageNavigation(
   String url, {
   required bool mainFrame,
@@ -101,7 +103,7 @@ Future<PageNavigation> browserPageNavigation(
   return browserNavigation(
     url,
     mainFrame: mainFrame,
-    pressed: asks ? await lastPressInPage() : null,
+    pressed: asks ? await lastPressInPage(pointerOnly: true) : null,
   );
 }
 
