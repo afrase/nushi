@@ -39,6 +39,8 @@ type stderrLines struct {
 	log *slog.Logger
 
 	mu      sync.Mutex
+	waiting bool       // the agent's pid isn't known yet: its records are held
+	held    []heldLine // the records made meanwhile, at most burst of them
 	buf     []byte
 	cut     bool // the line in buf was longer
 	tokens  float64
@@ -47,11 +49,26 @@ type stderrLines struct {
 	inKey   int // a private key's lines still to leave out
 }
 
-// setLog has the lines logged to log from now on.
+// heldLine is a record of a line the agent wrote before its pid was known.
+type heldLine struct {
+	level slog.Level
+	msg   string
+	args  []any
+}
+
+// setLog has the lines logged to log from now on, the ones held first:
+// an agent can write before Start knows its pid, and its first lines
+// (often why it failed) belong with the pid's. They went through the
+// caps and the key's leaving out as they came; only the record waited.
 func (s *stderrLines) setLog(log *slog.Logger) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.log = log
+	s.waiting = false
+	for _, h := range s.held {
+		s.log.Log(context.Background(), h.level, h.msg, h.args...)
+	}
+	s.held = nil
 }
 
 func (s *stderrLines) Write(p []byte) (int, error) {
@@ -110,6 +127,10 @@ func (s *stderrLines) emit() {
 	if s.dropped > 0 {
 		args = append(args, "dropped", s.dropped)
 		s.dropped = 0
+	}
+	if s.waiting {
+		s.held = append(s.held, heldLine{level, line, args})
+		return
 	}
 	s.log.Log(context.Background(), level, line, args...)
 }

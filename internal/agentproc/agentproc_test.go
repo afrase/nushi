@@ -153,6 +153,34 @@ func TestStderrCaps(t *testing.T) {
 	}
 }
 
+// What an agent writes before Start knows its pid is held, then logged
+// with the pid, a part line kept for the rest of it.
+func TestLinesBeforeThePid(t *testing.T) {
+	log, b := newLog(slog.LevelDebug)
+	s := &stderrLines{log: log, waiting: true}
+	_, _ = io.WriteString(s, "something went wrong\nhalf ")
+	if b.String() != "" {
+		t.Fatalf("logged before the pid:\n%s", b)
+	}
+	s.setLog(log.With("pid", 7))
+	_, _ = io.WriteString(s, "a line\n")
+	got := b.String()
+	for _, want := range []string{`msg="something went wrong" pid=7`, `msg="half a line" pid=7`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in\n%s", want, got)
+		}
+	}
+
+	// The lines go through the key's leaving out as they come, held or not.
+	log, b = newLog(slog.LevelDebug)
+	s = &stderrLines{log: log, waiting: true}
+	_, _ = io.WriteString(s, "-----BEGIN PRIVATE KEY-----\nMIIsecret\n-----END PRIVATE KEY-----\nafter\n")
+	s.setLog(log.With("pid", 7))
+	if got = b.String(); strings.Contains(got, "MIIsecret") || !strings.Contains(got, "msg=after pid=7") {
+		t.Errorf("a key's lines, held:\n%s", got)
+	}
+}
+
 // A line marked DEBUG (a bridge of Nushi's own) is logged at DEBUG, and
 // only when that's on.
 func TestDebugLinesOfABridge(t *testing.T) {

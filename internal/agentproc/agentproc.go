@@ -46,19 +46,20 @@ func Start(cmd *exec.Cmd, client acp.Client, log *slog.Logger) (*Agent, error) {
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	stderr := &stderrLines{log: log}
+	stderr := &stderrLines{log: log, waiting: true}
 	cmd.Stderr = stderr
 	calls := &callLog{}
 	calls.inner.Store(handlerOf(log))
 	started := time.Now()
 	conn, err := acp.Start(cmd, func(*acp.AgentConn) acp.Client { return client }, acp.WithLogger(slog.New(calls)), acp.WithWriteLimit(MaxMessage), acp.WithReadLimit(MaxRead))
 	if err != nil {
+		stderr.setLog(log) // what it wrote, if it ran at all
 		return nil, err
 	}
 	log = log.With("pid", cmd.Process.Pid)
 	calls.inner.Store(handlerOf(log))
-	stderr.setLog(log)
 	log.Info("agent started", "cmd", strings.Join(cmd.Args, " "))
+	stderr.setLog(log) // what it wrote before this goes after "agent started"
 	a := &Agent{AgentConn: conn, cmd: cmd, log: log}
 	go func() {
 		<-conn.Done() // its process has been waited for, and its stderr read
