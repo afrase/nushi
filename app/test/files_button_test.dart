@@ -246,6 +246,7 @@ void main() {
     expect(labels.where((l) => l.startsWith('Show ')).toList(), [
       'Show terminal',
       'Show files',
+      'Show browser',
       'Show details',
     ]);
     await tester.tap(find.text('Show files', findRichText: true));

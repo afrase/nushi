@@ -73,6 +73,42 @@ void main() {
       expect(c.previewTabs.value, hasLength(3));
     });
 
+    test('the globe hides the browser tabs and brings the same ones back', () {
+      final c = state()..openPreview('a.md');
+      final one = c.openBrowserTab('http://localhost:3000');
+      final two = c.openBrowserTab('http://localhost:5173');
+      c.showPreviewTab(one);
+      expect(c.browserShown, isTrue);
+      c.showOrHideBrowser();
+      // The file's tab stays and shows.
+      expect(c.browserShown, isFalse);
+      expect(c.previewFile, 'a.md');
+      expect(c.previewTabs.value, hasLength(1));
+      c.showOrHideBrowser();
+      expect(c.preview.value, same(one));
+      expect(c.previewTabs.value, hasLength(3));
+      expect(c.previewTabs.value.whereType<BrowserTab>(), [one, two]);
+      expect(one.address.value, 'http://localhost:3000');
+    });
+
+    test('with only browser tabs the globe closes the preview, and a new '
+        'tab brings the hidden ones back with it', () {
+      final c = state();
+      final one = c.openBrowserTab('http://localhost:3000');
+      c.showOrHideBrowser();
+      expect(c.preview.value, isNull);
+      expect(c.previewTabs.value, isEmpty);
+      final fresh = c.openBrowserTab();
+      expect(c.previewTabs.value, [one, fresh]);
+      expect(c.preview.value, same(fresh));
+      // Nothing left put away: hiding and showing again keeps the two.
+      c
+        ..showOrHideBrowser()
+        ..showOrHideBrowser();
+      expect(c.previewTabs.value, [one, fresh]);
+      expect(c.preview.value, same(fresh));
+    });
+
     test('a browser tab says its title, else its address, else New tab', () {
       final tab = BrowserTab();
       expect(tab.label, 'New tab');
@@ -143,8 +179,8 @@ void main() {
       await closeView(tester, d);
     }, variant: macOnly);
 
-    testWidgets('the header’s globe opens a browser tab and is lit while it '
-        'shows; the palette’s New browser tab adds one', (tester) async {
+    testWidgets('the header’s globe shows a browser tab, lit, and hides it; '
+        'the palette’s New browser tab adds one', (tester) async {
       browserFakes();
       final d = await browserApp(tester);
       final globe = find.byType(BrowserButton);
@@ -161,9 +197,18 @@ void main() {
       expect(c.preview.value, isA<BrowserTab>());
       expect(find.byType(BrowserPane), findsOneWidget);
       expect(ink(), t.accentInk);
+      // Pressed again it hides the browser, unlit; again, the same tab.
+      final shown = c.preview.value;
       await tester.tap(globe);
       await tester.pumpAndSettle();
+      expect(find.byType(BrowserPane), findsNothing);
+      expect(ink(), t.textSecondary);
+      expect(find.byTooltip('Show browser'), findsOneWidget);
+      await tester.tap(globe);
+      await tester.pumpAndSettle();
+      expect(c.preview.value, same(shown));
       expect(c.previewTabs.value, hasLength(1));
+      expect(find.byTooltip('Hide browser'), findsOneWidget);
       runAct(tester.element(globe), d, Act.newBrowserTab);
       await tester.pumpAndSettle();
       expect(c.previewTabs.value, hasLength(2));

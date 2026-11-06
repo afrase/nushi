@@ -20,8 +20,10 @@ class BrowserButton extends StatelessWidget {
 
   final ChatState chat;
 
-  /// What it says, and its row in the header's ⋯ when it folds there.
-  static const tooltip = 'Browser';
+  /// What it says, and its row in the header's ⋯ when it folds there:
+  /// Show browser or Hide browser.
+  static String tooltip({required bool shown}) =>
+      '${shown ? 'Hide' : 'Show'} browser';
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -30,9 +32,9 @@ class BrowserButton extends StatelessWidget {
       final t = NushiTheme.of(context).t;
       return IconTap.line(
         LineIcon.globe,
-        tooltip: tooltip,
+        tooltip: tooltip(shown: chat.browserShown),
         color: chat.browserShown ? t.accentInk : t.textSecondary,
-        onTap: chat.showBrowser,
+        onTap: chat.showOrHideBrowser,
       );
     },
   );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/card_list.dart';
 import 'package:nushi/disclosure.dart';
+import 'package:nushi/menu.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -214,7 +215,8 @@ class PanelWidget extends StatelessWidget {
 /// dragged, the [DragGrip] takes [trailing]'s place on the right (ADR
 /// 0092's amendment): the rail stays flat at rest, and the grip says the
 /// title drags. A [trailing] that [acts] (a button) stays, the grip left
-/// of it, so it can still be clicked.
+/// of it, so it can still be clicked, and a menu it opens keeps the grip
+/// there while the pointer is on the menu.
 class _Section extends StatefulWidget {
   const new({
     required this.title,
@@ -243,11 +245,42 @@ class _Section extends StatefulWidget {
 class _SectionState extends State<_Section> {
   bool _hovered = false;
 
+  /// A menu of the action's is open: the pointer on it has left the widget,
+  /// but the title row keeps its hovered look.
+  bool _menuOpen = false;
+
+  @override
+  void didUpdateWidget(_Section old) {
+    super.didUpdateWidget(old);
+    // A menu gone with its button (the widget folded) says nothing as it
+    // closes.
+    if (!widget.acts) _menuOpen = false;
+  }
+
+  /// The button that [_Section.acts], the grip left of it while [grip]. It
+  /// stays the same element as the pointer comes and goes (a menu it opened
+  /// would close with it), and its menus open under it, ending at its edge.
+  Widget _action({required bool grip}) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (grip) ...[const DragGrip(), const SizedBox(width: 10)],
+      NotificationListener<MenuOpened>(
+        key: const ValueKey('action'),
+        onNotification: (n) {
+          setState(() => _menuOpen = n.open);
+          return false;
+        },
+        child: TrailingMenus(child: widget.trailing!),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final dragged = DraggedCard.of(context);
     final w = widget;
+    final grip = _hovered || _menuOpen || dragged;
     // On the panel's background, dragged too.
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -280,18 +313,11 @@ class _SectionState extends State<_Section> {
                     Expanded(
                       child: Align(
                         alignment: Alignment.centerRight,
-                        child: !(_hovered || dragged)
-                            ? w.trailing
-                            : w.acts && w.trailing != null
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const DragGrip(),
-                                  const SizedBox(width: 10),
-                                  w.trailing!,
-                                ],
-                              )
-                            : const DragGrip(),
+                        child: w.acts && w.trailing != null
+                            ? _action(grip: grip)
+                            : grip
+                            ? const DragGrip()
+                            : w.trailing,
                       ),
                     ),
                   ],

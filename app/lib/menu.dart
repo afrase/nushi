@@ -86,6 +86,34 @@ class MenuEntry {
 /// Opens the menu: under (or over) the button, or at [at] in it.
 typedef OpenMenu = void Function([Offset? at]);
 
+/// Says the [Menu]s below open from a button at the end of a row (a panel
+/// widget's ⋯): under it, ending under its right edge, as macOS and Claude
+/// draw a trailing button's menu. Flutter opens a menu from its opener's
+/// left edge, and one with no room on its right it pushes back from the
+/// window's edge by the room it was laid out in, at least the theme's
+/// least width, though it draws narrower at that room's left: so a short
+/// menu ended left of a button at the window's right. Only for menus their
+/// button opens: one opened at a point (a right-click) would be laid out
+/// from that point the other way.
+class TrailingMenus extends InheritedWidget {
+  const new({required super.child, super.key});
+
+  static bool of(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<TrailingMenus>() != null;
+
+  @override
+  bool updateShouldNotify(TrailingMenus oldWidget) => false;
+}
+
+/// Sent up the tree as a [Menu] opens ([open]) and once it has closed, so
+/// what holds its opener can keep its look while the pointer is on the
+/// menu, which lies outside it.
+class MenuOpened extends Notification {
+  const new({required this.open});
+
+  final bool open;
+}
+
 /// The app's one menu: it opens at once, without an animation, under or
 /// over what [builder] draws (given the opener), or where it asks. What
 /// opens it is a control of `controls.dart` (a [MenuField], a
@@ -194,7 +222,23 @@ class _MenuState extends State<Menu> {
   }
 
   @override
-  Widget build(BuildContext context) => Focus(
+  Widget build(BuildContext context) {
+    if (!TrailingMenus.of(context)) return _anchor(context);
+    // Flutter lays a menu out from its opener's start edge, toward the
+    // text's end, so a trailing button's menu is laid out as in the other
+    // direction, from its end edge; its opener and rows keep the real one.
+    final real = Directionality.of(context);
+    return Directionality(
+      textDirection: real == TextDirection.ltr
+          ? TextDirection.rtl
+          : TextDirection.ltr,
+      child: _anchor(context, real: real),
+    );
+  }
+
+  /// The menu, its opener and rows in [real] when it's laid out in the
+  /// other direction.
+  Widget _anchor(BuildContext context, {TextDirection? real}) => Focus(
     focusNode: _focus,
     skipTraversal: true, // focused only while the menu is open
     onKeyEvent: _onKey,
@@ -207,24 +251,44 @@ class _MenuState extends State<Menu> {
       alignmentOffset: widget.above
           ? Offset(0, -_height(context) - 4)
           : Offset.zero,
-      menuChildren: _rows(
-        context,
-        widget.entries,
-        _menu.close,
-        digits: widget.digits,
-        filter: widget.filter,
-        keepFocus: widget.keepFocus,
-        largeIcons: widget.largeIcons,
-      ),
+      menuChildren: [
+        for (final row in _rows(
+          context,
+          widget.entries,
+          _menu.close,
+          digits: widget.digits,
+          filter: widget.filter,
+          keepFocus: widget.keepFocus,
+          largeIcons: widget.largeIcons,
+        ))
+          if (real == null)
+            row
+          else
+            Directionality(
+              textDirection: real,
+              // Where the row sits in the real direction.
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: row,
+              ),
+            ),
+      ],
       onOpen: () {
         if (widget.digits) _focus.requestFocus();
+        const MenuOpened(open: true).dispatch(context);
         widget.onOpen?.call();
       },
       // After the menu has settled its own focus.
-      onClose: () => WidgetsBinding.instance.addPostFrameCallback(
-        (_) => widget.onClose?.call(),
-      ),
-      child: widget.builder(context, _open),
+      onClose: () => WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) const MenuOpened(open: false).dispatch(context);
+        widget.onClose?.call();
+      }),
+      child: real == null
+          ? widget.builder(context, _open)
+          : Directionality(
+              textDirection: real,
+              child: widget.builder(context, _open),
+            ),
     ),
   );
 }

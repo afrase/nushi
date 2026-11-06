@@ -364,6 +364,7 @@ class ChatState extends ChangeNotifier {
   BrowserTab openBrowserTab([String address = '']) {
     final browser = BrowserTab(address);
     tab.value = ChatTab.chat;
+    _restoreBrowsers();
     _show(browser);
     return browser;
   }
@@ -372,17 +373,57 @@ class ChatState extends ChangeNotifier {
   bool get browserShown =>
       preview.value is BrowserTab && shownTab == ChatTab.chat;
 
-  /// Shows the last browser tab opened, or a new one if it has none, on the
+  /// The browser tabs [hideBrowser] put away, and the one that showed:
+  /// back in the preview as the browser shows again.
+  ({List<BrowserTab> tabs, BrowserTab shown})? _hidden;
+
+  /// The globe: hides the browser while it shows, else shows it.
+  void showOrHideBrowser() => browserShown ? hideBrowser() : showBrowser();
+
+  /// Shows the browser tabs [hideBrowser] put away, the one that showed,
+  /// else the last browser tab opened, or a new one if it has none, on the
   /// Chat tab.
   void showBrowser() {
     tab.value = ChatTab.chat;
     if (preview.value is BrowserTab) return;
-    final last = previewTabs.value.whereType<BrowserTab>().lastOrNull;
+    final last =
+        _restoreBrowsers() ??
+        previewTabs.value.whereType<BrowserTab>().lastOrNull;
     if (last == null) {
       openBrowserTab();
     } else {
       _show(last);
     }
+  }
+
+  /// Puts the preview's browser tabs away, at their addresses, for
+  /// [showBrowser] to bring back. A file's tab left shows (the last), else
+  /// the preview closes.
+  void hideBrowser() {
+    if (preview.value case final BrowserTab shown) {
+      final tabs = previewTabs.value.whereType<BrowserTab>().toList();
+      final rest = [
+        for (final e in previewTabs.value)
+          if (e is! BrowserTab) e,
+      ];
+      _hidden = (tabs: tabs, shown: shown);
+      if (rest.isEmpty) {
+        preview.value = null;
+        return;
+      }
+      previewTabs.value = rest;
+      preview.value = rest.last;
+    }
+  }
+
+  /// Adds the tabs [hideBrowser] put away back after the preview's, and
+  /// gives the one that showed; null with none put away.
+  BrowserTab? _restoreBrowsers() {
+    final hidden = _hidden;
+    if (hidden == null) return null;
+    _hidden = null;
+    previewTabs.value = [...previewTabs.value, ...hidden.tabs];
+    return hidden.shown;
   }
 
   /// Shows [tab], one of the preview's tabs.
