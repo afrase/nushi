@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/menu.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -120,6 +121,65 @@ void main() {
     expect(find.text('4%'), findsOneWidget);
     expect(find.byIcon(Icons.refresh), findsNothing);
     collapsedWidgets.value = {};
+  });
+
+  // The pointer leaving the widget for the menu once rebuilt the action
+  // in another place, which closed its menu before a row could be picked.
+  testWidgets("a widget's menu stays open as the pointer goes onto it, the "
+      'grip with it, and its row picks', (tester) async {
+    collapsedWidgets.value = {};
+    viewport(tester, const Size(800, 400));
+    var picked = false;
+    await tester.pumpWidget(
+      themed(
+        Align(
+          alignment: Alignment.topRight,
+          child: SizedBox(
+            width: 320,
+            child: PanelWidgets([
+              PanelWidget(
+                title: 'Pull request',
+                action: MenuIcon(
+                  Icons.more_horiz,
+                  tooltip: 'Pull request',
+                  entries: [
+                    MenuEntry('Open on GitHub', onPick: () {}),
+                    MenuEntry('Unlink', onPick: () => picked = true),
+                  ],
+                ),
+                rows: const [(null, 'a row')],
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+    final mouse = await _pointer(tester);
+    final more = tester.getCenter(find.byIcon(Icons.more_horiz));
+    await mouse.moveTo(more);
+    await tester.pumpAndSettle();
+    await mouse.down(more);
+    await mouse.up();
+    await tester.pumpAndSettle();
+    expect(find.text('Unlink'), findsOneWidget, reason: 'open');
+    final grip = tester.getRect(find.byType(DragGrip));
+
+    final row = tester.getCenter(find.text('Unlink'));
+    await mouse.moveTo(Offset(more.dx, row.dy)); // off the widget, onto it
+    await tester.pumpAndSettle();
+    await mouse.moveTo(row);
+    await tester.pumpAndSettle();
+    expect(find.text('Unlink'), findsOneWidget, reason: 'still open');
+    expect(tester.getRect(find.byType(DragGrip)), grip, reason: 'held');
+
+    await mouse.down(row);
+    await mouse.up();
+    await tester.pumpAndSettle();
+    expect(picked, isTrue);
+    expect(find.text('Unlink'), findsNothing);
+    await mouse.moveTo(const Offset(1, 1));
+    await tester.pumpAndSettle();
+    expect(find.byType(DragGrip), findsNothing, reason: 'flat again');
   });
 }
 

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_checks.dart';
@@ -406,6 +407,45 @@ void main() {
         matching: find.text('Pull request'),
       ),
       findsNothing,
+    );
+    d.dispose();
+  }, variant: _mac);
+
+  // The owner's report: the widget's ⋯, at the window's right, opened its
+  // menu off to one side; and the pointer going onto it closed it.
+  testWidgets("the widget's ⋯ opens its menu under it, ending at its right "
+      'edge, and it stays open to be picked from', (tester) async {
+    final (d, fake) = await _app(tester, whole: pull());
+    final more = _inPull(find.byType(IconTap));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: tester.getCenter(more));
+    addTearDown(mouse.removePointer);
+    await tester.pumpAndSettle();
+    await mouse.down(tester.getCenter(more));
+    await mouse.up();
+    await tester.pumpAndSettle();
+    final opener = tester.getRect(more);
+    final unlink = tester.getRect(
+      find.ancestor(
+        of: find.text('Unlink'),
+        matching: find.byType(MenuItemButton),
+      ),
+    );
+    // The row, inside the menu's padding.
+    expect(unlink.right, moreOrLessEquals(opener.right - 5, epsilon: 1));
+    expect(unlink.top, greaterThan(opener.bottom));
+
+    await mouse.moveTo(unlink.center);
+    await tester.pumpAndSettle();
+    await render(tester, find.byType(NushiApp), 'pull_widget_menu');
+    await mouse.down(unlink.center);
+    await mouse.up();
+    await tester.pumpAndSettle();
+    expect(find.text('Unlink'), findsNothing);
+    expect(
+      fake.calls.whereType<LinkChatPullRequest>().map((r) => r.hasPull()),
+      [false],
+      reason: 'Unlink ran',
     );
     d.dispose();
   }, variant: _mac);
