@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat_view.dart';
@@ -75,6 +76,29 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
     expect(_expand, findsOneWidget);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  testWidgets('Esc collapses it after another browser tab is picked', (
+    tester,
+  ) async {
+    browserFakes();
+    final d = await browserApp(tester);
+    d.chats['c']!
+      ..openBrowserTab('https://example.com')
+      ..openBrowserTab('http://localhost:3000');
+    await tester.pumpAndSettle();
+    await tester.tap(_expand);
+    await tester.pumpAndSettle();
+    // The other tab's chip, picked while it's expanded: a new pane.
+    await tester.tap(find.text('example.com').first);
+    await tester.pumpAndSettle();
+    expect(_collapse, findsOneWidget);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'browser pane');
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(_expand, findsOneWidget);
+    expect(find.byType(Composer), findsOneWidget);
     await closeView(tester, d);
   }, variant: macOnly);
 

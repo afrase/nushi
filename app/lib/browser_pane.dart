@@ -100,6 +100,9 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     unawaited(lookUpDefaultBrowser());
     if (addressOf(_tab.address.value) case final url?) {
       _open(url);
+      // Made expanded (another tab picked while the pane is): the pane
+      // takes the focus the old one had, so Esc still reaches it.
+      if (widget.expanded) _takeFocus();
     } else {
       // A new tab waits on its address.
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,12 +114,13 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   @override
   void didUpdateWidget(BrowserPane old) {
     super.didUpdateWidget(old);
-    if (widget.expanded && !old.expanded && !_field.hasFocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _pane.requestFocus();
-      });
-    }
+    if (widget.expanded && !old.expanded) _takeFocus();
   }
+
+  /// Gives the pane the focus after this frame, unless its field has it.
+  void _takeFocus() => WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted && !_field.hasFocus) _pane.requestFocus();
+  });
 
   @override
   void dispose() {
