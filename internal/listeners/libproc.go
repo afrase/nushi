@@ -19,9 +19,9 @@ struct sock {
 };
 
 // pid_socks writes up to max of pid's listening TCP sockets to out and
-// returns how many, or -1 when its descriptors can't be read (it ended, or
-// it isn't the user's). A descriptor that closes while it is read is
-// skipped.
+// returns how many it has, which can be more than max, or -1 when its
+// descriptors can't be read (it ended, or it isn't the user's). A
+// descriptor that closes while it is read is skipped.
 static int pid_socks(int pid, struct sock *out, int max) {
 	int size = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, NULL, 0);
 	if (size <= 0) return -1;
@@ -33,11 +33,15 @@ static int pid_socks(int pid, struct sock *out, int max) {
 		return -1;
 	}
 	int n = 0;
-	for (int i = 0; i < size / (int)sizeof(struct proc_fdinfo) && n < max; i++) {
+	for (int i = 0; i < size / (int)sizeof(struct proc_fdinfo); i++) {
 		if (fds[i].proc_fdtype != PROX_FDTYPE_SOCKET) continue;
 		struct socket_fdinfo si;
 		if (proc_pidfdinfo(pid, fds[i].proc_fd, PROC_PIDFDSOCKETINFO, &si, sizeof si) != sizeof si) continue;
 		if (si.psi.soi_kind != SOCKINFO_TCP || si.psi.soi_proto.pri_tcp.tcpsi_state != TSI_S_LISTEN) continue;
+		if (n >= max) {
+			n++;
+			continue;
+		}
 		struct in_sockinfo *in = &si.psi.soi_proto.pri_tcp.tcpsi_ini;
 		struct sock *s = &out[n++];
 		memset(s, 0, sizeof *s);
@@ -60,9 +64,10 @@ import (
 	"unsafe"
 )
 
-// maxPerProcess bounds the listening sockets read from one process: a dev
-// server has a few; more than this many are left unread.
-const maxPerProcess = 64
+// socksAtFirst is room for the listening sockets of one process at the
+// first read: a dev server has a few, and a process with more is read
+// again with room for all.
+const socksAtFirst = 16
 
 // pids lists the user's processes (PROC_UID_ONLY: libproc can't read
 // another user's descriptors, and asking costs a call each).
@@ -102,10 +107,9 @@ func List() ([]Listener, error) {
 		return nil, fmt.Errorf("listing processes: %w", err)
 	}
 	var out []Listener
-	var socks [maxPerProcess]C.struct_sock
+	socks := make([]C.struct_sock, socksAtFirst)
 	for _, pid := range ps {
-		n := C.pid_socks(C.int(pid), &socks[0], maxPerProcess)
-		for _, s := range socks[:max(n, 0)] {
+		for _, s := range pidSocks(pid, &socks) {
 			k := sock{family: int(s.family), vflag: int(s.vflag), port: int(s.port)}
 			for i, b := range s.addr {
 				k.addr[i] = byte(b)
@@ -116,6 +120,19 @@ func List() ([]Listener, error) {
 		}
 	}
 	return out, nil
+}
+
+// pidSocks reads pid's listening TCP sockets into *buf, growing it when
+// they don't fit (a few times at most: the process may open more between
+// reads, and then the last read's first ones are kept).
+func pidSocks(pid int, buf *[]C.struct_sock) []C.struct_sock {
+	for try := 1; ; try++ {
+		n := int(C.pid_socks(C.int(pid), &(*buf)[0], C.int(len(*buf))))
+		if n <= len(*buf) || try == 3 {
+			return (*buf)[:max(min(n, len(*buf)), 0)]
+		}
+		*buf = make([]C.struct_sock, n+socksAtFirst)
+	}
 }
 
 // The socket's flags of its IP versions (INI_IPV4 and INI_IPV6 in

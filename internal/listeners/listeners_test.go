@@ -156,6 +156,18 @@ func TestListLeavesOutOtherInterfaces(t *testing.T) {
 	}
 }
 
+// TestListReadsManyPerProcess lists every listener of a process holding
+// more than fit at the first read.
+func TestListReadsManyPerProcess(t *testing.T) {
+	many := slices.Repeat([]string{"ipv4"}, 2*socksAtFirst+1)
+	pid, ports := listenElsewhere(t, many...)
+	ls, err := List()
+	testcheck.NoErr(t, err)
+	if got := ofPid(ls, pid); len(got) != len(ports) {
+		t.Fatalf("listed %d of the helper's %d listeners", len(got), len(ports))
+	}
+}
+
 // TestListInTree finds a child's listener with its pid, in the processes
 // proctree reads below this process and not in those of another.
 func TestListInTree(t *testing.T) {
