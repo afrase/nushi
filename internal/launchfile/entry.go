@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"unicode/utf8"
+	"unicode/utf16"
 )
 
 // Source is where an entry was written.
@@ -36,12 +36,14 @@ type Entry struct {
 	Command string
 	Args    []string
 	// Cwd is the absolute folder the command runs in, inside the folder
-	// (no link leads out of it); empty for an entry with no command.
+	// (no link leads out of it) when Read ran: CheckCwd checks it again
+	// at the start. Empty for an entry with no command.
 	Cwd string
 	// Port is the port the server is to listen on: the entry's, its
 	// localhost url's, the command's (env PORT, --port or -p, a
 	// localhost:N or :NNNN in the arguments), else 3000 with a command.
-	// Zero only for an entry attaching to an address that isn't local.
+	// Zero only for an entry attaching to an address that isn't local
+	// with no port or env PORT.
 	Port int
 	Env  map[string]string
 	// AutoPort is the entry's autoPort: nil when unset.
@@ -170,14 +172,39 @@ func (p place) cwd(cwd string) (string, error) {
 	if cwd == "" {
 		return p.folder, nil
 	}
-	if !filepath.IsAbs(cwd) {
-		cwd = filepath.Join(p.folder, cwd)
+	return cwdIn(p.root, p.folder, cwd)
+}
+
+// CheckCwd checks again that cwd, an Entry's Cwd read from folder (Read's
+// folder), is a folder inside folder through no link out of it, as it was
+// when read: the starter calls it just before running the command, since
+// a folder can have been swapped for a link since (Claude checks at the
+// start). A swap between this and the spawn isn't caught.
+func CheckCwd(folder, cwd string) error {
+	if !filepath.IsAbs(folder) || !filepath.IsAbs(cwd) {
+		return errors.New(`"cwd" and its project must be absolute paths`)
 	}
-	rel, err := filepath.Rel(p.folder, filepath.Clean(cwd))
+	folder = filepath.Clean(folder)
+	root, err := os.OpenRoot(folder)
+	if err != nil {
+		return errors.New(`"cwd": the project's folder can't be opened`)
+	}
+	defer root.Close() //nolint:errcheck // read-only
+	_, err = cwdIn(root, folder, cwd)
+	return err
+}
+
+// cwdIn is cwd (relative to folder, or absolute) checked through root,
+// folder's: a folder inside it through no link out of it.
+func cwdIn(root *os.Root, folder, cwd string) (string, error) {
+	if !filepath.IsAbs(cwd) {
+		cwd = filepath.Join(folder, cwd)
+	}
+	rel, err := filepath.Rel(folder, filepath.Clean(cwd))
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", errors.New(`"cwd" must be a folder inside the project's`)
 	}
-	fi, err := p.root.Stat(rel)
+	fi, err := root.Stat(rel)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		return "", errors.New(`"cwd" names no folder in the project`)
@@ -186,12 +213,13 @@ func (p place) cwd(cwd string) (string, error) {
 	case !fi.IsDir():
 		return "", errors.New(`"cwd" must be a folder`)
 	}
-	return filepath.Join(p.folder, rel), nil
+	return filepath.Join(folder, rel), nil
 }
 
 // derivedName is Claude's name for an entry with none and a command: its
 // last argument without its extension, ":" made "-", or "preview" when
-// that leaves less than two characters.
+// that leaves less than two characters (UTF-16 units, as JavaScript
+// counts them: one emoji is two).
 func derivedName(args []string) string {
 	if len(args) == 0 || args[len(args)-1] == "" {
 		return "preview"
@@ -201,10 +229,19 @@ func derivedName(args []string) string {
 		last = last[:i]
 	}
 	last = strings.ReplaceAll(last, ":", "-")
-	if utf8.RuneCountInString(last) < 2 {
+	if utf16Len(last) < 2 {
 		return "preview"
 	}
 	return last
+}
+
+// utf16Len is s's length in UTF-16 units, JavaScript's length.
+func utf16Len(s string) int {
+	n := 0
+	for _, r := range s {
+		n += max(utf16.RuneLen(r), 1) // an invalid byte is U+FFFD, one unit
+	}
+	return n
 }
 
 // hash is a SHA-256 of what e resolves to.
