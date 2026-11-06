@@ -1,0 +1,25 @@
+# 0094. The preview pane has browser tabs for local web servers
+
+Status: accepted, 2026-11-06.
+
+## Context
+The owner wants Claude desktop's browser beside the chat: look at the dev server the agent started while the chat goes on. The preview pane already shows an agent's pages, but only files, and a link out of one opens the default browser (ADR 0068). A dev server is a page at an address, which keeps its own history and moves as it's used, so it isn't a file.
+
+## Decision
+- **A browser tab is a preview tab** (ADR 0070): the pane's tabs hold files and browser tabs in the order opened (`PreviewEntry`: `PreviewFile` or `BrowserTab`). One pane, its width, Close (every tab) and ⌘W stay as they are. A browser tab is never matched to another: each open is its own.
+- **It looks like Claude desktop's** where Nushi's rules allow: a + at the end of the tab row opens a new browser tab, shown only while a browser tab shows (a file's tabs keep plain names and nothing else); under the title row a bar of Back, Forward, Reload and the address field; the tab named for the page's title. A new tab is its address field and "Enter a local address, like localhost:3000". The chat header's globe (a drawn line icon, ADR 0072) shows the last browser tab or a new one; it folds into ⋯ first when the header is tight. The palette and File have New browser tab.
+- **Local pages only, for now.** The main frame loads http or https to this Mac (`localhost`, 127.0.0.0/8, `::1`) and `about:blank`. Another site, or a mail address, opens in the default browser only on a press: a typed address (Return is the press), or a link within a second of one (ADR 0068's rule), so a page can't open the browser on its own. `file:` and every other scheme go nowhere, in frames too; files belong in a file's tab. Frames inside a local page load what they like but files. Any site in the tab is the owner's call (docs/roadmap.md).
+- **The web view is WebKit's defaults, less windows**: no script message handlers or JavaScript channels, so nothing from a page reaches Nushi; `javaScriptCanOpenWindowsAutomatically` off, and a link with a target loads in the tab (the plugin's way). It shares WebKit's default data store with file previews and diagrams, the only one the plugin reaches (docs/security.md).
+- **⌘L and ⌘R are menu items** (File › Open Location…, View › Reload Page) as well as the app's keys, so they work while WebKit has the keys: AppKit gives a key the web view doesn't take to the menu bar. They apply only with a browser tab in sight and no dialog up. Jira's and GitHub's ⌘R stay theirs: their views bind it below the app's keys, and the acts don't apply there. ⌘[ and ⌘] stay chat switching; Back and Forward are buttons.
+- **One view at a time**, as ADR 0070 has it: a browser tab's page loads again from its address when its tab shows, its history gone.
+
+## Consequences
+- Switching tabs or chats reloads a page and loses its state and history; an app-wide keep-alive of a few views is the next step (docs/roadmap.md).
+- Until the pane draws its own, a page's dialogs get the plugin's answers (an `alert` shows nothing, `confirm` is no, `prompt` is empty), and a self-signed certificate or basic auth gets WebKit's default handling, which fails; the swipe back is the app's, not the page's.
+- A page's title is read when its address changes and when it finishes loading; a single-page app that only changes its title isn't seen (the plugin has no title observer).
+- Nothing opens a browser tab for the agent yet: `show {url}` and the dev servers are later work.
+
+## Alternatives considered
+- A browser as its own place, beside Chat and Changes: the owner rejected file tabs in the header (ADR 0070), and the page is wanted beside the chat.
+- Any http(s) site in the tab now: logins would share WebKit's store with file previews, and a local page could send the tab anywhere; left for the owner.
+- Back and Forward on ⌘← and ⌘→: in a field inside the page they move the caret, and the menu can't tell.

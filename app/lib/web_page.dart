@@ -164,18 +164,23 @@ Future<PageNavigation> pageNavigation(
   required bool mainFrame,
 }) async {
   if (staysInPage(url, path, mainFrame: mainFrame)) return PageNavigation.stay;
-  Duration? ago;
-  try {
-    ago = await sincePressInPage();
-  } on Object {
-    // no answer: no press
-  }
   return navigation(
     url,
     path,
     mainFrame: mainFrame,
-    pressed: ago == null ? null : clock().subtract(ago),
+    pressed: await lastPressInPage(),
   );
+}
+
+/// When the user last pressed in a web view, from [sincePressInPage]: null
+/// if never, since the last ask, or with no answer.
+Future<DateTime?> lastPressInPage() async {
+  try {
+    final ago = await sincePressInPage();
+    return ago == null ? null : clock().subtract(ago);
+  } on Object {
+    return null; // no answer: no press
+  }
 }
 
 /// Whether a navigation to [url] stays in the web view showing the file

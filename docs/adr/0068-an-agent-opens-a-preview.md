@@ -17,6 +17,7 @@ The owner wants what Claude Code's artifacts give: the agent finishes a page or 
 ## Consequences
 - A side chat is a fork of the chat's session and gets the chat's server (its key, its chat): its show opens beside the chat, under the chat's check, so a file only the side chat wrote outside the folder is refused. Subagents share their harness's tools, and their writes count in `Wrote`.
 - The preview's limits stay: the 5 MB cap for what the daemon sends, a web view's read access, no bridge from the page to Nushi. A file over the cap shows as it would from a click.
+- Amended by [0094](0094-browser-tabs-for-local-web-servers.md): a page that leaves its file opens in the default browser only on a press, and that's a file preview's rule. A browser tab keeps this Mac's pages (http and https to loopback) in the tab and sends other sites to the browser on a press; neither loads `file:` the other's way. `show` still opens files only.
 - `Wrote` counts any tool call's locations, reads and refused calls too, so "wrote" is wider than it says: an agent can show an HTML file it only read outside the folder, if the harness allows it. Tightening it belongs to `Wrote`, for both paths.
 - In a window too narrow for the pane beside the transcript, the pane doesn't open by itself: it would lie over the box and any card waiting (`Beside`). The row's Preview still opens it.
 - An extra `nushid tools-mcp` per Claude or Codex session, and MCP instructions of a sentence in each.
