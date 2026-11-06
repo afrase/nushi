@@ -23,7 +23,8 @@ import 'package:nushi/file_mode.dart';
 /// what rows show) and sections, the models picked last, each repository's
 /// merge method, each chat's pinned artifacts, and the Mac's notifications
 /// and Dock badge, the appearance and the color theme, whether the
-/// composer checks spelling, whether a preview's source wraps its lines,
+/// composer checks spelling, whether a chat's links open in a browser
+/// tab, whether a preview's source wraps its lines,
 /// what reply cards ask the agent, and the newer release whose toast was
 /// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
@@ -263,6 +264,12 @@ final Pref<bool> dockBadge = _plain('dockBadge', true);
 /// Whether the Mac's composer checks spelling (ADR 0083): off, it asks
 /// nothing and flags nothing.
 final Pref<bool> checkSpelling = _plain('checkSpelling', true);
+
+/// Whether a web link the user clicks in a chat (its messages, its tool
+/// calls' output) opens in a browser tab beside it (on at first, as Claude
+/// desktop's "Open links in built-in browser"; ADR 0094), rather than in
+/// the default browser; `openWebLink`.
+final Pref<bool> linksInBrowserTab = _plain('linksInBrowserTab', true);
 
 /// Whether a file's source in the preview wraps its long lines (on at
 /// first); off, they run on and the view scrolls sideways. One for every

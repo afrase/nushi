@@ -141,8 +141,8 @@ String baseName(String path) {
 }
 
 /// Opens a file's preview from the tool rows below it, the one open
-/// ([current]) marked. With no [open] (an older daemon) there's no
-/// Preview button.
+/// ([current]) marked, and a web link in a browser tab ([browse]). With no
+/// [open] (an older daemon) there's no Preview button.
 class Previews extends InheritedWidget {
   const new({
     required this.open,
@@ -150,9 +150,17 @@ class Previews extends InheritedWidget {
     super.key,
     this.current,
     this.name,
+    this.browse,
+    this.browseFits,
   });
 
   final void Function(String path)? open;
+
+  /// Opens a web address in a new browser tab beside the chat (ADR 0094),
+  /// and whether the pane has room to show one now; without them (the
+  /// phone) links open in the browser (`openWebLink`).
+  final void Function(Uri url)? browse;
+  final bool Function()? browseFits;
   final ValueListenable<PreviewEntry?>? current;
 
   /// The chat's one name for a file however a row or the preview named it

@@ -93,7 +93,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Preview** | An artifact shown in the side pane (or full screen on the phone), kept current as it changes; Preview and Source. | `preview.dart`, `WatchChatFile`, `internal/filewatch` | 0057 |
 | **Files pane** | The tree of the chat's folder, in a side pane left of the preview (⇧⌘E); the phone's Files screen. A file opens as a preview. | `FilesPane`, `FolderTree`, `WatchChatFolder`, `internal/folderlist`, the phone's `FilesScreen` | 0090 |
 | **Preview tab** | One of the files or browser tabs open in the preview, when two or more are: names in the side pane's title row, in place of the file's. In memory, and gone with the pane. Only the one showing has a view. | `ChatState.previewTabs`, `PreviewEntry`, `preview_tabs.dart` | 0070 |
-| **Browser tab** | A preview tab that shows a web page at an address, any site or a server on this Mac (`localhost:3000`), with Back, Forward, Reload and its address field. New browser tab: the + at the tab row's end, the header's globe, the palette. Not the default browser, which the docs call your browser. | `BrowserTab`, `BrowserPane`, `BrowserPage`, `browser_bar.dart`, `browser_address.dart` | 0094 |
+| **Browser tab** | A preview tab that shows a web page at an address, any site or a server on this Mac (`localhost:3000`), with Back, Forward, Reload and its address field. New browser tab: the + at the tab row's end, the header's globe, the palette. A chat's links open in one, with Open links in built-in browser on. Not the default browser, which the docs call your browser. | `BrowserTab`, `BrowserPane`, `BrowserPage`, `browser_bar.dart`, `browser_address.dart` | 0094 |
 | **Dev server** | A project's web server for development (`npm run dev`), as its launch files configure it: one entry, which runs a command, or opens a server already running at its address. | `launchfile.Entry` | 0095 |
 | **Launch file** | A folder's `.agents/launch.json` or `.claude/launch.json` (Claude desktop's), in Claude's format; its dev servers are both files' entries merged by written name, `.agents`' winning. | `internal/launchfile` | 0095 |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Stages and commits in Uncommitted. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019, 0079 |
@@ -197,6 +197,7 @@ One line each; the word after the arrow wins.
 - omp → **oh-my-pi** in the UI; `omp` is its command.
 - Nushi Next → **Nushi** (ADR 0018).
 - group, for tool rows → **run**.
+- built-in browser → **browser tab**. Only the setting Open links in built-in browser says it, in Claude desktop's words.
 
 ## Renames to do
 

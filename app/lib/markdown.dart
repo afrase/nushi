@@ -2,9 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
+import 'package:nushi/browser_address.dart' show isWebPage;
 import 'package:nushi/images.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/paced.dart';
+import 'package:nushi/preview.dart' show Previews;
+import 'package:nushi/settings.dart' show linksInBrowserTab;
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -21,6 +24,32 @@ Uri? webLink(String href) {
       ? uri
       : null;
 }
+
+/// Opens a web link the user clicked in a chat (its messages, its tool
+/// calls' output: what [AgentMarkdown] shows): in a browser tab beside the
+/// chat ([linkInTab]), else in the default browser ([openWebOutside]).
+/// Outside a chat's [Previews] (Jira, GitHub, the phone) it's the browser.
+Future<void> openWebLink(BuildContext context, Uri url) async {
+  final previews = context.getInheritedWidgetOfExactType<Previews>();
+  final browse = previews?.browse;
+  final fits = previews?.browseFits?.call() ?? false;
+  if (browse != null &&
+      linkInTab(url, setting: linksInBrowserTab.value, fits: fits)) {
+    browse(url);
+    return;
+  }
+  await openWebOutside(url);
+}
+
+/// Whether a web link opens in a browser tab (ADR 0094): with Open links in
+/// built-in browser on ([setting]), the pane able to show beside the chat
+/// ([fits]: a window too narrow for it would put it over the box), and a
+/// page a tab loads (`isWebPage`: no user name); else in the browser.
+bool linkInTab(Uri url, {required bool setting, required bool fits}) =>
+    setting && fits && isWebPage(url);
+
+/// Opens a web link in the default browser. Tests set their own.
+Future<void> Function(Uri url) openWebOutside = launchUrl;
 
 /// Opens [url] in the browser, when it's a [webLink].
 void openWeb(String url) {
@@ -78,9 +107,10 @@ const _extensions = {
   'txt', 'wasm', 'wav', 'webp', 'xml', 'yaml', 'yml', 'zip', 'zsh',
 };
 
-/// Agent markdown in the theme's fonts and colors. Links open in the
-/// browser, http and https only, a link whose text names another address
-/// only once the user saw where it goes; images as [markdownImage] shows them;
+/// Agent markdown in the theme's fonts and colors. Links open in a
+/// browser tab or the browser ([openWebLink]), http and https only, a link
+/// whose text names another address only once the user saw where it goes;
+/// images as [markdownImage] shows them;
 /// ```` ```mermaid ```` blocks as diagrams ([MermaidBlock]).
 class AgentMarkdown extends StatelessWidget {
   const new(
@@ -135,15 +165,16 @@ class AgentMarkdown extends StatelessWidget {
     if (uri == null) return;
     if (linkTextElsewhere(text, uri) case final shown?) {
       if (!await confirm(
-        context,
-        'Open ${uri.host}?',
-        'The link reads $shown, but it goes to $uri.',
-        'Open',
-      )) {
+            context,
+            'Open ${uri.host}?',
+            'The link reads $shown, but it goes to $uri.',
+            'Open',
+          ) ||
+          !context.mounted) {
         return;
       }
     }
-    await launchUrl(uri);
+    await openWebLink(context, uri);
   }
 
   @override

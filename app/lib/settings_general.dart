@@ -30,9 +30,9 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 /// Settings › General: when idle chats sleep, whether the composer checks
-/// spelling, the Mac's notifications, whether the daemon checks for updates,
-/// and whether it starts at login (the packaged app's, for the usual data
-/// folder).
+/// spelling, where a chat's links open, the Mac's notifications, whether
+/// the daemon checks for updates, and whether it starts at login (the
+/// packaged app's, for the usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
   const new({
@@ -81,6 +81,7 @@ class GeneralSection extends StatelessWidget {
           ],
         ),
       if (speller != null) const _Spelling(),
+      const _Links(),
       const NotificationsGroup(),
       if (settings case final s? when s.hasCheckUpdates())
         UpdatesGroup(daemon: daemon, settings: s, onChange: onChange),
@@ -108,6 +109,32 @@ class _Spelling extends StatelessWidget {
           control: SettingsSwitch(
             value: on,
             onChanged: (v) => checkSpelling.value = v,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Whether a chat's links open in a browser tab beside it (ADR 0094): the
+/// app's own preference, on at first, named as Claude desktop names it.
+class _Links extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: linksInBrowserTab,
+    builder: (context, on, _) => SettingsGroup(
+      title: 'Browser',
+      children: [
+        SettingsRow(
+          'Open links in built-in browser',
+          description:
+              'Links in a chat open in a browser tab beside it, not in your '
+              'browser.',
+          control: SettingsSwitch(
+            value: on,
+            onChanged: (v) => linksInBrowserTab.value = v,
           ),
         ),
       ],
