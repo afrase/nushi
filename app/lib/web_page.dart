@@ -52,11 +52,20 @@ Future<Duration?> Function({bool pointerOnly}) sincePressInPage =
       return s == null ? null : Duration(microseconds: (s * 1e6).round());
     };
 
-/// A WKWebView with only its free defaults (the owner's call):
-/// no script message handlers (nothing from the page reaches Nushi), file
-/// reads inside the root it's given, the network on, and a link the user
-/// clicks that leaves the page opened in the default browser instead (a
-/// page that leaves on its own, by script or a refresh, goes nowhere).
+/// Has a web view (by the plugin's `webViewIdentifier`) send and keep no
+/// cookies: the Swift side adds a content rule list to it. WebKit takes a
+/// `file:` page's frames and requests as first party, and file previews
+/// share WebKit's store with browser tabs, so without it a page the agent
+/// wrote would carry what a tab signed in to (docs/security.md).
+Future<void> Function(int id) blockCookies = (id) =>
+    const MethodChannel('nushi/browser').invokeMethod<void>('noCookies', id);
+
+/// A WKWebView with only its free defaults (the owner's call), and no
+/// cookies ([blockCookies]): no script message handlers (nothing from the
+/// page reaches Nushi), file reads inside the root it's given, the network
+/// on, and a link the user clicks that leaves the page opened in the
+/// default browser instead (a page that leaves on its own, by script or a
+/// refresh, goes nowhere).
 class WebKitPage implements PageHost {
   new() {
     final nav = WebKitNavigationDelegate(
@@ -65,12 +74,20 @@ class WebKitPage implements PageHost {
     unawaited(nav.setOnNavigationRequest(_decide));
     unawaited(nav.setOnPageFinished(_finished));
     unawaited(_c.setPlatformNavigationDelegate(nav));
-    unawaited(_c.setJavaScriptMode(JavaScriptMode.unrestricted));
+    // The native view exists once a call to it has come back; nothing loads
+    // until its cookies are off, and nothing at all if they can't be.
+    _ready =
+        _c
+            .setJavaScriptMode(JavaScriptMode.unrestricted)
+            .then((_) => blockCookies(_c.webViewIdentifier))
+          // Its error is load's to meet, not the zone's.
+          ..ignore();
   }
 
   final _c = WebKitWebViewController(
     const PlatformWebViewControllerCreationParams(),
   );
+  late final Future<void> _ready;
   String _path = '';
   String _root = '';
   bool _loaded = false;
@@ -82,10 +99,11 @@ class WebKitPage implements PageHost {
           .build(context);
 
   @override
-  Future<void> load(String path, String root) {
+  Future<void> load(String path, String root) async {
     _path = path;
     _root = root;
-    return _c.loadFileWithParams(
+    await _ready;
+    await _c.loadFileWithParams(
       WebKitLoadFileParams(absoluteFilePath: path, readAccessPath: root),
     );
   }

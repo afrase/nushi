@@ -126,7 +126,11 @@ final class Diagrams: NSObject, WKNavigationDelegate {
       queue = []
       return nil
     }
-    let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 600, height: 400), configuration: WKWebViewConfiguration())
+    // A store of its own, kept in memory: nothing a browser tab signed in to
+    // reaches it, nor it them (docs/security.md).
+    let config = WKWebViewConfiguration()
+    config.websiteDataStore = .nonPersistent()
+    let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 600, height: 400), configuration: config)
     let window = NSWindow(contentRect: NSRect(x: -30000, y: -30000, width: 600, height: 400),
                           styleMask: [.borderless], backing: .buffered, defer: false)
     window.isReleasedWhenClosed = false

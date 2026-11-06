@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/web_page.dart';
@@ -70,5 +71,29 @@ void main() {
     sincePressInPage = ({pointerOnly = false}) =>
         Future.error(StateError('no window'));
     expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
+  });
+
+  // A file's preview shares WebKit's store with browser tabs, and WebKit
+  // takes a file: page's frames as first party: it asks the Swift side to
+  // strip its web view's cookies before anything loads (docs/security.md).
+  testWidgets('a file’s preview asks for its web view’s cookies off', (
+    tester,
+  ) async {
+    final asked = <MethodCall>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('nushi/browser'),
+      (call) async {
+        asked.add(call);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('nushi/browser'),
+        null,
+      ),
+    );
+    await blockCookies(42);
+    expect(asked.map((c) => (c.method, c.arguments)), [('noCookies', 42)]);
   });
 }

@@ -2,6 +2,7 @@ import Cocoa
 import FlutterMacOS
 import ServiceManagement
 import WebKit
+import webview_flutter_wkwebview
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
@@ -52,21 +53,28 @@ class MainFlutterWindow: NSWindow {
 
     // Opens an address in the default browser (a preview's Open in browser and
     // its links): the app that opens https, for a file too, so a file a page
-    // links is never run by the app its type has. And how long ago the user
-    // last pressed or typed in a web view (lib/web_page.dart): Flutter never
-    // sees those, WebKit takes them.
+    // links is never run by the app its type has. How long ago the user last
+    // pressed or typed in a web view (lib/web_page.dart): Flutter never sees
+    // those, WebKit takes them. And a file preview's web view made cookieless
+    // (PreviewCookies).
     FlutterMethodChannel(name: "nushi/browser", binaryMessenger: flutterViewController.engine.binaryMessenger)
-      .setMethodCallHandler { [weak self] call, result in
+      .setMethodCallHandler { [weak self, weak flutterViewController] call, result in
         if call.method == "sincePress" {
           // A press lets one navigation leave the page, never a second:
           // asking takes it. A browser tab asks for a pointer's only
-          // ("pointer"): people type into a local page's forms, and a
+          // ("pointer"): people type into a page's forms, and a
           // Space or Return there would let the page's script out.
           let at = self?.webPressedAt
           let byKey = self?.webPressByKey ?? false
           self?.webPressedAt = nil
           if byKey, call.arguments as? String == "pointer" { return result(nil) }
           return result(at.map { ProcessInfo.processInfo.systemUptime - $0 })
+        }
+        if call.method == "noCookies" {
+          guard let id = (call.arguments as? NSNumber)?.int64Value, let registry = flutterViewController else {
+            return result(FlutterError(code: "refused", message: "No web view", details: nil))
+          }
+          return PreviewCookies.block(id, registry: registry, result)
         }
         guard call.method == "open" else { return result(FlutterMethodNotImplemented) }
         guard let text = call.arguments as? String, let url = URL(string: text),
@@ -326,5 +334,39 @@ class MainFlutterWindow: NSWindow {
       timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: windowNumber, context: nil,
       eventNumber: 0, clickCount: 1, pressure: 0)
     if let up { contentViewController?.mouseUp(with: up) }
+  }
+}
+
+/// A file's preview sends and keeps no cookies (docs/security.md): WebKit
+/// takes a `file:` page's frames and requests as first party, so in the one
+/// store browser tabs share with previews they'd carry the tabs' logins. A
+/// content rule list strips cookies both ways, for that web view only.
+enum PreviewCookies {
+  private static var list: WKContentRuleList?
+  private static let rules = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block-cookies"}}]"#
+
+  /// Adds the rule list to the plugin's web view [id] (`webViewIdentifier`,
+  /// lib/web_page.dart), then answers: nil once it holds, an error when it
+  /// can't, and the preview then loads nothing.
+  static func block(_ id: Int64, registry: FlutterPluginRegistry, _ result: @escaping FlutterResult) {
+    guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry) else {
+      return result(FlutterError(code: "refused", message: "No such web view", details: nil))
+    }
+    if let list {
+      web.configuration.userContentController.add(list)
+      return result(nil)
+    }
+    WKContentRuleListStore.default().compileContentRuleList(
+      forIdentifier: "nushi.preview-no-cookies", encodedContentRuleList: rules
+    ) { compiled, error in
+      DispatchQueue.main.async {
+        guard let compiled else {
+          return result(FlutterError(code: "failed", message: error?.localizedDescription ?? "No rule list", details: nil))
+        }
+        list = compiled
+        web.configuration.userContentController.add(compiled)
+        result(nil)
+      }
+    }
   }
 }
