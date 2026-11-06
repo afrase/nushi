@@ -150,8 +150,9 @@ void main() {
       'http://localhost:3000/',
       'http://192.168.7.5/',
     ]) {
+      // As the user typed it, which a local address needs from a tab.
       expect(
-        browserNavigation(url, mainFrame: true),
+        browserNavigation(url, mainFrame: true, asked: true),
         PageNavigation.stay,
         reason: 'a tab: $url',
       );
