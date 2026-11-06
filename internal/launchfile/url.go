@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+
+	"golang.org/x/net/idna"
 )
 
 // target is an entry's url, checked by Claude's rules: http or https, no
@@ -19,8 +21,9 @@ type target struct {
 }
 
 // parseURL checks s as Claude does. Its host is read as a browser reads
-// it (lower case, IPv4 and IPv6 addresses in their usual form), so a
-// spelling of 127.0.0.1 or ::1 meets the rules for localhost.
+// it (lower case, mapped to ASCII as IDNA maps it, IPv4 and IPv6
+// addresses in their usual form), so a spelling of localhost, 127.0.0.1
+// or ::1 meets the rules for localhost.
 func parseURL(s string) (target, error) {
 	invalid := errors.New(`"url" is not a valid URL`)
 	u, err := url.Parse(strings.TrimFunc(s, isJSSpace))
@@ -49,7 +52,7 @@ func parseURL(s string) (target, error) {
 	}
 	if p := u.Port(); p != "" {
 		n, err := strconv.Atoi(p)
-		if err != nil || n > 65535 {
+		if err != nil || n < 1 || n > 65535 {
 			return target{}, invalid
 		}
 		t.port = n
@@ -99,11 +102,25 @@ func offLoopback(host string) bool {
 	return strings.HasPrefix(host, "::ffff:")
 }
 
+// toASCII is the WHATWG URL standard's domain to ASCII: UTS 46 without
+// the STD3 rules, hyphen checks or DNS lengths, so a full-width
+// ｌｏｃａｌｈｏｓｔ or 127。0。0。1 is localhost as a browser reads it.
+var toASCII = idna.New(idna.MapForLookup(), idna.BidiRule(), idna.CheckJoiners(true),
+	idna.CheckHyphens(false), idna.StrictDomainName(false), idna.Transitional(false),
+	idna.VerifyDNSLength(false))
+
 // canonicalHost is host as a browser's URL parser writes it, or false
-// when it can't be one: lower case, an IPv6 address compressed, an IPv4
-// address that ends in a number (127.1, 0x7f.0.0.1, 2130706433) dotted
-// in four decimal parts.
+// when it can't be one: mapped to ASCII, lower case, an IPv6 address
+// compressed, an IPv4 address that ends in a number (127.1, 0x7f.0.0.1,
+// 2130706433) dotted in four decimal parts.
 func canonicalHost(host string) (string, bool) {
+	if strings.ContainsFunc(host, func(r rune) bool { return r >= 0x80 }) {
+		mapped, err := toASCII.ToASCII(host)
+		if err != nil {
+			return "", false
+		}
+		host = mapped
+	}
 	host = strings.ToLower(host)
 	if host == "" || strings.ContainsAny(host, "%/\\?#@ ") {
 		return "", false
@@ -148,6 +165,9 @@ func ipv4(parts []string) (string, bool) {
 	}
 	nums := make([]uint64, len(parts))
 	for i, p := range parts {
+		if p == "" { // 127..1: no number at all
+			return "", false
+		}
 		base := 10
 		switch {
 		case strings.HasPrefix(p, "0x"):
@@ -155,7 +175,7 @@ func ipv4(parts []string) (string, bool) {
 		case len(p) > 1 && p[0] == '0':
 			p, base = p[1:], 8
 		}
-		if p == "" {
+		if p == "" { // 0x alone is 0
 			nums[i] = 0
 			continue
 		}

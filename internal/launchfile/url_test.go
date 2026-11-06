@@ -26,6 +26,10 @@ func TestParseURL(t *testing.T) {
 		{"https://Example.com/sign-in?next=%2F#top", target{href: "https://example.com/sign-in?next=%2F#top", host: "example.com", port: 443}},
 		{"http://192.168.1.4:8080/app", target{href: "http://192.168.1.4:8080/app", host: "192.168.1.4:8080", port: 8080}},
 		{"http://my.localhost.example.com", target{href: "http://my.localhost.example.com", host: "my.localhost.example.com", port: 80}},
+		{"http://ｌｏｃａｌｈｏｓｔ:3000", target{href: "http://localhost:3000/", host: "localhost:3000", local: true, port: 3000}},
+		{"http://127。0。0。1:3000", target{href: "http://127.0.0.1:3000/", host: "127.0.0.1:3000", local: true, port: 3000}},
+		{"https://münchen.de/karte", target{href: "https://xn--mnchen-3ya.de/karte", host: "xn--mnchen-3ya.de", port: 443}},
+		{"http://0x.0.0.1:3000", target{href: "http://0.0.0.1:3000", host: "0.0.0.1:3000", port: 3000}},
 	} {
 		got, err := parseURL(c.url)
 		if err != nil || got != c.want {
@@ -49,7 +53,16 @@ func TestParseURL(t *testing.T) {
 		{"http://127.2:3000", "not written the usual way"},
 		{"http://[::ffff:127.0.0.1]:3000", "not written the usual way"},
 		{"http://[::ffff:7f00:1]:3000", "not written the usual way"},
+		{"http://ｌｏｃａｌｈｏｓｔ:3000/admin?x=1", "the server's origin alone"},
+		{"http://localhoſt:3000/admin", "the server's origin alone"},
+		{"http://127。0。0。1:3000/admin", "the server's origin alone"},
+		{"http://ｌｏｃａｌｈｏｓｔ．:3000", "not written the usual way"},
+		{"http://ex\u202eample.com", "not a valid URL"},
+		{"http://ｅｘ％41.com", "not a valid URL"},
 		{"http://localhost:70000", "not a valid URL"},
+		{"http://localhost:0", "not a valid URL"},
+		{"https://example.com:0/", "not a valid URL"},
+		{"http://127..1:3000", "not a valid URL"},
 		{"http://", "not a valid URL"},
 		{"http:localhost", "not a valid URL"},
 		{"http://[fe80::1%25en0]:3000", "not a valid URL"},
