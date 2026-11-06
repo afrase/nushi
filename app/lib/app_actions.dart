@@ -21,6 +21,7 @@ import 'package:nushi/jira_view.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
+import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/pull_link.dart';
 import 'package:nushi/pull_link_dialog.dart';
@@ -71,11 +72,21 @@ const filesKey = SingleActivator(
   shift: true,
 );
 
+/// ⌘L: the browser tab's address field (Safari's Open Location).
+const addressKey = SingleActivator(LogicalKeyboardKey.keyL, meta: true);
+
+/// ⌘R: the browser tab's page again. Jira and GitHub keep ⌘R for their own
+/// reload: their views bind it, under the app's keys.
+const reloadPageKey = SingleActivator(LogicalKeyboardKey.keyR, meta: true);
+
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
   openFile(key: openFileKey, menu: ActMenu.file, menuLabel: 'Open File…'),
   closeTab(key: closeTabKey, menu: ActMenu.file, menuLabel: 'Close Tab'),
+  newBrowserTab(menu: ActMenu.file, menuLabel: 'New Browser Tab'),
+  address(key: addressKey, menu: ActMenu.file, menuLabel: 'Open Location…'),
+  reloadPage(key: reloadPageKey, menu: ActMenu.view, menuLabel: 'Reload Page'),
   artifacts,
   find(key: findKey, menu: ActMenu.view, menuLabel: 'Find…'),
   chat(key: chatTabKey, menu: ActMenu.view, menuLabel: 'Chat'),
@@ -184,6 +195,14 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
   void tab(ChatTab t) => shown?.tab.value = t;
   final details = showDetails.value;
   final terminal = shown != null && terminalChats.value.contains(shown.id);
+  // The browser tab in sight, under no dialog.
+  final browser = switch (shown?.preview.value) {
+    final BrowserTab tab
+        when shown?.shownTab == ChatTab.chat &&
+            !(Navigator.maybeOf(context)?.canPop() ?? false) =>
+      tab.view,
+    _ => null,
+  };
   return [
     AppAction(.newChat, 'New chat', run: () => newChat(context, d, '')),
     AppAction(
@@ -202,6 +221,26 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
           shown?.shownTab == ChatTab.chat &&
           !(Navigator.maybeOf(context)?.canPop() ?? false),
       run: () => shown!.closePreview(shown.preview.value!),
+    ),
+    AppAction(
+      .newBrowserTab,
+      'New browser tab',
+      enabled: shown != null,
+      run: () => shown!.openBrowserTab(),
+    ),
+    // ⌘L and ⌘R are the menu bar's too, so they reach here while WebKit has
+    // the keys (ADR 0094).
+    AppAction(
+      .address,
+      'Open location…',
+      enabled: browser != null,
+      run: () => browser!.focusAddress(),
+    ),
+    AppAction(
+      .reloadPage,
+      'Reload page',
+      enabled: browser != null,
+      run: () => browser!.reload(),
     ),
     AppAction(
       .artifacts,
