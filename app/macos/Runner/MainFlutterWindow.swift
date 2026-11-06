@@ -410,9 +410,13 @@ enum PreviewCookies {
 /// of a local address unless the page on top is local, or a site let through.
 /// One list at a time per web view: a new one (the sites changed) takes the
 /// old one's place once it's compiled, so there's never a moment without.
+/// Only the rules asked for last are put on: older ones that finish
+/// compiling after them (the sites changed twice quickly) are dropped, so a
+/// site taken off stays off.
 enum LocalNetwork {
   private static var compiled: (rules: String, list: WKContentRuleList)?
   private static var key: UInt8 = 0
+  private static var wantKey: UInt8 = 0
 
   /// Puts [rules] on the plugin's web view [id], then answers: nil once it
   /// holds, an error when it can't, and the tab then loads nothing.
@@ -420,9 +424,13 @@ enum LocalNetwork {
     guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry) else {
       return result(FlutterError(code: "refused", message: "No such web view", details: nil))
     }
+    objc_setAssociatedObject(web, &wantKey, rules, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
     func install(_ list: WKContentRuleList) {
       let content = web.configuration.userContentController
       let old = objc_getAssociatedObject(web, &key) as? WKContentRuleList
+      // Rules asked for since answer for themselves; these go on only while
+      // the web view has none, so it's never without one.
+      if objc_getAssociatedObject(web, &wantKey) as? String != rules, old != nil { return result(nil) }
       if old !== list {
         content.add(list)
         if let old { content.remove(old) }
@@ -457,15 +465,16 @@ enum LocalNetwork {
 final class CommitWatch: NSObject, WKNavigationDelegate {
   private static var key: UInt8 = 0
   // WebKit says a navigation is a server's redirect only privately (seen in a
-  // probe app, 2026-11-06). Without it none is, and the app judges a redirect
-  // by the page on screen, which is stricter.
+  // probe app, 2026-11-06). Without it the app is told nothing of it, and
+  // judges the navigation by the stricter of the page on screen and the load
+  // it may redirect.
   private static let isRedirect = NSSelectorFromString("_isRedirect")
   // Strong: a web view holds its delegate weakly. WebKit reads which of a
   // delegate's methods it has as it's set, and this one has the plugin's.
   private let inner: WKNavigationDelegate
   private let committed: (URL?) -> Void
   // The main frame's navigations waiting on the app, oldest first.
-  private var deciding: [(url: String, type: Int, redirect: Bool)] = []
+  private var deciding: [(url: String, type: Int, redirect: Bool?)] = []
 
   private init(inner: WKNavigationDelegate, committed: @escaping (URL?) -> Void) {
     self.inner = inner
@@ -501,7 +510,9 @@ final class CommitWatch: NSObject, WKNavigationDelegate {
     else { return nil }
     let told = watch.deciding[at]
     watch.deciding.removeSubrange(...at)
-    return ["type": told.type, "redirect": told.redirect]
+    var said: [String: Any] = ["type": told.type]
+    if let redirect = told.redirect { said["redirect"] = redirect }
+    return said
   }
 
   /// The address of the history item [by] steps from web view [id]'s page
@@ -517,7 +528,7 @@ final class CommitWatch: NSObject, WKNavigationDelegate {
   ) {
     // The plugin's decision asks the app, which asks here: kept first.
     if action.targetFrame?.isMainFrame == true, let url = action.request.url?.absoluteString {
-      let redirect = action.responds(to: Self.isRedirect) && (action.value(forKey: "_isRedirect") as? Bool ?? false)
+      let redirect = action.responds(to: Self.isRedirect) ? action.value(forKey: "_isRedirect") as? Bool : nil
       deciding.append((url, action.navigationType.rawValue, redirect))
       if deciding.count > 16 { deciding.removeFirst() }
     }

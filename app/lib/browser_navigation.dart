@@ -77,8 +77,9 @@ Future<PageNavigation> browserPageNavigation(
 /// What WebKit says of a main frame's navigation as it's decided on
 /// (`CommitWatch` in `MainFlutterWindow.swift`): its `WKNavigationType`'s
 /// raw value ([NavigationSource]'s `typed`, `step`, `reload`) and whether
-/// it's a server's redirect of the navigation before it.
-typedef MainNavigation = ({int type, bool redirect});
+/// it's a server's redirect of the navigation before it (null when WebKit
+/// doesn't say: it says so only privately).
+typedef MainNavigation = ({int type, bool? redirect});
 
 /// Who sent a browser tab's main frame where, for its block on the local
 /// network (ADR 0094): whether the user asked for a navigation, and the
@@ -125,20 +126,31 @@ final class NavigationSource {
 
   /// For a main frame's navigation to [url], told [nav] (null when WebKit
   /// told nothing): whether the user asked for it, taking the ask, and
-  /// the address it comes from. Without WebKit's word it's no ask and no
-  /// redirect: the page on screen sent it.
-  ({bool asked, String from}) take(String url, MainNavigation? nav) {
+  /// the address it comes from. Without WebKit's word it's no ask; with no
+  /// word of a redirect while a load is let go, it may be the page on
+  /// screen's or that load's redirect, so it comes from whichever of the
+  /// two can't reach the local network through [allowed].
+  ({bool asked, String from}) take(
+    String url,
+    MainNavigation? nav, {
+    Set<String> allowed = const {},
+  }) {
     final ask = _ask;
     final asked =
         ask != null &&
         nav != null &&
-        !nav.redirect &&
+        nav.redirect != true &&
         ask.types.contains(nav.type) &&
         sameAddress(ask.url, url) &&
         clock().difference(ask.at) <= userGesture;
     if (asked) _ask = null;
-    final redirect = nav != null && nav.redirect && flight.isNotEmpty;
-    return (asked: asked, from: redirect ? flight : _page);
+    final from = switch (nav?.redirect) {
+      _ when flight.isEmpty => _page,
+      true => flight,
+      false => _page,
+      null => reachesLocal(_page, allowed) ? flight : _page,
+    };
+    return (asked: asked, from: from);
   }
 }
 

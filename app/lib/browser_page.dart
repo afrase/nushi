@@ -105,9 +105,9 @@ Future<MainNavigation?> Function(int id, String url) mainNavigation =
         {'id': id, 'url': url},
       );
       return switch (told) {
-        {'type': final int type, 'redirect': final bool redirect} => (
+        {'type': final int type} => (
           type: type,
-          redirect: redirect,
+          redirect: told['redirect'] as bool?,
         ),
         _ => null,
       };
@@ -369,10 +369,10 @@ class BrowserPage implements BrowserHost {
         nav = null; // judged as the page's own
       }
     }
-    final (:asked, :from) = r.isMainFrame
-        ? _source.take(r.url, nav)
-        : (asked: false, from: '');
     final allowed = localNetworkSites.value;
+    final (:asked, :from) = r.isMainFrame
+        ? _source.take(r.url, nav, allowed: allowed)
+        : (asked: false, from: '');
     final url = Uri.tryParse(r.url);
     switch (await browserPageNavigation(
       r.url,

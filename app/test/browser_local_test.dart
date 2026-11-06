@@ -254,14 +254,16 @@ void main() {
     PageNavigation decide(
       NavigationSource source,
       String url,
-      MainNavigation? nav,
-    ) {
-      final (:asked, :from) = source.take(url, nav);
+      MainNavigation? nav, {
+      Set<String> allowed = const {},
+    }) {
+      final (:asked, :from) = source.take(url, nav, allowed: allowed);
       final to = browserNavigation(
         url,
         mainFrame: true,
         from: from,
         asked: asked,
+        allowed: allowed,
       );
       if (to == PageNavigation.stay) source.flight = url;
       return to;
@@ -349,6 +351,37 @@ void main() {
         ..committed(dev)
         ..committed('about:blank');
       expect(decide(t, router, typed), PageNavigation.stay);
+    });
+
+    // Security review 2026-11-06: without WebKit's private redirect flag,
+    // a site's redirect to the router was judged by the dev server on
+    // screen, and went.
+    test('with no word of a redirect, the stricter of the page and the load '
+        'let go sent it', () {
+      const unknown = (type: NavigationSource.typed, redirect: null);
+      // The dev server on screen, a link to a site let go: what follows may
+      // be the site's redirect.
+      final s = NavigationSource()..committed(dev);
+      expect(decide(s, 'https://evil.example/r', unknown), PageNavigation.stay);
+      expect(decide(s, router, unknown), PageNavigation.drop);
+      // WebKit told nothing at all: the same.
+      expect(decide(s, 'https://evil.example/r', unknown), PageNavigation.stay);
+      expect(decide(s, router, null), PageNavigation.drop);
+      // A site on screen and a local load let go: the site's.
+      final t = NavigationSource()
+        ..committed(evil)
+        ..flight = dev;
+      expect(decide(t, router, unknown), PageNavigation.drop);
+      // Both local, or the site let through: it goes.
+      final u = NavigationSource()
+        ..committed(dev)
+        ..flight = 'http://localhost:3000/';
+      expect(decide(u, router, unknown), PageNavigation.stay);
+      s.flight = 'https://evil.example/r';
+      expect(
+        decide(s, router, unknown, allowed: {'evil.example'}),
+        PageNavigation.stay,
+      );
     });
 
     test('an address as WebKit writes it', () {
