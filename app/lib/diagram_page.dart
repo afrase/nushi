@@ -6,6 +6,7 @@ import 'package:nushi/mermaid.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_page.dart' show blockCookies;
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
@@ -33,7 +34,8 @@ DiagramHost Function() newDiagramHost = WebKitDiagram.new;
 
 /// The app's mermaid.html in a WKWebView, its script the pinned
 /// mermaid.min.js beside it, and nothing else: any other navigation is
-/// refused (Mermaid's strict level has no links or clicks anyway).
+/// refused (Mermaid's strict level has no links or clicks anyway), and
+/// like a file's preview it sends and keeps no cookies ([blockCookies]).
 class WebKitDiagram implements DiagramHost {
   new() {
     final nav = WebKitNavigationDelegate(
@@ -48,7 +50,6 @@ class WebKitDiagram implements DiagramHost {
     );
     unawaited(nav.setOnPageFinished(_finished));
     unawaited(_c.setPlatformNavigationDelegate(nav));
-    unawaited(_c.setJavaScriptMode(JavaScriptMode.unrestricted));
     unawaited(_load());
   }
 
@@ -60,6 +61,10 @@ class WebKitDiagram implements DiagramHost {
   String? _pending; // the script to run once loaded
 
   Future<void> _load() async {
+    // The native view exists once a call to it has come back; nothing loads
+    // until its cookies are off, and nothing at all if they can't be.
+    await _c.setJavaScriptMode(JavaScriptMode.unrestricted);
+    await blockCookies(_c.webViewIdentifier);
     _page = await diagramPage();
     if (_page.isEmpty) return;
     await _c.loadFileWithParams(
