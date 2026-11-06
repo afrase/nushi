@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/browser_bar.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/browser_pane.dart';
@@ -21,6 +23,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart';
 
 import 'fake_daemon.dart';
+import 'github_fixture.dart';
 import 'harness.dart';
 
 final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
@@ -155,6 +158,13 @@ Future<Daemon> _app(
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();
   return d;
+}
+
+Future<void> _meta(WidgetTester tester, LogicalKeyboardKey key) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+  await tester.sendKeyEvent(key);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+  await tester.pumpAndSettle();
 }
 
 Finder get _field => find.descendant(
@@ -298,6 +308,75 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(PreviewPane), findsOneWidget);
       expect(find.byTooltip('New browser tab'), findsNothing);
+      await closeView(tester, d);
+    }, variant: _mac);
+
+    testWidgets('⌘R reloads the page, ⌘L takes the focus to its address; '
+        '⌘W closes the tab', (tester) async {
+      final fakes = _fakes();
+      final d = await _app(tester);
+      final c = d.chats['c']!..openBrowserTab('http://localhost:3000');
+      await tester.pumpAndSettle();
+      final host = fakes.hosts.single;
+      expect(_editable(tester).widget.focusNode.hasFocus, isFalse);
+      await _meta(tester, LogicalKeyboardKey.keyR);
+      expect(host.reloads, 1);
+      await _meta(tester, LogicalKeyboardKey.keyL);
+      final field = _editable(tester).widget;
+      expect(field.focusNode.hasFocus, isTrue);
+      expect(
+        field.controller.selection,
+        const TextSelection(
+          baseOffset: 0,
+          extentOffset: 'http://localhost:3000'.length,
+        ),
+      );
+      await _meta(tester, LogicalKeyboardKey.keyW);
+      expect(c.preview.value, isNull);
+      // With no browser tab they do nothing.
+      final acts = appActions(tester.element(find.byType(Scaffold).first), d);
+      for (final a in [Act.address, Act.reloadPage]) {
+        expect(acts.firstWhere((e) => e.act == a).enabled, isFalse);
+      }
+      await closeView(tester, d);
+    }, variant: _mac);
+
+    testWidgets('GitHub keeps its ⌘R: the page’s act doesn’t apply there', (
+      tester,
+    ) async {
+      final fakes = _fakes();
+      // openView sizes the surface itself; the next test gets its own.
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final (fake, d) = await openView(
+        tester,
+        chats: [chat('c1', 'claude', 'Fix Sub')],
+        window: true,
+      );
+      // A browser tab in the chat behind the view.
+      d.chats['c1']!.openBrowserTab('http://localhost:3000');
+      int asked() => fake.calls.whereType<ListGitHubInboxRequest>().length;
+      final before = asked();
+      // The focus in the view, as a click there leaves it.
+      Focus.of(tester.element(find.text('Review requested  1'))).requestFocus();
+      await tester.pump();
+      await _meta(tester, LogicalKeyboardKey.keyR);
+      expect(asked(), before + 1);
+      expect(fakes.hosts, isEmpty); // no page was made, or reloaded
+      await closeView(tester, d);
+    }, variant: _mac);
+
+    testWidgets('⌘[ and ⌘] still switch chats from the address field', (
+      tester,
+    ) async {
+      _fakes();
+      final d = await _app(tester);
+      d.chats['c']!.openBrowserTab();
+      await tester.pumpAndSettle();
+      expect(_editable(tester).widget.focusNode.hasFocus, isTrue);
+      await _meta(tester, LogicalKeyboardKey.bracketRight);
+      expect(d.selectedId, 'd');
+      await _meta(tester, LogicalKeyboardKey.bracketLeft);
+      expect(d.selectedId, 'c');
       await closeView(tester, d);
     }, variant: _mac);
   });
