@@ -287,7 +287,12 @@ void main() {
                 key: const ValueKey('pane'),
                 child: SizedBox.fromSize(
                   size: size,
-                  child: BrowserPane(chat: c, tab: tab, onClose: () {}),
+                  child: BrowserPane(
+                    chat: c,
+                    tab: tab,
+                    onClose: () {},
+                    onExpand: () {},
+                  ),
                 ),
               ),
             ),

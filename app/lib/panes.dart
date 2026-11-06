@@ -13,6 +13,8 @@ import 'package:nushi/window_drag.dart';
 /// [initial]. The width is remembered across launches by [name]. With
 /// [top], the edge is on top and it is the pane's height. The edge lies over
 /// the pane's side; a platform view there keeps clear of it ([ClearOfEdge]).
+/// While [locked] it has no edge, and takes the width it's made to (an
+/// expanded pane, over the view beside it).
 class Resizable extends StatefulWidget {
   const new({
     required this.name,
@@ -23,6 +25,7 @@ class Resizable extends StatefulWidget {
     super.key,
     this.left = false,
     this.top = false,
+    this.locked = false,
   });
 
   final String name;
@@ -31,6 +34,7 @@ class Resizable extends StatefulWidget {
   final double max; // below [min] when there's no room: [min] wins
   final bool left;
   final bool top;
+  final bool locked;
   final Widget child;
 
   /// How far in from the pane's side the edge takes the pointer.
@@ -143,7 +147,9 @@ class _ResizableState extends State<Resizable> {
           children: [
             Positioned.fill(
               child: _Edge(
-                inset: top
+                inset: widget.locked
+                    ? EdgeInsets.zero
+                    : top
                     ? const EdgeInsets.only(top: Resizable.edgeWidth)
                     : widget.left
                     ? const EdgeInsets.only(left: Resizable.edgeWidth)
@@ -151,15 +157,16 @@ class _ResizableState extends State<Resizable> {
                 child: widget.child,
               ),
             ),
-            Positioned(
-              top: 0,
-              bottom: top ? null : 0,
-              width: top ? null : Resizable.edgeWidth,
-              height: top ? Resizable.edgeWidth : null,
-              left: widget.left || top ? 0 : null,
-              right: widget.left ? null : 0,
-              child: edge,
-            ),
+            if (!widget.locked)
+              Positioned(
+                top: 0,
+                bottom: top ? null : 0,
+                width: top ? null : Resizable.edgeWidth,
+                height: top ? Resizable.edgeWidth : null,
+                left: widget.left || top ? 0 : null,
+                right: widget.left ? null : 0,
+                child: edge,
+              ),
           ],
         ),
       );

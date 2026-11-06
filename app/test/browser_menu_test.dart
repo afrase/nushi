@@ -39,6 +39,7 @@ Future<ChatState> _pane(
                   chat: c,
                   tab: tab,
                   onClose: () {},
+                  onExpand: () {},
                 )
               : const SizedBox.shrink(),
         ),

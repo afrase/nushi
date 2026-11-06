@@ -52,6 +52,11 @@ class SidePane {
 /// where that text's column lies in it (the chat's); so do the
 /// panes that stay but move (the side chat, as the preview right of it
 /// closes), and so does [main] as the sidebar comes and goes.
+///
+/// The pane named [cover] takes the whole of it, over the rest (an expanded
+/// browser tab, ADR 0094): they stay laid out where they were, keeping
+/// their state, but draw nothing and take no pointer or focus, so the pane
+/// is the same widget throughout and its page doesn't load again.
 class Beside extends StatefulWidget {
   const new({
     required this.main,
@@ -60,6 +65,7 @@ class Beside extends StatefulWidget {
     super.key,
     this.details,
     this.columnSides,
+    this.cover,
   });
 
   final Widget main;
@@ -67,6 +73,7 @@ class Beside extends StatefulWidget {
   final List<SidePane> panes;
   final SidePane? details;
   final EdgeInsets Function(double width)? columnSides;
+  final String? cover;
 
   @override
   State<Beside> createState() => _BesideState();
@@ -85,6 +92,10 @@ class _BesideState extends State<Beside> {
 
   /// Each pane's x as last laid out: where one closing stays.
   final _at = <String, double>{};
+
+  /// Each pane's width as last laid out beside [Beside.main]: what one
+  /// over all ([Beside.cover]) leaves the rest.
+  final _widths = <String, double>{};
 
   /// Each pane's [Glide] token, changed only while it stays shown: a pane
   /// coming in slides, it doesn't glide.
@@ -115,6 +126,15 @@ class _BesideState extends State<Beside> {
         _built = true;
         _seen.addAll(now);
         _shown = now;
+        final cover = now.contains(widget.cover) ? widget.cover : null;
+        // Under the pane over all: kept, but not drawn or reached.
+        Widget under(String slot, Widget child) => ExcludeFocus(
+          excluding: cover != null && slot != cover,
+          child: Offstage(
+            offstage: cover != null && slot != cover,
+            child: child,
+          ),
+        );
         Widget resizable(SidePane p, double most) => p.fixed
             ? SizedBox(
                 key: ValueKey(p.name),
@@ -135,19 +155,23 @@ class _BesideState extends State<Beside> {
                 min: p.min,
                 max: min(p.cap, most),
                 left: true,
+                locked: p.name == cover,
                 child: p.child,
               );
         Widget pane(String slot, Widget? child) => LayoutId(
           key: ValueKey(slot),
           id: slot,
-          child: Glide(
-            token: _tokens[slot],
-            child: Presence(
-              // What showed as the view came is there; what opens after
-              // slides in.
-              arrives: built,
-              child: child,
-              builder: (_, run, c) => paneSlide(run, c),
+          child: under(
+            slot,
+            Glide(
+              token: _tokens[slot],
+              child: Presence(
+                // What showed as the view came is there; what opens after
+                // slides in.
+                arrives: built,
+                child: child,
+                builder: (_, run, c) => paneSlide(run, c),
+              ),
             ),
           ),
         );
@@ -166,6 +190,56 @@ class _BesideState extends State<Beside> {
           ),
           child: child,
         );
+        final children = [
+          LayoutId(
+            key: const ValueKey(_Slot.main),
+            id: _Slot.main,
+            child: under(
+              '',
+              Glide(
+                token: token,
+                sides: widget.columnSides,
+                // Its foot is its full width: cut at its left as it
+                // glides, it doesn't lie over the sidebar.
+                clip: true,
+                child: widget.main,
+              ),
+            ),
+          ),
+          // Those closing: over the main view, under the rest.
+          for (final s in _seen)
+            if (!now.contains(s)) pane(s, null),
+          // Beside, a pane leaves [main] its least width; over it, a
+          // strip of it. One with no cap can be dragged on over it. Over
+          // it, the first one's shadow falls on it.
+          for (final (i, p) in panes.indexed)
+            pane(
+              p.name,
+              backed(
+                resizable(
+                  p,
+                  room -
+                      detailsWidth -
+                      (panesWidth - p.width) -
+                      (over || p.cap.isInfinite ? 48 : widget.least),
+                ),
+                shadow: over && i == 0,
+              ),
+            ),
+          if (details != null)
+            pane(
+              details.name,
+              resizable(details, room - (over ? 0 : panesWidth) - widget.least),
+            ),
+        ];
+        // The pane over all is drawn last; keyed, it keeps its state as it
+        // moves in the list.
+        if (cover != null) {
+          final top = children.indexWhere(
+            (c) => c.key == ValueKey<String>(cover),
+          );
+          children.add(children.removeAt(top));
+        }
         return CustomMultiChildLayout(
           delegate: _Beside(
             widget.least,
@@ -176,49 +250,10 @@ class _BesideState extends State<Beside> {
                 if (!now.contains(s)) s,
             ],
             at: _at,
+            widths: _widths,
+            cover: cover,
           ),
-          children: [
-            LayoutId(
-              key: const ValueKey(_Slot.main),
-              id: _Slot.main,
-              child: Glide(
-                token: token,
-                sides: widget.columnSides,
-                // Its foot is its full width: cut at its left as it glides,
-                // it doesn't lie over the sidebar.
-                clip: true,
-                child: widget.main,
-              ),
-            ),
-            // Those closing: over the main view, under the rest.
-            for (final s in _seen)
-              if (!now.contains(s)) pane(s, null),
-            // Beside, a pane leaves [main] its least width; over it, a
-            // strip of it. One with no cap can be dragged on over it. Over
-            // it, the first one's shadow falls on it.
-            for (final (i, p) in panes.indexed)
-              pane(
-                p.name,
-                backed(
-                  resizable(
-                    p,
-                    room -
-                        detailsWidth -
-                        (panesWidth - p.width) -
-                        (over || p.cap.isInfinite ? 48 : widget.least),
-                  ),
-                  shadow: over && i == 0,
-                ),
-              ),
-            if (details != null)
-              pane(
-                details.name,
-                resizable(
-                  details,
-                  room - (over ? 0 : panesWidth) - widget.least,
-                ),
-              ),
-          ],
+          children: children,
         );
       },
     ),
@@ -239,6 +274,8 @@ class _Beside extends MultiChildLayoutDelegate {
     required this.details,
     required this.going,
     required this.at,
+    required this.widths,
+    this.cover,
   });
 
   final double least;
@@ -246,6 +283,8 @@ class _Beside extends MultiChildLayoutDelegate {
   final String? details;
   final List<String> going;
   final Map<String, double> at;
+  final Map<String, double> widths; // each pane's, as last laid out beside
+  final String? cover; // the pane over all, the whole of it
 
   @override
   void performLayout(Size size) {
@@ -261,7 +300,15 @@ class _Beside extends MultiChildLayoutDelegate {
     }
     var x = right;
     for (final p in panes.reversed) {
-      x -= layoutChild(p, tall).width;
+      if (p == cover) {
+        // It fills it all; the rest keep the room they had beside it, so
+        // nothing under it is laid out anew.
+        layoutChild(p, BoxConstraints.tight(size));
+        positionChild(p, Offset.zero);
+        x -= widths[p] ?? 0;
+        continue;
+      }
+      x -= widths[p] = layoutChild(p, tall).width;
       positionChild(p, Offset(at[p] = x, 0));
     }
     final main = x >= least ? x : right;

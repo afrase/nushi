@@ -407,6 +407,7 @@ void main() {
                             chat: c,
                             tab: tab,
                             onClose: () {},
+                            onExpand: () {},
                           )
                         : const SizedBox.shrink(),
                   ),

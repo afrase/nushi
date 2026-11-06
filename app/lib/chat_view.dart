@@ -80,6 +80,12 @@ class _ChatViewState extends State<ChatView> {
   /// the row moves to the new one with its place kept.
   final GlobalKey<State> _previewTabs = GlobalKey();
 
+  /// Whether the browser tab showing takes the whole area, over the
+  /// transcript (its Expand, ADR 0094). It lasts while a browser tab shows:
+  /// a file's tab, the browser hidden, another chat or the Changes tab
+  /// (this view gone) put it back.
+  bool _expanded = false;
+
   Future<void> _ask(String selection) =>
       askAside(context, widget.daemon, widget.chat, selection);
 
@@ -219,6 +225,7 @@ class _ChatViewState extends State<ChatView> {
         : chat.side.value;
     final id = chat.pane.value;
     final preview = id == null ? chat.preview.value : null;
+    if (preview is! BrowserTab) _expanded = false;
     final files = filesOpen(chat) && widget.daemon.daemonApi >= filesApi;
     // Either is dragged as wide as it's wanted.
     final wide = id != null || preview != null;
@@ -234,6 +241,7 @@ class _ChatViewState extends State<ChatView> {
           : details != null
           ? ChatView.leastBesideDetails
           : ChatView.minWidth,
+      cover: _expanded ? 'preview' : null,
       panes: [
         if (side != null)
           SidePane(
@@ -292,6 +300,8 @@ class _ChatViewState extends State<ChatView> {
                 tab: tab,
                 tabsKey: _previewTabs,
                 onClose: () => chat.preview.value = null,
+                expanded: _expanded,
+                onExpand: () => setState(() => _expanded = !_expanded),
               ),
             },
           ),

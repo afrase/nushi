@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_bar.dart';
@@ -45,7 +46,7 @@ const browserHint = 'Enter an address, like example.com or localhost:3000';
 
 /// A browser tab in the preview pane (ADR 0094), as Claude desktop's
 /// browser: the pane's title row (its tabs as chips, a + that opens a new
-/// browser tab; at the right ⋯ ([BrowserMenu]) and Close, which
+/// browser tab; at the right ⋯ ([BrowserMenu]), Expand and Close, which
 /// closes every tab), then [BrowserBar], then the page, or for a new tab a
 /// hint. Like a file's view it's made again as its tab shows: the page
 /// loads again from the tab's address.
@@ -56,6 +57,8 @@ class BrowserPane extends StatefulWidget {
     required this.onClose,
     super.key,
     this.tabsKey,
+    this.expanded = false,
+    this.onExpand,
   });
 
   final ChatState chat;
@@ -65,6 +68,13 @@ class BrowserPane extends StatefulWidget {
   /// The key of its [PreviewTabs] (`PreviewPane.tabsKey`).
   final Key? tabsKey;
 
+  /// Whether it takes the whole chat area, over the transcript (ADR 0094).
+  final bool expanded;
+
+  /// Expands it, or with it [expanded] collapses it: its title row's button,
+  /// and Esc while it's expanded. Null: no button.
+  final VoidCallback? onExpand;
+
   @override
   State<BrowserPane> createState() => _BrowserPaneState();
 }
@@ -73,6 +83,10 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   BrowserHost? _host;
   late final _address = TextEditingController(text: widget.tab.address.value);
   final _field = FocusNode(debugLabel: 'address');
+
+  /// The pane's own focus, taken as it expands, so Esc reaches it there
+  /// (what had the focus, the chat's box, is hidden behind it).
+  final _pane = FocusNode(debugLabel: 'browser pane', skipTraversal: true);
 
   BrowserTab get _tab => widget.tab;
 
@@ -95,6 +109,16 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   }
 
   @override
+  void didUpdateWidget(BrowserPane old) {
+    super.didUpdateWidget(old);
+    if (widget.expanded && !old.expanded && !_field.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _pane.requestFocus();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     if (identical(_tab.view, this)) _tab.view = null;
     _tab.address.removeListener(_moved);
@@ -104,6 +128,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       ..dispose();
     _address.dispose();
     _field.dispose();
+    _pane.dispose();
     super.dispose();
   }
 
@@ -183,7 +208,8 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     final host = _host;
-    return Column(
+    final expand = widget.onExpand;
+    final pane = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PaneHeader(
@@ -194,6 +220,13 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
             children: [
               Expanded(child: _tabs()),
               BrowserMenu(tab: _tab, host: host),
+              if (expand != null)
+                IconTap.line(
+                  widget.expanded ? LineIcon.collapse : LineIcon.expand,
+                  tooltip: widget.expanded ? 'Collapse' : 'Expand',
+                  size: 17,
+                  onTap: expand,
+                ),
               IconTap.line(
                 LineIcon.close,
                 tooltip: 'Close',
@@ -217,6 +250,15 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
           ),
         ),
       ],
+    );
+    // Esc collapses it, from anywhere in it Flutter has the keys (a page
+    // in WebKit keeps its own).
+    return CallbackShortcuts(
+      bindings: {
+        if (widget.expanded && expand != null)
+          const SingleActivator(LogicalKeyboardKey.escape): expand,
+      },
+      child: Focus(focusNode: _pane, child: pane),
     );
   }
 
