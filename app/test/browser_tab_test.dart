@@ -338,6 +338,49 @@ void main() {
       await closeView(tester, d);
     }, variant: _mac);
 
+    // Fix review 2026-11-06: on Changes the pane isn't there, so a new tab
+    // was made unseen, a second press did nothing, and the globe was lit.
+    testWidgets('from Changes the globe and New browser tab go to the Chat '
+        'tab, and the globe is lit only there', (tester) async {
+      _fakes();
+      final d = await _app(tester);
+      final c = d.chats['c']!;
+      final globe = find.byType(BrowserButton);
+      Color ink() => tester
+          .widget<IconTap>(
+            find.descendant(of: globe, matching: find.byType(IconTap)),
+          )
+          .color!;
+      final t = NushiTheme.of(tester.element(globe)).t;
+      Future<void> toChanges() async {
+        c.tab.value = ChatTab.changes;
+        await tester.pumpAndSettle();
+        expect(find.byType(BrowserPane), findsNothing);
+      }
+
+      await toChanges();
+      await tester.tap(globe);
+      await tester.pumpAndSettle();
+      expect(c.shownTab, ChatTab.chat);
+      expect(find.byType(BrowserPane), findsOneWidget);
+      expect(ink(), t.accentInk);
+      // The browser tab still the preview's: lit only while it's in sight.
+      await toChanges();
+      expect(ink(), t.textSecondary);
+      await tester.tap(globe);
+      await tester.pumpAndSettle();
+      expect(c.shownTab, ChatTab.chat);
+      expect(find.byType(BrowserPane), findsOneWidget);
+      expect(c.previewTabs.value, hasLength(1));
+      await toChanges();
+      runAct(tester.element(globe), d, Act.newBrowserTab);
+      await tester.pumpAndSettle();
+      expect(c.shownTab, ChatTab.chat);
+      expect(c.previewTabs.value, hasLength(2));
+      expect(find.text(browserHint), findsOneWidget);
+      await closeView(tester, d);
+    }, variant: _mac);
+
     testWidgets('⌘R reloads the page, ⌘L takes the focus to its address; '
         '⌘W closes the tab', (tester) async {
       final fakes = _fakes();

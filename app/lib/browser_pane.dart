@@ -14,7 +14,7 @@ import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart' show openInBrowser;
 
 /// The chat header's browser button (ADR 0094): it shows the preview's last
-/// browser tab, or a new one, lit while one shows.
+/// browser tab, or a new one, on the Chat tab; lit while one shows there.
 class BrowserButton extends StatelessWidget {
   const new({required this.chat, super.key});
 
@@ -24,14 +24,14 @@ class BrowserButton extends StatelessWidget {
   static const tooltip = 'Browser';
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
-    valueListenable: chat.preview,
-    builder: (context, showing, _) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([chat.preview, chat.tab]),
+    builder: (context, _) {
       final t = NushiTheme.of(context).t;
       return IconTap.line(
         LineIcon.globe,
         tooltip: tooltip,
-        color: showing is BrowserTab ? t.accentInk : t.textSecondary,
+        color: chat.browserShown ? t.accentInk : t.textSecondary,
         onTap: chat.showBrowser,
       );
     },
