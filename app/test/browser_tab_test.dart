@@ -110,22 +110,6 @@ void main() {
       await closeView(tester, d);
     }, variant: macOnly);
 
-    testWidgets('another site goes to the browser, a file nowhere, each '
-        'saying so', (tester) async {
-      final fakes = browserFakes();
-      final d = await browserApp(tester);
-      d.chats['c']!.openBrowserTab();
-      await tester.pumpAndSettle();
-      await typeAddress(tester, 'example.com/docs');
-      expect(fakes.opened, [Uri.parse('http://example.com/docs')]);
-      expect(fakes.hosts, isEmpty);
-      expect(find.textContaining('Opened in your browser'), findsOneWidget);
-      await typeAddress(tester, 'file:///etc/passwd');
-      expect(fakes.opened, hasLength(1));
-      expect(find.textContaining('Only a local address'), findsOneWidget);
-      await closeView(tester, d);
-    }, variant: macOnly);
-
     testWidgets('+ shows with a browser tab showing, never on a file’s', (
       tester,
     ) async {

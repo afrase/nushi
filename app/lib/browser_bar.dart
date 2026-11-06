@@ -85,7 +85,7 @@ class BrowserBar extends StatelessWidget {
                     const SpellCheckConfiguration.disabled(),
                 decoration: const InputDecoration(
                   isDense: true,
-                  hintText: 'Enter a local address',
+                  hintText: 'Enter an address',
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 8,
                     vertical: 6,

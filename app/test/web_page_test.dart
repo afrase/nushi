@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/browser_page.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/web_page.dart';
 
@@ -95,5 +96,37 @@ void main() {
     );
     await blockCookies(42);
     expect(asked.map((c) => (c.method, c.arguments)), [('noCookies', 42)]);
+  });
+
+  // Browser tabs load any site now (ADR 0094) and share WebKit's store
+  // with file previews: a site a tab signed in to must never load as a
+  // preview's main frame, a press or not (docs/security.md).
+  test('a file’s preview loads no site in its view, what a browser tab '
+      'would', () {
+    const p = '/repo/out/page.html';
+    final press = clock().subtract(const Duration(milliseconds: 200));
+    for (final url in [
+      'https://mail.example.com/',
+      'http://example.com/login',
+      'http://localhost:3000/',
+      'http://192.168.7.5/',
+    ]) {
+      expect(
+        browserNavigation(url, mainFrame: true),
+        PageNavigation.stay,
+        reason: 'a tab: $url',
+      );
+      expect(
+        navigation(url, p, mainFrame: true),
+        PageNavigation.drop,
+        reason: url,
+      );
+      // A click on a link sends it to the default browser, not the view.
+      expect(
+        navigation(url, p, mainFrame: true, pressed: press),
+        PageNavigation.open,
+        reason: url,
+      );
+    }
   });
 }

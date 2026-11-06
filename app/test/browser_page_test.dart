@@ -12,33 +12,30 @@ void main() {
     PageNavigation main(String url, [DateTime? pressed]) =>
         browserNavigation(url, mainFrame: true, pressed: pressed);
 
-    test('this Mac’s pages and a blank one stay in the tab', () {
+    test('web pages anywhere, and a blank one, stay in the tab', () {
       for (final url in [
         'http://localhost:3000/',
         'http://LOCALHOST:5173/app?x=1#top',
         'https://127.0.0.1:8443/',
         'http://127.4.5.6/',
         'http://[::1]:4000/',
+        'https://example.com/',
+        'http://example.com/login',
+        'http://192.168.7.5:3000/',
+        'http://localhost.example.com/',
+        'http://localhost@example.com/', // the host is example.com
+        'http://0.0.0.0:3000/',
         'about:blank',
       ]) {
         expect(main(url), PageNavigation.stay, reason: url);
       }
     });
 
-    test('another site, or mail, goes to the browser only on a press', () {
-      for (final url in [
-        'https://example.com/',
-        'http://192.168.7.5:3000/',
-        'http://localhost.example.com/',
-        'http://localhost@example.com/', // the host is example.com
-        'http://127.0.0.256/',
-        'http://0.0.0.0:3000/',
-        'mailto:me@example.com',
-      ]) {
-        expect(main(url), PageNavigation.drop, reason: url);
-        expect(main(url, old()), PageNavigation.drop, reason: url);
-        expect(main(url, press()), PageNavigation.open, reason: url);
-      }
+    test('mail goes to its app only on a press', () {
+      const mail = 'mailto:me@example.com';
+      expect(main(mail), PageNavigation.drop);
+      expect(main(mail, old()), PageNavigation.drop);
+      expect(main(mail, press()), PageNavigation.open);
     });
 
     test('a file, and other schemes, go nowhere, a press or not', () {
@@ -51,6 +48,8 @@ void main() {
         'about:srcdoc',
         'ftp://localhost/',
         'x-apple.systempreferences:',
+        'zoommtg://zoom.us/join',
+        'http:///no-host',
       ]) {
         expect(main(url, press()), PageNavigation.drop, reason: url);
       }
@@ -67,8 +66,7 @@ void main() {
     // Fix review 2026-11-06: a Space or Return typed into a local page's
     // form let the page's script send the default browser anywhere; only
     // the pointer's press counts for a browser tab.
-    test('the press is asked only for what the browser may take, and only '
-        'a pointer’s', () async {
+    test('the press is asked only for mail, and only a pointer’s', () async {
       final since = sincePressInPage;
       addTearDown(() => sincePressInPage = since);
       var asked = 0;
@@ -80,10 +78,11 @@ void main() {
       Future<PageNavigation> go(String url) =>
           browserPageNavigation(url, mainFrame: true);
       expect(await go('http://localhost:3000/'), PageNavigation.stay);
+      expect(await go('https://example.com/'), PageNavigation.stay);
       expect(await go('file:///etc/passwd'), PageNavigation.drop);
       expect(await go('data:text/html,x'), PageNavigation.drop);
       expect(asked, 0);
-      expect(await go('https://example.com/'), PageNavigation.open);
+      expect(await go('mailto:me@example.com'), PageNavigation.open);
       expect(asked, 1);
     });
 
@@ -98,32 +97,49 @@ void main() {
   });
 
   test('what the address field takes', () {
-    String? here(String text) => switch (addressOf(text)) {
-      (:final url, here: true) => '$url',
-      _ => null,
-    };
-    expect(here('localhost:3000'), 'http://localhost:3000');
-    expect(here('3000'), 'http://localhost:3000');
-    expect(here(':5173'), 'http://localhost:5173');
-    expect(here('1'), 'http://localhost:1');
-    expect(here('65535'), 'http://localhost:65535');
-    expect(here(' 127.0.0.1:8080/app '), 'http://127.0.0.1:8080/app');
-    expect(here('[::1]:3000'), 'http://[::1]:3000');
-    expect(here('https://localhost:8443/'), 'https://localhost:8443/');
-    expect(here('about:blank'), 'about:blank');
-    expect(here('localhost:3000/app'), 'http://localhost:3000/app');
-    expect(addressOf('example.com'), (
-      url: Uri.parse('http://example.com'),
-      here: false,
-    ));
+    String? to(String text) => addressOf(text)?.toString();
+    // This Mac, as before: http.
+    expect(to('localhost:3000'), 'http://localhost:3000');
+    expect(to('localhost'), 'http://localhost');
+    expect(to('3000'), 'http://localhost:3000');
+    expect(to(':5173'), 'http://localhost:5173');
+    expect(to('1'), 'http://localhost:1');
+    expect(to('65535'), 'http://localhost:65535');
+    expect(to(' 127.0.0.1:8080/app '), 'http://127.0.0.1:8080/app');
+    expect(to('[::1]:3000'), 'http://[::1]:3000');
+    expect(to('localhost:3000/app'), 'http://localhost:3000/app');
+    // The user's own network: http.
+    expect(to('192.168.7.5:3000'), 'http://192.168.7.5:3000');
+    expect(to('10.0.0.2'), 'http://10.0.0.2');
+    expect(to('printer.local'), 'http://printer.local');
+    expect(to('app.localhost:5173'), 'http://app.localhost:5173');
+    expect(to('devbox:8080'), 'http://devbox:8080');
+    // Any other name: https.
+    expect(to('example.com'), 'https://example.com');
+    expect(to('Example.COM/docs?q=1#top'), 'https://example.com/docs?q=1#top');
+    expect(to('example.com:8443/app'), 'https://example.com:8443/app');
+    expect(to('sub.example.co.uk'), 'https://sub.example.co.uk');
+    // A scheme typed is kept.
+    expect(to('http://example.com/'), 'http://example.com/');
+    expect(to('https://localhost:8443/'), 'https://localhost:8443/');
+    expect(to('HTTPS://example.com'), 'https://example.com');
+    expect(to('about:blank'), 'about:blank');
     for (final no in [
       '',
+      '   ',
+      // Not an address: no search engine, the field says so.
+      'tea',
+      'how to brew tea',
+      'example .com',
+      'me@example.com',
+      // Not for the tab.
       'file:///etc/passwd',
       'javascript:alert(1)',
+      'javascript://%0aalert(1)',
       'data:text/html,x',
       'ftp://localhost/',
       'mailto:me@example.com',
-      'javascript://%0aalert(1)',
+      'about:srcdoc',
       // No such port: the field says why, not WebKit.
       '99999',
       '0',

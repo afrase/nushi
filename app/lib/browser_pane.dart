@@ -11,7 +11,6 @@ import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
-import 'package:nushi/web_page.dart' show openInBrowser;
 
 /// The chat header's browser button (ADR 0094): it shows the preview's last
 /// browser tab, or a new one, on the Chat tab; lit while one shows there.
@@ -39,7 +38,7 @@ class BrowserButton extends StatelessWidget {
 }
 
 /// What a new browser tab says under its address field.
-const browserHint = 'Enter a local address, like localhost:3000';
+const browserHint = 'Enter an address, like example.com or localhost:3000';
 
 /// A browser tab in the preview pane (ADR 0094): the pane's title row (its
 /// tabs, or the one tab's title, a + that opens a new browser tab, Close,
@@ -80,7 +79,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
       ..view = this
       ..address.addListener(_moved);
     _field.addListener(_moved);
-    if (addressOf(_tab.address.value) case (:final url, here: true)) {
+    if (addressOf(_tab.address.value) case final url?) {
       _open(url);
     } else {
       // A new tab waits on its address.
@@ -114,25 +113,26 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     unawaited(host.open(url));
   }
 
-  /// The field's text on Return: a local page loads here, another site
-  /// opens in the default browser (the user asked, ADR 0094), and anything
-  /// else is refused, saying why.
+  /// The field's text on Return: a page loads here, and what isn't an
+  /// address is refused, saying why (nothing is searched for).
   void _go(String text) {
-    final say = ScaffoldMessenger.maybeOf(context);
-    void note(String text) => say
-      ?..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
-    switch (addressOf(text)) {
-      case (:final url, here: true):
-        _field.unfocus();
-        setState(() => _open(url));
-      case (:final url, here: false):
-        unawaited(openInBrowser(url).catchError((_) {}));
-        _address.text = _tab.address.value;
-        note('Opened in your browser: a browser tab shows this Mac’s pages');
-      case null:
-        note('Only a local address opens here, like localhost:3000');
+    final url = addressOf(text);
+    if (url != null) {
+      _field.unfocus();
+      setState(() => _open(url));
+      return;
     }
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            text.trim().toLowerCase().startsWith('file:')
+                ? 'A file opens in a file’s tab: from the Files pane, or ⌘P'
+                : 'Not an address: try one like example.com or localhost:3000',
+          ),
+        ),
+      );
   }
 
   @override

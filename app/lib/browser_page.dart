@@ -18,7 +18,7 @@ abstract interface class BrowserHost {
   /// The view; built once and kept (a web view is made once).
   Widget view(BuildContext context);
 
-  /// Loads [url], a local page ([isLocalPage]).
+  /// Loads [url], a page for the tab ([inBrowserTab]).
   Future<void> open(Uri url);
 
   /// Loads the page again (the tab's address, if it never loaded).
@@ -55,19 +55,19 @@ bool isLoopback(String host) {
       );
 }
 
-/// Whether a browser tab shows [url] (ADR 0094): http or https to this Mac
-/// ([isLoopback]), or a blank page. Any other site is for the browser.
-bool isLocalPage(Uri url) => switch (url.scheme) {
+/// Whether a browser tab shows [url] (ADR 0094): http or https to any
+/// host, or a blank page. A file, a script and every other scheme don't.
+bool inBrowserTab(Uri url) => switch (url.scheme) {
   'about' => url.path == 'blank',
-  'http' || 'https' => isLoopback(url.host),
+  'http' || 'https' => url.host.isNotEmpty,
   _ => false,
 };
 
 /// What a navigation to [url] does in a browser tab, the user having last
-/// pressed in a page at [pressed]: a local page stays; another site or a
-/// mail address opens in the default browser, but only right after a press,
-/// so a page can't open the browser on its own; a file, and every other
-/// scheme, goes nowhere. A frame inside the page loads anything but a file.
+/// pressed in a page at [pressed]: a web page stays, wherever it is; a mail
+/// address opens in the default app, but only right after a press, so a
+/// page can't open one on its own; a file, and every other scheme, goes
+/// nowhere. A frame inside the page loads anything but a file.
 PageNavigation browserNavigation(
   String url, {
   required bool mainFrame,
@@ -75,31 +75,23 @@ PageNavigation browserNavigation(
 }) {
   final u = Uri.tryParse(url);
   if (u == null || u.scheme == 'file') return PageNavigation.drop;
-  if (!mainFrame || isLocalPage(u)) return PageNavigation.stay;
-  return _elsewhere(u) &&
+  if (!mainFrame || inBrowserTab(u)) return PageNavigation.stay;
+  return u.scheme == 'mailto' &&
           pressed != null &&
           clock().difference(pressed) <= userGesture
       ? PageNavigation.open
       : PageNavigation.drop;
 }
 
-/// Whether the default browser may take [url]: another site, or mail.
-bool _elsewhere(Uri url) => switch (url.scheme) {
-  'http' || 'https' => url.host.isNotEmpty,
-  'mailto' => true,
-  _ => false,
-};
-
 /// [browserNavigation], with when the user last pressed in a page, asked
-/// only for one the browser may take, and only a pointer's press counting:
-/// people type into a local page, and a key there (Space, Return) is the
-/// page's script's to see first.
+/// only for a mail address, and only a pointer's press counting: people
+/// type into a page, and a key there (Space, Return) is the page's
+/// script's to see first.
 Future<PageNavigation> browserPageNavigation(
   String url, {
   required bool mainFrame,
 }) async {
-  final u = Uri.tryParse(url);
-  final asks = mainFrame && u != null && !isLocalPage(u) && _elsewhere(u);
+  final asks = mainFrame && Uri.tryParse(url)?.scheme == 'mailto';
   return browserNavigation(
     url,
     mainFrame: mainFrame,
@@ -107,14 +99,17 @@ Future<PageNavigation> browserPageNavigation(
   );
 }
 
-/// What the address field's text names: a local page for the tab (here),
-/// another site for the default browser (not here), or nothing either may
-/// open (null: a file, a script, an empty field). Without a scheme it's
-/// http (`localhost:3000`); a port alone is localhost's (`3000`, `:3000`).
-/// A port past 1–65535 names nothing.
-({Uri url, bool here})? addressOf(String text) {
+/// The page the address field's text names, or null when it names none (a
+/// file, a script, a word, an empty field): the field says so, and searches
+/// nothing. An http or https address is kept as typed. Without a scheme
+/// it's https, but http where TLS is rare and the network is the user's
+/// ([_plainHttp]): `localhost:3000`, `192.168.1.20`, `printer.local`; a
+/// port alone is localhost's (`3000`, `:3000`). A word that isn't a host
+/// (no dot, no port, not localhost), an email address, and a port past
+/// 1–65535 name nothing.
+Uri? addressOf(String text) {
   var a = text.trim();
-  if (a.isEmpty) return null;
+  if (a.isEmpty || a.contains(RegExp(r'\s'))) return null;
   if (RegExp(r'^:?\d+$').hasMatch(a)) {
     a = 'localhost:${a.replaceFirst(':', '')}';
   }
@@ -122,14 +117,28 @@ Future<PageNavigation> browserPageNavigation(
   final schemed = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d)').hasMatch(a);
   final u = Uri.tryParse(schemed ? a : 'http://$a');
   if (u == null || (u.hasPort && (u.port < 1 || u.port > 65535))) return null;
-  if (isLocalPage(u)) return (url: u, here: true);
-  if ((u.scheme == 'http' || u.scheme == 'https') && u.host.isNotEmpty) {
-    return (url: u, here: false);
+  if (schemed) return inBrowserTab(u) ? u : null;
+  final host = u.host;
+  if (host.isEmpty || u.userInfo.isNotEmpty) return null;
+  final ported = RegExp(r':\d+$').hasMatch(a.split(RegExp('[/?#]')).first);
+  if (!host.contains('.') && !host.contains(':') && !ported) {
+    return host == 'localhost' ? u : null;
   }
-  return null;
+  return _plainHttp(host) ? u : u.replace(scheme: 'https');
 }
 
-/// A WKWebView for a browser tab: local pages only ([browserNavigation]),
+/// Whether a typed [host] gets http, not https: this Mac, an IP address,
+/// a `.local` or `.localhost` name, or a single name (`devbox:8080`; one
+/// gets here only with a port), where a server seldom has a certificate.
+bool _plainHttp(String host) =>
+    !host.contains('.') ||
+    host.contains(':') || // IPv6
+    RegExp(r'^\d{1,3}(\.\d{1,3}){3}$').hasMatch(host) ||
+    host.endsWith('.local') ||
+    host.endsWith('.localhost') ||
+    isLoopback(host);
+
+/// A WKWebView for a browser tab: web pages only ([browserNavigation]),
 /// no window a script opens by itself (a link with a target loads in the
 /// tab), and like a file's preview no script message handlers, so nothing
 /// from the page reaches Nushi. It shares WebKit's default data store with
@@ -183,7 +192,7 @@ class BrowserPage implements BrowserHost {
 
   @override
   Future<void> open(Uri url) {
-    if (!isLocalPage(url)) return Future.value();
+    if (!inBrowserTab(url)) return Future.value();
     _loaded = true;
     tab.address.value = '$url';
     return _c.loadRequest(LoadRequestParams(uri: url));
