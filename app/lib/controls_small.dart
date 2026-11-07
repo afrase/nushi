@@ -46,7 +46,9 @@ class LinkText extends StatelessWidget {
 
 /// A small icon button: a tint under the pointer and its [tooltip]. Only
 /// where the icon alone says what it does. [held] keeps the tint while what
-/// it toggles is on (a pinned message's pin).
+/// it toggles is on (a pinned message's pin). [danger] fills it solid red,
+/// the icon in the window's background, where stopping must stand out (a
+/// running server's Stop).
 class IconTap extends StatelessWidget {
   const new(
     IconData this.icon, {
@@ -57,6 +59,7 @@ class IconTap extends StatelessWidget {
     this.color,
     this.padding = 5,
     this.held = false,
+    this.danger = false,
   }) : line = null,
        glyph = null,
        _working = false;
@@ -71,6 +74,7 @@ class IconTap extends StatelessWidget {
     this.color,
     this.padding = 5,
     this.held = false,
+    this.danger = false,
   }) : icon = null,
        glyph = null,
        _working = false;
@@ -88,7 +92,8 @@ class IconTap extends StatelessWidget {
   }) : icon = null,
        line = null,
        _working = false,
-       held = false;
+       held = false,
+       danger = false;
 
   /// A button for something that runs: held down (tinted) with [glyph]
   /// (a spinner) at rest, and [icon] (✕, to stop it) under the pointer.
@@ -103,13 +108,15 @@ class IconTap extends StatelessWidget {
     this.padding = 5,
   }) : line = null,
        _working = true,
-       held = false;
+       held = false,
+       danger = false;
 
   final IconData? icon;
   final LineIcon? line;
   final Widget Function(double size, Color color)? glyph;
   final bool _working;
   final bool held;
+  final bool danger;
   final String tooltip;
   final VoidCallback? onTap;
   final double size;
@@ -125,11 +132,19 @@ class IconTap extends StatelessWidget {
       onTap: onTap,
       tooltip: tooltip,
       builder: (context, look) {
-        final tint = look.enabled ? color ?? t.textSecondary : t.textMuted;
+        final tint = !look.enabled
+            ? t.textMuted
+            : danger
+            ? t.base
+            : color ?? t.textSecondary;
         return Container(
           padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
-            color: look.hover
+            color: danger
+                ? (look.hover
+                      ? Color.alphaBlend(_tint(t, look), t.crashed)
+                      : t.crashed)
+                : look.hover
                 ? _tint(t, look)
                 : _working || held
                 ? t.hover

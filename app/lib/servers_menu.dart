@@ -352,13 +352,12 @@ class ServerRow extends StatelessWidget {
       );
     }
     if (_runs) {
-      return IconTap.line(
-        LineIcon.stop,
+      return IconTap(
+        Icons.stop_rounded,
         tooltip: 'Stop',
         size: 18,
         padding: 6,
-        color: t.text,
-        held: true,
+        danger: true,
         onTap: () => servers.stop(chat.id, s.serverId).ignore(),
       );
     }
