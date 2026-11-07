@@ -2,6 +2,7 @@ import 'package:nushi/alerts.dart';
 import 'package:nushi/back_swipe.dart';
 import 'package:nushi/clipboard_files.dart';
 import 'package:nushi/desktop.dart';
+import 'package:nushi/file_mode.dart';
 import 'package:nushi/fonts.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/mermaid.dart';
@@ -23,6 +24,7 @@ class Native {
     required this.clipboard,
     required this.desktop,
     required this.diagrams,
+    required this.fileModes,
     required this.fonts,
     required this.loginItem,
     required this.swipes,
@@ -42,6 +44,9 @@ class Native {
 
   /// Mermaid diagrams drawn as pictures.
   Diagrams diagrams;
+
+  /// The user's files made theirs only.
+  FileModes fileModes;
 
   /// The installed fonts.
   Fonts fonts;
