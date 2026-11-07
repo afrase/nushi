@@ -342,8 +342,8 @@ class _NewTab extends StatelessWidget {
 }
 
 /// Over a page that didn't load: where it was going (the address that
-/// failed, not the tab's), what went wrong ([failedHeading]), and the web view's
-/// reason.
+/// failed, not the tab's), what went wrong ([failedHeading]), and the web
+/// view's reason.
 class _Failed extends StatelessWidget {
   const new(this.failure);
 
