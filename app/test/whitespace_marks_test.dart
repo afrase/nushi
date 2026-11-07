@@ -1,13 +1,16 @@
-// Show whitespace (ADR 0096): an app preference, off at first; on, the
-// read-only source and the editor both mark spaces and tabs, the text as
-// it was.
+// Show whitespace (ADR 0096): an app preference, off at first, in
+// Settings › Appearance, the View menu and the palette; on, the read-only
+// source and the editor both mark spaces and tabs, the text as it was.
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/place.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/source_editor.dart';
 import 'package:nushi/source_view.dart';
 import 'package:nushi/whitespace_marks.dart';
 import 'package:re_editor/re_editor.dart';
@@ -15,6 +18,7 @@ import 'package:re_editor/re_editor.dart';
 import 'fake_daemon.dart';
 import 'file_edit_helpers.dart';
 import 'harness.dart';
+import 'settings_harness.dart';
 
 /// A canvas that counts the marks drawn on it: circles (a space's) and
 /// paths (a tab's), and where the circles are.
@@ -30,6 +34,22 @@ class _Counting implements Canvas {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+/// The View menu's items' labels, and picks the one called [pick].
+List<String> _viewMenu(WidgetTester tester, {String? pick}) {
+  final view = tester
+      .widget<PlatformMenuBar>(find.byType(PlatformMenuBar))
+      .menus
+      .whereType<PlatformMenu>()
+      .firstWhere((m) => m.label == 'View');
+  Iterable<PlatformMenuItem> items(PlatformMenuItem m) => switch (m) {
+    PlatformMenuItemGroup(:final members) => members.expand(items),
+    _ => [m],
+  };
+  final all = view.menus.expand(items).toList();
+  if (pick != null) all.firstWhere((m) => m.label == pick).onSelected!();
+  return [for (final m in all) m.label];
 }
 
 /// The source view's lines whose whitespace is marked.
@@ -91,15 +111,26 @@ void main() {
     expect(copied.last, text);
   }, variant: onMac);
 
-  testWidgets('the editor marks its whitespace while it shows, remembered; '
-      'marks never reach the saved bytes', (tester) async {
+  testWidgets('View › Show Whitespace and the palette turn it over in both '
+      'views; it’s remembered; marks never reach the saved bytes', (
+    tester,
+  ) async {
     const text = 'package main\n\nfunc main() {\n\tx := 1  \n}\n';
     final (d, fake) = await openEditor(tester, {'main.go': utf8.encode(text)});
     expect(find.byType(WhitespaceOverlay), findsNothing);
-    showWhitespace.value = true;
+    expect(_viewMenu(tester), contains('Show Whitespace'));
+
+    _viewMenu(tester, pick: 'Show Whitespace');
     await tester.pumpAndSettle();
+    expect(showWhitespace.value, isTrue);
     expect(readSaved()['whitespace'], isTrue);
     expect(find.byType(WhitespaceOverlay), findsOneWidget);
+    expect(_viewMenu(tester), contains('Hide Whitespace'));
+    final context = tester.element(find.byType(SourceEditor));
+    expect(
+      appActions(context, d).firstWhere((a) => a.act == Act.whitespace).title,
+      'Hide whitespace in the preview',
+    );
 
     // The editor keeps its text: an edit and ⌘S save only what's typed.
     final e = editOf(d);
@@ -114,8 +145,10 @@ void main() {
       'package main\n\nfunc main() {\n\tx := 1  \t// one\n}\n',
     );
 
-    showWhitespace.value = false;
+    // The palette's action turns it off again.
+    appActions(context, d).firstWhere((a) => a.act == Act.whitespace).run();
     await tester.pumpAndSettle();
+    expect(showWhitespace.value, isFalse);
     expect(readSaved()['whitespace'], isFalse);
     expect(find.byType(WhitespaceOverlay), findsNothing);
     await endEditor(tester, d);
@@ -159,6 +192,27 @@ void main() {
     );
     await endEditor(tester, d);
   }, variant: onMac);
+
+  testWidgets('Settings › Appearance has Show whitespace, off at first', (
+    tester,
+  ) async {
+    final d = await FakeDaemon([]).connect(tester);
+    await pumpSettings(tester, d, SettingsSection.appearance);
+    final row = find.text('Show whitespace');
+    expect(row, findsOneWidget);
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    final toggle = find.descendant(
+      of: find.ancestor(of: row, matching: find.byType(Row)).first,
+      matching: find.byType(GestureDetector),
+    );
+    await tester.tap(toggle.last);
+    await tester.pumpAndSettle();
+    expect(showWhitespace.value, isTrue);
+    expect(readSaved()['whitespace'], isTrue);
+    await tester.pumpWidget(const SizedBox());
+    d.dispose();
+  });
 
   for (final brightness in Brightness.values) {
     testWidgets('renders: a tab-indented file being edited with its '

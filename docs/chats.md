@@ -192,7 +192,7 @@ A file a chat's agent (or one of its subagents) wrote previews beside the chat, 
 - **HTML pages and SVG** in a web view: the CSS, scripts and images beside them load, and the network too. A link out opens in your browser. Reload, and Open in browser;
 - **PDF**;
 - **CSV** as a table (its first 500 rows);
-- **code and text** (JSON, YAML, logs, source files) as their source, highlighted. A tab reaches the next stop of four columns, mid-line too, as it does where you edit the file; copying gives the tab itself.
+- **code and text** (JSON, YAML, logs, source files) as their source, highlighted. A tab reaches the next stop of four columns, mid-line too, as it does where you edit the file; copying gives the tab itself. **Show whitespace** (Settings › Appearance, or View › Show Whitespace and the palette; off at first) marks each space with a faint dot and each tab with an arrow across it, in the source and while you edit; the marks are only drawn, never copied or saved.
 
 Markdown, HTML, SVG and CSV have Preview and Source.
 

@@ -7,14 +7,40 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_theme.dart';
 
 /// Settings › Appearance: Light, Dark or as the system, the chat's width,
-/// and the color theme (ADR 0086).
+/// whether the preview shows whitespace, and the color theme (ADR 0086).
 class AppearanceSection extends StatelessWidget {
   const new({super.key});
 
   @override
   Widget build(BuildContext context) => const SettingsPage(
     title: 'Appearance',
-    children: [_Appearance(), ThemeGroup()],
+    children: [_Appearance(), _Preview(), ThemeGroup()],
+  );
+}
+
+/// How a file's source shows in the preview: whether its whitespace is
+/// marked (ADR 0096). An app preference; View › Show Whitespace too.
+class _Preview extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: showWhitespace,
+    builder: (context, on, _) => SettingsGroup(
+      title: 'Preview',
+      children: [
+        SettingsRow(
+          'Show whitespace',
+          description:
+              'Spaces show as faint dots and tabs as arrows in a file’s '
+              'source.',
+          control: SettingsSwitch(
+            value: on,
+            onChanged: (v) => showWhitespace.value = v,
+          ),
+        ),
+      ],
+    ),
   );
 }
 

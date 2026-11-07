@@ -104,6 +104,7 @@ enum Act {
   chatWidth,
   // The preview's own key: elsewhere ⌥Z types a character.
   wrap(keyText: wrapKeyText, menu: ActMenu.view, menuLabel: 'Wrap Lines'),
+  whitespace(menu: ActMenu.view, menuLabel: 'Show Whitespace'),
   terminal(key: toggleTerminalKey),
   rewind(keyText: 'Esc Esc'), // the composer's
   sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
@@ -325,6 +326,15 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       .wrap,
       '${wrapLabel(wrap: wrapLines.value)} in the preview',
       run: toggleWrap,
+    ),
+    AppAction(
+      .whitespace,
+      showWhitespace.value
+          ? 'Hide whitespace in the preview'
+          : 'Show whitespace in the preview',
+      // Where a chat shows, as its previews do.
+      enabled: shown != null,
+      run: () => showWhitespace.value = !showWhitespace.value,
     ),
     AppAction(
       .terminal,
