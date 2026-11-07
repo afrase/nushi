@@ -71,6 +71,18 @@ func TestTheMacEditsAFile(t *testing.T) {
 	if _, err := mac.c.WriteChatFile(ctx, connect.NewRequest(&nushiv1.WriteChatFileRequest{ChatId: id, Path: outside, Data: []byte("y"), BaseSha256: filesave.Sum([]byte("x"))})); connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Errorf("outside the folder: %v", err)
 	}
+	// A read-only file shows so, and isn't written.
+	testcheck.NoErr(t, os.Chmod(path, 0o444))
+	locked, err := mac.c.WatchChatFile(ctx, connect.NewRequest(&nushiv1.WatchChatFileRequest{ChatId: id, Path: "main.go"}))
+	testcheck.NoErr(t, err)
+	if !locked.Receive() || locked.Msg().Editable || !locked.Msg().ReadOnly {
+		t.Errorf("a read-only file watched: %+v, %v", locked.Msg(), locked.Err())
+	}
+	_ = locked.Close()
+	if _, err := write(mac, "package locked\n", filesave.Sum([]byte("package mine\n"))); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Errorf("a read-only file's write: %v", err)
+	}
+	testcheck.NoErr(t, os.Chmod(path, 0o644))
 
 	mac.send(id, "carry on")
 	mac.settled(id)

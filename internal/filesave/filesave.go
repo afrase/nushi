@@ -35,6 +35,9 @@ var (
 	ErrTooLarge = fmt.Errorf("larger than %d MiB", MaxSize>>20)
 	// ErrOutside is a path, or a link's target, outside the folder.
 	ErrOutside = errors.New("outside the folder")
+	// ErrReadOnly is a file the daemon's user doesn't own or has no write
+	// bit on: a new file renamed over it would get past its permissions.
+	ErrReadOnly = errors.New("the file is read-only")
 )
 
 // Result is how a save went: Saved, with the file's sum, or not, with the
@@ -54,18 +57,23 @@ func Sum(data []byte) string {
 }
 
 // Editable says a file the preview read, with links and size, may be
-// saved: a regular file with one link, at most MaxSize.
-func Editable(size int64, links uint64) bool { return size <= MaxSize && links == 1 }
-
-// Saver saves files one at a time per file.
-type Saver struct {
-	mu    sync.Mutex
-	locks map[string]*lock
+// saved: a regular file with one link, at most MaxSize, that Writable.
+func Editable(size int64, links uint64, mode fs.FileMode, owner uint32) bool {
+	return size <= MaxSize && links == 1 && Writable(mode, owner)
 }
 
-type lock struct {
-	sync.Mutex
-	users int
+// Writable says a file of mode and owner (a uid) may be saved: the daemon's
+// user owns it and has its write bit. A save renames a new file over the
+// old one, which only the folder's permissions would otherwise limit.
+func Writable(mode fs.FileMode, owner uint32) bool {
+	return int64(owner) == int64(os.Getuid()) && mode.Perm()&0o200 != 0
+}
+
+// Saver saves files one at a time. One lock for every file: a path's
+// spelling doesn't name one file (APFS ignores case and normalization),
+// and saves are few, small and quick.
+type Saver struct {
+	mu sync.Mutex
 }
 
 // Save writes data to rel inside root (as filewatch reads it: a link
@@ -73,7 +81,7 @@ type lock struct {
 // sha256 in hex, or isn't there, with mustNotExist. A file that already
 // holds data is Saved without a write; one that changed otherwise is
 // returned as it is now. The file keeps its permission bits; a new one is
-// 0644.
+// 0644. A file not Writable is ErrReadOnly.
 func (s *Saver) Save(root, rel string, data []byte, base string, mustNotExist bool) (Result, error) {
 	if len(data) > MaxSize {
 		return Result{}, ErrTooLarge
@@ -83,8 +91,8 @@ func (s *Saver) Save(root, rel string, data []byte, base string, mustNotExist bo
 		return Result{}, err
 	}
 	path := filepath.Join(folder, name)
-	release := s.hold(path)
-	defer release()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	r, err := os.OpenRoot(folder)
 	if err != nil {
 		return Result{}, err
@@ -110,7 +118,8 @@ func (s *Saver) Save(root, rel string, data []byte, base string, mustNotExist bo
 
 // current reads name inside r: nil when it isn't there, with the mode a
 // new file takes, or its bytes and its mode. A folder, a fifo or a device
-// is ErrNotRegular, a file with other hard links ErrLinked.
+// is ErrNotRegular, a file with other hard links ErrLinked, one not
+// Writable ErrReadOnly.
 func current(r *os.Root, name string) ([]byte, os.FileMode, error) {
 	fi, err := r.Lstat(name)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -130,8 +139,15 @@ func current(r *os.Root, name string) ([]byte, os.FileMode, error) {
 		return nil, 0, err
 	}
 	defer f.Close() //nolint:errcheck // read-only
-	if st, ok := fi.Sys().(*syscall.Stat_t); ok && st.Nlink > 1 {
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil, 0, ErrReadOnly
+	}
+	if st.Nlink > 1 {
 		return nil, 0, ErrLinked
+	}
+	if !Writable(fi.Mode(), st.Uid) {
+		return nil, 0, ErrReadOnly
 	}
 	b, err := regularfile.ReadAll(f, fi, MaxSize)
 	if errors.Is(err, regularfile.ErrTooLarge) {
@@ -172,28 +188,4 @@ func resolve(root, rel string) (folder, name string, err error) {
 		return "", "", ErrOutside
 	}
 	return folder, name, nil
-}
-
-// hold locks path until the function it returns is called.
-func (s *Saver) hold(path string) func() {
-	s.mu.Lock()
-	if s.locks == nil {
-		s.locks = map[string]*lock{}
-	}
-	l := s.locks[path]
-	if l == nil {
-		l = &lock{}
-		s.locks[path] = l
-	}
-	l.users++
-	s.mu.Unlock()
-	l.Lock()
-	return func() {
-		l.Unlock()
-		s.mu.Lock()
-		if l.users--; l.users == 0 {
-			delete(s.locks, path)
-		}
-		s.mu.Unlock()
-	}
 }

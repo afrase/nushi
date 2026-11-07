@@ -10526,8 +10526,12 @@ type WatchChatFileResponse struct {
 	// The sha256 of data, in hex, when data is sent. (API 108)
 	Sha256 string `protobuf:"bytes,6,opt,name=sha256,proto3" json:"sha256,omitempty"`
 	// WriteChatFile may write it: a regular file with one link, 1 MiB at
-	// most. The app checks its text too. (API 108)
-	Editable      bool `protobuf:"varint,7,opt,name=editable,proto3" json:"editable,omitempty"`
+	// most, that the daemon's user owns and may write. The app checks its
+	// text too. (API 108)
+	Editable bool `protobuf:"varint,7,opt,name=editable,proto3" json:"editable,omitempty"`
+	// The daemon's user doesn't own it or has no write bit on it: it isn't
+	// editable. (API 108)
+	ReadOnly      bool `protobuf:"varint,8,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -10607,6 +10611,13 @@ func (x *WatchChatFileResponse) GetSha256() string {
 func (x *WatchChatFileResponse) GetEditable() bool {
 	if x != nil {
 		return x.Editable
+	}
+	return false
+}
+
+func (x *WatchChatFileResponse) GetReadOnly() bool {
+	if x != nil {
+		return x.ReadOnly
 	}
 	return false
 }
@@ -23938,7 +23949,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\vmodified_ms\x18\x04 \x01(\x03R\n" +
 	"modifiedMs\x12\x18\n" +
 	"\aignored\x18\x05 \x01(\bR\aignored\x12\x16\n" +
-	"\x06linked\x18\x06 \x01(\bR\x06linked\"\xbe\x01\n" +
+	"\x06linked\x18\x06 \x01(\bR\x06linked\"\xdb\x01\n" +
 	"\x15WatchChatFileResponse\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data\x12\x12\n" +
@@ -23946,7 +23957,8 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\ttoo_large\x18\x04 \x01(\bR\btooLarge\x12\x18\n" +
 	"\amissing\x18\x05 \x01(\bR\amissing\x12\x16\n" +
 	"\x06sha256\x18\x06 \x01(\tR\x06sha256\x12\x1a\n" +
-	"\beditable\x18\a \x01(\bR\beditable\"\x9e\x01\n" +
+	"\beditable\x18\a \x01(\bR\beditable\x12\x1b\n" +
+	"\tread_only\x18\b \x01(\bR\breadOnly\"\x9e\x01\n" +
 	"\x14WriteChatFileRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +

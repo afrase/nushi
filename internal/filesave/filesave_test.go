@@ -101,6 +101,8 @@ func TestSaveRefuses(t *testing.T) {
 	testcheck.NoErr(t, os.Symlink(dir, filepath.Join(folder, "up")))
 	testcheck.NoErr(t, os.MkdirAll(filepath.Join(folder, "sub"), 0o700))
 	testcheck.NoErr(t, syscall.Mkfifo(filepath.Join(folder, "fifo"), 0o600))
+	testcheck.Write(t, filepath.Join(folder, "locked.txt"), "locked")
+	testcheck.NoErr(t, os.Chmod(filepath.Join(folder, "locked.txt"), 0o444))
 	var s Saver
 	for _, c := range []struct {
 		rel  string
@@ -115,6 +117,7 @@ func TestSaveRefuses(t *testing.T) {
 		{"fifo", []byte("x"), ErrNotRegular},
 		{"two.txt", []byte("x"), ErrLinked},
 		{"big.txt", []byte("x"), ErrTooLarge},
+		{"locked.txt", []byte("x"), ErrReadOnly},
 		{"real.md", bytes.Repeat([]byte{'x'}, MaxSize+1), ErrTooLarge},
 	} {
 		if _, err := s.Save(folder, c.rel, c.data, "", true); !errors.Is(err, c.want) {
@@ -124,7 +127,8 @@ func TestSaveRefuses(t *testing.T) {
 			t.Errorf("%s over a base: %v, want %v", c.rel, err, c.want)
 		}
 	}
-	if read(t, outside) != "secret" || read(t, filepath.Join(folder, "one.txt")) != "one" {
+	if read(t, outside) != "secret" || read(t, filepath.Join(folder, "one.txt")) != "one" ||
+		read(t, filepath.Join(folder, "locked.txt")) != "locked" {
 		t.Error("a refused save wrote")
 	}
 }
@@ -156,8 +160,9 @@ func mustReal(t *testing.T, p string) string {
 	return r
 }
 
-// Saves of one file wait for each other: of two over the same base, one
-// writes and the other is stale.
+// Saves of one file wait for each other, however its name is spelled
+// (APFS ignores case): of two over the same base, one writes and the other
+// is stale.
 func TestSavesOfAFileTakeTurns(t *testing.T) {
 	dir := t.TempDir()
 	testcheck.Write(t, filepath.Join(dir, "a.txt"), "base")
@@ -166,7 +171,8 @@ func TestSavesOfAFileTakeTurns(t *testing.T) {
 	results := make([]Result, 8)
 	for i := range results {
 		wg.Go(func() {
-			r, err := s.Save(dir, "a.txt", []byte(strconv.Itoa(i)), Sum([]byte("base")), false)
+			name := []string{"a.txt", "A.txt"}[i%2] // only a.txt on a case-sensitive disk
+			r, err := s.Save(dir, name, []byte(strconv.Itoa(i)), Sum([]byte("base")), false)
 			if err != nil {
 				t.Error(err)
 			}
@@ -183,7 +189,27 @@ func TestSavesOfAFileTakeTurns(t *testing.T) {
 	if saved != 1 {
 		t.Errorf("%d saves wrote", saved)
 	}
-	if len(s.locks) != 0 {
-		t.Errorf("%d locks kept", len(s.locks))
+}
+
+// Only a file the daemon's user owns and may write is editable.
+func TestEditable(t *testing.T) {
+	me := uint32(os.Getuid()) //nolint:gosec // a uid fits
+	for _, c := range []struct {
+		size  int64
+		links uint64
+		mode  os.FileMode
+		owner uint32
+		want  bool
+	}{
+		{10, 1, 0o644, me, true},
+		{MaxSize, 1, 0o600, me, true},
+		{MaxSize + 1, 1, 0o644, me, false},
+		{10, 2, 0o644, me, false},
+		{10, 1, 0o444, me, false},
+		{10, 1, 0o666, me + 1, false},
+	} {
+		if got := Editable(c.size, c.links, c.mode, c.owner); got != c.want {
+			t.Errorf("%+v: %v", c, got)
+		}
 	}
 }

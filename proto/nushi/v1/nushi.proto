@@ -1850,8 +1850,12 @@ message WatchChatFileResponse {
   // The sha256 of data, in hex, when data is sent. (API 108)
   string sha256 = 6;
   // WriteChatFile may write it: a regular file with one link, 1 MiB at
-  // most. The app checks its text too. (API 108)
+  // most, that the daemon's user owns and may write. The app checks its
+  // text too. (API 108)
   bool editable = 7;
+  // The daemon's user doesn't own it or has no write bit on it: it isn't
+  // editable. (API 108)
+  bool read_only = 8;
 }
 
 message WriteChatFileRequest {

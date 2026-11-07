@@ -29,6 +29,8 @@ type File struct {
 	TooLarge bool
 	Missing  bool   // not there, or not a regular file
 	Links    uint64 // its hard links, as the file read had them
+	Mode     fs.FileMode
+	Owner    uint32 // its owner's uid
 }
 
 // Locate finds which of roots (absolute folders) holds path (absolute, or
@@ -141,9 +143,9 @@ func Read(root, rel string) (File, error) {
 	if err != nil {
 		return f, err
 	}
-	f.Data, f.Size = b, int64(len(b))
+	f.Data, f.Size, f.Mode = b, int64(len(b)), fi.Mode()
 	if st, ok := fi.Sys().(*syscall.Stat_t); ok {
-		f.Links = uint64(st.Nlink)
+		f.Links, f.Owner = uint64(st.Nlink), st.Uid
 	}
 	return f, nil
 }

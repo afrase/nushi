@@ -3117,6 +3117,7 @@ const WatchChatFileResponse$json = {
     {'1': 'missing', '3': 5, '4': 1, '5': 8, '10': 'missing'},
     {'1': 'sha256', '3': 6, '4': 1, '5': 9, '10': 'sha256'},
     {'1': 'editable', '3': 7, '4': 1, '5': 8, '10': 'editable'},
+    {'1': 'read_only', '3': 8, '4': 1, '5': 8, '10': 'readOnly'},
   ],
 };
 
@@ -3125,7 +3126,7 @@ final $typed_data.Uint8List watchChatFileResponseDescriptor = $convert.base64Dec
     'ChVXYXRjaENoYXRGaWxlUmVzcG9uc2USEgoEcGF0aBgBIAEoCVIEcGF0aBISCgRkYXRhGAIgAS'
     'gMUgRkYXRhEhIKBHNpemUYAyABKANSBHNpemUSGwoJdG9vX2xhcmdlGAQgASgIUgh0b29MYXJn'
     'ZRIYCgdtaXNzaW5nGAUgASgIUgdtaXNzaW5nEhYKBnNoYTI1NhgGIAEoCVIGc2hhMjU2EhoKCG'
-    'VkaXRhYmxlGAcgASgIUghlZGl0YWJsZQ==');
+    'VkaXRhYmxlGAcgASgIUghlZGl0YWJsZRIbCglyZWFkX29ubHkYCCABKAhSCHJlYWRPbmx5');
 
 @$core.Deprecated('Use writeChatFileRequestDescriptor instead')
 const WriteChatFileRequest$json = {

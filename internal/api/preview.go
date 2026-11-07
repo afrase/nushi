@@ -30,7 +30,8 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 		msg := &nushiv1.WatchChatFileResponse{Path: f.Path, Data: f.Data, Size: f.Size,
 			TooLarge: f.TooLarge, Missing: f.Missing}
 		if f.Data != nil {
-			msg.Sha256, msg.Editable = filesave.Sum(f.Data), filesave.Editable(f.Size, f.Links)
+			msg.Sha256, msg.Editable = filesave.Sum(f.Data), filesave.Editable(f.Size, f.Links, f.Mode, f.Owner)
+			msg.ReadOnly = !filesave.Writable(f.Mode, f.Owner)
 		}
 		sendErr = stream.Send(msg)
 		return sendErr

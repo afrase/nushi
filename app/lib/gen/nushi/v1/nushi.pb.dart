@@ -13441,6 +13441,7 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
     $core.bool? missing,
     $core.String? sha256,
     $core.bool? editable,
+    $core.bool? readOnly,
   }) {
     final result = WatchChatFileResponse._();
     if (path != null) result.path = path;
@@ -13450,6 +13451,7 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
     if (missing != null) result.missing = missing;
     if (sha256 != null) result.sha256 = sha256;
     if (editable != null) result.editable = editable;
+    if (readOnly != null) result.readOnly = readOnly;
     return result;
   }
 
@@ -13474,6 +13476,7 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
     ..aOB(5, _omitFieldNames ? '' : 'missing')
     ..aOS(6, _omitFieldNames ? '' : 'sha256')
     ..aOB(7, _omitFieldNames ? '' : 'editable')
+    ..aOB(8, _omitFieldNames ? '' : 'readOnly')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13560,7 +13563,8 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
   void clearSha256() => $_clearField(6);
 
   /// WriteChatFile may write it: a regular file with one link, 1 MiB at
-  /// most. The app checks its text too. (API 108)
+  /// most, that the daemon's user owns and may write. The app checks its
+  /// text too. (API 108)
   @$pb.TagNumber(7)
   $core.bool get editable => $_getBF(6);
   @$pb.TagNumber(7)
@@ -13569,6 +13573,17 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
   $core.bool hasEditable() => $_has(6);
   @$pb.TagNumber(7)
   void clearEditable() => $_clearField(7);
+
+  /// The daemon's user doesn't own it or has no write bit on it: it isn't
+  /// editable. (API 108)
+  @$pb.TagNumber(8)
+  $core.bool get readOnly => $_getBF(7);
+  @$pb.TagNumber(8)
+  set readOnly($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasReadOnly() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearReadOnly() => $_clearField(8);
 }
 
 class WriteChatFileRequest extends $pb.GeneratedMessage {
