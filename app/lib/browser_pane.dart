@@ -9,10 +9,12 @@ import 'package:nushi/browser_menu.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
+import 'package:nushi/servers_menu.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// The chat header's browser button (ADR 0094): it shows the preview's last
@@ -47,7 +49,8 @@ const browserHint = 'Enter an address, like example.com or localhost:3000';
 
 /// A browser tab in the preview pane (ADR 0094), as Claude desktop's
 /// browser: the pane's title row (its tabs as chips, a + that opens a new
-/// browser tab; at the right ⋯ ([BrowserMenu]), Expand and Close, which
+/// browser tab; at the right Servers ([ServersButton]), ⋯ ([BrowserMenu]),
+/// Expand and Close, which
 /// closes every tab), then [BrowserBar], then the page, or for a new tab a
 /// hint. Like a file's view it's made again as its tab shows: the page
 /// loads again from the tab's address.
@@ -60,6 +63,7 @@ class BrowserPane extends StatefulWidget {
     this.tabsKey,
     this.expanded = false,
     this.onExpand,
+    this.daemon,
   });
 
   final ChatState chat;
@@ -75,6 +79,9 @@ class BrowserPane extends StatefulWidget {
   /// Expands it, or with it [expanded] collapses it: its title row's button,
   /// and Esc while it's expanded. Null: no button.
   final VoidCallback? onExpand;
+
+  /// The daemon, for the Servers button (ADR 0098); null: no button.
+  final Daemon? daemon;
 
   @override
   State<BrowserPane> createState() => _BrowserPaneState();
@@ -226,6 +233,12 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
               const SizedBox(width: 6),
               // Each in a box of one size, the glyphs as large as Claude's
               // and in the text's ink, a disabled one muted (IconTap).
+              if (widget.daemon case final daemon?)
+                ServersButton(
+                  chat: widget.chat,
+                  daemon: daemon,
+                  padding: _boxed(18),
+                ),
               BrowserMenu(tab: _tab, host: host, size: 20, padding: _boxed(20)),
               if (expand != null)
                 IconTap.line(

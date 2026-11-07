@@ -299,6 +299,7 @@ class _ChatViewState extends State<ChatView> {
                 key: ObjectKey(tab),
                 chat: chat,
                 tab: tab,
+                daemon: widget.daemon,
                 tabsKey: _previewTabs,
                 onClose: () => unawaited(closePreviewSaving(context, chat)),
                 expanded: _expanded,
