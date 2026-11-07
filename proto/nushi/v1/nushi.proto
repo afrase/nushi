@@ -27,6 +27,10 @@ service NushiService {
   // A chat's items before one of them, a page at a time: for a client that
   // took only the recent part (GetChatRequest.recent), as it scrolls up.
   rpc GetChatItems(GetChatItemsRequest) returns (GetChatItemsResponse);
+  // One of a chat's images, by its hash: for a client that took the chat's
+  // items with image_refs, as each image is about to show. Only an image
+  // of that chat's own items. API 110.
+  rpc GetChatImage(GetChatImageRequest) returns (GetChatImageResponse);
   // Starts an agent in a folder and opens a chat with it.
   rpc StartChat(StartChatRequest) returns (StartChatResponse);
   // Lists the agents chats can run, the default first, each as found on
@@ -657,6 +661,9 @@ message GetChatRequest {
   // that started a subagent whose steps are among them; `older` counts
   // the ones left out. A phone on a slow link opens a long chat this way.
   int32 recent = 2;
+  // The items' larger images as references (ImageData.sha256), fetched
+  // with GetChatImage as they show. API 110.
+  bool image_refs = 3;
 }
 
 message GetChatResponse {
@@ -687,6 +694,19 @@ message GetChatItemsRequest {
   // How many items at most, reaching back to a subagent's call as
   // `recent` does.
   int32 limit = 3;
+  // As GetChatRequest.image_refs. API 110.
+  bool image_refs = 4;
+}
+
+message GetChatImageRequest {
+  string chat_id = 1;
+  // The image's ImageData.sha256.
+  string sha256 = 2;
+}
+
+message GetChatImageResponse {
+  string mime_type = 1;
+  bytes data = 2;
 }
 
 message GetChatItemsResponse {
@@ -1001,7 +1021,15 @@ message UnqueueResponse {
 // An image in a prompt, a message or a tool call's output.
 message ImageData {
   string mime_type = 1;
+  // Empty when sent as a reference (image_refs): then sha256 names it.
   bytes data = 2;
+  // With image_refs, for an image larger than 64 KB: the lowercase hex
+  // SHA-256 of its bytes, for GetChatImage, their length, and its size in
+  // pixels when the daemon could read it (else 0). API 110.
+  string sha256 = 3;
+  int64 size = 4;
+  int32 width = 5;
+  int32 height = 6;
 }
 
 message ListFilesRequest {
@@ -1955,7 +1983,10 @@ message Commit {
   int32 removed = 6;
 }
 
-message EventsRequest {}
+message EventsRequest {
+  // As GetChatRequest.image_refs, for the items the events bring. API 110.
+  bool image_refs = 1;
+}
 
 message EventsResponse {
   string chat_id = 1;

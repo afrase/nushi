@@ -127,6 +127,26 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// One of a chat's images, by its hash: for a client that took the chat's
+  /// items with image_refs, as each image is about to show. Only an image
+  /// of that chat's own items. API 110.
+  Future<nushiv1nushi.GetChatImageResponse> getChatImage(
+    nushiv1nushi.GetChatImageRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.getChatImage,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Starts an agent in a folder and opens a chat with it.
   Future<nushiv1nushi.StartChatResponse> startChat(
     nushiv1nushi.StartChatRequest input, {

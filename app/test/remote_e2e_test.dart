@@ -4,6 +4,8 @@
 // starts one, prompts it, answers its permission card, gets the streamed
 // events, and is revoked.
 import 'dart:async';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/http2.dart';
@@ -105,6 +107,35 @@ void main() {
           e.item.item.text.contains('hello from the phone') &&
           e.item.item.kind == ItemKind.ITEM_KIND_AGENT_MESSAGE,
     );
+    // A screenshot's size (ADR 0099): the snapshot carries a reference,
+    // and the image comes on its own, whole, across many Noise messages.
+    final shot = Uint8List(3400000);
+    final random = Random(1);
+    for (var i = 0; i < shot.length; i++) {
+      shot[i] = random.nextInt(256);
+    }
+    shot.setAll(0, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    await phone.sendPrompt(
+      SendPromptRequest(
+        chatId: chat,
+        text: 'look at this',
+        images: [ImageData(mimeType: 'image/png', data: shot)],
+      ),
+    );
+    final snap = await phone.getChat(
+      GetChatRequest(chatId: chat, recent: 80, imageRefs: true),
+    );
+    final ref = snap.items
+        .firstWhere((it) => it.text == 'look at this')
+        .images
+        .single;
+    expect(ref.data, isEmpty);
+    expect(ref.size.toInt(), shot.length);
+    final got = await phone.getChatImage(
+      GetChatImageRequest(chatId: chat, sha256: ref.sha256),
+    );
+    expect(got.data, shot);
+
     await phone.sendPrompt(
       SendPromptRequest(chatId: chat, text: 'permission please'),
     );

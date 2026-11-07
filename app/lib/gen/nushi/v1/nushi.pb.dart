@@ -1438,10 +1438,12 @@ class GetChatRequest extends $pb.GeneratedMessage {
   factory GetChatRequest({
     $core.String? chatId,
     $core.int? recent,
+    $core.bool? imageRefs,
   }) {
     final result = GetChatRequest._();
     if (chatId != null) result.chatId = chatId;
     if (recent != null) result.recent = recent;
+    if (imageRefs != null) result.imageRefs = imageRefs;
     return result;
   }
 
@@ -1460,6 +1462,7 @@ class GetChatRequest extends $pb.GeneratedMessage {
       createEmptyInstance: GetChatRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aI(2, _omitFieldNames ? '' : 'recent')
+    ..aOB(3, _omitFieldNames ? '' : 'imageRefs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1504,6 +1507,17 @@ class GetChatRequest extends $pb.GeneratedMessage {
   $core.bool hasRecent() => $_has(1);
   @$pb.TagNumber(2)
   void clearRecent() => $_clearField(2);
+
+  /// The items' larger images as references (ImageData.sha256), fetched
+  /// with GetChatImage as they show. API 110.
+  @$pb.TagNumber(3)
+  $core.bool get imageRefs => $_getBF(2);
+  @$pb.TagNumber(3)
+  set imageRefs($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasImageRefs() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearImageRefs() => $_clearField(3);
 }
 
 class GetChatResponse extends $pb.GeneratedMessage {
@@ -1676,11 +1690,13 @@ class GetChatItemsRequest extends $pb.GeneratedMessage {
     $core.String? chatId,
     $core.String? before,
     $core.int? limit,
+    $core.bool? imageRefs,
   }) {
     final result = GetChatItemsRequest._();
     if (chatId != null) result.chatId = chatId;
     if (before != null) result.before = before;
     if (limit != null) result.limit = limit;
+    if (imageRefs != null) result.imageRefs = imageRefs;
     return result;
   }
 
@@ -1700,6 +1716,7 @@ class GetChatItemsRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'before')
     ..aI(3, _omitFieldNames ? '' : 'limit')
+    ..aOB(4, _omitFieldNames ? '' : 'imageRefs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1754,6 +1771,158 @@ class GetChatItemsRequest extends $pb.GeneratedMessage {
   $core.bool hasLimit() => $_has(2);
   @$pb.TagNumber(3)
   void clearLimit() => $_clearField(3);
+
+  /// As GetChatRequest.image_refs. API 110.
+  @$pb.TagNumber(4)
+  $core.bool get imageRefs => $_getBF(3);
+  @$pb.TagNumber(4)
+  set imageRefs($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasImageRefs() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearImageRefs() => $_clearField(4);
+}
+
+class GetChatImageRequest extends $pb.GeneratedMessage {
+  factory GetChatImageRequest({
+    $core.String? chatId,
+    $core.String? sha256,
+  }) {
+    final result = GetChatImageRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (sha256 != null) result.sha256 = sha256;
+    return result;
+  }
+
+  GetChatImageRequest._();
+
+  factory GetChatImageRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatImageRequest()..mergeFromBuffer(data, registry);
+  factory GetChatImageRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatImageRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetChatImageRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetChatImageRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'sha256')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatImageRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatImageRequest copyWith(void Function(GetChatImageRequest) updates) =>
+      super.copyWith((message) => updates(message as GetChatImageRequest))
+          as GetChatImageRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use GetChatImageRequest() / GetChatImageRequest.new instead')
+  static GetChatImageRequest create() => GetChatImageRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetChatImageRequest._();
+  @$core.override
+  GetChatImageRequest createEmptyInstance() => GetChatImageRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetChatImageRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetChatImageRequest>(
+          GetChatImageRequest.$_createMessage);
+  static GetChatImageRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The image's ImageData.sha256.
+  @$pb.TagNumber(2)
+  $core.String get sha256 => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set sha256($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSha256() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSha256() => $_clearField(2);
+}
+
+class GetChatImageResponse extends $pb.GeneratedMessage {
+  factory GetChatImageResponse({
+    $core.String? mimeType,
+    $core.List<$core.int>? data,
+  }) {
+    final result = GetChatImageResponse._();
+    if (mimeType != null) result.mimeType = mimeType;
+    if (data != null) result.data = data;
+    return result;
+  }
+
+  GetChatImageResponse._();
+
+  factory GetChatImageResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatImageResponse()..mergeFromBuffer(data, registry);
+  factory GetChatImageResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetChatImageResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetChatImageResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: GetChatImageResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'mimeType')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatImageResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetChatImageResponse copyWith(void Function(GetChatImageResponse) updates) =>
+      super.copyWith((message) => updates(message as GetChatImageResponse))
+          as GetChatImageResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetChatImageResponse() / GetChatImageResponse.new instead')
+  static GetChatImageResponse create() => GetChatImageResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetChatImageResponse._();
+  @$core.override
+  GetChatImageResponse createEmptyInstance() => GetChatImageResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetChatImageResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetChatImageResponse>(
+          GetChatImageResponse.$_createMessage);
+  static GetChatImageResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get mimeType => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set mimeType($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasMimeType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearMimeType() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
 }
 
 class GetChatItemsResponse extends $pb.GeneratedMessage {
@@ -4417,10 +4586,18 @@ class ImageData extends $pb.GeneratedMessage {
   factory ImageData({
     $core.String? mimeType,
     $core.List<$core.int>? data,
+    $core.String? sha256,
+    $fixnum.Int64? size,
+    $core.int? width,
+    $core.int? height,
   }) {
     final result = ImageData._();
     if (mimeType != null) result.mimeType = mimeType;
     if (data != null) result.data = data;
+    if (sha256 != null) result.sha256 = sha256;
+    if (size != null) result.size = size;
+    if (width != null) result.width = width;
+    if (height != null) result.height = height;
     return result;
   }
 
@@ -4440,6 +4617,10 @@ class ImageData extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'mimeType')
     ..a<$core.List<$core.int>>(
         2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aOS(3, _omitFieldNames ? '' : 'sha256')
+    ..aInt64(4, _omitFieldNames ? '' : 'size')
+    ..aI(5, _omitFieldNames ? '' : 'width')
+    ..aI(6, _omitFieldNames ? '' : 'height')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -4471,6 +4652,7 @@ class ImageData extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearMimeType() => $_clearField(1);
 
+  /// Empty when sent as a reference (image_refs): then sha256 names it.
   @$pb.TagNumber(2)
   $core.List<$core.int> get data => $_getN(1);
   @$pb.TagNumber(2)
@@ -4479,6 +4661,45 @@ class ImageData extends $pb.GeneratedMessage {
   $core.bool hasData() => $_has(1);
   @$pb.TagNumber(2)
   void clearData() => $_clearField(2);
+
+  /// With image_refs, for an image larger than 64 KB: the lowercase hex
+  /// SHA-256 of its bytes, for GetChatImage, their length, and its size in
+  /// pixels when the daemon could read it (else 0). API 110.
+  @$pb.TagNumber(3)
+  $core.String get sha256 => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set sha256($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSha256() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSha256() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $fixnum.Int64 get size => $_getI64(3);
+  @$pb.TagNumber(4)
+  set size($fixnum.Int64 value) => $_setInt64(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSize() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSize() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get width => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set width($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasWidth() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearWidth() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.int get height => $_getIZ(5);
+  @$pb.TagNumber(6)
+  set height($core.int value) => $_setSignedInt32(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasHeight() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearHeight() => $_clearField(6);
 }
 
 class ListFilesRequest extends $pb.GeneratedMessage {
@@ -14486,7 +14707,13 @@ class Commit extends $pb.GeneratedMessage {
 }
 
 class EventsRequest extends $pb.GeneratedMessage {
-  factory EventsRequest() => EventsRequest._();
+  factory EventsRequest({
+    $core.bool? imageRefs,
+  }) {
+    final result = EventsRequest._();
+    if (imageRefs != null) result.imageRefs = imageRefs;
+    return result;
+  }
 
   EventsRequest._();
 
@@ -14501,6 +14728,7 @@ class EventsRequest extends $pb.GeneratedMessage {
       _omitMessageNames ? '' : 'EventsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsRequest.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'imageRefs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14524,6 +14752,16 @@ class EventsRequest extends $pb.GeneratedMessage {
       _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<EventsRequest>(
           EventsRequest.$_createMessage);
   static EventsRequest? _defaultInstance;
+
+  /// As GetChatRequest.image_refs, for the items the events bring. API 110.
+  @$pb.TagNumber(1)
+  $core.bool get imageRefs => $_getBF(0);
+  @$pb.TagNumber(1)
+  set imageRefs($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasImageRefs() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearImageRefs() => $_clearField(1);
 }
 
 enum EventsResponse_Kind {
@@ -31285,6 +31523,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, GetChatItemsRequest request) =>
       _client.invoke<GetChatItemsResponse>(
           ctx, 'NushiService', 'GetChatItems', request, GetChatItemsResponse());
+
+  /// One of a chat's images, by its hash: for a client that took the chat's
+  /// items with image_refs, as each image is about to show. Only an image
+  /// of that chat's own items. API 110.
+  $async.Future<GetChatImageResponse> getChatImage(
+          $pb.ClientContext? ctx, GetChatImageRequest request) =>
+      _client.invoke<GetChatImageResponse>(
+          ctx, 'NushiService', 'GetChatImage', request, GetChatImageResponse());
 
   /// Starts an agent in a folder and opens a chat with it.
   $async.Future<StartChatResponse> startChat(

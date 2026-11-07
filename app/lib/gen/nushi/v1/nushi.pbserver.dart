@@ -33,6 +33,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetChatRequest request);
   $async.Future<$0.GetChatItemsResponse> getChatItems(
       $pb.ServerContext ctx, $0.GetChatItemsRequest request);
+  $async.Future<$0.GetChatImageResponse> getChatImage(
+      $pb.ServerContext ctx, $0.GetChatImageRequest request);
   $async.Future<$0.StartChatResponse> startChat(
       $pb.ServerContext ctx, $0.StartChatRequest request);
   $async.Future<$0.ListAgentsResponse> listAgents(
@@ -326,6 +328,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.GetChatRequest();
       case 'GetChatItems':
         return $0.GetChatItemsRequest();
+      case 'GetChatImage':
+        return $0.GetChatImageRequest();
       case 'StartChat':
         return $0.StartChatRequest();
       case 'ListAgents':
@@ -624,6 +628,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return getChat(ctx, request as $0.GetChatRequest);
       case 'GetChatItems':
         return getChatItems(ctx, request as $0.GetChatItemsRequest);
+      case 'GetChatImage':
+        return getChatImage(ctx, request as $0.GetChatImageRequest);
       case 'StartChat':
         return startChat(ctx, request as $0.StartChatRequest);
       case 'ListAgents':

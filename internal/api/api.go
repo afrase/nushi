@@ -30,7 +30,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 109
+const Version = 110
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -210,7 +210,7 @@ func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.Resta
 	return connect.NewResponse(out), nil
 }
 
-func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
+func (s *server) Events(ctx context.Context, req *connect.Request[nushiv1.EventsRequest], stream *connect.ServerStream[nushiv1.EventsResponse]) error {
 	var err error
 	// The count is the chats' own: the socket's server and the devices'
 	// are two, and a phone following keeps side chats the Mac left.
@@ -218,7 +218,7 @@ func (s *server) Events(ctx context.Context, _ *connect.Request[nushiv1.EventsRe
 	defer s.Chats.Following(-1)
 	// An empty first message tells the client the subscription is live.
 	behind := s.Hub.Subscribe(ctx, func(e model.Event) bool {
-		err = stream.Send(toProto(e))
+		err = stream.Send(toProto(e, req.Msg.ImageRefs))
 		return err == nil
 	}, events.OnLive(func() bool {
 		err = stream.Send(&nushiv1.EventsResponse{})

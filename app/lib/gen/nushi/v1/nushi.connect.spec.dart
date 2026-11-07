@@ -69,6 +69,16 @@ abstract final class NushiService {
     nushiv1nushi.GetChatItemsResponse.new,
   );
 
+  /// One of a chat's images, by its hash: for a client that took the chat's
+  /// items with image_refs, as each image is about to show. Only an image
+  /// of that chat's own items. API 110.
+  static const getChatImage = connect.Spec(
+    '/$name/GetChatImage',
+    connect.StreamType.unary,
+    nushiv1nushi.GetChatImageRequest.new,
+    nushiv1nushi.GetChatImageResponse.new,
+  );
+
   /// Starts an agent in a folder and opens a chat with it.
   static const startChat = connect.Spec(
     '/$name/StartChat',

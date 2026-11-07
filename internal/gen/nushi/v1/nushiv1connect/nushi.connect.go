@@ -48,6 +48,9 @@ const (
 	// NushiServiceGetChatItemsProcedure is the fully-qualified name of the NushiService's GetChatItems
 	// RPC.
 	NushiServiceGetChatItemsProcedure = "/nushi.v1.NushiService/GetChatItems"
+	// NushiServiceGetChatImageProcedure is the fully-qualified name of the NushiService's GetChatImage
+	// RPC.
+	NushiServiceGetChatImageProcedure = "/nushi.v1.NushiService/GetChatImage"
 	// NushiServiceStartChatProcedure is the fully-qualified name of the NushiService's StartChat RPC.
 	NushiServiceStartChatProcedure = "/nushi.v1.NushiService/StartChat"
 	// NushiServiceListAgentsProcedure is the fully-qualified name of the NushiService's ListAgents RPC.
@@ -456,6 +459,10 @@ type NushiServiceClient interface {
 	// A chat's items before one of them, a page at a time: for a client that
 	// took only the recent part (GetChatRequest.recent), as it scrolls up.
 	GetChatItems(context.Context, *connect.Request[v1.GetChatItemsRequest]) (*connect.Response[v1.GetChatItemsResponse], error)
+	// One of a chat's images, by its hash: for a client that took the chat's
+	// items with image_refs, as each image is about to show. Only an image
+	// of that chat's own items. API 110.
+	GetChatImage(context.Context, *connect.Request[v1.GetChatImageRequest]) (*connect.Response[v1.GetChatImageResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Lists the agents chats can run, the default first, each as found on
@@ -949,6 +956,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceGetChatItemsProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("GetChatItems")),
+			connect.WithClientOptions(opts...),
+		),
+		getChatImage: connect.NewClient[v1.GetChatImageRequest, v1.GetChatImageResponse](
+			httpClient,
+			baseURL+NushiServiceGetChatImageProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("GetChatImage")),
 			connect.WithClientOptions(opts...),
 		),
 		startChat: connect.NewClient[v1.StartChatRequest, v1.StartChatResponse](
@@ -1796,6 +1809,7 @@ type nushiServiceClient struct {
 	listChats               *connect.Client[v1.ListChatsRequest, v1.ListChatsResponse]
 	getChat                 *connect.Client[v1.GetChatRequest, v1.GetChatResponse]
 	getChatItems            *connect.Client[v1.GetChatItemsRequest, v1.GetChatItemsResponse]
+	getChatImage            *connect.Client[v1.GetChatImageRequest, v1.GetChatImageResponse]
 	startChat               *connect.Client[v1.StartChatRequest, v1.StartChatResponse]
 	listAgents              *connect.Client[v1.ListAgentsRequest, v1.ListAgentsResponse]
 	setUpAgent              *connect.Client[v1.SetUpAgentRequest, v1.SetUpAgentResponse]
@@ -1965,6 +1979,11 @@ func (c *nushiServiceClient) GetChat(ctx context.Context, req *connect.Request[v
 // GetChatItems calls nushi.v1.NushiService.GetChatItems.
 func (c *nushiServiceClient) GetChatItems(ctx context.Context, req *connect.Request[v1.GetChatItemsRequest]) (*connect.Response[v1.GetChatItemsResponse], error) {
 	return c.getChatItems.CallUnary(ctx, req)
+}
+
+// GetChatImage calls nushi.v1.NushiService.GetChatImage.
+func (c *nushiServiceClient) GetChatImage(ctx context.Context, req *connect.Request[v1.GetChatImageRequest]) (*connect.Response[v1.GetChatImageResponse], error) {
+	return c.getChatImage.CallUnary(ctx, req)
 }
 
 // StartChat calls nushi.v1.NushiService.StartChat.
@@ -2686,6 +2705,10 @@ type NushiServiceHandler interface {
 	// A chat's items before one of them, a page at a time: for a client that
 	// took only the recent part (GetChatRequest.recent), as it scrolls up.
 	GetChatItems(context.Context, *connect.Request[v1.GetChatItemsRequest]) (*connect.Response[v1.GetChatItemsResponse], error)
+	// One of a chat's images, by its hash: for a client that took the chat's
+	// items with image_refs, as each image is about to show. Only an image
+	// of that chat's own items. API 110.
+	GetChatImage(context.Context, *connect.Request[v1.GetChatImageRequest]) (*connect.Response[v1.GetChatImageResponse], error)
 	// Starts an agent in a folder and opens a chat with it.
 	StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error)
 	// Lists the agents chats can run, the default first, each as found on
@@ -3175,6 +3198,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceGetChatItemsProcedure,
 		svc.GetChatItems,
 		connect.WithSchema(nushiServiceMethods.ByName("GetChatItems")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceGetChatImageHandler := connect.NewUnaryHandler(
+		NushiServiceGetChatImageProcedure,
+		svc.GetChatImage,
+		connect.WithSchema(nushiServiceMethods.ByName("GetChatImage")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceStartChatHandler := connect.NewUnaryHandler(
@@ -4025,6 +4054,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceGetChatHandler.ServeHTTP(w, r)
 		case NushiServiceGetChatItemsProcedure:
 			nushiServiceGetChatItemsHandler.ServeHTTP(w, r)
+		case NushiServiceGetChatImageProcedure:
+			nushiServiceGetChatImageHandler.ServeHTTP(w, r)
 		case NushiServiceStartChatProcedure:
 			nushiServiceStartChatHandler.ServeHTTP(w, r)
 		case NushiServiceListAgentsProcedure:
@@ -4334,6 +4365,10 @@ func (UnimplementedNushiServiceHandler) GetChat(context.Context, *connect.Reques
 
 func (UnimplementedNushiServiceHandler) GetChatItems(context.Context, *connect.Request[v1.GetChatItemsRequest]) (*connect.Response[v1.GetChatItemsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetChatItems is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) GetChatImage(context.Context, *connect.Request[v1.GetChatImageRequest]) (*connect.Response[v1.GetChatImageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.GetChatImage is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) StartChat(context.Context, *connect.Request[v1.StartChatRequest]) (*connect.Response[v1.StartChatResponse], error) {

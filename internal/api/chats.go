@@ -45,10 +45,10 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
 		Queue: queueProto(c.Queue), Older: int32(start)}
 	for _, it := range c.Items {
-		resp.Items = append(resp.Items, itemProto(&it))
+		resp.Items = append(resp.Items, itemProto(&it, req.Msg.ImageRefs))
 	}
 	for _, it := range part.Running {
-		resp.Running = append(resp.Running, itemProto(&it))
+		resp.Running = append(resp.Running, itemProto(&it, req.Msg.ImageRefs))
 	}
 	return connect.NewResponse(resp), nil
 }
@@ -64,7 +64,7 @@ func (s *server) GetChatItems(_ context.Context, req *connect.Request[nushiv1.Ge
 	}
 	resp := &nushiv1.GetChatItemsResponse{Older: int32(start)}
 	for _, it := range items {
-		resp.Items = append(resp.Items, itemProto(&it))
+		resp.Items = append(resp.Items, itemProto(&it, req.Msg.ImageRefs))
 	}
 	return connect.NewResponse(resp), nil
 }

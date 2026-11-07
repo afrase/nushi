@@ -179,7 +179,7 @@ func TestEventsMarshalWhateverTheModelHolds(t *testing.T) {
 		"config":   {Config: []model.ConfigOption{{Name: bad, Current: bad, Values: []model.ConfigValue{{Name: bad}}}}},
 		"show":     {Show: bad},
 	} {
-		out := toProto(e)
+		out := toProto(e, false)
 		mend(out.ProtoReflect())
 		if _, err := proto.Marshal(out); err != nil {
 			t.Errorf("%s: %v", name, err)
@@ -192,7 +192,7 @@ func TestEventsMarshalWhateverTheModelHolds(t *testing.T) {
 func TestItemLeavesOutPathsThatAreNotUTF8(t *testing.T) {
 	it := model.Item{Kind: model.ToolCall, Title: "t\xff", Paths: []string{"good", "bad\xff"},
 		Diffs: []model.FileChange{{Path: "bad\xff"}, {Path: "good", Old: "o\xff", New: "n"}}}
-	out := itemProto(&it)
+	out := itemProto(&it, false)
 	if !slices.Equal(out.Paths, []string{"good"}) || len(out.Diffs) != 1 || out.Diffs[0].Path != "good" {
 		t.Errorf("%v %v", out.Paths, out.Diffs)
 	}

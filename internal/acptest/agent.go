@@ -64,6 +64,7 @@ type Agent struct {
 	Pause   time.Duration
 	Codex   bool // answers as codex-acp does (codex.go)
 	Omp     bool // answers as omp does (omp.go)
+	Images  bool // says it takes images in prompts (as plain agents don't)
 	// For the log: what it writes to its stderr, how long session/load
 	// takes, and whether it reopens a session it doesn't know (as if
 	// another process had kept it), replaying nothing.
@@ -210,7 +211,11 @@ func (a *Agent) answer(f frame) {
 	switch f.Method {
 	case "initialize":
 		caps := map[string]any{"fork": map[string]any{}, "delete": map[string]any{}, "close": map[string]any{}, "list": map[string]any{}}
-		result = map[string]any{"protocolVersion": 1, "agentCapabilities": map[string]any{"loadSession": true, "sessionCapabilities": caps}}
+		agentCaps := map[string]any{"loadSession": true, "sessionCapabilities": caps}
+		if a.Images {
+			agentCaps["promptCapabilities"] = map[string]any{"image": true}
+		}
+		result = map[string]any{"protocolVersion": 1, "agentCapabilities": agentCaps}
 		if a.Codex {
 			result = codexInit()
 		}

@@ -50,11 +50,13 @@ var fieldTypes = map[model.FieldType]nushiv1.FieldType{
 	model.Boolean: nushiv1.FieldType_FIELD_TYPE_BOOLEAN,
 }
 
-func toProto(e model.Event) *nushiv1.EventsResponse {
+// toProto is an event for the API; with refs, its item's larger images go
+// as references (imageProto).
+func toProto(e model.Event, refs bool) *nushiv1.EventsResponse {
 	out := &nushiv1.EventsResponse{ChatId: e.ChatID, Seq: e.Seq}
 	switch {
 	case e.Item != nil:
-		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item), Append: e.Append, Index: int32(e.Index)}}
+		out.Kind = &nushiv1.EventsResponse_Item{Item: &nushiv1.ItemEvent{Item: itemProto(e.Item, refs), Append: e.Append, Index: int32(e.Index)}}
 	case e.Record != nil:
 		out.Kind = &nushiv1.EventsResponse_Chat{Chat: chatProto(*e.Record)}
 	case e.Config != nil:
@@ -91,7 +93,9 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 	return out
 }
 
-func itemProto(it *model.Item) *nushiv1.Item {
+// itemProto is an item for the API; with refs, its larger images go as
+// references (imageProto).
+func itemProto(it *model.Item, refs bool) *nushiv1.Item {
 	out := &nushiv1.Item{Id: it.ID, Kind: itemKinds[it.Kind], Text: it.Text,
 		Title: it.Title, ToolKind: it.ToolKind, Status: it.Status, Answer: it.Answer, Parent: it.Parent, Agent: it.Agent, Tool: it.Tool,
 		Prompt: it.Prompt, Model: it.Model, Effort: it.Effort, RanModel: it.RanModel, AgentId: it.AgentID, ToSubagentName: it.ToSubagentName,
@@ -115,7 +119,7 @@ func itemProto(it *model.Item) *nushiv1.Item {
 	out.Options = optionsProto(it.Options)
 	out.Paths = sendablePaths(it.Paths)
 	for _, img := range it.Images {
-		out.Images = append(out.Images, &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data})
+		out.Images = append(out.Images, imageProto(img, refs))
 	}
 	for _, e := range it.Plan {
 		out.Plan = append(out.Plan, &nushiv1.PlanEntry{Content: e.Content, Status: e.Status})
