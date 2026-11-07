@@ -14,7 +14,7 @@ extension DaemonEvents on Daemon {
   void _subscribe() {
     var live = false;
     _events = client
-        .events(EventsRequest())
+        .events(EventsRequest(imageRefs: remote))
         .listen(
           (e) {
             if (!live) {
@@ -125,7 +125,11 @@ extension DaemonEvents on Daemon {
     for (final chat in [...chats.values]) {
       if (chat.side.value case final side?) {
         try {
-          side.load(await client.getChat(GetChatRequest(chatId: side.id)));
+          side.load(
+            await client.getChat(
+              GetChatRequest(chatId: side.id, imageRefs: remote),
+            ),
+          );
         } on Object {
           chat.side.value = null;
           sides.remove(side.id);

@@ -21,7 +21,12 @@ extension DaemonOpen on Daemon {
       // up), as much as it had, so what shows, or its place, stays.
       final had = max(chat.items.length, chat.keptItems);
       final snapshot = await client.getChat(
-        GetChatRequest(chatId: chat.id, recent: max(pageItems, had)),
+        GetChatRequest(
+          chatId: chat.id,
+          recent: max(pageItems, had),
+          // The phone takes larger images on their own (ADR 0099).
+          imageRefs: remote,
+        ),
       );
       if (load == chat.loads) {
         chat

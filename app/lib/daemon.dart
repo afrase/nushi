@@ -12,6 +12,7 @@ import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_colors.dart';
+import 'package:nushi/chat_images.dart';
 import 'package:nushi/context_cache.dart';
 import 'package:nushi/dev_servers.dart';
 import 'package:nushi/drafts.dart';
@@ -136,6 +137,15 @@ class Daemon extends ChangeNotifier {
   late final _transport = UdsTransport('$dataDir/nushid.sock');
   late final NushiServiceClient client;
   Timer? _timer;
+
+  /// The chats' images that came as references, which only the phone asks
+  /// for (ADR 0099): fetched as they show, kept by hash.
+  late final images = ChatImages((chatId, sha256) async {
+    final got = await client.getChatImage(
+      GetChatImageRequest(chatId: chatId, sha256: sha256),
+    );
+    return Uint8List.fromList(got.data);
+  });
   bool connected = false;
 
   /// Why the last ping failed (the phone shows it in details).

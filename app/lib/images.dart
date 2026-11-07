@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:nushi/chat_images.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -125,13 +126,15 @@ void showImagePreview(BuildContext context, ImageProvider image) =>
     );
 
 /// Small thumbnails of images; a click shows one large. With [onRemove]
-/// each has a button that removes it.
+/// each has a button that removes it. An image that came as a reference
+/// (ADR 0099) is fetched from [refs]'s chat as it shows ([ImageRef]).
 class Thumbnails extends StatelessWidget {
-  const new(this.images, {super.key, this.onRemove, this.size = 64});
+  const new(this.images, {super.key, this.onRemove, this.size = 64, this.refs});
 
   final List<ImageData> images;
   final void Function(int index)? onRemove;
   final double size;
+  final ({ChatImages images, String chatId})? refs;
 
   @override
   Widget build(BuildContext context) {
@@ -144,13 +147,16 @@ class Thumbnails extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              ClickableImage(
-                image: _provider[img] ??= MemoryImage(
-                  Uint8List.fromList(img.data),
+              if ((refs, isImageRef(img)) case (final refs?, true))
+                ImageRef(refs.images, refs.chatId, img, size: size)
+              else
+                ClickableImage(
+                  image: _provider[img] ??= MemoryImage(
+                    Uint8List.fromList(img.data),
+                  ),
+                  size: size,
+                  border: t.borderSubtle,
                 ),
-                size: size,
-                border: t.borderSubtle,
-              ),
               if (onRemove != null) RemoveBadge(() => onRemove!(i)),
             ],
           ),

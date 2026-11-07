@@ -112,7 +112,12 @@ class _RewindPickerState extends State<RewindPicker> {
     try {
       while (older > 0 && first != null) {
         final page = await widget.daemon.client.getChatItems(
-          GetChatItemsRequest(chatId: chat.id, before: first, limit: 500),
+          GetChatItemsRequest(
+            chatId: chat.id,
+            before: first,
+            limit: 500,
+            imageRefs: widget.daemon.remote,
+          ),
         );
         if (_gone || !mounted || page.items.isEmpty) return;
         setState(() => _earlier = [...page.items, ..._earlier]);

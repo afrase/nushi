@@ -60,6 +60,10 @@ class FakeDaemon implements Transport {
   Object? Function(Object input)? answer;
   final calls = <Object>[];
 
+  /// The chats' images GetChatImage answers, by hash (ADR 0099); another
+  /// hash is NotFound.
+  final chatImages = <String, ImageData>{};
+
   /// While set the daemon is gone: every call fails as the transport says
   /// when none answers, pings too.
   bool down = false;
@@ -158,6 +162,13 @@ class FakeDaemon implements Transport {
           ),
           ForkAsChatRequest() => ForkAsChatResponse(chatId: 'fork'),
           KeepSideChatRequest() => KeepSideChatResponse(chatId: 'kept'),
+          GetChatImageRequest(:final sha256) => switch (chatImages[sha256]) {
+            final i? => GetChatImageResponse(
+              mimeType: i.mimeType,
+              data: i.data,
+            ),
+            null => throw ConnectException(Code.notFound, 'no such image'),
+          },
           _ => spec.outputFactory(),
         };
     return UnaryResponse(spec, Headers(), out as O, Headers());

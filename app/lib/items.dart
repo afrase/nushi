@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_column.dart';
+import 'package:nushi/chat_images.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_cards.dart';
@@ -164,7 +165,16 @@ class ItemView extends StatelessWidget {
           // Continue when the turn got somewhere, else Try again.
           'turn_failed' when again != null => (
             again.label,
-            () => tryOrShow(context, () => daemon.sendPrompt(again.request)),
+            () => tryOrShow(context, () async {
+              // Its images, if they came as references, go whole.
+              final r = again.request;
+              final images = await daemon.images.whole(chat.id, r.images);
+              await daemon.sendPrompt(
+                r.deepCopy()
+                  ..images.clear()
+                  ..images.addAll(images),
+              );
+            }),
           ),
           // A session gone: the bar in the composer's place has Delete….
           _ => null,
@@ -235,7 +245,8 @@ class ItemView extends StatelessWidget {
               if (found.after.isNotEmpty)
                 LinkedMarkdown(found.after, chat, daemon, live: live),
             ],
-            if (item.images.isNotEmpty) Thumbnails(item.images, size: 240),
+            if (item.images.isNotEmpty)
+              Thumbnails(item.images, size: 240, refs: _refs),
           ],
         );
         if (TouchTargets.of(context)) return message;
@@ -258,6 +269,10 @@ class ItemView extends StatelessWidget {
         );
     }
   }
+
+  /// Where the item's images that came as references come from.
+  ({ChatImages images, String chatId}) get _refs =>
+      (images: daemon.images, chatId: chat.id);
 
   /// Whether something of the agent's follows this message: it read it.
   bool get _answered => chat.items
@@ -308,7 +323,7 @@ class ItemView extends StatelessWidget {
     spacing: 6,
     children: [
       if (item.toSubagentName.isNotEmpty) _ToSubagentMark(item, chat),
-      if (item.images.isNotEmpty) Thumbnails(item.images),
+      if (item.images.isNotEmpty) Thumbnails(item.images, refs: _refs),
       ?messageFiles(context, item, chat),
       if (item.text.isNotEmpty) UserMessageText(item.text),
     ],
