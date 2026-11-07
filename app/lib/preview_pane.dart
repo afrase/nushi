@@ -5,6 +5,9 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diagram_page.dart';
+import 'package:nushi/edit_bars.dart';
+import 'package:nushi/file_edit.dart';
+import 'package:nushi/file_text.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
@@ -14,6 +17,7 @@ import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/skills_list.dart';
+import 'package:nushi/source_editor.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart';
@@ -76,7 +80,61 @@ class _PreviewPaneState extends State<PreviewPane> {
   final _focus = FocusNode(debugLabel: 'preview');
 
   @override
+  void initState() {
+    super.initState();
+    _watch.addListener(_fileCame);
+  }
+
+  /// The file's edits, while it's being edited (ADR 0096).
+  FileEdit? get _edit => widget.chat.edits[widget.path];
+
+  /// A file that came is edited when it can be (text the editor gives
+  /// back byte for byte; not an image or a PDF); an edit hears of each
+  /// version, and goes once it has nothing unsaved and the file went or
+  /// can't be edited now.
+  void _fileCame() {
+    final f = _watch.file;
+    if (f == null || widget.daemon.daemonApi < editApi) return;
+    if (_edit case final edit?) {
+      edit.receive(f);
+      if (!edit.unsaved && (f.missing || edit.readOnly != null)) {
+        widget.chat.dropEdit(widget.path);
+      }
+      return;
+    }
+    if (_kind == PreviewKind.image || _kind == PreviewKind.pdf) return;
+    if (f.missing || notEditable(f) != null) return;
+    final (file, _) = decodeFile(f.data);
+    widget.chat.edit(
+      widget.path,
+      () =>
+          FileEdit(widget.daemon, widget.chat.id, widget.path, file!, f.sha256),
+    );
+  }
+
+  /// Why the file shows read-only, when it can't be edited (an edit's
+  /// own reason shows in its bars).
+  String? _readOnly() {
+    final f = _watch.file;
+    if (f == null || f.missing || _edit != null || _watch.notText) return null;
+    if (widget.daemon.daemonApi < editApi) return null;
+    return notEditable(f);
+  }
+
+  /// The editor in the source's place, while the file is being edited.
+  Widget? _editor({required bool wrap}) => switch (_edit) {
+    final edit? => SourceEditor(
+      key: ObjectKey(edit),
+      edit: edit,
+      wrap: wrap,
+      padding: const EdgeInsets.fromLTRB(28, 22, 28, 28),
+    ),
+    null => null,
+  };
+
+  @override
   void dispose() {
+    _watch.removeListener(_fileCame);
     _focus.dispose();
     _watch.dispose();
     _page?.dispose();
@@ -96,6 +154,8 @@ class _PreviewPaneState extends State<PreviewPane> {
 
   KeyEventResult _key(FocusNode _, KeyEvent e) {
     if (e is KeyUpEvent || !_showsSource) return KeyEventResult.ignored;
+    // In the editor ⌥Z types its character.
+    if (_edit != null && !_focus.hasPrimaryFocus) return KeyEventResult.ignored;
     if (!wrapKey.accepts(e, HardwareKeyboard.instance)) {
       return KeyEventResult.ignored;
     }
@@ -306,31 +366,52 @@ class _PreviewPaneState extends State<PreviewPane> {
               );
             },
           ),
+          ListenableBuilder(
+            listenable: widget.chat.editsChanged,
+            builder: (context, _) => switch (_edit) {
+              final edit? => EditBars(
+                edit: edit,
+                onDiscard: () => widget.chat.dropEdit(widget.path),
+              ),
+              null => const SizedBox.shrink(),
+            },
+          ),
           Expanded(
             // A click in a source takes the focus to the pane, for ⌥Z;
-            // a page's web view keeps its own.
+            // a page's web view and the editor keep their own.
             child: Listener(
               onPointerDown: (_) {
-                if (_showsSource && !_focus.hasFocus) _focus.requestFocus();
+                if (_showsSource && _edit == null && !_focus.hasFocus) {
+                  _focus.requestFocus();
+                }
               },
               child: ColoredBox(
                 color: t.base,
-                child: PreviewBody(
-                  watch: _watch,
-                  source: _source,
-                  onReveal: _reveal,
-                  page: switch ((page, diagram)) {
-                    (final page?, _) => (watch) => WebPage(
-                      host: page,
-                      watch: watch,
-                      roots: [widget.chat.folder, ?widget.chat.worktree?.path],
-                    ),
-                    (_, final diagram?) => (watch) => DiagramView(
-                      host: diagram,
-                      watch: watch,
-                    ),
-                    _ => null,
-                  },
+                // An edit coming or going swaps the source and the editor.
+                child: ListenableBuilder(
+                  listenable: widget.chat.editsChanged,
+                  builder: (context, _) => PreviewBody(
+                    watch: _watch,
+                    source: _source,
+                    onReveal: _reveal,
+                    editor: _editor,
+                    readOnly: _readOnly,
+                    page: switch ((page, diagram)) {
+                      (final page?, _) => (watch) => WebPage(
+                        host: page,
+                        watch: watch,
+                        roots: [
+                          widget.chat.folder,
+                          ?widget.chat.worktree?.path,
+                        ],
+                      ),
+                      (_, final diagram?) => (watch) => DiagramView(
+                        host: diagram,
+                        watch: watch,
+                      ),
+                      _ => null,
+                    },
+                  ),
                 ),
               ),
             ),
@@ -397,11 +478,27 @@ class _Name extends StatelessWidget {
               )
             : null,
         foregroundDecoration: focusRing(t, look),
-        child: Text(
-          plainPath(baseName(path)),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.code(t.text, size: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 7,
+          children: [
+            Flexible(
+              child: Text(
+                plainPath(baseName(path)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.code(t.text, size: 12),
+              ),
+            ),
+            // Its unsaved edits' dot (ADR 0096).
+            EditedMark(
+              chat: chat,
+              path: path,
+              close: const SizedBox.shrink(),
+              shown: false,
+              hover: false,
+            ),
+          ],
         ),
       ),
     );

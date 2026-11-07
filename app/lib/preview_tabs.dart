@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/gestures.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
+import 'package:nushi/edit_bars.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
@@ -330,14 +332,17 @@ class _Tab extends StatelessWidget {
             ),
             SizedBox(
               width: _closeRoom,
-              child: Opacity(
-                opacity: hover || showing ? 1 : 0,
-                child: IconTap.line(
+              child: EditedMark(
+                chat: chat,
+                path: _pathOf(tab),
+                shown: hover || showing,
+                hover: hover,
+                close: IconTap.line(
                   LineIcon.close,
                   size: 12,
                   padding: 3,
                   tooltip: 'Close tab',
-                  onTap: () => chat.closePreview(tab),
+                  onTap: () => unawaited(closeTabSaving(context, chat, tab)),
                 ),
               ),
             ),
@@ -419,16 +424,22 @@ class _Chip extends StatelessWidget {
                     padding: const EdgeInsets.only(right: _chipEnd),
                     child: SizedBox(
                       width: _chipCloseRoom,
-                      child: Opacity(
-                        opacity: hover || showing ? 1 : 0,
-                        child: Center(
+                      child: EditedMark(
+                        chat: tab.chat,
+                        path: _pathOf(tab.tab),
+                        shown: hover || showing,
+                        hover: hover,
+                        color: ink,
+                        close: Center(
                           child: IconTap.line(
                             // IconTap's 16: an ✕ as tall as the name's caps.
                             LineIcon.close,
                             padding: 2,
                             color: ink,
                             tooltip: 'Close tab',
-                            onTap: () => tab.chat.closePreview(tab.tab),
+                            onTap: () => unawaited(
+                              closeTabSaving(context, tab.chat, tab.tab),
+                            ),
                           ),
                         ),
                       ),
@@ -443,3 +454,9 @@ class _Chip extends StatelessWidget {
     );
   }
 }
+
+/// The file [tab] shows, as its tab names it; null for a browser tab.
+String? _pathOf(PreviewEntry tab) => switch (tab) {
+  PreviewFile(:final path) => path,
+  BrowserTab() => null,
+};

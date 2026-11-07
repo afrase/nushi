@@ -28,7 +28,7 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 <td><a href="docs/images/changes.png"><img src="docs/images/changes.png" width="440" alt="The Changes tab: a file tree and a side-by-side diff with two review comments"></a></td>
 </tr>
 <tr>
-<td><b>Artifacts and previews.</b> Markdown, HTML, images, PDFs, CSVs and Mermaid diagrams the agent writes preview beside the chat, live as it rewrites them. An agent can open one itself, and several files sit in tabs.</td>
+<td><b>Artifacts and previews.</b> Markdown, HTML, images, PDFs, CSVs and Mermaid diagrams the agent writes preview beside the chat, live as it rewrites them. An agent can open one itself, several files sit in tabs, and a file’s source is editable: click and type.</td>
 <td><a href="docs/images/preview.png"><img src="docs/images/preview.png" width="440" alt="A Markdown design note previewed beside the chat that wrote it"></a></td>
 </tr>
 <tr>

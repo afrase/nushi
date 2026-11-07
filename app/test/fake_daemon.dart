@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:connectrpc/connect.dart';
+import 'package:crypto/crypto.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -124,6 +126,10 @@ class FakeDaemon implements Transport {
         );
       }
     }
+    if (input is WriteChatFileRequest && files.containsKey(input.path)) {
+      calls.add(input);
+      return UnaryResponse(spec, Headers(), _write(input) as O, Headers());
+    }
     var other = answer?.call(input);
     if (other is Future) other = await other;
     calls.add(input);
@@ -221,6 +227,72 @@ class FakeDaemon implements Transport {
     );
   }
 
+  /// The chats' files WatchChatFile and WriteChatFile read and write
+  /// (ADR 0096), by the path asked for; null for one that isn't there.
+  /// Each write is in [writes]; [putFile] changes one as an agent would.
+  final files = <String, List<int>?>{};
+  final writes = <WriteChatFileRequest>[];
+  final _watches = <String, List<StreamController<WatchChatFileResponse>>>{};
+
+  /// [path] as its watch sends it now.
+  WatchChatFileResponse fileNow(String path) => switch (files[path]) {
+    null => WatchChatFileResponse(path: '/Users/me/nushi/$path', missing: true),
+    final data => WatchChatFileResponse(
+      path: '/Users/me/nushi/$path',
+      data: data,
+      size: Int64(data.length),
+      sha256: sha256.convert(data).toString(),
+      editable: true,
+    ),
+  };
+
+  /// Changes [path] on disk ([data] null: deletes it), and its watches
+  /// send it, as the daemon's would a second later.
+  void putFile(String path, List<int>? data) {
+    files[path] = data;
+    for (final w
+        in _watches[path] ??
+            const <StreamController<WatchChatFileResponse>>[]) {
+      w.add(fileNow(path));
+    }
+  }
+
+  /// Sends [path]'s watches [message] as it is: one from before a save,
+  /// arriving late.
+  void sendWatch(String path, WatchChatFileResponse message) {
+    for (final w
+        in _watches[path] ??
+            const <StreamController<WatchChatFileResponse>>[]) {
+      w.add(message);
+    }
+  }
+
+  WriteChatFileResponse _write(WriteChatFileRequest w) {
+    writes.add(w);
+    final now = files[w.path];
+    final sum = now == null ? '' : sha256.convert(now).toString();
+    if (now != null && listEquals(now, w.data)) {
+      return WriteChatFileResponse(
+        saved: WriteChatFileResponse_Saved(sha256: sum),
+      );
+    }
+    if (now == null ? !w.mustNotExist : w.mustNotExist || sum != w.baseSha256) {
+      return WriteChatFileResponse(
+        stale: WriteChatFileResponse_Stale(
+          sha256: sum,
+          data: now,
+          missing: now == null,
+        ),
+      );
+    }
+    files[w.path] = w.data;
+    return WriteChatFileResponse(
+      saved: WriteChatFileResponse_Saved(
+        sha256: sha256.convert(w.data).toString(),
+      ),
+    );
+  }
+
   /// Answers a stream call (its request): its messages, or null for the
   /// events' stream. Every such request is in [calls].
   Stream<Object>? Function(Object input)? streams;
@@ -231,11 +303,25 @@ class FakeDaemon implements Transport {
     Stream<I> input, [
     CallOptions? options,
   ]) async {
-    if (streams case final answer?) {
+    if (streams != null || files.isNotEmpty) {
       final request = await input.first;
-      if (answer(request) case final s?) {
+      if (streams?.call(request) case final s?) {
         calls.add(request);
         return StreamResponse(spec, Headers(), s.cast<O>(), Headers());
+      }
+      if (request case WatchChatFileRequest(:final path)
+          when files.containsKey(path)) {
+        calls.add(request);
+        final watch = StreamController<WatchChatFileResponse>();
+        (_watches[path] ??= []).add(watch);
+        addTearDown(watch.close);
+        watch.add(fileNow(path));
+        return StreamResponse(
+          spec,
+          Headers(),
+          watch.stream.cast<O>(),
+          Headers(),
+        );
       }
     }
     return StreamResponse(

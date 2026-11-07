@@ -14,6 +14,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/details_panel.dart';
+import 'package:nushi/edit_bars.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
@@ -292,14 +293,14 @@ class _ChatViewState extends State<ChatView> {
                 daemon: widget.daemon,
                 path: path,
                 tabsKey: _previewTabs,
-                onClose: () => chat.preview.value = null,
+                onClose: () => unawaited(closePreviewSaving(context, chat)),
               ),
               final BrowserTab tab => BrowserPane(
                 key: ObjectKey(tab),
                 chat: chat,
                 tab: tab,
                 tabsKey: _previewTabs,
-                onClose: () => chat.preview.value = null,
+                onClose: () => unawaited(closePreviewSaving(context, chat)),
                 expanded: _expanded,
                 onExpand: () => setState(() => _expanded = !_expanded),
               ),

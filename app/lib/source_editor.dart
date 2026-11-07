@@ -1,0 +1,184 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:nushi/file_edit.dart';
+import 'package:nushi/menu.dart' show Menu;
+import 'package:nushi/theme/theme.dart';
+import 'package:nushi/transcript_find.dart' show FindBar;
+import 'package:re_editor/re_editor.dart';
+
+/// A file's text as an editor (ADR 0096), as the preview's source shows
+/// it (`SourceView`: the code face, its highlighting, numbered lines
+/// wrapped as [wrap] says): a click and typing edit [edit]. It saves when
+/// the focus leaves it for somewhere that takes the keys (the prompt box,
+/// a terminal, another editor or pane), and when it goes (another tab or
+/// chat); not for a menu, the palette, a dialog, find, or a selection in
+/// the transcript or a preview, which wait for where the focus goes next.
+class SourceEditor extends StatefulWidget {
+  const new({
+    required this.edit,
+    required this.wrap,
+    super.key,
+    this.padding = EdgeInsets.zero,
+  });
+
+  final FileEdit edit;
+  final bool wrap;
+  final EdgeInsets padding;
+
+  @override
+  State<SourceEditor> createState() => _SourceEditorState();
+}
+
+class _SourceEditorState extends State<SourceEditor> {
+  final _focus = FocusNode(debugLabel: 'editor');
+  ModalRoute<Object?>? _route;
+  bool _following = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_focusChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of(context);
+  }
+
+  @override
+  void dispose() {
+    _unfollow();
+    _focus.dispose();
+    // Another tab, the pane closed, another chat: the focus went
+    // elsewhere with the view.
+    if (widget.edit.canSave) unawaited(widget.edit.save());
+    super.dispose();
+  }
+
+  void _focusChanged() {
+    if (_focus.hasFocus) {
+      _unfollow();
+    } else if (widget.edit.canSave && !_following) {
+      _following = true;
+      FocusManager.instance.addListener(_moved);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _moved());
+    }
+  }
+
+  void _unfollow() {
+    if (!_following) return;
+    _following = false;
+    FocusManager.instance.removeListener(_moved);
+  }
+
+  /// Where the focus went since it left: somewhere that takes the keys
+  /// saves; somewhere that only passes (a menu, a dialog) waits.
+  void _moved() {
+    if (!_following || !mounted) return;
+    if (_focus.hasFocus) return _unfollow();
+    if (passing(FocusManager.instance.primaryFocus, _route)) return;
+    _unfollow();
+    unawaited(widget.edit.save());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    final code = theme.code(t.text, size: 12);
+    final gutter = theme.code(t.textMuted, size: 12);
+    return ListenableBuilder(
+      listenable: widget.edit,
+      builder: (context, _) => CodeEditor(
+        controller: widget.edit.controller,
+        focusNode: _focus,
+        readOnly: widget.edit.readOnly != null,
+        wordWrap: widget.wrap,
+        autocompleteSymbols: false,
+        chunkAnalyzer: const NonCodeChunkAnalyzer(),
+        shortcutsActivatorsBuilder: const _MacKeys(),
+        padding: EdgeInsets.only(
+          left: 14,
+          top: widget.padding.top,
+          right: widget.padding.right,
+          bottom: widget.padding.bottom,
+        ),
+        style: CodeEditorStyle(
+          fontFamily: code.fontFamily,
+          fontSize: code.fontSize,
+          fontHeight: code.height,
+          textColor: t.text,
+          backgroundColor: t.base,
+          selectionColor: DefaultSelectionStyle.of(context).selectionColor,
+          cursorColor: t.text,
+          cursorWidth: 1.5,
+          cursorLineColor: t.base,
+        ),
+        indicatorBuilder: (context, controller, chunks, notifier) => Padding(
+          padding: EdgeInsets.only(left: widget.padding.left),
+          child: DefaultCodeLineNumber(
+            controller: controller,
+            notifier: notifier,
+            minNumberCount: 1,
+            textStyle: gutter,
+            focusedTextStyle: gutter.copyWith(color: t.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Whether the focus at [focus] only passes on its way somewhere (an
+/// editor whose page is [route] waits to see where): nothing, a scope
+/// (after a click on what takes no focus), another page (a dialog, the
+/// palette), a menu, find, or a selection in a transcript or preview.
+bool passing(FocusNode? focus, ModalRoute<Object?>? route) {
+  if (focus == null || focus is FocusScopeNode) return true;
+  final at = focus.context;
+  if (at == null) return true;
+  if (ModalRoute.of(at) != route) return true;
+  if (at.findAncestorWidgetOfExactType<Menu>() != null ||
+      at.findAncestorWidgetOfExactType<MenuAnchor>() != null ||
+      at.findAncestorWidgetOfExactType<FindBar>() != null) {
+    return true;
+  }
+  return at.findAncestorStateOfType<EditableTextState>() == null &&
+      at.findAncestorStateOfType<SelectableRegionState>() != null;
+}
+
+/// re_editor's Mac keys, less those the app keeps (⌘S saves, ⌘F finds, ⌘D
+/// pins the chat, ⌘L is the browser's address) or that aren't the Mac's
+/// (⌘L selecting a line, ⌘/ commenting), with Emacs's ⌃A and ⌃E as every
+/// Mac text field has them.
+class _MacKeys extends CodeShortcutsActivatorsBuilder {
+  const new();
+
+  static const _builtIn = DefaultCodeShortcutsActivatorsBuilder();
+
+  @override
+  List<ShortcutActivator>? build(CodeShortcutType type) => switch (type) {
+    CodeShortcutType.save ||
+    CodeShortcutType.find ||
+    CodeShortcutType.replace ||
+    CodeShortcutType.findToggleMatchCase ||
+    CodeShortcutType.findToggleRegex ||
+    CodeShortcutType.lineDelete ||
+    CodeShortcutType.lineSelect ||
+    CodeShortcutType.singleLineComment ||
+    CodeShortcutType.multiLineComment => null,
+    CodeShortcutType.cursorMoveLineStart => [
+      ...?_builtIn.build(type),
+      const SingleActivator(LogicalKeyboardKey.keyA, control: true),
+    ],
+    CodeShortcutType.cursorMoveLineEnd => [
+      ...?_builtIn.build(type),
+      const SingleActivator(LogicalKeyboardKey.keyE, control: true),
+    ],
+    _ => _builtIn.build(type),
+  };
+}

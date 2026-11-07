@@ -17,12 +17,14 @@ import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/daemon_update.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/drafts_mac.dart';
+import 'package:nushi/file_edit.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/nothing_open.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
+import 'package:nushi/preview.dart' show baseName;
 import 'package:nushi/remote.dart';
 import 'package:nushi/removed_chats.dart';
 import 'package:nushi/settings.dart';
@@ -33,8 +35,10 @@ import 'package:nushi/slides.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme_files.dart';
+import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/trust_card.dart';
 import 'package:nushi/update_toast.dart';
+import 'package:nushi/widgets.dart' show confirm;
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -81,9 +85,12 @@ class _NushiAppState extends State<NushiApp> {
     // the app goes to the back or quits.
     final drafts = widget.daemon.drafts;
     final comments = widget.commentDrafts;
+    // The window going to the back saves the files being edited too
+    // (ADR 0096).
     void saveDrafts() {
       comments?.flush();
       unawaited(drafts?.flush());
+      unawaited(saveEdits(widget.daemon));
     }
 
     _lifecycle = AppLifecycleListener(
@@ -91,6 +98,7 @@ class _NushiAppState extends State<NushiApp> {
       onInactive: saveDrafts,
       onHide: saveDrafts,
       onExitRequested: () async {
+        if (!await _editsSaved()) return AppExitResponse.cancel;
         comments?.flush();
         try {
           await drafts?.flush().timeout(const Duration(seconds: 1));
@@ -104,6 +112,35 @@ class _NushiAppState extends State<NushiApp> {
             s == AppLifecycleState.resumed || s == AppLifecycleState.inactive;
         _alerts.focused = s == AppLifecycleState.resumed;
       },
+    );
+  }
+
+  /// Saves the files being edited before the app quits: true when it may
+  /// quit, every edit saved, or those that couldn't be, discarded after
+  /// asking (ADR 0096).
+  Future<bool> _editsSaved() async {
+    await saveEdits(widget.daemon)
+        .timeout(const Duration(seconds: 3), onTimeout: () => []);
+    // Those a save left unsaved, or that a save still waits on.
+    final left = [
+      for (final c in widget.daemon.chats.values)
+        ...c.edits.values.where((e) => e.unsaved),
+    ];
+    final context = _navigator.currentContext;
+    if (left.isEmpty || context == null || !context.mounted) return true;
+    final names = left.map((e) => plainPath(baseName(e.path))).join(', ');
+    return await confirm(
+      context,
+      left.length == 1
+          ? 'Quit without your changes to $names?'
+          : 'Quit without your changes to ${left.length} files?',
+      left.length == 1
+          ? 'They couldn’t be saved: the file changed on disk, went, or '
+                'can’t be written.'
+          : '$names couldn’t be saved: each changed on disk, went, or '
+                'can’t be written.',
+      'Quit',
+      destructive: true,
     );
   }
 

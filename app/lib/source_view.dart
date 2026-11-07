@@ -212,7 +212,7 @@ class _SourceViewState extends State<SourceView> {
         children: [
           // An empty text can't be selected, so its break wouldn't copy.
           if (line.isEmpty) const TextSpan(text: _blank),
-          ..._spansOf(t, line, _spans?.elementAtOrNull(i)),
+          ...spansOf(t, line, _spans?.elementAtOrNull(i)),
           if (cut)
             TextSpan(
               text: ' … (${whole.length - _maxLine} more)',
@@ -409,7 +409,7 @@ class _LineEnd extends StaticSelectionContainerDelegate {
 
 /// [line] in runs of its syntax [spans] (`start, length, capture`
 /// triples), plain where none.
-List<TextSpan> _spansOf(Tokens t, String line, Uint32List? spans) {
+List<TextSpan> spansOf(Tokens t, String line, Uint32List? spans) {
   if (spans == null) return [TextSpan(text: line)];
   final out = <TextSpan>[];
   var at = 0;

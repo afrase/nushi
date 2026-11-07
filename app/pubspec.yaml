@@ -21,6 +21,7 @@ dependencies:
     path: ../packages/markdown
   protobuf: ^6.1.0
   qr: ^4.0.0
+  re_editor: ^0.10.0
   re_highlight: ^0.0.3
   remote_transport:
     path: ../packages/remote_transport

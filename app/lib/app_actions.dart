@@ -13,6 +13,7 @@ import 'package:nushi/cleanup_dialog.dart';
 import 'package:nushi/cleanup_job.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/edit_bars.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
@@ -72,6 +73,10 @@ const filesKey = SingleActivator(
   shift: true,
 );
 
+/// ⌘S: the preview's file, edited (ADR 0096). The editor leaves it to
+/// the app.
+const saveKey = SingleActivator(LogicalKeyboardKey.keyS, meta: true);
+
 /// ⌘L: the browser tab's address field (Safari's Open Location).
 const addressKey = SingleActivator(LogicalKeyboardKey.keyL, meta: true);
 
@@ -84,6 +89,7 @@ enum Act {
   newChat(key: newChatKey, menu: ActMenu.file, menuLabel: 'New Chat…'),
   openFile(key: openFileKey, menu: ActMenu.file, menuLabel: 'Open File…'),
   closeTab(key: closeTabKey, menu: ActMenu.file, menuLabel: 'Close Tab'),
+  save(key: saveKey, menu: ActMenu.file, menuLabel: 'Save'),
   newBrowserTab(menu: ActMenu.file, menuLabel: 'New Browser Tab'),
   address(key: addressKey, menu: ActMenu.file, menuLabel: 'Open Location…'),
   reloadPage(key: reloadPageKey, menu: ActMenu.view, menuLabel: 'Reload Page'),
@@ -203,6 +209,14 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       tab.view,
     _ => null,
   };
+  // The file the preview shows, being edited, in sight under no dialog.
+  final edited = switch (shown?.previewFile) {
+    final path?
+        when shown?.shownTab == ChatTab.chat &&
+            !(Navigator.maybeOf(context)?.canPop() ?? false) =>
+      shown!.edits[path],
+    _ => null,
+  };
   return [
     AppAction(.newChat, 'New chat', run: () => newChat(context, d, '')),
     AppAction(
@@ -220,7 +234,14 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
           shown?.preview.value != null &&
           shown?.shownTab == ChatTab.chat &&
           !(Navigator.maybeOf(context)?.canPop() ?? false),
-      run: () => shown!.closePreview(shown.preview.value!),
+      run: () =>
+          unawaited(closeTabSaving(context, shown!, shown.preview.value!)),
+    ),
+    AppAction(
+      .save,
+      'Save the file',
+      enabled: edited?.canSave ?? false,
+      run: () => unawaited(edited!.save()),
     ),
     AppAction(
       .newBrowserTab,

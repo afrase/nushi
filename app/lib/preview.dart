@@ -334,11 +334,19 @@ class PreviewBody extends StatelessWidget {
     this.onReveal,
     this.page,
     this.padding = const EdgeInsets.fromLTRB(28, 22, 28, 28),
+    this.editor,
+    this.readOnly,
   });
 
   final FileWatch watch;
   final bool source;
   final VoidCallback? onReveal;
+
+  /// The file's editor in its source's place (the Mac's, ADR 0096), when
+  /// it's being edited: null shows the source read-only, with [readOnly]'s
+  /// reason above it when it can't be edited.
+  final Widget? Function({required bool wrap})? editor;
+  final String? Function()? readOnly;
 
   /// Draws a page's file (HTML, SVG, Mermaid: needed for those, else they
   /// show as source), and a PDF where it can (the Mac's WebKit); without
@@ -366,10 +374,17 @@ class PreviewBody extends StatelessWidget {
     return ListenableBuilder(
       listenable: watch,
       builder: (context, _) {
-        if (previewStatus(context, watch, onReveal: onReveal)
-            case final status?) {
-          return status;
+        final status = previewStatus(context, watch, onReveal: onReveal);
+        // Gone from disk with unsaved edits: the edits still show.
+        if (watch.file?.missing ?? false) {
+          if (editor case final editor?) {
+            return ValueListenableBuilder(
+              valueListenable: wrapLines,
+              builder: (context, wrap, _) => editor(wrap: wrap) ?? status!,
+            );
+          }
         }
+        if (status != null) return status;
         final f = watch.file!;
         if (watch.notText) {
           return PreviewNote(
@@ -408,12 +423,24 @@ class PreviewBody extends StatelessWidget {
         if (kind != PreviewKind.markdown || source) {
           return ValueListenableBuilder(
             valueListenable: wrapLines,
-            builder: (context, wrap, _) => SourceView(
-              text,
-              path: watch.path,
-              padding: padding,
-              wrap: wrap,
-            ),
+            builder: (context, wrap, _) {
+              if (editor?.call(wrap: wrap) case final editor?) return editor;
+              final view = SourceView(
+                text,
+                path: watch.path,
+                padding: padding,
+                wrap: wrap,
+              );
+              final why = readOnly?.call();
+              if (why == null || why.isEmpty) return view;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ReadOnlyLine(why),
+                  Expanded(child: view),
+                ],
+              );
+            },
           );
         }
         return SelectionArea(
@@ -500,4 +527,26 @@ class _ChatImageState extends State<_ChatImage> {
       );
     },
   );
+}
+
+/// Why a file shows read-only: "Read-only: it's over 1 MiB."
+class ReadOnlyLine extends StatelessWidget {
+  const new(this.why, {super.key});
+
+  final String why;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = NushiTheme.of(context);
+    final t = theme.t;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(NushiTheme.gutter, 6, 8, 2),
+      child: Text(
+        'Read-only: $why',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.ui(t.textMuted, size: 12),
+      ),
+    );
+  }
 }

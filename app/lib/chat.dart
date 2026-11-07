@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show TextEditingController;
+import 'package:flutter/widgets.dart'
+    show TextEditingController, WidgetsBinding;
 
 import 'package:nushi/agents.dart';
 import 'package:nushi/chat_colors.dart';
@@ -10,6 +11,7 @@ import 'package:nushi/chat_look.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/code_runs.dart';
 import 'package:nushi/draft.dart';
+import 'package:nushi/file_edit.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/outbox.dart';
@@ -42,14 +44,54 @@ enum ChatTab { chat, changes, pull }
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
   new(this.id, this.folder) {
-    // A subagent's pane takes the preview's place.
+    // A subagent's pane takes the preview's place, unless a file there
+    // has unsaved edits: then both show (ADR 0096).
     pane.addListener(() {
-      if (pane.value != null) preview.value = null;
+      if (pane.value != null && !edits.values.any((e) => e.unsaved)) {
+        preview.value = null;
+      }
     });
     // However the preview closes, its tabs go with it.
     preview.addListener(() {
       if (preview.value == null) previewTabs.value = const [];
     });
+    // A file's tab closed: its edits go with it (the closing asked first).
+    previewTabs.addListener(_dropEdits);
+  }
+
+  /// The files of its preview being edited (ADR 0096), by their tabs'
+  /// names: each until its tab closes, so a tab shown again, or the chat
+  /// picked again, has its unsaved edits still.
+  final edits = <String, FileEdit>{};
+
+  /// Says an edit came or went, for the tabs' marks.
+  final editsChanged = ValueNotifier<int>(0);
+
+  /// [path]'s edit, made with [make] if it has none.
+  FileEdit edit(String path, FileEdit Function() make) {
+    if (edits[path] case final e?) return e;
+    final e = edits[path] = make();
+    editsChanged.value++;
+    return e;
+  }
+
+  /// Drops [path]'s edit (its file went, or its edits were discarded).
+  void dropEdit(String path) {
+    final e = edits.remove(path);
+    if (e == null) return;
+    e.closed = true;
+    editsChanged.value++;
+    // Its editor, if one shows, goes with this frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => e.dispose());
+  }
+
+  void _dropEdits() {
+    final open = {
+      for (final f in previewTabs.value.whereType<PreviewFile>()) f.path,
+    };
+    for (final path in [...edits.keys]) {
+      if (!open.contains(path)) dropEdit(path);
+    }
   }
 
   final String id;
