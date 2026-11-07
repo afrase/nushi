@@ -135,6 +135,9 @@ func (s *Service) RemoveWorktree(ctx context.Context, chatID string, force bool)
 	if s.terminals != nil {
 		s.terminals.CloseChat(chatID)
 	}
+	if s.servers != nil {
+		s.servers.StopWithin(wt.Path)
+	}
 	if err := s.worktrees.Remove(ctx, *wt, st.Changed > 0 || st.Ignored > 0); err != nil {
 		return err
 	}

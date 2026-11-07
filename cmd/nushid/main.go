@@ -152,11 +152,14 @@ func run() error {
 	termSvc := terminals.New(startShell, filepath.Base(loginShell()), chatSvc, hub.Publish)
 	chatSvc.UseTerminals(termSvc)
 	go follow(hub, termSvc.Follow)
+	srvSvc := newServers(dir, chatSvc, agentSvc, hub.Publish)
+	chatSvc.UseServers(srvSvc)
+	go follow(hub, srvSvc.Follow)
 	agentSvc.UseChats(chatSvc)
 	// The API, on the socket for the app (with the token) and on each
 	// paired device's channel (ADR 0034).
 	logs.SetDebug(st.DebugLog())
-	restarts := restart.New(chatSvc, termSvc)
+	restarts := restart.New(chatSvc, restart.Together{termSvc, srvSvc})
 	sv := api.Services{LogPrefs: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged), Skills: newSkills(known), Terms: termSvc,
 		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc}
 	sv.GitHub = newGitHub(st, dev)
@@ -179,11 +182,11 @@ func run() error {
 
 	// On SIGINT or SIGTERM, once its app is deleted, or for a restart
 	// into a newer build, stop the agents too: their sessions reopen
-	// through session/load when the daemon is back. The terminals end
-	// first: the restart found none running a command a moment ago, and
-	// ending them before the agents (which take up to stopGrace) leaves
-	// none the time to start one.
-	closeChats := sync.OnceFunc(func() { termSvc.CloseAll(); chatSvc.Close() })
+	// through session/load when the daemon is back. The terminals and the
+	// dev servers end first: the restart found none running a moment ago,
+	// and ending them before the agents (which take up to stopGrace)
+	// leaves none the time to start.
+	closeChats := sync.OnceFunc(func() { termSvc.CloseAll(); srvSvc.CloseAll(); chatSvc.Close() })
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	why, err := serve(srv, ln, stop, restarts.Due(), closeChats)

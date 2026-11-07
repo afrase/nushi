@@ -161,6 +161,9 @@ func (s *Service) deleteWorktree(ctx context.Context, wt *model.Worktree, opts W
 		return fmt.Errorf("the branch has %d commits that %s doesn't have", st.Commits, wt.Base)
 	}
 	if opts.RemoveWorktree {
+		if s.servers != nil { // they end before their folder goes
+			s.servers.StopWithin(wt.Path)
+		}
 		if err := s.worktrees.Remove(ctx, *wt, st.Changed > 0); err != nil {
 			return err
 		}

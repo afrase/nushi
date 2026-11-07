@@ -290,8 +290,8 @@ func (s *Service) fork(ctx context.Context, c *chat, sid, to string) (opened, er
 }
 
 // inUse says whether something but chat c may run in dir: another chat
-// (or the chats can't be read), or a terminal (c's too: it stays in its
-// folder).
+// (or the chats can't be read), a terminal (c's too: it stays in its
+// folder) or a dev server.
 func (s *Service) inUse(c *chat, dir string) bool {
-	return s.terminals != nil && s.terminals.Within(dir) || s.othersWorkIn(c, dir)
+	return s.terminals != nil && s.terminals.Within(dir) || s.servers != nil && s.servers.Within(dir) || s.othersWorkIn(c, dir)
 }

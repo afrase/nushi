@@ -36,6 +36,7 @@ type Service struct {
 	publish    func(model.Event)
 
 	terminals Terminals   // set once at startup, if there are any
+	servers   Servers     // set once at startup, if there are any
 	viewers   Viewers     // Options', for chats done while nobody looked (seen.go)
 	procs     Processes   // Options', for stopping background commands
 	prefs     SleepPrefs  // Options', if chats sleep
@@ -73,6 +74,20 @@ type Terminals interface {
 // UseTerminals tells the chats about the terminals, which need the chats
 // to be made first.
 func (s *Service) UseTerminals(t Terminals) { s.terminals = t }
+
+// Servers are the folders' dev servers (internal/features/servers, ADR
+// 0098).
+type Servers interface {
+	// Within says whether a server runs in dir or a folder in it.
+	Within(dir string) bool
+	// StopWithin stops the servers in dir or a folder in it, and returns
+	// once they ended.
+	StopWithin(dir string)
+}
+
+// UseServers tells the chats about the dev servers, which need the chats
+// to be made first.
+func (s *Service) UseServers(sv Servers) { s.servers = sv }
 
 type chat struct {
 	acp.UnimplementedClient // what the agent asks of a chat, beyond sides.go's
