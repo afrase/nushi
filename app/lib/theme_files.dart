@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:nushi/daemon.dart' show dataDir;
 import 'package:nushi/file_mode.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/theme/theme_file.dart';
@@ -25,11 +26,6 @@ ColorTheme pickedTheme() {
   }
   return builtInTheme(id) ?? nushiTheme;
 }
-
-/// How a folder is shown in Finder (a test's records it).
-@visibleForTesting
-Future<void> Function(List<String> args) openInFinder = (args) =>
-    Process.run('/usr/bin/open', args);
 
 /// The theme files in [dir], each read: at most [_most], in name order. A
 /// file is untrusted input: only a regular file (no link, no pipe), at
@@ -154,18 +150,18 @@ class ThemeFiles extends ValueNotifier<List<ThemeFile>> {
     writeWhole(file, utf8.encode(writeThemeFile(from, name)));
     load();
     colorTheme.value = '${ColorTheme.customPrefix}$name';
-    await openInFinder(['-R', file.path]);
+    await native.desktop.reveal(file.path);
   }
 
   /// Opens the folder in Finder, made first if it isn't there.
   Future<void> reveal() async {
     privateDir(dir);
-    await openInFinder([dir.path]);
+    await native.desktop.openFolder(dir.path);
   }
 
   /// Shows the theme file [file] (a name [value] lists) in Finder.
   Future<void> revealFile(String file) async {
-    if (_paths[file] case final path?) await openInFinder(['-R', path]);
+    if (_paths[file] case final path?) await native.desktop.reveal(path);
   }
 
   /// None read and none watched, as at launch (tests).

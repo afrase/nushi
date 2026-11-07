@@ -19,6 +19,7 @@ import 'package:nushi/theme_files.dart';
 import 'package:nushi/theme_preview.dart';
 
 import 'fake_daemon.dart';
+import 'fake_desktop.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
@@ -166,10 +167,7 @@ void main() {
 
   testWidgets('a user’s card says Yours, warns, and shows its file in '
       'Finder', (tester) async {
-    final opened = <List<String>>[];
-    final was = openInFinder;
-    openInFinder = (args) async => opened.add(args);
-    addTearDown(() => openInFinder = was);
+    final opened = fakeDesktop();
     _custom();
     final d = await _app(tester);
     final card = find.ancestor(

@@ -6,6 +6,7 @@ import 'package:nushi/app_log.dart';
 import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/commits.dart' show dateTime;
 import 'package:nushi/daemon.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/status_bar.dart' show restartDaemonAsking;
 import 'package:nushi/widgets.dart';
@@ -13,10 +14,9 @@ import 'package:nushi/widgets.dart';
 /// Reveals the daemon's log (nushid.log, app.log beside it) in Finder.
 Future<void> showLogs() async {
   final log = '$dataDir/nushid.log';
-  await Process.run(
-    '/usr/bin/open',
-    File(log).existsSync() ? ['-R', log] : [dataDir],
-  );
+  await (File(log).existsSync()
+      ? native.desktop.reveal(log)
+      : native.desktop.openFolder(dataDir));
 }
 
 /// Settings › Logs & advanced: Show logs, whether the daemon's log has

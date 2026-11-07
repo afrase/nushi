@@ -16,6 +16,7 @@ import 'package:nushi/theme_files.dart';
 import 'package:nushi/theme_preview.dart';
 
 import 'fake_daemon.dart';
+import 'fake_desktop.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
@@ -273,10 +274,7 @@ void main() {
 
   testWidgets('New from writes the current theme whole, picks it and shows '
       'it in Finder; Show folder opens the folder', (tester) async {
-    final opened = <List<String>>[];
-    final was = openInFinder;
-    openInFinder = (args) async => opened.add(args);
-    addTearDown(() => openInFinder = was);
+    final opened = fakeDesktop();
     addTearDown(() {
       if (themeFiles.dir.existsSync()) {
         themeFiles.dir.deleteSync(recursive: true);

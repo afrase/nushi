@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/widgets.dart' show errorText;
 
 /// The skills (and Claude's plugins) an agent uses in a folder, from the
@@ -107,11 +107,10 @@ bool pluginMatches(Plugin p, String query) =>
 /// Opens a skill's SKILL.md in the default text editor (`open -t`: as
 /// text, whatever the file turns out to be).
 Future<void> openSkillFile(Skill s) =>
-    Process.run('/usr/bin/open', ['-t', '${s.path}/SKILL.md']);
+    native.desktop.openAsText('${s.path}/SKILL.md');
 
-/// Shows [path] in Finder.
-Future<void> revealInFinder(String path) =>
-    Process.run('/usr/bin/open', ['-R', path]);
+/// Shows [path] in Finder ([Native.desktop]).
+Future<void> revealInFinder(String path) => native.desktop.reveal(path);
 
 /// Where a skill's switch acts, as the agent keeps it.
 String switchWhere(String agent, Skill s) => switch (agent) {
