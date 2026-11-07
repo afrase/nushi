@@ -85,6 +85,9 @@ class _PreviewPaneState extends State<PreviewPane> {
     _watch.addListener(_fileCame);
   }
 
+  /// Whether this pane's watch has sent a message yet.
+  bool _heard = false;
+
   /// The file's edits, while it's being edited (ADR 0096).
   FileEdit? get _edit => widget.chat.edits[widget.path];
 
@@ -95,8 +98,10 @@ class _PreviewPaneState extends State<PreviewPane> {
   void _fileCame() {
     final f = _watch.file;
     if (f == null || widget.daemon.daemonApi < editApi) return;
+    final first = !_heard;
+    _heard = true;
     if (_edit case final edit?) {
-      edit.receive(f);
+      edit.receive(f, first: first);
       if (!edit.unsaved && (f.missing || edit.readOnly != null)) {
         widget.chat.dropEdit(widget.path);
       }

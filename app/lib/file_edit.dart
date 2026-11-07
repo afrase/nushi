@@ -11,6 +11,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/merge_lines.dart';
 import 'package:nushi/source_view.dart' show spansOf;
 import 'package:nushi/syntax.dart';
+import 'package:nushi/tab_indent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:re_editor/re_editor.dart';
 
@@ -26,7 +27,8 @@ class FileEdit extends ChangeNotifier {
   new(this.daemon, this.chatId, this.path, FileText file, String sha)
     : codec = file.codec,
       _baseText = file.text,
-      _baseSha = sha {
+      _baseSha = sha,
+      tabs = indentsWithTabs(path, file.text) {
     controller = CodeLineEditingController(
       codeLines: CodeLines.fromText(file.text),
       spanBuilder: _span,
@@ -48,6 +50,10 @@ class FileEdit extends ChangeNotifier {
 
   String _baseText;
   String _baseSha;
+
+  /// The file indents with tabs (its base, as `indentsWithTabs` tells):
+  /// the editor's Tab, ⇧Tab and Return indent with them.
+  bool tabs;
 
   /// The disk's version that overlaps the edits (a conflict), while it's
   /// unresolved.
@@ -90,8 +96,13 @@ class FileEdit extends ChangeNotifier {
 
   /// The sum of the version a save before this one replaced: watch
   /// messages still carrying it are older than the save, until one with
-  /// any other sum comes.
+  /// any other sum comes, or a watch starts. Only the watch's messages
+  /// are checked against it: a save's Stale reply is the disk now.
   String? _ignore;
+
+  /// How many watch messages came, and the last one's sum ('' gone).
+  int _heard = 0;
+  String _heardSum = '';
 
   /// A change from disk held while an input method composes.
   (String, FileText)? _held;
@@ -116,8 +127,16 @@ class FileEdit extends ChangeNotifier {
     }
   }
 
-  /// The watch's latest message for the file.
-  void receive(WatchChatFileResponse f) {
+  /// The watch's latest message for the file; [first] the first of a
+  /// watch, which can't be older than a save already answered.
+  void receive(WatchChatFileResponse f, {bool first = false}) {
+    _heard++;
+    _heardSum = f.missing ? '' : f.sha256;
+    if (first && _saving == null) _ignore = null;
+    if (_ignore != null) {
+      if (!f.missing && f.sha256 == _ignore) return;
+      _ignore = null;
+    }
     if (f.missing) {
       if (_unsaved && !deleted) {
         deleted = true;
@@ -139,10 +158,6 @@ class FileEdit extends ChangeNotifier {
   }
 
   void _fromDisk(String sha, FileText file) {
-    if (_ignore != null) {
-      if (sha == _ignore) return;
-      _ignore = null;
-    }
     if (controller.isComposing) {
       _held = (sha, file);
       return;
@@ -182,6 +197,7 @@ class FileEdit extends ChangeNotifier {
     _baseText = text;
     _baseSha = sha;
     this.codec = codec;
+    tabs = indentsWithTabs(path, text);
     theirs = null;
   }
 
@@ -253,6 +269,7 @@ class FileEdit extends ChangeNotifier {
 
   Future<bool> _writeNow(String base, FileCodec codec, bool gone) async {
     final mine = text;
+    final heard = _heard;
     final WriteChatFileResponse r;
     try {
       r = await daemon.client.writeChatFile(
@@ -271,7 +288,10 @@ class FileEdit extends ChangeNotifier {
     }
     error = null;
     if (r.hasSaved()) {
-      if (!gone) _ignore = base;
+      // Messages with the old sum are older than the save, unless the
+      // watch has told of a newer version already (the save's own).
+      final told = _heard != heard && _heardSum != base;
+      if (!gone && !told) _ignore = base;
       deleted = false;
       merged = false;
       _setBase(mine, r.saved.sha256, codec);
@@ -280,6 +300,7 @@ class FileEdit extends ChangeNotifier {
       return !_unsaved;
     }
     final stale = r.stale;
+    _ignore = null;
     if (stale.missing) {
       deleted = true;
       notifyListeners();
@@ -376,9 +397,9 @@ typedef FileVersion = ({String text, String sha, FileCodec codec});
 String? notEditable(WatchChatFileResponse f) {
   if (f.sha256.isEmpty) return '';
   if (!f.editable) {
-    return f.size > 1 << 20
-        ? 'it’s over 1 MiB.'
-        : 'it has more than one hard link.';
+    if (f.size > 1 << 20) return 'it’s over 1 MiB.';
+    if (f.readOnly) return 'its permissions don’t let you write it.';
+    return 'it has more than one hard link.';
   }
   final (_, why) = decodeFile(f.data);
   return why;

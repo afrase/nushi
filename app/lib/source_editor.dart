@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/menu.dart' show Menu;
+import 'package:nushi/tab_indent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart' show FindBar;
 import 'package:re_editor/re_editor.dart';
@@ -85,6 +86,31 @@ class _SourceEditorState extends State<SourceEditor> {
     unawaited(widget.edit.save());
   }
 
+  /// Tab, ⇧Tab and Return in a file that indents with tabs, which
+  /// re_editor's own (spaces only) would get wrong.
+  late final Map<Type, Action<Intent>> _tabActions = {
+    CodeShortcutIndentIntent: _tabAction<CodeShortcutIndentIntent>(tabIndent),
+    CodeShortcutOutdentIntent: _tabAction<CodeShortcutOutdentIntent>(
+      tabOutdent,
+    ),
+    CodeShortcutNewLineIntent: _tabAction<CodeShortcutNewLineIntent>(
+      tabNewLine,
+    ),
+  };
+
+  Action<T> _tabAction<T extends Intent>(
+    CodeLineEditingValue Function(CodeLineEditingValue) edit,
+  ) => CallbackAction<T>(
+    onInvoke: (_) {
+      final c = widget.edit.controller;
+      if (widget.edit.readOnly != null) return null;
+      c
+        ..runRevocableOp(() => c.value = edit(c.value))
+        ..makeCursorVisible();
+      return null;
+    },
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
@@ -101,6 +127,7 @@ class _SourceEditorState extends State<SourceEditor> {
         autocompleteSymbols: false,
         chunkAnalyzer: const NonCodeChunkAnalyzer(),
         shortcutsActivatorsBuilder: const _MacKeys(),
+        shortcutOverrideActions: widget.edit.tabs ? _tabActions : null,
         padding: EdgeInsets.only(
           left: 14,
           top: widget.padding.top,

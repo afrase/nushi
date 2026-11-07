@@ -1,95 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
-import 'package:nushi/daemon.dart';
-import 'package:nushi/edit_bars.dart';
-import 'package:nushi/file_edit.dart';
-import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/preview_pane.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/source_editor.dart';
 import 'package:re_editor/re_editor.dart';
 
 import 'fake_daemon.dart';
+import 'file_edit_helpers.dart';
 import 'harness.dart';
-
-final Chat _chat = chat('c', 'claude', 'Fix the parser');
-
-final _items = [
-  Item(id: 'u', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: 'Tidy main.go'),
-  Item(
-    id: 'm',
-    kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
-    text: 'I tidied the parser in main.go.',
-  ),
-];
-
-const _go = 'package main\n\nfunc main() {\n\tprintln("hi")\n}\n';
-
-String _sum(List<int> b) => sha256.convert(b).toString();
-
-/// The Mac app on that chat, [files] on its fake disk, [open] in the
-/// preview.
-Future<(Daemon, FakeDaemon)> _app(
-  WidgetTester tester,
-  Map<String, List<int>?> files, {
-  List<String> open = const ['main.go'],
-  double width = 1700,
-  Brightness brightness = Brightness.light,
-}) async {
-  viewport(tester, Size(width, 900), brightness: brightness);
-  showDetails.value = false;
-  paneWidths.value = {};
-  final fake = FakeDaemon([_chat])
-    ..answer = ((input) => switch (input) {
-      GetChatRequest() => GetChatResponse(chat: _chat, items: _items),
-      _ => null,
-    });
-  fake.files.addAll(files);
-  final d = await fake.connect(tester);
-  d.select('c');
-  await tester.pumpWidget(NushiApp(daemon: d));
-  await tester.pumpAndSettle();
-  open.forEach(d.chats['c']!.openPreview);
-  await tester.pumpAndSettle();
-  return (d, fake);
-}
-
-/// Ends the test: its edits' highlighting timers run out, the app goes.
-Future<void> _end(WidgetTester tester, Daemon d) async {
-  await tester.pump(const Duration(seconds: 1));
-  await closeView(tester, d);
-}
-
-ChatState _c(Daemon d) => d.chats['c']!;
-FileEdit _edit(Daemon d, [String path = 'main.go']) => _c(d).edits[path]!;
-
-/// Types [text] where the editor's cursor is, as its input would.
-Future<void> _type(WidgetTester tester, FileEdit e, String text) async {
-  e.controller.replaceSelection(text);
-  await tester.pump();
-}
-
-Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
-  await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
-  await tester.sendKeyEvent(key);
-  await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
-  await tester.pumpAndSettle();
-}
-
-Finder get _dot => find.byType(UnsavedDot);
-
-final _mac = TargetPlatformVariant.only(TargetPlatform.macOS);
 
 void main() {
   setUpAll(loadFonts);
@@ -99,24 +25,24 @@ void main() {
   ) async {
     // A BOM, CRLF and no final newline, all kept.
     final bytes = [0xEF, 0xBB, 0xBF, ...utf8.encode('a\r\nb')];
-    final (d, fake) = await _app(tester, {'main.go': bytes});
+    final (d, fake) = await openEditor(tester, {'main.go': bytes});
     expect(find.byType(SourceEditor), findsOneWidget);
-    final e = _edit(d);
+    final e = editOf(d);
     expect(e.text, 'a\nb');
     await tester.tap(find.byType(CodeEditor));
     await tester.pump();
     expect(FocusManager.instance.primaryFocus?.debugLabel, 'editor');
-    expect(_dot, findsNothing);
+    expect(unsavedDot, findsNothing);
     e.controller.selection = const CodeLineSelection.collapsed(
       index: 1,
       offset: 1,
     );
-    await _type(tester, e, '2');
+    await typeIn(tester, e, '2');
     expect(e.unsaved, isTrue);
-    expect(_dot, findsOneWidget);
-    await _key(tester, LogicalKeyboardKey.keyS);
+    expect(unsavedDot, findsOneWidget);
+    await cmd(tester, LogicalKeyboardKey.keyS);
     expect(fake.writes, hasLength(1));
-    expect(fake.writes.single.baseSha256, _sum(bytes));
+    expect(fake.writes.single.baseSha256, sumOf(bytes));
     expect(fake.writes.single.data, [
       0xEF,
       0xBB,
@@ -124,23 +50,25 @@ void main() {
       ...utf8.encode('a\r\nb2'),
     ]);
     expect(e.unsaved, isFalse);
-    expect(_dot, findsNothing);
-    await _end(tester, d);
-  }, variant: _mac);
+    expect(unsavedDot, findsNothing);
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   testWidgets(
     'the focus leaving for the prompt box saves; a palette, a menu and a '
     'selection in the transcript don’t',
     (tester) async {
-      final (d, fake) = await _app(tester, {'main.go': utf8.encode(_go)});
-      final e = _edit(d);
+      final (d, fake) = await openEditor(tester, {
+        'main.go': utf8.encode(goSource),
+      });
+      final e = editOf(d);
       await tester.tap(find.byType(CodeEditor));
       await tester.pump();
       e.controller.selection = const CodeLineSelection.collapsed(
         index: 0,
         offset: 0,
       );
-      await _type(tester, e, '// ');
+      await typeIn(tester, e, '// ');
       // The palette, then Esc: back to the editor, nothing saved.
       unawaited(showPalette(tester.element(find.byType(CodeEditor)), d));
       await tester.pumpAndSettle();
@@ -168,16 +96,16 @@ void main() {
       await tester.tap(find.byType(EditableText).first);
       await tester.pumpAndSettle();
       expect(fake.writes, hasLength(1));
-      expect(utf8.decode(fake.writes.single.data), '// $_go');
-      await _end(tester, d);
+      expect(utf8.decode(fake.writes.single.data), '// $goSource');
+      await endEditor(tester, d);
     },
-    variant: _mac,
+    variant: onMac,
   );
 
   testWidgets('focus passing through a menu waits for where it goes', (
     tester,
   ) async {
-    final (d, _) = await _app(tester, {'main.go': utf8.encode(_go)});
+    final (d, _) = await openEditor(tester, {'main.go': utf8.encode(goSource)});
     final route = ModalRoute.of(tester.element(find.byType(CodeEditor)));
     expect(passing(null, route), isTrue);
     final scope = FocusScopeNode();
@@ -186,7 +114,7 @@ void main() {
     final composer = find.byType(EditableText).first;
     final node = tester.state<EditableTextState>(composer).widget.focusNode;
     expect(passing(node, route), isFalse);
-    await _end(tester, d);
+    await endEditor(tester, d);
     // A long menu's filter, and a numbered menu's own focus.
     for (final digits in [false, true]) {
       await tester.pumpWidget(
@@ -221,18 +149,20 @@ void main() {
       expect(f, isNot(isA<FocusScopeNode>()));
       expect(passing(f, ModalRoute.of(f.context!)), isTrue);
     }
-  }, variant: _mac);
+  }, variant: onMac);
 
   testWidgets('a change on disk: taken when clean, merged into unsaved edits '
       '(with a note), undo cleared after each', (tester) async {
-    final (d, fake) = await _app(tester, {'main.go': utf8.encode(_go)});
-    final e = _edit(d);
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
     // Clean: taken as it is, the cursor kept, no undo past it.
     e.controller.selection = const CodeLineSelection.collapsed(
       index: 2,
       offset: 4,
     );
-    fake.putFile('main.go', utf8.encode(_go.replaceAll('hi', 'hello')));
+    fake.putFile('main.go', utf8.encode(goSource.replaceAll('hi', 'hello')));
     await tester.pumpAndSettle();
     expect(e.text, contains('hello'));
     expect(e.unsaved, isFalse);
@@ -243,11 +173,11 @@ void main() {
       index: 0,
       offset: 0,
     );
-    await _type(tester, e, '// top\n');
+    await typeIn(tester, e, '// top\n');
     expect(e.controller.canUndo, isTrue);
     fake.putFile(
       'main.go',
-      utf8.encode('${_go.replaceAll('hi', 'hello')}// end\n'),
+      utf8.encode('${goSource.replaceAll('hi', 'hello')}// end\n'),
     );
     await tester.pumpAndSettle();
     expect(e.text, startsWith('// top\npackage main'));
@@ -258,21 +188,26 @@ void main() {
     await tester.tap(find.byTooltip('Dismiss'));
     await tester.pumpAndSettle();
     expect(find.text('Merged a change from disk'), findsNothing);
-    await _end(tester, d);
-  }, variant: _mac);
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   testWidgets('overlapping changes: the conflict bar’s three ways out', (
     tester,
   ) async {
-    final (d, fake) = await _app(tester, {'main.go': utf8.encode(_go)});
-    final e = _edit(d);
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
     Future<void> conflict(String theirs) async {
       e.controller.selection = const CodeLineSelection.collapsed(
         index: 3,
         offset: 1,
       );
-      await _type(tester, e, 'x');
-      fake.putFile('main.go', utf8.encode(_go.replaceAll('println', theirs)));
+      await typeIn(tester, e, 'x');
+      fake.putFile(
+        'main.go',
+        utf8.encode(goSource.replaceAll('println', theirs)),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Changed on disk'), findsOneWidget);
       expect(e.theirs, isNotNull);
@@ -280,7 +215,7 @@ void main() {
 
     await conflict('fmt.Println');
     // Nothing saves meanwhile.
-    await _key(tester, LogicalKeyboardKey.keyS);
+    await cmd(tester, LogicalKeyboardKey.keyS);
     expect(fake.writes, isEmpty);
     // Compare: the disk against the edits, in a dialog.
     await tester.tap(find.text('Compare'));
@@ -292,7 +227,7 @@ void main() {
     final shown = fake.files['main.go']!;
     await tester.tap(find.text('Overwrite with mine'));
     await tester.pumpAndSettle();
-    expect(fake.writes.single.baseSha256, _sum(shown));
+    expect(fake.writes.single.baseSha256, sumOf(shown));
     expect(utf8.decode(fake.files['main.go']!), contains('xprintln'));
     expect(find.text('Changed on disk'), findsNothing);
     // Use theirs: the disk's text, nothing written, no undo back.
@@ -303,17 +238,19 @@ void main() {
     expect(e.unsaved, isFalse);
     expect(e.controller.canUndo, isFalse);
     expect(fake.writes, hasLength(1));
-    await _end(tester, d);
-  }, variant: _mac);
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   testWidgets(
     'a watch message from before a save is ignored until another comes; '
     'then that sum is a real change (an agent’s revert)',
     (tester) async {
-      final (d, fake) = await _app(tester, {'main.go': utf8.encode(_go)});
-      final e = _edit(d);
+      final (d, fake) = await openEditor(tester, {
+        'main.go': utf8.encode(goSource),
+      });
+      final e = editOf(d);
       final before = fake.fileNow('main.go');
-      await _type(tester, e, '// mine\n');
+      await typeIn(tester, e, '// mine\n');
       expect(await e.save(), isTrue);
       await tester.pumpAndSettle();
       fake.sendWatch('main.go', before);
@@ -323,21 +260,23 @@ void main() {
       // The save's own version, then the agent puts the old text back.
       fake.sendWatch('main.go', fake.fileNow('main.go'));
       await tester.pumpAndSettle();
-      fake.putFile('main.go', utf8.encode(_go));
+      fake.putFile('main.go', utf8.encode(goSource));
       await tester.pumpAndSettle();
-      expect(e.text, _go);
+      expect(e.text, goSource);
       expect(e.unsaved, isFalse);
-      await _end(tester, d);
+      await endEditor(tester, d);
     },
-    variant: _mac,
+    variant: onMac,
   );
 
   testWidgets('deleted on disk with unsaved edits: Save writes it again', (
     tester,
   ) async {
-    final (d, fake) = await _app(tester, {'main.go': utf8.encode(_go)});
-    final e = _edit(d);
-    await _type(tester, e, '// mine\n');
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
+    await typeIn(tester, e, '// mine\n');
     fake.putFile('main.go', null);
     await tester.pumpAndSettle();
     expect(find.text('Deleted on disk'), findsOneWidget);
@@ -345,60 +284,60 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(fake.writes.single.mustNotExist, isTrue);
-    expect(utf8.decode(fake.files['main.go']!), '// mine\n$_go');
+    expect(utf8.decode(fake.files['main.go']!), '// mine\n$goSource');
     expect(find.text('Deleted on disk'), findsNothing);
     // Clean and gone: the preview says so, as before.
     fake.putFile('main.go', null);
     await tester.pumpAndSettle();
     expect(find.text('The file isn’t there (yet).'), findsOneWidget);
-    expect(_c(d).edits, isEmpty);
-    await _end(tester, d);
-  }, variant: _mac);
+    expect(chatC(d).edits, isEmpty);
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   testWidgets('closing edits that can’t be saved asks: Cancel keeps them', (
     tester,
   ) async {
-    final (d, fake) = await _app(
+    final (d, fake) = await openEditor(
       tester,
-      {'main.go': utf8.encode(_go), 'b.go': utf8.encode('package b\n')},
+      {'main.go': utf8.encode(goSource), 'b.go': utf8.encode('package b\n')},
       open: ['main.go', 'b.go', 'main.go'],
     );
-    final e = _edit(d);
-    await _type(tester, e, 'x');
-    fake.putFile('main.go', utf8.encode('x$_go'.replaceAll('x', 'y')));
+    final e = editOf(d);
+    await typeIn(tester, e, 'x');
+    fake.putFile('main.go', utf8.encode('x$goSource'.replaceAll('x', 'y')));
     await tester.pumpAndSettle();
     expect(e.theirs, isNotNull);
-    expect(_dot, findsOneWidget);
+    expect(unsavedDot, findsOneWidget);
     // The pane's Close: asked, Cancel keeps the tabs and the text.
     await tester.tap(find.byTooltip('Close').first);
     await tester.pumpAndSettle();
     expect(find.text('Discard your changes to main.go?'), findsOneWidget);
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
-    expect(_c(d).previewNames, ['main.go', 'b.go']);
-    expect(_c(d).edits['main.go'], same(e));
+    expect(chatC(d).previewNames, ['main.go', 'b.go']);
+    expect(chatC(d).edits['main.go'], same(e));
     // ⌘W asks too; Discard closes the tab.
-    await _key(tester, LogicalKeyboardKey.keyW);
+    await cmd(tester, LogicalKeyboardKey.keyW);
     expect(find.text('Discard your changes to main.go?'), findsOneWidget);
     await tester.tap(find.text('Discard'));
     await tester.pumpAndSettle();
-    expect(_c(d).previewNames, ['b.go']);
-    expect(_c(d).edits.containsKey('main.go'), isFalse);
-    await _end(tester, d);
-  }, variant: _mac);
+    expect(chatC(d).previewNames, ['b.go']);
+    expect(chatC(d).edits.containsKey('main.go'), isFalse);
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   testWidgets(
     'a failed save says so; discarded, the text is never written after',
     (tester) async {
-      final (d, fake) = await _app(
+      final (d, fake) = await openEditor(
         tester,
-        {'main.go': utf8.encode(_go), 'b.go': utf8.encode('package b\n')},
+        {'main.go': utf8.encode(goSource), 'b.go': utf8.encode('package b\n')},
         open: ['b.go', 'main.go'],
       );
-      final e = _edit(d);
-      await _type(tester, e, '// mine\n');
+      final e = editOf(d);
+      await typeIn(tester, e, '// mine\n');
       fake.down = true;
-      await _key(tester, LogicalKeyboardKey.keyS);
+      await cmd(tester, LogicalKeyboardKey.keyS);
       expect(find.textContaining('Couldn’t save'), findsOneWidget);
       // Its tab's ✕ is a dot until hovered: ⌘W.
       expect(find.byTooltip('Unsaved'), findsOneWidget);
@@ -410,52 +349,54 @@ void main() {
       expect(find.byTooltip('Unsaved'), findsNothing);
       await mouse.moveTo(Offset.zero);
       await tester.pumpAndSettle();
-      await _key(tester, LogicalKeyboardKey.keyW);
+      await cmd(tester, LogicalKeyboardKey.keyW);
       await tester.tap(find.text('Discard'));
       await tester.pumpAndSettle();
       fake.down = false;
       await tester.pumpAndSettle();
-      expect(_c(d).previewNames, ['b.go']);
+      expect(chatC(d).previewNames, ['b.go']);
       expect(fake.writes, isEmpty);
-      expect(utf8.decode(fake.files['main.go']!), _go);
-      await _end(tester, d);
+      expect(utf8.decode(fake.files['main.go']!), goSource);
+      await endEditor(tester, d);
     },
-    variant: _mac,
+    variant: onMac,
   );
 
   testWidgets(
     'the disk holding the editor’s text already is no change from disk',
     (tester) async {
-      final (d, fake) = await _app(tester, {'main.go': utf8.encode(_go)});
-      final e = _edit(d);
-      await _type(tester, e, '// mine\n');
+      final (d, fake) = await openEditor(tester, {
+        'main.go': utf8.encode(goSource),
+      });
+      final e = editOf(d);
+      await typeIn(tester, e, '// mine\n');
       fake.putFile('main.go', utf8.encode(e.text));
       await tester.pumpAndSettle();
       expect(e.unsaved, isFalse);
       expect(find.text('Merged a change from disk'), findsNothing);
       expect(e.controller.canUndo, isTrue);
-      await _end(tester, d);
+      await endEditor(tester, d);
     },
-    variant: _mac,
+    variant: onMac,
   );
 
   testWidgets('a subagent’s pane opens beside unsaved edits, not over them', (
     tester,
   ) async {
-    final (d, _) = await _app(tester, {'main.go': utf8.encode(_go)});
-    await _type(tester, _edit(d), 'x');
-    _c(d).pane.value = 'task';
+    final (d, _) = await openEditor(tester, {'main.go': utf8.encode(goSource)});
+    await typeIn(tester, editOf(d), 'x');
+    chatC(d).pane.value = 'task';
     await tester.pumpAndSettle();
-    expect(_c(d).previewNames, ['main.go']);
-    expect(_c(d).preview.value, isNotNull);
-    _c(d).pane.value = null;
-    await _end(tester, d);
-  }, variant: _mac);
+    expect(chatC(d).previewNames, ['main.go']);
+    expect(chatC(d).preview.value, isNotNull);
+    chatC(d).pane.value = null;
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   testWidgets('what can’t be edited shows read-only with its reason', (
     tester,
   ) async {
-    final (d, fake) = await _app(
+    final (d, fake) = await openEditor(
       tester,
       {'mixed.txt': utf8.encode('a\r\nb\n')},
       open: ['mixed.txt'],
@@ -477,27 +418,33 @@ void main() {
       find.text('Read-only: it has more than one hard link.'),
       findsOneWidget,
     );
-    expect(_c(d).edits, isEmpty);
-    await _end(tester, d);
-  }, variant: _mac);
+    expect(chatC(d).edits, isEmpty);
+    await endEditor(tester, d);
+  }, variant: onMac);
 
   for (final brightness in Brightness.values) {
     testWidgets('the editing tab and the conflict bar (${brightness.name})', (
       tester,
     ) async {
-      final (d, fake) = await _app(
+      final (d, fake) = await openEditor(
         tester,
-        {'main.go': utf8.encode(_go), 'parse.go': utf8.encode('package p\n')},
+        {
+          'main.go': utf8.encode(goSource),
+          'parse.go': utf8.encode('package p\n'),
+        },
         open: ['parse.go', 'main.go'],
         brightness: brightness,
       );
-      final e = _edit(d);
+      final e = editOf(d);
       e.controller.selection = const CodeLineSelection.collapsed(
         index: 3,
         offset: 1,
       );
-      await _type(tester, e, 'x');
-      fake.putFile('main.go', utf8.encode(_go.replaceAll('println', 'log')));
+      await typeIn(tester, e, 'x');
+      fake.putFile(
+        'main.go',
+        utf8.encode(goSource.replaceAll('println', 'log')),
+      );
       await tester.pump(const Duration(seconds: 1));
       await untilReal(tester, () => e.highlighted);
       await tester.pumpAndSettle();
@@ -515,7 +462,7 @@ void main() {
           'file_edit_${width.toInt()}_${brightness.name}',
         );
       }
-      await _end(tester, d);
-    }, variant: _mac);
+      await endEditor(tester, d);
+    }, variant: onMac);
   }
 }
