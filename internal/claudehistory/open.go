@@ -11,8 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/afrase/nushi/internal/claude"
 )
 
@@ -77,14 +75,4 @@ func open(dir string, startedAt func(pid int) (time.Time, bool)) map[string]stri
 func alive(pid int) bool {
 	err := syscall.Kill(pid, 0)
 	return err == nil || errors.Is(err, syscall.EPERM)
-}
-
-// started is when process pid started, from sysctl's kern.proc.pid.
-func started(pid int) (time.Time, bool) {
-	p, err := unix.SysctlKinfoProc("kern.proc.pid", pid)
-	if err != nil || p.Proc.P_pid != int32(pid) { //nolint:gosec // a pid
-		return time.Time{}, false
-	}
-	t := p.Proc.P_starttime
-	return time.Unix(t.Sec, int64(t.Usec)*1000), true
 }

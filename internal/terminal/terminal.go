@@ -60,12 +60,12 @@ func Start(argv []string, dir string, env []string, cols, rows int, changed func
 	cmd.Dir, cmd.Env = dir, env
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = tty, tty, tty
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}
-	var st unix.Stat_t
-	if err := unix.Fstat(int(tty.Fd()), &st); err != nil {
+	dev, err := device(tty)
+	if err != nil {
 		_ = master.Close()
 		return nil, err
 	}
-	t := &Terminal{pty: master, cmd: cmd, tty: st.Rdev, changed: changed, done: make(chan struct{}), subs: map[*sub]struct{}{}}
+	t := &Terminal{pty: master, cmd: cmd, tty: dev, changed: changed, done: make(chan struct{}), subs: map[*sub]struct{}{}}
 	if err := t.Resize(cols, rows); err != nil {
 		_ = master.Close()
 		return nil, err
@@ -233,14 +233,6 @@ func commandLine(pid int) string {
 	return strings.TrimSpace(strings.Join(args, " "))
 }
 
-// name returns a process's name, or "".
-func name(pid int) string {
-	if p, err := unix.SysctlKinfoProc("kern.proc.pid", pid); err == nil {
-		return unix.ByteSliceToString(p.Proc.P_comm[:])
-	}
-	return ""
-}
-
 // Write sends input to the program.
 func (t *Terminal) Write(p []byte) error {
 	_, err := t.pty.Write(p)
@@ -327,12 +319,7 @@ func (t *Terminal) Close() { t.closing.Do(t.hangUp) }
 func (t *Terminal) hangUp() {
 	// Listed while the program still holds the terminal: what it leaves
 	// running loses the terminal when it exits.
-	var pids []int
-	if procs, err := unix.SysctlKinfoProcSlice("kern.proc.tty", int(t.tty)); err == nil {
-		for _, p := range procs {
-			pids = append(pids, int(p.Proc.P_pid))
-		}
-	}
+	pids := t.onTerminal()
 	for _, pid := range pids {
 		_ = unix.Kill(pid, unix.SIGHUP)
 	}
