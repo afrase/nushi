@@ -101,6 +101,29 @@ func TestImagesAsReferences(t *testing.T) {
 	refused(id, "../../settings.json", connect.CodeInvalidArgument)         // not a hash
 	refused("no-such-chat", ref, connect.CodeNotFound)                      // no chat
 	refused(id, chats.ImageHash(nil)[:63]+"G", connect.CodeInvalidArgument) // not lowercase hex
+
+	// A tool call's image (a browser's screenshot, say) is a reference too,
+	// on the fake agent shaped like Claude's.
+	id = must(phone.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
+	phone.send(id, "take a screenshot")
+	phone.waitFor("the screenshot", idleChat(id))
+	shot := acptest.Screenshot()
+	var call *nushiv1.Item
+	for _, it := range must(phone.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id, Recent: 80, ImageRefs: true}))).Items {
+		if it.Kind == nushiv1.ItemKind_ITEM_KIND_TOOL_CALL && len(it.Images) > 0 {
+			call = it
+		}
+	}
+	if call == nil || len(call.Images) != 1 {
+		t.Fatalf("no tool call with an image: %v", call)
+	}
+	if img := call.Images[0]; len(img.Data) != 0 || img.Sha256 != chats.ImageHash(shot) || img.Size != int64(len(shot)) || img.Width != 200 || img.Height != 150 {
+		t.Fatalf("the tool call's image: %d bytes, %q, size %d, %dx%d", len(img.Data), img.Sha256, img.Size, img.Width, img.Height)
+	}
+	got = must(phone.c.GetChatImage(ctx, connect.NewRequest(&nushiv1.GetChatImageRequest{ChatId: id, Sha256: call.Images[0].Sha256})))
+	if !bytes.Equal(got.Data, shot) {
+		t.Errorf("GetChatImage of the tool call's: %d bytes", len(got.Data))
+	}
 }
 
 // checkRefs checks images are big as a reference and small inline.

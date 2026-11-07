@@ -134,7 +134,7 @@ class Thumbnails extends StatelessWidget {
   final List<ImageData> images;
   final void Function(int index)? onRemove;
   final double size;
-  final ({ChatImages images, String chatId})? refs;
+  final ImageRefs? refs;
 
   @override
   Widget build(BuildContext context) {

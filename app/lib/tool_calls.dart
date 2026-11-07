@@ -1,6 +1,7 @@
 import 'package:diff_view/diff_view.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/chat_images.dart';
 import 'package:nushi/collapsible.dart';
 import 'package:nushi/diff_box.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -224,9 +225,18 @@ class _Failed extends StatelessWidget {
 /// One tool call: a one-line summary by kind (the file read or edited, the
 /// command run, `+n −m` for an edit) that opens to its output and diffs.
 class ToolCallView extends StatelessWidget {
-  const new(this.item, {super.key, this.images = true, this.still = false});
+  const new(
+    this.item, {
+    super.key,
+    this.images = true,
+    this.still = false,
+    this.refs,
+  });
 
   final Item item;
+
+  /// Where its images that came as references come from (ADR 0099).
+  final ImageRefs? refs;
 
   /// Whether the agent waits on the user: nothing shines.
   final bool still;
@@ -273,6 +283,7 @@ class ToolCallView extends StatelessWidget {
     final output = it.text.trim().isNotEmpty;
     return _withImages(
       [if (images) ...it.images],
+      refs,
       Collapsible(
         ids: [it.id],
         failed: failed,
@@ -361,8 +372,10 @@ class ToolCallView extends StatelessWidget {
 Widget _tooltip(String? message, Widget child) =>
     message == null ? child : Tooltip(message: message, child: child);
 
-/// A tool call, or a run of them, with the images they returned under it.
-Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
+/// A tool call, or a run of them, with the images they returned under it;
+/// those that came as references are fetched from [refs] (ADR 0099).
+Widget _withImages(List<ImageData> images, ImageRefs? refs, Widget child) =>
+    images.isEmpty
     ? child
     : Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -371,7 +384,7 @@ Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
           child,
           Align(
             alignment: Alignment.centerLeft,
-            child: Thumbnails(images, size: 240),
+            child: Thumbnails(images, size: 240, refs: refs),
           ),
         ],
       );
@@ -380,10 +393,11 @@ Widget _withImages(List<ImageData> images, Widget child) => images.isEmpty
 /// opens to each call; while one runs, what it's doing ends the line and
 /// shines ("Read 4 files, searching").
 class RunView extends StatelessWidget {
-  const new(this.calls, {super.key, this.still = false});
+  const new(this.calls, {super.key, this.still = false, this.refs});
 
   final List<Item> calls;
   final bool still; // as ToolCallView's
+  final ImageRefs? refs; // as ToolCallView's
 
   @override
   Widget build(BuildContext context) {
@@ -394,6 +408,7 @@ class RunView extends StatelessWidget {
     final preview = calls.map(previewPath).nonNulls.lastOrNull;
     return _withImages(
       [for (final c in calls) ...c.images],
+      refs,
       Collapsible(
         // Open when its first call was, before the next made it a group.
         ids: ['group ${calls.first.id}', calls.first.id],

@@ -21,6 +21,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/tool_calls.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -76,6 +77,7 @@ Future<(Phone, FakeDaemon, List<EventsRequest>, List<GetChatImageRequest>)>
 _phone(
   WidgetTester tester, {
   List<ImageData>? images,
+  List<Item>? items,
   Object? Function(GetChatImageRequest)? image,
   Size size = const Size(390, 844),
 }) async {
@@ -88,7 +90,7 @@ _phone(
   Object? answer(Object input) => switch (input) {
     GetChatRequest() => GetChatResponse(
       chat: _chat,
-      items: _items(images ?? [_ref()]),
+      items: items ?? _items(images ?? [_ref()]),
     ),
     GetChatImageRequest() => image?.call((asked..add(input)).last),
     _ => null,
@@ -209,6 +211,40 @@ void main() {
     expect(_loading, findsNothing);
     expect(find.byType(ClickableImage), findsNWidgets(2));
     expect(asked, hasLength(1));
+    await endPhone(tester, phone);
+  });
+
+  testWidgets('a tool call’s images, alone or in a run, come as references '
+      'too', (tester) async {
+    Item call(String id, [List<ImageData> images = const []]) => Item(
+      id: id,
+      kind: ItemKind.ITEM_KIND_TOOL_CALL,
+      title: 'Take a screenshot',
+      status: 'completed',
+      images: images,
+    );
+    final (phone, _, _, asked) = await _phone(
+      tester,
+      items: [
+        Item(
+          id: 'u',
+          kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+          text: 'Show me the page',
+        ),
+        call('t1', [_ref('b' * 64)]),
+        Item(id: 'a', kind: ItemKind.ITEM_KIND_AGENT_MESSAGE, text: 'And now:'),
+        call('t2'),
+        call('t3', [_ref('c' * 64)]),
+      ],
+      image: (_) => Completer<Object?>().future,
+    );
+    // t1 alone; t2 and t3 a folded run, which shows t3's image itself.
+    expect(find.byType(ToolCallView), findsOneWidget);
+    expect(find.byType(RunView), findsOneWidget);
+    expect(_loading, findsNWidgets(2));
+    expect(find.byIcon(Icons.broken_image), findsNothing);
+    expect([for (final r in asked) r.sha256], ['b' * 64, 'c' * 64]);
+    await render(tester, find.byType(PhoneApp), 'phone_tool_image_390');
     await endPhone(tester, phone);
   });
 

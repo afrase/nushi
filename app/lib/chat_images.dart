@@ -13,6 +13,10 @@ import 'package:nushi/theme/theme.dart';
 bool isImageRef(ImageData image) =>
     image.data.isEmpty && image.sha256.isNotEmpty;
 
+/// Where a view's images that came as references come from: the app's
+/// [ChatImages] and the chat they are in.
+typedef ImageRefs = ({ChatImages images, String chatId});
+
 /// The images of chats that came as references (the phone asks for them:
 /// ADR 0099), fetched with [fetch] as they are about to show, [parallel] at
 /// a time, and kept by hash up to [maxBytes], the least recently shown

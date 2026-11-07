@@ -99,7 +99,7 @@ class ItemView extends StatelessWidget {
         );
       case ItemKind.ITEM_KIND_TOOL_CALL:
         if (item.hasFindings()) return FindingsCard(item.findings, chat);
-        return ToolCallView(item, still: still);
+        return ToolCallView(item, still: still, refs: _refs);
       case ItemKind.ITEM_KIND_QUESTION:
         return QuestionCard(
           item,
@@ -271,8 +271,7 @@ class ItemView extends StatelessWidget {
   }
 
   /// Where the item's images that came as references come from.
-  ({ChatImages images, String chatId}) get _refs =>
-      (images: daemon.images, chatId: chat.id);
+  ImageRefs get _refs => (images: daemon.images, chatId: chat.id);
 
   /// Whether something of the agent's follows this message: it read it.
   bool get _answered => chat.items

@@ -382,7 +382,11 @@ class _TranscriptState extends State<Transcript> {
     bool pinned = false,
     bool pinnable = false,
   }) => switch (e) {
-    final List<Item> run => RunView(run, still: still),
+    final List<Item> run => RunView(
+      run,
+      still: still,
+      refs: (images: widget.daemon.images, chatId: widget.chat.id),
+    ),
     final SubagentRun s => SubagentLine(
       s,
       widget.chat,

@@ -15,6 +15,8 @@
 //   - containing "wait": nothing, until the turn is cancelled (10 s at most);
 //   - containing "subagent": a subagent, as claude-agent-acp showed one
 //     without its own session, that runs the prompt as a command and ends;
+//   - containing "screenshot": a tool call that returns an image
+//     (Screenshot), then a message;
 //   - containing "tool": a command run with the prompt as its input and
 //     output;
 //   - containing "garbage": a line that isn't JSON-RPC and an update that
@@ -49,6 +51,7 @@ package acptest
 
 import (
 	"bufio"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -388,6 +391,12 @@ func (a *Agent) prompt(session string, blocks []string) string { //nolint:gocogn
 		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "a1", "status": "completed",
 			"_meta": claudeCode(map[string]any{"toolName": "Agent"})})
 		a.say(session, "The subagent is done.")
+	case strings.Contains(text, "screenshot"):
+		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t3", "title": "Take a screenshot", "status": "in_progress"})
+		a.update(session, map[string]any{"sessionUpdate": "tool_call_update", "toolCallId": "t3", "status": "completed",
+			"content": []map[string]any{{"type": "content", "content": map[string]any{"type": "image", "mimeType": "image/png",
+				"data": base64.StdEncoding.EncodeToString(Screenshot())}}}})
+		a.say(session, "Took it.")
 	case strings.Contains(text, "tool"):
 		a.update(session, map[string]any{"sessionUpdate": "tool_call", "toolCallId": "t2", "title": "Run " + text, "kind": "execute",
 			"status": "in_progress", "rawInput": map[string]any{"command": text}})
