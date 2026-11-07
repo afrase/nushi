@@ -8,8 +8,8 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -503,8 +503,7 @@ void main() {
 
   group('in the whole app', () {
     Future<(Daemon, ChatState)> app(WidgetTester tester) async {
-      testSpeller = _speller();
-      addTearDown(() => testSpeller = null);
+      native.speller = _speller();
       viewport(tester, const Size(1200, 700));
       final d = await FakeDaemon([
         Chat(id: 'a', title: 'A chat', agent: 'claude', folder: '/Users/me/p'),

@@ -12,6 +12,8 @@ import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/native.dart';
+import 'package:nushi/native_macos.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/pull_cache.dart';
 import 'package:nushi/remote.dart';
@@ -31,7 +33,7 @@ import 'harness.dart';
 /// stands at [fixtureNow], so an age a golden shows never moves. No test
 /// sees what another left: the app's prefs as at launch, no pull request
 /// read, no agents, review comments or drafts, remote state, clones or
-/// theme files known.
+/// theme files known; the Mac's native edge, no speller.
 /// The test process's data folder goes when its tests end.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
@@ -43,6 +45,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   }
   setUp(() {
     clock = () => fixtureNow;
+    // The Mac's native edge, over channels a test may answer, but no
+    // speller: one that sets its own gets it (ADR 0097).
+    native = macosNative()..speller = null;
     resetAppSettings();
     forgetPulls();
     forgetReviews();

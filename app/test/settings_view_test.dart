@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/mcp.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_nav.dart';
@@ -19,6 +20,7 @@ import 'package:nushi/widgets.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
+import 'spell_harness.dart' show FakeSpeller;
 
 Future<void> _key(
   WidgetTester tester,
@@ -54,6 +56,7 @@ void main() {
         testWidgets('${s.name}, $sizeName, $theme', (tester) async {
           final golden = sizeName == 'wide' && s == SettingsSection.general;
           if (golden) sidebarHidden.value = true;
+          native.speller = FakeSpeller({}); // the Mac's: it has one
           final d = await pumpSettingsApp(
             tester,
             settingsFake(),

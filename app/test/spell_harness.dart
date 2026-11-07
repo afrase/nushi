@@ -7,6 +7,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show SendPromptRequest;
+import 'package:nushi/native.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/theme/theme.dart';
@@ -88,8 +89,7 @@ Future<(Daemon, ChatState)> spellBox(
   double width = 640,
   double height = 320,
 }) async {
-  testSpeller = speller;
-  addTearDown(() => testSpeller = null);
+  native.speller = speller;
   final fake = _fake = FakeDaemon([]);
   final d = await fake.connect(tester);
   final chat = ChatState('c', '/Users/me/project')

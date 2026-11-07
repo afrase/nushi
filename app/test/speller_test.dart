@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/native_macos.dart';
 import 'package:nushi/speller.dart';
+import 'package:nushi/speller_macos.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -44,10 +45,8 @@ void main() {
     );
   });
 
-  test('only the Mac has one', () {
-    expect(speller, isNull); // tests run as Android unless they say
-    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-    expect(speller, isA<MacSpeller>());
+  test("the Mac's is its own; a test has none unless it sets one", () {
+    expect(macosNative().speller, isA<MacSpeller>());
+    expect(speller, isNull);
   });
 }

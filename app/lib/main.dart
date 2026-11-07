@@ -21,6 +21,8 @@ import 'package:nushi/file_edit.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/native.dart';
+import 'package:nushi/native_macos.dart';
 import 'package:nushi/nothing_open.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
@@ -43,6 +45,8 @@ import 'package:nushi/widgets.dart' show confirm;
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
   catchErrors();
+  // The window's app runs on the Mac (ADR 0097).
+  native = macosNative();
   themeFiles
     ..load()
     ..watch();

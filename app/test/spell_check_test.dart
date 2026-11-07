@@ -7,6 +7,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/spell_check.dart';
@@ -333,7 +334,7 @@ void main() {
     final chat = ChatState('c', '/Users/me/project')..loaded = true;
     d.chats['c'] = chat;
     await tester.pumpWidget(themed(Composer(chat: chat, daemon: d)));
-    expect(speller, isNull); // tests run as Android unless they say
+    expect(speller, isNull); // none, as on a phone
     await tester.enterText(find.byType(TextField), 'chekc thrid ');
     await checked(tester);
     expect(chat.draft.text.spell!.on, isFalse);
@@ -348,8 +349,7 @@ void main() {
     });
 
     Future<Daemon> settings(WidgetTester tester, Tokens tokens) async {
-      testSpeller = FakeSpeller({});
-      addTearDown(() => testSpeller = null);
+      native.speller = FakeSpeller({});
       final d = await settingsFake().connect(tester);
       await pumpSettings(tester, d, SettingsSection.general, tokens: tokens);
       return d;
