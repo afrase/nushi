@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_page.dart';
+import 'package:nushi/browser_page_macos.dart' show failureKind;
 import 'package:nushi/clock.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
@@ -198,19 +199,25 @@ void main() {
 
   test('a page that didn’t load says why', () {
     expect(
-      failedHeading(-1202, 'self-signed.badssl.com'),
+      failedHeading(failureKind(-1202), 'self-signed.badssl.com'),
       'self-signed.badssl.com’s certificate isn’t valid',
     );
-    expect(failedHeading(-1201, 'expired.example'), contains('certificate'));
     expect(
-      failedHeading(-1200, 'example.com'),
+      failedHeading(failureKind(-1201), 'expired.example'),
+      contains('certificate'),
+    );
+    expect(
+      failedHeading(failureKind(-1200), 'example.com'),
       'Can’t connect securely to example.com',
     );
     expect(
-      failedHeading(-1004, 'localhost:3000'),
+      failedHeading(failureKind(-1004), 'localhost:3000'),
       'Can’t reach localhost:3000',
     );
-    expect(failedHeading(-1202, ''), 'The page didn’t load');
+    expect(
+      failedHeading(PageFailureKind.badCertificate, ''),
+      'The page didn’t load',
+    );
   });
 
   test('a host as people read it, never a user name', () {

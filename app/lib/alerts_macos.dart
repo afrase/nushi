@@ -37,8 +37,15 @@ class MacAlertCenter implements AlertCenter {
   Future<void> badge(String label) =>
       alertsChannel.invokeMethod<Object?>('badge', label);
 
+  /// The Swift side answers "authorized", "denied" or "notDetermined".
   @override
-  Future<String?> allowed() => alertsChannel.invokeMethod<String>('status');
+  Future<NotifyPermission?> allowed() async =>
+      switch (await alertsChannel.invokeMethod<String>('status')) {
+        null => null,
+        'denied' => NotifyPermission.denied,
+        'notDetermined' => NotifyPermission.notAsked,
+        _ => NotifyPermission.allowed,
+      };
 
   @override
   Future<void> openSettings() =>

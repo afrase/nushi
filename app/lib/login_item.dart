@@ -6,21 +6,22 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// What starts the daemon at login (ADR 0036): on the Mac, the app's
-/// launch agent (`login_item_macos.dart`). Each call answers its status
-/// after it, in the Mac's words: "enabled", "requiresApproval" (on, until
-/// the user allows it in Login Items), "notRegistered", or "notFound"
-/// (what macOS says of a job it hasn't seen, before the first register
-/// too).
+/// launch agent (`login_item_macos.dart`). Each call answers its state
+/// after it.
 abstract interface class LoginItem {
-  /// Its status.
-  Future<String?> status();
+  /// Its state.
+  Future<LoginItemState?> status();
 
   /// Turns it [on] or off.
-  Future<String?> set({required bool on});
+  Future<LoginItemState?> set({required bool on});
 
   /// Opens the system's settings where the user allows it.
-  Future<String?> openSettings();
+  Future<LoginItemState?> openSettings();
 }
+
+/// Whether the daemon starts at login: [needsApproval] is on, until the
+/// user allows it in the system's settings.
+enum LoginItemState { on, needsApproval, off }
 
 /// "Start at login" in Settings › General, a group of its own: the app's
 /// launch agent, which opens the daemon's helper app at login (ADR 0036).
@@ -34,9 +35,7 @@ class StartAtLogin extends StatefulWidget {
 }
 
 class _StartAtLoginState extends State<StartAtLogin> {
-  // enabled, requiresApproval, notRegistered, or notFound: what macOS
-  // says of a job it hasn't seen (before the first register too).
-  String? _status;
+  LoginItemState? _status;
 
   @override
   void initState() {
@@ -45,7 +44,7 @@ class _StartAtLoginState extends State<StartAtLogin> {
     _call(native.loginItem.status).ignore();
   }
 
-  Future<void> _call(Future<String?> Function() call) async {
+  Future<void> _call(Future<LoginItemState?> Function() call) async {
     final status = await call();
     if (mounted) setState(() => _status = status);
   }
@@ -55,7 +54,7 @@ class _StartAtLoginState extends State<StartAtLogin> {
     final status = _status;
     if (status == null) return const SizedBox.shrink();
     final t = NushiTheme.of(context).t;
-    final waiting = status == 'requiresApproval';
+    final waiting = status == LoginItemState.needsApproval;
     return SettingsGroup(
       children: [
         SettingsRow(
@@ -65,7 +64,7 @@ class _StartAtLoginState extends State<StartAtLogin> {
               : 'The daemon starts when you log in, without the app.',
           descriptionColor: waiting ? t.needs : null,
           control: SettingsSwitch(
-            value: status == 'enabled' || waiting,
+            value: status != LoginItemState.off,
             run: ({required on}) => _call(() => native.loginItem.set(on: on)),
           ),
         ),

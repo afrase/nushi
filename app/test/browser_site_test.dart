@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_bar.dart';
+import 'package:nushi/browser_page.dart' show PageFailureKind;
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/main.dart';
@@ -119,7 +120,7 @@ void main() {
     d.chats['c']!.openBrowserTab('https://self-signed.badssl.com/');
     await tester.pumpAndSettle();
     fakes.hosts.single.failure.value = (
-      code: -1202,
+      kind: PageFailureKind.badCertificate,
       reason: _untrusted,
       url: 'https://self-signed.badssl.com/',
     );
@@ -232,7 +233,7 @@ void main() {
     );
     // A failure names the address that failed, by its host.
     host.failure.value = (
-      code: -1004,
+      kind: PageFailureKind.unreachable,
       reason: 'Could not connect to the server.',
       url: 'https://www.paypal.com@evil.example:8443/',
     );
@@ -252,7 +253,7 @@ void main() {
     await tester.pumpAndSettle();
     final host = fakes.hosts.single..urlChanged('https://expired.badssl.com/');
     host.failure.value = (
-      code: -1201,
+      kind: PageFailureKind.badCertificate,
       reason: 'The certificate for this server has expired.',
       url: 'https://expired.badssl.com/',
     );
@@ -319,7 +320,7 @@ void main() {
           'https://self-signed.badssl.com/',
         );
         host.failure.value = (
-          code: -1202,
+          kind: PageFailureKind.badCertificate,
           reason: _untrusted,
           url: 'https://self-signed.badssl.com/',
         );
@@ -353,7 +354,7 @@ void main() {
           fakes.hosts.single
             ..tab.address.value = 'https://self-signed.badssl.com/'
             ..failure.value = (
-              code: -1202,
+              kind: PageFailureKind.badCertificate,
               reason: _untrusted,
               url: 'https://self-signed.badssl.com/',
             );

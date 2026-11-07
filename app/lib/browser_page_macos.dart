@@ -79,6 +79,18 @@ Future<Uint8List> Function(int id) pageSnapshot = (id) async {
 /// side (`BrowserData`): the ⋯ menu's Clear browsing data.
 Future<void> clearData() => _browser.invokeMethod<void>('clearData');
 
+/// What WebKit's error [code] (`NSURLErrorDomain`'s, as -1202 for a
+/// certificate it doesn't trust) says went wrong.
+PageFailureKind failureKind(int code) => switch (code) {
+  // NSURLErrorServerCertificate…: bad date, untrusted, unknown root, not
+  // yet valid.
+  -1201 || -1202 || -1203 || -1204 => PageFailureKind.badCertificate,
+  // NSURLErrorSecureConnectionFailed, and a client certificate rejected or
+  // asked for.
+  -1200 || -1205 || -1206 => PageFailureKind.insecure,
+  _ => PageFailureKind.unreachable,
+};
+
 const _browser = MethodChannel('nushi/browser');
 final _commits = <int, ValueChanged<String>>{};
 
@@ -178,7 +190,11 @@ class BrowserPage implements BrowserHost {
       await _ready;
     } on Object {
       if (!_gone) {
-        _failed.value = (code: 0, reason: _unwatched, url: '$url');
+        _failed.value = (
+          kind: PageFailureKind.unreachable,
+          reason: _unwatched,
+          url: '$url',
+        );
       }
       return;
     }
@@ -246,7 +262,11 @@ class BrowserPage implements BrowserHost {
       unawaited(
         _c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))),
       );
-      _failed.value = (code: 0, reason: _unwatched, url: tab.address.value);
+      _failed.value = (
+        kind: PageFailureKind.unreachable,
+        reason: _unwatched,
+        url: tab.address.value,
+      );
     }),
   );
 
@@ -285,7 +305,7 @@ class BrowserPage implements BrowserHost {
     _source.flight = ''; // no redirect of it follows
     if (e.errorCode == 102 || _gone) return; // 102: "interrupted by policy"
     _failed.value = (
-      code: e.errorCode,
+      kind: failureKind(e.errorCode),
       reason: e.description,
       url: e.url ?? tab.address.value,
     );

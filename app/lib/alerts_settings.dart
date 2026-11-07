@@ -18,7 +18,7 @@ class NotificationsGroup extends StatefulWidget {
 }
 
 class _NotificationsGroupState extends State<NotificationsGroup> {
-  String? _allowed;
+  NotifyPermission? _allowed;
 
   @override
   void initState() {
@@ -56,7 +56,7 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
           'Mac.',
         ),
         children: [
-          if (_allowed == 'denied')
+          if (_allowed == NotifyPermission.denied)
             SettingsRow(
               'Off in macOS',
               description: 'macOS has notifications off for Nushi.',

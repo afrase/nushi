@@ -342,7 +342,7 @@ class _NewTab extends StatelessWidget {
 }
 
 /// Over a page that didn't load: where it was going (the address that
-/// failed, not the tab's), what went wrong ([failedHeading]), and WebKit's
+/// failed, not the tab's), what went wrong ([failedHeading]), and the web view's
 /// reason.
 class _Failed extends StatelessWidget {
   const new(this.failure);
@@ -364,7 +364,7 @@ class _Failed extends StatelessWidget {
             spacing: 6,
             children: [
               Text(
-                failedHeading(failure.code, where),
+                failedHeading(failure.kind, where),
                 textAlign: TextAlign.center,
                 style: theme.ui(t.text, weight: FontWeight.w500),
               ),

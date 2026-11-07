@@ -29,9 +29,8 @@ abstract interface class AlertCenter {
   /// Puts [label] on the app's icon ('' for none).
   Future<void> badge(String label);
 
-  /// Whether the system lets the app notify, in the Mac's words:
-  /// "authorized", "denied" or "notDetermined" (it asks on the first one).
-  Future<String?> allowed();
+  /// Whether the system lets the app notify.
+  Future<NotifyPermission?> allowed();
 
   /// Opens the system's settings for the app's notifications.
   Future<void> openSettings();
@@ -40,6 +39,10 @@ abstract interface class AlertCenter {
   /// clicked; null stops.
   void onOpen(void Function(String chat)? open);
 }
+
+/// Whether the system lets the app notify: [notAsked] until it asks, on
+/// the first notification.
+enum NotifyPermission { allowed, denied, notAsked }
 
 /// The API from which the daemon says how each turn ended
 /// (ChatStatus.ended, failure). While an older daemon waits to restart (ADR
@@ -305,7 +308,7 @@ class ChatAlerts {
 
 /// Whether the system lets Nushi notify ([AlertCenter.allowed]), or null
 /// when it doesn't answer.
-Future<String?> alertsAllowed() async {
+Future<NotifyPermission?> alertsAllowed() async {
   try {
     return await native.alerts.allowed();
   } on Object {

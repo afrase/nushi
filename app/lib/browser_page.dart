@@ -50,24 +50,34 @@ abstract interface class BrowserHost {
   void dispose();
 }
 
-/// Why a page didn't load: WebKit's error code (`NSURLErrorDomain`'s, as
-/// -1202 for a certificate it doesn't trust), its words, and the address
-/// that failed (not the tab's, which stays on the page last shown).
-typedef PageFailure = ({int code, String reason, String url});
+/// Why a page didn't load: what went wrong, the web view's words, and
+/// the address that failed (not the tab's, which stays on the page last
+/// shown).
+typedef PageFailure = ({PageFailureKind kind, String reason, String url});
+
+/// What went wrong with a page that didn't load.
+enum PageFailureKind {
+  /// The server's certificate isn't valid (a bad date, untrusted, an
+  /// unknown root, not yet valid).
+  badCertificate,
+
+  /// No secure connection (a client certificate rejected or asked for
+  /// too).
+  insecure,
+
+  /// Anything else: the host can't be reached.
+  unreachable,
+}
 
 /// What the pane says of a page at [where] (its host) that didn't load
-/// with WebKit's [code]: a certificate WebKit refused, which has no way
-/// past it (ADR 0094), else that the host can't be reached.
-String failedHeading(int code, String where) {
+/// for [kind]: a certificate the web view refused, which has no way past
+/// it (ADR 0094), else that the host can't be reached.
+String failedHeading(PageFailureKind kind, String where) {
   if (where.isEmpty) return 'The page didn’t load';
-  return switch (code) {
-    // NSURLErrorServerCertificate…: bad date, untrusted, unknown root, not
-    // yet valid.
-    -1201 || -1202 || -1203 || -1204 => '$where’s certificate isn’t valid',
-    // NSURLErrorSecureConnectionFailed, and a client certificate rejected
-    // or asked for.
-    -1200 || -1205 || -1206 => 'Can’t connect securely to $where',
-    _ => 'Can’t reach $where',
+  return switch (kind) {
+    PageFailureKind.badCertificate => '$where’s certificate isn’t valid',
+    PageFailureKind.insecure => 'Can’t connect securely to $where',
+    PageFailureKind.unreachable => 'Can’t reach $where',
   };
 }
 
