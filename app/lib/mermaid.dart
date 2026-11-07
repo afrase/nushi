@@ -4,9 +4,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:markdown_view/markdown_view.dart';
 
+import 'package:nushi/native.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -31,72 +32,20 @@ class DrawnDiagram {
   final bool retry;
 }
 
-/// Draws a diagram as a picture: on the Mac, mermaid.js in one hidden web
-/// view (`nushi/mermaid`, Diagrams.swift), `width` points wide at
-/// most, in the colors given. Tests set their own.
-///
-/// The web view gives each diagram 10 s, so a slow one doesn't hold the
-/// rest; a call that waits past [diagramWait] (the window's side never
-/// answered) fails, to be drawn again when next asked for.
-Future<DrawnDiagram> Function(
-  String source, {
-  required bool dark,
-  required double width,
-  required Color background,
-  required Color foreground,
-})
-drawDiagram = _drawOnMac;
-
-const _channel = MethodChannel('nushi/mermaid');
-
-/// How long a diagram waits on the Mac's web view, its queue included.
-Duration diagramWait = const Duration(minutes: 1);
-
-Future<DrawnDiagram> _drawOnMac(
-  String source, {
-  required bool dark,
-  required double width,
-  required Color background,
-  required Color foreground,
-}) async {
-  try {
-    final r = await _channel
-        .invokeMapMethod<String, Object?>('draw', {
-          'source': source,
-          'dark': dark,
-          'width': width,
-          'background': cssColor(background),
-          'foreground': cssColor(foreground),
-        })
-        .timeout(diagramWait);
-    if (r?['png'] case final Uint8List png) {
-      return DrawnDiagram(
-        png: png,
-        width: (r!['width']! as num).toDouble(),
-        height: (r['height']! as num).toDouble(),
-      );
-    }
-    return DrawnDiagram(
-      error: '${r?['error'] ?? 'Not drawn'}',
-      retry: r?['retry'] == true,
-    );
-  } on TimeoutException {
-    return const DrawnDiagram(
-      error: 'The diagram took too long to draw',
-      retry: true,
-    );
-  } on Object catch (e) {
-    return DrawnDiagram(
-      error: e is PlatformException ? '${e.message}' : '$e',
-      retry: true,
-    );
-  }
+/// Draws a diagram as a picture, `width` points wide at most, in the
+/// colors given: on the Mac, mermaid.js in one hidden web view
+/// (`mermaid_macos.dart`). It answers a failure as a [DrawnDiagram]'s
+/// error, never by throwing.
+abstract interface class Diagrams {
+  /// [source] drawn, or why it isn't.
+  Future<DrawnDiagram> draw(
+    String source, {
+    required bool dark,
+    required double width,
+    required Color background,
+    required Color foreground,
+  });
 }
-
-/// The path of the app's mermaid.html (its assets), for the preview pane's
-/// web view; tests set their own.
-Future<String> Function() diagramPage = () async =>
-    await _channel.invokeMethod<String>('page') ?? '';
 
 /// [c] as CSS's #rrggbb.
 String cssColor(Color c) =>
@@ -117,7 +66,7 @@ Future<DrawnDiagram> _drawnOnce(
   final key = (source, dark, background);
   if (_drawn.remove(key) case final f?) return _drawn[key] = f; // newest
   if (_drawn.length >= 100) _drawn.remove(_drawn.keys.first)?.ignore();
-  final drawn = drawDiagram(
+  final drawn = native.diagrams.draw(
     source,
     dark: dark,
     width: width,
@@ -143,7 +92,7 @@ void Function(BuildContext context, String source)? showDiagram;
 /// A ```` ```mermaid ```` block in Markdown (an agent's message, a Markdown
 /// preview). Still streaming in ([open]), its source only: never half a
 /// diagram. Once whole, on the Mac, the diagram as a picture
-/// ([drawDiagram]) with Diagram and Source in its bar, and its source with
+/// ([Native.diagrams]) with Diagram and Source in its bar, and its source with
 /// the error under it when it doesn't parse; on the phone, its source and
 /// Show diagram ([showDiagram]), full screen in a frame.
 class MermaidBlock extends StatefulWidget {

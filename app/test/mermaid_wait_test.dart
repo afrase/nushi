@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nushi/mermaid.dart';
+import 'package:nushi/mermaid_macos.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -24,13 +24,15 @@ void main() {
       final wait = diagramWait;
       diagramWait = const Duration(milliseconds: 50);
       addTearDown(() => diagramWait = wait);
-      final d = await drawDiagram(
-        'graph TD; a-->b',
-        dark: false,
-        width: 400,
-        background: Colors.white,
-        foreground: Colors.black,
-      ).timeout(const Duration(seconds: 5));
+      final d = await const MacDiagrams()
+          .draw(
+            'graph TD; a-->b',
+            dark: false,
+            width: 400,
+            background: Colors.white,
+            foreground: Colors.black,
+          )
+          .timeout(const Duration(seconds: 5));
       expect(
         (d.png, d.error, d.retry),
         (null, 'The diagram took too long to draw', true),

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/mermaid.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -23,6 +24,35 @@ final Uint8List _png = base64Decode(
 /// or an error for one that says "oops".
 final _asked = <(String, bool, double)>[];
 Completer<void>? _hold;
+
+/// A test's diagrams, drawn by [_Diagrams.drawn].
+class _Diagrams implements Diagrams {
+  const new(this.drawn);
+
+  final Future<DrawnDiagram> Function(
+    String source, {
+    required bool dark,
+    required double width,
+    required Color background,
+    required Color foreground,
+  })
+  drawn;
+
+  @override
+  Future<DrawnDiagram> draw(
+    String source, {
+    required bool dark,
+    required double width,
+    required Color background,
+    required Color foreground,
+  }) => drawn(
+    source,
+    dark: dark,
+    width: width,
+    background: background,
+    foreground: foreground,
+  );
+}
 
 Future<DrawnDiagram> _draw(
   String source, {
@@ -63,7 +93,7 @@ void main() {
     _asked.clear();
     _hold = null;
     forgetDiagrams();
-    drawDiagram = _draw;
+    native.diagrams = const _Diagrams(_draw);
   });
 
   for (final (name, tokens) in [
@@ -135,30 +165,29 @@ void main() {
   testWidgets('a drawing that failed for a passing reason (the web view '
       "stopped) is drawn again; a diagram's own error isn't", (tester) async {
     var stopped = true;
-    drawDiagram =
-        (
-          source, {
-          required dark,
-          required width,
-          required background,
-          required foreground,
-        }) async {
-          if (stopped && !source.contains('oops')) {
-            stopped = false;
-            _asked.add((source, dark, width));
-            return const DrawnDiagram(
-              error: "The diagram's web view stopped",
-              retry: true,
-            );
-          }
-          return await _draw(
-            source,
-            dark: dark,
-            width: width,
-            background: background,
-            foreground: foreground,
-          );
-        };
+    native.diagrams = _Diagrams((
+      source, {
+      required dark,
+      required width,
+      required background,
+      required foreground,
+    }) async {
+      if (stopped && !source.contains('oops')) {
+        stopped = false;
+        _asked.add((source, dark, width));
+        return const DrawnDiagram(
+          error: "The diagram's web view stopped",
+          retry: true,
+        );
+      }
+      return await _draw(
+        source,
+        dark: dark,
+        width: width,
+        background: background,
+        foreground: foreground,
+      );
+    });
     const text = '```mermaid\n$_flow\n```\n\n```mermaid\ngraph TD\n  oops\n```';
     await _show(tester, text);
     await tester.pumpAndSettle();

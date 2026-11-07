@@ -3,6 +3,7 @@ import 'package:nushi/back_swipe.dart';
 import 'package:nushi/clipboard_files.dart';
 import 'package:nushi/fonts.dart';
 import 'package:nushi/login_item.dart';
+import 'package:nushi/mermaid.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/window_drag.dart';
 
@@ -18,6 +19,7 @@ class Native {
   new({
     required this.alerts,
     required this.clipboard,
+    required this.diagrams,
     required this.fonts,
     required this.loginItem,
     required this.swipes,
@@ -30,6 +32,9 @@ class Native {
 
   /// The clipboard's files and picture, for ⌘V.
   ClipboardFiles clipboard;
+
+  /// Mermaid diagrams drawn as pictures.
+  Diagrams diagrams;
 
   /// The installed fonts.
   Fonts fonts;

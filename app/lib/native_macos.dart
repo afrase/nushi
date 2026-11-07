@@ -3,6 +3,7 @@ import 'package:nushi/back_swipe_macos.dart';
 import 'package:nushi/clipboard_files_macos.dart';
 import 'package:nushi/fonts_macos.dart';
 import 'package:nushi/login_item_macos.dart';
+import 'package:nushi/mermaid_macos.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/speller_macos.dart';
 import 'package:nushi/window_drag_macos.dart';
@@ -12,6 +13,7 @@ import 'package:nushi/window_drag_macos.dart';
 Native macosNative() => Native(
   alerts: const MacAlertCenter(),
   clipboard: const MacClipboardFiles(),
+  diagrams: const MacDiagrams(),
   fonts: const MacFonts(),
   loginItem: const MacLoginItem(),
   swipes: const MacPageSwipes(),

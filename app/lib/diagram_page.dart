@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/mermaid.dart';
+import 'package:nushi/mermaid_macos.dart' show diagramPage;
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
