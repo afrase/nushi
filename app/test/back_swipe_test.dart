@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/back_swipe.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_pull.dart';
+import 'package:nushi/native.dart';
 
 import 'fake_daemon.dart';
 import 'github_fixture.dart' show openView;
@@ -52,6 +53,14 @@ final _wide = FileChange(
   removed: 3,
 );
 
+/// The system's swipe back, sent by the test.
+class _FakeSwipes implements PageSwipes {
+  void Function(Offset at)? back;
+
+  @override
+  void onBack(void Function(Offset at) back) => this.back = back;
+}
+
 void main() {
   setUpAll(loadFonts);
 
@@ -81,6 +90,19 @@ void main() {
     );
     await mouse.down(_pane(tester));
     await mouse.up();
+    await tester.pumpAndSettle();
+    expect(find.byType(GitHubPullPane), findsNothing);
+    await closeView(tester, d);
+  });
+
+  // The tests before mounted a BackSwipe over the Mac's swipes: a fake put
+  // in their place still gets the swipe.
+  testWidgets("the system's swipe back goes back", (tester) async {
+    final swipes = _FakeSwipes();
+    native.swipes = swipes;
+    final (_, d) = await openView(tester);
+    await _openPull(tester);
+    swipes.back!(_pane(tester));
     await tester.pumpAndSettle();
     expect(find.byType(GitHubPullPane), findsNothing);
     await closeView(tester, d);

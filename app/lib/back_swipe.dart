@@ -70,7 +70,9 @@ class _BackSwipeState extends State<BackSwipe> {
   static int? _taken;
   static int? _pressed;
 
-  static bool _listening = false;
+  /// The [PageSwipes] [_swiped] is registered with: the one in
+  /// [Native.swipes] when the last [BackSwipe] mounted.
+  static PageSwipes? _registered;
 
   int? _pointer; // this swipe's, while the fingers are down
   _Way _way = _Way.unknown;
@@ -86,8 +88,8 @@ class _BackSwipeState extends State<BackSwipe> {
   void initState() {
     super.initState();
     _all.add(this);
-    if (!_listening) {
-      _listening = true;
+    if (!identical(_registered, native.swipes)) {
+      _registered = native.swipes;
       native.swipes.onBack(_swiped);
     }
   }
