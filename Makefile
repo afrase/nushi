@@ -181,10 +181,11 @@ lint-linux:
 	GOOS=linux CGO_ENABLED=0 go build ./...
 	GOOS=linux CGO_ENABLED=0 go vet ./...
 
-# The protos' and Dart's, and the app's native code only in *_macos.dart
-# files (tools/native-edge, ADR 0097): anywhere.
+# The protos' and Dart's, and the native code of the app and its Dart
+# packages only in *_macos.dart files (tools/native-edge, ADR 0097):
+# anywhere.
 lint-dart:
-	go run ./tools/native-edge
+	go run ./tools/native-edge $(addsuffix /lib,$(DART_DIRS))
 	$(BUF) lint
 	$(BUF) format --diff --exit-code
 	@for d in $(DART_DIRS); do echo "flutter analyze $$d"; (cd $$d && flutter analyze --fatal-infos) || exit 1; done

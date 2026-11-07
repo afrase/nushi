@@ -39,7 +39,7 @@ tools/release.sh 1.2.0   # a release's files into dist/, as the release workflow
 
 - golangci-lint (with gofmt and goimports) and govulncheck;
 - `make lint-linux`: every Go package built and vetted with `GOOS=linux CGO_ENABLED=0`, so macOS-only code outside a `_darwin.go` file fails (ADR 0097);
-- `tools/native-edge` (first in `make lint-dart`): a platform channel, `dart:ffi` or `webview_flutter_wkwebview` in `app/lib` outside a `*_macos.dart` file fails, named with its line (ADR 0097);
+- `tools/native-edge` (first in `make lint-dart`): a platform channel or message (a `BinaryMessenger`, a `MethodCall` or its codec, `SystemChannels`), `dart:ffi` or `webview_flutter_wkwebview` in the app's or a Dart package's `lib` outside a `*_macos.dart` file fails, named with its line, and so does a file naming a `*_macos.dart` one (an import, export or part) but `main.dart`'s `native_macos.dart`; protoc's and Connect's output is left out (ADR 0097);
 - `buf lint` and `buf format`;
 - `flutter analyze` and `dart format`, for the app and each package.
 
