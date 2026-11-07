@@ -27,11 +27,14 @@ func editNote(paths []string) string {
 	return "[Nushi] The user edited " + strings.Join(names, ", ") + " in Nushi since your last turn; re-read " + it + " before changing " + it + "."
 }
 
-// noteName says a path can go in a note: no backquote, and no line break
-// or other control character, so the note reads as one line and the
-// replay finds it again (noteTexts).
+// noteName says a path can go in a note: no backquote, no line break or
+// other control character, and no bidi or other format mark, so the note
+// reads as one line, as written, and the replay finds it again
+// (noteTexts).
 func noteName(p string) bool {
-	return p != "" && !strings.ContainsFunc(p, func(r rune) bool { return r == '`' || unicode.IsControl(r) })
+	return p != "" && !strings.ContainsFunc(p, func(r rune) bool {
+		return r == '`' || unicode.IsControl(r) || unicode.Is(unicode.Cf, r)
+	})
 }
 
 // UserEdited notes that the user saved the file at path (absolute, its

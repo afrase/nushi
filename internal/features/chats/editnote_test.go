@@ -19,8 +19,9 @@ func TestTheAgentHearsOfAFileTheUserEdited(t *testing.T) {
 	svc.UserEdited(c.id, filepath.Join(realPath(folder), "a.go"))
 	svc.UserEdited(c.id, filepath.Join(folder, "docs", "b.md"))
 	svc.UserEdited("another", filepath.Join(folder, "a.go"))
-	svc.UserEdited("another", "/elsewhere/c.md")               // not in its folder, nor its save
-	svc.UserEdited(c.id, filepath.Join(folder, "odd`name.go")) // can't be named in the note
+	svc.UserEdited("another", "/elsewhere/c.md")                                     // not in its folder, nor its save
+	svc.UserEdited(c.id, filepath.Join(folder, "odd`name.go"))                       // can't be named in the note
+	svc.UserEdited(c.id, filepath.Join(folder, "evil"+string(rune(0x202e))+"gp.go")) // nor a bidi mark
 	testcheck.NoErr(t, svc.Prompt(t.Context(), c.id, model.Message{Text: "Carry on"}, SendQueue))
 	eventually(t, c, func() bool { return !c.busy })
 	agent.mu.Lock()
