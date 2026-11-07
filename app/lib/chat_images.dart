@@ -148,29 +148,79 @@ class _ImageRefState extends State<ImageRef> {
   MemoryImage? _image;
   bool _failed = false;
 
+  /// Asked for: on its way, or waiting for its turn.
+  bool _asked = false;
+
+  /// The list it scrolls in, watched until it comes near the screen.
+  ScrollPosition? _position;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _start();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final position = Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
+    if (position != _position) {
+      _position?.removeListener(_look);
+      _position = position?..addListener(_look);
+    }
   }
 
   @override
   void didUpdateWidget(ImageRef old) {
     super.didUpdateWidget(old);
-    if (old.image.sha256 != widget.image.sha256) {
-      _image = null;
-      _load();
+    if (old.image.sha256 != widget.image.sha256) _start();
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_look);
+    super.dispose();
+  }
+
+  /// Shows the image if it's kept, else fetches it once it is near the
+  /// screen (looked at after this frame, once it has its place).
+  void _start() {
+    _failed = _asked = false;
+    _image = widget.images.kept(widget.image.sha256);
+    if (_image == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _look();
+      });
     }
+  }
+
+  /// Whether it is on the screen or within a screen of it. The transcript
+  /// lays every item out (transcript.dart), so being built isn't enough:
+  /// a chat's images are fetched as it scrolls to them (ADR 0099). Outside
+  /// a scrolling list it shows, so it's near.
+  bool get _near {
+    if (!mounted) return false;
+    final position = _position;
+    if (position == null) return true;
+    final box = context.findRenderObject();
+    final list = position.context.notificationContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize || list is! RenderBox) return false;
+    if (!box.attached || !list.attached || !list.hasSize) return false;
+    final top = box.localToGlobal(Offset.zero, ancestor: list).dy;
+    final screen = list.size.height;
+    return top + box.size.height > -screen && top < 2 * screen;
+  }
+
+  void _look() {
+    if (!_asked && _image == null && !_failed && _near) _load();
   }
 
   void _load() {
     final sha = widget.image.sha256;
-    _failed = false;
-    _image = widget.images.kept(sha);
-    if (_image != null) return;
+    _asked = true;
     unawaited(
       widget.images
-          .load(widget.chatId, sha, wanted: () => mounted)
+          .load(widget.chatId, sha, wanted: () => _near)
           .then(
             (image) {
               if (mounted && widget.image.sha256 == sha) {
@@ -178,9 +228,12 @@ class _ImageRefState extends State<ImageRef> {
               }
             },
             onError: (Object e) {
-              if (mounted &&
-                  widget.image.sha256 == sha &&
-                  e is! ImageNotWanted) {
+              if (!mounted || widget.image.sha256 != sha) return;
+              // Dropped while it waited, scrolled away: asked again when
+              // it comes near.
+              if (e is ImageNotWanted) {
+                _asked = false;
+              } else {
                 setState(() => _failed = true);
               }
             },
@@ -227,7 +280,10 @@ class _ImageRefState extends State<ImageRef> {
       );
       final again = Button(
         label: 'Try again',
-        onPressed: () => setState(_load),
+        onPressed: () => setState(() {
+          _failed = false;
+          _load();
+        }),
       );
       final icon = Icon(
         Icons.broken_image_outlined,

@@ -22,6 +22,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
+import 'package:nushi/transcript.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -245,6 +246,42 @@ void main() {
     expect(find.byIcon(Icons.broken_image), findsNothing);
     expect([for (final r in asked) r.sha256], ['b' * 64, 'c' * 64]);
     await render(tester, find.byType(PhoneApp), 'phone_tool_image_390');
+    await endPhone(tester, phone);
+  });
+
+  testWidgets('a long chat’s images are fetched as it scrolls to them, '
+      'not all as it opens', (tester) async {
+    String sha(int i) => '$i'.padLeft(64, '0');
+    final (phone, _, _, asked) = await _phone(
+      tester,
+      items: [
+        for (var i = 0; i < 20; i++)
+          Item(
+            id: 'a$i',
+            kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
+            text: 'Step $i:',
+            images: [_ref(sha(i))],
+          ),
+      ],
+      image: (_) => GetChatImageResponse(mimeType: 'image/png', data: _png),
+    );
+    // It opens at its end: those on the screen and a screen above it.
+    final first = [for (final r in asked) r.sha256];
+    expect(first, contains(sha(19)));
+    expect(first, isNot(contains(sha(0))));
+    expect(first.length, lessThan(10));
+    final list = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(Transcript),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    list.position.jumpTo(0);
+    await _frames(tester);
+    expect([for (final r in asked) r.sha256], contains(sha(0)));
+    expect(asked.length, lessThan(20)); // not those in the middle
     await endPhone(tester, phone);
   });
 
