@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bytes"
 	"cmp"
 	"context"
 	"crypto/rand"
@@ -14,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
@@ -102,9 +100,9 @@ func run() error {
 		return err
 	}
 	// NUSHI_DATA runs a second daemon beside the usual one, for development.
-	dir := os.Getenv("NUSHI_DATA")
+	dir := cmp.Or(os.Getenv("NUSHI_DATA"), defaultDataFolder(home))
 	if dir == "" {
-		dir = filepath.Join(home, "Library", "Application Support", "Nushi")
+		return errNoDataFolder
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
@@ -298,9 +296,7 @@ func listen(path string) (net.Listener, error) {
 // It is asked once, when first needed: not by the subcommands (a bridge, a
 // chat's tools), which run this executable too.
 var loginShell = sync.OnceValue(func() string {
-	// id -P prints the user's passwd entry; the shell is its last field.
-	out, _ := exec.Command("/usr/bin/id", "-P").Output()
-	shell := strings.TrimSpace(string(out[bytes.LastIndexByte(out, ':')+1:]))
+	shell := passwdShell()
 	if st, err := os.Stat(shell); err == nil && st.Mode().IsRegular() && st.Mode()&0o111 != 0 {
 		return shell
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,6 +38,9 @@ func execLogin() error {
 		return err
 	}
 	dir := logFolder(os.Getenv("NUSHI_DATA"), home)
+	if dir == "" {
+		return errNoDataFolder
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
@@ -61,5 +65,9 @@ func logFolder(nushiData, home string) string {
 	if nushiData != "" {
 		return nushiData
 	}
-	return filepath.Join(home, "Library", "Application Support", "Nushi")
+	return defaultDataFolder(home)
 }
+
+// errNoDataFolder is NUSHI_DATA unset on an OS with no default data
+// folder.
+var errNoDataFolder = errors.New("this OS has no default data folder: set NUSHI_DATA")
