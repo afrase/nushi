@@ -157,6 +157,7 @@ class MenuIcon extends StatefulWidget {
     required this.entries,
     super.key,
     this.size = 16,
+    this.onOpen,
     this.onClose,
     this.color,
     this.padding = 5,
@@ -171,6 +172,7 @@ class MenuIcon extends StatefulWidget {
     required this.entries,
     super.key,
     this.size = 16,
+    this.onOpen,
     this.onClose,
     this.color,
     this.padding = 5,
@@ -185,6 +187,7 @@ class MenuIcon extends StatefulWidget {
   final double size;
   final Color? color;
   final double padding;
+  final VoidCallback? onOpen;
   final VoidCallback? onClose;
 
   /// Whether a long list gets a filter field ([Menu.filter]).
@@ -207,7 +210,10 @@ class _MenuIconState extends State<MenuIcon> {
   @override
   Widget build(BuildContext context) => Menu(
     entries: widget.entries,
-    onOpen: () => _opened(true),
+    onOpen: () {
+      _opened(true);
+      widget.onOpen?.call();
+    },
     onClose: () {
       _opened(false);
       widget.onClose?.call();

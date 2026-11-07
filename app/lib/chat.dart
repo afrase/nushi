@@ -411,6 +411,23 @@ class ChatState extends ChangeNotifier {
     return browser;
   }
 
+  /// Shows a server's address at [url] ('http://localhost:3000'): the
+  /// browser tab already at that origin, else a new one (Servers menu,
+  /// ADR 0098), on the Chat tab.
+  void showServer(String url) {
+    final origin = Uri.tryParse(url)?.origin;
+    final open = previewTabs.value.whereType<BrowserTab>().where((b) {
+      final at = Uri.tryParse(b.address.value);
+      return at != null && at.hasScheme && at.origin == origin;
+    }).lastOrNull;
+    if (open == null) {
+      openBrowserTab(url);
+      return;
+    }
+    tab.value = ChatTab.chat;
+    _show(open);
+  }
+
   /// Whether a browser tab shows: the preview's, on the Chat tab.
   bool get browserShown =>
       preview.value is BrowserTab && shownTab == ChatTab.chat;
@@ -776,6 +793,7 @@ class ChatState extends ChangeNotifier {
           EventsResponse_Kind.update ||
           EventsResponse_Kind.show ||
           EventsResponse_Kind.relatedWorktrees ||
+          EventsResponse_Kind.serversChanged ||
           EventsResponse_Kind.notSet:
         return; // the daemon keeps a chat's title and folder
     }

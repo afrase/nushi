@@ -33,7 +33,28 @@ class MenuEntry {
     this.controls,
     this.lit = false,
     this.autofocus = false,
-  }) : heading = false;
+  }) : heading = false,
+       custom = null;
+
+  /// A row [custom] draws whole, given what closes the menu, as high as it
+  /// needs: one that is more than a choice (a Servers menu's server, its
+  /// name over its command and its ▶ at the end). It picks for itself.
+  const new row(Widget Function(VoidCallback close) this.custom)
+    : label = '',
+      detail = '',
+      checked = false,
+      onPick = null,
+      submenu = null,
+      tooltip = '',
+      icon = null,
+      line = null,
+      mark = null,
+      danger = false,
+      shortcut = '',
+      controls = null,
+      lit = false,
+      autofocus = false,
+      heading = false;
 
   /// A group's name over its rows.
   const new heading(this.label)
@@ -50,7 +71,8 @@ class MenuEntry {
       controls = null,
       lit = false,
       autofocus = false,
-      heading = true;
+      heading = true,
+      custom = null;
 
   /// The line between groups of rows.
   static const divider = MenuEntry('');
@@ -72,6 +94,9 @@ class MenuEntry {
   final bool danger;
   final String shortcut;
   final Widget Function(VoidCallback close)? controls;
+
+  /// The row drawn whole ([MenuEntry.row]).
+  final Widget Function(VoidCallback close)? custom;
 
   /// Marked as the row Enter picks, when the keys are handled elsewhere.
   final bool lit;
@@ -344,6 +369,8 @@ List<Widget> _rows(
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 3),
           child: Text(e.label, style: theme.ui(t.textMuted, size: 12)),
         )
+      else if (e.custom case final custom?)
+        custom(close)
       else if (e.controls case final controls?)
         _controlsRow(context, e, controls(close), icons: icons)
       else

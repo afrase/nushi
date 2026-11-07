@@ -13,6 +13,7 @@ import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_colors.dart';
 import 'package:nushi/context_cache.dart';
+import 'package:nushi/dev_servers.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
@@ -216,6 +217,9 @@ class Daemon extends ChangeNotifier {
 
   /// The chats' terminals.
   late final terminals = Terminals(client);
+
+  /// The chats' folders' dev servers (ADR 0098), the Mac's only.
+  late final devServers = DevServers(client);
 
   /// A folder's code waiting for the user's word before a chat starts or
   /// moves there (see TrustCard).

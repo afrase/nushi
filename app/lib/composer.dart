@@ -83,6 +83,8 @@ class _ComposerState extends State<Composer> {
     _spell.addListener(_imagesChanged); // marks that came without typing
     _draft.quote.addListener(_quote);
     _quote(); // one given before the box was built
+    _draft.put.addListener(_put);
+    _put();
     widget.chat.rewinding.addListener(_imagesChanged);
     widget.chat.takeBack.addListener(_takeBack);
     _takeBack(); // one taken back while the box wasn't there
@@ -104,6 +106,7 @@ class _ComposerState extends State<Composer> {
   void dispose() {
     _draft.removeListener(_draftChanged);
     _draft.quote.removeListener(_quote);
+    _draft.put.removeListener(_put);
     widget.chat.rewinding.removeListener(_imagesChanged);
     widget.chat.takeBack.removeListener(_takeBack);
     _esc?.cancel();
@@ -122,6 +125,23 @@ class _ComposerState extends State<Composer> {
         ? ''
         : '${_text.text.trimRight()}\n\n';
     final text = '$before$quoted\n\n';
+    _text.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _focus.requestFocus();
+  }
+
+  /// Puts the draft's [Draft.put] in the box, after a blank line when it
+  /// holds text, and takes the focus there.
+  void _put() {
+    final p = _draft.put.value;
+    if (p == null) return;
+    _draft.put.value = null;
+    final before = _text.text.trim().isEmpty
+        ? ''
+        : '${_text.text.trimRight()}\n\n';
+    final text = '$before$p';
     _text.value = TextEditingValue(
       text: text,
       selection: TextSelection.collapsed(offset: text.length),

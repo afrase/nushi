@@ -74,7 +74,17 @@ enum LineIcon {
 
   /// Remove (an allowed site): a bin, its lid's handle on top and two
   /// lines down its tapered body.
-  trash;
+  trash,
+
+  /// Dev servers (ADR 0098): the box cut in two across, a short line at
+  /// the right of each half, as Claude desktop's Servers button.
+  server,
+
+  /// Run a dev server: a triangle pointing right, its corners rounded.
+  play,
+
+  /// Stop a dev server: a square, its corners rounded.
+  stop;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -289,6 +299,30 @@ enum LineIcon {
         ..lineTo(10, 16.5)
         ..moveTo(14, 10.5)
         ..lineTo(14, 16.5),
+    server =>
+      Path()
+        ..addRRect(
+          RRect.fromRectXY(const Rect.fromLTWH(4, 4, 16, 16), 3.5, 3.5),
+        )
+        ..moveTo(4, 12)
+        ..lineTo(20, 12)
+        ..moveTo(13.5, 8)
+        ..lineTo(16, 8)
+        ..moveTo(13.5, 16)
+        ..lineTo(16, 16),
+    play =>
+      Path()
+        ..moveTo(8, 6.2)
+        ..quadraticBezierTo(8, 5, 9.1, 5.6)
+        ..lineTo(18.4, 11)
+        ..quadraticBezierTo(19.4, 12, 18.4, 13)
+        ..lineTo(9.1, 18.4)
+        ..quadraticBezierTo(8, 19, 8, 17.8)
+        ..close(),
+    stop =>
+      Path()..addRRect(
+        RRect.fromRectXY(const Rect.fromLTWH(6.5, 6.5, 11, 11), 2, 2),
+      ),
   };
 
   static Radius _r(double r) => Radius.circular(r);

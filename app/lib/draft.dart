@@ -52,6 +52,11 @@ class Draft extends ChangeNotifier {
   /// Text to quote in the box (a side chat's start), taken by the box.
   final quote = ValueNotifier<String?>(null);
 
+  /// Text to put in the box as written, after what's there (the Servers
+  /// menu's Add server), taken by the box, which takes the focus; never
+  /// sent by itself.
+  final put = ValueNotifier<String?>(null);
+
   /// The subagent a message taken back was for: its call and type. The
   /// message goes there again.
   final toSubagent = ValueNotifier<(String call, String agent)?>(null);

@@ -55,6 +55,8 @@ extension DaemonEvents on Daemon {
     } else if (e.hasRelatedWorktrees()) {
       // Unnumbered, so not for ChatState.apply, and only the Mac shows them.
       if (!remote) chats[e.chatId]?.related.take(e.relatedWorktrees.worktrees);
+    } else if (e.hasServersChanged()) {
+      if (!remote) devServers.changed(e.serversChanged);
     } else if (e.hasShow()) {
       // The phone offers Preview on the tool row; it opens nothing itself.
       if (!remote) chats[e.chatId]?.showAsked.value = e.show;
@@ -86,6 +88,7 @@ extension DaemonEvents on Daemon {
       c.unload(); // events may have been missed while disconnected
     }
     terminals.stale();
+    devServers.reload(); // its events may have been missed too
     try {
       final resp = await client.listChats(ListChatsRequest());
       removedChats = resp.removed;
