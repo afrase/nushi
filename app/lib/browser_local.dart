@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:nushi/browser_address.dart';
+
 // A browser tab's block on this Mac and the local network (ADR 0094): a
 // page whose top-level address isn't there itself may load nothing from
 // there, so a site can't reach a dev server, a router or a printer
@@ -123,4 +125,21 @@ bool reachesLocal(String address, Set<String> allowed) {
   final u = Uri.tryParse(address);
   if (u == null || u.host.isEmpty) return false;
   return isLocalNetwork(u.host) || allowed.contains(u.host.toLowerCase());
+}
+
+/// What Local network access says of the page at [address], given the
+/// sites let through ([allowed]): null for no web page (a new tab, a blank
+/// page), else whether it may reach this Mac and the local network, and
+/// whether that's fixed: a page there itself always may (`localNetworkRules`),
+/// and a host a rule can't hold ([allowableHost]) never may.
+({bool allowed, bool fixed})? localNetworkAccess(
+  String address,
+  Set<String> allowed,
+) {
+  final u = Uri.tryParse(address);
+  if (u == null || !isWebPage(u) || u.host.isEmpty) return null;
+  final host = u.host.toLowerCase();
+  if (isLocalNetwork(host)) return (allowed: true, fixed: true);
+  if (!allowableHost(host)) return (allowed: false, fixed: true);
+  return (allowed: allowed.contains(host), fixed: false);
 }

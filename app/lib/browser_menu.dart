@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/allowed_sites.dart';
 import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_local.dart';
 import 'package:nushi/browser_page.dart';
@@ -123,23 +124,6 @@ class BrowserMenu extends StatelessWidget {
   }
 }
 
-/// What Local network access says of the page at [address], given the
-/// sites let through ([allowed]): null for no web page (a new tab, a blank
-/// page), else whether it may reach this Mac and the local network, and
-/// whether that's fixed: a page there itself always may (`localNetworkRules`),
-/// and a host a rule can't hold ([allowableHost]) never may.
-({bool allowed, bool fixed})? localNetworkAccess(
-  String address,
-  Set<String> allowed,
-) {
-  final u = Uri.tryParse(address);
-  if (u == null || !isWebPage(u) || u.host.isEmpty) return null;
-  final host = u.host.toLowerCase();
-  if (isLocalNetwork(host)) return (allowed: true, fixed: true);
-  if (!allowableHost(host)) return (allowed: false, fixed: true);
-  return (allowed: allowed.contains(host), fixed: false);
-}
-
 /// Where Save screenshot saves a file of the name it's given: the Mac's
 /// save panel, PNG, null when it's cancelled. Tests set their own.
 Future<String?> Function(String name) screenshotPath = (name) async =>
@@ -203,102 +187,4 @@ Future<void> clearBrowsing(BuildContext context, BrowserHost? host) async {
     running: 'Clearing browsing data…',
     done: 'Browsing data cleared',
   );
-}
-
-/// Manage allowed sites…: the sites whose pages in a browser tab may reach
-/// this Mac and the local network (`localNetworkSites`), each removable.
-/// It's all a site is allowed in Nushi: no agent drives its pages.
-Future<void> showAllowedSites(BuildContext context) => showDialog<void>(
-  context: context,
-  builder: (context) => const AllowedSites(),
-);
-
-/// The Allowed sites dialog ([showAllowedSites]).
-class AllowedSites extends StatelessWidget {
-  const new({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    return ValueListenableBuilder(
-      valueListenable: localNetworkSites,
-      builder: (context, sites, _) {
-        final hosts = sites.toList()..sort();
-        return nushiDialog(
-          'Allowed sites',
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 14,
-            children: [
-              Text(
-                'Pages from these sites in a browser tab can reach your Mac '
-                'and your local network (a dev server, a router), as your own '
-                'local pages can; other sites can’t. Allow a site from Local '
-                'network access in the ⋯ menu while its page shows.',
-                style: theme.ui(t.textSecondary),
-              ),
-              if (hosts.isEmpty)
-                Text('No sites allowed', style: theme.ui(t.textMuted))
-              else
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 280),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: t.borderSubtle),
-                      borderRadius: BorderRadius.circular(NushiTheme.card),
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          for (final (i, host) in hosts.indexed)
-                            Container(
-                              height: 36,
-                              padding: const EdgeInsets.fromLTRB(12, 0, 6, 0),
-                              decoration: BoxDecoration(
-                                border: i == 0
-                                    ? null
-                                    : Border(
-                                        top: BorderSide(color: t.borderSubtle),
-                                      ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      host,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: theme.code(t.text, size: 12.5),
-                                    ),
-                                  ),
-                                  IconTap.line(
-                                    LineIcon.close,
-                                    tooltip: 'Remove',
-                                    size: 13,
-                                    onTap: () => disallowLocalNetwork(host),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          [
-            Button(
-              label: 'Done',
-              kind: ButtonKind.primary,
-              autofocus: true,
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

@@ -201,7 +201,7 @@ The browser's tabs are chips in the pane's title row (a file's tab beside them i
 
 - **Save screenshot**: the part of the page in sight, as a PNG, where you choose to save it.
 - **Open links in built-in browser**: the same switch as Settings › General's.
-- **Manage allowed sites…**: the sites you let reach your Mac and local network, each with a × to take it off the list.
+- **Manage allowed sites…**: the sites you let reach your Mac and local network. Add one under Add URL (a host such as `example.com`, or a page's address; Return or + adds it; a local address needs no adding), take one off with its bin, or Clear all after a confirmation.
 - **Local network access**: Blocked or Allowed for the site showing (a site you allow can load from `localhost` and your network, as your own pages can; reload the page after changing it). A page on your Mac or local network always has it, so it says Allowed and can't be changed. A new tab has none.
 - **Clear browsing data**, under Cookies: after asking, removes every site's cookies, storage and cache from the browser tabs, which signs you out of the sites you signed in to there, and reloads the page. File previews keep no cookies, but their pages' storage goes too. Your own browser keeps its data.
 

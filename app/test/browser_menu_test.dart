@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/allowed_sites.dart';
 import 'package:nushi/browser_menu.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/browser_pane.dart';
@@ -249,38 +250,21 @@ void main() {
     }, variant: macOnly);
   });
 
-  testWidgets('Manage allowed sites… lists the sites let through, each '
-      'removable', (tester) async {
+  testWidgets('Manage allowed sites… opens Allowed sites over the sites let '
+      'through', (tester) async {
     browserFakes();
     localNetworkSites.value = {'router.example', 'nas.example'};
     final c = await _pane(tester);
     await _open(tester, c, 'https://example.com');
     await tester.tap(find.text('Manage allowed sites…'));
     await tester.pumpAndSettle();
-    expect(find.text('Allowed sites'), findsOneWidget);
-    // In order.
-    expect(
-      tester.getTopLeft(find.text('nas.example')).dy,
-      lessThan(tester.getTopLeft(find.text('router.example')).dy),
-    );
-    await tester.tap(
-      find.descendant(
-        of: find.ancestor(
-          of: find.text('nas.example'),
-          matching: find.byType(Row),
-        ),
-        matching: find.byTooltip('Remove'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(localNetworkSites.value, {'router.example'});
-    expect(find.text('nas.example'), findsNothing);
-    await tester.tap(find.byTooltip('Remove'));
-    await tester.pumpAndSettle();
-    expect(find.text('No sites allowed'), findsOneWidget);
+    // Its own tests: allowed_sites_test.dart.
+    expect(find.byType(AllowedSites), findsOneWidget);
+    expect(find.text('nas.example'), findsOneWidget);
+    expect(find.text('router.example'), findsOneWidget);
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
-    expect(find.text('Allowed sites'), findsNothing);
+    expect(find.byType(AllowedSites), findsNothing);
   }, variant: macOnly);
 
   testWidgets('Clear browsing data asks first, then clears WebKit’s store '

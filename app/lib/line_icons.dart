@@ -70,7 +70,11 @@ enum LineIcon {
   collapse,
 
   /// A submenu's: a chevron to the right.
-  chevron;
+  chevron,
+
+  /// Remove (an allowed site): a bin, its lid's handle on top and two
+  /// lines down its tapered body.
+  trash;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -265,6 +269,26 @@ enum LineIcon {
         ..lineTo(4, 14)
         ..moveTo(10, 14)
         ..lineTo(4, 20),
+    trash =>
+      Path()
+        ..moveTo(4, 6.5)
+        ..lineTo(20, 6.5)
+        ..moveTo(9.5, 6.5)
+        ..lineTo(9.5, 4.5)
+        ..quadraticBezierTo(9.5, 3.5, 10.5, 3.5)
+        ..lineTo(13.5, 3.5)
+        ..quadraticBezierTo(14.5, 3.5, 14.5, 4.5)
+        ..lineTo(14.5, 6.5)
+        ..moveTo(6, 6.5)
+        ..lineTo(7, 19)
+        ..quadraticBezierTo(7.1, 20.5, 8.6, 20.5)
+        ..lineTo(15.4, 20.5)
+        ..quadraticBezierTo(16.9, 20.5, 17, 19)
+        ..lineTo(18, 6.5)
+        ..moveTo(10, 10.5)
+        ..lineTo(10, 16.5)
+        ..moveTo(14, 10.5)
+        ..lineTo(14, 16.5),
   };
 
   static Radius _r(double r) => Radius.circular(r);

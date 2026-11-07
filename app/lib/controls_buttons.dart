@@ -9,17 +9,22 @@ enum ButtonKind {
 
   /// One that deletes or loses something: red text, outlined.
   destructive,
+
+  /// The same beside a dialog's own Done, as Claude desktop draws it (its
+  /// Allowed sites' Clear all): red text on a faint red fill, no outline.
+  danger,
 }
 
 /// The ink of a button of [kind].
 Color _fg(Tokens t, ButtonKind kind) => switch (kind) {
   ButtonKind.primary => t.onAccent,
   ButtonKind.secondary => t.text,
-  ButtonKind.destructive => t.crashed,
+  ButtonKind.destructive || ButtonKind.danger => t.crashed,
 };
 
 /// A button's fill and border, as [look] has it, rounded by [r]: the
-/// accent's fill for a primary one, else outlined.
+/// accent's fill for a primary one, a faint red for a danger one, else
+/// outlined.
 BoxDecoration _buttonBox(
   Tokens t,
   ButtonKind kind,
@@ -27,6 +32,14 @@ BoxDecoration _buttonBox(
   BorderRadius r,
 ) {
   final primary = kind == ButtonKind.primary;
+  if (kind == ButtonKind.danger) {
+    return BoxDecoration(
+      color: look.hover
+          ? Color.alphaBlend(_tint(t, look), t.crashedSoft)
+          : t.crashedSoft,
+      borderRadius: r,
+    );
+  }
   return BoxDecoration(
     color: primary
         ? (look.pressed

@@ -208,13 +208,37 @@ class _HoverState extends State<Hover> {
   );
 }
 
-/// A dialog: [title], [content] 460 wide, and its [actions].
-Widget nushiDialog(String title, Widget content, List<Widget> actions) =>
-    AlertDialog(
-      title: Text(title),
-      content: SizedBox(width: 460, child: content),
-      actions: actions,
-    );
+/// A dialog: [title], [content] 460 wide, and its [actions], at the right
+/// unless [actionsAlignment] says otherwise. [onClose] puts a × at the
+/// title's end, as Claude desktop's dialogs that are lists to manage have.
+Widget nushiDialog(
+  String title,
+  Widget content,
+  List<Widget> actions, {
+  VoidCallback? onClose,
+  MainAxisAlignment? actionsAlignment,
+}) => AlertDialog(
+  title: onClose == null
+      ? Text(title)
+      : Row(
+          children: [
+            Expanded(child: Text(title)),
+            // Its glyph's right edge at the content's, past the button's
+            // padding.
+            Transform.translate(
+              offset: const Offset(5, 0),
+              child: IconTap.line(
+                LineIcon.close,
+                tooltip: 'Close',
+                onTap: onClose,
+              ),
+            ),
+          ],
+        ),
+  content: SizedBox(width: 460, child: content),
+  actions: actions,
+  actionsAlignment: actionsAlignment,
+);
 
 /// Asks [title] with [text] in a dialog; true once [action] is pressed
 /// ([destructive]: it deletes or loses something, so it's in red).
