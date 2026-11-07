@@ -2,30 +2,12 @@
 // macOS's sandbox (sandbox-exec), with every file write but /dev/null's
 // and every network connection denied. It's for asking a program what it
 // is (its version, whether it's signed in) without letting it write a
-// cache, a log or a setting on the way.
+// cache, a log or a setting on the way. The sandbox is macOS's
+// (readonly_darwin.go): another OS runs nothing (readonly_other.go, ADR
+// 0097).
 package readonly
 
-import (
-	"context"
-	"os/exec"
-	"time"
-
-	"github.com/afrase/nushi/internal/procgroup"
-)
-
-const profile = `(version 1)(allow default)(deny network*)(deny file-write* (require-not (literal "/dev/null")))`
+import "time"
 
 // Timeout bounds a run.
 var Timeout = 10 * time.Second
-
-// Output runs path with args, read-only, in env (nil: the daemon's), and
-// returns what it printed on stdout. What it starts goes with it when it
-// overruns Timeout.
-func Output(ctx context.Context, env []string, path string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, Timeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", append([]string{"-p", profile, path}, args...)...) //nolint:gosec // a found CLI's --version, under the sandbox
-	cmd.Env = env
-	procgroup.Bound(cmd)
-	return cmd.Output()
-}

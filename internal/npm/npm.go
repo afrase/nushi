@@ -1,7 +1,8 @@
 // Package npm installs npm packages into a folder from a lockfile, as `npm
 // ci` does, so every package's version and hash is the lockfile's. Nothing
 // outside the folder's parent is touched: npm runs under macOS's sandbox
-// with every other file write denied; its cache goes to a folder of the
+// with every other file write denied (sandbox_darwin.go; another OS has no
+// sandbox, so no install, ADR 0097); its cache goes to a folder of the
 // install's own, removed after, and it keeps no logs; no install scripts
 // run; optional dependencies (prebuilt programs for each platform) are
 // left out. It runs the npm on PATH, which reads the user's npm settings (a
@@ -15,10 +16,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/afrase/nushi/internal/procgroup"
@@ -57,14 +56,12 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 			return err
 		}
 	}
-	resolved, err := filepath.EvalSymlinks(parent) // what the sandbox sees
+	cache := filepath.Join(tmp, ".npm")
+	cmd, err := writingOnlyIn(ctx, parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
+		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	if err != nil {
 		return err
 	}
-	profile := `(version 1)(allow default)(deny file-write* (require-not (require-any (literal "/dev/null") (subpath ` + strconv.Quote(resolved) + `))))`
-	cache := filepath.Join(tmp, ".npm")
-	cmd := exec.CommandContext(ctx, "/usr/bin/sandbox-exec", "-p", profile, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts", //nolint:gosec // npm ci under the sandbox, fixed arguments
-		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	cmd.Dir = tmp
 	env := os.Environ()
 	if in.Environ != nil {
