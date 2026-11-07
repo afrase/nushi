@@ -30,7 +30,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
+.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -166,13 +166,20 @@ $(GOVULNCHECK): tools/lint/go.mod tools/lint/go.sum
 # (govulncheck asks vuln.go.dev, so this needs the network). CI runs the
 # parts as jobs of their own (.github/workflows/ci.yml); make check runs
 # everything they do.
-lint: lint-go lint-dart
+lint: lint-go lint-dart lint-linux
 
 # Go's: on macOS (the keychain's cgo needs its SDK).
 lint-go: $(GOLANGCI) $(GOVULNCHECK)
 	$(GOLANGCI) run ./...
 	$(GOVULNCHECK) ./...
 	GOWORK=off $(GOVULNCHECK) -C tools/lint github.com/golangci/golangci-lint/v2/cmd/golangci-lint golang.org/x/vuln/cmd/govulncheck
+
+# The daemon and the tools built and vetted for Linux without cgo, so
+# macOS-only code (cgo, sysctl, the Mac's commands) outside a _darwin.go
+# file fails here (ADR 0097): anywhere. Nothing more runs on Linux yet.
+lint-linux:
+	GOOS=linux CGO_ENABLED=0 go build ./...
+	GOOS=linux CGO_ENABLED=0 go vet ./...
 
 # The protos' and Dart's: anywhere.
 lint-dart:
