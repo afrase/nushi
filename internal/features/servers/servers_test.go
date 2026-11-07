@@ -150,7 +150,7 @@ func row(t *testing.T, s *Service, name string, state State) Row {
 func TestAServerAnswersAndStops(t *testing.T) {
 	p := freePort(t)
 	s, _, _ := setup(t, entry("web", p, "-delay", "300ms"))
-	r, err := s.Start(t.Context(), "c", "WEB", 0)
+	r, err := s.Start(t.Context(), "c", Pick{Name: "WEB"})
 	testcheck.NoErr(t, err)
 	if r.State != Starting || r.Port != p || r.ServerID == "" {
 		t.Errorf("Start = %+v", r)
@@ -169,7 +169,7 @@ func TestAServerAnswersAndStops(t *testing.T) {
 func TestAServerThatNeverAnswers(t *testing.T) {
 	s, _, _ := setup(t, entry("web", freePort(t), "-never"))
 	s.ReadyWithin = 300 * time.Millisecond
-	_, err := s.Start(t.Context(), "c", "web", 0)
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", NotAnswering)
 }
@@ -177,7 +177,7 @@ func TestAServerThatNeverAnswers(t *testing.T) {
 func TestAServerThatAnswersLate(t *testing.T) {
 	s, _, _ := setup(t, entry("web", freePort(t), "-delay", "1500ms"))
 	s.ReadyWithin = 300 * time.Millisecond
-	_, err := s.Start(t.Context(), "c", "web", 0)
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", NotAnswering)
 	row(t, s, "web", Running)
@@ -185,7 +185,7 @@ func TestAServerThatAnswersLate(t *testing.T) {
 
 func TestAServerThatExitsEarly(t *testing.T) {
 	s, _, _ := setup(t, entry("web", freePort(t), "-exit", "2"))
-	_, err := s.Start(t.Context(), "c", "web", 0)
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	r := row(t, s, "web", Failed)
 	if !strings.Contains(r.Error, "exit code 2") || !strings.Contains(r.Output, "boom: can't start") {
@@ -210,7 +210,7 @@ func TestATakenPortIsSkipped(t *testing.T) {
 			}
 			defer ln.Close() //nolint:errcheck // a test's
 			s, _, _ := setup(t, entry("web", p, "--port", strconv.Itoa(p)))
-			r, err := s.Start(t.Context(), "c", "web", 0)
+			r, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 			testcheck.NoErr(t, err)
 			if r.Port != p+1 {
 				t.Errorf("port %d, want %d", r.Port, p+1)
@@ -229,7 +229,7 @@ func TestATakenPortFailsWithoutAutoPort(t *testing.T) {
 	testcheck.NoErr(t, err)
 	defer ln.Close() //nolint:errcheck // a test's
 	s, _, _ := setup(t, fmt.Sprintf(`{"name": "web", "runtimeExecutable": "$SERVER", "port": %d, "autoPort": false}`, p))
-	_, err = s.Start(t.Context(), "c", "web", 0)
+	_, err = s.Start(t.Context(), "c", Pick{Name: "web"})
 	want := fmt.Sprintf("port %d is in use by ", p)
 	if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), fmt.Sprintf("(pid %d)", os.Getpid())) {
 		t.Errorf("Start = %v, want %q naming this process", err, want)
@@ -247,7 +247,7 @@ func TestStartsAtOnceTakeTwoPorts(t *testing.T) {
 	var wg sync.WaitGroup
 	for i, name := range []string{"one", "two"} {
 		wg.Go(func() {
-			r, err := s.Start(t.Context(), "c", name, 0)
+			r, err := s.Start(t.Context(), "c", Pick{Name: name})
 			testcheck.NoErr(t, err)
 			rows[i] = r
 		})
@@ -267,7 +267,7 @@ func TestStartsOfOneEntryMerge(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := range ids {
 		wg.Go(func() {
-			r, err := s.Start(t.Context(), "c", "web", 0)
+			r, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 			testcheck.NoErr(t, err)
 			ids[i] = r.ServerID
 		})
@@ -299,7 +299,7 @@ func gone(pid int) bool {
 func TestStopEndsAChildThatLeftTheTerminal(t *testing.T) {
 	pidFile := filepath.Join(t.TempDir(), "child")
 	s, _, _ := setup(t, entry("web", freePort(t), "-child", pidFile))
-	_, err := s.Start(t.Context(), "c", "web", 0)
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	r := row(t, s, "web", Running)
 	b, err := os.ReadFile(pidFile)
@@ -348,7 +348,7 @@ func TestSweepStopsWhatACrashLeft(t *testing.T) {
 // A running server is in the record, which goes once none runs.
 func TestTheRecordFollowsTheServers(t *testing.T) {
 	s, _, _ := setup(t, entry("web", freePort(t)))
-	r, err := s.Start(t.Context(), "c", "web", 0)
+	r, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", Running)
 	b, err := os.ReadFile(s.Record)

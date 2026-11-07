@@ -14265,7 +14265,10 @@ type DevServer struct {
 	// Its running server's id (StopServerRequest.server_id).
 	ServerId string `protobuf:"bytes,19,opt,name=server_id,json=serverId,proto3" json:"server_id,omitempty"`
 	// Its entry changed or went since the server started.
-	Changed       bool `protobuf:"varint,20,opt,name=changed,proto3" json:"changed,omitempty"`
+	Changed bool `protobuf:"varint,20,opt,name=changed,proto3" json:"changed,omitempty"`
+	// The entry's hash: StartServerRequest.hash, so what runs is what
+	// this row showed.
+	Hash          string `protobuf:"bytes,21,opt,name=hash,proto3" json:"hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14440,6 +14443,13 @@ func (x *DevServer) GetChanged() bool {
 	return false
 }
 
+func (x *DevServer) GetHash() string {
+	if x != nil {
+		return x.Hash
+	}
+	return ""
+}
+
 type StartServerRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	ChatId string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
@@ -14447,7 +14457,11 @@ type StartServerRequest struct {
 	//
 	//	*StartServerRequest_Name
 	//	*StartServerRequest_Index
-	Entry         isStartServerRequest_Entry `protobuf_oneof:"entry"`
+	Entry isStartServerRequest_Entry `protobuf_oneof:"entry"`
+	// The hash of the entry as the app showed it (DevServer.hash):
+	// required; a start whose entry changed since is refused, and the app
+	// lists the servers again.
+	Hash          string `protobuf:"bytes,4,opt,name=hash,proto3" json:"hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -14512,6 +14526,13 @@ func (x *StartServerRequest) GetIndex() int32 {
 		}
 	}
 	return 0
+}
+
+func (x *StartServerRequest) GetHash() string {
+	if x != nil {
+		return x.Hash
+	}
+	return ""
 }
 
 type isStartServerRequest_Entry interface {
@@ -24989,7 +25010,7 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"LaunchFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1b\n" +
 	"\tfrom_main\x18\x02 \x01(\bR\bfromMain\x12\x14\n" +
-	"\x05error\x18\x03 \x01(\tR\x05error\"\xd3\x04\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\"\xe7\x04\n" +
 	"\tDevServer\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x17\n" +
 	"\aname_ok\x18\x02 \x01(\bR\x06nameOk\x12\x14\n" +
@@ -25012,14 +25033,16 @@ const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\x05error\x18\x11 \x01(\tR\x05error\x12\x16\n" +
 	"\x06output\x18\x12 \x01(\tR\x06output\x12\x1b\n" +
 	"\tserver_id\x18\x13 \x01(\tR\bserverId\x12\x18\n" +
-	"\achanged\x18\x14 \x01(\bR\achanged\x1a6\n" +
+	"\achanged\x18\x14 \x01(\bR\achanged\x12\x12\n" +
+	"\x04hash\x18\x15 \x01(\tR\x04hash\x1a6\n" +
 	"\bEnvEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"d\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"x\n" +
 	"\x12StartServerRequest\x12\x17\n" +
 	"\achat_id\x18\x01 \x01(\tR\x06chatId\x12\x14\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x12\x16\n" +
-	"\x05index\x18\x03 \x01(\x05H\x00R\x05indexB\a\n" +
+	"\x05index\x18\x03 \x01(\x05H\x00R\x05index\x12\x12\n" +
+	"\x04hash\x18\x04 \x01(\tR\x04hashB\a\n" +
 	"\x05entry\"B\n" +
 	"\x13StartServerResponse\x12+\n" +
 	"\x06server\x18\x01 \x01(\v2\x13.nushi.v1.DevServerR\x06server\"I\n" +

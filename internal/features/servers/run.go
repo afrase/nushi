@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,39 +23,28 @@ import (
 )
 
 // launch finds the server a port and starts its program, directly (no
-// shell), with the login shell's environment, FORCE_COLOR, the entry's
-// env and PORT.
+// shell), as resolve has it, with PORT. Its errors are StartErrors.
 func (s *Service) launch(ctx context.Context, sv *server) error {
 	e := sv.entry
 	if err := launchfile.CheckCwd(sv.folder, e.Cwd); err != nil { // again: the folder may have changed since it was read
-		return err
+		return refuse("its folder", err)
 	}
 	port, err := s.pickPort(ctx, sv)
 	if err != nil {
-		return err
+		return refuse("its port", err)
 	}
 	args := e.Args
 	if port != e.Port {
 		args = withPort(e.Args, port)
 	}
-	env := shellenv.Merge(s.Env.Environ(), []string{"FORCE_COLOR=1", "TERM=xterm-256color"})
-	var own []string
-	for k, v := range e.Env {
-		own = append(own, k+"="+v)
-	}
-	slices.Sort(own)
-	env = shellenv.Merge(env, append(own, "PORT="+strconv.Itoa(port)))
-	command := e.Command
-	if strings.Contains(command, "/") && !filepath.IsAbs(command) {
-		command = filepath.Join(e.Cwd, command)
-	}
-	program := shellenv.LookPath(command, env)
+	program, env := resolve(e, s.Env.Environ())
+	env = shellenv.Merge(env, []string{"PORT=" + strconv.Itoa(port)})
 	if program == "" {
-		return fmt.Errorf("%s isn't a program on the login shell's PATH", e.Command)
+		return refuse("its program isn't found", fmt.Errorf("%s isn't a program on the login shell's PATH", e.Command))
 	}
 	proc, err := s.Spawn(append([]string{program}, args...), e.Cwd, env, func() {})
 	if err != nil {
-		return fmt.Errorf("starting it: %w", err)
+		return refuse("its program didn't start", fmt.Errorf("starting it: %w", err))
 	}
 	leader, err := s.Procs.Get(proc.Pid())
 	if err != nil {
@@ -242,9 +230,13 @@ func (s *Service) look(sv *server) {
 		tree[i].Args = nil
 	}
 	s.mu.Lock()
+	was := slices.Clone(sv.tree)
+	s.mu.Unlock()
+	tree = s.mergeTree(was, tree) // reads the processes: not under the lock
+	s.mu.Lock()
 	same := slices.EqualFunc(tree, sv.tree, func(a, b model.Process) bool { return a.Pid == b.Pid && a.Started.Equal(b.Started) })
 	if !same {
-		sv.tree = mergeTree(sv.tree, tree)
+		sv.tree = tree
 	}
 	s.mu.Unlock()
 	if !same {
@@ -254,11 +246,15 @@ func (s *Service) look(sv *server) {
 
 // mergeTree is the processes of was and now, each once: one seen before
 // that has since left the tree (a setsid child whose parent ended) is
-// still the server's.
-func mergeTree(was, now []model.Process) []model.Process {
+// still the server's while it runs; one that ended is dropped, so the list
+// doesn't grow with each short-lived child.
+func (s *Service) mergeTree(was, now []model.Process) []model.Process {
 	out := slices.Clone(now)
 	for _, p := range was {
-		if !slices.ContainsFunc(out, func(q model.Process) bool { return q.Pid == p.Pid && q.Started.Equal(p.Started) }) {
+		if slices.ContainsFunc(out, func(q model.Process) bool { return q.Pid == p.Pid && q.Started.Equal(p.Started) }) {
+			continue
+		}
+		if q, err := s.Procs.Get(p.Pid); err == nil && q.Started.Equal(p.Started) {
 			out = append(out, p)
 		}
 	}

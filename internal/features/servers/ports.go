@@ -25,6 +25,9 @@ const scan = 20
 // that listens can be let in beside another program's listener
 // (internal/listeners).
 func (s *Service) pickPort(ctx context.Context, sv *server) (int, error) {
+	// The probes outlive the call: a probe cut short by its caller going
+	// would read as a free port.
+	ctx = context.WithoutCancel(ctx)
 	e := sv.entry
 	last := e.Port
 	if e.AutoPort == nil || *e.AutoPort {

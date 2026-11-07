@@ -4294,6 +4294,7 @@ const DevServer$json = {
     {'1': 'output', '3': 18, '4': 1, '5': 9, '10': 'output'},
     {'1': 'server_id', '3': 19, '4': 1, '5': 9, '10': 'serverId'},
     {'1': 'changed', '3': 20, '4': 1, '5': 8, '10': 'changed'},
+    {'1': 'hash', '3': 21, '4': 1, '5': 9, '10': 'hash'},
   ],
   '3': [DevServer_EnvEntry$json],
 };
@@ -4319,8 +4320,9 @@ final $typed_data.Uint8List devServerDescriptor = $convert.base64Decode(
     'BVIEcG9ydBIWCgZhdHRhY2gYDiABKAhSBmF0dGFjaBIYCgdwcm9ibGVtGA8gASgJUgdwcm9ibG'
     'VtEi4KBXN0YXRlGBAgASgOMhgubnVzaGkudjEuRGV2U2VydmVyU3RhdGVSBXN0YXRlEhQKBWVy'
     'cm9yGBEgASgJUgVlcnJvchIWCgZvdXRwdXQYEiABKAlSBm91dHB1dBIbCglzZXJ2ZXJfaWQYEy'
-    'ABKAlSCHNlcnZlcklkEhgKB2NoYW5nZWQYFCABKAhSB2NoYW5nZWQaNgoIRW52RW50cnkSEAoD'
-    'a2V5GAEgASgJUgNrZXkSFAoFdmFsdWUYAiABKAlSBXZhbHVlOgI4AQ==');
+    'ABKAlSCHNlcnZlcklkEhgKB2NoYW5nZWQYFCABKAhSB2NoYW5nZWQSEgoEaGFzaBgVIAEoCVIE'
+    'aGFzaBo2CghFbnZFbnRyeRIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdW'
+    'U6AjgB');
 
 @$core.Deprecated('Use startServerRequestDescriptor instead')
 const StartServerRequest$json = {
@@ -4329,6 +4331,7 @@ const StartServerRequest$json = {
     {'1': 'chat_id', '3': 1, '4': 1, '5': 9, '10': 'chatId'},
     {'1': 'name', '3': 2, '4': 1, '5': 9, '9': 0, '10': 'name'},
     {'1': 'index', '3': 3, '4': 1, '5': 5, '9': 0, '10': 'index'},
+    {'1': 'hash', '3': 4, '4': 1, '5': 9, '10': 'hash'},
   ],
   '8': [
     {'1': 'entry'},
@@ -4338,7 +4341,8 @@ const StartServerRequest$json = {
 /// Descriptor for `StartServerRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List startServerRequestDescriptor = $convert.base64Decode(
     'ChJTdGFydFNlcnZlclJlcXVlc3QSFwoHY2hhdF9pZBgBIAEoCVIGY2hhdElkEhQKBG5hbWUYAi'
-    'ABKAlIAFIEbmFtZRIWCgVpbmRleBgDIAEoBUgAUgVpbmRleEIHCgVlbnRyeQ==');
+    'ABKAlIAFIEbmFtZRIWCgVpbmRleBgDIAEoBUgAUgVpbmRleBISCgRoYXNoGAQgASgJUgRoYXNo'
+    'QgcKBWVudHJ5');
 
 @$core.Deprecated('Use startServerResponseDescriptor instead')
 const StartServerResponse$json = {

@@ -20,7 +20,7 @@ import (
 func TestArchivingTheLastChatStopsTheServers(t *testing.T) {
 	s, chats, folder := setup(t, entry("web", freePort(t)))
 	chats.set(model.ChatRecord{ID: "d", Folder: folder})
-	_, err := s.Start(t.Context(), "c", "web", 0)
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", Running)
 	archive := func(id string) {
@@ -44,7 +44,7 @@ func TestArchivingTheLastChatStopsTheServers(t *testing.T) {
 // does (ADR 0056), until it stops.
 func TestAServerHoldsTheRestart(t *testing.T) {
 	s, _, _ := setup(t, entry("web", freePort(t)))
-	r, err := s.Start(t.Context(), "c", "web", 0)
+	r, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	row(t, s, "web", Running)
 	re := restart.New(idleChats{}, restart.Together{s})
@@ -77,7 +77,7 @@ func (idleChats) Holding() []model.Hold { return nil }
 func TestAnotherProgramOnThePortFails(t *testing.T) {
 	p := freePort(t)
 	s, _, _ := setup(t, entry("web", p, "-never"))
-	_, err := s.Start(t.Context(), "c", "web", 0)
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	ln, err := net.Listen("tcp4", "127.0.0.1:"+strconv.Itoa(p))
 	testcheck.NoErr(t, err)
@@ -98,10 +98,10 @@ func TestAFolderRunsFiveServersAtMost(t *testing.T) {
 	}
 	s, _, _ := setup(t, entries...)
 	for i := range PerFolder {
-		_, err := s.Start(t.Context(), "c", "", i)
+		_, err := s.Start(t.Context(), "c", Pick{Index: i})
 		testcheck.NoErr(t, err)
 	}
-	if _, err := s.Start(t.Context(), "c", "", PerFolder); err == nil || !strings.Contains(err.Error(), "stop one first") {
+	if _, err := s.Start(t.Context(), "c", Pick{Index: PerFolder}); err == nil || !strings.Contains(err.Error(), "stop one first") {
 		t.Errorf("a sixth started: %v", err)
 	}
 }
@@ -117,7 +117,7 @@ func TestAWorktreeRunsTheMainCheckoutsEntries(t *testing.T) {
 	if len(l.Rows) != 1 || !l.Rows[0].Source.FromMain || l.Rows[0].Cwd != wt {
 		t.Fatalf("rows %+v", l.Rows)
 	}
-	_, err = s.Start(t.Context(), "w", "web", 0)
+	_, err = s.Start(t.Context(), "w", Pick{Name: "web"})
 	testcheck.NoErr(t, err)
 	if !s.Within(filepath.Dir(wt)) || s.Within(repo) {
 		t.Error("Within doesn't say where the server runs")

@@ -1,6 +1,7 @@
 package servers
 
 import (
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,8 +22,8 @@ type Row struct {
 	// server whose entry is gone.
 	Index  int
 	Source launchfile.Source
-	// Command and Args are the command as it will run (Program is where
-	// the login shell's PATH finds it, "" when it doesn't), in Cwd.
+	// Command and Args are the command as it will run (Program is the
+	// program Start runs, resolve's, "" when there is none), in Cwd.
 	Command, Program string
 	Args             []string
 	Cwd              string
@@ -36,7 +37,10 @@ type Row struct {
 	// nothing to run.
 	Attach  bool
 	Problem string // why the entry can't run, in launchfile's words
-	State   State
+	// Hash is the entry's (launchfile's): Start's Pick names it, so what
+	// runs is what was listed.
+	Hash  string
+	State State
 	// Error is why it failed; Output its last lines, once it ended.
 	Error, Output string
 	ServerID      string // its live server's
@@ -92,13 +96,34 @@ func (s *Service) List(chatID string) (Listing, error) {
 	return out, nil
 }
 
+// resolve is how an entry's command runs on base, the login shell's
+// environment: the environment it gets (FORCE_COLOR, TERM, then the
+// entry's env over base; launch adds PORT) and the program it names, found
+// as the shell would on that environment's PATH (a relative path with a
+// slash in Cwd), "" when none is. List shows the program Start runs: both
+// take it from here.
+func resolve(e launchfile.Entry, base []string) (program string, env []string) {
+	env = shellenv.Merge(base, []string{"FORCE_COLOR=1", "TERM=xterm-256color"})
+	own := make([]string, 0, len(e.Env))
+	for k, v := range e.Env {
+		own = append(own, k+"="+v)
+	}
+	slices.Sort(own)
+	env = shellenv.Merge(env, own)
+	command := e.Command
+	if strings.Contains(command, "/") && !filepath.IsAbs(command) {
+		command = filepath.Join(e.Cwd, command)
+	}
+	return shellenv.LookPath(command, env), env
+}
+
 // entryRow is an entry's row, its server not running.
 func entryRow(e launchfile.Entry, index int, env []string) Row {
 	r := Row{Name: e.Name, NameOK: launchfile.ValidName(e.Name), Index: index, Source: e.Source, Command: e.Command,
 		Args: e.Args, Cwd: e.Cwd, Env: e.Env, Flagged: flagged(e.Env), URL: e.URL, Port: e.Port,
-		Attach: e.Problem == "" && e.Command == "", Problem: e.Problem, State: Stopped}
+		Attach: e.Problem == "" && e.Command == "", Problem: e.Problem, Hash: e.Hash, State: Stopped}
 	if e.Command != "" {
-		r.Program = shellenv.LookPath(e.Command, env)
+		r.Program, _ = resolve(e, env)
 	}
 	if r.URL == "" && e.Command != "" && e.Port > 0 {
 		r.URL = "http://localhost:" + strconv.Itoa(e.Port)

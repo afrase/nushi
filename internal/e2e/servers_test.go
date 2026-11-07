@@ -49,11 +49,15 @@ func TestDevServers(t *testing.T) {
 	if len(list.Servers) != 1 || list.Servers[0].Name != "web" || list.Servers[0].State != nushiv1.DevServerState_DEV_SERVER_STATE_STOPPED {
 		t.Fatalf("ListServers = %v", list)
 	}
+	hash := list.Servers[0].Hash
 	phone := openAt(t, d.devices)
-	if _, err := phone.c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: id, Entry: &nushiv1.StartServerRequest_Index{Index: 0}})); connect.CodeOf(err) != connect.CodePermissionDenied {
+	if _, err := phone.c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: id, Entry: &nushiv1.StartServerRequest_Index{Index: 0}, Hash: hash})); connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Errorf("a device started a server: %v", err)
 	}
-	must(a.c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: id, Entry: &nushiv1.StartServerRequest_Name{Name: "web"}})))
+	if _, err := a.c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: id, Entry: &nushiv1.StartServerRequest_Name{Name: "web"}})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Errorf("a start without the entry's hash: %v", err)
+	}
+	must(a.c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: id, Entry: &nushiv1.StartServerRequest_Name{Name: "web"}, Hash: hash})))
 	a.waitFor("the server's change", func(e *nushiv1.EventsResponse) bool { return e.GetServersChanged() == repo })
 	until(t, "the server to answer", func() bool {
 		s := must(a.c.ListServers(ctx, connect.NewRequest(&nushiv1.ListServersRequest{ChatId: id}))).Servers[0]

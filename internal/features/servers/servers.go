@@ -184,39 +184,66 @@ func (s *Service) find(id string) *server {
 	return nil
 }
 
-// Start starts a chat's folder's entry, picked by name (without case, the
-// first of it) or, with name "", by its place in the list (List's Index),
-// unless it runs already: then it is the one returned. It returns once
-// the server's program started; it answers later (List's state).
-func (s *Service) Start(ctx context.Context, chatID, name string, index int) (Row, error) {
+// Pick says which entry Start starts: by Name (without case, the first
+// of it) or, with Name "", by Index (List's). With Hash, only while the
+// entry is the one listed with it (Row.Hash): the user runs what the menu
+// showed, never what the file says since (docs/security.md).
+type Pick struct {
+	Name  string
+	Index int
+	Hash  string
+}
+
+// StartError is why Start refused or couldn't start a server: Kind in
+// fixed words, for the log; Err in full, for the user, as it may quote the
+// launch file (its command, its problem) or name another program.
+type StartError struct {
+	Kind string
+	Err  error
+}
+
+func (e *StartError) Error() string { return e.Err.Error() }
+func (e *StartError) Unwrap() error { return e.Err }
+
+// refuse is err as a StartError of kind.
+func refuse(kind string, err error) error {
+	return &StartError{Kind: kind, Err: err}
+}
+
+// Start starts a chat's folder's entry, picked by pick, unless it runs
+// already: then it is the one returned. It returns once the server's
+// program started; it answers later (List's state).
+func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, error) {
 	folder, main, err := s.place(chatID)
 	if err != nil {
 		return Row{}, err
 	}
 	l, err := launchfile.Read(folder, main)
 	if err != nil {
-		return Row{}, err
+		return Row{}, refuse("the launch files can't be read", err)
 	}
-	i := index
-	if name != "" {
-		i = slices.IndexFunc(l.Entries, func(e launchfile.Entry) bool { return strings.EqualFold(e.Name, name) })
+	i := pick.Index
+	if pick.Name != "" {
+		i = slices.IndexFunc(l.Entries, func(e launchfile.Entry) bool { return strings.EqualFold(e.Name, pick.Name) })
 	}
 	if i < 0 || i >= len(l.Entries) {
-		return Row{}, errors.New("no such server in the launch files")
+		return Row{}, refuse("no such entry", errors.New("no such server in the launch files"))
 	}
 	e := l.Entries[i]
 	switch {
 	case e.Problem != "":
-		return Row{}, errors.New(e.Problem)
+		return Row{}, refuse("the entry can't run", errors.New(e.Problem))
+	case pick.Hash != "" && pick.Hash != e.Hash:
+		return Row{}, refuse("the entry changed", errors.New("the launch file changed since it was shown: look at it again"))
 	case e.Command == "":
-		return Row{}, errors.New("this entry opens a server already running: it has nothing to run")
+		return Row{}, refuse("the entry runs nothing", errors.New("this entry opens a server already running: it has nothing to run"))
 	}
 	sv := &server{id: rand.Text()[:12], folder: folder, key: key(folder, e), entry: e, chatID: chatID, state: Starting, ended: make(chan struct{})}
 	s.mu.Lock()
 	switch {
 	case s.closed:
 		s.mu.Unlock()
-		return Row{}, errors.New("the daemon is stopping")
+		return Row{}, refuse("the daemon is stopping", errors.New("the daemon is stopping"))
 	case slices.ContainsFunc(s.alive, func(o *server) bool { return o.key == sv.key }):
 		o := s.alive[slices.IndexFunc(s.alive, func(o *server) bool { return o.key == sv.key })]
 		row := o.row()
@@ -225,7 +252,7 @@ func (s *Service) Start(ctx context.Context, chatID, name string, index int) (Ro
 		return row, nil // a start of one that runs: the same server
 	case s.count(folder) >= PerFolder:
 		s.mu.Unlock()
-		return Row{}, fmt.Errorf("%d servers already run in this folder: stop one first", PerFolder)
+		return Row{}, refuse("the folder runs its most", fmt.Errorf("%d servers already run in this folder: stop one first", PerFolder))
 	}
 	s.alive = append(s.alive, sv)
 	s.mu.Unlock()
@@ -347,13 +374,31 @@ func (s *Service) Busy() bool {
 }
 
 // Running says which servers run, for the restart's wait to show: each
-// the chat it was started from.
+// with a chat in its folder, the one it was started from while that is
+// still there (a server outlives it when another chat shares the folder).
 func (s *Service) Running() []model.Hold {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	var out []model.Hold
-	for _, sv := range s.alive {
-		out = append(out, model.Hold{ChatID: sv.chatID, Why: "a dev server runs"})
+	alive := slices.Clone(s.alive)
+	s.mu.Unlock()
+	if len(alive) == 0 {
+		return nil
+	}
+	in := map[string][]string{} // folder: its unarchived chats
+	if list, err := s.Chats.List(); err == nil {
+		for _, c := range list {
+			if !c.Archived {
+				in[c.Folder] = append(in[c.Folder], c.ID)
+			}
+		}
+	}
+	out := make([]model.Hold, 0, len(alive))
+	for _, sv := range alive {
+		chat := sv.chatID
+		if here := in[sv.folder]; len(here) > 0 && !slices.Contains(here, chat) {
+			slices.Sort(here)
+			chat = here[0]
+		}
+		out = append(out, model.Hold{ChatID: chat, Why: "a dev server runs"})
 	}
 	return out
 }

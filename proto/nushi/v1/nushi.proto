@@ -2508,6 +2508,9 @@ message DevServer {
   string server_id = 19;
   // Its entry changed or went since the server started.
   bool changed = 20;
+  // The entry's hash: StartServerRequest.hash, so what runs is what
+  // this row showed.
+  string hash = 21;
 }
 
 message StartServerRequest {
@@ -2516,6 +2519,10 @@ message StartServerRequest {
     string name = 2;
     int32 index = 3;
   }
+  // The hash of the entry as the app showed it (DevServer.hash):
+  // required; a start whose entry changed since is refused, and the app
+  // lists the servers again.
+  string hash = 4;
 }
 
 message StartServerResponse {

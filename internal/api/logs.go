@@ -15,6 +15,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/features/chats"
+	"github.com/afrase/nushi/internal/features/servers"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/gen/nushi/v1/nushiv1connect"
 	"github.com/afrase/nushi/internal/git"
@@ -82,7 +83,8 @@ func (l logCalls) ended(procedure string, took time.Duration, err error) {
 // its words, which can quote what someone else wrote or what was sent; a
 // failed commit without what its hooks printed, which can quote the
 // message; an upload without its file's name (its path is in the error
-// too), only the system's reason.
+// too), only the system's reason; a dev server's start without the launch
+// file's words (its command, its problem), only the kind of refusal.
 func loggable(err error) any {
 	if up, ok := errors.AsType[*chats.UploadError](err); ok {
 		if up.Large {
@@ -98,6 +100,9 @@ func loggable(err error) any {
 	}
 	if _, ok := errors.AsType[*git.CommitError](err); ok {
 		return "git commit failed"
+	}
+	if start, ok := errors.AsType[*servers.StartError](err); ok {
+		return "a dev server's start was refused: " + start.Kind
 	}
 	return err
 }

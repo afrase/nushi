@@ -13,7 +13,7 @@ import (
 // The dev servers (ADR 0098) are the Mac's only: they're in macOnly, and
 // each call checks it came on the Mac's socket too (onMac), as
 // WriteChatFile does. No call takes a command: only a launch file's
-// entries run, picked by name or place.
+// entries run, picked by name or place and the hash of the entry as shown.
 
 // serversHere refuses a call that didn't come on the Mac's socket, or
 // when the daemon runs no servers.
@@ -54,16 +54,19 @@ func (s *server) StartServer(ctx context.Context, req *connect.Request[nushiv1.S
 		return nil, err
 	}
 	m := req.Msg
-	var r servers.Row
-	var err error
+	if m.Hash == "" {
+		return nil, invalid(errors.New("no hash of the entry as shown"))
+	}
+	pick := servers.Pick{Hash: m.Hash}
 	switch e := m.Entry.(type) {
 	case *nushiv1.StartServerRequest_Name:
-		r, err = s.Servers.Start(ctx, m.ChatId, e.Name, -1)
+		pick.Name = e.Name
 	case *nushiv1.StartServerRequest_Index:
-		r, err = s.Servers.Start(ctx, m.ChatId, "", int(e.Index))
+		pick.Index = int(e.Index)
 	default:
 		return nil, invalid(errors.New("no entry named"))
 	}
+	r, err := s.Servers.Start(ctx, m.ChatId, pick)
 	if err != nil {
 		return nil, refused(err)
 	}
@@ -95,5 +98,5 @@ var serverStates = map[servers.State]nushiv1.DevServerState{
 func devServerProto(r servers.Row) *nushiv1.DevServer {
 	return &nushiv1.DevServer{Name: r.Name, NameOk: r.NameOK, Index: int32(r.Index), Source: r.Source.Path, FromMain: r.Source.FromMain,
 		Command: r.Command, Program: r.Program, Args: r.Args, Cwd: r.Cwd, Env: r.Env, FlaggedEnv: r.Flagged, Url: r.URL, Port: int32(r.Port),
-		Attach: r.Attach, Problem: r.Problem, State: serverStates[r.State], Error: r.Error, Output: r.Output, ServerId: r.ServerID, Changed: r.Changed}
+		Attach: r.Attach, Problem: r.Problem, State: serverStates[r.State], Error: r.Error, Output: r.Output, ServerId: r.ServerID, Changed: r.Changed, Hash: r.Hash}
 }

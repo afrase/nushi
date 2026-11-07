@@ -18354,6 +18354,7 @@ class DevServer extends $pb.GeneratedMessage {
     $core.String? output,
     $core.String? serverId,
     $core.bool? changed,
+    $core.String? hash,
   }) {
     final result = DevServer._();
     if (name != null) result.name = name;
@@ -18376,6 +18377,7 @@ class DevServer extends $pb.GeneratedMessage {
     if (output != null) result.output = output;
     if (serverId != null) result.serverId = serverId;
     if (changed != null) result.changed = changed;
+    if (hash != null) result.hash = hash;
     return result;
   }
 
@@ -18417,6 +18419,7 @@ class DevServer extends $pb.GeneratedMessage {
     ..aOS(18, _omitFieldNames ? '' : 'output')
     ..aOS(19, _omitFieldNames ? '' : 'serverId')
     ..aOB(20, _omitFieldNames ? '' : 'changed')
+    ..aOS(21, _omitFieldNames ? '' : 'hash')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18614,6 +18617,17 @@ class DevServer extends $pb.GeneratedMessage {
   $core.bool hasChanged() => $_has(19);
   @$pb.TagNumber(20)
   void clearChanged() => $_clearField(20);
+
+  /// The entry's hash: StartServerRequest.hash, so what runs is what
+  /// this row showed.
+  @$pb.TagNumber(21)
+  $core.String get hash => $_getSZ(20);
+  @$pb.TagNumber(21)
+  set hash($core.String value) => $_setString(20, value);
+  @$pb.TagNumber(21)
+  $core.bool hasHash() => $_has(20);
+  @$pb.TagNumber(21)
+  void clearHash() => $_clearField(21);
 }
 
 enum StartServerRequest_Entry { name, index_, notSet }
@@ -18623,11 +18637,13 @@ class StartServerRequest extends $pb.GeneratedMessage {
     $core.String? chatId,
     $core.String? name,
     $core.int? index,
+    $core.String? hash,
   }) {
     final result = StartServerRequest._();
     if (chatId != null) result.chatId = chatId;
     if (name != null) result.name = name;
     if (index != null) result.index = index;
+    if (hash != null) result.hash = hash;
     return result;
   }
 
@@ -18654,6 +18670,7 @@ class StartServerRequest extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aI(3, _omitFieldNames ? '' : 'index')
+    ..aOS(4, _omitFieldNames ? '' : 'hash')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18712,6 +18729,18 @@ class StartServerRequest extends $pb.GeneratedMessage {
   $core.bool hasIndex() => $_has(2);
   @$pb.TagNumber(3)
   void clearIndex() => $_clearField(3);
+
+  /// The hash of the entry as the app showed it (DevServer.hash):
+  /// required; a start whose entry changed since is refused, and the app
+  /// lists the servers again.
+  @$pb.TagNumber(4)
+  $core.String get hash => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set hash($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasHash() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearHash() => $_clearField(4);
 }
 
 class StartServerResponse extends $pb.GeneratedMessage {
