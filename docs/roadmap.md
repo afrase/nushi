@@ -24,6 +24,8 @@ What isn't built yet and the decisions still open, each checked against the code
 
 ### Previews
 
+- **Dev servers, next** (ADR 0098 shipped the daemon's servers and the Servers menu, 2026-11-07): the agent's `preview_start`/`preview_stop`/`preview_list`/`preview_logs` tools on Nushi's MCP server, the resolved command on the permission card (the owner: card only, 2026-11-06), and `show {url}`; a logs drawer (a `ListServers` tail exists only for a failure's tooltip); the phone's list with Run and Stop; spotting servers an agent started in Bash or a terminal's ▷ started (`internal/listeners` is ready); Claude's quick package.json scan with Use this, and Nushi writing `.agents/launch.json` (`jsonsettings`' one-element edit); starting servers again after a daemon restart, rather than holding it; the details panel's Dev servers widget and a palette item, for when no browser tab is open.
+
 - **A Files view's rest** (the owner, 2026-10-27; the use case is seeing what the agent made, like Claude Code's artifacts): missing is the web view's hardening past WebKit's free defaults (the Files pane, ADR 0090, has the tree). The owner trusts what the agent writes as much as a page they'd open in a browser (2026-10-28), so the network stays on, no switch. Files are edited in the preview (ADR 0096); left for if it's used enough: backups of unsaved text, saying who changed a file, the approval card's lines, merging by hand in Compare, undo that survives a change from disk, the phone. Mocks: https://claude.ai/artifact/TP8YD5rSCSi2L28hnsdPGP (the owner liked them).
 
 ### Changes and review
