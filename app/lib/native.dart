@@ -1,4 +1,5 @@
 import 'package:nushi/alerts.dart';
+import 'package:nushi/back_swipe.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/window_drag.dart';
@@ -15,6 +16,7 @@ class Native {
   new({
     required this.alerts,
     required this.loginItem,
+    required this.swipes,
     required this.window,
     this.speller,
   });
@@ -24,6 +26,9 @@ class Native {
 
   /// What starts the daemon at login.
   LoginItem loginItem;
+
+  /// The system's swipe back between pages.
+  PageSwipes swipes;
 
   /// The window, moved and zoomed from a header.
   AppWindow window;

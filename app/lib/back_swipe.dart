@@ -3,9 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:nushi/motion.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// How far right two fingers pan on the trackpad, in logical pixels, for
@@ -25,6 +25,15 @@ const _quiet = 20.0;
 /// Pan before the swipe is side or up and down, and stays so.
 const _lockAt = 8.0;
 
+/// The system's own swipe back between pages, apart from the trackpad's
+/// pans Flutter sees: on the Mac, a three-finger swipe when "Swipe
+/// between pages" says so (`back_swipe_macos.dart`).
+abstract interface class PageSwipes {
+  /// Has [back] called with the point of the window (logical pixels) at
+  /// each swipe back.
+  void onBack(void Function(Offset at) back);
+}
+
 /// What a side scroller that isn't a [Scrollable] (a diff's panes) sends
 /// when it moved, so a swipe that scrolled it doesn't go back too.
 class SideScrolled extends Notification {
@@ -33,8 +42,8 @@ class SideScrolled extends Notification {
 
 /// Goes [onBack] on a two-finger swipe right on the trackpad (as Safari
 /// and Finder do; macOS sends it as pan/zoom), a three-finger one when
-/// macOS's "Swipe between pages" says so (an `NSEvent` swipe, through
-/// `nushi/swipe`), and the mouse's back button, over [child]. Not while
+/// macOS's "Swipe between pages" says so ([PageSwipes]), and the mouse's
+/// back button, over [child]. Not while
 /// a side scroller under the fingers moves instead (a diff, a code
 /// block, a wide table, scrolled right), nor on a swipe mostly up or
 /// down. While swiping, an arrow at the left edge grows and fills as the
@@ -79,7 +88,7 @@ class _BackSwipeState extends State<BackSwipe> {
     _all.add(this);
     if (!_listening) {
       _listening = true;
-      const MethodChannel('nushi/swipe').setMethodCallHandler(_swiped);
+      native.swipes.onBack(_swiped);
     }
   }
 
@@ -92,15 +101,7 @@ class _BackSwipeState extends State<BackSwipe> {
 
   /// A three-finger swipe right at a point of the window (logical
   /// pixels): the innermost [BackSwipe] there goes back.
-  static Future<void> _swiped(MethodCall call) async {
-    final at = switch ((call.method, call.arguments)) {
-      ('back', [final num x, final num y]) => Offset(
-        x.toDouble(),
-        y.toDouble(),
-      ),
-      _ => null,
-    };
-    if (at == null) return;
+  static void _swiped(Offset at) {
     for (final s in _all.reversed) {
       final box = s.context.findRenderObject() as RenderBox?;
       if (box == null || !box.attached || !box.hasSize) continue;
