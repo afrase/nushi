@@ -8,8 +8,13 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/afrase/nushi/internal/features/servers"
 	"github.com/afrase/nushi/internal/features/terminals"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/listeners"
+	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/proctree"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/terminal"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -59,4 +64,14 @@ func startSh(folder string, cols, rows int, changed func()) (terminals.Shell, er
 func questionPending(e *nushiv1.EventsResponse) bool {
 	it := e.GetItem().GetItem()
 	return it.GetKind() == nushiv1.ItemKind_ITEM_KIND_QUESTION && it.GetStatus() == "pending"
+}
+
+// newServers is the dev servers as main has them, on the daemon's own
+// environment (not the login shell's), its record at record.
+func newServers(chats servers.Chats, record string, publish func(model.Event)) *servers.Service {
+	return servers.New(servers.Options{Chats: chats, Procs: proctree.Tree{}, Env: shellenv.Off(os.Environ()), Publish: publish,
+		Listeners: listeners.List, Record: record,
+		Spawn: func(argv []string, dir string, env []string, exited func()) (servers.Process, error) {
+			return terminal.Start(argv, dir, env, 100, 30, exited)
+		}})
 }

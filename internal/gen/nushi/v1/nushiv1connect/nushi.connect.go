@@ -246,6 +246,17 @@ const (
 	// NushiServiceCloseTerminalProcedure is the fully-qualified name of the NushiService's
 	// CloseTerminal RPC.
 	NushiServiceCloseTerminalProcedure = "/nushi.v1.NushiService/CloseTerminal"
+	// NushiServiceListServersProcedure is the fully-qualified name of the NushiService's ListServers
+	// RPC.
+	NushiServiceListServersProcedure = "/nushi.v1.NushiService/ListServers"
+	// NushiServiceStartServerProcedure is the fully-qualified name of the NushiService's StartServer
+	// RPC.
+	NushiServiceStartServerProcedure = "/nushi.v1.NushiService/StartServer"
+	// NushiServiceStopServerProcedure is the fully-qualified name of the NushiService's StopServer RPC.
+	NushiServiceStopServerProcedure = "/nushi.v1.NushiService/StopServer"
+	// NushiServiceStopAllServersProcedure is the fully-qualified name of the NushiService's
+	// StopAllServers RPC.
+	NushiServiceStopAllServersProcedure = "/nushi.v1.NushiService/StopAllServers"
 	// NushiServiceCheckFolderProcedure is the fully-qualified name of the NushiService's CheckFolder
 	// RPC.
 	NushiServiceCheckFolderProcedure = "/nushi.v1.NushiService/CheckFolder"
@@ -732,6 +743,17 @@ type NushiServiceClient interface {
 	// Closes a terminal: its shell is hung up, then killed after a short
 	// grace, along with what still runs in it.
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
+	// A chat's folder's dev servers (ADR 0098): the entries of its launch
+	// files, read afresh, merged with the servers that run there. The Mac's
+	// only (API 109), as are the three below.
+	ListServers(context.Context, *connect.Request[v1.ListServersRequest]) (*connect.Response[v1.ListServersResponse], error)
+	// Starts an entry of a chat's folder's launch files, by name or by its
+	// place in ListServers, unless it runs already (then it's that one). It
+	// answers once the program started; its state comes as events. No call
+	// takes a command: only the launch files' entries run.
+	StartServer(context.Context, *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error)
+	StopServer(context.Context, *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error)
+	StopAllServers(context.Context, *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error)
 	// Says what a folder brings for the agent to run on its own (MCP
 	// servers, hooks, helper commands) when neither the agent nor Nushi was
 	// told to trust it; nothing when it is trusted or brings nothing. Ask
@@ -1379,6 +1401,30 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("CloseTerminal")),
 			connect.WithClientOptions(opts...),
 		),
+		listServers: connect.NewClient[v1.ListServersRequest, v1.ListServersResponse](
+			httpClient,
+			baseURL+NushiServiceListServersProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("ListServers")),
+			connect.WithClientOptions(opts...),
+		),
+		startServer: connect.NewClient[v1.StartServerRequest, v1.StartServerResponse](
+			httpClient,
+			baseURL+NushiServiceStartServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StartServer")),
+			connect.WithClientOptions(opts...),
+		),
+		stopServer: connect.NewClient[v1.StopServerRequest, v1.StopServerResponse](
+			httpClient,
+			baseURL+NushiServiceStopServerProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StopServer")),
+			connect.WithClientOptions(opts...),
+		),
+		stopAllServers: connect.NewClient[v1.StopAllServersRequest, v1.StopAllServersResponse](
+			httpClient,
+			baseURL+NushiServiceStopAllServersProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("StopAllServers")),
+			connect.WithClientOptions(opts...),
+		),
 		checkFolder: connect.NewClient[v1.CheckFolderRequest, v1.CheckFolderResponse](
 			httpClient,
 			baseURL+NushiServiceCheckFolderProcedure,
@@ -1825,6 +1871,10 @@ type nushiServiceClient struct {
 	arrangeTerminals        *connect.Client[v1.ArrangeTerminalsRequest, v1.ArrangeTerminalsResponse]
 	restartTerminal         *connect.Client[v1.RestartTerminalRequest, v1.RestartTerminalResponse]
 	closeTerminal           *connect.Client[v1.CloseTerminalRequest, v1.CloseTerminalResponse]
+	listServers             *connect.Client[v1.ListServersRequest, v1.ListServersResponse]
+	startServer             *connect.Client[v1.StartServerRequest, v1.StartServerResponse]
+	stopServer              *connect.Client[v1.StopServerRequest, v1.StopServerResponse]
+	stopAllServers          *connect.Client[v1.StopAllServersRequest, v1.StopAllServersResponse]
 	checkFolder             *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
 	trustFolder             *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
 	getRemote               *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
@@ -2290,6 +2340,26 @@ func (c *nushiServiceClient) RestartTerminal(ctx context.Context, req *connect.R
 // CloseTerminal calls nushi.v1.NushiService.CloseTerminal.
 func (c *nushiServiceClient) CloseTerminal(ctx context.Context, req *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
 	return c.closeTerminal.CallUnary(ctx, req)
+}
+
+// ListServers calls nushi.v1.NushiService.ListServers.
+func (c *nushiServiceClient) ListServers(ctx context.Context, req *connect.Request[v1.ListServersRequest]) (*connect.Response[v1.ListServersResponse], error) {
+	return c.listServers.CallUnary(ctx, req)
+}
+
+// StartServer calls nushi.v1.NushiService.StartServer.
+func (c *nushiServiceClient) StartServer(ctx context.Context, req *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error) {
+	return c.startServer.CallUnary(ctx, req)
+}
+
+// StopServer calls nushi.v1.NushiService.StopServer.
+func (c *nushiServiceClient) StopServer(ctx context.Context, req *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error) {
+	return c.stopServer.CallUnary(ctx, req)
+}
+
+// StopAllServers calls nushi.v1.NushiService.StopAllServers.
+func (c *nushiServiceClient) StopAllServers(ctx context.Context, req *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error) {
+	return c.stopAllServers.CallUnary(ctx, req)
 }
 
 // CheckFolder calls nushi.v1.NushiService.CheckFolder.
@@ -2903,6 +2973,17 @@ type NushiServiceHandler interface {
 	// Closes a terminal: its shell is hung up, then killed after a short
 	// grace, along with what still runs in it.
 	CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error)
+	// A chat's folder's dev servers (ADR 0098): the entries of its launch
+	// files, read afresh, merged with the servers that run there. The Mac's
+	// only (API 109), as are the three below.
+	ListServers(context.Context, *connect.Request[v1.ListServersRequest]) (*connect.Response[v1.ListServersResponse], error)
+	// Starts an entry of a chat's folder's launch files, by name or by its
+	// place in ListServers, unless it runs already (then it's that one). It
+	// answers once the program started; its state comes as events. No call
+	// takes a command: only the launch files' entries run.
+	StartServer(context.Context, *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error)
+	StopServer(context.Context, *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error)
+	StopAllServers(context.Context, *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error)
 	// Says what a folder brings for the agent to run on its own (MCP
 	// servers, hooks, helper commands) when neither the agent nor Nushi was
 	// told to trust it; nothing when it is trusted or brings nothing. Ask
@@ -3546,6 +3627,30 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("CloseTerminal")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceListServersHandler := connect.NewUnaryHandler(
+		NushiServiceListServersProcedure,
+		svc.ListServers,
+		connect.WithSchema(nushiServiceMethods.ByName("ListServers")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStartServerHandler := connect.NewUnaryHandler(
+		NushiServiceStartServerProcedure,
+		svc.StartServer,
+		connect.WithSchema(nushiServiceMethods.ByName("StartServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStopServerHandler := connect.NewUnaryHandler(
+		NushiServiceStopServerProcedure,
+		svc.StopServer,
+		connect.WithSchema(nushiServiceMethods.ByName("StopServer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceStopAllServersHandler := connect.NewUnaryHandler(
+		NushiServiceStopAllServersProcedure,
+		svc.StopAllServers,
+		connect.WithSchema(nushiServiceMethods.ByName("StopAllServers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceCheckFolderHandler := connect.NewUnaryHandler(
 		NushiServiceCheckFolderProcedure,
 		svc.CheckFolder,
@@ -4070,6 +4175,14 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceRestartTerminalHandler.ServeHTTP(w, r)
 		case NushiServiceCloseTerminalProcedure:
 			nushiServiceCloseTerminalHandler.ServeHTTP(w, r)
+		case NushiServiceListServersProcedure:
+			nushiServiceListServersHandler.ServeHTTP(w, r)
+		case NushiServiceStartServerProcedure:
+			nushiServiceStartServerHandler.ServeHTTP(w, r)
+		case NushiServiceStopServerProcedure:
+			nushiServiceStopServerHandler.ServeHTTP(w, r)
+		case NushiServiceStopAllServersProcedure:
+			nushiServiceStopAllServersHandler.ServeHTTP(w, r)
 		case NushiServiceCheckFolderProcedure:
 			nushiServiceCheckFolderHandler.ServeHTTP(w, r)
 		case NushiServiceTrustFolderProcedure:
@@ -4521,6 +4634,22 @@ func (UnimplementedNushiServiceHandler) RestartTerminal(context.Context, *connec
 
 func (UnimplementedNushiServiceHandler) CloseTerminal(context.Context, *connect.Request[v1.CloseTerminalRequest]) (*connect.Response[v1.CloseTerminalResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.CloseTerminal is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) ListServers(context.Context, *connect.Request[v1.ListServersRequest]) (*connect.Response[v1.ListServersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.ListServers is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StartServer(context.Context, *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StartServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StopServer(context.Context, *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StopServer is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) StopAllServers(context.Context, *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StopAllServers is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error) {

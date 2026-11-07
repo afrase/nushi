@@ -183,6 +183,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RestartTerminalRequest request);
   $async.Future<$0.CloseTerminalResponse> closeTerminal(
       $pb.ServerContext ctx, $0.CloseTerminalRequest request);
+  $async.Future<$0.ListServersResponse> listServers(
+      $pb.ServerContext ctx, $0.ListServersRequest request);
+  $async.Future<$0.StartServerResponse> startServer(
+      $pb.ServerContext ctx, $0.StartServerRequest request);
+  $async.Future<$0.StopServerResponse> stopServer(
+      $pb.ServerContext ctx, $0.StopServerRequest request);
+  $async.Future<$0.StopAllServersResponse> stopAllServers(
+      $pb.ServerContext ctx, $0.StopAllServersRequest request);
   $async.Future<$0.CheckFolderResponse> checkFolder(
       $pb.ServerContext ctx, $0.CheckFolderRequest request);
   $async.Future<$0.TrustFolderResponse> trustFolder(
@@ -468,6 +476,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.RestartTerminalRequest();
       case 'CloseTerminal':
         return $0.CloseTerminalRequest();
+      case 'ListServers':
+        return $0.ListServersRequest();
+      case 'StartServer':
+        return $0.StartServerRequest();
+      case 'StopServer':
+        return $0.StopServerRequest();
+      case 'StopAllServers':
+        return $0.StopAllServersRequest();
       case 'CheckFolder':
         return $0.CheckFolderRequest();
       case 'TrustFolder':
@@ -761,6 +777,14 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return restartTerminal(ctx, request as $0.RestartTerminalRequest);
       case 'CloseTerminal':
         return closeTerminal(ctx, request as $0.CloseTerminalRequest);
+      case 'ListServers':
+        return listServers(ctx, request as $0.ListServersRequest);
+      case 'StartServer':
+        return startServer(ctx, request as $0.StartServerRequest);
+      case 'StopServer':
+        return stopServer(ctx, request as $0.StopServerRequest);
+      case 'StopAllServers':
+        return stopAllServers(ctx, request as $0.StopAllServersRequest);
       case 'CheckFolder':
         return checkFolder(ctx, request as $0.CheckFolderRequest);
       case 'TrustFolder':

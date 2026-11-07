@@ -70,6 +70,8 @@ func TestNothingPrivateLogged(t *testing.T) {
 	data, repo := t.TempDir(), t.TempDir()
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(repo, "notes.txt"), []byte("MARKER-FILE-c41a\n"), 0o600))
 	testcheck.Git(t, repo, "init", "-q")
+	testcheck.Write(t, filepath.Join(repo, ".agents", "launch.json"), `{"configurations": [{"name": "MARKER-SRV-6d0e",
+		"runtimeExecutable": "/bin/sh", "runtimeArgs": ["-c", "echo MARKER-OUT-$((7*6)); MARKER_CMD=1 exec sleep 30"]}]}`)
 	launch := func(h acp.Client, log *slog.Logger) (chats.Agent, error) {
 		cmd := exec.Command(bin)
 		cmd.Env = append(os.Environ(), "FAKE_KEY="+token)
@@ -86,15 +88,23 @@ func TestNothingPrivateLogged(t *testing.T) {
 		Scratch: filepath.Join(data, "scratch"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts})
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
+	srvs := newServers(svc, filepath.Join(data, "servers.json"), hub.Publish)
 	srv := httptest.NewServer(api.WithToken("tok", api.New(api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub,
-		Memory: memory.New(svc), LogPrefs: st, Transcripts: st})))
+		Memory: memory.New(svc), LogPrefs: st, Transcripts: st, Servers: srvs})))
 	go func() {
 		_ = hub.Subscribe(context.Background(), func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
 	}()
 
 	ctx := context.Background()
 	a := open(t, &daemon{url: srv.URL})
-	defer func() { a.quit(); srv.CloseClientConnections(); srv.Close(); terms.CloseAll(); svc.Close() }()
+	defer func() {
+		a.quit()
+		srv.CloseClientConnections()
+		srv.Close()
+		terms.CloseAll()
+		srvs.CloseAll()
+		svc.Close()
+	}()
 	chatID := a.start(&nushiv1.StartChatRequest{Folder: repo})
 	must(a.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: chatID, Text: "MARKER-PROMPT-1b2e tool stderr",
 		Files: []string{filepath.Join(repo, "notes.txt")}})))
@@ -110,6 +120,9 @@ func TestNothingPrivateLogged(t *testing.T) {
 	term := must(a.c.OpenTerminal(ctx, connect.NewRequest(&nushiv1.OpenTerminalRequest{ChatId: chatID, Cols: 80, Rows: 24}))).Terminal
 	must(a.c.WriteTerminal(ctx, connect.NewRequest(&nushiv1.WriteTerminalRequest{TerminalId: term.Id, Data: []byte("echo MARKER-TERM-$((40+2))\n")})))
 	a.attach(ctx, term.Id, "MARKER-TERM-42\r\n")
+	devServer := must(a.c.StartServer(ctx, connect.NewRequest(&nushiv1.StartServerRequest{ChatId: chatID, Entry: &nushiv1.StartServerRequest_Index{Index: 0}}))).Server
+	must(a.c.ListServers(ctx, connect.NewRequest(&nushiv1.ListServersRequest{ChatId: chatID})))
+	must(a.c.StopServer(ctx, connect.NewRequest(&nushiv1.StopServerRequest{ChatId: chatID, ServerId: devServer.ServerId})))
 	must(a.c.Log(ctx, connect.NewRequest(&nushiv1.LogRequest{Level: "error", Message: "Bad state: " + strings.Repeat("x", 3000),
 		Stack: "#0 main (app.dart:1)", Attrs: map[string]string{"from": "zone"}})))
 	must(a.c.SleepChat(ctx, connect.NewRequest(&nushiv1.SleepChatRequest{ChatId: chatID})))
@@ -120,13 +133,13 @@ func TestNothingPrivateLogged(t *testing.T) {
 	must(a.c.ClearTranscripts(ctx, connect.NewRequest(&nushiv1.ClearTranscriptsRequest{All: true})))
 
 	got := log.String()
-	for _, marker := range []string{"MARKER-PROMPT", "MARKER-ASK", "MARKER-FILE", "MARKER-TITLE", "MARKER-TERM", "MARKER-ENV", "MARKER-TOKEN", "sk-ant-api03-Zr8"} {
+	for _, marker := range []string{"MARKER-PROMPT", "MARKER-ASK", "MARKER-FILE", "MARKER-TITLE", "MARKER-TERM", "MARKER-ENV", "MARKER-SRV", "MARKER-OUT", "MARKER_CMD", "/bin/sh", "MARKER-TOKEN", "sk-ant-api03-Zr8"} {
 		if strings.Contains(got, marker) {
 			t.Errorf("%s is in the log:\n%s", marker, got)
 		}
 	}
 	for _, want := range []string{`msg="agent started"`, `msg="turn ended"`, `msg="auth: using the key [redacted] from the environment"`, `source=agent`,
-		`msg="acp call" chat=` + chatID, `rpc=session/prompt`, `msg="api call" rpc=SendPrompt`, `msg="terminal opened"`, `msg="chat asleep"`,
+		`msg="acp call" chat=` + chatID, `rpc=session/prompt`, `msg="api call" rpc=SendPrompt`, `msg="terminal opened"`, `msg="dev server started"`, `msg="dev server ended"`, `msg="chat asleep"`,
 		`level=ERROR msg="Bad state: xxx`, `x…" source=app from=zone stack="#0 main (app.dart:1)"`, `msg="transcript copies cleared" copies=1`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("no %s in the log:\n%s", want, got)

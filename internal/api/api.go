@@ -20,6 +20,7 @@ import (
 	"github.com/afrase/nushi/internal/features/mcp"
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/remote"
+	"github.com/afrase/nushi/internal/features/servers"
 	"github.com/afrase/nushi/internal/features/skills"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/trust"
@@ -29,7 +30,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 108
+const Version = 109
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -70,6 +71,8 @@ type Services struct {
 	Remote *remote.Service
 	Jira   *jira.Service
 	GitHub *github.Service
+	// Servers runs the folders' dev servers; nil: none run.
+	Servers *servers.Service
 	// LogPrefs keeps the debug log setting; nil: not kept.
 	LogPrefs LogPrefs
 	// Transcripts keeps the transcripts' copies' settings; nil: not kept.
@@ -132,6 +135,12 @@ var macOnly = map[string]bool{
 	// The phone never edits a file (ADR 0096); WriteChatFile checks for
 	// the Mac's socket too (onMac).
 	nushiv1connect.NushiServiceWriteChatFileProcedure: true,
+	// Dev servers run on the Mac's word only (ADR 0098); each call checks
+	// for the Mac's socket too (onMac).
+	nushiv1connect.NushiServiceListServersProcedure:    true,
+	nushiv1connect.NushiServiceStartServerProcedure:    true,
+	nushiv1connect.NushiServiceStopServerProcedure:     true,
+	nushiv1connect.NushiServiceStopAllServersProcedure: true,
 }
 
 // ForDevices is the API a paired device's channel gets, which the

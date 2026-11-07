@@ -71,6 +71,8 @@ func toProto(e model.Event) *nushiv1.EventsResponse {
 		out.Kind = &nushiv1.EventsResponse_Dropped{Dropped: e.Dropped}
 	case e.Show != "":
 		out.Kind = &nushiv1.EventsResponse_Show{Show: e.Show}
+	case e.Servers != "":
+		out.Kind = &nushiv1.EventsResponse_ServersChanged{ServersChanged: e.Servers}
 	case e.Queue != nil:
 		out.Kind = &nushiv1.EventsResponse_Queue{Queue: queueProto(*e.Queue)}
 	case e.Commands != nil:

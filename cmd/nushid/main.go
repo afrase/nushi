@@ -161,7 +161,7 @@ func run() error {
 	logs.SetDebug(st.DebugLog())
 	restarts := restart.New(chatSvc, restart.Together{termSvc, srvSvc})
 	sv := api.Services{LogPrefs: st, Transcripts: st, Chats: chatSvc, Agents: agentSvc, MCP: newMCP(known, agentSvc, chatSvc.MCPChanged), Skills: newSkills(known), Terms: termSvc,
-		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc}
+		Trust: newTrust(known, st), Hub: hub, Memory: memory.New(chatSvc), Restart: restarts, Jira: jiraSvc, Remote: remoteSvc, Servers: srvSvc}
 	sv.GitHub = newGitHub(st, dev)
 	sv.Updates = startUpdates(st, hub.Publish)
 	if err := usePush(st, sv.Remote, chatSvc, kinds); err != nil {

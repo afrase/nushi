@@ -14543,6 +14543,7 @@ enum EventsResponse_Kind {
   update,
   show,
   relatedWorktrees,
+  serversChanged,
   notSet
 }
 
@@ -14566,6 +14567,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     UpdateCheck? update,
     $core.String? show,
     ChatRelatedWorktrees? relatedWorktrees,
+    $core.String? serversChanged,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -14586,6 +14588,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (update != null) result.update = update;
     if (show != null) result.show = show;
     if (relatedWorktrees != null) result.relatedWorktrees = relatedWorktrees;
+    if (serversChanged != null) result.serversChanged = serversChanged;
     return result;
   }
 
@@ -14616,13 +14619,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     16: EventsResponse_Kind.update,
     17: EventsResponse_Kind.show,
     18: EventsResponse_Kind.relatedWorktrees,
+    19: EventsResponse_Kind.serversChanged,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -14653,6 +14657,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOS(17, _omitFieldNames ? '' : 'show')
     ..aOM<ChatRelatedWorktrees>(18, _omitFieldNames ? '' : 'relatedWorktrees',
         subBuilder: ChatRelatedWorktrees.$_createMessage)
+    ..aOS(19, _omitFieldNames ? '' : 'serversChanged')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14693,6 +14698,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(16)
   @$pb.TagNumber(17)
   @$pb.TagNumber(18)
+  @$pb.TagNumber(19)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -14711,6 +14717,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(16)
   @$pb.TagNumber(17)
   @$pb.TagNumber(18)
+  @$pb.TagNumber(19)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -14919,6 +14926,17 @@ class EventsResponse extends $pb.GeneratedMessage {
   void clearRelatedWorktrees() => $_clearField(18);
   @$pb.TagNumber(18)
   ChatRelatedWorktrees ensureRelatedWorktrees() => $_ensure(17);
+
+  /// A folder whose dev servers changed: one started, answered, failed
+  /// or ended (chat_id is empty; API 109).
+  @$pb.TagNumber(19)
+  $core.String get serversChanged => $_getSZ(18);
+  @$pb.TagNumber(19)
+  set serversChanged($core.String value) => $_setString(18, value);
+  @$pb.TagNumber(19)
+  $core.bool hasServersChanged() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearServersChanged() => $_clearField(19);
 }
 
 /// A chat's config options, all of them.
@@ -18096,6 +18114,877 @@ class CloseTerminalResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<CloseTerminalResponse>(
           CloseTerminalResponse.$_createMessage);
   static CloseTerminalResponse? _defaultInstance;
+}
+
+class ListServersRequest extends $pb.GeneratedMessage {
+  factory ListServersRequest({
+    $core.String? chatId,
+  }) {
+    final result = ListServersRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  ListServersRequest._();
+
+  factory ListServersRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListServersRequest()..mergeFromBuffer(data, registry);
+  factory ListServersRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListServersRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListServersRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListServersRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListServersRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListServersRequest copyWith(void Function(ListServersRequest) updates) =>
+      super.copyWith((message) => updates(message as ListServersRequest))
+          as ListServersRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListServersRequest() / ListServersRequest.new instead')
+  static ListServersRequest create() => ListServersRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListServersRequest._();
+  @$core.override
+  ListServersRequest createEmptyInstance() => ListServersRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListServersRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListServersRequest>(
+          ListServersRequest.$_createMessage);
+  static ListServersRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class ListServersResponse extends $pb.GeneratedMessage {
+  factory ListServersResponse({
+    $core.String? folder,
+    $core.Iterable<DevServer>? servers,
+    $core.Iterable<LaunchFile>? files,
+  }) {
+    final result = ListServersResponse._();
+    if (folder != null) result.folder = folder;
+    if (servers != null) result.servers.addAll(servers);
+    if (files != null) result.files.addAll(files);
+    return result;
+  }
+
+  ListServersResponse._();
+
+  factory ListServersResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListServersResponse()..mergeFromBuffer(data, registry);
+  factory ListServersResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListServersResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListServersResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: ListServersResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'folder')
+    ..pPM<DevServer>(2, _omitFieldNames ? '' : 'servers',
+        subBuilder: DevServer.$_createMessage)
+    ..pPM<LaunchFile>(3, _omitFieldNames ? '' : 'files',
+        subBuilder: LaunchFile.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListServersResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListServersResponse copyWith(void Function(ListServersResponse) updates) =>
+      super.copyWith((message) => updates(message as ListServersResponse))
+          as ListServersResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use ListServersResponse() / ListServersResponse.new instead')
+  static ListServersResponse create() => ListServersResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListServersResponse._();
+  @$core.override
+  ListServersResponse createEmptyInstance() => ListServersResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListServersResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListServersResponse>(
+          ListServersResponse.$_createMessage);
+  static ListServersResponse? _defaultInstance;
+
+  /// The chat's folder, whose servers these are.
+  @$pb.TagNumber(1)
+  $core.String get folder => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set folder($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasFolder() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearFolder() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<DevServer> get servers => $_getList(1);
+
+  /// The launch files read, each with why it was refused, if it was.
+  @$pb.TagNumber(3)
+  $pb.PbList<LaunchFile> get files => $_getList(2);
+}
+
+/// A launch file read for a folder's dev servers (ADR 0095).
+class LaunchFile extends $pb.GeneratedMessage {
+  factory LaunchFile({
+    $core.String? path,
+    $core.bool? fromMain,
+    $core.String? error,
+  }) {
+    final result = LaunchFile._();
+    if (path != null) result.path = path;
+    if (fromMain != null) result.fromMain = fromMain;
+    if (error != null) result.error = error;
+    return result;
+  }
+
+  LaunchFile._();
+
+  factory LaunchFile.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LaunchFile()..mergeFromBuffer(data, registry);
+  factory LaunchFile.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LaunchFile()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LaunchFile',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: LaunchFile.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'path')
+    ..aOB(2, _omitFieldNames ? '' : 'fromMain')
+    ..aOS(3, _omitFieldNames ? '' : 'error')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LaunchFile clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LaunchFile copyWith(void Function(LaunchFile) updates) =>
+      super.copyWith((message) => updates(message as LaunchFile)) as LaunchFile;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use LaunchFile() / LaunchFile.new instead')
+  static LaunchFile create() => LaunchFile._();
+  static $pb.GeneratedMessage $_createMessage() => LaunchFile._();
+  @$core.override
+  LaunchFile createEmptyInstance() => LaunchFile._();
+  @$core.pragma('dart2js:noInline')
+  static LaunchFile getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<LaunchFile>(LaunchFile.$_createMessage);
+  static LaunchFile? _defaultInstance;
+
+  /// .agents/launch.json or .claude/launch.json.
+  @$pb.TagNumber(1)
+  $core.String get path => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set path($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPath() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPath() => $_clearField(1);
+
+  /// Read from the main checkout, the worktree having neither file.
+  @$pb.TagNumber(2)
+  $core.bool get fromMain => $_getBF(1);
+  @$pb.TagNumber(2)
+  set fromMain($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFromMain() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFromMain() => $_clearField(2);
+
+  /// Why the whole file was refused; empty when it was read.
+  @$pb.TagNumber(3)
+  $core.String get error => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set error($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasError() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearError() => $_clearField(3);
+}
+
+/// A row of a folder's Servers menu: a launch file's entry with its
+/// server's state, or a running server whose entry has gone (index -1).
+class DevServer extends $pb.GeneratedMessage {
+  factory DevServer({
+    $core.String? name,
+    $core.bool? nameOk,
+    $core.int? index,
+    $core.String? source,
+    $core.bool? fromMain,
+    $core.String? command,
+    $core.String? program,
+    $core.Iterable<$core.String>? args,
+    $core.String? cwd,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? env,
+    $core.Iterable<$core.String>? flaggedEnv,
+    $core.String? url,
+    $core.int? port,
+    $core.bool? attach,
+    $core.String? problem,
+    DevServerState? state,
+    $core.String? error,
+    $core.String? output,
+    $core.String? serverId,
+    $core.bool? changed,
+  }) {
+    final result = DevServer._();
+    if (name != null) result.name = name;
+    if (nameOk != null) result.nameOk = nameOk;
+    if (index != null) result.index = index;
+    if (source != null) result.source = source;
+    if (fromMain != null) result.fromMain = fromMain;
+    if (command != null) result.command = command;
+    if (program != null) result.program = program;
+    if (args != null) result.args.addAll(args);
+    if (cwd != null) result.cwd = cwd;
+    if (env != null) result.env.addEntries(env);
+    if (flaggedEnv != null) result.flaggedEnv.addAll(flaggedEnv);
+    if (url != null) result.url = url;
+    if (port != null) result.port = port;
+    if (attach != null) result.attach = attach;
+    if (problem != null) result.problem = problem;
+    if (state != null) result.state = state;
+    if (error != null) result.error = error;
+    if (output != null) result.output = output;
+    if (serverId != null) result.serverId = serverId;
+    if (changed != null) result.changed = changed;
+    return result;
+  }
+
+  DevServer._();
+
+  factory DevServer.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DevServer()..mergeFromBuffer(data, registry);
+  factory DevServer.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DevServer()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DevServer',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: DevServer.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'name')
+    ..aOB(2, _omitFieldNames ? '' : 'nameOk')
+    ..aI(3, _omitFieldNames ? '' : 'index')
+    ..aOS(4, _omitFieldNames ? '' : 'source')
+    ..aOB(5, _omitFieldNames ? '' : 'fromMain')
+    ..aOS(6, _omitFieldNames ? '' : 'command')
+    ..aOS(7, _omitFieldNames ? '' : 'program')
+    ..pPS(8, _omitFieldNames ? '' : 'args')
+    ..aOS(9, _omitFieldNames ? '' : 'cwd')
+    ..m<$core.String, $core.String>(10, _omitFieldNames ? '' : 'env',
+        entryClassName: 'DevServer.EnvEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('nushi.v1'))
+    ..pPS(11, _omitFieldNames ? '' : 'flaggedEnv')
+    ..aOS(12, _omitFieldNames ? '' : 'url')
+    ..aI(13, _omitFieldNames ? '' : 'port')
+    ..aOB(14, _omitFieldNames ? '' : 'attach')
+    ..aOS(15, _omitFieldNames ? '' : 'problem')
+    ..aE<DevServerState>(16, _omitFieldNames ? '' : 'state',
+        enumValues: DevServerState.values)
+    ..aOS(17, _omitFieldNames ? '' : 'error')
+    ..aOS(18, _omitFieldNames ? '' : 'output')
+    ..aOS(19, _omitFieldNames ? '' : 'serverId')
+    ..aOB(20, _omitFieldNames ? '' : 'changed')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DevServer clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DevServer copyWith(void Function(DevServer) updates) =>
+      super.copyWith((message) => updates(message as DevServer)) as DevServer;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use DevServer() / DevServer.new instead')
+  static DevServer create() => DevServer._();
+  static $pb.GeneratedMessage $_createMessage() => DevServer._();
+  @$core.override
+  DevServer createEmptyInstance() => DevServer._();
+  @$core.pragma('dart2js:noInline')
+  static DevServer getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DevServer>(DevServer.$_createMessage);
+  static DevServer? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get name => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set name($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearName() => $_clearField(1);
+
+  /// The name is fit for an agent's text; one that isn't shows marked.
+  @$pb.TagNumber(2)
+  $core.bool get nameOk => $_getBF(1);
+  @$pb.TagNumber(2)
+  set nameOk($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasNameOk() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearNameOk() => $_clearField(2);
+
+  /// Its place among the folder's entries (StartServerRequest.index).
+  @$pb.TagNumber(3)
+  $core.int get index => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set index($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasIndex() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearIndex() => $_clearField(3);
+
+  /// The file it came from (LaunchFile.path), and whether the main
+  /// checkout's.
+  @$pb.TagNumber(4)
+  $core.String get source => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set source($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSource() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSource() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get fromMain => $_getBF(4);
+  @$pb.TagNumber(5)
+  set fromMain($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasFromMain() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearFromMain() => $_clearField(5);
+
+  /// The command as it will run, its arguments and folder; program is
+  /// where the login shell's PATH finds it ("" when it doesn't).
+  @$pb.TagNumber(6)
+  $core.String get command => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set command($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCommand() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCommand() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get program => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set program($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasProgram() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearProgram() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $pb.PbList<$core.String> get args => $_getList(7);
+
+  @$pb.TagNumber(9)
+  $core.String get cwd => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set cwd($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasCwd() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearCwd() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $pb.PbMap<$core.String, $core.String> get env => $_getMap(9);
+
+  /// The keys of env that change what a command runs (NODE_OPTIONS,
+  /// PATH, DYLD_*, LD_*).
+  @$pb.TagNumber(11)
+  $pb.PbList<$core.String> get flaggedEnv => $_getList(10);
+
+  /// Where it answers: the running server's port when it runs.
+  @$pb.TagNumber(12)
+  $core.String get url => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set url($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasUrl() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearUrl() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.int get port => $_getIZ(12);
+  @$pb.TagNumber(13)
+  set port($core.int value) => $_setSignedInt32(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasPort() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearPort() => $_clearField(13);
+
+  /// An entry with a url alone: a server already running, nothing to run.
+  @$pb.TagNumber(14)
+  $core.bool get attach => $_getBF(13);
+  @$pb.TagNumber(14)
+  set attach($core.bool value) => $_setBool(13, value);
+  @$pb.TagNumber(14)
+  $core.bool hasAttach() => $_has(13);
+  @$pb.TagNumber(14)
+  void clearAttach() => $_clearField(14);
+
+  /// Why the entry can't run.
+  @$pb.TagNumber(15)
+  $core.String get problem => $_getSZ(14);
+  @$pb.TagNumber(15)
+  set problem($core.String value) => $_setString(14, value);
+  @$pb.TagNumber(15)
+  $core.bool hasProblem() => $_has(14);
+  @$pb.TagNumber(15)
+  void clearProblem() => $_clearField(15);
+
+  @$pb.TagNumber(16)
+  DevServerState get state => $_getN(15);
+  @$pb.TagNumber(16)
+  set state(DevServerState value) => $_setField(16, value);
+  @$pb.TagNumber(16)
+  $core.bool hasState() => $_has(15);
+  @$pb.TagNumber(16)
+  void clearState() => $_clearField(16);
+
+  /// Why it failed, and its last lines of output.
+  @$pb.TagNumber(17)
+  $core.String get error => $_getSZ(16);
+  @$pb.TagNumber(17)
+  set error($core.String value) => $_setString(16, value);
+  @$pb.TagNumber(17)
+  $core.bool hasError() => $_has(16);
+  @$pb.TagNumber(17)
+  void clearError() => $_clearField(17);
+
+  @$pb.TagNumber(18)
+  $core.String get output => $_getSZ(17);
+  @$pb.TagNumber(18)
+  set output($core.String value) => $_setString(17, value);
+  @$pb.TagNumber(18)
+  $core.bool hasOutput() => $_has(17);
+  @$pb.TagNumber(18)
+  void clearOutput() => $_clearField(18);
+
+  /// Its running server's id (StopServerRequest.server_id).
+  @$pb.TagNumber(19)
+  $core.String get serverId => $_getSZ(18);
+  @$pb.TagNumber(19)
+  set serverId($core.String value) => $_setString(18, value);
+  @$pb.TagNumber(19)
+  $core.bool hasServerId() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearServerId() => $_clearField(19);
+
+  /// Its entry changed or went since the server started.
+  @$pb.TagNumber(20)
+  $core.bool get changed => $_getBF(19);
+  @$pb.TagNumber(20)
+  set changed($core.bool value) => $_setBool(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasChanged() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearChanged() => $_clearField(20);
+}
+
+enum StartServerRequest_Entry { name, index_, notSet }
+
+class StartServerRequest extends $pb.GeneratedMessage {
+  factory StartServerRequest({
+    $core.String? chatId,
+    $core.String? name,
+    $core.int? index,
+  }) {
+    final result = StartServerRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (name != null) result.name = name;
+    if (index != null) result.index = index;
+    return result;
+  }
+
+  StartServerRequest._();
+
+  factory StartServerRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartServerRequest()..mergeFromBuffer(data, registry);
+  factory StartServerRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartServerRequest()..mergeFromJson(json, registry);
+
+  static const $core.Map<$core.int, StartServerRequest_Entry>
+      _StartServerRequest_EntryByTag = {
+    2: StartServerRequest_Entry.name,
+    3: StartServerRequest_Entry.index_,
+    0: StartServerRequest_Entry.notSet
+  };
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StartServerRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StartServerRequest.$_createMessage)
+    ..oo(0, [2, 3])
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aI(3, _omitFieldNames ? '' : 'index')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartServerRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartServerRequest copyWith(void Function(StartServerRequest) updates) =>
+      super.copyWith((message) => updates(message as StartServerRequest))
+          as StartServerRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StartServerRequest() / StartServerRequest.new instead')
+  static StartServerRequest create() => StartServerRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StartServerRequest._();
+  @$core.override
+  StartServerRequest createEmptyInstance() => StartServerRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StartServerRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StartServerRequest>(
+          StartServerRequest.$_createMessage);
+  static StartServerRequest? _defaultInstance;
+
+  @$pb.TagNumber(2)
+  @$pb.TagNumber(3)
+  StartServerRequest_Entry whichEntry() =>
+      _StartServerRequest_EntryByTag[$_whichOneof(0)]!;
+  @$pb.TagNumber(2)
+  @$pb.TagNumber(3)
+  void clearEntry() => $_clearField($_whichOneof(0));
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get index => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set index($core.int value) => $_setSignedInt32(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasIndex() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearIndex() => $_clearField(3);
+}
+
+class StartServerResponse extends $pb.GeneratedMessage {
+  factory StartServerResponse({
+    DevServer? server,
+  }) {
+    final result = StartServerResponse._();
+    if (server != null) result.server = server;
+    return result;
+  }
+
+  StartServerResponse._();
+
+  factory StartServerResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartServerResponse()..mergeFromBuffer(data, registry);
+  factory StartServerResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartServerResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StartServerResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StartServerResponse.$_createMessage)
+    ..aOM<DevServer>(1, _omitFieldNames ? '' : 'server',
+        subBuilder: DevServer.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartServerResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartServerResponse copyWith(void Function(StartServerResponse) updates) =>
+      super.copyWith((message) => updates(message as StartServerResponse))
+          as StartServerResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use StartServerResponse() / StartServerResponse.new instead')
+  static StartServerResponse create() => StartServerResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StartServerResponse._();
+  @$core.override
+  StartServerResponse createEmptyInstance() => StartServerResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StartServerResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StartServerResponse>(
+          StartServerResponse.$_createMessage);
+  static StartServerResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  DevServer get server => $_getN(0);
+  @$pb.TagNumber(1)
+  set server(DevServer value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasServer() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearServer() => $_clearField(1);
+  @$pb.TagNumber(1)
+  DevServer ensureServer() => $_ensure(0);
+}
+
+class StopServerRequest extends $pb.GeneratedMessage {
+  factory StopServerRequest({
+    $core.String? chatId,
+    $core.String? serverId,
+  }) {
+    final result = StopServerRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (serverId != null) result.serverId = serverId;
+    return result;
+  }
+
+  StopServerRequest._();
+
+  factory StopServerRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopServerRequest()..mergeFromBuffer(data, registry);
+  factory StopServerRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopServerRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StopServerRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StopServerRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'serverId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopServerRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopServerRequest copyWith(void Function(StopServerRequest) updates) =>
+      super.copyWith((message) => updates(message as StopServerRequest))
+          as StopServerRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StopServerRequest() / StopServerRequest.new instead')
+  static StopServerRequest create() => StopServerRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StopServerRequest._();
+  @$core.override
+  StopServerRequest createEmptyInstance() => StopServerRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StopServerRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<StopServerRequest>(
+          StopServerRequest.$_createMessage);
+  static StopServerRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get serverId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set serverId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasServerId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearServerId() => $_clearField(2);
+}
+
+class StopServerResponse extends $pb.GeneratedMessage {
+  factory StopServerResponse() => StopServerResponse._();
+
+  StopServerResponse._();
+
+  factory StopServerResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopServerResponse()..mergeFromBuffer(data, registry);
+  factory StopServerResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopServerResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StopServerResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StopServerResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopServerResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopServerResponse copyWith(void Function(StopServerResponse) updates) =>
+      super.copyWith((message) => updates(message as StopServerResponse))
+          as StopServerResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use StopServerResponse() / StopServerResponse.new instead')
+  static StopServerResponse create() => StopServerResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StopServerResponse._();
+  @$core.override
+  StopServerResponse createEmptyInstance() => StopServerResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StopServerResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StopServerResponse>(
+          StopServerResponse.$_createMessage);
+  static StopServerResponse? _defaultInstance;
+}
+
+class StopAllServersRequest extends $pb.GeneratedMessage {
+  factory StopAllServersRequest({
+    $core.String? chatId,
+  }) {
+    final result = StopAllServersRequest._();
+    if (chatId != null) result.chatId = chatId;
+    return result;
+  }
+
+  StopAllServersRequest._();
+
+  factory StopAllServersRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopAllServersRequest()..mergeFromBuffer(data, registry);
+  factory StopAllServersRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopAllServersRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StopAllServersRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StopAllServersRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopAllServersRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopAllServersRequest copyWith(
+          void Function(StopAllServersRequest) updates) =>
+      super.copyWith((message) => updates(message as StopAllServersRequest))
+          as StopAllServersRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use StopAllServersRequest() / StopAllServersRequest.new instead')
+  static StopAllServersRequest create() => StopAllServersRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StopAllServersRequest._();
+  @$core.override
+  StopAllServersRequest createEmptyInstance() => StopAllServersRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StopAllServersRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StopAllServersRequest>(
+          StopAllServersRequest.$_createMessage);
+  static StopAllServersRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+}
+
+class StopAllServersResponse extends $pb.GeneratedMessage {
+  factory StopAllServersResponse() => StopAllServersResponse._();
+
+  StopAllServersResponse._();
+
+  factory StopAllServersResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopAllServersResponse()..mergeFromBuffer(data, registry);
+  factory StopAllServersResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StopAllServersResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StopAllServersResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: StopAllServersResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopAllServersResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StopAllServersResponse copyWith(
+          void Function(StopAllServersResponse) updates) =>
+      super.copyWith((message) => updates(message as StopAllServersResponse))
+          as StopAllServersResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use StopAllServersResponse() / StopAllServersResponse.new instead')
+  static StopAllServersResponse create() => StopAllServersResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StopAllServersResponse._();
+  @$core.override
+  StopAllServersResponse createEmptyInstance() => StopAllServersResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StopAllServersResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StopAllServersResponse>(
+          StopAllServersResponse.$_createMessage);
+  static StopAllServersResponse? _defaultInstance;
 }
 
 class CheckFolderRequest extends $pb.GeneratedMessage {
@@ -30949,6 +31838,31 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, CloseTerminalRequest request) =>
       _client.invoke<CloseTerminalResponse>(ctx, 'NushiService',
           'CloseTerminal', request, CloseTerminalResponse());
+
+  /// A chat's folder's dev servers (ADR 0098): the entries of its launch
+  /// files, read afresh, merged with the servers that run there. The Mac's
+  /// only (API 109), as are the three below.
+  $async.Future<ListServersResponse> listServers(
+          $pb.ClientContext? ctx, ListServersRequest request) =>
+      _client.invoke<ListServersResponse>(
+          ctx, 'NushiService', 'ListServers', request, ListServersResponse());
+
+  /// Starts an entry of a chat's folder's launch files, by name or by its
+  /// place in ListServers, unless it runs already (then it's that one). It
+  /// answers once the program started; its state comes as events. No call
+  /// takes a command: only the launch files' entries run.
+  $async.Future<StartServerResponse> startServer(
+          $pb.ClientContext? ctx, StartServerRequest request) =>
+      _client.invoke<StartServerResponse>(
+          ctx, 'NushiService', 'StartServer', request, StartServerResponse());
+  $async.Future<StopServerResponse> stopServer(
+          $pb.ClientContext? ctx, StopServerRequest request) =>
+      _client.invoke<StopServerResponse>(
+          ctx, 'NushiService', 'StopServer', request, StopServerResponse());
+  $async.Future<StopAllServersResponse> stopAllServers(
+          $pb.ClientContext? ctx, StopAllServersRequest request) =>
+      _client.invoke<StopAllServersResponse>(ctx, 'NushiService',
+          'StopAllServers', request, StopAllServersResponse());
 
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was

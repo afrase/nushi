@@ -156,5 +156,41 @@ class TurnEnd extends $pb.ProtobufEnum {
   const TurnEnd._(super.value, super.name);
 }
 
+/// A dev server's state.
+class DevServerState extends $pb.ProtobufEnum {
+  static const DevServerState DEV_SERVER_STATE_UNSPECIFIED =
+      DevServerState._(0, _omitEnumNames ? '' : 'DEV_SERVER_STATE_UNSPECIFIED');
+  static const DevServerState DEV_SERVER_STATE_STOPPED =
+      DevServerState._(1, _omitEnumNames ? '' : 'DEV_SERVER_STATE_STOPPED');
+  static const DevServerState DEV_SERVER_STATE_STARTING =
+      DevServerState._(2, _omitEnumNames ? '' : 'DEV_SERVER_STATE_STARTING');
+  static const DevServerState DEV_SERVER_STATE_RUNNING =
+      DevServerState._(3, _omitEnumNames ? '' : 'DEV_SERVER_STATE_RUNNING');
+
+  /// It runs, but hasn't answered on its port within 180 s.
+  static const DevServerState DEV_SERVER_STATE_NOT_ANSWERING = DevServerState._(
+      4, _omitEnumNames ? '' : 'DEV_SERVER_STATE_NOT_ANSWERING');
+
+  /// Its last run failed: error says why.
+  static const DevServerState DEV_SERVER_STATE_FAILED =
+      DevServerState._(5, _omitEnumNames ? '' : 'DEV_SERVER_STATE_FAILED');
+
+  static const $core.List<DevServerState> values = <DevServerState>[
+    DEV_SERVER_STATE_UNSPECIFIED,
+    DEV_SERVER_STATE_STOPPED,
+    DEV_SERVER_STATE_STARTING,
+    DEV_SERVER_STATE_RUNNING,
+    DEV_SERVER_STATE_NOT_ANSWERING,
+    DEV_SERVER_STATE_FAILED,
+  ];
+
+  static final $core.List<DevServerState?> _byValue =
+      $pb.ProtobufEnum.$_initByValueList(values, 5);
+  static DevServerState? valueOf($core.int value) =>
+      value < 0 || value >= _byValue.length ? null : _byValue[value];
+
+  const DevServerState._(super.value, super.name);
+}
+
 const $core.bool _omitEnumNames =
     $core.bool.fromEnvironment('protobuf.omit_enum_names');

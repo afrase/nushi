@@ -1614,6 +1614,81 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// A chat's folder's dev servers (ADR 0098): the entries of its launch
+  /// files, read afresh, merged with the servers that run there. The Mac's
+  /// only (API 109), as are the three below.
+  Future<nushiv1nushi.ListServersResponse> listServers(
+    nushiv1nushi.ListServersRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.listServers,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// Starts an entry of a chat's folder's launch files, by name or by its
+  /// place in ListServers, unless it runs already (then it's that one). It
+  /// answers once the program started; its state comes as events. No call
+  /// takes a command: only the launch files' entries run.
+  Future<nushiv1nushi.StartServerResponse> startServer(
+    nushiv1nushi.StartServerRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.startServer,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.StopServerResponse> stopServer(
+    nushiv1nushi.StopServerRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.stopServer,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<nushiv1nushi.StopAllServersResponse> stopAllServers(
+    nushiv1nushi.StopAllServersRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.stopAllServers,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was
   /// told to trust it; nothing when it is trusted or brings nothing. Ask

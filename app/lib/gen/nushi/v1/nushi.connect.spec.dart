@@ -806,6 +806,41 @@ abstract final class NushiService {
     nushiv1nushi.CloseTerminalResponse.new,
   );
 
+  /// A chat's folder's dev servers (ADR 0098): the entries of its launch
+  /// files, read afresh, merged with the servers that run there. The Mac's
+  /// only (API 109), as are the three below.
+  static const listServers = connect.Spec(
+    '/$name/ListServers',
+    connect.StreamType.unary,
+    nushiv1nushi.ListServersRequest.new,
+    nushiv1nushi.ListServersResponse.new,
+  );
+
+  /// Starts an entry of a chat's folder's launch files, by name or by its
+  /// place in ListServers, unless it runs already (then it's that one). It
+  /// answers once the program started; its state comes as events. No call
+  /// takes a command: only the launch files' entries run.
+  static const startServer = connect.Spec(
+    '/$name/StartServer',
+    connect.StreamType.unary,
+    nushiv1nushi.StartServerRequest.new,
+    nushiv1nushi.StartServerResponse.new,
+  );
+
+  static const stopServer = connect.Spec(
+    '/$name/StopServer',
+    connect.StreamType.unary,
+    nushiv1nushi.StopServerRequest.new,
+    nushiv1nushi.StopServerResponse.new,
+  );
+
+  static const stopAllServers = connect.Spec(
+    '/$name/StopAllServers',
+    connect.StreamType.unary,
+    nushiv1nushi.StopAllServersRequest.new,
+    nushiv1nushi.StopAllServersResponse.new,
+  );
+
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was
   /// told to trust it; nothing when it is trusted or brings nothing. Ask

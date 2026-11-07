@@ -315,6 +315,17 @@ service NushiService {
   // Closes a terminal: its shell is hung up, then killed after a short
   // grace, along with what still runs in it.
   rpc CloseTerminal(CloseTerminalRequest) returns (CloseTerminalResponse);
+  // A chat's folder's dev servers (ADR 0098): the entries of its launch
+  // files, read afresh, merged with the servers that run there. The Mac's
+  // only (API 109), as are the three below.
+  rpc ListServers(ListServersRequest) returns (ListServersResponse);
+  // Starts an entry of a chat's folder's launch files, by name or by its
+  // place in ListServers, unless it runs already (then it's that one). It
+  // answers once the program started; its state comes as events. No call
+  // takes a command: only the launch files' entries run.
+  rpc StartServer(StartServerRequest) returns (StartServerResponse);
+  rpc StopServer(StopServerRequest) returns (StopServerResponse);
+  rpc StopAllServers(StopAllServersRequest) returns (StopAllServersResponse);
   // Says what a folder brings for the agent to run on its own (MCP
   // servers, hooks, helper commands) when neither the agent nor Nushi was
   // told to trust it; nothing when it is trusted or brings nothing. Ask
@@ -1987,6 +1998,9 @@ message EventsResponse {
     // The chat's related worktrees, all of them, when they changed; these
     // events have no seq (API 99).
     ChatRelatedWorktrees related_worktrees = 18;
+    // A folder whose dev servers changed: one started, answered, failed
+    // or ended (chat_id is empty; API 109).
+    string servers_changed = 19;
   }
 }
 
@@ -2422,6 +2436,104 @@ message CloseTerminalRequest {
 }
 
 message CloseTerminalResponse {}
+
+message ListServersRequest {
+  string chat_id = 1;
+}
+
+message ListServersResponse {
+  // The chat's folder, whose servers these are.
+  string folder = 1;
+  repeated DevServer servers = 2;
+  // The launch files read, each with why it was refused, if it was.
+  repeated LaunchFile files = 3;
+}
+
+// A launch file read for a folder's dev servers (ADR 0095).
+message LaunchFile {
+  // .agents/launch.json or .claude/launch.json.
+  string path = 1;
+  // Read from the main checkout, the worktree having neither file.
+  bool from_main = 2;
+  // Why the whole file was refused; empty when it was read.
+  string error = 3;
+}
+
+// A dev server's state.
+enum DevServerState {
+  DEV_SERVER_STATE_UNSPECIFIED = 0;
+  DEV_SERVER_STATE_STOPPED = 1;
+  DEV_SERVER_STATE_STARTING = 2;
+  DEV_SERVER_STATE_RUNNING = 3;
+  // It runs, but hasn't answered on its port within 180 s.
+  DEV_SERVER_STATE_NOT_ANSWERING = 4;
+  // Its last run failed: error says why.
+  DEV_SERVER_STATE_FAILED = 5;
+}
+
+// A row of a folder's Servers menu: a launch file's entry with its
+// server's state, or a running server whose entry has gone (index -1).
+message DevServer {
+  string name = 1;
+  // The name is fit for an agent's text; one that isn't shows marked.
+  bool name_ok = 2;
+  // Its place among the folder's entries (StartServerRequest.index).
+  int32 index = 3;
+  // The file it came from (LaunchFile.path), and whether the main
+  // checkout's.
+  string source = 4;
+  bool from_main = 5;
+  // The command as it will run, its arguments and folder; program is
+  // where the login shell's PATH finds it ("" when it doesn't).
+  string command = 6;
+  string program = 7;
+  repeated string args = 8;
+  string cwd = 9;
+  map<string, string> env = 10;
+  // The keys of env that change what a command runs (NODE_OPTIONS,
+  // PATH, DYLD_*, LD_*).
+  repeated string flagged_env = 11;
+  // Where it answers: the running server's port when it runs.
+  string url = 12;
+  int32 port = 13;
+  // An entry with a url alone: a server already running, nothing to run.
+  bool attach = 14;
+  // Why the entry can't run.
+  string problem = 15;
+  DevServerState state = 16;
+  // Why it failed, and its last lines of output.
+  string error = 17;
+  string output = 18;
+  // Its running server's id (StopServerRequest.server_id).
+  string server_id = 19;
+  // Its entry changed or went since the server started.
+  bool changed = 20;
+}
+
+message StartServerRequest {
+  string chat_id = 1;
+  oneof entry {
+    string name = 2;
+    int32 index = 3;
+  }
+}
+
+message StartServerResponse {
+  DevServer server = 1;
+}
+
+message StopServerRequest {
+  string chat_id = 1;
+  string server_id = 2;
+}
+
+message StopServerResponse {}
+
+message StopAllServersRequest {
+  string chat_id = 1;
+}
+
+message StopAllServersResponse {}
 
 message CheckFolderRequest {
   string folder = 1;

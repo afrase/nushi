@@ -181,13 +181,16 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	toolSvc := tools.New(shows)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
+	srvs := newServers(svc, filepath.Join(dataDir, "servers.json"), hub.Publish)
+	svc.UseServers(srvs)
 	follow, unfollow := context.WithCancel(context.Background())
 	go func() {
-		_ = hub.Subscribe(follow, func(e model.Event) bool { terms.Follow(e); return true }, events.Unbounded())
+		_ = hub.Subscribe(follow, func(e model.Event) bool { terms.Follow(e); srvs.Follow(e); return true }, events.Unbounded())
 	}()
-	restarts := restart.New(svc, terms)
+	restarts := restart.New(svc, restart.Together{terms, srvs})
 	restarts.Every = 20 * time.Millisecond
-	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts}
+	sv := api.Services{Chats: svc, Agents: agents.New(nil, nil, shellenv.Off(os.Environ()), "", nil), Terms: terms, Hub: hub, Memory: memory.New(svc), Transcripts: st, Restart: restarts,
+		Servers: srvs}
 	srv := httptest.NewServer(api.WithToken("tok", api.New(sv)))
 	devices := httptest.NewServer(api.ForDevices(sv))
 	toolAPI := httptest.NewServer(api.Tools(toolSvc))
@@ -198,6 +201,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 			s.Close()
 		}
 		terms.CloseAll() // as main does: the shells don't outlive the daemon
+		srvs.CloseAll()
 		svc.Close()
 	}
 	t.Cleanup(stop)
