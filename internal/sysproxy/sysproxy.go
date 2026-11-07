@@ -2,7 +2,9 @@
 // without cgo: the environment's (HTTPS_PROXY, HTTP_PROXY, NO_PROXY) when
 // it names any, else the network settings `scutil --proxy` prints: a PAC
 // file (evaluated by macOS's own CFNetwork, through osascript), else the
-// HTTPS, HTTP or SOCKS proxy with the exceptions list.
+// HTTPS, HTTP or SOCKS proxy with the exceptions list. Reading and
+// evaluating them is sysproxy_darwin.go's; another OS has only the
+// environment's (sysproxy_other.go, ADR 0097).
 //
 // Not supported: proxy auto-discovery (WPAD), proxies that want a password
 // from the settings (the Keychain's), NTLM and Kerberos. A password in an
@@ -13,7 +15,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,14 +22,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Timeout bounds each outside step: scutil, fetching a PAC file,
@@ -77,21 +74,7 @@ func For(u *url.URL) ([]*url.URL, error) {
 
 // lookup reads the settings for u, and how long the answer holds: a PAC
 // file that couldn't be read or run is tried again sooner.
-var lookup = func(u *url.URL, secure bool) ([]*url.URL, time.Duration) {
-	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "/usr/sbin/scutil", "--proxy")
-	procgroup.Bound(cmd)
-	out, err := cmd.Output()
-	if err != nil {
-		return []*url.URL{nil}, 30 * time.Second
-	}
-	proxies, ok := fromSettings(parse(out), u, secure)
-	if !ok {
-		return proxies, 30 * time.Second
-	}
-	return proxies, 5 * time.Minute
-}
+var lookup = systemLookup
 
 // done says the lookup has finished. Called with cache's lock.
 func (c *cached) done() bool {
@@ -216,18 +199,6 @@ func (s settings) excepted(host string) bool {
 	return false
 }
 
-// pacScript evaluates a PAC file (on stdin) for a URL (its argument) with
-// CFNetwork, and prints the proxies it names as JSON.
-const pacScript = `ObjC.import('Foundation'); ObjC.import('CoreServices');
-function run(argv) {
-  const data = $.NSFileHandle.fileHandleWithStandardInput.readDataToEndOfFile;
-  const script = $.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding);
-  const res = $.CFNetworkCopyProxiesForAutoConfigurationScript(script, $.NSURL.URLWithString(argv[0]), Ref());
-  const list = ObjC.castRefToObject(res), out = [];
-  for (let i = 0; i < list.count; i++) out.push(ObjC.deepUnwrap(list.objectAtIndex(i)));
-  return JSON.stringify(out);
-}`
-
 // pac fetches the PAC file at pacURL (directly) and asks macOS what it says
 // for u, which is only a scheme, host and port.
 func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
@@ -239,35 +210,7 @@ func pac(pacURL string, u *url.URL) ([]*url.URL, error) {
 	}
 	// CFNetwork knows http and https; a WebSocket URL is asked as either.
 	asked := url.URL{Scheme: map[string]string{"wss": "https", "ws": "http", "https": "https", "http": "http"}[u.Scheme], Host: u.Host, Path: "/"}
-	cmd := exec.CommandContext(ctx, "/usr/bin/osascript", "-l", "JavaScript", "-e", pacScript, asked.String()) //nolint:gosec // osascript with our own script
-	cmd.Stdin = bytes.NewReader(script)
-	procgroup.Bound(cmd)
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("evaluating the PAC file: %w", err)
-	}
-	var entries []map[string]any
-	if err := json.Unmarshal(out, &entries); err != nil {
-		return nil, err
-	}
-	var proxies []*url.URL
-	for _, e := range entries {
-		host, _ := e["kCFProxyHostNameKey"].(string)
-		port, _ := e["kCFProxyPortNumberKey"].(float64)
-		addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
-		switch e["kCFProxyTypeKey"] {
-		case "kCFProxyTypeNone":
-			proxies = append(proxies, nil)
-		case "kCFProxyTypeHTTP", "kCFProxyTypeHTTPS":
-			proxies = append(proxies, &url.URL{Scheme: "http", Host: addr})
-		case "kCFProxyTypeSOCKS":
-			proxies = append(proxies, &url.URL{Scheme: "socks5", Host: addr})
-		}
-	}
-	if len(proxies) == 0 {
-		return nil, errors.New("the PAC file named no proxy Nushi can use")
-	}
-	return proxies, nil
+	return evaluate(ctx, script, asked)
 }
 
 // pacTransport fetches PAC files, directly; a connection isn't kept for
