@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:nushi/chat_images.dart' show isImageRef;
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
 /// A chat's messages on their way (`ChatState.outbox`): those this app
@@ -26,6 +27,12 @@ class Outbox {
 
   /// [sending] messages whose send failed, fading out of the transcript.
   final Set<String> unsent = {};
+
+  /// Where an echo's images that came as references (ADR 0099) go with
+  /// the bytes this app sent, by their hash: the phone's `ChatImages`, so
+  /// it shows them without fetching back what it just sent. Set by the
+  /// sender.
+  void Function(String sha256, Uint8List bytes)? keepImage;
 
   final _sent = <String>{}; // sent, the echo still to come
   int _sends = 0;
@@ -89,6 +96,20 @@ class Outbox {
     echoes[echo.id] = it.id;
     sending.remove(it);
     _sent.remove(it.id);
+    _keepImages(it.images, echo.images);
+  }
+
+  /// Hands [keepImage] the bytes of each of [sent] whose echo in [shown]
+  /// came as a reference: the same image in the same place, of its length.
+  void _keepImages(List<ImageData> sent, List<ImageData> shown) {
+    final keep = keepImage;
+    if (keep == null || sent.length != shown.length) return;
+    for (final (i, ref) in shown.indexed) {
+      final data = sent[i].data;
+      if (isImageRef(ref) && data.length == ref.size.toInt()) {
+        keep(ref.sha256, data is Uint8List ? data : Uint8List.fromList(data));
+      }
+    }
   }
 
   /// Sent messages the daemon has without an echo (they went into the

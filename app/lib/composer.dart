@@ -354,6 +354,8 @@ class _ComposerState extends State<Composer> {
     final message = withOutputs(withReplies(m.replies, text), m.outputs);
     // To an idle chat it shows in the transcript at once, faint until the
     // daemon's echo; not a queued one (a pill) nor one for a subagent.
+    // Its images' echo, if it comes as references, shows these bytes.
+    chat.outbox.keepImage = widget.daemon.images.put;
     final shown = !busy && m.toSubagent == null && !chat.asleep
         ? chat.outbox.send(
             message,

@@ -18,6 +18,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/outbox.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/theme/theme.dart';
@@ -152,6 +153,51 @@ void main() {
       waits['b']!.complete(Uint8List(1));
       waits['d']!.complete(Uint8List(1));
       await Future.wait([b, d]);
+    });
+
+    test('an echo’s references keep the bytes this app sent, not fetched '
+        'back', () async {
+      final fetched = <String>[];
+      final images = ChatImages((chat, sha) async {
+        fetched.add(sha);
+        return Uint8List(0);
+      });
+      final sent = Uint8List.fromList(List.filled(100000, 7));
+      ImageData ref(String sha, int size) =>
+          ImageData(mimeType: 'image/png', sha256: sha, size: Int64(size));
+      final outbox = Outbox(() {})
+        ..keepImage = images.put
+        ..send('Look', [
+          ImageData(mimeType: 'image/png', data: sent),
+          ImageData(mimeType: 'image/png', data: _png),
+        ])
+        ..adopt(
+          Item(
+            id: 'u',
+            kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+            text: 'Look',
+            images: [
+              ref(_sha, sent.length),
+              ImageData(mimeType: 'image/png', data: _png),
+            ],
+          ),
+        );
+      expect(outbox.sending, isEmpty);
+      expect(images.kept(_sha)?.bytes, same(sent));
+      expect((await images.load('c', _sha)).bytes, same(sent));
+      expect(fetched, isEmpty);
+      // Not one of another length in its place.
+      outbox
+        ..send('Again', [ImageData(mimeType: 'image/png', data: sent)])
+        ..adopt(
+          Item(
+            id: 'v',
+            kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+            text: 'Again',
+            images: [ref('b' * 64, sent.length + 1)],
+          ),
+        );
+      expect(images.kept('b' * 64), isNull);
     });
 
     test('whole: references fetched, inline images as they are', () async {

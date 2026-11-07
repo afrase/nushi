@@ -43,6 +43,12 @@ class ChatImages {
     return image;
   }
 
+  /// Keeps [bytes] as the image of [sha256], which this app has already
+  /// (it sent them): shown at once, not fetched.
+  void put(String sha256, Uint8List bytes) {
+    if (kept(sha256) == null) _keep(sha256, MemoryImage(bytes));
+  }
+
   /// The image of [sha256] in [chatId], kept or fetched. A fetch still
   /// waiting for its turn when no caller [wanted] it any more (their rows
   /// scrolled away) is dropped, failing with [ImageNotWanted].
