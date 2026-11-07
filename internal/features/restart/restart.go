@@ -25,10 +25,33 @@ type Chats interface {
 }
 
 // Terminals are the terminals beside chats (internal/features/terminals),
-// which end with the daemon.
+// which end with the daemon, and what else does: the dev servers
+// (internal/features/servers, ADR 0098), as Together.
 type Terminals interface {
 	Busy() bool            // one runs a command
 	Running() []model.Hold // those that run one
+}
+
+// Together is several Terminals as one: busy while any is.
+type Together []Terminals
+
+// Busy says whether any of them is busy.
+func (t Together) Busy() bool {
+	for _, x := range t {
+		if x.Busy() {
+			return true
+		}
+	}
+	return false
+}
+
+// Running is what runs in each of them, in turn.
+func (t Together) Running() []model.Hold {
+	var out []model.Hold
+	for _, x := range t {
+		out = append(out, x.Running()...)
+	}
+	return out
 }
 
 // Service waits, once asked, for nothing to run, and then says the daemon
