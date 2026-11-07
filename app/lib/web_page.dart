@@ -23,8 +23,17 @@ abstract interface class PageHost {
   void dispose();
 }
 
-/// Opens an address in the default browser ([WebViews.openInBrowser]).
-Future<void> openInBrowser(Uri url) => native.web.openInBrowser(url);
+/// Opens [url] in the default browser: http(s) and file addresses with
+/// the app that opens https ([WebViews.openWithBrowser]), so a file is
+/// never run by the app its type has; mail with the mail app
+/// ([WebViews.openMail]). Any other address goes nowhere.
+Future<void> openInBrowser(Uri url) async {
+  if (url.scheme == 'mailto') {
+    await native.web.openMail(url);
+  } else if (const {'http', 'https', 'file'}.contains(url.scheme)) {
+    await native.web.openWithBrowser(url);
+  }
+}
 
 /// What a navigation a page asks for does: it stays in the web view, opens
 /// in the default browser, or goes nowhere.

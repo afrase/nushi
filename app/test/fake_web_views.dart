@@ -18,7 +18,7 @@ class FakeWebViews implements WebViews {
   /// Makes a Mermaid file's host.
   DiagramHost Function()? newDiagram;
 
-  /// Opens an address in the default browser.
+  /// Opens an address in the default browser, or mail with the mail app.
   Future<void> Function(Uri url)? open;
 
   /// Says how long ago the user pressed in a page.
@@ -42,8 +42,11 @@ class FakeWebViews implements WebViews {
   DiagramHost diagram() => newDiagram?.call() ?? _mac.diagram();
 
   @override
-  Future<void> openInBrowser(Uri url) =>
-      open?.call(url) ?? _mac.openInBrowser(url);
+  Future<void> openWithBrowser(Uri url) =>
+      open?.call(url) ?? _mac.openWithBrowser(url);
+
+  @override
+  Future<void> openMail(Uri url) => open?.call(url) ?? _mac.openMail(url);
 
   @override
   Future<Duration?> sincePress({bool pointerOnly = false}) =>

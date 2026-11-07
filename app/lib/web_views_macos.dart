@@ -26,16 +26,13 @@ class MacWebViews implements WebViews {
   @override
   DiagramHost diagram() => WebKitDiagram();
 
-  /// The Swift side opens http(s) and file addresses with the app that
-  /// opens https.
+  /// The Swift side opens it with the app that opens https.
   @override
-  Future<void> openInBrowser(Uri url) async {
-    if (url.scheme == 'mailto') {
-      await launchUrl(url);
-    } else if (const {'http', 'https', 'file'}.contains(url.scheme)) {
-      await _browser.invokeMethod('open', '$url');
-    }
-  }
+  Future<void> openWithBrowser(Uri url) =>
+      _browser.invokeMethod('open', '$url');
+
+  @override
+  Future<void> openMail(Uri url) => launchUrl(url);
 
   /// The Swift side's event monitor sees the presses (the plugin doesn't
   /// give WebKit's navigation type either).

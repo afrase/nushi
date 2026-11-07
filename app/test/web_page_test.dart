@@ -46,6 +46,29 @@ void main() {
     ); // a frame
   });
 
+  test('only web, file and mail addresses leave for another app', () async {
+    final opened = <Uri>[];
+    fakeWebViews().open = (url) async => opened.add(url);
+    for (final a in [
+      'https://example.com/',
+      'http://localhost:3000/',
+      'file:///tmp/page.html',
+      'mailto:someone@example.com',
+      'javascript:alert(1)',
+      'ssh://example.com',
+      'vscode://file/tmp/x',
+      'data:text/html,hi',
+    ]) {
+      await openInBrowser(Uri.parse(a));
+    }
+    expect(opened.map((u) => '$u'), [
+      'https://example.com/',
+      'http://localhost:3000/',
+      'file:///tmp/page.html',
+      'mailto:someone@example.com',
+    ]);
+  });
+
   // Fix review 2026-11-04: the press was taken from a Flutter Listener
   // around the web view, which on the Mac never sees one (WebKit takes a
   // press inside a platform view), so every link click was dropped. It's
