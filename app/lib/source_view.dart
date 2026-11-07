@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:nushi/preview_text.dart';
+import 'package:nushi/source_spans.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -170,17 +171,23 @@ class _SourceViewState extends State<SourceView> {
       });
 
   /// The widest line's room in columns, as near as cheaply known: a wide
-  /// character (CJK, an emoji's halves) counts as two, a cut line its note.
+  /// character (CJK, an emoji's halves) counts as two, a tab to its stop,
+  /// a cut line its note.
   int get _widest => _columns ??= _lines.fold<int>(0, (widest, line) {
     final n = min(line.length, _maxLine);
     final note = line.length > _maxLine ? 24 : 0;
-    if (2 * n + note <= widest) return widest;
-    var w = n + note;
+    final most = line.contains('\t') ? tabSize : 2;
+    if (most * n + note <= widest) return widest;
+    var w = 0;
     for (var i = 0; i < n; i++) {
       final c = line.codeUnitAt(i);
-      if (c >= 0x1100 && (c < 0xD800 || c > 0xDFFF)) w++;
+      w += c == 0x09
+          ? tabColumns(w)
+          : c >= 0x1100 && (c < 0xD800 || c > 0xDFFF)
+          ? 2
+          : 1;
     }
-    return max(widest, w);
+    return max(widest, w + note);
   });
 
   @override
@@ -203,6 +210,11 @@ class _SourceViewState extends State<SourceView> {
     final char = zero.width;
     _lineHeight = zero.height;
     zero.dispose();
+    // The letter spacing every character has, a tab's too; and the
+    // strut that holds a line's height when a tab's font is larger.
+    final drawn = DefaultTextStyle.of(context).style.merge(style);
+    final spacing = drawn.letterSpacing ?? 0;
+    final strut = StrutStyle.fromTextStyle(drawn, forceStrutHeight: true);
     TextSpan text(int i) {
       final whole = _lines[i];
       final cut = whole.length > _maxLine;
@@ -212,7 +224,12 @@ class _SourceViewState extends State<SourceView> {
         children: [
           // An empty text can't be selected, so its break wouldn't copy.
           if (line.isEmpty) const TextSpan(text: _blank),
-          ...spansOf(t, line, _spans?.elementAtOrNull(i)),
+          ...tabStops(
+            spansOf(t, line, _spans?.elementAtOrNull(i)),
+            fontSize: style.fontSize!,
+            column: char,
+            spacing: spacing,
+          ),
           if (cut)
             TextSpan(
               text: ' … (${whole.length - _maxLine} more)',
@@ -241,7 +258,12 @@ class _SourceViewState extends State<SourceView> {
                     child: Text(number(i), style: gutter),
                   ),
                 ),
-                Expanded(child: _Line(Text.rich(text(i)), whole: _lines[i])),
+                Expanded(
+                  child: _Line(
+                    Text.rich(text(i), strutStyle: strut),
+                    whole: _lines[i],
+                  ),
+                ),
               ],
             ),
           ),
@@ -286,7 +308,11 @@ class _SourceViewState extends State<SourceView> {
                           Padding(
                             padding: EdgeInsets.only(left: numbers),
                             child: _Line(
-                              Text.rich(text(i), softWrap: false),
+                              Text.rich(
+                                text(i),
+                                softWrap: false,
+                                strutStyle: strut,
+                              ),
                               whole: _lines[i],
                             ),
                           ),
@@ -405,32 +431,4 @@ class _LineEnd extends StaticSelectionContainerDelegate {
         : content?.plainText.replaceAll(_blank, '') ?? '';
     return SelectedContent(plainText: end < contentLength ? text : '$text\n');
   }
-}
-
-/// [line] in runs of its syntax [spans] (`start, length, capture`
-/// triples), plain where none.
-List<TextSpan> spansOf(Tokens t, String line, Uint32List? spans) {
-  if (spans == null) return [TextSpan(text: line)];
-  final out = <TextSpan>[];
-  var at = 0;
-  for (var k = 0; k + 2 < spans.length; k += 3) {
-    final start = min(spans[k], line.length);
-    final end = min(spans[k] + spans[k + 1], line.length);
-    if (start > at) out.add(TextSpan(text: line.substring(at, start)));
-    if (end <= start) continue;
-    final ink = t.ink(Capture.values[spans[k + 2]]);
-    out.add(
-      TextSpan(
-        text: line.substring(start, end),
-        style: TextStyle(
-          color: ink.color,
-          fontStyle: ink.italic ? FontStyle.italic : null,
-          fontWeight: ink.bold ? FontWeight.w700 : null,
-        ),
-      ),
-    );
-    at = end;
-  }
-  if (at < line.length) out.add(TextSpan(text: line.substring(at)));
-  return out;
 }

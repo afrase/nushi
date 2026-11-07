@@ -9,7 +9,7 @@ import 'package:nushi/errors.dart';
 import 'package:nushi/file_text.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/merge_lines.dart';
-import 'package:nushi/source_view.dart' show spansOf;
+import 'package:nushi/source_spans.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/tab_indent.dart';
 import 'package:nushi/theme/theme.dart';
@@ -370,7 +370,13 @@ class FileEdit extends ChangeNotifier {
     final line = codeLine.text;
     return TextSpan(
       style: style.copyWith(fontFeatures: _noLigatures),
-      children: spansOf(t, line, _spansAt(index, line)),
+      // re_editor draws with no text scaling.
+      children: tabStops(
+        spansOf(t, line, _spansAt(index, line)),
+        fontSize: style.fontSize!,
+        column: columnWidth(style, TextScaler.noScaling),
+        spacing: style.letterSpacing ?? 0,
+      ),
     );
   }
 
