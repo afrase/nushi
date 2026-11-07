@@ -114,3 +114,62 @@ func killRest(pgid int, termed time.Time) {
 		_ = syscall.Kill(-pgid, syscall.SIGKILL)
 	}
 }
+
+// Get is process pid as it is now, without its command line.
+func (Tree) Get(pid int) (model.Process, error) {
+	ps, err := all()
+	if err != nil {
+		return model.Process{}, err
+	}
+	if i := slices.IndexFunc(ps, func(p proc) bool { return p.Pid == pid }); i >= 0 {
+		return ps[i].Process, nil
+	}
+	return model.Process{}, fmt.Errorf("no process %d", pid)
+}
+
+// Args is a process's command line (the package's Args).
+func (Tree) Args(pid int) []string { return Args(pid) }
+
+// Stop ends those of ps that still run as the same processes (pid and
+// start time, so a pid used again is left alone), wherever they are now:
+// what a dev server left behind once its terminal is gone, a child that
+// setsid out of it, or the leftovers of a daemon that crashed (ADR 0098).
+// Each gets SIGTERM (its whole group when it leads one), and what is
+// still the same after Grace gets SIGKILL. It returns once they ended or
+// were killed.
+func (Tree) Stop(ps []model.Process) {
+	if live := same(ps); len(live) > 0 {
+		signal(live, syscall.SIGTERM)
+		for end := time.Now().Add(Grace); time.Now().Before(end) && len(live) > 0; live = same(live) {
+			time.Sleep(50 * time.Millisecond)
+		}
+		signal(live, syscall.SIGKILL)
+	}
+}
+
+// same is those of ps still running with the start time they had, as
+// they are now.
+func same(ps []model.Process) []model.Process {
+	now, err := all()
+	if err != nil {
+		return nil
+	}
+	var out []model.Process
+	for _, p := range ps {
+		i := slices.IndexFunc(now, func(q proc) bool { return q.Pid == p.Pid && q.Started.Equal(p.Started) })
+		if p.Pid > 1 && i >= 0 {
+			out = append(out, now[i].Process) // its group as it is now
+		}
+	}
+	return out
+}
+
+// signal sends sig to each of ps, and to the group of one that leads it.
+func signal(ps []model.Process, sig syscall.Signal) {
+	for _, p := range ps {
+		if p.Pgid == p.Pid {
+			_ = syscall.Kill(-p.Pid, sig)
+		}
+		_ = syscall.Kill(p.Pid, sig)
+	}
+}

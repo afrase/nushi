@@ -233,6 +233,29 @@ func commandLine(pid int) string {
 	return strings.TrimSpace(strings.Join(args, " "))
 }
 
+// Pid is the program's process id: it leads the terminal's session and
+// its own process group.
+func (t *Terminal) Pid() int { return t.cmd.Process.Pid }
+
+// Done is closed once the program has exited.
+func (t *Terminal) Done() <-chan struct{} { return t.done }
+
+// Terminate asks the foreground program to end: SIGTERM to the terminal's
+// foreground process group, the program's own when that can't be read. A
+// dev server's stop sends it before Close's hang-up (ADR 0098).
+func (t *Terminal) Terminate() error {
+	select {
+	case <-t.done:
+		return nil
+	default:
+	}
+	pg := t.foreground()
+	if pg <= 1 {
+		pg = t.cmd.Process.Pid
+	}
+	return unix.Kill(-pg, unix.SIGTERM)
+}
+
 // Write sends input to the program.
 func (t *Terminal) Write(p []byte) error {
 	_, err := t.pty.Write(p)
