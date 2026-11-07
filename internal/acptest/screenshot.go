@@ -15,7 +15,7 @@ var Screenshot = sync.OnceValue(func() []byte {
 	img := image.NewNRGBA(image.Rect(0, 0, 200, 150))
 	r := rand.New(rand.NewPCG(3, 4)) //nolint:gosec // test pixels
 	for i := range img.Pix {
-		img.Pix[i] = uint8(r.UintN(256)) //nolint:gosec // below 256
+		img.Pix[i] = uint8(r.UintN(256))
 	}
 	var b bytes.Buffer
 	if err := png.Encode(&b, img); err != nil {
