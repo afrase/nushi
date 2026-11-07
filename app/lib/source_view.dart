@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:ui' show BoxHeightStyle;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -264,7 +265,11 @@ class _SourceViewState extends State<SourceView> {
                 ),
                 Expanded(
                   child: _Line(
-                    Text.rich(text(i), strutStyle: strut),
+                    Text.rich(
+                      text(i),
+                      strutStyle: strut,
+                      selectionColor: Colors.transparent,
+                    ),
                     whole: _lines[i],
                     column: char,
                   ),
@@ -317,6 +322,7 @@ class _SourceViewState extends State<SourceView> {
                                 text(i),
                                 softWrap: false,
                                 strutStyle: strut,
+                                selectionColor: Colors.transparent,
                               ),
                               whole: _lines[i],
                               column: char,

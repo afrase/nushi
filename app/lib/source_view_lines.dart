@@ -59,18 +59,107 @@ class _LineState extends State<_Line> {
     final t = NushiTheme.of(context).t;
     return SelectionContainer(
       delegate: _delegate,
-      child: ValueListenableBuilder(
-        valueListenable: showWhitespace,
-        builder: (context, show, text) => WhitespaceMarks(
-          line: whole.length > _maxLine ? whole.substring(0, _maxLine) : whole,
-          show: show,
-          color: whitespaceColor(t),
-          column: widget.column,
-          child: text,
+      child: _LineSelection(
+        selection: _delegate,
+        color:
+            DefaultSelectionStyle.of(context).selectionColor ??
+            DefaultSelectionStyle.defaultColor,
+        child: ValueListenableBuilder(
+          valueListenable: showWhitespace,
+          builder: (context, show, text) => WhitespaceMarks(
+            line: whole.length > _maxLine
+                ? whole.substring(0, _maxLine)
+                : whole,
+            show: show,
+            color: whitespaceColor(t),
+            column: widget.column,
+            child: text,
+          ),
+          child: widget.text,
         ),
-        child: widget.text,
       ),
     );
+  }
+}
+
+/// A line's selection, painted under its text a line high. Its text draws
+/// none of its own (`Text.rich`'s `selectionColor` is clear): a paragraph
+/// paints a selection with tight boxes, which take a run's own height, and
+/// a tab's run is set larger to reach its stop ([tabStops]), so its box
+/// would reach into the lines above and below.
+class _LineSelection extends SingleChildRenderObjectWidget {
+  const new({required this.selection, required this.color, super.child});
+
+  final _LineEnd selection;
+  final Color color;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderLineSelection(selection, color);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) =>
+      (renderObject as _RenderLineSelection)
+        ..selection = selection
+        ..color = color;
+}
+
+class _RenderLineSelection extends RenderProxyBox {
+  new(this._selection, this._color);
+
+  _LineEnd _selection;
+  _LineEnd get selection => _selection;
+  set selection(_LineEnd v) {
+    if (identical(v, _selection)) return;
+    if (attached) _selection.removeListener(markNeedsPaint);
+    _selection = v;
+    if (attached) _selection.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
+  Color _color;
+  Color get color => _color;
+  set color(Color v) {
+    if (v == _color) return;
+    _color = v;
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _selection.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _selection.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final range = _selection.getSelection();
+    final p = paragraphIn(child);
+    if (range != null &&
+        range.startOffset != range.endOffset &&
+        p != null &&
+        p.hasSize) {
+      final at =
+          offset +
+          MatrixUtils.transformPoint(p.getTransformTo(this), Offset.zero);
+      final paint = Paint()..color = _color;
+      for (final box in p.getBoxesForSelection(
+        TextSelection(
+          baseOffset: min(range.startOffset, range.endOffset),
+          extentOffset: max(range.startOffset, range.endOffset),
+        ),
+        boxHeightStyle: BoxHeightStyle.max,
+      )) {
+        context.canvas.drawRect(box.toRect().shift(at), paint);
+      }
+    }
+    super.paint(context, offset);
   }
 }
 

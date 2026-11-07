@@ -123,26 +123,11 @@ class _RenderMarks extends RenderProxyBox {
     if (_show) markNeedsPaint();
   }
 
-  RenderParagraph? _paragraph() {
-    RenderParagraph? found;
-    void visit(RenderObject o) {
-      if (found != null) return;
-      if (o is RenderParagraph) {
-        found = o;
-      } else {
-        o.visitChildren(visit);
-      }
-    }
-
-    if (child case final c?) visit(c);
-    return found;
-  }
-
   @override
   void paint(PaintingContext context, Offset offset) {
     super.paint(context, offset);
     if (!_show || !_line.contains(_blank)) return;
-    final p = _paragraph();
+    final p = paragraphIn(child);
     if (p == null || !p.hasSize) return;
     final at =
         offset +
@@ -163,6 +148,22 @@ class _RenderMarks extends RenderProxyBox {
 }
 
 final _blank = RegExp('[ \t]');
+
+/// The first paragraph at or below [root]: a line's text.
+RenderParagraph? paragraphIn(RenderObject? root) {
+  RenderParagraph? found;
+  void visit(RenderObject o) {
+    if (found != null) return;
+    if (o is RenderParagraph) {
+      found = o;
+    } else {
+      o.visitChildren(visit);
+    }
+  }
+
+  if (root != null) visit(root);
+  return found;
+}
 
 /// The lines re_editor has laid out, as it tells its line numbers (the
 /// notifier its `indicatorBuilder` is handed), told on as they change:

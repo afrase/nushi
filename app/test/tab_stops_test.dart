@@ -252,6 +252,52 @@ void main() {
     expect(copied.last, contains('\t\tfmt.Println(p.label)\t// said once\n'));
   }, variant: onMac);
 
+  for (final wrap in [true, false]) {
+    testWidgets('the source view selects a tab a line high, wrap $wrap', (
+      tester,
+    ) async {
+      viewport(tester, const Size(900, 600));
+      await tester.pumpWidget(
+        themed(SourceView(tabbed, path: 'main.go', wrap: wrap)),
+      );
+      await tester.pump();
+      final from = find.textContaining('\tlabel', findRichText: true).first;
+      final to = find.textContaining('\t}', findRichText: true).first;
+      final drag = await tester.startGesture(
+        tester.getTopLeft(from) + const Offset(1, 4),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pump();
+      await drag.moveTo(tester.getTopLeft(to) + const Offset(30, 4));
+      await tester.pump();
+      await drag.up();
+      await tester.pump();
+      await render(tester, find.byType(SourceView), 'tab_selection_$wrap');
+      // What the selection paints stays in its lines, a line high,
+      // however large a tab's run is set; the text paints none of its own.
+      final line = _sourceLine(tester, 'package').size.height;
+      final color = DefaultSelectionStyle.of(
+        tester.element(find.textContaining('\tlabel', findRichText: true)),
+      ).selectionColor;
+      final painted = <Rect>[];
+      expect(
+        tester.renderObject(find.byType(SourceView)),
+        paints..everything((method, args) {
+          if (method == #drawRect &&
+              (args[1] as Paint).color.toARGB32() == color!.toARGB32()) {
+            painted.add(args[0] as Rect);
+          }
+          return true;
+        }),
+      );
+      // From '\tlabel' (line 9) to '\t}' (line 16), one rect a line.
+      expect(painted.length, greaterThanOrEqualTo(8));
+      for (final r in painted) {
+        expect(r.height, closeTo(line, 0.01), reason: '$r');
+      }
+    }, variant: onMac);
+  }
+
   testWidgets('the editor: the caret after a tab, a click past one, a copy '
       'and a save keep the real tabs', (tester) async {
     final (d, fake) = await openEditor(tester, {
