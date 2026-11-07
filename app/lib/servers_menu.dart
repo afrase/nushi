@@ -211,8 +211,12 @@ class ServerRow extends StatelessWidget {
             s.state == DevServerState.DEV_SERVER_STATE_RUNNING ||
             s.state == DevServerState.DEV_SERVER_STATE_NOT_ANSWERING);
     final failed = s.state == DevServerState.DEV_SERVER_STATE_FAILED;
+    final refused = s.state == DevServerState.DEV_SERVER_STATE_STOPPED
+        ? servers.refusedOf(chat.id, s.index)
+        : null;
     final (line, lineColor) = switch (s.state) {
       _ when s.problem.isNotEmpty => (s.problem, t.crashed),
+      _ when refused != null => (refused, t.crashed),
       DevServerState.DEV_SERVER_STATE_FAILED => (s.error, t.crashed),
       DevServerState.DEV_SERVER_STATE_NOT_ANSWERING => (
         'Not answering on port ${s.port}',

@@ -21,6 +21,14 @@ class DevServers extends ChangeNotifier {
   /// opens.
   final _onReady = <String, void Function(String url)>{};
 
+  /// Why a start the daemon refused outright (no failed run to list: five
+  /// running already, the entry gone) didn't go, by chat and entry, until
+  /// that entry is started again.
+  final _refused = <String, Map<int, String>>{};
+
+  /// Why the start of a chat's entry at [index] was refused, or null.
+  String? refusedOf(String chatId, int index) => _refused[chatId]?[index];
+
   /// A chat's servers, or null until listed.
   ListServersResponse? of(String chatId) => _lists[chatId];
 
@@ -81,6 +89,7 @@ class DevServers extends ChangeNotifier {
     int index, {
     required void Function(String url) onReady,
   }) async {
+    _refused[chatId]?.remove(index);
     try {
       final r = await client.startServer(
         StartServerRequest(chatId: chatId, index: index),
@@ -90,8 +99,10 @@ class DevServers extends ChangeNotifier {
       } else {
         _onReady[r.server.serverId] = onReady;
       }
-    } on Object catch (_) {
-      // The row says why: the daemon lists the failed start.
+    } on Object catch (e) {
+      // The row says why: the daemon lists a run that failed, and this
+      // keeps a start it refused outright.
+      (_refused[chatId] ??= {})[index] = errorText(e);
     }
     await load(chatId);
   }

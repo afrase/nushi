@@ -1,3 +1,4 @@
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_pane.dart';
@@ -80,8 +81,14 @@ class _Servers {
     return null;
   }
 
+  /// Why StartServer refuses, when it does.
+  String? refuse;
+
   StartServerResponse _start(StartServerRequest r) {
     starts.add(r);
+    if (refuse case final why?) {
+      throw ConnectException(Code.failedPrecondition, why);
+    }
     rows[r.index] = rows[r.index].deepCopy()
       ..state = DevServerState.DEV_SERVER_STATE_STARTING
       ..serverId = 'srv${r.index}';
@@ -222,6 +229,18 @@ void main() {
       ..state = DevServerState.DEV_SERVER_STATE_RUNNING;
     await _changed(tester, d);
     expect(c.previewTabs.value, hasLength(1));
+    await _close(tester);
+  }, variant: macOnly);
+
+  testWidgets('a start refused outright says why on its row', (tester) async {
+    final s = _Servers()
+      ..rows = [_server('web')]
+      ..refuse = '5 servers already run in this folder: stop one first';
+    await _pane(tester, s);
+    await _openMenu(tester);
+    await tester.tap(find.byTooltip('Run'));
+    await tester.pumpAndSettle();
+    expect(find.text(s.refuse!), findsOneWidget);
     await _close(tester);
   }, variant: macOnly);
 
