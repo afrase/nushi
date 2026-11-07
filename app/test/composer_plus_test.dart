@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/clipboard_files.dart';
 import 'package:nushi/composer.dart';
 import 'package:nushi/composer_plus.dart';
 import 'package:nushi/daemon.dart';
@@ -21,6 +22,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart' show maxImageBytes;
 import 'package:nushi/main.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -102,21 +104,27 @@ class _ReadCount extends XFile {
   }
 }
 
-/// [pickFiles], [clipboardFiles], [clipboardImage] and [sendWhole] as they
-/// were, after the test.
+/// [pickFiles] and [sendWhole] as they were, after the test.
 void _restoreFakes() {
-  final (pick, files, image, whole) = (
-    pickFiles,
-    clipboardFiles,
-    clipboardImage,
-    sendWhole,
-  );
+  final (pick, whole) = (pickFiles, sendWhole);
   addTearDown(() {
     pickFiles = pick;
-    clipboardFiles = files;
-    clipboardImage = image;
     sendWhole = whole;
   });
+}
+
+/// The clipboard as a test has it: its files and picture.
+class _Clipboard implements ClipboardFiles {
+  new({required this.onFiles, this.onImage});
+
+  final Future<List<String>> Function() onFiles;
+  final Future<Uint8List?> Function()? onImage;
+
+  @override
+  Future<List<String>> files() => onFiles();
+
+  @override
+  Future<Uint8List?> image() async => await onImage?.call();
 }
 
 Future<void> _openMenu(WidgetTester tester) async {
@@ -370,7 +378,7 @@ void main() {
     final (fake, _, chat) = await _box(tester);
     final notes = _file(chat.folder, 'notes.md');
     final clipboard = Completer<List<String>>();
-    clipboardFiles = () => clipboard.future;
+    native.clipboard = _Clipboard(onFiles: () => clipboard.future);
     await tester.enterText(find.byType(TextField), 'This one');
     await _cmd(tester, LogicalKeyboardKey.keyV);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter); // before the read
@@ -488,8 +496,10 @@ void main() {
       'one more.jpg: a message sends 20 MB at most',
     );
     expect(photo.reads, 0);
-    clipboardFiles = () async => const [];
-    clipboardImage = () async => Uint8List(10);
+    native.clipboard = _Clipboard(
+      onFiles: () async => const [],
+      onImage: () async => Uint8List(10),
+    );
     expect(
       await pasteFiles(chat, api: apiVersion),
       'the picture pasted: a message sends 20 MB at most',

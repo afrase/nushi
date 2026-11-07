@@ -1,5 +1,6 @@
 import 'package:nushi/alerts.dart';
 import 'package:nushi/back_swipe.dart';
+import 'package:nushi/clipboard_files.dart';
 import 'package:nushi/fonts.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/speller.dart';
@@ -16,6 +17,7 @@ import 'package:nushi/window_drag.dart';
 class Native {
   new({
     required this.alerts,
+    required this.clipboard,
     required this.fonts,
     required this.loginItem,
     required this.swipes,
@@ -25,6 +27,9 @@ class Native {
 
   /// Notifications and the app icon's badge.
   AlertCenter alerts;
+
+  /// The clipboard's files and picture, for ⌘V.
+  ClipboardFiles clipboard;
 
   /// The installed fonts.
   Fonts fonts;

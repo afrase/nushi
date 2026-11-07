@@ -4,11 +4,11 @@ import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show MethodChannel;
 import 'package:nushi/chat.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload;
 import 'package:nushi/images.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/widgets.dart';
@@ -88,30 +88,19 @@ bool sendWhole = kIsWeb;
 Future<List<XFile>> Function() pickFiles = () =>
     openFiles(confirmButtonText: 'Attach');
 
-/// The Mac's clipboard for what ⌘V attaches (`macos/Runner/Clipboard.swift`).
-const _clipboard = MethodChannel('nushi/clipboard');
-
-/// The clipboard's files (Finder's copy: file URLs only, not a copied web
-/// link) and its picture as PNG (none when it holds text too: cells copied
-/// from Numbers carry a PDF of themselves); tests put fakes in their places.
-Future<List<String>> Function() clipboardFiles = () async =>
-    await _clipboard.invokeListMethod<String>('files') ?? [];
-Future<Uint8List?> Function() clipboardImage = () =>
-    _clipboard.invokeMethod<Uint8List>('image');
-
 /// Attaches what ⌘V pastes beside its text: the clipboard's files, or else
-/// its image when the agent takes images. Returns what wasn't attached,
-/// or ''.
+/// its image when the agent takes images ([Native.clipboard]). Returns
+/// what wasn't attached, or ''.
 Future<String> pasteFiles(ChatState chat, {required int api}) =>
     chat.draft.images.track(() async {
-      final paths = await clipboardFiles();
+      final paths = await native.clipboard.files();
       if (paths.isNotEmpty) {
         return await attachFiles(chat, [
           for (final p in paths) XFile(p),
         ], api: api);
       }
       if (chat.canImages) {
-        if (await clipboardImage() case final image?) {
+        if (await native.clipboard.image() case final image?) {
           if (_sent(chat.draft) + maxImageBytes > maxUploadTotal) {
             return 'the picture pasted: $_tooMuch';
           }
