@@ -41,8 +41,8 @@ class _StartAtLoginState extends State<StartAtLogin> {
   @override
   void initState() {
     super.initState();
-    _call(native.loginItem.status)
-        .ignore(); // no answer (macOS 12, tests): no row
+    // No answer (macOS 12, tests): no row.
+    _call(native.loginItem.status).ignore();
   }
 
   Future<void> _call(Future<String?> Function() call) async {
