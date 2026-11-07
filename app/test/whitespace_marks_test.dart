@@ -193,6 +193,62 @@ void main() {
     await endEditor(tester, d);
   }, variant: onMac);
 
+  testWidgets('scrolled sideways, the overlay marks where the line is now, '
+      'only what shows', (tester) async {
+    showWhitespace.value = true;
+    wrapLines.value = false;
+    // Spaces at 40 and 442: one in sight, one far off to the right.
+    final line = '${'x' * 40} y${'z' * 400} w';
+    final (d, _) = await openEditor(tester, {
+      'main.go': utf8.encode('$line\n'),
+    });
+    await tester.pumpAndSettle();
+    final gutter = find.byType(DefaultCodeLineNumber);
+    CodeLineRenderParagraph laidOut() => tester
+        .widget<DefaultCodeLineNumber>(gutter)
+        .notifier
+        .value!
+        .paragraphs
+        .first;
+    final start = laidOut().offset.dx;
+    List<Offset> dots() {
+      final paint = tester.widget<CustomPaint>(
+        find.descendant(
+          of: find.byType(WhitespaceOverlay),
+          matching: find.byType(CustomPaint),
+        ),
+      );
+      final c = _Counting();
+      paint.painter!.paint(c, tester.getSize(find.byType(WhitespaceOverlay)));
+      return c.dots;
+    }
+
+    tester
+        .stateList<ScrollableState>(
+          find.descendant(
+            of: find.byType(SourceEditor),
+            matching: find.byType(Scrollable),
+          ),
+        )
+        .firstWhere((s) => s.position.axis == Axis.horizontal)
+        .position
+        .jumpTo(200);
+    await tester.pump();
+    final space = laidOut()
+        .getRangeRects(const TextRange(start: 40, end: 41))
+        .single;
+    final left =
+        tester.getTopRight(gutter).dx -
+        tester.getTopLeft(find.byType(WhitespaceOverlay)).dx;
+    // re_editor draws the line 200 to the left of where it laid it out.
+    expect(
+      dots().single.dx,
+      closeTo(left + start - 200 + space.center.dx, 0.01),
+    );
+    await render(tester, find.byType(SourceEditor), 'whitespace_scrolled');
+    await endEditor(tester, d);
+  }, variant: onMac);
+
   testWidgets('Settings › Appearance has Show whitespace, off at first', (
     tester,
   ) async {

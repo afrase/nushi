@@ -11,24 +11,28 @@ import 'package:re_editor/re_editor.dart';
 Color whitespaceColor(Tokens t) => t.textMuted.withValues(alpha: 0.45);
 
 /// Paints the marks of [line]'s spaces and tabs (Show whitespace, ADR
-/// 0096): a space a dot at its middle, a tab an arrow across the columns
-/// it spans, in [color]. [boxesOf] gives where the character at an offset
-/// is drawn, in the canvas's terms; [column] is a column's width. Only
-/// marks: the text is never changed, so copying and saving never see them.
+/// 0096), those from offset [from] to [to] (the line's end if not given):
+/// a space a dot at its middle, a tab an arrow across the columns it
+/// spans, in [color]. [boxesOf] gives where the character at an offset is
+/// drawn, in the canvas's terms; [column] is a column's width. Only marks:
+/// the text is never changed, so copying and saving never see them.
 void paintWhitespace(
   Canvas canvas,
   String line,
   Iterable<Rect> Function(int at) boxesOf,
   Color color,
-  double column,
-) {
+  double column, {
+  int from = 0,
+  int? to,
+}) {
   final dot = Paint()..color = color;
   final stroke = Paint()
     ..color = color
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
   final r = max(0.9, column * 0.13);
-  for (var i = 0; i < line.length; i++) {
+  final end = min(to ?? line.length, line.length);
+  for (var i = max(0, from); i < end; i++) {
     final c = line.codeUnitAt(i);
     if (c != 0x20 && c != 0x09) continue;
     for (final box in boxesOf(i)) {
@@ -167,23 +171,46 @@ RenderParagraph? paragraphIn(RenderObject? root) {
 
 /// The lines re_editor has laid out, as it tells its line numbers (the
 /// notifier its `indicatorBuilder` is handed), told on as they change:
-/// scrolled, edited, wrapped.
+/// scrolled, edited, wrapped; and as [across], the editor's sideways
+/// scrolling (lines unwrapped), moves them.
 class EditorLines extends ChangeNotifier {
-  CodeIndicatorValueNotifier? _from;
+  new(this.across) {
+    across.addListener(notifyListeners);
+  }
 
-  /// The lines laid out now, where the editor's text area has them.
+  /// The editor's sideways scrolling (its `CodeScrollController`'s).
+  final ScrollController across;
+
+  CodeIndicatorValueNotifier? _from;
+  double _laidOutAt = 0;
+
+  /// The lines laid out now, where the editor's text area had them then.
   CodeIndicatorValue? get value => _from?.value;
+
+  /// How far the lines moved right since they were laid out: re_editor
+  /// tells where they are as it lays them out, scrolled sideways as far
+  /// as then, but a sideways scroll only repaints them.
+  double get moved => _laidOutAt - _across;
+
+  double get _across => across.hasClients ? across.position.pixels : 0;
 
   /// Follows [from], the editor's own.
   void follow(CodeIndicatorValueNotifier from) {
     if (identical(from, _from)) return;
-    _from?.removeListener(notifyListeners);
-    _from = from..addListener(notifyListeners);
+    _from?.removeListener(_laidOut);
+    _from = from..addListener(_laidOut);
+    _laidOutAt = _across;
+  }
+
+  void _laidOut() {
+    _laidOutAt = _across;
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    _from?.removeListener(notifyListeners);
+    _from?.removeListener(_laidOut);
+    across.removeListener(notifyListeners);
     super.dispose();
   }
 }
@@ -260,23 +287,33 @@ class _EditorMarks extends CustomPainter {
       g.getTransformTo(me),
       Offset(g.size.width, 0),
     );
+    final clip = Rect.fromLTRB(origin.dx, origin.dy, size.width, size.height);
+    if (clip.isEmpty) return;
     canvas
       ..save()
-      ..clipRect(Rect.fromLTRB(origin.dx, origin.dy, size.width, size.height));
+      ..clipRect(clip);
     final code = controller.codeLines;
     for (final p in laidOut.paragraphs) {
       if (p.index >= code.length) continue;
-      final text = code[p.index].text;
-      final at = origin + p.offset;
+      final at = origin + p.offset + Offset(lines.moved, 0);
+      // Only what shows: from the character at the clip's top left to
+      // the one at its bottom right (a long line's few in sight).
+      final seen = clip.shift(-at);
+      final from = p.getPosition(Offset(max(0, seen.left), max(0, seen.top)));
+      final to = p.getPosition(
+        Offset(seen.right, min(p.height, seen.bottom) - 0.5),
+      );
       paintWhitespace(
         canvas,
-        // A line re_editor cut short draws only its start.
-        text.length > p.length ? text.substring(0, p.length) : text,
+        code[p.index].text,
         (i) => p
             .getRangeRects(TextRange(start: i, end: i + 1))
             .map((r) => r.shift(at)),
         color,
         column,
+        from: from.offset - 1,
+        // A line re_editor cut short draws only its start.
+        to: min(p.length, to.offset + 1),
       );
     }
     canvas.restore();

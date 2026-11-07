@@ -39,9 +39,17 @@ class SourceEditor extends StatefulWidget {
 class _SourceEditorState extends State<SourceEditor> {
   final _focus = FocusNode(debugLabel: 'editor');
 
+  /// The editor's scrolling, down and (lines unwrapped) across.
+  final _down = ScrollController();
+  final _across = ScrollController();
+  late final _scroll = CodeScrollController(
+    verticalScroller: _down,
+    horizontalScroller: _across,
+  );
+
   /// The lines as re_editor laid them out, and its line numbers' place:
   /// where Show whitespace marks them.
-  final _lines = EditorLines();
+  late final _lines = EditorLines(_across);
   final GlobalKey _gutter = GlobalKey();
   ModalRoute<Object?>? _route;
   bool _following = false;
@@ -63,6 +71,9 @@ class _SourceEditorState extends State<SourceEditor> {
     _unfollow();
     _focus.dispose();
     _lines.dispose();
+    _scroll.dispose();
+    _down.dispose();
+    _across.dispose();
     // Another tab, the pane closed, another chat: the focus went
     // elsewhere with the view.
     if (widget.edit.canSave) unawaited(widget.edit.save());
@@ -131,6 +142,7 @@ class _SourceEditorState extends State<SourceEditor> {
       builder: (context, _) => CodeEditor(
         controller: widget.edit.controller,
         focusNode: _focus,
+        scrollController: _scroll,
         readOnly: widget.edit.readOnly != null,
         wordWrap: widget.wrap,
         autocompleteSymbols: false,
