@@ -1,8 +1,12 @@
 import 'package:nushi/alerts_macos.dart';
+import 'package:nushi/login_item_macos.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/speller_macos.dart';
 
 /// The Mac's implementation of each native capability (ADR 0097), each
 /// over its Swift side in `macos/Runner`.
-Native macosNative() =>
-    Native(alerts: const MacAlertCenter(), speller: const MacSpeller());
+Native macosNative() => Native(
+  alerts: const MacAlertCenter(),
+  loginItem: const MacLoginItem(),
+  speller: const MacSpeller(),
+);
