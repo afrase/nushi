@@ -494,6 +494,19 @@ abstract final class NushiService {
     nushiv1nushi.FindChatFilesResponse.new,
   );
 
+  /// Writes a file of the chat's from the Mac's preview, where
+  /// WatchChatFile reads it (a link followed only where it would read the
+  /// target): a regular file with one link, 1 MiB at most, and only while
+  /// it is as the app last read it (base_sha256), or isn't there, with
+  /// must_not_exist. Otherwise Stale, with the file as it is now. Refused
+  /// to a paired device. (API 108)
+  static const writeChatFile = connect.Spec(
+    '/$name/WriteChatFile',
+    connect.StreamType.unary,
+    nushiv1nushi.WriteChatFileRequest.new,
+    nushiv1nushi.WriteChatFileResponse.new,
+  );
+
   /// Lists a folder inside the chat's folder (its worktree, for a worktree
   /// chat) for the Files pane, then again each time it changes, until the
   /// call ends: folders first, each folder's entries capped (the rest

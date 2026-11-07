@@ -132,6 +132,7 @@ type chat struct {
 	started      time.Time             // when the running turn started
 	background   int                   // subagents and background commands running, as last said
 	killed       []string              // background commands Nushi stopped since the last prompt, by the agent's id: told with the next (stopNote)
+	edited       []string              // files the user saved in the preview since the last prompt: told with the next (editNote)
 	done         chan struct{}         // closed when the running turn ends
 	sent         chan struct{}         // closed once the running turn's prompt is written
 	seq          int64                 // the last event's number

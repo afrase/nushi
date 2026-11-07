@@ -186,3 +186,17 @@ func TestWatchSendsChanges(t *testing.T) {
 	}
 	cancel()
 }
+
+// A file read says how many hard links it has: one with others isn't
+// edited in place (filesave).
+func TestReadCountsLinks(t *testing.T) {
+	dir := t.TempDir()
+	testcheck.Write(t, filepath.Join(dir, "one.txt"), "x")
+	testcheck.Write(t, filepath.Join(dir, "a.txt"), "y")
+	testcheck.NoErr(t, os.Link(filepath.Join(dir, "a.txt"), filepath.Join(dir, "b.txt")))
+	for rel, want := range map[string]uint64{"one.txt": 1, "a.txt": 2} {
+		if f, err := Read(dir, rel); err != nil || f.Links != want {
+			t.Errorf("%s: %d links, %v; want %d", rel, f.Links, err, want)
+		}
+	}
+}

@@ -29,7 +29,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 107
+const Version = 108
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -88,7 +88,7 @@ type Restart interface {
 
 // New returns the whole API, unauthenticated: the local socket wraps it in
 // WithToken.
-func New(sv Services) http.Handler { return serve(sv, "socket") }
+func New(sv Services) http.Handler { return macSocket(serve(sv, "socket")) }
 
 // serve is the API for clients that come via, its calls logged.
 func serve(sv Services, via string, interceptors ...connect.Interceptor) http.Handler {
@@ -129,6 +129,9 @@ var macOnly = map[string]bool{
 	// macOS's keychain prompt shows on the Mac's screen.
 	nushiv1connect.NushiServiceAllowJiraTokenProcedure:   true,
 	nushiv1connect.NushiServiceAllowGitHubTokenProcedure: true,
+	// The phone never edits a file (ADR 0096); WriteChatFile checks for
+	// the Mac's socket too (onMac).
+	nushiv1connect.NushiServiceWriteChatFileProcedure: true,
 }
 
 // ForDevices is the API a paired device's channel gets, which the

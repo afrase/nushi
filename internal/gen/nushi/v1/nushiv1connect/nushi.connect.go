@@ -156,6 +156,9 @@ const (
 	// NushiServiceFindChatFilesProcedure is the fully-qualified name of the NushiService's
 	// FindChatFiles RPC.
 	NushiServiceFindChatFilesProcedure = "/nushi.v1.NushiService/FindChatFiles"
+	// NushiServiceWriteChatFileProcedure is the fully-qualified name of the NushiService's
+	// WriteChatFile RPC.
+	NushiServiceWriteChatFileProcedure = "/nushi.v1.NushiService/WriteChatFile"
 	// NushiServiceWatchChatFolderProcedure is the fully-qualified name of the NushiService's
 	// WatchChatFolder RPC.
 	NushiServiceWatchChatFolderProcedure = "/nushi.v1.NushiService/WatchChatFolder"
@@ -609,6 +612,13 @@ type NushiServiceClient interface {
 	// worktree, no link out, or one its tool calls worked on), so the app
 	// links only those.
 	FindChatFiles(context.Context, *connect.Request[v1.FindChatFilesRequest]) (*connect.Response[v1.FindChatFilesResponse], error)
+	// Writes a file of the chat's from the Mac's preview, where
+	// WatchChatFile reads it (a link followed only where it would read the
+	// target): a regular file with one link, 1 MiB at most, and only while
+	// it is as the app last read it (base_sha256), or isn't there, with
+	// must_not_exist. Otherwise Stale, with the file as it is now. Refused
+	// to a paired device. (API 108)
+	WriteChatFile(context.Context, *connect.Request[v1.WriteChatFileRequest]) (*connect.Response[v1.WriteChatFileResponse], error)
 	// Lists a folder inside the chat's folder (its worktree, for a worktree
 	// chat) for the Files pane, then again each time it changes, until the
 	// call ends: folders first, each folder's entries capped (the rest
@@ -1175,6 +1185,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceFindChatFilesProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("FindChatFiles")),
+			connect.WithClientOptions(opts...),
+		),
+		writeChatFile: connect.NewClient[v1.WriteChatFileRequest, v1.WriteChatFileResponse](
+			httpClient,
+			baseURL+NushiServiceWriteChatFileProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("WriteChatFile")),
 			connect.WithClientOptions(opts...),
 		),
 		watchChatFolder: connect.NewClient[v1.WatchChatFolderRequest, v1.WatchChatFolderResponse](
@@ -1777,6 +1793,7 @@ type nushiServiceClient struct {
 	getFile                 *connect.Client[v1.GetFileRequest, v1.GetFileResponse]
 	watchChatFile           *connect.Client[v1.WatchChatFileRequest, v1.WatchChatFileResponse]
 	findChatFiles           *connect.Client[v1.FindChatFilesRequest, v1.FindChatFilesResponse]
+	writeChatFile           *connect.Client[v1.WriteChatFileRequest, v1.WriteChatFileResponse]
 	watchChatFolder         *connect.Client[v1.WatchChatFolderRequest, v1.WatchChatFolderResponse]
 	listCommits             *connect.Client[v1.ListCommitsRequest, v1.ListCommitsResponse]
 	getFolderStatus         *connect.Client[v1.GetFolderStatusRequest, v1.GetFolderStatusResponse]
@@ -2113,6 +2130,11 @@ func (c *nushiServiceClient) WatchChatFile(ctx context.Context, req *connect.Req
 // FindChatFiles calls nushi.v1.NushiService.FindChatFiles.
 func (c *nushiServiceClient) FindChatFiles(ctx context.Context, req *connect.Request[v1.FindChatFilesRequest]) (*connect.Response[v1.FindChatFilesResponse], error) {
 	return c.findChatFiles.CallUnary(ctx, req)
+}
+
+// WriteChatFile calls nushi.v1.NushiService.WriteChatFile.
+func (c *nushiServiceClient) WriteChatFile(ctx context.Context, req *connect.Request[v1.WriteChatFileRequest]) (*connect.Response[v1.WriteChatFileResponse], error) {
+	return c.writeChatFile.CallUnary(ctx, req)
 }
 
 // WatchChatFolder calls nushi.v1.NushiService.WatchChatFolder.
@@ -2761,6 +2783,13 @@ type NushiServiceHandler interface {
 	// worktree, no link out, or one its tool calls worked on), so the app
 	// links only those.
 	FindChatFiles(context.Context, *connect.Request[v1.FindChatFilesRequest]) (*connect.Response[v1.FindChatFilesResponse], error)
+	// Writes a file of the chat's from the Mac's preview, where
+	// WatchChatFile reads it (a link followed only where it would read the
+	// target): a regular file with one link, 1 MiB at most, and only while
+	// it is as the app last read it (base_sha256), or isn't there, with
+	// must_not_exist. Otherwise Stale, with the file as it is now. Refused
+	// to a paired device. (API 108)
+	WriteChatFile(context.Context, *connect.Request[v1.WriteChatFileRequest]) (*connect.Response[v1.WriteChatFileResponse], error)
 	// Lists a folder inside the chat's folder (its worktree, for a worktree
 	// chat) for the Files pane, then again each time it changes, until the
 	// call ends: folders first, each folder's entries capped (the rest
@@ -3323,6 +3352,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceFindChatFilesProcedure,
 		svc.FindChatFiles,
 		connect.WithSchema(nushiServiceMethods.ByName("FindChatFiles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceWriteChatFileHandler := connect.NewUnaryHandler(
+		NushiServiceWriteChatFileProcedure,
+		svc.WriteChatFile,
+		connect.WithSchema(nushiServiceMethods.ByName("WriteChatFile")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceWatchChatFolderHandler := connect.NewServerStreamHandler(
@@ -3971,6 +4006,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceWatchChatFileHandler.ServeHTTP(w, r)
 		case NushiServiceFindChatFilesProcedure:
 			nushiServiceFindChatFilesHandler.ServeHTTP(w, r)
+		case NushiServiceWriteChatFileProcedure:
+			nushiServiceWriteChatFileHandler.ServeHTTP(w, r)
 		case NushiServiceWatchChatFolderProcedure:
 			nushiServiceWatchChatFolderHandler.ServeHTTP(w, r)
 		case NushiServiceListCommitsProcedure:
@@ -4356,6 +4393,10 @@ func (UnimplementedNushiServiceHandler) WatchChatFile(context.Context, *connect.
 
 func (UnimplementedNushiServiceHandler) FindChatFiles(context.Context, *connect.Request[v1.FindChatFilesRequest]) (*connect.Response[v1.FindChatFilesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.FindChatFiles is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) WriteChatFile(context.Context, *connect.Request[v1.WriteChatFileRequest]) (*connect.Response[v1.WriteChatFileResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WriteChatFile is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) WatchChatFolder(context.Context, *connect.Request[v1.WatchChatFolderRequest], *connect.ServerStream[v1.WatchChatFolderResponse]) error {

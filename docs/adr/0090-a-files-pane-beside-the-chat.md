@@ -1,6 +1,6 @@
 # 0090. A Files pane beside the chat, listed by the daemon
 
-Status: accepted, 2026-11-04.
+Status: accepted, 2026-11-04. [0096](0096-editing-in-the-preview.md) amends it: a file it opens can be edited.
 
 ## Context
 The roadmap's Files view wanted "a file tree of the chat's folder to open any file", for seeing what the agent made as Claude Code's artifacts do. The approved mocks (the roadmap links them) draw the preview pane beside the chat and no tree. A tree needs the folder's entries; the app shouldn't read the disk itself (the phone can't, and the daemon may one day run a chat elsewhere), and the phone's requests come through the relay.

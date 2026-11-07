@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/afrase/nushi/internal/filesave"
 	"github.com/afrase/nushi/internal/filewatch"
 	"github.com/afrase/nushi/internal/folderlist"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -26,8 +27,12 @@ func (s *server) WatchChatFile(ctx context.Context, req *connect.Request[nushiv1
 	}
 	var sendErr error
 	err = filewatch.Watch(ctx, root, rel, time.Second, func(f filewatch.File) error {
-		sendErr = stream.Send(&nushiv1.WatchChatFileResponse{Path: f.Path, Data: f.Data, Size: f.Size,
-			TooLarge: f.TooLarge, Missing: f.Missing})
+		msg := &nushiv1.WatchChatFileResponse{Path: f.Path, Data: f.Data, Size: f.Size,
+			TooLarge: f.TooLarge, Missing: f.Missing}
+		if f.Data != nil {
+			msg.Sha256, msg.Editable = filesave.Sum(f.Data), filesave.Editable(f.Size, f.Links)
+		}
+		sendErr = stream.Send(msg)
 		return sendErr
 	})
 	if err == nil || sendErr != nil {

@@ -66,6 +66,7 @@ var noteTexts = []*regexp.Regexp{
 	regexp.MustCompile(`^\[Nushi\] This worktree's branch was renamed from \S+ to \S+\. Use the new name\.\s*`),
 	regexp.MustCompile(`^\[Nushi\] This folder's branch changed from \S+ to \S+\. Work on \S+ from now on\.\s*`),
 	regexp.MustCompile("^\\[Nushi\\] This chat moved to `[^`\n]*`(?:, on branch \\S+)?\\. Work there from now on\\.\\s*"),
+	regexp.MustCompile("^\\[Nushi\\] The user edited `[^`\n]*`(?:, `[^`\n]*`)* in Nushi since your last turn; re-read (?:it|them) before changing (?:it|them)\\.\\s*"),
 }
 
 // unnoted is a replayed user message's text without the notes that went
@@ -103,6 +104,7 @@ type notes struct {
 	renamed  []string // the renames' lines not told yet, when the branch was renamed
 	switched []string // the moves' and switches' lines not told yet, when there's one
 	stopped  []string // the background commands Nushi stopped since the last prompt
+	edited   []string // the files the user saved in the preview since the last prompt
 }
 
 // notesLocked takes what the notes for the prompt starting now need; nil
@@ -112,8 +114,8 @@ func (c *chat) notesLocked() *notes {
 		return nil
 	}
 	sess := c.record
-	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), stopped: c.killed}
-	c.killed = nil
+	n := &notes{sess: sess, git: c.worktrees, log: c.logLocked(), stopped: c.killed, edited: c.edited}
+	c.killed, c.edited = nil, nil
 	if wt := sess.Worktree; wt != nil && wt.Told != "" && wt.Told != wt.Branch {
 		n.renamed = c.untoldLocked("branch_renamed")
 	}
@@ -132,6 +134,9 @@ func (n *notes) blocks() ([]acp.ContentBlock, *told) {
 	var blocks []acp.ContentBlock
 	for _, id := range n.stopped {
 		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: stopNote(id)}})
+	}
+	if len(n.edited) > 0 {
+		blocks = append(blocks, acp.ContentBlock{Type: "text", Text: &acp.TextContent{Text: editNote(n.edited)}})
 	}
 	place, p := n.place()
 	if place != nil {

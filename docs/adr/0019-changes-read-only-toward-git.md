@@ -1,6 +1,6 @@
 # 0019. The Changes view is read-only toward git
 
-[0079](0079-stage-and-commit-from-changes.md) amends this: Uncommitted stages and commits, from a click. Checking out and pushing stay out.
+[0079](0079-stage-and-commit-from-changes.md) amends this: Uncommitted stages and commits, from a click. Checking out and pushing stay out. [0096](0096-editing-in-the-preview.md) amends it too: the preview edits a file, saved through the daemon.
 
 ## Context
 The Changes view shows a chat's work: what's uncommitted, the branch since it left its base, and its commits. Diff tools often also stage, commit, check out or push.

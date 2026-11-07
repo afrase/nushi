@@ -194,6 +194,13 @@ service NushiService {
   // worktree, no link out, or one its tool calls worked on), so the app
   // links only those.
   rpc FindChatFiles(FindChatFilesRequest) returns (FindChatFilesResponse);
+  // Writes a file of the chat's from the Mac's preview, where
+  // WatchChatFile reads it (a link followed only where it would read the
+  // target): a regular file with one link, 1 MiB at most, and only while
+  // it is as the app last read it (base_sha256), or isn't there, with
+  // must_not_exist. Otherwise Stale, with the file as it is now. Refused
+  // to a paired device. (API 108)
+  rpc WriteChatFile(WriteChatFileRequest) returns (WriteChatFileResponse);
   // Lists a folder inside the chat's folder (its worktree, for a worktree
   // chat) for the Files pane, then again each time it changes, until the
   // call ends: folders first, each folder's entries capped (the rest
@@ -1840,6 +1847,42 @@ message WatchChatFileResponse {
   bool too_large = 4;
   // It isn't there, or isn't a regular file (yet).
   bool missing = 5;
+  // The sha256 of data, in hex, when data is sent. (API 108)
+  string sha256 = 6;
+  // WriteChatFile may write it: a regular file with one link, 1 MiB at
+  // most. The app checks its text too. (API 108)
+  bool editable = 7;
+}
+
+message WriteChatFileRequest {
+  string chat_id = 1;
+  // As WatchChatFile takes it.
+  string path = 2;
+  // The file's new bytes, 1 MiB at most.
+  bytes data = 3;
+  // The sha256 (hex) of the file as the app last read it.
+  string base_sha256 = 4;
+  // Write it only if it isn't there: it was deleted since it was read.
+  bool must_not_exist = 5;
+}
+
+message WriteChatFileResponse {
+  // Written, or already holding data.
+  message Saved {
+    // The sha256 of the file as it is now.
+    string sha256 = 1;
+  }
+  // Not written: the file changed since the app read it.
+  message Stale {
+    // The file as it is now, unless it's missing.
+    string sha256 = 1;
+    bytes data = 2;
+    bool missing = 3;
+  }
+  oneof result {
+    Saved saved = 1;
+    Stale stale = 2;
+  }
 }
 
 message GetFileResponse {

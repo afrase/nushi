@@ -13439,6 +13439,8 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
     $fixnum.Int64? size,
     $core.bool? tooLarge,
     $core.bool? missing,
+    $core.String? sha256,
+    $core.bool? editable,
   }) {
     final result = WatchChatFileResponse._();
     if (path != null) result.path = path;
@@ -13446,6 +13448,8 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
     if (size != null) result.size = size;
     if (tooLarge != null) result.tooLarge = tooLarge;
     if (missing != null) result.missing = missing;
+    if (sha256 != null) result.sha256 = sha256;
+    if (editable != null) result.editable = editable;
     return result;
   }
 
@@ -13468,6 +13472,8 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
     ..aInt64(3, _omitFieldNames ? '' : 'size')
     ..aOB(4, _omitFieldNames ? '' : 'tooLarge')
     ..aOB(5, _omitFieldNames ? '' : 'missing')
+    ..aOS(6, _omitFieldNames ? '' : 'sha256')
+    ..aOB(7, _omitFieldNames ? '' : 'editable')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -13542,6 +13548,387 @@ class WatchChatFileResponse extends $pb.GeneratedMessage {
   $core.bool hasMissing() => $_has(4);
   @$pb.TagNumber(5)
   void clearMissing() => $_clearField(5);
+
+  /// The sha256 of data, in hex, when data is sent. (API 108)
+  @$pb.TagNumber(6)
+  $core.String get sha256 => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set sha256($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSha256() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSha256() => $_clearField(6);
+
+  /// WriteChatFile may write it: a regular file with one link, 1 MiB at
+  /// most. The app checks its text too. (API 108)
+  @$pb.TagNumber(7)
+  $core.bool get editable => $_getBF(6);
+  @$pb.TagNumber(7)
+  set editable($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasEditable() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearEditable() => $_clearField(7);
+}
+
+class WriteChatFileRequest extends $pb.GeneratedMessage {
+  factory WriteChatFileRequest({
+    $core.String? chatId,
+    $core.String? path,
+    $core.List<$core.int>? data,
+    $core.String? baseSha256,
+    $core.bool? mustNotExist,
+  }) {
+    final result = WriteChatFileRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (path != null) result.path = path;
+    if (data != null) result.data = data;
+    if (baseSha256 != null) result.baseSha256 = baseSha256;
+    if (mustNotExist != null) result.mustNotExist = mustNotExist;
+    return result;
+  }
+
+  WriteChatFileRequest._();
+
+  factory WriteChatFileRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileRequest()..mergeFromBuffer(data, registry);
+  factory WriteChatFileRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WriteChatFileRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WriteChatFileRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'path')
+    ..a<$core.List<$core.int>>(
+        3, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aOS(4, _omitFieldNames ? '' : 'baseSha256')
+    ..aOB(5, _omitFieldNames ? '' : 'mustNotExist')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileRequest copyWith(void Function(WriteChatFileRequest) updates) =>
+      super.copyWith((message) => updates(message as WriteChatFileRequest))
+          as WriteChatFileRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WriteChatFileRequest() / WriteChatFileRequest.new instead')
+  static WriteChatFileRequest create() => WriteChatFileRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WriteChatFileRequest._();
+  @$core.override
+  WriteChatFileRequest createEmptyInstance() => WriteChatFileRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WriteChatFileRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WriteChatFileRequest>(
+          WriteChatFileRequest.$_createMessage);
+  static WriteChatFileRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// As WatchChatFile takes it.
+  @$pb.TagNumber(2)
+  $core.String get path => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set path($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPath() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPath() => $_clearField(2);
+
+  /// The file's new bytes, 1 MiB at most.
+  @$pb.TagNumber(3)
+  $core.List<$core.int> get data => $_getN(2);
+  @$pb.TagNumber(3)
+  set data($core.List<$core.int> value) => $_setBytes(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasData() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearData() => $_clearField(3);
+
+  /// The sha256 (hex) of the file as the app last read it.
+  @$pb.TagNumber(4)
+  $core.String get baseSha256 => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set baseSha256($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBaseSha256() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBaseSha256() => $_clearField(4);
+
+  /// Write it only if it isn't there: it was deleted since it was read.
+  @$pb.TagNumber(5)
+  $core.bool get mustNotExist => $_getBF(4);
+  @$pb.TagNumber(5)
+  set mustNotExist($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasMustNotExist() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearMustNotExist() => $_clearField(5);
+}
+
+/// Written, or already holding data.
+class WriteChatFileResponse_Saved extends $pb.GeneratedMessage {
+  factory WriteChatFileResponse_Saved({
+    $core.String? sha256,
+  }) {
+    final result = WriteChatFileResponse_Saved._();
+    if (sha256 != null) result.sha256 = sha256;
+    return result;
+  }
+
+  WriteChatFileResponse_Saved._();
+
+  factory WriteChatFileResponse_Saved.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileResponse_Saved()..mergeFromBuffer(data, registry);
+  factory WriteChatFileResponse_Saved.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileResponse_Saved()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WriteChatFileResponse.Saved',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WriteChatFileResponse_Saved.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'sha256')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileResponse_Saved clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileResponse_Saved copyWith(
+          void Function(WriteChatFileResponse_Saved) updates) =>
+      super.copyWith(
+              (message) => updates(message as WriteChatFileResponse_Saved))
+          as WriteChatFileResponse_Saved;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WriteChatFileResponse_Saved() / WriteChatFileResponse_Saved.new instead')
+  static WriteChatFileResponse_Saved create() =>
+      WriteChatFileResponse_Saved._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      WriteChatFileResponse_Saved._();
+  @$core.override
+  WriteChatFileResponse_Saved createEmptyInstance() =>
+      WriteChatFileResponse_Saved._();
+  @$core.pragma('dart2js:noInline')
+  static WriteChatFileResponse_Saved getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WriteChatFileResponse_Saved>(
+          WriteChatFileResponse_Saved.$_createMessage);
+  static WriteChatFileResponse_Saved? _defaultInstance;
+
+  /// The sha256 of the file as it is now.
+  @$pb.TagNumber(1)
+  $core.String get sha256 => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set sha256($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSha256() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSha256() => $_clearField(1);
+}
+
+/// Not written: the file changed since the app read it.
+class WriteChatFileResponse_Stale extends $pb.GeneratedMessage {
+  factory WriteChatFileResponse_Stale({
+    $core.String? sha256,
+    $core.List<$core.int>? data,
+    $core.bool? missing,
+  }) {
+    final result = WriteChatFileResponse_Stale._();
+    if (sha256 != null) result.sha256 = sha256;
+    if (data != null) result.data = data;
+    if (missing != null) result.missing = missing;
+    return result;
+  }
+
+  WriteChatFileResponse_Stale._();
+
+  factory WriteChatFileResponse_Stale.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileResponse_Stale()..mergeFromBuffer(data, registry);
+  factory WriteChatFileResponse_Stale.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileResponse_Stale()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WriteChatFileResponse.Stale',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WriteChatFileResponse_Stale.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'sha256')
+    ..a<$core.List<$core.int>>(
+        2, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aOB(3, _omitFieldNames ? '' : 'missing')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileResponse_Stale clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileResponse_Stale copyWith(
+          void Function(WriteChatFileResponse_Stale) updates) =>
+      super.copyWith(
+              (message) => updates(message as WriteChatFileResponse_Stale))
+          as WriteChatFileResponse_Stale;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WriteChatFileResponse_Stale() / WriteChatFileResponse_Stale.new instead')
+  static WriteChatFileResponse_Stale create() =>
+      WriteChatFileResponse_Stale._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      WriteChatFileResponse_Stale._();
+  @$core.override
+  WriteChatFileResponse_Stale createEmptyInstance() =>
+      WriteChatFileResponse_Stale._();
+  @$core.pragma('dart2js:noInline')
+  static WriteChatFileResponse_Stale getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WriteChatFileResponse_Stale>(
+          WriteChatFileResponse_Stale.$_createMessage);
+  static WriteChatFileResponse_Stale? _defaultInstance;
+
+  /// The file as it is now, unless it's missing.
+  @$pb.TagNumber(1)
+  $core.String get sha256 => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set sha256($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSha256() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSha256() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get data => $_getN(1);
+  @$pb.TagNumber(2)
+  set data($core.List<$core.int> value) => $_setBytes(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasData() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearData() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get missing => $_getBF(2);
+  @$pb.TagNumber(3)
+  set missing($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMissing() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMissing() => $_clearField(3);
+}
+
+enum WriteChatFileResponse_Result { saved, stale, notSet }
+
+class WriteChatFileResponse extends $pb.GeneratedMessage {
+  factory WriteChatFileResponse({
+    WriteChatFileResponse_Saved? saved,
+    WriteChatFileResponse_Stale? stale,
+  }) {
+    final result = WriteChatFileResponse._();
+    if (saved != null) result.saved = saved;
+    if (stale != null) result.stale = stale;
+    return result;
+  }
+
+  WriteChatFileResponse._();
+
+  factory WriteChatFileResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileResponse()..mergeFromBuffer(data, registry);
+  factory WriteChatFileResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WriteChatFileResponse()..mergeFromJson(json, registry);
+
+  static const $core.Map<$core.int, WriteChatFileResponse_Result>
+      _WriteChatFileResponse_ResultByTag = {
+    1: WriteChatFileResponse_Result.saved,
+    2: WriteChatFileResponse_Result.stale,
+    0: WriteChatFileResponse_Result.notSet
+  };
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WriteChatFileResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WriteChatFileResponse.$_createMessage)
+    ..oo(0, [1, 2])
+    ..aOM<WriteChatFileResponse_Saved>(1, _omitFieldNames ? '' : 'saved',
+        subBuilder: WriteChatFileResponse_Saved.$_createMessage)
+    ..aOM<WriteChatFileResponse_Stale>(2, _omitFieldNames ? '' : 'stale',
+        subBuilder: WriteChatFileResponse_Stale.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WriteChatFileResponse copyWith(
+          void Function(WriteChatFileResponse) updates) =>
+      super.copyWith((message) => updates(message as WriteChatFileResponse))
+          as WriteChatFileResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WriteChatFileResponse() / WriteChatFileResponse.new instead')
+  static WriteChatFileResponse create() => WriteChatFileResponse._();
+  static $pb.GeneratedMessage $_createMessage() => WriteChatFileResponse._();
+  @$core.override
+  WriteChatFileResponse createEmptyInstance() => WriteChatFileResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WriteChatFileResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WriteChatFileResponse>(
+          WriteChatFileResponse.$_createMessage);
+  static WriteChatFileResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  @$pb.TagNumber(2)
+  WriteChatFileResponse_Result whichResult() =>
+      _WriteChatFileResponse_ResultByTag[$_whichOneof(0)]!;
+  @$pb.TagNumber(1)
+  @$pb.TagNumber(2)
+  void clearResult() => $_clearField($_whichOneof(0));
+
+  @$pb.TagNumber(1)
+  WriteChatFileResponse_Saved get saved => $_getN(0);
+  @$pb.TagNumber(1)
+  set saved(WriteChatFileResponse_Saved value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSaved() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSaved() => $_clearField(1);
+  @$pb.TagNumber(1)
+  WriteChatFileResponse_Saved ensureSaved() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  WriteChatFileResponse_Stale get stale => $_getN(1);
+  @$pb.TagNumber(2)
+  set stale(WriteChatFileResponse_Stale value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStale() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStale() => $_clearField(2);
+  @$pb.TagNumber(2)
+  WriteChatFileResponse_Stale ensureStale() => $_ensure(1);
 }
 
 class GetFileResponse extends $pb.GeneratedMessage {
@@ -30301,6 +30688,17 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, FindChatFilesRequest request) =>
       _client.invoke<FindChatFilesResponse>(ctx, 'NushiService',
           'FindChatFiles', request, FindChatFilesResponse());
+
+  /// Writes a file of the chat's from the Mac's preview, where
+  /// WatchChatFile reads it (a link followed only where it would read the
+  /// target): a regular file with one link, 1 MiB at most, and only while
+  /// it is as the app last read it (base_sha256), or isn't there, with
+  /// must_not_exist. Otherwise Stale, with the file as it is now. Refused
+  /// to a paired device. (API 108)
+  $async.Future<WriteChatFileResponse> writeChatFile(
+          $pb.ClientContext? ctx, WriteChatFileRequest request) =>
+      _client.invoke<WriteChatFileResponse>(ctx, 'NushiService',
+          'WriteChatFile', request, WriteChatFileResponse());
 
   /// Lists a folder inside the chat's folder (its worktree, for a worktree
   /// chat) for the Files pane, then again each time it changes, until the

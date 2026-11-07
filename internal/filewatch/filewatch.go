@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/afrase/nushi/internal/regularfile"
@@ -26,7 +27,8 @@ type File struct {
 	Data     []byte // nil when TooLarge or Missing
 	Size     int64
 	TooLarge bool
-	Missing  bool // not there, or not a regular file
+	Missing  bool   // not there, or not a regular file
+	Links    uint64 // its hard links, as the file read had them
 }
 
 // Locate finds which of roots (absolute folders) holds path (absolute, or
@@ -140,6 +142,9 @@ func Read(root, rel string) (File, error) {
 		return f, err
 	}
 	f.Data, f.Size = b, int64(len(b))
+	if st, ok := fi.Sys().(*syscall.Stat_t); ok {
+		f.Links = uint64(st.Nlink)
+	}
 	return f, nil
 }
 
