@@ -12,7 +12,8 @@
 // the user's), `lsof -nP -iTCP -sTCP:LISTEN -Fpn` 27.7–28.2 ms, and the
 // two listed the same sockets. lsof's -Fpn also writes an IPv4 and an
 // IPv6 wildcard alike (`*:p`) and never says whether an IPv6 one takes
-// IPv4; libproc's flags do.
+// IPv4; libproc's flags do. libproc is macOS's (libproc_darwin.go):
+// another OS lists none (listeners_other.go, ADR 0097).
 //
 // A free port is told by dialing it, not by listening on it: Go's
 // net.Listen sets SO_REUSEADDR, and macOS then lets it bind beside another
