@@ -1,3 +1,4 @@
+import 'package:nushi/alerts.dart';
 import 'package:nushi/speller.dart';
 
 /// The app's native edge (ADR 0097): what it asks of the machine it runs
@@ -9,7 +10,10 @@ import 'package:nushi/speller.dart';
 /// (`flutter_test_config.dart`) and puts a fake in a capability's place.
 /// The phone's web app reaches none of it.
 class Native {
-  new({this.speller});
+  new({required this.alerts, this.speller});
+
+  /// Notifications and the app icon's badge.
+  AlertCenter alerts;
 
   /// The spell checker, where there's one (ADR 0083).
   Speller? speller;

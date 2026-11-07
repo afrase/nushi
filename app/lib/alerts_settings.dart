@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:nushi/alerts.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
@@ -11,9 +11,7 @@ import 'package:nushi/widgets.dart';
 /// the Dock badge (`alerts.dart`); and, when macOS has them off for Nushi,
 /// a way to its settings.
 class NotificationsGroup extends StatefulWidget {
-  const new({super.key, this.channel = alertsChannel});
-
-  final MethodChannel channel;
+  const new({super.key});
 
   @override
   State<NotificationsGroup> createState() => _NotificationsGroupState();
@@ -25,7 +23,7 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
   @override
   void initState() {
     super.initState();
-    alertsAllowed(widget.channel).then((a) {
+    alertsAllowed().then((a) {
       if (mounted) setState(() => _allowed = a);
     }).ignore();
   }
@@ -65,10 +63,7 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
               descriptionColor: t.needs,
               control: Button(
                 label: 'Open Notifications…',
-                onPressed: () => tryOrShow(
-                  context,
-                  () => widget.channel.invokeMethod<void>('openSettings'),
-                ),
+                onPressed: () => tryOrShow(context, native.alerts.openSettings),
               ),
             ),
           row(

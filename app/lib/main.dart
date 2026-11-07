@@ -73,13 +73,13 @@ class NushiApp extends StatefulWidget {
 class _NushiAppState extends State<NushiApp> {
   final _navigator = GlobalKey<NavigatorState>();
   late final AppLifecycleListener _lifecycle;
-  late final MacAlerts _alerts;
+  late final ChatAlerts _alerts;
 
   @override
   void initState() {
     super.initState();
     watchPairings(_navigator, widget.daemon.client);
-    _alerts = MacAlerts(widget.daemon);
+    _alerts = ChatAlerts(widget.daemon);
     widget.daemon.addListener(_pinChanged);
     sidebarHidden.addListener(_sidebarChanged);
     wrapLines.addListener(_sidebarChanged);

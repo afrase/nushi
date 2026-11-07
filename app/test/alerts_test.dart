@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/alerts.dart';
+import 'package:nushi/alerts_macos.dart';
 import 'package:nushi/alerts_settings.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -77,7 +78,7 @@ EventsResponse _item(String id, ItemKind kind, String status, [String? item]) =>
 
 /// The alerts on a daemon with chats a (Claude's) and b (Codex's); with
 /// [api], a daemon of that API version.
-Future<(FakeDaemon, Daemon, MacAlerts)> _connect(
+Future<(FakeDaemon, Daemon, ChatAlerts)> _connect(
   WidgetTester tester, {
   int? api,
 }) async {
@@ -90,7 +91,7 @@ Future<(FakeDaemon, Daemon, MacAlerts)> _connect(
         input is PingRequest ? PingResponse(apiVersion: api) : null;
   }
   final d = await fake.connect(tester);
-  return (fake, d, MacAlerts(d));
+  return (fake, d, ChatAlerts(d));
 }
 
 void main() {
@@ -328,7 +329,7 @@ void main() {
         chat('b', 'codex', 'Tidy the docs', age: 1),
       ]),
     );
-    final alerts = MacAlerts(d);
+    final alerts = ChatAlerts(d);
     expect(d.chatsListed, isFalse);
     await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .handlePlatformMessage(

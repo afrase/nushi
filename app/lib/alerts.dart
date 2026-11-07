@@ -1,14 +1,45 @@
 import 'dart:async';
 
-import 'package:flutter/services.dart';
-
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 
-/// The app's Swift side of notifications and the Dock badge.
-const alertsChannel = MethodChannel('nushi/alerts');
+/// What posts notifications and badges the app's icon (ADR 0097): on the
+/// Mac, its Notification Center and Dock (`alerts_macos.dart`).
+abstract interface class AlertCenter {
+  /// Posts a notification named [id] (one posted with the same id takes
+  /// the place of the one before) for chat [chat], with [title] over
+  /// [body], and the notification sound when [sound].
+  Future<void> post({
+    required String id,
+    required String chat,
+    required String title,
+    required String body,
+    required bool sound,
+  });
+
+  /// Takes back the notifications named [ids].
+  Future<void> withdraw(List<String> ids);
+
+  /// Takes back every notification for chat [chat].
+  Future<void> clear(String chat);
+
+  /// Puts [label] on the app's icon ('' for none).
+  Future<void> badge(String label);
+
+  /// Whether the system lets the app notify, in the Mac's words:
+  /// "authorized", "denied" or "notDetermined" (it asks on the first one).
+  Future<String?> allowed();
+
+  /// Opens the system's settings for the app's notifications.
+  Future<void> openSettings();
+
+  /// Has [open] called with a chat's id when one of its notifications is
+  /// clicked; null stops.
+  void onOpen(void Function(String chat)? open);
+}
 
 /// The API from which the daemon says how each turn ended
 /// (ChatStatus.ended, failure). While an older daemon waits to restart (ADR
@@ -39,7 +70,8 @@ enum AlertKind {
   };
 }
 
-/// The Mac's notifications and Dock badge, from the chats' events as the
+/// The notifications and the app icon's badge ([AlertCenter], the Mac's
+/// Notification Center and Dock), from the chats' events as the
 /// daemon's pushes to the phone are (`features/remote`'s notifier): a
 /// permission prompt or a question when it comes, and a turn's end
 /// [finishedWait] later as the daemon judged it (ChatStatus.ended):
@@ -51,18 +83,20 @@ enum AlertKind {
 /// leaves the Mac: macOS shows them. The badge is the number of chats that
 /// need you. macOS asks for permission on the first
 /// notification, not at launch.
-class MacAlerts {
-  new(this.daemon, {this.channel = alertsChannel}) {
+class ChatAlerts {
+  new(this.daemon) {
     daemon
       ..onEvent = follow
       ..addListener(_changed);
-    channel.setMethodCallHandler(_called);
+    center.onOpen(_open);
     dockBadge.addListener(_badge);
     _changed();
   }
 
   final Daemon daemon;
-  final MethodChannel channel;
+
+  /// What posts them: the platform's ([Native.alerts]).
+  final AlertCenter center = native.alerts;
 
   /// The phone's pushes wait the same: a turn the agent goes straight on
   /// from isn't over.
@@ -99,7 +133,7 @@ class MacAlerts {
       ..onEvent = null
       ..removeListener(_changed);
     dockBadge.removeListener(_badge);
-    channel.setMethodCallHandler(null);
+    center.onOpen(null);
     for (final t in _finishing.values) {
       t.cancel();
     }
@@ -188,7 +222,7 @@ class MacAlerts {
       // A turn's end the user doesn't want still takes the place of the
       // one before: a Try again that worked leaves no failure behind.
       if (kind.slot == 'ended' && _posted.contains(id)) {
-        channel.invokeMethod<Object?>('withdraw', ['$id/ended']).ignore();
+        center.withdraw(['$id/ended']).ignore();
       }
       return;
     }
@@ -197,13 +231,17 @@ class MacAlerts {
     if (kind == AlertKind.permission || kind == AlertKind.question) {
       _needs[id] = chat.waiting;
     }
-    channel.invokeMethod<Object?>('post', {
-      'id': '$id/${kind.slot}',
-      'chat': id,
-      'title': '${chat.agentName}${kind.words}',
-      'body': detail.isEmpty ? chat.shownTitle : '${chat.shownTitle}\n$detail',
-      'sound': alertSound.value,
-    }).ignore();
+    center
+        .post(
+          id: '$id/${kind.slot}',
+          chat: id,
+          title: '${chat.agentName}${kind.words}',
+          body: detail.isEmpty
+              ? chat.shownTitle
+              : '${chat.shownTitle}\n$detail',
+          sound: alertSound.value,
+        )
+        .ignore();
   }
 
   /// The daemon changed (a chat picked, listed, gone): the badge, and the
@@ -222,7 +260,7 @@ class MacAlerts {
   void _clearShown() {
     final id = daemon.macView.showing;
     if (!_focused || !_posted.remove(id)) return;
-    channel.invokeMethod<Object?>('clear', id).ignore();
+    center.clear(id).ignore();
   }
 
   /// The Dock badge: the chats that need you, or none. A chat that no
@@ -238,7 +276,7 @@ class MacAlerts {
         _needs[id] = true;
       } else if (seen || !daemon.chats.containsKey(id)) {
         _needs.remove(id);
-        channel.invokeMethod<Object?>('withdraw', [
+        center.withdraw([
           '$id/${AlertKind.permission.name}',
           '$id/${AlertKind.question.name}',
         ]).ignore();
@@ -248,33 +286,28 @@ class MacAlerts {
     if (label == _badgeShown) return;
     _badgeShown = label;
     unawaited(
-      channel
-          .invokeMethod<Object?>('badge', label)
+      center
+          .badge(label)
           .then((_) {}, onError: (Object _) => _badgeShown = null),
     );
   }
 
   /// A notification clicked: its chat opens, or once the daemon has listed
   /// the chats, when it hasn't yet.
-  Future<Object?> _called(MethodCall call) async {
-    if (call.method == 'open' && call.arguments is String) {
-      final id = call.arguments as String;
-      if (daemon.chats.containsKey(id)) {
-        daemon.select(id);
-      } else if (!daemon.chatsListed) {
-        _opening = id;
-      }
+  void _open(String id) {
+    if (daemon.chats.containsKey(id)) {
+      daemon.select(id);
+    } else if (!daemon.chatsListed) {
+      _opening = id;
     }
-    return null;
   }
 }
 
-/// Whether macOS lets Nushi notify: "authorized", "denied",
-/// "notDetermined" (it asks on the first one), or null when the Swift
-/// side doesn't answer.
-Future<String?> alertsAllowed([MethodChannel channel = alertsChannel]) async {
+/// Whether the system lets Nushi notify ([AlertCenter.allowed]), or null
+/// when it doesn't answer.
+Future<String?> alertsAllowed() async {
   try {
-    return await channel.invokeMethod<String>('status');
+    return await native.alerts.allowed();
   } on Object {
     return null;
   }

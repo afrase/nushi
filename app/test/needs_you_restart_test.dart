@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/alerts.dart';
+import 'package:nushi/alerts_macos.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
@@ -58,7 +59,7 @@ void main() {
             : null);
       final d = await fake.connect(tester);
       if (shown) d.select('a');
-      final alerts = MacAlerts(d)..focused = false;
+      final alerts = ChatAlerts(d)..focused = false;
       await tester.pumpWidget(
         themed(SizedBox(width: 260, child: Sidebar(daemon: d)), still: true),
       );
