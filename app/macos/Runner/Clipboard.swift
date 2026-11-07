@@ -1,6 +1,6 @@
 import AppKit
 
-/// What the composer's ⌘V attaches beside its text (lib/attached_files.dart),
+/// What the composer's ⌘V attaches beside its text (lib/clipboard_files_macos.dart),
 /// read from a pasteboard on the `nushi/clipboard` channel (AppDelegate).
 /// AppKit only, so `make test-window` builds it without Flutter.
 enum Clipboard {

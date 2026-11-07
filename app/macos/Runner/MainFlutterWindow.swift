@@ -54,7 +54,7 @@ class MainFlutterWindow: NSWindow {
     // Opens an address in the default browser (a preview's Open in browser and
     // its links): the app that opens https, for a file too, so a file a page
     // links is never run by the app its type has, and that app's name. How long ago the user last
-    // pressed or typed in a web view (lib/web_page.dart): Flutter never sees
+    // pressed or typed in a web view (lib/web_views_macos.dart): Flutter never sees
     // those, WebKit takes them. A file preview's web view made cookieless
     // (PreviewCookies). A browser tab's loads as they commit (CommitWatch), and
     // its block on the local network (LocalNetwork). Its ⋯ menu's screenshot
@@ -388,7 +388,7 @@ enum PreviewCookies {
   private static let rules = #"[{"trigger":{"url-filter":".*"},"action":{"type":"block-cookies"}}]"#
 
   /// Adds the rule list to the plugin's web view [id] (`webViewIdentifier`,
-  /// lib/web_page.dart), then answers: nil once it holds, an error when it
+  /// lib/web_page_macos.dart), then answers: nil once it holds, an error when it
   /// can't, and the preview then loads nothing.
   static func block(_ id: Int64, registry: FlutterPluginRegistry, _ result: @escaping FlutterResult) {
     guard let web = FWFWebViewFlutterWKWebViewExternalAPI.webView(forIdentifier: id, withPluginRegistry: registry) else {
