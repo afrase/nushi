@@ -38,6 +38,8 @@ tools/release.sh 1.2.0   # a release's files into dist/, as the release workflow
 `make lint` runs:
 
 - golangci-lint (with gofmt and goimports) and govulncheck;
+- `make lint-linux`: every Go package built and vetted with `GOOS=linux CGO_ENABLED=0`, so macOS-only code outside a `_darwin.go` file fails (ADR 0097);
+- `tools/native-edge` (first in `make lint-dart`): a platform channel, `dart:ffi` or `webview_flutter_wkwebview` in `app/lib` outside a `*_macos.dart` file fails, named with its line (ADR 0097);
 - `buf lint` and `buf format`;
 - `flutter analyze` and `dart format`, for the app and each package.
 
@@ -73,7 +75,7 @@ With a `go.work`, `make lint` builds golangci-lint into `bin/` because `go tool 
 CI (`.github/workflows/ci.yml`) runs the same parts as `make check`, as parallel jobs, in under 3 minutes:
 
 - on macOS: Go's lint and tests and the window's placement maths, the web app's end-to-end test, and the app's tests in two shards (`make test-app SHARD=1/2`: every second test file);
-- on Linux: the protos' and Dart's lint, the Dart packages' tests, and the relay's and the Noise channel's Go tests.
+- on Linux: the protos' and Dart's lint (with `tools/native-edge`), the Dart packages' tests, the relay's and the Noise channel's Go tests, and `make lint-linux`.
 
 ## Install, releases, logs
 
