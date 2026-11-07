@@ -464,8 +464,9 @@ void main() {
           ),
         );
         await tester.pump(const Duration(milliseconds: 300));
+        // The Scaffold, not the app: the app adds the debug banner.
         await expectLater(
-          find.byType(MaterialApp),
+          find.byType(Scaffold),
           matchesGoldenFile('goldens/image_ref_${state}_$name.png'),
         );
       });
