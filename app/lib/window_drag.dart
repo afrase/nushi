@@ -1,12 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/inline_edit.dart';
+import 'package:nushi/native.dart';
 
-const _channel = MethodChannel('nushi/window');
+/// The window as a header that stands in for its title bar moves and
+/// zooms it (ADR 0080): on the Mac, AppKit's (`window_drag_macos.dart`).
+abstract interface class AppWindow {
+  /// A primary press went down on the header at [micros] (the engine's
+  /// microseconds, the event's own timestamp): the window may move with
+  /// it, once it passes the pan's slop, while its button is held. A call
+  /// for a press already let go moves nothing.
+  Future<void> arm(int micros);
+
+  /// Zooms the window, as a double click on a title bar does.
+  Future<void> zoom();
+}
 
 /// A header at the window's top, which has no title bar to hold (the
 /// content runs under the traffic lights), doing what a title bar did
@@ -50,9 +61,6 @@ class _WindowDragState extends State<WindowDrag> {
     }
   }
 
-  void _send(String method, [Object? arguments]) =>
-      _channel.invokeMethod<void>(method, arguments).ignore();
-
   /// A click: on or beside the bar's content it's no click of the bar's,
   /// and the next one starts a double click afresh.
   void _clicked(Offset global) {
@@ -61,7 +69,7 @@ class _WindowDragState extends State<WindowDrag> {
         content.near(content.globalToLocal(global))) {
       _click = DoubleClick();
     } else if (_click()) {
-      _send('zoom');
+      native.window.zoom().ignore();
     }
   }
 
@@ -87,7 +95,7 @@ class _WindowDragState extends State<WindowDrag> {
               // It says when the press went down, in the engine's
               // microseconds of the event's own timestamp: a call for a
               // press already let go moves nothing.
-              _send('arm', e.timeStamp.inMicroseconds);
+              native.window.arm(e.timeStamp.inMicroseconds).ignore();
             },
             onPointerUp: _up,
             onPointerCancel: (e) => _downs.remove(e.pointer),
