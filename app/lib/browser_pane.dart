@@ -9,6 +9,7 @@ import 'package:nushi/browser_menu.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
@@ -145,7 +146,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
   }
 
   void _open(Uri url) {
-    final host = _host ??= newBrowserHost(_tab)
+    final host = _host ??= native.web.tab(_tab)
       ..blockedLocal.addListener(_blocked);
     unawaited(host.open(url));
   }

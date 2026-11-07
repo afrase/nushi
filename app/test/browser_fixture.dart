@@ -14,9 +14,9 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/settings.dart';
-import 'package:nushi/web_page.dart';
 
 import 'fake_daemon.dart';
+import 'fake_web_views.dart';
 import 'harness.dart';
 
 // The browser tab's tests' fakes and helpers (ADR 0094): a page host that
@@ -147,22 +147,15 @@ String? _browserName = browserName;
 ({List<FakeBrowserHost> hosts, List<Uri> opened}) browserFakes() {
   final hosts = <FakeBrowserHost>[];
   final opened = <Uri>[];
-  final (wasHost, wasOpen, wasName) = (
-    newBrowserHost,
-    openInBrowser,
-    defaultBrowserName,
-  );
-  newBrowserHost = (tab) {
-    final h = FakeBrowserHost(tab);
-    hosts.add(h);
-    return h;
-  };
-  openInBrowser = (url) async => opened.add(url);
-  defaultBrowserName = () async => _browserName;
+  fakeWebViews()
+    ..newTab = (tab) {
+      final h = FakeBrowserHost(tab);
+      hosts.add(h);
+      return h;
+    }
+    ..open = ((url) async => opened.add(url))
+    ..browserName = (() async => _browserName);
   addTearDown(() {
-    newBrowserHost = wasHost;
-    openInBrowser = wasOpen;
-    defaultBrowserName = wasName;
     defaultBrowser.value = null;
     _browserName = browserName;
   });

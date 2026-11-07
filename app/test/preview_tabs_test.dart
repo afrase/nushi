@@ -31,6 +31,7 @@ import 'package:nushi/web_page.dart';
 import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
+import 'fake_web_views.dart';
 import 'harness.dart';
 
 const _three = ['docs/report.md', 'docs/plan.md', 'site/notes.md'];
@@ -559,9 +560,7 @@ void main() {
     ) async {
       final live = ValueNotifier(0);
       final made = ValueNotifier(0);
-      final was = newPageHost;
-      newPageHost = () => _Page(live, made);
-      addTearDown(() => newPageHost = was);
+      fakeWebViews().newPage = () => _Page(live, made);
       final d = await _app(
         tester,
         files: const ['site/a.html', 'site/b.html'],

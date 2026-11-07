@@ -5,6 +5,7 @@ import 'package:nushi/fonts.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/speller.dart';
+import 'package:nushi/web_views.dart';
 import 'package:nushi/window_drag.dart';
 
 /// The app's native edge (ADR 0097): what it asks of the machine it runs
@@ -23,6 +24,7 @@ class Native {
     required this.fonts,
     required this.loginItem,
     required this.swipes,
+    required this.web,
     required this.window,
     this.speller,
   });
@@ -44,6 +46,9 @@ class Native {
 
   /// The system's swipe back between pages.
   PageSwipes swipes;
+
+  /// The web views, and the default browser.
+  WebViews web;
 
   /// The window, moved and zoomed from a header.
   AppWindow window;

@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/allowed_sites.dart';
 import 'package:nushi/browser_menu.dart';
-import 'package:nushi/browser_page.dart';
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/preview_entry.dart';
@@ -14,6 +13,7 @@ import 'package:nushi/theme/theme.dart';
 
 import 'browser_fixture.dart';
 import 'fake_daemon.dart' show loadFonts;
+import 'fake_web_views.dart';
 import 'harness.dart';
 
 // A browser tab's ⋯ menu, as Claude desktop's (ADR 0094): each row, in its
@@ -270,10 +270,8 @@ void main() {
   testWidgets('Clear browsing data asks first, then clears WebKit’s store '
       'and reloads the page', (tester) async {
     final fakes = browserFakes();
-    final was = clearBrowsingData;
-    addTearDown(() => clearBrowsingData = was);
     var cleared = 0;
-    clearBrowsingData = () async => cleared++;
+    fakeWebViews().clear = () async => cleared++;
     final c = await _pane(tester);
     await _open(tester, c, 'https://example.com');
     await tester.tap(find.text('Clear browsing data'));

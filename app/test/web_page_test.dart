@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/web_page.dart';
+import 'package:nushi/web_page_macos.dart';
+
+import 'fake_web_views.dart';
 
 void main() {
   // Security review 2026-11-04, L5: a page the agent shows (no click,
@@ -51,11 +54,10 @@ void main() {
   test("a link's press comes from the window's events", () async {
     const p = '/repo/out/page.html';
     const away = 'https://example.com/docs';
-    final since = sincePressInPage;
-    addTearDown(() => sincePressInPage = since);
+    final web = fakeWebViews();
     var asked = 0;
     Duration? ago;
-    sincePressInPage = ({pointerOnly = false}) async {
+    web.since = ({pointerOnly = false}) async {
       asked++;
       expect(pointerOnly, isFalse); // a key in a file's page counts
       return ago;
@@ -71,7 +73,7 @@ void main() {
       PageNavigation.stay,
     );
     expect(asked, 3); // not asked for one that stays
-    sincePressInPage = ({pointerOnly = false}) =>
+    web.since = ({pointerOnly = false}) =>
         Future.error(StateError('no window'));
     expect(await pageNavigation(away, p, mainFrame: true), PageNavigation.drop);
   });

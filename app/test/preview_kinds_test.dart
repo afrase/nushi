@@ -24,6 +24,7 @@ import 'package:nushi/source_view.dart';
 import 'package:nushi/web_page.dart';
 
 import 'fake_daemon.dart';
+import 'fake_web_views.dart';
 import 'harness.dart';
 
 const _html = '''
@@ -167,13 +168,9 @@ Future<(Daemon, _Host)> _app(
   showDetails.value = false;
   paneWidths.value = {};
   final host = _Host();
-  final (wasHost, wasOpen) = (newPageHost, openInBrowser);
-  newPageHost = () => host;
-  openInBrowser = (url) async => opened?.add(url);
-  addTearDown(() {
-    newPageHost = wasHost;
-    openInBrowser = wasOpen;
-  });
+  fakeWebViews()
+    ..newPage = (() => host)
+    ..open = ((url) async => opened?.add(url));
   final d = await _fake(streams).connect(tester);
   d.select('c');
   await tester.pumpWidget(NushiApp(daemon: d));
@@ -341,9 +338,7 @@ void main() {
     final streams = <String, StreamController<WatchChatFileResponse>>{};
     final (d, _) = await _app(tester, streams);
     final diagram = _Diagram();
-    final was = newDiagramHost;
-    newDiagramHost = () => diagram;
-    addTearDown(() => newDiagramHost = was);
+    fakeWebViews().newDiagram = () => diagram;
     final c = d.chats['c']!..openPreview('site/index.html');
     await tester.pumpAndSettle();
     await render(tester, find.byType(NushiApp), 'preview_html_edge');
@@ -477,9 +472,7 @@ void main() {
     final streams = <String, StreamController<WatchChatFileResponse>>{};
     final (d, host) = await _app(tester, streams);
     final diagram = _Diagram();
-    final was = newDiagramHost;
-    newDiagramHost = () => diagram;
-    addTearDown(() => newDiagramHost = was);
+    fakeWebViews().newDiagram = () => diagram;
     d.chats['c']!.openPreview('docs/flow.mmd');
     await tester.pumpAndSettle();
     expect(diagram.shown, [(_flow, false)]);

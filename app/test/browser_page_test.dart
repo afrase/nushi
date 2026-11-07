@@ -5,6 +5,8 @@ import 'package:nushi/clock.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
 
+import 'fake_web_views.dart';
+
 // What a browser tab loads and what its address field takes (ADR 0094).
 void main() {
   group('what a browser tab loads', () {
@@ -75,10 +77,8 @@ void main() {
     // form let the page's script send the default browser anywhere; only
     // the pointer's press counts for a browser tab.
     test('the press is asked only for mail, and only a pointer’s', () async {
-      final since = sincePressInPage;
-      addTearDown(() => sincePressInPage = since);
       var asked = 0;
-      sincePressInPage = ({pointerOnly = false}) async {
+      fakeWebViews().since = ({pointerOnly = false}) async {
         asked++;
         expect(pointerOnly, isTrue);
         return const Duration(milliseconds: 100);

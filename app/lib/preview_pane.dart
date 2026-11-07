@@ -10,6 +10,7 @@ import 'package:nushi/file_edit.dart';
 import 'package:nushi/file_text.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
@@ -71,10 +72,10 @@ class _PreviewPaneState extends State<PreviewPane> {
   late final _watch = FileWatch(widget.daemon, widget.chat.id, widget.path);
   late final PreviewKind _kind = previewKind(widget.path) ?? PreviewKind.code;
   late final PageHost? _page = _kind.page && _kind != PreviewKind.mermaid
-      ? newPageHost()
+      ? native.web.page()
       : null;
   late final DiagramHost? _diagram = _kind == PreviewKind.mermaid
-      ? newDiagramHost()
+      ? native.web.diagram()
       : null;
   late bool _source = widget.chat.previewSources.contains(widget.path);
   final _focus = FocusNode(debugLabel: 'preview');

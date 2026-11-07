@@ -1,16 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
-import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
+import 'package:nushi/web_views.dart';
 
 /// What draws a page (HTML, SVG, PDF) the agent wrote, from disk: on the
-/// Mac a WKWebView ([WebKitPage]); tests make their own ([newPageHost]).
+/// Mac a WKWebView (`web_page_macos.dart`); [WebViews.page] makes one.
 abstract interface class PageHost {
   /// The view; built once and kept (a web view is made once).
   Widget view(BuildContext context);
@@ -25,147 +23,8 @@ abstract interface class PageHost {
   void dispose();
 }
 
-/// Makes the [PageHost] a preview pane uses.
-PageHost Function() newPageHost = WebKitPage.new;
-
-/// Opens an address in the default browser: the Swift side (`nushi/browser`)
-/// opens http(s) and file addresses with the app that opens https, so a
-/// file is never run by the app its type has. Tests set their own.
-Future<void> Function(Uri url) openInBrowser = (url) async {
-  if (url.scheme == 'mailto') {
-    await launchUrl(url);
-  } else if (const {'http', 'https', 'file'}.contains(url.scheme)) {
-    await const MethodChannel('nushi/browser').invokeMethod('open', '$url');
-  }
-};
-
-/// How long ago the user last pressed, let go, or hit Return, Enter or
-/// Space in a web view in the window, null if never or since the last ask
-/// (each press lets one navigation out); asked for a pointer's only, null
-/// too when the last was a key. The Swift side's event monitor sees it, as
-/// Flutter doesn't (WebKit takes a press inside its view, and the plugin
-/// doesn't give WebKit's navigation type). Tests set their own.
-Future<Duration?> Function({bool pointerOnly}) sincePressInPage =
-    ({pointerOnly = false}) async {
-      final s = await const MethodChannel('nushi/browser')
-          .invokeMethod<double>('sincePress', pointerOnly ? 'pointer' : null);
-      return s == null ? null : Duration(microseconds: (s * 1e6).round());
-    };
-
-/// Has a web view (by the plugin's `webViewIdentifier`) send and keep no
-/// cookies: the Swift side adds a content rule list to it. WebKit takes a
-/// `file:` page's frames and requests as first party, and file previews
-/// share WebKit's store with browser tabs, so without it a page the agent
-/// wrote would carry what a tab signed in to (docs/security.md).
-Future<void> Function(int id) blockCookies = (id) =>
-    const MethodChannel('nushi/browser').invokeMethod<void>('noCookies', id);
-
-/// A preview's web view's loads, held until its cookies are off: none
-/// before `made` (a call to the native view that has come back, so it
-/// exists) and [blockCookies] for the web view the plugin numbers `id`, and
-/// none at all if they can't be.
-final class CookielessLoads {
-  new(Future<void> made, int Function() id)
-    : _ready = made.then((_) => blockCookies(id()))
-        // Its error is load's to meet, not the zone's.
-        ..ignore();
-
-  final Future<void> _ready;
-
-  /// Runs [load] once the cookies are off; throws, loading nothing, if
-  /// they can't be.
-  Future<void> load(Future<void> Function() load) async {
-    await _ready;
-    await load();
-  }
-}
-
-/// A WKWebView with only its free defaults (the owner's call), and no
-/// cookies ([blockCookies]): no script message handlers (nothing from the
-/// page reaches Nushi), file reads inside the root it's given, the network
-/// on, and a link the user clicks that leaves the page opened in the
-/// default browser instead (a page that leaves on its own, by script or a
-/// refresh, goes nowhere).
-class WebKitPage implements PageHost {
-  new() {
-    final nav = WebKitNavigationDelegate(
-      const PlatformNavigationDelegateCreationParams(),
-    );
-    unawaited(nav.setOnNavigationRequest(_decide));
-    unawaited(nav.setOnPageFinished(_finished));
-    unawaited(_c.setPlatformNavigationDelegate(nav));
-    _loads = CookielessLoads(
-      _c.setJavaScriptMode(JavaScriptMode.unrestricted),
-      () => _c.webViewIdentifier,
-    );
-  }
-
-  final _c = WebKitWebViewController(
-    const PlatformWebViewControllerCreationParams(),
-  );
-  late final CookielessLoads _loads;
-  String _path = '';
-  String _root = '';
-  bool _loaded = false;
-  num? _scrollTo;
-
-  @override
-  Widget view(BuildContext context) =>
-      PlatformWebViewWidget(WebKitWebViewWidgetCreationParams(controller: _c))
-          .build(context);
-
-  @override
-  Future<void> load(String path, String root) async {
-    _path = path;
-    _root = root;
-    await _loads.load(
-      () => _c.loadFileWithParams(
-        WebKitLoadFileParams(absoluteFilePath: path, readAccessPath: root),
-      ),
-    );
-  }
-
-  @override
-  Future<void> reload() async {
-    if (_path.isEmpty) return;
-    try {
-      final y = await _c.runJavaScriptReturningResult('window.scrollY');
-      if (y is num && y > 0) _scrollTo = y;
-    } on Object {
-      // A PDF, or a page that's gone: from the top.
-    }
-    // WebKit's reload checks the page's files again (its CSS too); a page
-    // that never loaded (missing then) loads afresh.
-    await (_loaded ? _c.reload() : load(_path, _root));
-  }
-
-  void _finished(String url) {
-    _loaded = true;
-    if (_scrollTo case final y?) {
-      _scrollTo = null;
-      unawaited(_c.runJavaScript('window.scrollTo(0, $y)').catchError((_) {}));
-    }
-  }
-
-  Future<NavigationDecision> _decide(NavigationRequest r) async {
-    switch (await pageNavigation(r.url, _path, mainFrame: r.isMainFrame)) {
-      case PageNavigation.stay:
-        return NavigationDecision.navigate;
-      case PageNavigation.open:
-        if (Uri.tryParse(r.url) case final url?) {
-          unawaited(openInBrowser(url).catchError((_) {}));
-        }
-      case PageNavigation.drop:
-    }
-    return NavigationDecision.prevent;
-  }
-
-  @override
-  void dispose() {
-    // The view goes with its widget; the page stops with it.
-    unawaited(_c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))));
-  }
-}
+/// Opens an address in the default browser ([WebViews.openInBrowser]).
+Future<void> openInBrowser(Uri url) => native.web.openInBrowser(url);
 
 /// What a navigation a page asks for does: it stays in the web view, opens
 /// in the default browser, or goes nowhere.
@@ -193,7 +52,7 @@ PageNavigation navigation(
 }
 
 /// [navigation], with when the user last pressed in a page from
-/// [sincePressInPage], asked only for one that leaves the page.
+/// [WebViews.sincePress], asked only for one that leaves the page.
 Future<PageNavigation> pageNavigation(
   String url,
   String path, {
@@ -208,12 +67,12 @@ Future<PageNavigation> pageNavigation(
   );
 }
 
-/// When the user last pressed in a web view, from [sincePressInPage]: null
+/// When the user last pressed in a web view, from [WebViews.sincePress]: null
 /// if never, since the last ask, or with no answer; with [pointerOnly], a
 /// key's press counts for nothing.
 Future<DateTime?> lastPressInPage({bool pointerOnly = false}) async {
   try {
-    final ago = await sincePressInPage(pointerOnly: pointerOnly);
+    final ago = await native.web.sincePress(pointerOnly: pointerOnly);
     return ago == null ? null : clock().subtract(ago);
   } on Object {
     return null; // no answer: no press
