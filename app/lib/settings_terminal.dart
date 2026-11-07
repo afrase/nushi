@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:nushi/menu.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/terminal_find.dart' show terminalStyle;
@@ -19,11 +19,10 @@ const terminalPreview =
 
 const _sizes = [10.0, 11.0, 12.0, 12.5, 13.0, 14.0, 15.0, 16.0, 18.0, 20.0];
 
-/// The installed monospaced families (from the app's Swift side), but the
-/// bundled one's name.
+/// The installed monospaced families ([Native.fonts]), but the bundled
+/// one's name.
 Future<List<String>> _monospaced() async {
-  final all = await const MethodChannel('nushi/fonts')
-      .invokeListMethod<String>('monospaced');
+  final all = await native.fonts.monospaced();
   return [...?all?.where((f) => f != NushiTheme.codeFont)];
 }
 

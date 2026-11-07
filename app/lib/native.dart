@@ -1,5 +1,6 @@
 import 'package:nushi/alerts.dart';
 import 'package:nushi/back_swipe.dart';
+import 'package:nushi/fonts.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/speller.dart';
 import 'package:nushi/window_drag.dart';
@@ -15,6 +16,7 @@ import 'package:nushi/window_drag.dart';
 class Native {
   new({
     required this.alerts,
+    required this.fonts,
     required this.loginItem,
     required this.swipes,
     required this.window,
@@ -23,6 +25,9 @@ class Native {
 
   /// Notifications and the app icon's badge.
   AlertCenter alerts;
+
+  /// The installed fonts.
+  Fonts fonts;
 
   /// What starts the daemon at login.
   LoginItem loginItem;
