@@ -5,9 +5,12 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/menu.dart' show Menu;
+import 'package:nushi/settings.dart';
+import 'package:nushi/source_spans.dart';
 import 'package:nushi/tab_indent.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart' show FindBar;
+import 'package:nushi/whitespace_marks.dart';
 import 'package:re_editor/re_editor.dart';
 
 /// A file's text as an editor (ADR 0096), as the preview's source shows
@@ -35,6 +38,11 @@ class SourceEditor extends StatefulWidget {
 
 class _SourceEditorState extends State<SourceEditor> {
   final _focus = FocusNode(debugLabel: 'editor');
+
+  /// The lines as re_editor laid them out, and its line numbers' place:
+  /// where Show whitespace marks them.
+  final _lines = EditorLines();
+  final GlobalKey _gutter = GlobalKey();
   ModalRoute<Object?>? _route;
   bool _following = false;
 
@@ -54,6 +62,7 @@ class _SourceEditorState extends State<SourceEditor> {
   void dispose() {
     _unfollow();
     _focus.dispose();
+    _lines.dispose();
     // Another tab, the pane closed, another chat: the focus went
     // elsewhere with the view.
     if (widget.edit.canSave) unawaited(widget.edit.save());
@@ -117,7 +126,7 @@ class _SourceEditorState extends State<SourceEditor> {
     final t = theme.t;
     final code = theme.code(t.text, size: 12);
     final gutter = theme.code(t.textMuted, size: 12);
-    return ListenableBuilder(
+    final editor = ListenableBuilder(
       listenable: widget.edit,
       builder: (context, _) => CodeEditor(
         controller: widget.edit.controller,
@@ -145,17 +154,39 @@ class _SourceEditorState extends State<SourceEditor> {
           cursorWidth: 1.5,
           cursorLineColor: t.base,
         ),
-        indicatorBuilder: (context, controller, chunks, notifier) => Padding(
-          padding: EdgeInsets.only(left: widget.padding.left),
-          child: DefaultCodeLineNumber(
-            controller: controller,
-            notifier: notifier,
-            minNumberCount: 1,
-            textStyle: gutter,
-            focusedTextStyle: gutter.copyWith(color: t.textSecondary),
-          ),
-        ),
+        indicatorBuilder: (context, controller, chunks, notifier) {
+          _lines.follow(notifier);
+          return Padding(
+            key: _gutter,
+            padding: EdgeInsets.only(left: widget.padding.left),
+            child: DefaultCodeLineNumber(
+              controller: controller,
+              notifier: notifier,
+              minNumberCount: 1,
+              textStyle: gutter,
+              focusedTextStyle: gutter.copyWith(color: t.textSecondary),
+            ),
+          );
+        },
       ),
+    );
+    return ValueListenableBuilder(
+      valueListenable: showWhitespace,
+      builder: (context, show, editor) => Stack(
+        fit: StackFit.expand,
+        children: [
+          editor!,
+          if (show)
+            WhitespaceOverlay(
+              lines: _lines,
+              controller: widget.edit.controller,
+              gutter: _gutter,
+              // re_editor draws with no text scaling.
+              column: columnWidth(code, TextScaler.noScaling),
+            ),
+        ],
+      ),
+      child: editor,
     );
   }
 }

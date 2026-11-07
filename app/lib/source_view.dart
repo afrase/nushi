@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:nushi/preview_text.dart';
+import 'package:nushi/settings.dart';
 import 'package:nushi/source_spans.dart';
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/whitespace_marks.dart';
+
+part 'source_view_lines.dart';
 
 /// A line shows this many characters at most (a minified file's one line).
 const _maxLine = 5000;
@@ -262,6 +266,7 @@ class _SourceViewState extends State<SourceView> {
                   child: _Line(
                     Text.rich(text(i), strutStyle: strut),
                     whole: _lines[i],
+                    column: char,
                   ),
                 ),
               ],
@@ -314,6 +319,7 @@ class _SourceViewState extends State<SourceView> {
                                 strutStyle: strut,
                               ),
                               whole: _lines[i],
+                              column: char,
                             ),
                           ),
                           Positioned(
@@ -357,78 +363,5 @@ class _SourceViewState extends State<SourceView> {
         ),
       ),
     );
-  }
-}
-
-/// A list's selection that copies the whole text after Select All: the
-/// list builds only the lines in sight, and only those would copy.
-class _Whole extends StaticSelectionContainerDelegate {
-  new(this.text);
-
-  final String Function() text;
-
-  /// Whether the last selection was Select All, not since changed.
-  bool _all = false;
-
-  @override
-  SelectionResult dispatchSelectionEvent(SelectionEvent event) {
-    _all = event.type == SelectionEventType.selectAll;
-    return super.dispatchSelectionEvent(event);
-  }
-
-  @override
-  SelectedContent? getSelectedContent() =>
-      _all ? SelectedContent(plainText: text()) : super.getSelectedContent();
-}
-
-/// A line's text, copied with its line break when it's selected to its
-/// end: each line is a text of its own, and a selection across them
-/// otherwise runs them together.
-class _Line extends StatefulWidget {
-  const new(this.text, {required this.whole});
-
-  final Widget text;
-
-  /// The line as the file has it: a line cut at [_maxLine] copies its
-  /// own text to its end, not the note that stands for the rest.
-  final String whole;
-
-  @override
-  State<_Line> createState() => _LineState();
-}
-
-class _LineState extends State<_Line> {
-  final _delegate = _LineEnd();
-
-  @override
-  void dispose() {
-    _delegate.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    _delegate.whole = widget.whole;
-    return SelectionContainer(delegate: _delegate, child: widget.text);
-  }
-}
-
-class _LineEnd extends StaticSelectionContainerDelegate {
-  String whole = '';
-
-  @override
-  SelectedContent? getSelectedContent() {
-    final content = super.getSelectedContent();
-    final range = getSelection();
-    if (range == null) return content;
-    final start = min(range.startOffset, range.endOffset);
-    final end = max(range.startOffset, range.endOffset);
-    // Into a cut line's note: the line's own text from the start on.
-    final note = whole.length > _maxLine && end > _maxLine;
-    if (end < contentLength && !note) return content;
-    final text = note
-        ? whole.substring(min(start, _maxLine))
-        : content?.plainText.replaceAll(_blank, '') ?? '';
-    return SelectedContent(plainText: end < contentLength ? text : '$text\n');
   }
 }

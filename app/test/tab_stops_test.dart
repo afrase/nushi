@@ -18,25 +18,6 @@ import 'fake_daemon.dart';
 import 'file_edit_helpers.dart';
 import 'harness.dart';
 
-/// A Go file as gofmt leaves it (tabs to indent), with tabs mid-line too.
-const tabbed =
-    'package main\n'
-    '\n'
-    'import "fmt"\n'
-    '\n'
-    '// point is where a label goes.\n'
-    'type point struct {\n'
-    '\tx, y\tint    // across\n'
-    '\tlabel\tstring // the name\n'
-    '}\n'
-    '\n'
-    'func main() {\n'
-    '\tp := point{1, 2, "a"}\n'
-    '\tif p.x > 0 {\n'
-    '\t\tfmt.Println(p.label)\t// said once\n'
-    '\t}\n'
-    '}\n';
-
 /// The editor's and the source view's code style.
 TextStyle _code(BuildContext context) {
   final theme = NushiTheme.of(context);
@@ -340,22 +321,26 @@ void main() {
   }, variant: onMac);
 
   for (final brightness in Brightness.values) {
-    testWidgets('a tab-indented file, the source view beside the editor '
-        '(${brightness.name})', (tester) async {
-      viewport(tester, const Size(1000, 330));
-      final e = await _edit(tester);
-      await tester.pumpWidget(_beside(e, brightness));
-      final plain = _spans(tester);
-      await untilReal(tester, () => e.highlighted && _spans(tester) > plain);
-      await tester.pumpAndSettle();
-      await expectLater(
-        find.byKey(_besideKey),
-        matchesGoldenFile('goldens/tab_stops_${brightness.name}.png'),
-      );
-      await tester.pumpWidget(const SizedBox());
-      e.dispose();
-      e.daemon.dispose();
-    });
+    for (final marks in [false, true]) {
+      final name = marks ? 'whitespace_${brightness.name}' : brightness.name;
+      testWidgets('a tab-indented file, the source view beside the editor '
+          '($name)', (tester) async {
+        showWhitespace.value = marks;
+        viewport(tester, const Size(1000, 330));
+        final e = await _edit(tester);
+        await tester.pumpWidget(_beside(e, brightness));
+        final plain = _spans(tester);
+        await untilReal(tester, () => e.highlighted && _spans(tester) > plain);
+        await tester.pumpAndSettle();
+        await expectLater(
+          find.byKey(_besideKey),
+          matchesGoldenFile('goldens/tab_stops_$name.png'),
+        );
+        await tester.pumpWidget(const SizedBox());
+        e.dispose();
+        e.daemon.dispose();
+      });
+    }
   }
 }
 

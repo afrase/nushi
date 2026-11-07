@@ -25,7 +25,7 @@ import 'package:nushi/file_mode.dart';
 /// and Dock badge, the appearance and the color theme, whether the
 /// composer checks spelling, whether a chat's links open in a browser
 /// tab and which sites there may reach the local network, whether a
-/// preview's source wraps its lines,
+/// preview's source wraps its lines and shows its whitespace,
 /// what reply cards ask the agent, and the newer release whose toast was
 /// dismissed. Each is a [Pref].
 /// Not whether new chats get a worktree, nor whether a subagent's pane
@@ -283,6 +283,11 @@ final Pref<Set<String>> localNetworkSites = _set('localNetworkSites');
 /// preview. The phone's button flips it too, in its own memory: a browser
 /// has no `app.json`, so there it lasts until the page reloads.
 final Pref<bool> wrapLines = _plain('wrap', true);
+
+/// Whether a file's source in the preview, read-only or being edited,
+/// marks its spaces (a dot) and tabs (an arrow) (off at first; ADR 0096).
+/// Only drawn: the text is as it was.
+final Pref<bool> showWhitespace = _plain('whitespace', false);
 
 /// The newer release whose toast was dismissed ("0.1.17"): it shows again
 /// only for a newer one.

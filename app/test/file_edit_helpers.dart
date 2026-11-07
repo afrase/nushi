@@ -31,6 +31,25 @@ final editItems = [
 /// A Go file, indented with tabs.
 const goSource = 'package main\n\nfunc main() {\n\tprintln("hi")\n}\n';
 
+/// A Go file as gofmt leaves it (tabs to indent), with tabs mid-line too.
+const tabbed =
+    'package main\n'
+    '\n'
+    'import "fmt"\n'
+    '\n'
+    '// point is where a label goes.\n'
+    'type point struct {\n'
+    '\tx, y\tint    // across\n'
+    '\tlabel\tstring // the name\n'
+    '}\n'
+    '\n'
+    'func main() {\n'
+    '\tp := point{1, 2, "a"}\n'
+    '\tif p.x > 0 {\n'
+    '\t\tfmt.Println(p.label)\t// said once\n'
+    '\t}\n'
+    '}\n';
+
 /// [b]'s sha256, as the daemon gives it.
 String sumOf(List<int> b) => sha256.convert(b).toString();
 
