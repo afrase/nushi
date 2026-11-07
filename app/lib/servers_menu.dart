@@ -34,10 +34,15 @@ class ServersButton extends StatefulWidget {
     super.key,
     this.size = 18,
     this.padding = 5,
+    this.collapse,
   });
 
   final ChatState chat;
   final Daemon daemon;
+
+  /// Collapses the pane when it's expanded over the chat, so Add server's
+  /// text shows in the box; null when it isn't.
+  final VoidCallback? collapse;
 
   /// Its glyph's size and the room around it ([IconTap]'s).
   final double size;
@@ -74,8 +79,12 @@ class _ServersButtonState extends State<ServersButton> {
           color: NushiTheme.of(context).t.text,
           filter: false,
           heldOpen: true,
-          onOpen: () => _servers.load(widget.chat.id).ignore(),
-          entries: serverEntries(widget.chat, _servers),
+          onOpen: () => _servers.look(widget.chat.id).ignore(),
+          entries: serverEntries(
+            widget.chat,
+            _servers,
+            collapse: widget.collapse,
+          ),
         ),
       ),
     );
@@ -83,8 +92,13 @@ class _ServersButtonState extends State<ServersButton> {
 }
 
 /// The Servers menu's rows for [chat]: its servers, Stop all servers when
-/// more than one runs, and Add server.
-List<MenuEntry> serverEntries(ChatState chat, DevServers servers) {
+/// more than one runs, and Add server, which first runs [collapse] (the
+/// pane expanded over the chat hides its box).
+List<MenuEntry> serverEntries(
+  ChatState chat,
+  DevServers servers, {
+  VoidCallback? collapse,
+}) {
   final list = servers.of(chat.id);
   final error = servers.errorOf(chat.id);
   final rows = list?.servers ?? const <DevServer>[];
@@ -93,7 +107,7 @@ List<MenuEntry> serverEntries(ChatState chat, DevServers servers) {
       if (f.error.isNotEmpty) f,
   ];
   final running = rows.where(DevServers.runs).length;
-  final addWhy = chat.folder.isEmpty
+  final addWhy = chat.scratch || chat.folder.isEmpty
       ? 'This chat has no folder'
       : chat.archived
       ? 'The chat is archived'
@@ -107,6 +121,8 @@ List<MenuEntry> serverEntries(ChatState chat, DevServers servers) {
     else if (list == null)
       MenuEntry.row((_) => const _Note('Reading the launch files…'))
     else ...[
+      for (final why in servers.refusedGone(chat.id))
+        MenuEntry.row((_) => _Note(why, danger: true)),
       for (final f in broken)
         MenuEntry.row(
           (_) => _Note(
@@ -134,6 +150,7 @@ List<MenuEntry> serverEntries(ChatState chat, DevServers servers) {
       onPick: addWhy != null
           ? null
           : () {
+              collapse?.call();
               chat.draft.put.value = addServerDraft;
             },
     ),
@@ -197,7 +214,7 @@ class ServerRow extends StatelessWidget {
   /// Runs it; its page opens once it answers (the user started it, so
   /// ADR 0068's "the agent never moves the user" doesn't hold it back).
   void _run() =>
-      servers.start(chat.id, server.index, onReady: chat.showServer).ignore();
+      servers.start(chat.id, server, onReady: chat.showServer).ignore();
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +229,7 @@ class ServerRow extends StatelessWidget {
             s.state == DevServerState.DEV_SERVER_STATE_NOT_ANSWERING);
     final failed = s.state == DevServerState.DEV_SERVER_STATE_FAILED;
     final refused = s.state == DevServerState.DEV_SERVER_STATE_STOPPED
-        ? servers.refusedOf(chat.id, s.index)
+        ? servers.refusedOf(chat.id, s)
         : null;
     final (line, lineColor) = switch (s.state) {
       _ when s.problem.isNotEmpty => (s.problem, t.crashed),
@@ -292,7 +309,7 @@ class ServerRow extends StatelessWidget {
       ],
     );
     return Tooltip(
-      message: failed && s.output.isNotEmpty ? s.output : _details(s),
+      message: failed && s.output.isNotEmpty ? _tail(s.output) : _details(s),
       waitDuration: const Duration(milliseconds: 600),
       textStyle: theme.code(t.text, size: 11.5),
       child: Padding(
@@ -359,6 +376,19 @@ class ServerRow extends StatelessWidget {
       onTap: _run,
     );
   }
+}
+
+/// How many of a failed server's last lines its tooltip shows: the end,
+/// where the error is, in a tooltip no taller than the window.
+const _tailLines = 18;
+
+/// The last [_tailLines] of [output], each as the menu shows text.
+String _tail(String output) {
+  final lines = output.split('\n');
+  return lines
+      .skip(lines.length > _tailLines ? lines.length - _tailLines : 0)
+      .map(plainPath)
+      .join('\n');
 }
 
 /// [s]'s command as one line: its words, each quoted when it has a space.

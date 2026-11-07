@@ -238,6 +238,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
                   chat: widget.chat,
                   daemon: daemon,
                   padding: _boxed(18),
+                  collapse: widget.expanded ? expand : null,
                 ),
               BrowserMenu(tab: _tab, host: host, size: 20, padding: _boxed(20)),
               if (expand != null)

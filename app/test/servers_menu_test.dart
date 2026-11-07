@@ -51,6 +51,7 @@ DevServer _server(
   output: output,
   serverId: id,
   problem: problem,
+  hash: problem.isEmpty ? 'hash-$name-$port' : '',
 );
 
 /// The daemon's servers, as the test sets them; StartServer and the stops
@@ -103,6 +104,8 @@ Future<(FakeDaemon, ChatState)> _pane(
   _Servers s, {
   Tokens tokens = Tokens.dark,
   Brightness brightness = Brightness.dark,
+  bool expanded = false,
+  VoidCallback? onExpand,
 }) async {
   browserFakes();
   viewport(tester, const Size(560, 420), brightness: brightness);
@@ -128,7 +131,8 @@ Future<(FakeDaemon, ChatState)> _pane(
                   tab: tab,
                   daemon: d,
                   onClose: () {},
-                  onExpand: () {},
+                  expanded: expanded,
+                  onExpand: onExpand ?? () {},
                 )
               : const SizedBox.shrink(),
         ),
@@ -188,6 +192,7 @@ void main() {
     await tester.tap(find.byTooltip('Run').last);
     await tester.pumpAndSettle();
     expect(s.starts.single.index, 1);
+    expect(s.starts.single.hash, 'hash-web-3000');
     expect(c.previewTabs.value, hasLength(2));
     s.rows[1] = s.rows[1].deepCopy()
       ..state = DevServerState.DEV_SERVER_STATE_RUNNING;
@@ -236,11 +241,62 @@ void main() {
     final s = _Servers()
       ..rows = [_server('web')]
       ..refuse = '5 servers already run in this folder: stop one first';
-    await _pane(tester, s);
+    final (d, _) = await _pane(tester, s);
     await _openMenu(tester);
     await tester.tap(find.byTooltip('Run'));
     await tester.pumpAndSettle();
     expect(find.text(s.refuse!), findsOneWidget);
+    // The folder's servers changed (one stopped): what refused it may
+    // have, and the row no longer says so.
+    s.refuse = null;
+    await _changed(tester, d);
+    expect(
+      find.text('5 servers already run in this folder: stop one first'),
+      findsNothing,
+    );
+    await _close(tester);
+  }, variant: macOnly);
+
+  testWidgets('a start of an entry changed since it was listed says so above '
+      'the rows, until the menu opens again', (tester) async {
+    const why = 'the launch file changed since it was shown: look at it again';
+    final s = _Servers()
+      ..rows = [_server('web')]
+      ..refuse = why;
+    await _pane(tester, s);
+    await _openMenu(tester);
+    s.rows = [_server('web', port: 4000)];
+    await tester.tap(find.byTooltip('Run'));
+    await tester.pumpAndSettle();
+    expect(find.text(why), findsOneWidget);
+    expect(find.text('pnpm run dev --port 4000'), findsOneWidget);
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+    await _openMenu(tester);
+    expect(find.text(why), findsNothing);
+    await _close(tester);
+  }, variant: macOnly);
+
+  testWidgets('a failed row’s tooltip has the end of its output', (
+    tester,
+  ) async {
+    final s = _Servers()
+      ..rows = [
+        _server(
+          'web',
+          state: DevServerState.DEV_SERVER_STATE_FAILED,
+          error: 'it ended (exit code 1)',
+          output: [for (var i = 1; i <= 120; i++) 'line $i'].join('\n'),
+        ),
+      ];
+    await _pane(tester, s);
+    await _openMenu(tester);
+    final tip = tester
+        .widgetList<Tooltip>(find.byType(Tooltip))
+        .map((t) => t.message ?? '')
+        .firstWhere((m) => m.contains('line 120'));
+    expect(tip.split('\n'), hasLength(18));
+    expect(tip, startsWith('line 103\n'));
     await _close(tester);
   }, variant: macOnly);
 
@@ -285,6 +341,37 @@ void main() {
     await tester.tap(find.text('Add server'));
     await tester.pumpAndSettle();
     expect(find.byTooltip('The chat is archived'), findsOneWidget);
+    await _close(tester);
+  }, variant: macOnly);
+
+  testWidgets('a chat in a scratch folder has no folder to add a server to', (
+    tester,
+  ) async {
+    final (_, c) = await _pane(tester, _Servers());
+    c.scratch = true;
+    await _openMenu(tester);
+    await tester.tap(find.text('Add server'));
+    await tester.pumpAndSettle();
+    expect(c.draft.put.value, isNull);
+    expect(find.byTooltip('This chat has no folder'), findsOneWidget);
+    await _close(tester);
+  }, variant: macOnly);
+
+  testWidgets('Add server collapses the expanded tab, so the box shows', (
+    tester,
+  ) async {
+    var collapsed = 0;
+    final (_, c) = await _pane(
+      tester,
+      _Servers(),
+      expanded: true,
+      onExpand: () => collapsed++,
+    );
+    await _openMenu(tester);
+    await tester.tap(find.text('Add server'));
+    await tester.pumpAndSettle();
+    expect(collapsed, 1);
+    expect(c.draft.put.value, addServerDraft);
     await _close(tester);
   }, variant: macOnly);
 

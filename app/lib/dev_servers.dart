@@ -22,12 +22,30 @@ class DevServers extends ChangeNotifier {
   final _onReady = <String, void Function(String url)>{};
 
   /// Why a start the daemon refused outright (no failed run to list: five
-  /// running already, the entry gone) didn't go, by chat and entry, until
-  /// that entry is started again.
-  final _refused = <String, Map<int, String>>{};
+  /// running already, the entry changed since it was listed) didn't go, by
+  /// chat and the entry's hash (DevServer.hash): until the menu opens
+  /// again, the folder's servers change or that entry is started again.
+  final _refused = <String, Map<String, String>>{};
 
-  /// Why the start of a chat's entry at [index] was refused, or null.
-  String? refusedOf(String chatId, int index) => _refused[chatId]?[index];
+  /// Why the start of a chat's entry [s] was refused, or null.
+  String? refusedOf(String chatId, DevServer s) => _refused[chatId]?[s.hash];
+
+  /// Why starts of a chat's entries no longer listed (changed since) were
+  /// refused.
+  List<String> refusedGone(String chatId) {
+    final listed = {...?_lists[chatId]?.servers.map((s) => s.hash)};
+    return [
+      for (final MapEntry(:key, :value) in (_refused[chatId] ?? {}).entries)
+        if (!listed.contains(key)) value,
+    ];
+  }
+
+  /// Lists a chat's servers as the menu opens: the refusals of its last
+  /// look go.
+  Future<void> look(String chatId) {
+    _refused.remove(chatId);
+    return load(chatId);
+  }
 
   /// A chat's servers, or null until listed.
   ListServersResponse? of(String chatId) => _lists[chatId];
@@ -60,7 +78,9 @@ class DevServers extends ChangeNotifier {
   /// lists them again.
   void changed(String folder) {
     for (final chat in [..._lists.keys]) {
-      if (_lists[chat]?.folder == folder) load(chat).ignore();
+      if (_lists[chat]?.folder != folder) continue;
+      _refused.remove(chat); // what refused them may have changed
+      load(chat).ignore();
     }
   }
 
@@ -81,18 +101,19 @@ class DevServers extends ChangeNotifier {
     }
   }
 
-  /// Starts a chat's entry at [index]; [onReady] runs with its address
-  /// once it answers. A failure is listed on its row (the daemon keeps
-  /// it); the list is read again either way.
+  /// Starts a chat's entry [s], as listed: the daemon refuses it once the
+  /// launch file changed it (its hash). [onReady] runs with its address
+  /// once it answers. A failure is listed on its row (the daemon keeps it);
+  /// the list is read again either way.
   Future<void> start(
     String chatId,
-    int index, {
+    DevServer s, {
     required void Function(String url) onReady,
   }) async {
-    _refused[chatId]?.remove(index);
+    _refused[chatId]?.remove(s.hash);
     try {
       final r = await client.startServer(
-        StartServerRequest(chatId: chatId, index: index),
+        StartServerRequest(chatId: chatId, index: s.index, hash: s.hash),
       );
       if (r.server.state == DevServerState.DEV_SERVER_STATE_RUNNING) {
         onReady(r.server.url); // it ran already
@@ -102,7 +123,7 @@ class DevServers extends ChangeNotifier {
     } on Object catch (e) {
       // The row says why: the daemon lists a run that failed, and this
       // keeps a start it refused outright.
-      (_refused[chatId] ??= {})[index] = errorText(e);
+      (_refused[chatId] ??= {})[s.hash] = errorText(e);
     }
     await load(chatId);
   }
