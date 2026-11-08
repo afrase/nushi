@@ -119,6 +119,9 @@ import (
 	"unsafe"
 )
 
+// noKeychain is ErrNoKeychain's text on the Mac.
+const noKeychain = "macOS can't find your login keychain: check it in Keychain Access (File › Keychain List), then restart the daemon"
+
 // calls are the Security calls the C side reports by number.
 var calls = map[C.int]string{1: "SecKeychainFindGenericPassword", 2: "SecKeychainItemDelete", 3: "SecItemAdd", 4: "SecItemCopyMatching"}
 
@@ -248,18 +251,6 @@ func kind(status int) error {
 // errnoBase is where the Security framework's statuses for a Unix errno
 // start (errSecErrnoBase): 100000 + errno.
 const errnoBase = 100000
-
-func kindName(k error) string {
-	for _, n := range []struct {
-		err  error
-		name string
-	}{{ErrNotFound, "not found"}, {ErrNeedsOK, "needs ok"}, {ErrRestart, "restart"}, {ErrNoKeychain, "no keychain"}} {
-		if errors.Is(k, n.err) {
-			return n.name
-		}
-	}
-	return "other"
-}
 
 func message(st C.OSStatus) string {
 	msg := C.SecCopyErrorMessageString(st, nil)

@@ -27,13 +27,18 @@ var (
 	// again by the app can.
 	ErrRestart = errors.New("Nushi's daemon can't reach your keychain until it starts again: restart the daemon")
 	// ErrNoKeychain is no login keychain to be found (moved, deleted, or a
-	// HOME that isn't the user's).
-	ErrNoKeychain = errors.New("macOS can't find your login keychain: check it in Keychain Access (File › Keychain List), then restart the daemon")
+	// HOME that isn't the user's); on Linux, a Secret Service with no
+	// default collection to keep items in.
+	ErrNoKeychain = errors.New(noKeychain)
+	// ErrNoKeyring is no Secret Service on the session bus, or no session
+	// bus (Linux only).
+	ErrNoKeyring = errors.New("No keyring service: install gnome-keyring or KeePassXC's Secret Service")
 )
 
 // Error is a keychain call's failure: which of the Security framework's
-// calls failed, its OSStatus and macOS's words for it, and what that
-// means (Kind: one of the errors above, or nil when Nushi can't tell);
+// calls failed, its OSStatus and macOS's words for it (on Linux, the
+// Secret Service's method and the D-Bus error's words, with no status),
+// and what that means (Kind: one of the errors above, or nil when Nushi can't tell);
 // for ErrRestart, Why the daemon can't reach the keychain.
 type Error struct {
 	Call   string
@@ -50,6 +55,9 @@ func (e *Error) Error() string {
 	if e.Kind != nil {
 		return e.Kind.Error()
 	}
+	if e.Status == 0 {
+		return fmt.Sprintf("keychain: %s (%s)", e.Msg, e.Call)
+	}
 	return fmt.Sprintf("keychain: %s (%s: %d)", e.Msg, e.Call, e.Status)
 }
 
@@ -58,4 +66,17 @@ func (e *Error) Unwrap() error { return e.Kind }
 // Keychain is the items of one service.
 type Keychain struct {
 	Service string
+}
+
+// kindName is a kind's name for the log.
+func kindName(k error) string {
+	for _, n := range []struct {
+		err  error
+		name string
+	}{{ErrNotFound, "not found"}, {ErrNeedsOK, "needs ok"}, {ErrRestart, "restart"}, {ErrNoKeychain, "no keychain"}, {ErrNoKeyring, "no keyring"}} {
+		if errors.Is(k, n.err) {
+			return n.name
+		}
+	}
+	return "other"
 }
