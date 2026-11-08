@@ -267,7 +267,9 @@ class PaneHeader extends StatelessWidget {
 /// drag there moves the window and a double click zooms it. AppKit's own
 /// title bar no longer takes that strip, so without the band nothing would
 /// move the window. A click on it does [onTap], as one on what's under it
-/// did (a click on Settings' dim shuts Settings).
+/// did (a click on Settings' dim shuts Settings). Where the headers don't
+/// move the window ([headersMoveWindow]), it's [child] alone, whose own
+/// clicks do the rest.
 class TitleBand extends StatelessWidget {
   const new({required this.child, super.key, this.onTap});
 
@@ -275,23 +277,28 @@ class TitleBand extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      child,
-      Positioned(
-        top: 0,
-        left: 0,
-        right: 0,
-        height: PaneHeader.height,
-        child: WindowDrag(
-          background: const SizedBox.shrink(),
+  Widget build(BuildContext context) => !headersMoveWindow
+      ? child
+      : Stack(
+          fit: StackFit.expand,
           children: [
-            if (onTap case final onTap?)
-              GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap),
+            child,
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: PaneHeader.height,
+              child: WindowDrag(
+                background: const SizedBox.shrink(),
+                children: [
+                  if (onTap case final onTap?)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onTap,
+                    ),
+                ],
+              ),
+            ),
           ],
-        ),
-      ),
-    ],
-  );
+        );
 }

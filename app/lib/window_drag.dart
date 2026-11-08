@@ -6,12 +6,29 @@ import 'package:flutter/widgets.dart';
 import 'package:nushi/inline_edit.dart';
 import 'package:nushi/native.dart';
 
-/// The window as a header that stands in for its title bar moves and
-/// zooms it (ADR 0080): on the Mac, AppKit's (`window_drag_macos.dart`).
+/// The window and the chrome around it: on the Mac, AppKit's
+/// (`window_drag_macos.dart`), whose content runs under the title bar, so
+/// a header stands in for it and moves and zooms the window (ADR 0080); on
+/// Linux the system's title bar, above the content (ADR 0102).
 abstract interface class AppWindow {
+  /// How far from the window's left edge what's in the main area's top
+  /// starts with the sidebar hidden: past the Mac's traffic lights, or a
+  /// margin where the title bar isn't over the content.
+  double get titleInset;
+
+  /// Whether a header moves the window and zooms it, as the title bar it
+  /// stands in for (the Mac's): with the system's title bar, it doesn't.
+  bool get headersMoveWindow;
+
   /// Whether the app's menus go in the system's menu bar (the Mac's):
   /// elsewhere there's none, and Flutter's platform menus would throw.
   bool get menuBar;
+
+  /// Brings the window to the front, as a notification's click does, with
+  /// the [token] the desktop gave that click, if any: Wayland's
+  /// xdg-activation token or X11's startup id, without which the desktop
+  /// may only mark the window as wanting attention.
+  Future<void> present({String? token});
 
   /// A primary press went down on the header at [micros] (the engine's
   /// microseconds, the event's own timestamp): the window may move with
@@ -23,6 +40,10 @@ abstract interface class AppWindow {
   Future<void> zoom();
 }
 
+/// Whether the headers move the window ([AppWindow.headersMoveWindow]), as
+/// a widget reads it: the phone has no window to move.
+bool get headersMoveWindow => !kIsWeb && native.window.headersMoveWindow;
+
 /// A header at the window's top, which has no title bar to hold (the
 /// content runs under the traffic lights), doing what a title bar did
 /// (ADR 0080): a Stack of [background] (its fill and hairline), the drag
@@ -30,7 +51,9 @@ abstract interface class AppWindow {
 /// A drag anywhere but on a control moves the window, from its title and
 /// its marks too; a double click zooms it only in the bar's empty space,
 /// not on or beside what's in it. A control (what shows a pointer of its
-/// own: the hand, the text's I-beam) keeps its clicks and its drags.
+/// own: the hand, the text's I-beam) keeps its clicks and its drags. Where
+/// the headers don't move the window ([headersMoveWindow]: the phone's,
+/// Linux's), it's only the Stack.
 class WindowDrag extends StatefulWidget {
   const new({required this.background, required this.children, super.key});
 
@@ -84,8 +107,8 @@ class _WindowDragState extends State<WindowDrag> {
       fit: StackFit.expand,
       children: [
         widget.background,
-        if (kIsWeb)
-          layers // the phone's headers: no window to move
+        if (!headersMoveWindow)
+          layers
         else ...[
           Listener(
             onPointerDown: (e) {

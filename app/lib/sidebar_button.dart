@@ -6,17 +6,21 @@ import 'package:flutter/scheduler.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/window_drag.dart';
 
 part 'sidebar_glide.dart';
 
 /// Where what's in the main area's top may start with the sidebar hidden:
-/// past the traffic lights, which stay where macOS puts them (ADR 0080).
-const lightsInset = 84.0;
+/// past the Mac's traffic lights, which stay where macOS puts them
+/// (ADR 0080), or the window's own inset ([AppWindow.titleInset]). The
+/// phone, whose sidebar never hides, has none.
+double get lightsInset => kIsWeb ? 0 : native.window.titleInset;
 
 /// Where a header's own content starts with the sidebar hidden: past the
 /// lights and [ShowSidebarButton].
-const double hiddenHeaderStart = lightsInset + 26 + 8;
+double get hiddenHeaderStart => lightsInset + 26 + 8;
 
 /// Whether the sidebar is hidden, so the main area reaches the window's left
 /// edge. The phone has none, whatever is saved.
@@ -69,10 +73,10 @@ class ShowSidebarButton extends StatelessWidget {
   const new({super.key});
 
   @override
-  Widget build(BuildContext context) => const Positioned(
+  Widget build(BuildContext context) => Positioned(
     left: lightsInset,
     top: 0,
     bottom: 1, // the border's
-    child: Center(widthFactor: 1, child: SidebarButton(header: true)),
+    child: const Center(widthFactor: 1, child: SidebarButton(header: true)),
   );
 }

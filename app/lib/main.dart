@@ -386,8 +386,9 @@ class _Shell extends StatelessWidget {
       final chat = daemon.selected;
       final shut = sidebarShut;
       // With the sidebar hidden the bars start at the window's left edge,
-      // under the traffic lights, so their text starts past them.
-      final barStart = shut ? lightsInset : 16.0;
+      // under the traffic lights, so their text starts past them; with
+      // nothing over the content there (Linux), at their own margin.
+      final barStart = shut ? max(lightsInset, 16.0) : 16.0;
       final app = LayoutBuilder(
         // The sidebar slides in and out over the view, which keeps its
         // state either way.
