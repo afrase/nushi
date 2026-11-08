@@ -4,10 +4,12 @@
 // settings `scutil --proxy` prints: a PAC file (evaluated by macOS's own
 // CFNetwork, through osascript), else the HTTPS, HTTP or SOCKS proxy with
 // the exceptions list (sysproxy_darwin.go, pac_darwin.go). On Linux it is
-// the environment alone, as the login shell gives it: ALL_PROXY (an http,
-// https or socks5 URL) unless NO_PROXY sends the host direct; no gsettings
-// or desktop settings (sysproxy_linux.go). Another OS goes direct
-// (sysproxy_other.go, ADR 0097).
+// the environment alone, as the login shell gives it: ALL_PROXY also
+// serves a scheme whose own variable is unset, as curl's all_proxy does;
+// no gsettings or desktop settings (sysproxy_linux.go). Another OS goes
+// direct (sysproxy_other.go, ADR 0097). A proxy URL is http, https or
+// socks5 (socks5h is the same to Go: names resolved at the proxy); the
+// relay's websocket takes http, socks5 and socks5h, not https (relay.Dialer).
 //
 // Not supported: proxy auto-discovery (WPAD), proxies that want a password
 // from the settings (the Keychain's), NTLM and Kerberos. A password in an
@@ -39,8 +41,7 @@ func Proxy(r *http.Request) (*url.URL, error) {
 func For(u *url.URL) ([]*url.URL, error) {
 	secure := u.Scheme == "wss" || u.Scheme == "https"
 	if envSet() {
-		req := &http.Request{URL: &url.URL{Scheme: map[bool]string{true: "https", false: "http"}[secure], Host: u.Host}}
-		p, err := http.ProxyFromEnvironment(req)
+		p, err := fromEnvironment(u, secure)
 		return []*url.URL{p}, err
 	}
 	bare := &url.URL{Scheme: u.Scheme, Host: u.Host, Path: "/"}
@@ -88,6 +89,17 @@ type cached struct {
 	keep    time.Duration
 }
 
+// fromEnvironment is the environment's proxy for u, NO_PROXY's exceptions
+// counted (net/http's rules), or nil for a direct connection. Read afresh
+// each time, unlike http.ProxyFromEnvironment, which keeps its first.
+func fromEnvironment(u *url.URL, secure bool) (*url.URL, error) {
+	cfg := envConfig()
+	asked := &url.URL{Scheme: map[bool]string{true: "https", false: "http"}[secure], Host: u.Host}
+	return cfg.ProxyFunc()(asked)
+}
+
+// envSet says the environment names a proxy for a scheme of its own
+// (HTTPS_PROXY, HTTP_PROXY): For then reads only the environment.
 func envSet() bool {
 	for _, v := range []string{"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"} {
 		if os.Getenv(v) != "" {

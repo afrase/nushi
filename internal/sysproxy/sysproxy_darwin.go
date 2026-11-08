@@ -11,8 +11,14 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/http/httpproxy"
+
 	"github.com/afrase/nushi/internal/procgroup"
 )
+
+// envConfig is the environment's proxies: HTTPS_PROXY, HTTP_PROXY,
+// NO_PROXY (ALL_PROXY isn't read on the Mac: the settings are scutil's).
+func envConfig() *httpproxy.Config { return httpproxy.FromEnvironment() }
 
 // Timeout bounds each outside step: scutil, fetching a PAC file,
 // evaluating it.
