@@ -10,14 +10,15 @@ import 'package:nushi/speller.dart';
 import 'package:nushi/web_views.dart';
 import 'package:nushi/window_drag.dart';
 
-/// The app's native edge (ADR 0097): what it asks of the machine it runs
-/// on, each capability an interface declared beside what uses it, and a
-/// platform's implementations in files of their own (the Mac's are
-/// `*_macos.dart`, the only files that may hold platform channels, WebKit's
-/// plugin or FFI: `tools/native-edge` checks). main.dart sets [native]
-/// once at startup (`macosNative`); each test starts from the same
-/// (`flutter_test_config.dart`) and puts a fake in a capability's place.
-/// The phone's web app reaches none of it.
+/// The app's native edge (ADR 0097, 0102): what it asks of the machine it
+/// runs on, each capability an interface declared beside what uses it, and
+/// each platform's implementations in files of their own (`*_macos.dart`
+/// and `*_linux.dart`, the only files that may hold platform channels or
+/// FFI; WebKit's plugin only the Mac's, dbus only Linux's:
+/// `tools/native-edge` checks). main.dart sets [native] once at startup
+/// (`linuxNative` on Linux, else `macosNative`); each test starts from the
+/// Mac's (`flutter_test_config.dart`) and puts a fake in a capability's
+/// place. The phone's web app reaches none of it.
 class Native {
   new({
     required this.alerts,
