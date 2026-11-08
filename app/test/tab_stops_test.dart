@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -224,7 +225,11 @@ void main() {
         expect(line.height, greaterThan(line.preferredLineHeight));
       } else {
         final end = line.getOffset(const TextPosition(offset: 3002))!;
-        expect(end.dx / editorColumn, closeTo(3008, 0.05));
+        // Linux's font metrics put it a little further off.
+        expect(
+          end.dx / editorColumn,
+          closeTo(3008, Platform.isMacOS ? 0.05 : 0.1),
+        );
       }
       await endEditor(tester, d);
     }, variant: onMac);

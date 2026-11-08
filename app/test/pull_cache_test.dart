@@ -127,9 +127,8 @@ void main() {
       files.map((f) => f.uri.pathSegments.last),
       contains('github.com_octo_notes_52.pb'),
     );
-    String mode(String path) =>
-        (Process.runSync('stat', ['-f', '%Lp', path]).stdout as String).trim();
-    expect(mode(dir.path), '700');
-    expect(mode(files.first.path), '600');
+    int mode(String path) => FileStat.statSync(path).mode & 0x1ff;
+    expect(mode(dir.path), 0x1c0);
+    expect(mode(files.first.path), 0x180);
   });
 }

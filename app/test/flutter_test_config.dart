@@ -23,22 +23,27 @@ import 'package:nushi/theme_files.dart';
 
 import 'harness.dart';
 
-/// On CI (GitHub's macOS image draws text a few pixels differently from a
-/// Mac), a golden may differ in up to 1% of its pixels (a card dense with
-/// text, as a review's findings, reaches 0.56% from anti-aliasing alone);
-/// here it must match. Every shine stands still, its band before the text,
-/// and so does every loop on the shared clock that reads `loopPhase` (a
-/// pull request's running ring, a streaming reply's caret), so goldens are
-/// one frame and pumpAndSettle settles while a call runs; the app's clock
-/// stands at [fixtureNow], so an age a golden shows never moves. No test
-/// sees what another left: the app's prefs as at launch, no pull request
-/// read, no agents, review comments or drafts, remote state, clones or
-/// theme files known; the Mac's native edge, no speller.
+/// Goldens are drawn on macOS only (on Linux about a third differ by 1–4%):
+/// elsewhere they aren't compared or written. On CI (GitHub's macOS image
+/// draws text a few pixels differently from a Mac), a golden may differ in
+/// up to 1% of its pixels (a card dense with text, as a review's findings,
+/// reaches 0.56% from anti-aliasing alone); here it must match. Every
+/// shine stands still, its band before the text, and so does every loop on
+/// the shared clock that reads `loopPhase` (a pull request's running ring,
+/// a streaming reply's caret), so goldens are one frame and pumpAndSettle
+/// settles while a call runs; the app's clock stands at [fixtureNow], so an
+/// age a golden shows never moves. No test sees what another left: the
+/// app's prefs as at launch, no pull request read, no agents, review
+/// comments or drafts, remote state, clones or theme files known; the Mac's
+/// native edge (on every host), no speller.
 /// The test process's data folder goes when its tests end.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
   final local = goldenFileComparator;
-  if (Platform.environment['CI'] == 'true' && local is LocalFileComparator) {
+  if (!Platform.isMacOS) {
+    goldenFileComparator = _NotHere();
+  } else if (Platform.environment['CI'] == 'true' &&
+      local is LocalFileComparator) {
     goldenFileComparator = _Tolerant(
       local.basedir.resolve('flutter_test_config.dart'),
     );
@@ -67,6 +72,16 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     if (dir.existsSync()) dir.deleteSync(recursive: true);
   });
   await testMain();
+}
+
+/// Off macOS: every golden passes unseen, and none is written.
+class _NotHere extends GoldenFileComparator {
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async => true;
+
+  @override
+  Future<void> update(Uri golden, Uint8List imageBytes) =>
+      throw FlutterError('Goldens are drawn on macOS only: $golden');
 }
 
 class _Tolerant extends LocalFileComparator {
