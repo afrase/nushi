@@ -1,0 +1,8 @@
+Name:	kworker/0:1
+Umask:	0000
+State:	I (idle)
+Tgid:	9
+Pid:	9
+PPid:	2
+Kthread:	1
+Threads:	1

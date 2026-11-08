@@ -1,0 +1,23 @@
+555555554000-ffffca7ca000 ---p 00000000 00:00 0                          [rollup]
+Rss:                3960 kB
+Pss:                1959 kB
+Pss_Dirty:          1177 kB
+Pss_Anon:           1148 kB
+Pss_File:            781 kB
+Pss_Shmem:            29 kB
+Shared_Clean:       1580 kB
+Shared_Dirty:        624 kB
+Private_Clean:       608 kB
+Private_Dirty:      1148 kB
+Referenced:         3960 kB
+Anonymous:          1148 kB
+KSM:                   0 kB
+LazyFree:              0 kB
+AnonHugePages:         0 kB
+ShmemPmdMapped:        0 kB
+FilePmdMapped:         0 kB
+Shared_Hugetlb:        0 kB
+Private_Hugetlb:       0 kB
+Swap:                 20 kB
+SwapPss:              12 kB
+Locked:                0 kB

@@ -82,6 +82,11 @@ func Cmdline(pid int) ([]string, bool) {
 	return splitCmdline(b), true
 }
 
+// ReadFile reads /proc/<pid>/<name>, such as smaps_rollup or status.
+func ReadFile(pid int, name string) ([]byte, error) {
+	return os.ReadFile(path(pid, name))
+}
+
 // Links reads what each of a process's open file descriptors points at:
 // "socket:[123]" (a socket's inode), "pipe:[456]", "/dev/pts/3" or a
 // file's path. Only the user's own processes can be read; another's, or

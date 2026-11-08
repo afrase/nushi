@@ -1,8 +1,11 @@
-// Package footprint reads how much memory processes take on macOS: their
-// physical footprint (phys_footprint), what Activity Monitor shows as
-// Memory. It needs no cgo: proc_pid_rusage is the proc_info system call,
-// and the process list is sysctl's kern.proc.all (footprint_darwin.go);
-// another OS reads nothing (footprint_other.go, ADR 0097).
+// Package footprint reads how much memory processes take. On macOS it
+// is their physical footprint (phys_footprint), what Activity Monitor
+// shows as Memory, with no cgo: proc_pid_rusage is the proc_info system
+// call, and the process list is sysctl's kern.proc.all
+// (footprint_darwin.go). On Linux it is each process's proportional set
+// size and swapped-out share, from /proc/<pid>/smaps_rollup, and the
+// process list is /proc's stat files (footprint_linux.go). Another OS
+// reads nothing (footprint_other.go, ADR 0097).
 package footprint
 
 // Processes is a snapshot of which process started which.
