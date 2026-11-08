@@ -167,7 +167,8 @@ func inFile(path string, own platform, ok, main bool) ([]use, error) {
 			continue
 		}
 		for _, k := range native {
-			if k.pattern.MatchString(line) && !(ok && slices.Contains(k.in, own)) {
+			allowed := ok && slices.Contains(k.in, own)
+			if !allowed && k.pattern.MatchString(line) {
 				uses = append(uses, use{path, n, k.name + " " + where(k.in)})
 			}
 		}
