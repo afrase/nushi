@@ -42,6 +42,13 @@ final String _sha = 'a' * 64;
 final Uint8List _shot = Uint8List(100000)..setAll(0, _png);
 final String _shotSha = sha256.convert(_shot).toString();
 
+/// [_shot] as the daemon shows it: a reference.
+final ImageData _shotRef = ImageData(
+  mimeType: 'image/png',
+  sha256: _shotSha,
+  size: Int64(_shot.length),
+);
+
 /// A 1600×1000 screenshot, as a reference.
 ImageData _ref([String? sha]) => ImageData(
   mimeType: 'image/png',
@@ -237,6 +244,77 @@ void main() {
       final mac = Outbox(() {})..hold([big]);
       await mac.release(const []);
       expect(images.kept(_shotSha), isNull);
+    });
+
+    test('an image queued twice stays until both are taken back, and one '
+        'shown stays', () async {
+      final images = ChatImages((chat, sha) => throw StateError('fetched'));
+      final big = ImageData(mimeType: 'image/png', data: _shot);
+      final outbox = Outbox(() {})
+        ..images = images
+        ..hold([big])
+        ..hold([big]);
+      await outbox.release([big]);
+      expect(images.kept(_shotSha), isNotNull);
+      await outbox.release([big]);
+      expect(images.kept(_shotSha), isNull);
+      // Queued in one chat and shown in another, it stays when taken back.
+      final other = Outbox(() {})..images = images;
+      outbox.hold([big]);
+      await outbox.release(const []);
+      other.adopt(
+        Item(
+          id: 'u',
+          kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+          images: [_shotRef],
+        ),
+      );
+      await outbox.release([big]);
+      expect(images.kept(_shotSha), isNotNull);
+    });
+
+    test('a queued message that runs before its images are hashed keeps '
+        'them as any other, or leaves them to their fetch', () async {
+      final fetch = Completer<Uint8List>();
+      final images = ChatImages((chat, sha) => fetch.future);
+      final big = ImageData(mimeType: 'image/png', data: _shot);
+      final echo = Item(
+        id: 'u',
+        kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+        images: [_shotRef],
+      );
+      final outbox = Outbox(() {})
+        ..images = images
+        ..hold([big])
+        ..adopt(echo); // its echo, the hash still to come
+      await outbox.release(const []);
+      expect(images.holding, isFalse);
+      expect(images.kept(_shotSha)?.bytes, same(_shot));
+      images.forget(_shotSha);
+      // Its row fetching it already: the fetch brings it, counted once.
+      final row = images.load('c', _shotSha);
+      outbox
+        ..hold([big])
+        ..adopt(echo);
+      await outbox.release(const []);
+      expect(images.holding, isFalse);
+      expect(images.kept(_shotSha), isNull);
+      fetch.complete(_shot);
+      await row;
+      expect(images.kept(_shotSha)?.bytes, same(_shot));
+    });
+
+    test('an image put while it is fetched is left to the fetch, counted '
+        'once toward the cap', () async {
+      final fetch = Completer<Uint8List>();
+      final images = ChatImages((chat, sha) => fetch.future, maxBytes: 20);
+      final row = images.load('c', 'a');
+      expect(images.put('a', Uint8List(10)), isFalse);
+      fetch.complete(Uint8List(10));
+      await row;
+      images.put('b', Uint8List(10)); // 20 bytes: both fit
+      expect(images.kept('a'), isNotNull);
+      expect(images.kept('b'), isNotNull);
     });
 
     test('whole: references fetched, inline images as they are', () async {

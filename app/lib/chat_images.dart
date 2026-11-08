@@ -64,6 +64,8 @@ class ChatImages {
   // In insertion order: the first is the least recently shown.
   final _kept = <String, MemoryImage>{};
   int _bytes = 0;
+  // The [hold]s of each kept image not shown yet.
+  final _held = <String, int>{};
   final _jobs = <String, _Job>{};
   final _waiting = Queue<_Job>();
   int _running = 0;
@@ -76,16 +78,48 @@ class ChatImages {
   }
 
   /// Keeps [bytes] as the image of [sha256], which this app has already
-  /// (it sent them): shown at once, not fetched. Whether it wasn't kept
-  /// already.
+  /// (it sent them): shown at once, not fetched. Not if it is kept or on
+  /// its way already (a fetch brings it); whether it was put.
   bool put(String sha256, Uint8List bytes) {
-    if (kept(sha256) != null) return false;
+    if (kept(sha256) != null || _jobs.containsKey(sha256)) return false;
     _keep(sha256, MemoryImage(bytes));
     return true;
   }
 
-  /// Lets the image of [sha256] go: [put] for a message that won't show it
-  /// (taken out of the queue).
+  /// Keeps [bytes] as the image of [sha256] for a queued message that will
+  /// show it when it runs, counted: each hold takes a [release] or, once
+  /// the image shows, [shown]. Those kept already for what showed stay as
+  /// they are, and one on its way comes as fetched.
+  void hold(String sha256, Uint8List bytes) {
+    if (_held[sha256] case final n?) {
+      _held[sha256] = n + 1;
+    } else if (put(sha256, bytes)) {
+      _held[sha256] = 1;
+    }
+  }
+
+  /// Whether any image is held for a queued message.
+  bool get holding => _held.isNotEmpty;
+
+  /// Lets go of a [hold] for a message that won't run (taken out of the
+  /// queue): its image goes with the last.
+  void release(String sha256) {
+    switch (_held[sha256]) {
+      case null:
+        return;
+      case 1:
+        _held.remove(sha256);
+        forget(sha256);
+      case final n:
+        _held[sha256] = n - 1;
+    }
+  }
+
+  /// The image of [sha256] showed (a message ran with it): kept as any
+  /// other, what held it no longer counted.
+  void shown(String sha256) => _held.remove(sha256);
+
+  /// Lets the image of [sha256] go.
   void forget(String sha256) {
     if (_kept.remove(sha256) case final image?) _bytes -= image.bytes.length;
   }
@@ -150,11 +184,13 @@ class ChatImages {
   }
 
   void _keep(String sha256, MemoryImage image) {
+    forget(sha256); // counted once, whatever kept it before
     _kept[sha256] = image;
     _bytes += image.bytes.length;
     while (_bytes > maxBytes && _kept.length > 1) {
       final first = _kept.keys.first;
       _bytes -= _kept.remove(first)!.bytes.length;
+      _held.remove(first);
     }
   }
 }

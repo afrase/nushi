@@ -37,10 +37,12 @@ class Outbox {
   final _sent = <String>{}; // sent, the echo still to come
   int _sends = 0;
 
-  /// The hashes of the images [hold] put in [images], their echo still to
-  /// come; [_holding] is its work, in order, so [release] comes after.
-  final _held = <String>{};
+  /// [hold]'s work, in order, so [release] comes after; [_hashing] counts
+  /// the holds still at it, and [_echoed] has the references of the echoes
+  /// that came meanwhile: a message can run before its images are hashed.
   Future<void> _holding = Future.value();
+  int _hashing = 0;
+  final _echoed = <String>{};
 
   /// A message on its way: shown in the transcript until its echo.
   Item send(
@@ -94,8 +96,9 @@ class Outbox {
   /// message on its way with its text, if there is one.
   void adopt(Item echo) {
     if (echo.kind != ItemKind.ITEM_KIND_USER_MESSAGE) return;
-    for (final i in echo.images) {
-      _held.remove(i.sha256); // shown now: kept as any other
+    for (final i in echo.images.where(isImageRef)) {
+      images?.shown(i.sha256); // kept as any other now
+      if (_hashing > 0) _echoed.add(i.sha256);
     }
     final it = sending
         .where((s) => s.text == echo.text && !unsent.contains(s.id))
@@ -129,11 +132,20 @@ class Outbox {
   void hold(List<ImageData> sent) {
     final keep = images;
     if (keep == null) return;
+    _hashing++;
     _holding = _holding.then((_) async {
-      for (final i in sent) {
-        if (i.data.length <= refAbove) continue; // it comes inline
-        final hash = await imageHash(i.data);
-        if (keep.put(hash, _bytes(i.data))) _held.add(hash);
+      try {
+        for (final i in sent) {
+          if (i.data.length <= refAbove) continue; // it comes inline
+          final hash = await imageHash(i.data);
+          if (_echoed.contains(hash)) {
+            keep.put(hash, _bytes(i.data)); // it ran: kept as any other
+          } else {
+            keep.hold(hash, _bytes(i.data));
+          }
+        }
+      } finally {
+        if (--_hashing == 0) _echoed.clear();
       }
     });
   }
@@ -146,10 +158,9 @@ class Outbox {
     if (keep == null) return _holding;
     return _holding = _holding.then((_) async {
       for (final i in sent) {
-        if (_held.isEmpty) return;
+        if (!keep.holding) return;
         if (i.data.length <= refAbove) continue;
-        final hash = await imageHash(i.data);
-        if (_held.remove(hash)) keep.forget(hash);
+        keep.release(await imageHash(i.data));
       }
     });
   }
