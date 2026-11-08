@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"slices"
 
 	"github.com/afrase/nushi/internal/model"
 )
@@ -58,6 +59,10 @@ func (s *Service) Image(chatID, hash string) (model.Image, error) {
 	}
 	var unhashed []model.Image
 	c.mu.Lock()
+	if c.inCopy {
+		defer c.mu.Unlock()
+		return c.copyImageLocked(hash)
+	}
 	for i := range c.items {
 		for _, img := range c.items[i].Images {
 			switch img.Hash {
@@ -73,6 +78,32 @@ func (s *Service) Image(chatID, hash string) (model.Image, error) {
 	for _, img := range unhashed {
 		if ImageHash(img.Data) == hash {
 			return img, nil
+		}
+	}
+	return model.Image{}, ErrNoImage
+}
+
+// copyImageLocked is Image for a chat whose items were let go: only an
+// item that has the image is read back from the copy (letgo.go).
+func (c *chat) copyImageLocked(hash string) (model.Image, error) {
+	heads, err := c.copies.Heads(c.id)
+	if err != nil {
+		return model.Image{}, err
+	}
+	var ids []string
+	for _, h := range heads {
+		if slices.ContainsFunc(h.Images, func(img model.Image) bool { return img.Hash == hash }) {
+			ids = append(ids, h.ID)
+			break
+		}
+	}
+	found, err := c.copies.Pick(c.id, ids)
+	if err != nil {
+		return model.Image{}, err
+	}
+	for _, it := range found {
+		if i := slices.IndexFunc(it.Images, func(img model.Image) bool { return img.Hash == hash }); i >= 0 {
+			return it.Images[i], nil
 		}
 	}
 	return model.Image{}, ErrNoImage

@@ -26,6 +26,8 @@ const (
 )
 
 // Copies keeps the copies (internal/transcripts).
+//
+//nolint:interfacebloat // the one store of the copies, as chats use it: written as items settle, read whole, or read by heads and picks without a whole read (letgo.go)
 type Copies interface {
 	// Append adds items, or writes again ones it has; after[i] is the item
 	// before items[i] in the transcript ("" for the first).
@@ -39,8 +41,13 @@ type Copies interface {
 	Read(chat string) ([]model.Item, error)
 	// Find returns the items of a chat's copy that want picks, each with
 	// the id of the item before it, without reading the others whole:
-	// want sees an item's ID, Kind and Status.
+	// want sees an item as Heads has it.
 	Find(chat string, want func(model.Item) bool) (items []model.Item, after []string, err error)
+	// Heads returns a chat's copy with only each item's ID, Kind, Status,
+	// Parent and WorktreePath, and its images' MimeType and Hash; Pick
+	// those of its items whose ids are ids, whole, reading only them.
+	Heads(chat string) ([]model.Item, error)
+	Pick(chat string, ids []string) ([]model.Item, error)
 	Delete(chat string) error
 	Has(chat string) bool
 	// List returns every chat's copy, largest first.
@@ -82,6 +89,7 @@ func (c *chat) copyLocked(all bool) {
 	}
 	if !c.copiesOn() {
 		clear(c.unsaved)
+		c.mirrored = false
 		return
 	}
 	var items []model.Item
@@ -103,6 +111,7 @@ func (c *chat) copyLocked(all bool) {
 		clear(c.unsaved) // items gone meanwhile
 	}
 	if err := c.copies.Append(c.id, items, after); err != nil {
+		c.mirrored = false
 		c.logLocked().Warn("transcript copy not written", "items", len(items), "err", err)
 	}
 }
@@ -118,6 +127,7 @@ func (c *chat) cutCopyLocked(item string) {
 	}
 	if c.copies != nil {
 		if err := c.copies.Cut(c.id, item); err != nil {
+			c.mirrored = false
 			c.logLocked().Warn("transcript copy not cut", "err", err)
 		}
 	}
@@ -131,6 +141,7 @@ func (c *chat) dropCopyLocked(it model.Item) {
 		return
 	}
 	if err := c.copies.Drop(c.id, it.ID); err != nil {
+		c.mirrored = false
 		c.logLocked().Warn("transcript copy: item not dropped", "err", err)
 	}
 }
@@ -185,19 +196,28 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		if !slices.Contains(chats, c.Chat) {
 			continue
 		}
-		if err := s.copies.Delete(c.Chat); err != nil {
-			return n, bytes, err
-		}
-		n, bytes = n+1, bytes+c.Bytes
 		s.mu.Lock()
 		ch := s.chats[c.Chat]
 		s.mu.Unlock()
 		if ch == nil {
+			if err := s.copies.Delete(c.Chat); err != nil {
+				return n, bytes, err
+			}
+			n, bytes = n+1, bytes+c.Bytes
 			continue
 		}
+		// An open chat shows on what it has, so items it let go come back
+		// before the copy goes.
 		ch.mu.Lock()
+		ch.itemsBackLocked()
+		err := s.copies.Delete(c.Chat)
+		ch.mirrored = false
 		gone := ch.sessionGone
 		ch.mu.Unlock()
+		if err != nil {
+			return n, bytes, err
+		}
+		n, bytes = n+1, bytes+c.Bytes
 		if gone {
 			s.expire(ctx, ch, "its transcript's copy was cleared")
 		}

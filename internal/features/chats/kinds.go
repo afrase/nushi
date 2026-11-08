@@ -135,6 +135,9 @@ func New(ctx context.Context, agents []Kind, o Options) *Service {
 	if o.Copies != nil && o.CopyDays != nil {
 		go s.autoClearCopies(o.CopyDays)
 	}
+	if o.Copies != nil {
+		go s.letGoUnseen()
+	}
 	return s
 }
 

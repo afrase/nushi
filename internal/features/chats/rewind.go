@@ -153,6 +153,7 @@ func (s *Service) Rewind(ctx context.Context, chatID, itemID string) (model.Mess
 // indexLocked returns the index of the item with id, or -1, looking from
 // the latest (an event's item is almost always one of them).
 func (c *chat) indexLocked(id string) int {
+	c.itemsBackLocked() // whoever looks for an item may change it
 	for i, it := range slices.Backward(c.items) {
 		if it.ID == id {
 			return i

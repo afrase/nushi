@@ -28,7 +28,7 @@ func (s *Service) Pin(chatIDs []string) error {
 		if sess.Pin == place[sess.ID] {
 			continue
 		}
-		c, err := s.stored(sess.ID)
+		c, err := s.listed(sess.ID)
 		if err != nil {
 			continue // gone meanwhile
 		}

@@ -31,7 +31,7 @@ func (s *Service) Seen(chatID string) error {
 		if !slices.ContainsFunc(stored, func(sess model.ChatRecord) bool { return sess.ID == chatID && sess.Done }) {
 			return nil
 		}
-		if c, err = s.stored(chatID); err != nil {
+		if c, err = s.listed(chatID); err != nil {
 			return err
 		}
 	}

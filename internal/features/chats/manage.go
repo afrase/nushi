@@ -22,10 +22,20 @@ func (s *Service) stored(id string) (*chat, error) {
 	return c, err
 }
 
+// listed is stored without reading the chat's items back (find): for what
+// changes only its record.
+func (s *Service) listed(id string) (*chat, error) {
+	c, err := s.find(id)
+	if err == nil && c.parent != nil {
+		return nil, fmt.Errorf("%q is a side chat", id)
+	}
+	return c, err
+}
+
 // Rename sets the title the user gave a chat, which wins over the agent's.
 // An empty name goes back to the agent's title.
 func (s *Service) Rename(chatID, name string) error {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return err
 	}
@@ -60,7 +70,7 @@ func (s *Service) Session(id string) (model.ChatRecord, error) {
 // set) doesn't take the place of one linked by hand, nor come back once
 // unlinked.
 func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return err
 	}
@@ -100,7 +110,7 @@ func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
 // DropFoundPull unlinks the pull request found for a branch the chat's
 // folder is no longer on.
 func (s *Service) DropFoundPull(chatID, branch string) {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return
 	}
@@ -293,7 +303,7 @@ func (s *Service) Folder(chatID string) (string, error) {
 // Roots returns the folders a chat's files may be read from: its folder
 // and, for a worktree chat, the worktree (the folder may be inside it).
 func (s *Service) Roots(chatID string) ([]string, error) {
-	c, err := s.lookup(chatID)
+	c, err := s.find(chatID)
 	if err != nil {
 		return nil, err
 	}

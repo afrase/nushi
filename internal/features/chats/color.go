@@ -22,7 +22,7 @@ func (s *Service) SetColor(chatID, color string) error {
 	if color != "" && !slices.Contains(chatColors, color) {
 		return ErrColor // says nothing of the name: it's the client's text
 	}
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return fmt.Errorf("setting the chat's color: %w", err)
 	}
