@@ -20,7 +20,8 @@ import (
 // CLI writes <config>/sessions/<pid>.json (its session id, entrypoint, the
 // process's start time). A record counts by the rules claude-agent-acp's
 // session list had: the process is alive, and started when the record
-// says, so a pid used again doesn't count; a record without a start time
+// says (within stepSlack), so a pid used again doesn't count; a record
+// without a start time
 // counts for a day. A record whose pidDomain isn't this host's (a pid of
 // another machine or pid namespace, docs/facts/claude.md) doesn't count.
 func (Local) OpenElsewhere(_ []string) map[string]string {
@@ -59,7 +60,7 @@ func open(dir string, startedAt func(pid int) (time.Time, bool)) map[string]stri
 		start, known := startedAt(pid)
 		recorded, err := time.ParseInLocation("Mon Jan 2 15:04:05 2006", strings.Join(strings.Fields(r.ProcStart), " "), time.UTC)
 		switch {
-		case err == nil && known && !recorded.Equal(start.Truncate(time.Second)):
+		case err == nil && known && recorded.Sub(start.Truncate(time.Second)).Abs() > stepSlack:
 			continue // another process has the pid now
 		case err != nil && time.Since(time.UnixMilli(max(r.Updated, r.Started, r.StatusTime))) > 24*time.Hour:
 			continue

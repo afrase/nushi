@@ -19,3 +19,8 @@ func started(pid int) (time.Time, bool) {
 // domain is the pidDomain Claude Code writes on macOS
 // (docs/facts/claude.md).
 func domain() string { return "darwin" }
+
+// stepSlack is how far a record's procStart may be from the process's
+// start and still be it: none, since P_starttime is fixed at fork, so ps
+// gives Claude the same second Nushi reads.
+const stepSlack time.Duration = 0

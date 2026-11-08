@@ -11,3 +11,7 @@ func domain() string { return "" }
 // started can't say when a process started on this OS (ADR 0097): a
 // record then counts by its age alone.
 func started(int) (time.Time, bool) { return time.Time{}, false }
+
+// stepSlack is how far a record's procStart may be from the process's
+// start: started never knows one here, so it doesn't matter.
+const stepSlack time.Duration = 0

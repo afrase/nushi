@@ -61,4 +61,13 @@ func TestOpen(t *testing.T) {
 			t.Errorf("a record of another pid domain (%q) counted: %v", d, got)
 		}
 	}
+	// A record a second off, as a step of the clock between Claude's ps
+	// and this read leaves it on Linux, is still its process there; on the
+	// Mac the start never moves, so it is another.
+	if at, ok := started(sleeper.Process.Pid); ok {
+		write(sleeper.Process.Pid, map[string]any{"sessionId": "stepped", "entrypoint": "cli", "procStart": stamp(at.Add(time.Second))})
+		if got, want := open(dir, started)["stepped"] != "", stepSlack >= time.Second; got != want {
+			t.Errorf("a record a second off counted: %v, want %v (slack %v)", got, want, stepSlack)
+		}
+	}
 }
