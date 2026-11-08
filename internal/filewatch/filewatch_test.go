@@ -164,9 +164,14 @@ func TestWatchSendsChanges(t *testing.T) {
 	if f := next(); string(f.Data) != "# two, longer" {
 		t.Fatalf("after the rewrite: %q", f.Data)
 	}
-	// Turned into a link out of the folder: refused, and the watch ends.
+	// Removed, then turned into a link out of the folder: refused, and the
+	// watch ends (the link is a change from missing, though it can't be
+	// stat'd through).
 	if err := os.Remove(path); err != nil {
 		t.Fatal(err)
+	}
+	if f := next(); !f.Missing {
+		t.Fatalf("after the removal: %+v", f)
 	}
 	if err := os.Symlink("/etc/hosts", path); err != nil {
 		t.Fatal(err)
@@ -177,12 +182,9 @@ func TestWatchSendsChanges(t *testing.T) {
 			t.Fatal("a link out ended the watch without an error")
 		}
 	case f := <-got:
-		if !f.Missing { // the removal may be seen first
-			t.Fatalf("sent %+v through a link out", f)
-		}
-		if err := <-done; err == nil {
-			t.Fatal("a link out ended the watch without an error")
-		}
+		t.Fatalf("sent %+v through a link out", f)
+	case <-time.After(5 * time.Second):
+		t.Fatal("a link out wasn't seen")
 	}
 	cancel()
 }

@@ -170,7 +170,12 @@ func stampOf(root, rel string) stamp {
 	defer r.Close() //nolint:errcheck // read-only
 	fi, err := r.Stat(rel)
 	if err != nil {
-		return stamp{}
+		// A link out of root (or to nothing) can't be stat'd through, but
+		// it's there: its own stamp, so a missing file turned into one is a
+		// change, and Watch reads it and refuses a link out.
+		if fi, err = r.Lstat(rel); err != nil {
+			return stamp{}
+		}
 	}
 	return stamp{size: fi.Size(), mod: fi.ModTime(), there: true}
 }
