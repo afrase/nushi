@@ -12,6 +12,31 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
+// sleeperEnv makes this test binary, run again as a child, sleep instead
+// of running tests: a child that runs whatever its first argument says,
+// even an empty one, which a multicall coreutils (uutils, Ubuntu's since
+// 25.10, or busybox) would take for no program and exit at once.
+const sleeperEnv = "NUSHI_PROCTREE_SLEEPER"
+
+func TestMain(m *testing.M) {
+	if os.Getenv(sleeperEnv) == "1" {
+		time.Sleep(time.Minute)
+		os.Exit(0)
+	}
+	m.Run()
+}
+
+// sleeper starts this test binary as a sleeping child with args, its
+// environment only env.
+func sleeper(t *testing.T, args []string, env ...string) *exec.Cmd {
+	t.Helper()
+	exe, err := os.Executable()
+	testcheck.NoErr(t, err)
+	cmd := &exec.Cmd{Path: exe, Args: args, Env: append(env, sleeperEnv+"=1")}
+	testcheck.NoErr(t, cmd.Start()) // returns once the child has exec'd
+	return cmd
+}
+
 // group starts script in sh as a process group of its own, as Claude Code
 // starts a command, and waits for it in the background.
 func group(t *testing.T, script string) (*exec.Cmd, <-chan struct{}) {
@@ -144,8 +169,7 @@ func TestUnder(t *testing.T) {
 // arguments stay where they are, and the environment out of them.
 func TestArgsWithAnEmptyFirstArgument(t *testing.T) {
 	for _, want := range [][]string{{"", "30"}, {"sleep", "30"}} {
-		cmd := &exec.Cmd{Path: "/bin/sleep", Args: want, Env: []string{"SECRET_TOKEN=hunter2"}}
-		testcheck.NoErr(t, cmd.Start())
+		cmd := sleeper(t, want, "SECRET_TOKEN=hunter2")
 		var got []string
 		ok := testcheck.Eventually(func() bool { got = Args(cmd.Process.Pid); return slices.Equal(got, want) })
 		_ = cmd.Process.Kill()

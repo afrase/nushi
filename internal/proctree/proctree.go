@@ -1,10 +1,11 @@
-// Package proctree reads the processes under one on macOS, with their
-// command lines, and ends a process group among them: an agent's own
-// background command, which Nushi stops without asking the agent
-// (docs/facts/claude.md). Who started whom is sysctl's kern.proc.all; a
-// command line is kern.procargs2, readable for the user's own processes
-// (proctree_darwin.go). Another OS reads no processes (proctree_other.go,
-// ADR 0097).
+// Package proctree reads the processes under one, with their command
+// lines, and ends a process group among them: an agent's own background
+// command, which Nushi stops without asking the agent
+// (docs/facts/claude.md). On macOS who started whom is sysctl's
+// kern.proc.all and a command line is kern.procargs2, readable for the
+// user's own processes (proctree_darwin.go); on Linux both come from
+// /proc, each process's stat and cmdline (proctree_linux.go, through
+// procfs). Another OS reads no processes (proctree_other.go, ADR 0097).
 package proctree
 
 import (
