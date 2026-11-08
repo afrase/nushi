@@ -26,7 +26,6 @@ void main() {
     expect(const MacWindow().menuBar, isTrue);
     expect(set.speller, isNull);
     expect(await set.loginItem.status(), isNull);
-    expect(await set.alerts.allowed(), isNull);
     expect(await set.clipboard.files(), isEmpty);
     expect(await set.clipboard.image(), isNull);
     expect(await set.web.sincePress(), isNull);

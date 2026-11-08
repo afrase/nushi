@@ -8,13 +8,14 @@ import 'package:nushi/fonts_linux.dart';
 import 'package:nushi/login_item_linux.dart';
 import 'package:nushi/mermaid_linux.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/session_bus_linux.dart';
 import 'package:nushi/web_views_linux.dart';
 import 'package:nushi/window_drag_linux.dart';
 
 /// Linux's implementation of each native capability (ADR 0097, 0102), each
 /// over GTK's runner in `linux/runner`, D-Bus or libc; no speller yet.
 Native linuxNative() => Native(
-  alerts: const LinuxAlertCenter(),
+  alerts: LinuxAlertCenter(sessionBus, const LinuxWindow()),
   clipboard: const LinuxClipboardFiles(),
   conventions: linuxConventions,
   desktop: const LinuxDesktop(),

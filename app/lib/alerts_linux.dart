@@ -1,11 +1,51 @@
-import 'package:nushi/alerts.dart';
+import 'dart:async';
 
-/// Linux's notifications and badge, none yet: the freedesktop
-/// notification service and the launcher's count come over D-Bus later
-/// (ADR 0102). Until then nothing is posted, and Settings shows no
-/// permission.
+import 'package:dbus/dbus.dart';
+import 'package:nushi/alerts.dart';
+import 'package:nushi/window_drag.dart';
+
+const _service = 'org.freedesktop.Notifications';
+final _path = DBusObjectPath('/org/freedesktop/Notifications');
+
+/// The app's id, which names its `.desktop` file and its icon (ADR 0102).
+const _app = 'com.nushihq.Nushi';
+
+/// Linux's notifications, through the desktop's notification service
+/// (`org.freedesktop.Notifications`: GNOME Shell's, KDE's, dunst, mako)
+/// on the session bus, and the count on the app's icon through Unity's
+/// launcher entry, which Ubuntu's dock, Dash to Dock and KDE's task
+/// manager show (ADR 0102). The service lists nothing it has shown, so
+/// what was posted is kept here: each name's number from the service
+/// (sent back to replace it) and each chat's names. A click on one opens
+/// its chat and brings the window to the front with the token the desktop
+/// gave the click. Calls run one at a time, in order, so a name posted
+/// twice in a row is replaced, never shown twice.
 class LinuxAlertCenter implements AlertCenter {
-  const new();
+  /// Over the session bus given, none (nothing posted, no permission)
+  /// when null, bringing the window given to the front on a click.
+  new(this._bus, this._window);
+
+  final DBusClient? _bus;
+  final AppWindow _window;
+
+  final _numbers = <String, int>{}; // a name's number from the service
+  final _names = <int, String>{}; // a number's name
+  final _chats = <String, String>{}; // a name's chat
+  final _tokens = <int, String>{}; // a click's activation token, by number
+  void Function(String chat)? _open;
+  StreamSubscription<DBusSignal>? _signals;
+  Future<bool>? _markup;
+  Future<void> _last = Future.value();
+
+  DBusRemoteObject get _notifications =>
+      DBusRemoteObject(_bus!, name: _service, path: _path);
+
+  /// Runs [call] after every call before it, whatever they did.
+  Future<T> _inTurn<T>(Future<T> Function() call) {
+    final done = _last.then((_) => call());
+    _last = done.then((_) {}, onError: (Object _) {});
+    return done;
+  }
 
   @override
   Future<void> post({
@@ -14,23 +54,188 @@ class LinuxAlertCenter implements AlertCenter {
     required String title,
     required String body,
     required bool sound,
-  }) async {}
+  }) async {
+    if (_bus == null) return;
+    _listen();
+    await _inTurn(() async {
+      // Markup the service would read, from a chat's title (the agent's
+      // words) or a failure, is shown as written.
+      final escape = await (_markup ??= _bodyMarkup());
+      final reply = await _notifications.callMethod(_service, 'Notify', [
+        const DBusString('Nushi'),
+        DBusUint32(_numbers[id] ?? 0),
+        const DBusString(_app),
+        DBusString(escape ? escaped(title) : title),
+        DBusString(escape ? escaped(body) : body),
+        DBusArray.string(['default', 'Open']),
+        DBusDict.stringVariant({
+          'desktop-entry': const DBusString(_app),
+          'category': const DBusString('im.received'),
+          if (sound)
+            'sound-name': const DBusString('message-new-instant')
+          else
+            'suppress-sound': const DBusBoolean(true),
+        }),
+        const DBusInt32(-1),
+      ], replySignature: DBusSignature('u'));
+      final number = reply.returnValues.single.asUint32();
+      if (_numbers[id] case final old? when old != number) _names.remove(old);
+      _numbers[id] = number;
+      _names[number] = id;
+      _chats[id] = chat;
+    });
+  }
+
+  /// Whether the service reads markup in a notification's text (its
+  /// `body-markup` capability; dunst and GNOME Shell do).
+  Future<bool> _bodyMarkup() async {
+    try {
+      final reply = await _notifications.callMethod(
+        _service,
+        'GetCapabilities',
+        const [],
+        replySignature: DBusSignature('as'),
+      );
+      return reply.returnValues.single.asStringArray().contains('body-markup');
+    } on Object {
+      _markup = null; // asked again with the next one
+      return true;
+    }
+  }
 
   @override
-  Future<void> withdraw(List<String> ids) async {}
+  Future<void> withdraw(List<String> ids) async {
+    if (_bus == null) return;
+    await _inTurn(() => _close(ids));
+  }
 
   @override
-  Future<void> clear(String chat) async {}
+  Future<void> clear(String chat) async {
+    if (_bus == null) return;
+    await _inTurn(
+      () => _close([
+        for (final MapEntry(key: id, value: c) in _chats.entries)
+          if (c == chat) id,
+      ]),
+    );
+  }
 
+  /// Closes the notifications named [ids] that are shown.
+  Future<void> _close(List<String> ids) async {
+    for (final id in ids) {
+      final number = _numbers.remove(id);
+      _chats.remove(id);
+      if (number == null) continue;
+      _names.remove(number);
+      _tokens.remove(number);
+      await _notifications.callMethod(_service, 'CloseNotification', [
+        DBusUint32(number),
+      ], replySignature: DBusSignature.empty);
+    }
+  }
+
+  /// The count of [label] (digits, or '' for none), as the launcher
+  /// entry's Update signal, which no one answers.
   @override
-  Future<void> badge(String label) async {}
+  Future<void> badge(String label) async {
+    final count = int.tryParse(label) ?? 0;
+    await _bus?.emitSignal(
+      path: DBusObjectPath('/com/nushihq/Nushi'),
+      interface: 'com.canonical.Unity.LauncherEntry',
+      name: 'Update',
+      values: [
+        const DBusString('application://$_app.desktop'),
+        DBusDict.stringVariant({
+          'count': DBusInt64(count),
+          'count-visible': DBusBoolean(count > 0),
+        }),
+      ],
+    );
+  }
 
+  /// Allowed while a notification service runs or the bus can start one;
+  /// otherwise no answer, as the freedesktop service has no permission
+  /// to ask about (a desktop's own switch for Nushi stays its own).
   @override
-  Future<NotifyPermission?> allowed() async => null;
+  Future<NotifyPermission?> allowed() async {
+    final bus = _bus;
+    if (bus == null) return null;
+    try {
+      if (await bus.nameHasOwner(_service) ||
+          (await bus.listActivatableNames()).contains(_service)) {
+        return NotifyPermission.allowed;
+      }
+    } on Object {
+      // No bus to ask.
+    }
+    return null;
+  }
 
+  /// There's no one place for a desktop's notification settings.
   @override
   Future<void> openSettings() async {}
 
+  /// A null [open] (the alerts gone) stops following the service until
+  /// the next notification.
   @override
-  void onOpen(void Function(String chat)? open) {}
+  void onOpen(void Function(String chat)? open) {
+    _open = open;
+    if (open != null) {
+      _listen();
+    } else {
+      _signals?.cancel().ignore();
+      _signals = null;
+    }
+  }
+
+  /// Follows the service's signals from now on: a click's token, then its
+  /// action, and a notification gone.
+  void _listen() {
+    final bus = _bus;
+    if (bus == null || _signals != null) return;
+    _signals =
+        DBusSignalStream(
+          bus,
+          sender: _service,
+          interface: _service,
+          path: _path,
+        ).listen(
+          _signal,
+          onError: (Object _) {
+            // A bus that went away: nothing more to follow.
+          },
+        );
+  }
+
+  void _signal(DBusSignal s) {
+    final values = s.values;
+    if (values.length != 2 || values.first is! DBusUint32) return;
+    final number = values.first.asUint32();
+    switch ((s.name, values.last)) {
+      case ('ActivationToken', final DBusString token):
+        if (_names.containsKey(number)) _tokens[number] = token.value;
+      case ('ActionInvoked', DBusString(value: 'default')):
+        final id = _names[number];
+        final chat = _chats[id];
+        final token = _tokens.remove(number);
+        if (chat == null) return;
+        _window.present(token: token).ignore();
+        _open?.call(chat);
+      case ('NotificationClosed', _):
+        final id = _names.remove(number);
+        _tokens.remove(number);
+        if (id != null && _numbers[id] == number) {
+          _numbers.remove(id);
+          _chats.remove(id);
+        }
+    }
+  }
 }
+
+/// [text] with the characters notification markup reads (`&`, `<`, `>`)
+/// escaped, so it shows as written: a chat's title may hold a tag or a
+/// link.
+String escaped(String text) => text
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
