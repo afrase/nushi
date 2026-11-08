@@ -1,6 +1,6 @@
 # Installing Nushi
 
-Nushi runs on a Mac with Apple silicon and macOS 13 or later. Linux and Windows aren't supported yet: the daemon uses macOS's keychain, sandbox and launchd. The relay runs anywhere ([Remote access](remote.md)).
+Nushi runs on a Mac with Apple silicon and macOS 13 or later, and on Linux ([below](#on-linux)). Windows isn't supported yet. The relay runs anywhere ([Remote access](remote.md)).
 
 ## With Homebrew
 
@@ -21,6 +21,32 @@ Releases are signed ad hoc, not notarized. The cask clears macOS's quarantine fl
 2. Check it: `shasum -a 256 -c Nushi-X.Y.Z.zip.sha256`.
 3. Unzip it, move Nushi.app to Applications and open it.
 4. macOS refuses the first time. Go to System Settings › Privacy & Security and click Open Anyway.
+
+## On Linux
+
+Nushi runs on x86_64 and arm64 Linux ([ADR 0102](adr/0102-the-app-runs-on-linux.md)) with:
+
+- glibc 2.34 or later (Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 and later);
+- GTK 3, which every desktop has;
+- a Secret Service keyring (GNOME Keyring, KWallet, KeePassXC) for a Jira or GitHub token;
+- bubblewrap (`bwrap`) to set up an agent's adapter (Codex's), whose install runs in its sandbox; on Ubuntu, AppArmor must allow unprivileged user namespaces (`kernel.apparmor_restrict_unprivileged_userns=0`);
+- an emoji font (Noto Color Emoji) for emoji, and enchant 2 with a Hunspell dictionary for spelling.
+
+From [Releases](https://github.com/afrase/nushi/releases), download `nushi-X.Y.Z-linux-amd64.tar.gz` (or `-arm64`) and its `.sha256`, then:
+
+```sh
+sha256sum -c nushi-X.Y.Z-linux-amd64.tar.gz.sha256
+tar -xzf nushi-X.Y.Z-linux-amd64.tar.gz
+nushi/install.sh
+```
+
+`install.sh` puts Nushi in `~/.local/opt/nushi`, and its menu entry and icon in `~/.local/share` (nothing outside your home, no root). Open Nushi from your applications. A newer release installs the same way, over the old one. `~/.local/opt/nushi/install.sh --uninstall` removes it, with Start at login's entry; the data folder stays.
+
+On Linux:
+
+- Pages (an HTML or PDF preview, a browser tab) open in your default browser when you click Open, not inside Nushi, and a diagram shows its source. Ubuntu's Firefox and Chromium are snaps, which can't read hidden folders in your home, so a scratch chat's page (in the data folder) doesn't open in them; a page in a project does.
+- The window has your desktop's own title bar.
+- Start at login is an autostart entry, which your desktop session starts as you log in.
 
 ## Updates
 
@@ -46,6 +72,8 @@ Each release is a new program to macOS. After an upgrade, a Jira token (and a Gi
 
 ## Uninstalling
 
+On Linux, `~/.local/opt/nushi/install.sh --uninstall` (above); the rest of this section is the Mac's.
+
 Uninstalling quits the app. The daemon stops by itself within about a minute once the app is gone, also when you drag it to the Trash. Start at login's item goes with the app.
 
 Chats' data stays in `~/Library/Application Support/Nushi`. **`--zap` deletes it**:
@@ -61,14 +89,14 @@ It doesn't touch the agents' own history (`~/.claude`, `~/.codex`, `~/.ante`, `~
 
 Nushi, an agentic development environment (ADE), is two programs: a Go daemon, `nushid`, that runs the agents, and a Flutter app that is the window.
 
-- The packaged app carries `nushid` in `Contents/Helpers/Nushi Daemon.app`, a background-only app. It starts it when no daemon is running, and leaves it running when it quits ([ADR 0013](adr/0013-app-starts-its-daemon.md), [ADR 0036](adr/0036-the-daemon-is-a-background-helper-app.md)).
+- The packaged app carries `nushid` in `Contents/Helpers/Nushi Daemon.app`, a background-only app (on Linux in `lib/nushid`). It starts it when no daemon is running, and leaves it running when it quits ([ADR 0013](adr/0013-app-starts-its-daemon.md), [ADR 0036](adr/0036-the-daemon-is-a-background-helper-app.md)).
 - Settings › Start at login also starts it at login.
 - A daemon whose app is deleted stops within about a minute. One whose app is replaced (an upgrade, `make install`) keeps running until it restarts.
 - Settings › Logs & advanced shows the app's version and the running daemon's. `nushid -version` in the helper app says the same.
 
 ## Data and logs
 
-The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi/`:
+The daemon keeps its socket, token and log in `~/Library/Application Support/Nushi/` (on Linux `~/.local/share/nushi/`, or `$XDG_DATA_HOME/nushi`):
 
 - `nushid.log`, rotated at 10 MB, with two older copies;
 - `app.log`, for what the app logged while the daemon didn't answer.

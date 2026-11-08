@@ -5,13 +5,18 @@
 # (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
 # rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
 # protos' and Dart's lint, the Dart packages' tests, and the daemon on Linux (ADR 0101): every Go package's tests,
-# lint, build and vet without cgo. The ACP library, github.com/afrase/acp-go, has its own CI. Actions are pinned by
-# commit.
+# lint, build and vet without cgo; and the Linux app (ADR 0102): its tests in two shards (goldens are compared on macOS
+# only), and its package built on each architecture as the release builds it (tools/release.sh's linux part, on the
+# oldest Ubuntu it supports, for the glibc it needs), installed and started on a virtual display (tools/linux-smoke.sh),
+# with the runner's channels tested for real on amd64 (tools/linux-channels.sh). The ACP library,
+# github.com/afrase/acp-go, has its own CI. Actions are pinned by commit.
 #
 # Each job's timeout is two to three times its longest recent run with warm caches (2026-10-29: Go 4.4 minutes, the
 # app's shards 6.2, the web 7.1, Linux's 2 at most), room for a cold cache's downloads and builds: a hung test ends
 # there, not at GitHub's six hours on a scarce macOS runner. Linux's Go job runs every package's tests from 2026-11-08
-# (a minute in an x86 VM with the build cached, unmeasured on CI yet): 25 until it has run there.
+# (a minute in an x86 VM with the build cached, unmeasured on CI yet): 25 until it has run there. The Linux app's jobs
+# (from 2026-11-09) are unmeasured too: 25 for its tests, 30 for its package (a cold Flutter build), until they have
+# run.
 name: CI
 
 on:
@@ -260,3 +265,93 @@ jobs:
       # go.mod and go.sum name what the code imports, no more and no less.
       - if: ${{ !cancelled() }}
         run: go mod tidy -diff
+
+  linux-app:
+    name: App tests (Linux, ${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    # Four test files at once: the runner has four cores.
+    env:
+      SHARD: ${{ matrix.shard }}/2
+      FLUTTER_TEST_FLAGS: --concurrency 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # The end-to-end tests build nushid, nushi-relay and the fake agent, as on macOS.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go build ./cmd/nushid ./cmd/nushi-relay ./internal/acptest/fakeagent
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
+          cache: true
+      - run: make test-app
+
+  linux-package:
+    name: App (Linux, ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    # The newest glibc the package may need, which docs/install.md names (tools/check-bundle.sh): what a build needs
+    # even on a newer glibc (__libc_start_main's 2.34), so RHEL 9's runs it.
+    env:
+      NUSHI_GLIBC: '2.34'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - if: matrix.arch == 'amd64'
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
+          cache: true
+      # Flutter publishes no SDK archive for arm64 Linux: its repository at the tag, which fetches its own Dart and
+      # engine on first use (the same steps as release.yml's).
+      - if: matrix.arch == 'arm64'
+        id: flutter-arm64
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/flutter
+          key: flutter-linux-arm64-${{ env.NUSHI_FLUTTER_VERSION }}
+      - if: matrix.arch == 'arm64'
+        run: |
+          [ -d ~/flutter ] || git clone --depth 1 -b "$NUSHI_FLUTTER_VERSION" https://github.com/flutter/flutter.git ~/flutter
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      # Flutter's Linux build (its docs' list), and what the smoke test and the channels' test run on.
+      - run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libstdc++-12-dev xvfb xauth dbus libgl1-mesa-dri imagemagick xclip
+      - run: tools/release.sh 0.0.0-ci linux
+      - run: SHOT=dist/linux-${{ matrix.arch }}.png tools/linux-smoke.sh dist/nushi-0.0.0-ci-linux-${{ matrix.arch }}.tar.gz
+      # The window as the smoke test left it, to look at (the only look at arm64's).
+      - if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-${{ matrix.arch }}-screenshot
+          path: dist/linux-${{ matrix.arch }}.png
+          if-no-files-found: ignore
+          retention-days: 7
+      # Skipped while the tree has no tools/linux-channels.sh: the runner's channels' test lands on its own.
+      - if: ${{ !cancelled() && matrix.arch == 'amd64' && hashFiles('tools/linux-channels.sh') != '' }}
+        run: tools/linux-channels.sh

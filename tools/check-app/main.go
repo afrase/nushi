@@ -1,6 +1,6 @@
 // Command check-app checks the app the way a change to it needs: make
-// lint-dart, then make test-app, then flutter build macos, which it never
-// runs. It stops at the first failure. Each step's whole output goes to a log
+// lint-dart, then make test-app, then flutter build macos (on Linux,
+// flutter build linux), which it never runs. It stops at the first failure. Each step's whole output goes to a log
 // file, so what's printed is short enough to need no pipe: a line per step
 // and, on a failure, the failing tests' names and reasons, then a last line
 // with the failed step, its exit code and its log. The last line is the
@@ -22,6 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -67,8 +68,17 @@ func steps(folder string) []step {
 			cmd:     []string{"make", "test-app", "FLUTTER_TEST_FLAGS=" + strings.TrimSpace(flags)},
 			results: filepath.Join(folder, "test-app.json"),
 		},
-		{name: "flutter build macos", dir: "app", cmd: []string{"flutter", "build", "macos"}},
+		{name: "flutter build " + buildTarget(), dir: "app", cmd: []string{"flutter", "build", buildTarget()}},
 	}
+}
+
+// buildTarget is the desktop app flutter builds here: Linux's on Linux
+// (ADR 0102), else the Mac's.
+func buildTarget() string {
+	if runtime.GOOS == "linux" {
+		return "linux"
+	}
+	return "macos"
 }
 
 // run runs the steps until one fails and gives the exit code for that.

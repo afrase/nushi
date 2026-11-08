@@ -31,6 +31,7 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | A PiG session's file in the Trash | `~/.Trash` | Delete (you asked), and a side chat closed: moved there with `trash`, as PiG's `/resume` deletes. |
 | The Mac kept awake | `caffeinate` (a process, no file) | Remote access on. |
 | Enchant's folder, and a word you teach the spell checker (Linux) | `$XDG_CONFIG_HOME/enchant/` (by default `~/.config/enchant/`), and enchant's personal list there, `<language>.dic` | The folder (0700, empty) when spell check starts with a dictionary in your language, if it isn't there; the list on Learn Spelling on a misspelled word (ADR 0102). |
+| The Linux app, installed | `~/.local/opt/nushi`, `$XDG_DATA_HOME/applications/com.nushihq.Nushi.desktop` and `$XDG_DATA_HOME/icons/hicolor/*/apps/com.nushihq.Nushi.*` (else `~/.local/share`) | Its `install.sh` (or `make install`), which you run; `install.sh --uninstall` removes them. |
 | Files you open | macOS's open-panel state (`com.nushihq.Nushi` preferences) | The folder picker. |
 
 What changed in milestone Z:

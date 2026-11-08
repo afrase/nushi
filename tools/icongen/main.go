@@ -1,7 +1,7 @@
 // Command icongen draws Nushi's icon, "the still lake": broken rings with
 // agents riding them and one light at the centre. It writes the Icon Composer
-// icon (macOS 26 and later), the PNG icon set older macOS uses, and the bare
-// mark. Run it from the repository root: make icons. The app's mark
+// icon (macOS 26 and later), the PNG icon set older macOS uses, the Linux
+// app's hicolor icons, and the bare mark. Run it from the repository root: make icons. The app's mark
 // (app/lib/mark.dart) draws the same rings.
 package main
 
@@ -23,6 +23,14 @@ const (
 	tealBot = "#0F1A20"
 	ink     = "#EEF1F5"
 	amber   = "#F5A524"
+)
+
+// The Linux app's icons (ADR 0102): the same art as the Mac's icon set, in
+// an icon theme's hicolor folders, named for the .desktop file, which the
+// package installs (app/linux/packaging).
+const (
+	hicolor   = "app/linux/packaging/icons/hicolor"
+	linuxIcon = "com.nushihq.Nushi"
 )
 
 // Drawn on a 100-unit grid, centre (50, 50).
@@ -91,9 +99,13 @@ func main() {
 		write(src, svg)
 		if i == 0 {
 			write("docs/brand/icon.svg", svg)
+			write(filepath.Join(hicolor, "scalable", "apps", linuxIcon+".svg"), svg)
 		}
 		for _, px := range d.pngSizes {
 			png(src, px, filepath.Join(set, fmt.Sprintf("app_icon_%d.png", px)))
+			if px <= 512 {
+				png(src, px, filepath.Join(hicolor, fmt.Sprintf("%dx%d", px, px), "apps", linuxIcon+".png"))
+			}
 		}
 	}
 

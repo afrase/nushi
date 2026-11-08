@@ -133,6 +133,9 @@ static void my_application_startup(GApplication* application) {
   // startup above) capitalizes ("Com.nushihq.Nushi"), so both halves of it
   // match the .desktop file.
   gdk_set_program_class(APPLICATION_ID);
+  // The icon install.sh puts in the icon theme, for window managers that
+  // show a window's own icon rather than its .desktop file's.
+  gtk_window_set_default_icon_name(APPLICATION_ID);
 }
 
 // Implements GApplication::shutdown.

@@ -111,4 +111,46 @@ X-GNOME-Autostart-enabled=true
     expect(execValue(['/opt/a\nb']), isNull);
     expect(execValue(['/opt/100%/nushid']), isNull);
   });
+
+  test("install.sh's uninstall removes the entry the app wrote for its "
+      "package, whatever the home's path, and leaves another copy's", () {
+    for (final name in ['home', r'h o"m$e`x\b']) {
+      final home = '${dir.path}/$name';
+      final daemon = '$home/.local/opt/nushi/lib/nushid';
+      File(daemon).createSync(recursive: true);
+      // The app names the package by the path it runs from, symlinks
+      // resolved, which isn't $HOME's spelling under a linked home.
+      final link = Link('${dir.path}/link-${name.length}')..createSync(home);
+      for (final (given, written) in [
+        (home, daemon),
+        (link.path, File(daemon).resolveSymbolicLinksSync()),
+      ]) {
+        File(daemon).createSync(recursive: true);
+        final entry =
+            File('$given/.config/autostart/com.nushihq.Nushi.daemon.desktop')
+              ..createSync(recursive: true)
+              ..writeAsStringSync(autostartEntry(written)!);
+        expect(_uninstall(given), 0);
+        expect(entry.existsSync(), isFalse, reason: written);
+        expect(Directory('$home/.local/opt/nushi').existsSync(), isFalse);
+
+        File(daemon).createSync(recursive: true);
+        final other = autostartEntry('$home/.local/opt/old/lib/nushid')!;
+        entry
+          ..createSync(recursive: true)
+          ..writeAsStringSync(other);
+        expect(_uninstall(given), 0);
+        expect(entry.readAsStringSync(), other);
+        entry.deleteSync();
+      }
+    }
+  });
 }
+
+/// The packaged install.sh's uninstall run for [home], as its user would.
+int _uninstall(String home) => Process.runSync(
+  'sh',
+  ['linux/packaging/install.sh', '--uninstall'],
+  environment: {'HOME': home, 'PATH': Platform.environment['PATH']!},
+  includeParentEnvironment: false,
+).exitCode;

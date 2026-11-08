@@ -1,10 +1,12 @@
 name: Release
 
 # Publishing a GitHub release (Draft a new release, a new tag vX.Y.Z on main, Publish) builds that tag, attaches
-# Nushi-X.Y.Z.zip, the relay's and the web app's tarballs and a .sha256 for each to the release, and updates the cask
-# in afrase/homebrew-tap (ADR 0055). A draft triggers nothing until it is published. Run it by hand to rebuild an
-# existing release's files. The app (macOS), the relays and the web app (Linux) build in parallel jobs, beside the
-# check; publish attaches them once all are built and the commit is checked. Actions are pinned by commit, as in CI.
+# Nushi-X.Y.Z.zip, the Linux app's nushi-X.Y.Z-linux-{amd64,arm64}.tar.gz, the relay's and the web app's tarballs and a
+# .sha256 for each to the release, and updates the cask in afrase/homebrew-tap (ADR 0055). A draft triggers nothing
+# until it is published. Run it by hand to rebuild an existing release's files. The app (macOS), the Linux app (on each
+# architecture: Flutter doesn't cross-build), the relays and the web app (Linux) build in parallel jobs, beside the
+# check; publish attaches them once all are built and the commit is checked. CI builds, installs and starts the Linux
+# app with the same steps (tools/release.sh's linux part) on every push, since this can't run before a release. Actions are pinned by commit, as in CI.
 # Each job that runs steps has a timeout, as CI's do: two to three times its longest recent run (2026-10-29), room
 # for a cold cache.
 on:
@@ -100,7 +102,64 @@ jobs:
       - run: tools/release.sh "$VERSION" app
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: app
+          name: release-app
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  linux:
+    name: Build the Linux app (${{ matrix.arch }})
+    needs: tag
+    # The oldest Ubuntu Nushi supports, so the package needs no newer glibc than its (ci.yml's linux-package job).
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    permissions:
+      contents: read
+    env:
+      SHA: ${{ needs.tag.outputs.sha }}
+      VERSION: ${{ needs.tag.outputs.version }}
+      NUSHI_GLIBC: '2.34'
+    steps:
+      # Full history: the build number is the commit count.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - if: matrix.arch == 'amd64'
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          channel: stable
+          flutter-version: ${{ env.NUSHI_FLUTTER_VERSION }}
+          cache: true
+      # No SDK archive for arm64 Linux: Flutter's repository at the tag, as in CI.
+      - if: matrix.arch == 'arm64'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/flutter
+          key: flutter-linux-arm64-${{ env.NUSHI_FLUTTER_VERSION }}
+      - if: matrix.arch == 'arm64'
+        run: |
+          [ -d ~/flutter ] || git clone --depth 1 -b "$NUSHI_FLUTTER_VERSION" https://github.com/flutter/flutter.git ~/flutter
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+      - run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libstdc++-12-dev
+      - run: tools/release.sh "$VERSION" linux
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-linux-${{ matrix.arch }}
           path: dist/
           if-no-files-found: error
           retention-days: 7
@@ -126,7 +185,7 @@ jobs:
       - run: tools/release.sh "$VERSION" relay
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: relay
+          name: release-relay
           path: dist/
           if-no-files-found: error
           retention-days: 7
@@ -162,18 +221,18 @@ jobs:
       - run: tools/release.sh "$VERSION" web
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: web
+          name: release-web
           path: dist/
           if-no-files-found: error
           retention-days: 7
 
   publish:
     name: Attach and update the cask
-    needs: [tag, ci, app, relay, web]
+    needs: [tag, ci, app, linux, relay, web]
     # The ci job is skipped when CI already passed on the commit; anything else must have succeeded.
     if: >-
       !cancelled() && needs.tag.result == 'success' && needs.app.result == 'success' &&
-      needs.relay.result == 'success' && needs.web.result == 'success' &&
+      needs.linux.result == 'success' && needs.relay.result == 'success' && needs.web.result == 'success' &&
       (needs.ci.result == 'success' || needs.ci.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -187,8 +246,10 @@ jobs:
         with:
           ref: ${{ env.SHA }}
           persist-credentials: false
+      # Only the builds' files: the ci job's own artifacts (the Linux app's screenshots) are in this run too.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
+          pattern: release-*
           path: dist
           merge-multiple: true
       - name: Attach to the release

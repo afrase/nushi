@@ -18,7 +18,8 @@ make check       # lint, then test
 make gen         # regenerate the API code after editing proto/
 make lines       # hand-written line counts
 make package     # a release "Nushi.app" with nushid inside (signed: Install, below, says with what)
-make install     # package, then copy it to ~/Applications
+make install     # package, then copy it to ~/Applications (Linux: package-linux, then its install.sh)
+make package-linux  # Linux's package, app/build/linux/nushi (tools/package-linux.sh)
 make icons       # redraw the app icon and the mark (tools/icongen)
 make adapters    # an adapter's lockfile again after its version changed
 make relay       # the relay, bin/nushi-relay
@@ -26,11 +27,12 @@ make web         # the phone's web app, into app/build/web
 make screenshots # the README's screenshots, into docs/images
 make renders TEST=test/chat_spacing_test.dart  # its windows as PNGs, into app/build/renders
 tools/release.sh 1.2.0   # a release's files into dist/, as the release workflow builds them
-                         # (or one part: app, relay, web)
+                         # (or one part: app, relay, web, linux)
+tools/linux-smoke.sh dist/nushi-1.2.0-linux-amd64.tar.gz  # install and start it, as CI does
 ```
 
 - With `make run`, start and stop the daemon yourself.
-- `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`).
+- `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`); `make package-linux` the Linux package's layout, nushid's version against the app's, and the newest glibc it needs (no newer than `NUSHI_GLIBC` when set).
 - To try a build beside a Nushi that's in use, give both another data folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`). On Linux the usual folder is `$XDG_DATA_HOME/nushi` (else `~/.local/share/nushi`), `make app` runs `flutter run -d linux`, and `make stop` needs psmisc's `fuser`.
 
 ## Lint
@@ -72,10 +74,11 @@ With a `go.work`, `make lint` builds golangci-lint into `bin/` because `go tool 
 
 ## CI
 
-CI (`.github/workflows/ci.yml`) runs the same parts as `make check`, as parallel jobs, in under 3 minutes:
+CI (`.github/workflows/ci.yml`) runs the same parts as `make check`, as parallel jobs, in under 3 minutes (the Linux app's package longer, a Flutter release build on each architecture):
 
 - on macOS: Go's lint and tests and the window's placement maths, the web app's end-to-end test, and the app's tests in two shards (`make test-app SHARD=1/2`: every second test file);
-- on Linux: the protos' and Dart's lint (with `tools/native-edge`), the Dart packages' tests, every Go package's tests (`make test-go`, with bubblewrap from apt for npm's sandbox and AppArmor's rule on unprivileged user namespaces off), `make lint-linux` and `go mod tidy -diff` (ADR 0101).
+- on Linux: the protos' and Dart's lint (with `tools/native-edge`), the Dart packages' tests, every Go package's tests (`make test-go`, with bubblewrap from apt for npm's sandbox and AppArmor's rule on unprivileged user namespaces off), `make lint-linux` and `go mod tidy -diff` (ADR 0101);
+- the Linux app (ADR 0102): its tests in two shards (goldens skipped), and on each architecture (Ubuntu 22.04, amd64 and arm64) its package built as a release builds it (`tools/release.sh 0.0.0-ci linux`, glibc 2.34 at most), installed into a throwaway home and started on a virtual display until it connects to the daemon it started (`tools/linux-smoke.sh`, whose screenshot is the job's artifact), and on amd64 the runner's channels (`tools/linux-channels.sh`).
 
 ### The daemon's tests on Linux
 
@@ -98,8 +101,8 @@ On a Mac, an OrbStack machine works (`orb create arch nushi-linux`; it can't see
 
 ## Install, releases, logs
 
-- **Install**: `make install` packages a release app (`make package`: the app, the daemon in `Contents/Helpers/Nushi Daemon.app`, signed with the first "Apple Development" identity in the keychain (or `NUSHI_SIGN`; ad hoc when there is none, and then the keychain asks again after every install), checked by `tools/check-bundle.sh`), puts it in `~/Applications`, and copies it to `COPY_TO` from `local.mk` (not committed): the owner's iCloud Downloads, so the work Mac gets it. The running installed daemon keeps the old build until it restarts: restart it only when no chat's agent runs (stop it by its PID, then `open -n -g "$HOME/Applications/Nushi.app/Contents/Helpers/Nushi Daemon.app" --args -login` as the app does, and check `nushid started … api=<n>` in `nushid.log`); otherwise say so: an app of API 77 on asks it to restart itself once nothing runs (ADR 0056).
-- **Releases** (ADR 0055): publishing a GitHub release (tag `vX.Y.Z` on `main`) runs `.github/workflows/release.yml` (about 5 minutes): the app (macOS), the relays and the web app (Linux) in parallel jobs, each `tools/release.sh X.Y.Z <part>` (try it here: with no part it writes all three into `dist/`), and the commit checked (a passing CI run on it, else CI's own workflow, called); then the files attached to the release, and the cask (`packaging/homebrew/nushi.rb`) pushed to `afrase/homebrew-tap` with the `HOMEBREW_TAP_TOKEN` secret, for the latest release only. `make package` stamps `NUSHI_VERSION` (else the newest tag's) and the commit count into the app, the helper and the daemon (`api.Release`, Ping's `version`), and builds for macOS 13 (`MACOS_MIN`). The lead architect cuts a release once CI is green on `main`, without asking; an agent working on a brief never tags, publishes or pushes to the tap.
+- **Install**: `make install` packages a release app (`make package`: the app, the daemon in `Contents/Helpers/Nushi Daemon.app`, signed with the first "Apple Development" identity in the keychain (or `NUSHI_SIGN`; ad hoc when there is none, and then the keychain asks again after every install), checked by `tools/check-bundle.sh`), puts it in `~/Applications`, and copies it to `COPY_TO` from `local.mk` (not committed): the owner's iCloud Downloads, so the work Mac gets it. The running installed daemon keeps the old build until it restarts: restart it only when no chat's agent runs (stop it by its PID, then `open -n -g "$HOME/Applications/Nushi.app/Contents/Helpers/Nushi Daemon.app" --args -login` as the app does, and check `nushid started … api=<n>` in `nushid.log`); otherwise say so: an app of API 77 on asks it to restart itself once nothing runs (ADR 0056). On Linux, `make install` runs `make package-linux` and the package's own `install.sh`: the package to `~/.local/opt/nushi`, its `.desktop` file (its `Exec` naming the package there) to `$XDG_DATA_HOME/applications` and its icons (`app/linux/packaging/icons`, drawn by `make icons`) to `$XDG_DATA_HOME/icons/hicolor`, as the release's tarball installs; there's no `COPY_TO`.
+- **Releases** (ADR 0055): publishing a GitHub release (tag `vX.Y.Z` on `main`) runs `.github/workflows/release.yml` (about 5 minutes): the app (macOS), the Linux app (`nushi-X.Y.Z-linux-<arch>.tar.gz`, on Ubuntu 22.04 for amd64 and arm64: Flutter doesn't cross-build, and the oldest Ubuntu keeps the glibc it needs at 2.34), the relays and the web app (Linux) in parallel jobs, each `tools/release.sh X.Y.Z <part>` (try it here: with no part it writes what this machine builds into `dist/`; CI builds and starts the Linux part on every push, since the release can't run before one), and the commit checked (a passing CI run on it, else CI's own workflow, called); then the files attached to the release, and the cask (`packaging/homebrew/nushi.rb`) pushed to `afrase/homebrew-tap` with the `HOMEBREW_TAP_TOKEN` secret, for the latest release only. `make package` stamps `NUSHI_VERSION` (else the newest tag's) and the commit count into the app, the helper and the daemon (`api.Release`, Ping's `version`), and builds for macOS 13 (`MACOS_MIN`). The lead architect cuts a release once CI is green on `main`, without asking; an agent working on a brief never tags, publishes or pushes to the tap.
 - **Debugging from the logs**: `nushid.log` in the data folder (Settings › Logs; `.1` and `.2` are older, 10 MB each), `app.log` beside it for what the app wrote while the daemon didn't answer; `NUSHI_LOG=debug` or the Settings switch for debug lines. One chat: `grep 'chat=<id>' nushid.log` (side chats name theirs); an agent's processes: `grep 'pid=<pid>'`; a recovered panic's stack: `printf '%b\n' "$(grep panicked nushid.log)"`. What each failure looks like: `docs/history/debugging-from-the-logs.md`.
 
 ## Goldens and renders
