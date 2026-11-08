@@ -7,8 +7,20 @@ BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 GOLANGCI := bin/golangci-lint
 GOVULNCHECK := bin/govulncheck
 DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown packages/svg_path
-# NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones.
+# The machine make runs on: Darwin, or Linux (ADR 0101, 0102).
+OS := $(shell uname -s)
+# NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones;
+# else the daemon's own folder (on Linux $XDG_DATA_HOME/nushi when it's an
+# absolute path, else ~/.local/share/nushi, as nushid picks it).
+ifeq ($(OS),Linux)
+DATA := $(or $(NUSHI_DATA),$(if $(filter /%,$(XDG_DATA_HOME)),$(XDG_DATA_HOME),$(HOME)/.local/share)/nushi)
+else
 DATA := $(or $(NUSHI_DATA),$(HOME)/Library/Application Support/Nushi)
+endif
+# Whether the tests in Chrome run: on the Mac always (Flutter and dart test
+# find its Chrome); on Linux when CHROME_EXECUTABLE names one, or
+# google-chrome is on PATH, which they find there.
+CHROME := $(if $(filter Linux,$(OS)),$(or $(CHROME_EXECUTABLE),$(shell command -v google-chrome 2>/dev/null)),yes)
 RELEASE := app/build/macos/Build/Products/Release/Nushi.app
 HELPER := $(RELEASE)/Contents/Helpers/Nushi Daemon.app
 # local.mk (not committed) can set COPY_TO=<folder>: make install also copies the app there.
@@ -40,12 +52,17 @@ daemon:
 	mkdir -p "$(DATA)"
 	bin/nushid >>"$(DATA)/nushid.log" 2>&1 &
 
-# Stops the daemon listening in $(DATA), not any other.
+# Stops the daemon listening in $(DATA), not any other: on Linux through
+# psmisc's fuser, which finds a Unix socket's holder by its path.
 stop:
+ifeq ($(OS),Linux)
+	fuser -k -TERM "$(DATA)/nushid.sock" 2>/dev/null || true
+else
 	lsof -a -c nushid -t "$(DATA)/nushid.sock" | xargs kill 2>/dev/null || true
+endif
 
 app: mermaid
-	cd app && flutter run -d macos
+	cd app && flutter run -d $(if $(filter Linux,$(OS)),linux,macos)
 
 # mermaid.min.js into the app's assets (the Mac app's and the phone's), as
 # tools/mermaid/mermaid.lock pins it: fetched once into a cache outside the
@@ -187,8 +204,8 @@ lint-linux: $(GOLANGCI)
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 $(GOLANGCI) run ./...
 
 # The protos' and Dart's, and the native code of the app and its Dart
-# packages only in *_macos.dart files (tools/native-edge, ADR 0097):
-# anywhere.
+# packages only in a platform's *_macos.dart or *_linux.dart files
+# (tools/native-edge, ADR 0097, 0102): anywhere.
 lint-dart:
 	go run ./tools/native-edge $(addsuffix /lib,$(DART_DIRS))
 	$(BUF) lint
@@ -198,7 +215,12 @@ lint-dart:
 
 check: lint test
 
+# On Linux, no Mac window to test, and the web's tests only with a Chrome.
+ifeq ($(OS),Linux)
+test: test-go test-packages test-app $(if $(CHROME),test-web)
+else
 test: test-go test-packages test-app test-web test-window
+endif
 
 # With the race detector: about twice the time, still under the app's
 # tests in CI, and a goroutine nothing waits for shows up here first.
@@ -208,11 +230,11 @@ test-go:
 	go test -race $(GOTESTFLAGS) ./...
 
 # The packages run anywhere with Go (remote_transport's interop builds a
-# Go peer) and Chrome.
+# Go peer), and in Chrome where there's one.
 test-packages:
 	cd packages/uds_transport && dart test
-	cd packages/noise && dart test && dart test -p chrome
-	cd packages/remote_transport && dart test && dart test -p chrome test/gzip_web_test.dart
+	cd packages/noise && dart test $(if $(CHROME),&& dart test -p chrome)
+	cd packages/remote_transport && dart test $(if $(CHROME),&& dart test -p chrome test/gzip_web_test.dart)
 	cd packages/markdown && flutter test
 	cd packages/svg_path && flutter test
 
@@ -229,7 +251,7 @@ test-app:
 # and what AppKit takes for its title bar (TitleBar.swift, a window never
 # shown) with their tests, built by swiftc and run with no window on
 # screen: RunnerTests is hosted by the app, so xcodebuild test would launch
-# Nushi (macOS).
+# Nushi (macOS only).
 test-window:
 	@mkdir -p bin
 	xcrun swiftc -o bin/placement-test app/macos/Runner/Placement.swift app/macos/PlacementTests/main.swift
