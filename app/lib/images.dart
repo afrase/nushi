@@ -26,6 +26,11 @@ const maxImageBytes = 3750000;
 /// the bytes `ChatImages` keeps, or come again from the daemon.
 const int imageCacheBytes = 64 << 20;
 
+/// Holds the image cache to [imageCacheBytes]: the Mac's app does as it
+/// starts.
+void limitImageCache() =>
+    PaintingBinding.instance.imageCache.maximumSizeBytes = imageCacheBytes;
+
 /// The image types sent as they are; others are turned into PNG.
 String? _mimeType(Uint8List b) => switch (b) {
   [0x89, 0x50, 0x4E, 0x47, ...] => 'image/png',

@@ -125,9 +125,10 @@ void main() {
     final budget = cache.maximumSizeBytes;
     cache
       ..clear()
-      ..clearLiveImages()
-      ..maximumSizeBytes = imageCacheBytes; // as main sets it
+      ..clearLiveImages();
     addTearDown(() => cache.maximumSizeBytes = budget);
+    limitImageCache(); // as the app starts
+    expect(cache.maximumSizeBytes, lessThan(budget)); // Flutter's 100 MB
     viewport(tester, const Size(1700, 1000), ratio: 2);
     final shots = await _screenshots(tester);
     final c = chat('c', 'claude', 'Screenshots');

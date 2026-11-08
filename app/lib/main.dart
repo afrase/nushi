@@ -20,7 +20,7 @@ import 'package:nushi/drafts_mac.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
-import 'package:nushi/images.dart' show imageCacheBytes;
+import 'package:nushi/images.dart' show limitImageCache;
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/native_macos.dart';
@@ -45,7 +45,7 @@ import 'package:nushi/widgets.dart' show confirm;
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
-  PaintingBinding.instance.imageCache.maximumSizeBytes = imageCacheBytes;
+  limitImageCache();
   catchErrors();
   // The window's app runs on the Mac (ADR 0097).
   native = macosNative();
