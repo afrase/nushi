@@ -8,9 +8,10 @@ import (
 )
 
 // A chat whose agent doesn't run lets go of its items when its copy holds
-// them all (ADR 0047; copies on, nothing unsaved): an asleep chat at once,
-// another once no client shows it. A long transcript's text and images are
-// most of what the daemon holds, and an asleep chat may stay so for days.
+// them all (ADR 0103; the copy is ADR 0047's; copies on, nothing
+// unsaved): an asleep chat at once, another once no client shows it. A
+// long transcript's text and images are most of what the daemon holds,
+// and an asleep chat may stay so for days.
 // Its items are read back by the first lookup that needs them (lookup); the
 // recent part, a page, a snapshot and an image are read from the copy
 // without holding them. The items that only show (shownOnly: notices the

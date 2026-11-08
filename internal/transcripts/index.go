@@ -12,7 +12,7 @@ import (
 )
 
 // A chat that let go of its items reads its pages from its copy (the
-// chats' letgo.go): the heads of every item to find where a page starts,
+// chats' letgo.go, ADR 0103): the heads of every item to find where a page starts,
 // then the page's items whole. A copy's index is those heads and where
 // each item's last record is in its file, so a page costs its own lines,
 // not a pass over the file. The store keeps the indexes of the last few
