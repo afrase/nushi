@@ -31,6 +31,7 @@ class StatusBar extends StatefulWidget {
 
 class _StatusBarState extends State<StatusBar> {
   late final Timer _timer;
+  late final AppLifecycleListener _lifecycle;
   GetMemoryResponse? _memory;
 
   @override
@@ -39,12 +40,16 @@ class _StatusBarState extends State<StatusBar> {
     _timer = Timer.periodic(_every, (_) {
       if (widget.daemon.macView.window) unawaited(_read());
     });
+    // The window back from hidden reads at once: the last reading may be
+    // hours old.
+    _lifecycle = AppLifecycleListener(onShow: () => unawaited(_read()));
     unawaited(_read());
   }
 
   @override
   void dispose() {
     _timer.cancel();
+    _lifecycle.dispose();
     super.dispose();
   }
 

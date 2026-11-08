@@ -68,8 +68,9 @@ void main() {
     });
   }
 
-  testWidgets('read every 5 s while the window shows, never while hidden; '
-      'a reading that shows the same draws nothing', (tester) async {
+  testWidgets('read every 5 s while the window shows, never while hidden, '
+      'at once as it shows again; a reading that shows the same draws '
+      'nothing', (tester) async {
     const mb = 1 << 20;
     var daemonBytes = 24 * mb;
     final fake = FakeDaemon([])
@@ -103,12 +104,24 @@ void main() {
     expect(reads(), 3);
     expect(find.text('30 MB'), findsOne);
 
+    // The app's state, one step at a time as the engine changes it.
+    void become(List<AppLifecycleState> states) =>
+        states.forEach(tester.binding.handleAppLifecycleStateChanged);
+
+    // Hidden (main.dart says so to macView as the app's state changes).
+    become([.inactive, .hidden]);
     d.macView.window = false;
     await tester.pump(const Duration(seconds: 15));
     expect(reads(), 3);
+    // Shown again, it reads at once, then every 5 s.
+    daemonBytes = 40 * mb;
     d.macView.window = true;
-    await tester.pump(const Duration(seconds: 5));
+    become([.inactive, .resumed]);
+    await tester.pump();
     expect(reads(), 4);
+    expect(find.text('40 MB'), findsOne);
+    await tester.pump(const Duration(seconds: 5));
+    expect(reads(), 5);
 
     await closeView(tester, d);
   });
