@@ -7,11 +7,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
+import 'package:nushi/browser_address.dart' show isWebPage;
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_page.dart' show openInBrowserOrSay;
+import 'package:nushi/web_views.dart' show webEmbedded;
 import 'package:nushi/widgets.dart';
 
 /// An MCP tool's name as Claude Code makes it, `mcp__<server>__<tool>`:
@@ -336,8 +339,12 @@ class PreviewButton extends StatelessWidget {
 }
 
 /// A show call's Open (ADR 0100): opens [url], a page on this Mac, in a
-/// browser tab beside the chat. None without [Previews.browse] (the
-/// phone, whose loopback isn't the Mac's).
+/// browser tab beside the chat, or without the app's own web views (Linux,
+/// ADR 0102) in the default browser, as the user's click asks. None without
+/// [Previews.browse] (the phone, whose loopback isn't the Mac's), nor for
+/// what a tab wouldn't show (`isWebPage`: a file, a user name), whichever
+/// opens it: [url] is the agent's own argument, not the daemon's checked
+/// address.
 class OpenPageButton extends StatelessWidget {
   const new(this.url, {super.key});
 
@@ -347,12 +354,15 @@ class OpenPageButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final browse = Previews.of(context)?.browse;
     final at = Uri.tryParse(url);
-    if (browse == null || at == null) return const SizedBox.shrink();
+    if (browse == null || at == null || !isWebPage(at)) {
+      return const SizedBox.shrink();
+    }
     return _Pill(
       label: 'Open',
       icon: Icons.open_in_browser,
       tooltip: 'Open $url',
-      onTap: () => browse(at),
+      onTap: () =>
+          webEmbedded ? browse(at) : openInBrowserOrSay(context, at).ignore(),
     );
   }
 }

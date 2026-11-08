@@ -36,6 +36,7 @@ import 'package:nushi/spell_check.dart';
 import 'package:nushi/status_bar.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/update_toast.dart';
+import 'package:nushi/web_views.dart' show webEmbedded;
 import 'package:nushi/widgets.dart';
 
 // The app's actions in one place: each is a row of the ⌘K palette, its
@@ -261,7 +262,8 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .reloadPage,
       'Reload page',
-      enabled: browser != null,
+      // A page in the browser reloads there (ADR 0102).
+      enabled: browser != null && webEmbedded,
       run: () => browser!.reload(),
     ),
     AppAction(

@@ -23,13 +23,15 @@ import 'package:nushi/source_editor.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart';
+import 'package:nushi/web_views.dart';
 
 /// A file the agent wrote, beside the chat where a subagent's pane opens:
 /// its name (a click shows it in the Files pane; with several files open,
 /// the tabs of them all, [PreviewTabs]), Live while the daemon keeps it
 /// current, wrapping the lines or not while it shows a source
 /// ([WrapButton], and ⌥Z with the focus in the pane), Preview or Source (a
-/// file that renders), Reload and Open in browser (a page, not a diagram),
+/// file that renders; not a diagram with nothing to draw it), Reload (in
+/// the app's own web view) and Open in browser (a page, not a diagram),
 /// Show in Finder and Close, which closes every tab (browser tabs too,
 /// `BrowserPane`). Read-only. It's one file's view, made again as its tab
 /// shows.
@@ -154,10 +156,17 @@ class _PreviewPaneState extends State<PreviewPane> {
 
   void _reveal() => revealInFinder(_abs).ignore();
 
-  /// Whether it shows the file's text, a source view: code, or the Source
-  /// of one that renders. Only then do its lines wrap or not.
+  /// Whether it has Preview and Source: a file that renders, but a diagram
+  /// only with something to draw it (Linux has none, ADR 0102).
+  bool get _switches =>
+      _kind.rendered && (_kind != PreviewKind.mermaid || _diagram != null);
+
+  /// Whether it shows the file's text, a source view: code, a diagram with
+  /// nothing to draw it, or the Source of one that renders. Only then do its
+  /// lines wrap or not.
   bool get _showsSource =>
-      _kind == PreviewKind.code && !_watch.notText || _kind.rendered && _source;
+      _kind == PreviewKind.code && !_watch.notText ||
+      _kind.rendered && (_source || !_switches);
 
   KeyEventResult _key(FocusNode _, KeyEvent e) {
     if (e is KeyUpEvent || !_showsSource) return KeyEventResult.ignored;
@@ -189,12 +198,14 @@ class _PreviewPaneState extends State<PreviewPane> {
     final diagram = _diagram;
     final actions = <(IconData, String, double, VoidCallback)>[
       if (page != null) ...[
-        (Icons.refresh, 'Reload', 15, () => page.reload().ignore()),
+        // A page in the browser reloads there (ADR 0102).
+        if (webEmbedded)
+          (Icons.refresh, 'Reload', 15, () => page.reload().ignore()),
         (
           Icons.open_in_new,
           'Open in browser',
           14,
-          () => openInBrowser(Uri.file(_abs)).ignore(),
+          () => openInBrowserOrSay(context, Uri.file(_abs)).ignore(),
         ),
       ],
     ];
@@ -303,7 +314,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                           // Left of the switch, so Source showing it moves
                           // nothing under the pointer.
                           if (wraps && !folds) const WrapButton(),
-                          if (kind.rendered)
+                          if (_switches)
                             SourceSwitch(
                               source: _source,
                               onChanged: _showSource,

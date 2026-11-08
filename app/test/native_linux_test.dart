@@ -29,7 +29,7 @@ void main() {
     expect(set.install, isA<LinuxAppInstall>());
     expect(set.loginItem, isA<LinuxLoginItem>());
     expect(await set.web.sincePress(), isNull);
-    expect(await set.web.defaultBrowserName(), isNull);
+    expect(set.web.embedded, isFalse); // outside_page_test has the rest
     final d = await set.diagrams.draw(
       'graph TD; a-->b',
       dark: false,

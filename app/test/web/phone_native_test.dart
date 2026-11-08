@@ -10,8 +10,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/cards.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/sidebar_button.dart';
 import 'package:nushi/speller.dart';
@@ -68,5 +70,32 @@ void main() {
     expect(find.text('kettle'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     d.dispose();
+  });
+
+  testWidgets('a show’s card still says a page runs as it opens: the '
+      'host’s app may be the Mac’s', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: const NushiTheme(Tokens.dark).toThemeData(),
+        home: Scaffold(
+          body: PermissionCard(
+            Item(
+              id: 'p',
+              kind: ItemKind.ITEM_KIND_PERMISSION,
+              title: 'mcp__nushi__show',
+              input: jsonEncode({'path': 'site/index.html'}),
+              status: 'pending',
+              options: [Option(id: 'yes', name: 'Yes', kind: 'allow_once')],
+            ),
+            onAnswer: (_) async {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Show site/index.html'), findsOneWidget);
+    expect(
+      find.text('A page runs as it opens in the preview.'),
+      findsOneWidget,
+    );
   });
 }

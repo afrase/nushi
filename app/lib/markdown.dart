@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/browser_address.dart' show isWebPage;
@@ -10,6 +11,8 @@ import 'package:nushi/preview.dart' show Previews;
 import 'package:nushi/settings.dart' show linksInBrowserTab;
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_page.dart' show openInBrowserOrSay;
+import 'package:nushi/web_views.dart' show webEmbedded;
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,8 +31,15 @@ Uri? webLink(String href) {
 /// Opens a web link the user clicked in a chat (its messages, its tool
 /// calls' output: what [AgentMarkdown] shows): in a browser tab beside the
 /// chat ([linkInTab]), else in the default browser ([openWebOutside]).
-/// Outside a chat's [Previews] (Jira, GitHub, the phone) it's the browser.
+/// Outside a chat's [Previews] (Jira, GitHub, the phone), it's the browser.
+/// Without the app's own web views (Linux, ADR 0102) it's always the
+/// browser, opened as every page there is ([openInBrowserOrSay]), which
+/// says why when none opens.
 Future<void> openWebLink(BuildContext context, Uri url) async {
+  if (!kIsWeb && !webEmbedded) {
+    await openInBrowserOrSay(context, url);
+    return;
+  }
   final previews = context.getInheritedWidgetOfExactType<Previews>();
   final browse = previews?.browse;
   final fits = previews?.browseFits?.call() ?? false;

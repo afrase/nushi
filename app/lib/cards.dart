@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 
@@ -8,6 +9,7 @@ import 'package:nushi/motion.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart';
+import 'package:nushi/web_views.dart' show webEmbedded;
 import 'package:nushi/widgets.dart';
 
 /// A card for something the agent waits on: amber while it waits, with a
@@ -256,7 +258,10 @@ class _PermissionCardState extends State<PermissionCard> {
         // its end past one line), wrapped.
         CardTitle('Permission', detail: pending ? '' : title, waiting: pending),
         if (pending && title.isNotEmpty) FullTitle(title),
-        if (pending && runs)
+        // The host's app shows it: the Mac's own web view runs it unasked,
+        // Linux's browser waits for a click (ADR 0102). The phone can't
+        // tell which app its host has, so it says so.
+        if (pending && runs && (kIsWeb || webEmbedded))
           Text('A page runs as it opens in the preview.', style: muted),
         // What the entry runs, as the daemon resolved it when it asked
         // (ADR 0100): the start that follows runs only this.
