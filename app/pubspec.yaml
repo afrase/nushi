@@ -40,6 +40,8 @@ dev_dependencies:
   async: ^2.13.1
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   stream_channel: ^2.1.4
   very_good_analysis: ^11.0.0
 
