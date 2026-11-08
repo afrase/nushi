@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// The phone's touch target: 44 points, as iOS asks.
@@ -242,7 +243,7 @@ class PhoneSpinner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox.square(
     dimension: 16,
-    child: CircularProgressIndicator(
+    child: Spinner(
       strokeWidth: 2,
       color: NushiTheme.of(context).t.textSecondary,
     ),

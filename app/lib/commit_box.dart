@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -151,10 +152,7 @@ class _CommitBoxState extends State<CommitBox> {
                   ),
                 ),
                 if (_writing)
-                  const SizedBox.square(
-                    dimension: 12,
-                    child: CircularProgressIndicator(strokeWidth: 1.5),
-                  )
+                  const SizedBox.square(dimension: 12, child: Spinner())
                 else if (chat.canWriteCommit)
                   IconTap(
                     Icons.auto_awesome_outlined,

@@ -15,6 +15,7 @@ import 'package:nushi/preview_sniff.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/syntax_languages.dart' show codeNames;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -269,10 +270,7 @@ Widget? previewStatus(
   if (watch.error.isNotEmpty) return PreviewNote(watch.error);
   if (f == null) {
     return const Center(
-      child: SizedBox.square(
-        dimension: 16,
-        child: CircularProgressIndicator(strokeWidth: 1.5),
-      ),
+      child: SizedBox.square(dimension: 16, child: Spinner()),
     );
   }
   if (f.missing) return const PreviewNote('The file isn’t there (yet).');

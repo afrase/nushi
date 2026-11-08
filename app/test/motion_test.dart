@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/transcript.dart';
@@ -39,11 +40,11 @@ void main() {
       'shows neither', (tester) async {
     await tester.pumpWidget(_app(ToolCallView(_call('in_progress'))));
     expect(find.byType(ShaderMask), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(Spinner), findsNothing);
 
     await tester.pumpWidget(_app(ToolCallView(_call('completed'))));
     expect(find.byType(ShaderMask), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(Spinner), findsNothing);
   });
 
   testWidgets('with Reduce Motion a running call is plain text', (

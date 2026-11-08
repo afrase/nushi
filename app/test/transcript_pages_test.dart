@@ -21,6 +21,7 @@ import 'package:nushi/message_pins.dart';
 import 'package:nushi/pins_rail.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/scrollbar.dart';
 import 'package:nushi/transcript_find.dart';
 import 'package:nushi/transcript_pages.dart';
@@ -146,7 +147,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(EarlierMessages),
-        matching: find.byType(CircularProgressIndicator),
+        matching: find.byType(Spinner),
       ),
       findsOneWidget,
     );

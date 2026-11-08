@@ -6,6 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/images.dart' show RemoveBadge;
 import 'package:nushi/run_text.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -76,10 +77,7 @@ class RunnableBlock extends StatelessWidget {
               IconTap.working(
                 (size, color) => SizedBox.square(
                   dimension: size - 2,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 1.5,
-                    color: color,
-                  ),
+                  child: Spinner(color: color),
                 ),
                 Icons.close,
                 size: 13,

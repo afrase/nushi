@@ -4,6 +4,7 @@ import 'package:nushi/background_commands.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/drawn.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/subagents.dart';
 
 import 'fake_daemon.dart';
@@ -38,7 +39,7 @@ void main() {
       'its check draws itself', (tester) async {
     final chat = ChatState('c', '/x');
     await tester.pumpWidget(_app(SubagentLine(_run('running'), chat)));
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(Spinner), findsNothing);
     expect(find.byType(ShaderMask), findsOneWidget);
     expect(_drawn(tester), isNull);
 
@@ -89,7 +90,7 @@ void main() {
     );
     await tester.pumpWidget(_app(row(command('running'))));
     expect(find.byType(ShaderMask), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(Spinner), findsNothing);
     await tester.pumpWidget(_app(row(command('done'))));
     await tester.pump(const Duration(milliseconds: 16));
     await tester.pump(const Duration(milliseconds: 100));

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart' show ClickableImage;
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// Whether [image] came as a reference (ADR 0099): its bytes are fetched
@@ -350,10 +351,7 @@ class _ImageRefState extends State<ImageRef> {
       inside = SizedBox.square(
         key: const ValueKey('image-loading'),
         dimension: small ? 20 : 28,
-        child: CircularProgressIndicator(
-          strokeWidth: small ? 2 : 3,
-          color: t.textSecondary,
-        ),
+        child: Spinner(strokeWidth: small ? 2 : 3, color: t.textSecondary),
       );
     } else {
       final said = Text(

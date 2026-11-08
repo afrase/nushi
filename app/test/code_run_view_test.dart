@@ -10,6 +10,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/file_links.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 
 import 'fake_daemon.dart';
@@ -154,7 +155,7 @@ void main() {
         output: '\x1b[2mINFO\x1b[m serving on http://127.0.0.1:8000\r\n',
       );
       expect(shells.typed['a'], ['python3 -m tennis.server\r']);
-      expect(find.byType(CircularProgressIndicator), findsOne);
+      expect(find.byType(Spinner), findsOne);
       expect(find.text('INFO serving on http://127.0.0.1:8000'), findsOne);
       await tester.pump(const Duration(milliseconds: 500)); // the arc drawn
       await expectLater(
@@ -175,7 +176,7 @@ void main() {
       await mouse.moveTo(tester.getCenter(find.byTooltip(_cancel)));
       await tester.pump();
       expect(find.byIcon(Icons.close), findsOne);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(Spinner), findsNothing);
       await tester.tap(find.byTooltip(_cancel));
       await tester.pump();
       expect(shells.typed['a']!.last, '\x03');

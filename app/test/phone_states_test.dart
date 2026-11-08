@@ -15,6 +15,7 @@ import 'package:nushi/phone/connection_bar.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
 import 'package:nushi/phone/platform.dart';
+import 'package:nushi/spinner.dart';
 import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 import 'fake_daemon.dart';
@@ -152,7 +153,7 @@ void main() {
         final tried = p.link!.check(user: true);
         await tester.pump();
         expect(find.text('Try again'), findsNothing);
-        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.byType(Spinner), findsOneWidget);
         held.complete();
         held = null;
         await tried;
