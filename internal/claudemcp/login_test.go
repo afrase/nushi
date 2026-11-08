@@ -2,6 +2,7 @@ package claudemcp
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -41,12 +42,28 @@ func loginClaude(t *testing.T, rest string) (dir string) {
 // Login runs `claude mcp login -- <name>` in a terminal, in the folder,
 // each word as given (a name the shell would split or expand on Linux,
 // where script(1) takes a shell's line, included), and whatever the login
-// shell is.
+// shell is. util-linux's script falls back to running $SHELL's base name
+// from PATH, so "missing" is a shell no machine has; "fish" is a real one,
+// which reads a backslash inside single quotes as an escape, when there
+// is one.
 func TestLoginRunsClaudeInATerminal(t *testing.T) {
+	shells := map[string]string{"missing": "/nonexistent/nushi-no-shell"}
+	if fish, err := exec.LookPath("fish"); err == nil {
+		shells["fish"] = fish
+	}
+	for name, shell := range shells {
+		t.Run(name, func(t *testing.T) { loginInTerminal(t, shell) })
+	}
+}
+
+// loginInTerminal is TestLoginRunsClaudeInATerminal with the login shell
+// at shell.
+func loginInTerminal(t *testing.T, shell string) {
+	t.Helper()
 	dir := loginClaude(t, `pwd -P > "$here/folder"`)
-	t.Setenv("SHELL", "/nonexistent/fish")
+	t.Setenv("SHELL", shell)
 	folder := t.TempDir()
-	const name = `it's "my" $HOME; srv`
+	const name = `it's "my" $HOME; a\\b srv`
 	if err := (Claude{}).Login(t.Context(), folder, name); err != nil {
 		t.Fatal(err)
 	}

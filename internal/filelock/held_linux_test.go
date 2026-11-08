@@ -11,9 +11,12 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// Held sees each kind of Linux lock: a POSIX one and an open file
-// description's taken by this process, which F_GETLK doesn't report to
-// it, and a flock one another process holds.
+// Held sees each kind of Linux lock: a POSIX one taken by this process,
+// which F_GETLK doesn't report to it, and a flock one another process
+// holds, which F_GETLK never sees; both only through /proc/locks. An open
+// file description's lock F_GETLK does see, even this process's, since
+// Held opens a description of its own: "ofd" is a regression check that
+// reading /proc/locks hasn't lost what F_GETLK finds.
 func TestHeldEveryKind(t *testing.T) {
 	for name, take := range map[string]func(t *testing.T, path string){
 		"posix": func(t *testing.T, path string) { t.Helper(); fcntlLock(t, path, unix.F_SETLK) },

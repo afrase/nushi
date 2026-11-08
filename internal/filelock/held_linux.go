@@ -9,11 +9,13 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// held is F_GETLK, for another process's POSIX lock, or a lock on f's
-// file in /proc/locks: flock(2)'s, which F_GETLK never sees on Linux, an
-// open file description's, or this process's own. Reading the list never
-// takes the lock, as trying it and letting go would: that races an agent
-// starting at that moment.
+// held is F_GETLK, which sees another process's POSIX lock and any open
+// file description's lock (one belongs to its description, not a process,
+// and f is a description of its own), or a lock on f's file in
+// /proc/locks: flock(2)'s, which F_GETLK never sees on Linux, or this
+// process's own POSIX lock, which F_GETLK doesn't report to its holder.
+// Reading the list never takes the lock, as trying it and letting go
+// would: that races an agent starting at that moment.
 func held(f *os.File) bool {
 	if posixHeld(f) {
 		return true
