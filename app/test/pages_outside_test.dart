@@ -45,11 +45,13 @@ Item _show(String id, String url) => Item(
 );
 
 /// The app at [width] on chat c, whose files answer as the daemon would,
-/// in /Users/me/nushi; the agent showed a page and linked one.
+/// in /Users/me/nushi; the agent showed a page and linked one, then did
+/// [more].
 Future<(FakeDaemon, Daemon)> _app(
   WidgetTester tester, {
   double width = 1700,
   Brightness? brightness,
+  List<Item> more = const [],
 }) async {
   viewport(tester, Size(width, 900), brightness: brightness);
   showDetails.value = false;
@@ -66,6 +68,7 @@ Future<(FakeDaemon, Daemon)> _app(
                 kind: ItemKind.ITEM_KIND_AGENT_MESSAGE,
                 text: '[The brewing guide](https://tea.example/guide)',
               ),
+              ...more,
             ],
           )
         : null)
@@ -93,6 +96,10 @@ Future<(FakeDaemon, Daemon)> _app(
 Finder _in<T>(Finder f) => find.descendant(of: find.byType(T), matching: f);
 
 Finder get _openButton => find.text('Open in Firefox');
+
+Finder get _guideLink =>
+    find.textContaining('The brewing guide', findRichText: true).last;
+
 void main() {
   setUpAll(loadFonts);
 
@@ -250,20 +257,66 @@ void main() {
     openWebOutside = (url) async => outside.add(url);
     addTearDown(() => openWebOutside = was);
     final (_, d) = await _app(tester);
-    await tester.tap(
-      find.textContaining('The brewing guide', findRichText: true).last,
-    );
+    await tester.tap(_guideLink);
     await tester.pumpAndSettle();
-    expect(outside, [Uri.parse('https://tea.example/guide')]);
+    // The app that opens https, as every page here (not url_launcher's).
+    expect(opened, [Uri.parse('https://tea.example/guide')]);
+    expect(outside, isEmpty);
     expect(d.chats['c']!.preview.value, isNull);
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    expect(opened, [Uri.parse('http://localhost:5173/menu')]);
+    expect(opened.last, Uri.parse('http://localhost:5173/menu'));
     expect(d.chats['c']!.preview.value, isNull);
     d.openSettings(section: SettingsSection.general);
     await tester.pumpAndSettle();
     expect(find.text('Notifications'), findsWidgets); // the page shows
     expect(find.text('Open links in built-in browser'), findsNothing);
+    await closeView(tester, d);
+  }, variant: linuxOnly);
+
+  testWidgets('a chat’s link with no default browser says so', (tester) async {
+    pagesOutside(
+      open: (_) => Future.error(
+        const BrowserError(
+          'No default browser is set: choose one in your '
+          'system’s settings.',
+        ),
+      ),
+    );
+    final (_, d) = await _app(tester);
+    await tester.tap(_guideLink);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No default browser is set'), findsOneWidget);
+    await closeView(tester, d);
+  }, variant: linuxOnly);
+
+  testWidgets('a show row has no Open for what a tab wouldn’t show; its '
+      'card doesn’t say a page runs as it opens', (tester) async {
+    final opened = pagesOutside();
+    final (_, d) = await _app(
+      tester,
+      more: [
+        _show('f', 'file:///Users/me/nushi/evil.html'),
+        _show('u', 'http://bank.example@localhost:3000/'),
+        Item(
+          id: 'p',
+          kind: ItemKind.ITEM_KIND_PERMISSION,
+          title: 'mcp__nushi__show',
+          input: jsonEncode({'path': 'site/index.html'}),
+          status: 'pending',
+          options: [Option(id: 'yes', name: 'Yes', kind: 'allow_once')],
+        ),
+      ],
+    );
+    // Only the first show's page, http://localhost:5173/menu.
+    expect(find.text('Open'), findsOneWidget);
+    expect(
+      find.byTooltip('Open file:///Users/me/nushi/evil.html'),
+      findsNothing,
+    );
+    expect(opened, isEmpty);
+    expect(find.text('Show site/index.html'), findsOneWidget);
+    expect(find.textContaining('A page runs'), findsNothing);
     await closeView(tester, d);
   }, variant: linuxOnly);
 }
