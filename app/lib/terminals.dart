@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
+import 'package:nushi/keys.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:xterm2/xterm.dart';
 
@@ -223,7 +225,7 @@ class TermSession extends ChangeNotifier {
     _exited = false;
     terminal = Terminal(
       maxLines: 10000,
-      platform: TerminalTargetPlatform.macos,
+      platform: terminalPlatform,
       inputHandler: const CascadeInputHandler([
         _OptionAsMeta(),
         defaultInputHandler,
@@ -320,6 +322,14 @@ class TermSession extends ChangeNotifier {
     super.dispose();
   }
 }
+
+/// The platform a terminal reads its keys as: the Mac's, or Linux's where
+/// Control is the command key (ADR 0102): its keytab, and AltGr typing its
+/// character rather than Alt and Control.
+TerminalTargetPlatform get terminalPlatform => switch (commandKey) {
+  CommandKey.meta => TerminalTargetPlatform.macos,
+  CommandKey.control => TerminalTargetPlatform.linux,
+};
 
 /// Option as Meta: Option with a letter or digit sends Escape and the key,
 /// and Option-←/→ move by word, as in Terminal.app with "Use Option as

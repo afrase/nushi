@@ -13,6 +13,7 @@ import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_find.dart' show terminalStyle;
 import 'package:nushi/terminal_screen.dart' show terminalTheme;
+import 'package:nushi/terminals.dart' show terminalPlatform;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:xterm2/xterm.dart';
@@ -60,7 +61,7 @@ class ServerLog extends ChangeNotifier {
     terminal =
         Terminal(
             maxLines: 10000,
-            platform: TerminalTargetPlatform.macos,
+            platform: terminalPlatform,
             onClipboardStore: (_, _) {},
             onClipboardQuery: (_) => null,
           )

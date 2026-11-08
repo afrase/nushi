@@ -6,12 +6,15 @@ import 'package:nushi/chat_keys.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/new_chat.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_screen.dart';
 
 // The app's keys on each platform (ADR 0102): the same values held with ⌘
 // on the Mac and Control on Linux, written as each platform writes them,
-// none taken twice.
+// none taken twice, and in a focused terminal on Linux only the listed ones
+// passed on.
 
 /// Every key the app binds wherever the focus is, and the preview's.
 List<ShortcutActivator> get _appKeys => {
@@ -21,6 +24,23 @@ List<ShortcutActivator> get _appKeys => {
   paletteKeyToo,
   wrapKey,
 }.toList();
+
+/// The app's keys a terminal is given to pass on or not.
+List<ShortcutActivator> get _toTerminal => [
+  ...actKeys.keys,
+  paletteKeyToo,
+  ...chatKeys.keys,
+];
+
+/// The terminal's own keys.
+const _terminalKeys = <ShortcutActivator>[
+  terminalCopyKey,
+  terminalPasteKey,
+  terminalClearKey,
+  newTerminalKey,
+  closeTerminalKey,
+  terminalFindKey,
+];
 
 /// The labels [keys] have more than once.
 Iterable<String> _twice(Iterable<ShortcutActivator> keys) {
@@ -100,13 +120,75 @@ void main() {
     expect((enterLabel, cmdEnterLabel), ('Enter', 'Ctrl+Enter'));
   });
 
+  test('a terminal’s own keys: ⌘ and the letter on the Mac, Ctrl+Shift and '
+      'it on Linux', () {
+    expect(keyLabel(newTerminalKey), '⌘T');
+    native.conventions = linuxConventions;
+    expect(
+      [for (final k in _terminalKeys) keyLabel(k)],
+      [
+        'Ctrl+Shift+C',
+        'Ctrl+Shift+V',
+        'Ctrl+Shift+K',
+        'Ctrl+Shift+T',
+        'Ctrl+Shift+W',
+        'Ctrl+Shift+F',
+      ],
+    );
+  });
+
   for (final (name, c) in [
     ('Mac', macConventions),
     ('Linux', linuxConventions),
   ]) {
-    test('on $name no two of the app’s keys are the same', () {
+    test('on $name no two of the app’s keys are the same, nor the '
+        'terminal’s own', () {
       native.conventions = c;
       expect(_twice(_appKeys), isEmpty);
+      expect(_twice(_terminalKeys), isEmpty);
     });
   }
+
+  test('a terminal on the Mac passes every ⌘ key on but ⌘F and ⌘W', () {
+    expect([
+      for (final k in _toTerminal)
+        if (!terminalPasses(k)) keyLabel(k),
+    ], unorderedEquals(['⌘F', '⌘W']));
+  });
+
+  test('a terminal on Linux passes on only keys Ctrl and a letter isn’t: '
+      r'the shell keeps Ctrl+D, Ctrl+R, Ctrl+\ (SIGQUIT) and the rest; none '
+      'it passes is its own', () {
+    native.conventions = linuxConventions;
+    final passed = _toTerminal.where(terminalPasses).toList();
+    for (final k in passed) {
+      final a = k is Cmd ? k.single : k as SingleActivator;
+      final letter =
+          a.trigger.keyId >= LogicalKeyboardKey.keyA.keyId &&
+          a.trigger.keyId <= LogicalKeyboardKey.keyZ.keyId;
+      expect(
+        letter && a.control && !a.shift,
+        isFalse,
+        reason: '${keyLabel(k)} is the shell’s',
+      );
+    }
+    for (final k in [sidebarKey, pinKey, reloadPageKey, newChatKey]) {
+      expect(terminalPasses(k), isFalse, reason: keyLabel(k));
+    }
+    expect(
+      [for (final k in passed) keyLabel(k)],
+      containsAll([
+        'Ctrl+Shift+P',
+        'Ctrl+Shift+B',
+        'Ctrl+Shift+E',
+        'Ctrl+,',
+        'Ctrl+Alt+2',
+        'Ctrl+1',
+        'Ctrl+Page Down',
+        'Ctrl+Tab',
+        'Ctrl+`',
+      ]),
+    );
+    expect(_twice([...passed, ..._terminalKeys]), isEmpty);
+  });
 }

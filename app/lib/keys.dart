@@ -1,7 +1,11 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:nushi/app_actions.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/conventions.dart';
+import 'package:nushi/settings_view.dart';
+import 'package:nushi/terminal_panel.dart';
 
 // The app's shortcuts on each platform (ADR 0102): held with ⌘ on the Mac
 // and the phone, with Control on Linux, and written as each writes them
@@ -141,4 +145,36 @@ String keyName(LogicalKeyboardKey key) => switch (commandKey) {
     LogicalKeyboardKey.escape => 'Esc',
     _ => key.keyLabel,
   },
+};
+
+/// The app's keys a focused terminal passes on where the command key is
+/// Control, as GNOME Terminal leaves them: those Ctrl and a letter can't be
+/// meant for the shell (Ctrl and a digit, a symbol or Page Up, and Ctrl+Shift
+/// keys the terminal doesn't keep). Every other Ctrl key is the shell's:
+/// Ctrl+D ends its input, Ctrl+R searches its history, Ctrl+\ quits its
+/// program (SIGQUIT), though it hides the sidebar elsewhere.
+final List<ShortcutActivator> _linuxTerminalPasses = [
+  paletteKeyToo, // Ctrl+Shift+P
+  sideChatKey, // Ctrl+Shift+B
+  filesKey, // Ctrl+Shift+E
+  settingsKey, // Ctrl+,
+  nextTypoKey, // F7
+  toggleTerminalKey, // Ctrl+`
+  chatTabKey, // Ctrl+Alt+1
+  changesTabKey, // Ctrl+Alt+2
+  pullTabKey, // Ctrl+Alt+3
+  for (var n = 1; n <= 9; n++) chatNumberKey(n), // Ctrl+1–9
+  previousChatKey, // Ctrl+Page Up
+  nextChatKey, // Ctrl+Page Down
+  nextTabKey, // Ctrl+Tab
+  previousTabKey, // Ctrl+Shift+Tab
+];
+
+/// Whether a focused terminal passes [key], one of the app's, on to the
+/// app. On the Mac every ⌘ key but ⌘F and ⌘W, which find in it and close
+/// it (⌘K, its clear, is no action's); where the command key is Control,
+/// only [_linuxTerminalPasses].
+bool terminalPasses(ShortcutActivator key) => switch (commandKey) {
+  CommandKey.meta => !identical(key, findKey) && !identical(key, closeTabKey),
+  CommandKey.control => _linuxTerminalPasses.contains(key),
 };

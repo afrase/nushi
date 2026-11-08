@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/inline_edit.dart';
+import 'package:nushi/keys.dart';
+import 'package:nushi/terminal_panel.dart';
+import 'package:nushi/terminal_screen.dart';
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -65,7 +68,7 @@ class TerminalTabs extends StatelessWidget {
               onReorderItem: (from, to) => terms.move(chatId, from, to),
               footer: IconTap(
                 Icons.add,
-                tooltip: 'New terminal  ⌘T',
+                tooltip: 'New terminal  ${keyLabel(newTerminalKey)}',
                 onTap: () => tryOrShow(context, () => terms.open(chatId)),
               ),
               itemBuilder: (context, i) => ReorderableDragStartListener(
@@ -81,7 +84,7 @@ class TerminalTabs extends StatelessWidget {
           ),
           IconTap(
             Icons.keyboard_arrow_down,
-            tooltip: 'Hide terminal  ⌃`',
+            tooltip: 'Hide terminal  ${keyLabel(toggleTerminalKey)}',
             onTap: onHide,
           ),
         ],
@@ -188,7 +191,7 @@ class _TabState extends State<_Tab> {
                 child: IconTap(
                   Icons.close,
                   size: 12,
-                  tooltip: 'Close  ⌘W',
+                  tooltip: 'Close  ${keyLabel(closeTerminalKey)}',
                   onTap: () => closeTerminal(context, widget.terms, info),
                 ),
               ),

@@ -16,6 +16,46 @@ import 'package:nushi/transcript_find.dart';
 import 'package:nushi/widgets.dart';
 import 'package:xterm2/xterm.dart';
 
+// A terminal's own keys: ⌘ and a letter, as Terminal has them; on Linux
+// Ctrl+Shift and the letter, as GNOME Terminal has them, since Ctrl and a
+// letter is the shell's (ADR 0102).
+
+/// Copies the terminal's selection.
+const terminalCopyKey = Cmd(
+  LogicalKeyboardKey.keyC,
+  linux: SingleActivator(LogicalKeyboardKey.keyC, control: true, shift: true),
+);
+
+/// Pastes into the terminal.
+const terminalPasteKey = Cmd(
+  LogicalKeyboardKey.keyV,
+  linux: SingleActivator(LogicalKeyboardKey.keyV, control: true, shift: true),
+);
+
+/// Clears the terminal's screen and scrollback.
+const terminalClearKey = Cmd(
+  LogicalKeyboardKey.keyK,
+  linux: SingleActivator(LogicalKeyboardKey.keyK, control: true, shift: true),
+);
+
+/// Opens another terminal for the chat.
+const newTerminalKey = Cmd(
+  LogicalKeyboardKey.keyT,
+  linux: SingleActivator(LogicalKeyboardKey.keyT, control: true, shift: true),
+);
+
+/// Closes the terminal.
+const closeTerminalKey = Cmd(
+  LogicalKeyboardKey.keyW,
+  linux: SingleActivator(LogicalKeyboardKey.keyW, control: true, shift: true),
+);
+
+/// Finds in the terminal.
+const terminalFindKey = Cmd(
+  LogicalKeyboardKey.keyF,
+  linux: SingleActivator(LogicalKeyboardKey.keyF, control: true, shift: true),
+);
+
 /// One terminal's screen, and its exit with Restart once its shell ended.
 class TerminalScreen extends StatelessWidget {
   const new({
@@ -34,38 +74,34 @@ class TerminalScreen extends StatelessWidget {
   final Future<bool> Function(String path) showChange;
 
   /// The keys the panel keeps for itself; the rest go to the shell.
-  Map<ShortcutActivator, Intent> _keys(BuildContext context, TermSession s) {
-    Cmd cmd(LogicalKeyboardKey key) => Cmd(key);
-    return {
-      // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–3…) and ⌘⇧P, the palette,
-      // passed on; ⌘K clears here, as in Terminal, ⌘F finds here and ⌘W
-      // closes this terminal, not a preview tab.
-      for (final MapEntry(:key, :value) in actKeys.entries)
-        if (!identical(key, findKey) && !identical(key, closeTabKey))
-          key: value,
+  Map<ShortcutActivator, Intent> _keys(BuildContext context, TermSession s) => {
+    // The app's keys a terminal passes on (`terminalPasses`: ⌘N, ⌘,,
+    // ⌃⌘1–3…, ⌘⇧P, the palette, and ⌘1–9, ⌘[ and ⌘] that switch chats,
+    // ⌃Tab and ⌃⇧Tab the chat's tabs); ⌘K clears here, as in Terminal, ⌘F
+    // finds here and ⌘W closes this terminal, not a preview tab.
+    for (final MapEntry(:key, :value) in {
+      ...actKeys,
       paletteKeyToo: const OpenPaletteIntent(),
-      cmd(LogicalKeyboardKey.keyC): CopySelectionTextIntent.copy,
-      cmd(LogicalKeyboardKey.keyV): const PasteTextIntent(
-        SelectionChangedCause.keyboard,
-      ),
-      cmd(LogicalKeyboardKey.keyK): VoidCallbackIntent(s.terminal.clear),
-      cmd(LogicalKeyboardKey.keyT): VoidCallbackIntent(
-        () => tryOrShow(context, () => terms.open(info.chatId)),
-      ),
-      cmd(LogicalKeyboardKey.keyW): VoidCallbackIntent(
-        () => closeTerminal(context, terms, info),
-      ),
-      toggleTerminalKey: VoidCallbackIntent(onHide),
-      cmd(LogicalKeyboardKey.keyF): VoidCallbackIntent(s.find.open),
-      // ⌥⌘1–9 a terminal; ⌘1–9, ⌘[ and ⌘] switch chats, ⌃Tab and ⌃⇧Tab
-      // the chat's tabs, as elsewhere.
-      for (var i = 0; i < 9 && i < list.length; i++)
-        altDigitKey(i + 1): VoidCallbackIntent(
-          () => terms.show(info.chatId, list[i].id),
-        ),
       ...chatKeys,
-    };
-  }
+    }.entries)
+      if (terminalPasses(key)) key: value,
+    terminalCopyKey: CopySelectionTextIntent.copy,
+    terminalPasteKey: const PasteTextIntent(SelectionChangedCause.keyboard),
+    terminalClearKey: VoidCallbackIntent(s.terminal.clear),
+    newTerminalKey: VoidCallbackIntent(
+      () => tryOrShow(context, () => terms.open(info.chatId)),
+    ),
+    closeTerminalKey: VoidCallbackIntent(
+      () => closeTerminal(context, terms, info),
+    ),
+    terminalFindKey: VoidCallbackIntent(s.find.open),
+    toggleTerminalKey: VoidCallbackIntent(onHide),
+    // ⌥⌘1–9 a terminal.
+    for (var i = 0; i < 9 && i < list.length; i++)
+      altDigitKey(i + 1): VoidCallbackIntent(
+        () => terms.show(info.chatId, list[i].id),
+      ),
+  };
 
   @override
   Widget build(BuildContext context) {

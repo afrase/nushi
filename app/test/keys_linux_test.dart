@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/composer.dart';
@@ -13,13 +14,16 @@ import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/window_drag_linux.dart';
+import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
+import 'fake_shells.dart';
 import 'harness.dart';
 
 // The app's keys on Linux (ADR 0102): held with Control where the Mac's
-// take ⌘, and written Ctrl+Shift+E. Tests pair Linux's conventions and
-// window with its platform, as a Linux machine runs them.
+// take ⌘, written Ctrl+Shift+E, with GNOME Terminal's keys in a terminal.
+// Tests pair Linux's conventions and window with its platform, as a Linux
+// machine runs them.
 
 final _linux = TargetPlatformVariant.only(TargetPlatform.linux);
 
@@ -46,12 +50,18 @@ Future<void> _press(
 }
 
 const _ctrl = <LogicalKeyboardKey>[LogicalKeyboardKey.controlLeft];
+const _shift = <LogicalKeyboardKey>[
+  LogicalKeyboardKey.controlLeft,
+  LogicalKeyboardKey.shiftLeft,
+];
 
-/// The app on Linux on three chats, [select] shown, [width] wide.
+/// The app on Linux on three chats, [select] shown, [width] wide; chat a's
+/// terminal is [shells]' shell.
 Future<(Daemon, FakeDaemon)> _app(
   WidgetTester tester, {
   String select = 'a',
   double width = 1200,
+  FakeShells Function(FakeDaemon)? shells,
 }) async {
   _onLinux();
   viewport(tester, Size(width, 760));
@@ -61,12 +71,16 @@ Future<(Daemon, FakeDaemon)> _app(
     chat('b', 'codex', 'Bump the API version', age: 1),
     chat('c', 'claude', 'Release notes', folder: '/Users/me/site', age: 3),
   ]);
+  shells?.call(fake);
   final d = await fake.connect(tester);
   d.select(select);
   await tester.pumpWidget(NushiApp(daemon: d));
   await tester.pumpAndSettle();
   return (d, fake);
 }
+
+/// What the shell got of Ctrl+C, D, R, K and \\ (SIGQUIT's).
+const _shellGot = '\x03\x04\x12\x0b\x1c';
 
 Finder get _paletteField =>
     find.descendant(of: find.byType(Palette), matching: find.byType(TextField));
@@ -192,6 +206,79 @@ void main() {
     expect(sent.single.now, isTrue);
     expect(c.text, isEmpty);
     a.busy = false;
+    await closeView(tester, d);
+  }, variant: _linux);
+
+  testWidgets(r'in a terminal Ctrl and a letter is the shell’s, Ctrl+\ '
+      'too; Ctrl+Shift+C copies, Ctrl+Shift+P opens the palette, Ctrl+Alt+2 '
+      'shows Changes', (tester) async {
+    terminalChats.value = {'a'};
+    late FakeShells shells;
+    final (d, _) = await _app(
+      tester,
+      shells: (fake) => shells = FakeShells(
+        fake,
+        terminals: [
+          Terminal(id: 't1', chatId: 'a', folder: '/tmp', shell: 'zsh'),
+        ],
+      )..replay['t1'] = 'old output\r\n> ',
+    );
+    final copied = <Object?>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') copied.add(call.arguments);
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final view = find.byType(TerminalView);
+    await tester.tap(view);
+    await tester.pumpAndSettle();
+    final pinned = d.chats['a']!.pin;
+    for (final k in [
+      LogicalKeyboardKey.keyC,
+      LogicalKeyboardKey.keyD,
+      LogicalKeyboardKey.keyR,
+      LogicalKeyboardKey.keyK,
+      LogicalKeyboardKey.backslash,
+    ]) {
+      await _press(tester, k);
+    }
+    expect(shells.typedAll.join(), _shellGot);
+    expect(sidebarHidden.value, isFalse);
+    expect(d.chats['a']!.pin, pinned);
+    expect(find.byType(Palette), findsNothing);
+
+    final terminal = tester.widget<TerminalView>(view);
+    final buffer = terminal.terminal.buffer;
+    terminal.controller!.setSelection(
+      buffer.createAnchor(0, 0),
+      buffer.createAnchor(3, 0),
+    );
+    await _press(tester, LogicalKeyboardKey.keyC, _shift);
+    expect(copied, [
+      {'text': 'old'},
+    ]);
+    expect(shells.typedAll.join(), _shellGot);
+
+    await _press(tester, LogicalKeyboardKey.digit2, [
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.altLeft,
+    ]);
+    expect(d.chats['a']!.shownTab, ChatTab.changes);
+    d.chats['a']!.tab.value = ChatTab.chat;
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(TerminalView));
+    await tester.pumpAndSettle();
+    await _press(tester, LogicalKeyboardKey.keyP, _shift);
+    expect(find.byType(Palette), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
   }, variant: _linux);
 }
