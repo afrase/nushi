@@ -400,6 +400,7 @@ void main() {
       images: [_ref(), small],
       image: (_) => GetChatImageResponse(mimeType: 'image/png', data: _png),
     );
+    await _decode(tester); // the spinner until it has
     expect(_loading, findsNothing);
     expect(find.byType(ClickableImage), findsNWidgets(2));
     expect(asked, hasLength(1));
@@ -570,6 +571,7 @@ void main() {
           ),
         );
       await _frames(tester);
+      await _decode(tester);
       expect(find.byType(ClickableImage), findsOneWidget);
       expect(_loading, findsNothing);
       expect(asked, isEmpty);
@@ -701,6 +703,51 @@ void main() {
     expect(fetched(), before); // kept, not fetched again
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a row keeps its place until its image decodes, fetched or '
+      'taken back, and lets go at that size', (tester) async {
+    viewport(tester, const Size(1000, 800));
+    final shot = await _picture(tester, 1600, 1000);
+    final images = ChatImages((_, _) async => shot, local: true);
+    final list = ScrollController();
+    addTearDown(list.dispose);
+    await tester.pumpWidget(
+      themed(
+        SingleChildScrollView(
+          controller: list,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ImageRef(images, 'c', _ref(), size: 240),
+              const SizedBox(height: 20000),
+            ],
+          ),
+        ),
+      ),
+    );
+    final row = find.byType(ImageRef);
+    final heights = <double>[];
+    Future<void> pumps() async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump();
+        heights.add(tester.getSize(row).height);
+      }
+    }
+
+    // Fetched, not decoded yet: an image has no size until it is.
+    await pumps();
+    expect(find.byType(ClickableImage), findsOneWidget);
+    // Far off before it decoded: it lets go at the size it holds.
+    list.jumpTo(10000);
+    await pumps();
+    expect(find.byType(ClickableImage), findsNothing);
+    list.jumpTo(0);
+    await pumps();
+    expect(find.byType(ClickableImage), findsOneWidget);
+    await _decode(tester);
+    heights.add(tester.getSize(row).height);
+    expect(heights, everyElement(240));
+  });
 
   for (final width in [1700.0, 720.0]) {
     testWidgets('on the Mac at $width wide, an image coming, one failed and '

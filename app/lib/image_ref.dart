@@ -28,7 +28,8 @@ class _ImageRefState extends State<ImageRef> {
   bool _failed = false;
 
   /// The size it showed at before it let its image go ([ChatImages.local]):
-  /// its place keeps it, so nothing above the screen moves.
+  /// its place keeps it until the image decodes again, so nothing above
+  /// the screen moves.
   Size? _was;
 
   /// Asked for: on its way, or waiting for its turn.
@@ -155,23 +156,17 @@ class _ImageRefState extends State<ImageRef> {
 
   @override
   Widget build(BuildContext context) {
+    final box = _box(context);
     if (_image case final image?) {
-      final t = NushiTheme.of(context).t;
-      final shown = ClickableImage(
+      // Its place holds until the image decodes, fetched or taken back.
+      return ClickableImage(
         image: image,
         size: widget.size,
-        border: t.borderSubtle,
+        border: NushiTheme.of(context).t.borderSubtle,
+        waiting: box,
       );
-      // Taken back after it let go: its room kept while it decodes again.
-      if (_was case final was?) {
-        return ConstrainedBox(
-          constraints: BoxConstraints(minHeight: was.height),
-          child: shown,
-        );
-      }
-      return shown;
     }
-    return _box(context);
+    return box;
   }
 
   /// The image's place: the size it showed at if it let its image go

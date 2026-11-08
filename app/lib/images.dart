@@ -202,38 +202,54 @@ class RemoveBadge extends StatelessWidget {
 
 /// An image that shows large when clicked, [size] tall at most.
 class ClickableImage extends StatelessWidget {
-  const new({required this.image, required this.size, super.key, this.border});
+  const new({
+    required this.image,
+    required this.size,
+    super.key,
+    this.border,
+    this.waiting,
+  });
 
   final ImageProvider image;
   final double size;
   final Color? border;
 
+  /// What shows in its place until the image decodes: an image has no size
+  /// before, so a row in a list would shrink to its border and grow back,
+  /// moving what is below it.
+  final Widget? waiting;
+
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.zoomIn,
-    child: GestureDetector(
-      onTap: () => showImagePreview(context, image),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: size, maxWidth: size * 4),
-        decoration: BoxDecoration(
-          border: border == null ? null : Border.all(color: border!),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Image(
-          // Decoded at the size shown; the preview has it whole.
-          image: ResizeImage(
-            image,
-            height: (size * MediaQuery.devicePixelRatioOf(context)).round(),
-            policy: ResizeImagePolicy.fit,
+  Widget build(BuildContext context) {
+    Widget framed(Widget child) => MouseRegion(
+      cursor: SystemMouseCursors.zoomIn,
+      child: GestureDetector(
+        onTap: () => showImagePreview(context, image),
+        child: Container(
+          constraints: BoxConstraints(maxHeight: size, maxWidth: size * 4),
+          decoration: BoxDecoration(
+            border: border == null ? null : Border.all(color: border!),
+            borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
-          gaplessPlayback: true,
-          fit: BoxFit.contain,
-          errorBuilder: (context, _, _) => const Icon(Icons.broken_image),
+          clipBehavior: Clip.antiAlias,
+          child: child,
         ),
       ),
-    ),
-  );
+    );
+    return Image(
+      // Decoded at the size shown; the preview has it whole.
+      image: ResizeImage(
+        image,
+        height: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+        policy: ResizeImagePolicy.fit,
+      ),
+      gaplessPlayback: true,
+      fit: BoxFit.contain,
+      frameBuilder: (context, child, frame, _) =>
+          frame == null && waiting != null ? waiting! : framed(child),
+      errorBuilder: (context, _, _) => framed(const Icon(Icons.broken_image)),
+    );
+  }
 }
 
 /// The largest local file a markdown image reads.
