@@ -34,17 +34,68 @@ bool isShow(Item it) => showTitles.contains(it.title);
 /// The file a show call names, from its input: `path`, inside `arguments`
 /// on Codex. Null while its input hasn't come (Claude's comes just after
 /// the call), or when it was cut short.
-String? showPath(Item it) {
-  if (!isShow(it) || it.input.isEmpty) return null;
+String? showPath(Item it) => isShow(it) ? _argument(it, 'path') : null;
+
+/// The page a show call names (ADR 0100), as [showPath] its file: `url`.
+/// The daemon refused any but a page on this Mac's loopback.
+String? showUrl(Item it) => isShow(it) ? _argument(it, 'url') : null;
+
+/// A string argument of a call to one of Nushi's tools, from its input
+/// (inside `arguments` on Codex), its unprintable characters marked; null
+/// when it hasn't come, was cut short, or is empty.
+String? _argument(Item it, String key) {
+  if (it.input.isEmpty) return null;
   try {
     final input = jsonDecode(it.input);
     final args = input is Map ? input['arguments'] ?? input : null;
-    final path = args is Map ? args['path'] : null;
-    return path is String && path.isNotEmpty ? plainPath(path) : null;
+    final value = args is Map ? args[key] : null;
+    return value is String && value.isNotEmpty ? plainPath(value) : null;
   } on FormatException {
     return null;
   }
 }
+
+/// What the rows and cards of Nushi's dev server tools (ADR 0100) say,
+/// by tool: done, doing, and asked to do or failed. Each but the list's is
+/// followed by the entry's name.
+const serverVerbs = {
+  'preview_list': ('Listed servers', 'Listing servers', 'List servers'),
+  'preview_start': ('Started', 'Starting', 'Start'),
+  'preview_stop': ('Stopped', 'Stopping', 'Stop'),
+  'preview_logs': (
+    'Read the logs of',
+    'Reading the logs of',
+    'Read the logs of',
+  ),
+};
+
+/// Which of Nushi's dev server tools [it] calls, or asks to ('preview_start'),
+/// titled as Claude's agents (`mcp__nushi__preview_start`) and Codex's
+/// adapter (`mcp.nushi.preview_start`) title them; null for any other.
+String? serverTool(Item it) {
+  final title = it.title;
+  final tool = title.startsWith('mcp__nushi__')
+      ? title.substring(12)
+      : title.startsWith('mcp.nushi.')
+      ? title.substring(10)
+      : null;
+  return serverVerbs.containsKey(tool) ? tool : null;
+}
+
+/// What a call to a dev server tool did, does or failed to do, by its
+/// status ([serverVerbs]); null for another call.
+String? serverVerb(Item it) => switch (serverVerbs[serverTool(it)]) {
+  null => null,
+  (final did, final doing, final tried) => switch (it.status) {
+    'failed' => tried,
+    'pending' || 'in_progress' => doing,
+    _ => did,
+  },
+};
+
+/// The entry a call to a dev server tool names: its `name`.
+String? serverName(Item it) =>
+    serverTool(it) == null ? null : _argument(it, 'name');
 
 final _unprintable = RegExp(
   '[\x00-\x1f\x7f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]',
@@ -60,6 +111,10 @@ String plainPath(String path) => path.replaceAll(_unprintable, '�');
 /// it runs (a gateway's `tool`, `tool_name` or `name`).
 String toolTitle(Item it) {
   if (isShow(it)) return 'Showing a file';
+  if (serverVerb(it) case final verb?) {
+    // A name yet to come (or the list's, which names none).
+    return serverTool(it) == 'preview_list' ? verb : '$verb a server';
+  }
   final mcp = mcpName(it.title);
   if (mcp == null) return it.title;
   final (server, tool) = mcp;
@@ -99,15 +154,19 @@ String? innerTool(String input) {
 
 /// Whether a call runs a command: its title is the command.
 bool isCommand(Item it) =>
-    it.toolKind == 'execute' && it.title.isNotEmpty && !isShow(it);
+    it.toolKind == 'execute' &&
+    it.title.isNotEmpty &&
+    !isShow(it) &&
+    serverTool(it) == null;
 
 /// Whether a call's input shows: it has one and no diff or command says
 /// what it did, and either nothing else shows or it's a tool ACP has no kind
 /// for (an MCP tool's), whose content is only its result. A show call's
-/// title says its input.
+/// title says its input, as a dev server tool's does.
 bool showsInput(Item it) =>
     it.input.isNotEmpty &&
     !isShow(it) &&
+    serverTool(it) == null &&
     it.diffs.isEmpty &&
     !isCommand(it) &&
     (it.text.trim().isEmpty || it.toolKind == 'other' || it.toolKind.isEmpty);
@@ -247,11 +306,71 @@ class PreviewButton extends StatelessWidget {
     final previews = Previews.of(context);
     final open = previews?.open;
     if (open == null) return const SizedBox.shrink();
+    Widget pill({required bool on}) => _Pill(
+      label: 'Preview',
+      icon: Icons.visibility_outlined,
+      tooltip: 'Preview ${baseName(path)}',
+      onTap: () => open(path),
+      on: on,
+    );
+    final current = previews?.current;
+    final name = previews?.name ?? (p) => p;
+    return current == null
+        ? pill(on: false)
+        : ValueListenableBuilder(
+            valueListenable: current,
+            builder: (context, v, _) =>
+                pill(on: v is PreviewFile && name(v.path) == name(path)),
+          );
+  }
+}
+
+/// A show call's Open (ADR 0100): opens [url], a page on this Mac, in a
+/// browser tab beside the chat. None without [Previews.browse] (the
+/// phone, whose loopback isn't the Mac's).
+class OpenPageButton extends StatelessWidget {
+  const new(this.url, {super.key});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final browse = Previews.of(context)?.browse;
+    final at = Uri.tryParse(url);
+    if (browse == null || at == null) return const SizedBox.shrink();
+    return _Pill(
+      label: 'Open',
+      icon: Icons.open_in_browser,
+      tooltip: 'Open $url',
+      onTap: () => browse(at),
+    );
+  }
+}
+
+/// A tool row's small button: [icon] and [label] in a box, filled while
+/// [on].
+class _Pill extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.on = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool on;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    Widget pill({required bool on}) => Pressable(
-      onTap: () => open(path),
-      tooltip: 'Preview ${baseName(path)}',
+    return Pressable(
+      onTap: onTap,
+      tooltip: tooltip,
       builder: (context, look) => Container(
         height: 20,
         padding: const EdgeInsets.symmetric(horizontal: 7),
@@ -269,20 +388,11 @@ class PreviewButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           spacing: 4,
           children: [
-            Icon(Icons.visibility_outlined, size: 12, color: t.textSecondary),
-            Text('Preview', style: theme.ui(t.text, size: 11.5)),
+            Icon(icon, size: 12, color: t.textSecondary),
+            Text(label, style: theme.ui(t.text, size: 11.5)),
           ],
         ),
       ),
     );
-    final current = previews?.current;
-    final name = previews?.name ?? (p) => p;
-    return current == null
-        ? pill(on: false)
-        : ValueListenableBuilder(
-            valueListenable: current,
-            builder: (context, v, _) =>
-                pill(on: v is PreviewFile && name(v.path) == name(path)),
-          );
   }
 }

@@ -233,12 +233,22 @@ class _PermissionCardState extends State<PermissionCard> {
     final theme = NushiTheme.of(context);
     final pending = item.status == 'pending';
     final picked = item.options.where((o) => o.id == item.answer).firstOrNull;
-    // A show call asks about a file: its raw tool name wouldn't say which.
+    // A show call asks about a file or a page, a dev server tool about an
+    // entry: their raw tool names wouldn't say which.
     final shown = showPath(item);
-    final title = shown == null ? item.title : 'Show $shown';
+    final page = showUrl(item);
+    final server = serverTool(item);
+    final title = switch (serverVerbs[server]) {
+      _ when shown != null => 'Show $shown',
+      _ when page != null => 'Show $page',
+      (_, _, final ask)? when server == 'preview_list' => ask,
+      (_, _, final ask)? => '$ask ${serverName(item) ?? 'a server'}',
+      null => item.title,
+    };
     final runs =
         shown != null &&
         const {PreviewKind.html, PreviewKind.svg}.contains(previewKind(shown));
+    final muted = theme.ui(theme.t.textMuted, size: 12);
     return WaitingCard(
       waiting: pending,
       children: [
@@ -247,10 +257,20 @@ class _PermissionCardState extends State<PermissionCard> {
         CardTitle('Permission', detail: pending ? '' : title, waiting: pending),
         if (pending && title.isNotEmpty) FullTitle(title),
         if (pending && runs)
-          Text(
-            'A page runs as it opens in the preview.',
-            style: theme.ui(theme.t.textMuted, size: 12),
-          ),
+          Text('A page runs as it opens in the preview.', style: muted),
+        // What the entry runs, as the daemon resolved it when it asked
+        // (ADR 0100): the start that follows runs only this.
+        if (pending && server == 'preview_start')
+          if (item.serverCommand.isEmpty)
+            Text(
+              'No entry of the launch files by that name can run: '
+              'the start will be refused.',
+              style: theme.ui(theme.t.crashed, size: 12),
+            )
+          else ...[
+            Text('It runs:', style: muted),
+            FullTitle(plainPath(item.serverCommand)),
+          ],
         for (final d in item.diffs) DiffBox(d),
         if (item.text.isNotEmpty) AgentMarkdown(item.text),
         if (pending)

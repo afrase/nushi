@@ -72,18 +72,25 @@ class _ChatAreaState extends State<ChatArea> {
     if (widget.chat.preview.value != null) _tab.value = ChatTab.chat;
   }
 
-  /// A file its agent asked to show opens while the transcript shows. This
-  /// area lives only while its chat is the one showing, so another chat or
-  /// a view in its place leaves the ask waiting, and on Changes it waits
-  /// too: the agent never moves the user (ADR 0068). In a window too narrow
-  /// for the pane beside the transcript it stays closed, or it would lie
-  /// over the box and any card waiting; the row's Preview opens it.
+  /// A file or page its agent asked to show opens while the transcript
+  /// shows. This area lives only while its chat is the one showing, so
+  /// another chat or a view in its place leaves the ask waiting, and on
+  /// Changes it waits too: the agent never moves the user (ADR 0068). In a
+  /// window too narrow for the pane beside the transcript it stays closed,
+  /// or it would lie over the box and any card waiting; the row's Preview
+  /// or Open opens it.
   void _showAsked() {
     final chat = widget.chat;
-    final path = chat.showAsked.value;
-    if (path == null || chat.shownTab != ChatTab.chat) return;
+    final asked = chat.showAsked.value;
+    if (asked == null || chat.shownTab != ChatTab.chat) return;
     chat.showAsked.value = null;
-    if (_previewFits()) chat.openPreview(path);
+    if (!_previewFits()) return;
+    switch (asked) {
+      case ShowFile(:final path):
+        chat.openPreview(path);
+      case ShowPage(:final url):
+        chat.showPage(url);
+    }
   }
 
   /// Whether the preview opens beside the transcript and leaves it

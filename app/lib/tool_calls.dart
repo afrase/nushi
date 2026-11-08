@@ -68,9 +68,24 @@ const _showKind = ToolKind(
   'Showing',
 );
 
+/// A show call of a page (ADR 0100).
+const _showPageKind = ToolKind(
+  Icons.visibility_outlined,
+  'showed',
+  'page',
+  'Showed',
+  'Showing',
+);
+
+/// A call to one of Nushi's dev server tools (ADR 0100); its row's words
+/// are [serverVerbs]'.
+const _serverKind = ToolKind(Icons.dns_outlined, 'used', 'server tool');
+
 /// The kind of tool call [it] is.
 ToolKind kindOf(Item it) => isShow(it)
-    ? _showKind
+    ? (showUrl(it) == null ? _showKind : _showPageKind)
+    : serverTool(it) != null
+    ? _serverKind
     : _kinds[it.toolKind] ??
           const ToolKind(Icons.build_outlined, 'used', 'tool');
 
@@ -82,6 +97,7 @@ String doingOf(Item it) {
   final verb = kindOf(it).doing;
   return switch ((verb, path)) {
     _ when isCommand(it) => 'Running ${it.title}',
+    _ when serverTool(it) != null => callTitle(it),
     (final v?, final p?) => '$v $p',
     (final v?, null) => v,
     _ => toolTitle(it),
@@ -148,25 +164,31 @@ String runFolded(List<Item> calls) => [
   for (final c in calls) ...[callTitle(c), callFolded(c)],
 ].join('\n');
 
-/// The verb before a call's file in its row, if it has one.
-String? _verbOf(Item it) => !isShow(it)
-    ? kindOf(it).verb
-    : it.status == 'failed'
-    ? 'Show'
-    : _running(it)
-    ? kindOf(it).doing
-    : kindOf(it).verb;
+/// The verb before a call's file in its row, if it has one; Nushi's own
+/// tools' by their status.
+String? _verbOf(Item it) => isShow(it)
+    ? it.status == 'failed'
+          ? 'Show'
+          : _running(it)
+          ? kindOf(it).doing
+          : kindOf(it).verb
+    : serverVerb(it) ?? kindOf(it).verb;
 
 /// Whether a call's row reads as [verb] and [path].
 bool _pathed(Item it, String? verb, String? path) =>
-    (isShow(it) || it.toolKind != 'execute') && verb != null && path != null;
+    (isShow(it) || serverTool(it) != null || it.toolKind != 'execute') &&
+    verb != null &&
+    path != null;
 
-/// What a call's title names: its file, a show call's by its name alone.
+/// What a call's title names: its file, a show call's by its name alone or
+/// its page whole, a dev server tool's its entry.
 String? _named(Item it) => isShow(it)
     ? switch (showPath(it)) {
         final p? => baseName(p),
-        null => null,
+        null => showUrl(it),
       }
+    : serverTool(it) != null
+    ? serverName(it)
     : it.paths.firstOrNull ?? it.diffs.firstOrNull?.path;
 
 /// The file a tool call wrote or edited, when it's an artifact
@@ -267,7 +289,7 @@ class ToolCallView extends StatelessWidget {
         : TextSpan(text: toolTitle(it), style: theme.ui(t.textSecondary));
     // An MCP call's title is its server and tool; its raw name on hover.
     final rawName = show
-        ? showPath(it)
+        ? showPath(it) ?? showUrl(it)
         : mcpName(it.title) == null
         ? null
         : it.title;
@@ -279,6 +301,7 @@ class ToolCallView extends StatelessWidget {
     }
     final command = isCommand(it);
     final preview = previewPath(it);
+    final page = show && it.status == 'completed' ? showUrl(it) : null;
     final input = showsInput(it);
     final output = it.text.trim().isNotEmpty;
     return _withImages(
@@ -326,6 +349,10 @@ class ToolCallView extends StatelessWidget {
             if (preview != null) ...[
               const SizedBox(width: 8),
               PreviewButton(preview),
+            ],
+            if (page != null) ...[
+              const SizedBox(width: 8),
+              OpenPageButton(page),
             ],
             // The call ends; the command runs on (background_commands.dart).
             if (it.hasBackgroundCommand())

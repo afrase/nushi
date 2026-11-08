@@ -59,7 +59,10 @@ extension DaemonEvents on Daemon {
       if (!remote) devServers.changed(e.serversChanged);
     } else if (e.hasShow()) {
       // The phone offers Preview on the tool row; it opens nothing itself.
-      if (!remote) chats[e.chatId]?.showAsked.value = e.show;
+      if (!remote) chats[e.chatId]?.showAsked.value = ShowFile(e.show);
+    } else if (e.hasShowUrl()) {
+      // A page on the Mac's loopback (ADR 0100): nothing the phone opens.
+      if (!remote) chats[e.chatId]?.showAsked.value = ShowPage(e.showUrl);
     } else if (sides[e.chatId] case final side?) {
       e.removed ? _sideGone(side) : _applySide(side, e);
     } else if (e.hasChat()) {

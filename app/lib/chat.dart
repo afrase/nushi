@@ -40,6 +40,25 @@ enum ChatPhase {
 /// or its pull request.
 enum ChatTab { chat, changes, pull }
 
+/// What a chat's agent asked to show beside it: a file (ADR 0068) or a page
+/// on this Mac (ADR 0100).
+sealed class ShowAsk;
+
+/// A file the show tool named, as the agent named it.
+final class ShowFile implements ShowAsk {
+  const new(this.path);
+
+  final String path;
+}
+
+/// A page on this Mac's loopback: the show tool's url, or a dev server the
+/// agent started, once it answers.
+final class ShowPage implements ShowAsk {
+  const new(this.url);
+
+  final String url;
+}
+
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
@@ -381,11 +400,12 @@ class ChatState extends ChangeNotifier {
   /// Which files its messages name are there (links to their preview).
   final fileLinks = FileLinks();
 
-  /// The file its agent last asked to show (the show tool, ADR 0068) that
-  /// hasn't opened: the chat's pane opens it while its transcript shows,
-  /// or when it next does. A later ask takes its place; nothing but the
-  /// Mac's app sets it, and it lasts while the app runs.
-  final showAsked = ValueNotifier<String?>(null);
+  /// The file or page its agent last asked to show (the show tool, ADR
+  /// 0068; a server it started, ADR 0100) that hasn't opened: the chat's
+  /// pane opens it while its transcript shows, or when it next does. A
+  /// later ask takes its place; nothing but the Mac's app sets it, and it
+  /// lasts while the app runs.
+  final showAsked = ValueNotifier<ShowAsk?>(null);
 
   /// Shows [path] in the preview: the tab of the same file if it has one,
   /// however each is named ([relativeIn]: relative to the folder or
@@ -420,6 +440,27 @@ class ChatState extends ChangeNotifier {
       final at = Uri.tryParse(b.address.value);
       return at != null && at.hasScheme && at.origin == origin;
     }).lastOrNull;
+    if (open == null) {
+      openBrowserTab(url);
+      return;
+    }
+    tab.value = ChatTab.chat;
+    _show(open);
+  }
+
+  /// Shows a page its agent asked for ([ShowPage]): a server's address
+  /// as [showServer] does; a page within a site in the tab already at it,
+  /// else a new one.
+  void showPage(String url) {
+    final at = Uri.tryParse(url);
+    if (at == null || (at.path.isEmpty || at.path == '/') && !at.hasQuery) {
+      showServer(url);
+      return;
+    }
+    final open = previewTabs.value
+        .whereType<BrowserTab>()
+        .where((b) => b.address.value == url)
+        .lastOrNull;
     if (open == null) {
       openBrowserTab(url);
       return;
