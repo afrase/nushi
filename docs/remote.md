@@ -159,7 +159,7 @@ app = "my-nushi-relay"
 
 ### Updating a relay from a release
 
-Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`, `darwin-arm64`: static binaries) and `nushi-web-X.Y.Z.tar.gz`. Update the web app along with the Mac:
+Each release has `nushi-relay-X.Y.Z-linux-arm64.tar.gz` (and `linux-amd64`: static binaries) and `nushi-web-X.Y.Z.tar.gz`. Update the web app along with the Mac:
 
 ```sh
 tar -xzf nushi-relay-X.Y.Z-linux-arm64.tar.gz && sudo install nushi-relay /usr/local/bin/

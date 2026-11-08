@@ -45,7 +45,7 @@ for part in $parts; do
     ditto -c -k --keepParent app/build/macos/Build/Products/Release/Nushi.app "dist/Nushi-$version.zip"
     ;;
   relay)
-    for target in linux/arm64 linux/amd64 darwin/arm64; do
+    for target in linux/arm64 linux/amd64; do
       os=${target%/*}
       arch=${target#*/}
       out=dist/relay-$os-$arch
