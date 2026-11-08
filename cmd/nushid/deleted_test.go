@@ -1,3 +1,5 @@
+//go:build darwin || linux
+
 package main
 
 import (
@@ -12,13 +14,7 @@ import (
 // app never does.
 func TestAppDeleted(t *testing.T) {
 	dir := t.TempDir()
-	exe := filepath.Join(dir, "Nushi.app", "Contents", "Helpers", "Nushi Daemon.app", "Contents", "MacOS", "nushid")
-	if err := os.MkdirAll(filepath.Dir(exe), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(exe, nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	exe, app := packagedDaemon(t, dir)
 	if appDeleted(filepath.Join(dir, "bin", "nushid"), time.Millisecond) != nil {
 		t.Error("a daemon outside an app is watched")
 	}
@@ -38,12 +34,23 @@ func TestAppDeleted(t *testing.T) {
 	case <-time.After(4 * every):
 	}
 
-	if err := os.RemoveAll(filepath.Join(dir, "Nushi.app")); err != nil {
+	if err := os.RemoveAll(app); err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case <-gone:
 	case <-time.After(20 * every):
 		t.Fatal("still running with its app deleted")
+	}
+}
+
+// writeEmpty makes the file at path, and the folders it's in.
+func writeEmpty(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
