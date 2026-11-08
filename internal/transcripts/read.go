@@ -24,7 +24,7 @@ func (s *Store) Read(chat string) ([]model.Item, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	t, lines, size, err := s.replayLocked(chat, func(line []byte) (change, bool) {
+	t, lines, size, err := s.replayLocked(chat, func(line []byte, _ int64) (change, bool) {
 		var r record
 		if json.Unmarshal(line, &r) != nil {
 			return change{}, false
@@ -50,22 +50,39 @@ func (s *Store) Read(chat string) ([]model.Item, error) {
 	return out, nil
 }
 
-// head is what Find reads of a record first: none of its item's text.
+// head is what Find and Heads read of a record first: none of its item's
+// text, nor its images' bytes.
 type head struct {
-	Item *struct {
-		ID     string
-		Kind   model.ItemKind
-		Status string
-	} `json:"item"`
-	After string `json:"after"`
-	Cut   string `json:"cut"`
-	Drop  string `json:"drop"`
+	Item  *itemHead `json:"item"`
+	After string    `json:"after"`
+	Cut   string    `json:"cut"`
+	Drop  string    `json:"drop"`
+}
+
+// itemHead is what Heads gives of an item.
+type itemHead struct {
+	ID           string
+	Kind         model.ItemKind
+	Status       string
+	Parent       string
+	WorktreePath string
+	Pictures     []picture `json:"pictures"`
+}
+
+// item is h as a model.Item of only what it has: its images are their
+// MimeType and Hash, without Data.
+func (h *itemHead) item() model.Item {
+	it := model.Item{ID: h.ID, Kind: h.Kind, Status: h.Status, Parent: h.Parent, WorktreePath: h.WorktreePath}
+	for _, p := range h.Pictures {
+		it.Images = append(it.Images, model.Image{MimeType: p.MimeType, Hash: p.Hash})
+	}
+	return it
 }
 
 // Find returns the items of chat's copy, as it stands, that want picks,
 // their images read back, each with the id of the item before it ("" for
-// the first). want sees an item's ID, Kind and Status only, and only the
-// items it picks are read whole: a long copy costs what they hold and its
+// the first). want sees an item as Heads has it, and only the items it
+// picks are read whole: a long copy costs what they hold and its
 // items' ids, not its size (a daemon's start looks through every chat's).
 func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Item, after []string, err error) {
 	if err := checkChat(chat); err != nil {
@@ -73,7 +90,7 @@ func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Ite
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	t, _, _, err := s.replayLocked(chat, func(line []byte) (change, bool) {
+	t, _, _, err := s.replayLocked(chat, func(line []byte, _ int64) (change, bool) {
 		var h head
 		if json.Unmarshal(line, &h) != nil {
 			return change{}, false
@@ -83,7 +100,7 @@ func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Ite
 			return c, true
 		}
 		c.item = &entry{id: h.Item.ID}
-		if !want(model.Item{ID: h.Item.ID, Kind: h.Item.Kind, Status: h.Item.Status}) {
+		if !want(h.Item.item()) {
 			return c, true
 		}
 		var r record
@@ -107,11 +124,11 @@ func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Ite
 }
 
 // replayLocked replays chat's file into its transcript a line at a time,
-// each line made a change by decode (false: a line that can't be read,
-// skipped), so no more of the file is held at once than its longest
-// line. It returns the transcript (nil when chat has no copy), how many
+// each line (and where it starts in the file) made a change by decode
+// (false: a line that can't be read, skipped), so no more of the file is
+// held at once than its longest line. It returns the transcript (nil when chat has no copy), how many
 // records it read and the file's size.
-func (s *Store) replayLocked(chat string, decode func([]byte) (change, bool)) (*transcript, int, int64, error) {
+func (s *Store) replayLocked(chat string, decode func(line []byte, at int64) (change, bool)) (*transcript, int, int64, error) {
 	f, err := s.root.Open(path.Join(chat, itemsFile))
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, 0, 0, nil
@@ -120,7 +137,7 @@ func (s *Store) replayLocked(chat string, decode func([]byte) (change, bool)) (*
 		return nil, 0, 0, err
 	}
 	defer func() { _ = f.Close() }()
-	t, n := &transcript{}, 0
+	t, n, at := &transcript{}, 0, int64(0)
 	r := bufio.NewReaderSize(f, 64<<10)
 	var long []byte // a line longer than r's buffer, so far
 	for {
@@ -132,10 +149,11 @@ func (s *Store) replayLocked(chat string, decode func([]byte) (change, bool)) (*
 		if len(long) > 0 {
 			line, long = append(long, line...), long[:0]
 		}
-		if c, ok := decode(bytes.TrimSuffix(line, []byte("\n"))); ok {
+		if c, ok := decode(bytes.TrimSuffix(line, []byte("\n")), at); ok {
 			n++
 			t.apply(c)
 		}
+		at += int64(len(line))
 		if errors.Is(err, io.EOF) {
 			break
 		}

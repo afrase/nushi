@@ -34,7 +34,9 @@ const (
 type Store struct {
 	mu       sync.Mutex
 	root     *os.Root
-	repaired map[string]bool // chats whose file's end was checked in this run
+	repaired map[string]bool   // chats whose file's end was checked in this run
+	indexes  map[string]*index // the last chats' indexes (index.go)
+	indexed  []string          // their chats, the latest last
 }
 
 // Open opens the store in dir, made 0700 if it isn't there, and removes
@@ -51,7 +53,7 @@ func Open(dir string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{root: root, repaired: map[string]bool{}}
+	s := &Store{root: root, repaired: map[string]bool{}, indexes: map[string]*index{}}
 	var half []string
 	for _, p := range []string{"*/.nushi-*", "*/" + imagesDir + "/.nushi-*", "*/" + imagesDir + "/*.tmp*", "*/" + itemsFile + ".tmp"} {
 		m, _ := fs.Glob(root.FS(), p)
@@ -159,6 +161,7 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
+	s.forgetIndexLocked(chat)
 	name := path.Join(chat, itemsFile)
 	if !s.repaired[chat] {
 		if err := s.repairLocked(name); err != nil {
@@ -304,6 +307,7 @@ func (s *Store) rewriteLocked(chat string, items []*stored) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
+	s.forgetIndexLocked(chat)
 	if err := atomicfile.ReplaceIn(s.root, path.Join(chat, itemsFile), buf.Bytes(), 0o600); err != nil {
 		return err
 	}
@@ -325,6 +329,7 @@ func (s *Store) Delete(chat string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.repaired, chat)
+	s.forgetIndexLocked(chat)
 	return s.root.RemoveAll(chat)
 }
 

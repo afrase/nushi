@@ -3,10 +3,13 @@ package transcripts
 import "slices"
 
 // entry is an item of a transcript being replayed: its id, and the item
-// as last written, or nil where the reader kept only the id (Find).
+// as last written, or nil where the reader kept only the id (Find) or
+// its head (index, with at and n where its last record is in the file).
 type entry struct {
-	id   string
-	item *stored
+	id    string
+	item  *stored
+	head  *itemHead
+	at, n int64
 }
 
 // change is a record as a transcript replays it: an item (nil for a cut
