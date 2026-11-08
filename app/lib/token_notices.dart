@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/widgets.dart';
 
 /// The notice over Jira's or GitHub's list while the daemon can't read a
@@ -34,7 +34,7 @@ class TokenNotices extends StatelessWidget {
       : needsRestart
       ? Notice(
           '$problem. Restarting stops running turns and closes terminals.',
-          action: bundledDaemon == null ? null : 'Restart daemon',
+          action: native.install.daemon == null ? null : 'Restart daemon',
           onAction: onRestart,
         )
       : const SizedBox.shrink();

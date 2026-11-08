@@ -21,6 +21,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme_files.dart';
 
+import 'fake_app_install.dart';
 import 'harness.dart';
 
 /// Goldens are drawn on macOS only (on Linux about a third differ by 1–4%):
@@ -35,7 +36,8 @@ import 'harness.dart';
 /// age a golden shows never moves. No test sees what another left: the
 /// app's prefs as at launch, no pull request read, no agents, review
 /// comments or drafts, remote state, clones or theme files known; the Mac's
-/// native edge (on every host), no speller.
+/// native edge (on every host), no speller, and a fake install, so nothing
+/// starts or stops a daemon.
 /// The test process's data folder goes when its tests end.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
@@ -51,8 +53,11 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   setUp(() {
     clock = () => fixtureNow;
     // The Mac's native edge, over channels a test may answer, but no
-    // speller: one that sets its own gets it (ADR 0097).
-    native = macosNative()..speller = null;
+    // speller: one that sets its own gets it (ADR 0097); an install that
+    // runs nothing.
+    native = macosNative()
+      ..speller = null
+      ..install = FakeAppInstall();
     resetAppSettings();
     forgetPulls();
     forgetReviews();

@@ -66,7 +66,7 @@ extension DaemonLink on Daemon {
       pingError = null;
     } on Object catch (e) {
       pingError = e;
-      if (!remote && _launcher.launch() && _launcher.launches == 3) {
+      if (!remote && _launcher.launch(dataDir) && _launcher.launches == 3) {
         _changed();
       }
     }
@@ -173,10 +173,10 @@ extension DaemonLink on Daemon {
     await appLog.write(
       'info',
       'restarting the daemon',
-      attrs: {'build': _build, 'bundled': ?bundledBuild},
+      attrs: {'build': _build, 'bundled': ?bundled},
     );
     final before = _build;
-    stopDaemon(dataDir);
+    await native.install.stop(dataDir);
     // The first ping that fails starts the bundled daemon.
     _launcher.launched = DateTime(0);
     for (var i = 0; i < 50 && connected; i++) {
@@ -186,7 +186,7 @@ extension DaemonLink on Daemon {
     if (connected && _build == before) {
       appLog.warn('the daemon did not stop', {'build': before});
       throw StateError(
-        "The running daemon didn't stop: quit nushid in Activity Monitor, "
+        "The running daemon didn't stop: ${native.install.stopByHand}, "
         'then reopen Nushi',
       );
     }

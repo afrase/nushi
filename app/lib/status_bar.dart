@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agent_mark.dart';
-import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -225,7 +225,7 @@ class _MemoryButton extends StatelessWidget {
         row(
           label('Nushi daemon'),
           m.daemon.toInt(),
-          action: bundledDaemon == null
+          action: native.install.daemon == null
               ? null
               : Button(
                   label: daemon.restarting ? 'Restarting…' : 'Restart',

@@ -1,4 +1,5 @@
 import 'package:nushi/alerts.dart';
+import 'package:nushi/app_install.dart';
 import 'package:nushi/back_swipe.dart';
 import 'package:nushi/clipboard_files.dart';
 import 'package:nushi/conventions.dart';
@@ -29,6 +30,7 @@ class Native {
     required this.diagrams,
     required this.fileModes,
     required this.fonts,
+    required this.install,
     required this.loginItem,
     required this.swipes,
     required this.web,
@@ -57,6 +59,9 @@ class Native {
 
   /// The installed fonts.
   Fonts fonts;
+
+  /// The installed app: its data folder, version and daemon.
+  AppInstall install;
 
   /// What starts the daemon at login.
   LoginItem loginItem;

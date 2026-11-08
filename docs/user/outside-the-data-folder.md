@@ -4,7 +4,7 @@ Everything Nushi writes outside its data folder, and why.
 
 ## What Nushi changes outside its data folder (milestone Z)
 
-Everything else Nushi writes is in its data folder (`~/Library/Application Support/Nushi`, or `NUSHI_DATA`): chats, settings (`app.json`), trust answers (`trusted.json`), remote keys, the log, scratch chats' folders, and the adapters (`agents/`). Outside it, each change is one you ask for, or the agent's own doing while you use it:
+Everything else Nushi writes is in its data folder (`~/Library/Application Support/Nushi`; on Linux `$XDG_DATA_HOME/nushi`, else `~/.local/share/nushi`; or `NUSHI_DATA`): chats, settings (`app.json`), trust answers (`trusted.json`), remote keys, the log, scratch chats' folders, and the adapters (`agents/`). Outside it, each change is one you ask for, or the agent's own doing while you use it:
 
 | What | Where | Why |
 |---|---|---|

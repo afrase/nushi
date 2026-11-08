@@ -21,6 +21,7 @@ import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/issue_chat.dart';
 import 'package:nushi/mac_view.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/place.dart';
 import 'package:nushi/remote.dart';
 import 'package:nushi/review.dart';
@@ -40,9 +41,8 @@ part 'daemon_places.dart';
 part 'daemon_sides.dart';
 part 'daemon_start.dart';
 
-final support = '${Platform.environment['HOME']}/Library/Application Support';
-
-/// The daemon's data folder; `NUSHI_DATA` picks another one (development).
+/// The daemon's data folder, as the daemon picks it ([Native.install]);
+/// `NUSHI_DATA` picks another one (development).
 /// Tests get a new one in the temporary folder, never the user's, even
 /// with `NUSHI_DATA` exported (a restart there would stop its daemon):
 /// one per test process, as test files run side by side and a shared
@@ -50,7 +50,7 @@ final support = '${Platform.environment['HOME']}/Library/Application Support';
 /// reused pid starts from no one's prefs. flutter_test_config deletes it.
 final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     ? Directory.systemTemp.createTempSync('nushi-test-').path
-    : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
+    : Platform.environment['NUSHI_DATA'] ?? native.install.dataFolder;
 
 /// The API version this app was built with (`internal/api.Version`).
 const apiVersion = 111;
@@ -119,7 +119,7 @@ class Daemon extends ChangeNotifier {
     unawaited(
       ping().then(
         (_) => appLog.info('app started', {
-          'version': appVersion,
+          'version': native.install.version,
           'api': '$apiVersion',
           'pid': '$pid',
           'daemon': connected ? 'answers' : 'not answering',
@@ -158,9 +158,9 @@ class Daemon extends ChangeNotifier {
   /// The running daemon's build: its program's `<size>-<mtime in ms>`.
   String get daemonBuild => _build;
 
-  /// The bundled daemon's build ([bundledBuild]): none on the phone, or
-  /// when the app isn't packaged. Tests set one.
-  late String? bundled = remote ? null : bundledBuild;
+  /// The bundled daemon's build (`native.install.daemonBuild`): none on
+  /// the phone, or when the app isn't packaged. Tests set one.
+  late String? bundled = remote ? null : native.install.daemonBuild;
 
   /// What the daemon's restart into the bundled one waits for, as it last
   /// said (API 85): chats that run or wait, terminals running a command.

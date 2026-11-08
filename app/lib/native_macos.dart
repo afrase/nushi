@@ -1,4 +1,5 @@
 import 'package:nushi/alerts_macos.dart';
+import 'package:nushi/app_install_macos.dart';
 import 'package:nushi/back_swipe_macos.dart';
 import 'package:nushi/clipboard_files_macos.dart';
 import 'package:nushi/conventions.dart';
@@ -22,6 +23,7 @@ Native macosNative() => Native(
   diagrams: const MacDiagrams(),
   fileModes: const MacFileModes(),
   fonts: const MacFonts(),
+  install: MacAppInstall(),
   loginItem: const MacLoginItem(),
   swipes: const MacPageSwipes(),
   web: const MacWebViews(),

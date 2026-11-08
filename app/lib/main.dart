@@ -9,7 +9,6 @@ import 'package:nushi/alerts.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/app_log.dart';
 import 'package:nushi/beside.dart';
-import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat_area.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/comment_drafts_mac.dart';
@@ -369,7 +368,7 @@ class _Shell extends StatelessWidget {
         return TitleBand(
           child: Center(
             child: Text(
-              bundledDaemon == null
+              native.install.daemon == null
                   ? 'Daemon not running'
                   : daemon.launchFailed
                   ? "Couldn't start the daemon. Its log: "

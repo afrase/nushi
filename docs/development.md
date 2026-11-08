@@ -31,7 +31,7 @@ tools/release.sh 1.2.0   # a release's files into dist/, as the release workflow
 
 - With `make run`, start and stop the daemon yourself.
 - `make package` checks the bundle's layout and signatures (`tools/check-bundle.sh`).
-- To try a build beside a Nushi that's in use, give both another data folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`).
+- To try a build beside a Nushi that's in use, give both another data folder: `NUSHI_DATA=~/Library/Application\ Support/Nushi\ Dev make run` (and the same for `make stop`). On Linux the usual folder is `$XDG_DATA_HOME/nushi` (else `~/.local/share/nushi`), `make app` runs `flutter run -d linux`, and `make stop` needs psmisc's `fuser`.
 
 ## Lint
 

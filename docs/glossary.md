@@ -164,7 +164,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 
 | Term | Meaning | Code | ADR |
 |---|---|---|---|
-| **Data folder** | `~/Library/Application Support/Nushi`: socket, token, state, copies, logs, adapters. | `NUSHI_DATA` | |
+| **Data folder** | `~/Library/Application Support/Nushi` (on Linux `$XDG_DATA_HOME/nushi`, else `~/.local/share/nushi`): socket, token, state, copies, logs, adapters. | `NUSHI_DATA`, `AppInstall.dataFolder` | 0101, 0102 |
 | **Start at login** | A launch agent that opens the daemon at login. | `login_item.dart` | 0036 |
 | **Logs** | `nushid.log` and `app.log`; Settings › Logs & advanced. | `internal/logs` | 0038 |
 | **Shell environment** | Your login shell's variables, which agents start with; read again from Settings › Agents. | `internal/shellenv`, `ShellEnv` | 0048 |

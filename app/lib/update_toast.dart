@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:nushi/app_log.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/markdown.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/slides.dart';
 import 'package:nushi/theme/theme.dart';
@@ -86,7 +86,7 @@ int compareVersions(String a, String b) {
 String? updateToShow(Daemon d) {
   final v = d.update.version;
   if (d.remote || v.isEmpty || v == dismissedUpdate.value) return null;
-  final mine = appVersion.split('+').first;
+  final mine = native.install.version.split('+').first;
   if (mine.isNotEmpty && compareVersions(mine, v) >= 0) return null;
   return v;
 }

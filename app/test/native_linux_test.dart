@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_install_linux.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/file_mode_linux.dart';
@@ -26,6 +27,7 @@ void main() {
     expect(const MacWindow().menuBar, isTrue);
     expect(set.speller, isNull);
     expect(await set.fonts.monospaced(), isNull);
+    expect(set.install, isA<LinuxAppInstall>());
     expect(await set.loginItem.status(), isNull);
     expect(await set.alerts.allowed(), isNull);
     expect(await set.clipboard.files(), isEmpty);

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nushi/agents.dart';
-import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/chat_keys.dart';
@@ -19,6 +18,7 @@ import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
 import 'package:nushi/palette.dart';
@@ -382,7 +382,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .restart,
       'Restart daemon',
-      enabled: bundledDaemon != null,
+      enabled: native.install.daemon != null,
       run: () => unawaited(restartDaemonAsking(context, d)),
     ),
     AppAction(

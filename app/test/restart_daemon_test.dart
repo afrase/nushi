@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 
+import 'fake_app_install.dart';
 import 'fake_daemon.dart';
 
 void main() {
@@ -35,6 +36,35 @@ void main() {
     );
     await d.restartDaemon();
     expect((d.connected, phase), (true, 'new'));
+  });
+
+  test('a restart stops the daemon of the data folder and starts the '
+      'packaged one once it has gone', () async {
+    fakeInstall.daemon = '/opt/nushi/lib/nushid';
+    var phase = 'old';
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        PingRequest() when phase == 'gone' => throw ConnectException(
+          Code.unavailable,
+          'no daemon',
+        ),
+        PingRequest() => PingResponse(apiVersion: apiVersion, build: phase),
+        _ => null,
+      };
+    final d = Daemon(transport: fake);
+    addTearDown(d.dispose);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    Future<void>.delayed(
+      const Duration(milliseconds: 100),
+      () => phase = 'gone',
+    );
+    Future<void>.delayed(
+      const Duration(milliseconds: 600),
+      () => phase = 'new',
+    );
+    await d.restartDaemon();
+    expect(fakeInstall.stopped, [dataDir]);
+    expect(fakeInstall.launched, [dataDir]);
   });
 
   // Ten seconds of tries, on the test's clock rather than waited out.

@@ -179,20 +179,3 @@ void catchErrors() {
     return true;
   };
 }
-
-/// The app's version from its bundle (Info.plist), "" outside one.
-final String appVersion = () {
-  try {
-    final plist = File(
-      '${File(Platform.resolvedExecutable).parent.parent.path}/Info.plist',
-    ).readAsStringSync();
-    String key(String k) =>
-        RegExp('<key>$k</key>\\s*<string>([^<]*)</string>')
-            .firstMatch(plist)
-            ?.group(1) ??
-        '';
-    return '${key('CFBundleShortVersionString')}+${key('CFBundleVersion')}';
-  } on Object {
-    return '';
-  }
-}();

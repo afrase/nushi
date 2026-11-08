@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/alerts_settings.dart';
-import 'package:nushi/bundled_daemon.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/menu.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_updates.dart';
@@ -85,8 +85,9 @@ class GeneralSection extends StatelessWidget {
       const NotificationsGroup(),
       if (settings case final s? when s.hasCheckUpdates())
         UpdatesGroup(daemon: daemon, settings: s, onChange: onChange),
-      // The launch agent starts the usual data folder's daemon.
-      if (bundledDaemon != null && Platform.environment['NUSHI_DATA'] == null)
+      // Start at login starts the usual data folder's daemon.
+      if (native.install.daemon != null &&
+          Platform.environment['NUSHI_DATA'] == null)
         const StartAtLogin(),
     ],
   );
