@@ -1,14 +1,17 @@
 // Command native-edge checks that the app's native code stays at its edge
-// (ADR 0097): platform channels and messages (MethodChannel, EventChannel,
-// BasicMessageChannel, a BinaryMessenger, a MethodCall or its codec,
-// SystemChannels, sendPlatformMessage), FFI (dart:ffi, package:ffi) and a
-// macOS-only package (webview_flutter_wkwebview) appear in the Dart
-// libraries it's given only in a file named <capability>_macos.dart, the
-// Mac's implementation of an interface its user declares; and no other
-// file reaches one of those (an import, export or part of a *_macos.dart
-// file), but main.dart, which picks the Mac's set (native_macos.dart). It
-// prints each use elsewhere and exits 1. make lint-dart runs it from the
-// repository root over each Dart package's lib (app/lib when given none).
+// (ADR 0097, 0102): platform channels and messages (MethodChannel,
+// EventChannel, BasicMessageChannel, a BinaryMessenger, a MethodCall or its
+// codec, SystemChannels, sendPlatformMessage) and FFI (dart:ffi,
+// package:ffi) appear in the Dart libraries it's given only in a platform's
+// file, <capability>_macos.dart or <capability>_linux.dart, its
+// implementation of an interface the capability's user declares; a
+// platform's own package only in that platform's files
+// (webview_flutter_wkwebview the Mac's, dbus Linux's). No file reaches a
+// platform's file (an import, export or part of one) but that platform's
+// own, and main.dart, which picks a set (native_macos.dart or
+// native_linux.dart). It prints each use elsewhere and exits 1. make
+// lint-dart runs it from the repository root over each Dart package's lib
+// (app/lib when given none).
 package main
 
 import (
@@ -18,28 +21,46 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
-// native is what only a *_macos.dart file may use, and what to call it.
+// platform is one platform's suffix (a file <capability>_<suffix>.dart is
+// its implementation) and what its implementations are called.
+type platform struct{ suffix, name string }
+
+var (
+	mac   = platform{"macos", "a Mac implementation's file"}
+	linux = platform{"linux", "a Linux implementation's file"}
+)
+
+// platforms are every platform with files of its own.
+var platforms = []platform{mac, linux}
+
+// native is what only some platforms' files may use, what to call it, and
+// those platforms.
 var native = []struct {
 	pattern *regexp.Regexp
 	name    string
+	in      []platform
 }{
-	{regexp.MustCompile(`\b(Optional)?MethodChannel\b|\bEventChannel\b|\bBasicMessageChannel\b`), "a platform channel"},
-	{regexp.MustCompile(`BinaryMessenger\b|\bMethodCall\b|MethodCodec\b|\bSystemChannels\b|\bsendPlatformMessage\b|\bchannelBuffers\b`), "a platform message"},
-	{regexp.MustCompile(`['"]dart:ffi['"]`), "dart:ffi"},
-	{regexp.MustCompile(`['"]package:ffi/`), "package:ffi"},
-	{regexp.MustCompile(`['"]package:webview_flutter_wkwebview/`), "webview_flutter_wkwebview (macOS's WebKit)"},
+	{regexp.MustCompile(`\b(Optional)?MethodChannel\b|\bEventChannel\b|\bBasicMessageChannel\b`), "a platform channel", platforms},
+	{regexp.MustCompile(`BinaryMessenger\b|\bMethodCall\b|MethodCodec\b|\bSystemChannels\b|\bsendPlatformMessage\b|\bchannelBuffers\b`), "a platform message", platforms},
+	{regexp.MustCompile(`['"]dart:ffi['"]`), "dart:ffi", platforms},
+	{regexp.MustCompile(`['"]package:ffi/`), "package:ffi", platforms},
+	{regexp.MustCompile(`['"]package:webview_flutter_wkwebview/`), "webview_flutter_wkwebview (macOS's WebKit)", []platform{mac}},
+	{regexp.MustCompile(`['"]package:dbus/`), "dbus (Linux's D-Bus)", []platform{linux}},
 }
 
-// macosFile is a URI of a Mac implementation's file, as an import, export
-// or part names it (on its own line too, as a conditional import's).
-var macosFile = regexp.MustCompile(`['"]([^'"]*_macos\.dart)['"]`)
+// platformFile is a URI of a platform's file, as an import, export or part
+// names it (on its own line too, as a conditional import's), and its suffix.
+var platformFile = regexp.MustCompile(`['"]([^'"]*_(macos|linux)\.dart)['"]`)
 
-// picksTheMac is the one file that may name a *_macos.dart file, and the
-// one it may name: main.dart sets the Mac's set at startup.
-const picksTheMac, theMacsSet = "main.dart", "native_macos.dart"
+// picksASet is the one file that may name another platform's file, and
+// theSets the ones it may name: main.dart sets the machine's at startup.
+const picksASet = "main.dart"
+
+var theSets = []string{"native_macos.dart", "native_linux.dart"}
 
 // generated are the suffixes of protoc's and Connect's Dart, left out.
 var generated = []string{".pb.dart", ".pbenum.dart", ".pbjson.dart", ".pbserver.dart", ".pbgrpc.dart"}
@@ -66,32 +87,33 @@ func main() {
 		uses = append(uses, found...)
 	}
 	for _, u := range uses {
-		fmt.Fprintf(os.Stderr, "%s:%d: %s outside a *_macos.dart file\n", u.path, u.line, u.what)
+		fmt.Fprintf(os.Stderr, "%s:%d: %s\n", u.path, u.line, u.what)
 	}
 	if len(uses) > 0 {
-		fmt.Fprintln(os.Stderr, "Native code goes behind an interface its user declares, the Mac's implementation in "+
-			"<capability>_macos.dart, reached only through Native and chosen in main.dart's native_macos.dart "+
-			"(ADR 0097, docs/adr/0097-native-code-behind-interfaces.md).")
+		fmt.Fprintln(os.Stderr, "Native code goes behind an interface its user declares, each platform's implementation in "+
+			"<capability>_macos.dart or <capability>_linux.dart, reached only through Native and chosen in main.dart "+
+			"(native_macos.dart or native_linux.dart; ADR 0097 and 0102, docs/adr/).")
 		os.Exit(1)
 	}
 }
 
-// check lists the native code in the Dart files under root, generated code
-// and the Mac's own files left out.
+// check lists the native code in the Dart files under root where it may not
+// be, generated code left out.
 func check(root string) ([]use, error) {
 	var uses []use
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
-		case d.IsDir() || !strings.HasSuffix(path, ".dart") || strings.HasSuffix(path, "_macos.dart") || isGenerated(path):
+		case d.IsDir() || !strings.HasSuffix(path, ".dart") || isGenerated(path):
 			return nil
 		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
 		}
-		found, err := inFile(path, rel == picksTheMac)
+		own, ok := platformOf(path)
+		found, err := inFile(path, own, ok, rel == picksASet)
 		uses = append(uses, found...)
 		return err
 	})
@@ -109,9 +131,29 @@ func isGenerated(path string) bool {
 	return strings.Contains(base, ".connect.")
 }
 
-// inFile lists the native code in one file, comments left out; main is
-// whether it's the app's main.dart, which may name the Mac's set.
-func inFile(path string, main bool) ([]use, error) {
+// platformOf is the platform whose file path is, if any.
+func platformOf(path string) (platform, bool) {
+	for _, p := range platforms {
+		if strings.HasSuffix(path, "_"+p.suffix+".dart") {
+			return p, true
+		}
+	}
+	return platform{}, false
+}
+
+// where says which files may hold what only the platforms in may use.
+func where(in []platform) string {
+	files := make([]string, len(in))
+	for i, p := range in {
+		files[i] = "*_" + p.suffix + ".dart"
+	}
+	return "outside a " + strings.Join(files, " or ") + " file"
+}
+
+// inFile lists the native code in one file, comments left out, that its
+// platform (own, when ok) doesn't allow; main is whether it's the app's
+// main.dart, which may name the sets.
+func inFile(path string, own platform, ok, main bool) ([]use, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -125,13 +167,17 @@ func inFile(path string, main bool) ([]use, error) {
 			continue
 		}
 		for _, k := range native {
-			if k.pattern.MatchString(line) {
-				uses = append(uses, use{path, n, k.name})
+			if k.pattern.MatchString(line) && !(ok && slices.Contains(k.in, own)) {
+				uses = append(uses, use{path, n, k.name + " " + where(k.in)})
 			}
 		}
-		for _, m := range macosFile.FindAllStringSubmatch(line, -1) {
-			if !main || filepath.Base(m[1]) != theMacsSet {
-				uses = append(uses, use{path, n, "a Mac implementation's file (" + m[1] + ")"})
+		for _, m := range platformFile.FindAllStringSubmatch(line, -1) {
+			named, _ := platformOf(m[1])
+			switch {
+			case main && slices.Contains(theSets, filepath.Base(m[1])):
+			case ok && named == own:
+			default:
+				uses = append(uses, use{path, n, named.name + " (" + m[1] + ")"})
 			}
 		}
 	}

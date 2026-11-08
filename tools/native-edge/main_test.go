@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+// What each kind of use is called, outside the files that may hold it.
+const (
+	channel   = "a platform channel outside a *_macos.dart or *_linux.dart file"
+	message   = "a platform message outside a *_macos.dart or *_linux.dart file"
+	ffi       = "dart:ffi outside a *_macos.dart or *_linux.dart file"
+	webKit    = "webview_flutter_wkwebview (macOS's WebKit) outside a *_macos.dart file"
+	dbus      = "dbus (Linux's D-Bus) outside a *_linux.dart file"
+	macFile   = "a Mac implementation's file "
+	linuxFile = "a Linux implementation's file "
+)
+
 func TestCheck(t *testing.T) {
 	root := t.TempDir()
 	files := map[string]string{
@@ -24,7 +35,7 @@ func TestCheck(t *testing.T) {
 		"basic.dart":                         "BasicMessageChannel<Object?> b;\n",
 		"optional.dart":                      "OptionalMethodChannel o;\n",
 		"phone/nothing_here.dart":            "void main() {}\n",
-		"main.dart":                          "import 'package:nushi/native_macos.dart';\nimport 'package:nushi/alerts_macos.dart';\n",
+		"main.dart":                          "import 'package:nushi/native_macos.dart';\nimport 'package:nushi/alerts_macos.dart';\nimport 'package:nushi/native_linux.dart';\nimport 'package:nushi/alerts_linux.dart';\n",
 		"phone_main.dart":                    "import 'package:nushi/native_macos.dart';\n",
 		"settings_terminal.dart":             "import 'package:nushi/fonts_macos.dart';\nfinal c = Chan('nushi/fonts');\n",
 		"cond.dart":                          "export 'package:nushi/x_web.dart'\n    if (dart.library.ffi) 'package:nushi/x_macos.dart';\n",
@@ -36,6 +47,16 @@ func TestCheck(t *testing.T) {
 		"logs.dart":                          "PlatformDispatcher.instance.onError = (e, s) => true;\n",
 		"gen/sneaky.dart":                    "const c = MethodChannel('nushi/sneaky');\n",
 		"gen/nushi/v1/x.connect.client.dart": "const c = MethodChannel('generated');\n",
+		// A platform's own files: its channels, FFI and packages, and its
+		// own files named, never another platform's.
+		"speller_linux.dart":    "import 'dart:ffi';\nimport 'package:dbus/dbus.dart';\nconst c = MethodChannel('nushi/x');\n",
+		"native_linux.dart":     "import 'package:nushi/speller_linux.dart';\n",
+		"web_views_macos.dart":  "import 'package:nushi/web_page_macos.dart';\nimport 'package:webview_flutter_wkwebview/x.dart';\n",
+		"alerts_macos.dart":     "import 'package:dbus/dbus.dart';\nimport 'package:nushi/alerts_linux.dart';\n",
+		"web_views_linux.dart":  "import 'package:webview_flutter_wkwebview/x.dart';\nimport 'package:nushi/web_page_macos.dart';\n",
+		"notify.dart":           "import 'package:dbus/dbus.dart';\n",
+		"status.dart":           "import 'package:nushi/alerts_linux.dart';\n",
+		"phone/scan_linux.dart": "import 'package:nushi/native_linux.dart';\n",
 	}
 	for name, body := range files {
 		path := filepath.Join(root, name)
@@ -57,22 +78,29 @@ func TestCheck(t *testing.T) {
 	}
 	slices.Sort(got)
 	want := []string{
-		"basic.dart: a platform channel",
-		"chmod.dart: dart:ffi",
-		"cond.dart: a Mac implementation's file (package:nushi/x_macos.dart)",
-		"dispatch.dart: a platform message",
-		"events.dart: a platform channel",
-		"ffi_cond.dart: dart:ffi",
-		"gen/sneaky.dart: a platform channel",
-		"main.dart: a Mac implementation's file (package:nushi/alerts_macos.dart)",
-		"messenger.dart: a platform message",
-		"optional.dart: a platform channel",
-		"page.dart: webview_flutter_wkwebview (macOS's WebKit)",
-		"parts.dart: a Mac implementation's file (parts_macos.dart)",
-		"phone_main.dart: a Mac implementation's file (package:nushi/native_macos.dart)",
-		"settings_terminal.dart: a Mac implementation's file (package:nushi/fonts_macos.dart)",
-		"system.dart: a platform message",
-		"view.dart: a platform channel",
+		"alerts_macos.dart: " + linuxFile + "(package:nushi/alerts_linux.dart)",
+		"alerts_macos.dart: " + dbus,
+		"basic.dart: " + channel,
+		"chmod.dart: " + ffi,
+		"cond.dart: " + macFile + "(package:nushi/x_macos.dart)",
+		"dispatch.dart: " + message,
+		"events.dart: " + channel,
+		"ffi_cond.dart: " + ffi,
+		"gen/sneaky.dart: " + channel,
+		"main.dart: " + linuxFile + "(package:nushi/alerts_linux.dart)",
+		"main.dart: " + macFile + "(package:nushi/alerts_macos.dart)",
+		"messenger.dart: " + message,
+		"notify.dart: " + dbus,
+		"optional.dart: " + channel,
+		"page.dart: " + webKit,
+		"parts.dart: " + macFile + "(parts_macos.dart)",
+		"phone_main.dart: " + macFile + "(package:nushi/native_macos.dart)",
+		"settings_terminal.dart: " + macFile + "(package:nushi/fonts_macos.dart)",
+		"status.dart: " + linuxFile + "(package:nushi/alerts_linux.dart)",
+		"system.dart: " + message,
+		"view.dart: " + channel,
+		"web_views_linux.dart: " + macFile + "(package:nushi/web_page_macos.dart)",
+		"web_views_linux.dart: " + webKit,
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("got %q\nwant %q", got, want)
