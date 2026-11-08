@@ -57,12 +57,17 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 			return err
 		}
 	}
-	cache := filepath.Join(tmp, ".npm")
+	// npm's cache and temp files go in the new folder, the one place the
+	// sandbox lets it write (the system's temp folder is read-only there).
+	cache, temp := filepath.Join(tmp, ".npm"), filepath.Join(tmp, ".tmp")
+	if err := os.Mkdir(temp, 0o700); err != nil {
+		return err
+	}
 	env := os.Environ()
 	if in.Environ != nil {
 		env = in.Environ()
 	}
-	cmd, err := writingOnlyIn(ctx, slices.Concat(env, in.Env), parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
+	cmd, err := writingOnlyIn(ctx, slices.Concat(env, in.Env, []string{"TMPDIR=" + temp}), parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
 		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	if err != nil {
 		return err
@@ -72,7 +77,7 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("npm ci: %w: %s", err, tail(string(out), 6))
 	}
-	if err := os.RemoveAll(cache); err != nil {
+	if err := errors.Join(os.RemoveAll(cache), os.RemoveAll(temp)); err != nil {
 		return err
 	}
 	ready()

@@ -163,3 +163,24 @@ func TestInstall(t *testing.T) {
 		t.Error("still installed after Remove")
 	}
 }
+
+// npm's temp files go in the new folder, where the sandbox lets it write,
+// not the system's temp folder, which it doesn't; the folder goes with the
+// cache.
+func TestInstallTempFolder(t *testing.T) {
+	sandboxRuns(t)
+	bin := t.TempDir()
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(bin, "npm"), []byte("#!/bin/sh\n[ \"$(cd \"$TMPDIR/..\" && pwd -P)\" = \"$(pwd -P)\" ] && touch \"$TMPDIR/x\" done || { echo \"TMPDIR=$TMPDIR\" >&2; exit 1; }\n"), 0o700))
+	in := Installer{Environ: func() []string { return []string{"PATH=" + bin + ":/usr/bin:/bin", "TMPDIR=/elsewhere"} }}
+	folder := filepath.Join(t.TempDir(), "x")
+	lock := fstest.MapFS{"package.json": {Data: []byte("{}")}, "package-lock.json": {Data: []byte("{}")}}
+	if err := in.Install(context.Background(), lock, folder, func() {}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(folder, "done")); err != nil {
+		t.Error(err)
+	}
+	if _, err := os.Stat(filepath.Join(folder, ".tmp")); err == nil {
+		t.Error("the temp folder stayed")
+	}
+}
