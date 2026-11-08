@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
+	"time"
 )
 
 // inhibitProgram takes systemd-logind's inhibitor lock; tests swap in
@@ -25,6 +28,12 @@ var inhibitProgram = "systemd-inhibit"
 func keepAwake() (stop func()) {
 	cmd := exec.Command(inhibitProgram, "--what=idle:sleep", "--who=Nushi", "--why=Remote access is on", "--mode=block", //nolint:gosec,noctx // systemd-inhibit with our pid, until stop
 		"tail", "--pid="+strconv.Itoa(os.Getpid()), "-f", "/dev/null")
+	// What systemd-inhibit says when logind refuses (its policy, polkit, no
+	// session): its exit status alone tells the log nothing. The wait for
+	// it is bounded, in case the tail outlives it holding the pipe.
+	var said bytes.Buffer
+	cmd.Stderr = &said
+	cmd.WaitDelay = time.Second
 	if err := cmd.Start(); err != nil {
 		slog.Warn("keeping the machine awake", "err", err)
 		return func() {}
@@ -38,7 +47,7 @@ func keepAwake() (stop func()) {
 		case <-stopped:
 		default:
 			if exit := (*exec.ExitError)(nil); errors.As(err, &exit) {
-				slog.Warn("keeping the machine awake", "err", err)
+				slog.Warn("keeping the machine awake", "err", err, "said", strings.TrimSpace(said.String()))
 			}
 		}
 	}()
