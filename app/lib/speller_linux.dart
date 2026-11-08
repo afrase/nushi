@@ -19,7 +19,8 @@ typedef _WordDart = void Function(Pointer<Void>, Pointer<Uint8>, int);
 /// GNOME's and KDE's apps check with, over the user's own Hunspell, Nuspell
 /// or Aspell dictionary in their language. Ignore lasts the session;
 /// Learn adds the word to enchant's personal list
-/// (`~/.config/enchant/<language>.dic`), which those apps share.
+/// (`$XDG_CONFIG_HOME/enchant/<language>.dic`, a folder enchant makes when
+/// a dictionary opens), which those apps share.
 class LinuxSpeller implements Speller {
   new _(DynamicLibrary lib, this._dict)
     : _check = lib

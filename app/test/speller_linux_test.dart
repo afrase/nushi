@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/daemon.dart';
 import 'package:nushi/speller_linux.dart';
 
 void main() {
@@ -30,17 +31,25 @@ void main() {
     expect(LinuxSpeller.open(library: 'libnothing-such.so.0'), isNull);
   });
 
-  // Enchant itself, with an English dictionary (Arch's hunspell-en_us):
-  // never Learn, which writes the user's own list.
+  // Enchant itself, with an English dictionary (Arch's hunspell-en_us).
+  // Its folder and personal list are in the test process's
+  // XDG_CONFIG_HOME, inside its data folder (flutter_test_config.dart).
   final real = Platform.isLinux
       ? LinuxSpeller.open(environment: {'LANG': 'en_US.UTF-8'})
       : null;
-  test('enchant flags, suggests and ignores for the session', () async {
+  test('enchant flags, suggests, ignores for the session and learns into '
+      'its personal list', () async {
     final speller = real!;
     expect(await speller.misspelled(['the', 'qick', 'café', '']), ['qick']);
     expect(await speller.guesses('qick'), contains('quick'));
     expect(await speller.guesses(''), isEmpty);
     await speller.ignore('nushiword');
     expect(await speller.misspelled(['nushiword', 'qick']), ['qick']);
+    await speller.learn('nushiflux');
+    expect(await speller.misspelled(['nushiflux']), isEmpty);
+    expect(
+      File('$dataDir/config/enchant/en_US.dic').readAsLinesSync(),
+      contains('nushiflux'),
+    );
   }, skip: real == null ? 'needs enchant and an English dictionary' : false);
 }

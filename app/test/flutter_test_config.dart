@@ -22,6 +22,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme_files.dart';
 
+import 'config_home_linux.dart';
 import 'harness.dart';
 
 /// Goldens are drawn on macOS only (on Linux about a third differ by 1–4%):
@@ -37,9 +38,12 @@ import 'harness.dart';
 /// app's prefs as at launch, no pull request read, no agents, review
 /// comments or drafts, remote state, clones or theme files known; the Mac's
 /// native edge (on every host), no speller, and a phone paired with a Mac.
-/// The test process's data folder goes when its tests end.
+/// The test process's data folder goes when its tests end; on Linux it
+/// holds the process's `XDG_CONFIG_HOME` too, where enchant makes its
+/// folder, so no test writes in the user's.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
+  if (Platform.isLinux) configHomeAt('$dataDir/config');
   final local = goldenFileComparator;
   if (!Platform.isMacOS) {
     goldenFileComparator = _NotHere();
