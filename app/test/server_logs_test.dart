@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -246,6 +247,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ServerLogs), findsNothing);
     expect(c.serverLogs.value, isNull);
+    await closeView(tester, d);
+  }, variant: macOnly);
+
+  testWidgets('keeps to the bottom as output comes, and stays where the user '
+      'scrolled up to', (tester) async {
+    final s = _Servers()..rows = [_server('web', id: 'a', logId: 'a')];
+    final (fake, d, _) = await _pane(tester, s);
+    fake.serverLog('a');
+    await _openLogs(tester);
+    final view = find.byType(TerminalView);
+    final scroll = tester.widget<TerminalView>(view).scrollController!;
+    String lines(int from, int to) =>
+        [for (var i = from; i < to; i++) 'line $i\r\n'].join();
+    await _write(tester, fake, 'a', lines(0, 100));
+    expect(scroll.offset, greaterThan(0), reason: 'more than it shows');
+    expect(scroll.offset, scroll.position.maxScrollExtent);
+    await _write(tester, fake, 'a', lines(100, 150));
+    expect(scroll.offset, scroll.position.maxScrollExtent, reason: 'follows');
+    // The user scrolls up: more output leaves the view where it is.
+    final wheel = TestPointer(1, PointerDeviceKind.mouse)
+      ..hover(tester.getCenter(view));
+    await tester.sendEventToBinding(wheel.scroll(const Offset(0, -300)));
+    await tester.pumpAndSettle();
+    final up = scroll.offset;
+    expect(up, lessThan(scroll.position.maxScrollExtent));
+    await _write(tester, fake, 'a', lines(150, 200));
+    expect(scroll.offset, up);
+    expect(scroll.position.maxScrollExtent, greaterThan(up));
     await closeView(tester, d);
   }, variant: macOnly);
 
