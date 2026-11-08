@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"github.com/afrase/nushi/internal/features/trust"
 	"github.com/afrase/nushi/internal/knownagents"
 	"github.com/afrase/nushi/internal/npm"
-	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
 )
 
@@ -30,15 +28,12 @@ func newAgents(dir string, known []knownagents.Agent) *agents.Service {
 		shellEnv = shellenv.Off(os.Environ())
 	}
 	shellEnv.Start()
-	probe := func(ctx context.Context, path string, args ...string) ([]byte, error) {
-		return readonly.Output(ctx, shellEnv.Environ(), path, args...)
-	}
 	var list []agents.Agent
 	for _, a := range known {
 		list = append(list, a.Agent)
 	}
 	removeClaudeAdapter(filepath.Join(dir, "agents", "claude"))
-	return agents.New(list, probe, shellEnv, filepath.Join(dir, "agents"), npm.Installer{Environ: shellEnv.Environ})
+	return agents.New(list, agents.Run(shellEnv.Environ), shellEnv, filepath.Join(dir, "agents"), npm.Installer{Environ: shellEnv.Environ})
 }
 
 // removeClaudeAdapter removes folder, where Settings › Agents set up

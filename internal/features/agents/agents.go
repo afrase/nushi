@@ -1,10 +1,10 @@
 // Package agents finds the agents chats can run on this Mac: each one's
 // CLI on the login shell's PATH (Env: the environment agents start with),
 // its version, and what else it needs.
-// Finding them changes nothing: a CLI is only asked what it is, with
-// writes and the network denied (Probe). An agent whose ACP side is an
-// npm package (an adapter) runs once that's set up, which happens only
-// when asked (SetUp). ADR 0037.
+// Finding them only asks each CLI what it is (Probe), run as the user
+// as its chats run it. An agent whose ACP side is an npm package (an
+// adapter) runs once that's set up, which happens only when asked
+// (SetUp). ADR 0037.
 package agents
 
 import (
@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"regexp"
 	"slices"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 	"time"
 
 	"github.com/afrase/nushi/internal/model"
+	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // Agent is one agent as main describes it.
@@ -33,13 +35,31 @@ type Agent struct {
 	Adapter     *Adapter // nil when it speaks ACP itself, or through Nushi's bridge
 	Tested      []string // the CLI's versions Nushi was tried with, oldest first
 	// SignedIn says whether the CLI is signed in, "yes" or "no", or ""
-	// when it can't tell cheaply; run runs the CLI with args, read-only.
+	// when it can't tell cheaply; run runs the CLI with args (Probe).
 	SignedIn func(run func(args ...string) ([]byte, error)) string
 }
 
-// Probe runs a program read-only (internal/readonly) and returns its
-// stdout.
+// Probe runs a program and returns its stdout: Run's, or a test's.
 type Probe func(ctx context.Context, path string, args ...string) ([]byte, error)
+
+// ProbeTimeout bounds a Probe's run: a CLI asked its version that hangs
+// (a prompt, a network wait) is stopped with what it started.
+var ProbeTimeout = 10 * time.Second
+
+// Run is the Probe that runs the program in env's environment (nil, or
+// env returning nil: the daemon's), for at most ProbeTimeout.
+func Run(env func() []string) Probe {
+	return func(ctx context.Context, path string, args ...string) ([]byte, error) {
+		ctx, cancel := context.WithTimeout(ctx, ProbeTimeout)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, path, args...) //nolint:gosec // a CLI found on PATH, asked its version or sign-in
+		if env != nil {
+			cmd.Env = env()
+		}
+		procgroup.Bound(cmd)
+		return cmd.Output()
+	}
+}
 
 // Status is an agent as found now.
 type Status struct {

@@ -25,3 +25,5 @@ A chat's first start ran `npx --yes -p <pinned package>`: it downloaded and ran 
 - Pointing codex-acp at Codex's native binary inside the user's npm package rather than at the `codex` on `PATH`: saves the 14 MB launcher, but reaches into how Codex is packaged, and isn't "the CLI found".
 
 **Note (ADR [0066](0066-claude-through-nushis-go-agent.md), 2026-11-04):** its Claude part is superseded: Claude runs through Nushi's Go agent, with no adapter, Set up, Node or pinned versions. Codex's adapter stays as above.
+
+**Note (2026-11-08, the owner: "It seems like over engineering of paranoia"):** finding agents no longer runs each CLI under `sandbox-exec`. Chats run the same CLIs as the user with no sandbox, so guarding only `--version` protected nothing; Codex's aliases land in its own `$CODEX_HOME/tmp` either way. The probe runs the CLI plainly, 10 s at most with what it started (`agents.Run`), and `internal/readonly` is gone. Setting up an adapter still runs `npm ci` under the sandbox.

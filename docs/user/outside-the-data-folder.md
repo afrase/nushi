@@ -34,6 +34,6 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 
 What changed in milestone Z:
 - **npx's cache** (`~/.npm/_npx/<hash>`, about 330 MB per adapter with its own Claude Code or Codex, 1.1 GB for omp with Bun): gone. Adapters are set up only when asked, into `agents/` (ADR 0037). Those left in your npx cache from before are yours to delete: `1f872328d1400346` (claude-agent-acp 0.94.0), `4a4ca55c38a52b9f` (codex-acp 2.2.2), `0bc28aba708345f9` (omp 18.12.6 and Bun 1.4.3), `72bcd8a8dc4e8361` (claude-agent-acp 0.91.0).
-- **Finding agents** asks each CLI its version under macOS's sandbox (`sandbox-exec`) with file writes and the network denied: `codex --version` writes its PATH aliases (`$CODEX_HOME/tmp/arg0-macos/…`) otherwise.
-- **Setting up** runs `npm ci` under the sandbox too, with writes allowed only in `agents/`; its cache is a folder of the install's own, removed after; no logs, no update check, no audit.
+- **Finding agents** asks each CLI its version, as a chat would run it: `codex --version` writes its PATH aliases (`$CODEX_HOME/tmp/arg0-macos/…`).
+- **Setting up** runs `npm ci` under macOS's sandbox (`sandbox-exec`), with writes allowed only in `agents/`; its cache is a folder of the install's own, removed after; no logs, no update check, no audit.
 - Starting an agent changes nothing beyond the agent's own: Claude and Codex run your own CLIs, not copies; nothing is written to their configs (Codex's trust of a chat's folder is an override codex-acp passes, never written; ADR 0029).

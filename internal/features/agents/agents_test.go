@@ -11,18 +11,15 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// fakeCLI writes a program into dir that prints out for --version and
-// tries to leave a file behind.
+// fakeCLI writes a program into dir that prints out for --version.
 func fakeCLI(t *testing.T, dir, name, out string) string {
 	t.Helper()
 	p := filepath.Join(dir, name)
-	script := "#!/bin/sh\ntouch " + filepath.Join(dir, name+".wrote") + " 2>/dev/null\n" +
-		"[ \"$1\" = auth ] && { echo '{\"loggedIn\": true}'; exit 0; }\nprintf '%s' '" + out + "'\n"
+	script := "#!/bin/sh\n[ \"$1\" = auth ] && { echo '{\"loggedIn\": true}'; exit 0; }\nprintf '%s' '" + out + "'\n"
 	if err := os.WriteFile(p, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +28,7 @@ func fakeCLI(t *testing.T, dir, name, out string) string {
 
 // Agents found on a PATH of fakes: installed with a version, missing,
 // odd version output, found off PATH, too old, missing what they run
-// under; and nothing they tried to write was written.
+// under.
 func TestList(t *testing.T) {
 	bin, other := t.TempDir(), t.TempDir()
 	fakeCLI(t, bin, "claude", "2.1.310 (Claude Code)\n")
@@ -72,11 +69,6 @@ func TestList(t *testing.T) {
 			t.Errorf("%s: %+v, want %+v", got.Name, got, w)
 		}
 	}
-	for _, d := range []string{bin, other} {
-		if wrote, _ := filepath.Glob(filepath.Join(d, "*.wrote")); len(wrote) > 0 {
-			t.Errorf("a probe wrote %s", wrote)
-		}
-	}
 }
 
 func TestOlder(t *testing.T) {
@@ -90,12 +82,10 @@ func TestOlder(t *testing.T) {
 	}
 }
 
-// newService finds agents with readonly.Output, on the test's own PATH
-// (made after its t.Setenv).
+// newService finds agents with Run, on the test's own PATH (made after
+// its t.Setenv).
 func newService(agents []Agent, dir string, in Installer, chats Chats) *Service {
-	s := New(agents, func(ctx context.Context, path string, args ...string) ([]byte, error) {
-		return readonly.Output(ctx, nil, path, args...)
-	}, shellenv.Off(os.Environ()), dir, in)
+	s := New(agents, Run(nil), shellenv.Off(os.Environ()), dir, in)
 	s.UseChats(chats)
 	return s
 }

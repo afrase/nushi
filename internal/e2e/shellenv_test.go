@@ -22,7 +22,6 @@ import (
 	"github.com/afrase/nushi/internal/git"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/omp"
-	"github.com/afrase/nushi/internal/readonly"
 	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 )
@@ -58,9 +57,7 @@ exec /bin/sh -c "$4"
 	svc := agents.New([]agents.Agent{
 		{Name: "omp", Title: "oh-my-pi", CLI: "omp", Needs: "bun"},
 		{Name: "codex", Title: "Codex", CLI: "codex", Adapter: &agents.Adapter{Lock: os.DirFS(t.TempDir()), Package: "p", Bin: "b"}},
-	}, func(ctx context.Context, path string, args ...string) ([]byte, error) {
-		return readonly.Output(ctx, env.Environ(), path, args...)
-	}, env, t.TempDir(), setUp{})
+	}, agents.Run(env.Environ), env, t.TempDir(), setUp{})
 	svc.UseChats(noChats{})
 
 	found := svc.List(context.Background())
