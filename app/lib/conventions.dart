@@ -37,6 +37,18 @@ class Conventions {
 
   /// The count on the app's icon.
   final String badge;
+
+  /// These words, with [key] as the shortcuts' modifier.
+  Conventions withKey(CommandKey key) => key == commandKey
+      ? this
+      : Conventions(
+          commandKey: key,
+          reveal: reveal,
+          system: system,
+          machine: machine,
+          keyring: keyring,
+          badge: badge,
+        );
 }
 
 /// The Mac's.
@@ -61,8 +73,10 @@ const linuxConventions = Conventions(
 
 /// The platform's conventions, as a widget reads them: on the phone, whose
 /// web app shares the widgets but has no native edge, the paired
-/// computer's ([phoneHost]).
-Conventions get conventions => kIsWeb ? phoneHost : native.conventions;
+/// computer's words ([phoneHost]) with the phone's own modifier, ⌘, as an
+/// iPad's keyboard has it: its keys never follow the computer's system.
+Conventions get conventions =>
+    kIsWeb ? phoneHost.withKey(CommandKey.meta) : native.conventions;
 
 /// The phone's paired computer's conventions, by the system its daemon
 /// says it runs on ([conventionsOf]); the phone sets them.
