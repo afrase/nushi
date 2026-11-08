@@ -107,23 +107,31 @@ func (s *Service) Answered(askID string, allowed bool) {
 	}
 }
 
-// takeAsked is the hash of the first ask of a chat's to run name that the
-// user allowed, and forgets the ask: "" when none was (the harness didn't
-// ask: the user allowed the tool).
+// takeAsked is the hash of the ask of a chat's to run name that the user
+// allowed last, and forgets that one ask: a start runs the entry as the
+// newest card showed it, and each start takes one ask, so two calls
+// allowed at once each keep theirs. An older one whose call never came
+// waits out allowedFor, refusing a later start if the file changed since.
+// "" when none was allowed (the harness didn't ask: the user allowed the
+// tool).
 func (s *Service) takeAsked(chatID, name string) string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now()
 	s.asks = slices.DeleteFunc(s.asks, func(a ask) bool { return !a.allowed.IsZero() && now.Sub(a.allowed) > allowedFor })
 	name = strings.ToLower(name)
-	i := slices.IndexFunc(s.asks, func(a ask) bool {
-		return a.chat == chatID && !a.allowed.IsZero() && (a.name == name || a.name == "")
-	})
-	if i < 0 {
+	held := func(a ask) bool { return a.chat == chatID && !a.allowed.IsZero() && (a.name == name || a.name == "") }
+	newest := -1
+	for i, a := range s.asks {
+		if held(a) && (newest < 0 || !a.allowed.Before(s.asks[newest].allowed)) {
+			newest = i
+		}
+	}
+	if newest < 0 {
 		return ""
 	}
-	h := s.asks[i].hash
-	s.asks = slices.Delete(s.asks, i, i+1)
+	h := s.asks[newest].hash
+	s.asks = slices.Delete(s.asks, newest, newest+1)
 	return h
 }
 

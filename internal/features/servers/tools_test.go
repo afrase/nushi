@@ -207,6 +207,22 @@ func TestAnAskHoldsItsOwnStart(t *testing.T) {
 		t.Errorf("the second card's start: %v", err)
 	}
 
+	// Two cards allowed before either start came: the first start runs the
+	// newest card's entry, and the second takes the older card, which no
+	// longer matches the file: refused, never run unchecked.
+	launchFile(t, folder, entry("web", p, "-exit", "1"))
+	_, older := s.Command("c", "web")
+	launchFile(t, folder, entry("web", p, "-exit", "2"))
+	_, newer := s.Command("c", "web")
+	s.Answered(older, true)
+	s.Answered(newer, true)
+	if err := start("web"); err == nil || !strings.Contains(err.Error(), "exit code 2") {
+		t.Errorf("two allowed cards' first start: %v", err)
+	}
+	if err := start("web"); !changed(err) {
+		t.Errorf("two allowed cards' second start: %v", err)
+	}
+
 	// A refused card holds nothing: a later start (no card) runs the file's.
 	_, refused := s.Command("c", "web")
 	s.Answered(refused, false)
