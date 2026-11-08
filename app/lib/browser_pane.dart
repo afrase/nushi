@@ -17,6 +17,8 @@ import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/server_logs.dart';
 import 'package:nushi/servers_menu.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_page.dart' show openInBrowserOrSay;
+import 'package:nushi/web_views.dart';
 
 /// The chat header's browser button (ADR 0094): it shows the preview's last
 /// browser tab, or a new one, on the Chat tab; lit while one shows there.
@@ -176,9 +178,10 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     ?..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(text)));
 
-  /// The field's text on Return: a page loads here, a file's address opens
-  /// the file's preview ([fileAddressOf]), and what isn't an address is
-  /// refused, saying why (nothing is searched for).
+  /// The field's text on Return: a page loads here (and, without the app's
+  /// own web views, opens in the browser too: the user asked for it, ADR
+  /// 0102), a file's address opens the file's preview ([fileAddressOf]), and
+  /// what isn't an address is refused, saying why (nothing is searched for).
   void _go(String text) {
     if (fileAddressOf(text) case final path?) {
       _field.unfocus();
@@ -189,6 +192,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     if (url != null) {
       _field.unfocus();
       setState(() => _open(url));
+      if (!webEmbedded) unawaited(openInBrowserOrSay(context, url));
       return;
     }
     _note(
@@ -242,7 +246,14 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
                   padding: _boxed(18),
                   collapse: widget.expanded ? expand : null,
                 ),
-              BrowserMenu(tab: _tab, host: host, size: 20, padding: _boxed(20)),
+              // Its rows are the app's web views' (ADR 0102).
+              if (webEmbedded)
+                BrowserMenu(
+                  tab: _tab,
+                  host: host,
+                  size: 20,
+                  padding: _boxed(20),
+                ),
               if (expand != null)
                 IconTap.line(
                   widget.expanded ? LineIcon.collapse : LineIcon.expand,

@@ -12,6 +12,7 @@ import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
 import 'package:nushi/settings_updates.dart';
 import 'package:nushi/speller.dart';
+import 'package:nushi/web_views.dart';
 import 'package:nushi/widgets.dart';
 
 /// Changes the daemon's settings: the function given applied to them.
@@ -30,9 +31,9 @@ const _sleepAfter = {
 String _sleepLabel(int m) => _sleepAfter[m] ?? '$m minute${m == 1 ? '' : 's'}';
 
 /// Settings › General: when idle chats sleep, whether the composer checks
-/// spelling, where a chat's links open, the Mac's notifications, whether
-/// the daemon checks for updates, and whether it starts at login (the
-/// packaged app's, for the usual data folder).
+/// spelling, where a chat's links open (with the app's own web views), the
+/// Mac's notifications, whether the daemon checks for updates, and whether
+/// it starts at login (the packaged app's, for the usual data folder).
 /// [settings] is the daemon's, null until it said.
 class GeneralSection extends StatelessWidget {
   const new({
@@ -81,7 +82,7 @@ class GeneralSection extends StatelessWidget {
           ],
         ),
       if (speller != null) const _Spelling(),
-      const _Links(),
+      if (webEmbedded) const _Links(),
       const NotificationsGroup(),
       if (settings case final s? when s.hasCheckUpdates())
         UpdatesGroup(daemon: daemon, settings: s, onChange: onChange),

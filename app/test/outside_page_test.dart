@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/browser_page.dart';
+import 'package:nushi/browser_pane.dart';
+import 'package:nushi/chat.dart';
 import 'package:nushi/outside_page.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/theme/theme.dart';
@@ -107,6 +109,40 @@ void main() {
         await expectLater(
           find.byKey(const ValueKey('page')),
           matchesGoldenFile('goldens/outside_page_$name.png'),
+        );
+      }, variant: linuxOnly);
+
+      testWidgets('a browser tab: no Back, Forward, Reload or ⋯, the '
+          'placeholder', (tester) async {
+        pagesOutside();
+        const size = Size(560, 360);
+        viewport(tester, size);
+        final c = ChatState('c', '/Users/me/nushi');
+        final tab = c.openBrowserTab('http://localhost:5173/menu');
+        await tester.pumpWidget(
+          themed(
+            tokens: tokens,
+            Center(
+              child: RepaintBoundary(
+                key: const ValueKey('pane'),
+                child: SizedBox.fromSize(
+                  size: size,
+                  child: BrowserPane(
+                    chat: c,
+                    tab: tab,
+                    onClose: () {},
+                    onExpand: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Open in Firefox'), findsOneWidget);
+        await expectLater(
+          find.byKey(const ValueKey('pane')),
+          matchesGoldenFile('goldens/outside_tab_$name.png'),
         );
       }, variant: linuxOnly);
     });

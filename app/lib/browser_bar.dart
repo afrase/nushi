@@ -6,7 +6,8 @@ import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/web_page.dart' show openInBrowser;
+import 'package:nushi/web_page.dart' show openInBrowserOrSay;
+import 'package:nushi/web_views.dart';
 
 /// A browser tab's bar, under the pane's title row (ADR 0094), drawn as
 /// Claude desktop's: Back, Forward and Reload, "Not secure" for a page that
@@ -16,7 +17,8 @@ import 'package:nushi/web_page.dart' show openInBrowser;
 /// the host's end always in sight ([_Shown]); in it, the whole address to
 /// edit; inside its right end, for a web page, a button that opens the page
 /// in the default browser ([_Outside]). A new tab has no page yet ([host]
-/// null): only its field works.
+/// null): only its field works. Without the app's own web views (Linux,
+/// ADR 0102) there's no Back, Forward or Reload: the page is the browser's.
 class BrowserBar extends StatelessWidget {
   const new({
     required this.host,
@@ -88,21 +90,23 @@ class BrowserBar extends StatelessWidget {
       child: Row(
         spacing: 3,
         children: [
-          step(LineIcon.back, 'Back', host?.canBack, () => host!.back()),
-          step(
-            LineIcon.forward,
-            'Forward',
-            host?.canForward,
-            () => host!.forward(),
-          ),
-          IconTap.line(
-            LineIcon.reload,
-            tooltip: 'Reload  ${Act.reloadPage.shortcut}',
-            size: _icon,
-            padding: _iconPadding,
-            color: t.text,
-            onTap: host == null ? null : () => host.reload().ignore(),
-          ),
+          if (webEmbedded) ...[
+            step(LineIcon.back, 'Back', host?.canBack, () => host!.back()),
+            step(
+              LineIcon.forward,
+              'Forward',
+              host?.canForward,
+              () => host!.forward(),
+            ),
+            IconTap.line(
+              LineIcon.reload,
+              tooltip: 'Reload  ${Act.reloadPage.shortcut}',
+              size: _icon,
+              padding: _iconPadding,
+              color: t.text,
+              onTap: host == null ? null : () => host.reload().ignore(),
+            ),
+          ],
           ValueListenableBuilder(
             valueListenable: page,
             builder: (context, at, _) => notSecure(at)
@@ -242,7 +246,7 @@ class _Outside extends StatelessWidget {
       color: NushiTheme.of(context).t.text,
       onTap: () {
         if (Uri.tryParse(page.value) case final url? when isWebPage(url)) {
-          openInBrowser(url).ignore();
+          openInBrowserOrSay(context, url).ignore();
         }
       },
     ),
