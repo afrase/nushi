@@ -299,6 +299,7 @@ class _ComposerState extends State<Composer> {
         final r = await widget.daemon.client.unqueue(
           UnqueueRequest(chatId: widget.chat.id, id: m.id),
         );
+        unawaited(widget.chat.outbox.release(r.message.images));
         if (!drop) _restoreMessage(r.message);
       });
 
@@ -322,6 +323,7 @@ class _ComposerState extends State<Composer> {
         ),
       );
     } on Object {
+      unawaited(widget.chat.outbox.release(q.images));
       _restoreMessage(q);
       rethrow;
     }
@@ -354,8 +356,9 @@ class _ComposerState extends State<Composer> {
     final message = withOutputs(withReplies(m.replies, text), m.outputs);
     // To an idle chat it shows in the transcript at once, faint until the
     // daemon's echo; not a queued one (a pill) nor one for a subagent.
-    // Its images' echo, if it comes as references, shows these bytes.
-    chat.outbox.keepImage = widget.daemon.images.put;
+    // Its images' echo, if it comes as references (the phone's), shows
+    // these bytes; those of one not shown are kept by their hash.
+    chat.outbox.images = widget.daemon.remote ? widget.daemon.images : null;
     final shown = !busy && m.toSubagent == null && !chat.asleep
         ? chat.outbox.send(
             message,
@@ -363,6 +366,7 @@ class _ComposerState extends State<Composer> {
             files: files, // uploads once saved
           )
         : null;
+    if (shown == null) chat.outbox.hold(m.images);
     try {
       final r = await widget.daemon.sendPrompt(
         SendPromptRequest(
@@ -385,6 +389,8 @@ class _ComposerState extends State<Composer> {
       if (shown != null) {
         final still = mounted && reduceMotion(context);
         chat.outbox.unsend(shown, fade: still ? Duration.zero : Motion.exit);
+      } else {
+        unawaited(chat.outbox.release(m.images));
       }
       // Back in the draft (it outlives the box), before what was typed since.
       _draft.putBack(m);

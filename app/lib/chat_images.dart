@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -12,6 +13,37 @@ import 'package:nushi/theme/theme.dart';
 /// on their own.
 bool isImageRef(ImageData image) =>
     image.data.isEmpty && image.sha256.isNotEmpty;
+
+/// The size above which the daemon sends an image as a reference (the
+/// daemon's `refAbove`, ADR 0099): smaller ones always come inline.
+const int refAbove = 64 << 10;
+
+/// The lowercase hex SHA-256 of [bytes], as the daemon names an image that
+/// came as a reference. Hashed a slice at a time, letting frames through
+/// between them: a screenshot takes a while in the phone's browser.
+Future<String> imageHash(List<int> bytes) async {
+  const slice = 256 << 10;
+  final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+  final digest = _Digest();
+  final hash = sha256.startChunkedConversion(digest);
+  for (var at = 0; at < data.length; at += slice) {
+    if (at > 0) await Future<void>.delayed(Duration.zero);
+    final end = at + slice < data.length ? at + slice : data.length;
+    hash.add(Uint8List.sublistView(data, at, end));
+  }
+  hash.close();
+  return digest.value.toString();
+}
+
+class _Digest implements Sink<Digest> {
+  late Digest value;
+
+  @override
+  void add(Digest data) => value = data;
+
+  @override
+  void close() {}
+}
 
 /// Where a view's images that came as references come from: the app's
 /// [ChatImages] and the chat they are in.
@@ -44,9 +76,18 @@ class ChatImages {
   }
 
   /// Keeps [bytes] as the image of [sha256], which this app has already
-  /// (it sent them): shown at once, not fetched.
-  void put(String sha256, Uint8List bytes) {
-    if (kept(sha256) == null) _keep(sha256, MemoryImage(bytes));
+  /// (it sent them): shown at once, not fetched. Whether it wasn't kept
+  /// already.
+  bool put(String sha256, Uint8List bytes) {
+    if (kept(sha256) != null) return false;
+    _keep(sha256, MemoryImage(bytes));
+    return true;
+  }
+
+  /// Lets the image of [sha256] go: [put] for a message that won't show it
+  /// (taken out of the queue).
+  void forget(String sha256) {
+    if (_kept.remove(sha256) case final image?) _bytes -= image.bytes.length;
   }
 
   /// The image of [sha256] in [chatId], kept or fetched. A fetch still

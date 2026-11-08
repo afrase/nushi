@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:connectrpc/connect.dart' as connect;
+import 'package:crypto/crypto.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,6 +36,11 @@ final Uint8List _png = base64Decode(
 );
 
 final String _sha = 'a' * 64;
+
+/// A screenshot the phone sends: over 64 KB, so it comes back as a
+/// reference; a pixel, then what a decoder never reads.
+final Uint8List _shot = Uint8List(100000)..setAll(0, _png);
+final String _shotSha = sha256.convert(_shot).toString();
 
 /// A 1600×1000 screenshot, as a reference.
 ImageData _ref([String? sha]) => ImageData(
@@ -81,6 +87,8 @@ _phone(
   List<ImageData>? images,
   List<Item>? items,
   Object? Function(GetChatImageRequest)? image,
+  Object? Function(Object)? otherwise,
+  ChatStatus? status,
   Size size = const Size(390, 844),
 }) async {
   viewport(tester, size, ratio: 3);
@@ -93,9 +101,10 @@ _phone(
     GetChatRequest() => GetChatResponse(
       chat: _chat,
       items: items ?? _items(images ?? [_ref()]),
+      status: status,
     ),
     GetChatImageRequest() => image?.call((asked..add(input)).last),
-    _ => null,
+    _ => otherwise?.call(input),
   };
   final fake = FakeDaemon([_chat])
     ..answer = answer
@@ -166,7 +175,7 @@ void main() {
       ImageData ref(String sha, int size) =>
           ImageData(mimeType: 'image/png', sha256: sha, size: Int64(size));
       final outbox = Outbox(() {})
-        ..keepImage = images.put
+        ..images = images
         ..send('Look', [
           ImageData(mimeType: 'image/png', data: sent),
           ImageData(mimeType: 'image/png', data: _png),
@@ -198,6 +207,36 @@ void main() {
           ),
         );
       expect(images.kept('b' * 64), isNull);
+    });
+
+    test('a queued message’s images are kept by the hash of their bytes, '
+        'and let go when it is taken back', () async {
+      final images = ChatImages((chat, sha) => throw StateError('fetched'));
+      final small = ImageData(mimeType: 'image/png', data: _png);
+      final big = ImageData(mimeType: 'image/png', data: _shot);
+      final outbox = Outbox(() {})
+        ..images = images
+        ..hold([small, big]);
+      await outbox.release(const []); // once the hold's work is done
+      expect(await imageHash(_shot), _shotSha);
+      expect(images.kept(_shotSha)?.bytes, same(_shot));
+      // A small one comes inline: nothing to keep.
+      expect(images.kept(sha256.convert(_png).toString()), isNull);
+      // One kept already (shown in the chat) stays when it's taken back.
+      final shown = Uint8List(70000)..[0] = 1;
+      final shownSha = sha256.convert(shown).toString();
+      images.put(shownSha, shown);
+      outbox.hold([ImageData(mimeType: 'image/png', data: shown)]);
+      await outbox.release([
+        big,
+        ImageData(mimeType: 'image/png', data: shown),
+      ]);
+      expect(images.kept(_shotSha), isNull);
+      expect(images.kept(shownSha), isNotNull);
+      // The Mac's outbox keeps none: its images come inline.
+      final mac = Outbox(() {})..hold([big]);
+      await mac.release(const []);
+      expect(images.kept(_shotSha), isNull);
     });
 
     test('whole: references fetched, inline images as they are', () async {
@@ -353,6 +392,105 @@ void main() {
     expect(find.byType(ClickableImage), findsOneWidget);
     expect(asked, hasLength(2));
     await endPhone(tester, phone);
+  });
+
+  group('a message queued to a busy chat', () {
+    final busy = ChatStatus(busy: true, images: true, started: Int64(1));
+    final queued = QueuedMessage(
+      id: 'q1',
+      text: 'And this one?',
+      images: [ImageData(mimeType: 'image/png', data: _shot)],
+    );
+
+    /// The phone in chat c, busy, its box's message with [_shot] queued.
+    Future<(Phone, FakeDaemon, List<GetChatImageRequest>)> queue(
+      WidgetTester tester,
+    ) async {
+      final (phone, fake, _, asked) = await _phone(
+        tester,
+        items: [_items(const []).first],
+        status: busy,
+        image: (_) => Completer<Object?>().future, // never comes
+        otherwise: (input) =>
+            input is UnqueueRequest ? UnqueueResponse(message: queued) : null,
+      );
+      phone.daemon!.chats['c']!.draft.images.value = [
+        ImageData(mimeType: 'image/png', data: _shot),
+      ];
+      await tester.enterText(find.byType(TextField), 'And this one?');
+      await tester.pump();
+      await tester.tap(find.byTooltip('Queue'));
+      await _frames(tester);
+      final sent = fake.calls.whereType<SendPromptRequest>().single;
+      expect((sent.queue, sent.images.single.data), (true, _shot));
+      fake.emit(
+        EventsResponse(
+          chatId: 'c',
+          seq: Int64(1),
+          queue: ChatQueue(messages: [queued]),
+        ),
+      );
+      await _frames(tester);
+      return (phone, fake, asked);
+    }
+
+    testWidgets('its image shows from the bytes the phone sent when it runs, '
+        'not fetched back', (tester) async {
+      final (phone, fake, asked) = await queue(tester);
+      fake
+        ..emit(EventsResponse(chatId: 'c', seq: Int64(2), queue: ChatQueue()))
+        ..emit(
+          EventsResponse(
+            chatId: 'c',
+            seq: Int64(3),
+            item: ItemEvent(
+              index: 1,
+              item: Item(
+                id: 'u2',
+                kind: ItemKind.ITEM_KIND_USER_MESSAGE,
+                text: 'And this one?',
+                images: [
+                  ImageData(
+                    mimeType: 'image/png',
+                    sha256: _shotSha,
+                    size: Int64(_shot.length),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      await _frames(tester);
+      expect(find.byType(ClickableImage), findsOneWidget);
+      expect(_loading, findsNothing);
+      expect(asked, isEmpty);
+      await endPhone(tester, phone);
+    });
+
+    testWidgets('removed from the queue, the phone keeps nothing of it', (
+      tester,
+    ) async {
+      final (phone, fake, _) = await queue(tester);
+      final images = phone.daemon!.images;
+      expect(images.kept(_shotSha)?.bytes, same(_shot));
+      await tester.tap(find.byTooltip('Remove'));
+      await _frames(tester);
+      expect(fake.calls.whereType<UnqueueRequest>().single.id, 'q1');
+      expect(images.kept(_shotSha), isNull);
+      expect(phone.daemon!.chats['c']!.draft.images.value, isEmpty);
+      await endPhone(tester, phone);
+    });
+
+    testWidgets('taken back to edit, it keeps nothing either', (tester) async {
+      final (phone, _, _) = await queue(tester);
+      expect(phone.daemon!.images.kept(_shotSha), isNotNull);
+      await tester.tap(find.byTooltip('Edit'));
+      await _frames(tester);
+      expect(phone.daemon!.images.kept(_shotSha), isNull);
+      // Back in the box, to send again.
+      expect(phone.daemon!.chats['c']!.draft.images.value, hasLength(1));
+      await endPhone(tester, phone);
+    });
   });
 
   testWidgets('the Mac asks for no references and shows images inline, as '
