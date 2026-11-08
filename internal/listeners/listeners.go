@@ -1,5 +1,5 @@
 // Package listeners lists the TCP sockets listening for connections to
-// this Mac's localhost (127.0.0.1 and ::1), with the process holding
+// this machine's localhost (127.0.0.1 and ::1), with the process holding
 // each, and tells which of them a connection reaches and whether they are
 // in a process tree (proctree's processes): what a dev server's identity
 // check and spotting need.
@@ -12,8 +12,15 @@
 // the user's), `lsof -nP -iTCP -sTCP:LISTEN -Fpn` 27.7–28.2 ms, and the
 // two listed the same sockets. lsof's -Fpn also writes an IPv4 and an
 // IPv6 wildcard alike (`*:p`) and never says whether an IPv6 one takes
-// IPv4; libproc's flags do. libproc is macOS's (libproc_darwin.go):
-// another OS lists none (listeners_other.go, ADR 0097).
+// IPv4; libproc's flags do. libproc is macOS's (libproc_darwin.go).
+//
+// On Linux (listeners_linux.go, ADR 0097) the listening sockets come from
+// the kernel's sock_diag (netlink, as ss asks; pure Go, no cgo), which
+// gives each one's inode and an IPv6 one's IPV6_V6ONLY, and the process
+// holding each from the user's processes' descriptor links in /proc
+// (procfs); /proc/net/tcp and tcp6, which can't tell IPV6_V6ONLY, are the
+// fallback where sock_diag can't be asked (sockets.go). Another OS lists
+// none (listeners_other.go).
 //
 // A free port is told by dialing it, not by listening on it: Go's
 // net.Listen sets SO_REUSEADDR, and macOS then lets it bind beside another
@@ -25,7 +32,10 @@
 // [::1]:p; on an IPv6-only [::]:p and a probe on [::1]:p; on [::1]:p and
 // a probe on ":p". The other socket's own SO_REUSEADDR made no difference.
 // A dial to 127.0.0.1:p and to [::1]:p connected in each case the
-// listener takes connections on that family.
+// listener takes connections on that family. Linux refuses that bind
+// (EADDRINUSE beside any listening socket on an overlapping address,
+// SO_REUSEADDR or not, unless both set SO_REUSEPORT; TestSecondBindRefused),
+// so a probe would do there, but dialing is right on both.
 package listeners
 
 import (
@@ -97,10 +107,12 @@ func OnPort(ls []Listener, port uint16) []Listener {
 // can land on. macOS gives it to a listener bound to dst's own address
 // before any wildcard, whichever bound first (seen with two processes on
 // one port: beside 0.0.0.0:p or ":p", a dial to 127.0.0.1 reached
-// 127.0.0.1:p; beside ":p", one to ::1 reached [::1]:p), so those alone
+// 127.0.0.1:p; beside ":p", one to ::1 reached [::1]:p), and so does
+// Linux, whose lookup tries the exact address before the wildcard (two
+// processes share a port there only with SO_REUSEPORT), so those alone
 // when there are any; otherwise every wildcard that Takes dst, since
-// which of two the kernel picks (0.0.0.0:p beside a dual-stack ":p")
-// isn't told here. A dev server's identity check asks it for each family
+// which of two the kernel picks (0.0.0.0:p beside a dual-stack ":p";
+// Linux prefers the IPv4 one) isn't told here. A dev server's identity check asks it for each family
 // the browser tab dials: every listener it returns must be in the
 // server's Procs, and an empty one means nothing answers there.
 func Reaching(ls []Listener, dst netip.AddrPort) []Listener {
