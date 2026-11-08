@@ -1,6 +1,9 @@
 // Package filelock tells whether another process holds a lock on a file,
-// without taking it: fcntl's F_GETLK, which on macOS also sees flock(2)
-// locks, as Codex and omp take them; and takes one as Ante does.
+// without taking it, and takes one as Ante does. Codex and omp lock with
+// flock(2). fcntl's F_GETLK sees those on macOS, where flock and POSIX
+// locks are one kind; on Linux they are apart and F_GETLK never sees a
+// flock lock, so Held also reads /proc/locks, the kernel's list of every
+// lock held (held_linux.go).
 package filelock
 
 import (
@@ -20,6 +23,12 @@ func Held(path string) bool {
 		return false
 	}
 	defer f.Close() //nolint:errcheck // read-only
+	return held(f)
+}
+
+// posixHeld says fcntl's F_GETLK finds a lock on f that another process
+// holds.
+func posixHeld(f *os.File) bool {
 	lk := unix.Flock_t{Type: unix.F_WRLCK}
 	return unix.FcntlFlock(f.Fd(), unix.F_GETLK, &lk) == nil && lk.Type != unix.F_UNLCK
 }
