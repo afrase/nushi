@@ -79,7 +79,7 @@ func TestTrash(t *testing.T) {
 		t.Fatal(err)
 	}
 	old := TrashProgram
-	TrashProgram = filepath.Join(bin, "trash")
+	TrashProgram = []string{filepath.Join(bin, "trash")}
 	defer func() { TrashProgram = old }()
 	target := t.TempDir()
 	testcheck.Write(t, filepath.Join(target, "SKILL.md"), "x")
@@ -131,5 +131,25 @@ func TestTrash(t *testing.T) {
 	// Yours may be a link.
 	if err := Trash(ctx, nil, []string{root}, filepath.Join(root, "victim")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Without its program, Trash says which, and moves nothing.
+func TestTrashWithoutTheProgram(t *testing.T) {
+	top, _ := filepath.EvalSymlinks(t.TempDir())
+	root := filepath.Join(top, ".agents", "skills")
+	testcheck.Write(t, filepath.Join(root, "s", "SKILL.md"), "x")
+	old := TrashProgram
+	TrashProgram = []string{filepath.Join(top, "no-trash")}
+	defer func() { TrashProgram = old }()
+	err := Trash(context.Background(), []string{root}, nil, filepath.Join(root, "s"))
+	if err == nil || !strings.Contains(err.Error(), "needs "+TrashProgram[0]) {
+		t.Fatalf("got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "s", "SKILL.md")); err != nil {
+		t.Error(err)
+	}
+	if left, _ := filepath.Glob(filepath.Join(top, ".nushi-trash-*")); len(left) != 0 {
+		t.Errorf("left %q", left)
 	}
 }

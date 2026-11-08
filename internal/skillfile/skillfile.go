@@ -13,11 +13,13 @@ import (
 	"cmp"
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"unicode"
@@ -207,10 +209,6 @@ func Top(folder string) string {
 	}
 }
 
-// TrashProgram moves a file to the Trash (macOS's; tests swap in their
-// own).
-var TrashProgram = "/usr/bin/trash"
-
 // Trash moves a skill's folder (or the link in its place, not what it
 // points at) to the Trash: only a folder right in one of the project's
 // roots or yours, not named with a leading dot, holding a SKILL.md. One of
@@ -228,6 +226,9 @@ func Trash(ctx context.Context, project, yours []string, path string) error {
 	}
 	if _, err := os.Stat(filepath.Join(path, "SKILL.md")); err != nil {
 		return fmt.Errorf("%s isn't a skill's folder", path)
+	}
+	if err := trashReady(); err != nil {
+		return err
 	}
 	if !slices.Contains(project, root) {
 		return trash(ctx, path)
@@ -263,9 +264,22 @@ func Trash(ctx context.Context, project, yours []string, path string) error {
 	return nil
 }
 
+// trashReady says whether TrashProgram can run here, before anything
+// moves.
+func trashReady() error {
+	if len(TrashProgram) == 0 {
+		return fmt.Errorf("moving to the Trash on %s: %w", runtime.GOOS, errors.ErrUnsupported)
+	}
+	if _, err := exec.LookPath(TrashProgram[0]); err != nil {
+		return fmt.Errorf("moving to the Trash needs %s, which isn't installed", TrashProgram[0])
+	}
+	return nil
+}
+
 // trash runs the Trash on path (a link itself goes, not its target).
 func trash(ctx context.Context, path string) error {
-	cmd := exec.CommandContext(ctx, TrashProgram, path) //nolint:gosec // an absolute path checked by the caller
+	args := append(slices.Clone(TrashProgram[1:]), path)
+	cmd := exec.CommandContext(ctx, TrashProgram[0], args...) //nolint:gosec // the Trash's program, on an absolute path checked by the caller
 	procgroup.Bound(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("moving %s to the Trash: %s", path, strings.TrimSpace(string(out)))
