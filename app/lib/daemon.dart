@@ -138,14 +138,19 @@ class Daemon extends ChangeNotifier {
   late final NushiServiceClient client;
   Timer? _timer;
 
-  /// The chats' images that came as references, which only the phone asks
-  /// for (ADR 0099): fetched as they show, kept by hash.
-  late final images = ChatImages((chatId, sha256) async {
-    final got = await client.getChatImage(
-      GetChatImageRequest(chatId: chatId, sha256: sha256),
-    );
-    return bytesOf(got.data);
-  });
+  /// The chats' images that came as references (ADR 0099): fetched as
+  /// they show, kept by hash. The Mac's daemon is on the same machine, so
+  /// it keeps fewer and lets a row's go once it's far off the screen.
+  late final images = ChatImages(
+    (chatId, sha256) async {
+      final got = await client.getChatImage(
+        GetChatImageRequest(chatId: chatId, sha256: sha256),
+      );
+      return bytesOf(got.data);
+    },
+    maxBytes: remote ? 64 << 20 : 32 << 20,
+    local: !remote,
+  );
   bool connected = false;
 
   /// Why the last ping failed (the phone shows it in details).
@@ -273,8 +278,9 @@ class Daemon extends ChangeNotifier {
 
   /// How many chats keep their items in memory: the shown one and the
   /// ones shown just before it, quick to go back to. A long chat's items
-  /// take from about half a megabyte to several (tool output, diffs,
-  /// images); kept for every chat opened since launch, they added up.
+  /// take from about half a megabyte to several (tool output, diffs; an
+  /// image over 64 KB comes as a reference, its bytes in [images]); kept
+  /// for every chat opened since launch, they added up.
   static const keptChats = 6;
 
   /// The chats picked since launch, the last picked last.

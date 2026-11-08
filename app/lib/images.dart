@@ -18,6 +18,13 @@ const maxImageSide = 1568;
 /// 5 MB of base64.
 const maxImageBytes = 3750000;
 
+/// The decoded pixels the Mac's image cache keeps of images no longer
+/// shown (Flutter's default is 100 MB): a chat's thumbnails are decoded at
+/// the size they show, about 1.5 MB a screenshot, so this keeps a few
+/// screens of them to scroll back to; further back they decode again from
+/// the bytes `ChatImages` keeps, or come again from the daemon.
+const int imageCacheBytes = 64 << 20;
+
 /// The image types sent as they are; others are turned into PNG.
 String? _mimeType(Uint8List b) => switch (b) {
   [0x89, 0x50, 0x4E, 0x47, ...] => 'image/png',

@@ -116,7 +116,7 @@ class _RewindPickerState extends State<RewindPicker> {
             chatId: chat.id,
             before: first,
             limit: 500,
-            imageRefs: widget.daemon.remote,
+            imageRefs: true,
           ),
         );
         if (_gone || !mounted || page.items.isEmpty) return;

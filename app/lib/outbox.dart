@@ -29,9 +29,9 @@ class Outbox {
   final Set<String> unsent = {};
 
   /// Where an echo's images that came as references (ADR 0099) go with
-  /// the bytes this app sent, by their hash: the phone's `ChatImages`, so
+  /// the bytes this app sent, by their hash: the app's `ChatImages`, so
   /// it shows them without fetching back what it just sent. Set by the
-  /// sender, on the phone only (the Mac gets no references).
+  /// sender.
   ChatImages? images;
 
   final _sent = <String>{}; // sent, the echo still to come

@@ -55,17 +55,28 @@ class _Digest implements Sink<Digest> {
 /// [ChatImages] and the chat they are in.
 typedef ImageRefs = ({ChatImages images, String chatId});
 
-/// The images of chats that came as references (the phone asks for them:
-/// ADR 0099), fetched with [fetch] as they are about to show, [parallel] at
-/// a time, and kept by hash up to [maxBytes], the least recently shown
-/// going first.
+/// The images of chats that came as references (ADR 0099), fetched with
+/// [fetch] as they are about to show, [parallel] at a time, and kept by
+/// hash up to [maxBytes], the least recently shown going first.
 class ChatImages {
-  new(this.fetch, {this.maxBytes = 64 << 20, this.parallel = 3});
+  new(
+    this.fetch, {
+    this.maxBytes = 64 << 20,
+    this.parallel = 3,
+    this.local = false,
+  });
 
   /// Fetches one of a chat's images by its hash (GetChatImage).
   final Future<Uint8List> Function(String chatId, String sha256) fetch;
   final int maxBytes;
   final int parallel;
+
+  /// Whether a fetch is cheap, the daemon on this machine (the Mac's): a
+  /// row lets its image go once it is far off the screen, so the decoded
+  /// pixels of a long chat's images aren't all held while it shows, and
+  /// takes it back from here, or fetches it again, as it comes near. The
+  /// phone's rows hold theirs: a fetch again goes over the relay.
+  final bool local;
 
   // In insertion order: the first is the least recently shown.
   final _kept = <String, MemoryImage>{};
@@ -75,6 +86,9 @@ class ChatImages {
   final _jobs = <String, _Job>{};
   final _waiting = Queue<_Job>();
   int _running = 0;
+
+  /// The bytes of the images it keeps now.
+  int get bytes => _bytes;
 
   /// The image of [sha256] if it is kept, now the most recently shown.
   MemoryImage? kept(String sha256) {
@@ -237,6 +251,10 @@ class _ImageRefState extends State<ImageRef> {
   MemoryImage? _image;
   bool _failed = false;
 
+  /// The size it showed at before it let its image go ([ChatImages.local]):
+  /// its place keeps it, so nothing above the screen moves.
+  Size? _was;
+
   /// Asked for: on its way, or waiting for its turn.
   bool _asked = false;
 
@@ -275,6 +293,7 @@ class _ImageRefState extends State<ImageRef> {
   /// screen (looked at after this frame, once it has its place).
   void _start() {
     _failed = _asked = false;
+    _was = null;
     _image = widget.images.kept(widget.image.sha256);
     if (_image == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -289,19 +308,47 @@ class _ImageRefState extends State<ImageRef> {
   /// a scrolling list it shows, so it's near.
   bool get _near {
     if (!mounted) return false;
-    final position = _position;
-    if (position == null) return true;
+    if (_position == null) return true;
+    final w = _where;
+    return w != null && w.bottom > -w.screen && w.top < 2 * w.screen;
+  }
+
+  /// Whether it is more than two screens off: a screen past [_near], so a
+  /// row near the edge doesn't let go and take back in turn.
+  bool get _far {
+    final w = mounted ? _where : null;
+    return w != null && (w.bottom < -2 * w.screen || w.top > 3 * w.screen);
+  }
+
+  /// Its top and bottom in the list it scrolls in, and the list's height,
+  /// as last laid out; null until both are.
+  ({double top, double bottom, double screen})? get _where {
     final box = context.findRenderObject();
-    final list = position.context.notificationContext?.findRenderObject();
-    if (box is! RenderBox || !box.hasSize || list is! RenderBox) return false;
-    if (!box.attached || !list.attached || !list.hasSize) return false;
+    final list = _position?.context.notificationContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize || list is! RenderBox) return null;
+    if (!box.attached || !list.attached || !list.hasSize) return null;
     final top = box.localToGlobal(Offset.zero, ancestor: list).dy;
-    final screen = list.size.height;
-    return top + box.size.height > -screen && top < 2 * screen;
+    return (top: top, bottom: top + box.size.height, screen: list.size.height);
   }
 
   void _look() {
-    if (!_asked && _image == null && !_failed && _near) _load();
+    if (_image == null) {
+      if (!_asked && !_failed && _near) _load();
+    } else if (widget.images.local && _far) {
+      // After this task: the list can move while it's laid out.
+      scheduleMicrotask(_letGo);
+    }
+  }
+
+  /// Lets its image go, far off the screen ([ChatImages.local]), keeping
+  /// its size; [_look] takes it back as it comes near.
+  void _letGo() {
+    if (_image == null || !_far) return;
+    setState(() {
+      _was = (context.findRenderObject()! as RenderBox).size;
+      _image = null;
+      _asked = false;
+    });
   }
 
   void _load() {
@@ -334,17 +381,35 @@ class _ImageRefState extends State<ImageRef> {
   Widget build(BuildContext context) {
     if (_image case final image?) {
       final t = NushiTheme.of(context).t;
-      return ClickableImage(
+      final shown = ClickableImage(
         image: image,
         size: widget.size,
         border: t.borderSubtle,
       );
+      // Taken back after it let go: its room kept while it decodes again.
+      if (_was case final was?) {
+        return ConstrainedBox(
+          constraints: BoxConstraints(minHeight: was.height),
+          child: shown,
+        );
+      }
+      return shown;
     }
     return _box(context);
   }
 
-  /// The image's place: its size when the daemon said it, else a square.
+  /// The image's place: the size it showed at if it let its image go
+  /// (failing, the room its words need), else [_waiting]'s.
   Widget _box(BuildContext context) {
+    if (_was case final size? when !_failed) {
+      return SizedBox.fromSize(size: size, child: _waiting(context));
+    }
+    return _waiting(context);
+  }
+
+  /// A box of the image's size when the daemon said it, else a square,
+  /// with a spinner while it comes or the failure with Try again.
+  Widget _waiting(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final size = widget.size;

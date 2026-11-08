@@ -46,7 +46,7 @@ extension DaemonPages on Daemon {
             before: first,
             // Going to a message: as much as the daemon gives at once.
             limit: more ? 500 : pageItems,
-            imageRefs: remote,
+            imageRefs: true,
           ),
         );
         page.insertAll(0, got.items);
