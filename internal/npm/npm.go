@@ -58,17 +58,16 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 		}
 	}
 	cache := filepath.Join(tmp, ".npm")
-	cmd, err := writingOnlyIn(ctx, parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
+	env := os.Environ()
+	if in.Environ != nil {
+		env = in.Environ()
+	}
+	cmd, err := writingOnlyIn(ctx, slices.Concat(env, in.Env), parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
 		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	if err != nil {
 		return err
 	}
 	cmd.Dir = tmp
-	env := os.Environ()
-	if in.Environ != nil {
-		env = in.Environ()
-	}
-	cmd.Env = slices.Concat(env, in.Env)
 	procgroup.Bound(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("npm ci: %w: %s", err, tail(string(out), 6))

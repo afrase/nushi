@@ -4,20 +4,38 @@ import (
 	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// Without bwrap on PATH, nothing runs, and the reason is the fixed one the
-// app shows.
+// Without bwrap on the PATH npm runs from, nothing runs, and the reason is
+// the fixed one the app shows, though the daemon's own PATH has one.
 func TestNoBubblewrap(t *testing.T) {
-	t.Setenv("PATH", t.TempDir())
-	if _, err := writingOnlyIn(context.Background(), t.TempDir(), "npm", "ci"); !errors.Is(err, ErrNoBubblewrap) {
+	bin := t.TempDir()
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(bin, "bwrap"), []byte("#!/bin/sh\nexit 0\n"), 0o700))
+	t.Setenv("PATH", bin)
+	if _, err := writingOnlyIn(context.Background(), []string{"PATH=" + t.TempDir()}, t.TempDir(), "npm", "ci"); !errors.Is(err, ErrNoBubblewrap) {
 		t.Errorf("%v", err)
+	}
+}
+
+// bwrap is found on the PATH npm runs from (the login shell's), though the
+// daemon's own has none, and the command runs in that environment.
+func TestBubblewrapOnAgentsPath(t *testing.T) {
+	bin := t.TempDir()
+	testcheck.NoErr(t, os.WriteFile(filepath.Join(bin, "bwrap"), []byte("#!/bin/sh\nexit 0\n"), 0o700))
+	t.Setenv("PATH", t.TempDir())
+	env := []string{"PATH=" + bin + ":/usr/bin:/bin", "npm_config_x=1"}
+	cmd, err := writingOnlyIn(context.Background(), env, t.TempDir(), "npm", "ci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmd.Path != filepath.Join(bin, "bwrap") || !slices.Equal(cmd.Env, env) {
+		t.Errorf("%s in %q", cmd.Path, cmd.Env)
 	}
 }
 
@@ -26,8 +44,7 @@ func TestNoBubblewrap(t *testing.T) {
 func TestBubblewrapFails(t *testing.T) {
 	bin := t.TempDir()
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(bin, "bwrap"), []byte("#!/bin/sh\necho 'bwrap: setting up uid map: Permission denied' >&2\nexit 1\n"), 0o700))
-	t.Setenv("PATH", bin+":/usr/bin:/bin")
-	_, err := writingOnlyIn(context.Background(), t.TempDir(), "npm", "ci")
+	_, err := writingOnlyIn(context.Background(), []string{"PATH=" + bin + ":/usr/bin:/bin"}, t.TempDir(), "npm", "ci")
 	if err == nil || errors.Is(err, ErrNoBubblewrap) || !strings.Contains(err.Error(), "uid map: Permission denied") {
 		t.Errorf("%v", err)
 	}
@@ -36,9 +53,7 @@ func TestBubblewrapFails(t *testing.T) {
 // Under the real bubblewrap a command reads and writes in dir; a folder
 // beside it stays readable and unwritten, and so does one outside /tmp.
 func TestWritingOnlyIn(t *testing.T) {
-	if _, err := exec.LookPath("bwrap"); err != nil {
-		t.Skip("no bwrap")
-	}
+	sandboxRuns(t)
 	dir, beside := t.TempDir(), t.TempDir()
 	testcheck.NoErr(t, os.WriteFile(filepath.Join(beside, "settings"), []byte("x"), 0o600))
 	outside, err := os.MkdirTemp("/var/tmp", "nushi-npm-test-") //nolint:usetesting // a folder outside /tmp, where t.TempDir's are
@@ -46,10 +61,10 @@ func TestWritingOnlyIn(t *testing.T) {
 		t.Skipf("no folder outside /tmp: %v", err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(outside) })
-	cmd, err := writingOnlyIn(context.Background(), dir, "sh", "-c",
+	cmd, err := writingOnlyIn(context.Background(), os.Environ(), dir, "sh", "-c",
 		`touch "$1/in" && cat "$2/settings" >/dev/null && ! touch "$2/out" 2>/dev/null && ! touch "$3/out" 2>/dev/null`, "sh", dir, beside, outside)
 	if err != nil {
-		t.Skipf("bubblewrap doesn't run here: %v", err)
+		t.Fatal(err)
 	}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("%v: %s", err, out)

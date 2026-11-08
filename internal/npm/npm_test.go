@@ -94,6 +94,19 @@ func registry(t *testing.T, marker string) (url string, lock fstest.MapFS, tampe
 	}
 }
 
+// sandboxRuns skips the test where npm's sandbox doesn't run (Linux without
+// a bwrap that can make its namespaces, an OS with none), except in CI,
+// whose jobs set one up, so a skip there can't hide a broken sandbox.
+func sandboxRuns(t *testing.T) {
+	t.Helper()
+	if _, err := writingOnlyIn(context.Background(), os.Environ(), t.TempDir(), "true"); err != nil {
+		if os.Getenv("CI") != "" {
+			t.Fatalf("in CI: %v", err)
+		}
+		t.Skip(err)
+	}
+}
+
 // npm ci from the lockfile, against the local registry, with its own
 // settings and HOME: the packages are installed, the optional one and the
 // install script left out, npm's cache gone; a changed tarball fails and
@@ -102,6 +115,7 @@ func TestInstall(t *testing.T) {
 	if _, err := exec.LookPath("npm"); err != nil {
 		t.Skip("no npm")
 	}
+	sandboxRuns(t)
 	tmp := t.TempDir()
 	marker := filepath.Join(tmp, "script-ran")
 	url, lock, tamper := registry(t, marker)
