@@ -183,8 +183,8 @@ func TestListsNoHintThatSkipsTheAsk(t *testing.T) {
 }
 
 // A url opens a browser tab for a page on this Mac's loopback, as a
-// browser reads it; anything else, or a url beside a path, is refused,
-// and none of it tells the clients.
+// browser reads it; anything else, a url beside a path, or a key not as
+// written, is refused, and none of it tells the clients.
 func TestShowsAPageOnThisMac(t *testing.T) {
 	s, got := shown(fakeChats{roots: []string{t.TempDir()}})
 	call := func(raw string) (string, error) {
@@ -205,7 +205,10 @@ func TestShowsAPageOnThisMac(t *testing.T) {
 			t.Errorf("%q: %v", u, err)
 		}
 	}
-	for _, raw := range []string{`{}`, `{"url":"http://localhost:3000","path":"a.md"}`, `{"url":5}`} {
+	// A key in another case is refused: encoding/json would take it for
+	// url, while the app's row reads url as written (ADR 0100).
+	for _, raw := range []string{`{}`, `{"url":"http://localhost:3000","path":"a.md"}`, `{"url":5}`,
+		`{"url":"https://evil.example/","URL":"http://localhost:3000"}`, `{"Path":"a.md"}`} {
 		if _, err := call(raw); !errors.Is(err, errArgs) {
 			t.Errorf("arguments %s: %v", raw, err)
 		}

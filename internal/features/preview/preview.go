@@ -94,7 +94,7 @@ func (s *Set) Call(_ context.Context, g tools.Grant, tool string, raw json.RawMe
 		Path *string `json:"path"`
 		URL  *string `json:"url"`
 	}
-	if err := json.Unmarshal(raw, &args); err != nil || (args.Path == nil) == (args.URL == nil) {
+	if err := tools.Decode(raw, &args, "path", "url"); err != nil || (args.Path == nil) == (args.URL == nil) {
 		return "", errArgs
 	}
 	if args.URL != nil {

@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 
@@ -153,4 +154,28 @@ func (s *Service) Call(ctx context.Context, key, tool string, args json.RawMessa
 		}
 	}
 	return "", fmt.Errorf("no tool %q for this chat", tool)
+}
+
+// errArgKey is arguments with a key Decode wasn't given.
+var errArgKey = errors.New("an argument the tool doesn't take")
+
+// Decode reads a call's arguments, an object or nothing, into v, refusing
+// any key that isn't one of keys exactly: encoding/json matches a key
+// without case, the last of several winning, while the app reads the one
+// written as asked (tool_parts.dart), so the daemon could check one value
+// and the row show another (ADR 0100).
+func Decode(raw json.RawMessage, v any, keys ...string) error {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return err
+	}
+	for k := range m {
+		if !slices.Contains(keys, k) {
+			return errArgKey
+		}
+	}
+	return json.Unmarshal(raw, v)
 }

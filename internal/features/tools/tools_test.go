@@ -102,3 +102,24 @@ func TestALoggedFailure(t *testing.T) {
 		t.Errorf("the log:\n%s", l)
 	}
 }
+
+// Decode takes only the keys it's given, as written: a key in another
+// case, which encoding/json would take for one of them, is refused.
+func TestDecodeTakesKeysAsWritten(t *testing.T) {
+	var args struct {
+		URL *string `json:"url"`
+	}
+	for _, raw := range []string{``, `null`, `{}`, `{"url":"http://localhost:3000"}`} {
+		if err := Decode(json.RawMessage(raw), &args, "url", "path"); err != nil {
+			t.Errorf("%s: %v", raw, err)
+		}
+	}
+	if args.URL == nil || *args.URL != "http://localhost:3000" {
+		t.Errorf("read %v", args.URL)
+	}
+	for _, raw := range []string{`{"url":"https://evil.example/","URL":"http://localhost:3000"}`, `{"Url":"x"}`, `[]`, `"url"`, `{"url":1,"other":2}`} {
+		if err := Decode(json.RawMessage(raw), &args, "url", "path"); err == nil {
+			t.Errorf("%s taken", raw)
+		}
+	}
+}
