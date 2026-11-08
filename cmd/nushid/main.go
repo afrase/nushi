@@ -76,15 +76,36 @@ func main() {
 		fmt.Println("nushid", version()) //nolint:forbidigo // -version's answer
 		return
 	}
+	login, err := daemonArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2) //nolint:revive // main's own, before anything runs
+	}
 	// Until the daemon holds its socket, its lines go to stderr, which the
 	// launcher points at nushid.log.
 	slog.SetDefault(slog.New(logs.Handler(os.Stderr)))
-	if len(os.Args) > 1 && os.Args[1] == loginFlag {
+	if login {
 		fatal(execLogin())
 	}
 	if err := run(); err != nil {
 		fatal(err)
 	}
+}
+
+// daemonArgs reads the daemon's arguments, once the subcommands' are
+// ruled out: none, or -login (loginFlag). Anything else (a -h, a typo) is
+// an error saying how it runs, never a daemon started on the default data
+// folder. Launch Services' `-psn_…` (a process serial number, which macOS
+// has given an app it opens) is passed over.
+func daemonArgs(args []string) (login bool, err error) {
+	args = slices.DeleteFunc(slices.Clone(args), func(a string) bool { return strings.HasPrefix(a, "-psn_") })
+	switch {
+	case len(args) == 0:
+		return false, nil
+	case len(args) == 1 && args[0] == loginFlag:
+		return true, nil
+	}
+	return false, fmt.Errorf("nushid: unknown arguments %q\nusage: nushid [%s | -version]", args, loginFlag)
 }
 
 func fatal(err error) {
