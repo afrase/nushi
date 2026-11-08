@@ -6,6 +6,7 @@ analyzer:
   exclude:
     - lib/gen/**
     - build/**
+    - linux/**
     - macos/**
     - web/**
 
