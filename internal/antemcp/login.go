@@ -81,7 +81,7 @@ func (a Ante) account(ctx context.Context, name string) (model.AgentRun, string,
 // Ante's own folder, whatever folder was asked: Ante's servers don't
 // depend on one. Ante's sign-in was made for a terminal and offers to
 // take a pasted URL while it waits, so it gets one (script(1), as
-// Claude's) with a stdin that stays open and silent: a user who types
+// Claude's, claudemcp.Terminal) with a stdin that stays open and silent: a user who types
 // nothing, not an input that ended. 0.2.15 needs --force, or it finds the
 // token the server just refused, says it is signed in and opens no
 // browser; from 0.3.0 login always signs in again and the flag is gone.
@@ -90,14 +90,17 @@ func (a Ante) Login(ctx context.Context, _, name string) error {
 	if err != nil {
 		return err
 	}
-	args := []string{"-q", "/dev/null", r.CLI, group, "login"}
+	args := []string{r.CLI, group, "login"}
 	if group == "mcp" {
 		args = append(args, "--force")
 	}
 	ctx, cancel := context.WithTimeout(ctx, signInFor)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "script", append(args, "--", name)...) //nolint:gosec // the user's ante, the server name after --
-	cmd.Dir, cmd.Env = ante.Home(), r.Env
+	cmd, err := claudemcp.Terminal(ctx, r.Env, append(args, "--", name)...) // the server name after --
+	if err != nil {
+		return fmt.Errorf("signing in to %s: %w", name, err)
+	}
+	cmd.Dir = ante.Home()
 	if _, err := cmd.StdinPipe(); err != nil { // never written, closed when the command ends
 		return err
 	}
