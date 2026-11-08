@@ -215,7 +215,7 @@ void main() {
   }, variant: _linux);
 
   testWidgets(r'in a terminal Ctrl and a letter is the shell’s, Ctrl+\ '
-      'too, and F7; Ctrl+Shift+C copies, '
+      'too, and Ctrl+C with a selection, and F7; Ctrl+Shift+C copies, '
       'Ctrl+Shift+P opens the palette, Ctrl+Alt+2 shows Changes', (
     tester,
   ) async {
@@ -274,9 +274,17 @@ void main() {
     ]);
     expect(shells.typedAll.join(), _shellGot);
 
-    // F7, the next typo elsewhere, is the shell's program's.
+    // Ctrl+C interrupts with text selected too, where xterm2 alone would
+    // copy it, and F7, the next typo elsewhere, is the shell's program's.
+    terminal.controller!.setSelection(
+      buffer.createAnchor(0, 0),
+      buffer.createAnchor(3, 0),
+    );
+    await _press(tester, LogicalKeyboardKey.keyC);
     await _press(tester, LogicalKeyboardKey.f7, const []);
-    expect(shells.typedAll.join(), '$_shellGot\x1b[18~');
+    expect(copied, hasLength(1));
+    expect(terminal.controller!.selectionFor(buffer), isNull);
+    expect(shells.typedAll.join(), '$_shellGot\x03\x1b[18~');
 
     await _press(tester, LogicalKeyboardKey.digit2, [
       LogicalKeyboardKey.controlLeft,

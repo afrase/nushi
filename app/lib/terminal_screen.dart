@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
 import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
@@ -55,6 +56,21 @@ const terminalFindKey = Cmd(
   LogicalKeyboardKey.keyF,
   linux: SingleActivator(LogicalKeyboardKey.keyF, control: true, shift: true),
 );
+
+/// Ctrl+C, the shell's interrupt.
+const _interruptKey = SingleActivator(LogicalKeyboardKey.keyC, control: true);
+
+/// Where the command key is Control, Ctrl+C interrupts with text selected
+/// too, as in GNOME Terminal (ADR 0102): off the Mac xterm2 would copy the
+/// selection instead, before its shortcuts, so the selection goes and the
+/// key reaches the shell. Ctrl+Shift+C copies.
+KeyEventResult _interruptWithSelection(KeyEvent event, TermSession s) {
+  if (commandKey == CommandKey.control &&
+      _interruptKey.accepts(event, HardwareKeyboard.instance)) {
+    s.controller.clearSelection();
+  }
+  return KeyEventResult.ignored;
+}
 
 /// One terminal's screen, and its exit with Restart once its shell ended.
 class TerminalScreen extends StatelessWidget {
@@ -136,6 +152,7 @@ class TerminalScreen extends StatelessWidget {
                   cursorBlink: true,
                   keyboardAppearance: t.brightness,
                   shortcuts: _keys(context, s),
+                  onKeyEvent: (_, event) => _interruptWithSelection(event, s),
                   readOnly: info.exited,
                   // ⌘-click (Ctrl-click on Linux) opens one thing: an OSC 8
                   // link's real target, else the URL or file under the
