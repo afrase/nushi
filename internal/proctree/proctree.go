@@ -86,7 +86,7 @@ func (Tree) StopGroup(root int, p model.Process) error {
 	case below[i].Pgid != p.Pid || p.Pid <= 1: // the group to signal is p's own, as it is now, never the one p was said to have
 		return errors.New("the process doesn't lead a group of its own")
 	}
-	termed := time.Now()
+	termed := now()
 	if err := syscall.Kill(-p.Pid, syscall.SIGTERM); err != nil {
 		return fmt.Errorf("signalling the process group: %w", err)
 	}
@@ -95,7 +95,7 @@ func (Tree) StopGroup(root int, p model.Process) error {
 }
 
 // killRest kills what is left of group pgid, if all of it started before
-// it was sent SIGTERM at termed.
+// it was sent SIGTERM at termed (now's time, which Started is in).
 func killRest(pgid int, termed time.Time) {
 	ps, err := all()
 	if err != nil {

@@ -53,3 +53,6 @@ func Args(pid int) []string {
 	}
 	return out
 }
+
+// now is the time in Started's terms: P_starttime is the wall clock's.
+func now() time.Time { return time.Now() }

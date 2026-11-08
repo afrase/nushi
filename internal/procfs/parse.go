@@ -17,8 +17,8 @@ type Stat struct {
 	State     byte
 	Comm      string // the executable's name, at most 15 bytes, any of them
 	// Started is when it started by the wall clock as it is now: btime,
-	// read anew for each call, plus SinceBoot, as procps computes ps's
-	// lstart. btime is the wall clock less the time since boot, in whole
+	// read anew for each call (or the boot time given to AllFrom), plus
+	// SinceBoot, as procps computes ps's lstart. btime is the wall clock less the time since boot, in whole
 	// seconds, so a step of the clock (NTP, chrony's makestep,
 	// settimeofday, a VM's time sync) moves it, and Started with it, by
 	// the step. That keeps Started comparable with time.Now and with ps

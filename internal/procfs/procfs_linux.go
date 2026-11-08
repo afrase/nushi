@@ -57,6 +57,14 @@ func All() []Stat {
 	if err != nil {
 		return nil
 	}
+	return AllFrom(boot)
+}
+
+// AllFrom is All with each Started counted from boot instead of btime as
+// it is now: a caller that keeps one boot time for its life (proctree)
+// gets the same Started for a process at every listing, whatever steps
+// the clock takes meanwhile.
+func AllFrom(boot time.Time) []Stat {
 	entries, _ := os.ReadDir(root)
 	out := make([]Stat, 0, len(entries))
 	for _, e := range entries {
