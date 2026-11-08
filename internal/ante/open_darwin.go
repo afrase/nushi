@@ -1,0 +1,37 @@
+package ante
+
+import (
+	"context"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/afrase/nushi/internal/procgroup"
+)
+
+// openFiles runs lsof on files and returns the id (of) of each one some
+// process has open.
+func openFiles(files []string, of func(file string) string) map[string]string {
+	out := map[string]string{}
+	if len(files) == 0 {
+		return out
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	// -F n prints a line "n<path>" per open file; lsof exits 1 when one of
+	// the files isn't open, so the output counts, not the status.
+	cmd := exec.CommandContext(ctx, "/usr/sbin/lsof", append([]string{"-w", "-F", "n", "--"}, files...)...) //nolint:gosec // lsof on Ante's own session files
+	procgroup.Bound(cmd)
+	b, _ := cmd.Output()
+	for line := range strings.Lines(string(b)) {
+		if name, ok := strings.CutPrefix(strings.TrimSpace(line), "n"); ok {
+			for _, f := range files {
+				if resolved, _ := filepath.EvalSymlinks(f); name == f || name == resolved {
+					out[of(f)] = "another app"
+				}
+			}
+		}
+	}
+	return out
+}

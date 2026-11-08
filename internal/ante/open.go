@@ -1,21 +1,16 @@
 package ante
 
 import (
-	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
-	"time"
-
-	"github.com/afrase/nushi/internal/procgroup"
 )
 
 // OpenElsewhere says which of sessions ids an Ante holds open: Ante takes
 // no lock, but keeps a session's events.jsonl open for writing while it
 // has the session (its TUI, or a host of another bridge), so lsof finds
-// it, in about a tenth of a second. Two Antes on one session both append
-// to it.
+// it on the Mac, in about a tenth of a second, as do the links of its
+// open files in /proc on Linux. Two Antes on one session both append to
+// it.
 func (Local) OpenElsewhere(ids []string) map[string]string {
 	var files []string
 	for _, id := range ids {
@@ -26,32 +21,6 @@ func (Local) OpenElsewhere(ids []string) map[string]string {
 		}
 	}
 	return openFiles(files, func(f string) string { return filepath.Base(filepath.Dir(f)) })
-}
-
-// openFiles runs lsof on files and returns the id (of) of each one some
-// process has open.
-func openFiles(files []string, of func(file string) string) map[string]string {
-	out := map[string]string{}
-	if len(files) == 0 {
-		return out
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	// -F n prints a line "n<path>" per open file; lsof exits 1 when one of
-	// the files isn't open, so the output counts, not the status.
-	cmd := exec.CommandContext(ctx, "/usr/sbin/lsof", append([]string{"-w", "-F", "n", "--"}, files...)...) //nolint:gosec // lsof on Ante's own session files
-	procgroup.Bound(cmd)
-	b, _ := cmd.Output()
-	for line := range strings.Lines(string(b)) {
-		if name, ok := strings.CutPrefix(strings.TrimSpace(line), "n"); ok {
-			for _, f := range files {
-				if resolved, _ := filepath.EvalSymlinks(f); name == f || name == resolved {
-					out[of(f)] = "another app"
-				}
-			}
-		}
-	}
-	return out
 }
 
 func fileExists(path string) bool {
