@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:connectrpc/connect.dart' as connect;
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/conventions.dart';
+import 'package:nushi/daemon.dart' show apiVersion;
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/phone_app.dart';
@@ -15,6 +18,7 @@ import 'package:nushi/phone/settings_screen.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/question_card.dart';
 import 'package:nushi/remote.dart' show keyFingerprint, remoteState;
+import 'package:remote_transport/remote_transport.dart' show Unreachable;
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -108,17 +112,19 @@ Future<(Phone, PhonePlatform)> _app(
   return (phone, platform);
 }
 
-/// Scrolls Settings down to Forget this Mac, under the themes.
-Future<void> _toForget(WidgetTester tester) => tester.scrollUntilVisible(
-  find.text('Forget this Mac'),
-  300,
-  scrollable: find
-      .descendant(
-        of: find.byType(SettingsScreen),
-        matching: find.byType(Scrollable),
-      )
-      .first,
-);
+/// Scrolls Settings down to Forget this Mac (or [machine]), under the
+/// themes.
+Future<void> _toForget(WidgetTester tester, [String machine = 'Mac']) =>
+    tester.scrollUntilVisible(
+      find.text('Forget this $machine'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(SettingsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
 
 void main() {
   setUpAll(loadFonts);
@@ -193,7 +199,7 @@ void main() {
         ..iPhone = true
         ..installed = true;
       await tester.pump();
-      expect(find.text('Pair with a Mac'), findsOneWidget);
+      expect(find.text('Pair with your computer'), findsOneWidget);
       await render(tester, find.byType(PhoneApp), 'phone_pair_$name');
       phone
         ..pairing = '491 207'
@@ -577,10 +583,61 @@ void main() {
     expect(platform.wasReset, isTrue, reason: 'caches and the worker too');
     expect(phone.daemon, isNull);
     expect(fake.calls.whereType<UnpairThisDeviceRequest>(), hasLength(1));
-    expect(find.text('Pair with a Mac'), findsOneWidget);
+    expect(find.text('Pair with your computer'), findsOneWidget);
     // Pairing is the root again: nothing to go back to.
     expect(find.bySemanticsLabel('Back'), findsNothing);
     await endPhone(tester, phone);
+  });
+
+  // The phone names the computer by the system its daemon runs on
+  // (PingResponse.os), and keeps it, so it says it offline after a relaunch.
+  testWidgets('a paired computer that isn’t a Mac is called a computer', (
+    tester,
+  ) async {
+    final fake = FakeDaemon(_chats)
+      ..answer = (input) => input is PingRequest
+          ? PingResponse(apiVersion: apiVersion, os: 'linux')
+          : null;
+    // A key as X25519 keeps it (clamped): the record is this one's.
+    final (phone, platform) = await _app(
+      tester,
+      fake,
+      record: {
+        ...pairedRecord(),
+        'key': Uint8List(32)
+          ..[0] = 8
+          ..[31] = 64,
+      },
+    );
+    await tester.tap(find.bySemanticsLabel('Settings'));
+    await tester.pumpAndSettle();
+    expect(platform.saved?['os'], 'linux');
+    expect(find.text('Computer'), findsOneWidget);
+    expect(find.text("Computer's key"), findsOneWidget);
+    await _toForget(tester, 'computer');
+    expect(find.text('Forget this Mac'), findsNothing);
+    await endPhone(tester, phone);
+
+    phoneHost = macConventions;
+    final away = FakeDaemon(_chats)
+      ..answer = (input) => input is PingRequest
+          ? throw connect.ConnectException(
+              connect.Code.unavailable,
+              'daemon unavailable',
+              cause: Unreachable.mac,
+            )
+          : null;
+    final again = await startPhone(
+      tester,
+      away,
+      platform: PhonePlatform()..saved = platform.saved,
+    );
+    expect(phoneHost, same(linuxConventions));
+    await again.link!.check();
+    await again.link!.check();
+    await tester.pump();
+    expect(find.text("Can't reach your computer"), findsOneWidget);
+    await endPhone(tester, again);
   });
 
   testWidgets('Forget this Mac that fails on the way keeps the pairing', (
@@ -704,7 +761,7 @@ void main() {
       paired: false,
       size: const Size(390, 844),
     );
-    expect(find.text('Pair with a Mac'), findsOneWidget);
+    expect(find.text('Pair with your computer'), findsOneWidget);
     // Paired (as pair() ends): the chats take pairing's place.
     phone.platform.saved = pairedRecord();
     await phone.start();
@@ -723,7 +780,7 @@ void main() {
     // Back from the chats doesn't reach pairing.
     expect(await nav.maybePop(), isFalse);
     await tester.pump();
-    expect(find.text('Pair with a Mac'), findsNothing);
+    expect(find.text('Pair with your computer'), findsNothing);
     await render(tester, find.byType(PhoneApp), 'phone_root_390');
     await endPhone(tester, phone);
   });
@@ -749,7 +806,7 @@ void main() {
     );
     await tester.tap(find.text('Scan QR code'));
     await tester.pumpAndSettle();
-    expect(find.text('Scan the Mac’s code'), findsOneWidget);
+    expect(find.text('Scan your computer’s code'), findsOneWidget);
     final scanner = Scanner.last!..see('https://example.com/');
     await tester.pump();
     await tester.pump();
@@ -762,7 +819,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(scanner.stopped, isTrue, reason: 'the camera is off');
-    expect(find.text('Scan the Mac’s code'), findsNothing);
+    expect(find.text('Scan your computer’s code'), findsNothing);
     expect(
       find.textContaining('This link is for the relay at'),
       findsOneWidget,
@@ -816,7 +873,7 @@ void main() {
     for (var i = 0; i < 8; i++) {
       await tester.pump();
     }
-    expect(find.text('Pair with a Mac'), findsOneWidget);
+    expect(find.text('Pair with your computer'), findsOneWidget);
     expect(platform.workerRegistered, registered + 1);
     // Paired again, as pair() ends (a new Daemon connects).
     platform.saved = pairedRecord();

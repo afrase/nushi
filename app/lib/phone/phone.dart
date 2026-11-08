@@ -6,6 +6,7 @@ import 'package:connectrpc/http2.dart';
 import 'package:connectrpc/protobuf.dart';
 import 'package:connectrpc/protocol/connect.dart' as protocol;
 import 'package:flutter/foundation.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/drafts.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -64,6 +65,11 @@ class Phone extends ChangeNotifier {
   /// When the Mac last answered, kept across launches.
   DateTime? _seen;
 
+  /// The system the paired computer runs on, as its daemon last said
+  /// (PingResponse.os), kept across launches: the phone names it by it
+  /// ([phoneHost]), offline too.
+  String _os = '';
+
   /// The code of a pairing under way, to compare with the Mac's, once it
   /// has one.
   String? pairing;
@@ -109,6 +115,8 @@ class Phone extends ChangeNotifier {
         }
         name = r['name'] as String? ?? '';
         _seen = DateTime.tryParse(r['seen'] as String? ?? '');
+        _os = r['os'] as String? ?? '';
+        phoneHost = conventionsOf(_os);
         final relay = Uri.tryParse(r['relay'] as String? ?? '');
         final id = r['daemon'] as String? ?? '';
         if (r['daemonKey'] case final Uint8List dk
@@ -153,6 +161,7 @@ class Phone extends ChangeNotifier {
       'key': mine,
       'name': name,
       if (_seen case final seen?) 'seen': seen.toIso8601String(),
+      if (_os.isNotEmpty) 'os': _os,
       if (paired case final p?) ...{
         'relay': p.relay.toString(),
         'daemon': p.id,
@@ -249,9 +258,18 @@ class Phone extends ChangeNotifier {
     if (d == null || d.connected == _wasConnected) return;
     _wasConnected = d.connected;
     if (d.connected) {
+      _sawOs(d.daemonOs);
       unawaited(_askPushKey(d));
       unawaited(view(d.selectedId)); // a new connection knows no view
     }
+  }
+
+  /// The paired computer's system, as its daemon says: kept when it's new.
+  void _sawOs(String os) {
+    phoneHost = conventionsOf(os);
+    if (os == _os) return;
+    _os = os;
+    unawaited(_save().catchError((Object _) {}));
   }
 
   Future<void> _askPushKey(Daemon d) async {
@@ -326,7 +344,7 @@ class Phone extends ChangeNotifier {
     try {
       if (on) {
         final key = _pushKey;
-        if (key == null) return 'Not connected to the Mac';
+        if (key == null) return 'Not connected to the ${phoneHost.machine}';
         final sub = await platform.subscribe(key);
         push = await platform.pushState();
         notifyListeners();
@@ -425,6 +443,8 @@ class Phone extends ChangeNotifier {
       unawaited(platform.registerWorker());
       await close();
       paired = _key = _pushKey = null;
+      _os = '';
+      phoneHost = macConventions;
       remoteState.value = null;
       push = await platform.pushState();
     } finally {

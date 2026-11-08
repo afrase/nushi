@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/subscription.dart';
 import 'package:nushi/phone/ui.dart';
@@ -22,11 +23,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _forget(BuildContext context) async {
+    final machine = phoneHost.machine;
     final sure = await confirm(
       context,
-      'Forget this Mac?',
-      'This device forgets the Mac and its own key; pairing again makes a '
-          'new one. Revoke it on the Mac too: until then the Mac lists it.',
+      'Forget this $machine?',
+      'This device forgets the $machine and its own key; pairing again makes '
+          'a new one. Revoke it on the $machine too: until then the $machine '
+          'lists it.',
       'Forget',
       destructive: true,
     );
@@ -39,6 +42,8 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    final machine = phoneHost.machine;
+    final heading = machine[0].toUpperCase() + machine.substring(1);
     return ListenableBuilder(
       listenable: Listenable.merge([phone, ?phone.daemon]),
       builder: (context, _) {
@@ -48,7 +53,7 @@ class SettingsScreen extends StatelessWidget {
             'Notifications work once Nushi is on the Home Screen.',
           PushState.denied =>
             'Notifications are off for Nushi in the phone’s Settings.',
-          _ when !connected => 'Connect to the Mac to change this.',
+          _ when !connected => 'Connect to the $machine to change this.',
           _ =>
             'When a chat finishes or needs you. They say only what '
                 'happened, never what’s in the chat.',
@@ -58,10 +63,10 @@ class SettingsScreen extends StatelessWidget {
           body: ListView(
             padding: const EdgeInsets.only(bottom: 24),
             children: [
-              const PhoneHeading('Mac'),
+              PhoneHeading(heading),
               _Line('Relay', phone.paired?.relay.toString() ?? ''),
               _Line(
-                "Mac's key",
+                "$heading's key",
                 phone.paired == null ? '' : keyFingerprint(phone.paired!.key),
               ),
               _Line('This device', phone.name),
@@ -84,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
                 child: PhoneButton(
-                  phone.forgetting ? 'Forgetting…' : 'Forget this Mac',
+                  phone.forgetting ? 'Forgetting…' : 'Forget this $machine',
                   destructive: true,
                   onTap: phone.forgetting
                       ? null

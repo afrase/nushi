@@ -59,6 +59,17 @@ const linuxConventions = Conventions(
   badge: 'App icon badge',
 );
 
-/// The platform's conventions, as a widget reads them: the phone's web app,
-/// which shares the widgets but has no native edge, keeps the Mac's.
-Conventions get conventions => kIsWeb ? macConventions : native.conventions;
+/// The platform's conventions, as a widget reads them: on the phone, whose
+/// web app shares the widgets but has no native edge, the paired
+/// computer's ([phoneHost]).
+Conventions get conventions => kIsWeb ? phoneHost : native.conventions;
+
+/// The phone's paired computer's conventions, by the system its daemon
+/// says it runs on ([conventionsOf]); the phone sets them.
+Conventions phoneHost = macConventions;
+
+/// The conventions of a daemon's system, as Go names it
+/// (PingResponse.os): the Mac's for "darwin", and for a daemon from before
+/// it said, which ran on a Mac.
+Conventions conventionsOf(String os) =>
+    os == 'linux' ? linuxConventions : macConventions;

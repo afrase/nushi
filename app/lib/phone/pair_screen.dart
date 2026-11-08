@@ -78,9 +78,10 @@ class _PairScreenState extends State<PairScreen> {
     } on FormatException catch (e) {
       _error = e.message.startsWith('This link is for')
           ? '${e.message}.'
-          : "That isn't a Nushi pairing link: copy it again on the Mac.";
+          : "That isn't a Nushi pairing link: copy it again on your "
+                'computer.';
     } on PairingRefused {
-      _error = 'The Mac refused this device, or no one answered in time.';
+      _error = 'Your computer refused this device, or no one answered in time.';
     } on Object catch (e) {
       // A relay that can't be reached says so ("Connection refused"), not
       // that the Mac refused.
@@ -101,7 +102,7 @@ class _PairScreenState extends State<PairScreen> {
       builder: (context, _) {
         final code = widget.phone.pairing;
         return PhoneScreen(
-          title: 'Pair with a Mac',
+          title: 'Pair with your computer',
           body: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
@@ -143,7 +144,7 @@ class _PairScreenState extends State<PairScreen> {
                 const SizedBox(height: 28),
               ],
               if (code != null) ...[
-                Text('Check the Mac shows', style: muted),
+                Text('Check your computer shows', style: muted),
                 const SizedBox(height: 8),
                 Text(
                   code,
@@ -159,7 +160,7 @@ class _PairScreenState extends State<PairScreen> {
                 ),
               ] else if (!notInstalled) ...[
                 Text(
-                  'On the Mac: Settings › Remote access › Pair a phone.',
+                  'On your computer: Settings › Remote access › Pair a phone.',
                   style: muted,
                 ),
                 const SizedBox(height: 16),
@@ -167,7 +168,7 @@ class _PairScreenState extends State<PairScreen> {
                   controller: _name,
                   style: phoneText(context),
                   decoration: const InputDecoration(
-                    labelText: 'This device’s name, as the Mac shows it',
+                    labelText: 'This device’s name, as your computer shows it',
                   ),
                 ),
                 const SizedBox(height: 16),

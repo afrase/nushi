@@ -343,7 +343,10 @@ type PingResponse struct {
 	// (API 74).
 	Version string `protobuf:"bytes,3,opt,name=version,proto3" json:"version,omitempty"`
 	// What its check for a newer release found (API 86).
-	Update        *UpdateCheck `protobuf:"bytes,4,opt,name=update,proto3" json:"update,omitempty"`
+	Update *UpdateCheck `protobuf:"bytes,4,opt,name=update,proto3" json:"update,omitempty"`
+	// The system it runs on, as Go names it ("darwin", "linux"): the phone
+	// names the computer it's paired with by it (API 112).
+	Os            string `protobuf:"bytes,5,opt,name=os,proto3" json:"os,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -404,6 +407,13 @@ func (x *PingResponse) GetUpdate() *UpdateCheck {
 		return x.Update
 	}
 	return nil
+}
+
+func (x *PingResponse) GetOs() string {
+	if x != nil {
+		return x.Os
+	}
+	return ""
 }
 
 // What the daemon's check for a newer release of Nushi found: GitHub's
@@ -24381,13 +24391,14 @@ var File_nushi_v1_nushi_proto protoreflect.FileDescriptor
 const file_nushi_v1_nushi_proto_rawDesc = "" +
 	"\n" +
 	"\x14nushi/v1/nushi.proto\x12\bnushi.v1\"\r\n" +
-	"\vPingRequest\"\x8e\x01\n" +
+	"\vPingRequest\"\x9e\x01\n" +
 	"\fPingResponse\x12\x1f\n" +
 	"\vapi_version\x18\x01 \x01(\x05R\n" +
 	"apiVersion\x12\x14\n" +
 	"\x05build\x18\x02 \x01(\tR\x05build\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\tR\aversion\x12-\n" +
-	"\x06update\x18\x04 \x01(\v2\x15.nushi.v1.UpdateCheckR\x06update\"\x84\x01\n" +
+	"\x06update\x18\x04 \x01(\v2\x15.nushi.v1.UpdateCheckR\x06update\x12\x0e\n" +
+	"\x02os\x18\x05 \x01(\tR\x02os\"\x84\x01\n" +
 	"\vUpdateCheck\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12\x10\n" +
 	"\x03url\x18\x02 \x01(\tR\x03url\x12\x16\n" +

@@ -53,7 +53,7 @@ final String dataDir = Platform.environment.containsKey('FLUTTER_TEST')
     : Platform.environment['NUSHI_DATA'] ?? '$support/Nushi';
 
 /// The API version this app was built with (`internal/api.Version`).
-const apiVersion = 111;
+const apiVersion = 112;
 
 /// The API from which the daemon says what an agent has (Agent.mcp_user_only,
 /// ListSkillsResponse.has_built_in and has_plugins), which
@@ -154,6 +154,7 @@ class Daemon extends ChangeNotifier {
   String _build = ''; // the running daemon's build
   int _links = 0; // times the daemon was reached anew ([whenBack])
   String daemonVersion = ''; // its release, "" when it isn't one (API 74)
+  String daemonOs = ''; // its system, Go's name for it; "" before API 112
 
   /// The running daemon's build: its program's `<size>-<mtime in ms>`.
   String get daemonBuild => _build;

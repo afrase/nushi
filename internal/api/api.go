@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 
 	"connectrpc.com/connect"
@@ -30,7 +31,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 111
+const Version = 112
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -197,7 +198,7 @@ func WithToken(token string, h http.Handler) http.Handler {
 }
 
 func (s *server) Ping(context.Context, *connect.Request[nushiv1.PingRequest]) (*connect.Response[nushiv1.PingResponse], error) {
-	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build(), Version: Release, Update: s.update()}), nil
+	return connect.NewResponse(&nushiv1.PingResponse{ApiVersion: Version, Build: Build(), Version: Release, Update: s.update(), Os: runtime.GOOS}), nil
 }
 
 func (s *server) RestartWhenIdle(context.Context, *connect.Request[nushiv1.RestartWhenIdleRequest]) (*connect.Response[nushiv1.RestartWhenIdleResponse], error) {

@@ -57,11 +57,12 @@ extension DaemonLink on Daemon {
     var api = 0;
     var build = '';
     var version = '';
+    var os = '';
     var found = UpdateCheck();
     try {
       // A daemon that hangs counts as gone, rather than stalling the pings.
       final r = await client.ping(PingRequest()).timeout(wait);
-      (api, build, version) = (r.apiVersion, r.build, r.version);
+      (api, build, version, os) = (r.apiVersion, r.build, r.version, r.os);
       found = r.update;
       pingError = null;
     } on Object catch (e) {
@@ -83,6 +84,7 @@ extension DaemonLink on Daemon {
         daemonApi = api; // kept while away: the app stays as it was
         _build = build;
         daemonVersion = version;
+        daemonOs = os;
         if (updatesWhenIdle && !updating) {
           appLog.info('the daemon restarts into the bundled one when idle', {
             'build': build,
