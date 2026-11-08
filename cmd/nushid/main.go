@@ -100,8 +100,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	// NUSHI_DATA runs a second daemon beside the usual one, for development.
-	dir := cmp.Or(os.Getenv("NUSHI_DATA"), defaultDataFolder(home))
+	dir := dataFolder(home)
 	if dir == "" {
 		return errNoDataFolder
 	}
@@ -298,7 +297,7 @@ func listen(path string) (net.Listener, error) {
 }
 
 // loginShell is the user's shell from the user database, as Terminal picks
-// it, else $SHELL, else zsh. The daemon's own $SHELL is whatever started it.
+// it, else $SHELL, else fallbackShell. The daemon's own $SHELL is whatever started it.
 // It is asked once, when first needed: not by the subcommands (a bridge, a
 // chat's tools), which run this executable too.
 var loginShell = sync.OnceValue(func() string {
@@ -306,7 +305,7 @@ var loginShell = sync.OnceValue(func() string {
 	if st, err := os.Stat(shell); err == nil && st.Mode().IsRegular() && st.Mode()&0o111 != 0 {
 		return shell
 	}
-	return cmp.Or(os.Getenv("SHELL"), "/bin/zsh")
+	return cmp.Or(os.Getenv("SHELL"), fallbackShell)
 })
 
 // startShell starts the user's login shell in a terminal, with the daemon's

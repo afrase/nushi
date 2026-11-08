@@ -59,7 +59,7 @@ func TestSharedThroughALink(t *testing.T) {
 		t.Fatal(err)
 	}
 	old := skillfile.TrashProgram
-	skillfile.TrashProgram = filepath.Join(bin, "trash")
+	skillfile.TrashProgram = []string{filepath.Join(bin, "trash")}
 	defer func() { skillfile.TrashProgram = old }()
 	if err := (Claude{}).Trash(ctx, deeper, link); err != nil {
 		t.Fatal(err)

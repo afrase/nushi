@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"os"
 	"path/filepath"
@@ -17,10 +18,10 @@ const loginFlag = "-login"
 // and shellenv's.
 var knownShells = []string{"sh", "zsh", "bash", "fish", "dash", "ksh"}
 
-// knownShell is shell when it's one of knownShells, else zsh.
+// knownShell is shell when it's one of knownShells, else fallbackShell.
 func knownShell(shell string) string {
 	if !slices.Contains(knownShells, filepath.Base(shell)) {
-		return "/bin/zsh"
+		return fallbackShell
 	}
 	return shell
 }
@@ -37,7 +38,7 @@ func execLogin() error {
 	if err != nil {
 		return err
 	}
-	dir := logFolder(os.Getenv("NUSHI_DATA"), home)
+	dir := dataFolder(home)
 	if dir == "" {
 		return errNoDataFolder
 	}
@@ -47,25 +48,27 @@ func execLogin() error {
 	if err := os.Chdir(dir); err != nil {
 		return err
 	}
-	argv, env := loginCommand(loginShell(), bin, filepath.Join(dir, "nushid.log"), os.Environ())
+	argv, env := loginCommand(loginShell(), bin, dir, os.Environ())
 	return syscall.Exec(argv[0], argv, env) //nolint:gosec // the login shell, running this nushid
 }
 
 // loginCommand is the login shell's command line and environment. The
 // paths go through the environment: no quoting, and the line reads the
-// same in each known shell; another shell gets zsh.
-func loginCommand(shell, bin, log string, env []string) ([]string, []string) {
+// same in each known shell; another shell gets fallbackShell. The data
+// folder goes too (NUSHID_DATA), so the daemon keeps the one chosen here.
+func loginCommand(shell, bin, dir string, env []string) ([]string, []string) {
 	shell = knownShell(shell)
-	env = append(slices.Clone(env), "NUSHID_BIN="+bin, "NUSHID_LOG="+log)
+	env = append(slices.Clone(env), "NUSHID_BIN="+bin, "NUSHID_DATA="+dir, "NUSHID_LOG="+filepath.Join(dir, "nushid.log"))
 	return []string{shell, "-l", "-c", `exec "$NUSHID_BIN" >>"$NUSHID_LOG" 2>&1`}, env
 }
 
-// logFolder is where the daemon's log goes: the data folder.
-func logFolder(nushiData, home string) string {
-	if nushiData != "" {
-		return nushiData
-	}
-	return defaultDataFolder(home)
+// dataFolder is the daemon's data folder, its log's too: the one -login
+// chose from its launcher's environment (NUSHID_DATA), so a profile that
+// sets XDG_DATA_HOME or NUSHI_DATA in the login shell doesn't move it away
+// from where the app and the log look; else NUSHI_DATA (a second daemon,
+// for development); else the OS's default, empty when it has none.
+func dataFolder(home string) string {
+	return cmp.Or(os.Getenv("NUSHID_DATA"), os.Getenv("NUSHI_DATA"), defaultDataFolder(home))
 }
 
 // errNoDataFolder is NUSHI_DATA unset on an OS with no default data

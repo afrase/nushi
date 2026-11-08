@@ -91,7 +91,8 @@ func (d *Dialer) connect(ctx context.Context, relay, side, id string) (*Conn, er
 	}
 	var errs []error
 	for _, p := range proxies {
-		wd := websocket.Dialer{Proxy: func(*http.Request) (*url.URL, error) { return p, nil }, HandshakeTimeout: 20 * time.Second}
+		gp := forGorilla(p)
+		wd := websocket.Dialer{Proxy: func(*http.Request) (*url.URL, error) { return gp, nil }, HandshakeTimeout: 20 * time.Second}
 		ws, resp, err := wd.DialContext(ctx, u.String(), nil) //nolint:bodyclose // gorilla's Dial: the body of a failed handshake needn't be closed
 		if err == nil {
 			return newConn(ws), nil
@@ -105,6 +106,19 @@ func (d *Dialer) connect(ctx context.Context, relay, side, id string) (*Conn, er
 		errs = append(errs, err)
 	}
 	return nil, errors.Join(errs...)
+}
+
+// forGorilla is the proxy p as gorilla's dialer takes it, which knows
+// http and socks5 only. Its SOCKS5 dialer already sends the relay's host
+// name to the proxy, which is what socks5h (curl's and ssh -D's name for
+// it) means, so socks5h is socks5 to it.
+func forGorilla(p *url.URL) *url.URL {
+	if p == nil || p.Scheme != "socks5h" {
+		return p
+	}
+	q := *p
+	q.Scheme = "socks5"
+	return &q
 }
 
 // Conn is a connection to a relay, carrying binary messages to and from

@@ -1,22 +1,19 @@
-//go:build !darwin
+//go:build !darwin && !linux
 
 package sysproxy
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"net/url"
-	"runtime"
 	"time"
+
+	"golang.org/x/net/http/httpproxy"
 )
+
+// envConfig is the environment's proxies: HTTPS_PROXY, HTTP_PROXY,
+// NO_PROXY.
+func envConfig() *httpproxy.Config { return httpproxy.FromEnvironment() }
 
 // systemLookup reads no settings on this OS: a direct connection.
 func systemLookup(*url.URL, bool) ([]*url.URL, time.Duration) {
 	return []*url.URL{nil}, 5 * time.Minute
-}
-
-// evaluate can't run a PAC file on this OS.
-func evaluate(context.Context, []byte, url.URL) ([]*url.URL, error) {
-	return nil, fmt.Errorf("evaluating a PAC file on %s: %w", runtime.GOOS, errors.ErrUnsupported)
 }

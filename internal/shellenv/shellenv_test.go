@@ -146,7 +146,8 @@ func TestLookPath(t *testing.T) {
 func TestEnv(t *testing.T) {
 	shell := fakeShell(t, "fish", `[ -e "$HANG" ] && sleep 30`)
 	hang := filepath.Join(t.TempDir(), "hang")
-	e := New(shell, []string{"PATH=/usr/bin:/bin", "ONLY_IN_SHELL=daemon's", "NUSHI_DATA=/d", "HANG=" + hang})
+	// /bin first: on a merged-/usr Linux /usr/bin/sh is there too.
+	e := New(shell, []string{"PATH=/bin:/usr/bin", "ONLY_IN_SHELL=daemon's", "NUSHI_DATA=/d", "HANG=" + hang})
 	e.Start()
 	env := e.Environ()
 	if Get(env, "ONLY_IN_SHELL") != "a value\non two lines" || Get(env, "NUSHI_DATA") != "" || e.Status().Problem != "" || e.Status().Read.IsZero() {

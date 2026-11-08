@@ -189,7 +189,7 @@ func TestTrashOnlyASkillsFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 	old := skillfile.TrashProgram
-	skillfile.TrashProgram = filepath.Join(bin, "trash")
+	skillfile.TrashProgram = []string{filepath.Join(bin, "trash")}
 	defer func() { skillfile.TrashProgram = old }()
 	skill(t, filepath.Join(top, ".claude", "skills"), "proj", "x")
 	testcheck.Write(t, filepath.Join(top, ".claude", "skills", "nofile", "README.md"), "x")
