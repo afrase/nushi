@@ -82,12 +82,13 @@ func settled(it *model.Item, last bool) bool {
 
 // copyLocked writes the items that changed since the copy last had them
 // and have settled, or with all every one of them (a turn ended, the agent
-// stopped). While copies are off nothing is written.
+// stopped). While copies are off, or the copy couldn't be read (unread),
+// nothing is written.
 func (c *chat) copyLocked(all bool) {
 	if c.copies == nil || len(c.unsaved) == 0 {
 		return
 	}
-	if !c.copiesOn() {
+	if !c.copiesOn() || c.unread {
 		clear(c.unsaved)
 		c.mirrored = false
 		return
@@ -211,7 +212,7 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 		ch.mu.Lock()
 		ch.itemsBackLocked()
 		err := s.copies.Delete(c.Chat)
-		ch.mirrored = false
+		ch.mirrored, ch.unread = false, ch.unread && err != nil // a new copy starts empty
 		gone := ch.sessionGone
 		ch.mu.Unlock()
 		if err != nil {

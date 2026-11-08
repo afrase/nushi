@@ -89,6 +89,7 @@ func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) 
 		if copied, err = c.copies.Read(c.id); err != nil {
 			c.logLocked().Warn("transcript copy not read", "err", err)
 		}
+		c.unread = err != nil // merged with the replay, the copy may be written again
 	}
 	date := func(it *model.Item) {
 		if (it.Kind == model.UserMessage || it.Kind == model.AgentMessage) && it.Sent.IsZero() {
@@ -189,12 +190,12 @@ func sameItem(a, b model.Item) bool {
 
 // saveCopyLocked makes the copy (it had copied) what the chat shows, but
 // for what only shows: the items at its end it lacks are added, or it is
-// written anew.
+// written anew. One that couldn't be read (unread) is left as it is.
 func (c *chat) saveCopyLocked(copied, shown []model.Item) {
 	if c.copies == nil {
 		return
 	}
-	if !c.copiesOn() {
+	if !c.copiesOn() || c.unread {
 		c.mirrored = false
 		return
 	}

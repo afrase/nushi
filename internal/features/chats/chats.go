@@ -208,6 +208,10 @@ type chat struct {
 	mirrored bool
 	inCopy   bool
 	aside    []asideItem
+	// unread says the copy couldn't be read when the transcript was made
+	// from it: nothing is written to it then, as new items would go at
+	// its start, before the history it holds (letgo.go).
+	unread bool
 
 	// One look at the related worktrees at a time (related.go): looking
 	// holds it across git's runs; relating says a look of the chat's own

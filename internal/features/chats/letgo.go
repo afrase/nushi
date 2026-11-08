@@ -84,7 +84,8 @@ func (c *chat) canLetGoLocked() bool {
 // itemsBackLocked reads the chat's items back from its copy if they were
 // let go, what was under way when it was written ended, with the items set
 // aside in their places. A copy that can't be read leaves the chat with
-// those alone, as a lookup's did before.
+// those alone, as a lookup's did before, and the copy as it is (unread):
+// the chat goes on, what it holds isn't written over.
 func (c *chat) itemsBackLocked() {
 	if !c.inCopy {
 		return
@@ -93,6 +94,7 @@ func (c *chat) itemsBackLocked() {
 	if err != nil {
 		c.logLocked().Warn("transcript copy not read", "err", err)
 	}
+	c.unread = err != nil
 	changed := false
 	for i := range items {
 		changed = changed || underWay(items[i])

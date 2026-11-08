@@ -18,14 +18,18 @@ import (
 	"github.com/afrase/nushi/internal/transcripts"
 )
 
-// readCounter counts the whole reads of chats' copies.
+// readCounter counts the whole reads of chats' copies, failing the next
+// fail of them.
 type readCounter struct {
 	Copies
-	reads atomic.Int32
+	reads, fail atomic.Int32
 }
 
 func (r *readCounter) Read(chat string) ([]model.Item, error) {
 	r.reads.Add(1)
+	if r.fail.Add(-1) >= 0 {
+		return nil, errors.New("too many open files")
+	}
 	return r.Copies.Read(chat)
 }
 
@@ -352,5 +356,42 @@ func TestFailedDeleteKeepsTheItems(t *testing.T) {
 	c.letGoLocked() // as the look each minute does, no client showing it
 	if c.inCopy || describe(c.items) != "user:one agent:m1" {
 		t.Errorf("let go %v, holds %s", c.inCopy, describe(c.items))
+	}
+}
+
+// A copy that can't be read when an asleep chat wakes is left as it is:
+// the turn that woke the chat can't be written before the history the
+// copy holds. Merged with the agent's replay on a reopen, it is written
+// again, in order.
+func TestUnreadCopyIsLeftAsItIs(t *testing.T) {
+	svc, agent, c, copies, _ := lettingGo(t, nil)
+	store := copies.Copies.(*transcripts.Store)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	testcheck.NoErr(t, svc.Sleep(c.id))
+	copies.fail.Store(1)
+	agent.updates = []acp.SessionUpdate{chunk("m2", "ok")}
+	turn(t, svc, c, "two")
+	if got := copied(t, store, c.id); got != "user:one agent:m1" {
+		t.Fatalf("copied after a failed read: %s", got)
+	}
+	c.mu.Lock()
+	c.copyLocked(true)
+	c.letGoLocked()
+	unread, let := c.unread, c.inCopy
+	c.mu.Unlock()
+	if !unread || let {
+		t.Errorf("unread %v, let go %v", unread, let)
+	}
+
+	agent.quit()
+	eventually(t, c, func() bool { return c.agent == nil })
+	c.mu.Lock()
+	c.kept = false // a reopen replays the session into the copy
+	c.mu.Unlock()
+	agent.updates = []acp.SessionUpdate{chunk("m3", "ok")}
+	turn(t, svc, c, "three")
+	if got := copied(t, store, c.id); got != "user:one agent:m1 user:two agent:m2 user:three agent:m3" {
+		t.Errorf("copied after a reopen: %s", got)
 	}
 }
