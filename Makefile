@@ -61,8 +61,14 @@ else
 	lsof -a -c nushid -t "$(DATA)/nushid.sock" | xargs kill 2>/dev/null || true
 endif
 
+# On Linux the app is given $(DATA): without NUSHI_DATA it still looks in
+# the Mac's folder, so it would never meet make daemon's (ADR 0102).
 app: mermaid
-	cd app && flutter run -d $(if $(filter Linux,$(OS)),linux,macos)
+ifeq ($(OS),Linux)
+	cd app && NUSHI_DATA="$(DATA)" flutter run -d linux
+else
+	cd app && flutter run -d macos
+endif
 
 # mermaid.min.js into the app's assets (the Mac app's and the phone's), as
 # tools/mermaid/mermaid.lock pins it: fetched once into a cache outside the
