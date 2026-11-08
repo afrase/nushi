@@ -15,6 +15,7 @@ import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/grow.dart';
 import 'package:nushi/images.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plan_view.dart';
@@ -177,7 +178,7 @@ class _ComposerState extends State<Composer> {
       _esc = Timer(escEscWithin, () {});
       return KeyEventResult.ignored; // and goes on: it stops a turn
     }
-    final meta = HardwareKeyboard.instance.isMetaPressed;
+    final meta = cmdPressed();
     final enter = enterKey(e, _text, () => unawaited(_send(now: meta)));
     if (enter == KeyEventResult.handled) return enter;
     if (attachKey.accepts(e, HardwareKeyboard.instance)) {

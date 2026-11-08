@@ -101,10 +101,11 @@ class TerminalScreen extends StatelessWidget {
                   keyboardAppearance: t.brightness,
                   shortcuts: _keys(context, s),
                   readOnly: info.exited,
-                  // ⌘-click opens one thing: an OSC 8 link's real
-                  // target, else the URL or file under the pointer.
+                  // ⌘-click (Ctrl-click on Linux) opens one thing: an OSC 8
+                  // link's real target, else the URL or file under the
+                  // pointer.
                   onTapUp: (_, at) {
-                    if (HardwareKeyboard.instance.isMetaPressed) {
+                    if (cmdPressed()) {
                       unawaited(
                         openLink(
                           clickTarget(s.terminal, at),

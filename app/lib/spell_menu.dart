@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/composer_parts.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/spell_check.dart';
 import 'package:nushi/spell_scan.dart';
@@ -185,7 +186,7 @@ class SpellMenu extends ChangeNotifier {
       return true;
     }
     final n = _digits.indexOf(key);
-    final plain = !HardwareKeyboard.instance.isMetaPressed;
+    final plain = !cmdPressed();
     if (n >= 0 && n < fixes.length && plain) {
       take(w, fixes[n]);
       return true;

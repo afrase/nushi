@@ -325,7 +325,7 @@ class _GitHubViewState extends State<GitHubView> {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
-    final meta = HardwareKeyboard.instance.isMetaPressed;
+    final meta = cmdPressed();
     final items = _items;
     if (k == LogicalKeyboardKey.enter && items.isNotEmpty && _at >= 0) {
       meta ? _startWork() : _open(items[_at]);

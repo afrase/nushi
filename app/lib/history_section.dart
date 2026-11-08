@@ -8,6 +8,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_parts.dart';
 import 'package:nushi/history_table.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings_general.dart';
 import 'package:nushi/settings_rows.dart';
@@ -202,7 +203,7 @@ class _HistorySectionState extends State<HistorySection> {
           ..addAll([for (final r in _view.sublist(a, b + 1)) r.id]);
         return;
       }
-      if (keys.isMetaPressed) {
+      if (cmdPressed()) {
         if (!_selected.remove(row.id)) _selected.add(row.id);
       } else if (_selected.length == 1 && _selected.contains(row.id)) {
         _selected.clear();

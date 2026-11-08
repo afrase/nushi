@@ -12,6 +12,12 @@ import 'package:nushi/conventions.dart';
 /// The modifier the app's shortcuts are held with now.
 CommandKey get commandKey => conventions.commandKey;
 
+/// Whether the command key ([commandKey]) is down: ⌘, or Control.
+bool cmdPressed() => switch (commandKey) {
+  CommandKey.meta => HardwareKeyboard.instance.isMetaPressed,
+  CommandKey.control => HardwareKeyboard.instance.isControlPressed,
+};
+
 /// A shortcut held with the command key ([commandKey]), with [shift], [alt]
 /// and [ctrl] as given: ⌘ on the Mac, Control on Linux. Where Control and
 /// the same key won't do there (⌃⌘ keys, Control and `[`, which is Escape),

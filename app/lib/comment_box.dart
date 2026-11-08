@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -205,8 +206,7 @@ class _CommentBoxState extends State<CommentBox> {
   /// ⌘⏎ and Esc, before the field reads ⌘⏎ as a line break.
   KeyEventResult _key(FocusNode _, KeyEvent e) {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
-    if (e.logicalKey == LogicalKeyboardKey.enter &&
-        HardwareKeyboard.instance.isMetaPressed) {
+    if (e.logicalKey == LogicalKeyboardKey.enter && cmdPressed()) {
       unawaited(_post());
       return KeyEventResult.handled;
     }

@@ -431,7 +431,7 @@ class _JiraViewState extends State<JiraView> {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
-    final meta = HardwareKeyboard.instance.isMetaPressed;
+    final meta = cmdPressed();
     final at = _visible.where((x) => idOf(x) == _picked).firstOrNull;
     if (k == LogicalKeyboardKey.enter && at != null) {
       meta ? _startWork() : _open(at);

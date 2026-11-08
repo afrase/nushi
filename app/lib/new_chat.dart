@@ -169,7 +169,7 @@ class _NewChatState extends State<_NewChat> {
         _start(_at);
       case LogicalKeyboardKey.arrowRight when issue == null:
         _sessions(true);
-      case LogicalKeyboardKey.keyV when HardwareKeyboard.instance.isMetaPressed:
+      case LogicalKeyboardKey.keyV when cmdPressed():
         unawaited(_paste());
       case LogicalKeyboardKey.keyI when _offersIssue:
         _pickIssue();

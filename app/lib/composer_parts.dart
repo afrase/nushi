@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/code_run_view.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/file_cards.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/reply_cards.dart';
 import 'package:nushi/rewind.dart';
@@ -71,10 +73,12 @@ Widget stopIcon(Color color) => Container(
 /// the field, so there is one way for all and never two lines: left to
 /// macOS's text input, a Flutter field starts one for ⇧ and ⌥ but types a
 /// space for ⌃ (seen in a release build). A phone's Return is Enter
-/// without them (the browser's keydown): it sends there too.
+/// without them (the browser's keydown): it sends there too. Where Control
+/// is the command key (Linux), Ctrl+Enter sends now, as ⌘⏎ does.
 bool isSendKey(KeyEvent e) => _isEnter(e) && !_lineModifier;
 
-/// Whether [e] is Enter with ⇧, ⌥ or ⌃, which starts a line ([isSendKey]).
+/// Whether [e] is Enter with ⇧, ⌥ or ⌃ (not the command key), which starts
+/// a line ([isSendKey]).
 bool isLineKey(KeyEvent e) => _isEnter(e) && _lineModifier;
 
 bool _isEnter(KeyEvent e) =>
@@ -84,7 +88,9 @@ bool _isEnter(KeyEvent e) =>
 
 bool get _lineModifier {
   final k = HardwareKeyboard.instance;
-  return k.isShiftPressed || k.isAltPressed || k.isControlPressed;
+  return k.isShiftPressed ||
+      k.isAltPressed ||
+      k.isControlPressed && commandKey != CommandKey.control;
 }
 
 /// A Markdown list item's start: its indent, and `1.`, `1)`, `-` or `*`

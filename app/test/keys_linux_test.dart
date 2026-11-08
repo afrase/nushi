@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/chat_keys.dart';
+import 'package:nushi/clock.dart';
+import 'package:nushi/composer.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/palette.dart';
@@ -39,6 +43,8 @@ Future<void> _press(
   }
   settle ? await tester.pumpAndSettle() : await tester.pump();
 }
+
+const _ctrl = <LogicalKeyboardKey>[LogicalKeyboardKey.controlLeft];
 
 /// The app on Linux on three chats, [select] shown, [width] wide.
 Future<(Daemon, FakeDaemon)> _app(
@@ -90,6 +96,40 @@ void main() {
       LogicalKeyboardKey.metaLeft,
     ]);
     expect(d.selectedId, order[2]);
+    await closeView(tester, d);
+  }, variant: _linux);
+
+  testWidgets('Ctrl+Enter stops the turn and sends; Control starts no line '
+      'here, Shift still does', (tester) async {
+    final (d, fake) = await _app(tester);
+    final a = d.chats['a']!
+      ..busy = true
+      ..started = clock()
+      ..notifyListeners();
+    await tester.pump();
+    final field = find.descendant(
+      of: find.byType(Composer),
+      matching: find.byType(TextField),
+    );
+    await tester.tap(field);
+    await tester.pump();
+    final c = tester.widget<TextField>(field).controller!
+      ..value = const TextEditingValue(
+        text: 'abcd',
+        selection: TextSelection.collapsed(offset: 2),
+      );
+    await _press(tester, LogicalKeyboardKey.enter, [
+      LogicalKeyboardKey.shiftLeft,
+    ], false);
+    expect(c.text, 'ab\ncd');
+    c.text = 'abcd';
+    await _press(tester, LogicalKeyboardKey.enter, _ctrl, false);
+    await tester.pump(const Duration(milliseconds: 100));
+    final sent = fake.calls.whereType<SendPromptRequest>();
+    expect(sent.single.text, 'abcd');
+    expect(sent.single.now, isTrue);
+    expect(c.text, isEmpty);
+    a.busy = false;
     await closeView(tester, d);
   }, variant: _linux);
 }

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/conventions.dart';
 import 'package:nushi/file_edit.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart' show Menu;
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_spans.dart';
@@ -147,7 +149,7 @@ class _SourceEditorState extends State<SourceEditor> {
         wordWrap: widget.wrap,
         autocompleteSymbols: false,
         chunkAnalyzer: const NonCodeChunkAnalyzer(),
-        shortcutsActivatorsBuilder: const _MacKeys(),
+        shortcutsActivatorsBuilder: const _EditorKeys(),
         shortcutOverrideActions: widget.edit.tabs ? _tabActions : null,
         padding: EdgeInsets.only(
           left: 14,
@@ -221,11 +223,12 @@ bool passing(FocusNode? focus, ModalRoute<Object?>? route) {
       at.findAncestorStateOfType<SelectableRegionState>() != null;
 }
 
-/// re_editor's Mac keys, less those the app keeps (⌘S saves, ⌘F finds, ⌘D
-/// pins the chat, ⌘L is the browser's address) or that aren't the Mac's
-/// (⌘L selecting a line, ⌘/ commenting), with Emacs's ⌃A and ⌃E as every
-/// Mac text field has them.
-class _MacKeys extends CodeShortcutsActivatorsBuilder {
+/// re_editor's keys (the Mac's, or Control's on Linux), less those the app
+/// keeps (⌘S saves, ⌘F finds, ⌘D pins the chat, ⌘L is the browser's
+/// address) or that aren't the Mac's (⌘L selecting a line, ⌘/ commenting),
+/// with Emacs's ⌃A and ⌃E as every Mac text field has them; on Linux
+/// Ctrl+A selects all.
+class _EditorKeys extends CodeShortcutsActivatorsBuilder {
   const new();
 
   static const _builtIn = DefaultCodeShortcutsActivatorsBuilder();
@@ -241,11 +244,11 @@ class _MacKeys extends CodeShortcutsActivatorsBuilder {
     CodeShortcutType.lineSelect ||
     CodeShortcutType.singleLineComment ||
     CodeShortcutType.multiLineComment => null,
-    CodeShortcutType.cursorMoveLineStart => [
+    CodeShortcutType.cursorMoveLineStart when commandKey == CommandKey.meta => [
       ...?_builtIn.build(type),
       const SingleActivator(LogicalKeyboardKey.keyA, control: true),
     ],
-    CodeShortcutType.cursorMoveLineEnd => [
+    CodeShortcutType.cursorMoveLineEnd when commandKey == CommandKey.meta => [
       ...?_builtIn.build(type),
       const SingleActivator(LogicalKeyboardKey.keyE, control: true),
     ],

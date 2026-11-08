@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:nushi/chat.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/sidebar_view.dart';
@@ -156,10 +157,10 @@ final Map<ShortcutActivator, Intent> chatKeys = {
 /// quick shortcut doesn't flash them.
 const commandHoldDelay = Duration(milliseconds: 300);
 
-/// Whether ⌘ is held alone (for [commandHoldDelay]): the sidebar numbers
-/// its chats while it is. Any other key first, and it isn't until ⌘ is
-/// pressed again; the app going to the background ends it (⌘⇥ never
-/// sends the ⌘ up).
+/// Whether the command key (⌘, Control on Linux) is held alone (for
+/// [commandHoldDelay]): the sidebar numbers its chats while it is. Any
+/// other key first, and it isn't until it is pressed again; the app going
+/// to the background ends it (⌘⇥ never sends the ⌘ up).
 class CommandHold extends ValueNotifier<bool> {
   new() : super(false) {
     HardwareKeyboard.instance.addHandler(_onKey);
@@ -169,22 +170,29 @@ class CommandHold extends ValueNotifier<bool> {
   Timer? _timer;
   late final AppLifecycleListener _lifecycle;
 
-  static bool _isMeta(LogicalKeyboardKey k) =>
-      k == LogicalKeyboardKey.metaLeft || k == LogicalKeyboardKey.metaRight;
+  static bool _isCommand(LogicalKeyboardKey k) => switch (commandKey) {
+    CommandKey.meta =>
+      k == LogicalKeyboardKey.metaLeft || k == LogicalKeyboardKey.metaRight,
+    CommandKey.control =>
+      k == LogicalKeyboardKey.controlLeft ||
+          k == LogicalKeyboardKey.controlRight,
+  };
 
   bool _onKey(KeyEvent e) {
-    final meta = _isMeta(e.logicalKey);
-    if (e is KeyDownEvent && meta) {
-      // ⌘ alone (the other ⌘ may be down too).
-      final alone = HardwareKeyboard.instance.logicalKeysPressed.every(_isMeta);
+    final command = _isCommand(e.logicalKey);
+    if (e is KeyDownEvent && command) {
+      // The command key alone (the other one may be down too).
+      final alone = HardwareKeyboard.instance.logicalKeysPressed.every(
+        _isCommand,
+      );
       _timer?.cancel();
       _timer = alone
           ? Timer(commandHoldDelay, () {
-              if (HardwareKeyboard.instance.isMetaPressed) value = true;
+              if (cmdPressed()) value = true;
             })
           : null;
-    } else if (e is KeyUpEvent && meta) {
-      if (!HardwareKeyboard.instance.isMetaPressed) _reset();
+    } else if (e is KeyUpEvent && command) {
+      if (!cmdPressed()) _reset();
     } else if (e is KeyDownEvent && !value) {
       _timer?.cancel(); // a shortcut, not a hold
     }
