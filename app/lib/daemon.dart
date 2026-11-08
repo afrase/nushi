@@ -150,6 +150,7 @@ class Daemon extends ChangeNotifier {
     },
     maxBytes: remote ? 64 << 20 : 32 << 20,
     local: !remote,
+    whenBack: whenBack,
   );
   bool connected = false;
 

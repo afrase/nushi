@@ -704,6 +704,53 @@ void main() {
     await closeView(tester, d);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
+  testWidgets('an image that failed while the daemon was away is asked '
+      'again once it is back', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('nushi/fonts'),
+          (_) async => <String>[],
+        );
+    viewport(tester, const Size(1700, 900));
+    var away = true;
+    var fetched = 0;
+    final fake = FakeDaemon([_chat])
+      ..answer = ((input) {
+        if (input is GetChatRequest) {
+          return GetChatResponse(chat: _chat, items: _items([_ref()]));
+        }
+        if (input is! GetChatImageRequest) return null;
+        fetched++;
+        if (away) {
+          // A restart into an update, as the row asked.
+          throw connect.ConnectException(
+            connect.Code.unavailable,
+            'daemon unavailable: dial failed',
+          );
+        }
+        return GetChatImageResponse(mimeType: 'image/png', data: _png);
+      });
+    final d = await fake.connect(tester)
+      ..select('c');
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await _frames(tester);
+    expect(_failed, findsOneWidget);
+    expect(fetched, 1);
+    // The pings see it gone, then back.
+    away = false;
+    fake.down = true;
+    await tester.pump(const Duration(seconds: 2));
+    expect(fetched, 1);
+    fake.down = false;
+    await tester.pump(const Duration(seconds: 2));
+    await _frames(tester);
+    expect(_failed, findsNothing);
+    expect(fetched, 2);
+    expect(find.byType(ClickableImage), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5)); // "Reconnected" goes
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
   testWidgets('a row keeps its place until its image decodes, fetched or '
       'taken back, and lets go at that size', (tester) async {
     viewport(tester, const Size(1000, 800));

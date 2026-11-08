@@ -60,6 +60,7 @@ class ChatImages {
     this.maxBytes = 64 << 20,
     this.parallel = 3,
     this.local = false,
+    this.whenBack,
   });
 
   /// Fetches one of a chat's images by its hash (GetChatImage).
@@ -73,6 +74,12 @@ class ChatImages {
   /// takes it back from here, or fetches it again, as it comes near. The
   /// phone's rows hold theirs: a fetch again goes over the relay.
   final bool local;
+
+  /// Calls its argument once the daemon is back after it was away
+  /// (`Daemon.whenBack`), and returns what cancels that: a row whose fetch
+  /// failed because the daemon was gone asks again then, rather than keep
+  /// its failure until Try again.
+  final VoidCallback Function(VoidCallback again)? whenBack;
 
   // In insertion order: the first is the least recently shown.
   final _kept = <String, MemoryImage>{};

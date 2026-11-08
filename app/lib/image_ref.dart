@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/chat_images.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/errors.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart' show ClickableImage;
 import 'package:nushi/spinner.dart';
@@ -10,7 +11,8 @@ import 'package:nushi/theme/theme.dart';
 
 /// One of a chat's images that came as a reference, [size] tall at most
 /// as [ClickableImage]: while it comes, a box of its size with a spinner;
-/// if it fails, a box that says so with Try again.
+/// if it fails, a box that says so with Try again (asked again by itself
+/// once the daemon is back, when it was away).
 class ImageRef extends StatefulWidget {
   const new(this.images, this.chatId, this.image, {super.key, this.size = 64});
 
@@ -38,6 +40,10 @@ class _ImageRefState extends State<ImageRef> {
   /// The list it scrolls in, watched until it comes near the screen.
   ScrollPosition? _position;
 
+  /// What cancels waiting for the daemon to come back after a fetch failed
+  /// because it was away ([ChatImages.whenBack]).
+  VoidCallback? _whenBack;
+
   @override
   void initState() {
     super.initState();
@@ -63,12 +69,14 @@ class _ImageRefState extends State<ImageRef> {
   @override
   void dispose() {
     _position?.removeListener(_look);
+    _stopWaiting();
     super.dispose();
   }
 
   /// Shows the image if it's kept, else fetches it once it is near the
   /// screen (looked at after this frame, once it has its place).
   void _start() {
+    _stopWaiting();
     _failed = _asked = false;
     _was = null;
     _image = widget.images.kept(widget.image.sha256);
@@ -128,6 +136,12 @@ class _ImageRefState extends State<ImageRef> {
     });
   }
 
+  /// Stops waiting for the daemon to come back, if it waits.
+  void _stopWaiting() {
+    _whenBack?.call();
+    _whenBack = null;
+  }
+
   void _load() {
     final sha = widget.image.sha256;
     _asked = true;
@@ -146,8 +160,19 @@ class _ImageRefState extends State<ImageRef> {
               // it comes near.
               if (e is ImageNotWanted) {
                 _asked = false;
-              } else {
-                setState(() => _failed = true);
+                return;
+              }
+              setState(() => _failed = true);
+              // The daemon was away (a restart, an update): it says so, and
+              // asks again once it's back, as it comes near.
+              if (daemonGone(e)) {
+                _stopWaiting();
+                _whenBack = widget.images.whenBack?.call(() {
+                  _whenBack = null;
+                  if (!mounted || !_failed) return;
+                  setState(() => _failed = _asked = false);
+                  _look();
+                });
               }
             },
           ),
@@ -203,6 +228,7 @@ class _ImageRefState extends State<ImageRef> {
       final again = Button(
         label: 'Try again',
         onPressed: () => setState(() {
+          _stopWaiting();
           _failed = false;
           _load();
         }),
