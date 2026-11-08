@@ -1,13 +1,15 @@
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/outside_page.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
 import 'package:nushi/web_views.dart';
 import 'package:nushi/web_views_macos.dart';
 
 /// The web views as a test has them (ADR 0097): what it sets, and the
-/// Mac's for the rest, whose channels tests leave unanswered.
+/// Mac's for the rest, whose channels tests leave unanswered; not
+/// [embedded], Linux's placeholders and no diagrams (ADR 0102).
 class FakeWebViews implements WebViews {
   /// Whether pages show in the app, as on the Mac.
   @override
@@ -37,13 +39,16 @@ class FakeWebViews implements WebViews {
   static const _mac = MacWebViews();
 
   @override
-  PageHost page() => newPage?.call() ?? _mac.page();
+  PageHost page() =>
+      newPage?.call() ?? (embedded ? _mac.page() : OutsidePage());
 
   @override
-  BrowserHost tab(BrowserTab tab) => newTab?.call(tab) ?? _mac.tab(tab);
+  BrowserHost tab(BrowserTab tab) =>
+      newTab?.call(tab) ?? (embedded ? _mac.tab(tab) : OutsideTab(tab));
 
   @override
-  DiagramHost diagram() => newDiagram?.call() ?? _mac.diagram();
+  DiagramHost? diagram() =>
+      newDiagram?.call() ?? (embedded ? _mac.diagram() : null);
 
   @override
   Future<void> openWithBrowser(Uri url) =>

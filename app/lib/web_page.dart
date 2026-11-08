@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
@@ -34,6 +35,27 @@ Future<void> openInBrowser(Uri url) async {
     await native.web.openWithBrowser(url);
   }
 }
+
+/// [openInBrowser] for the user's click, saying in a snack bar why the page
+/// didn't open (no default browser, ADR 0102) rather than doing nothing.
+Future<void> openInBrowserOrSay(BuildContext context, Uri url) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    await openInBrowser(url);
+  } on Object catch (e) {
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(_browserFailure(e))));
+  }
+}
+
+/// What a snack bar says of [e], the default browser's failure to open a
+/// page: a [BrowserError]'s own words, else the platform's reason.
+String _browserFailure(Object e) => switch (e) {
+  BrowserError(:final message) => message,
+  PlatformException(:final message?) => 'Couldn’t open your browser: $message',
+  _ => 'Couldn’t open your browser.',
+};
 
 /// What a navigation a page asks for does: it stays in the web view, opens
 /// in the default browser, or goes nowhere.
