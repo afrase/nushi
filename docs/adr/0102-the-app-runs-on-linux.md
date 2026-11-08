@@ -28,6 +28,7 @@ The daemon runs on Linux (ADR 0101); the app was the Mac's only. ADR 0097 made t
 
 ## Consequences
 - The app builds and starts on Linux, finds or starts its packaged daemon in nushid's own folder, restarts it, and shows its views. What doesn't work yet does nothing rather than fail, apart from a file preview or a browser tab (no web view yet). The key labels and wording are still the Mac's.
+- The browsers Ubuntu ships are snaps, which can't read hidden folders in the home, so a page in the data folder (a scratch chat's) doesn't open in them (docs/install.md; the roadmap).
 - A new capability needs its `_linux.dart` beside its `_macos.dart`: `Native`'s required parameters make a set without one fail to compile.
 
 ## Alternatives considered
