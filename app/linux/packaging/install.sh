@@ -22,13 +22,24 @@ case ${XDG_CONFIG_HOME:-} in
 esac
 desktop=$share/applications/$id.desktop
 fail() { echo "install.sh: $*" >&2; exit 1; }
+# A path quoted as a desktop entry's Exec argument (the spec): ", `, $ and \
+# escaped inside the quotes, then every \ doubled for the value's own
+# escapes, as login_item_linux.dart's execValue writes it.
+quoted() { printf '"%s"' "$(printf '%s' "$1" | sed -e 's/[\\"`$]/\\&/g' -e 's/\\/\\\\/g')"; }
 
 case ${1:-} in
 --uninstall)
-  # Start at login's entry (login_item_linux.dart) only if it starts this
-  # package's daemon: another copy's is the user's.
+  # Start at login's entry only if it starts this package's daemon: another
+  # copy's is the user's. The app writes its Exec line from the path it runs
+  # from, symlinks resolved, quoted only when the path needs it
+  # (login_item_linux.dart).
   autostart=$config/autostart/$id.daemon.desktop
-  if [ -f "$autostart" ] && grep -qF "$opt/lib/nushid" "$autostart"; then
+  daemon=$opt/lib/nushid
+  real=$daemon
+  if lib=$(cd "$opt/lib" 2>/dev/null && pwd -P); then real=$lib/nushid; fi
+  if [ -f "$autostart" ] && grep -qxF \
+    -e "Exec=$daemon -login" -e "Exec=$(quoted "$daemon") -login" \
+    -e "Exec=$real -login" -e "Exec=$(quoted "$real") -login" "$autostart"; then
     rm -f "$autostart"
   fi
   rm -f "$desktop" "$share"/icons/hicolor/*/apps/"$id".png "$share"/icons/hicolor/*/apps/"$id".svg
@@ -57,9 +68,7 @@ if [ "$here" != "$opt" ]; then
   mv "$opt.new" "$opt"
 fi
 
-# The Exec value (the desktop entry spec): the program quoted, with ", `, $
-# and \ escaped, then every \ doubled for the value's own escapes.
-exec=\"$(printf '%s' "$opt/nushi" | sed -e 's/[\\"`$]/\\&/g' -e 's/\\/\\\\/g')\"
+exec=$(quoted "$opt/nushi")
 mkdir -p "$share/applications" "$share/icons/hicolor"
 EXEC=$exec awk '/^Exec=/ { print "Exec=" ENVIRON["EXEC"]; next } { print }' \
   "$opt/share/applications/$id.desktop" >"$desktop.new"
