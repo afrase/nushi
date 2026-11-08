@@ -13,7 +13,8 @@ import 'package:nushi/remote.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// How often the memory is read: a few milliseconds of the daemon's time.
+/// How often the memory is read while the window shows: a few
+/// milliseconds of the daemon's time.
 const _every = Duration(seconds: 5);
 
 /// The bar along the window's bottom: how many agents work, are awake and
@@ -35,7 +36,9 @@ class _StatusBarState extends State<StatusBar> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(_every, (_) => _read());
+    _timer = Timer.periodic(_every, (_) {
+      if (widget.daemon.macView.window) unawaited(_read());
+    });
     unawaited(_read());
   }
 
@@ -51,7 +54,12 @@ class _StatusBarState extends State<StatusBar> {
       final m = await widget.daemon.client.getMemory(
         GetMemoryRequest(appPid: pid),
       );
-      if (mounted) setState(() => _memory = m);
+      // A reading that shows as the last did draws nothing: a frame
+      // draws the whole window.
+      if (!mounted || _memory != null && _shows(m) == _shows(_memory!)) {
+        return;
+      }
+      setState(() => _memory = m);
     } on Object {
       // The last reading stays until the next one.
     }
@@ -141,6 +149,19 @@ class _Dot extends StatelessWidget {
   );
 }
 
+/// The whole of [m]: the agents', Nushi's and the rest.
+int _total(GetMemoryResponse m) =>
+    m.chats.values.fold(0, (a, n) => a + n.toInt()) +
+    (m.daemon + m.app + m.other).toInt();
+
+/// What [m] shows, in the bar and its menu, as the menu rounds it.
+String _shows(GetMemoryResponse m) => [
+  bytes(_total(m)),
+  for (final id in m.chats.keys.toList()..sort())
+    '$id ${bytes(m.chats[id]!.toInt())}',
+  for (final n in [m.daemon, m.app, m.other]) bytes(n.toInt()),
+].join(', ');
+
 /// "1.2 GB", or "240 MB".
 String bytes(int n) => n >= 1000 << 20
     ? '${(n / (1 << 30)).toStringAsFixed(1)} GB'
@@ -159,9 +180,7 @@ class _MemoryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final agents = m.chats.values.fold(0, (a, n) => a + n.toInt());
-    final nushi = (m.daemon + m.app).toInt();
-    final total = agents + nushi + m.other.toInt();
+    final total = _total(m);
     final chats = [
       for (final e in m.chats.entries)
         if (daemon.chats[e.key] case final c?) (c, e.value.toInt()),

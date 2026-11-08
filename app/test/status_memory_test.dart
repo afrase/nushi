@@ -67,4 +67,49 @@ void main() {
       await closeView(tester, d);
     });
   }
+
+  testWidgets('read every 5 s while the window shows, never while hidden; '
+      'a reading that shows the same draws nothing', (tester) async {
+    const mb = 1 << 20;
+    var daemonBytes = 24 * mb;
+    final fake = FakeDaemon([])
+      ..answer = (input) => switch (input) {
+        GetMemoryRequest() => GetMemoryResponse(daemon: Int64(daemonBytes)),
+        _ => null,
+      };
+    final d = await fake.connect(tester);
+    await tester.pumpWidget(themed(StatusBar(d)));
+    await tester.pump();
+    int reads() => fake.calls.whereType<GetMemoryRequest>().length;
+    expect(reads(), 1);
+    expect(find.text('24 MB'), findsOne);
+
+    // A few bytes more: the same "24 MB", no frame.
+    var frames = 0;
+    var counting = true;
+    tester.binding.addPersistentFrameCallback((_) {
+      if (counting) frames++;
+    });
+    daemonBytes += 1000;
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+    counting = false;
+    expect(reads(), 2);
+    expect(frames, 0);
+
+    daemonBytes = 30 * mb;
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+    expect(reads(), 3);
+    expect(find.text('30 MB'), findsOne);
+
+    d.macView.window = false;
+    await tester.pump(const Duration(seconds: 15));
+    expect(reads(), 3);
+    d.macView.window = true;
+    await tester.pump(const Duration(seconds: 5));
+    expect(reads(), 4);
+
+    await closeView(tester, d);
+  });
 }
