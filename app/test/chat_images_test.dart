@@ -18,6 +18,7 @@ import 'package:nushi/chat_images.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/image_ref.dart';
 import 'package:nushi/images.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
