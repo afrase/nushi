@@ -19,6 +19,8 @@ The owner: "Any swift code should be hidden behind interfaces. We should not be 
 
 **Note (ADR [0101](0101-the-daemon-runs-on-linux.md), 2026-11-08):** the daemon runs on Linux: each stand-in above has a `foo_linux.go`, and `foo_other.go` is `//go:build !darwin && !linux`, for the rest. `make lint-linux` also runs golangci-lint for Linux, and CI runs every Go package's tests there. lsof, `/usr/bin/trash` and BSD `script` have Linux counterparts (`/proc`'s fd links, `gio trash`, util-linux's `script -c`). The app's side is as above.
 
+**Note (ADR [0102](0102-the-app-runs-on-linux.md), 2026-11-08):** the app runs on Linux: each capability has a `<capability>_linux.dart` beside its `_macos.dart`, and `native_linux.dart`'s `linuxNative()` is Linux's set, which `main.dart` picks with `Platform.isLinux`. `tools/native-edge` takes either suffix for channels, platform messages and FFI, `webview_flutter_wkwebview` only in `_macos.dart` files and `dbus` only in `_linux.dart` ones; a platform's file names only its own platform's files, and `main.dart` both sets. The Mac's packaging stays as above until Linux's way of finding and starting the daemon replaces it.
+
 ## Alternatives considered
 - Constructor injection through the widget tree: each capability is used in a few deep views; threading it through every widget between was a larger change for nothing a top-level doesn't give.
 - A service locator package: more than a class with fields, and a new dependency.
