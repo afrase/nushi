@@ -4,13 +4,14 @@
 # maths (swiftc); the web app's end-to-end test
 # (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
 # rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
-# protos' and Dart's lint, the Dart packages' tests, the packages that also run elsewhere (the relay, the Noise
-# channel), and the daemon's Linux build. The ACP library, github.com/afrase/acp-go, has its own CI. Actions are
-# pinned by commit.
+# protos' and Dart's lint, the Dart packages' tests, and the daemon on Linux (ADR 0101): every Go package's tests,
+# lint, build and vet without cgo. The ACP library, github.com/afrase/acp-go, has its own CI. Actions are pinned by
+# commit.
 #
 # Each job's timeout is two to three times its longest recent run with warm caches (2026-10-29: Go 4.4 minutes, the
 # app's shards 6.2, the web 7.1, Linux's 2 at most), room for a cold cache's downloads and builds: a hung test ends
-# there, not at GitHub's six hours on a scarce macOS runner.
+# there, not at GitHub's six hours on a scarce macOS runner. Linux's Go job runs every package's tests from 2026-11-08
+# (a minute in an x86 VM with the build cached, unmeasured on CI yet): 25 until it has run there.
 name: CI
 
 on:
@@ -217,23 +218,43 @@ jobs:
   linux:
     name: Go packages (Linux)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
+    # As on the Mac: the tests in a new order each run.
+    env:
+      GOTESTFLAGS: -shuffle=on
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref }}
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - id: go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            tools/lint/go.sum
+      # golangci-lint as built, as in the macOS job (make lint-linux runs it for Linux).
+      - id: lint-tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: bin/golangci-lint
+          key: lint-tools-${{ runner.os }}-${{ runner.arch }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('tools/lint/go.mod', 'tools/lint/go.sum') }}
+      - if: steps.lint-tools.outputs.cache-hit == 'true'
+        run: touch bin/golangci-lint
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: golangci-lint-${{ runner.os }}-${{ hashFiles('tools/lint/go.sum', '.golangci.yml') }}-${{ github.sha }}
+          restore-keys: golangci-lint-${{ runner.os }}-${{ hashFiles('tools/lint/go.sum', '.golangci.yml') }}-
       # npm's install runs under bubblewrap on Linux (internal/npm's tests run it); Ubuntu's AppArmor denies it
       # unprivileged user namespaces unless that rule is off.
       - run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends bubblewrap
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
-      - run: go test -race -shuffle=on ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
-      # Everything builds and vets for Linux without cgo: macOS-only code stays in _darwin.go files (ADR 0097).
+      - run: make test-go
+      # Everything builds, vets and lints for Linux without cgo: macOS-only code stays in _darwin.go files (ADR 0097).
       - if: ${{ !cancelled() }}
         run: make lint-linux
       # go.mod and go.sum name what the code imports, no more and no less.

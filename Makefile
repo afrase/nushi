@@ -174,12 +174,15 @@ lint-go: $(GOLANGCI) $(GOVULNCHECK)
 	$(GOVULNCHECK) ./...
 	GOWORK=off $(GOVULNCHECK) -C tools/lint github.com/golangci/golangci-lint/v2/cmd/golangci-lint golang.org/x/vuln/cmd/govulncheck
 
-# The daemon and the tools built and vetted for Linux without cgo, so
-# macOS-only code (cgo, sysctl, the Mac's commands) outside a _darwin.go
-# file fails here (ADR 0097): anywhere. Nothing more runs on Linux yet.
-lint-linux:
+# The daemon and the tools built, vetted and linted for Linux without
+# cgo, so macOS-only code (cgo, sysctl, the Mac's commands) outside a
+# _darwin.go file fails here (ADR 0097), and the _linux.go files, which
+# lint-go never sees, are linted: anywhere. On Linux, make test-go runs the
+# daemon's tests (ADR 0101).
+lint-linux: $(GOLANGCI)
 	GOOS=linux CGO_ENABLED=0 go build ./...
 	GOOS=linux CGO_ENABLED=0 go vet ./...
+	GOOS=linux CGO_ENABLED=0 $(GOLANGCI) run ./...
 
 # The protos' and Dart's, and the native code of the app and its Dart
 # packages only in *_macos.dart files (tools/native-edge, ADR 0097):
