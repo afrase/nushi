@@ -38,7 +38,7 @@ func TestOpen(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	write(me, map[string]any{"sessionId": "cli", "kind": "interactive", "entrypoint": "cli", "procStart": stamp(start), "pidDomain": "darwin"})
+	write(me, map[string]any{"sessionId": "cli", "kind": "interactive", "entrypoint": "cli", "procStart": stamp(start), "pidDomain": domain()})
 	write(dead.Process.Pid, map[string]any{"sessionId": "dead", "kind": "interactive", "updatedAt": time.Now().UnixMilli()})
 	write(sleeper.Process.Pid, map[string]any{"sessionId": "reused", "kind": "interactive", "procStart": stamp(start.Add(-time.Hour))})
 	write(1, map[string]any{"sessionId": "sdk", "kind": "interactive", "entrypoint": "sdk-cli", "updatedAt": time.Now().UnixMilli()})
@@ -51,5 +51,14 @@ func TestOpen(t *testing.T) {
 	write(1, map[string]any{"sessionId": "stale", "updatedAt": time.Now().Add(-25 * time.Hour).UnixMilli()})
 	if got := open(dir, started); got["stale"] != "" {
 		t.Errorf("a day-old record without a start time counted: %v", got)
+	}
+	for _, d := range []string{"darwin:0123456789abcdef:pid:[4026531836]", "darwin:other-host", "darwin", "linux"} {
+		if d == domain() {
+			continue
+		}
+		write(1, map[string]any{"sessionId": "elsewhere", "entrypoint": "cli", "pidDomain": d, "updatedAt": time.Now().UnixMilli()})
+		if got := open(dir, started); got["elsewhere"] != "" {
+			t.Errorf("a record of another pid domain (%q) counted: %v", d, got)
+		}
 	}
 }

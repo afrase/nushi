@@ -21,7 +21,8 @@ import (
 // process's start time). A record counts by the rules claude-agent-acp's
 // session list had: the process is alive, and started when the record
 // says, so a pid used again doesn't count; a record without a start time
-// counts for a day.
+// counts for a day. A record whose pidDomain isn't this host's (a pid of
+// another machine or pid namespace, docs/facts/claude.md) doesn't count.
 func (Local) OpenElsewhere(_ []string) map[string]string {
 	if _, err := os.UserHomeDir(); err != nil {
 		return nil
@@ -33,6 +34,7 @@ var record = regexp.MustCompile(`^(\d+)\.json$`)
 
 func open(dir string, startedAt func(pid int) (time.Time, bool)) map[string]string {
 	names, _ := os.ReadDir(dir)
+	here := domain()
 	out := map[string]string{}
 	for _, n := range names {
 		m := record.FindStringSubmatch(n.Name())
@@ -51,7 +53,7 @@ func open(dir string, startedAt func(pid int) (time.Time, bool)) map[string]stri
 			StatusTime int64  `json:"statusUpdatedAt"`
 		}
 		b, err := os.ReadFile(filepath.Join(dir, n.Name()))
-		if err != nil || json.Unmarshal(b, &r) != nil || r.Pid != pid || r.SessionID == "" || r.Domain != "" && r.Domain != "darwin" || !alive(pid) {
+		if err != nil || json.Unmarshal(b, &r) != nil || r.Pid != pid || r.SessionID == "" || r.Domain != "" && r.Domain != here || !alive(pid) {
 			continue
 		}
 		start, known := startedAt(pid)

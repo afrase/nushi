@@ -15,3 +15,7 @@ func started(pid int) (time.Time, bool) {
 	t := p.Proc.P_starttime
 	return time.Unix(t.Sec, int64(t.Usec)*1000), true
 }
+
+// domain is the pidDomain Claude Code writes on macOS
+// (docs/facts/claude.md).
+func domain() string { return "darwin" }
