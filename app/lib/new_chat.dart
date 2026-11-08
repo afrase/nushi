@@ -11,13 +11,14 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/issue_picker.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/new_chat_issue.dart';
 import 'package:nushi/open_session.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘N: a new chat, as the sidebar's button starts one.
-const newChatKey = SingleActivator(LogicalKeyboardKey.keyN, meta: true);
+const newChatKey = Cmd(LogicalKeyboardKey.keyN);
 
 /// Asks which agent a new chat in [folder] ('' for none) runs, then
 /// starts it there; or, a step further, opens one of the agent's sessions

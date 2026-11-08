@@ -13,6 +13,7 @@ import 'package:nushi/files_pane.dart';
 import 'package:nushi/folder_tree.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/pickers.dart' show ConfigNames;

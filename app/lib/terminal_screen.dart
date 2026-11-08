@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' as pb;
+import 'package:nushi/keys.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/terminal_find.dart';
 import 'package:nushi/terminal_panel.dart';
@@ -34,8 +35,7 @@ class TerminalScreen extends StatelessWidget {
 
   /// The keys the panel keeps for itself; the rest go to the shell.
   Map<ShortcutActivator, Intent> _keys(BuildContext context, TermSession s) {
-    SingleActivator cmd(LogicalKeyboardKey key) =>
-        SingleActivator(key, meta: true);
+    Cmd cmd(LogicalKeyboardKey key) => Cmd(key);
     return {
       // The app's actions' keys (⌘N, ⌘,, ⌃⌘1–3…) and ⌘⇧P, the palette,
       // passed on; ⌘K clears here, as in Terminal, ⌘F finds here and ⌘W
@@ -60,8 +60,9 @@ class TerminalScreen extends StatelessWidget {
       // ⌥⌘1–9 a terminal; ⌘1–9, ⌘[ and ⌘] switch chats, ⌃Tab and ⌃⇧Tab
       // the chat's tabs, as elsewhere.
       for (var i = 0; i < 9 && i < list.length; i++)
-        SingleActivator(LogicalKeyboardKey(0x31 + i), meta: true, alt: true):
-            VoidCallbackIntent(() => terms.show(info.chatId, list[i].id)),
+        altDigitKey(i + 1): VoidCallbackIntent(
+          () => terms.show(info.chatId, list[i].id),
+        ),
       ...chatKeys,
     };
   }

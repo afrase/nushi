@@ -7,12 +7,13 @@ import 'package:nushi/chat_files.dart';
 import 'package:nushi/completions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘P: Open file… in the chat shown.
-const openFileKey = SingleActivator(LogicalKeyboardKey.keyP, meta: true);
+const openFileKey = Cmd(LogicalKeyboardKey.keyP);
 
 /// Opens a file of the chat shown in its preview, picked in a small box
 /// that matches as you type ([OpenFileBox]); nothing when no chat shows.

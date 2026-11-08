@@ -130,10 +130,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(window.calls, isEmpty);
 
-    await tester.tap(find.byTooltip(r'Hide the sidebar (⌘\)'));
+    await tester.tap(find.byTooltip(r'Hide the sidebar (Ctrl+\)'));
     await tester.pumpAndSettle();
     expect(sidebarHidden.value, isTrue);
-    expect(tester.getRect(find.byTooltip(r'Show the sidebar (⌘\)')).left, 8);
+    expect(
+      tester.getRect(find.byTooltip(r'Show the sidebar (Ctrl+\)')).left,
+      8,
+    );
 
     d.openSettings();
     await tester.pumpAndSettle();
@@ -208,7 +211,7 @@ void main() {
             expect(find.byType(PlatformMenuBar), findsNothing);
             if (hidden && name != 'settings') {
               final show = tester.getRect(
-                find.byTooltip(r'Show the sidebar (⌘\)'),
+                find.byTooltip(r'Show the sidebar (Ctrl+\)'),
               );
               expect(show.left, lightsInset);
               expect(show.top, greaterThanOrEqualTo(0));

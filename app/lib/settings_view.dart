@@ -10,6 +10,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_settings.dart';
 import 'package:nushi/history_section.dart';
 import 'package:nushi/jira_settings.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/logs_section.dart';
 import 'package:nushi/mcp.dart';
 import 'package:nushi/panes.dart';
@@ -23,7 +24,7 @@ import 'package:nushi/skills.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-const settingsKey = SingleActivator(LogicalKeyboardKey.comma, meta: true);
+const settingsKey = Cmd(LogicalKeyboardKey.comma);
 
 /// Settings, open over the window (ADR 0087; ⌘,, Esc or Close shut it): a
 /// nav of sections and the picked one's page. The daemon's settings are

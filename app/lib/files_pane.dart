@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/file_filter.dart';
 import 'package:nushi/folder_tree.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';

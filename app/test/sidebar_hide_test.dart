@@ -7,6 +7,7 @@ import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/daemon_banner.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/panes.dart';
@@ -433,15 +434,19 @@ void main() {
     test(r'⌘\ is its own key: no action’s or the chats’ but this', () {
       expect(Act.sidebar.shortcut, r'⌘\');
       expect(Act.sidebar.key, sidebarKey);
-      bool same(SingleActivator a) =>
-          a.trigger == sidebarKey.trigger &&
-          a.meta == sidebarKey.meta &&
-          a.control == sidebarKey.control &&
-          a.alt == sidebarKey.alt &&
-          a.shift == sidebarKey.shift;
+      final key = sidebarKey.single;
+      bool same(ShortcutActivator k) {
+        final a = k is Cmd ? k.single : k as SingleActivator;
+        return a.trigger == key.trigger &&
+            a.meta == key.meta &&
+            a.control == key.control &&
+            a.alt == key.alt &&
+            a.shift == key.shift;
+      }
+
       final all = [
-        ...actKeys.keys.whereType<SingleActivator>(),
-        ...chatKeys.keys.whereType<SingleActivator>(),
+        ...actKeys.keys,
+        ...chatKeys.keys,
         paletteKey,
         paletteKeyToo,
       ];

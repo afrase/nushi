@@ -5,11 +5,13 @@ import 'package:flutter/widgets.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/sidebar_view.dart';
 
 // Switching chats by keyboard, as Claude Code does: ⌘ held alone numbers
 // the sidebar's chats, ⌘1–⌘9 opens one, ⌘[ and ⌘] go to the one before
-// and after. And the chat's tabs: ⌃Tab and ⌃⇧Tab go through them.
+// and after. And the chat's tabs: ⌃Tab and ⌃⇧Tab go through them. On
+// Linux, Control in ⌘'s place (`keys.dart`).
 
 /// The chats as the sidebar shows them, top to bottom, Pinned first, then
 /// the sections and the groups, the archived (in their collapsed group)
@@ -63,17 +65,31 @@ class StepChatIntent extends Intent {
   final int step;
 }
 
-/// ⌘[n] (1–9) opens the [n]th chat.
-SingleActivator chatNumberKey(int n) =>
-    SingleActivator(LogicalKeyboardKey(0x30 + n), meta: true);
+/// ⌘[n] (1–9) opens the [n]th chat: the same value each time, so a
+/// terminal finds it among the keys it passes on.
+Cmd chatNumberKey(int n) => _chatNumberKeys[n - 1];
 
-const previousChatKey = SingleActivator(
+const _chatNumberKeys = [
+  Cmd(LogicalKeyboardKey.digit1),
+  Cmd(LogicalKeyboardKey.digit2),
+  Cmd(LogicalKeyboardKey.digit3),
+  Cmd(LogicalKeyboardKey.digit4),
+  Cmd(LogicalKeyboardKey.digit5),
+  Cmd(LogicalKeyboardKey.digit6),
+  Cmd(LogicalKeyboardKey.digit7),
+  Cmd(LogicalKeyboardKey.digit8),
+  Cmd(LogicalKeyboardKey.digit9),
+];
+
+/// ⌘[ and ⌘]; on Linux Ctrl+Page Up and Ctrl+Page Down, as a browser's
+/// tabs, since Control and `[` is Escape.
+const previousChatKey = Cmd(
   LogicalKeyboardKey.bracketLeft,
-  meta: true,
+  linux: SingleActivator(LogicalKeyboardKey.pageUp, control: true),
 );
-const nextChatKey = SingleActivator(
+const nextChatKey = Cmd(
   LogicalKeyboardKey.bracketRight,
-  meta: true,
+  linux: SingleActivator(LogicalKeyboardKey.pageDown, control: true),
 );
 
 /// Shows the tab [step] places on (⌃Tab is 1, ⌃⇧Tab -1) in the chat shown.
@@ -91,28 +107,28 @@ const previousTabKey = SingleActivator(
 );
 
 /// ⌃⌘1–⌃⌘3 show Chat, Changes and Pull request (⌘⇧3 is macOS's
-/// screenshot, so not ⌘⇧).
-const chatTabKey = SingleActivator(
+/// screenshot, so not ⌘⇧); on Linux Ctrl+Alt+1–3.
+const chatTabKey = Cmd(
   LogicalKeyboardKey.digit1,
-  control: true,
-  meta: true,
+  ctrl: true,
+  linux: SingleActivator(LogicalKeyboardKey.digit1, control: true, alt: true),
 );
-const changesTabKey = SingleActivator(
+const changesTabKey = Cmd(
   LogicalKeyboardKey.digit2,
-  control: true,
-  meta: true,
+  ctrl: true,
+  linux: SingleActivator(LogicalKeyboardKey.digit2, control: true, alt: true),
 );
-const pullTabKey = SingleActivator(
+const pullTabKey = Cmd(
   LogicalKeyboardKey.digit3,
-  control: true,
-  meta: true,
+  ctrl: true,
+  linux: SingleActivator(LogicalKeyboardKey.digit3, control: true, alt: true),
 );
 
 /// ⌘W: closes the preview tab showing, and with the last the pane. A focused
 /// terminal keeps it, to close itself.
-const closeTabKey = SingleActivator(LogicalKeyboardKey.keyW, meta: true);
+const closeTabKey = Cmd(LogicalKeyboardKey.keyW);
 
-SingleActivator tabKey(ChatTab tab) => switch (tab) {
+Cmd tabKey(ChatTab tab) => switch (tab) {
   .chat => chatTabKey,
   .changes => changesTabKey,
   .pull => pullTabKey,

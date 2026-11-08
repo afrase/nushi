@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/conventions.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -12,11 +13,7 @@ const plusTooltip = 'Add files, mention a file, or run a command';
 
 /// ⌘U: Add files or photos, from the box, with the menu shut; once a
 /// press, not again as the key repeats.
-const attachKey = SingleActivator(
-  LogicalKeyboardKey.keyU,
-  meta: true,
-  includeRepeats: false,
-);
+const attachKey = Cmd(LogicalKeyboardKey.keyU, includeRepeats: false);
 
 /// The composer's + at the box's left and its menu, in the form of Claude's
 /// app: Add files or photos (⌘U), Mention a file, Slash commands, each row a

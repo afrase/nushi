@@ -7,6 +7,7 @@ import 'package:nushi/composer.dart';
 import 'package:nushi/composer_parts.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/fork_chat.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/status.dart';
 import 'package:nushi/theme/theme.dart';

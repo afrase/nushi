@@ -11,6 +11,7 @@ import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_sources.dart';
 import 'package:nushi/jira_tasks.dart';
 import 'package:nushi/jira_view_parts.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -18,7 +19,7 @@ import 'package:nushi/token_notices.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘J shows Jira in place of the chat, and back.
-const jiraKey = SingleActivator(LogicalKeyboardKey.keyJ, meta: true);
+const jiraKey = Cmd(LogicalKeyboardKey.keyJ);
 
 /// How often the open list is asked for again while the view shows.
 const jiraPoll = Duration(minutes: 1);
@@ -464,17 +465,12 @@ class _JiraViewState extends State<JiraView> {
     ];
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
+        const Cmd(LogicalKeyboardKey.keyR): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             details != null ? _back() : widget.daemon.back(),
-        // ⌥⌘: ⌘1–9 switch chats.
+        // ⌥⌘ (Alt on Linux): ⌘1–9 switch chats.
         for (var i = 0; i < lists.length && i < 9; i++)
-          SingleActivator(
-            LogicalKeyboardKey(0x31 + i),
-            meta: true,
-            alt: true,
-          ): () =>
-              _pickList(lists[i]),
+          altDigitKey(i + 1): () => _pickList(lists[i]),
       },
       child: Focus(
         focusNode: _viewFocus,

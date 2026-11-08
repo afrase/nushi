@@ -18,6 +18,7 @@ import 'package:nushi/folder_tree.dart';
 import 'package:nushi/fork_chat.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/open_file.dart';
@@ -49,41 +50,37 @@ enum ActMenu { nushi, file, view, chat }
 
 /// ⌘F: find in the chat's transcript, or its changed files. A focused
 /// terminal keeps it for its own find.
-const findKey = SingleActivator(LogicalKeyboardKey.keyF, meta: true);
+const findKey = Cmd(LogicalKeyboardKey.keyF);
 
 /// ⇧⌘B: a side chat (Claude Code's /btw, "by the way").
-const sideChatKey = SingleActivator(
-  LogicalKeyboardKey.keyB,
-  meta: true,
-  shift: true,
-);
+const sideChatKey = Cmd(LogicalKeyboardKey.keyB, shift: true);
 
 /// ⌘D: pin the chat, or unpin it (Arc's key for pinning a tab).
-const pinKey = SingleActivator(LogicalKeyboardKey.keyD, meta: true);
+const pinKey = Cmd(LogicalKeyboardKey.keyD);
 
 /// ⌘\: hide the sidebar, or show it.
-const sidebarKey = SingleActivator(LogicalKeyboardKey.backslash, meta: true);
+const sidebarKey = Cmd(LogicalKeyboardKey.backslash);
 
-/// ⌘;: the next flagged word in the composer.
-const nextTypoKey = SingleActivator(LogicalKeyboardKey.semicolon, meta: true);
+/// ⌘;: the next flagged word in the composer, as macOS's Check Spelling.
+/// On Linux F7, LibreOffice's spelling key: IBus takes Ctrl+; for its emoji.
+const nextTypoKey = Cmd(
+  LogicalKeyboardKey.semicolon,
+  linux: SingleActivator(LogicalKeyboardKey.f7),
+);
 
 /// ⇧⌘E: the Files pane (VS Code's key for its Explorer).
-const filesKey = SingleActivator(
-  LogicalKeyboardKey.keyE,
-  meta: true,
-  shift: true,
-);
+const filesKey = Cmd(LogicalKeyboardKey.keyE, shift: true);
 
 /// ⌘S: the preview's file, edited (ADR 0096). The editor leaves it to
 /// the app.
-const saveKey = SingleActivator(LogicalKeyboardKey.keyS, meta: true);
+const saveKey = Cmd(LogicalKeyboardKey.keyS);
 
 /// ⌘L: the browser tab's address field (Safari's Open Location).
-const addressKey = SingleActivator(LogicalKeyboardKey.keyL, meta: true);
+const addressKey = Cmd(LogicalKeyboardKey.keyL);
 
 /// ⌘R: the browser tab's page again. Jira and GitHub keep ⌘R for their own
 /// reload: their views bind it, under the app's keys.
-const reloadPageKey = SingleActivator(LogicalKeyboardKey.keyR, meta: true);
+const reloadPageKey = Cmd(LogicalKeyboardKey.keyR);
 
 /// An action of the app, in the palette's order with an empty query.
 enum Act {
@@ -134,7 +131,7 @@ enum Act {
   new({this.key, this.keyText, this.menu, this.menuLabel});
 
   /// The key the app binds to it, wherever the focus is.
-  final SingleActivator? key;
+  final MenuSerializableShortcut? key;
   final String? keyText; // shown, not bound: another widget has the key
   final ActMenu? menu;
   final String? menuLabel;
@@ -183,12 +180,8 @@ class OpenPaletteIntent extends Intent {
 
 /// ⌘K opens the palette, and ⌘⇧P, which a terminal (where ⌘K clears)
 /// passes on too.
-const paletteKey = SingleActivator(LogicalKeyboardKey.keyK, meta: true);
-const paletteKeyToo = SingleActivator(
-  LogicalKeyboardKey.keyP,
-  meta: true,
-  shift: true,
-);
+const paletteKey = Cmd(LogicalKeyboardKey.keyK);
+const paletteKeyToo = Cmd(LogicalKeyboardKey.keyP, shift: true);
 
 /// The keys of the actions that have one, as the intents that run them.
 final Map<ShortcutActivator, Intent> actKeys = {
@@ -547,12 +540,4 @@ void runAct(BuildContext context, Daemon d, Act act) {
   if (act != Act.settings && act != Act.appearance) d.closeSettings();
   final a = appActions(context, d).firstWhere((a) => a.act == act);
   if (a.enabled) a.run();
-}
-
-/// A key as macOS's menus write it: ⌃⌥⇧⌘ and then the key.
-String keyLabel(SingleActivator a) {
-  final k = a.trigger;
-  final name = k == LogicalKeyboardKey.tab ? '⇥' : k.keyLabel.toUpperCase();
-  return '${a.control ? '⌃' : ''}${a.alt ? '⌥' : ''}'
-      '${a.shift ? '⇧' : ''}${a.meta ? '⌘' : ''}$name';
 }

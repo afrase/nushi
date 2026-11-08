@@ -12,13 +12,14 @@ import 'package:nushi/github_inbox.dart';
 import 'package:nushi/github_issue.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_pull.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/token_notices.dart';
 import 'package:nushi/widgets.dart';
 
 /// ⌘G shows GitHub in place of the chat, and back.
-const githubKey = SingleActivator(LogicalKeyboardKey.keyG, meta: true);
+const githubKey = Cmd(LogicalKeyboardKey.keyG);
 
 /// How often the inbox is asked for again while the view shows (a quiet
 /// ask: the daemon holds it back while a rate limit runs low).
@@ -394,7 +395,7 @@ class _GitHubViewState extends State<GitHubView> {
     final details = _details;
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyR, meta: true): _load,
+        const Cmd(LogicalKeyboardKey.keyR): _load,
         const SingleActivator(LogicalKeyboardKey.escape): () =>
             details != null ? _back() : widget.daemon.back(),
       },

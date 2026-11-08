@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -167,10 +168,7 @@ class _CommitBoxState extends State<CommitBox> {
               ],
             ),
             CallbackShortcuts(
-              bindings: {
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                    _commit,
-              },
+              bindings: {const Cmd(LogicalKeyboardKey.enter): _commit},
               child: TextField(
                 controller: chat.commitMessage,
                 // Room to read a whole message; a window's short side keeps
