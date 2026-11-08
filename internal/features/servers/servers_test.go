@@ -97,7 +97,11 @@ func setup(t *testing.T, configurations ...string) (*Service, *fakeChats, string
 	return s, chats, folder
 }
 
-// freePort is a port nothing listens on now, nor on the next few.
+// freePort is a port nothing listens on now, nor on the next few, and
+// each of those next few binds as the fake server binds it. A dial alone
+// misses a port another connection's end holds (in use or in TIME_WAIT,
+// which a port from the ephemeral range may be), where Linux refuses the
+// fake server's bind.
 func freePort(t *testing.T) int {
 	t.Helper()
 	for range 50 {
@@ -105,12 +109,27 @@ func freePort(t *testing.T) int {
 		testcheck.NoErr(t, err)
 		p := ln.Addr().(*net.TCPAddr).Port
 		_ = ln.Close()
-		if p+5 < 65535 && !taken(t.Context(), p+1) && !taken(t.Context(), p+2) && !taken(t.Context(), p+3) {
+		if p+5 < 65535 && free(t, p+1) && free(t, p+2) && free(t, p+3) {
 			return p
 		}
 	}
 	t.Fatal("no free port")
 	return 0
+}
+
+// free says whether nothing takes connections on localhost's port p and
+// the fake server could listen there.
+func free(t *testing.T, p int) bool {
+	t.Helper()
+	if taken(t.Context(), p) {
+		return false
+	}
+	ln, err := net.Listen("tcp", "localhost:"+strconv.Itoa(p))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close()
+	return true
 }
 
 // entry is a configuration running the fake server with args on port.
@@ -142,7 +161,7 @@ func row(t *testing.T, s *Service, name string, state State) Row {
 		return r.State == state
 	})
 	if !ok {
-		t.Fatalf("%s is %s (%s), want %s", name, r.State, r.Error, state)
+		t.Fatalf("%s is %s (%s), want %s; its output: %q", name, r.State, r.Error, state, r.Output)
 	}
 	return r
 }
