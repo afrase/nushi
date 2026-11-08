@@ -151,9 +151,7 @@ class Thumbnails extends StatelessWidget {
                 ImageRef(refs.images, refs.chatId, img, size: size)
               else
                 ClickableImage(
-                  image: _provider[img] ??= MemoryImage(
-                    Uint8List.fromList(img.data),
-                  ),
+                  image: _provider[img] ??= MemoryImage(bytesOf(img.data)),
                   size: size,
                   border: t.borderSubtle,
                 ),

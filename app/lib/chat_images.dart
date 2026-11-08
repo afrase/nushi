@@ -19,12 +19,17 @@ bool isImageRef(ImageData image) =>
 /// daemon's `refAbove`, ADR 0099): smaller ones always come inline.
 const int refAbove = 64 << 10;
 
+/// [data] as a [Uint8List] without copying it when it is one already, as
+/// protobuf's bytes are: a screenshot isn't held twice.
+Uint8List bytesOf(List<int> data) =>
+    data is Uint8List ? data : Uint8List.fromList(data);
+
 /// The lowercase hex SHA-256 of [bytes], as the daemon names an image that
 /// came as a reference. Hashed a slice at a time, letting frames through
 /// between them: a screenshot takes a while in the phone's browser.
 Future<String> imageHash(List<int> bytes) async {
   const slice = 256 << 10;
-  final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+  final data = bytesOf(bytes);
   final digest = _Digest();
   final hash = sha256.startChunkedConversion(digest);
   for (var at = 0; at < data.length; at += slice) {

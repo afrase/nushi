@@ -144,7 +144,7 @@ class Daemon extends ChangeNotifier {
     final got = await client.getChatImage(
       GetChatImageRequest(chatId: chatId, sha256: sha256),
     );
-    return Uint8List.fromList(got.data);
+    return bytesOf(got.data);
   });
   bool connected = false;
 

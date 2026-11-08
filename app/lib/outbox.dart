@@ -118,7 +118,7 @@ class Outbox {
     for (final (i, ref) in shown.indexed) {
       final data = sent[i].data;
       if (isImageRef(ref) && data.length == ref.size.toInt()) {
-        keep.put(ref.sha256, _bytes(data));
+        keep.put(ref.sha256, bytesOf(data));
       }
     }
   }
@@ -139,9 +139,9 @@ class Outbox {
           if (i.data.length <= refAbove) continue; // it comes inline
           final hash = await imageHash(i.data);
           if (_echoed.contains(hash)) {
-            keep.put(hash, _bytes(i.data)); // it ran: kept as any other
+            keep.put(hash, bytesOf(i.data)); // it ran: kept as any other
           } else {
-            keep.hold(hash, _bytes(i.data));
+            keep.hold(hash, bytesOf(i.data));
           }
         }
       } finally {
@@ -164,9 +164,6 @@ class Outbox {
       }
     });
   }
-
-  static Uint8List _bytes(List<int> data) =>
-      data is Uint8List ? data : Uint8List.fromList(data);
 
   /// Sent messages the daemon has without an echo (they went into the
   /// queue, say) go.

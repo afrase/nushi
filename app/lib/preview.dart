@@ -5,6 +5,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/chat_images.dart' show bytesOf;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart' show diskSize;
@@ -401,7 +402,7 @@ class PreviewBody extends StatelessWidget {
             padding: padding,
             child: Center(
               child: Image.memory(
-                Uint8List.fromList(f.data),
+                bytesOf(f.data),
                 gaplessPlayback: true,
                 errorBuilder: (_, _, _) => Text(
                   'Not an image Nushi can show.',
@@ -519,10 +520,7 @@ class _ChatImageState extends State<_ChatImage> {
         return Text('[image: ${widget.alt}]', style: muted);
       }
       if (f == null) return const SizedBox(height: 24);
-      return ClickableImage(
-        image: MemoryImage(Uint8List.fromList(f.data)),
-        size: 480,
-      );
+      return ClickableImage(image: MemoryImage(bytesOf(f.data)), size: 480);
     },
   );
 }

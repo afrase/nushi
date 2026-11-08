@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:nushi/chat_images.dart' show bytesOf;
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
@@ -74,10 +74,7 @@ class AttachmentImage extends StatelessWidget {
     future: _fetch(client, site, id, thumbnail: false),
     builder: (context, r) => switch (r) {
       AsyncSnapshot(:final data?) when data.mimeType.startsWith('image/') =>
-        ClickableImage(
-          image: MemoryImage(Uint8List.fromList(data.data)),
-          size: size,
-        ),
+        ClickableImage(image: MemoryImage(bytesOf(data.data)), size: size),
       AsyncSnapshot(hasError: true) => const Icon(Icons.broken_image, size: 16),
       AsyncSnapshot(:final data?) => Text('[${data.mimeType}]'),
       _ => SizedBox(height: size / 4, width: size / 4),
