@@ -178,6 +178,63 @@ void main() {
       expect(find.textContaining(r'$ mcp'), findsNothing);
       await closeView(tester, d);
     }, variant: macOnly);
+
+    test('its output is as written, out of a failure’s fence', () {
+      expect(serverOutput('web (running)\n# a'), 'web (running)\n# a');
+      expect(serverOutput('```\nweb failed\n```'), 'web failed');
+      expect(serverOutput('````\na ``` b\n````\n'), 'a ``` b');
+      expect(serverOutput('```\na\n```\nafter'), '```\na\n```\nafter');
+    });
+
+    for (final width in [1700.0, 720.0]) {
+      testWidgets('opens to its output as written, line by line, not Markdown, '
+          'at $width', (tester) async {
+        const logs =
+            'web (running), its last 100 lines at most:\n'
+            '9:41:02 AM [vite] page reload src/App.tsx\n'
+            'GET /__init__.py 404\n'
+            '# not a heading\n'
+            '- not a list';
+        final (_, d) = await _app(
+          tester,
+          size: Size(width, 900),
+          items: [
+            _call('c', 'preview_logs', {'name': 'web'}, text: logs),
+            _say('m', 'Then it failed.'),
+            _call(
+              'f',
+              'preview_start',
+              {'name': 'web'},
+              status: 'failed',
+              text:
+                  '```\nweb failed: it ended (exit code 1)\n\n'
+                  'Its last lines:\n**boom**\n```',
+            ),
+          ],
+        );
+        await tester.tap(find.textContaining('Read the logs of web'));
+        await tester.tap(find.textContaining('Start web'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(logs),
+          findsOneWidget,
+          reason: 'one text, its lines kept',
+        );
+        expect(
+          find.text(
+            'web failed: it ended (exit code 1)\n\nIts last lines:\n**boom**',
+          ),
+          findsOneWidget,
+          reason: 'out of its fence, its stars as written',
+        );
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'server-tool-output-$width',
+        );
+        await closeView(tester, d);
+      }, variant: macOnly);
+    }
   });
 
   group('show of a page', () {

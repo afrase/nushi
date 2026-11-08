@@ -384,6 +384,8 @@ class ToolCallView extends StatelessWidget {
                     if (input) ToolSection('Input', RawText(it.input)),
                     if (output && input)
                       ToolSection('Output', AgentMarkdown(it.text))
+                    else if (output && serverTool(it) != null)
+                      RawText(serverOutput(it.text), folded: 12)
                     else if (output)
                       AgentMarkdown(it.text)
                     else if (showsRawOutput(it))

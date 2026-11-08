@@ -93,6 +93,16 @@ String? serverVerb(Item it) => switch (serverVerbs[serverTool(it)]) {
   },
 };
 
+/// A dev server tool's result to show as written, never as Markdown (a
+/// server's lines would run together, `__init__` turn bold): its text, or
+/// what's inside the fence claude-acp-go puts around a failure's.
+String serverOutput(String text) {
+  final whole = _wholeFence.firstMatch(text.trim());
+  return whole == null ? text : whole[2]!;
+}
+
+final _wholeFence = RegExp(r'^(`{3,})[^`\n]*\n([\s\S]*?)\n\1$');
+
 /// The entry a call to a dev server tool names: its `name`.
 String? serverName(Item it) =>
     serverTool(it) == null ? null : _argument(it, 'name');
