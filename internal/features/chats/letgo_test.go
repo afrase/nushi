@@ -246,8 +246,7 @@ func TestUnseenLetsGo(t *testing.T) {
 	}
 }
 
-// After a restart a chat's recent part comes from its copy's heads, not a
-// whole read, and its reopen reads the copy once: the merge with the
+// After a restart a chat's reopen reads its copy once: the merge with the
 // agent's replay takes the items read back (it read the copy twice).
 func TestRestartReadsTheCopyOnce(t *testing.T) {
 	svc, agent, c, copies, _ := lettingGo(t, nil)
@@ -263,10 +262,12 @@ func TestRestartReadsTheCopyOnce(t *testing.T) {
 	svc2 := newService(t, []Kind{{Harness: testHarness{Name: "claude", Title: "Claude"}, Launch: agent.launch}},
 		Options{Sessions: &memSessions{stored: []model.ChatRecord{sess}}, Scratch: t.TempDir(), Copies: counted})
 	t.Cleanup(svc2.Close)
+	// Recent starts the reopen, whose read back may come before Recent's own
+	// look; either way only one whole read happens in all.
 	part, err := svc2.Recent(c.id, 2)
 	testcheck.NoErr(t, err)
-	if describe(part.Chat.Items) != "user:two agent:m2" || part.Older != 2 || counted.reads.Load() != 0 {
-		t.Errorf("recent %s, %d older, %d whole reads", describe(part.Chat.Items), part.Older, counted.reads.Load())
+	if describe(part.Chat.Items) != "user:two agent:m2" || part.Older != 2 {
+		t.Errorf("recent %s, %d older", describe(part.Chat.Items), part.Older)
 	}
 	close(agent.loadGate)
 	c2 := svc2.chats[c.id]
