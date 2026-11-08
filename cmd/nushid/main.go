@@ -79,7 +79,7 @@ func main() {
 	login, err := daemonArgs(os.Args[1:])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2) //nolint:revive // main's own, before anything runs
+		os.Exit(2)
 	}
 	// Until the daemon holds its socket, its lines go to stderr, which the
 	// launcher points at nushid.log.
