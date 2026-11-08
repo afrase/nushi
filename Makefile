@@ -130,7 +130,8 @@ web-fonts: mermaid
 	$(FLUTTER_WEB)
 	go run ./tools/webbuild -lock-fonts app/build/web
 
-# The app icon (Icon Composer, and PNGs for macOS before 26) and the mark.
+# The app icon (Icon Composer, PNGs for macOS before 26, Linux's hicolor
+# icons) and the mark.
 icons:
 	go run ./tools/icongen
 
