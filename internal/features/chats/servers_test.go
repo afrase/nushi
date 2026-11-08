@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -24,13 +25,20 @@ type fakeServers struct {
 	stopped  []string
 	commands map[string]string
 	askedBy  []string
+	answers  []string // each ask's id and whether it was allowed
 }
 
-func (f *fakeServers) Command(chatID, name string) string {
+func (f *fakeServers) Command(chatID, name string) (string, string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.askedBy = append(f.askedBy, chatID)
-	return f.commands[name]
+	return f.commands[name], "ask" + strconv.Itoa(len(f.askedBy))
+}
+
+func (f *fakeServers) Answered(askID string, allowed bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.answers = append(f.answers, askID+" "+strconv.FormatBool(allowed))
 }
 
 func (f *fakeServers) Within(dir string) bool {
@@ -126,5 +134,67 @@ func TestAPreviewStartPromptSaysWhatRuns(t *testing.T) {
 	defer servers.mu.Unlock()
 	if !slices.Equal(servers.askedBy, []string{c.id, c.id, c.id}) {
 		t.Errorf("asked for %q", servers.askedBy)
+	}
+}
+
+// Each preview_start ask's answer reaches the servers before the agent
+// hears it: allowed by an allow option, else refused or cancelled; and
+// the card's name is read with its keys as written (ADR 0100).
+func TestAPreviewStartAnswerReachesTheServers(t *testing.T) {
+	svc, _, c := newChat(t, `{"sessionId":"s1"}`, &memModes{})
+	servers := &fakeServers{commands: map[string]string{"web": "npm run dev"}}
+	svc.UseServers(servers)
+	options := []acp.PermissionOption{{OptionID: "yes", Name: "Yes", Kind: "allow_once"}, {OptionID: "no", Name: "No", Kind: "reject_once"}}
+	asked := func(input, pick string) model.Item {
+		t.Helper()
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			_, _ = c.RequestPermission(ctx, &acp.RequestPermissionRequest{SessionID: "s1", Options: options,
+				ToolCall: acp.ToolCallUpdate{ToolCallID: "x", Title: "mcp__nushi__preview_start", RawInput: json.RawMessage(input)}})
+		}()
+		eventually(t, c, func() bool { return len(c.waiting) == 1 })
+		c.mu.Lock()
+		it := c.items[len(c.items)-1]
+		c.mu.Unlock()
+		if pick == "" {
+			cancel()
+		} else {
+			testcheck.NoErr(t, svc.AnswerPermission(c.id, it.ID, pick))
+		}
+		<-done
+		return it
+	}
+	asked(`{"name":"web"}`, "yes")
+	asked(`{"name":"web"}`, "no")
+	asked(`{"name":"web"}`, "")
+	if it := asked(`{"name":"api","NAME":"web"}`, "no"); it.ServerCommand != "" {
+		t.Errorf("a name in another case was read: %+v", it)
+	}
+	servers.mu.Lock()
+	defer servers.mu.Unlock()
+	if want := []string{"ask1 true", "ask2 false", "ask3 false", "ask4 false"}; !slices.Equal(servers.answers, want) {
+		t.Errorf("answers %q, want %q", servers.answers, want)
+	}
+}
+
+func TestEntryName(t *testing.T) {
+	for input, want := range map[string]string{
+		`{"name":"web"}`:                   "web",
+		`{"arguments":{"name":"web"}}`:     "web",
+		`{"name":"web","arguments":null}`:  "web",
+		`{"name":"web","arguments":{}}`:    "",
+		`{"NAME":"web"}`:                   "",
+		`{"name":"api","Name":"web"}`:      "api",
+		`{"arguments":{"Name":"web"}}`:     "",
+		`{"name":5}`:                       "",
+		`not json`:                         "",
+		`{"arguments":"web","name":"web"}`: "",
+	} {
+		if got := entryName(input); got != want {
+			t.Errorf("entryName(%s) = %q, want %q", input, got, want)
+		}
 	}
 }

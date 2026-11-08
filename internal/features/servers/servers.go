@@ -112,13 +112,13 @@ type Service struct {
 	alive    []*server
 	ended    []*server // the last PerFolder of each folder
 	reserved map[int]string
-	closed   bool              // the daemon stops: no more starts
-	asked    map[string]string // the hash of each entry an agent's preview_start asked to run, by chat and name (Command)
+	closed   bool  // the daemon stops: no more starts
+	asks     []ask // the asks to run an agent's preview_start, oldest first (asks.go)
 }
 
 // New returns the service, with no server running.
 func New(o Options) *Service {
-	return &Service{Options: o, ReadyWithin: 180 * time.Second, StopGrace: 2 * time.Second, StartWait: 30 * time.Second, reserved: map[int]string{}, asked: map[string]string{}}
+	return &Service{Options: o, ReadyWithin: 180 * time.Second, StopGrace: 2 * time.Second, StartWait: 30 * time.Second, reserved: map[int]string{}}
 }
 
 // server is one run of a launch file's entry.
@@ -360,6 +360,9 @@ func within(folder, dir string) bool {
 // Follow takes every event: a chat archived, moved or deleted may leave a
 // folder without chats, whose servers then stop and whose ended ones go.
 func (s *Service) Follow(e model.Event) {
+	if e.Removed {
+		s.forget(e.ChatID)
+	}
 	if !e.Removed && e.Record == nil {
 		return
 	}

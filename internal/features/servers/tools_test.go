@@ -145,15 +145,19 @@ func TestTheCardsCommandIsWhatRuns(t *testing.T) {
 	s, _, folder := setup(t, `{"name": "web", "runtimeExecutable": "$SERVER", "runtimeArgs": ["--port", "`+strconv.Itoa(p)+`", "it's"], "env": {"MODE": "dev x"}}`)
 	set, _ := agentTools(s)
 	want := "MODE='dev x' " + fakeServer + " --port " + strconv.Itoa(p) + ` 'it'\''s'`
-	if got := s.Command("c", "WEB"); got != want {
+	got, ask := s.Command("c", "WEB")
+	if got != want {
 		t.Errorf("Command = %q, want %q", got, want)
 	}
 	for _, name := range []string{"api", "", "a\x00"} {
-		if got := s.Command("c", name); got != "" {
+		got, other := s.Command("c", name)
+		if got != "" {
 			t.Errorf("Command(%q) = %q", name, got)
 		}
+		s.Answered(other, false)
 	}
-	testcheck.Write(t, filepath.Join(folder, ".agents", "launch.json"), `{"configurations": [`+strings.ReplaceAll(entry("web", p, "-exit", "1"), "$SERVER", fakeServer)+`]}`)
+	s.Answered(ask, true)
+	launchFile(t, folder, entry("web", p, "-exit", "1"))
 	_, err := call(t, set, "preview_start", map[string]string{"name": "web"})
 	if err == nil || !strings.Contains(err.Error(), "changed since the permission card") {
 		t.Errorf("a changed entry: %v", err)
@@ -161,6 +165,85 @@ func TestTheCardsCommandIsWhatRuns(t *testing.T) {
 	// The ask was used: the next start (no card, say) runs the file's.
 	if _, err = call(t, set, "preview_start", map[string]string{"name": "web"}); err == nil || !strings.Contains(err.Error(), "boom: can't start") {
 		t.Errorf("the next start: %v", err)
+	}
+}
+
+// launchFile writes a chat's folder's .agents/launch.json, of
+// configurations as setup takes them.
+func launchFile(t *testing.T, folder string, configurations ...string) {
+	t.Helper()
+	testcheck.Write(t, filepath.Join(folder, ".agents", "launch.json"),
+		`{"configurations": [`+strings.ReplaceAll(strings.Join(configurations, ","), "$SERVER", fakeServer)+`]}`)
+}
+
+// Each ask holds only the start it was allowed for: two asks of one name
+// keep their own entries, a refused ask holds nothing, and an ask that
+// showed no entry, or no name, refuses its start whatever the file says
+// by then.
+func TestAnAskHoldsItsOwnStart(t *testing.T) {
+	p := freePort(t)
+	s, _, folder := setup(t, entry("web", p, "-exit", "1"))
+	set, _ := agentTools(s)
+	start := func(name string) error {
+		t.Helper()
+		_, err := call(t, set, "preview_start", map[string]string{"name": name})
+		return err
+	}
+	changed := func(err error) bool {
+		return err != nil && strings.Contains(err.Error(), "changed since the permission card")
+	}
+
+	// Two cards for web, the file changed between them: the first allowed
+	// is refused, as its card showed what no longer runs; the second runs.
+	_, first := s.Command("c", "web")
+	launchFile(t, folder, entry("web", p, "-exit", "2"))
+	_, second := s.Command("c", "web")
+	s.Answered(first, true)
+	if err := start("web"); !changed(err) {
+		t.Errorf("the first card's start: %v", err)
+	}
+	s.Answered(second, true)
+	if err := start("web"); err == nil || !strings.Contains(err.Error(), "exit code 2") {
+		t.Errorf("the second card's start: %v", err)
+	}
+
+	// A refused card holds nothing: a later start (no card) runs the file's.
+	_, refused := s.Command("c", "web")
+	s.Answered(refused, false)
+	launchFile(t, folder, entry("web", p, "-exit", "3"))
+	if err := start("web"); err == nil || !strings.Contains(err.Error(), "exit code 3") {
+		t.Errorf("after a refused card: %v", err)
+	}
+
+	// A card that said no entry could run, or couldn't tell which: its
+	// start is refused once the file has one.
+	command, none := s.Command("c", "api")
+	if command != "" {
+		t.Fatalf("Command(api) = %q", command)
+	}
+	s.Answered(none, true)
+	launchFile(t, folder, entry("web", p, "-exit", "3"), entry("api", p+1, "-exit", "4"))
+	if err := start("api"); !changed(err) {
+		t.Errorf("a card with no entry: %v", err)
+	}
+	_, unnamed := s.Command("c", "")
+	s.Answered(unnamed, true)
+	if err := start("api"); !changed(err) {
+		t.Errorf("a card with no name: %v", err)
+	}
+	if err := start("api"); err == nil || !strings.Contains(err.Error(), "exit code 4") {
+		t.Errorf("the next start: %v", err)
+	}
+
+	// A removed chat's asks go.
+	_, gone := s.Command("c", "web")
+	s.Answered(gone, true)
+	s.Follow(model.Event{ChatID: "c", Removed: true})
+	s.mu.Lock()
+	left := len(s.asks)
+	s.mu.Unlock()
+	if left != 0 {
+		t.Errorf("%d asks left", left)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 
 	acp "github.com/afrase/acp-go/unstable"
 
@@ -23,21 +24,25 @@ func isPreviewStart(title string) bool {
 }
 
 // entryName is the name a preview_start call's input gives: `name`,
-// inside `arguments` on Codex; "" when it gives none.
+// inside `arguments` on Codex; "" when it gives none. The keys are read
+// as written, as the app's card reads them and the tool takes them
+// (tools.Decode), not without case as encoding/json would.
 func entryName(input string) string {
-	var in struct {
-		Name      string `json:"name"`
-		Arguments *struct {
-			Name string `json:"name"`
-		} `json:"arguments"`
-	}
+	var in map[string]json.RawMessage
 	if json.Unmarshal([]byte(input), &in) != nil {
 		return ""
 	}
-	if in.Arguments != nil {
-		return in.Arguments.Name
+	if args, ok := in["arguments"]; ok && string(args) != "null" { // as the app's `arguments ?? input`
+		in = nil // the arguments alone
+		if json.Unmarshal(args, &in) != nil {
+			return ""
+		}
 	}
-	return in.Name
+	var name string
+	if json.Unmarshal(in["name"], &name) != nil {
+		return ""
+	}
+	return name
 }
 
 // requestPermission shows the agent's permission prompt and waits for the
@@ -65,13 +70,14 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 			item.Input = call.Input
 		}
 	}
+	askID := ""
 	if isPreviewStart(item.Title) { // and the command it runs, read outside the lock (Servers.Command)
 		chatID := c.id
 		if c.parent != nil {
 			chatID = c.parent.id // a side chat's tools are its chat's
 		}
 		c.mu.Unlock()
-		item.ServerCommand = c.serverCommand(chatID, entryName(item.Input))
+		item.ServerCommand, askID = c.serverCommand(chatID, entryName(item.Input))
 		c.mu.Lock()
 	}
 	id := c.addLocked(item)
@@ -83,6 +89,9 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 	select {
 	case picked = <-answer:
 	case <-ctx.Done():
+	}
+	if askID != "" { // before the agent hears it, and runs the start that follows
+		c.serverAnswered(askID, allows(item.Options, picked))
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -103,6 +112,13 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 	return &acp.RequestPermissionResponse{Outcome: acp.RequestPermissionOutcome{
 		Selected: &acp.SelectedPermissionOutcome{OptionID: acp.PermissionOptionID(picked)},
 	}}, nil
+}
+
+// allows says whether the option picked allows the call (ACP's allow_once
+// or allow_always); "" is cancelled.
+func allows(options []model.Option, picked string) bool {
+	i := slices.IndexFunc(options, func(o model.Option) bool { return o.ID == picked })
+	return picked != "" && i >= 0 && strings.HasPrefix(options[i].Kind, "allow")
 }
 
 // AnswerPermission sends the user's pick for a pending permission prompt.

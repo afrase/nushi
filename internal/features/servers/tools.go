@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/launchfile"
@@ -100,10 +98,8 @@ func (t *AgentTools) Call(ctx context.Context, g tools.Grant, tool string, raw j
 		Name  *string `json:"name"`
 		Lines *int    `json:"lines"`
 	}
-	if len(raw) > 0 && string(raw) != "null" {
-		if err := json.Unmarshal(raw, &args); err != nil {
-			return "", errToolArgs
-		}
+	if err := tools.Decode(raw, &args, "name", "lines"); err != nil {
+		return "", errToolArgs
 	}
 	if tool == "preview_list" {
 		return t.list(g.Chat)
@@ -303,76 +299,4 @@ func (s *Service) showAsked(chatID, url string) {
 	if chatID != "" && url != "" && s.Publish != nil {
 		s.Publish(model.Event{ChatID: chatID, ShowURL: url})
 	}
-}
-
-// askedKey is a chat's ask to run the entry of name.
-func askedKey(chatID, name string) string { return chatID + "\x00" + strings.ToLower(name) }
-
-// Command is the command a chat's folder's entry of name runs, as Start
-// would run it, for the card that asks to run the agent's preview_start
-// (ADR 0100): the entry's env, the program as the login shell's PATH
-// finds it, its arguments, each quoted so a control or bidi character
-// shows; "" when no entry fit for the agent has the name, or it runs
-// nothing. The entry's hash is kept for the start that follows, so what
-// runs is what the card showed.
-func (s *Service) Command(chatID, name string) string {
-	if !launchfile.ValidName(name) {
-		return ""
-	}
-	folder, main, err := s.place(chatID)
-	if err != nil {
-		return ""
-	}
-	l, err := launchfile.Read(folder, main)
-	if err != nil {
-		return ""
-	}
-	i := slices.IndexFunc(l.Entries, func(e launchfile.Entry) bool { return strings.EqualFold(e.Name, name) })
-	if i < 0 || !launchfile.ValidName(l.Entries[i].Name) || l.Entries[i].Problem != "" || l.Entries[i].Command == "" {
-		return ""
-	}
-	e := l.Entries[i]
-	s.mu.Lock()
-	s.asked[askedKey(chatID, name)] = e.Hash
-	s.mu.Unlock()
-	program, _ := resolve(e, s.Env.Environ())
-	if program == "" {
-		program = e.Command
-	}
-	var parts []string
-	for k, v := range e.Env {
-		parts = append(parts, quote(k)+"="+quote(v))
-	}
-	slices.Sort(parts)
-	parts = append(parts, quote(program))
-	for _, a := range e.Args {
-		parts = append(parts, quote(a))
-	}
-	return strings.Join(parts, " ")
-}
-
-// takeAsked is the hash Command kept for a chat's ask to run name, and
-// forgets it: "" when none was asked (the harness didn't ask: the user
-// allowed the tool).
-func (s *Service) takeAsked(chatID, name string) string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	k := askedKey(chatID, name)
-	h := s.asked[k]
-	delete(s.asked, k)
-	return h
-}
-
-// quote is s for the card: bare when plain, else in single quotes as a
-// shell takes it, or in Go's escaped form when it holds what wouldn't
-// show (control, format and bidi characters), so the card can't be made
-// to read as another command.
-func quote(s string) string {
-	if s != "" && strings.Trim(s, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-") == "" {
-		return s
-	}
-	if strings.ContainsFunc(s, func(r rune) bool { return !unicode.IsGraphic(r) || unicode.Is(unicode.Cf, r) }) {
-		return strconv.QuoteToASCII(s)
-	}
-	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
