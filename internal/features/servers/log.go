@@ -70,6 +70,9 @@ func (s *Service) Watch(chatID, serverID string, stop <-chan struct{}, fn func([
 	if log != nil { // it ended
 		return fn(log), nil // false: fn is gone, and hears no end
 	}
+	if proc == nil { // it ended before its program started: nothing to give
+		return false, errNoLog
+	}
 	first, more := true, true
 	proc.Attach(stop, func(b []byte) bool {
 		if first {
@@ -92,7 +95,7 @@ func (s *Service) tail(sv *server, lines, size int) string {
 	s.mu.Lock()
 	log, proc := sv.log, sv.proc
 	s.mu.Unlock()
-	if log == nil {
+	if log == nil && proc != nil {
 		log = logTail(written(proc))
 	}
 	return lastLines(log, lines, size)

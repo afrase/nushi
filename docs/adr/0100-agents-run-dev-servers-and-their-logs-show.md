@@ -18,7 +18,7 @@ ADR 0098 ran a folder's dev servers on the user's ▶ only and left for later wh
 ## Consequences
 - An agent allowed `preview_start` for good runs any entry of the launch files unasked, and it can write those files itself: the card and its hash bind only a run that was asked about. That's the reach Bash already has under the same allow.
 - The drawer shows a server's output since the daemon started it; a daemon restart loses the output with the servers (ADR 0098 starts nothing again).
-- An ended server keeps its terminal object with its scrollback until the folder's sixth end pushes it out: about 1 MB each, five a folder.
+- An ended server lets go of its terminal and keeps its log alone: 256 KB at most each, five a folder, dropped with the folder (its last chat archived or deleted, its worktree removed).
 - Claude desktop's parameter shapes beyond the names aren't in docs/facts (only its error codes are); the tools take `name`, and are to follow its shapes once they're seen.
 - Ante, oh-my-pi, Pi and PiG take no client MCP servers and still run servers through Bash, unseen by the menu (docs/roadmap.md: spotting them).
 

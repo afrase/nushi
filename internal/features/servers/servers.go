@@ -127,8 +127,8 @@ type server struct {
 	entry           launchfile.Entry
 	port            int
 	url             string
-	chatID          string // the chat it was started from
-	proc            Process
+	chatID          string  // the chat it was started from
+	proc            Process // its terminal, from its program's start until it ended (under the lock; reap reads its own)
 	leader          model.Process
 	ended           chan struct{} // closed once it ended and is listed so
 
@@ -345,9 +345,11 @@ func (s *Service) Within(dir string) bool {
 }
 
 // StopWithin stops the servers in dir or a folder in it, before dir is
-// removed.
+// removed, and drops their ended ones.
 func (s *Service) StopWithin(dir string) {
-	s.stopWhere(func(sv *server) bool { return within(sv.folder, dir) }, ByNushi)
+	in := func(sv *server) bool { return within(sv.folder, dir) }
+	s.stopWhere(in, ByNushi)
+	s.dropEnded(in)
 }
 
 func within(folder, dir string) bool {
@@ -356,20 +358,21 @@ func within(folder, dir string) bool {
 }
 
 // Follow takes every event: a chat archived, moved or deleted may leave a
-// folder without chats, whose servers then stop.
+// folder without chats, whose servers then stop and whose ended ones go.
 func (s *Service) Follow(e model.Event) {
 	if !e.Removed && e.Record == nil {
 		return
 	}
 	s.mu.Lock()
-	none := len(s.alive) == 0
+	none := len(s.alive) == 0 && len(s.ended) == 0
 	s.mu.Unlock()
 	if !none {
 		go s.release()
 	}
 }
 
-// release stops the servers of folders no unarchived chat has.
+// release stops the servers of folders no unarchived chat has, and drops
+// their ended ones: no menu lists them again.
 func (s *Service) release() {
 	list, err := s.Chats.List()
 	if err != nil {
@@ -382,6 +385,14 @@ func (s *Service) release() {
 		}
 	}
 	s.stopWhere(func(sv *server) bool { return !used[sv.folder] }, ByNushi)
+	s.dropEnded(func(sv *server) bool { return !used[sv.folder] })
+}
+
+// dropEnded forgets the ended servers which says yes to.
+func (s *Service) dropEnded(which func(*server) bool) {
+	s.mu.Lock()
+	s.ended = slices.DeleteFunc(s.ended, which)
+	s.mu.Unlock()
 }
 
 // Busy says whether a server runs: it holds the daemon's restart, as a

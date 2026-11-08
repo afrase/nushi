@@ -38,6 +38,36 @@ func TestArchivingTheLastChatStopsTheServers(t *testing.T) {
 	if !testcheck.Eventually(func() bool { return !s.Busy() }) {
 		t.Error("the server runs on with no chat in its folder")
 	}
+	if !testcheck.Eventually(func() bool { return endedCount(s) == 0 }) {
+		t.Error("a folder with no chat keeps its ended servers")
+	}
+}
+
+// endedCount is how many ended servers the service keeps.
+func endedCount(s *Service) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.ended)
+}
+
+// An ended server lets go of its terminal, its log kept; a folder that
+// goes takes its ended servers with it.
+func TestAnEndedServerKeepsItsLogAlone(t *testing.T) {
+	s, _, folder := setup(t, entry("web", freePort(t)))
+	_, err := s.Start(t.Context(), "c", Pick{Name: "web"})
+	testcheck.NoErr(t, err)
+	r := row(t, s, "web", Running)
+	testcheck.NoErr(t, s.Stop("c", r.ServerID))
+	s.mu.Lock()
+	kept := len(s.ended) == 1 && s.ended[0].proc == nil && len(s.ended[0].log) > 0
+	s.mu.Unlock()
+	if !kept {
+		t.Error("the ended server keeps its terminal, or no log")
+	}
+	s.StopWithin(filepath.Dir(folder))
+	if n := endedCount(s); n != 0 {
+		t.Errorf("%d ended servers kept of a folder that went", n)
+	}
 }
 
 // A server holds the daemon's restart, as a terminal running a command

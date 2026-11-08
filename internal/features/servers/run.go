@@ -283,15 +283,22 @@ func (s *Service) stop(sv *server, by string) {
 	<-sv.ended
 }
 
-// halt is stop's work on a server whose program started.
+// halt is stop's work on a server whose program started, unless it ended
+// since (end lets go of its terminal).
 func (s *Service) halt(sv *server) {
+	s.mu.Lock()
+	proc := sv.proc
+	s.mu.Unlock()
+	if proc == nil {
+		return
+	}
 	s.look(sv)
-	_ = sv.proc.Terminate()
+	_ = proc.Terminate()
 	select {
-	case <-sv.proc.Done():
+	case <-proc.Done():
 	case <-time.After(s.StopGrace):
 	}
-	sv.proc.Close()
+	proc.Close()
 }
 
 // reap waits for the server's program to end, then ends what it left,
@@ -327,6 +334,8 @@ func (s *Service) fail(sv *server, why string) {
 
 // end lists a server as ended: failed with why, or stopped; raw is what
 // it wrote, as its terminal kept it, nil when its program never started.
+// It lets go of the terminal, whose scrollback (up to 2 MB) would stay
+// with each ended server the folder keeps: its log has what's shown.
 func (s *Service) end(sv *server, why string, raw []byte, code int) {
 	var log []byte // no log: nothing ran
 	if raw != nil {
@@ -340,7 +349,7 @@ func (s *Service) end(sv *server, why string, raw []byte, code int) {
 			delete(s.reserved, p)
 		}
 	}
-	sv.state, sv.err, sv.output, sv.log, sv.exit = Stopped, why, out, log, code
+	sv.state, sv.err, sv.output, sv.log, sv.exit, sv.proc = Stopped, why, out, log, code, nil
 	if why != "" {
 		sv.state = Failed
 	}
