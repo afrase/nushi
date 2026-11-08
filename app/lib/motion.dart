@@ -129,7 +129,13 @@ class _Pulse extends ChangeNotifier {
   @override
   void removeListener(VoidCallback listener) {
     super.removeListener(listener);
-    _run();
+    // Stops once the work at hand is done, if no one came back: a painter
+    // made anew as its widget rebuilds leaves and its successor comes at
+    // once (RenderCustomPaint swaps them), and a spinner rebuilt each
+    // frame would otherwise start the timer again every frame and never
+    // turn. One that leaves as it ticks is gone only then too: a notifier
+    // keeps who leaves while it notifies until it's done.
+    if (!hasListeners) scheduleMicrotask(_run);
   }
 
   /// Ticks while something listens and Nushi is in front; with no one
@@ -146,8 +152,6 @@ class _Pulse extends ChangeNotifier {
       _timer = Timer.periodic(_every, (t) {
         _now = from + _every * t.tick;
         notifyListeners();
-        // One that left as it ticked is gone only now (see [_Clock]).
-        _run();
       });
       return;
     }

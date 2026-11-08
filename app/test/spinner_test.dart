@@ -31,6 +31,35 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('rebuilt every frame (a command printing fast), it turns '
+      'all the same', (tester) async {
+    Shine.stopAt = null;
+    addTearDown(() => Shine.stopAt = 0);
+    final lines = ValueNotifier(0);
+    addTearDown(lines.dispose);
+    // Each build a new painter, which RenderCustomPaint swaps in: the old
+    // one leaves the clock and the new one comes, in the same frame.
+    await tester.pumpWidget(
+      themed(
+        ValueListenableBuilder(
+          valueListenable: lines,
+          // A Spinner built anew, as RunnableBlock builds one.
+          // ignore: prefer_const_constructors
+          builder: (context, n, _) => Center(child: Spinner()),
+        ),
+      ),
+    );
+    const period = Duration(seconds: 10);
+    final from = pulseClock.phase(period);
+    for (var i = 0; i < 60; i++) {
+      lines.value++;
+      await tester.pump(const Duration(microseconds: 16667));
+    }
+    // A second on, within a tick.
+    expect(pulseClock.phase(period), closeTo(from + 0.1, 0.006));
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('with Reduce Motion it stands still', (tester) async {
     Shine.stopAt = null;
     addTearDown(() => Shine.stopAt = 0);
