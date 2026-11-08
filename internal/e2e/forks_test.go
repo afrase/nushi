@@ -14,11 +14,6 @@ import (
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
-// idleChat is chat id's status going idle.
-func idleChat(id string) func(*nushiv1.EventsResponse) bool {
-	return func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && idle(e) }
-}
-
 // A fork of a whole chat is a chat of its own: listed, the transcript as
 // the original's (a permission prompt included), going on separately, and
 // still so once the daemon restarts (its copy and its own session).
@@ -29,11 +24,11 @@ func TestForkAChat(t *testing.T) {
 	a := open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	a.send(id, "hello")
-	a.waitFor("the reply", idleChat(id))
+	a.waitFor("the reply", turnEnded(id))
 	a.send(id, "permission")
 	p := a.waitFor("the permission", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: id, ItemId: p.Id, OptionId: "allow"})))
-	a.waitFor("the answer", idleChat(id))
+	a.waitFor("the answer", turnEnded(id))
 	orig := a.get(id)
 
 	fork := must(a.c.ForkAsChat(ctx, connect.NewRequest(&nushiv1.ForkAsChatRequest{ChatId: id}))).ChatId
@@ -45,7 +40,7 @@ func TestForkAChat(t *testing.T) {
 		t.Errorf("fork %v", c)
 	}
 	a.send(fork, "only here")
-	a.waitFor("the fork's reply", idleChat(fork))
+	a.waitFor("the fork's reply", turnEnded(fork))
 	if now := a.get(id); transcript(now.Items) != transcript(orig.Items) {
 		t.Errorf("the original changed:\n%s", transcript(now.Items))
 	}
@@ -75,7 +70,7 @@ func TestForkFromAMessage(t *testing.T) {
 	id := a.start(&nushiv1.StartChatRequest{Agent: "pig", Folder: t.TempDir()})
 	for _, text := range []string{"hello", "use a tool"} {
 		a.send(id, text)
-		a.waitFor("the reply", idleChat(id))
+		a.waitFor("the reply", turnEnded(id))
 	}
 	snap := a.get(id)
 	i := slices.IndexFunc(snap.Items, func(it *nushiv1.Item) bool { return it.Text == "You said: hello" })
@@ -88,11 +83,11 @@ func TestForkFromAMessage(t *testing.T) {
 		t.Errorf("the fork:\n%s", got)
 	}
 	a.send(fork, "again")
-	a.waitFor("the fork's reply", idleChat(fork))
+	a.waitFor("the fork's reply", turnEnded(fork))
 
 	omp := a.start(&nushiv1.StartChatRequest{Agent: "omp", Folder: t.TempDir()})
 	a.send(omp, "hello")
-	a.waitFor("omp's reply", idleChat(omp))
+	a.waitFor("omp's reply", turnEnded(omp))
 	snap = a.get(omp)
 	last := snap.Items[len(snap.Items)-1]
 	before := len(must(a.c.ListChats(ctx, connect.NewRequest(&nushiv1.ListChatsRequest{}))).Chats)
@@ -117,10 +112,10 @@ func TestKeepASideChat(t *testing.T) {
 	a := open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	a.send(id, "hello")
-	a.waitFor("the reply", idleChat(id))
+	a.waitFor("the reply", turnEnded(id))
 	side := must(a.c.ForkChat(ctx, connect.NewRequest(&nushiv1.ForkChatRequest{ChatId: id}))).ChatId
 	a.send(side, "aside")
-	a.waitFor("the side chat's reply", idleChat(side))
+	a.waitFor("the side chat's reply", turnEnded(side))
 
 	kept := must(a.c.KeepSideChat(ctx, connect.NewRequest(&nushiv1.KeepSideChatRequest{ChatId: side}))).ChatId
 	if _, err := a.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: side})); err == nil {
@@ -141,5 +136,5 @@ func TestKeepASideChat(t *testing.T) {
 		t.Errorf("title %q", snap.Chat.Title)
 	}
 	a.send(kept, "more")
-	a.waitFor("the kept chat's reply", idleChat(kept))
+	a.waitFor("the kept chat's reply", turnEnded(kept))
 }

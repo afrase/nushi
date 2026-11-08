@@ -138,7 +138,7 @@ func TestARestartNotAskedAgainLapses(t *testing.T) {
 	must(a.c.RestartWhenIdle(ctx, connect.NewRequest(&nushiv1.RestartWhenIdleRequest{})))
 	time.Sleep(300 * time.Millisecond)
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id})))
-	a.waitFor("the turn to end", idle)
+	a.waitFor("the turn to end", turnEnded(id))
 	if d.due(300 * time.Millisecond) {
 		t.Fatal("restarted on an ask that had lapsed")
 	}

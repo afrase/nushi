@@ -112,7 +112,7 @@ func TestNothingPrivateLogged(t *testing.T) {
 	a.waitFor("the reply", func(e *nushiv1.EventsResponse) bool {
 		return e.GetItem().GetItem().GetText() == "Ran it."
 	})
-	a.waitFor("the turn to end", idle) // the reply comes before the end: a prompt between them is refused
+	a.waitFor("the turn to end", turnEnded(chatID)) // the reply comes before the end: a prompt between them is refused
 	a.send(chatID, "MARKER-ASK-77aa permission")
 	perm := a.waitFor("the permission", pendingPermission).GetItem().GetItem()
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))

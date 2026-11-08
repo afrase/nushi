@@ -37,7 +37,7 @@ func TestAnAnteChat(t *testing.T) {
 	a.send(id, "please write")
 	perm := a.waitFor("the permission", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: id, ItemId: perm.Id, OptionId: "allow_once"})))
-	a.waitFor("the write", idle)
+	a.waitFor("the write", turnEnded(id))
 	a.send(id, "ask me")
 	q := a.waitFor("the question", questionPending).GetItem().Item
 	if len(q.Fields) != 2 || q.Fields[1].OtherFor != "q0" {
@@ -45,7 +45,7 @@ func TestAnAnteChat(t *testing.T) {
 	}
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: "q0", Values: []string{"Blue"}}, {FieldId: "q0_other", Values: []string{"teal"}}}})))
-	a.waitFor("the answer", idle)
+	a.waitFor("the answer", turnEnded(id))
 	snap := a.get(id)
 	if st := snap.Status; !st.CanFork || !st.CanRewind || !st.CanAskContext {
 		t.Errorf("status = %v, want fork, rewind and the context", st)
@@ -114,6 +114,10 @@ func TestAnAnteSubagent(t *testing.T) {
 	d := startDaemon(t, dataDir, history)
 	a := open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Agent: "ante", Folder: t.TempDir()})
+	// The bridge's commands come a moment after the session's answer, and
+	// the chat's idle status after them: in the stream before the prompt's
+	// events, as when the start ran slow on CI.
+	a.waitFor("the commands", func(e *nushiv1.EventsResponse) bool { return e.ChatId == id && e.GetCommands() != nil })
 	a.say(id, "ask a subagent")
 	snap := a.get(id)
 	live := subagentView(snap.Items)
@@ -164,7 +168,7 @@ func TestAnOmpChat(t *testing.T) {
 	}
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: "q0", Values: []string{"Red"}}}})))
-	a.waitFor("the answer", idle)
+	a.waitFor("the answer", turnEnded(id))
 	if st := a.get(id).Status; !st.CanFork || st.CanRewind || st.CanAskContext {
 		t.Errorf("status = %v, want fork only", st)
 	}

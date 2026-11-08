@@ -58,7 +58,7 @@ func TestImagesAsReferences(t *testing.T) {
 	}
 	must(phone.c.SendPrompt(ctx, connect.NewRequest(&nushiv1.SendPromptRequest{ChatId: id, Text: "look",
 		Images: []*nushiv1.ImageData{{MimeType: "image/png", Data: big}, {MimeType: "image/png", Data: small}}})))
-	mac.waitFor("the reply", idleChat(id))
+	mac.waitFor("the reply", turnEnded(id))
 	for stream.Receive() {
 		if it := stream.Msg().GetItem().GetItem(); it != nil && len(it.Images) == 2 {
 			checkRefs(t, "an event", it.Images, big, small)
@@ -106,7 +106,7 @@ func TestImagesAsReferences(t *testing.T) {
 	// on the fake agent shaped like Claude's.
 	id = must(phone.c.StartChat(ctx, connect.NewRequest(&nushiv1.StartChatRequest{Folder: t.TempDir()}))).ChatId
 	phone.send(id, "take a screenshot")
-	phone.waitFor("the screenshot", idleChat(id))
+	phone.waitFor("the screenshot", turnEnded(id))
 	shot := acptest.Screenshot()
 	var call *nushiv1.Item
 	for _, it := range must(phone.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id, Recent: 80, ImageRefs: true}))).Items {

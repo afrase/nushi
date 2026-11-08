@@ -39,5 +39,5 @@ func TestAPromptsFilesAndUploads(t *testing.T) {
 	if b, err := os.ReadFile(saved); err != nil || string(b) != "from the phone" {
 		t.Errorf("saved %q, %v", b, err)
 	}
-	a.waitFor("the reply", idle)
+	a.waitFor("the reply", turnEnded(id))
 }

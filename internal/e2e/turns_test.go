@@ -18,13 +18,13 @@ func TestStopEndsTheAgentsTurn(t *testing.T) {
 	a := open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
 	a.send(id, "hello")
-	if end := a.waitFor("the turn to end", idle).GetStatus().GetEnded(); end != nushiv1.TurnEnd_TURN_END_DONE {
+	if end := a.waitFor("the turn to end", turnEnded(id)).GetStatus().GetEnded(); end != nushiv1.TurnEnd_TURN_END_DONE {
 		t.Errorf("a turn the agent ended: %v", end)
 	}
 	a.send(id, "wait")
 	a.waitFor("the turn to start", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetBusy() })
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id})))
-	if end := a.waitFor("the turn to end", idle).GetStatus().GetEnded(); end != nushiv1.TurnEnd_TURN_END_STOPPED {
+	if end := a.waitFor("the turn to end", turnEnded(id)).GetStatus().GetEnded(); end != nushiv1.TurnEnd_TURN_END_STOPPED {
 		t.Errorf("a stopped turn: %v", end)
 	}
 	if st := a.get(id).GetStatus(); st.GetEnded() != nushiv1.TurnEnd_TURN_END_UNSPECIFIED {
@@ -49,7 +49,7 @@ func TestAQuestionRoundTrip(t *testing.T) {
 	}).GetItem().GetItem()
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: "color", Values: []string{"green"}}}})))
-	a.waitFor("the turn to end", idle)
+	a.waitFor("the turn to end", turnEnded(id))
 	items := a.get(id).Items
 	if last := items[len(items)-1].Text; last != `Answer: {"action":"accept","content":{"color":"green"}}` {
 		t.Errorf("the agent got %s", last)

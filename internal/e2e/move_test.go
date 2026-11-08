@@ -38,7 +38,7 @@ func TestMoveAChat(t *testing.T) {
 		a.waitFor("the reply to "+text, func(e *nushiv1.EventsResponse) bool {
 			return e.GetItem().GetItem().GetKind() == nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE
 		})
-		a.waitFor("the end of the turn", idle)
+		a.waitFor("the end of the turn", turnEnded(id))
 		items := a.get(id).Items
 		return items[len(items)-1].Text
 	}
@@ -97,7 +97,7 @@ func TestMoveAChat(t *testing.T) {
 		t.Error("a busy chat moved")
 	}
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: id})))
-	a.waitFor("the turn to end", idle)
+	a.waitFor("the turn to end", turnEnded(id))
 
 	// A move that fails leaves the chat where it was, saying why.
 	if err := move(id, broken); err == nil {

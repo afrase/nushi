@@ -49,7 +49,7 @@ func TestACodexChat(t *testing.T) {
 	}
 
 	a.send(first.ChatId, "run it")
-	a.waitFor("the turn to end", func(e *nushiv1.EventsResponse) bool { return e.ChatId == first.ChatId && idle(e) })
+	a.waitFor("the turn to end", turnEnded(first.ChatId))
 	want := "USER_MESSAGE:run it:\nTOOL_CALL:```\nhi\n```:completed\nAGENT_MESSAGE:Ran it.:"
 	if got := transcript(a.get(first.ChatId).Items); got != want {
 		t.Errorf("transcript:\n%s\nwant:\n%s", got, want)

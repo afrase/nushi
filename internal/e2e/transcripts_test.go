@@ -23,7 +23,7 @@ func TestTranscriptCopies(t *testing.T) {
 	a.send(chatID, "ask permission")
 	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
-	a.waitFor("the reply", idle)
+	a.waitFor("the reply", turnEnded(chatID))
 
 	list := must(a.c.ListTranscripts(ctx, connect.NewRequest(&nushiv1.ListTranscriptsRequest{})))
 	if len(list.Copies) != 1 || list.Copies[0].ChatId != chatID || list.Copies[0].Title != "ask permission" || list.Copies[0].Agent != "fake" ||

@@ -318,11 +318,11 @@ func (a *app) get(id string) *nushiv1.GetChatResponse {
 	return must(a.c.GetChat(a.t.Context(), connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id})))
 }
 
-// say sends text to chat id and waits for a chat to go idle.
+// say sends text to chat id and waits for the turn to end.
 func (a *app) say(id, text string) {
 	a.t.Helper()
 	a.send(id, text)
-	a.waitFor("the reply to "+text, idle)
+	a.waitFor("the reply to "+text, turnEnded(id))
 }
 
 // must returns a call's response; a failed call fails the test (by panic).
@@ -339,6 +339,17 @@ func pendingPermission(e *nushiv1.EventsResponse) bool {
 }
 
 func idle(e *nushiv1.EventsResponse) bool { return e.GetStatus() != nil && !e.GetStatus().Busy }
+
+// turnEnded is the end of a turn of chat id: its status saying how the turn
+// ended. Not any idle status: one can wait in the stream from before the
+// prompt went (Ante's and Pi's bridges send a new session's commands a
+// moment after its answer, and the chat's status follows them), and a wait
+// for idle took that for the turn's end.
+func turnEnded(id string) func(*nushiv1.EventsResponse) bool {
+	return func(e *nushiv1.EventsResponse) bool {
+		return e.ChatId == id && e.GetStatus().GetEnded() != nushiv1.TurnEnd_TURN_END_UNSPECIFIED
+	}
+}
 
 // apply builds a transcript as the app does: a snapshot, then the chat's
 // later events.
@@ -443,7 +454,7 @@ func TestDaemonRestartReopensChats(t *testing.T) {
 	a.send(chatID, "ask permission")
 	perm := a.waitFor("the permission prompt", pendingPermission).GetItem().Item
 	must(a.c.AnswerPermission(ctx, connect.NewRequest(&nushiv1.AnswerPermissionRequest{ChatId: chatID, ItemId: perm.Id, OptionId: "allow"})))
-	a.waitFor("the second reply", idle)
+	a.waitFor("the second reply", turnEnded(chatID))
 	before := transcript(a.get(chatID).Items)
 
 	d.stop() // the daemon goes, and its agents with it
@@ -484,7 +495,7 @@ func TestStopCancelsAWaitingPrompt(t *testing.T) {
 	a.send(chatID, "ask permission")
 	a.waitFor("the chat to wait on the user", func(e *nushiv1.EventsResponse) bool { return e.GetStatus().GetWaiting() })
 	must(a.c.CancelTurn(ctx, connect.NewRequest(&nushiv1.CancelTurnRequest{ChatId: chatID})))
-	a.waitFor("the turn to end", idle)
+	a.waitFor("the turn to end", turnEnded(chatID))
 
 	snap := a.get(chatID)
 	var got []string

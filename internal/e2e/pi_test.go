@@ -46,7 +46,7 @@ func aPiChat(t *testing.T, agent string) {
 	}
 	must(a.c.AnswerQuestion(ctx, connect.NewRequest(&nushiv1.AnswerQuestionRequest{ChatId: id, ItemId: q.Id,
 		Answers: []*nushiv1.FieldAnswer{{FieldId: q.Fields[0].Id, Values: []string{"Blue"}}}})))
-	a.waitFor("the answer", idle)
+	a.waitFor("the answer", turnEnded(id))
 	snap := a.get(id)
 	if st := snap.Status; !st.CanFork || !st.CanRewind || !st.CanAskContext {
 		t.Errorf("status = %v, want fork, rewind and the context", st)

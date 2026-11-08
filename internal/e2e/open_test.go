@@ -87,7 +87,7 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 	}
 	ours := a.start(&nushiv1.StartChatRequest{Folder: link})
 	a.send(ours, "a chat of Nushi's")
-	a.waitFor("its reply", func(e *nushiv1.EventsResponse) bool { return e.ChatId == ours && idle(e) })
+	a.waitFor("its reply", turnEnded(ours))
 	sid, resume := inTerminal(t, history, false, dir, "hello from the terminal")
 	inTerminal(t, history, false, t.TempDir(), "another folder's")
 
@@ -117,7 +117,7 @@ func TestOpenASessionStartedElsewhere(t *testing.T) {
 		return e.ChatId == chatID && strings.Contains(e.GetItem().GetItem().GetText(), "and from Nushi") &&
 			e.GetItem().GetItem().GetKind() == nushiv1.ItemKind_ITEM_KIND_AGENT_MESSAGE
 	})
-	a.waitFor("the turn to end", func(e *nushiv1.EventsResponse) bool { return e.ChatId == chatID && idle(e) })
+	a.waitFor("the turn to end", turnEnded(chatID))
 	if got := strings.Join(resume(), " | "); got != "hello from the terminal | and from Nushi" {
 		t.Errorf("the terminal resumes %q, want one history with both", got)
 	}

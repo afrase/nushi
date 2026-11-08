@@ -21,7 +21,7 @@ func TestAChatOutlivesItsAgent(t *testing.T) {
 		a.waitFor("the reply to "+text, func(e *nushiv1.EventsResponse) bool {
 			return e.GetItem().GetAppend() && e.GetItem().GetItem().GetText() == text
 		})
-		a.waitFor("the end of the turn", idle)
+		a.waitFor("the end of the turn", turnEnded(id))
 	}
 
 	// Mid-turn, while a permission prompt waits.
@@ -29,7 +29,9 @@ func TestAChatOutlivesItsAgent(t *testing.T) {
 	a.waitFor("the permission prompt", pendingPermission)
 	d.kill()
 	a.waitFor("the notice", quit)
-	a.waitFor("the turn to end", idle)
+	// Not turnEnded: the turn's end can come before the notice, and then the
+	// status that follows the notice is the idle one.
+	a.waitFor("the chat to go idle", idle)
 	a.send(id, "hello") // reopens the session, then goes
 	replied("hello")
 
