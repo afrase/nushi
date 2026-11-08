@@ -50,7 +50,7 @@ type WorktreeOptions struct {
 // PlanDelete says what Delete would remove. The first time, it starts the
 // agent to learn whether it can delete its history.
 func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, error) {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return DeletePlan{}, err
 	}

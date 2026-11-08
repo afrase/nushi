@@ -320,14 +320,23 @@ func (s *Service) Roots(chatID string) ([]string, error) {
 // worked on the file at path (absolute), wherever it is: an agent's notes
 // outside the chat's folder can be previewed too. A show call doesn't
 // count, whatever its agent says it touched: asking to show a file can't
-// be what allows it (ADR 0068).
+// be what allows it (ADR 0068). Of a chat whose items were let go, only
+// its tool calls are read from the copy (ADR 0103): a file link asks on
+// every message that names a path outside the chat's folder.
 func (s *Service) Wrote(chatID, path string) bool {
-	c, err := s.lookup(chatID)
+	c, err := s.find(chatID)
 	if err != nil {
 		return false
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	calls := c.items
+	if c.inCopy {
+		if calls, _, err = c.copies.Find(c.id, func(it model.Item) bool { return it.Kind == model.ToolCall }); err != nil {
+			c.logLocked().Warn("transcript copy not read", "err", err)
+			return false
+		}
+	}
 	path = filepath.Clean(path)
 	abs := func(p string) string {
 		if !filepath.IsAbs(p) {
@@ -335,7 +344,7 @@ func (s *Service) Wrote(chatID, path string) bool {
 		}
 		return filepath.Clean(p)
 	}
-	for _, it := range c.items {
+	for _, it := range calls {
 		if it.Kind != model.ToolCall || isShow(it.Title) {
 			continue
 		}

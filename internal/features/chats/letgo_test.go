@@ -142,7 +142,11 @@ func TestAsleepLetsGoAndComesBackTheSame(t *testing.T) {
 	agent.updates = append(shotUpdates("m1", "t1", shot), toolDone("t1"))
 	turn(t, svc, c, "one")
 	first := look(t, svc, c.id, 2) // a client opens the chat now
-	agent.updates = []acp.SessionUpdate{chunk("m2", "two"), toolCall("t2", "in_progress"), toolDone("t2")}
+	// A file written outside the chat's folder, which a file link asks of.
+	plan := filepath.Join(t.TempDir(), "plan.md")
+	wrote := toolCall("t2", "in_progress")
+	wrote.ToolCall.Locations = []acp.ToolCallLocation{{Path: plan}}
+	agent.updates = []acp.SessionUpdate{chunk("m2", "two"), wrote, toolDone("t2")}
 	turn(t, svc, c, "two")
 	c.mu.Lock()
 	c.addLocked(model.Item{Kind: model.Notice, Status: differsNotice, Text: "only shows"}) // the copy never has it
@@ -170,10 +174,15 @@ func TestAsleepLetsGoAndComesBackTheSame(t *testing.T) {
 	if img, err := svc.Image(c.id, ImageHash(shot)); err != nil || !bytes.Equal(img.Data, shot) {
 		t.Errorf("Image = %q, %v", img.Data, err)
 	}
+	if !svc.Wrote(c.id, plan) || svc.Wrote(c.id, filepath.Join(filepath.Dir(plan), "other.md")) {
+		t.Error("Wrote doesn't answer from the copy's tool calls")
+	}
+	_, err := svc.CleanUpOf(t.Context(), c.id)
+	testcheck.NoErr(t, err)
 	c.mu.Lock()
 	still := c.inCopy && c.seq == seq
 	c.mu.Unlock()
-	if !still {
+	if !still || copies.reads.Load()-reads != 1 {
 		t.Error("reading it took its items back or sent an event")
 	}
 	testcheck.NoErr(t, svc.Rename(c.id, "renamed")) // an event while let go
