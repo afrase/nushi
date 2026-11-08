@@ -18,6 +18,9 @@ class MacWebViews implements WebViews {
   const new();
 
   @override
+  bool get embedded => true;
+
+  @override
   PageHost page() => WebKitPage();
 
   @override

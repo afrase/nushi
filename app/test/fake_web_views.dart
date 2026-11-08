@@ -9,6 +9,10 @@ import 'package:nushi/web_views_macos.dart';
 /// The web views as a test has them (ADR 0097): what it sets, and the
 /// Mac's for the rest, whose channels tests leave unanswered.
 class FakeWebViews implements WebViews {
+  /// Whether pages show in the app, as on the Mac.
+  @override
+  bool embedded = true;
+
   /// Makes a file preview's host.
   PageHost Function()? newPage;
 

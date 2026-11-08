@@ -13,6 +13,9 @@ class LinuxWebViews implements WebViews {
   const new();
 
   @override
+  bool get embedded => false;
+
+  @override
   PageHost page() => throw UnsupportedError('no web views on Linux yet');
 
   @override

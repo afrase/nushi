@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
+
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/diagram_page.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
 
@@ -7,6 +10,10 @@ import 'package:nushi/web_page.dart';
 /// 0094, 0097): on the Mac, WKWebViews and the Swift side
 /// (`web_views_macos.dart`).
 abstract interface class WebViews {
+  /// Whether pages show in the app's own web views: on the Mac; on Linux
+  /// they open in the default browser (ADR 0102).
+  bool get embedded;
+
   /// A web view for a file's preview.
   PageHost page();
 
@@ -39,3 +46,8 @@ abstract interface class WebViews {
   /// previews share (cookies, storage, caches).
   Future<void> clearData();
 }
+
+/// Whether the app's own web views show pages, as a widget reads it: the
+/// phone's web app, which shares the widgets but has no native edge, has
+/// frames of its own instead.
+bool get webEmbedded => !kIsWeb && native.web.embedded;
