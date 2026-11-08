@@ -121,18 +121,16 @@ X-GNOME-Autostart-enabled=true
       // The app names the package by the path it runs from, symlinks
       // resolved, which isn't $HOME's spelling under a linked home.
       final link = Link('${dir.path}/link-${name.length}')..createSync(home);
-      for (final (home, written) in [
+      for (final (given, written) in [
         (home, daemon),
         (link.path, File(daemon).resolveSymbolicLinksSync()),
       ]) {
         File(daemon).createSync(recursive: true);
-        final entry = File(
-          '$home/.config/autostart/com.nushihq.Nushi.daemon.desktop',
-        );
-        entry
-          ..createSync(recursive: true)
-          ..writeAsStringSync(autostartEntry(written)!);
-        expect(_uninstall(home), 0);
+        final entry =
+            File('$given/.config/autostart/com.nushihq.Nushi.daemon.desktop')
+              ..createSync(recursive: true)
+              ..writeAsStringSync(autostartEntry(written)!);
+        expect(_uninstall(given), 0);
         expect(entry.existsSync(), isFalse, reason: written);
         expect(Directory('$home/.local/opt/nushi').existsSync(), isFalse);
 
@@ -141,7 +139,7 @@ X-GNOME-Autostart-enabled=true
         entry
           ..createSync(recursive: true)
           ..writeAsStringSync(other);
-        expect(_uninstall(home), 0);
+        expect(_uninstall(given), 0);
         expect(entry.readAsStringSync(), other);
         entry.deleteSync();
       }
