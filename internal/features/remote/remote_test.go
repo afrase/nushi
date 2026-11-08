@@ -212,6 +212,9 @@ func TestPairThenConnect(t *testing.T) {
 	if !strings.Contains(logged, `msg="device paired"`) || strings.Contains(logged, base64.RawURLEncoding.EncodeToString(o.psk)) {
 		t.Errorf("log:\n%s", logged)
 	}
+	// The pairing ends as pair returns, a moment after the phone heard
+	// it was paired.
+	waitFor(t, func() bool { return s.Get().Pairing == nil })
 	r := s.Get()
 	if len(r.Devices) != 1 || r.Devices[0].Name != "Test phone" || r.Pairing != nil {
 		t.Fatalf("after pairing: %+v", r)

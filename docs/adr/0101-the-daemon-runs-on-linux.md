@@ -1,0 +1,29 @@
+# 0101. The daemon runs on Linux
+
+Status: accepted, 2026-11-08. Builds on [0097](0097-native-code-behind-interfaces.md) (its `_other.go` stand-ins get Linux implementations).
+
+## Context
+ADR 0097 made the seams: the daemon's macOS-only code in `_darwin.go` files, with `_other.go` stand-ins that compiled for Linux and answered `errors.ErrUnsupported` or nothing. Linux was the first other platform on the roadmap (the owner, 2026-10-27), and this is its first phase: `nushid` and every Go package working on Linux x86_64, `go test -race ./...` passing there as on the Mac. The app's Linux runner, its packaging and its web views are later phases.
+
+## Decision
+- **Files**: macOS code stays in `foo_darwin.go`, Linux's is `foo_linux.go`, and `foo_other.go` (`//go:build !darwin && !linux`) still builds for the rest with ADR 0097's answers. The Linux daemon builds with `CGO_ENABLED=0`. A test of something only the Mac has (scutil, CFNetwork's PAC, the Security framework's codes, codesign, libproc's records) is in a `_darwin_test.go`; everything with a Linux meaning has a Linux implementation and its tests.
+- **Processes from `/proc`** (`internal/procfs`, no cgo): `stat` for parent, group, session, terminal and start time (boot time plus ticks, the boot time read once per daemon so a clock step doesn't change a process's identity), `cmdline`, the `fd` links, `smaps_rollup` (else `status`) for the footprint, `/proc/locks` for `filelock`'s holders. Only the user's own processes count; an unreadable entry is skipped, never an error for the whole list. `proctree`, `terminal`, `footprint`, `claudehistory` (Claude's `pidDomain`, `darwin:<machine-id>:<pid namespace>` even on Linux, docs/facts/claude.md) and Ante's open sessions read it.
+- **Listeners from the kernel's sock_diag** over netlink (pure Go on `x/sys/unix`), which says whether a `[::]` listener is v6-only; `/proc/net/tcp` and `tcp6` are the fallback. The socket's holder is found through the user's processes' fd links. Parity with the Mac: other users' listeners aren't listed.
+- **The keychain is the freedesktop Secret Service** over the session D-Bus, through `github.com/godbus/dbus/v5` (pure Go). With no keyring service, an error the UI shows ("No keyring service: install gnome-keyring or KeePassXC's Secret Service"); never a plaintext fallback. A locked collection shows the keyring's own prompt to read a token only on the user's Allow, as on the Mac; saving and removing one may show it to unlock, since the user is acting then.
+- **Proxies come from the environment** the login shell gives: `https_proxy`/`HTTPS_PROXY`, `http_proxy`, `no_proxy`, and `all_proxy` (x/net's `httpproxy`); no gsettings, no PAC.
+- **npm's install of an adapter runs under bubblewrap**: `/` read-only, the install folder read-write, `/dev`, `/proc` as bwrap gives them, the network on. With no `bwrap` on `PATH`, or one that can't make its namespaces (Ubuntu's AppArmor rule), Set up is refused with a fixed message; never an unsandboxed install.
+- **The rest of the daemon's Mac edges**: the data folder is `$XDG_DATA_HOME/nushi`, else `~/.local/share/nushi` (the app's Linux runner must use the same); the login shell is the passwd entry's (`getent`, else `/etc/passwd`), then `$SHELL`, then `/bin/sh`; keep-awake is `systemd-inhibit` (logind's idle lock) for the daemon's life; a skill goes to the Trash with `gio trash`; Claude's and Ante's sign-ins run under util-linux's `script -c`, each word single-quoted.
+- **CI**: the "Go packages (Linux)" job runs every package's tests (`make test-go`, `-race -shuffle=on`) on ubuntu-latest, with bubblewrap from apt and AppArmor's unprivileged-namespace rule off, beside `make lint-linux`, which now also runs golangci-lint with `GOOS=linux` (the Mac's lint never sees a `_linux.go` file), and `go mod tidy -diff`.
+
+## Consequences
+- What stays macOS-only in the daemon: PAC files and the system's proxy settings (scutil), the keychain's per-app access (codesign), sandbox-exec's profile. Read-only runs under the sandbox are gone anyway (ADR 0037's note), so nothing else needed one.
+- Nushi still ships only for the Mac: Linux needs the app's runner, its packaging and Start at login, and web views (WebKitGTK later; the first Linux release opens pages in the default browser). docs/roadmap.md holds that.
+- Two Linux limits are known and fail safe: a server's leftovers recorded before a clock step and a daemon restart aren't swept (their start times no longer match), and a Claude record's process is taken as alive when its start time is within 5 minutes of the record's (a clock step moves both reads), so a pid reused within minutes of a crash could hold a session back.
+- bubblewrap 0.13 can't build a sandbox under Rosetta (OrbStack's x86 machines): npm's sandbox tests skip there and run on CI.
+
+## Alternatives considered
+- `ps`, `lsof` and `ss` instead of `/proc` and sock_diag: commands that differ across distributions (busybox, uutils), cost a process each call, and `ss` hides nothing `/proc` shows.
+- libsecret through cgo: the Linux daemon would need cgo and the library's headers to build; godbus speaks the same protocol in Go.
+- gsettings or the desktop's proxy settings: GNOME's, KDE's and none differ; the environment is what every Linux program already honours.
+- Landlock for npm: it limits writes but needs a recent kernel and its own rules for the network; bubblewrap is packaged everywhere and gives the same shape as the Mac's profile.
+- A plaintext token file when no keyring runs: a secret on disk in clear, which Nushi never writes on the Mac either.
