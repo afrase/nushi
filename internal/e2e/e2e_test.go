@@ -93,7 +93,17 @@ func (claudeOnFake) Info() model.HarnessInfo {
 // pipeAgent is a fake agent "process" over pipes.
 type pipeAgent struct{ *agentproc.Agent }
 
-func (p pipeAgent) Stop(time.Duration) error { return p.Close() }
+// Stop kills the fake at once (none needs a grace) and, as agentproc's
+// Stop does, returns once its connection has ended: what it sent is
+// handled by then. Without the wait a daemon stopped while an update was
+// being handled wrote after it stopped (a bridge's commands, a moment after
+// a session's answer, into agents.json), into a data folder the test's
+// cleanup was removing.
+func (p pipeAgent) Stop(time.Duration) error {
+	err := p.Close()
+	<-p.Done()
+	return err
+}
 
 func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon {
 	t.Helper()
