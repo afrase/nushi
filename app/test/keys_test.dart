@@ -163,9 +163,9 @@ void main() {
     ], unorderedEquals(['⌘F', '⌘W']));
   });
 
-  test('a terminal on Linux passes on only keys Ctrl and a letter isn’t: '
-      r'the shell keeps Ctrl+D, Ctrl+R, Ctrl+\ (SIGQUIT) and the rest; none '
-      'it passes is its own', () {
+  test('a terminal on Linux passes on only Ctrl keys Ctrl and a letter '
+      r'isn’t: the shell keeps Ctrl+D, Ctrl+R, Ctrl+\ (SIGQUIT), F7 and the '
+      'rest; none it passes is its own', () {
     native.conventions = linuxConventions;
     final passed = _toTerminal.where(terminalPasses).toList();
     for (final k in passed) {
@@ -174,12 +174,19 @@ void main() {
           a.trigger.keyId >= LogicalKeyboardKey.keyA.keyId &&
           a.trigger.keyId <= LogicalKeyboardKey.keyZ.keyId;
       expect(
-        letter && a.control && !a.shift,
+        !a.control || letter && !a.shift,
         isFalse,
         reason: '${keyLabel(k)} is the shell’s',
       );
     }
-    for (final k in [sidebarKey, pinKey, reloadPageKey, newChatKey, quitKey]) {
+    for (final k in [
+      sidebarKey,
+      pinKey,
+      reloadPageKey,
+      newChatKey,
+      quitKey,
+      nextTypoKey,
+    ]) {
       expect(terminalPasses(k), isFalse, reason: keyLabel(k));
     }
     expect(

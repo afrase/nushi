@@ -150,15 +150,16 @@ String keyName(LogicalKeyboardKey key) => switch (commandKey) {
 /// The app's keys a focused terminal passes on where the command key is
 /// Control, as GNOME Terminal leaves them: those Ctrl and a letter can't be
 /// meant for the shell (Ctrl and a digit, a symbol or Page Up, and Ctrl+Shift
-/// keys the terminal doesn't keep). Every other Ctrl key is the shell's:
-/// Ctrl+D ends its input, Ctrl+R searches its history, Ctrl+\ quits its
-/// program (SIGQUIT), though it hides the sidebar elsewhere.
+/// keys the terminal doesn't keep), each held with Ctrl. Every other key is
+/// the shell's: Ctrl+D ends its input, Ctrl+R searches its history, Ctrl+\
+/// quits its program (SIGQUIT), though it hides the sidebar elsewhere, and
+/// F7, the next typo elsewhere, is its program's (htop's Nice -, Midnight
+/// Commander's Mkdir).
 final List<ShortcutActivator> _linuxTerminalPasses = [
   paletteKeyToo, // Ctrl+Shift+P
   sideChatKey, // Ctrl+Shift+B
   filesKey, // Ctrl+Shift+E
   settingsKey, // Ctrl+,
-  nextTypoKey, // F7
   toggleTerminalKey, // Ctrl+`
   chatTabKey, // Ctrl+Alt+1
   changesTabKey, // Ctrl+Alt+2

@@ -215,8 +215,10 @@ void main() {
   }, variant: _linux);
 
   testWidgets(r'in a terminal Ctrl and a letter is the shell’s, Ctrl+\ '
-      'too; Ctrl+Shift+C copies, Ctrl+Shift+P opens the palette, Ctrl+Alt+2 '
-      'shows Changes', (tester) async {
+      'too, and F7; Ctrl+Shift+C copies, '
+      'Ctrl+Shift+P opens the palette, Ctrl+Alt+2 shows Changes', (
+    tester,
+  ) async {
     terminalChats.value = {'a'};
     late FakeShells shells;
     final (d, _) = await _app(
@@ -271,6 +273,10 @@ void main() {
       {'text': 'old'},
     ]);
     expect(shells.typedAll.join(), _shellGot);
+
+    // F7, the next typo elsewhere, is the shell's program's.
+    await _press(tester, LogicalKeyboardKey.f7, const []);
+    expect(shells.typedAll.join(), '$_shellGot\x1b[18~');
 
     await _press(tester, LogicalKeyboardKey.digit2, [
       LogicalKeyboardKey.controlLeft,
