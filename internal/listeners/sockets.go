@@ -59,7 +59,11 @@ func (s inodeSocket) listener(pid int) (Listener, bool) {
 // parseDiagDump reads what one read of a sock_diag socket gave: netlink
 // messages, each an inet_diag_msg and its attributes, until NLMSG_DONE
 // (done) or an NLMSG_ERROR. A message of another type, a socket not
-// listening and one of another family are skipped.
+// listening and one of another family are skipped. A dump the kernel
+// couldn't make (no tcp_diag for inet_diag to hand it to) ends in an
+// NLMSG_DONE carrying the negative errno, not an NLMSG_ERROR
+// (netlink_dump_done), so a DONE's errno is an error too: its empty dump
+// isn't "no listeners".
 func parseDiagDump(b []byte) (socks []inodeSocket, done bool, err error) {
 	ne := binary.NativeEndian
 	for len(b) >= nlmsgHdrLen {
@@ -70,13 +74,16 @@ func parseDiagDump(b []byte) (socks []inodeSocket, done bool, err error) {
 		data := b[nlmsgHdrLen:n]
 		switch ne.Uint16(b[4:]) {
 		case nlmsgDone:
+			if err := diagErrno(data); err != nil {
+				return socks, false, err
+			}
 			return socks, true, nil
 		case nlmsgError:
 			if len(data) < 4 {
 				return socks, false, errors.New("sock_diag: a short error")
 			}
-			if e := int32(ne.Uint32(data)); e < 0 { //nolint:gosec // the kernel's int error, sent as its bits
-				return socks, false, syscall.Errno(-e)
+			if err := diagErrno(data); err != nil {
+				return socks, false, err
 			}
 			// An error of 0 acknowledges a request, which a dump doesn't ask for.
 		case sockDiagByFamily:
@@ -87,6 +94,19 @@ func parseDiagDump(b []byte) (socks []inodeSocket, done bool, err error) {
 		b = b[min(align4(n), len(b)):]
 	}
 	return socks, false, nil
+}
+
+// diagErrno is the error a message's payload starts with, the kernel's
+// int: nil when it is 0 or there is none (an old kernel's bare
+// NLMSG_DONE).
+func diagErrno(data []byte) error {
+	if len(data) < 4 {
+		return nil
+	}
+	if e := int32(binary.NativeEndian.Uint32(data)); e < 0 { //nolint:gosec // the kernel's int error, sent as its bits
+		return syscall.Errno(-e)
+	}
+	return nil
 }
 
 // parseDiagMsg reads an inet_diag_msg (family, state, the socket's id:

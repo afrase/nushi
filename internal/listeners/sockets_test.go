@@ -63,14 +63,38 @@ func TestParseDiagDumpEdges(t *testing.T) {
 		t.Errorf("an established socket: %v, %v", got, err)
 	}
 
-	const errLen = nlmsgHdrLen + 4
-	errMsg := make([]byte, errLen)
-	binary.NativeEndian.PutUint32(errMsg, errLen)
-	binary.NativeEndian.PutUint16(errMsg[4:], nlmsgError)
-	binary.NativeEndian.PutUint32(errMsg[nlmsgHdrLen:], ^uint32(0)) // -1, -EPERM
-	if _, _, err := parseDiagDump(errMsg); !errors.Is(err, syscall.Errno(1)) {
+	if _, _, err := parseDiagDump(errnoMsg(nlmsgError, syscall.EPERM)); !errors.Is(err, syscall.EPERM) {
 		t.Errorf("an error message read as %v", err)
 	}
+}
+
+// A dump of a protocol inet_diag has no handler for (sctp_diag not loaded,
+// or tcp_diag where it can't be) ends, on Linux 7.2, in a 20-byte
+// NLMSG_DONE carrying -ENOENT and no NLMSG_ERROR; a good dump's DONE
+// carries 0, and an old kernel's none.
+func TestParseDiagDumpDoneErrno(t *testing.T) {
+	if got, done, err := parseDiagDump(errnoMsg(nlmsgDone, syscall.ENOENT)); !errors.Is(err, syscall.ENOENT) || done || len(got) != 0 {
+		t.Errorf("a DONE carrying -ENOENT: %v, done %v, %v", got, done, err)
+	}
+	if _, done, err := parseDiagDump(errnoMsg(nlmsgDone, 0)); err != nil || !done {
+		t.Errorf("a DONE carrying 0: done %v, %v", done, err)
+	}
+	bare := errnoMsg(nlmsgDone, 0)[:nlmsgHdrLen]
+	binary.NativeEndian.PutUint32(bare, nlmsgHdrLen)
+	if _, done, err := parseDiagDump(bare); err != nil || !done {
+		t.Errorf("a bare DONE: done %v, %v", done, err)
+	}
+}
+
+// errnoMsg is a netlink message of type typ whose payload is -errno, as
+// the kernel writes an NLMSG_ERROR's or a failed dump's NLMSG_DONE.
+func errnoMsg(typ uint16, errno syscall.Errno) []byte {
+	const msgLen = nlmsgHdrLen + 4
+	b := make([]byte, msgLen)
+	binary.NativeEndian.PutUint32(b, msgLen)
+	binary.NativeEndian.PutUint16(b[4:], typ)
+	binary.NativeEndian.PutUint32(b[nlmsgHdrLen:], uint32(-int32(errno))) //nolint:gosec // the kernel's int error, as its bits
+	return b
 }
 
 // proc-net-tcp's and proc-net-tcp6's first rows are as Linux 7.2 wrote

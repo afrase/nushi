@@ -106,11 +106,14 @@ func listenElsewhere(t *testing.T, kinds ...string) (int, []uint16) {
 	return cmd.Process.Pid, ports
 }
 
-// list is List, skipped where this OS's listeners aren't read.
+// list is List, skipped where this OS's listeners aren't read. On the Mac
+// and Linux, which read them, an unsupported answer fails the test, so a
+// lost build tag or a sandbox that hides both of Linux's sources can't
+// pass as a skip.
 func list(t *testing.T) []Listener {
 	t.Helper()
 	ls, err := List()
-	if errors.Is(err, errors.ErrUnsupported) {
+	if errors.Is(err, errors.ErrUnsupported) && runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
 		t.Skipf("%s's listeners aren't read", runtime.GOOS)
 	}
 	testcheck.NoErr(t, err)
