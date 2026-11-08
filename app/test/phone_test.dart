@@ -614,6 +614,7 @@ void main() {
     expect(platform.saved?['os'], 'linux');
     expect(find.text('Computer'), findsOneWidget);
     expect(find.text("Computer's key"), findsOneWidget);
+    await render(tester, find.byType(PhoneApp), 'phone_settings_computer');
     await _toForget(tester, 'computer');
     expect(find.text('Forget this Mac'), findsNothing);
     await endPhone(tester, phone);
@@ -637,6 +638,7 @@ void main() {
     await again.link!.check();
     await tester.pump();
     expect(find.text("Can't reach your computer"), findsOneWidget);
+    await render(tester, find.byType(PhoneApp), 'phone_unreachable_computer');
     await endPhone(tester, again);
   });
 
