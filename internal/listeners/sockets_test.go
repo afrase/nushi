@@ -108,20 +108,19 @@ func TestParseProcNet(t *testing.T) {
 		sockAt("192.168.7.20:8080", 539190, false),
 		sockAt("127.0.0.2:8081", 539191, false),
 	}
-	if got := parseProcNet(readTestdata(t, "proc-net-tcp"), true); !slices.Equal(got, v4) {
+	if got := parseProcNet(readTestdata(t, "proc-net-tcp")); !slices.Equal(got, v4) {
 		t.Errorf("tcp: %v, want %v", got, v4)
 	}
-	for _, v6only := range []bool{false, true} {
-		want := []inodeSocket{
-			sockAt("[::]:40005", 539186, v6only),
-			sockAt("[::]:40004", 539185, v6only),
-			sockAt("[::1]:40002", 539183, v6only),
-			sockAt("127.0.0.1:40006", 539193, false),
-			sockAt("[fe80::9]:8080", 539195, v6only),
-		}
-		if got := parseProcNet(readTestdata(t, "proc-net-tcp6"), v6only); !slices.Equal(got, want) {
-			t.Errorf("tcp6, bindv6only %v: %v, want %v", v6only, got, want)
-		}
+	// No IPv6 row is V6Only: /proc/net can't tell, so each is dual-stack.
+	tcp6 := []inodeSocket{
+		sockAt("[::]:40005", 539186, false),
+		sockAt("[::]:40004", 539185, false),
+		sockAt("[::1]:40002", 539183, false),
+		sockAt("127.0.0.1:40006", 539193, false),
+		sockAt("[fe80::9]:8080", 539195, false),
+	}
+	if got := parseProcNet(readTestdata(t, "proc-net-tcp6")); !slices.Equal(got, tcp6) {
+		t.Errorf("tcp6: %v, want %v", got, tcp6)
 	}
 }
 

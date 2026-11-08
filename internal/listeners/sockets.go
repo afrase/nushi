@@ -149,11 +149,14 @@ func align4(n int) int {
 
 // parseProcNet reads /proc/net/tcp or tcp6 (proc_net_tcp(5)): the rows in
 // state 0A (listening), their local address and inode. It can't tell an
-// IPv6 socket's IPV6_V6ONLY, so each takes v6only, the system's default
-// (net.ipv6.bindv6only), which a program that sets the option itself (Go
-// does for "tcp6" on [::]) overrides unseen. A row it can't read is
-// skipped.
-func parseProcNet(b []byte, v6only bool) []inodeSocket {
+// IPv6 socket's IPV6_V6ONLY, which a program sets as it likes (Go does for
+// "tcp6" on [::]) whatever net.ipv6.bindv6only says, so each is taken as
+// dual-stack: a wildcard then counts among those an IPv4 dial may reach,
+// and a servers identity check that meets another program's refuses
+// rather than misses it (the wrong guess costs a refusal, or a v6-only
+// server taken as answering on 127.0.0.1, never another program let in).
+// A row it can't read is skipped.
+func parseProcNet(b []byte) []inodeSocket {
 	var out []inodeSocket
 	for i, line := range bytes.Split(b, []byte("\n")) {
 		f := strings.Fields(string(line))
@@ -167,7 +170,7 @@ func parseProcNet(b []byte, v6only bool) []inodeSocket {
 		if !ok || errPort != nil || errInode != nil || port == 0 || inode == 0 {
 			continue
 		}
-		out = append(out, inodeSocket{Addr: netip.AddrPortFrom(a, uint16(port)), Inode: inode, V6Only: a.Is6() && v6only})
+		out = append(out, inodeSocket{Addr: netip.AddrPortFrom(a, uint16(port)), Inode: inode})
 	}
 	return out
 }

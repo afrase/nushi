@@ -1,7 +1,6 @@
 package listeners
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -55,23 +54,19 @@ func List() ([]Listener, error) {
 }
 
 // procNetListening reads the listening sockets from /proc/net/tcp and
-// tcp6, which tell no IPv6 socket's IPV6_V6ONLY: each takes the system's
-// default (parseProcNet). A system without IPv6 has no tcp6, which is no
-// error.
+// tcp6, which tell no IPv6 socket's IPV6_V6ONLY: each is taken as
+// dual-stack (parseProcNet). A system without IPv6 has no tcp6, which is
+// no error.
 func procNetListening() ([]inodeSocket, error) {
-	v6only := false
-	if b, err := os.ReadFile("/proc/sys/net/ipv6/bindv6only"); err == nil {
-		v6only = string(bytes.TrimSpace(b)) == "1"
-	}
 	b, err := os.ReadFile("/proc/net/tcp")
 	if err != nil {
 		return nil, fmt.Errorf("reading TCP sockets: %w", err)
 	}
-	socks := parseProcNet(b, v6only)
+	socks := parseProcNet(b)
 	b, err = os.ReadFile("/proc/net/tcp6")
 	switch {
 	case err == nil:
-		socks = append(socks, parseProcNet(b, v6only)...)
+		socks = append(socks, parseProcNet(b)...)
 	case !errors.Is(err, os.ErrNotExist):
 		return nil, fmt.Errorf("reading TCP sockets: %w", err)
 	}
