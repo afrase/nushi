@@ -42,7 +42,7 @@ BUILD := $(or $(shell git rev-list --count HEAD 2>/dev/null),1)
 MACOS_MIN := 13.0
 MACOS_CGO := -O2 -g -mmacosx-version-min=$(MACOS_MIN)
 
-.PHONY: run daemon stop app package install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
+.PHONY: run daemon stop app package package-linux install gen gen-tools test test-go test-packages test-app test-web lint lint-go lint-dart lint-linux check check-app golden-diff renders lines relay icons adapters web web-fonts web-cut mermaid screenshots claude-record
 
 # Starts the daemon in the background (unless one is running), then the app.
 run: daemon app
@@ -90,11 +90,24 @@ package: mermaid
 	codesign --force --deep --timestamp=none --sign "$(SIGN)" "$(RELEASE)"
 	tools/check-bundle.sh "$(RELEASE)"
 
+# Linux's package (ADR 0102), app/build/linux/nushi: Flutter's release
+# bundle with nushid in lib/, its .desktop file, icons and install.sh,
+# checked; what a release's Linux tarball holds (tools/package-linux.sh).
+package-linux:
+	tools/package-linux.sh "$(VERSION)" "$(BUILD)"
+
+# On Linux the package into ~/.local/opt/nushi, with its .desktop file
+# and icons, through the install.sh it ships.
+ifeq ($(OS),Linux)
+install: package-linux
+	app/build/linux/nushi/install.sh
+else
 install: package
 	mkdir -p "$(HOME)/Applications"
 	rm -rf "$(HOME)/Applications/Nushi.app"
 	ditto "$(RELEASE)" "$(HOME)/Applications/Nushi.app"
 	if [ -n "$(COPY_TO)" ]; then rm -rf "$(COPY_TO)/Nushi.app" && ditto "$(RELEASE)" "$(COPY_TO)/Nushi.app"; fi
+endif
 
 # The relay (ADR 0033), one static binary: bin/nushi-relay -h lists its flags.
 relay:
@@ -272,11 +285,11 @@ test-web:
 screenshots:
 	cd app && flutter test --update-goldens test/screenshots/readme_shots.dart
 
-# make lint-dart, make test-app and flutter build macos (build only), stopping
-# at the first failure: a line per step, then what failed and the path of the
-# full log, so its output needs no pipe (tools/check-app). Not part of check
-# or CI: the build is for a change to the app. FLUTTER_TEST_FLAGS and SHARD
-# work as for test-app.
+# make lint-dart, make test-app and flutter build macos (on Linux, flutter
+# build linux; build only), stopping at the first failure: a line per step,
+# then what failed and the path of the full log, so its output needs no pipe
+# (tools/check-app). Not part of check or CI: the build is for a change to
+# the app. FLUTTER_TEST_FLAGS and SHARD work as for test-app.
 check-app:
 	@go build -o bin/check-app ./tools/check-app
 	@bin/check-app

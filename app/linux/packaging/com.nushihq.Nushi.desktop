@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Nushi
+Comment=Run your coding agents as chats
+Exec=nushi
+Icon=com.nushihq.Nushi
+Terminal=false
+Categories=Development;IDE;
+StartupWMClass=com.nushihq.Nushi
+StartupNotify=true
