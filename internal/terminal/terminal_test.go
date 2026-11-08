@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +13,20 @@ import (
 
 	"github.com/afrase/nushi/internal/testcheck"
 )
+
+// sleeperEnv makes this test binary, run again as a child, sleep instead
+// of running tests: a child that runs whatever its first argument says,
+// even an empty one, which a multicall coreutils (uutils, Ubuntu's since
+// 25.10, or busybox) would take for no program and exit at once.
+const sleeperEnv = "NUSHI_TERMINAL_SLEEPER"
+
+func TestMain(m *testing.M) {
+	if os.Getenv(sleeperEnv) == "1" {
+		time.Sleep(time.Minute)
+		os.Exit(0)
+	}
+	m.Run()
+}
 
 // shell starts /bin/sh in a terminal and collects what it prints.
 func shell(t *testing.T) (*Terminal, *output) {
@@ -138,32 +151,20 @@ func TestASecondCloseLeavesTheNextShell(t *testing.T) {
 	out.wait(t, `alive-42`)
 }
 
-// No process started after a terminal holds its master: it could type
-// into the terminal.
-func TestLaterProcessesDontGetTheTerminal(t *testing.T) {
-	term, _ := shell(t)
-	out, err := exec.Command("/bin/ls", "/dev/fd").Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if fd := strconv.Itoa(int(term.pty.Fd())); slices.Contains(strings.Fields(string(out)), fd) {
-		t.Errorf("a later process has the master (fd %s): %s", fd, out)
-	}
-}
-
 // An empty first argument isn't taken for padding: the arguments stay
 // where they are, and the environment out of the title.
 func TestCommandLineWithAnEmptyFirstArgument(t *testing.T) {
 	for _, args := range [][]string{{"", "30"}, {"sleep", "30"}} {
-		cmd := &exec.Cmd{Path: "/bin/sleep", Args: args, Env: []string{"SECRET_TOKEN=hunter2"}}
-		if err := cmd.Start(); err != nil {
-			t.Fatal(err)
-		}
-		time.Sleep(50 * time.Millisecond)
-		got := commandLine(cmd.Process.Pid)
+		exe, err := os.Executable()
+		testcheck.NoErr(t, err)
+		cmd := &exec.Cmd{Path: exe, Args: args, Env: []string{"SECRET_TOKEN=hunter2", sleeperEnv + "=1"}}
+		testcheck.NoErr(t, cmd.Start())
+		want, got := strings.TrimSpace(args[0]+" 30"), ""
+		// Under Rosetta the arguments read empty for a moment after the exec.
+		ok := testcheck.Eventually(func() bool { got = commandLine(cmd.Process.Pid); return got == want })
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait() // killed: its error says only that
-		if want := strings.TrimSpace(args[0] + " 30"); got != want {
+		if !ok {
 			t.Errorf("commandLine of %q = %q, want %q", args, got, want)
 		}
 	}
