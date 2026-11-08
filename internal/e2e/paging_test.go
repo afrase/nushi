@@ -2,7 +2,9 @@ package e2e
 
 import (
 	"context"
+	"log/slog"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 
 	"github.com/afrase/nushi/internal/acptest"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
+	"github.com/afrase/nushi/internal/logs"
 )
 
 // A phone takes a long chat's recent part, then older pages as it
@@ -56,12 +59,16 @@ func TestRecentThenOlderPages(t *testing.T) {
 	}
 }
 
-// An asleep chat lets go of its transcript (the copy holds it): a client
-// following it all along reads the same recent part and pages from the
-// daemon after as before, its events numbered on without a gap, and the
-// message that wakes it shows where it should.
+// An asleep chat lets go of its transcript (the copy holds it; the log
+// says so, as nothing a client sees does): a client following it all
+// along reads the same recent part and pages from the daemon after as
+// before, its events numbered on without a gap, and the message that
+// wakes it shows where it should.
 func TestAnAsleepChatPagesTheSame(t *testing.T) {
 	ctx := context.Background()
+	log := &syncBuffer{}
+	defer slog.SetDefault(slog.Default())
+	slog.SetDefault(slog.New(logs.Handler(log)))
 	d := startDaemon(t, t.TempDir(), &acptest.History{})
 	a, follower := open(t, d), open(t, d)
 	id := a.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
@@ -79,6 +86,11 @@ func TestAnAsleepChatPagesTheSame(t *testing.T) {
 	}
 	before, snap := read()
 	must(a.c.SleepChat(ctx, connect.NewRequest(&nushiv1.SleepChatRequest{ChatId: id})))
+	if !slices.ContainsFunc(strings.Split(log.String(), "\n"), func(line string) bool {
+		return strings.Contains(line, `msg="transcript let go"`) && strings.Contains(line, "chat="+id)
+	}) {
+		t.Fatalf("asleep, the chat didn't let go of its transcript:\n%s", log)
+	}
 	after, asleep := read()
 	if len(after) != len(before) || asleep.Older != snap.Older || asleep.Seq <= snap.Seq {
 		t.Fatalf("asleep: %d items (%d before), %d older (%d), seq %d (%d)", len(after), len(before), asleep.Older, snap.Older, asleep.Seq, snap.Seq)
