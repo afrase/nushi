@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -21,7 +23,7 @@ bool reduceMotion(BuildContext context) =>
 ///   the chat, lay out once at the final width and glide by a transform;
 /// - under [reduceMotion], sizes and places jump; feedback such as a press
 ///   tint stays;
-/// - nothing runs at rest: a one-shot run ends, loops are on [loopClock].
+/// - nothing runs at rest: a one-shot run ends, loops are on [pulseClock].
 abstract final class Motion {
   /// Text and color crossfades, a button swapping: barely seen.
   static const quick = Duration(milliseconds: 120);
@@ -45,9 +47,11 @@ abstract final class Motion {
   static const Cubic leave = Cubic(0.4, 0, 1, 1);
 }
 
-/// One clock for everything that loops (a shine, a working chat's ring):
-/// it ticks only while something listens, so they move in step and stop
-/// together, and what listens repaints from it without its own controller.
+/// One clock for the motions that run once ([ClockRun]) and the reply's
+/// pacing, every frame: it ticks only while something listens, so they
+/// move in step and stop together, and what listens repaints from it
+/// without its own controller. What loops for as long as a state lasts is
+/// on [pulseClock].
 class _Clock extends ChangeNotifier {
   Ticker? _ticker;
   Duration now = Duration.zero;
@@ -81,10 +85,85 @@ class _Clock extends ChangeNotifier {
   }
 }
 
-final loopClock = _Clock();
+/// The one clock of what runs once (see [_Clock]).
+final frameClock = _Clock();
+
+/// How many times a second [pulseClock] ticks while Nushi is in front:
+/// about the fewest at which a shine still sweeps rather than steps across
+/// a title (its band moves two text widths in two seconds), and plenty for
+/// the rest (a ring grows under a pixel a tick, a breath or a caret fades).
+const pulseRate = 20;
+
+/// The clock everything that loops for as long as a state lasts repaints
+/// from (a shine, a working chat's ring, work in the background, a pull
+/// request's running checks, a streaming reply's caret, a spinner):
+/// [pulseRate] times a second while Nushi is in front (the window focused,
+/// the phone's page in front; unknown counts as in front), still otherwise,
+/// where a loop's state shows by its color and shape alone, as under
+/// Reduce Motion. A loop can last hours (a command in the background), and
+/// each tick draws the whole window again: at the display's rate, one chat
+/// working in the background kept an idle Nushi at half a core and the
+/// window server at more.
+class _Pulse extends ChangeNotifier {
+  static const _every = Duration(
+    microseconds: Duration.microsecondsPerSecond ~/ pulseRate,
+  );
+
+  // Its time: the ticks it ticked, so every loop is in step within a tick
+  // and a test's fake time moves it.
+  Duration _now = Duration.zero;
+  Timer? _timer;
+  AppLifecycleListener? _lifecycle;
+
+  /// Where in a loop of [period] the clock is, from 0 to 1.
+  double phase(Duration period) =>
+      _now.inMicroseconds % period.inMicroseconds / period.inMicroseconds;
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    _lifecycle ??= AppLifecycleListener(onStateChange: (_) => _run());
+    _run();
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    _run();
+  }
+
+  /// Ticks while something listens and Nushi is in front; with no one
+  /// listening, stops listening to the app's state too.
+  void _run() {
+    final front =
+        (WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) ==
+        AppLifecycleState.resumed;
+    if (hasListeners && front) {
+      if (_timer != null) return;
+      final from = _now;
+      // A late tick counts the ticks it missed (Timer.tick), so a loop
+      // keeps its pace when the app is busy.
+      _timer = Timer.periodic(_every, (t) {
+        _now = from + _every * t.tick;
+        notifyListeners();
+        // One that left as it ticked is gone only now (see [_Clock]).
+        _run();
+      });
+      return;
+    }
+    _timer?.cancel();
+    _timer = null;
+    if (hasListeners) return;
+    _lifecycle?.dispose();
+    _lifecycle = null;
+  }
+}
+
+/// The one clock of what loops (see [_Pulse]).
+final pulseClock = _Pulse();
 
 /// A motion that runs once for a while (a call's title typing, a check
-/// drawing, sparks) on [loopClock]: the state rebuilds on each tick until
+/// drawing, sparks) on [frameClock]: the state rebuilds on each tick until
 /// it has run [runFor]'s length, so no ticker of its own runs, and
 /// nothing at rest.
 mixin ClockRun<T extends StatefulWidget> on State<T> {
@@ -98,7 +177,7 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
       ? _length
       : _from == null
       ? Duration.zero
-      : loopClock.now - _from!;
+      : frameClock.now - _from!;
 
   /// [ran] in milliseconds.
   double get ranMs => ran.inMicroseconds / 1000;
@@ -112,14 +191,14 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
     _from = null;
     if (_on) return;
     _on = true;
-    loopClock.addListener(_tick);
+    frameClock.addListener(_tick);
   }
 
   /// Ends the run where it is (as if it had run its length).
   void stopRun() {
     if (!_on) return;
     _on = false;
-    loopClock.removeListener(_tick);
+    frameClock.removeListener(_tick);
   }
 
   /// Called on each tick before the rebuild ([ran] as of this tick; the
@@ -128,8 +207,8 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
   void ticked() {}
 
   void _tick() {
-    final from = _from ??= loopClock.now;
-    if (loopClock.now - from >= _length) stopRun();
+    final from = _from ??= frameClock.now;
+    if (frameClock.now - from >= _length) stopRun();
     if (!mounted) return;
     ticked();
     setState(() {});
@@ -232,21 +311,21 @@ class Shine extends StatelessWidget {
     );
     if (stopAt case final v?) return mask(v, child);
     return ListenableBuilder(
-      listenable: loopClock,
-      builder: (context, child) => mask(loopClock.phase(period), child!),
+      listenable: pulseClock,
+      builder: (context, child) => mask(pulseClock.phase(period), child!),
       child: child,
     );
   }
 }
 
-/// Where in a loop of [period] something that loops on [loopClock] is: as
+/// Where in a loop of [period] something that loops on [pulseClock] is: as
 /// the clock says, or where [Shine.stopAt] stops every shine, for a still
 /// frame.
-double loopPhase(Duration period) => Shine.stopAt ?? loopClock.phase(period);
+double loopPhase(Duration period) => Shine.stopAt ?? pulseClock.phase(period);
 
-/// What a looping painter repaints with: [loopClock], unless stopped for a
+/// What a looping painter repaints with: [pulseClock], unless stopped for a
 /// still frame (see [loopPhase]).
-Listenable? get loopRepaint => Shine.stopAt == null ? loopClock : null;
+Listenable? get loopRepaint => Shine.stopAt == null ? pulseClock : null;
 
 /// [child] easing to its new size as it changes, over [Motion.standard]
 /// from [alignment]; under Reduce Motion at once, with no AnimatedSize (one

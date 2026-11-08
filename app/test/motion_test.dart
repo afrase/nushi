@@ -94,6 +94,42 @@ void main() {
     await closeView(tester, d);
   });
 
+  testWidgets('a loop ticks $pulseRate times a second while Nushi is in '
+      'front, never while it is not, and stops with no one listening', (
+    tester,
+  ) async {
+    var ticks = 0;
+    void tick() => ticks++;
+    pulseClock.addListener(tick);
+    addTearDown(() => pulseClock.removeListener(tick));
+    final from = pulseClock.phase(const Duration(seconds: 10));
+    await tester.pump(const Duration(seconds: 1));
+    expect(ticks, pulseRate);
+    // Its time is its ticks: a second on.
+    expect(
+      pulseClock.phase(const Duration(seconds: 10)),
+      closeTo((from + 0.1) % 1, 1e-9),
+    );
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    addTearDown(
+      () => tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(ticks, pulseRate);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 1));
+    expect(ticks, 2 * pulseRate);
+
+    // Gone, it stops: a timer left running would fail the test as it ends.
+    pulseClock.removeListener(tick);
+    await tester.pump(const Duration(seconds: 1));
+    expect(ticks, 2 * pulseRate);
+  });
+
   // Enlarged, so the band shows; stopped mid-sweep.
   testWidgets('golden, a running call, still, dark', (tester) async {
     Shine.stopAt = 0.4;

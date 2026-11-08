@@ -150,6 +150,9 @@ void main() {
 
     final seed = fake.chats.firstWhere((c) => c.id == 'b')..archived = true;
     fake.emit(EventsResponse(chatId: 'b', chat: seed));
+    // The event in, then the row built going: with nothing looping, the
+    // first pump has no frame to draw it in.
+    await tester.pump();
     await tester.pump();
     await tester.pump(Motion.exit ~/ 2);
     expect(_in('Seed data'), findsOneWidget);
