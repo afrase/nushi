@@ -211,6 +211,32 @@ func TestCrashMidWrite(t *testing.T) {
 	}
 }
 
+// The half-written line is cut off however long it is: longer than what's
+// read of the file's end at a time, or the file's only line.
+func TestCrashMidLongWrite(t *testing.T) {
+	s, dir := open(t)
+	add(t, s, "C", "", msg("a", "A"))
+	half := `{"item":{"ID":"b","Kind":2,"Text":"` + strings.Repeat("x", 3*tailChunk+5)
+	for chat, start := range map[string]string{"C": "", "D": half} {
+		testcheck.NoErr(t, os.MkdirAll(filepath.Join(dir, chat), 0o700))
+		f, err := os.OpenFile(filepath.Join(dir, chat, itemsFile), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
+		testcheck.NoErr(t, err)
+		_, err = f.WriteString(start + half)
+		testcheck.NoErr(t, err)
+		testcheck.NoErr(t, f.Close())
+	}
+	s2, err := Open(dir)
+	testcheck.NoErr(t, err)
+	add(t, s2, "C", "a", msg("c", "C"))
+	add(t, s2, "D", "", msg("d", "D"))
+	if got := ids(read(t, s2, "C")); got != "a=A c=C" {
+		t.Errorf("C: %s", got)
+	}
+	if got := ids(read(t, s2, "D")); got != "d=D" {
+		t.Errorf("D: %s", got)
+	}
+}
+
 func TestReplaceAndList(t *testing.T) {
 	s, dir := open(t)
 	img := model.Image{MimeType: "image/png", Data: []byte("old")}
@@ -319,12 +345,13 @@ func TestFind(t *testing.T) {
 	}
 }
 
-// A daemon's start looks through every chat's copy (EndStalePrompts): a
-// long one costs what Find picks of it, not its size. Before Find, that
-// look read a 30 MB copy whole and decoded all of it, about 190 MB
-// allocated, all of it held until the next collection.
+// A daemon's start looks through every chat's copy (EndStalePrompts) and
+// writes the prompts it finds back cancelled: a long one costs what Find
+// picks of it, not its size. Before Find, that look read a 30 MB copy whole
+// and decoded all of it, about 110 MB allocated, and the write read it
+// whole again to check its end; all of it held until the next collection.
 func TestFindReadsLittle(t *testing.T) {
-	s, _ := open(t)
+	s, dir := open(t)
 	text := strings.Repeat("output of a tool call\n", 300) // about 6.6 KB
 	var items []model.Item
 	for i := range 4500 {
@@ -336,17 +363,25 @@ func TestFindReadsLittle(t *testing.T) {
 		afters[i] = items[i-1].ID
 	}
 	testcheck.NoErr(t, s.Append("BIG", items, afters))
+	s2, err := Open(dir) // the daemon's next start: the copy's end not yet checked
+	testcheck.NoErr(t, err)
+	t.Cleanup(func() { _ = s2.Close() })
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	found, _, err := s.Find("BIG", pending)
-	runtime.ReadMemStats(&after)
+	found, foundAfter, err := s2.Find("BIG", pending)
 	testcheck.NoErr(t, err)
 	if len(found) != 1 || found[0].ID != "item-100" {
 		t.Fatalf("found %s", ids(found))
 	}
+	found[0].Status = "cancelled"
+	testcheck.NoErr(t, s2.Append("BIG", found, foundAfter))
+	runtime.ReadMemStats(&after)
 	// About 2 MB; 7 MB with -race, which empties sync.Pool's (json's state
 	// for each line made anew).
 	if alloc := after.TotalAlloc - before.TotalAlloc; alloc > 12<<20 {
-		t.Errorf("Find allocated %d MB for a 30 MB copy", alloc>>20)
+		t.Errorf("Find and Append allocated %d MB for a 30 MB copy", alloc>>20)
+	}
+	if found, _, _ := s2.Find("BIG", pending); len(found) != 0 {
+		t.Errorf("still pending: %s", ids(found))
 	}
 }

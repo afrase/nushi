@@ -178,24 +178,51 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 }
 
 // repairLocked cuts off a last line a crash left without its end, so the
-// next record starts a line of its own.
+// next record starts a line of its own. It reads only the file's tail: the
+// first write to an asleep chat's copy (EndStalePrompts, at every start)
+// mustn't cost the whole copy.
 func (s *Store) repairLocked(name string) error {
-	b, err := s.root.ReadFile(name)
+	f, err := s.root.OpenFile(name, os.O_RDWR, 0)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
-	if err != nil || len(b) == 0 || b[len(b)-1] == '\n' {
-		return err
-	}
-	f, err := s.root.OpenFile(name, os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
-	err = f.Truncate(int64(bytes.LastIndexByte(b, '\n') + 1))
+	fi, err := f.Stat()
+	var whole int64
+	if err == nil {
+		whole, err = wholeLines(f, fi.Size())
+	}
+	if err == nil && whole < fi.Size() {
+		err = f.Truncate(whole)
+	}
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
 	return err
+}
+
+// tailChunk is how much of a copy's end wholeLines reads at a time.
+const tailChunk = 64 << 10
+
+// wholeLines returns how much of f's size bytes are whole lines: all of
+// them when the last is a newline, else up to the last newline. It reads
+// back from the end a chunk at a time, so a long half-written line costs
+// its length and a whole file one chunk.
+func wholeLines(f *os.File, size int64) (int64, error) {
+	buf := make([]byte, min(size, tailChunk))
+	for end := size; end > 0; {
+		b := buf[:min(end, int64(len(buf)))]
+		end -= int64(len(b))
+		if _, err := f.ReadAt(b, end); err != nil {
+			return 0, err
+		}
+		if i := bytes.LastIndexByte(b, '\n'); i >= 0 {
+			return end + int64(i) + 1, nil
+		}
+	}
+	return 0, nil
 }
 
 // storeImagesLocked writes an item's images beside chat's file (each once,
