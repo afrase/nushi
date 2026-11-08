@@ -247,6 +247,28 @@ func TestAnAskHoldsItsOwnStart(t *testing.T) {
 	}
 }
 
+// A start stopped before it answered says so, and who stopped it: it
+// didn't fail.
+func TestAStartStoppedBeforeItAnswers(t *testing.T) {
+	s, _, _ := setup(t, entry("web", freePort(t), "-delay", "10s"))
+	set, _ := agentTools(s)
+	type answer struct {
+		text string
+		err  error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		text, err := set.Call(context.Background(), tools.Grant{Chat: "c"}, "preview_start", json.RawMessage(`{"name":"web"}`))
+		done <- answer{text, err}
+	}()
+	r := row(t, s, "web", Starting)
+	testcheck.NoErr(t, s.Stop("c", r.ServerID))
+	got := <-done
+	if got.err != nil || got.text != "web was stopped before it answered, by the user." {
+		t.Errorf("preview_start: %q, %v", got.text, got.err)
+	}
+}
+
 // A failed start tells the agent why and what it printed; the log has
 // fixed words alone.
 func TestAFailedStartTellsTheAgent(t *testing.T) {

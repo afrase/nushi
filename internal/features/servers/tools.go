@@ -197,14 +197,25 @@ func (t *AgentTools) start(ctx context.Context, chat, name string) (string, erro
 	case err != nil:
 		return "", err
 	}
-	r = t.s.settle(ctx, r)
+	r, by := t.s.settle(ctx, r)
 	where := fmt.Sprintf("port %d (%s)", r.Port, r.URL)
 	switch r.State {
 	case Running:
 		return fmt.Sprintf("%s runs on %s. Its page opens beside the chat.", r.Name, where), nil
 	case Starting, NotAnswering:
 		return fmt.Sprintf("%s started on %s but hasn't answered yet. preview_list says when it does, preview_logs shows its output; its page opens beside the chat once it answers.", r.Name, where), nil
-	case Stopped, Failed:
+	case Stopped: // stopped while it started: no failure to look into
+		text := r.Name + " was stopped before it answered"
+		switch by {
+		case ByUser:
+			text += ", by the user"
+		case ByAgent:
+			text += ", by a preview_stop"
+		case ByNushi:
+			text += ", by Nushi (its folder has no chat left, or the daemon stops)"
+		}
+		return text + ".", nil
+	case Failed:
 	}
 	text := r.Name + " failed"
 	if r.Error != "" {
@@ -251,16 +262,17 @@ func (t *AgentTools) logs(chat, name string, lines int) (string, error) {
 }
 
 // settle waits up to StartWait, or until ctx ends, for a server Start
-// started to answer or end, and returns its row as it then is.
-func (s *Service) settle(ctx context.Context, r Row) Row {
+// started to answer or end, and returns its row as it then is, and who
+// stopped it once it ended.
+func (s *Service) settle(ctx context.Context, r Row) (Row, string) {
 	deadline := time.After(s.StartWait)
 	tick := time.NewTicker(100 * time.Millisecond)
 	defer tick.Stop()
 	for {
 		s.mu.Lock()
-		state := Stopped
+		state, by := Stopped, ""
 		if sv := s.server(r.ServerID); sv != nil {
-			state = sv.state
+			state, by = sv.state, sv.by
 			if sv.port != 0 {
 				r.Port, r.URL = sv.port, sv.url
 			}
@@ -269,13 +281,13 @@ func (s *Service) settle(ctx context.Context, r Row) Row {
 		s.mu.Unlock()
 		r.State = state
 		if state != Starting {
-			return r
+			return r, by
 		}
 		select {
 		case <-ctx.Done():
-			return r
+			return r, by
 		case <-deadline:
-			return r
+			return r, by
 		case <-tick.C:
 		}
 	}
