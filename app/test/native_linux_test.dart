@@ -31,7 +31,7 @@ void main() {
     expect(await set.clipboard.files(), isEmpty);
     expect(await set.clipboard.image(), isNull);
     expect(await set.web.sincePress(), isNull);
-    expect(await set.web.defaultBrowserName(), isNull);
+    expect(set.web.embedded, isFalse); // outside_page_test has the rest
     final d = await set.diagrams.draw(
       'graph TD; a-->b',
       dark: false,
