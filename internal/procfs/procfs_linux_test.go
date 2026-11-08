@@ -14,6 +14,18 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
+// childEnv makes this test binary, run again by TestChild, wait to be
+// killed instead of running tests.
+const childEnv = "NUSHI_PROCFS_CHILD"
+
+func TestMain(m *testing.M) {
+	if os.Getenv(childEnv) == "1" {
+		time.Sleep(time.Minute)
+		os.Exit(0)
+	}
+	m.Run()
+}
+
 // This test's own stat matches what the process knows of itself, and it
 // started after the boot and a little before now.
 func TestReadStatSelf(t *testing.T) {
@@ -36,11 +48,13 @@ func TestReadStatSelf(t *testing.T) {
 
 // A child's command line keeps its empty first argument, and its stat
 // names this process as its parent; once it ends and is reaped, neither
-// reads.
+// reads. The child is this test binary run again, not the system's
+// sleep: a multicall coreutils (busybox, uutils) picks its program by
+// the first argument's name and, given an empty one, exits at once.
 func TestChild(t *testing.T) {
-	sleep, err := exec.LookPath("sleep")
+	exe, err := os.Executable()
 	testcheck.NoErr(t, err)
-	cmd := &exec.Cmd{Path: sleep, Args: []string{"", "30"}}
+	cmd := &exec.Cmd{Path: exe, Args: []string{"", "-test.run=^$"}, Env: append(os.Environ(), childEnv+"=1")}
 	testcheck.NoErr(t, cmd.Start()) // returns once the child has exec'd
 	pid := cmd.Process.Pid
 	defer func() { _ = cmd.Process.Kill(); _ = cmd.Wait() }()
@@ -51,13 +65,15 @@ func TestChild(t *testing.T) {
 	var ok bool
 	if !testcheck.Eventually(func() bool {
 		args, ok = Cmdline(pid)
-		return ok && slices.Equal(args, []string{"", "30"})
+		return ok && slices.Equal(args, []string{"", "-test.run=^$"})
 	}) {
 		t.Fatalf("cmdline %q, %v", args, ok)
 	}
 	s, err := ReadStat(pid)
 	testcheck.NoErr(t, err)
-	if s.Ppid != os.Getpid() || s.Comm != "sleep" {
+	comm := filepath.Base(exe)
+	comm = comm[:min(len(comm), 15)]
+	if s.Ppid != os.Getpid() || s.Comm != comm {
 		t.Fatalf("child's stat %+v", s)
 	}
 	lstart(t, pid, s.Started)
@@ -103,6 +119,13 @@ func TestLinks(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if l := Links(os.Getpid()); !slices.Contains(l, name) {
 		t.Fatalf("links %q don't hold %s", l, name)
+	}
+}
+
+// The boot's id is a UUID, the same at each read.
+func TestBootID(t *testing.T) {
+	if id := BootID(); len(id) != len("8e0d2f2c-3a4b-4c5d-9e6f-0a1b2c3d4e5f") || id != BootID() {
+		t.Fatalf("boot id %q", id)
 	}
 }
 

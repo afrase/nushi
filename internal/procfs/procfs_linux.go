@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -20,6 +19,10 @@ func ReadStat(pid int) (Stat, error) {
 	if err != nil {
 		return Stat{}, err
 	}
+	return readStat(pid, boot)
+}
+
+func readStat(pid int, boot time.Time) (Stat, error) {
 	b, err := os.ReadFile(path(pid, "stat"))
 	if err != nil {
 		return Stat{}, fmt.Errorf("reading process %d: %w", pid, err)
@@ -27,19 +30,33 @@ func ReadStat(pid int) (Stat, error) {
 	return parseStat(b, boot)
 }
 
-// BootTime is when the system booted, /proc/stat's btime, read once: it
-// doesn't change while the system runs, and every Started counts from it.
-var BootTime = sync.OnceValues(func() (time.Time, error) {
+// BootTime is when the system booted by the wall clock as it is now,
+// /proc/stat's btime, read anew at each call: a step of the clock moves
+// it (Stat's Started says what that means), and ps reads it anew too.
+func BootTime() (time.Time, error) {
 	b, err := os.ReadFile(filepath.Join(root, "stat"))
 	if err != nil {
 		return time.Time{}, fmt.Errorf("reading the boot time: %w", err)
 	}
 	return parseBootTime(b)
-})
+}
+
+// BootID names this boot (/proc/sys/kernel/random/boot_id): a Stat's
+// SinceBoot means the same moment only within one. Empty when it can't
+// be read.
+func BootID() string {
+	b, _ := os.ReadFile(filepath.Join(root, "sys", "kernel", "random", "boot_id"))
+	return string(bytes.TrimSpace(b))
+}
 
 // All reads the stat of every process /proc lists, in no particular
-// order, skipping each one that ended or can't be read.
+// order, skipping each one that ended or can't be read. The boot time is
+// read once for the whole list, so its Started times agree.
 func All() []Stat {
+	boot, err := BootTime()
+	if err != nil {
+		return nil
+	}
 	entries, _ := os.ReadDir(root)
 	out := make([]Stat, 0, len(entries))
 	for _, e := range entries {
@@ -47,7 +64,7 @@ func All() []Stat {
 		if err != nil || pid <= 0 {
 			continue
 		}
-		if s, err := ReadStat(pid); err == nil {
+		if s, err := readStat(pid, boot); err == nil {
 			out = append(out, s)
 		}
 	}

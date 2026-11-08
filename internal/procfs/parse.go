@@ -16,7 +16,19 @@ type Stat struct {
 	TTY       int // its controlling terminal's device number (tty_nr), 0 for none
 	State     byte
 	Comm      string // the executable's name, at most 15 bytes, any of them
-	Started   time.Time
+	// Started is when it started by the wall clock as it is now: btime,
+	// read anew for each call, plus SinceBoot, as procps computes ps's
+	// lstart. btime is the wall clock less the time since boot, in whole
+	// seconds, so a step of the clock (NTP, chrony's makestep,
+	// settimeofday, a VM's time sync) moves it, and Started with it, by
+	// the step. That keeps Started comparable with time.Now and with ps
+	// (claudehistory's procStart), but the same process may get another
+	// Started after a step: to know a process again across one, or
+	// across a daemon's restart, compare SinceBoot within one BootID.
+	Started time.Time
+	// SinceBoot is how long after the boot it started (starttime), on
+	// the boot clock, which no step of the wall clock moves.
+	SinceBoot time.Duration
 }
 
 // userHZ is the unit of stat's times. It is fixed at 100 in the Linux
@@ -27,7 +39,7 @@ const userHZ = 100
 // parseStat reads a stat line. comm runs from the first '(' to the last
 // ')': it may hold spaces and parentheses itself, the fields after it
 // never do. Started is boot plus the start time's ticks, as procps
-// computes ps's lstart, so the same process always gets the same time.
+// computes ps's lstart.
 func parseStat(b []byte, boot time.Time) (Stat, error) {
 	open, end := bytes.IndexByte(b, '('), bytes.LastIndexByte(b, ')')
 	if open < 0 || end < open {
@@ -52,10 +64,11 @@ func parseStat(b []byte, boot time.Time) (Stat, error) {
 	if err != nil {
 		return Stat{}, fmt.Errorf("stat of %d: starttime: %w", pid, err)
 	}
+	since := time.Duration(ticks) * (time.Second / userHZ)
 	return Stat{
 		Pid: pid, Ppid: n[0], Pgid: n[1], Session: n[2], TTY: n[3],
 		State: f[0][0], Comm: string(b[open+1 : end]),
-		Started: boot.Add(time.Duration(ticks) * (time.Second / userHZ)),
+		Started: boot.Add(since), SinceBoot: since,
 	}, nil
 }
 
@@ -78,14 +91,23 @@ func parseBootTime(b []byte) (time.Time, error) {
 
 // splitCmdline splits /proc/<pid>/cmdline: each argument ends with a NUL,
 // so an empty first argument is a leading NUL and is kept. A process
-// that rewrote its arguments (setproctitle) may leave no NUL at the end;
-// the last argument then runs to the end.
+// that rewrote its arguments to retitle itself leaves one of two shapes.
+// BSD's setproctitle may leave no NUL at the end: the last argument then
+// runs to the end. libuv's uv_set_process_title (node's process.title,
+// so Claude Code's "claude") writes the title and fills the rest of the
+// old arguments' space with NULs, which reads as the title and an empty
+// argument for each NUL left. Trailing empty arguments past the first
+// are dropped, so it reads as the title alone, at the cost of a real
+// trailing "" argument, which the kernel's bytes can't tell apart.
 func splitCmdline(b []byte) []string {
 	if len(b) == 0 {
 		return []string{}
 	}
 	b = bytes.TrimSuffix(b, []byte{0})
 	args := bytes.Split(b, []byte{0})
+	for len(args) > 1 && len(args[len(args)-1]) == 0 {
+		args = args[:len(args)-1]
+	}
 	out := make([]string, len(args))
 	for i, a := range args {
 		out[i] = string(a)

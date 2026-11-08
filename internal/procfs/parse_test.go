@@ -36,6 +36,9 @@ func TestParseStat(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("testdata", "stat", tc.file))
 			testcheck.NoErr(t, err)
 			got, err := parseStat(b, boot)
+			if tc.want != (Stat{}) {
+				tc.want.SinceBoot = tc.want.Started.Sub(boot)
+			}
 			switch {
 			case tc.want == Stat{} && err == nil:
 				t.Fatalf("parsed %+v, want an error", got)
@@ -57,6 +60,22 @@ func TestStartedAsLstart(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if got, want := s.Started.Truncate(time.Second), time.Unix(1793405909+703235, 0); !got.Equal(want) {
 		t.Fatalf("started %v, want %v", got, want)
+	}
+	if want := 703235*time.Second + 250*time.Millisecond; s.SinceBoot != want {
+		t.Fatalf("since boot %v, want %v", s.SinceBoot, want)
+	}
+}
+
+// A clock step moves btime, and Started with it, but not SinceBoot.
+func TestClockStep(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("testdata", "stat", "cat"))
+	testcheck.NoErr(t, err)
+	before, err := parseStat(b, boot)
+	testcheck.NoErr(t, err)
+	after, err := parseStat(b, boot.Add(2*time.Second))
+	testcheck.NoErr(t, err)
+	if after.Started.Sub(before.Started) != 2*time.Second || after.SinceBoot != before.SinceBoot {
+		t.Fatalf("before %+v\nafter %+v", before, after)
 	}
 }
 
@@ -85,6 +104,9 @@ func TestSplitCmdline(t *testing.T) {
 		{"node\x00\x00x\x00", []string{"node", "", "x"}}, // an empty one between
 		{"nginx: worker process", []string{"nginx: worker process"}},
 		{"", []string{}}, // a kernel thread's
+		// Retitled by libuv: the title, then NULs to the old arguments' end.
+		{"claude\x00\x00\x00\x00\x00\x00\x00", []string{"claude"}},
+		{"\x00", []string{""}},
 	} {
 		if got := splitCmdline([]byte(tc.in)); !slices.Equal(got, tc.want) {
 			t.Errorf("%q: got %q, want %q", tc.in, got, tc.want)
