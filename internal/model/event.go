@@ -40,6 +40,10 @@ type Event struct {
 	// (its show tool, ADR 0068), as the agent named it. These events aren't
 	// numbered (Seq is 0).
 	Show string
+	// ShowURL is a page the chat's agent asked to show in a browser tab:
+	// its show tool's url, or a dev server it started once that answers
+	// (ADR 0100); loopback http or https only. Not numbered either.
+	ShowURL string
 	// Servers is a folder whose dev servers changed (ADR 0098): one
 	// started, answered, failed or ended; ChatID is "".
 	Servers string

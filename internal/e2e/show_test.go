@@ -20,7 +20,13 @@ import (
 // show calls the show tool as `nushid tools-mcp` does.
 func show(t *testing.T, d *daemon, key, path string) (text string, failed bool) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"name": "show", "arguments": map[string]string{"path": path}})
+	return callTool(t, d, key, "show", map[string]string{"path": path})
+}
+
+// callTool calls a chat's tool as `nushid tools-mcp` does.
+func callTool(t *testing.T, d *daemon, key, tool string, args any) (text string, failed bool) {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{"name": tool, "arguments": args})
 	testcheck.NoErr(t, err)
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, d.toolAPI+"/tools/call", bytes.NewReader(body))
 	testcheck.NoErr(t, err)
@@ -104,5 +110,24 @@ func TestWatchChatFolder(t *testing.T) {
 			}
 			_ = stream.Close()
 		}
+	}
+}
+
+// The agent's show of a page on this Mac: the clients hear its url, as a
+// browser reads it; another machine's page reaches neither (ADR 0100).
+func TestAgentShowsAPage(t *testing.T) {
+	d := startDaemon(t, t.TempDir(), &acptest.History{})
+	mac := open(t, d)
+	id := mac.start(&nushiv1.StartChatRequest{Folder: t.TempDir()})
+	key := d.tools.Key(tools.Grant{Chat: id, Agent: "fake"})
+	if text, failed := callTool(t, d, key, "show", map[string]string{"url": "https://example.com/"}); !failed || !strings.Contains(text, "this Mac") {
+		t.Errorf("another machine's page: %q, failed %v", text, failed)
+	}
+	if text, failed := callTool(t, d, key, "show", map[string]string{"url": "http://LOCALHOST:5173/app"}); failed {
+		t.Fatalf("a page: %q", text)
+	}
+	e := mac.waitFor("the show_url event", func(e *nushiv1.EventsResponse) bool { return e.GetShowUrl() != "" })
+	if e.ChatId != id || e.GetShowUrl() != "http://localhost:5173/app" || e.Seq != 0 {
+		t.Errorf("event %+v", e)
 	}
 }

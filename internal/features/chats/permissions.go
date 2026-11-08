@@ -2,6 +2,7 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -11,12 +12,36 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// requestPermission shows the agent's permission prompt and waits for the
-// user's answer. Nushi never answers one itself.
 // isShow says a call is Nushi's show tool, by the title Claude's agents
 // and Codex's adapter give it (docs/facts).
 func isShow(title string) bool { return title == "mcp__nushi__show" || title == "mcp.nushi.show" }
 
+// isPreviewStart says a call is Nushi's preview_start tool (ADR 0100), by
+// the same titles.
+func isPreviewStart(title string) bool {
+	return title == "mcp__nushi__preview_start" || title == "mcp.nushi.preview_start"
+}
+
+// entryName is the name a preview_start call's input gives: `name`,
+// inside `arguments` on Codex; "" when it gives none.
+func entryName(input string) string {
+	var in struct {
+		Name      string `json:"name"`
+		Arguments *struct {
+			Name string `json:"name"`
+		} `json:"arguments"`
+	}
+	if json.Unmarshal([]byte(input), &in) != nil {
+		return ""
+	}
+	if in.Arguments != nil {
+		return in.Arguments.Name
+	}
+	return in.Name
+}
+
+// requestPermission shows the agent's permission prompt and waits for the
+// user's answer. Nushi never answers one itself.
 func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermissionRequest) (*acp.RequestPermissionResponse, error) {
 	item := model.Item{Kind: model.Permission, Status: "pending", Title: req.ToolCall.Title}
 	for _, o := range req.Options {
@@ -34,11 +59,20 @@ func (c *chat) requestPermission(ctx context.Context, req *acp.RequestPermission
 			item.Text, item.Diffs = call.Text, call.Diffs
 		}
 	}
-	if isShow(item.Title) { // the card says which file: what's being allowed (ADR 0068)
+	if isShow(item.Title) || isPreviewStart(item.Title) { // the card says which file or server: what's being allowed (ADR 0068, 0100)
 		item.Input = inputText(req.ToolCall.RawInput)
 		if item.Input == "" && call != nil {
 			item.Input = call.Input
 		}
+	}
+	if isPreviewStart(item.Title) { // and the command it runs, read outside the lock (Servers.Command)
+		chatID := c.id
+		if c.parent != nil {
+			chatID = c.parent.id // a side chat's tools are its chat's
+		}
+		c.mu.Unlock()
+		item.ServerCommand = c.serverCommand(chatID, entryName(item.Input))
+		c.mu.Lock()
 	}
 	id := c.addLocked(item)
 	c.waiting[id] = answer

@@ -124,7 +124,7 @@ func output(s *Service) string {
 	s.mu.Lock()
 	proc := s.alive[0].proc
 	s.mu.Unlock()
-	return lastLines(proc)
+	return lastLines(written(proc), keptLines, keptBytes)
 }
 
 // row waits for the row named name to be in state, and returns it.

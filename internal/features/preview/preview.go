@@ -1,7 +1,8 @@
 // Package preview is the agent's way into the preview pane: the `show`
 // tool every chat with Nushi's tools gets (ADR 0068). It takes only what a
-// tool row's Preview could open, and says so to the clients; the file's
-// text never goes back to the agent.
+// tool row's Preview could open, or a page on this Mac's loopback for a
+// browser tab (ADR 0100), and says so to the clients; the file's text
+// never goes back to the agent.
 package preview
 
 import (
@@ -13,6 +14,7 @@ import (
 
 	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/filewatch"
+	"github.com/afrase/nushi/internal/launchfile"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/regularfile"
 )
@@ -48,7 +50,7 @@ func (s *Set) UseChats(c Chats) { s.chats = c }
 // Instructions say what the tool is for: Claude's MCP tools are deferred,
 // so without them it may not look.
 func (*Set) Instructions(tools.Grant) string {
-	return "show opens a file in the preview pane beside this chat. " +
+	return "show opens a file in the preview pane beside this chat, or a page this Mac serves (a localhost URL) in a browser tab there. " +
 		"Use it to show the user a finished page, document or image, not for routine edits."
 }
 
@@ -58,16 +60,20 @@ func (*Set) Instructions(tools.Grant) string {
 func (*Set) Tools(tools.Grant) []tools.Tool {
 	return []tools.Tool{{Name: toolName,
 		Description: "Opens a file in the preview pane beside this chat, live as you rewrite it: HTML, Markdown, an image, SVG, PDF, CSV or a Mermaid diagram. " +
+			"Or, given url instead of path, opens a page this Mac serves (http or https to localhost, a *.localhost name, 127.0.0.1 or [::1], any port) in a browser tab there. " +
 			"Use it to show the user a finished page, document or image, not for routine edits. " +
 			"The file must be inside this chat's folder or worktree, or one you wrote. An HTML page runs when it opens.",
 		InputSchema: json.RawMessage(`{"type":"object","properties":{"path":{"type":"string","maxLength":4096,` +
-			`"description":"The file: absolute, or relative to the chat's folder."}},"required":["path"],"additionalProperties":false}`)}}
+			`"description":"The file: absolute, or relative to the chat's folder."},` +
+			`"url":{"type":"string","maxLength":4096,"description":"Instead of path: a page on this Mac, such as http://localhost:3000/."}},` +
+			`"additionalProperties":false}`)}}
 }
 
 // The tool's refusals, each fixed text: tools.Service logs a tool's error,
 // and what an agent names never reaches the log.
 var (
-	errArgs     = errors.New("show takes one argument, path, a string")
+	errArgs     = errors.New("show takes one argument, a string: path (a file) or url (a page on this Mac)")
+	errURL      = errors.New("url must be http or https to this Mac (localhost, a *.localhost name, 127.0.0.0/8 or [::1]) with no user name, written plainly, of at most 4096 bytes")
 	errPath     = errors.New("path must be a file's path of at most 4096 bytes")
 	errChat     = errors.New("this chat is gone")
 	errOutside  = errors.New("the file is outside this chat's folder and worktree, and none of its tool calls wrote it")
@@ -77,22 +83,32 @@ var (
 	errLinksOut = errors.New("this path leads through a link outside the folder holding it")
 )
 
-// Call checks the file as WatchChatFile would, then tells the clients to
+// Call checks the file as WatchChatFile would, or the url as a page on
+// this Mac's loopback (launchfile.LoopbackURL), then tells the clients to
 // show it. The answer says it went, nothing of the file.
 func (s *Set) Call(_ context.Context, g tools.Grant, tool string, raw json.RawMessage) (string, error) {
 	if tool != toolName {
 		return "", errArgs
 	}
 	var args struct {
-		Path string `json:"path"`
+		Path *string `json:"path"`
+		URL  *string `json:"url"`
 	}
-	if err := json.Unmarshal(raw, &args); err != nil {
+	if err := json.Unmarshal(raw, &args); err != nil || (args.Path == nil) == (args.URL == nil) {
 		return "", errArgs
 	}
-	if err := s.check(g.Chat, args.Path); err != nil {
+	if args.URL != nil {
+		page, ok := launchfile.LoopbackURL(*args.URL)
+		if !ok {
+			return "", errURL
+		}
+		s.publish(model.Event{ChatID: g.Chat, ShowURL: page})
+		return "A browser tab beside the chat has the page.", nil
+	}
+	if err := s.check(g.Chat, *args.Path); err != nil {
 		return "", err
 	}
-	s.publish(model.Event{ChatID: g.Chat, Show: args.Path})
+	s.publish(model.Event{ChatID: g.Chat, Show: *args.Path})
 	return "The preview pane beside the chat has the file, live as you rewrite it.", nil
 }
 

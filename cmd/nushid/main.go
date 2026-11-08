@@ -35,6 +35,7 @@ import (
 	"github.com/afrase/nushi/internal/features/preview"
 	"github.com/afrase/nushi/internal/features/remote"
 	"github.com/afrase/nushi/internal/features/restart"
+	"github.com/afrase/nushi/internal/features/servers"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/tools"
 	"github.com/afrase/nushi/internal/git"
@@ -137,7 +138,8 @@ func run() error {
 	dev := os.Getenv("NUSHI_DATA") != ""
 	jiraSvc := newJira(st, dev)
 	shows := preview.New(hub.Publish)
-	toolSvc := tools.New(jiraSvc.Tools(), shows)
+	serverTools := &servers.AgentTools{}
+	toolSvc := tools.New(jiraSvc.Tools(), shows, serverTools)
 	channels := newChannels()
 	remoteSvc, err := remote.New(st, &relay.Dialer{Proxies: sysproxy.For}, channels.serve, keepAwake, hub.Publish)
 	if err != nil {
@@ -154,6 +156,7 @@ func run() error {
 	go follow(hub, termSvc.Follow)
 	srvSvc := newServers(dir, chatSvc, agentSvc, hub.Publish)
 	chatSvc.UseServers(srvSvc)
+	serverTools.Use(srvSvc)
 	go follow(hub, srvSvc.Follow)
 	agentSvc.UseChats(chatSvc)
 	// The API, on the socket for the app (with the token) and on each

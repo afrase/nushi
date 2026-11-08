@@ -851,6 +851,17 @@ abstract final class NushiService {
     nushiv1nushi.StopAllServersResponse.new,
   );
 
+  /// A dev server's output (ADR 0100): the last 256 KB of it as its
+  /// terminal wrote it (escapes and colours kept), then what it writes as it
+  /// comes, until it ends; a server that ended sends what it kept and ends
+  /// the stream. The Mac's only (API 111): the logs drawer.
+  static const watchServerLog = connect.Spec(
+    '/$name/WatchServerLog',
+    connect.StreamType.server,
+    nushiv1nushi.WatchServerLogRequest.new,
+    nushiv1nushi.WatchServerLogResponse.new,
+  );
+
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was
   /// told to trust it; nothing when it is trusted or brings nothing. Ask

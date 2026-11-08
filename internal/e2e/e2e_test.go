@@ -35,6 +35,7 @@ import (
 	"github.com/afrase/nushi/internal/features/memory"
 	"github.com/afrase/nushi/internal/features/preview"
 	"github.com/afrase/nushi/internal/features/restart"
+	"github.com/afrase/nushi/internal/features/servers"
 	"github.com/afrase/nushi/internal/features/terminals"
 	"github.com/afrase/nushi/internal/features/tools"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
@@ -188,11 +189,13 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		Uploads: filepath.Join(dataDir, "uploads"), Publish: hub.Publish, Copies: copies, CopiesOn: st.KeepTranscripts, Sleep: st})
 	shows := preview.New(hub.Publish)
 	shows.UseChats(svc)
-	toolSvc := tools.New(shows)
+	serverTools := &servers.AgentTools{}
+	toolSvc := tools.New(shows, serverTools)
 	terms := terminals.New(startSh, "sh", svc, hub.Publish)
 	svc.UseTerminals(terms)
 	srvs := newServers(svc, filepath.Join(dataDir, "servers.json"), hub.Publish)
 	svc.UseServers(srvs)
+	serverTools.Use(srvs)
 	follow, unfollow := context.WithCancel(context.Background())
 	go func() {
 		_ = hub.Subscribe(follow, func(e model.Event) bool { terms.Follow(e); srvs.Follow(e); return true }, events.Unbounded())

@@ -2,14 +2,17 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
 
+	"github.com/afrase/nushi/internal/features/tools"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 	"github.com/afrase/nushi/internal/testcheck"
 )
@@ -71,4 +74,67 @@ func TestDevServers(t *testing.T) {
 		}
 		return err != nil
 	})
+}
+
+// A chat's agent runs its folder's server by name through Nushi's tools:
+// once it answers, the Mac is asked to show its page beside that chat;
+// its log follows it on the Mac, never on a device (ADR 0100).
+func TestAgentRunsADevServer(t *testing.T) {
+	ctx := context.Background()
+	repo := gitRepo(t)
+	port := freePort(t)
+	testcheck.Write(t, filepath.Join(repo, ".agents", "launch.json"),
+		fmt.Sprintf(`{"configurations": [{"name": "web", "runtimeExecutable": %q, "port": %d}]}`, fakeServerBin(t), port))
+	d := startDaemon(t, t.TempDir(), nil)
+	a := open(t, d)
+	id := a.start(&nushiv1.StartChatRequest{Folder: repo})
+	key := d.tools.Key(tools.Grant{Chat: id, Agent: "fake"})
+	text, failed := callTool(t, d, key, "preview_list", map[string]any{})
+	var list struct {
+		Servers []struct{ Name, State string }
+	}
+	if failed || json.Unmarshal([]byte(text), &list) != nil || len(list.Servers) != 1 || list.Servers[0].Name != "web" || list.Servers[0].State != "stopped" {
+		t.Fatalf("preview_list: %q, failed %v", text, failed)
+	}
+	url := fmt.Sprintf("http://localhost:%d", port)
+	if text, failed = callTool(t, d, key, "preview_start", map[string]string{"name": "web"}); failed || !strings.Contains(text, url) {
+		t.Fatalf("preview_start: %q", text)
+	}
+	e := a.waitFor("the server's page", func(e *nushiv1.EventsResponse) bool { return e.GetShowUrl() != "" })
+	if e.ChatId != id || e.GetShowUrl() != url {
+		t.Errorf("event %+v", e)
+	}
+	row := must(a.c.ListServers(ctx, connect.NewRequest(&nushiv1.ListServersRequest{ChatId: id}))).Servers[0]
+	if row.State != nushiv1.DevServerState_DEV_SERVER_STATE_RUNNING || row.LogId == "" || row.LogId != row.ServerId {
+		t.Fatalf("row %v", row)
+	}
+	phone := openAt(t, d.devices)
+	ps, err := phone.c.WatchServerLog(ctx, connect.NewRequest(&nushiv1.WatchServerLogRequest{ChatId: id, ServerId: row.LogId}))
+	testcheck.NoErr(t, err)
+	if ps.Receive() || connect.CodeOf(ps.Err()) != connect.CodePermissionDenied {
+		t.Errorf("a device watched a server's log: %v", ps.Err())
+	}
+	_ = ps.Close()
+	stream, err := a.c.WatchServerLog(ctx, connect.NewRequest(&nushiv1.WatchServerLogRequest{ChatId: id, ServerId: row.LogId}))
+	testcheck.NoErr(t, err)
+	defer func() { _ = stream.Close() }()
+	var log strings.Builder
+	for !strings.Contains(log.String(), fmt.Sprintf("listening on %d", port)) {
+		if !stream.Receive() {
+			t.Fatalf("the log ended: %q, %v", log.String(), stream.Err())
+		}
+		log.Write(stream.Msg().Data)
+	}
+	if text, failed = callTool(t, d, key, "preview_logs", map[string]string{"name": "web"}); failed || !strings.Contains(text, "fakeserver starting") {
+		t.Errorf("preview_logs: %q", text)
+	}
+	if text, failed = callTool(t, d, key, "preview_stop", map[string]string{"name": "web"}); failed || text != "Stopped web." {
+		t.Errorf("preview_stop: %q", text)
+	}
+	for stream.Receive() {
+		if stream.Msg().Ended {
+			return
+		}
+	}
+	t.Errorf("the log never said it ended: %v", stream.Err())
 }

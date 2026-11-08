@@ -90,6 +90,7 @@ const (
 const (
 	ByUser  = "user"
 	ByNushi = "nushi"
+	ByAgent = "agent" // a chat's agent, through its preview_stop (ADR 0100)
 )
 
 // PerFolder is how many servers may run in one folder at once, and how
@@ -102,20 +103,22 @@ type Service struct {
 
 	// ReadyWithin is how long a server has to answer before it shows as
 	// running but not answering; StopGrace how long it has to end on
-	// SIGTERM before its terminal hangs up.
-	ReadyWithin, StopGrace time.Duration
+	// SIGTERM before its terminal hangs up; StartWait how long an agent's
+	// preview_start waits for it to answer or fail before it answers.
+	ReadyWithin, StopGrace, StartWait time.Duration
 
 	recordMu sync.Mutex // one write of the record at a time
 	mu       sync.Mutex
 	alive    []*server
 	ended    []*server // the last PerFolder of each folder
 	reserved map[int]string
-	closed   bool // the daemon stops: no more starts
+	closed   bool              // the daemon stops: no more starts
+	asked    map[string]string // the hash of each entry an agent's preview_start asked to run, by chat and name (Command)
 }
 
 // New returns the service, with no server running.
 func New(o Options) *Service {
-	return &Service{Options: o, ReadyWithin: 180 * time.Second, StopGrace: 2 * time.Second, reserved: map[int]string{}}
+	return &Service{Options: o, ReadyWithin: 180 * time.Second, StopGrace: 2 * time.Second, StartWait: 30 * time.Second, reserved: map[int]string{}, asked: map[string]string{}}
 }
 
 // server is one run of a launch file's entry.
@@ -130,9 +133,11 @@ type server struct {
 	ended           chan struct{} // closed once it ended and is listed so
 
 	// Under the service's lock.
+	showTo   string // the chat whose agent started it (preview_start), shown its page once it answers
 	state    State
 	err      string
 	output   string          // its last lines, once it ended
+	log      []byte          // its output as written, the last logBytes, once it ended (log.go)
 	tree     []model.Process // its processes, as last seen
 	stopping string          // who stops it
 	exit     int
@@ -187,11 +192,14 @@ func (s *Service) find(id string) *server {
 // Pick says which entry Start starts: by Name (without case, the first
 // of it) or, with Name "", by Index (List's). With Hash, only while the
 // entry is the one listed with it (Row.Hash): the user runs what the menu
-// showed, never what the file says since (docs/security.md).
+// showed, never what the file says since (docs/security.md). Agent says
+// the chat's agent starts it (its preview_start, ADR 0100): only by a
+// name fit for its text, and once it answers the Mac is asked to show it.
 type Pick struct {
 	Name  string
 	Index int
 	Hash  string
+	Agent bool
 }
 
 // StartError is why Start refused or couldn't start a server: Kind in
@@ -231,6 +239,8 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 	}
 	e := l.Entries[i]
 	switch {
+	case pick.Agent && !launchfile.ValidName(e.Name):
+		return Row{}, refuse("no such entry", errors.New("no such server in the launch files"))
 	case e.Problem != "":
 		return Row{}, refuse("the entry can't run", errors.New(e.Problem))
 	case pick.Hash != "" && pick.Hash != e.Hash:
@@ -239,6 +249,9 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 		return Row{}, refuse("the entry runs nothing", errors.New("this entry opens a server already running: it has nothing to run"))
 	}
 	sv := &server{id: rand.Text()[:12], folder: folder, key: key(folder, e), entry: e, chatID: chatID, state: Starting, ended: make(chan struct{})}
+	if pick.Agent {
+		sv.showTo = chatID
+	}
 	s.mu.Lock()
 	switch {
 	case s.closed:
@@ -247,8 +260,14 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 	case slices.ContainsFunc(s.alive, func(o *server) bool { return o.key == sv.key }):
 		o := s.alive[slices.IndexFunc(s.alive, func(o *server) bool { return o.key == sv.key })]
 		row := o.row()
+		if pick.Agent && o.showTo == "" {
+			o.showTo = chatID // shown once it answers, if it hasn't yet
+		}
 		s.mu.Unlock()
 		row.Index = i
+		if pick.Agent && row.State == Running {
+			s.showAsked(chatID, row.URL)
+		}
 		return row, nil // a start of one that runs: the same server
 	case s.count(folder) >= PerFolder:
 		s.mu.Unlock()
@@ -258,7 +277,7 @@ func (s *Service) Start(ctx context.Context, chatID string, pick Pick) (Row, err
 	s.mu.Unlock()
 	s.changed(folder)
 	if err := s.launch(ctx, sv); err != nil {
-		s.fail(sv, err.Error(), "")
+		s.fail(sv, err.Error())
 		return Row{}, err
 	}
 	slog.Info("dev server started", "server", sv.id, "chat", chatID, "pid", sv.leader.Pid)

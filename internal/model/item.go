@@ -142,6 +142,10 @@ type Item struct {
 	BackgroundCommand *BackgroundCommand `json:"Shell"`
 	// Findings is a code review's result, for a tool call that reports one.
 	Findings *Findings
+	// ServerCommand is, for the ask to run Nushi's preview_start tool, the
+	// command the named launch file entry runs, as resolved when the ask
+	// came, for the card (ADR 0100).
+	ServerCommand string `json:",omitempty"`
 	// Output is a command's output as the agent streams it in its _meta,
 	// from which the harness makes Text; only the daemon has it.
 	Output string `json:"-"`

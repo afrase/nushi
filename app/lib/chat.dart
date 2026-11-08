@@ -792,6 +792,7 @@ class ChatState extends ChangeNotifier {
           EventsResponse_Kind.removedChats ||
           EventsResponse_Kind.update ||
           EventsResponse_Kind.show ||
+          EventsResponse_Kind.showUrl ||
           EventsResponse_Kind.relatedWorktrees ||
           EventsResponse_Kind.serversChanged ||
           EventsResponse_Kind.notSet:

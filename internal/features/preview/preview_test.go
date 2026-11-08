@@ -181,3 +181,36 @@ func TestListsNoHintThatSkipsTheAsk(t *testing.T) {
 		t.Errorf("listed: %s", b)
 	}
 }
+
+// A url opens a browser tab for a page on this Mac's loopback, as a
+// browser reads it; anything else, or a url beside a path, is refused,
+// and none of it tells the clients.
+func TestShowsAPageOnThisMac(t *testing.T) {
+	s, got := shown(fakeChats{roots: []string{t.TempDir()}})
+	call := func(raw string) (string, error) {
+		return s.Call(t.Context(), tools.Grant{Chat: "c"}, "show", json.RawMessage(raw))
+	}
+	text, err := call(`{"url":"HTTP://LocalHost:5173/docs?q=1"}`)
+	if err != nil || strings.Contains(text, "5173") {
+		t.Errorf("a page: %q, %v", text, err)
+	}
+	if len(*got) != 1 || (*got)[0].ChatID != "c" || (*got)[0].ShowURL != "http://localhost:5173/docs?q=1" || (*got)[0].Show != "" {
+		t.Errorf("events %+v", *got)
+	}
+	*got = nil
+	for _, u := range []string{"https://example.com", "http://192.168.1.4:3000", "file:///etc/passwd", "javascript:alert(1)",
+		"http://me@localhost:3000", "http://localhost.:3000", "http://127.0.0.1.nip.io", "http://local\x00host", ""} {
+		raw, _ := json.Marshal(map[string]string{"url": u}) // a string
+		if _, err := call(string(raw)); !errors.Is(err, errURL) {
+			t.Errorf("%q: %v", u, err)
+		}
+	}
+	for _, raw := range []string{`{}`, `{"url":"http://localhost:3000","path":"a.md"}`, `{"url":5}`} {
+		if _, err := call(raw); !errors.Is(err, errArgs) {
+			t.Errorf("arguments %s: %v", raw, err)
+		}
+	}
+	if len(*got) != 0 {
+		t.Errorf("a refused call told the clients: %+v", *got)
+	}
+}

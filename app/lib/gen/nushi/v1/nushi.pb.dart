@@ -14782,6 +14782,7 @@ enum EventsResponse_Kind {
   show,
   relatedWorktrees,
   serversChanged,
+  showUrl,
   notSet
 }
 
@@ -14806,6 +14807,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     $core.String? show,
     ChatRelatedWorktrees? relatedWorktrees,
     $core.String? serversChanged,
+    $core.String? showUrl,
   }) {
     final result = EventsResponse._();
     if (chatId != null) result.chatId = chatId;
@@ -14827,6 +14829,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     if (show != null) result.show = show;
     if (relatedWorktrees != null) result.relatedWorktrees = relatedWorktrees;
     if (serversChanged != null) result.serversChanged = serversChanged;
+    if (showUrl != null) result.showUrl = showUrl;
     return result;
   }
 
@@ -14858,13 +14861,14 @@ class EventsResponse extends $pb.GeneratedMessage {
     17: EventsResponse_Kind.show,
     18: EventsResponse_Kind.relatedWorktrees,
     19: EventsResponse_Kind.serversChanged,
+    20: EventsResponse_Kind.showUrl,
     0: EventsResponse_Kind.notSet
   };
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'EventsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
       createEmptyInstance: EventsResponse.$_createMessage)
-    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+    ..oo(0, [2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])
     ..aOS(1, _omitFieldNames ? '' : 'chatId')
     ..aOM<ItemEvent>(2, _omitFieldNames ? '' : 'item',
         subBuilder: ItemEvent.$_createMessage)
@@ -14896,6 +14900,7 @@ class EventsResponse extends $pb.GeneratedMessage {
     ..aOM<ChatRelatedWorktrees>(18, _omitFieldNames ? '' : 'relatedWorktrees',
         subBuilder: ChatRelatedWorktrees.$_createMessage)
     ..aOS(19, _omitFieldNames ? '' : 'serversChanged')
+    ..aOS(20, _omitFieldNames ? '' : 'showUrl')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -14937,6 +14942,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(17)
   @$pb.TagNumber(18)
   @$pb.TagNumber(19)
+  @$pb.TagNumber(20)
   EventsResponse_Kind whichKind() =>
       _EventsResponse_KindByTag[$_whichOneof(0)]!;
   @$pb.TagNumber(2)
@@ -14956,6 +14962,7 @@ class EventsResponse extends $pb.GeneratedMessage {
   @$pb.TagNumber(17)
   @$pb.TagNumber(18)
   @$pb.TagNumber(19)
+  @$pb.TagNumber(20)
   void clearKind() => $_clearField($_whichOneof(0));
 
   @$pb.TagNumber(1)
@@ -15175,6 +15182,19 @@ class EventsResponse extends $pb.GeneratedMessage {
   $core.bool hasServersChanged() => $_has(18);
   @$pb.TagNumber(19)
   void clearServersChanged() => $_clearField(19);
+
+  /// A page the chat's agent asked to show in a browser tab: its show
+  /// tool's url, or a dev server it started once that answers (ADR
+  /// 0100); http or https to this Mac's loopback only. As show, no seq,
+  /// and only the Mac's app acts on it (API 111).
+  @$pb.TagNumber(20)
+  $core.String get showUrl => $_getSZ(19);
+  @$pb.TagNumber(20)
+  set showUrl($core.String value) => $_setString(19, value);
+  @$pb.TagNumber(20)
+  $core.bool hasShowUrl() => $_has(19);
+  @$pb.TagNumber(20)
+  void clearShowUrl() => $_clearField(20);
 }
 
 /// A chat's config options, all of them.
@@ -15503,6 +15523,7 @@ class Item extends $pb.GeneratedMessage {
     $core.bool? forkable,
     $core.bool? steered,
     $core.Iterable<$core.String>? files,
+    $core.String? serverCommand,
   }) {
     final result = Item._();
     if (id != null) result.id = id;
@@ -15541,6 +15562,7 @@ class Item extends $pb.GeneratedMessage {
     if (forkable != null) result.forkable = forkable;
     if (steered != null) result.steered = steered;
     if (files != null) result.files.addAll(files);
+    if (serverCommand != null) result.serverCommand = serverCommand;
     return result;
   }
 
@@ -15602,6 +15624,7 @@ class Item extends $pb.GeneratedMessage {
     ..aOB(36, _omitFieldNames ? '' : 'forkable')
     ..aOB(37, _omitFieldNames ? '' : 'steered')
     ..pPS(38, _omitFieldNames ? '' : 'files')
+    ..aOS(39, _omitFieldNames ? '' : 'serverCommand')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -15963,6 +15986,20 @@ class Item extends $pb.GeneratedMessage {
   /// were attached (API 106).
   @$pb.TagNumber(38)
   $pb.PbList<$core.String> get files => $_getList(35);
+
+  /// For the ask to run Nushi's preview_start tool: the command the named
+  /// launch file entry runs, as the daemon resolved it when the ask came
+  /// (its own env, the program found on the login shell's PATH, its
+  /// arguments), for the card to show; empty when the name is none of the
+  /// folder's entries or can't run (API 111, ADR 0100).
+  @$pb.TagNumber(39)
+  $core.String get serverCommand => $_getSZ(36);
+  @$pb.TagNumber(39)
+  set serverCommand($core.String value) => $_setString(36, value);
+  @$pb.TagNumber(39)
+  $core.bool hasServerCommand() => $_has(36);
+  @$pb.TagNumber(39)
+  void clearServerCommand() => $_clearField(39);
 }
 
 /// A code review's result: the effort level it ran at ("medium"; "" when
@@ -18593,6 +18630,7 @@ class DevServer extends $pb.GeneratedMessage {
     $core.String? serverId,
     $core.bool? changed,
     $core.String? hash,
+    $core.String? logId,
   }) {
     final result = DevServer._();
     if (name != null) result.name = name;
@@ -18616,6 +18654,7 @@ class DevServer extends $pb.GeneratedMessage {
     if (serverId != null) result.serverId = serverId;
     if (changed != null) result.changed = changed;
     if (hash != null) result.hash = hash;
+    if (logId != null) result.logId = logId;
     return result;
   }
 
@@ -18658,6 +18697,7 @@ class DevServer extends $pb.GeneratedMessage {
     ..aOS(19, _omitFieldNames ? '' : 'serverId')
     ..aOB(20, _omitFieldNames ? '' : 'changed')
     ..aOS(21, _omitFieldNames ? '' : 'hash')
+    ..aOS(22, _omitFieldNames ? '' : 'logId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -18866,6 +18906,18 @@ class DevServer extends $pb.GeneratedMessage {
   $core.bool hasHash() => $_has(20);
   @$pb.TagNumber(21)
   void clearHash() => $_clearField(21);
+
+  /// The server whose output WatchServerLog sends (its logs drawer): the
+  /// running one's, else the last one's that ran, failed or stopped,
+  /// while the daemon keeps it; empty when there's none (API 111).
+  @$pb.TagNumber(22)
+  $core.String get logId => $_getSZ(21);
+  @$pb.TagNumber(22)
+  set logId($core.String value) => $_setString(21, value);
+  @$pb.TagNumber(22)
+  $core.bool hasLogId() => $_has(21);
+  @$pb.TagNumber(22)
+  void clearLogId() => $_clearField(22);
 }
 
 enum StartServerRequest_Entry { name, index_, notSet }
@@ -19252,6 +19304,154 @@ class StopAllServersResponse extends $pb.GeneratedMessage {
       $pb.GeneratedMessage.$_defaultFor<StopAllServersResponse>(
           StopAllServersResponse.$_createMessage);
   static StopAllServersResponse? _defaultInstance;
+}
+
+class WatchServerLogRequest extends $pb.GeneratedMessage {
+  factory WatchServerLogRequest({
+    $core.String? chatId,
+    $core.String? serverId,
+  }) {
+    final result = WatchServerLogRequest._();
+    if (chatId != null) result.chatId = chatId;
+    if (serverId != null) result.serverId = serverId;
+    return result;
+  }
+
+  WatchServerLogRequest._();
+
+  factory WatchServerLogRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchServerLogRequest()..mergeFromBuffer(data, registry);
+  factory WatchServerLogRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchServerLogRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchServerLogRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WatchServerLogRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'chatId')
+    ..aOS(2, _omitFieldNames ? '' : 'serverId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchServerLogRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchServerLogRequest copyWith(
+          void Function(WatchServerLogRequest) updates) =>
+      super.copyWith((message) => updates(message as WatchServerLogRequest))
+          as WatchServerLogRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WatchServerLogRequest() / WatchServerLogRequest.new instead')
+  static WatchServerLogRequest create() => WatchServerLogRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WatchServerLogRequest._();
+  @$core.override
+  WatchServerLogRequest createEmptyInstance() => WatchServerLogRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WatchServerLogRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WatchServerLogRequest>(
+          WatchServerLogRequest.$_createMessage);
+  static WatchServerLogRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get chatId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set chatId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasChatId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearChatId() => $_clearField(1);
+
+  /// The server: DevServer.log_id.
+  @$pb.TagNumber(2)
+  $core.String get serverId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set serverId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasServerId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearServerId() => $_clearField(2);
+}
+
+class WatchServerLogResponse extends $pb.GeneratedMessage {
+  factory WatchServerLogResponse({
+    $core.List<$core.int>? data,
+    $core.bool? ended,
+  }) {
+    final result = WatchServerLogResponse._();
+    if (data != null) result.data = data;
+    if (ended != null) result.ended = ended;
+    return result;
+  }
+
+  WatchServerLogResponse._();
+
+  factory WatchServerLogResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchServerLogResponse()..mergeFromBuffer(data, registry);
+  factory WatchServerLogResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchServerLogResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchServerLogResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: WatchServerLogResponse.$_createMessage)
+    ..a<$core.List<$core.int>>(
+        1, _omitFieldNames ? '' : 'data', $pb.PbFieldType.OY)
+    ..aOB(2, _omitFieldNames ? '' : 'ended')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchServerLogResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchServerLogResponse copyWith(
+          void Function(WatchServerLogResponse) updates) =>
+      super.copyWith((message) => updates(message as WatchServerLogResponse))
+          as WatchServerLogResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use WatchServerLogResponse() / WatchServerLogResponse.new instead')
+  static WatchServerLogResponse create() => WatchServerLogResponse._();
+  static $pb.GeneratedMessage $_createMessage() => WatchServerLogResponse._();
+  @$core.override
+  WatchServerLogResponse createEmptyInstance() => WatchServerLogResponse._();
+  @$core.pragma('dart2js:noInline')
+  static WatchServerLogResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<WatchServerLogResponse>(
+          WatchServerLogResponse.$_createMessage);
+  static WatchServerLogResponse? _defaultInstance;
+
+  /// The server's output, raw: a terminal's bytes, which may cut a
+  /// character or an escape in two.
+  @$pb.TagNumber(1)
+  $core.List<$core.int> get data => $_getN(0);
+  @$pb.TagNumber(1)
+  set data($core.List<$core.int> value) => $_setBytes(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasData() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearData() => $_clearField(1);
+
+  /// The server has ended; this is the last message. Its state, error and
+  /// exit come with ListServers (servers_changed says when).
+  @$pb.TagNumber(2)
+  $core.bool get ended => $_getBF(1);
+  @$pb.TagNumber(2)
+  set ended($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasEnded() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearEnded() => $_clearField(2);
 }
 
 class CheckFolderRequest extends $pb.GeneratedMessage {
@@ -32138,6 +32338,15 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, StopAllServersRequest request) =>
       _client.invoke<StopAllServersResponse>(ctx, 'NushiService',
           'StopAllServers', request, StopAllServersResponse());
+
+  /// A dev server's output (ADR 0100): the last 256 KB of it as its
+  /// terminal wrote it (escapes and colours kept), then what it writes as it
+  /// comes, until it ends; a server that ended sends what it kept and ends
+  /// the stream. The Mac's only (API 111): the logs drawer.
+  $async.Future<WatchServerLogResponse> watchServerLog(
+          $pb.ClientContext? ctx, WatchServerLogRequest request) =>
+      _client.invoke<WatchServerLogResponse>(ctx, 'NushiService',
+          'WatchServerLog', request, WatchServerLogResponse());
 
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was

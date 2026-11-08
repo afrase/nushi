@@ -193,6 +193,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.StopServerRequest request);
   $async.Future<$0.StopAllServersResponse> stopAllServers(
       $pb.ServerContext ctx, $0.StopAllServersRequest request);
+  $async.Future<$0.WatchServerLogResponse> watchServerLog(
+      $pb.ServerContext ctx, $0.WatchServerLogRequest request);
   $async.Future<$0.CheckFolderResponse> checkFolder(
       $pb.ServerContext ctx, $0.CheckFolderRequest request);
   $async.Future<$0.TrustFolderResponse> trustFolder(
@@ -488,6 +490,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.StopServerRequest();
       case 'StopAllServers':
         return $0.StopAllServersRequest();
+      case 'WatchServerLog':
+        return $0.WatchServerLogRequest();
       case 'CheckFolder':
         return $0.CheckFolderRequest();
       case 'TrustFolder':
@@ -791,6 +795,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return stopServer(ctx, request as $0.StopServerRequest);
       case 'StopAllServers':
         return stopAllServers(ctx, request as $0.StopAllServersRequest);
+      case 'WatchServerLog':
+        return watchServerLog(ctx, request as $0.WatchServerLogRequest);
       case 'CheckFolder':
         return checkFolder(ctx, request as $0.CheckFolderRequest);
       case 'TrustFolder':

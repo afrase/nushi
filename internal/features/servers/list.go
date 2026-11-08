@@ -44,6 +44,10 @@ type Row struct {
 	// Error is why it failed; Output its last lines, once it ended.
 	Error, Output string
 	ServerID      string // its live server's
+	// LogID is the server whose output Watch gives: the live one's once
+	// its program started, else the last one's that ran, while the folder
+	// keeps it.
+	LogID string
 	// Changed says its entry changed (or went) since its server started:
 	// a restart applies it.
 	Changed bool
@@ -80,8 +84,14 @@ func (s *Service) List(chatID string) (Listing, error) {
 			seen[sv] = true
 			sv.into(&r)
 			r.Changed = sv.entry.Hash != e.Hash
-		} else if j := slices.IndexFunc(s.ended, func(sv *server) bool { return sv.key == k }); j >= 0 && s.ended[j].state == Failed {
-			r.State, r.Error, r.Output = Failed, s.ended[j].err, s.ended[j].output
+		} else if j := slices.IndexFunc(s.ended, func(sv *server) bool { return sv.key == k }); j >= 0 {
+			sv := s.ended[j]
+			if sv.state == Failed {
+				r.State, r.Error, r.Output = Failed, sv.err, sv.output
+			}
+			if sv.log != nil {
+				r.LogID = sv.id
+			}
 		}
 		out.Rows = append(out.Rows, r)
 	}
@@ -134,6 +144,9 @@ func entryRow(e launchfile.Entry, index int, env []string) Row {
 // into sets a live server's part of its row; under the service's lock.
 func (sv *server) into(r *Row) {
 	r.State, r.Error, r.ServerID = sv.state, sv.err, sv.id
+	if sv.proc != nil {
+		r.LogID = sv.id
+	}
 	if sv.port != 0 {
 		r.Port, r.URL = sv.port, sv.url
 	}

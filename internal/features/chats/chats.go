@@ -83,11 +83,24 @@ type Servers interface {
 	// StopWithin stops the servers in dir or a folder in it, and returns
 	// once they ended.
 	StopWithin(dir string)
+	// Command is the command a chat's folder's entry of name runs, for
+	// the card asking to run the agent's preview_start (ADR 0100); "" when
+	// there's none. It reads the chat (Session): never call it under a
+	// chat's lock.
+	Command(chatID, name string) string
 }
 
 // UseServers tells the chats about the dev servers, which need the chats
 // to be made first.
 func (s *Service) UseServers(sv Servers) { s.servers = sv }
+
+// serverCommand is Servers.Command, "" where no servers run.
+func (s *Service) serverCommand(chatID, name string) string {
+	if s.servers == nil {
+		return ""
+	}
+	return s.servers.Command(chatID, name)
+}
 
 type chat struct {
 	acp.UnimplementedClient // what the agent asks of a chat, beyond sides.go's
@@ -109,6 +122,8 @@ type chat struct {
 	copiesOn func() bool     // and whether it writes them
 	viewers  Viewers         // the service's
 	ctx      context.Context //nolint:containedctx // the service's life, which ends what the chat follows on its own
+	// serverCommand is the service's, for a preview_start ask's card.
+	serverCommand func(chatID, name string) string
 
 	mu           sync.Mutex
 	items        []model.Item
@@ -260,7 +275,7 @@ func checkFolder(folder string) error {
 }
 
 func (s *Service) newChat(k *kind) *chat {
-	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, waiting: map[string]chan<- string{},
+	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, serverCommand: s.serverCommand, waiting: map[string]chan<- string{},
 		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
 }
 

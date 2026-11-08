@@ -260,6 +260,9 @@ const (
 	// NushiServiceStopAllServersProcedure is the fully-qualified name of the NushiService's
 	// StopAllServers RPC.
 	NushiServiceStopAllServersProcedure = "/nushi.v1.NushiService/StopAllServers"
+	// NushiServiceWatchServerLogProcedure is the fully-qualified name of the NushiService's
+	// WatchServerLog RPC.
+	NushiServiceWatchServerLogProcedure = "/nushi.v1.NushiService/WatchServerLog"
 	// NushiServiceCheckFolderProcedure is the fully-qualified name of the NushiService's CheckFolder
 	// RPC.
 	NushiServiceCheckFolderProcedure = "/nushi.v1.NushiService/CheckFolder"
@@ -761,6 +764,11 @@ type NushiServiceClient interface {
 	StartServer(context.Context, *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error)
 	StopServer(context.Context, *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error)
 	StopAllServers(context.Context, *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error)
+	// A dev server's output (ADR 0100): the last 256 KB of it as its
+	// terminal wrote it (escapes and colours kept), then what it writes as it
+	// comes, until it ends; a server that ended sends what it kept and ends
+	// the stream. The Mac's only (API 111): the logs drawer.
+	WatchServerLog(context.Context, *connect.Request[v1.WatchServerLogRequest]) (*connect.ServerStreamForClient[v1.WatchServerLogResponse], error)
 	// Says what a folder brings for the agent to run on its own (MCP
 	// servers, hooks, helper commands) when neither the agent nor Nushi was
 	// told to trust it; nothing when it is trusted or brings nothing. Ask
@@ -1438,6 +1446,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(nushiServiceMethods.ByName("StopAllServers")),
 			connect.WithClientOptions(opts...),
 		),
+		watchServerLog: connect.NewClient[v1.WatchServerLogRequest, v1.WatchServerLogResponse](
+			httpClient,
+			baseURL+NushiServiceWatchServerLogProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("WatchServerLog")),
+			connect.WithClientOptions(opts...),
+		),
 		checkFolder: connect.NewClient[v1.CheckFolderRequest, v1.CheckFolderResponse](
 			httpClient,
 			baseURL+NushiServiceCheckFolderProcedure,
@@ -1889,6 +1903,7 @@ type nushiServiceClient struct {
 	startServer             *connect.Client[v1.StartServerRequest, v1.StartServerResponse]
 	stopServer              *connect.Client[v1.StopServerRequest, v1.StopServerResponse]
 	stopAllServers          *connect.Client[v1.StopAllServersRequest, v1.StopAllServersResponse]
+	watchServerLog          *connect.Client[v1.WatchServerLogRequest, v1.WatchServerLogResponse]
 	checkFolder             *connect.Client[v1.CheckFolderRequest, v1.CheckFolderResponse]
 	trustFolder             *connect.Client[v1.TrustFolderRequest, v1.TrustFolderResponse]
 	getRemote               *connect.Client[v1.GetRemoteRequest, v1.GetRemoteResponse]
@@ -2379,6 +2394,11 @@ func (c *nushiServiceClient) StopServer(ctx context.Context, req *connect.Reques
 // StopAllServers calls nushi.v1.NushiService.StopAllServers.
 func (c *nushiServiceClient) StopAllServers(ctx context.Context, req *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error) {
 	return c.stopAllServers.CallUnary(ctx, req)
+}
+
+// WatchServerLog calls nushi.v1.NushiService.WatchServerLog.
+func (c *nushiServiceClient) WatchServerLog(ctx context.Context, req *connect.Request[v1.WatchServerLogRequest]) (*connect.ServerStreamForClient[v1.WatchServerLogResponse], error) {
+	return c.watchServerLog.CallServerStream(ctx, req)
 }
 
 // CheckFolder calls nushi.v1.NushiService.CheckFolder.
@@ -3007,6 +3027,11 @@ type NushiServiceHandler interface {
 	StartServer(context.Context, *connect.Request[v1.StartServerRequest]) (*connect.Response[v1.StartServerResponse], error)
 	StopServer(context.Context, *connect.Request[v1.StopServerRequest]) (*connect.Response[v1.StopServerResponse], error)
 	StopAllServers(context.Context, *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error)
+	// A dev server's output (ADR 0100): the last 256 KB of it as its
+	// terminal wrote it (escapes and colours kept), then what it writes as it
+	// comes, until it ends; a server that ended sends what it kept and ends
+	// the stream. The Mac's only (API 111): the logs drawer.
+	WatchServerLog(context.Context, *connect.Request[v1.WatchServerLogRequest], *connect.ServerStream[v1.WatchServerLogResponse]) error
 	// Says what a folder brings for the agent to run on its own (MCP
 	// servers, hooks, helper commands) when neither the agent nor Nushi was
 	// told to trust it; nothing when it is trusted or brings nothing. Ask
@@ -3680,6 +3705,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(nushiServiceMethods.ByName("StopAllServers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nushiServiceWatchServerLogHandler := connect.NewServerStreamHandler(
+		NushiServiceWatchServerLogProcedure,
+		svc.WatchServerLog,
+		connect.WithSchema(nushiServiceMethods.ByName("WatchServerLog")),
+		connect.WithHandlerOptions(opts...),
+	)
 	nushiServiceCheckFolderHandler := connect.NewUnaryHandler(
 		NushiServiceCheckFolderProcedure,
 		svc.CheckFolder,
@@ -4214,6 +4245,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceStopServerHandler.ServeHTTP(w, r)
 		case NushiServiceStopAllServersProcedure:
 			nushiServiceStopAllServersHandler.ServeHTTP(w, r)
+		case NushiServiceWatchServerLogProcedure:
+			nushiServiceWatchServerLogHandler.ServeHTTP(w, r)
 		case NushiServiceCheckFolderProcedure:
 			nushiServiceCheckFolderHandler.ServeHTTP(w, r)
 		case NushiServiceTrustFolderProcedure:
@@ -4685,6 +4718,10 @@ func (UnimplementedNushiServiceHandler) StopServer(context.Context, *connect.Req
 
 func (UnimplementedNushiServiceHandler) StopAllServers(context.Context, *connect.Request[v1.StopAllServersRequest]) (*connect.Response[v1.StopAllServersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.StopAllServers is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) WatchServerLog(context.Context, *connect.Request[v1.WatchServerLogRequest], *connect.ServerStream[v1.WatchServerLogResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.WatchServerLog is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) CheckFolder(context.Context, *connect.Request[v1.CheckFolderRequest]) (*connect.Response[v1.CheckFolderResponse], error) {

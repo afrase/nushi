@@ -30,7 +30,7 @@ import (
 )
 
 // Version is the API version reported by Ping. Bump it when methods are added.
-const Version = 110
+const Version = 111
 
 // Release is the version a release build stamps in (make package's
 // VERSION, through -ldflags -X), "" in a build that isn't packaged
@@ -141,6 +141,7 @@ var macOnly = map[string]bool{
 	nushiv1connect.NushiServiceStartServerProcedure:    true,
 	nushiv1connect.NushiServiceStopServerProcedure:     true,
 	nushiv1connect.NushiServiceStopAllServersProcedure: true,
+	nushiv1connect.NushiServiceWatchServerLogProcedure: true,
 }
 
 // ForDevices is the API a paired device's channel gets, which the

@@ -87,6 +87,26 @@ func (s *server) StopAllServers(ctx context.Context, req *connect.Request[nushiv
 	return done[nushiv1.StopAllServersResponse](s.Servers.StopAll(req.Msg.ChatId), refused)
 }
 
+// WatchServerLog sends a server's output for its logs drawer (ADR 0100):
+// its log, then what it writes, then ended once it has.
+func (s *server) WatchServerLog(ctx context.Context, req *connect.Request[nushiv1.WatchServerLogRequest], stream *connect.ServerStream[nushiv1.WatchServerLogResponse]) error {
+	if err := s.serversHere(ctx); err != nil {
+		return err
+	}
+	var sendErr error
+	ended, err := s.Servers.Watch(req.Msg.ChatId, req.Msg.ServerId, ctx.Done(), func(b []byte) bool {
+		sendErr = stream.Send(&nushiv1.WatchServerLogResponse{Data: b})
+		return sendErr == nil
+	})
+	switch {
+	case err != nil:
+		return notFound(err)
+	case sendErr != nil || !ended:
+		return sendErr
+	}
+	return stream.Send(&nushiv1.WatchServerLogResponse{Ended: true})
+}
+
 var serverStates = map[servers.State]nushiv1.DevServerState{
 	servers.Stopped:      nushiv1.DevServerState_DEV_SERVER_STATE_STOPPED,
 	servers.Starting:     nushiv1.DevServerState_DEV_SERVER_STATE_STARTING,
@@ -98,5 +118,6 @@ var serverStates = map[servers.State]nushiv1.DevServerState{
 func devServerProto(r servers.Row) *nushiv1.DevServer {
 	return &nushiv1.DevServer{Name: r.Name, NameOk: r.NameOK, Index: int32(r.Index), Source: r.Source.Path, FromMain: r.Source.FromMain,
 		Command: r.Command, Program: r.Program, Args: r.Args, Cwd: r.Cwd, Env: r.Env, FlaggedEnv: r.Flagged, Url: r.URL, Port: int32(r.Port),
-		Attach: r.Attach, Problem: r.Problem, State: serverStates[r.State], Error: r.Error, Output: r.Output, ServerId: r.ServerID, Changed: r.Changed, Hash: r.Hash}
+		Attach: r.Attach, Problem: r.Problem, State: serverStates[r.State], Error: r.Error, Output: r.Output, ServerId: r.ServerID, Changed: r.Changed, Hash: r.Hash,
+		LogId: r.LogID}
 }

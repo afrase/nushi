@@ -108,6 +108,10 @@ func (s *Service) ready(sv *server) {
 	s.set(sv, Running, "")
 	s.unreserve(sv)
 	slog.Info("dev server answers", "server", sv.id)
+	s.mu.Lock()
+	to, url := sv.showTo, sv.url
+	s.mu.Unlock()
+	s.showAsked(to, url)
 	tick := time.NewTicker(5 * time.Second)
 	defer tick.Stop()
 	for {
@@ -301,7 +305,7 @@ func (s *Service) reap(sv *server) {
 	s.mu.Unlock()
 	s.Procs.Stop(tree)
 	_, code := sv.proc.Exit()
-	out := lastLines(sv.proc)
+	raw := written(sv.proc)
 	s.mu.Lock()
 	why, by := sv.err, sv.stopping
 	switch {
@@ -313,16 +317,22 @@ func (s *Service) reap(sv *server) {
 		why = fmt.Sprintf("it ended (exit code %d)", code)
 	}
 	s.mu.Unlock()
-	s.end(sv, why, out, code)
+	s.end(sv, why, raw, code)
 }
 
-// fail ends a server that never started, or failed.
-func (s *Service) fail(sv *server, why, out string) {
-	s.end(sv, why, out, 0)
+// fail ends a server that never started.
+func (s *Service) fail(sv *server, why string) {
+	s.end(sv, why, nil, 0)
 }
 
-// end lists a server as ended: failed with why, or stopped.
-func (s *Service) end(sv *server, why, out string, code int) {
+// end lists a server as ended: failed with why, or stopped; raw is what
+// it wrote, as its terminal kept it, nil when its program never started.
+func (s *Service) end(sv *server, why string, raw []byte, code int) {
+	var log []byte // no log: nothing ran
+	if raw != nil {
+		log = logTail(raw)
+	}
+	out := lastLines(log, keptLines, keptBytes)
 	s.mu.Lock()
 	s.alive = slices.DeleteFunc(s.alive, func(o *server) bool { return o == sv })
 	for p, id := range s.reserved {
@@ -330,7 +340,7 @@ func (s *Service) end(sv *server, why, out string, code int) {
 			delete(s.reserved, p)
 		}
 	}
-	sv.state, sv.err, sv.output, sv.exit = Stopped, why, out, code
+	sv.state, sv.err, sv.output, sv.log, sv.exit = Stopped, why, out, log, code
 	if why != "" {
 		sv.state = Failed
 	}
@@ -362,28 +372,35 @@ func (s *Service) endedIn(folder string) int {
 	return n
 }
 
-// Output kept of an ended server: its last lines, without the
-// terminal's escapes, at most so many and so long.
+// Output kept of an ended server for its row: its last lines, without
+// the terminal's escapes, at most so many and so long.
 const (
 	keptLines = 200
 	keptBytes = 32 << 10
 )
 
-// lastLines is the last of a program's output, plain text.
-func lastLines(p Process) string {
-	var raw []byte
+// written is what a program wrote so far, as its terminal keeps it;
+// never nil.
+func written(p Process) []byte {
+	raw := []byte{}
 	done := make(chan struct{})
 	close(done)
 	p.Attach(done, func(b []byte) bool { raw = append(raw, b...); return false })
+	return raw
+}
+
+// lastLines is the last of a program's output as plain text: at most so
+// many lines and size bytes, the line that size cuts left out.
+func lastLines(raw []byte, lines, size int) string {
 	text := strings.ReplaceAll(ansi.Strip(string(raw)), "\r\n", "\n")
 	text = strings.ReplaceAll(text, "\r", "\n")
-	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
-	if len(lines) > keptLines {
-		lines = lines[len(lines)-keptLines:]
+	all := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	if len(all) > lines {
+		all = all[len(all)-lines:]
 	}
-	text = strings.Join(lines, "\n")
-	if len(text) > keptBytes {
-		text = text[len(text)-keptBytes:]
+	text = strings.Join(all, "\n")
+	if len(text) > size {
+		text = text[len(text)-size:]
 		if i := strings.IndexByte(text, '\n'); i >= 0 {
 			text = text[i+1:]
 		}

@@ -204,3 +204,49 @@ func ipv4(parts []string) (string, bool) {
 	}
 	return ip.String(), true
 }
+
+// LoopbackURL is s, an agent's address of a page, as a browser loads it,
+// when it is http or https to this Mac's loopback: localhost, a
+// *.localhost name, 127.0.0.0/8 or [::1], on any port, with no user name
+// or password and no space, control character or backslash anywhere (the
+// show tool's url, ADR 0100). Its host is read as a browser reads it
+// (canonicalHost), so no spelling reaches another machine while passing
+// here; a trailing dot or an IPv4-mapped address isn't loopback to it.
+func LoopbackURL(s string) (string, bool) {
+	if s == "" || len(s) > 4096 || strings.ContainsFunc(s, func(r rune) bool { return r <= ' ' || r == 0x7f || r == '\\' }) {
+		return "", false
+	}
+	u, err := url.Parse(s)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Opaque != "" || u.User != nil || u.Host == "" {
+		return "", false
+	}
+	host, ok := canonicalHost(u.Hostname())
+	if !ok || !loopback(host) {
+		return "", false
+	}
+	if strings.Contains(host, ":") {
+		host = "[" + host + "]"
+	}
+	if p := u.Port(); p != "" {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 || n > 65535 {
+			return "", false
+		}
+		host += ":" + strconv.Itoa(n)
+	}
+	u.Host = host
+	return u.String(), true
+}
+
+// loopback says a canonical host is this Mac's: localhost, a name under
+// it, an address in 127.0.0.0/8, or ::1.
+func loopback(host string) bool {
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return !strings.HasPrefix(host, ".") && !strings.Contains(host, "..")
+	}
+	if strings.Contains(host, ":") {
+		return host == "::1"
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}

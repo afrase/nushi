@@ -1709,6 +1709,27 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// A dev server's output (ADR 0100): the last 256 KB of it as its
+  /// terminal wrote it (escapes and colours kept), then what it writes as it
+  /// comes, until it ends; a server that ended sends what it kept and ends
+  /// the stream. The Mac's only (API 111): the logs drawer.
+  Stream<nushiv1nushi.WatchServerLogResponse> watchServerLog(
+    nushiv1nushi.WatchServerLogRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).server(
+      specs.NushiService.watchServerLog,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Says what a folder brings for the agent to run on its own (MCP
   /// servers, hooks, helper commands) when neither the agent nor Nushi was
   /// told to trust it; nothing when it is trusted or brings nothing. Ask

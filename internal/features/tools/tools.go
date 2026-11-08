@@ -118,6 +118,14 @@ func (s *Service) List(key string) ([]Tool, string, error) {
 	return out, strings.Join(said, "\n\n"), nil
 }
 
+// Logged is a Set's error whose text the agent sees but the log
+// mustn't (it quotes the chat's folder's files): the log has what Logged
+// says instead, fixed words.
+type Logged interface {
+	error
+	Logged() string
+}
+
 // Call runs a tool the key grants. The log says which tool, for which
 // chat, and whether it worked; never the arguments or the result.
 func (s *Service) Call(ctx context.Context, key, tool string, args json.RawMessage) (string, error) {
@@ -132,9 +140,13 @@ func (s *Service) Call(ctx context.Context, key, tool string, args json.RawMessa
 			}
 			text, err := set.Call(ctx, g, tool, args)
 			log := slog.With("chat", g.Chat, "agent", g.Agent, "tool", tool)
-			if err != nil {
+			var quiet Logged
+			switch {
+			case errors.As(err, &quiet):
+				log.Info("agent's tool failed", "err", quiet.Logged())
+			case err != nil:
 				log.Info("agent's tool failed", "err", err)
-			} else {
+			default:
 				log.Info("agent's tool ran")
 			}
 			return text, err

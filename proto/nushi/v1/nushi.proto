@@ -330,6 +330,11 @@ service NushiService {
   rpc StartServer(StartServerRequest) returns (StartServerResponse);
   rpc StopServer(StopServerRequest) returns (StopServerResponse);
   rpc StopAllServers(StopAllServersRequest) returns (StopAllServersResponse);
+  // A dev server's output (ADR 0100): the last 256 KB of it as its
+  // terminal wrote it (escapes and colours kept), then what it writes as it
+  // comes, until it ends; a server that ended sends what it kept and ends
+  // the stream. The Mac's only (API 111): the logs drawer.
+  rpc WatchServerLog(WatchServerLogRequest) returns (stream WatchServerLogResponse);
   // Says what a folder brings for the agent to run on its own (MCP
   // servers, hooks, helper commands) when neither the agent nor Nushi was
   // told to trust it; nothing when it is trusted or brings nothing. Ask
@@ -2032,6 +2037,11 @@ message EventsResponse {
     // A folder whose dev servers changed: one started, answered, failed
     // or ended (chat_id is empty; API 109).
     string servers_changed = 19;
+    // A page the chat's agent asked to show in a browser tab: its show
+    // tool's url, or a dev server it started once that answers (ADR
+    // 0100); http or https to this Mac's loopback only. As show, no seq,
+    // and only the Mac's app acts on it (API 111).
+    string show_url = 20;
   }
 }
 
@@ -2199,6 +2209,12 @@ message Item {
   // chat's folder, or absolute. Those its text doesn't mention as @path
   // were attached (API 106).
   repeated string files = 38;
+  // For the ask to run Nushi's preview_start tool: the command the named
+  // launch file entry runs, as the daemon resolved it when the ask came
+  // (its own env, the program found on the login shell's PATH, its
+  // arguments), for the card to show; empty when the name is none of the
+  // folder's entries or can't run (API 111, ADR 0100).
+  string server_command = 39;
 }
 
 // A code review's result: the effort level it ran at ("medium"; "" when
@@ -2542,6 +2558,10 @@ message DevServer {
   // The entry's hash: StartServerRequest.hash, so what runs is what
   // this row showed.
   string hash = 21;
+  // The server whose output WatchServerLog sends (its logs drawer): the
+  // running one's, else the last one's that ran, failed or stopped,
+  // while the daemon keeps it; empty when there's none (API 111).
+  string log_id = 22;
 }
 
 message StartServerRequest {
@@ -2572,6 +2592,21 @@ message StopAllServersRequest {
 }
 
 message StopAllServersResponse {}
+
+message WatchServerLogRequest {
+  string chat_id = 1;
+  // The server: DevServer.log_id.
+  string server_id = 2;
+}
+
+message WatchServerLogResponse {
+  // The server's output, raw: a terminal's bytes, which may cut a
+  // character or an escape in two.
+  bytes data = 1;
+  // The server has ended; this is the last message. Its state, error and
+  // exit come with ListServers (servers_changed says when).
+  bool ended = 2;
+}
 
 message CheckFolderRequest {
   string folder = 1;

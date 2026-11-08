@@ -1,9 +1,13 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/afrase/nushi/internal/model"
@@ -26,9 +30,18 @@ func (echoSet) Instructions(g Grant) string {
 	return "Echoes for " + g.Issue.Key + "."
 }
 
+// quietError is a failure whose text the log mustn't have.
+type quietError struct{}
+
+func (quietError) Error() string  { return "the server said: secret words" }
+func (quietError) Logged() string { return "the server failed" }
+
 func (echoSet) Call(_ context.Context, g Grant, _ string, args json.RawMessage) (string, error) {
-	if string(args) == `"fail"` {
+	switch string(args) {
+	case `"fail"`:
 		return "", errors.New("it failed")
+	case `"quiet"`:
+		return "", fmt.Errorf("starting: %w", quietError{})
 	}
 	return g.Chat + " " + g.Issue.Key + " " + string(args), nil
 }
@@ -70,5 +83,22 @@ func TestKeys(t *testing.T) {
 		if _, err := s.Call(t.Context(), bad, "echo", nil); !errors.Is(err, ErrKey) {
 			t.Errorf("key %q: %v", bad, err)
 		}
+	}
+}
+
+// A failure that says it's Logged reaches the agent whole and the log as
+// what Logged says.
+func TestALoggedFailure(t *testing.T) {
+	var log bytes.Buffer
+	was := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&log, nil)))
+	t.Cleanup(func() { slog.SetDefault(was) })
+	s := New(echoSet{})
+	key := s.Key(Grant{Chat: "c", Issue: &model.ChatIssue{Key: "ACME-1"}})
+	if _, err := s.Call(t.Context(), key, "echo", json.RawMessage(`"quiet"`)); err == nil || !strings.Contains(err.Error(), "secret words") {
+		t.Errorf("the agent got %v", err)
+	}
+	if l := log.String(); strings.Contains(l, "secret") || !strings.Contains(l, `err="the server failed"`) {
+		t.Errorf("the log:\n%s", l)
 	}
 }

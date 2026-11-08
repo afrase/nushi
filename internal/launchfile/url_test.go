@@ -75,3 +75,44 @@ func TestParseURL(t *testing.T) {
 		}
 	}
 }
+
+// The show tool's url: a page on this Mac's loopback, any port and path,
+// as a browser loads it; anything else refused.
+func TestLoopbackURL(t *testing.T) {
+	for in, want := range map[string]string{
+		"http://localhost:3000":              "http://localhost:3000",
+		"HTTP://LocalHost:3000/docs?q=1#top": "http://localhost:3000/docs?q=1#top",
+		"https://app.localhost/a b":          "",
+		"https://app.localhost/a%20b":        "https://app.localhost/a%20b",
+		"http://127.0.0.1:8000/":             "http://127.0.0.1:8000/",
+		"http://127.0.0.2:8000/":             "http://127.0.0.2:8000/",
+		"http://127.1:8000":                  "http://127.0.0.1:8000",
+		"http://[::1]:3000/x":                "http://[::1]:3000/x",
+		"http://ｌｏｃａｌｈｏｓｔ:3000":              "http://localhost:3000",
+		"http://localhost:65535":             "http://localhost:65535",
+	} {
+		got, ok := LoopbackURL(in)
+		if want == "" {
+			if ok {
+				t.Errorf("%q passed as %q", in, got)
+			}
+			continue
+		}
+		if !ok || got != want {
+			t.Errorf("%q: %q, %v; want %q", in, got, ok, want)
+		}
+	}
+	for _, in := range []string{
+		"", "localhost:3000", "file:///tmp/a.html", "ws://localhost:3000", "javascript:alert(1)",
+		"http://example.com", "http://192.168.1.4:8080", "http://0.0.0.0:3000", "http://[::ffff:127.0.0.1]:3000",
+		"http://localhost.:3000", "http://app.localhost.:3000", "http://.localhost", "http://a..localhost",
+		"http://localhost.example.com", "http://127.0.0.1.nip.io", "http://me@localhost:3000", "http://@localhost:3000",
+		"http://localhost:0", "http://localhost:65536", "http://localhost:3000@example.com", "http:///x",
+		"http://localhost\\@example.com", "http://local\x00host", "http://localhost:3000/\n", "http://localhost%2e:3000",
+		"http://" + strings.Repeat("a", 4100) + ".localhost",
+	} {
+		if got, ok := LoopbackURL(in); ok {
+			t.Errorf("%q passed as %q", in, got)
+		}
+	}
+}
