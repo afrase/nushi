@@ -80,8 +80,28 @@ func all() ([]proc, error) {
 
 // Args reads a process's command line from /proc/<pid>/cmdline, nil when
 // it can't be read (it ended, or the system hides it), empty for a
-// kernel thread's.
+// kernel thread's or a zombie's. A live process of the user's reads empty
+// too for a moment in the middle of an exec, before the kernel has set up
+// the new program's arguments (some hundred microseconds under Rosetta),
+// and terminal's Foreground would take that for its prompt, so such a
+// read is tried again for up to execWait.
 func Args(pid int) []string {
-	args, _ := procfs.Cmdline(pid)
-	return args
+	for end := time.Now().Add(execWait); ; {
+		args, ok := procfs.Cmdline(pid)
+		if !ok || len(args) > 0 || !execing(pid) || time.Now().After(end) {
+			return args
+		}
+		time.Sleep(execWait / 50)
+	}
+}
+
+// execWait is how long Args waits for an exec's arguments.
+const execWait = 20 * time.Millisecond
+
+// execing says whether a process with no arguments could be in an exec:
+// not a zombie and not a kernel thread (kthreadd, pid 2, and its
+// children).
+func execing(pid int) bool {
+	s, err := procfs.ReadStat(pid)
+	return err == nil && s.State != 'Z' && s.State != 'X' && s.Pid != 2 && s.Ppid != 2
 }

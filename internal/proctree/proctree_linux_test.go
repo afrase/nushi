@@ -88,9 +88,40 @@ func TestZombiesAreLeftOut(t *testing.T) {
 	if p, err := (Tree{}).Get(zombie); err == nil {
 		t.Errorf("a zombie reads as running: %+v", p)
 	}
+	if args := Args(zombie); args == nil || len(args) > 0 {
+		t.Errorf("a zombie's arguments read %q, not empty", args)
+	}
 	ps, err := Tree{}.Under(cmd.Process.Pid)
 	testcheck.NoErr(t, err)
 	if slices.ContainsFunc(ps, func(p model.Process) bool { return p.Pid == zombie }) {
 		t.Errorf("a zombie is listed below its parent: %+v", ps)
+	}
+}
+
+// A process in the middle of an exec never reads as having no arguments,
+// which terminal's Foreground would take for the shell's prompt: sh
+// becomes this test binary, and every read until its arguments show is
+// either sh's or the new program's.
+func TestArgsThroughAnExec(t *testing.T) {
+	exe, err := os.Executable()
+	testcheck.NoErr(t, err)
+	for range 20 {
+		cmd := exec.Command("/bin/sh", "-c", `exec "$0"`, exe)
+		cmd.Env = []string{sleeperEnv + "=1"}
+		testcheck.NoErr(t, cmd.Start())
+		for end := time.Now().Add(5 * time.Second); ; {
+			if time.Now().After(end) {
+				t.Fatal("the child's arguments never showed")
+			}
+			args := Args(cmd.Process.Pid)
+			if args != nil && len(args) == 0 {
+				t.Fatal("a process in an exec read as having no arguments")
+			}
+			if slices.Equal(args, []string{exe}) {
+				break
+			}
+		}
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
 	}
 }
