@@ -10,7 +10,7 @@ import (
 	"github.com/afrase/nushi/internal/testcheck"
 )
 
-// keepAwake holds an idle inhibitor until stop, through a tail that ends
+// keepAwake holds idle and sleep locks until stop, through a tail that ends
 // with the daemon; without systemd-inhibit it does nothing.
 func TestKeepAwake(t *testing.T) {
 	dir := t.TempDir()
@@ -28,7 +28,7 @@ func TestKeepAwake(t *testing.T) {
 	if !testcheck.Eventually(func() bool { got, _ = os.ReadFile(args); return len(got) > 0 }) {
 		t.Fatal("systemd-inhibit never ran")
 	}
-	want := "--what=idle --who=Nushi --why=Remote access is on --mode=block tail --pid=" + strconv.Itoa(os.Getpid()) + " -f /dev/null"
+	want := "--what=idle:sleep --who=Nushi --why=Remote access is on --mode=block tail --pid=" + strconv.Itoa(os.Getpid()) + " -f /dev/null"
 	if strings.TrimSpace(string(got)) != want {
 		t.Errorf("ran %q", got)
 	}
