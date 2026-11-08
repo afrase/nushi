@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin && !linux
 
 package keychain
 
@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"runtime"
 )
+
+// noKeychain is ErrNoKeychain's text where there is no keychain.
+const noKeychain = "there is no keychain on this OS"
 
 // Set fails: there is no keychain on this OS.
 func (k Keychain) Set(_, _ string, _ []byte) error {

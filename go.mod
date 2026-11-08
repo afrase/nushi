@@ -11,6 +11,7 @@ require (
 	github.com/cli/go-gh/v2 v2.17.0
 	github.com/creack/pty v1.1.24
 	github.com/flynn/noise v1.1.0
+	github.com/godbus/dbus/v5 v5.2.4
 	github.com/gorilla/websocket v1.5.3
 	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	github.com/yuin/goldmark v1.8.6
