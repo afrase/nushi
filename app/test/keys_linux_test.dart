@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/clock.dart';
@@ -14,16 +17,18 @@ import 'package:nushi/palette.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/sidebar.dart';
 import 'package:nushi/window_drag_linux.dart';
+import 'package:re_editor/re_editor.dart';
 import 'package:xterm2/xterm.dart' hide Terminal;
 
 import 'fake_daemon.dart';
 import 'fake_shells.dart';
+import 'file_edit_helpers.dart';
 import 'harness.dart';
 
 // The app's keys on Linux (ADR 0102): held with Control where the Mac's
-// take ⌘, written Ctrl+Shift+E, with GNOME Terminal's keys in a terminal.
-// Tests pair Linux's conventions and window with its platform, as a Linux
-// machine runs them.
+// take ⌘, written Ctrl+Shift+E, with GNOME Terminal's keys in a terminal
+// and Quit, which no menu bar has, in the palette. Tests pair Linux's
+// conventions and window with its platform, as a Linux machine runs them.
 
 final _linux = TargetPlatformVariant.only(TargetPlatform.linux);
 
@@ -281,4 +286,66 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await closeView(tester, d);
   }, variant: _linux);
+
+  testWidgets('without a menu bar, Quit and Previous and Next chat are '
+      'palette rows', (tester) async {
+    final (d, _) = await _app(tester);
+    await _press(tester, LogicalKeyboardKey.keyK);
+    await tester.enterText(_paletteField, 'quit');
+    await tester.pumpAndSettle();
+    expect(find.text('Quit Nushi'), findsOneWidget);
+    expect(find.text('Ctrl+Q', findRichText: true), findsOneWidget);
+    await tester.enterText(_paletteField, 'chat');
+    await tester.pumpAndSettle();
+    expect(find.text('Previous chat'), findsOneWidget);
+    expect(find.text('Ctrl+Page Up', findRichText: true), findsOneWidget);
+    expect(find.text('Next chat'), findsOneWidget);
+    final order = [for (final c in chatOrder(d)) c.id];
+    await tester.tap(find.text('Previous chat'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Palette), findsNothing);
+    expect(d.selectedId, order[(order.indexOf('a') - 1) % order.length]);
+    await closeView(tester, d);
+  }, variant: _linux);
+
+  testWidgets('Ctrl+Q asks before it quits, as the window’s close does: '
+      'edits that can’t be saved ask, and Cancel stays', (tester) async {
+    _onLinux();
+    final (d, fake) = await openEditor(tester, {
+      'main.go': utf8.encode(goSource),
+    });
+    final e = editOf(d);
+    e.controller.selection = const CodeLineSelection.collapsed(
+      index: 3,
+      offset: 1,
+    );
+    await typeIn(tester, e, 'x');
+    fake.putFile('main.go', utf8.encode(goSource.replaceAll('println', 'p')));
+    await tester.pumpAndSettle();
+    await _press(tester, LogicalKeyboardKey.keyQ);
+    expect(find.text('Quit without your changes to main.go?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Quit without your changes to main.go?'), findsNothing);
+    expect(chatC(d).edits['main.go'], same(e));
+    await endEditor(tester, d);
+  }, variant: _linux);
+
+  testWidgets('on the Mac, Quit is its menu’s: ⌘Q is no key of the app’s '
+      'and the palette has no Quit row', (tester) async {
+    viewport(tester, const Size(1200, 760));
+    final d = await FakeDaemon([chat('a', 'claude', 'Keys')]).connect(tester);
+    d.select('a');
+    await tester.pumpWidget(NushiApp(daemon: d));
+    await tester.pumpAndSettle();
+    expect(actKeys.keys, isNot(contains(quitKey)));
+    await _press(tester, LogicalKeyboardKey.keyK, [
+      LogicalKeyboardKey.metaLeft,
+    ]);
+    await tester.enterText(_paletteField, 'quit');
+    await tester.pumpAndSettle();
+    expect(find.text('Quit Nushi'), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await closeView(tester, d);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

@@ -23,6 +23,7 @@ List<ShortcutActivator> get _appKeys => {
   paletteKey,
   paletteKeyToo,
   wrapKey,
+  quitKey,
 }.toList();
 
 /// The app's keys a terminal is given to pass on or not.
@@ -137,6 +138,12 @@ void main() {
     );
   });
 
+  test('Quit: ⌘Q, and Ctrl+Q on Linux', () {
+    expect(keyLabel(quitKey), '⌘Q');
+    native.conventions = linuxConventions;
+    expect(keyLabel(quitKey), 'Ctrl+Q');
+  });
+
   for (final (name, c) in [
     ('Mac', macConventions),
     ('Linux', linuxConventions),
@@ -172,7 +179,7 @@ void main() {
         reason: '${keyLabel(k)} is the shell’s',
       );
     }
-    for (final k in [sidebarKey, pinKey, reloadPageKey, newChatKey]) {
+    for (final k in [sidebarKey, pinKey, reloadPageKey, newChatKey, quitKey]) {
       expect(terminalPasses(k), isFalse, reason: keyLabel(k));
     }
     expect(

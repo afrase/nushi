@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show AppExitResponse, AppExitType;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -126,7 +127,11 @@ enum Act {
   jira(key: jiraKey, menu: ActMenu.view, menuLabel: 'Jira'),
   github(key: githubKey, menu: ActMenu.view, menuLabel: 'GitHub'),
   restart,
-  checkUpdates(menu: ActMenu.nushi, menuLabel: 'Check for Updates…');
+  checkUpdates(menu: ActMenu.nushi, menuLabel: 'Check for Updates…'),
+  // Where no menu bar has them (Linux): the Mac's View and Nushi menus'.
+  previousChat(shows: previousChatKey),
+  nextChat(shows: nextChatKey),
+  quit(shows: quitKey);
 
   new({this.key, this.shows, this.keyText, this.menu, this.menuLabel});
 
@@ -173,6 +178,10 @@ class RunActIntent extends Intent {
 
   final Act act;
 }
+
+/// ⌘Q: quits the app, where no menu bar has Quit (Linux); the Mac's is its
+/// menu's. It asks the window to close, so unsaved edits still ask.
+const quitKey = Cmd(LogicalKeyboardKey.keyQ);
 
 /// Opens the palette.
 class OpenPaletteIntent extends Intent {
@@ -387,7 +396,32 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       enabled: d.connected && d.daemonApi >= updatesApi,
       run: () => unawaited(checkForUpdates(context, d)),
     ),
+    if (!native.window.menuBar) ...[
+      AppAction(
+        .previousChat,
+        'Previous chat',
+        enabled: d.chats.isNotEmpty,
+        run: () => stepChat(d, -1),
+      ),
+      AppAction(
+        .nextChat,
+        'Next chat',
+        enabled: d.chats.isNotEmpty,
+        run: () => stepChat(d, 1),
+      ),
+      AppAction(.quit, 'Quit Nushi', run: () => unawaited(_quit())),
+    ],
   ];
+}
+
+/// Quits the app, where no menu bar's Quit does: what would be lost asks
+/// first (the app's onExitRequested: edits that can't be saved), as a
+/// cancelable exit's request does, and then the engine exits.
+Future<void> _quit() async {
+  final binding = ServicesBinding.instance;
+  if (await binding.handleRequestAppExit() == AppExitResponse.exit) {
+    await binding.exitApplication(AppExitType.required);
+  }
 }
 
 /// The spell check ⌘; goes through in [chat], while it runs: its prompt
@@ -536,9 +570,12 @@ List<AppAction> chatActions(
 
 /// Runs [act] as it is now, if it applies.
 void runAct(BuildContext context, Daemon d, Act act) {
-  // Only the menu bar reaches here past Settings (it stops the keys): what
-  // runs is elsewhere, so Settings shuts first (ADR 0087).
-  if (act != Act.settings && act != Act.appearance) d.closeSettings();
+  // Only the menu bar (and Linux's Quit) reaches here past Settings (it
+  // stops the keys): what runs is elsewhere, so Settings shuts first (ADR
+  // 0087).
+  if (!const {Act.settings, Act.appearance, Act.quit}.contains(act)) {
+    d.closeSettings();
+  }
   final a = appActions(context, d).firstWhere((a) => a.act == act);
   if (a.enabled) a.run();
 }

@@ -321,13 +321,14 @@ class _NushiAppState extends State<NushiApp> {
             ),
           },
           // The actions' keys, ⌘K, ⌘1–⌘9, ⌘[ and ⌘], ⌃Tab and ⌃⇧Tab:
-          // wherever the focus is.
+          // wherever the focus is; and Quit's without a menu bar.
           child: Shortcuts(
             shortcuts: {
               ...actKeys,
               paletteKey: const OpenPaletteIntent(),
               paletteKeyToo: const OpenPaletteIntent(),
               ...chatKeys,
+              if (!native.window.menuBar) quitKey: const RunActIntent(.quit),
             },
             // Focused when nothing in the window is, so the keys still
             // come here (an empty pane, after a click on the sidebar).
