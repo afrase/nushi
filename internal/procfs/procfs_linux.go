@@ -65,15 +65,25 @@ func All() []Stat {
 // gets the same Started for a process at every listing, whatever steps
 // the clock takes meanwhile.
 func AllFrom(boot time.Time) []Stat {
-	entries, _ := os.ReadDir(root)
-	out := make([]Stat, 0, len(entries))
-	for _, e := range entries {
-		pid, err := strconv.Atoi(e.Name())
-		if err != nil || pid <= 0 {
-			continue
-		}
+	pids := Pids()
+	out := make([]Stat, 0, len(pids))
+	for _, pid := range pids {
 		if s, err := readStat(pid, boot); err == nil {
 			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// Pids lists the pids /proc shows, in no particular order: every
+// process's, though only the user's own say more than their stat (their
+// open files, Links).
+func Pids() []int {
+	entries, _ := os.ReadDir(root)
+	out := make([]int, 0, len(entries))
+	for _, e := range entries {
+		if pid, err := strconv.Atoi(e.Name()); err == nil && pid > 0 {
+			out = append(out, pid)
 		}
 	}
 	return out

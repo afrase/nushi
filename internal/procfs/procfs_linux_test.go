@@ -122,6 +122,15 @@ func TestLinks(t *testing.T) {
 	}
 }
 
+// The pids hold this process's and its parent's, and nothing that isn't a
+// pid.
+func TestPids(t *testing.T) {
+	pids := Pids()
+	if !slices.Contains(pids, os.Getpid()) || !slices.Contains(pids, os.Getppid()) || slices.ContainsFunc(pids, func(p int) bool { return p <= 0 }) {
+		t.Fatalf("pids %v; this one %d, its parent %d", pids, os.Getpid(), os.Getppid())
+	}
+}
+
 // The boot's id is a UUID, the same at each read.
 func TestBootID(t *testing.T) {
 	if id := BootID(); len(id) != len("8e0d2f2c-3a4b-4c5d-9e6f-0a1b2c3d4e5f") || id != BootID() {
