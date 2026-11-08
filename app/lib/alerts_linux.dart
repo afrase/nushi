@@ -19,7 +19,8 @@ const _app = 'com.nushihq.Nushi';
 /// (sent back to replace it) and each chat's names. A click on one opens
 /// its chat and brings the window to the front with the token the desktop
 /// gave the click. Calls run one at a time, in order, so a name posted
-/// twice in a row is replaced, never shown twice.
+/// twice in a row is replaced, never shown twice. A bus that doesn't
+/// answer at first is as none, for the app's run.
 class LinuxAlertCenter implements AlertCenter {
   /// Over the session bus given, none (nothing posted, no permission)
   /// when null, bringing the window given to the front on a click.
@@ -27,6 +28,22 @@ class LinuxAlertCenter implements AlertCenter {
 
   final DBusClient? _bus;
   final AppWindow _window;
+
+  /// The bus once it has answered a ping, or null: package:dbus (0.7.15)
+  /// leaves a client whose first connection failed waiting for good on
+  /// every later call, and throws that failure where a signal stream
+  /// subscribes, so nothing else is asked of it before it answers.
+  late final Future<DBusClient?> _reached = () async {
+    final bus = _bus;
+    if (bus == null) return null;
+    try {
+      await bus.ping().timeout(const Duration(seconds: 5));
+      return bus;
+    } on Object {
+      bus.close().ignore();
+      return null;
+    }
+  }();
 
   final _numbers = <String, int>{}; // a name's number from the service
   final _names = <int, String>{}; // a number's name
@@ -37,8 +54,8 @@ class LinuxAlertCenter implements AlertCenter {
   Future<bool>? _markup;
   Future<void> _last = Future.value();
 
-  DBusRemoteObject get _notifications =>
-      DBusRemoteObject(_bus!, name: _service, path: _path);
+  DBusRemoteObject _notifications(DBusClient bus) =>
+      DBusRemoteObject(bus, name: _service, path: _path);
 
   /// Runs [call] after every call before it, whatever they did.
   Future<T> _inTurn<T>(Future<T> Function() call) {
@@ -55,13 +72,14 @@ class LinuxAlertCenter implements AlertCenter {
     required String body,
     required bool sound,
   }) async {
-    if (_bus == null) return;
-    _listen();
+    final bus = await _reached;
+    if (bus == null) return;
+    _listen(bus);
     await _inTurn(() async {
       // Markup the service would read, from a chat's title (the agent's
       // words) or a failure, is shown as written.
-      final escape = await (_markup ??= _bodyMarkup());
-      final reply = await _notifications.callMethod(_service, 'Notify', [
+      final escape = await (_markup ??= _bodyMarkup(bus));
+      final reply = await _notifications(bus).callMethod(_service, 'Notify', [
         const DBusString('Nushi'),
         DBusUint32(_numbers[id] ?? 0),
         const DBusString(_app),
@@ -88,9 +106,9 @@ class LinuxAlertCenter implements AlertCenter {
 
   /// Whether the service reads markup in a notification's text (its
   /// `body-markup` capability; dunst and GNOME Shell do).
-  Future<bool> _bodyMarkup() async {
+  Future<bool> _bodyMarkup(DBusClient bus) async {
     try {
-      final reply = await _notifications.callMethod(
+      final reply = await _notifications(bus).callMethod(
         _service,
         'GetCapabilities',
         const [],
@@ -105,15 +123,17 @@ class LinuxAlertCenter implements AlertCenter {
 
   @override
   Future<void> withdraw(List<String> ids) async {
-    if (_bus == null) return;
-    await _inTurn(() => _close(ids));
+    final bus = await _reached;
+    if (bus == null) return;
+    await _inTurn(() => _close(bus, ids));
   }
 
   @override
   Future<void> clear(String chat) async {
-    if (_bus == null) return;
+    final bus = await _reached;
+    if (bus == null) return;
     await _inTurn(
-      () => _close([
+      () => _close(bus, [
         for (final MapEntry(key: id, value: c) in _chats.entries)
           if (c == chat) id,
       ]),
@@ -121,14 +141,14 @@ class LinuxAlertCenter implements AlertCenter {
   }
 
   /// Closes the notifications named [ids] that are shown.
-  Future<void> _close(List<String> ids) async {
+  Future<void> _close(DBusClient bus, List<String> ids) async {
     for (final id in ids) {
       final number = _numbers.remove(id);
       _chats.remove(id);
       if (number == null) continue;
       _names.remove(number);
       _tokens.remove(number);
-      await _notifications.callMethod(_service, 'CloseNotification', [
+      await _notifications(bus).callMethod(_service, 'CloseNotification', [
         DBusUint32(number),
       ], replySignature: DBusSignature.empty);
     }
@@ -139,7 +159,7 @@ class LinuxAlertCenter implements AlertCenter {
   @override
   Future<void> badge(String label) async {
     final count = int.tryParse(label) ?? 0;
-    await _bus?.emitSignal(
+    await (await _reached)?.emitSignal(
       path: DBusObjectPath('/com/nushihq/Nushi'),
       interface: 'com.canonical.Unity.LauncherEntry',
       name: 'Update',
@@ -158,7 +178,7 @@ class LinuxAlertCenter implements AlertCenter {
   /// to ask about (a desktop's own switch for Nushi stays its own).
   @override
   Future<NotifyPermission?> allowed() async {
-    final bus = _bus;
+    final bus = await _reached;
     if (bus == null) return null;
     try {
       if (await bus.nameHasOwner(_service) ||
@@ -181,18 +201,19 @@ class LinuxAlertCenter implements AlertCenter {
   void onOpen(void Function(String chat)? open) {
     _open = open;
     if (open != null) {
-      _listen();
+      _reached.then((bus) {
+        if (bus != null && _open != null) _listen(bus);
+      }).ignore();
     } else {
       _signals?.cancel().ignore();
       _signals = null;
     }
   }
 
-  /// Follows the service's signals from now on: a click's token, then its
-  /// action, and a notification gone.
-  void _listen() {
-    final bus = _bus;
-    if (bus == null || _signals != null) return;
+  /// Follows the service's signals on [bus] from now on: a click's token,
+  /// then its action, and a notification gone.
+  void _listen(DBusClient bus) {
+    if (_signals != null) return;
     _signals =
         DBusSignalStream(
           bus,

@@ -4,8 +4,9 @@ import 'package:dbus/dbus.dart';
 
 /// The user's D-Bus session bus, which Linux's notifications and badge
 /// reach the desktop over (ADR 0102), or null when there's none to find.
-/// The client connects on its first call, so one that can't reach the bus
-/// fails each call rather than the app's start.
+/// The client connects on its first call, so a bus it can't reach never
+/// holds up the app's start; `LinuxAlertCenter` pings it before anything
+/// else, as such a client answers nothing after its first failure.
 final DBusClient? sessionBus = sessionBusAt(Platform.environment);
 
 /// A client of the session bus [environment] names: its

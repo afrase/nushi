@@ -135,8 +135,18 @@ Future<void> _post(
   bool sound = true,
 }) => center.post(id: id, chat: chat, title: title, body: body, sound: sound);
 
-/// Lets the bus's messages arrive.
-Future<void> _settle() =>
+/// Waits until [done], as the bus's messages cross its sockets: every
+/// 10 ms, 10 s at most.
+Future<void> _until(bool Function() done) async {
+  for (var i = 0; !done(); i++) {
+    if (i == 1000) fail('not done after 10 s');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+}
+
+/// A moment for what should not happen to show if it does: too short, it
+/// lets a test pass, never fail.
+Future<void> _moment() =>
     Future<void>.delayed(const Duration(milliseconds: 50));
 
 void main() {
@@ -202,18 +212,21 @@ void main() {
   test('one closed by the user is posted anew, not replaced', () async {
     final service = _Notifications();
     final (center, _, _) = await _center(service);
-    center.onOpen((_) {});
-    await _settle();
+    final opened = <String>[];
+    center.onOpen(opened.add);
     await _post(center, 'a/ended');
+    await _post(center, 'b/ended', chat: 'b');
     await service.emitSignal(_service, 'NotificationClosed', [
       const DBusUint32(1),
       const DBusUint32(2),
     ]);
-    await _settle();
+    // A click after it, so the close has arrived once the click has.
+    await service.click(2);
+    await _until(() => opened.isNotEmpty);
     await _post(center, 'a/ended');
     expect(service.notified.last[1].asUint32(), 0);
     await center.clear('a');
-    expect(service.closed, [2]);
+    expect(service.closed, [3]);
   });
 
   test("a click opens its chat and brings the window up with the click's "
@@ -222,19 +235,18 @@ void main() {
     final (center, window, _) = await _center(service);
     final opened = <String>[];
     center.onOpen(opened.add);
-    await _settle();
     await _post(center, 'a/question');
     await _post(center, 'b/ended', chat: 'b');
     await service.click(1, token: 'gnome-shell/Nushi/1234-0-host_TIME5');
-    await service.click(2);
     await service.click(9);
-    await _settle();
+    await service.click(2);
+    await _until(() => opened.length == 2);
     expect(opened, ['a', 'b']);
     expect(window.presented, ['gnome-shell/Nushi/1234-0-host_TIME5', null]);
 
     center.onOpen(null);
     await service.click(1);
-    await _settle();
+    await _moment();
     expect(opened, ['a', 'b']);
   });
 
@@ -249,12 +261,12 @@ void main() {
       name: 'Update',
     ).listen(updates.add);
     addTearDown(sub.cancel);
+    // Its match is the bus's once the ping that follows it is answered.
     await dock.ping();
-    await _settle();
     final center = LinuxAlertCenter(_client(address), _Window());
     await center.badge('3');
     await center.badge('');
-    await _settle();
+    await _until(() => updates.length == 2);
     expect(
       [for (final u in updates) u.values.first.asString()],
       [
@@ -301,6 +313,24 @@ void main() {
     await _post(nothing, 'a/ended');
     await nothing.clear('a');
     await nothing.badge('1');
+  });
+
+  test("a bus that can't be reached is as none: every call returns, and "
+      'nothing is thrown', () async {
+    final dir = Directory.systemTemp.createTempSync('nushi-bus-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final center = LinuxAlertCenter(
+      _client(DBusAddress.unix(path: '${dir.path}/bus')),
+      _Window(),
+    )..onOpen((_) {});
+    const limit = Duration(seconds: 10);
+    await _post(center, 'a/ended').timeout(limit);
+    await _post(center, 'a/question').timeout(limit);
+    expect(await center.allowed().timeout(limit), isNull);
+    expect(await center.allowed().timeout(limit), isNull);
+    await center.withdraw(['a/ended']).timeout(limit);
+    await center.clear('a').timeout(limit);
+    await center.badge('2').timeout(limit);
   });
 
   test('the session bus is the one the environment names, else the '
