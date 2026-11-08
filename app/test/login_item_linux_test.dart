@@ -59,8 +59,8 @@ X-GNOME-Autostart-enabled=true
     },
   );
 
-  test('an entry whose nushid is gone, or that the desktop turned off, is '
-      'off; turning it on writes it anew', () async {
+  test("an entry whose nushid is gone or another copy's, or that the "
+      'desktop turned off, is off; turning it on writes it anew', () async {
     await item.set(on: true);
     final text = item.file.readAsStringSync();
     item.file.writeAsStringSync(text.replaceAll('=true', '=false'));
@@ -69,8 +69,22 @@ X-GNOME-Autostart-enabled=true
     expect(await item.status(), LoginItemState.off);
     item.file.writeAsStringSync(text.replaceAll('Nushi app', 'Old'));
     expect(await item.status(), LoginItemState.off);
+    File('${dir.path}/opt/Old/lib/nushid').createSync(recursive: true);
+    expect(await item.status(), LoginItemState.off);
     expect(await item.set(on: true), LoginItemState.on);
     expect(item.file.readAsStringSync(), text);
+  });
+
+  test('a package under a folder with a % writes nothing: GLib would not '
+      'load its entry', () async {
+    final daemon = '${dir.path}/100%/lib/nushid';
+    File(daemon).createSync(recursive: true);
+    final odd = LinuxLoginItem(
+      install: FakeAppInstall()..daemon = daemon,
+      environment: {'XDG_CONFIG_HOME': '${dir.path}/cfg'},
+    );
+    expect(await odd.set(on: true), LoginItemState.off);
+    expect(odd.file.existsSync(), isFalse);
   });
 
   test('without a packaged daemon, on writes nothing', () async {
@@ -88,13 +102,13 @@ X-GNOME-Autostart-enabled=true
       ('/opt/nushi/lib/nushid', '/opt/nushi/lib/nushid -login'),
       ('/opt/a b/nushid', '"/opt/a b/nushid" -login'),
       (r'/opt/a"$`\b/nushid', r'"/opt/a\\"\\$\\`\\\\b/nushid" -login'),
-      ('/opt/100%/nushid', '/opt/100%%/nushid -login'),
       ("/opt/it's/nushid", '"/opt/it\'s/nushid" -login'),
     ]) {
       expect(execValue([path, '-login']), exec, reason: path);
       expect(execProgram(exec), path, reason: exec);
     }
     expect(execProgram('"/opt/unclosed'), isNull);
-    expect(() => execValue(['/opt/a\nb']), throwsArgumentError);
+    expect(execValue(['/opt/a\nb']), isNull);
+    expect(execValue(['/opt/100%/nushid']), isNull);
   });
 }
