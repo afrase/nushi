@@ -193,11 +193,12 @@ class TerminalScreen extends StatelessWidget {
   }
 }
 
-/// The app's colors with the theme's ANSI palette ([Tokens.terminal]).
-TerminalTheme terminalTheme(Tokens t) {
+/// The app's colors with the theme's ANSI palette ([Tokens.terminal]);
+/// [cursor] in place of the text's (the background's hides it).
+TerminalTheme terminalTheme(Tokens t, {Color? cursor}) {
   final a = t.terminal;
   return TerminalTheme(
-    cursor: t.text,
+    cursor: cursor ?? t.text,
     selection: t.accent.withValues(alpha: 0.3),
     foreground: t.text,
     background: t.base,

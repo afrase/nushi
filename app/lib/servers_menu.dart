@@ -186,9 +186,10 @@ class _Note extends StatelessWidget {
 
 /// One server's row: its name (a click opens its page beside the chat
 /// while it runs), under it a muted line (its command, or why it can't run,
-/// failed or isn't answering), and at the end ▶ (Run), ■ (Stop) or a
-/// spinner while it starts. Its tooltip has the whole command, its folder
-/// and env, or a failure's last lines.
+/// failed or isn't answering), and at the end Logs while it has output
+/// (ADR 0100), then ▶ (Run), ■ (Stop) or a spinner while it starts. Its
+/// tooltip has the whole command, its folder and env, or a failure's last
+/// lines.
 class ServerRow extends StatelessWidget {
   const new({
     required this.server,
@@ -209,6 +210,16 @@ class ServerRow extends StatelessWidget {
   void _open() {
     close();
     chat.showServer(server.url);
+  }
+
+  /// Opens its logs drawer at the bottom of the browser pane.
+  void _logs() {
+    close();
+    chat.serverLogs.value = (
+      name: server.name,
+      source: server.source,
+      fromMain: server.fromMain,
+    );
   }
 
   /// Runs it; its page opens once it answers (the user started it, so
@@ -308,8 +319,11 @@ class ServerRow extends StatelessWidget {
         ),
       ],
     );
+    final logs = s.logId.isNotEmpty;
     return Tooltip(
-      message: failed && s.output.isNotEmpty ? _tail(s.output) : _details(s),
+      message: failed && s.output.isNotEmpty
+          ? [_tail(s.output), if (logs) _seeLogs].join('\n\n')
+          : _details(s),
       waitDuration: const Duration(milliseconds: 600),
       textStyle: theme.code(t.text, size: 11.5),
       child: Padding(
@@ -319,6 +333,17 @@ class ServerRow extends StatelessWidget {
           spacing: 10,
           children: [
             SizedBox(width: _rowWidth, child: text),
+            // In a box of one width, so each row's ▶ lines up.
+            SizedBox(
+              width: 50,
+              child: logs
+                  ? Button(
+                      label: 'Logs',
+                      tooltip: 'Show its output below the page',
+                      onPressed: _logs,
+                    )
+                  : null,
+            ),
             _button(context),
           ],
         ),
@@ -376,6 +401,9 @@ class ServerRow extends StatelessWidget {
     );
   }
 }
+
+/// What ends a failed server's tooltip: where the rest of its output is.
+const _seeLogs = 'The whole output is in Logs.';
 
 /// How many of a failed server's last lines its tooltip shows: the end,
 /// where the error is, in a tooltip no taller than the window.

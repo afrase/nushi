@@ -59,6 +59,10 @@ final class ShowPage implements ShowAsk {
   final String url;
 }
 
+/// A launch file's entry by what tells it from the others: its name, in
+/// its file.
+typedef ServerEntry = ({String name, String source, bool fromMain});
+
 /// One chat's transcript and status: a snapshot from the daemon, kept
 /// current by the chat's later events.
 class ChatState extends ChangeNotifier {
@@ -406,6 +410,11 @@ class ChatState extends ChangeNotifier {
   /// later ask takes its place; nothing but the Mac's app sets it, and it
   /// lasts while the app runs.
   final showAsked = ValueNotifier<ShowAsk?>(null);
+
+  /// The dev server whose logs drawer shows at the bottom of the browser
+  /// pane (ADR 0100), by its entry, so a run that follows shows there too;
+  /// null while it's closed. In the app's memory only.
+  final serverLogs = ValueNotifier<ServerEntry?>(null);
 
   /// Shows [path] in the preview: the tab of the same file if it has one,
   /// however each is named ([relativeIn]: relative to the folder or

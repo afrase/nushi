@@ -14,6 +14,7 @@ import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_tabs.dart';
+import 'package:nushi/server_logs.dart';
 import 'package:nushi/servers_menu.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -52,8 +53,9 @@ const browserHint = 'Enter an address, like example.com or localhost:3000';
 /// browser tab; at the right Servers ([ServersButton]), ⋯ ([BrowserMenu]),
 /// Expand and Close, which
 /// closes every tab), then [BrowserBar], then the page, or for a new tab a
-/// hint. Like a file's view it's made again as its tab shows: the page
-/// loads again from the tab's address.
+/// hint, over a server's logs drawer while one is open ([ServerLogsDrawer]).
+/// Like a file's view it's made again as its tab shows: the page loads
+/// again from the tab's address.
 class BrowserPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -269,9 +271,25 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
           onGo: _go,
         ),
         Expanded(
-          child: ColoredBox(
-            color: t.base,
-            child: host == null ? const _NewTab() : _page(host),
+          child: LayoutBuilder(
+            builder: (context, box) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ColoredBox(
+                    color: t.base,
+                    child: host == null ? const _NewTab() : _page(host),
+                  ),
+                ),
+                // A server's output under the page it serves (ADR 0100).
+                if (widget.daemon case final daemon?)
+                  ServerLogsDrawer(
+                    chat: widget.chat,
+                    servers: daemon.devServers,
+                    room: box.maxHeight,
+                  ),
+              ],
+            ),
           ),
         ),
       ],

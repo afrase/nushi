@@ -26,6 +26,7 @@ DevServer _server(
   int index = 0,
   DevServerState state = DevServerState.DEV_SERVER_STATE_STOPPED,
   String id = '',
+  String logId = '',
   String error = '',
   String output = '',
   String source = '.agents/launch.json',
@@ -50,6 +51,7 @@ DevServer _server(
   error: error,
   output: output,
   serverId: id,
+  logId: logId,
   problem: problem,
   hash: problem.isEmpty ? 'hash-$name-$port' : '',
 );
@@ -418,6 +420,7 @@ void main() {
         'court-finder',
         state: DevServerState.DEV_SERVER_STATE_RUNNING,
         id: 'a',
+        logId: 'a',
       ),
     ],
     'failed': () => [
@@ -426,6 +429,7 @@ void main() {
         state: DevServerState.DEV_SERVER_STATE_FAILED,
         error: 'it ended (exit code 1) before answering on port 3000',
         output: 'Error: Cannot find module vite',
+        logId: 'a',
       ),
     ],
     'several': () => [
@@ -433,6 +437,7 @@ void main() {
         'api',
         state: DevServerState.DEV_SERVER_STATE_RUNNING,
         id: 'a',
+        logId: 'a',
         port: 8080,
       ),
       _server(
@@ -440,6 +445,7 @@ void main() {
         index: 1,
         state: DevServerState.DEV_SERVER_STATE_NOT_ANSWERING,
         id: 'b',
+        logId: 'b',
       ),
       _server('storybook', index: 2, port: 6006),
     ],

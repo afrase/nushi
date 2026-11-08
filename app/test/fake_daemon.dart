@@ -308,17 +308,53 @@ class FakeDaemon implements Transport {
   /// events' stream. Every such request is in [calls].
   Stream<Object>? Function(Object input)? streams;
 
+  /// The dev servers' output WatchServerLog sends (ADR 0100), by
+  /// DevServer.log_id: what [serverLog]'s controller is given, to each
+  /// watch from then on. A server with none, or whose controller the test
+  /// closed, is refused as one whose output the daemon no longer keeps.
+  final _serverLogs = <String, StreamController<WatchServerLogResponse>>{};
+
+  /// The output of the server [logId], for the test to send.
+  StreamController<WatchServerLogResponse> serverLog(String logId) =>
+      _serverLogs[logId] ??= () {
+        final log = StreamController<WatchServerLogResponse>.broadcast();
+        // Not waited on: its done waits on watches the app may have let go.
+        addTearDown(() => unawaited(log.close()));
+        return log;
+      }();
+
   @override
   Future<StreamResponse<I, O>> stream<I extends Object, O extends Object>(
     Spec<I, O> spec,
     Stream<I> input, [
     CallOptions? options,
   ]) async {
-    if (streams != null || files.isNotEmpty) {
+    if (streams != null || files.isNotEmpty || _serverLogs.isNotEmpty) {
       final request = await input.first;
       if (streams?.call(request) case final s?) {
         calls.add(request);
         return StreamResponse(spec, Headers(), s.cast<O>(), Headers());
+      }
+      if (request case WatchServerLogRequest(:final serverId)) {
+        calls.add(request);
+        // One the test closed is gone, as the daemon's output of a server
+        // five others ended after. Closed by the test, or as it ends.
+        // ignore: close_sinks
+        final log = _serverLogs[serverId];
+        final live = log != null && !log.isClosed ? log.stream : null;
+        return StreamResponse(
+          spec,
+          Headers(),
+          (live ??
+                  Stream<WatchServerLogResponse>.error(
+                    ConnectException(
+                      Code.notFound,
+                      'no such server’s output is kept in this chat’s folder',
+                    ),
+                  ))
+              .cast<O>(),
+          Headers(),
+        );
       }
       if (request case WatchChatFileRequest(:final path)
           when files.containsKey(path)) {
