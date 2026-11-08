@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/account_rows.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -115,8 +116,8 @@ class _GitHubPageState extends State<GitHubPage> {
     if (!await confirm(
           context,
           'Remove the token for ${h.host}?',
-          "Nushi deletes it from the keychain, and uses gh's login for "
-              '${h.host} if gh has one.',
+          'Nushi deletes it from the ${conventions.keyring}, and uses '
+              "gh's login for ${h.host} if gh has one.",
           'Remove',
           destructive: true,
         ) ||

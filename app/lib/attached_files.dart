@@ -5,6 +5,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show immutable, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show FileUpload;
 import 'package:nushi/images.dart';
@@ -228,7 +229,9 @@ Future<AttachedFile?> _upload(
   required List<String> refused,
 }) async {
   if (api < attachApi) {
-    refused.add('the Mac’s Nushi takes photos only until it’s updated');
+    refused.add(
+      'the ${conventions.machine}’s Nushi takes photos only until it’s updated',
+    );
     return null;
   }
   final size = await f.length();

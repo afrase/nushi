@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -66,7 +67,8 @@ class PlusMenu extends StatelessWidget {
           tooltip: attach
               ? ''
               : '${chat.agentName} doesn’t take images in this chat, and '
-                    'the Mac’s Nushi takes other files once it’s updated',
+                    'the ${conventions.machine}’s Nushi takes other files once '
+                    'it’s updated',
         ),
         MenuEntry('Mention a file', line: LineIcon.at, onPick: onMention),
         MenuEntry('Slash commands', line: LineIcon.slashBox, onPick: onSlash),

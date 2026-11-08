@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart' show ago;
+import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/settings_rows.dart';
@@ -107,11 +108,15 @@ class _RemoteSectionState extends State<RemoteSection> {
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-            if (r.on) Text('Keeps the Mac awake while on.', style: muted),
+            if (r.on)
+              Text(
+                'Keeps the ${conventions.machine} awake while on.',
+                style: muted,
+              ),
             if (r.key.isNotEmpty)
               Text(
-                "This Mac's key: ${keyFingerprint(r.key)}, as a paired "
-                'phone shows it.',
+                "This ${conventions.machine}'s key: ${keyFingerprint(r.key)}, "
+                'as a paired phone shows it.',
                 style: muted,
               ),
             const SizedBox(height: 8),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/edit_bars.dart';
@@ -333,7 +334,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                                           onPick: onTap,
                                         ),
                                       MenuEntry(
-                                        'Show in Finder',
+                                        conventions.reveal,
                                         line: LineIcon.folderOpen,
                                         onPick: _reveal,
                                       ),
@@ -350,7 +351,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                                     ),
                                   IconTap.line(
                                     LineIcon.folderOpen,
-                                    tooltip: 'Show in Finder',
+                                    tooltip: conventions.reveal,
                                     size: 14,
                                     onTap: _reveal,
                                   ),

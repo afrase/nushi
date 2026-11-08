@@ -11,7 +11,8 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/status_bar.dart' show restartDaemonAsking;
 import 'package:nushi/widgets.dart';
 
-/// Reveals the daemon's log (nushid.log, app.log beside it) in Finder.
+/// Reveals the daemon's log (nushid.log, app.log beside it) in the file
+/// manager.
 Future<void> showLogs() async {
   final log = '$dataDir/nushid.log';
   await (File(log).existsSync()

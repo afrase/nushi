@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nushi/bundled_daemon.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/widgets.dart';
 
 /// The notice over Jira's or GitHub's list while the daemon can't read a
@@ -27,7 +28,8 @@ class TokenNotices extends StatelessWidget {
   Widget build(BuildContext context) => needsOk
       ? Notice(
           'This build of Nushi needs your OK to read the token from the '
-          'keychain; macOS asks for your password.',
+          '${conventions.keyring}; ${conventions.system} asks for your '
+          'password.',
           action: 'Allow…',
           onAction: onAllow,
         )

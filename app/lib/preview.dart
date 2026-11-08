@@ -5,6 +5,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart' show diskSize;
@@ -282,7 +283,7 @@ Widget? previewStatus(
       action: onReveal == null
           ? null
           : Button(
-              label: 'Show in Finder',
+              label: conventions.reveal,
               icon: Icons.folder_open_outlined,
               onPressed: onReveal,
             ),
@@ -392,7 +393,7 @@ class PreviewBody extends StatelessWidget {
             action: onReveal == null
                 ? null
                 : Button(
-                    label: 'Show in Finder',
+                    label: conventions.reveal,
                     icon: Icons.folder_open_outlined,
                     onPressed: onReveal,
                   ),
@@ -414,7 +415,9 @@ class PreviewBody extends StatelessWidget {
           );
         }
         if (kind == PreviewKind.pdf) {
-          return const PreviewNote('Open it on your Mac to see it.');
+          return PreviewNote(
+            'Open it on your ${conventions.machine} to see it.',
+          );
         }
         final text = utf8.decode(f.data, allowMalformed: true);
         if (kind == PreviewKind.csv && !source) {

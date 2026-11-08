@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/controls.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
@@ -350,7 +351,7 @@ class _Name extends StatelessWidget {
           IconTap(
             Icons.folder_open_outlined,
             key: ValueKey('theme-reveal-$f'),
-            tooltip: 'Show in Finder',
+            tooltip: conventions.reveal,
             size: 15,
             onTap: () => unawaited(themeFiles.revealFile(f)),
           ),

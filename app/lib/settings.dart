@@ -252,10 +252,10 @@ final appearance = Pref<ThemeMode>(
 /// id, or `custom:` and a theme file's name; Nushi's unless picked.
 final Pref<String> colorTheme = _plain('theme', 'nushi');
 
-/// The Mac's notifications (`alerts.dart`), each kind on or off: a chat
+/// The app's notifications (`alerts.dart`), each kind on or off: a chat
 /// needs you (a permission prompt or a question), a turn ends, a turn
-/// fails; whether they play a sound; and the Dock badge counting the
-/// chats that need you.
+/// fails; whether they play a sound; and the app icon's badge (the Dock's,
+/// on the Mac) counting the chats that need you.
 final Pref<bool> alertNeedsYou = _plain('alertNeedsYou', true);
 final Pref<bool> alertFinished = _plain('alertFinished', true);
 final Pref<bool> alertFailed = _plain('alertFailed', true);
