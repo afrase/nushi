@@ -6,6 +6,7 @@ import 'package:nushi/app_install_linux.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/file_mode_linux.dart';
+import 'package:nushi/login_item_linux.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/native_linux.dart';
@@ -28,7 +29,7 @@ void main() {
     expect(set.speller, isNull);
     expect(await set.fonts.monospaced(), isNull);
     expect(set.install, isA<LinuxAppInstall>());
-    expect(await set.loginItem.status(), isNull);
+    expect(set.loginItem, isA<LinuxLoginItem>());
     expect(await set.alerts.allowed(), isNull);
     expect(await set.clipboard.files(), isEmpty);
     expect(await set.clipboard.image(), isNull);

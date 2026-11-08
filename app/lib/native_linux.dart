@@ -23,7 +23,7 @@ Native linuxNative() => Native(
   fileModes: const LinuxFileModes(),
   fonts: const LinuxFonts(),
   install: LinuxAppInstall(),
-  loginItem: const LinuxLoginItem(),
+  loginItem: LinuxLoginItem(),
   swipes: const LinuxPageSwipes(),
   web: const LinuxWebViews(),
   window: const LinuxWindow(),

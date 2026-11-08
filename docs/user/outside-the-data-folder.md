@@ -20,7 +20,7 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | A worktree | `<repo>/.worktrees/<name>`, its branch, `.git/info/exclude` | A chat in a new worktree; Delete removes them when asked. The branch is renamed (`git branch -m`) after the chat between turns, unless pushed, or by Rename branch…; the folder keeps its name. The agent is told with the next prompt, which its history keeps. |
 | MCP servers started | whatever each server does | Opening the MCP view runs `claude mcp list`, which starts every server to check it, as in a terminal. |
 | A shell | your shell's own files (history) | A terminal you open; the daemon's start (`nushid -login`, ADR 0036); reading its environment for agents, at start and from Settings › Agents (`-l -i -c`, ADR 0048): your config runs as in a terminal. |
-| A login item | launchd's per-user list, Login Items | Start at login (Settings). |
+| A login item | launchd's per-user list, Login Items; on Linux an autostart entry, `$XDG_CONFIG_HOME/autostart/com.nushihq.Nushi.daemon.desktop` (else `~/.config`), removed when turned off | Start at login (Settings). |
 | A Jira site's API token | the login keychain, service "Nushi Jira", account "<email> on <host>" | Settings › Jira (you added it); Remove deletes it. |
 | Jira itself | the site | A move, a comment you make, or an agent's through its tools (its harness asks first). Nothing else: lists and issues are only read. |
 | A GitHub token you paste | the login keychain, service "Nushi GitHub", account the host | Settings › GitHub (you added it); Remove deletes it. gh's own login is gh's: Nushi only reads it. |
