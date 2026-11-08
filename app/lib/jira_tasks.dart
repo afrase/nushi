@@ -7,6 +7,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/jira_people.dart';
 import 'package:nushi/jira_view_parts.dart';
 import 'package:nushi/jira_work.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -383,7 +384,7 @@ class _TaskRowState extends State<TaskRow> {
         Icons.play_arrow_outlined,
         size: 15,
         padding: 2,
-        tooltip: widget.selected ? 'Start work (⌘⏎)' : 'Start work',
+        tooltip: widget.selected ? 'Start work ($cmdEnterLabel)' : 'Start work',
         onTap: open,
       );
     },

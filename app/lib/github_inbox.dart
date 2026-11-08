@@ -5,6 +5,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_filters.dart';
 import 'package:nushi/github_parts.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -348,7 +349,7 @@ class _ItemRowState extends State<ItemRow> {
       return IconTap(
         Icons.play_arrow_outlined,
         size: 15,
-        tooltip: widget.selected ? 'Start work (⌘⏎)' : 'Start work',
+        tooltip: widget.selected ? 'Start work ($cmdEnterLabel)' : 'Start work',
         onTap: open,
       );
     },

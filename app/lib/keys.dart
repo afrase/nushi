@@ -120,6 +120,15 @@ String keyLabel(ShortcutActivator key) {
   };
 }
 
+/// The command key and [key], as [keyLabel] writes them (⌘⏎, Ctrl+Enter).
+String cmdLabel(LogicalKeyboardKey key) => keyLabel(Cmd(key));
+
+/// ⏎, or Enter on Linux.
+String get enterLabel => keyName(LogicalKeyboardKey.enter);
+
+/// ⌘⏎, or Ctrl+Enter on Linux: what sends now, posts or commits.
+String get cmdEnterLabel => cmdLabel(LogicalKeyboardKey.enter);
+
 /// [key] alone as the platform writes it: ⏎ and ⇥ on the Mac, Enter and
 /// Tab on Linux.
 String keyName(LogicalKeyboardKey key) => switch (commandKey) {

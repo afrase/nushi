@@ -8,6 +8,7 @@ import 'package:nushi/app_actions.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_files.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/panel_widgets.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/settings.dart';
@@ -272,10 +273,15 @@ class _PaletteState extends State<Palette> {
                     prefixIcon: const Icon(Icons.search, size: 15),
                     prefixIconConstraints: const BoxConstraints(minWidth: 28),
                     suffixIcon: Tooltip(
-                      message: 'The palette: ⌘K, or ⌘⇧P (in a terminal too)',
+                      message:
+                          'The palette: ${keyLabel(paletteKey)}, or '
+                          '${keyLabel(paletteKeyToo)} (in a terminal too)',
                       child: Padding(
                         padding: const EdgeInsets.only(right: 4),
-                        child: keyText('⌘K', theme.code(t.textMuted, size: 12)),
+                        child: keyText(
+                          keyLabel(paletteKey),
+                          theme.code(t.textMuted, size: 12),
+                        ),
                       ),
                     ),
                     suffixIconConstraints: const BoxConstraints(),

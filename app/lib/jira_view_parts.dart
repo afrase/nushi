@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/theme/theme.dart';
@@ -173,7 +175,11 @@ class JiraBar extends StatelessWidget {
               padding: const EdgeInsets.only(right: 8),
               child: Text(line, style: theme.ui(t.textMuted, size: 12)),
             ),
-          IconTap(Icons.refresh, tooltip: 'Refresh (⌘R)', onTap: onRefresh),
+          IconTap(
+            Icons.refresh,
+            tooltip: 'Refresh (${cmdLabel(LogicalKeyboardKey.keyR)})',
+            onTap: onRefresh,
+          ),
           IconTap(Icons.close, tooltip: 'Close (esc)', onTap: onClose),
         ],
       ),

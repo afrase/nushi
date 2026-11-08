@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/composer_parts.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -329,7 +330,7 @@ class _ReplyBoxState extends State<ReplyBox> {
                     ),
                     IconTap(
                       Icons.arrow_upward,
-                      tooltip: 'Add to the message (⏎)',
+                      tooltip: 'Add to the message ($enterLabel)',
                       onTap: _send,
                     ),
                   ],

@@ -59,7 +59,7 @@ class PlusMenu extends StatelessWidget {
         MenuEntry(
           photosOnly ? 'Add photos' : 'Add files or photos',
           line: LineIcon.paperclip,
-          shortcut: touch ? '' : '⌘U',
+          shortcut: touch ? '' : keyLabel(attachKey),
           onPick: attach ? onAttach : null,
           tooltip: attach
               ? ''

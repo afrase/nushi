@@ -94,6 +94,12 @@ void main() {
     ]);
   });
 
+  test('Enter and the command key with it, as each platform writes them', () {
+    expect((enterLabel, cmdEnterLabel), ('⏎', '⌘⏎'));
+    native.conventions = linuxConventions;
+    expect((enterLabel, cmdEnterLabel), ('Enter', 'Ctrl+Enter'));
+  });
+
   for (final (name, c) in [
     ('Mac', macConventions),
     ('Linux', linuxConventions),

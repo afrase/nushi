@@ -8,6 +8,7 @@ import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_parts.dart';
 import 'package:nushi/github_review.dart';
 import 'package:nushi/item_chats.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -161,7 +162,7 @@ class _GitHubIssuePaneState extends State<GitHubIssuePane> {
           const SizedBox(height: 16),
           CommentBox(
             draft: githubDraft(it.ref, 'comment'),
-            hint: 'Comment on the issue (Markdown; ⌘⏎ posts it)',
+            hint: 'Comment on the issue (Markdown; $cmdEnterLabel posts it)',
             onPost: (text) async {
               await widget.daemon.client.addGitHubComment(
                 AddGitHubCommentRequest(

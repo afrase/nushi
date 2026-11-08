@@ -4,11 +4,13 @@ import 'package:nushi/agent_mark.dart';
 import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_colors.dart';
+import 'package:nushi/chat_keys.dart';
 import 'package:nushi/chat_menu.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/commits.dart' show agoShort;
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/settings.dart';
@@ -212,7 +214,7 @@ class _SidebarRowState extends State<SidebarRow> {
                               radius: NushiTheme.control,
                             ),
                             child: keyText(
-                              '⌘$n',
+                              keyLabel(chatNumberKey(n)),
                               theme.code(t.textSecondary, size: 11),
                             ),
                           ),

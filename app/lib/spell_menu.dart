@@ -79,7 +79,7 @@ class SpellMenu extends ChangeNotifier {
       for (final (i, fix) in fixes.indexed)
         MenuEntry(
           fix,
-          shortcut: i == 0 ? '⏎' : '${i + 1}',
+          shortcut: i == 0 ? enterLabel : '${i + 1}',
           lit: i == 0,
           onPick: () => take(w, fix),
         ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:markdown_view/markdown_view.dart';
 
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -182,6 +183,9 @@ class FoundCount extends StatelessWidget {
   }
 }
 
+/// ⇧⏎: the match before.
+const _previousKey = SingleActivator(LogicalKeyboardKey.enter, shift: true);
+
 /// The find bar over the transcript: the field, "2 of 7", ↑ and ↓ (or ⏎
 /// and ⇧⏎), and × (or Esc) to close. Given [loadAll] (a chat with more
 /// before what it has loaded), a line under them says the find looks in
@@ -264,12 +268,12 @@ class _FindBarState extends State<FindBar> {
             Text(f.count, style: theme.ui(t.textMuted, size: 12)),
             IconTap(
               Icons.keyboard_arrow_up,
-              tooltip: 'Previous (⇧⏎)',
+              tooltip: 'Previous (${keyLabel(_previousKey)})',
               onTap: f.canStep ? () => f.step(-1) : null,
             ),
             IconTap(
               Icons.keyboard_arrow_down,
-              tooltip: 'Next (⏎)',
+              tooltip: 'Next ($enterLabel)',
               onTap: f.canStep ? () => f.step(1) : null,
             ),
             IconTap(Icons.close, tooltip: 'Close (esc)', onTap: f.close),

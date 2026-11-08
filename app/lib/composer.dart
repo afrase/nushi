@@ -538,8 +538,9 @@ class _ComposerState extends State<Composer> {
                                     ? widget.hint
                                     : touch
                                     ? 'Queue a message, or stop and send'
-                                    : '⏎ queues it, ⌘⏎ stops ${chat.agentName} '
-                                          'and sends',
+                                    : '$enterLabel queues it, '
+                                          '$cmdEnterLabel stops '
+                                          '${chat.agentName} and sends',
                                 border: InputBorder.none,
                                 // One line (18.2) is as tall as the buttons.
                                 contentPadding: const EdgeInsets.symmetric(

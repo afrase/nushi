@@ -4,6 +4,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_comment.dart';
 import 'package:nushi/github_review.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/pull_todo_items.dart';
 import 'package:nushi/send_to_agent.dart';
 import 'package:nushi/theme/theme.dart';
@@ -37,7 +38,7 @@ class ThreadReplyBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CommentBox(
     draft: threadDraft(ref, thread),
-    hint: 'Reply (Markdown; ⌘⏎ posts it)',
+    hint: 'Reply (Markdown; $cmdEnterLabel posts it)',
     label: 'Reply',
     autofocus: true,
     onCancel: onClose,

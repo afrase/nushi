@@ -258,7 +258,7 @@ class SendButtons extends StatelessWidget {
             key: const ValueKey('queue'),
             play: pop,
             child: boxButton(
-              touch ? 'Queue' : 'Queue (⏎)',
+              touch ? 'Queue' : 'Queue ($enterLabel)',
               onSend,
               Icon(Icons.queue, size: 16, color: t.textSecondary),
             ),
@@ -268,7 +268,7 @@ class SendButtons extends StatelessWidget {
               key: const ValueKey('now'),
               play: pop,
               child: boxButton(
-                touch ? 'Stop and send' : 'Stop and send (⌘⏎)',
+                touch ? 'Stop and send' : 'Stop and send ($cmdEnterLabel)',
                 () => onSend(now: true),
                 Icon(Icons.fast_forward, size: 16, color: t.textSecondary),
               ),
@@ -289,7 +289,7 @@ class SendButtons extends StatelessWidget {
             key: const ValueKey('send'),
             play: pop,
             child: boxButton(
-              'Send (⏎)',
+              'Send ($enterLabel)',
               onSend,
               Icon(Icons.keyboard_return, size: 16, color: t.textSecondary),
             ),

@@ -7,6 +7,7 @@ import 'package:nushi/changes_span.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show GetDiffRequest;
+import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/panes.dart';
 import 'package:nushi/settings.dart';
@@ -54,8 +55,8 @@ class TerminalButton extends StatelessWidget {
         tooltip: chat.archived
             ? 'An archived chat has no terminals'
             : on
-            ? 'Hide terminal  ⌃`'
-            : 'Show terminal  ⌃`',
+            ? 'Hide terminal  ${keyLabel(toggleTerminalKey)}'
+            : 'Show terminal  ${keyLabel(toggleTerminalKey)}',
         color: on ? t.accentInk : t.textSecondary,
         onTap: !chat.archived ? () => toggleTerminal(chat.id) : null,
       );

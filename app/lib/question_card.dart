@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/cards.dart';
 import 'package:nushi/draft.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/question_parts.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -336,7 +337,7 @@ class _QuestionCardState extends State<QuestionCard> {
       if (!_many && (many || f.options.isEmpty))
         RunButton(
           label: 'Submit',
-          hint: '⏎',
+          hint: enterLabel,
           kind: ButtonKind.primary,
           runner: _sending,
           run: _answer.isEmpty ? null : () => widget.onAnswer(_answer),
@@ -365,7 +366,7 @@ class _QuestionCardState extends State<QuestionCard> {
         ),
       RunButton(
         label: 'Submit',
-        hint: '⏎',
+        hint: enterLabel,
         kind: ButtonKind.primary,
         runner: _sending,
         run: _answer.isEmpty ? null : () => widget.onAnswer(_answer),

@@ -6,6 +6,7 @@ import 'package:nushi/arrangement.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/chat_keys.dart';
 import 'package:nushi/daemon.dart';
+import 'package:nushi/keys.dart';
 import 'package:nushi/list_motion.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/panes.dart';
@@ -150,7 +151,7 @@ class _SidebarState extends State<Sidebar> {
               child: Button(
                 label: 'New chat',
                 icon: Icons.add,
-                hint: '⌘N',
+                hint: keyLabel(newChatKey),
                 onPressed: starting == null ? () => _new('') : null,
               ),
             ),

@@ -101,7 +101,7 @@ enum Act {
   files(key: filesKey, menu: ActMenu.view, menuLabel: 'Files'),
   chatWidth,
   // The preview's own key: elsewhere ⌥Z types a character.
-  wrap(keyText: wrapKeyText, menu: ActMenu.view, menuLabel: 'Wrap Lines'),
+  wrap(shows: wrapKey, menu: ActMenu.view, menuLabel: 'Wrap Lines'),
   whitespace(menu: ActMenu.view, menuLabel: 'Show Whitespace'),
   terminal(key: toggleTerminalKey),
   rewind(keyText: 'Esc Esc'), // the composer's
@@ -128,18 +128,19 @@ enum Act {
   restart,
   checkUpdates(menu: ActMenu.nushi, menuLabel: 'Check for Updates…');
 
-  new({this.key, this.keyText, this.menu, this.menuLabel});
+  new({this.key, this.shows, this.keyText, this.menu, this.menuLabel});
 
   /// The key the app binds to it, wherever the focus is.
   final MenuSerializableShortcut? key;
-  final String? keyText; // shown, not bound: another widget has the key
+  final ShortcutActivator? shows; // shown, not bound: another widget has it
+  final String? keyText; // the same, in words
   final ActMenu? menu;
   final String? menuLabel;
 
   /// Its key as the palette and tooltips show it.
   String? get shortcut =>
       keyText ??
-      switch (key) {
+      switch (key ?? shows) {
         final k? => keyLabel(k),
         null => null,
       };

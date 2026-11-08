@@ -321,7 +321,7 @@ class ChatHeader extends StatelessWidget {
                 if (folds.tabs)
                   MenuField(
                     compact: true,
-                    tooltip: '⌃⇥ the next tab, ⌃⇧⇥ the one before',
+                    tooltip: _stepTabs,
                     entries: [
                       for (final (each, label) in _tabs(chat))
                         MenuEntry(
@@ -339,9 +339,7 @@ class ChatHeader extends StatelessWidget {
                     tabs: _tabs(chat),
                     onChanged: onTab,
                     fill: true,
-                    tooltip: (t) =>
-                        '${keyLabel(tabKey(t))}   ⌃⇥ the next tab, ⌃⇧⇥ the one '
-                        'before',
+                    tooltip: (t) => '${keyLabel(tabKey(t))}   $_stepTabs',
                   ),
                 SizedBox(width: roomy ? NushiTheme.groupGap : 4),
                 // In the order of what they show, the terminal under the
@@ -387,7 +385,7 @@ class ChatHeader extends StatelessWidget {
                           terminalChats.value.contains(chat.id)
                               ? 'Hide terminal'
                               : 'Show terminal',
-                          shortcut: '⌃`',
+                          shortcut: keyLabel(toggleTerminalKey),
                           line: LineIcon.terminal,
                           onPick: () => toggleTerminal(chat.id),
                         ),
@@ -453,6 +451,11 @@ class ChatHeader extends StatelessWidget {
     if (chat.pull != null) (ChatTab.pull, 'Pull request'),
   ];
 }
+
+/// How the tabs are stepped through, as their tooltips say.
+String get _stepTabs =>
+    '${keyLabel(nextTabKey)} the next tab, ${keyLabel(previousTabKey)} the '
+    'one before';
 
 /// The room the chat's color's dot takes, its gap to the title in it.
 const _dotRoom = 16.0;

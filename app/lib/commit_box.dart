@@ -206,7 +206,7 @@ class _CommitBoxState extends State<CommitBox> {
                   ? 'Commit'
                   : 'Commit $n file${n == 1 ? '' : 's'}',
               kind: ButtonKind.primary,
-              tooltip: n == 0 ? 'Stage a file first' : '⌘⏎',
+              tooltip: n == 0 ? 'Stage a file first' : cmdEnterLabel,
               onPressed: _ready ? _commit : null,
             ),
           ],
