@@ -9,8 +9,8 @@ import 'package:nushi/motion.dart';
 /// given (16 square when loose). It turns on [pulseClock], not on a ticker
 /// of its own as Material's spinner does: one can show for as long as a
 /// command a code block ran (a dev server, for hours), and a ticker draws
-/// the whole window every frame. With Reduce Motion, or in a still frame,
-/// it's a ring three parts drawn.
+/// the whole window every frame. With Reduce Motion, in a still frame, or
+/// at rest ([loopMoving]), it's a ring three parts drawn.
 class Spinner extends StatelessWidget {
   const new({super.key, this.strokeWidth = 1.5, this.color});
 
@@ -43,7 +43,7 @@ class _Arc extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final (from, length) = turning
+    final (from, length) = turning && loopMoving
         ? (
             2 * pi * loopPhase(turn),
             0.1 + 0.65 * (0.5 - 0.5 * cos(2 * pi * loopPhase(breath))),

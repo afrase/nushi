@@ -60,6 +60,30 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets('while Nushi is not in front, it is the still frame, drawn '
+      'once', (tester) async {
+    Shine.stopAt = null;
+    addTearDown(() => Shine.stopAt = 0);
+    viewport(tester, const Size(40, 40), ratio: 3);
+    await tester.pumpWidget(_spinner());
+    await tester.pump(const Duration(milliseconds: 730)); // mid-turn
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    addTearDown(
+      () => tester.binding.handleAppLifecycleStateChanged(
+        AppLifecycleState.resumed,
+      ),
+    );
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    await tester.pump();
+    await expectLater(
+      find.byType(Scaffold),
+      matchesGoldenFile('goldens/spinner_dark.png'),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('with Reduce Motion it stands still', (tester) async {
     Shine.stopAt = null;
     addTearDown(() => Shine.stopAt = 0);
