@@ -1,6 +1,7 @@
 import 'package:nushi/alerts_linux.dart';
 import 'package:nushi/back_swipe_linux.dart';
 import 'package:nushi/clipboard_files_linux.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/desktop_linux.dart';
 import 'package:nushi/file_mode_linux.dart';
 import 'package:nushi/fonts_linux.dart';
@@ -15,6 +16,7 @@ import 'package:nushi/window_drag_linux.dart';
 Native linuxNative() => Native(
   alerts: const LinuxAlertCenter(),
   clipboard: const LinuxClipboardFiles(),
+  conventions: linuxConventions,
   desktop: const LinuxDesktop(),
   diagrams: const LinuxDiagrams(),
   fileModes: const LinuxFileModes(),

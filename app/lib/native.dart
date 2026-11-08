@@ -1,6 +1,7 @@
 import 'package:nushi/alerts.dart';
 import 'package:nushi/back_swipe.dart';
 import 'package:nushi/clipboard_files.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/desktop.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/fonts.dart';
@@ -23,6 +24,7 @@ class Native {
   new({
     required this.alerts,
     required this.clipboard,
+    required this.conventions,
     required this.desktop,
     required this.diagrams,
     required this.fileModes,
@@ -39,6 +41,10 @@ class Native {
 
   /// The clipboard's files and picture, for ⌘V.
   ClipboardFiles clipboard;
+
+  /// What the platform names differently, and its shortcuts' modifier
+  /// (widgets read `conventions`, which the phone has too).
+  Conventions conventions;
 
   /// The file manager and default apps.
   Desktop desktop;

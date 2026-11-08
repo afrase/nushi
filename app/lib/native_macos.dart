@@ -1,6 +1,7 @@
 import 'package:nushi/alerts_macos.dart';
 import 'package:nushi/back_swipe_macos.dart';
 import 'package:nushi/clipboard_files_macos.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/desktop_macos.dart';
 import 'package:nushi/file_mode_macos.dart';
 import 'package:nushi/fonts_macos.dart';
@@ -16,6 +17,7 @@ import 'package:nushi/window_drag_macos.dart';
 Native macosNative() => Native(
   alerts: const MacAlertCenter(),
   clipboard: const MacClipboardFiles(),
+  conventions: macConventions,
   desktop: const MacDesktop(),
   diagrams: const MacDiagrams(),
   fileModes: const MacFileModes(),

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/file_mode_linux.dart';
 import 'package:nushi/main.dart';
@@ -20,6 +21,7 @@ void main() {
   test("Linux's set is whole, keeps the system's title bar and has no menu "
       'bar, no speller and no diagrams yet', () async {
     final set = linuxNative();
+    expect(set.conventions, same(linuxConventions));
     expect(set.window.menuBar, isFalse);
     expect(const MacWindow().menuBar, isTrue);
     expect(set.speller, isNull);
@@ -38,6 +40,13 @@ void main() {
       foreground: const Color(0xFF000000),
     );
     expect((d.png, d.error), (null, 'Diagrams aren’t drawn on Linux yet'));
+  });
+
+  test('widgets read the native set’s conventions', () {
+    expect(conventions, same(macConventions));
+    native.conventions = linuxConventions;
+    expect(conventions.commandKey, CommandKey.control);
+    expect(conventions.reveal, 'Show in Folder');
   });
 
   // Flutter's platform menus throw off the Mac (PlatformProvidedMenuItem
