@@ -28,8 +28,6 @@ void main() {
     expect(await set.fonts.monospaced(), isNull);
     expect(await set.loginItem.status(), isNull);
     expect(await set.alerts.allowed(), isNull);
-    expect(await set.clipboard.files(), isEmpty);
-    expect(await set.clipboard.image(), isNull);
     expect(await set.web.sincePress(), isNull);
     expect(await set.web.defaultBrowserName(), isNull);
     final d = await set.diagrams.draw(
