@@ -226,6 +226,12 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      # npm's install runs under bubblewrap on Linux (internal/npm's tests run it); Ubuntu's AppArmor denies it
+      # unprivileged user namespaces unless that rule is off.
+      - run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends bubblewrap
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: go test -race -shuffle=on ./relay/... ./noiseconn/... ./cmd/nushi-relay/...
       # Everything builds and vets for Linux without cgo: macOS-only code stays in _darwin.go files (ADR 0097).
       - if: ${{ !cancelled() }}

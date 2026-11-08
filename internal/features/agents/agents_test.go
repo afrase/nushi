@@ -37,7 +37,7 @@ func TestList(t *testing.T) {
 	off := fakeCLI(t, other, "ante", "ante 0.2.9")
 	fakeCLI(t, bin, "omp", "18.12.6")
 	fakeCLI(t, bin, "pig", "0.5.3+1.4.0.74f46864")
-	t.Setenv("PATH", bin+":/usr/bin:/bin")
+	t.Setenv("PATH", bin) // the fakes alone: a system folder may hold a real node, as on Linux
 	signedIn := func(run func(...string) ([]byte, error)) string {
 		out, err := run("auth", "status")
 		if err != nil || !strings.Contains(string(out), `"loggedIn": true`) {
@@ -127,13 +127,14 @@ func (f *fakeInstaller) Remove(folder string) error { delete(f.versions, folder)
 
 // An agent with an adapter: not ready until it's set up; setting it up
 // puts its awake chats to sleep, and tells the chats it's ready; a failed
-// install says why; Remove; found ready (Node back), the chats are told.
+// install says why, in the installer's words (npm's, or why its sandbox
+// can't run); Remove; found ready (Node back), the chats are told.
 func TestSetUp(t *testing.T) {
 	bin := t.TempDir()
 	fakeCLI(t, bin, "claude", "2.1.310")
 	fakeCLI(t, bin, "node", "v26.1.0")
 	fakeCLI(t, bin, "npm", "11.13.0")
-	t.Setenv("PATH", bin+":/usr/bin:/bin")
+	t.Setenv("PATH", bin) // the fakes alone: a system folder may hold a real node, as on Linux
 	lock := fstest.MapFS{
 		"package.json":      {Data: []byte(`{"dependencies":{"adapter":"1.0.0"}}`)},
 		"package-lock.json": {Data: []byte(`{"packages":{"":{},"node_modules/adapter":{},"node_modules/dep":{},"node_modules/bin-darwin":{"optional":true}}}`)},
@@ -150,7 +151,7 @@ func TestSetUp(t *testing.T) {
 		t.Errorf("Run before SetUp: %v", err)
 	}
 	in.fail = true
-	if err := svc.SetUp(context.Background(), "claude"); err == nil || chats.slept != 0 || chats.ready != nil {
+	if err := svc.SetUp(context.Background(), "claude"); err == nil || err.Error() != "npm ci: no network" || chats.slept != 0 || chats.ready != nil {
 		t.Errorf("a failed install: %v, %d slept, ready %q", err, chats.slept, chats.ready)
 	}
 	in.fail = false
@@ -194,7 +195,7 @@ func TestExplain(t *testing.T) {
 	bin := t.TempDir()
 	fakeCLI(t, bin, "codex", "codex-cli 0.170.0")
 	fakeCLI(t, bin, "ante", "ante 0.2.14")
-	t.Setenv("PATH", bin+":/usr/bin:/bin")
+	t.Setenv("PATH", bin) // the fakes alone: a system folder may hold a real node, as on Linux
 	svc := newService([]Agent{{Name: "codex", Title: "Codex", CLI: "codex", Tested: []string{"0.160.1", "0.163.0"}}, {Name: "ante", Title: "Ante", CLI: "ante", Tested: []string{"0.2.14"}},
 		{Name: "claude", Title: "Claude", CLI: "claude", Tested: []string{"2.1.310"}}}, "", &fakeInstaller{}, &fakeChats{})
 	failed := errors.New("initialize: it quit")

@@ -1,9 +1,10 @@
 // Package npm installs npm packages into a folder from a lockfile, as `npm
 // ci` does, so every package's version and hash is the lockfile's. Nothing
 // outside the folder's parent is touched: npm runs under macOS's sandbox
-// with every other file write denied (sandbox_darwin.go; another OS has no
-// sandbox, so no install, ADR 0097); its cache goes to a folder of the
-// install's own, removed after, and it keeps no logs; no install scripts
+// (sandbox_darwin.go) or Linux's bubblewrap (sandbox_linux.go) with every
+// other file write denied (another OS has no sandbox, so no install, ADR
+// 0097); its cache goes to a folder of the install's own, removed after,
+// and it keeps no logs; no install scripts
 // run; optional dependencies (prebuilt programs for each platform) are
 // left out. It runs the npm on PATH, which reads the user's npm settings (a
 // registry or proxy of their own).
@@ -57,17 +58,16 @@ func (in Installer) Install(ctx context.Context, lock fs.FS, folder string, read
 		}
 	}
 	cache := filepath.Join(tmp, ".npm")
-	cmd, err := writingOnlyIn(ctx, parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
+	env := os.Environ()
+	if in.Environ != nil {
+		env = in.Environ()
+	}
+	cmd, err := writingOnlyIn(ctx, slices.Concat(env, in.Env), parent, "npm", "ci", "--omit=optional", "--omit=dev", "--ignore-scripts",
 		"--no-audit", "--no-fund", "--update-notifier=false", "--logs-max=0", "--cache", cache)
 	if err != nil {
 		return err
 	}
 	cmd.Dir = tmp
-	env := os.Environ()
-	if in.Environ != nil {
-		env = in.Environ()
-	}
-	cmd.Env = slices.Concat(env, in.Env)
 	procgroup.Bound(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("npm ci: %w: %s", err, tail(string(out), 6))
