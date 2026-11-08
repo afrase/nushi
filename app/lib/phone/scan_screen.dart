@@ -58,7 +58,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
     return PhoneScreen(
-      title: 'Scan the Mac’s code',
+      title: 'Scan your computer’s code',
       body: _error != null
           ? Padding(
               padding: const EdgeInsets.all(16),
@@ -99,7 +99,7 @@ class _ScanScreenState extends State<ScanScreen> {
                     _note.isNotEmpty
                         ? _note
                         : 'Point the camera at the code in Settings › Remote '
-                              'access › Pair a phone on the Mac.',
+                              'access › Pair a phone on your computer.',
                     textAlign: TextAlign.center,
                     style: phoneText(
                       context,

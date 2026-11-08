@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/alerts.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/settings_rows.dart';
@@ -8,8 +9,8 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 /// Settings › General's Notifications: each kind on or off, the sound and
-/// the Dock badge (`alerts.dart`); and, when macOS has them off for Nushi,
-/// a way to its settings.
+/// the app icon's badge (`alerts.dart`), in the platform's words; and, when
+/// the system has them off for Nushi, a way to its settings.
 class NotificationsGroup extends StatefulWidget {
   const new({super.key});
 
@@ -31,6 +32,7 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
+    final words = conventions;
     SettingsRow row(String label, String text, ValueNotifier<bool> on) =>
         SettingsRow(
           label,
@@ -50,16 +52,16 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
       ]),
       builder: (context, _) => SettingsGroup(
         title: 'Notifications',
-        footer: const Text(
+        footer: Text(
           "Shown while Nushi isn't the app in front, or for a chat other "
           'than the one showing. A click opens the chat. They stay on this '
-          'Mac.',
+          '${words.machine}.',
         ),
         children: [
           if (_allowed == NotifyPermission.denied)
             SettingsRow(
-              'Off in macOS',
-              description: 'macOS has notifications off for Nushi.',
+              'Off in ${words.system}',
+              description: '${words.system} has notifications off for Nushi.',
               descriptionColor: t.needs,
               control: Button(
                 label: 'Open Notifications…',
@@ -79,7 +81,7 @@ class _NotificationsGroupState extends State<NotificationsGroup> {
           ),
           row('Sound', 'Play the notification sound.', alertSound),
           row(
-            'Dock badge',
+            words.badge,
             "The number of chats that need you, on Nushi's icon.",
             dockBadge,
           ),

@@ -499,6 +499,9 @@ message PingResponse {
   string version = 3;
   // What its check for a newer release found (API 86).
   UpdateCheck update = 4;
+  // The system it runs on, as Go names it ("darwin", "linux"): the phone
+  // names the computer it's paired with by it (API 112).
+  string os = 5;
 }
 
 // What the daemon's check for a newer release of Nushi found: GitHub's

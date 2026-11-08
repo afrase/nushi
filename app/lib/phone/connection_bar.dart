@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/motion.dart';
 import 'package:nushi/phone/link.dart';
 import 'package:nushi/phone/phone.dart';
@@ -79,8 +80,9 @@ class ConnectionBar extends StatelessWidget {
                             children: [
                               Text(
                                 link.asked && !link.trying
-                                    ? "Still can't reach your Mac"
-                                    : "Can't reach your Mac",
+                                    ? "Still can't reach your "
+                                          '${phoneHost.machine}'
+                                    : "Can't reach your ${phoneHost.machine}",
                                 style: small.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),

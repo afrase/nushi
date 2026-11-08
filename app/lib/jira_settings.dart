@@ -4,6 +4,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flutter/material.dart';
 import 'package:nushi/account_rows.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -115,7 +116,8 @@ class _JiraPageState extends State<JiraPage> {
     if (!await confirm(
           context,
           'Remove ${s.id}?',
-          'Nushi forgets the site and deletes its token from the keychain.',
+          'Nushi forgets the site and deletes its token from the '
+              '${conventions.keyring}.',
           'Remove',
           destructive: true,
         ) ||

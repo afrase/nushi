@@ -9,6 +9,7 @@ import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_local.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/clock.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/settings.dart' show linksInBrowserTab, localNetworkSites;
@@ -92,7 +93,8 @@ class BrowserMenu extends StatelessWidget {
           tooltip: !fixed
               ? ''
               : allowed
-              ? 'A page on your Mac or local network always reaches it'
+              ? 'A page on your ${conventions.machine} or local network '
+                    'always reaches it'
               : 'This site’s address can’t be allowed',
           // The site it's for, over its choices: the page may move while
           // the menu is open, and the rows follow it. Fixed, none: the row

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/agents.dart';
 import 'package:nushi/clock.dart';
 import 'package:nushi/comment_box.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/github_files.dart';
 import 'package:nushi/github_parts.dart';
@@ -21,6 +22,7 @@ import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme_files.dart';
 
+import 'config_home_linux.dart';
 import 'fake_app_install.dart';
 import 'harness.dart';
 
@@ -36,11 +38,14 @@ import 'harness.dart';
 /// age a golden shows never moves. No test sees what another left: the
 /// app's prefs as at launch, no pull request read, no agents, review
 /// comments or drafts, remote state, clones or theme files known; the Mac's
-/// native edge (on every host), no speller, and a fake install, so nothing
-/// starts or stops a daemon.
-/// The test process's data folder goes when its tests end.
+/// native edge (on every host), no speller, a fake install, so nothing
+/// starts or stops a daemon, and a phone paired with a Mac.
+/// The test process's data folder goes when its tests end; on Linux it
+/// holds the process's `XDG_CONFIG_HOME` too, where enchant makes its
+/// folder, so no test writes in the user's.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   Shine.stopAt = 0;
+  if (Platform.isLinux) configHomeAt('$dataDir/config');
   final local = goldenFileComparator;
   if (!Platform.isMacOS) {
     goldenFileComparator = _NotHere();
@@ -58,6 +63,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     native = macosNative()
       ..speller = null
       ..install = FakeAppInstall();
+    phoneHost = macConventions;
     resetAppSettings();
     forgetPulls();
     forgetReviews();

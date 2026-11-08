@@ -9,6 +9,7 @@ import 'package:nushi/browser_menu.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/panes.dart';
@@ -166,8 +167,8 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     final url = _host?.blockedLocal.value;
     if (url == null || !mounted) return;
     _note(
-      'This site can’t open ${hostOf('$url')}: it’s on your Mac or local '
-      'network. Type the address to open it.',
+      'This site can’t open ${hostOf('$url')}: it’s on your '
+      '${conventions.machine} or local network. Type the address to open it.',
     );
   }
 
@@ -193,7 +194,8 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
     }
     _note(
       text.trim().toLowerCase().startsWith('file:')
-          ? 'Not a file on this Mac: try file:///path, or /path'
+          ? 'Not a file on this ${conventions.machine}: try file:///path, or '
+                '/path'
           : 'Not an address: try one like example.com or localhost:3000',
     );
   }

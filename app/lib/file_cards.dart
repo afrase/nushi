@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/attached_files.dart';
 import 'package:nushi/chat.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart' show Item;
 import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
@@ -78,8 +79,8 @@ class FileCard extends StatelessWidget {
       children: [
         Tooltip(
           message: file.data != null
-              ? '${plainPath(file.name)}: saved on the Mac for the agent '
-                    'when sent'
+              ? '${plainPath(file.name)}: saved on the ${conventions.machine} '
+                    'for the agent when sent'
               : plainPath(file.path),
           child: Container(
             constraints: const BoxConstraints(maxWidth: 240, minHeight: height),

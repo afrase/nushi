@@ -7,7 +7,9 @@ import 'package:nushi/native.dart';
 import 'package:nushi/settings.dart';
 
 /// What posts notifications and badges the app's icon (ADR 0097): on the
-/// Mac, its Notification Center and Dock (`alerts_macos.dart`).
+/// Mac, its Notification Center and Dock (`alerts_macos.dart`); on Linux,
+/// the desktop's notification service and launcher (`alerts_linux.dart`,
+/// ADR 0102).
 abstract interface class AlertCenter {
   /// Posts a notification named [id] (one posted with the same id takes
   /// the place of the one before) for chat [chat], with [title] over

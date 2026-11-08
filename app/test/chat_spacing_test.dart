@@ -10,12 +10,14 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/chat_header.dart';
 import 'package:nushi/chat_view.dart';
 import 'package:nushi/composer.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/files_pane.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/github_text.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_actions.dart';
+import 'package:nushi/native.dart';
 import 'package:nushi/pickers.dart';
 import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/preview_pane.dart';
@@ -24,6 +26,7 @@ import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_calls.dart';
 import 'package:nushi/widgets.dart';
+import 'package:nushi/window_drag_linux.dart';
 
 import 'fake_daemon.dart';
 import 'harness.dart';
@@ -628,6 +631,34 @@ void main() {
         await render(tester, find.byType(NushiApp), 'preview_menu_720_$name');
         d.dispose();
       }, variant: _mac);
+    }
+
+    // Linux's words (ADR 0102), in its window, on its platform.
+    for (final width in [1700.0, 720.0]) {
+      testWidgets('the preview’s folded ⋯ on Linux, ${width.toInt()} wide', (
+        tester,
+      ) async {
+        native
+          ..conventions = linuxConventions
+          ..window = const LinuxWindow();
+        final d = await _app(
+          tester,
+          width: width,
+          height: 600,
+          file: 'docs/login-report.md',
+          pane: 300,
+        );
+        await tester.tap(find.byTooltip('More'));
+        await tester.pumpAndSettle();
+        expect(find.text('Show in Folder', findRichText: true), findsOne);
+        expect(find.text('Show in Finder', findRichText: true), findsNothing);
+        await render(
+          tester,
+          find.byType(NushiApp),
+          'linux_preview_menu_${width.toInt()}',
+        );
+        d.dispose();
+      }, variant: TargetPlatformVariant.only(TargetPlatform.linux));
     }
   });
 

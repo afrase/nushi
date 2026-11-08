@@ -21,16 +21,13 @@ int _mode(String path) => FileStat.statSync(path).mode & 0x1ff;
 
 void main() {
   test("Linux's set is whole, keeps the system's title bar and has no menu "
-      'bar, no speller and no diagrams yet', () async {
+      'bar and no diagrams yet', () async {
     final set = linuxNative();
     expect(set.conventions, same(linuxConventions));
     expect(set.window.menuBar, isFalse);
     expect(const MacWindow().menuBar, isTrue);
-    expect(set.speller, isNull);
-    expect(await set.fonts.monospaced(), isNull);
     expect(set.install, isA<LinuxAppInstall>());
     expect(set.loginItem, isA<LinuxLoginItem>());
-    expect(await set.alerts.allowed(), isNull);
     expect(await set.web.sincePress(), isNull);
     expect(await set.web.defaultBrowserName(), isNull);
     final d = await set.diagrams.draw(

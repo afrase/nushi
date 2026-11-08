@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
@@ -210,7 +211,7 @@ class _SharedRow extends StatelessWidget {
           entries: [
             MenuEntry('Open SKILL.md', onPick: () => openSkillFile(skill)),
             MenuEntry(
-              'Show in Finder',
+              conventions.reveal,
               onPick: () => revealInFinder(skill.path),
             ),
             if (canLink)

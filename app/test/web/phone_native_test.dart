@@ -30,6 +30,15 @@ void main() {
     expect(speller, isNull);
   });
 
+  test('paired with Linux, the phone says its words but keeps its own '
+      'modifier', () {
+    phoneHost = linuxConventions;
+    addTearDown(() => phoneHost = macConventions);
+    expect(conventions.machine, 'computer');
+    expect(conventions.reveal, 'Show in Folder');
+    expect(conventions.commandKey, CommandKey.meta);
+  });
+
   testWidgets('a PDF’s preview and a CSV’s open on the phone', (tester) async {
     final fake = FakeDaemon([chat('c', 'claude', 'The landing page')])
       ..files['report.pdf'] = utf8.encode('%PDF-1.7')

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,10 +10,11 @@ import 'package:url_launcher/url_launcher.dart';
 // and the form that adds a token.
 
 /// What a site's or host's row says while this build of Nushi needs the
-/// user's OK to read its token from the keychain.
-const needsOkStatus =
-    'This build of Nushi needs your OK to read the token: macOS asks for '
-    'your password.';
+/// user's OK to read its token from the keychain (on Linux, while the
+/// keyring is locked).
+String get needsOkStatus =>
+    'This build of Nushi needs your OK to read the token: '
+    '${conventions.system} asks for your password.';
 
 /// A Jira site's or a GitHub host's row: its [title], then [lines] (each
 /// its words and their color); Allow… while the keychain needs the

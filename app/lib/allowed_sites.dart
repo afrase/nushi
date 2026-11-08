@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/browser_address.dart';
 import 'package:nushi/browser_local.dart';
 import 'package:nushi/browser_page.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/settings.dart' show localNetworkSites;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -26,7 +27,9 @@ import 'package:nushi/widgets.dart';
     null => (host: null, error: 'That isn’t a site’s address.'),
     (fixed: true, allowed: true) => (
       host: null,
-      error: 'A page on your Mac or local network always reaches it.',
+      error:
+          'A page on your ${conventions.machine} or local network always '
+          'reaches it.',
     ),
     (fixed: true, allowed: false) => (
       host: null,
@@ -79,8 +82,8 @@ class _AllowedSitesState extends State<AllowedSites> {
     final sure = await confirm(
       context,
       'Clear all allowed sites?',
-      'Their pages lose their reach to your Mac and local network until you '
-          'allow them again.',
+      'Their pages lose their reach to your ${conventions.machine} and local '
+          'network until you allow them again.',
       'Clear all',
       destructive: true,
     );
@@ -102,9 +105,9 @@ class _AllowedSitesState extends State<AllowedSites> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Pages from these sites can reach your Mac and local network '
-                '(a dev server, a router) from a browser tab, as local pages '
-                'can. Other sites’ pages can’t.',
+                'Pages from these sites can reach your ${conventions.machine} '
+                'and local network (a dev server, a router) from a browser '
+                'tab, as local pages can. Other sites’ pages can’t.',
                 style: theme.ui(t.textSecondary),
               ),
               const SizedBox(height: 18),

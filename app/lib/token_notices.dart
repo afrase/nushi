@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/widgets.dart';
 
@@ -27,7 +28,8 @@ class TokenNotices extends StatelessWidget {
   Widget build(BuildContext context) => needsOk
       ? Notice(
           'This build of Nushi needs your OK to read the token from the '
-          'keychain; macOS asks for your password.',
+          '${conventions.keyring}; ${conventions.system} asks for your '
+          'password.',
           action: 'Allow…',
           onAction: onAllow,
         )

@@ -69,12 +69,14 @@ class PingResponse extends $pb.GeneratedMessage {
     $core.String? build,
     $core.String? version,
     UpdateCheck? update,
+    $core.String? os,
   }) {
     final result = PingResponse._();
     if (apiVersion != null) result.apiVersion = apiVersion;
     if (build != null) result.build = build;
     if (version != null) result.version = version;
     if (update != null) result.update = update;
+    if (os != null) result.os = os;
     return result;
   }
 
@@ -96,6 +98,7 @@ class PingResponse extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'version')
     ..aOM<UpdateCheck>(4, _omitFieldNames ? '' : 'update',
         subBuilder: UpdateCheck.$_createMessage)
+    ..aOS(5, _omitFieldNames ? '' : 'os')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -164,6 +167,17 @@ class PingResponse extends $pb.GeneratedMessage {
   void clearUpdate() => $_clearField(4);
   @$pb.TagNumber(4)
   UpdateCheck ensureUpdate() => $_ensure(3);
+
+  /// The system it runs on, as Go names it ("darwin", "linux"): the phone
+  /// names the computer it's paired with by it (API 112).
+  @$pb.TagNumber(5)
+  $core.String get os => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set os($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasOs() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearOs() => $_clearField(5);
 }
 
 /// What the daemon's check for a newer release of Nushi found: GitHub's
