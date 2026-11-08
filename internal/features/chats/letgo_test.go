@@ -3,6 +3,7 @@ package chats
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -330,5 +331,26 @@ func TestAgentReadyWhileLetGo(t *testing.T) {
 	defer c.mu.Unlock()
 	if c.reopenFailed || !c.inCopy {
 		t.Errorf("reopen failed %v, let go %v", c.reopenFailed, c.inCopy)
+	}
+}
+
+// A chat whose deletion failed after its copy went keeps its items: they
+// can't be let go to a copy that's gone.
+func TestFailedDeleteKeepsTheItems(t *testing.T) {
+	svc, agent, c, _, _ := lettingGo(t, nil)
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	turn(t, svc, c, "one")
+	sessions := svc.sessions.(*memSessions)
+	sessions.mu.Lock()
+	sessions.deleteErr = errors.New("read-only")
+	sessions.mu.Unlock()
+	if err := svc.Delete(t.Context(), c.id, nil); err == nil {
+		t.Fatal("deleted")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.letGoLocked() // as the look each minute does, no client showing it
+	if c.inCopy || describe(c.items) != "user:one agent:m1" {
+		t.Errorf("let go %v, holds %s", c.inCopy, describe(c.items))
 	}
 }

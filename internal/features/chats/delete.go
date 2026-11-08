@@ -152,6 +152,9 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	}
 	if err == nil && s.copies != nil {
 		err = s.copies.Delete(c.id)
+		c.mu.Lock()
+		c.mirrored = false // if the chat stays, its items can't go to a copy that's gone (letgo.go)
+		c.mu.Unlock()
 	}
 	if err == nil {
 		err = s.removeUploads(c.id)
