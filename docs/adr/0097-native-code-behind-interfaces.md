@@ -17,6 +17,8 @@ The owner: "Any swift code should be hidden behind interfaces. We should not be 
 - A new native call means an interface method and its Mac implementation, not a channel in a view.
 - Left as they are: the app's data folder under `~/Library/Application Support` (`daemon.dart`) and its bundled daemon, a helper app inside the `.app` started through Launch Services, its socket's holder found with lsof (`bundled_daemon.dart`): the Mac's packaging, which another platform replaces rather than implements. In the daemon, commands that compile everywhere and fail plainly elsewhere: lsof at `/usr/sbin` (Ante's open sessions), `/usr/bin/trash` (a skill to the Trash), BSD `script` (an MCP server's sign-in).
 
+**Note (ADR [0101](0101-the-daemon-runs-on-linux.md), 2026-11-08):** the daemon runs on Linux: each stand-in above has a `foo_linux.go`, and `foo_other.go` is `//go:build !darwin && !linux`, for the rest. `make lint-linux` also runs golangci-lint for Linux, and CI runs every Go package's tests there. lsof, `/usr/bin/trash` and BSD `script` have Linux counterparts (`/proc`'s fd links, `gio trash`, util-linux's `script -c`). The app's side is as above.
+
 ## Alternatives considered
 - Constructor injection through the widget tree: each capability is used in a few deep views; threading it through every widget between was a larger change for nothing a top-level doesn't give.
 - A service locator package: more than a class with fields, and a new dependency.

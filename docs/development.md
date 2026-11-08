@@ -38,7 +38,7 @@ tools/release.sh 1.2.0   # a release's files into dist/, as the release workflow
 `make lint` runs:
 
 - golangci-lint (with gofmt and goimports) and govulncheck;
-- `make lint-linux`: every Go package built and vetted with `GOOS=linux CGO_ENABLED=0`, so macOS-only code outside a `_darwin.go` file fails (ADR 0097);
+- `make lint-linux`: every Go package built, vetted and linted (golangci-lint) with `GOOS=linux CGO_ENABLED=0`, so macOS-only code outside a `_darwin.go` file fails (ADR 0097) and the `_linux.go` files, which the Mac's lint never sees, are linted (ADR 0101);
 - `tools/native-edge` (first in `make lint-dart`): a platform channel or message (a `BinaryMessenger`, a `MethodCall` or its codec, `SystemChannels`), `dart:ffi` or `webview_flutter_wkwebview` in the app's or a Dart package's `lib` outside a `*_macos.dart` file fails, named with its line, and so does a file naming a `*_macos.dart` one (an import, export or part) but `main.dart`'s `native_macos.dart`; protoc's and Connect's output is left out (ADR 0097);
 - `buf lint` and `buf format`;
 - `flutter analyze` and `dart format`, for the app and each package.
@@ -75,7 +75,19 @@ With a `go.work`, `make lint` builds golangci-lint into `bin/` because `go tool 
 CI (`.github/workflows/ci.yml`) runs the same parts as `make check`, as parallel jobs, in under 3 minutes:
 
 - on macOS: Go's lint and tests and the window's placement maths, the web app's end-to-end test, and the app's tests in two shards (`make test-app SHARD=1/2`: every second test file);
-- on Linux: the protos' and Dart's lint (with `tools/native-edge`), the Dart packages' tests, the relay's and the Noise channel's Go tests, and `make lint-linux`.
+- on Linux: the protos' and Dart's lint (with `tools/native-edge`), the Dart packages' tests, every Go package's tests (`make test-go`, with bubblewrap from apt for npm's sandbox and AppArmor's rule on unprivileged user namespaces off), `make lint-linux` and `go mod tidy -diff` (ADR 0101).
+
+### The daemon's tests on Linux
+
+On a Linux machine (x86_64 or arm64) with Go: `make test-go` (or `go test -race -shuffle=on ./...`) and `make lint-linux`, as CI's Linux job runs them. Some tests need programs there and skip, naming them, without: bubblewrap (`bwrap`, npm's sandbox; it must be able to make user namespaces, so on Ubuntu `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`), `flock` (util-linux), `gio` (a skill to the Trash), `dbus-daemon` (the keychain's fake Secret Service); `script` (util-linux) is assumed, and zsh and fish, if there, are tried as login shells. The live keychain test against a real keyring, in a throwaway session with a throwaway home:
+
+```sh
+export HOME=$(mktemp -d) XDG_DATA_HOME=$HOME/.local/share XDG_RUNTIME_DIR=$HOME/run; mkdir -m 700 $XDG_RUNTIME_DIR
+go test -c -o /tmp/kc.test ./internal/keychain
+dbus-run-session -- sh -c 'printf test | gnome-keyring-daemon --unlock --components=secrets >/dev/null; NUSHI_KEYCHAIN_TEST=1 /tmp/kc.test -test.run TestKeychain -test.v'
+```
+
+On a Mac, an OrbStack machine works (`orb create arch nushi-linux`; it can't see your files unless you copy them in). Under Rosetta (an x86_64 machine on Apple silicon) bubblewrap 0.13 can't mount anything ("Can't open source /: Function not implemented"), so npm's sandbox tests skip there unless an older `bwrap` is first on `PATH`; an arm64 machine or CI runs them.
 
 ## Install, releases, logs
 
