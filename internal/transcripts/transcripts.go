@@ -205,8 +205,11 @@ func (s *Store) storeImagesLocked(chat string, it model.Item) (*stored, error) {
 	st := &stored{Item: it}
 	st.Images = nil
 	for _, img := range it.Images {
-		sum := sha256.Sum256(img.Data)
-		hash := hex.EncodeToString(sum[:])
+		hash := img.Hash // taken as the image came in
+		if hash == "" {
+			sum := sha256.Sum256(img.Data)
+			hash = hex.EncodeToString(sum[:])
+		}
 		if err := s.writeImageLocked(chat, hash, img.Data); err != nil {
 			return nil, err
 		}
@@ -272,7 +275,7 @@ func (s *Store) Read(chat string) ([]model.Item, error) {
 				continue
 			}
 			if data, err := s.root.ReadFile(path.Join(chat, imagesDir, p.Hash)); err == nil {
-				out[i].Images = append(out[i].Images, model.Image{MimeType: p.MimeType, Data: data})
+				out[i].Images = append(out[i].Images, model.Image{MimeType: p.MimeType, Data: data, Hash: p.Hash})
 			}
 		}
 	}

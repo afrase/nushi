@@ -67,7 +67,7 @@ func TestPromptStreamsTheReply(t *testing.T) {
 		t.Error("the message has no time sent")
 	}
 	want := []model.Item{
-		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{png}, Files: []string{"a b.go"}, Rewindable: true, Sent: c.items[0].Sent},
+		{ID: "item-1", Kind: model.UserMessage, Text: "hi", Images: []model.Image{{MimeType: png.MimeType, Data: png.Data, Hash: ImageHash(png.Data)}}, Files: []string{"a b.go"}, Rewindable: true, Sent: c.items[0].Sent},
 		{ID: "m1", Kind: model.AgentMessage, Text: "Hello!"},
 		{ID: "m2", Kind: model.AgentMessage, Text: "Bye"},
 	}
@@ -361,7 +361,7 @@ func TestImagesJoinTheirMessageOrToolCall(t *testing.T) {
 	} {
 		_ = c.SessionUpdate(context.Background(), &acp.SessionNotification{SessionID: "s1", Update: u})
 	}
-	png := []model.Image{{MimeType: "image/png", Data: []byte("\x89PNG")}}
+	png := []model.Image{{MimeType: "image/png", Data: []byte("\x89PNG"), Hash: ImageHash([]byte("\x89PNG"))}}
 	if len(c.items) != 2 || c.items[0].Text != "look" || !reflect.DeepEqual(c.items[0].Images, png) || !reflect.DeepEqual(c.items[1].Images, png) {
 		t.Errorf("items = %+v", c.items)
 	}

@@ -1,6 +1,8 @@
 package transcripts
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"slices"
@@ -69,6 +71,10 @@ func TestAppendReadBack(t *testing.T) {
 	}
 	if len(got[0].Images) != 1 || string(got[0].Images[0].Data) != "png bytes" || got[2].Images[0].MimeType != "image/png" {
 		t.Errorf("images %+v", got[0].Images)
+	}
+	// Read back with its hash, the file's name, so it needn't be hashed again.
+	if sum := sha256.Sum256(img.Data); got[0].Images[0].Hash != hex.EncodeToString(sum[:]) {
+		t.Errorf("image read back with hash %q", got[0].Images[0].Hash)
 	}
 	pics, _ := os.ReadDir(filepath.Join(dir, "CHAT", imagesDir))
 	if len(pics) != 1 { // the same image once

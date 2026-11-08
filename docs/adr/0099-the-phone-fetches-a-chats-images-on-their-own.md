@@ -13,7 +13,7 @@ The owner's phone sat on "Couldn't load it yet: trying again" for minutes. The c
 
 ## Consequences
 - A chat of screenshots opens on the phone as fast as one without; each image then takes its own few seconds, and a dropped link costs one image, not the load.
-- Hashing: each reference hashes its image (milliseconds for a screenshot), and a `GetChatImage` hashes the chat's images until one matches; nothing is cached for it.
+- Hashing: an image is hashed once, as it comes in (from the agent, from a prompt) or read from its transcript copy's file name, and keeps its hash beside its bytes (`model.Image.Hash`, not stored); references and `GetChatImage` only compare hashes, so a fetch doesn't read the chat's other images.
 - The queue's and a rewound message's images still come inline (a message being written, small and rare).
 
 ## Alternatives considered

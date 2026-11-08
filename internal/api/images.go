@@ -33,7 +33,7 @@ func imageProto(img model.Image, refs bool) *nushiv1.ImageData {
 	if !refs || len(img.Data) <= refAbove {
 		return &nushiv1.ImageData{MimeType: img.MimeType, Data: img.Data}
 	}
-	out := &nushiv1.ImageData{MimeType: img.MimeType, Sha256: chats.ImageHash(img.Data), Size: int64(len(img.Data))}
+	out := &nushiv1.ImageData{MimeType: img.MimeType, Sha256: chats.HashOf(img), Size: int64(len(img.Data))}
 	// Only the header is read; a WebP, or bytes that aren't an image, have
 	// no size and the client shows a square until they come.
 	if c, _, err := image.DecodeConfig(bytes.NewReader(img.Data)); err == nil {

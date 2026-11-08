@@ -205,10 +205,15 @@ type Subagent struct {
 	Said, Session  string
 }
 
-// Image is an image in a message or a tool call's output.
+// Image is an image in a message or a tool call's output. Hash is the
+// lowercase hex SHA-256 of Data, taken once as the image comes in (or read
+// from the transcript copy's file name), so what names an image by it
+// (ADR 0099) never reads Data again; "" when not taken. Data is never
+// changed in place, so the two stay one.
 type Image struct {
 	MimeType string
 	Data     []byte
+	Hash     string `json:"-"`
 }
 
 // Option is a choice the agent offers. Kind is ACP's hint for a permission

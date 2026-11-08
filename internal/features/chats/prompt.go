@@ -39,6 +39,7 @@ func (s *Service) Prompt(ctx context.Context, chatID string, m model.Message, ho
 	if err := s.checkUploads(m); err != nil {
 		return err
 	}
+	m.Images = hashed(m.Images) // here, before the chat's lock
 	if c, cmd, ok := s.terminalCommandOf(chatID, m); ok {
 		return s.uploadThenCommand(ctx, c, m, cmd, how)
 	}
