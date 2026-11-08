@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -284,5 +286,67 @@ func TestNames(t *testing.T) {
 	testcheck.NoErr(t, err)
 	if slices.ContainsFunc(list, func(c model.TranscriptCopy) bool { return c.Chat == "LINK" }) {
 		t.Error("a link listed as a copy")
+	}
+}
+
+func pending(it model.Item) bool { return it.Kind == model.Permission && it.Status == "pending" }
+
+// Find gives the items it picks as the copy has them now, whole, with the
+// item before each; an item written again so it's no longer picked, or cut,
+// isn't found.
+func TestFind(t *testing.T) {
+	s, _ := open(t)
+	img := model.Image{MimeType: "image/png", Data: []byte("png bytes")}
+	ask := func(id, text string) model.Item {
+		return model.Item{ID: id, Kind: model.Permission, Status: "pending", Text: text, Images: []model.Image{img}}
+	}
+	add(t, s, "C", "", msg("a", "A"), ask("p1", "P1"), msg("b", "B"), ask("p2", "P2"), ask("p3", "P3"), msg("c", "C"))
+	answered := ask("p2", "P2")
+	answered.Status = "answered"
+	add(t, s, "C", "b", answered)
+	testcheck.NoErr(t, s.Cut("C", "p3"))
+	add(t, s, "C", "p2", ask("p4", "P4"))
+	items, after, err := s.Find("C", pending)
+	testcheck.NoErr(t, err)
+	if ids(items) != "p1=P1 p4=P4" || strings.Join(after, " ") != "a p2" {
+		t.Fatalf("found %s after %q", ids(items), after)
+	}
+	if len(items[1].Images) != 1 || string(items[1].Images[0].Data) != "png bytes" {
+		t.Errorf("images %+v", items[1].Images)
+	}
+	if items, _, err := s.Find("NONE", pending); items != nil || err != nil {
+		t.Errorf("a chat without a copy finds %v, %v", items, err)
+	}
+}
+
+// A daemon's start looks through every chat's copy (EndStalePrompts): a
+// long one costs what Find picks of it, not its size. Before Find, that
+// look read a 30 MB copy whole and decoded all of it, about 190 MB
+// allocated, all of it held until the next collection.
+func TestFindReadsLittle(t *testing.T) {
+	s, _ := open(t)
+	text := strings.Repeat("output of a tool call\n", 300) // about 6.6 KB
+	var items []model.Item
+	for i := range 4500 {
+		items = append(items, model.Item{ID: "item-" + strconv.Itoa(i), Kind: model.ToolCall, Status: "completed", Text: text})
+	}
+	items[100] = model.Item{ID: "item-100", Kind: model.Permission, Status: "pending", Text: text}
+	afters := make([]string, len(items))
+	for i := 1; i < len(items); i++ {
+		afters[i] = items[i-1].ID
+	}
+	testcheck.NoErr(t, s.Append("BIG", items, afters))
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	found, _, err := s.Find("BIG", pending)
+	runtime.ReadMemStats(&after)
+	testcheck.NoErr(t, err)
+	if len(found) != 1 || found[0].ID != "item-100" {
+		t.Fatalf("found %s", ids(found))
+	}
+	// About 2 MB; 7 MB with -race, which empties sync.Pool's (json's state
+	// for each line made anew).
+	if alloc := after.TotalAlloc - before.TotalAlloc; alloc > 12<<20 {
+		t.Errorf("Find allocated %d MB for a 30 MB copy", alloc>>20)
 	}
 }

@@ -2,6 +2,20 @@ package transcripts
 
 import "slices"
 
+// entry is an item of a transcript being replayed: its id, and the item
+// as last written, or nil where the reader kept only the id (Find).
+type entry struct {
+	id   string
+	item *stored
+}
+
+// change is a record as a transcript replays it: an item (nil for a cut
+// or a drop) and the record's After, Cut and Drop.
+type change struct {
+	item             *entry
+	after, cut, drop string
+}
+
 // transcript replays a chat's records into its items, in the transcript's
 // order: a new item goes right after the item it was written after, and
 // one written before that item waits for it (at the end, if it never
@@ -9,16 +23,16 @@ import "slices"
 // of an item still waiting replaces it there (or places it, its new After
 // there). So no id is there twice: in list or in waiting, once.
 type transcript struct {
-	list    []stored
-	waiting []record       // items whose After isn't there yet, in the order written
+	list    []entry
+	waiting []change       // items whose After isn't there yet, in the order written
 	pos     map[string]int // list's indexes by id; nil after list changed other than at its end
 }
 
 func (t *transcript) index(id string) int {
 	if t.pos == nil {
 		t.pos = make(map[string]int, len(t.list))
-		for i, s := range t.list {
-			t.pos[s.ID] = i
+		for i, e := range t.list {
+			t.pos[e.id] = i
 		}
 	}
 	if i, ok := t.pos[id]; ok {
@@ -27,42 +41,42 @@ func (t *transcript) index(id string) int {
 	return -1
 }
 
-func (t *transcript) apply(r record) {
+func (t *transcript) apply(c change) {
 	switch {
-	case r.Item != nil:
-		if i := t.index(r.Item.ID); i >= 0 {
-			t.list[i] = *r.Item
+	case c.item != nil:
+		if i := t.index(c.item.id); i >= 0 {
+			t.list[i] = *c.item
 			return
 		}
-		j := slices.IndexFunc(t.waiting, func(w record) bool { return w.Item.ID == r.Item.ID })
-		switch placed := t.place(r); {
+		j := slices.IndexFunc(t.waiting, func(w change) bool { return w.item.id == c.item.id })
+		switch placed := t.place(c); {
 		case !placed && j >= 0:
-			t.waiting[j] = r
+			t.waiting[j] = c
 		case !placed:
-			t.waiting = append(t.waiting, r)
+			t.waiting = append(t.waiting, c)
 		default:
 			if j >= 0 {
 				t.waiting = slices.Delete(t.waiting, j, j+1)
 			}
 			t.placeWaiting()
 		}
-	case r.Cut != "":
-		if i := t.index(r.Cut); i >= 0 {
+	case c.cut != "":
+		if i := t.index(c.cut); i >= 0 {
 			t.list, t.waiting, t.pos = t.list[:i], nil, nil
 		}
-	case r.Drop != "":
-		if i := t.index(r.Drop); i >= 0 {
+	case c.drop != "":
+		if i := t.index(c.drop); i >= 0 {
 			t.list, t.pos = slices.Delete(t.list, i, i+1), nil
 		}
-		t.waiting = slices.DeleteFunc(t.waiting, func(w record) bool { return w.Item.ID == r.Drop })
+		t.waiting = slices.DeleteFunc(t.waiting, func(w change) bool { return w.item.id == c.drop })
 	}
 }
 
 // place puts a new item right after its After ("": first), if that is there.
-func (t *transcript) place(r record) bool {
+func (t *transcript) place(c change) bool {
 	at := 0
-	if r.After != "" {
-		i := t.index(r.After)
+	if c.after != "" {
+		i := t.index(c.after)
 		if i < 0 {
 			return false
 		}
@@ -70,11 +84,11 @@ func (t *transcript) place(r record) bool {
 	}
 	if at == len(t.list) {
 		if t.pos != nil {
-			t.pos[r.Item.ID] = at
+			t.pos[c.item.id] = at
 		}
-		t.list = append(t.list, *r.Item)
+		t.list = append(t.list, *c.item)
 	} else {
-		t.list, t.pos = slices.Insert(t.list, at, *r.Item), nil
+		t.list, t.pos = slices.Insert(t.list, at, *c.item), nil
 	}
 	return true
 }
@@ -94,11 +108,11 @@ func (t *transcript) placeWaiting() {
 	}
 }
 
-// items is the transcript, with what still waits at its end.
-func (t *transcript) items() []stored {
+// entries is the transcript, with what still waits at its end.
+func (t *transcript) entries() []entry {
 	out := t.list
 	for _, w := range t.waiting {
-		out = append(out, *w.Item)
+		out = append(out, *w.item)
 	}
 	return out
 }

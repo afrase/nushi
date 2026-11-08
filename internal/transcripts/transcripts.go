@@ -5,7 +5,6 @@
 package transcripts
 
 import (
-	"bufio"
 	"bytes"
 	"cmp"
 	"crypto/sha256"
@@ -236,55 +235,6 @@ func (s *Store) writeImageLocked(chat, hash string, data []byte) error {
 	return atomicfile.ReplaceIn(s.root, name, data, 0o600)
 }
 
-var validHash = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
-// Read returns chat's copy as it stands, its images read back; none (nil)
-// when it has no copy. Lines that can't be read (a crash's last line) are
-// skipped. A file mostly of items written again since is written anew.
-func (s *Store) Read(chat string) ([]model.Item, error) {
-	if err := checkChat(chat); err != nil {
-		return nil, err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	b, err := s.root.ReadFile(path.Join(chat, itemsFile))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var t transcript
-	lines := 0
-	sc := bufio.NewScanner(bytes.NewReader(b))
-	sc.Buffer(nil, len(b)+1)
-	for sc.Scan() {
-		var r record
-		if json.Unmarshal(sc.Bytes(), &r) != nil {
-			continue
-		}
-		lines++
-		t.apply(r)
-	}
-	items := t.items()
-	out := make([]model.Item, len(items))
-	for i, st := range items {
-		out[i] = st.Item
-		for _, p := range st.Pictures {
-			if !validHash.MatchString(p.Hash) {
-				continue
-			}
-			if data, err := s.root.ReadFile(path.Join(chat, imagesDir, p.Hash)); err == nil {
-				out[i].Images = append(out[i].Images, model.Image{MimeType: p.MimeType, Data: data, Hash: p.Hash})
-			}
-		}
-	}
-	if lines > 2*len(out)+16 && len(b) > 1<<20 {
-		_ = s.rewriteLocked(chat, items) // best effort: the file reads the same either way
-	}
-	return out, nil
-}
-
 // Replace writes chat's copy anew as items, in order.
 func (s *Store) Replace(chat string, items []model.Item) error {
 	if err := checkChat(chat); err != nil {
@@ -292,13 +242,13 @@ func (s *Store) Replace(chat string, items []model.Item) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := make([]stored, len(items))
+	st := make([]*stored, len(items))
 	for i, it := range items {
 		p, err := s.storeImagesLocked(chat, it)
 		if err != nil {
 			return err
 		}
-		st[i] = *p
+		st[i] = p
 	}
 	return s.rewriteLocked(chat, st)
 }
@@ -306,11 +256,11 @@ func (s *Store) Replace(chat string, items []model.Item) error {
 // rewriteLocked replaces chat's file with items' records, atomically and
 // durably (the file may be the only history left of the chat), and
 // removes the images no item names any more.
-func (s *Store) rewriteLocked(chat string, items []stored) error {
+func (s *Store) rewriteLocked(chat string, items []*stored) error {
 	var buf bytes.Buffer
 	used := map[string]bool{}
 	for i := range items {
-		r := record{Item: &items[i]}
+		r := record{Item: items[i]}
 		if i > 0 {
 			r.After = items[i-1].ID
 		}

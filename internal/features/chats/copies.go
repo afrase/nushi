@@ -37,6 +37,10 @@ type Copies interface {
 	Replace(chat string, items []model.Item) error
 	// Read returns a chat's copy; nil when it has none.
 	Read(chat string) ([]model.Item, error)
+	// Find returns the items of a chat's copy that want picks, each with
+	// the id of the item before it, without reading the others whole:
+	// want sees an item's ID, Kind and Status.
+	Find(chat string, want func(model.Item) bool) (items []model.Item, after []string, err error)
 	Delete(chat string) error
 	Has(chat string) bool
 	// List returns every chat's copy, largest first.
