@@ -71,6 +71,18 @@ func dataFolder(home string) string {
 	return cmp.Or(os.Getenv("NUSHID_DATA"), os.Getenv("NUSHI_DATA"), defaultDataFolder(home))
 }
 
+// launcherVars are what loginCommand sets for the daemon.
+var launcherVars = []string{"NUSHID_BIN", "NUSHID_DATA", "NUSHID_LOG"}
+
+// forgetLauncher unsets launcherVars once the daemon has read them, so no
+// process it starts inherits them: a dev daemon started from one of its
+// terminals would take NUSHID_DATA over its own NUSHI_DATA.
+func forgetLauncher() {
+	for _, name := range launcherVars {
+		_ = os.Unsetenv(name) // fails only on a malformed name
+	}
+}
+
 // errNoDataFolder is NUSHI_DATA unset on an OS with no default data
 // folder.
 var errNoDataFolder = errors.New("this OS has no default data folder: set NUSHI_DATA")

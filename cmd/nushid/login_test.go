@@ -71,3 +71,28 @@ func TestThePasswdEntrysShell(t *testing.T) {
 		t.Errorf("getent: %q", got)
 	}
 }
+
+// Once the daemon has its data folder, what -login set is gone from its
+// environment, so nothing it starts inherits the real data folder.
+func TestTheDaemonForgetsItsLauncher(t *testing.T) {
+	for _, name := range launcherVars {
+		t.Setenv(name, "/launcher")
+	}
+	forgetLauncher()
+	for _, name := range launcherVars {
+		if v, ok := os.LookupEnv(name); ok {
+			t.Errorf("%s=%s", name, v)
+		}
+	}
+}
+
+// A terminal gets the daemon's environment without Nushi's own variables,
+// as an agent does, and $SHELL naming the login shell.
+func TestATerminalsEnvironment(t *testing.T) {
+	env := terminalEnv([]string{"HOME=/h", "SHELL=/bin/sh", "NUSHID_DATA=/real", "NUSHID_BIN=/b", "NUSHID_LOG=/real/nushid.log",
+		"NUSHI_DATA=/dev", "NUSHI_LOG=debug", "PATH=/usr/bin"}, "/usr/bin/fish")
+	want := []string{"HOME=/h", "PATH=/usr/bin", "SHELL=/usr/bin/fish", "TERM=xterm-256color", "COLORTERM=truecolor"}
+	if !slices.Equal(env, want) {
+		t.Errorf("%q", env)
+	}
+}

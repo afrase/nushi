@@ -45,6 +45,7 @@ import (
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/pi"
 	"github.com/afrase/nushi/internal/proctree"
+	"github.com/afrase/nushi/internal/shellenv"
 	"github.com/afrase/nushi/internal/store"
 	"github.com/afrase/nushi/internal/sysproxy"
 	"github.com/afrase/nushi/internal/terminal"
@@ -101,6 +102,7 @@ func run() error {
 		return err
 	}
 	dir := dataFolder(home)
+	forgetLauncher()
 	if dir == "" {
 		return errNoDataFolder
 	}
@@ -308,10 +310,20 @@ var loginShell = sync.OnceValue(func() string {
 	return cmp.Or(os.Getenv("SHELL"), fallbackShell)
 })
 
-// startShell starts the user's login shell in a terminal, with the daemon's
-// environment and $SHELL naming that shell.
+// startShell starts the user's login shell in a terminal, with
+// terminalEnv's environment.
 func startShell(folder string, cols, rows int, changed func()) (terminals.Shell, error) {
-	env := slices.DeleteFunc(os.Environ(), func(v string) bool { return strings.HasPrefix(v, "SHELL=") })
-	env = append(env, "SHELL="+loginShell(), "TERM=xterm-256color", "COLORTERM=truecolor")
-	return terminal.Start([]string{loginShell(), "-l"}, folder, env, cols, rows, changed)
+	return terminal.Start([]string{loginShell(), "-l"}, folder, terminalEnv(os.Environ(), loginShell()), cols, rows, changed)
+}
+
+// terminalEnv is a terminal's environment: the daemon's, $SHELL naming
+// shell, without Nushi's own variables, as an agent's is (shellenv.Own): a
+// dev daemon started from the terminal (NUSHI_DATA=… make run) must not
+// find the installed daemon's data folder or its log there.
+func terminalEnv(environ []string, shell string) []string {
+	env := slices.DeleteFunc(slices.Clone(environ), func(v string) bool {
+		name, _, _ := strings.Cut(v, "=")
+		return name == "SHELL" || shellenv.Own(name)
+	})
+	return append(env, "SHELL="+shell, "TERM=xterm-256color", "COLORTERM=truecolor")
 }
