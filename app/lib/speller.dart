@@ -20,7 +20,7 @@ abstract interface class Speller {
 
 /// The speller: the platform's ([Native.speller]), on the Mac, and on
 /// Linux where enchant has a dictionary for the user's language; not on
-/// the phone, whose browser has its own spell check. A test sets its own: it must
-/// never reach the real checker, whose [Speller.learn] writes the user's
-/// own dictionary.
+/// the phone, whose browser has its own spell check. A test sets its own:
+/// it must never reach the real checker, whose [Speller.learn] writes the
+/// user's own dictionary.
 Speller? get speller => kIsWeb ? null : native.speller;
