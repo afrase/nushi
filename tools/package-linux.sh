@@ -21,8 +21,9 @@ esac
 cd "$(dirname "$0")/.."
 package=app/build/linux/nushi
 
-# No make mermaid: Linux has no diagrams yet (its Native.diagrams is null,
-# so a diagram's source shows), and mermaid.min.js would be 5 MB unused.
+# No make mermaid: Linux has no diagrams yet (its web views have no diagram
+# host, so a diagram's source shows), and mermaid.min.js would be 5 MB
+# unused.
 (cd app && flutter build linux --release --build-name "$version" --build-number "$build")
 rm -rf "$package"
 cp -R "app/build/linux/$arch/release/bundle" "$package"
