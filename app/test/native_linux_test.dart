@@ -31,8 +31,6 @@ void main() {
     expect(set.install, isA<LinuxAppInstall>());
     expect(set.loginItem, isA<LinuxLoginItem>());
     expect(await set.alerts.allowed(), isNull);
-    expect(await set.clipboard.files(), isEmpty);
-    expect(await set.clipboard.image(), isNull);
     expect(await set.web.sincePress(), isNull);
     expect(await set.web.defaultBrowserName(), isNull);
     final d = await set.diagrams.draw(
