@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/bundled_daemon.dart';
 
@@ -15,5 +17,16 @@ void main() {
       '--args',
       '-login',
     ]);
+  });
+
+  // Arch has no lsof by default: a restart there must say the daemon
+  // didn't stop, not throw from here before it tried.
+  test('without lsof, a stop stops nothing rather than throwing', () {
+    final dir = Directory.systemTemp.createTempSync('nushi-stop-');
+    addTearDown(() => dir.deleteSync(recursive: true));
+    expect(
+      () => stopDaemon(dir.path, lsof: '${dir.path}/no-lsof'),
+      returnsNormally,
+    );
   });
 }

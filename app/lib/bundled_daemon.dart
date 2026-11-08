@@ -67,16 +67,27 @@ class Launcher {
   }
 }
 
-/// Stops the daemon listening in [dir], if one is.
-void stopDaemon(String dir) {
-  final lsof = Process.runSync('lsof', [
-    '-a',
-    '-c',
-    'nushid',
-    '-t',
-    '$dir/nushid.sock',
-  ]);
-  for (final pid in '${lsof.stdout}'.split('\n')) {
+/// Stops the daemon listening in [dir], if one is, through [lsof]. A
+/// machine without lsof (Arch has none by default) stops nothing and logs
+/// it, and the restart that asked says the daemon didn't stop; on Linux
+/// the app will stop its daemon itself (ADR 0102).
+void stopDaemon(String dir, {String lsof = 'lsof'}) {
+  final ProcessResult found;
+  try {
+    found = Process.runSync(lsof, [
+      '-a',
+      '-c',
+      'nushid',
+      '-t',
+      '$dir/nushid.sock',
+    ]);
+  } on ProcessException catch (e) {
+    appLog.warn('no lsof to find the daemon by, so none stopped', {
+      'error': e.message,
+    });
+    return;
+  }
+  for (final pid in '${found.stdout}'.split('\n')) {
     if (int.tryParse(pid) case final pid?) Process.killPid(pid);
   }
 }
