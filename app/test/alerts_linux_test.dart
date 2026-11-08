@@ -150,13 +150,15 @@ Future<void> _moment() =>
     Future<void>.delayed(const Duration(milliseconds: 50));
 
 void main() {
-  test('a notification says it is Nushi’s, its text escaped where the '
-      'service reads markup, with the sound or without', () async {
+  test('a notification says it is Nushi’s, its body escaped where the '
+      'service reads markup (the summary is plain text), with the sound or '
+      'without', () async {
     final service = _Notifications();
     final (center, _, _) = await _center(service);
     await _post(
       center,
       'a/ended',
+      title: 'Claude & Co <i>finished</i>',
       body: 'Fix <b>this</b> & that\nexit status 1',
     );
     await _post(center, 'a/question', sound: false);
@@ -164,7 +166,7 @@ void main() {
     expect(sent[0].asString(), 'Nushi');
     expect(sent[1].asUint32(), 0);
     expect(sent[2].asString(), 'com.nushihq.Nushi');
-    expect(sent[3].asString(), 'Claude finished');
+    expect(sent[3].asString(), 'Claude & Co <i>finished</i>');
     expect(
       sent[4].asString(),
       'Fix &lt;b&gt;this&lt;/b&gt; &amp; that\nexit status 1',

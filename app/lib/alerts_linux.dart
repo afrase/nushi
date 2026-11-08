@@ -76,14 +76,15 @@ class LinuxAlertCenter implements AlertCenter {
     if (bus == null) return;
     _listen(bus);
     await _inTurn(() async {
-      // Markup the service would read, from a chat's title (the agent's
-      // words) or a failure, is shown as written.
+      // Markup the service would read in the body, from a chat's title
+      // (the agent's words) or a failure, is shown as written. The
+      // summary is plain text, which the service escapes itself.
       final escape = await (_markup ??= _bodyMarkup(bus));
       final reply = await _notifications(bus).callMethod(_service, 'Notify', [
         const DBusString('Nushi'),
         DBusUint32(_numbers[id] ?? 0),
         const DBusString(_app),
-        DBusString(escape ? escaped(title) : title),
+        DBusString(title),
         DBusString(escape ? escaped(body) : body),
         DBusArray.string(['default', 'Open']),
         DBusDict.stringVariant({
@@ -104,7 +105,7 @@ class LinuxAlertCenter implements AlertCenter {
     });
   }
 
-  /// Whether the service reads markup in a notification's text (its
+  /// Whether the service reads markup in a notification's body (its
   /// `body-markup` capability; dunst and GNOME Shell do).
   Future<bool> _bodyMarkup(DBusClient bus) async {
     try {
