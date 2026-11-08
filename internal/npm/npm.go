@@ -1,9 +1,10 @@
 // Package npm installs npm packages into a folder from a lockfile, as `npm
 // ci` does, so every package's version and hash is the lockfile's. Nothing
 // outside the folder's parent is touched: npm runs under macOS's sandbox
-// with every other file write denied (sandbox_darwin.go; another OS has no
-// sandbox, so no install, ADR 0097); its cache goes to a folder of the
-// install's own, removed after, and it keeps no logs; no install scripts
+// (sandbox_darwin.go) or Linux's bubblewrap (sandbox_linux.go) with every
+// other file write denied (another OS has no sandbox, so no install, ADR
+// 0097); its cache goes to a folder of the install's own, removed after,
+// and it keeps no logs; no install scripts
 // run; optional dependencies (prebuilt programs for each platform) are
 // left out. It runs the npm on PATH, which reads the user's npm settings (a
 // registry or proxy of their own).
