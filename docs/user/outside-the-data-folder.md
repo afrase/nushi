@@ -30,6 +30,7 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | Ante's prompt images | a private folder in `$TMPDIR` | An image in an Ante prompt; removed when the bridge ends. |
 | A PiG session's file in the Trash | `~/.Trash` | Delete (you asked), and a side chat closed: moved there with `trash`, as PiG's `/resume` deletes. |
 | The Mac kept awake | `caffeinate` (a process, no file) | Remote access on. |
+| A word you teach the spell checker (Linux) | enchant's personal list, `~/.config/enchant/<language>.dic` | Learn Spelling on a misspelled word (ADR 0102). |
 | Files you open | macOS's open-panel state (`com.nushihq.Nushi` preferences) | The folder picker. |
 
 What changed in milestone Z:

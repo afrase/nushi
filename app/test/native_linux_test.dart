@@ -19,12 +19,11 @@ int _mode(String path) => FileStat.statSync(path).mode & 0x1ff;
 
 void main() {
   test("Linux's set is whole, keeps the system's title bar and has no menu "
-      'bar, no speller and no diagrams yet', () async {
+      'bar and no diagrams yet', () async {
     final set = linuxNative();
     expect(set.conventions, same(linuxConventions));
     expect(set.window.menuBar, isFalse);
     expect(const MacWindow().menuBar, isTrue);
-    expect(set.speller, isNull);
     expect(await set.loginItem.status(), isNull);
     expect(await set.clipboard.files(), isEmpty);
     expect(await set.clipboard.image(), isNull);
