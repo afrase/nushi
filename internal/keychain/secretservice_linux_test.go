@@ -10,30 +10,42 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// fakeSecrets is a Secret Service of one collection on the test's bus: its
-// items, whether it is locked, and what the user answers in its prompt.
+// fakeSecrets is a Secret Service on the test's bus: its collections
+// (login, and old, which was the default before), which one the alias
+// "default" names, which are locked, and what the user answers in its
+// prompt.
 type fakeSecrets struct {
 	bus *dbus.Conn
 
-	mu        sync.Mutex
-	locked    bool
-	noDefault bool
-	dismiss   bool // the user dismisses the prompt
-	prompts   int  // prompts shown
-	sessions  map[dbus.ObjectPath]bool
-	items     map[dbus.ObjectPath]*fakeItem
-	next      int
+	mu       sync.Mutex
+	def      dbus.ObjectPath // noObject: no default collection
+	locked   map[dbus.ObjectPath]bool
+	dismiss  bool // the user dismisses the prompt
+	prompts  int  // prompts shown
+	sessions map[dbus.ObjectPath]bool
+	items    map[dbus.ObjectPath]*fakeItem
+	next     int
 }
 
 type fakeItem struct {
 	s     *fakeSecrets
+	coll  dbus.ObjectPath
 	path  dbus.ObjectPath
 	label string
 	attrs map[string]string
 	value []byte
 }
 
-const fakeColl = dbus.ObjectPath("/org/freedesktop/secrets/collection/login")
+// fakeColl is a collection's object, for CreateItem.
+type fakeColl struct {
+	s    *fakeSecrets
+	path dbus.ObjectPath
+}
+
+const (
+	fakeLogin = dbus.ObjectPath("/org/freedesktop/secrets/collection/login")
+	fakeOld   = dbus.ObjectPath("/org/freedesktop/secrets/collection/old")
+)
 
 func startSecrets(t *testing.T, addr string) *fakeSecrets {
 	t.Helper()
@@ -42,9 +54,13 @@ func startSecrets(t *testing.T, addr string) *fakeSecrets {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = bus.Close() })
-	s := &fakeSecrets{bus: bus, sessions: map[dbus.ObjectPath]bool{}, items: map[dbus.ObjectPath]*fakeItem{}}
-	for path, iface := range map[dbus.ObjectPath]string{secretsPath: serviceIface, fakeColl: collectionIface} {
-		if err := bus.Export(s, path, iface); err != nil {
+	s := &fakeSecrets{bus: bus, def: fakeLogin, locked: map[dbus.ObjectPath]bool{},
+		sessions: map[dbus.ObjectPath]bool{}, items: map[dbus.ObjectPath]*fakeItem{}}
+	if err := bus.Export(s, secretsPath, serviceIface); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []dbus.ObjectPath{fakeLogin, fakeOld} {
+		if err := bus.Export(&fakeColl{s: s, path: p}, p, collectionIface); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -75,21 +91,21 @@ func (s *fakeSecrets) OpenSession(alg string, _ dbus.Variant) (dbus.Variant, dbu
 func (s *fakeSecrets) ReadAlias(name string) (dbus.ObjectPath, *dbus.Error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if name != "default" || s.noDefault {
+	if name != "default" {
 		return noObject, nil
 	}
-	return fakeColl, nil
+	return s.def, nil
 }
 
-// SearchItems is the Service's: every match, locked or not as the
-// collection is.
+// SearchItems is the Service's: every match in every collection, locked
+// or not as its collection is.
 func (s *fakeSecrets) SearchItems(attrs map[string]string) (unlocked, locked []dbus.ObjectPath, _ *dbus.Error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	unlocked, locked = []dbus.ObjectPath{}, []dbus.ObjectPath{}
 	for p, it := range s.items {
 		if maps.Equal(it.attrs, attrs) {
-			if s.locked {
+			if s.locked[it.coll] {
 				locked = append(locked, p)
 			} else {
 				unlocked = append(unlocked, p)
@@ -99,53 +115,74 @@ func (s *fakeSecrets) SearchItems(attrs map[string]string) (unlocked, locked []d
 	return unlocked, locked, nil
 }
 
-// Unlock is the Service's: a locked collection needs a prompt.
+// Unlock is the Service's: objects in a locked collection need a prompt,
+// which unlocks their collections.
 func (s *fakeSecrets) Unlock(objects []dbus.ObjectPath) ([]dbus.ObjectPath, dbus.ObjectPath, *dbus.Error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !s.locked {
+	var colls []dbus.ObjectPath
+	for _, o := range objects {
+		coll := o
+		if it, ok := s.items[o]; ok {
+			coll = it.coll
+		}
+		if s.locked[coll] {
+			colls = append(colls, coll)
+		}
+	}
+	if len(colls) == 0 {
 		return objects, noObject, nil
 	}
 	p := s.path("prompt")
-	if err := s.bus.Export(&fakePrompt{s: s, path: p, objects: objects}, p, promptIface); err != nil {
+	if err := s.bus.Export(&fakePrompt{s: s, path: p, objects: objects, colls: colls}, p, promptIface); err != nil {
 		return nil, "", dbus.MakeFailedError(err)
 	}
 	return []dbus.ObjectPath{}, p, nil
 }
 
-// CreateItem is the Collection's.
-func (s *fakeSecrets) CreateItem(props map[string]dbus.Variant, sec secret, replace bool) (dbus.ObjectPath, dbus.ObjectPath, *dbus.Error) {
+// CreateItem is the Collection's: replace replaces a match in this
+// collection only.
+func (c *fakeColl) CreateItem(props map[string]dbus.Variant, sec secret, replace bool) (dbus.ObjectPath, dbus.ObjectPath, *dbus.Error) {
+	s := c.s
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.locked {
+	if s.locked[c.path] {
 		return "", "", dbus.NewError("org.freedesktop.Secret.Error.IsLocked", []any{"locked"})
 	}
 	if !s.sessions[sec.Session] {
 		return "", "", dbus.NewError("org.freedesktop.Secret.Error.NoSession", []any{"no session"})
 	}
-	it := &fakeItem{s: s, value: sec.Value}
+	it := &fakeItem{s: s, coll: c.path, value: sec.Value}
 	_ = props[itemIface+".Label"].Store(&it.label)
 	_ = props[itemIface+".Attributes"].Store(&it.attrs)
 	for p, old := range s.items {
-		if replace && maps.Equal(old.attrs, it.attrs) {
+		if replace && old.coll == c.path && maps.Equal(old.attrs, it.attrs) {
 			it.path = p
 		}
 	}
-	if it.path == "" {
-		it.path = s.path("collection/login")
-	}
-	s.items[it.path] = it
-	if err := s.bus.Export(it, it.path, itemIface); err != nil {
+	if err := s.add(it); err != nil {
 		return "", "", dbus.MakeFailedError(err)
 	}
 	return it.path, noObject, nil
+}
+
+// add keeps it (in a new path below its collection's unless it has one)
+// and exports it. s.mu is held.
+func (s *fakeSecrets) add(it *fakeItem) error {
+	if it.path == "" {
+		s.next++
+		it.path = dbus.ObjectPath(fmt.Sprintf("%s/%d", it.coll, s.next))
+	}
+	it.s = s
+	s.items[it.path] = it
+	return s.bus.Export(it, it.path, itemIface)
 }
 
 // GetSecret is the Item's.
 func (it *fakeItem) GetSecret(session dbus.ObjectPath) (secret, *dbus.Error) {
 	it.s.mu.Lock()
 	defer it.s.mu.Unlock()
-	if it.s.locked {
+	if it.s.locked[it.coll] {
 		return secret{}, dbus.NewError("org.freedesktop.Secret.Error.IsLocked", []any{"locked"})
 	}
 	if !it.s.sessions[session] {
@@ -158,7 +195,7 @@ func (it *fakeItem) GetSecret(session dbus.ObjectPath) (secret, *dbus.Error) {
 func (it *fakeItem) Delete() (dbus.ObjectPath, *dbus.Error) {
 	it.s.mu.Lock()
 	defer it.s.mu.Unlock()
-	if it.s.locked {
+	if it.s.locked[it.coll] {
 		return "", dbus.NewError("org.freedesktop.Secret.Error.IsLocked", []any{"locked"})
 	}
 	delete(it.s.items, it.path)
@@ -166,11 +203,12 @@ func (it *fakeItem) Delete() (dbus.ObjectPath, *dbus.Error) {
 	return noObject, nil
 }
 
-// fakePrompt unlocks the collection when the user doesn't dismiss it.
+// fakePrompt unlocks its collections when the user doesn't dismiss it.
 type fakePrompt struct {
 	s       *fakeSecrets
 	path    dbus.ObjectPath
 	objects []dbus.ObjectPath
+	colls   []dbus.ObjectPath
 }
 
 // Prompt is the Prompt's: the user's answer comes at once.
@@ -179,7 +217,9 @@ func (p *fakePrompt) Prompt(string) *dbus.Error {
 	p.s.prompts++
 	dismiss := p.s.dismiss
 	if !dismiss {
-		p.s.locked = false
+		for _, c := range p.colls {
+			p.s.locked[c] = false
+		}
 	}
 	p.s.mu.Unlock()
 	go p.complete(dismiss)
@@ -259,7 +299,7 @@ func TestSecretServiceLocked(t *testing.T) {
 	if err := k.Set("someone", "Nushi test", []byte("secret")); err != nil {
 		t.Fatal(err)
 	}
-	s.set(func(s *fakeSecrets) { s.locked = true })
+	s.set(func(s *fakeSecrets) { s.locked[fakeLogin] = true })
 	if _, err := k.Get("someone", false); !errors.Is(err, ErrNeedsOK) {
 		t.Fatalf("locked, no prompt: %v", err)
 	}
@@ -275,12 +315,12 @@ func TestSecretServiceLocked(t *testing.T) {
 		if s.prompts != 2 {
 			t.Errorf("%d prompts shown, want 2", s.prompts)
 		}
-		s.locked = true
+		s.locked[fakeLogin] = true
 	})
 	if err := k.Set("someone", "Nushi test", []byte("new")); err != nil {
 		t.Fatalf("Set on a locked collection: %v", err)
 	}
-	s.set(func(s *fakeSecrets) { s.locked = true })
+	s.set(func(s *fakeSecrets) { s.locked[fakeLogin] = true })
 	if err := k.Delete("someone"); err != nil {
 		t.Fatalf("Delete on a locked collection: %v", err)
 	}
@@ -295,9 +335,104 @@ func TestSecretServiceLocked(t *testing.T) {
 // token.
 func TestSecretServiceNoDefault(t *testing.T) {
 	s := startSecrets(t, privateBus(t))
-	s.set(func(s *fakeSecrets) { s.noDefault = true })
+	s.set(func(s *fakeSecrets) { s.def = noObject })
 	err := Keychain{Service: "Nushi test"}.Set("someone", "Nushi test", []byte("secret"))
 	if !errors.Is(err, ErrNoKeychain) || kindName(err) != "no keychain" {
 		t.Fatalf("%v", err)
 	}
+}
+
+// A save or a removal the keyring refuses because it stays locked says so
+// (ErrLocked), not that a read needs the user's OK.
+func TestSecretServiceRefused(t *testing.T) {
+	s := startSecrets(t, privateBus(t))
+	k := Keychain{Service: "Nushi test"}
+	if err := k.Set("someone", "Nushi test", []byte("secret")); err != nil {
+		t.Fatal(err)
+	}
+	s.set(func(s *fakeSecrets) { s.locked[fakeLogin], s.dismiss = true, true })
+	const want = "your keyring is locked: unlock it, then try again"
+	if err := k.Set("someone", "Nushi test", []byte("new")); !errors.Is(err, ErrLocked) || errors.Is(err, ErrNeedsOK) || err.Error() != want {
+		t.Errorf("Set, prompt dismissed: %v", err)
+	}
+	if err := k.Delete("someone"); !errors.Is(err, ErrLocked) || err.Error() != want || kindName(err) != "locked" {
+		t.Errorf("Delete, prompt dismissed: %v", err)
+	}
+	if _, err := k.Get("someone", true); !errors.Is(err, ErrNeedsOK) {
+		t.Errorf("Get, prompt dismissed: %v", err)
+	}
+}
+
+// Copies in another collection, left when the default alias moved: Get
+// reads the default collection's (the one Set wrote last), unlocking
+// nothing it needn't; Set removes an unlocked copy elsewhere without a
+// prompt and leaves a locked one; Delete removes every copy.
+func TestSecretServiceCollections(t *testing.T) {
+	s := startSecrets(t, privateBus(t))
+	k := Keychain{Service: "Nushi test"}
+	stale := func() {
+		s.set(func(s *fakeSecrets) {
+			if err := s.add(&fakeItem{coll: fakeOld, label: "Nushi test", attrs: k.attributes("someone"), value: []byte("old")}); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	stale()
+	if got, err := k.Get("someone", false); err != nil || string(got) != "old" {
+		t.Fatalf("the only copy, elsewhere: %q, %v", got, err)
+	}
+	s.set(func(s *fakeSecrets) { s.locked[fakeOld] = true })
+	if err := k.Set("someone", "Nushi test", []byte("new")); err != nil {
+		t.Fatal(err)
+	}
+	// The default's item locked, the old one not: never the old token.
+	s.set(func(s *fakeSecrets) { s.locked[fakeOld], s.locked[fakeLogin] = false, true })
+	for range 5 { // SearchItems' order is the fake's map's
+		if _, err := k.Get("someone", false); !errors.Is(err, ErrNeedsOK) {
+			t.Fatalf("default locked, old unlocked: %v", err)
+		}
+	}
+	if got, err := k.Get("someone", true); err != nil || string(got) != "new" {
+		t.Fatalf("default locked, old unlocked, the user's OK: %q, %v", got, err)
+	}
+	// The old one locked, the default's not: no prompt, the new token.
+	s.set(func(s *fakeSecrets) { s.locked[fakeOld], s.locked[fakeLogin] = true, false })
+	for range 5 {
+		if got, err := k.Get("someone", false); err != nil || string(got) != "new" {
+			t.Fatalf("default unlocked, old locked: %q, %v", got, err)
+		}
+	}
+	count := func(coll dbus.ObjectPath) (n int) {
+		s.set(func(s *fakeSecrets) {
+			for _, it := range s.items {
+				if it.coll == coll {
+					n++
+				}
+			}
+		})
+		return n
+	}
+	if err := k.Set("someone", "Nushi test", []byte("newer")); err != nil {
+		t.Fatal(err)
+	}
+	if count(fakeOld) != 1 || count(fakeLogin) != 1 {
+		t.Errorf("a locked copy elsewhere: %d old, %d login; want it left", count(fakeOld), count(fakeLogin))
+	}
+	s.set(func(s *fakeSecrets) { s.locked[fakeOld] = false })
+	if err := k.Set("someone", "Nushi test", []byte("newest")); err != nil {
+		t.Fatal(err)
+	}
+	if count(fakeOld) != 0 || count(fakeLogin) != 1 {
+		t.Errorf("an unlocked copy elsewhere: %d old, %d login; want it removed", count(fakeOld), count(fakeLogin))
+	}
+	stale()
+	s.set(func(s *fakeSecrets) { s.locked[fakeOld] = true })
+	if err := k.Delete("someone"); err != nil {
+		t.Fatal(err)
+	}
+	s.set(func(s *fakeSecrets) {
+		if len(s.items) != 0 || s.prompts != 2 {
+			t.Errorf("%d items, %d prompts after Delete; want 0, 2 (Get's OK and Delete's)", len(s.items), s.prompts)
+		}
+	})
 }

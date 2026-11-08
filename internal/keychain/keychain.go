@@ -1,12 +1,22 @@
-// Package keychain keeps secrets as generic passwords in the user's login
-// keychain, through the Security framework (cgo): the secret goes to and
-// from the framework in this process's memory only, never through a
+// Package keychain keeps secrets where the OS keeps the user's passwords,
+// found by a service and an account.
+//
+// On the Mac (keychain_darwin.go) they are generic passwords in the user's
+// login keychain, through the Security framework (cgo): the secret goes to
+// and from the framework in this process's memory only, never through a
 // command line, a file or another process. An item's access list is the
 // one macOS gives it: the program that made it. Another program (an agent
 // running `security find-generic-password -w`, or the next build of Nushi,
-// which ad-hoc signing makes a new program) gets macOS's prompt. The
-// Security framework's side is keychain_darwin.go; on another OS there is
-// no keychain (keychain_other.go, ADR 0097).
+// which ad-hoc signing makes a new program) gets macOS's prompt.
+//
+// On Linux (keychain_linux.go) they are items of the freedesktop Secret
+// Service's default collection (gnome-keyring, KeePassXC), reached over the
+// user's D-Bus session bus through godbus in pure Go, with the attributes
+// service and account. The Secret Service has no access list per program:
+// any program of the user's can read an unlocked item. No Secret Service is
+// ErrNoKeyring, never a file in its place.
+//
+// On another OS there is no keychain (keychain_other.go, ADR 0097).
 package keychain
 
 import (
@@ -33,6 +43,10 @@ var (
 	// ErrNoKeyring is no Secret Service on the session bus, or no session
 	// bus (Linux only).
 	ErrNoKeyring = errors.New("No keyring service: install gnome-keyring or KeePassXC's Secret Service")
+	// ErrLocked is a save or a removal the keyring refused because it stayed
+	// locked: the user dismissed its password prompt, or none could show
+	// (Linux only; a read that meets a locked keyring is ErrNeedsOK).
+	ErrLocked = errors.New("your keyring is locked: unlock it, then try again")
 )
 
 // Error is a keychain call's failure: which of the Security framework's
@@ -73,7 +87,7 @@ func kindName(k error) string {
 	for _, n := range []struct {
 		err  error
 		name string
-	}{{ErrNotFound, "not found"}, {ErrNeedsOK, "needs ok"}, {ErrRestart, "restart"}, {ErrNoKeychain, "no keychain"}, {ErrNoKeyring, "no keyring"}} {
+	}{{ErrNotFound, "not found"}, {ErrNeedsOK, "needs ok"}, {ErrRestart, "restart"}, {ErrNoKeychain, "no keychain"}, {ErrNoKeyring, "no keyring"}, {ErrLocked, "locked"}} {
 		if errors.Is(k, n.err) {
 			return n.name
 		}
