@@ -100,8 +100,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	// NUSHI_DATA runs a second daemon beside the usual one, for development.
-	dir := cmp.Or(os.Getenv("NUSHI_DATA"), defaultDataFolder(home))
+	dir := dataFolder(home)
 	if dir == "" {
 		return errNoDataFolder
 	}

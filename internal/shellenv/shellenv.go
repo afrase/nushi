@@ -111,7 +111,7 @@ var shells = map[string]bool{"_": true, "PWD": true, "OLDPWD": true, "SHLVL": tr
 
 // Own says the variable named name is Nushi's: the daemon's settings
 // (NUSHI_DATA, NUSHI_LOG), what its launcher sets (NUSHID_BIN,
-// NUSHID_LOG), a chat's tools server's (NUSHI_SOCKET, NUSHI_TOOLS_KEY).
+// NUSHID_DATA, NUSHID_LOG), a chat's tools server's (NUSHI_SOCKET, NUSHI_TOOLS_KEY).
 // None goes to an agent.
 func Own(name string) bool {
 	return strings.HasPrefix(name, "NUSHI_") || strings.HasPrefix(name, "NUSHID_")
