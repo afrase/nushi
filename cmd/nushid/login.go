@@ -17,10 +17,10 @@ const loginFlag = "-login"
 // and shellenv's.
 var knownShells = []string{"sh", "zsh", "bash", "fish", "dash", "ksh"}
 
-// knownShell is shell when it's one of knownShells, else zsh.
+// knownShell is shell when it's one of knownShells, else fallbackShell.
 func knownShell(shell string) string {
 	if !slices.Contains(knownShells, filepath.Base(shell)) {
-		return "/bin/zsh"
+		return fallbackShell
 	}
 	return shell
 }
@@ -53,7 +53,7 @@ func execLogin() error {
 
 // loginCommand is the login shell's command line and environment. The
 // paths go through the environment: no quoting, and the line reads the
-// same in each known shell; another shell gets zsh.
+// same in each known shell; another shell gets fallbackShell.
 func loginCommand(shell, bin, log string, env []string) ([]string, []string) {
 	shell = knownShell(shell)
 	env = append(slices.Clone(env), "NUSHID_BIN="+bin, "NUSHID_LOG="+log)
