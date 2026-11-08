@@ -157,7 +157,6 @@ void main() {
       expect(shells.typed['a'], ['python3 -m tennis.server\r']);
       expect(find.byType(Spinner), findsOne);
       expect(find.text('INFO serving on http://127.0.0.1:8000'), findsOne);
-      await tester.pump(const Duration(milliseconds: 500)); // the arc drawn
       await expectLater(
         find.byKey(const Key('view')),
         matchesGoldenFile('goldens/code_run_running_$name.png'),
