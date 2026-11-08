@@ -79,12 +79,17 @@ CI (`.github/workflows/ci.yml`) runs the same parts as `make check`, as parallel
 
 ### The daemon's tests on Linux
 
-On a Linux machine (x86_64 or arm64) with Go: `make test-go` (or `go test -race -shuffle=on ./...`) and `make lint-linux`, as CI's Linux job runs them. Some tests need programs there and skip, naming them, without: bubblewrap (`bwrap`, npm's sandbox; it must be able to make user namespaces, so on Ubuntu `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`), `flock` (util-linux), `gio` (a skill to the Trash), `dbus-daemon` (the keychain's fake Secret Service); `script` (util-linux) is assumed, and zsh and fish, if there, are tried as login shells. The live keychain test against a real keyring, in a throwaway session with a throwaway home:
+On a Linux machine (x86_64 or arm64) with Go: `make test-go` (or `go test -race -shuffle=on ./...`) and `make lint-linux`, as CI's Linux job runs them. Some tests need programs there and skip, naming them, without: bubblewrap (`bwrap`, npm's sandbox; it must be able to make user namespaces, so on Ubuntu `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`), `flock` (util-linux), `gio` (a skill to the Trash), `dbus-daemon` (the keychain's fake Secret Service); `script` (util-linux) is assumed, and zsh and fish, if there, are tried as login shells. The live keychain test against a real keyring, in a throwaway session with a throwaway home (a subshell, so your shell keeps its own; `HOME` is set before the lines that use it, since one `export` expands every word first):
 
 ```sh
-export HOME=$(mktemp -d) XDG_DATA_HOME=$HOME/.local/share XDG_RUNTIME_DIR=$HOME/run; mkdir -m 700 $XDG_RUNTIME_DIR
 go test -c -o /tmp/kc.test ./internal/keychain
-dbus-run-session -- sh -c 'printf test | gnome-keyring-daemon --unlock --components=secrets >/dev/null; NUSHI_KEYCHAIN_TEST=1 /tmp/kc.test -test.run TestKeychain -test.v'
+(
+  export HOME="$(mktemp -d)"
+  export XDG_DATA_HOME="$HOME/.local/share" XDG_CONFIG_HOME="$HOME/.config" XDG_CACHE_HOME="$HOME/.cache" XDG_RUNTIME_DIR="$HOME/run"
+  mkdir -m 700 "$XDG_RUNTIME_DIR"
+  dbus-run-session -- sh -c 'printf test | gnome-keyring-daemon --unlock --components=secrets >/dev/null; NUSHI_KEYCHAIN_TEST=1 /tmp/kc.test -test.run TestKeychain -test.v'
+  rm -rf "$HOME"
+)
 ```
 
 On a Mac, an OrbStack machine works (`orb create arch nushi-linux`; it can't see your files unless you copy them in). Under Rosetta (an x86_64 machine on Apple silicon) bubblewrap 0.13 can't mount anything ("Can't open source /: Function not implemented"), so npm's sandbox tests skip there unless an older `bwrap` is first on `PATH`; an arm64 machine or CI runs them.
