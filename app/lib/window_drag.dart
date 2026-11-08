@@ -9,6 +9,10 @@ import 'package:nushi/native.dart';
 /// The window as a header that stands in for its title bar moves and
 /// zooms it (ADR 0080): on the Mac, AppKit's (`window_drag_macos.dart`).
 abstract interface class AppWindow {
+  /// Whether the app's menus go in the system's menu bar (the Mac's):
+  /// elsewhere there's none, and Flutter's platform menus would throw.
+  bool get menuBar;
+
   /// A primary press went down on the header at [micros] (the engine's
   /// microseconds, the event's own timestamp): the window may move with
   /// it, once it passes the pan's slop, while its button is held. A call

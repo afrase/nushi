@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 import 'dart:ui' show AppExitResponse;
 
@@ -22,6 +23,7 @@ import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/native.dart';
+import 'package:nushi/native_linux.dart';
 import 'package:nushi/native_macos.dart';
 import 'package:nushi/nothing_open.dart';
 import 'package:nushi/palette.dart';
@@ -44,9 +46,10 @@ import 'package:nushi/widgets.dart' show confirm;
 
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
+  // The machine's native edge, the app's one test of the platform (ADR
+  // 0097, 0102), before anything that may reach it.
+  native = Platform.isLinux ? linuxNative() : macosNative();
   catchErrors();
-  // The window's app runs on the Mac (ADR 0097).
-  native = macosNative();
   themeFiles
     ..load()
     ..watch();
@@ -206,72 +209,70 @@ class _NushiAppState extends State<NushiApp> {
       if (a.menu == menu) _item(a),
   ];
 
+  /// The window, under the system's menu bar where there's one: the
+  /// actions' keys work without it (the Shortcuts in [_makeWindow]).
   @override
-  Widget build(BuildContext context) => PlatformMenuBar(
-    menus: [
-      PlatformMenu(
-        label: 'Nushi',
-        menus: [
-          const PlatformProvidedMenuItem(
-            type: PlatformProvidedMenuItemType.about,
-          ),
-          ..._items(ActMenu.nushi),
-          const PlatformProvidedMenuItem(
-            type: PlatformProvidedMenuItemType.hide,
-          ),
-          const PlatformProvidedMenuItem(
-            type: PlatformProvidedMenuItemType.quit,
-          ),
-        ],
-      ),
-      PlatformMenu(label: 'File', menus: _items(ActMenu.file)),
-      PlatformMenu(
-        label: 'View',
-        menus: [
-          PlatformMenuItem(
-            label: 'Command Palette…',
-            shortcut: paletteKey,
-            onSelected: () => unawaited(
-              showPalette(_navigator.currentContext!, widget.daemon),
+  Widget build(BuildContext context) => native.window.menuBar
+      ? PlatformMenuBar(menus: _menus, child: _window)
+      : _window;
+
+  List<PlatformMenuItem> get _menus => [
+    PlatformMenu(
+      label: 'Nushi',
+      menus: [
+        const PlatformProvidedMenuItem(
+          type: PlatformProvidedMenuItemType.about,
+        ),
+        ..._items(ActMenu.nushi),
+        const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.hide),
+        const PlatformProvidedMenuItem(type: PlatformProvidedMenuItemType.quit),
+      ],
+    ),
+    PlatformMenu(label: 'File', menus: _items(ActMenu.file)),
+    PlatformMenu(
+      label: 'View',
+      menus: [
+        PlatformMenuItem(
+          label: 'Command Palette…',
+          shortcut: paletteKey,
+          onSelected: () =>
+              unawaited(showPalette(_navigator.currentContext!, widget.daemon)),
+        ),
+        PlatformMenuItemGroup(members: _items(ActMenu.view)),
+        PlatformMenuItemGroup(
+          members: [
+            PlatformMenuItem(
+              label: 'Previous Chat',
+              shortcut: previousChatKey,
+              onSelected: () => stepChat(widget.daemon, -1),
             ),
-          ),
-          PlatformMenuItemGroup(members: _items(ActMenu.view)),
-          PlatformMenuItemGroup(
-            members: [
-              PlatformMenuItem(
-                label: 'Previous Chat',
-                shortcut: previousChatKey,
-                onSelected: () => stepChat(widget.daemon, -1),
-              ),
-              PlatformMenuItem(
-                label: 'Next Chat',
-                shortcut: nextChatKey,
-                onSelected: () => stepChat(widget.daemon, 1),
-              ),
-              // Hold ⌘ to see the numbers in the sidebar.
-              PlatformMenu(
-                label: 'Open Chat',
-                menus: [
-                  for (var n = 1; n <= 9; n++)
-                    PlatformMenuItem(
-                      label: 'Chat $n in the Sidebar',
-                      shortcut: chatNumberKey(n),
-                      onSelected: () => openNthChat(widget.daemon, n),
-                    ),
-                ],
-              ),
-            ],
-          ),
-          _appearance('Light Appearance', ThemeMode.light),
-          _appearance('Dark Appearance', ThemeMode.dark),
-          _appearance('System Appearance', ThemeMode.system),
-        ],
-      ),
-      // The shown chat's actions, as its ⋯ menu has them.
-      PlatformMenu(label: 'Chat', menus: _items(ActMenu.chat)),
-    ],
-    child: _window,
-  );
+            PlatformMenuItem(
+              label: 'Next Chat',
+              shortcut: nextChatKey,
+              onSelected: () => stepChat(widget.daemon, 1),
+            ),
+            // Hold ⌘ to see the numbers in the sidebar.
+            PlatformMenu(
+              label: 'Open Chat',
+              menus: [
+                for (var n = 1; n <= 9; n++)
+                  PlatformMenuItem(
+                    label: 'Chat $n in the Sidebar',
+                    shortcut: chatNumberKey(n),
+                    onSelected: () => openNthChat(widget.daemon, n),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        _appearance('Light Appearance', ThemeMode.light),
+        _appearance('Dark Appearance', ThemeMode.dark),
+        _appearance('System Appearance', ThemeMode.system),
+      ],
+    ),
+    // The shown chat's actions, as its ⋯ menu has them.
+    PlatformMenu(label: 'Chat', menus: _items(ActMenu.chat)),
+  ];
 
   /// The window below the menu bar, made again only for a new daemon: a
   /// menu label's change (the sidebar shown or hidden, the chat pinned)

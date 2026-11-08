@@ -10,6 +10,9 @@ class MacWindow implements AppWindow {
   const new();
 
   @override
+  bool get menuBar => true;
+
+  @override
   Future<void> arm(int micros) => _channel.invokeMethod<void>('arm', micros);
 
   @override
