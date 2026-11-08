@@ -352,5 +352,6 @@ jobs:
           path: dist/linux-${{ matrix.arch }}.png
           if-no-files-found: ignore
           retention-days: 7
-      - if: ${{ !cancelled() && matrix.arch == 'amd64' }}
+      # Skipped while the tree has no tools/linux-channels.sh: the runner's channels' test lands on its own.
+      - if: ${{ !cancelled() && matrix.arch == 'amd64' && hashFiles('tools/linux-channels.sh') != '' }}
         run: tools/linux-channels.sh
