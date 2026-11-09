@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/alerts_settings.dart';
+import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/login_item.dart';
@@ -132,9 +133,9 @@ class _Links extends StatelessWidget {
         SettingsRow(
           'Open local links in built-in browser',
           description:
-              'Links in a chat to this Mac or your local network, such as a '
-              'dev server, open in a browser tab beside it. Other sites open '
-              'in your browser.',
+              'Links in a chat to this ${conventions.machine} or your local '
+              'network, such as a dev server, open in a browser tab beside '
+              'it. Other sites open in your browser.',
           control: SettingsSwitch(
             value: on,
             onChanged: (v) => linksInBrowserTab.value = v,
