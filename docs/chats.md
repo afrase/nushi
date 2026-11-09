@@ -305,6 +305,8 @@ An asleep chat's transcript stays in its copy rather than in Nushi's memory ([AD
 
 A chat's history is its agent's: a chat reopens from the agent's session, and resumes in a terminal from it.
 
+**Sessions started elsewhere.** In the New chat dialog, → (or an agent's Sessions) lists that agent's sessions that aren't chats, such as one started in a terminal; opening one makes it a chat ([ADR 0035](adr/0035-open-sessions-started-elsewhere.md)). Its field filters the titles listed so far as you type (More lists older ones). For Claude and Codex, a pause in typing or Enter also searches what was said in every session, yours and the agent's words (not tool output or thinking), and lists those that mention it under "What was said", with the words around the first mention.
+
 **Nushi's copy.** Nushi also keeps its own read-only copy of each chat's transcript as it was shown, for what the agent no longer replays (Settings › Chat history, on by default; [ADR 0047](adr/0047-nushis-copy-of-transcripts.md)). The copy is never sent to the agent.
 
 - After `/compact` (or Claude compacting on its own), Claude replays only what follows. A reopened chat shows the earlier part from the copy, with "Compacted here" where Claude's history starts again; a click shows the summary Claude kept.

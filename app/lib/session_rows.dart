@@ -22,8 +22,8 @@ String? whyNotOpen(FoundSession s, String agent, {required bool oneWriter}) =>
 
 /// A row of SessionList: [s]'s title, then its age, size and folder (the
 /// folder when [everyFolder]), and where it's open; dimmed with [why] as
-/// its tooltip when it can't be opened. [below] goes under them (a
-/// search's excerpt).
+/// its tooltip when it can't be opened. [extra] ends the details (a
+/// search's count), [below] goes under them (its excerpt).
 class SessionRow extends StatelessWidget {
   const new(
     this.s, {
@@ -31,6 +31,7 @@ class SessionRow extends StatelessWidget {
     required this.onTap,
     required this.everyFolder,
     this.why,
+    this.extra = '',
     this.below,
     super.key,
   });
@@ -40,6 +41,7 @@ class SessionRow extends StatelessWidget {
   final VoidCallback onTap;
   final bool everyFolder;
   final String? why;
+  final String extra;
   final Widget? below;
 
   @override
@@ -52,6 +54,7 @@ class SessionRow extends StatelessWidget {
       if (s.messages > 0) '${s.messages} messages',
       if (everyFolder && s.folder.isNotEmpty) folderParts(s.folder).$1,
       if (s.folderGone) 'folder gone',
+      if (extra.isNotEmpty) extra,
     ].join(' · ');
     return Tap(
       onTap: why != null ? null : onTap,
