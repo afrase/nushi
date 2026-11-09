@@ -40,11 +40,16 @@ void main() {
   test('enchant flags, suggests, ignores for the session and learns into '
       'its personal list', () async {
     final speller = real!;
-    expect(await speller.misspelled(['the', 'qick', 'café', '']), ['qick']);
+    expect(await speller.misspelled(['the', 'qick', '']), ['qick']);
     expect(await speller.guesses('qick'), contains('quick'));
     expect(await speller.guesses(''), isEmpty);
+    // Words go to enchant as UTF-8 (one outside ASCII here: whether a
+    // dictionary has a word like café differs, Ubuntu's hasn't).
     await speller.ignore('nushiword');
-    expect(await speller.misspelled(['nushiword', 'qick']), ['qick']);
+    await speller.ignore('nushïcafé');
+    expect(await speller.misspelled(['nushiword', 'nushïcafé', 'qick']), [
+      'qick',
+    ]);
     await speller.learn('nushiflux');
     expect(await speller.misspelled(['nushiflux']), isEmpty);
     expect(
