@@ -3,6 +3,7 @@ package github
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/afrase/nushi/internal/githubapi"
 	"github.com/afrase/nushi/internal/model"
@@ -57,5 +58,30 @@ func TestTokenChangeDropsTheInbox(t *testing.T) {
 	w.s.mu.Unlock()
 	if n != 0 || m != 0 {
 		t.Fatalf("kept after the token changed: %d inboxes, %d states", n, m)
+	}
+}
+
+// The token changing while a poll of the old one fails: the inbox kept
+// for the old one isn't the fallback either.
+func TestTokenChangeDropsTheStaleInbox(t *testing.T) {
+	w := newWorld(t)
+	ctx := t.Context()
+	f := githubapi.InboxFilter{}
+	if _, err := w.s.Inbox(ctx, "github.com", f, false); err != nil {
+		t.Fatal(err)
+	}
+	gh := w.clients["gho_gh"]
+	gh.inbox = githubapi.Inbox{Mine: []model.GitHubItem{{Host: "github.com", ID: "PR_1", Title: "A's secret"}}}
+	w.s.mu.Lock()
+	w.s.inboxes["github.com "+inboxKey(f)] = inboxCache{at: time.Now().Add(-inboxFresh), inbox: gh.inbox}
+	w.s.mu.Unlock()
+	gh.fail = errors.New("offline")
+	gh.inboxing = func() {
+		if _, err := w.s.AddToken(ctx, "github.com", "ghp_b"); err != nil {
+			t.Error(err)
+		}
+	}
+	if in, err := w.s.Inbox(ctx, "github.com", f, true); err == nil || len(in.Mine) != 0 {
+		t.Fatalf("the old account's inbox as stale: %+v %v", in, err)
 	}
 }

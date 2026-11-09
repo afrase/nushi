@@ -62,16 +62,19 @@ func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilte
 		ctx = githubapi.Poll(ctx)
 	}
 	in, err := h.c.Inbox(ctx, f)
-	if err != nil {
-		if ok {
-			return Inbox{Inbox: kept.inbox, At: kept.at, Stale: err}, nil
-		}
-		return Inbox{}, err
-	}
 	now := time.Now()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.clients[name] != h {
+	current := s.clients[name] == h
+	switch {
+	case err != nil && current:
+		if kept, ok := s.inboxes[key]; ok { // read again: a token change drops it
+			return Inbox{Inbox: kept.inbox, At: kept.at, Stale: err}, nil
+		}
+		return Inbox{}, err
+	case err != nil:
+		return Inbox{}, err
+	case !current:
 		return Inbox{}, fmt.Errorf("the token for %s changed: ask again", name)
 	}
 	s.keep(name, inboxKey(f), in) // under s.mu, so a forget can't come between
