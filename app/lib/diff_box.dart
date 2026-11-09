@@ -173,6 +173,27 @@ class _DiffBoxState extends State<DiffBox> {
     }
   }
 
+  /// The view is switching (split and unified, ADR 0107): the find's
+  /// current hit, if the leaving view shows it, stays where it is. The
+  /// view only keeps the line a third of the way down, and a row more or
+  /// less above it (an inserted line, a deleted one) can push the hit out.
+  void _keepHit(DiffViewController c) {
+    final f = widget.find;
+    final now = f == null ? null : _hits[f.current];
+    if (now == null) return;
+    // Where the leaving view, still laid out, shows it.
+    final y = c.viewportYOfLine(now.side, now.line);
+    final p = _unified ? c.unifiedScroll : c.scroll(now.side);
+    if (y == null || !p.hasClients || y < 0) return;
+    if (y + c.resources.lineHeight > p.position.viewportDimension) return;
+    // Before the leaving view's own keep, which this one replaces.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _controller == c) {
+        c.jumpToLine(now.side, now.line, viewportY: y);
+      }
+    });
+  }
+
   void _takeDraft() {
     if (_drafts.remove(_draftKey(widget.review)) case final d?) {
       _draft = d.at;
@@ -545,6 +566,7 @@ class _DiffBoxState extends State<DiffBox> {
           : placeholder;
     }
     final c = _controller!;
+    if (unified != _unified) _keepHit(c);
     _unified = unified; // what a click on line numbers selects in
     final scroll = unified ? c.unifiedScroll : c.scroll(PaneSide.neu);
     final inlays = widget.review == null && widget.note == null
