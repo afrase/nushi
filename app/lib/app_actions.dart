@@ -50,7 +50,8 @@ import 'package:nushi/widgets.dart';
 enum ActMenu { nushi, file, view, chat }
 
 /// ⌘F: find in the chat's transcript, or its changed files. A focused
-/// terminal keeps it for its own find.
+/// terminal keeps it for its own find, and the preview's editor for the
+/// file's (`EditorFind`).
 const findKey = Cmd(LogicalKeyboardKey.keyF);
 
 /// ⇧⌘B: a side chat (Claude Code's /btw, "by the way").

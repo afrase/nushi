@@ -113,7 +113,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Status bar** | The bottom strip: working, awake and sleeping agents, and Nushi's memory. | `StatusBar` | 0032 |
 | **Palette** | ⌘K (⌘⇧P): go to a chat or run an action. | `palette.dart`, `AppAction` | |
 | **Open file** | ⌘P: any file that previews in the chat's folder. | `open_file.dart`, `FindChatFiles` | |
-| **Find** | ⌘F: in the chat, in Changes' files and diffs, or in a terminal's scrollback. | `TranscriptFind`, `ChangesFind`, `TerminalFind` (each in a `FindBar`), `TextMarks` | 0082 |
+| **Find** | ⌘F: in the chat, in Changes' files and diffs, in a terminal's scrollback, or in the preview's file while its editor has the focus. | `TranscriptFind`, `ChangesFind`, `TerminalFind`, `EditorFind` (each in a `FindBar`), `TextMarks` | 0082, 0096 |
 | **Settings** | A modal over the window (⌘,), a nav of sections; it never takes the chat's place. | `settings_modal.dart`, `settings_view.dart`, `SettingsSection`, `Daemon.settingsOpen` | 0053, 0087 |
 | **View in the chat's place** | Jira and GitHub: they take the chat's place beside the sidebar; Esc goes back. | `Place`, `Daemon.go`, `back` | 0053 |
 | **Toast** | A small card in the bottom right corner: the newer release's. | `UpdateToast` | 0061 |

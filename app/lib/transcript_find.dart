@@ -74,12 +74,13 @@ class TranscriptFind extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Takes [hits] for a query just set, the last of them current (a
-  /// terminal's find starts from its latest output).
+  /// Takes [hits], the one at [at] current, for a find that picks its
+  /// own: a terminal's starts from its latest output, an editor's from its
+  /// caret.
   @protected
-  void foundFromLast(List<String> hits) {
+  void foundAt(List<String> hits, int at) {
     _hits = hits;
-    _at = hits.isEmpty ? 0 : hits.length - 1;
+    _at = hits.isEmpty ? 0 : at.clamp(0, hits.length - 1);
     notifyListeners();
   }
 
