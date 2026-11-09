@@ -284,6 +284,15 @@ void main() {
       pick(4, 6),
       const LineSelection(side: PaneSide.neu, anchor: 2, focus: 3),
     );
+    // Deleted rows then an unchanged one keep the deleted lines.
+    final cut = UnifiedRows.build(
+      TextDiff.compute('a\nb\nc\n', 'a\nc\n').document,
+    );
+    // Rows: a, -b, c.
+    expect(
+      linesOfRows(cut, const ModelSpan(1, 3)),
+      const LineSelection(side: PaneSide.old, anchor: 1, focus: 2),
+    );
   });
 
   testWidgets('lines picked in the unified view take a review comment', (

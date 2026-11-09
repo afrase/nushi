@@ -104,7 +104,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Logs drawer** | A dev server's output, live and in its colours, read-only, in a drawer docked at the bottom of the browser tab's pane: its name, port and state, Stop while it runs, and a close. Opened by a Servers menu row's Logs. | `server_logs.dart` (`ServerLogsDrawer`, `ServerLog`), `WatchServerLog`, `DevServer.log_id` | 0100 |
 | **Launch file** | A folder's `.agents/launch.json` or `.claude/launch.json` (Claude desktop's), in Claude's format; its dev servers are both files' entries merged by written name, `.agents`' winning. | `internal/launchfile` | 0095 |
 | **Changes** | The chat's diff viewer tab: its folder's uncommitted changes, or its branch's for a worktree chat. Stages and commits in Uncommitted. | `changes_view.dart`, `GetDiff`, `FileChange` | 0012, 0019, 0079 |
-| **Side by side, unified** | How a diff shows: two panes, old on the left; or one column, each change's deleted lines above its inserted ones, both line numbers in the gutter. One switch for every diff; an added or a deleted file and a narrow diff are always unified. Not "split" or "inline". | `diffUnified`, `DiffBox`, diff_view's `SideBySideDiff` and `UnifiedDiff` | 0107 |
+| **Side by side, unified** | How a diff shows: two panes, old on the left; or one column, each change's deleted lines above its inserted ones, both line numbers in the gutter. One switch for every diff; an added or a deleted file and a narrow diff are always unified. Not split or inline (see below). | `diffUnified`, `DiffBox`, diff_view's `SideBySideDiff` and `UnifiedDiff` | 0107 |
 | **Commit box** | Under Uncommitted's files: what's staged, the message, Commit. | `CommitBox`, `StageCheck`, `StageFiles`, `CommitStaged` | 0079 |
 | **Terminal** | A shell beside a chat, owned by the daemon, in tabs under it (⌃\`). | `Terminal`, `features/terminals`, `terminal_panel.dart` | 0022 |
 | **Run** (a code block's) | ▷ on an agent's shell block: the block typed into the chat's terminal, its newest output under the block, its exit once it ends. | `CodeRuns`, `CodeRun`, `RunnableBlock`, `ShellMarks` | 0084 |
@@ -197,6 +197,7 @@ One line each; the word after the arrow wins.
 - waiting → **needs you**.
 - relay, for a message to a subagent → **message to a subagent**. Relay is the server only.
 - shell, for a background command → **background command**. Shell is a terminal's.
+- inline, split (diff views) → **unified**, **side by side** (the owner asked for an "inline diff view", 2026-11-09).
 - steer, for the button that stops the turn and sends → **Stop and send** (the owner, 2026-10-29). Steering (the agent taking a message into its running turn, as other harnesses use the word) is what **Queue** does when the agent can.
 - transition (Jira's API) → **move** in the UI.
 - unpair → **Forget this Mac** on the phone, **Revoke** on the Mac.

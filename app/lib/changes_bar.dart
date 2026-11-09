@@ -154,7 +154,8 @@ class ChangesBar extends StatelessWidget {
                   ),
                   // Side by side or unified, for every diff (ADR 0107). In
                   // a view too narrow for a diff of two panes beside the
-                  // list it would change nothing here.
+                  // list at its least width it would change nothing here;
+                  // a wider list may still leave the diff one column.
                   if (box.maxWidth >= changesFilesLeast + oneColumnBelow)
                     ValueListenableBuilder(
                       valueListenable: diffUnified,

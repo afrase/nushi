@@ -34,11 +34,16 @@ const double oneColumnBelow = 560;
 bool oneSided(FileChange d) => d.oldText.isEmpty || d.newText.isEmpty;
 
 /// The lines a selection of unified [rows] stands for, on one side as a
-/// comment is: the side of its last row (the new side but for a deleted
-/// line), its lines of that side among the rows.
+/// comment is: a side with a line on every row (the new side first), else
+/// the side of its last row (the new side but for a deleted line); its
+/// lines of that side among the rows.
 LineSelection linesOfRows(UnifiedRows u, ModelSpan rows) {
-  final side = u.textSideAt(rows.end - 1);
   final lines = u.linesIn(rows);
+  final side = lines.neu.length == rows.length
+      ? PaneSide.neu
+      : lines.old.length == rows.length
+      ? PaneSide.old
+      : u.textSideAt(rows.end - 1);
   final span = side == PaneSide.old ? lines.old : lines.neu;
   return LineSelection(side: side, anchor: span.start, focus: span.end - 1);
 }

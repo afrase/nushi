@@ -345,8 +345,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .unifiedDiff,
       diffUnified.value ? 'Show diffs side by side' : 'Show diffs unified',
-      // Where a chat shows, as its Changes and cards do.
-      enabled: shown != null,
+      // One choice for the app, as a pull request's Files follows it too.
       run: () => diffUnified.value = !diffUnified.value,
     ),
     AppAction(
