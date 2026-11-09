@@ -11,6 +11,7 @@ import 'package:markdown_view/src/text_marks.dart';
 
 part 'code_block.dart';
 part 'file_link.dart';
+part 'heading_mark.dart';
 
 /// The colors and fonts of [StreamingMarkdown].
 @immutable
@@ -91,6 +92,7 @@ class StreamingMarkdown extends StatefulWidget {
     this.onTapFile,
     this.fresh = const [],
     this.caret,
+    this.headingMark,
   });
 
   /// The markdown so far.
@@ -133,6 +135,10 @@ class StreamingMarkdown extends StatefulWidget {
   /// While streaming, drawn where the text ends, in its line and taking no
   /// room, when the text ends in a line of prose ([caretFits]).
   final Widget? caret;
+
+  /// Draws a mark at the start of each heading ([HeadingMarkBuilder]), once
+  /// [text] has finished streaming.
+  final HeadingMarkBuilder? headingMark;
 
   @override
   State<StreamingMarkdown> createState() => _StreamingMarkdownState();
@@ -214,13 +220,17 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
     final onTapLink = w.onTapLink;
     final imageBuilder = w.imageBuilder;
     final faint = (body.color ?? s.muted).withValues(alpha: 0.07);
+    final mark = streaming ? null : w.headingMark;
     return MarkdownBody(
       // The body parses again only for new text or a new style sheet:
       // other links, another body.
       key: linking ? ValueKey(Object.hashAllUnordered(files.keys)) : null,
       data: data,
       softLineBreak: w.lineBreaks,
-      blockSyntaxes: const [_HtmlAsText()],
+      blockSyntaxes: [
+        const _HtmlAsText(),
+        if (mark != null) ...const [_MarkedHeader(), _MarkedSetextHeader()],
+      ],
       inlineSyntaxes: [
         if (linking) _FilePathSyntax(files.keys),
         if (streaming) ...streamSyntaxes,
@@ -232,6 +242,7 @@ class _StreamingMarkdownState extends State<StreamingMarkdown> {
           'code': _FileLinkBuilder(files, w.onTapFile!),
           _FilePathSyntax.tag: _FileLinkBuilder(files, w.onTapFile!),
         },
+        if (mark != null) _HeadingMark.markTag: _HeadingMarkBuilder(mark),
       },
       // A task list's box ("- [x]"), as text so it lines up with the item.
       checkboxBuilder: (checked) => Padding(

@@ -139,6 +139,7 @@ class AgentMarkdown extends StatelessWidget {
     this.shown,
     this.transcript = false,
     this.codeBlock,
+    this.headingMark,
   });
 
   final String text;
@@ -154,6 +155,10 @@ class AgentMarkdown extends StatelessWidget {
   /// It's a message in a transcript: on the Mac, a size and a line up from
   /// other Markdown (ADR 0072).
   final bool transcript;
+
+  /// Marks each heading where it starts, for an outline (a preview's,
+  /// `markdown_outline.dart`).
+  final HeadingMarkBuilder? headingMark;
 
   /// What an image shows as (Jira's text: only its attachments).
   final Widget Function(Uri uri, String? alt) images;
@@ -228,6 +233,7 @@ class AgentMarkdown extends StatelessWidget {
         style: style,
         files: files,
         onTapFile: onTapFile,
+        headingMark: headingMark,
         codeBlock: (language, code, {required open}) => language == 'mermaid'
             ? MermaidBlock(code, style: style, open: open)
             : open
