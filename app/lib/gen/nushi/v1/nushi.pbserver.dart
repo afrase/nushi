@@ -47,6 +47,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListAgentSessionsRequest request);
   $async.Future<$0.OpenAgentSessionResponse> openAgentSession(
       $pb.ServerContext ctx, $0.OpenAgentSessionRequest request);
+  $async.Future<$0.SearchAgentSessionsResponse> searchAgentSessions(
+      $pb.ServerContext ctx, $0.SearchAgentSessionsRequest request);
   $async.Future<$0.MoveChatResponse> moveChat(
       $pb.ServerContext ctx, $0.MoveChatRequest request);
   $async.Future<$0.SendPromptResponse> sendPrompt(
@@ -344,6 +346,8 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return $0.ListAgentSessionsRequest();
       case 'OpenAgentSession':
         return $0.OpenAgentSessionRequest();
+      case 'SearchAgentSessions':
+        return $0.SearchAgentSessionsRequest();
       case 'MoveChat':
         return $0.MoveChatRequest();
       case 'SendPrompt':
@@ -646,6 +650,9 @@ abstract class NushiServiceBase extends $pb.GeneratedService {
         return listAgentSessions(ctx, request as $0.ListAgentSessionsRequest);
       case 'OpenAgentSession':
         return openAgentSession(ctx, request as $0.OpenAgentSessionRequest);
+      case 'SearchAgentSessions':
+        return searchAgentSessions(
+            ctx, request as $0.SearchAgentSessionsRequest);
       case 'MoveChat':
         return moveChat(ctx, request as $0.MoveChatRequest);
       case 'SendPrompt':

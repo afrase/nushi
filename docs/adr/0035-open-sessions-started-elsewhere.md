@@ -17,3 +17,11 @@ An agent's sessions outlive Nushi's chats: started with `claude` or `codex` in a
 ## Alternatives considered
 - Copying the transcript into Nushi: a second history that drifts (ADR 0008).
 - Refusing a session open elsewhere for every agent: Claude and Ante handle two writers, and Nushi doesn't decide how agents are run.
+
+## Amendment (2026-11-09): finding a session by what was said
+The list names sessions by title only; the owner wanted to find the one to open by what was said in it.
+- **The title filter** at the top of the list narrows the sessions loaded so far, case aside, in the app. It doesn't load further pages itself: each page starts the agent (about a second), and the search below reads every transcript anyway; "More" still loads them.
+- **The search** (`SearchAgentSessions`), after a pause in typing or Enter, reads the agent's own transcripts on this machine, each time (no index): Claude's top-level `projects/<folder>/<id>.jsonl` (`claudehistory`), Codex's `sessions/` rollouts (`codex`), each agent's reader in its package's `Local` behind `chats.SessionSearcher`. Only what the user and the agent said is matched (the user's text, claude's command tags as typed; the agent's text blocks): not tool calls or their output, thinking, meta records, context the CLI adds in the user's place, or compaction (a raw match finds a common word in nearly every transcript). Plain text, case aside, whitespace matching any; no patterns. It leaves out what the list leaves out, by the same rules (chats', forks, subagents'), newest first, 50 at most, 10 s at most; each hit has the text around its first match and a count. Other agents have no search; their titles still filter.
+- A cheap test of each raw line comes first (the query's longest run of plain ASCII, case aside; records that can't be a message), so a line is decoded only when it may hold a hit; a line over 8 MB is passed over unread.
+
+Consequences: a search reads up to the whole of an agent's history (gigabytes; measured on fixtures at about 1 GB/s a core, several files at once); a new CLI version can change what counts as said (`docs/facts/`). Considered: an index (a second copy of every transcript to keep current, ADR 0008), and grepping raw lines (it matches tool output, nearly every file).

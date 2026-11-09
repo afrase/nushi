@@ -2,6 +2,7 @@ package claudehistory
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -42,13 +43,26 @@ func forked(path string) bool {
 	defer f.Close() //nolint:errcheck // read-only
 	sc := bufio.NewScanner(f)
 	sc.Buffer(nil, 4<<20)
-	for i := 0; i < 8 && sc.Scan(); i++ {
-		var r struct {
-			ForkedFrom json.RawMessage `json:"forkedFrom"`
-		}
-		if json.Unmarshal(sc.Bytes(), &r) == nil && len(r.ForkedFrom) > 0 && string(r.ForkedFrom) != "null" {
+	for i := 0; i < forkLines && sc.Scan(); i++ {
+		if forkRecord(sc.Bytes()) {
 			return true
 		}
 	}
 	return false
+}
+
+// forkLines is how many of a transcript's first records may say it's a
+// fork.
+const forkLines = 8
+
+// forkRecord says a transcript's record names the session it was forked
+// from.
+func forkRecord(line []byte) bool {
+	if !bytes.Contains(line, []byte(`"forkedFrom"`)) {
+		return false
+	}
+	var r struct {
+		ForkedFrom json.RawMessage `json:"forkedFrom"`
+	}
+	return json.Unmarshal(line, &r) == nil && len(r.ForkedFrom) > 0 && string(r.ForkedFrom) != "null"
 }

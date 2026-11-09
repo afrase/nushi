@@ -3572,6 +3572,318 @@ class FoundSession extends $pb.GeneratedMessage {
   void clearFolderGone() => $_clearField(7);
 }
 
+class SearchAgentSessionsRequest extends $pb.GeneratedMessage {
+  factory SearchAgentSessionsRequest({
+    $core.String? agent,
+    $core.String? folder,
+    $core.String? text,
+  }) {
+    final result = SearchAgentSessionsRequest._();
+    if (agent != null) result.agent = agent;
+    if (folder != null) result.folder = folder;
+    if (text != null) result.text = text;
+    return result;
+  }
+
+  SearchAgentSessionsRequest._();
+
+  factory SearchAgentSessionsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SearchAgentSessionsRequest()..mergeFromBuffer(data, registry);
+  factory SearchAgentSessionsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SearchAgentSessionsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SearchAgentSessionsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SearchAgentSessionsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'agent')
+    ..aOS(2, _omitFieldNames ? '' : 'folder')
+    ..aOS(3, _omitFieldNames ? '' : 'text')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SearchAgentSessionsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SearchAgentSessionsRequest copyWith(
+          void Function(SearchAgentSessionsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as SearchAgentSessionsRequest))
+          as SearchAgentSessionsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SearchAgentSessionsRequest() / SearchAgentSessionsRequest.new instead')
+  static SearchAgentSessionsRequest create() => SearchAgentSessionsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SearchAgentSessionsRequest._();
+  @$core.override
+  SearchAgentSessionsRequest createEmptyInstance() =>
+      SearchAgentSessionsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SearchAgentSessionsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SearchAgentSessionsRequest>(
+          SearchAgentSessionsRequest.$_createMessage);
+  static SearchAgentSessionsRequest? _defaultInstance;
+
+  /// Agent.name; empty for the default.
+  @$pb.TagNumber(1)
+  $core.String get agent => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set agent($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAgent() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAgent() => $_clearField(1);
+
+  /// Empty: every folder's.
+  @$pb.TagNumber(2)
+  $core.String get folder => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set folder($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFolder() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFolder() => $_clearField(2);
+
+  /// Plain text (no pattern), found case aside, its whitespace matching
+  /// any: in the user's prompts and the agent's replies, not tool calls,
+  /// their output, thinking, or what the agent records for itself.
+  @$pb.TagNumber(3)
+  $core.String get text => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set text($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasText() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearText() => $_clearField(3);
+}
+
+class SearchAgentSessionsResponse extends $pb.GeneratedMessage {
+  factory SearchAgentSessionsResponse({
+    $core.bool? canSearch,
+    $core.Iterable<SessionHit>? hits,
+    $core.bool? more,
+    $core.bool? seesOpen,
+    $core.bool? oneWriter,
+  }) {
+    final result = SearchAgentSessionsResponse._();
+    if (canSearch != null) result.canSearch = canSearch;
+    if (hits != null) result.hits.addAll(hits);
+    if (more != null) result.more = more;
+    if (seesOpen != null) result.seesOpen = seesOpen;
+    if (oneWriter != null) result.oneWriter = oneWriter;
+    return result;
+  }
+
+  SearchAgentSessionsResponse._();
+
+  factory SearchAgentSessionsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SearchAgentSessionsResponse()..mergeFromBuffer(data, registry);
+  factory SearchAgentSessionsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SearchAgentSessionsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SearchAgentSessionsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SearchAgentSessionsResponse.$_createMessage)
+    ..aOB(1, _omitFieldNames ? '' : 'canSearch')
+    ..pPM<SessionHit>(2, _omitFieldNames ? '' : 'hits',
+        subBuilder: SessionHit.$_createMessage)
+    ..aOB(3, _omitFieldNames ? '' : 'more')
+    ..aOB(4, _omitFieldNames ? '' : 'seesOpen')
+    ..aOB(5, _omitFieldNames ? '' : 'oneWriter')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SearchAgentSessionsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SearchAgentSessionsResponse copyWith(
+          void Function(SearchAgentSessionsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as SearchAgentSessionsResponse))
+          as SearchAgentSessionsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SearchAgentSessionsResponse() / SearchAgentSessionsResponse.new instead')
+  static SearchAgentSessionsResponse create() =>
+      SearchAgentSessionsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SearchAgentSessionsResponse._();
+  @$core.override
+  SearchAgentSessionsResponse createEmptyInstance() =>
+      SearchAgentSessionsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SearchAgentSessionsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SearchAgentSessionsResponse>(
+          SearchAgentSessionsResponse.$_createMessage);
+  static SearchAgentSessionsResponse? _defaultInstance;
+
+  /// Nushi reads this agent's transcripts (Claude's, Codex's); without,
+  /// nothing is found.
+  @$pb.TagNumber(1)
+  $core.bool get canSearch => $_getBF(0);
+  @$pb.TagNumber(1)
+  set canSearch($core.bool value) => $_setBool(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCanSearch() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCanSearch() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<SessionHit> get hits => $_getList(1);
+
+  /// The search stopped before reading every transcript (it took too long,
+  /// or found enough): more may say it.
+  @$pb.TagNumber(3)
+  $core.bool get more => $_getBF(2);
+  @$pb.TagNumber(3)
+  set more($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMore() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMore() => $_clearField(3);
+
+  /// As ListAgentSessionsResponse's.
+  @$pb.TagNumber(4)
+  $core.bool get seesOpen => $_getBF(3);
+  @$pb.TagNumber(4)
+  set seesOpen($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSeesOpen() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSeesOpen() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get oneWriter => $_getBF(4);
+  @$pb.TagNumber(5)
+  set oneWriter($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasOneWriter() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearOneWriter() => $_clearField(5);
+}
+
+/// A session whose messages say the text searched for: the first time they
+/// say it, on one line, and how many times.
+class SessionHit extends $pb.GeneratedMessage {
+  factory SessionHit({
+    FoundSession? session,
+    $core.String? before,
+    $core.String? match,
+    $core.String? after,
+    $core.int? count,
+  }) {
+    final result = SessionHit._();
+    if (session != null) result.session = session;
+    if (before != null) result.before = before;
+    if (match != null) result.match = match;
+    if (after != null) result.after = after;
+    if (count != null) result.count = count;
+    return result;
+  }
+
+  SessionHit._();
+
+  factory SessionHit.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SessionHit()..mergeFromBuffer(data, registry);
+  factory SessionHit.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SessionHit()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SessionHit',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'nushi.v1'),
+      createEmptyInstance: SessionHit.$_createMessage)
+    ..aOM<FoundSession>(1, _omitFieldNames ? '' : 'session',
+        subBuilder: FoundSession.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'before')
+    ..aOS(3, _omitFieldNames ? '' : 'match')
+    ..aOS(4, _omitFieldNames ? '' : 'after')
+    ..aI(5, _omitFieldNames ? '' : 'count')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SessionHit clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SessionHit copyWith(void Function(SessionHit) updates) =>
+      super.copyWith((message) => updates(message as SessionHit)) as SessionHit;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SessionHit() / SessionHit.new instead')
+  static SessionHit create() => SessionHit._();
+  static $pb.GeneratedMessage $_createMessage() => SessionHit._();
+  @$core.override
+  SessionHit createEmptyInstance() => SessionHit._();
+  @$core.pragma('dart2js:noInline')
+  static SessionHit getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SessionHit>(SessionHit.$_createMessage);
+  static SessionHit? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  FoundSession get session => $_getN(0);
+  @$pb.TagNumber(1)
+  set session(FoundSession value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSession() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSession() => $_clearField(1);
+  @$pb.TagNumber(1)
+  FoundSession ensureSession() => $_ensure(0);
+
+  /// The text before the hit and after it, cut to a few words each ("…"
+  /// where cut), and the hit as written.
+  @$pb.TagNumber(2)
+  $core.String get before => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set before($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBefore() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBefore() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get match => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set match($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasMatch() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearMatch() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get after => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set after($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasAfter() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearAfter() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get count => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set count($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCount() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCount() => $_clearField(5);
+}
+
 class OpenAgentSessionRequest extends $pb.GeneratedMessage {
   factory OpenAgentSessionRequest({
     $core.String? agent,
@@ -31791,6 +32103,14 @@ class NushiServiceApi {
           $pb.ClientContext? ctx, OpenAgentSessionRequest request) =>
       _client.invoke<OpenAgentSessionResponse>(ctx, 'NushiService',
           'OpenAgentSession', request, OpenAgentSessionResponse());
+
+  /// Finds the sessions ListAgentSessions would list whose messages say
+  /// some text: what the user and the agent said, read from the agent's own
+  /// transcripts on this machine each time (no index), newest first.
+  $async.Future<SearchAgentSessionsResponse> searchAgentSessions(
+          $pb.ClientContext? ctx, SearchAgentSessionsRequest request) =>
+      _client.invoke<SearchAgentSessionsResponse>(ctx, 'NushiService',
+          'SearchAgentSessions', request, SearchAgentSessionsResponse());
 
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is

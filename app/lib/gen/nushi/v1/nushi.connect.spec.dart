@@ -136,6 +136,16 @@ abstract final class NushiService {
     nushiv1nushi.OpenAgentSessionResponse.new,
   );
 
+  /// Finds the sessions ListAgentSessions would list whose messages say
+  /// some text: what the user and the agent said, read from the agent's own
+  /// transcripts on this machine each time (no index), newest first.
+  static const searchAgentSessions = connect.Spec(
+    '/$name/SearchAgentSessions',
+    connect.StreamType.unary,
+    nushiv1nushi.SearchAgentSessionsRequest.new,
+    nushiv1nushi.SearchAgentSessionsResponse.new,
+  );
+
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is
   /// removed if it holds no work); one with messages keeps its history, in a

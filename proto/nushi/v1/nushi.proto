@@ -52,6 +52,10 @@ service NushiService {
   // (session/load); nothing is copied. For a session that is a chat
   // already, that chat.
   rpc OpenAgentSession(OpenAgentSessionRequest) returns (OpenAgentSessionResponse);
+  // Finds the sessions ListAgentSessions would list whose messages say
+  // some text: what the user and the agent said, read from the agent's own
+  // transcripts on this machine each time (no index), newest first.
+  rpc SearchAgentSessions(SearchAgentSessionsRequest) returns (SearchAgentSessionsResponse);
   // Moves a chat to another folder, or to a new worktree. A chat without
   // messages starts a new session there (and a worktree it leaves is
   // removed if it holds no work); one with messages keeps its history, in a
@@ -917,6 +921,42 @@ message FoundSession {
   string open_in = 6;
   // Its folder no longer exists: it can't be opened.
   bool folder_gone = 7;
+}
+
+message SearchAgentSessionsRequest {
+  // Agent.name; empty for the default.
+  string agent = 1;
+  // Empty: every folder's.
+  string folder = 2;
+  // Plain text (no pattern), found case aside, its whitespace matching
+  // any: in the user's prompts and the agent's replies, not tool calls,
+  // their output, thinking, or what the agent records for itself.
+  string text = 3;
+}
+
+message SearchAgentSessionsResponse {
+  // Nushi reads this agent's transcripts (Claude's, Codex's); without,
+  // nothing is found.
+  bool can_search = 1;
+  repeated SessionHit hits = 2;
+  // The search stopped before reading every transcript (it took too long,
+  // or found enough): more may say it.
+  bool more = 3;
+  // As ListAgentSessionsResponse's.
+  bool sees_open = 4;
+  bool one_writer = 5;
+}
+
+// A session whose messages say the text searched for: the first time they
+// say it, on one line, and how many times.
+message SessionHit {
+  FoundSession session = 1;
+  // The text before the hit and after it, cut to a few words each ("…"
+  // where cut), and the hit as written.
+  string before = 2;
+  string match = 3;
+  string after = 4;
+  int32 count = 5;
 }
 
 message OpenAgentSessionRequest {

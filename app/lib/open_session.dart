@@ -4,21 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/agents.dart';
-import 'package:nushi/clock.dart';
-import 'package:nushi/commits.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/session_rows.dart';
+import 'package:nushi/session_search.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
+
+export 'package:nushi/session_rows.dart' show mayOpen;
 
 /// The agents found not to list their sessions, while the app runs: the
 /// New chat dialog offers them no "Sessions →".
 final cantListSessions = <String>{};
 
 /// The New chat dialog's second step: [agent]'s sessions in [folder] ('':
-/// every folder's) that aren't chats, newest first, for [onOpen]. The
-/// arrows move, Enter opens, ← or Esc goes [onBack].
+/// every folder's) that aren't chats, newest first, for [onOpen]. Its
+/// field filters them by title, case aside: those loaded so far, as each
+/// page starts the agent (More loads the next). Once typing pauses, or on
+/// Enter, it also searches what was said in every session
+/// (SessionSearch), listed under the titles with the text around each
+/// hit. The arrows move over both, Enter opens (or searches at once, right
+/// after typing), Esc (or ← with the field empty) goes [onBack].
 class SessionList extends StatefulWidget {
   const new({
     required this.daemon,
@@ -49,11 +56,22 @@ class _SessionListState extends State<SessionList> {
   final GlobalKey<State<StatefulWidget>> _shown = GlobalKey();
 
   final _scroll = ScrollController();
+  final _filter = TextEditingController();
+  String _filtered = '';
+
+  /// The arrows moved the selection since the field changed: Enter opens
+  /// it rather than search at once.
+  bool _moved = false;
+  late final _search = SessionSearch(widget.daemon, widget.agent, widget.folder)
+    ..addListener(_searched);
+
+  void _searched() => setState(() {});
 
   /// Moves the selection, keeping it in view. Wrapped to the first or the
   /// last, the list jumps to its end: that row, away from the screen,
   /// isn't built.
   void _move(int by) {
+    _moved = true;
     final to = _at + by;
     setState(() => _at = (to + _rows) % _rows);
     if (to >= 0 && to < _rows) return revealRow(_shown, down: by > 0);
@@ -66,13 +84,27 @@ class _SessionListState extends State<SessionList> {
   @override
   void dispose() {
     _scroll.dispose();
+    _filter.dispose();
+    _search.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _filter.addListener(_typed);
     unawaited(_more());
+  }
+
+  void _typed() {
+    _search.typed(_filter.text);
+    final text = _filter.text.trim().toLowerCase();
+    if (text == _filtered) return; // the caret moved
+    setState(() {
+      _filtered = text;
+      _at = 0;
+      _moved = false;
+    });
   }
 
   Future<void> _more() async {
@@ -102,14 +134,31 @@ class _SessionListState extends State<SessionList> {
 
   bool get _hasMore => _last?.nextCursor.isNotEmpty ?? false;
 
-  /// The rows the arrows move over: the sessions, then "More".
-  int get _rows => _sessions.length + (_hasMore ? 1 : 0);
+  /// The sessions loaded whose title says the field's text.
+  List<FoundSession> get _titled => [
+    for (final s in _sessions)
+      if (s.title.toLowerCase().contains(_filtered)) s,
+  ];
+
+  /// The sessions the search found for what the field says.
+  List<SessionHit> get _hits => _search.shown && _search.asked == _search.text
+      ? _search.found?.hits ?? const []
+      : const [];
+
+  /// The rows the arrows move over: the titles shown, "More", then the
+  /// sessions found.
+  int get _rows => _titled.length + (_hasMore ? 1 : 0) + _hits.length;
 
   void _pick(int i) {
-    if (i == _sessions.length) {
+    final shown = _titled;
+    final hits = _hits;
+    final more = _hasMore ? 1 : 0;
+    if (i < shown.length) {
+      if (_why(shown[i]) == null) widget.onOpen(shown[i]);
+    } else if (i < shown.length + more) {
       if (!_loading) unawaited(_more());
-    } else if (_why(_sessions[i]) == null) {
-      widget.onOpen(_sessions[i]);
+    } else if (_whyHit(hits[i - shown.length - more].session) == null) {
+      widget.onOpen(hits[i - shown.length - more].session);
     }
   }
 
@@ -118,12 +167,17 @@ class _SessionListState extends State<SessionList> {
       return KeyEventResult.ignored;
     }
     switch (e.logicalKey) {
-      case LogicalKeyboardKey.arrowLeft || LogicalKeyboardKey.escape:
+      case LogicalKeyboardKey.escape:
+        widget.onBack();
+      case LogicalKeyboardKey.arrowLeft when _filter.text.isEmpty:
         widget.onBack();
       case LogicalKeyboardKey.arrowDown when _rows > 0:
         _move(1);
       case LogicalKeyboardKey.arrowUp when _rows > 0:
         _move(-1);
+      case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
+          when _search.pending && !_moved:
+        _search.now();
       case LogicalKeyboardKey.enter || LogicalKeyboardKey.numpadEnter
           when _rows > 0:
         _pick(_at);
@@ -139,15 +193,23 @@ class _SessionListState extends State<SessionList> {
     final t = theme.t;
     final title = agentTitle(widget.agent);
     final last = _last;
+    final shown = _titled;
+    final hits = _hits;
+    final filtering = _filtered.isNotEmpty;
     final note = switch (()) {
       _ when _error != null => _error,
       _ when last == null => 'Looking…',
       _ when !last.canList => "$title can't list its sessions.",
-      _ when _sessions.isEmpty => 'No other sessions here.',
+      _ when _sessions.isEmpty && !filtering => 'No other sessions here.',
       _ => null,
     };
+    final noTitle = switch (()) {
+      _ when !filtering || shown.isNotEmpty || last == null => null,
+      _ when _hasMore => 'No title loaded so far says “${_search.text}”.',
+      _ => 'No title says “${_search.text}”.',
+    };
+    _at = _rows == 0 ? 0 : _at.clamp(0, _rows - 1);
     return Focus(
-      autofocus: true,
       onKeyEvent: _key,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -176,24 +238,56 @@ class _SessionListState extends State<SessionList> {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
+            child: TextField(
+              controller: _filter,
+              autofocus: true,
+              style: theme.ui(t.text),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: _search.searches
+                    ? 'Filter titles, or search what was said'
+                    : 'Filter by title',
+              ),
+            ),
+          ),
           if (note != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 10),
               child: Text(note, style: theme.ui(t.textMuted, size: 12.5)),
-            )
-          else
+            ),
+          if (shown.isNotEmpty || (_hasMore && last != null) || filtering)
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 360),
+              constraints: const BoxConstraints(maxHeight: 400),
               child: ListView(
                 controller: _scroll,
                 shrinkWrap: true,
                 children: [
-                  for (final (i, s) in _sessions.indexed) _row(theme, i, s),
+                  if (filtering && _search.searches)
+                    const SessionsHeading('Titles'),
+                  if (noTitle != null)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
+                      child: Text(
+                        noTitle,
+                        style: theme.ui(t.textMuted, size: 12.5),
+                      ),
+                    ),
+                  for (final (i, s) in shown.indexed)
+                    SessionRow(
+                      s,
+                      key: i == _at ? _shown : null,
+                      selected: i == _at,
+                      onTap: () => _pick(i),
+                      everyFolder: widget.folder.isEmpty,
+                      why: _why(s),
+                    ),
                   if (_hasMore)
                     Tap(
-                      key: _at == _sessions.length ? _shown : null,
-                      onTap: () => _pick(_sessions.length),
-                      selected: _at == _sessions.length,
+                      key: _at == shown.length ? _shown : null,
+                      onTap: () => _pick(shown.length),
+                      selected: _at == shown.length,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 7,
@@ -203,10 +297,12 @@ class _SessionListState extends State<SessionList> {
                         style: theme.ui(t.textSecondary, size: 12.5),
                       ),
                     ),
+                  if (filtering) ..._said(shown.length + (_hasMore ? 1 : 0)),
                 ],
               ),
             ),
-          if (last != null && !last.seesOpen && _sessions.isNotEmpty)
+          if (last != null && !last.seesOpen && shown.isNotEmpty ||
+              hits.isNotEmpty && !(_search.found?.seesOpen ?? true))
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
               child: Text(
@@ -220,73 +316,40 @@ class _SessionListState extends State<SessionList> {
     );
   }
 
-  /// Why [s] can't be opened, if it can't: its folder is gone, or it's
-  /// open elsewhere and the agent lets one app at a time write to it.
-  String? _why(FoundSession s) => switch (s) {
-    _ when s.folderGone => '${tildePath(s.folder)} no longer exists',
-    _ when s.openIn.isNotEmpty && (_last?.oneWriter ?? false) =>
-      '${agentTitle(widget.agent)} lets one app at a time use a session: '
-          'close it there first',
-    _ => null,
-  };
-
-  Widget _row(NushiTheme theme, int i, FoundSession s) {
-    final t = theme.t;
-    final why = _why(s);
-    final when = DateTime.fromMillisecondsSinceEpoch(s.updatedUnixMs.toInt());
-    final details = [
-      if (s.updatedUnixMs != 0) ago(clock().difference(when), when),
-      if (s.messages > 0) '${s.messages} messages',
-      if (widget.folder.isEmpty && s.folder.isNotEmpty)
-        folderParts(s.folder).$1,
-      if (s.folderGone) 'folder gone',
-    ].join(' · ');
-    return Tap(
-      key: i == _at ? _shown : null,
-      onTap: why != null ? null : () => _pick(i),
-      selected: i == _at,
-      tooltip: why ?? '',
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            s.title.isEmpty ? 'Untitled' : s.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(why != null ? t.textMuted : t.text),
+  /// The search's part of the list, its rows from [first] on: the
+  /// sessions found, each with the text around its hit, or where the
+  /// search stands.
+  List<Widget> _said(int first) {
+    final hits = _hits;
+    if (!_search.searches || hits.isEmpty) return [SearchState(_search)];
+    final t = NushiTheme.of(context);
+    return [
+      const SessionsHeading('What was said'),
+      for (final (i, h) in hits.indexed)
+        SessionRow(
+          h.session,
+          key: first + i == _at ? _shown : null,
+          selected: first + i == _at,
+          onTap: () => _pick(first + i),
+          everyFolder: widget.folder.isEmpty,
+          why: _whyHit(h.session),
+          extra: h.count == 1 ? '1 mention' : '${h.count} mentions',
+          below: HitExcerpt(h),
+        ),
+      if (_search.found?.more ?? false)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+          child: Text(
+            'The search stopped early: older sessions may mention it too.',
+            style: t.ui(t.t.textMuted, size: 11.5),
           ),
-          const SizedBox(height: 2),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(text: details),
-                if (s.openIn.isNotEmpty)
-                  TextSpan(
-                    text: '${details.isEmpty ? '' : ' · '}open in ${s.openIn}',
-                    style: TextStyle(color: t.needs),
-                  ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.ui(t.textMuted, size: 11.5),
-          ),
-        ],
-      ),
-    );
+        ),
+    ];
   }
-}
 
-/// Whether to open [s], which may be open elsewhere: both would write to
-/// its history, so that asks first (it doesn't refuse). An agent that
-/// allows one writer never gets here (SessionList doesn't offer it).
-Future<bool> mayOpen(BuildContext context, FoundSession s) async =>
-    s.openIn.isEmpty ||
-    await confirm(
-      context,
-      'Open it here too?',
-      "It's open in ${s.openIn}. Both will write to its history, and neither "
-          "sees the other's turns.",
-      'Open',
-    );
+  String? _why(FoundSession s) =>
+      whyNotOpen(s, widget.agent, oneWriter: _last?.oneWriter ?? false);
+
+  String? _whyHit(FoundSession s) =>
+      whyNotOpen(s, widget.agent, oneWriter: _search.found?.oneWriter ?? false);
+}

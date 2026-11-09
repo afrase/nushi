@@ -82,6 +82,14 @@ class FakeDaemon implements Transport {
   ListAgentSessionsResponse Function(ListAgentSessionsRequest)? sessions;
   final listed = <ListAgentSessionsRequest>[];
   final opened = <OpenAgentSessionRequest>[];
+
+  /// What SearchAgentSessions answers (a Future of it, to answer later; a
+  /// thrown error fails it; nothing found when unset), the searches, and
+  /// the texts of those the app cancelled.
+  FutureOr<SearchAgentSessionsResponse> Function(SearchAgentSessionsRequest)?
+  searches;
+  final searched = <SearchAgentSessionsRequest>[];
+  final cancelledSearches = <String>[];
   // The fake's stream, which lives as long as the test.
   final _events = StreamController<EventsResponse>()..add(EventsResponse());
 
@@ -112,6 +120,16 @@ class FakeDaemon implements Transport {
     }
     if (input is ListAgentSessionsRequest) listed.add(input);
     if (input is OpenAgentSessionRequest) opened.add(input);
+    if (input is SearchAgentSessionsRequest) {
+      searched.add(input);
+      unawaited(
+        options?.signal?.future.then((_) => cancelledSearches.add(input.text)),
+      );
+      final r =
+          await searches?.call(input) ??
+          SearchAgentSessionsResponse(canSearch: true);
+      return UnaryResponse(spec, Headers(), r as O, Headers());
+    }
     if (input is SetUpAgentRequest) setUp.add(input.agent);
     if (input is RemoveAgentRequest) removed.add(input.agent);
     if (input is SetSettingsRequest) setSettings.add(settings = input.settings);

@@ -194,6 +194,15 @@ type ForkFinder interface {
 	Forked(ids []string) map[string]bool
 }
 
+// SessionSearcher finds which of the agent's sessions say some text in
+// what the user and the agent said, reading the agent's own files (ADR
+// 0035): the newest first, s.Max at most (more: some files weren't read),
+// passing over what Find leaves out besides chats (forks, subagents').
+// When ctx ends it returns what it found so far, with ctx's error.
+type SessionSearcher interface {
+	SearchSessions(ctx context.Context, s model.SessionSearch) (hits []model.SessionHit, more bool, err error)
+}
+
 // WorktreeFinder says which worktree the agent's own files say each
 // subagent of session sid of folder has, by the tool call that started it.
 // Those files are the agent's to write: a path here only says whose a
