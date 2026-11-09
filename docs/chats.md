@@ -177,6 +177,8 @@ When a chat's subagents work in worktrees of their own, a menu at the left of th
 - A commit follows your git: your identity, signing (GPG or SSH), hooks and `commit.*` settings. If signing fails, nothing is committed.
 - If what's staged changed since it was shown, or files outside the chat's folder are staged, Commit refuses. While the agent is working it warns that files may change ([ADR 0079](adr/0079-stage-and-commit-from-changes.md)).
 
+**Side by side or unified.** The bar's view button (beside the list's tree or list), View › Show Diffs Unified or the palette shows diffs unified: one column, each change's deleted lines above its inserted ones, with both line numbers. It's one choice for every diff (Changes, tool calls, a pull request's Files), remembered. An added or a deleted file always shows in one column, since its other side is empty, and so does a diff too narrow for two panes and the phone's; the switch keeps your choice for the next file. Switching keeps the line you were on ([ADR 0107](adr/0107-unified-diff.md)).
+
 - Select lines to write a review comment for the agent.
 - **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message, and takes you back to the chat.
 - Comments not sent yet show in the header ("Changes 2") and over the box, with Send to agent and Show.

@@ -24,7 +24,7 @@ Then open Nushi and set up an agent in Settings › Agents. The zip, upgrades an
 <td><a href="docs/images/agents.png"><img src="docs/images/agents.png" width="440" alt="The New chat dialog listing the five agents"></a></td>
 </tr>
 <tr>
-<td><b>Changes and review.</b> A side-by-side diff of the chat's work, with comments on its lines that go to the agent as one message.</td>
+<td><b>Changes and review.</b> A side-by-side or unified diff of the chat's work, with comments on its lines that go to the agent as one message.</td>
 <td><a href="docs/images/changes.png"><img src="docs/images/changes.png" width="440" alt="The Changes tab: a file tree and a side-by-side diff with two review comments"></a></td>
 </tr>
 <tr>

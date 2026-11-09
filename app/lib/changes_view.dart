@@ -449,7 +449,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                   Resizable(
                     name: 'files',
                     initial: 240,
-                    min: 180,
+                    min: changesFilesLeast,
                     max: min(560, box.maxWidth - 360),
                     child: ColoredBox(
                       color: t.raised,

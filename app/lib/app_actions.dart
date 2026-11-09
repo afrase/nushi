@@ -104,6 +104,7 @@ enum Act {
   // The preview's own key: elsewhere ⌥Z types a character.
   wrap(shows: wrapKey, menu: ActMenu.view, menuLabel: 'Wrap Lines'),
   whitespace(menu: ActMenu.view, menuLabel: 'Show Whitespace'),
+  unifiedDiff(menu: ActMenu.view, menuLabel: 'Show Diffs Unified'),
   terminal(key: toggleTerminalKey),
   rewind(keyText: 'Esc Esc'), // the composer's
   sideChat(key: sideChatKey, menu: ActMenu.chat, menuLabel: 'Side Chat'),
@@ -340,6 +341,13 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
       // Where a chat shows, as its previews do.
       enabled: shown != null,
       run: () => showWhitespace.value = !showWhitespace.value,
+    ),
+    AppAction(
+      .unifiedDiff,
+      diffUnified.value ? 'Show diffs side by side' : 'Show diffs unified',
+      // Where a chat shows, as its Changes and cards do.
+      enabled: shown != null,
+      run: () => diffUnified.value = !diffUnified.value,
     ),
     AppAction(
       .terminal,

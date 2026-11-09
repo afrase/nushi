@@ -108,11 +108,10 @@ packages:
   diff_view:
     dependency: "direct main"
     description:
-      name: diff_view
-      sha256: a626fb2aac59643b8ecc3ecc2fc3dbc8ae019d18581647868c93614a288bc8de
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.0"
+      path: "/Users/aaron/Developer/diff_view-unified"
+      relative: false
+    source: path
+    version: "0.2.0"
   equatable:
     dependency: transitive
     description:
