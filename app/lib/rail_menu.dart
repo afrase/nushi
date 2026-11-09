@@ -4,19 +4,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/controls.dart';
-import 'package:nushi/pins_rail.dart';
+import 'package:nushi/rail.dart';
 import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
 
-// The pins' rail's menu (ADR 0085, pins_rail.dart), as Claude's desktop
-// app has it: "Session start" and each pin by its title, each with its
+// A rail's menu (rail.dart), as Claude's desktop app has it: each entry by
+// its title ("Session start" and each pin, for the pins rail), each with its
 // dash, the current one's title bright, the others dim.
 
 /// A menu title's color, not the current one's: [Tokens.text] dimmed over
 /// the menu's fill, as Claude's are (about half the contrast of the current
 /// one's, whatever the theme; textSecondary is nearly text in some), but
 /// no dimmer than reads on the fill.
-Color pinTitleDim(Tokens t) {
+Color railTitleDim(Tokens t) {
   for (var a = 0.6; ; a += 0.05) {
     final dim = Color.alphaBlend(t.text.withValues(alpha: a), t.raised);
     if (a >= 0.8 || contrast(dim, t.raised) >= 4) return dim;
@@ -25,7 +25,7 @@ Color pinTitleDim(Tokens t) {
 
 /// The rail's menu, over it: [entries] by title, each with its dash, the
 /// current one's long and its title bright, the [lit] row filled.
-class PinsMenu extends StatelessWidget {
+class RailMenu extends StatelessWidget {
   const new({
     required this.entries,
     required this.current,
@@ -36,7 +36,7 @@ class PinsMenu extends StatelessWidget {
     super.key,
   });
 
-  final List<PinEntry> entries;
+  final List<RailEntry> entries;
   final ValueListenable<int> current;
   final ValueNotifier<int?> lit;
   final RailFit fit;
@@ -130,7 +130,7 @@ class _MenuRow extends StatelessWidget {
     required this.onTap,
   });
 
-  final PinEntry entry;
+  final RailEntry entry;
   final double height;
   final double inset;
   final RailFit fit;
@@ -174,13 +174,16 @@ class _MenuRow extends StatelessWidget {
           child: Row(
             spacing: 10,
             children: [
-              PinDash(on: current, fit: fit, bright: bright),
+              RailDash(on: current, fit: fit, bright: bright),
               Flexible(
                 child: Text(
                   entry.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.ui(bright ? t.text : pinTitleDim(t), size: 13.5),
+                  style: theme.ui(
+                    bright ? t.text : railTitleDim(t),
+                    size: 13.5,
+                  ),
                 ),
               ),
             ],

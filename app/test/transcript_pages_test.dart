@@ -18,7 +18,7 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/items.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_pins.dart';
-import 'package:nushi/pins_rail.dart';
+import 'package:nushi/rail.dart';
 import 'package:nushi/rewind_picker.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/spinner.dart';
@@ -251,19 +251,13 @@ void main() {
     await mouse.moveTo(
       tester.getCenter(
         find
-            .descendant(
-              of: find.byType(PinsRail),
-              matching: find.byType(PinDash),
-            )
+            .descendant(of: find.byType(Rail), matching: find.byType(RailDash))
             .first,
       ),
     );
     await _settle(tester);
     await tester.tap(
-      find.descendant(
-        of: find.byType(PinsRail),
-        matching: find.text('Pin c-a2'),
-      ),
+      find.descendant(of: find.byType(Rail), matching: find.text('Pin c-a2')),
     );
     await _settle(tester);
     expect(_chat(d).items.any((it) => it.id == 'c-a2'), isTrue);

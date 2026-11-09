@@ -8,25 +8,22 @@ import 'package:flutter/services.dart';
 
 import 'package:nushi/controls.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/pins_menu.dart';
+import 'package:nushi/rail_menu.dart';
 import 'package:nushi/theme/theme.dart';
 
-// The pins' rail (ADR 0085), as Claude's desktop app has it: a dash for the
-// session's start and one for each pinned message, down the transcript's
-// left margin at its top, the one for where you're reading long and bright.
-// The pointer over it, a click, or the keyboard's focus opens its menu:
-// each entry by its title, its dash beside it; a pick goes there.
+// A rail, as Claude's desktop app has them: a dash for each place in a
+// long text, down its left margin at its top, the one for where you're
+// reading long and bright. The pointer over it, a click, or the keyboard's
+// focus opens its menu: each entry by its title, its dash beside it; a pick
+// goes there. The pins rail (ADR 0085, message_pins.dart) has a pinned
+// message's.
 
-/// One of the rail's entries: a pinned message's item and title; the
-/// session's start is [PinEntry.start].
+/// One of the rail's entries: what [Rail.onPick] gets, and its title.
 @immutable
-class PinEntry {
+class RailEntry {
   const new(this.id, this.title);
 
-  /// The session's start, the rail's first entry.
-  static const start = PinEntry('', 'Session start');
-
-  /// The pinned message's item; '' for the start.
+  /// What a pick of it gives [Rail.onPick].
   final String id;
 
   /// What the menu lists it by: plain text, at most a line.
@@ -34,7 +31,7 @@ class PinEntry {
 
   @override
   bool operator ==(Object other) =>
-      other is PinEntry && other.id == id && other.title == title;
+      other is RailEntry && other.id == id && other.title == title;
 
   @override
   int get hashCode => Object.hash(id, title);
@@ -89,30 +86,25 @@ class RailFit {
   int get hashCode => Object.hash(margin, inset, long);
 }
 
-/// The first daemon that sends each pin's title with its chat
-/// (`Chat.message_pins`). Against an older one the phone takes the pages
-/// its pins are on before the rail's menu opens, to list them by their
-/// first lines; against this one the menu opens at once, and a pick takes
-/// the page it goes to.
-const pinTitlesApi = 104;
-
-/// The rail: [entries] (the start first, then the pins in the transcript's
-/// order) as dashes, [current]'s long and bright. Its menu lists them;
-/// [onPick] goes to the one picked (its id, '' for the start). [before]
-/// runs as it opens, the menu showing once it's done ([pinTitlesApi]). [fit] is
-/// where the dashes stand from its left edge, which is the transcript's,
-/// and how long they are.
-class PinsRail extends StatefulWidget {
+/// The rail: [entries], in the text's order, as dashes, [current]'s long
+/// and bright. Its menu lists them; [onPick] goes to the one picked (its
+/// id). [before] runs as it opens, the menu showing once it's done
+/// (`pinTitlesApi`). [fit] is where the dashes stand from its left edge,
+/// which is the text's, and how long they are.
+class Rail extends StatefulWidget {
   const new({
     required this.entries,
     required this.current,
     required this.onPick,
     required this.fit,
+    required this.label,
     super.key,
     this.before,
   });
 
-  final List<PinEntry> entries;
+  /// What a screen reader calls it ("Pinned messages").
+  final String label;
+  final List<RailEntry> entries;
   final ValueListenable<int> current;
   final void Function(String id) onPick;
   final RailFit fit;
@@ -122,10 +114,10 @@ class PinsRail extends StatefulWidget {
   static const linger = Duration(milliseconds: 150);
 
   @override
-  State<PinsRail> createState() => _PinsRailState();
+  State<Rail> createState() => _RailState();
 }
 
-class _PinsRailState extends State<PinsRail> {
+class _RailState extends State<Rail> {
   final _menu = OverlayPortalController();
   final _link = LayerLink();
   final _region = Object();
@@ -206,7 +198,7 @@ class _PinsRailState extends State<PinsRail> {
       if ((rail ?? false) && !_quiet) unawaited(_open());
       return;
     }
-    if (_pointed) _leave = Timer(PinsRail.linger, _close);
+    if (_pointed) _leave = Timer(Rail.linger, _close);
   }
 
   KeyEventResult _key(FocusNode _, KeyEvent e) {
@@ -294,7 +286,7 @@ class _PinsRailState extends State<PinsRail> {
             },
             child: Semantics(
               button: true,
-              label: 'Pinned messages',
+              label: widget.label,
               child: CompositedTransformTarget(
                 link: _link,
                 child: OverlayPortal(
@@ -302,7 +294,7 @@ class _PinsRailState extends State<PinsRail> {
                   overlayChildBuilder: (context) => CompositedTransformFollower(
                     link: _link,
                     showWhenUnlinked: false,
-                    offset: const Offset(PinsMenu.shift, 0),
+                    offset: const Offset(RailMenu.shift, 0),
                     child: Align(
                       alignment: Alignment.topLeft,
                       child: TapRegion(
@@ -317,7 +309,7 @@ class _PinsRailState extends State<PinsRail> {
                             _menuPointer = null;
                             _pointer(menu: false);
                           },
-                          child: PinsMenu(
+                          child: RailMenu(
                             entries: widget.entries,
                             current: widget.current,
                             lit: _lit,
@@ -367,7 +359,7 @@ class _RenderRailHit extends RenderProxyBox {
       super.hitTest(result, position: position);
 }
 
-/// The most dashes the rail draws: with more pins, those around the
+/// The most dashes the rail draws: with more entries, those around the
 /// current one, so it stays short (the menu lists them all).
 const railMost = 12;
 
@@ -404,7 +396,7 @@ class _Dashes extends StatelessWidget {
           spacing: _pitch - _thick,
           children: [
             for (var i = from; i < min(count, from + railMost); i++)
-              PinDash(on: i == current, fit: fit),
+              RailDash(on: i == current, fit: fit),
           ],
         ),
       ),
@@ -415,7 +407,7 @@ class _Dashes extends StatelessWidget {
 /// One entry's dash: long and bright for the current one ([on]), short and
 /// dim otherwise; between the two if [bright] (its row under the pointer or
 /// the keys), as Claude's hovered row has it.
-class PinDash extends StatelessWidget {
+class RailDash extends StatelessWidget {
   const new({
     required this.on,
     super.key,

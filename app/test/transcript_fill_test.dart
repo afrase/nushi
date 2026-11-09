@@ -9,7 +9,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_pins.dart';
-import 'package:nushi/pins_rail.dart';
+import 'package:nushi/rail.dart';
 import 'package:nushi/settings.dart';
 
 import 'fake_daemon.dart';
@@ -130,20 +130,14 @@ void main() {
     await mouse.moveTo(
       tester.getCenter(
         find
-            .descendant(
-              of: find.byType(PinsRail),
-              matching: find.byType(PinDash),
-            )
+            .descendant(of: find.byType(Rail), matching: find.byType(RailDash))
             .first,
       ),
     );
     await _settle(tester);
     final before = _built();
     await tester.tap(
-      find.descendant(
-        of: find.byType(PinsRail),
-        matching: find.text('Pin c-a2'),
-      ),
+      find.descendant(of: find.byType(Rail), matching: find.text('Pin c-a2')),
     );
     final most = await _mostAFrame(tester);
     expect(c.items.length, paged.items.length - c.older);

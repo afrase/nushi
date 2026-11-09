@@ -4,13 +4,13 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/pins_rail.dart';
+import 'package:nushi/rail.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 // Pinned messages (ADR 0085): the agent's messages, pinned from their
 // actions row, and listed by the rail at the transcript's top left
-// (pins_rail.dart). The daemon keeps a chat's (PinMessage) with their titles,
+// (rail.dart). The daemon keeps a chat's (PinMessage) with their titles,
 // so the phone and another Mac show the same; a pin shows at once and goes
 // back if the daemon refuses.
 
@@ -31,10 +31,20 @@ bool canPinMessage(Daemon d, ChatState chat, Item item, {required bool live}) =>
     !live &&
     !chat.outbox.sending.contains(item);
 
+/// The session's start, the pins rail's first entry.
+const sessionStart = RailEntry('', 'Session start');
+
+/// The first daemon that sends each pin's title with its chat
+/// (`Chat.message_pins`). Against an older one the phone takes the pages
+/// its pins are on before the rail's menu opens, to list them by their
+/// first lines; against this one the menu opens at once, and a pick takes
+/// the page it goes to.
+const pinTitlesApi = 104;
+
 /// [chat]'s pins as the rail lists them, in the transcript's order: those
 /// on pages not loaded yet first (which are older), then those
 /// among its items. A pin whose message is gone isn't listed.
-List<PinEntry> pinEntries(ChatState chat) {
+List<RailEntry> pinEntries(ChatState chat) {
   final ids = chat.pinnedMessages.toSet();
   if (ids.isEmpty) return const [];
   final shown = [
@@ -46,9 +56,9 @@ List<PinEntry> pinEntries(ChatState chat) {
     if (chat.older > 0)
       for (final id in chat.pinnedMessages)
         if (!have.contains(id))
-          PinEntry(id, chat.pinTitles[id] ?? 'Pinned message'),
+          RailEntry(id, chat.pinTitles[id] ?? 'Pinned message'),
     for (final it in shown)
-      PinEntry(it.id, switch (chat.pinTitles[it.id]) {
+      RailEntry(it.id, switch (chat.pinTitles[it.id]) {
         final t? when t.isNotEmpty => t,
         _ => firstLine(it),
       }),

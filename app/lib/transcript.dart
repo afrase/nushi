@@ -15,7 +15,7 @@ import 'package:nushi/items.dart';
 import 'package:nushi/jump_chip.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/pins_rail.dart';
+import 'package:nushi/rail.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/rewind.dart';
 import 'package:nushi/subagents.dart';
@@ -785,7 +785,7 @@ class _TranscriptState extends State<Transcript> {
     if (_goTo != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _go());
     }
-    final rail = widget.items == null ? pinEntries(chat) : const <PinEntry>[];
+    final rail = widget.items == null ? pinEntries(chat) : const <RailEntry>[];
     _railIds = [for (final e in rail) e.id];
     final pinned = _railIds.toSet();
     _railAt = {
@@ -891,8 +891,9 @@ class _TranscriptState extends State<Transcript> {
               Positioned(
                 left: 0,
                 top: 6,
-                child: PinsRail(
-                  entries: [PinEntry.start, ...rail],
+                child: Rail(
+                  label: 'Pinned messages',
+                  entries: [sessionStart, ...rail],
                   current: _pinAt,
                   fit: RailFit.of(sides.left),
                   onPick: (id) => unawaited(_pick(id)),

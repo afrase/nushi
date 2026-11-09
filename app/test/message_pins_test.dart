@@ -14,8 +14,8 @@ import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/message_pins.dart';
 import 'package:nushi/phone/phone_app.dart';
-import 'package:nushi/pins_menu.dart';
-import 'package:nushi/pins_rail.dart';
+import 'package:nushi/rail.dart';
+import 'package:nushi/rail_menu.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/contrast.dart';
 import 'package:nushi/theme/theme.dart';
@@ -153,18 +153,18 @@ Future<void> _hover(WidgetTester tester, String text) =>
 
 /// The rail's dashes (not its menu's).
 Finder get _railDashes =>
-    find.descendant(of: find.byType(PinsRail), matching: find.byType(PinDash));
+    find.descendant(of: find.byType(Rail), matching: find.byType(RailDash));
 
 /// Which of the rail's [count] entries is current: its long dash.
 int _current(WidgetTester tester, int count) => tester
-    .widgetList<PinDash>(_railDashes)
+    .widgetList<RailDash>(_railDashes)
     .take(count)
     .toList()
     .indexWhere((d) => d.on);
 
 /// The menu's row of [title].
 Finder _row(String title) =>
-    find.descendant(of: find.byType(PinsRail), matching: find.text(title));
+    find.descendant(of: find.byType(Rail), matching: find.text(title));
 
 /// The transcript's scroll.
 ScrollPosition _scroll(WidgetTester tester) => tester
@@ -207,7 +207,7 @@ double _gapToWords(WidgetTester tester) {
 /// Opens the menu with the pointer over the rail, come from elsewhere: a
 /// pick leaves the menu closed until the pointer has left the rail.
 Future<void> _openMenu(WidgetTester tester) async {
-  final rail = tester.getRect(find.byType(PinsRail));
+  final rail = tester.getRect(find.byType(Rail));
   await _move(tester, rail.bottomRight + const Offset(40, 40));
   await _move(tester, tester.getCenter(_railDashes.first));
   expect(_row('Session start'), findsOneWidget);
@@ -227,7 +227,7 @@ void main() {
   testWidgets('pin and unpin an agent message from its actions; none on '
       'the user’s', (tester) async {
     final (d, fake) = await _window(tester);
-    expect(find.byType(PinsRail), findsNothing); // nothing pinned: no rail
+    expect(find.byType(Rail), findsNothing); // nothing pinned: no rail
 
     await _hover(tester, 'Ship it');
     expect(find.byTooltip('Pin'), findsNothing);
@@ -252,7 +252,7 @@ void main() {
     await tester.tap(find.byTooltip('Unpin'));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.pinnedMessages, isEmpty);
-    expect(find.byType(PinsRail), findsNothing);
+    expect(find.byType(Rail), findsNothing);
     await closeView(tester, d);
   }, variant: _mac);
 
@@ -290,7 +290,7 @@ void main() {
     await tester.tap(find.byTooltip('Pin'));
     await tester.pumpAndSettle();
     expect(d.chats['c']!.pinnedMessages, isEmpty);
-    expect(find.byType(PinsRail), findsNothing);
+    expect(find.byType(Rail), findsNothing);
     await closeView(tester, d);
   }, variant: _mac);
 
@@ -435,13 +435,13 @@ void main() {
     final t = NushiTheme.of(tester.element(_row(rows.last))).t;
     Color? colorOf(String r) => tester.widget<Text>(_row(r)).style?.color;
     expect(colorOf(rows.last), t.text);
-    expect(colorOf(rows[1]), pinTitleDim(t));
+    expect(colorOf(rows[1]), railTitleDim(t));
 
     // Over the menu it stays; away from both it goes.
     await _move(tester, tester.getCenter(_row(rows[1])));
     expect(colorOf(rows[1]), t.text, reason: 'the row under the pointer');
     await _move(tester, const Offset(900, 600));
-    await tester.pump(PinsRail.linger);
+    await tester.pump(Rail.linger);
     await tester.pumpAndSettle();
     expect(_row('Session start'), findsNothing);
 
@@ -482,7 +482,7 @@ void main() {
   testWidgets('a click on a menu row over the rail picks it, and the '
       'menu stays closed until the pointer leaves the rail', (tester) async {
     final (d, _) = await _window(tester, pins: ['a1', 'a2', 'a3']);
-    final rail = tester.getRect(find.byType(PinsRail));
+    final rail = tester.getRect(find.byType(Rail));
     await _openMenu(tester);
     final row = tester.getRect(_row('Session start'));
     final at = Offset(rail.right - 3, row.center.dy);
@@ -507,7 +507,7 @@ void main() {
       'current entry, ↑↓ move, Enter picks, Esc closes', (tester) async {
     final (d, _) = await _window(tester, pins: ['a1', 'a2']);
     final inside = find.descendant(
-      of: find.byType(PinsRail),
+      of: find.byType(Rail),
       matching: find.byType(GestureDetector),
     );
     FocusManager.instance.highlightStrategy =
@@ -555,7 +555,7 @@ void main() {
       'in every built-in theme', () {
     for (final theme in builtInThemes) {
       for (final t in [theme.dark, theme.light]) {
-        final dim = pinTitleDim(t);
+        final dim = railTitleDim(t);
         final what = '${theme.id} ${t == theme.dark ? 'dark' : 'light'}';
         // Claude's are about 2.2 from the current one's; themes whose text
         // is dimmer on its fill (Solarized dark) get less, to stay legible.
@@ -595,10 +595,11 @@ void main() {
                 Positioned(
                   left: 0,
                   top: 6,
-                  child: PinsRail(
+                  child: Rail(
+                    label: 'Pinned messages',
                     entries: [
-                      PinEntry.start,
-                      for (var i = 1; i < 50; i++) PinEntry('p$i', 'Pin $i'),
+                      sessionStart,
+                      for (var i = 1; i < 50; i++) RailEntry('p$i', 'Pin $i'),
                     ],
                     current: current,
                     fit: RailFit.of(20),
@@ -611,7 +612,7 @@ void main() {
         ),
       ),
     );
-    final rail = tester.getRect(find.byType(PinsRail));
+    final rail = tester.getRect(find.byType(Rail));
     expect(_railDashes, findsNWidgets(railMost));
     expect(_current(tester, railMost), railMost ~/ 2, reason: 'around it');
     expect(rail.height, lessThan(130));
@@ -648,16 +649,17 @@ void main() {
             backgroundColor: theme.t.base,
             body: Align(
               alignment: Alignment.topLeft,
-              child: PinsRail(
+              child: Rail(
+                label: 'Pinned messages',
                 entries: const [
-                  PinEntry.start,
-                  PinEntry('a', 'Stripe UI styling'),
-                  PinEntry('b', 'Inline code formatting display'),
-                  PinEntry(
+                  sessionStart,
+                  RailEntry('a', 'Stripe UI styling'),
+                  RailEntry('b', 'Inline code formatting display'),
+                  RailEntry(
                     'c',
                     'Theme-card screenshots and the v0.3.0 release notes',
                   ),
-                  PinEntry('d', 'v0.3.1 deployment and parallel features'),
+                  RailEntry('d', 'v0.3.1 deployment and parallel features'),
                 ],
                 current: current,
                 fit: RailFit.wide,
