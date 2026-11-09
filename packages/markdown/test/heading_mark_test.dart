@@ -89,6 +89,16 @@ void main() {
     expect(mark.top, inInclusiveRange(title.top, title.top + 6));
   });
 
+  test('markdownHeadings says what the marks will', () {
+    expect(markdownHeadings(_doc), [
+      (1, 'The Still Kettle'),
+      (2, 'Plans'),
+      (3, 'Quoted code'),
+      (2, 'Setext'),
+    ]);
+    expect(markdownHeadings('No heading.\n\n    # indented code\n'), isEmpty);
+  });
+
   testWidgets('a copied heading has no mark in it', (tester) async {
     await _pump(tester, '# Kettle\n\nTea.\n');
     final title = tester.getCenter(

@@ -5,6 +5,35 @@ part of 'streaming_markdown.dart';
 /// finds the headings it lists.
 typedef HeadingMarkBuilder = Widget Function(int level, String text);
 
+/// [text]'s headings, in order, as [StreamingMarkdown] parses them for its
+/// [HeadingMarkBuilder] once [text] has finished streaming: each one's level
+/// and text, as its mark has them. An outline knows from them, before the
+/// text is laid out, what its marks will say.
+List<(int level, String text)> markdownHeadings(String text) {
+  final doc = md.Document(
+    blockSyntaxes: const [
+      _HtmlAsText(),
+      _MarkedHeader(),
+      _MarkedSetextHeader(),
+    ],
+    extensionSet: md.ExtensionSet.gitHubFlavored,
+    encodeHtml: false,
+  );
+  final found = <(int, String)>[];
+  void walk(List<md.Node>? nodes) {
+    for (final n in nodes ?? const <md.Node>[]) {
+      if (n is _HeadingMark) {
+        found.add((n.level, n.text));
+      } else if (n is md.Element) {
+        walk(n.children);
+      }
+    }
+  }
+
+  walk(doc.parseLines(const LineSplitter().convert(text)));
+  return found;
+}
+
 /// A heading's first child, standing for the mark: the heading itself, for
 /// its level and text once its inline content is parsed.
 class _HeadingMark extends md.Element {
@@ -13,6 +42,12 @@ class _HeadingMark extends md.Element {
   static const markTag = 'heading-mark';
 
   final md.Element heading;
+
+  /// The heading's level, 1 to 6.
+  int get level => int.tryParse(heading.tag.substring(1)) ?? 1;
+
+  /// The heading's text, once its inline content is parsed.
+  String get text => heading.textContent.trim();
 }
 
 /// [node] (a heading, or nothing) with a [_HeadingMark] first.
@@ -54,14 +89,12 @@ class _HeadingMarkBuilder extends MarkdownElementBuilder {
     TextStyle? parentStyle,
   ) {
     if (element is! _HeadingMark) return null;
-    final heading = element.heading;
-    final level = int.tryParse(heading.tag.substring(1)) ?? 1;
     return Text.rich(
       TextSpan(
         children: [
           WidgetSpan(
             alignment: PlaceholderAlignment.top,
-            child: build(level, heading.textContent.trim()),
+            child: build(element.level, element.text),
           ),
         ],
       ),

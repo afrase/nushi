@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:markdown_view/markdown_view.dart' show markdownHeadings;
 
 import 'package:nushi/markdown.dart';
 import 'package:nushi/motion.dart';
@@ -12,7 +13,9 @@ import 'package:nushi/rail.dart';
 // section's long and in the accent; its menu lists the headings by name and
 // a pick scrolls there. Each heading carries a mark where it starts
 // (`StreamingMarkdown.headingMark`), which tells the outline its level, its
-// name and where it stands.
+// name and where it stands. The text's parse gives the rail its entries
+// before the first layout, so the text stands where it stays from its first
+// frame.
 
 /// The widest the rendered text gets.
 const markdownWidth = 760.0;
@@ -101,15 +104,24 @@ class _OutlinedMarkdownState extends State<OutlinedMarkdown> {
   final ValueNotifier<int> _current = ValueNotifier(0);
   final GlobalKey _viewport = GlobalKey();
 
-  /// The marks in the text's order, and the rail's entries for them.
+  /// The marks in the text's order, and the rail's entries for them (the
+  /// text's parse's until the marks are laid out).
   List<_MarkState> _order = const [];
-  List<RailEntry> _entries = const [];
+  late List<RailEntry> _entries = _outline(markdownHeadings(widget.text));
   bool _due = false;
 
   /// The heading picked from the rail's menu, current while the view goes
   /// there (`at` null) and stays where the pick took it, though another
   /// heading is at the top (the last ones, at the text's end).
   ({int index, double? at})? _picked;
+
+  @override
+  void didUpdateWidget(OutlinedMarkdown old) {
+    super.didUpdateWidget(old);
+    if (old.text != widget.text) {
+      _entries = _outline(markdownHeadings(widget.text));
+    }
+  }
 
   @override
   void dispose() {
@@ -153,7 +165,9 @@ class _OutlinedMarkdownState extends State<OutlinedMarkdown> {
         if (_top(m) case final top?) (m, top),
     ]..sort((a, b) => a.$2.compareTo(b.$2));
     final order = [for (final (m, _) in placed) m];
-    final entries = _outline(order);
+    final entries = _outline([
+      for (final m in order) (m.widget.level, m.widget.title),
+    ]);
     final same =
         entries.length == _entries.length &&
         [for (var i = 0; i < entries.length; i++) i]
@@ -163,12 +177,13 @@ class _OutlinedMarkdownState extends State<OutlinedMarkdown> {
     _follow();
   }
 
-  /// The rail's entries for [order]'s headings: their depth from the
-  /// top-most level, or from the next one when a single top heading leads
-  /// (a title, as Claude's outline has it), at most [_deepest].
-  static List<RailEntry> _outline(List<_MarkState> order) {
-    if (order.isEmpty) return const [];
-    final levels = [for (final m in order) m.widget.level];
+  /// The rail's entries for [headings], each a level and a title: their
+  /// depth from the top-most level, or from the next one when a single top
+  /// heading leads (a title, as Claude's outline has it), at most
+  /// [_deepest].
+  static List<RailEntry> _outline(List<(int, String)> headings) {
+    if (headings.isEmpty) return const [];
+    final levels = [for (final (level, _) in headings) level];
     final top = levels.reduce(min);
     var base = top;
     final tops = levels.where((l) => l == top).length;
@@ -176,12 +191,8 @@ class _OutlinedMarkdownState extends State<OutlinedMarkdown> {
       base = levels.skip(1).reduce(min);
     }
     return [
-      for (final (i, m) in order.indexed)
-        RailEntry(
-          '$i',
-          m.widget.title,
-          depth: (m.widget.level - base).clamp(0, _deepest),
-        ),
+      for (final (i, (level, title)) in headings.indexed)
+        RailEntry('$i', title, depth: (level - base).clamp(0, _deepest)),
     ];
   }
 
@@ -250,7 +261,10 @@ class _OutlinedMarkdownState extends State<OutlinedMarkdown> {
           : pad.left + 40;
       // Laid out at a new width, the headings stand elsewhere.
       if (_order.isNotEmpty) _changed();
+      // Filling the pane, as the text's view did on its own: a click below a
+      // short text still selects.
       return Stack(
+        fit: StackFit.expand,
         children: [
           NotificationListener<ScrollNotification>(
             onNotification: (_) {
