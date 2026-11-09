@@ -86,6 +86,7 @@ func (b *bridge) start(ctx context.Context, h *host, op any, replay bool) (*sess
 			_ = json.Unmarshal(ev.Payload, &c)
 			s.mu.Lock()
 			s.turn, s.tools, s.steps = nil, map[string]string{}, map[string]int{} // the saved turns are over
+			s.fill = contextUse{c.Used, c.Limit}
 			s.mu.Unlock()
 			b.mu.Lock()
 			b.sessions[s.id] = s
