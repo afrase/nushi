@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/keys.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -20,6 +21,29 @@ bool? stagedValue(Iterable<FileChange> files) {
       : files.every((f) => f.staged.isEmpty)
       ? false
       : null;
+}
+
+/// The paths of [files] that are in the index, whole or in part.
+Set<String> stagedPaths(Iterable<FileChange> files) => {
+  for (final f in files)
+    if (f.staged.isNotEmpty) f.path,
+};
+
+/// A commit refused because the files staged aren't the ones shown at the
+/// click: a reload after it (a turn's, staging's) found others (ADR 0079).
+class StagedMoved implements Exception {
+  /// The files staged or taken out since the click, by path.
+  new(Set<String> paths) : paths = paths.toList()..sort();
+
+  final List<String> paths;
+
+  @override
+  String toString() {
+    final names = paths.take(3).map(plainName).join(', ');
+    final more = paths.length > 3 ? ' and ${paths.length - 3} more' : '';
+    return 'Staged files changed since you looked: $names$more. Look them '
+        'over and commit again.';
+  }
 }
 
 /// A staging checkbox over [files], in a row's height. A click stages what
@@ -84,7 +108,7 @@ class _CommitBoxState extends State<CommitBox> {
   bool _running = false;
   bool _writing = false;
 
-  int get _staged => widget.files.where((f) => f.staged.isNotEmpty).length;
+  int get _staged => stagedPaths(widget.files).length;
 
   bool get _ready =>
       !_running &&

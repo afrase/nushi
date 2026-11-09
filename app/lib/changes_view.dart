@@ -73,9 +73,14 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   bool _stale = false;
   Timer? _slow;
 
-  // Staging asked for and not yet done, in order.
+  // Staging asked for and not yet done, in order; the clicks that asked,
+  // and how many of them are in.
   Future<void> _staging = Future.value();
-  int _stages = 0;
+  int _clicks = 0;
+  int _clicksIn = 0;
+  // The index of what the view shows, for Commit; null while a click's
+  // staging shows but no reload since has read its index (ADR 0079).
+  String? _seenIndex;
   // The list's last answer to the find: its text, of which files, the files.
   (String, List<FileChange>, List<FileChange>) _shown = (
     '',
@@ -222,6 +227,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       return;
     }
     final asked = ++_asked;
+    final clicksIn = _clicksIn;
     setState(() {
       _reloading = true;
       _goneOf = null;
@@ -258,6 +264,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       if (!mounted || asked != _asked) return;
       setState(() {
         _span = span;
+        // Its index names what shows, unless a click's staging wasn't in
+        // when it began.
+        _seenIndex = clicksIn == _clicks ? span.index : null;
         _commits = commits;
         if (!_repick) {
           _first = first;
@@ -681,8 +690,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       for (final f in files.where(stageable)) {
         f.staged = on ? 'all' : '';
       }
+      _clicks++;
+      _seenIndex = null;
     });
-    _stages++;
     final client = daemon.client;
     _staging = _staging.then((_) async {
       if (mounted) {
@@ -692,7 +702,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
         // click still counts, with nowhere to say it failed.
         await client.stageFiles(ask).then<void>((_) {}, onError: (Object _) {});
       }
-      if (--_stages == 0 && mounted) await reload();
+      if (++_clicksIn == _clicks && mounted) await reload();
     });
   }
 
@@ -706,19 +716,26 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     return got.message;
   }
 
-  /// Commits what's staged, once any staging under way is in and read:
-  /// with the index the newest reload read (a turn's may overtake the
-  /// staging's), so the commit isn't refused as the index having moved.
+  /// Commits what was staged at the click, once any staging under way is in
+  /// and read (ADR 0079). A reload after the click that staged other files
+  /// (a turn's, or staging's own) refuses it here. Otherwise it sends the
+  /// index the view showed; with the user's staging since, which only a
+  /// later reload names, that reload's, as its files are the ones shown.
   Future<void> _commit(String message) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final seen = stagedPaths(_files);
+    final seenIndex = _seenIndex;
     await _staging;
     await _reloadsDone();
+    final now = stagedPaths(_files);
+    final moved = seen.union(now).difference(seen.intersection(now));
+    if (moved.isNotEmpty) throw StagedMoved(moved);
     try {
       final done = await daemon.client.commitStaged(
         CommitStagedRequest(
           folder: chat.folder,
           message: message,
-          index: _span?.index,
+          index: seenIndex ?? _span?.index,
         ),
       );
       messenger?.showSnackBar(

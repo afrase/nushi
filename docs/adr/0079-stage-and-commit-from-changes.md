@@ -25,3 +25,6 @@ Amends [0019](0019-changes-read-only-toward-git.md).
 - Blocking while the agent works: safe, but it holds a commit for a whole turn, and doesn't stop a terminal.
 - `--no-verify`: safer, but it silently skips what the repository requires.
 - Staging by hunk: wanted, later; diff_view has no per-hunk controls yet.
+
+## Amendment (2026-11-09): only the staged files shown commit
+A commit sent the newest reload's index, so a reload landing between the click and the commit (a turn's, or staging's own) could bring a file an agent staged, and it was committed unseen. Commit now takes the files shown staged at the click, the user's own Stage and Unstage included. Once staging and reloads under way are in, it refuses if other files are staged: "Staged files changed since you looked: X. Look them over and commit again." Otherwise it sends the index the view showed, or, after the user's own staging, which only a later reload names, that reload's. Changes reads nothing while hidden, so only what showed counts. Left uncaught: an agent staging a newer copy of a file already staged, in the moment between the user's own Stage and its reload.

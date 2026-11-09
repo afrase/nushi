@@ -175,7 +175,7 @@ When a chat's subagents work in worktrees of their own, a menu at the left of th
 - Under the files, write a message and press Commit (⌘⏎). It commits what's staged, as `git commit` does: hooks and signing run, and what a failing hook says shows there.
 - The ✨ button asks the chat's agent to write the message from what's staged and why the chat did it, for Claude and Codex while the chat is idle. Nothing commits until you press Commit, and the chat shows no trace of it.
 - A commit follows your git: your identity, signing (GPG or SSH), hooks and `commit.*` settings. If signing fails, nothing is committed.
-- If what's staged changed since it was shown, or files outside the chat's folder are staged, Commit refuses. While the agent is working it warns that files may change ([ADR 0079](adr/0079-stage-and-commit-from-changes.md)).
+- Commit takes the files shown staged when you press it. If others are staged by the time it runs (the agent's, say), what's staged changed since it was shown, or files outside the chat's folder are staged, it refuses: look them over and press it again. While the agent is working it warns that files may change ([ADR 0079](adr/0079-stage-and-commit-from-changes.md)).
 
 - Select lines to write a review comment for the agent.
 - **Send to agent** puts the comments into the chat's box as reply cards, to send with your next message, and takes you back to the chat.
