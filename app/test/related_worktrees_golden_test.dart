@@ -6,6 +6,7 @@ import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
+import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/subagents.dart';
 
@@ -199,6 +200,46 @@ void main() {
         chat.related.pick(_worktrees.first.path);
         await tester.pumpAndSettle();
         await shot(tester, 'related_changes_$w');
+        await closeView(tester, d);
+      }, variant: _mac);
+
+      testWidgets('comments in a worktree, $w wide, $theme', (tester) async {
+        final d = await _app(tester, size(), brightness);
+        final chat = d.chats['c']!;
+        final path = _worktrees.first.path;
+        ReviewComment at(String id, String where, String text) => ReviewComment(
+          id: id,
+          where: where,
+          path: 'internal/parser/parse.go',
+          old: false,
+          start: 4,
+          end: 4,
+          quote: 'func Parse(line string) error {',
+          text: text,
+        );
+        addTearDown(() => setComments('c', []));
+        setComments('c', [
+          at('1', 'branch', 'Keep Parse taking no arguments here.'),
+          at(
+            '2',
+            whereIn('branch', worktree: path),
+            'Return the line number with the error.',
+          ),
+        ]);
+        chat.tab.value = ChatTab.changes;
+        await tester.pumpAndSettle();
+        chat.related.pick(path);
+        await tester.pumpAndSettle();
+        // A narrow bar's is short, beside the worktrees' menu.
+        expect(
+          find.text(width == 720 ? 'Send (2)' : 'Send to agent (2)'),
+          findsOne,
+        );
+        expect(find.text('Return the line number with the error.'), findsOne);
+        // The chat's own, above the list: not on the worktree's file.
+        expect(find.text('1 comment not on these files'), findsOne);
+        expectTextInside(tester, width);
+        await shot(tester, 'related_comments_$w');
         await closeView(tester, d);
       }, variant: _mac);
 

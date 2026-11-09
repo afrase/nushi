@@ -216,17 +216,19 @@ class _DiffBoxState extends State<DiffBox> {
   @override
   void didUpdateWidget(DiffBox old) {
     super.didUpdateWidget(old);
-    if (!_sameDiff(old.change, widget.change)) {
-      _build();
-    } else if (old.notes != widget.notes) {
-      _showComments();
-    } else if (old.review != widget.review) {
-      // Another view of the same file (another commit picked): its own
-      // comments; the box half written for the last one waits for it.
+    // Another view of the same path (another commit picked, a related
+    // worktree's file): its own comments, whether or not its text is the
+    // same; the box half written for the last one waits for it.
+    final otherView = old.review != widget.review;
+    if (otherView) {
       _keepDraft(old.review);
       _draft = _editing = null;
       _comment.clear();
       _takeDraft();
+    }
+    if (!_sameDiff(old.change, widget.change)) {
+      _build();
+    } else if (otherView || old.notes != widget.notes) {
       _showComments();
     }
   }
