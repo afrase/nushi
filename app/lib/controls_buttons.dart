@@ -248,7 +248,8 @@ class SplitButton extends StatelessWidget {
 
 /// Send to agent's button, wherever something goes into the chat's box
 /// as a reply card (Send, Fix checks, Address): its arrow and [label] in
-/// the accent's ink on its tint; [primary], the accent's fill (Send all).
+/// the accent's ink on its tint, edged in that ink; [primary], the
+/// accent's fill (Send all).
 class SendButton extends StatelessWidget {
   const new({
     required this.label,
@@ -276,7 +277,10 @@ class SendButton extends StatelessWidget {
         look,
         Container(
           height: controlHeight,
-          padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
+          // The edge takes a pixel of the padding on each side.
+          padding: primary
+              ? const EdgeInsets.fromLTRB(7, 0, 9, 0)
+              : const EdgeInsets.fromLTRB(6, 0, 8, 0),
           decoration: BoxDecoration(
             color: look.hover
                 ? Color.alphaBlend(
@@ -284,6 +288,13 @@ class SendButton extends StatelessWidget {
                     fill,
                   )
                 : fill,
+            // An edge in the accent's ink, as a button has one: the tint
+            // alone read as a disabled one (the owner, 2026-11-09).
+            border: primary
+                ? null
+                : Border.all(
+                    color: fg.withValues(alpha: look.hover ? 0.85 : 0.55),
+                  ),
             borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
           foregroundDecoration: focusRing(t, look),
