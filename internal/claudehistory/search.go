@@ -10,9 +10,11 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/afrase/claude-acp-go/claudeagent/sessions"
 
+	"github.com/afrase/nushi/internal/claude"
 	"github.com/afrase/nushi/internal/model"
 	"github.com/afrase/nushi/internal/textfind"
 )
@@ -24,9 +26,11 @@ import (
 // Claude's text blocks, never tool calls or their results, thinking, meta
 // records, compaction summaries or what claude wrote in the user's place
 // (ADR 0035). Forks and what Claude's list leaves out are passed over, by
-// the list's own rules: forkedFrom in the first records, and
-// sessions.Store's reading of the transcript's start and end (a
-// subagent's, or one with nothing to name it by).
+// the list's own rules: forkedFrom in the first records, sessions.Store's
+// reading of the transcript's start and end (a subagent's, or one with
+// nothing to name it by), and claudeacp's (no folder); a session in two
+// history folders is found once, by the transcript sessions.Store.Get
+// reads, and its title is cut as the list cuts it.
 func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]model.SessionHit, bool, error) {
 	q := textfind.New(s.Query)
 	if q.Empty() {
@@ -51,10 +55,10 @@ func (l Local) SearchSessions(ctx context.Context, s model.SessionSearch) ([]mod
 			return model.SessionHit{}, false
 		}
 		info, err := store.Get(f.id, "")
-		if err != nil || s.InFolder != nil && !s.InFolder(info.Cwd) {
+		if err != nil || info.Cwd == "" || s.InFolder != nil && !s.InFolder(info.Cwd) {
 			return model.SessionHit{}, false
 		}
-		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: strings.Join(strings.Fields(info.Summary), " "),
+		return model.SessionHit{SessionID: f.id, Folder: info.Cwd, Title: listTitle(info.Summary),
 			Updated: f.modified, Count: n, Before: ex.Before, Match: ex.Match, After: ex.After}, true
 	})
 }
@@ -65,10 +69,30 @@ type transcript struct {
 	modified time.Time
 }
 
+// maxTitle is the most characters of a found session's title, as
+// claudeacp lists one.
+const maxTitle = 256
+
+// listTitle is a session's summary on one line, cut to maxTitle
+// characters, as claudeacp's list has it (its listTitle, which it doesn't
+// export): the title a chat opened from the search takes.
+func listTitle(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if utf8.RuneCountInString(s) <= maxTitle {
+		return s
+	}
+	return string([]rune(s)[:maxTitle-1]) + "…"
+}
+
 // transcripts lists the transcripts in dirs, the newest first, but those
-// skip names.
+// skip names. Of a session in more than one, the first in dirs' order,
+// which is the one sessions.Store.Get finds and so where its folder and
+// title come from, and what opening it resumes: its excerpt is that
+// transcript's. (Claude's list keeps the newest; the two differ only for a
+// session copied between history folders.)
 func transcripts(dirs []string, skip func(string) bool) []transcript {
 	var out []transcript
+	seen := map[string]bool{}
 	for _, dir := range dirs {
 		entries, _ := os.ReadDir(dir)
 		for _, e := range entries {
@@ -76,7 +100,12 @@ func transcripts(dirs []string, skip func(string) bool) []transcript {
 			if !ok || !e.Type().IsRegular() || skip != nil && skip(id) {
 				continue
 			}
-			if fi, err := e.Info(); err == nil && fi.Size() > 0 {
+			fi, err := e.Info()
+			if err != nil || fi.Size() == 0 {
+				continue
+			}
+			if !seen[id] {
+				seen[id] = true
 				out = append(out, transcript{id: id, path: filepath.Join(dir, e.Name()), modified: fi.ModTime()})
 			}
 		}
@@ -173,7 +202,12 @@ func said(typ string, content json.RawMessage) []string {
 	return out
 }
 
+// cleaned is a user's text as userText has it, nothing for what isn't the
+// user's (claude's mark where a turn was stopped among it).
 func cleaned(text string) []string {
+	if claude.InterruptMark(text) {
+		return nil
+	}
 	if t, ok := userText(text); ok {
 		return []string{t}
 	}
@@ -182,13 +216,15 @@ func cleaned(text string) []string {
 
 // What claude writes into a user message besides what the user typed, as
 // claude-acp-go's claudeacp cleans a replayed one (its userText, which it
-// doesn't export): context it adds, removed whole, and a slash command as
-// tags, which reads as the command typed.
+// doesn't export): context it adds and a `!` command's output, removed
+// whole, and a slash command or a `!` command as tags, which read as the
+// command typed (docs/facts/claude.md).
 var (
-	injected = regexp.MustCompile(`(?s)<(system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message)>.*?</(?:system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message)>`)
+	injected = regexp.MustCompile(`(?s)<(system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message|bash-stdout|bash-stderr|bash-exit-code)>.*?</(?:system-reminder|task-notification|local-command-stdout|local-command-stderr|local-command-caveat|command-message|bash-stdout|bash-stderr|bash-exit-code)>`)
 
 	commandName = regexp.MustCompile(`(?s)<command-name>(.*?)</command-name>`)
 	commandArgs = regexp.MustCompile(`(?s)<command-args>(.*?)</command-args>`)
+	bashInput   = regexp.MustCompile(`(?s)<bash-input>(.*?)</bash-input>`)
 )
 
 // userText is a user message's text as the user wrote it; false when
@@ -203,6 +239,7 @@ func userText(text string) (string, bool) {
 	}
 	if strings.Contains(text, "<") {
 		text = injected.ReplaceAllString(text, "")
+		text = bashInput.ReplaceAllString(text, "!$1")
 	}
 	text = strings.TrimSpace(text)
 	return text, text != ""

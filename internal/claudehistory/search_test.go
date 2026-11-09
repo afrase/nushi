@@ -17,8 +17,9 @@ import (
 // The fixture's sessions (testdata/search): A, in /work/app, says the
 // text in its prompts and Claude's replies, and "quokka" only where
 // nothing the user or Claude said is (thinking, a tool call and its
-// results, a meta reminder, a command's output, a task's end, the
-// compaction's summary, a summary record); B is a fork of it, C a
+// results, a meta reminder, a command's output, a `!` command's output, a
+// task's end, the compaction's summary, a summary record), and has
+// claude's marks where the user stopped a turn; B is a fork of it, C a
 // sidechain's transcript, E a chat's; D is another folder's, in
 // Japanese. A subagent's transcript is in A's own folder.
 const (
@@ -90,9 +91,47 @@ func TestSearchSessions(t *testing.T) {
 	if hits := search(t, l, model.SessionSearch{Query: "wombat"}); ids(hits) != "a" || hits[0].Count != 2 {
 		t.Errorf("wombat: %+v", hits)
 	}
-	// A command reads as typed.
-	if got := ids(search(t, l, model.SessionSearch{Query: "/compact"})); got != "a" {
-		t.Errorf("/compact: %s", got)
+	// A command reads as typed, a `!` one too.
+	for _, q := range []string{"/compact", "!ls burrow"} {
+		if got := ids(search(t, l, model.SessionSearch{Query: q})); got != "a" {
+			t.Errorf("%s: %s", q, got)
+		}
+	}
+	// What claude writes where the user stopped a turn, and a `!`
+	// command's tags, aren't the user's words.
+	for _, q := range []string{"interrupted", "request", "bash"} {
+		if hits := search(t, l, model.SessionSearch{Query: q}); len(hits) != 0 {
+			t.Errorf("%s: %v, want nothing", q, ids(hits))
+		}
+	}
+}
+
+// A session in two history folders is found once, by the transcript
+// sessions.Store.Get reads (its folder and title are that one's), whatever
+// the other says; one with no folder isn't found (Claude's list leaves it
+// out); a long title is cut as the list cuts it.
+func TestSearchSessionsAsListed(t *testing.T) {
+	projects := filepath.Join(t.TempDir(), "projects")
+	prompt := func(cwd, text string) string {
+		return `{"type":"user","cwd":"` + cwd + `","sessionId":"x","message":{"role":"user","content":"` + text + `"}}` + "\n"
+	}
+	write := func(folder, id, data string, at time.Time) {
+		path := filepath.Join(projects, folder, id+".jsonl")
+		testcheck.Write(t, path, data)
+		testcheck.NoErr(t, os.Chtimes(path, at, at))
+	}
+	now := time.Now()
+	long := strings.Repeat("word ", 100)
+	write("-work-app", sessA, prompt("/work/app", "The old numbat")+
+		`{"type":"custom-title","customTitle":"`+long+`","sessionId":"`+sessA+`"}`+"\n", now.Add(-time.Hour))
+	write("-work-moved", sessA, prompt("/work/moved", "The new numbat"), now)
+	write("-work-none", sessD, `{"type":"user","sessionId":"x","message":{"role":"user","content":"No numbat folder"}}`+"\n", now)
+	hits := search(t, Local{Projects: projects}, model.SessionSearch{Query: "numbat"})
+	if len(hits) != 1 || hits[0].SessionID != sessA || hits[0].Before != "The old " || hits[0].Folder != "/work/app" {
+		t.Fatalf("found %+v", hits)
+	}
+	if r := []rune(hits[0].Title); len(r) != 256 || r[255] != '…' {
+		t.Errorf("title %d characters: %q", len(r), hits[0].Title)
 	}
 }
 

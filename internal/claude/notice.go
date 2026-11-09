@@ -8,8 +8,13 @@ import (
 
 // Interrupted says a replayed user message's text is the mark Claude
 // Code writes into its history where the user stopped a turn, not the
-// user's words.
-func (Harness) Interrupted(text string) bool {
+// user's words (InterruptMark).
+func (Harness) Interrupted(text string) bool { return InterruptMark(text) }
+
+// InterruptMark says a user message's text is the mark Claude Code writes
+// into its history where the user stopped a turn (docs/facts/claude.md),
+// not the user's words.
+func InterruptMark(text string) bool {
 	switch strings.TrimSpace(text) {
 	case "[Request interrupted by user]", "[Request interrupted by user for tool use]":
 		return true
