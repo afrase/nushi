@@ -250,17 +250,18 @@ void main() {
 
   test('a page stays in its web view only for itself', () {
     const p = '/Users/me/site/index.html';
-    expect(staysInPage('file://$p', p, mainFrame: true), isTrue);
-    expect(staysInPage('file://$p#menu', p, mainFrame: true), isTrue);
-    expect(staysInPage('about:blank', p, mainFrame: true), isTrue);
-    expect(staysInPage('https://example.com/', p, mainFrame: false), isTrue);
+    final page = PageFile(p);
+    expect(staysInPage('file://$p', page, mainFrame: true), isTrue);
+    expect(staysInPage('file://$p#menu', page, mainFrame: true), isTrue);
+    expect(staysInPage('about:blank', page, mainFrame: true), isTrue);
+    expect(staysInPage('https://example.com/', page, mainFrame: false), isTrue);
     for (final out in [
       'https://example.com/',
       'file:///Users/me/site/other.html',
       'file://host$p',
       'mailto:a@b.c',
     ]) {
-      expect(staysInPage(out, p, mainFrame: true), isFalse, reason: out);
+      expect(staysInPage(out, page, mainFrame: true), isFalse, reason: out);
     }
     expect(
       pageRoot('/Users/me/nushi/site/index.html', ['/Users/me/nushi']),

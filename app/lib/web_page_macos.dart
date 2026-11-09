@@ -61,7 +61,7 @@ class WebKitPage implements PageHost {
     const PlatformWebViewControllerCreationParams(),
   );
   late final CookielessLoads _loads;
-  String _path = '';
+  final _page = PageFile();
   String _root = '';
   bool _loaded = false;
   num? _scrollTo;
@@ -73,18 +73,19 @@ class WebKitPage implements PageHost {
 
   @override
   Future<void> load(String path, String root) async {
-    _path = path;
+    _page.path = path;
     _root = root;
-    await _loads.load(
-      () => _c.loadFileWithParams(
+    await _loads.load(() {
+      _page.loading(path);
+      return _c.loadFileWithParams(
         WebKitLoadFileParams(absoluteFilePath: path, readAccessPath: root),
-      ),
-    );
+      );
+    });
   }
 
   @override
   Future<void> reload() async {
-    if (_path.isEmpty) return;
+    if (_page.path.isEmpty) return;
     try {
       final y = await _c.runJavaScriptReturningResult('window.scrollY');
       if (y is num && y > 0) _scrollTo = y;
@@ -93,7 +94,7 @@ class WebKitPage implements PageHost {
     }
     // WebKit's reload checks the page's files again (its CSS too); a page
     // that never loaded (missing then) loads afresh.
-    await (_loaded ? _c.reload() : load(_path, _root));
+    await (_loaded ? _c.reload() : load(_page.path, _root));
   }
 
   void _finished(String url) {
@@ -105,7 +106,7 @@ class WebKitPage implements PageHost {
   }
 
   Future<NavigationDecision> _decide(NavigationRequest r) async {
-    switch (await pageNavigation(r.url, _path, mainFrame: r.isMainFrame)) {
+    switch (await pageNavigation(r.url, _page, mainFrame: r.isMainFrame)) {
       case PageNavigation.stay:
         return NavigationDecision.navigate;
       case PageNavigation.open:
