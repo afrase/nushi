@@ -11,6 +11,14 @@ import 'harness.dart';
 void main() {
   setUpAll(loadFonts);
 
+  test("the phone finds a Mac's home folder and a Linux daemon's", () {
+    expect(remoteHome('/Users/me/kettle/a.md'), '/Users/me');
+    expect(remoteHome('/home/me/kettle/a.md'), '/home/me');
+    expect(remoteHome('/home/me'), '/home/me');
+    expect(remoteHome('/srv/kettle/a.md'), '');
+    expect(remoteHome('/homework/a.md'), '');
+  });
+
   // Stacked (the details panel's Folder): the parent's right edge lines up
   // with the name's, the chevron beside both; a long name is cut.
   for (final (folder, width) in [

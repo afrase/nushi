@@ -13,14 +13,17 @@ import 'package:nushi/widgets.dart';
 
 /// [path] with the home folder as "~".
 String tildePath(String path) {
-  // The phone doesn't know the Mac's home folder: /Users/<name> it is.
-  final home = kIsWeb
-      ? RegExp('^/Users/[^/]+').stringMatch(path) ?? ''
-      : Platform.environment['HOME'] ?? '';
+  final home = kIsWeb ? remoteHome(path) : Platform.environment['HOME'] ?? '';
   return home.isNotEmpty && (path == home || path.startsWith('$home/'))
       ? '~${path.substring(home.length)}'
       : path;
 }
+
+/// The home folder [path] is in, as the phone guesses it, which doesn't
+/// know the daemon's: `/Users/<name>` on a Mac, `/home/<name>` on Linux;
+/// '' for a path in neither.
+String remoteHome(String path) =>
+    RegExp('^/(?:Users|home)/[^/]+').stringMatch(path) ?? '';
 
 /// A folder's name and its parent's path ("~" for the home folder, "/" for
 /// the root), or "No folder" and '' for a [scratch] folder. A name with no
