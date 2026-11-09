@@ -9873,9 +9873,10 @@ type GetDiffRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// An absolute path; it may be anywhere inside a repository.
 	Folder string `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	// A branch: count the changes from where HEAD's branch left it (git
-	// merge-base HEAD base), the branch's commits and uncommitted changes
-	// together, instead of from HEAD.
+	// A branch: count the changes from where HEAD's branch left it, or its
+	// upstream (or the local branch it's the upstream of) if that's later
+	// (git merge-base HEAD base other), the branch's commits and uncommitted
+	// changes together, instead of from HEAD.
 	Base string `protobuf:"bytes,2,opt,name=base,proto3" json:"base,omitempty"`
 	// A commit: what it changed, from its first parent, instead.
 	Commit string `protobuf:"bytes,3,opt,name=commit,proto3" json:"commit,omitempty"`

@@ -145,7 +145,8 @@ func (Worktrees) MergeBase(ctx context.Context, folder, a, b string) (string, er
 }
 
 // Merged returns those of tips (object ids) git shows on HEAD or base (""
-// for the repository's default branch), at two runs of git however many
+// for the repository's default branch) or its other copy (bases), at a
+// few runs of git however many
 // there are. A tip git no longer has isn't among them: reachable from
 // nothing is not the same as on the branch.
 func (Worktrees) Merged(ctx context.Context, folder, base string, tips []string) ([]string, error) {
@@ -165,7 +166,7 @@ func (Worktrees) Merged(ctx context.Context, folder, base string, tips []string)
 	}
 	into := []string{"HEAD"}
 	if b := cmp.Or(base, DefaultBase(ctx, folder)); b != "" && !strings.HasPrefix(b, "-") {
-		into = append(into, b)
+		into = append(into, bases(ctx, folder, b)...)
 	}
 	args := append(append([]string{"rev-list", "--ignore-missing"}, there...), "--not")
 	if out, err = run(ctx, folder, append(append(args, into...), "--")...); err != nil {

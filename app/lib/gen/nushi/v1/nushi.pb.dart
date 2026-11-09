@@ -12592,9 +12592,10 @@ class GetDiffRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearFolder() => $_clearField(1);
 
-  /// A branch: count the changes from where HEAD's branch left it (git
-  /// merge-base HEAD base), the branch's commits and uncommitted changes
-  /// together, instead of from HEAD.
+  /// A branch: count the changes from where HEAD's branch left it, or its
+  /// upstream (or the local branch it's the upstream of) if that's later
+  /// (git merge-base HEAD base other), the branch's commits and uncommitted
+  /// changes together, instead of from HEAD.
   @$pb.TagNumber(2)
   $core.String get base => $_getSZ(1);
   @$pb.TagNumber(2)

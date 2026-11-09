@@ -30,6 +30,36 @@ func DefaultBase(ctx context.Context, folder string) string {
 	return ""
 }
 
+// bases is base with its other copy, if it's a branch with one: a local
+// branch's upstream, or the local branch a remote one is the upstream of.
+// Either can be ahead (a fetch, a pull in another folder), and a branch
+// rebased onto the newer one left it there, not where it left the older:
+// counting from the older one takes in every commit between the two.
+// It is one run of git on the status's path: a commit or a tag matches no
+// line.
+func bases(ctx context.Context, folder, base string) []string {
+	out, err := run(ctx, folder, "for-each-ref", "--format=%(refname)%00%(upstream)%00%(upstream:track)", "refs/heads")
+	if err != nil {
+		return []string{base}
+	}
+	names := func(ref string) bool {
+		return base == ref || "refs/heads/"+base == ref || "refs/remotes/"+base == ref
+	}
+	for line := range strings.SplitSeq(string(out), "\n") {
+		f := strings.Split(line, "\x00")
+		if len(f) != 3 || f[1] == "" || f[2] == "[gone]" {
+			continue
+		}
+		switch {
+		case names(f[0]):
+			return []string{base, f[1]}
+		case names(f[1]):
+			return []string{base, f[0]}
+		}
+	}
+	return []string{base}
+}
+
 // Ahead counts the commits head ("" for HEAD) has that base doesn't.
 func Ahead(ctx context.Context, folder, base, head string) (int, error) {
 	if strings.HasPrefix(base, "-") {
@@ -38,7 +68,8 @@ func Ahead(ctx context.Context, folder, base, head string) (int, error) {
 	if strings.HasPrefix(head, "-") {
 		return 0, fmt.Errorf("%q is not a commit", head)
 	}
-	out, err := run(ctx, folder, "rev-list", "--count", base+".."+cmp.Or(head, "HEAD"))
+	args := append([]string{"rev-list", "--count", cmp.Or(head, "HEAD"), "--not"}, bases(ctx, folder, base)...)
+	out, err := run(ctx, folder, append(args, "--")...)
 	if err != nil {
 		return 0, err
 	}
@@ -55,15 +86,16 @@ func Commits(ctx context.Context, folder, base, head string, limit int) ([]Commi
 	if strings.HasPrefix(head, "-") {
 		return nil, fmt.Errorf("%q is not a commit", head)
 	}
-	rev := cmp.Or(head, "HEAD")
+	revs := []string{cmp.Or(head, "HEAD")}
 	if base != "" {
-		rev = base + ".." + rev
+		revs = append(append(revs, "--not"), bases(ctx, folder, base)...)
 	}
 	// With -z, a NUL ends each commit's line and each of its numstat lines
 	// (added, removed, path). A commit's line is \x1e and its fields split
 	// by \x1f, the subject last: a subject can hold those, never a NUL.
-	out, err := run(ctx, folder, "log", "-z", "-n", strconv.Itoa(limit), "--no-renames", "--numstat", "--relative", "--no-ext-diff", "--no-textconv",
-		"--format=%x1e%H%x1f%h%x1f%ct%x1f%s", rev, "--")
+	args := []string{"log", "-z", "-n", strconv.Itoa(limit), "--no-renames", "--numstat", "--relative", "--no-ext-diff", "--no-textconv",
+		"--format=%x1e%H%x1f%h%x1f%ct%x1f%s"}
+	out, err := run(ctx, folder, append(append(args, revs...), "--")...)
 	if err != nil {
 		return nil, err
 	}

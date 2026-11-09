@@ -1768,9 +1768,10 @@ message GitWorktree {
 message GetDiffRequest {
   // An absolute path; it may be anywhere inside a repository.
   string folder = 1;
-  // A branch: count the changes from where HEAD's branch left it (git
-  // merge-base HEAD base), the branch's commits and uncommitted changes
-  // together, instead of from HEAD.
+  // A branch: count the changes from where HEAD's branch left it, or its
+  // upstream (or the local branch it's the upstream of) if that's later
+  // (git merge-base HEAD base other), the branch's commits and uncommitted
+  // changes together, instead of from HEAD.
   string base = 2;
   // A commit: what it changed, from its first parent, instead.
   string commit = 3;

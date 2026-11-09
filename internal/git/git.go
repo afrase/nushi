@@ -203,7 +203,8 @@ func repo(ctx context.Context, folder string) (hasHead bool, err error) {
 }
 
 // start returns the commit changes are counted from: HEAD, or with base
-// the merge base of HEAD and base; "" before the first commit.
+// where HEAD left base or its other copy (bases), the later of the two;
+// "" before the first commit.
 func start(ctx context.Context, folder, base string) (string, error) {
 	hasHead, err := repo(ctx, folder)
 	switch {
@@ -214,7 +215,9 @@ func start(ctx context.Context, folder, base string) (string, error) {
 	case strings.HasPrefix(base, "-"):
 		return "", fmt.Errorf("%q is not a branch", base)
 	}
-	out, err := run(ctx, folder, "merge-base", "HEAD", base)
+	// With more than two commits, git takes the best common ancestor of
+	// HEAD and a merge of the rest.
+	out, err := run(ctx, folder, append([]string{"merge-base", "HEAD"}, bases(ctx, folder, base)...)...)
 	return strings.TrimSpace(string(out)), err
 }
 

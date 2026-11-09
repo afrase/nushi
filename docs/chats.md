@@ -167,7 +167,7 @@ A chat whose agent can rewind goes back to just before one of your messages. Rew
 
 ## Changes and review comments
 
-**Changes**, beside Chat, is the chat's diff viewer: its folder's uncommitted changes, or its branch's for a worktree chat (Uncommitted, Branch and Commits pick which). In Uncommitted you can stage and commit; Branch and Commits only read, and Nushi doesn't push.
+**Changes**, beside Chat, is the chat's diff viewer: its folder's uncommitted changes, or its branch's for a worktree chat (Uncommitted, Branch and Commits pick which). In Uncommitted you can stage and commit; Branch and Commits only read, and Nushi doesn't push. Branch counts from where the branch left its base or the base's upstream, whichever is later, so a branch rebased onto a newer `origin/main` than the local `main` shows only its own work.
 
 When a chat's subagents work in worktrees of their own, a menu at the left of the bar picks the chat's folder or one of those **related worktrees**. One of them only reads: no staging, commit box or comments ([ADR 0081](adr/0081-related-worktrees.md)). Its diff is read when you pick it, click a scope or press Reload, because that runs the repository's filters: after a turn ends the view says **Changed** and waits for you. Once a worktree is removed its commits can still be read, while git keeps them. Nushi doesn't keep them for you: when git has collected them, the view says they're gone.
 
