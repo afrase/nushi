@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:nushi/app_actions.dart' show findKey;
 import 'package:nushi/conventions.dart';
+import 'package:nushi/editor_find.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/menu.dart' show Menu;
@@ -22,6 +24,7 @@ import 'package:re_editor/re_editor.dart';
 /// a terminal, another editor or pane), and when it goes (another tab or
 /// chat); not for a menu, the palette, a dialog, find, or a selection in
 /// the transcript or a preview, which wait for where the focus goes next.
+/// ⌘F with the focus in it finds in the file ([EditorFind]), not the chat.
 class SourceEditor extends StatefulWidget {
   const new({
     required this.edit,
@@ -52,6 +55,7 @@ class _SourceEditorState extends State<SourceEditor> {
   /// The lines as re_editor laid them out, and its line numbers' place:
   /// where Show whitespace marks them.
   late final _lines = EditorLines(_across);
+  late final _find = EditorFind(widget.edit.controller);
   final GlobalKey _gutter = GlobalKey();
   ModalRoute<Object?>? _route;
   bool _following = false;
@@ -71,6 +75,7 @@ class _SourceEditorState extends State<SourceEditor> {
   @override
   void dispose() {
     _unfollow();
+    _find.dispose();
     _focus.dispose();
     _lines.dispose();
     _scroll.dispose();
@@ -140,9 +145,10 @@ class _SourceEditorState extends State<SourceEditor> {
     final code = theme.code(t.text, size: 12);
     final gutter = theme.code(t.textMuted, size: 12);
     final editor = ListenableBuilder(
-      listenable: widget.edit,
+      listenable: Listenable.merge([widget.edit, _find.roomAbove]),
       builder: (context, _) => CodeEditor(
         controller: widget.edit.controller,
+        findController: _find.marking,
         focusNode: _focus,
         scrollController: _scroll,
         readOnly: widget.edit.readOnly != null,
@@ -153,7 +159,8 @@ class _SourceEditorState extends State<SourceEditor> {
         shortcutOverrideActions: widget.edit.tabs ? _tabActions : null,
         padding: EdgeInsets.only(
           left: 14,
-          top: widget.padding.top,
+          top:
+              widget.padding.top + (_find.roomAbove.value ? FindBar.height : 0),
           right: widget.padding.right,
           bottom: widget.padding.bottom,
         ),
@@ -167,6 +174,9 @@ class _SourceEditorState extends State<SourceEditor> {
           cursorColor: t.text,
           cursorWidth: 1.5,
           cursorLineColor: t.base,
+          // A find's matches; the current one is the selection, as the
+          // transcript's (TextMarks) are.
+          highlightColor: t.needs.withValues(alpha: 0.3),
         ),
         indicatorBuilder: (context, controller, chunks, notifier) {
           _lines.follow(notifier);
@@ -184,23 +194,38 @@ class _SourceEditorState extends State<SourceEditor> {
         },
       ),
     );
-    return ValueListenableBuilder(
-      valueListenable: showWhitespace,
-      builder: (context, show, editor) => Stack(
-        fit: StackFit.expand,
-        children: [
-          editor!,
-          if (show)
-            WhitespaceOverlay(
-              lines: _lines,
-              controller: widget.edit.controller,
-              gutter: _gutter,
-              // re_editor draws with no text scaling.
-              column: columnWidth(code, TextScaler.noScaling),
+    // ⌘F here finds in the file, as a terminal keeps it (`terminalPasses`);
+    // elsewhere it's the chat's or Changes'.
+    return CallbackShortcuts(
+      bindings: {findKey: _find.open},
+      child: ValueListenableBuilder(
+        valueListenable: showWhitespace,
+        builder: (context, show, editor) => Stack(
+          fit: StackFit.expand,
+          children: [
+            editor!,
+            if (show)
+              WhitespaceOverlay(
+                lines: _lines,
+                controller: widget.edit.controller,
+                gutter: _gutter,
+                // re_editor draws with no text scaling.
+                column: columnWidth(code, TextScaler.noScaling),
+              ),
+            Positioned(
+              top: 8,
+              right: NushiTheme.gutter,
+              child: EditorFindBar(
+                find: _find,
+                lines: _lines,
+                gutter: _gutter,
+                down: _down,
+              ),
             ),
-        ],
+          ],
+        ),
+        child: editor,
       ),
-      child: editor,
     );
   }
 }
@@ -224,10 +249,10 @@ bool passing(FocusNode? focus, ModalRoute<Object?>? route) {
 }
 
 /// re_editor's keys (the Mac's, or Control's on Linux), less those the app
-/// keeps (⌘S saves, ⌘F finds, ⌘D pins the chat, ⌘L is the browser's
-/// address) or that aren't the Mac's (⌘L selecting a line, ⌘/ commenting),
-/// with Emacs's ⌃A and ⌃E as every Mac text field has them; on Linux
-/// Ctrl+A selects all.
+/// keeps (⌘S saves, ⌘D pins the chat, ⌘L is the browser's address), its
+/// find's (⌘F opens Nushi's bar, [EditorFind]) or those that aren't the
+/// Mac's (⌘L selecting a line, ⌘/ commenting), with Emacs's ⌃A and ⌃E as
+/// every Mac text field has them; on Linux Ctrl+A selects all.
 class _EditorKeys extends CodeShortcutsActivatorsBuilder {
   const new();
 

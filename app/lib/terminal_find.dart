@@ -95,9 +95,9 @@ class TerminalFind extends TranscriptFind {
     super.query = q;
     final terminal = session.terminal;
     _matches = q == null || q.isEmpty ? const [] : terminal.search(q);
-    foundFromLast([
+    foundAt([
       for (final m in _matches) '${m.range.begin.y}:${m.range.begin.x}',
-    ]);
+    ], _matches.length - 1);
     session.controller.setSearchHighlights(terminal.buffer, [
       for (final m in _matches) m.range,
     ], currentIndex: at);
