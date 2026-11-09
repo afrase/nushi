@@ -166,7 +166,7 @@ func (s *session) change(ctx context.Context, name, arg string) (string, error) 
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	ev, err := s.await(ctx, map[string]any{"UpdateSession": map[string]any{"model": model}}, "SessionUpdated")
+	ev, err := s.updateModel(ctx, model)
 	if err != nil {
 		return "", err
 	}

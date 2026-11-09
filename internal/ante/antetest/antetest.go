@@ -25,6 +25,9 @@
 // and any other name as the input "/name args". Compact compacts, its
 // summary "the summary", in an info block as Ante's.
 //
+// A session's context limit is 1000 tokens, 1,048,576 on the model
+// "big": ContextReport and each turn's UsageUpdate say so.
+//
 // An input that waits ("wait") says so on the Store's Waiting once it
 // does, so a test stops or steers it when it runs, not after a sleep that
 // may lose the race.
@@ -112,6 +115,14 @@ func variant(raw json.RawMessage) (string, json.RawMessage) {
 		return k, v
 	}
 	return "", nil
+}
+
+// limit is the session's context limit, by its model.
+func (h *Host) limit() int64 {
+	if h.s.model == "big" {
+		return 1 << 20
+	}
+	return 1000
 }
 
 // emit writes an event; logged ones are saved for a resume to replay.
@@ -281,7 +292,7 @@ func (h *Host) op(id string, raw json.RawMessage) (done bool) { //nolint:gocogni
 		h.emit(id, map[string]any{"SessionUpdated": h.info()}, false)
 	case "ContextReport":
 		h.emit(id, map[string]any{"ContextReport": map[string]any{"system_prompt_tokens": 100, "messages_tokens": 50,
-			"used_tokens": 150, "limit_tokens": 1000, "compact_buffer_tokens": 100}}, false)
+			"used_tokens": 150, "limit_tokens": h.limit(), "compact_buffer_tokens": 100}}, false)
 	case "ForkSession":
 		var req struct{ At string }
 		_ = json.Unmarshal(p, &req)
@@ -379,7 +390,7 @@ func (h *Host) run(turn, text string) {
 		h.emit(turn, map[string]any{"AgentMessage": "You said: " + text}, true)
 	}
 	h.emit(turn, map[string]any{"UsageUpdate": map[string]any{"usage": map[string]any{"input_tokens": 10, "output_tokens": 2},
-		"context": map[string]any{"used_tokens": 12, "limit_tokens": 1000}}}, true)
+		"context": map[string]any{"used_tokens": 12, "limit_tokens": h.limit()}}}, true)
 	h.store.save(h.id, h.s)
 	h.emit(turn, map[string]any{"TurnEnd": map[string]any{"turn_id": turn, "status": status, "steps": 1}}, true)
 }

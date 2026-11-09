@@ -191,11 +191,35 @@ func (b *bridge) Prompt(ctx context.Context, req *acp.PromptRequest) (*acp.Promp
 	if err != nil {
 		return nil, err
 	}
-	text, err := flatten(req.Prompt, b.images)
+	text, over, err := b.input(s, req.Prompt)
 	if err != nil {
 		return nil, err
 	}
+	b.tooBig(s, over)
 	return s.prompt(ctx, text)
+}
+
+// input is a prompt as Ante takes it (flatten), its images made to fit
+// what the session's context has left.
+func (b *bridge) input(s *session, blocks []acp.ContentBlock) (string, int, error) {
+	s.mu.Lock()
+	fill := s.fill
+	s.mu.Unlock()
+	return flatten(blocks, b.images, fill)
+}
+
+// tooBig tells the client, as a note in the chat, that over of a prompt's
+// images didn't fit even scaled down: Ante would leave out all its images
+// and say nothing (docs/facts/ante.md's Images).
+func (b *bridge) tooBig(s *session, over int) {
+	if over == 0 {
+		return
+	}
+	note := "An image is too big for what's left of this chat's context, even scaled down, so Ante may leave this prompt's images out. /compact or a new chat makes room."
+	if over > 1 {
+		note = fmt.Sprintf("%d images are too big for what's left of this chat's context, even scaled down, so Ante may leave this prompt's images out. /compact or a new chat makes room.", over)
+	}
+	b.update(s.id, chunk(false, note, acp.MessageID("images-"+opID())))
 }
 
 func (b *bridge) Cancel(_ context.Context, n *acp.CancelNotification) error {
@@ -241,7 +265,7 @@ func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMe
 		if err != nil {
 			return nil, err
 		}
-		text, err := flatten(req.Prompt, b.images)
+		text, over, err := b.input(s, req.Prompt)
 		if err != nil {
 			return nil, err
 		}
@@ -250,6 +274,7 @@ func (b *bridge) ExtMethod(ctx context.Context, method string, params json.RawMe
 			return nil, err
 		} else if ok {
 			outcome = steering.Injected
+			b.tooBig(s, over) // else it comes again as a prompt, which says so
 		}
 		return steering.Response{Outcome: outcome}, nil
 	case ContextMethod:

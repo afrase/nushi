@@ -34,8 +34,14 @@ type session struct {
 	deltas  bool                  // the message under way streamed as deltas
 	thinks  bool                  // and the thought
 	compact compaction            // the last compaction shown
+	fill    contextUse            // the context as Ante last told it
 	ended   chan struct{}         // closed once the host is gone
 }
+
+// contextUse is how full a session's context is, in tokens, as Ante says:
+// its ContextReport, or a model call's provider-reported usage. A limit of
+// 0 is one not yet known.
+type contextUse struct{ used, limit int64 }
 
 // info is Ante's SessionInfo: what SessionStart and SessionUpdated say.
 type info struct {
@@ -152,6 +158,14 @@ func (s *session) handle(ev event) {
 		out = s.pauseLocked(ev, olds)
 	case "UsageUpdate":
 		out = s.usageLocked(ev)
+	case "ContextReport": // the Context widget's
+		var c struct {
+			Used  int64 `json:"used_tokens"`
+			Limit int64 `json:"limit_tokens"`
+		}
+		if json.Unmarshal(ev.Payload, &c) == nil && c.Limit > 0 {
+			s.fill = contextUse{c.Used, c.Limit}
+		}
 	case "TurnEnd":
 		s.turnEndLocked(ev)
 	case "CompactStart", "CompactEnd", "InfoBlockAppend":
@@ -283,6 +297,7 @@ func (s *session) usageLocked(ev event) []acp.SessionUpdate {
 	if p.Context == nil || p.Context.Limit == 0 {
 		return nil
 	}
+	s.fill = contextUse{p.Context.Used, p.Context.Limit}
 	return []acp.SessionUpdate{usageUpdate(p.Context.Used, p.Context.Limit)}
 }
 

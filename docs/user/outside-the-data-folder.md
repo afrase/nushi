@@ -27,7 +27,7 @@ Everything else Nushi writes is in its data folder (`~/Library/Application Suppo
 | GitHub itself | the host | A reply, a resolve or unresolve, a comment, a review you send. Nothing else: the inbox, pull requests, issues, checks and files are only read. |
 | A pull request's head in a repository | `refs/remotes/<remote>/<branch>` or `refs/nushi/pull/<n>`, and a worktree's branch on it | Start work on a pull request: `git fetch` from the folder's remote that is its repository. |
 | A worktree named after an issue | `<repo>/.worktrees/<KEY>-<slug>`, branch `<KEY>-<slug>` | A chat started from an issue, when you pick a worktree. |
-| Ante's prompt images | a private folder in `$TMPDIR` | An image in an Ante prompt; removed when the bridge ends. |
+| Ante's prompt images | a private folder in `$TMPDIR` | An image in an Ante prompt, scaled down first when it's big; removed when the bridge ends. |
 | A PiG session's file in the Trash | `~/.Trash` | Delete (you asked), and a side chat closed: moved there with `trash`, as PiG's `/resume` deletes. |
 | The Mac kept awake | `caffeinate` (a process, no file) | Remote access on. |
 | Enchant's folder, and a word you teach the spell checker (Linux) | `$XDG_CONFIG_HOME/enchant/` (by default `~/.config/enchant/`), and enchant's personal list there, `<language>.dic` | The folder (0700, empty) when spell check starts with a dictionary in your language, if it isn't there; the list on Learn Spelling on a misspelled word (ADR 0104). |

@@ -40,6 +40,7 @@ Through Nushi's own bridge, `nushid ante-acp`, which runs an `ante serve --stdio
 - It needs Ante 0.2.14 or newer: the `ante` on `PATH`, else `~/.ante/bin/ante`. The bridge follows 0.2.14 and was run on 0.3.2 too; the protocol's events didn't change between them.
 - It uses Ante's own settings, providers and sign-in (`~/.ante`, or `$ANTE_HOME`), so your default model until you pick another in the chat. A provider's key, such as `FIREWORKS_API_KEY`, comes from the environment.
 - An Ante chat resumes in a terminal with `ante --resume <session id>`.
+- Ante leaves out a prompt's images when they don't fit what's left of the chat's context, and says nothing. So the bridge scales a big image down first (usually a JPEG of 1568 px at most), smaller as the chat fills. When even that won't fit, a note in the chat says so; `/compact` or a new chat makes room.
 
 ### oh-my-pi
 

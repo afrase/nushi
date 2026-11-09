@@ -278,14 +278,14 @@ func TestASessionThroughTheBridge(t *testing.T) {
 }
 
 func TestFlatten(t *testing.T) {
-	got, err := flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "look at"}},
+	got, _, err := flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "look at"}},
 		{Type: "resource_link", ResourceLink: &acp.ResourceLink{URI: "file:///a%20b/c.go", Name: "c.go"}},
-		{Type: "text", Text: &acp.TextContent{Text: "please"}}}, nil)
+		{Type: "text", Text: &acp.TextContent{Text: "please"}}}, nil, contextUse{})
 	if err != nil || got != `look at @/a\ b/c.go please` {
 		t.Errorf("flatten = %q, %v", got, err)
 	}
-	got, err = flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "[Nushi] a note."}},
-		{Type: "text", Text: &acp.TextContent{Text: "go on"}}}, nil)
+	got, _, err = flatten([]acp.ContentBlock{{Type: "text", Text: &acp.TextContent{Text: "[Nushi] a note."}},
+		{Type: "text", Text: &acp.TextContent{Text: "go on"}}}, nil, contextUse{})
 	if err != nil || got != "[Nushi] a note.\n\ngo on" {
 		t.Errorf("two texts: %q, %v", got, err)
 	}
@@ -363,13 +363,14 @@ func TestToolTitles(t *testing.T) {
 	}
 }
 
-// A prompt's image goes to a new file in the bridge's own folder.
+// A prompt's image goes to a new file in the bridge's own folder; one
+// that isn't an image it can read goes as it is.
 func TestImagesInAFolderOfTheBridges(t *testing.T) {
 	b := &bridge{}
 	png := base64.StdEncoding.EncodeToString([]byte("png"))
-	text, err := flatten([]acp.ContentBlock{{Type: "image", Image: &acp.ImageContent{Data: png, MimeType: "image/png"}}}, b.images)
-	if err != nil {
-		t.Fatal(err)
+	text, over, err := flatten([]acp.ContentBlock{{Type: "image", Image: &acp.ImageContent{Data: png, MimeType: "image/png"}}}, b.images, contextUse{})
+	if err != nil || over != 0 {
+		t.Fatal(over, err)
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(b.imgDir) })
 	path := strings.TrimPrefix(text, "@")
