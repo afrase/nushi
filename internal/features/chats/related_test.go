@@ -593,3 +593,76 @@ func worktreeIn(s, folder string) string {
 	}
 	return ""
 }
+
+// A worktree an agent made from origin/main counts from there, not from
+// the old branch the chat's folder has out (issue #16), and a record kept
+// with the old base is put right at the next look.
+func TestRelatedCountsFromTheDefaultBranch(t *testing.T) {
+	dir := git.RealPath(t.TempDir())
+	origin, repo, mate := filepath.Join(dir, "origin.git"), filepath.Join(dir, "repo"), filepath.Join(dir, "mate")
+	testcheck.Git(t, dir, "init", "-q", "--bare", "-b", "main", origin)
+	testcheck.Git(t, dir, "clone", "-q", origin, repo)
+	testcheck.Git(t, repo, "commit", "-q", "--allow-empty", "-m", "start")
+	testcheck.Git(t, repo, "push", "-q", "-u", "origin", "main")
+	testcheck.Git(t, repo, "remote", "set-head", "origin", "main")
+	testcheck.Git(t, repo, "switch", "-q", "-c", "old-feature")
+	oldFeature := testcheck.Git(t, repo, "rev-parse", "HEAD")
+	testcheck.Git(t, dir, "clone", "-q", origin, mate)
+	for i := range 5 {
+		testcheck.Git(t, mate, "commit", "-q", "--allow-empty", "-m", fmt.Sprintf("merged %d", i))
+	}
+	testcheck.Git(t, mate, "push", "-q")
+	testcheck.Git(t, repo, "fetch", "-q")
+	tip := testcheck.Git(t, repo, "rev-parse", "origin/main")
+	// Its branch tracks origin/main, as git sets it up, and sorts before
+	// main: it isn't main's other copy.
+	wt := filepath.Join(repo, ".claude", "worktrees", "a-w")
+	testcheck.Git(t, repo, "worktree", "add", "-q", "-b", "a-w", wt, "origin/main")
+	if up := testcheck.Git(t, wt, "rev-parse", "--abbrev-ref", "@{upstream}"); up != "origin/main" {
+		t.Fatalf("the agent's branch tracks %q", up)
+	}
+	testcheck.Write(t, filepath.Join(wt, "agent.txt"), "the agent's\n")
+	testcheck.Git(t, wt, "add", ".")
+	testcheck.Git(t, wt, "commit", "-q", "-m", "the agent's")
+	head := testcheck.Git(t, wt, "rev-parse", "HEAD")
+
+	stored := &memSessions{}
+	svc, c := relatedChat(t, testHarness{Name: "claude"}, repo, stored)
+	startSubagent(t, c, "a1")
+	step(t, c, "a1", "s1", shell(t, "ls "+wt))
+	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip || got[0].LastHead != head {
+		t.Fatalf("found: %+v (tip %s)", got, tip)
+	}
+	if n, err := git.Ahead(t.Context(), wt, "origin/main", ""); err != nil || n != 1 {
+		t.Errorf("ahead of origin/main: %d, %v", n, err)
+	}
+	if st, err := git.Status(t.Context(), wt, "origin/main"); err != nil || st.Files != 1 || st.Added != 1 {
+		t.Errorf("status against origin/main: %+v, %v", st, err)
+	}
+
+	// One whose first look found no base gets one.
+	c.mu.Lock()
+	c.record.RelatedWorktrees[0].BaseCommit = ""
+	c.mu.Unlock()
+	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip {
+		t.Errorf("no base: %+v", got)
+	}
+
+	// A record from before, based on old-feature, moves on to origin/main.
+	c.mu.Lock()
+	c.record.RelatedWorktrees[0].BaseCommit = oldFeature
+	c.mu.Unlock()
+	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip {
+		t.Errorf("kept from before: %+v", got)
+	}
+
+	// Merged into main, it keeps its base: its work and "merged" stay.
+	testcheck.Git(t, mate, "pull", "-q")
+	testcheck.Git(t, mate, "fetch", "-q", repo, "a-w")
+	testcheck.Git(t, mate, "merge", "-q", "--ff-only", "FETCH_HEAD")
+	testcheck.Git(t, mate, "push", "-q")
+	testcheck.Git(t, repo, "fetch", "-q")
+	if got := related(t, svc, c); len(got) != 1 || got[0].BaseCommit != tip || !got[0].Merged {
+		t.Errorf("merged: %+v", got)
+	}
+}

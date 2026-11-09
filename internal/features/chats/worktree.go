@@ -50,8 +50,12 @@ type Checkouts interface {
 	// Locate says folder's repository's common folder and the top of its
 	// work tree, both real paths.
 	Locate(ctx context.Context, folder string) (common, top string, err error)
-	// MergeBase is where commits a and b of folder's repository parted.
-	MergeBase(ctx context.Context, folder, a, b string) (string, error)
+	// MergeBase is the latest commit where head left any of from, all
+	// commits of folder's repository.
+	MergeBase(ctx context.Context, folder, head string, from ...string) (string, error)
+	// DefaultTips are the commits the repository's default branch is at
+	// (its local and remote copies), none if it has none.
+	DefaultTips(ctx context.Context, folder string) []string
 	// Merged returns those of tips git shows on folder's HEAD or base (""
 	// for the repository's default branch).
 	Merged(ctx context.Context, folder, base string, tips []string) ([]string, error)

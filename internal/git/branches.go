@@ -130,18 +130,37 @@ func (Worktrees) Locate(ctx context.Context, folder string) (common, top string,
 	return RealPath(lines[0]), RealPath(lines[1]), nil
 }
 
-// MergeBase is the commit where two commits of folder's repository
-// parted. Both must be object ids: they may come from a worktree's HEAD,
-// which an agent can write.
-func (Worktrees) MergeBase(ctx context.Context, folder, a, b string) (string, error) {
-	if !ObjectID(a) || !ObjectID(b) {
-		return "", fmt.Errorf("%q and %q aren't both commits", a, b)
+// MergeBase is the latest commit where head left any of from, in folder's
+// repository: git's best common ancestor of head and a merge of from.
+// All must be object ids: they may come from a worktree's HEAD, which an
+// agent can write.
+func (Worktrees) MergeBase(ctx context.Context, folder, head string, from ...string) (string, error) {
+	if !ObjectID(head) || len(from) == 0 || slices.ContainsFunc(from, func(s string) bool { return !ObjectID(s) }) {
+		return "", fmt.Errorf("%q and %q aren't all commits", head, from)
 	}
-	out, err := run(ctx, folder, "merge-base", a, b)
+	out, err := run(ctx, folder, append([]string{"merge-base", head}, from...)...)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// DefaultTips are the commits the repository's default branch and its
+// other copy (bases) are at, none if it has no default branch. An agent's
+// worktree often starts there, not from the branch the chat's folder has
+// out, which can be an old one.
+func (Worktrees) DefaultTips(ctx context.Context, folder string) []string {
+	base := DefaultBase(ctx, folder)
+	if base == "" || strings.HasPrefix(base, "-") {
+		return nil
+	}
+	var tips []string
+	for _, ref := range bases(ctx, folder, base) {
+		if tip, err := verify(ctx, folder, ref+"^{commit}"); err == nil && !slices.Contains(tips, tip) {
+			tips = append(tips, tip)
+		}
+	}
+	return tips
 }
 
 // Merged returns those of tips (object ids) git shows on HEAD or base (""
