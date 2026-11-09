@@ -66,6 +66,9 @@ const (
 	// NushiServiceOpenAgentSessionProcedure is the fully-qualified name of the NushiService's
 	// OpenAgentSession RPC.
 	NushiServiceOpenAgentSessionProcedure = "/nushi.v1.NushiService/OpenAgentSession"
+	// NushiServiceSearchAgentSessionsProcedure is the fully-qualified name of the NushiService's
+	// SearchAgentSessions RPC.
+	NushiServiceSearchAgentSessionsProcedure = "/nushi.v1.NushiService/SearchAgentSessions"
 	// NushiServiceMoveChatProcedure is the fully-qualified name of the NushiService's MoveChat RPC.
 	NushiServiceMoveChatProcedure = "/nushi.v1.NushiService/MoveChat"
 	// NushiServiceSendPromptProcedure is the fully-qualified name of the NushiService's SendPrompt RPC.
@@ -487,6 +490,10 @@ type NushiServiceClient interface {
 	// (session/load); nothing is copied. For a session that is a chat
 	// already, that chat.
 	OpenAgentSession(context.Context, *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error)
+	// Finds the sessions ListAgentSessions would list whose messages say
+	// some text: what the user and the agent said, read from the agent's own
+	// transcripts on this machine each time (no index), newest first.
+	SearchAgentSessions(context.Context, *connect.Request[v1.SearchAgentSessionsRequest]) (*connect.Response[v1.SearchAgentSessionsResponse], error)
 	// Moves a chat to another folder, or to a new worktree. A chat without
 	// messages starts a new session there (and a worktree it leaves is
 	// removed if it holds no work); one with messages keeps its history, in a
@@ -1006,6 +1013,12 @@ func NewNushiServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+NushiServiceOpenAgentSessionProcedure,
 			connect.WithSchema(nushiServiceMethods.ByName("OpenAgentSession")),
+			connect.WithClientOptions(opts...),
+		),
+		searchAgentSessions: connect.NewClient[v1.SearchAgentSessionsRequest, v1.SearchAgentSessionsResponse](
+			httpClient,
+			baseURL+NushiServiceSearchAgentSessionsProcedure,
+			connect.WithSchema(nushiServiceMethods.ByName("SearchAgentSessions")),
 			connect.WithClientOptions(opts...),
 		),
 		moveChat: connect.NewClient[v1.MoveChatRequest, v1.MoveChatResponse](
@@ -1830,6 +1843,7 @@ type nushiServiceClient struct {
 	removeAgent             *connect.Client[v1.RemoveAgentRequest, v1.RemoveAgentResponse]
 	listAgentSessions       *connect.Client[v1.ListAgentSessionsRequest, v1.ListAgentSessionsResponse]
 	openAgentSession        *connect.Client[v1.OpenAgentSessionRequest, v1.OpenAgentSessionResponse]
+	searchAgentSessions     *connect.Client[v1.SearchAgentSessionsRequest, v1.SearchAgentSessionsResponse]
 	moveChat                *connect.Client[v1.MoveChatRequest, v1.MoveChatResponse]
 	sendPrompt              *connect.Client[v1.SendPromptRequest, v1.SendPromptResponse]
 	rewindChat              *connect.Client[v1.RewindChatRequest, v1.RewindChatResponse]
@@ -2029,6 +2043,11 @@ func (c *nushiServiceClient) ListAgentSessions(ctx context.Context, req *connect
 // OpenAgentSession calls nushi.v1.NushiService.OpenAgentSession.
 func (c *nushiServiceClient) OpenAgentSession(ctx context.Context, req *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error) {
 	return c.openAgentSession.CallUnary(ctx, req)
+}
+
+// SearchAgentSessions calls nushi.v1.NushiService.SearchAgentSessions.
+func (c *nushiServiceClient) SearchAgentSessions(ctx context.Context, req *connect.Request[v1.SearchAgentSessionsRequest]) (*connect.Response[v1.SearchAgentSessionsResponse], error) {
+	return c.searchAgentSessions.CallUnary(ctx, req)
 }
 
 // MoveChat calls nushi.v1.NushiService.MoveChat.
@@ -2750,6 +2769,10 @@ type NushiServiceHandler interface {
 	// (session/load); nothing is copied. For a session that is a chat
 	// already, that chat.
 	OpenAgentSession(context.Context, *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error)
+	// Finds the sessions ListAgentSessions would list whose messages say
+	// some text: what the user and the agent said, read from the agent's own
+	// transcripts on this machine each time (no index), newest first.
+	SearchAgentSessions(context.Context, *connect.Request[v1.SearchAgentSessionsRequest]) (*connect.Response[v1.SearchAgentSessionsResponse], error)
 	// Moves a chat to another folder, or to a new worktree. A chat without
 	// messages starts a new session there (and a worktree it leaves is
 	// removed if it holds no work); one with messages keeps its history, in a
@@ -3265,6 +3288,12 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 		NushiServiceOpenAgentSessionProcedure,
 		svc.OpenAgentSession,
 		connect.WithSchema(nushiServiceMethods.ByName("OpenAgentSession")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nushiServiceSearchAgentSessionsHandler := connect.NewUnaryHandler(
+		NushiServiceSearchAgentSessionsProcedure,
+		svc.SearchAgentSessions,
+		connect.WithSchema(nushiServiceMethods.ByName("SearchAgentSessions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	nushiServiceMoveChatHandler := connect.NewUnaryHandler(
@@ -4099,6 +4128,8 @@ func NewNushiServiceHandler(svc NushiServiceHandler, opts ...connect.HandlerOpti
 			nushiServiceListAgentSessionsHandler.ServeHTTP(w, r)
 		case NushiServiceOpenAgentSessionProcedure:
 			nushiServiceOpenAgentSessionHandler.ServeHTTP(w, r)
+		case NushiServiceSearchAgentSessionsProcedure:
+			nushiServiceSearchAgentSessionsHandler.ServeHTTP(w, r)
 		case NushiServiceMoveChatProcedure:
 			nushiServiceMoveChatHandler.ServeHTTP(w, r)
 		case NushiServiceSendPromptProcedure:
@@ -4426,6 +4457,10 @@ func (UnimplementedNushiServiceHandler) ListAgentSessions(context.Context, *conn
 
 func (UnimplementedNushiServiceHandler) OpenAgentSession(context.Context, *connect.Request[v1.OpenAgentSessionRequest]) (*connect.Response[v1.OpenAgentSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.OpenAgentSession is not implemented"))
+}
+
+func (UnimplementedNushiServiceHandler) SearchAgentSessions(context.Context, *connect.Request[v1.SearchAgentSessionsRequest]) (*connect.Response[v1.SearchAgentSessionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("nushi.v1.NushiService.SearchAgentSessions is not implemented"))
 }
 
 func (UnimplementedNushiServiceHandler) MoveChat(context.Context, *connect.Request[v1.MoveChatRequest]) (*connect.Response[v1.MoveChatResponse], error) {

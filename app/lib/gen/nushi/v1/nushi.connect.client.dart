@@ -264,6 +264,26 @@ extension type NushiServiceClient(connect.Transport _transport) {
     );
   }
 
+  /// Finds the sessions ListAgentSessions would list whose messages say
+  /// some text: what the user and the agent said, read from the agent's own
+  /// transcripts on this machine each time (no index), newest first.
+  Future<nushiv1nushi.SearchAgentSessionsResponse> searchAgentSessions(
+    nushiv1nushi.SearchAgentSessionsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.NushiService.searchAgentSessions,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// Moves a chat to another folder, or to a new worktree. A chat without
   /// messages starts a new session there (and a worktree it leaves is
   /// removed if it holds no work); one with messages keeps its history, in a

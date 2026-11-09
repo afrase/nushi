@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/afrase/nushi/internal/features/agents"
+	"github.com/afrase/nushi/internal/features/chats"
 	nushiv1 "github.com/afrase/nushi/internal/gen/nushi/v1"
 )
 
@@ -59,13 +60,31 @@ func (s *server) ListAgentSessions(ctx context.Context, req *connect.Request[nus
 	}
 	out := &nushiv1.ListAgentSessionsResponse{CanList: page.CanList, NextCursor: page.Next, SeesOpen: page.SeesOpen, OneWriter: page.OneWriter}
 	for _, f := range page.Sessions {
-		fs := &nushiv1.FoundSession{SessionId: f.SessionID, Title: f.Title, Folder: f.Folder, Messages: int32(f.Messages), OpenIn: f.OpenIn, FolderGone: f.FolderGone}
-		if !f.Updated.IsZero() {
-			fs.UpdatedUnixMs = f.Updated.UnixMilli()
-		}
-		out.Sessions = append(out.Sessions, fs)
+		out.Sessions = append(out.Sessions, foundSession(f))
 	}
 	return connect.NewResponse(out), nil
+}
+
+func (s *server) SearchAgentSessions(ctx context.Context, req *connect.Request[nushiv1.SearchAgentSessionsRequest]) (*connect.Response[nushiv1.SearchAgentSessionsResponse], error) {
+	m := req.Msg
+	found, err := s.Chats.Search(ctx, s.agent(m.Agent), m.Folder, m.Text)
+	if err != nil {
+		return nil, refused(err)
+	}
+	out := &nushiv1.SearchAgentSessionsResponse{CanSearch: found.CanSearch, More: found.More, SeesOpen: found.SeesOpen, OneWriter: found.OneWriter}
+	for _, f := range found.Sessions {
+		out.Hits = append(out.Hits, &nushiv1.SessionHit{Session: foundSession(f.Found), Before: f.Before, Match: f.Match, After: f.After, Count: int32(f.Count)})
+	}
+	return connect.NewResponse(out), nil
+}
+
+// foundSession is a session that isn't a chat, as the API tells it.
+func foundSession(f chats.Found) *nushiv1.FoundSession {
+	fs := &nushiv1.FoundSession{SessionId: f.SessionID, Title: f.Title, Folder: f.Folder, Messages: int32(f.Messages), OpenIn: f.OpenIn, FolderGone: f.FolderGone}
+	if !f.Updated.IsZero() {
+		fs.UpdatedUnixMs = f.Updated.UnixMilli()
+	}
+	return fs
 }
 
 func (s *server) OpenAgentSession(ctx context.Context, req *connect.Request[nushiv1.OpenAgentSessionRequest]) (*connect.Response[nushiv1.OpenAgentSessionResponse], error) {

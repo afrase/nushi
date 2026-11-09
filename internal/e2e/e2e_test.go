@@ -177,7 +177,11 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 	kinds := []chats.Kind{{Harness: fakeHarness{}, Launch: fake(false, false)}}
 	for _, a := range knownagents.All("") { // no projects folder: Local isn't used
 		if l := launches[a.Agent.Name]; l != nil {
-			kinds = append(kinds, chats.Kind{Harness: a.Harness, Launch: l, MCP: a.MCP != nil})
+			h := a.Harness
+			if a.Agent.Name == "claude" {
+				h = claudeSearch{projects: filepath.Join(dataDir, "claude", "projects")}
+			}
+			kinds = append(kinds, chats.Kind{Harness: h, Launch: l, MCP: a.MCP != nil})
 		}
 	}
 	kinds = append(kinds, chats.Kind{Harness: claudeOnFake{}, Launch: fake(false, false), MCP: true})

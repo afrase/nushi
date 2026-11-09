@@ -31,11 +31,12 @@ var (
 	_ chats.GoneReader       = claude.Harness{}
 	_ chats.TitleMaker       = claude.Harness{}
 
-	_ chats.OpenFinder     = claudehistory.Local{}
-	_ chats.ForkFinder     = claudehistory.Local{}
-	_ chats.HistoryChecker = claudehistory.Local{}
-	_ chats.MessageDater   = claudehistory.Local{}
-	_ chats.WorktreeFinder = claudehistory.Local{}
+	_ chats.OpenFinder      = claudehistory.Local{}
+	_ chats.ForkFinder      = claudehistory.Local{}
+	_ chats.HistoryChecker  = claudehistory.Local{}
+	_ chats.MessageDater    = claudehistory.Local{}
+	_ chats.WorktreeFinder  = claudehistory.Local{}
+	_ chats.SessionSearcher = claudehistory.Local{}
 
 	_ chats.Forker      = codex.Harness{}
 	_ chats.ReadOnly    = codex.Harness{}
@@ -43,8 +44,9 @@ var (
 	_ chats.OtherReader = codex.Harness{}
 	_ chats.GoneReader  = codex.Harness{}
 
-	_ chats.OpenFinder = codex.Local{}
-	_ chats.ForkFinder = codex.Local{}
+	_ chats.OpenFinder      = codex.Local{}
+	_ chats.ForkFinder      = codex.Local{}
+	_ chats.SessionSearcher = codex.Local{}
 
 	_ chats.Forker       = ante.Harness{}
 	_ chats.ToolReader   = ante.Harness{}
