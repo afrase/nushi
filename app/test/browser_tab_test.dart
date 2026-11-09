@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/app_actions.dart';
 import 'package:nushi/browser_bar.dart';
+import 'package:nushi/browser_page.dart';
 import 'package:nushi/browser_pane.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
@@ -287,6 +288,36 @@ void main() {
       for (final a in [Act.address, Act.reloadPage]) {
         expect(acts.firstWhere((e) => e.act == a).enabled, isFalse);
       }
+      await closeView(tester, d);
+    }, variant: macOnly);
+
+    // Deep review 2026-11-10, 3: a tab at a server that wasn't up showed
+    // "Can't reach"; once the server started, the Servers menu and the
+    // agent's show tool only showed the tab, and the failure stayed.
+    testWidgets('a server’s or a page’s tab that didn’t load loads again as '
+        'it’s shown', (tester) async {
+      final fakes = browserFakes();
+      final d = await browserApp(tester);
+      final c = d.chats['c']!..openBrowserTab('http://localhost:3000');
+      await tester.pumpAndSettle();
+      final host = fakes.hosts.single;
+      c.showServer('http://localhost:3000');
+      expect(host.reloads, 0); // it loaded
+      host.failure.value = (
+        kind: PageFailureKind.unreachable,
+        reason: 'Could not connect to the server.',
+        url: 'http://localhost:3000/',
+      );
+      c.showServer('http://localhost:3000');
+      expect(host.reloads, 1);
+      c.showPage('http://localhost:3000/');
+      expect(host.reloads, 2);
+      c.openBrowserTab('http://localhost:3000/menu');
+      await tester.pumpAndSettle();
+      final page = fakes.hosts.last..failure.value = host.failure.value;
+      c.showPage('http://localhost:3000/menu');
+      expect(page.reloads, 1);
+      expect(fakes.hosts, hasLength(2));
       await closeView(tester, d);
     }, variant: macOnly);
 

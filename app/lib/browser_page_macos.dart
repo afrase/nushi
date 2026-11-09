@@ -163,6 +163,8 @@ class BrowserPage implements BrowserHost {
   final _failed = ValueNotifier<PageFailure?>(null);
   final _blocked = ValueNotifier<Uri?>(null);
   final _source = NavigationSource();
+  // A load has committed: until one does WebKit has no page to reload (a
+  // first load that failed leaves none), and Reload opens the tab's address.
   bool _loaded = false;
   bool _gone = false; // disposed: the view's last callbacks change nothing
 
@@ -183,7 +185,6 @@ class BrowserPage implements BrowserHost {
   @override
   Future<void> open(Uri url) async {
     if (!inBrowserTab(url)) return;
-    _loaded = true;
     // What the user asked for shows at once, as in a browser.
     tab.address.value = '$url';
     try {
@@ -273,6 +274,7 @@ class BrowserPage implements BrowserHost {
   /// A load committed at [url] (the Swift side's [watchCommits]).
   void _commit(String url) {
     if (_gone) return;
+    _loaded = true;
     _page.committed(url);
     _source.committed(url);
     unawaited(_moved());

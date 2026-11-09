@@ -68,4 +68,8 @@ abstract interface class BrowserControls {
 
   /// Loads the page again.
   void reload();
+
+  /// Loads the page again if it shows why it didn't load: a server it
+  /// couldn't reach may answer now.
+  void retry();
 }
