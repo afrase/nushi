@@ -2,8 +2,10 @@ package chats
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"slices"
+	"sync"
 	"testing"
 
 	acp "github.com/afrase/acp-go/unstable"
@@ -270,5 +272,53 @@ func TestForksKeepTheirUploads(t *testing.T) {
 				t.Errorf("%s's file is gone with the chat it came from: %v", id, err)
 			}
 		}
+	}
+}
+
+// A new chat and a fork are the service's before their records are
+// stored, though their picks and mode go back on them after: what finds a
+// new id once stored (a click on the row its record brings, a sweep) gets
+// this chat, not a second one made from the record, with an agent of its
+// own. The fork's record has the chat's mode all along, not the new
+// session's default.
+func TestNewChatsAreFoundOnceStored(t *testing.T) {
+	agent := &fakeAgent{}
+	testcheck.NoErr(t, json.Unmarshal([]byte(claudeSession), &agent.session))
+	svc := newService(t, []Kind{{Harness: testHarness{Name: "claude"}, Launch: agent.launch}}, Options{Remembered: &memModes{"claude/model": "sonnet", "claude": "plan"}})
+	t.Cleanup(svc.Close)
+	var mu sync.Mutex
+	var unknown []string           // the chats whose records were stored before the service had them
+	modes := map[string][]string{} // each chat's mode, as stored
+	publish := svc.publish
+	svc.publish = func(e model.Event) {
+		if e.Record != nil {
+			svc.mu.Lock()
+			_, ok := svc.chats[e.ChatID]
+			svc.mu.Unlock()
+			mu.Lock()
+			if !ok {
+				unknown = append(unknown, e.ChatID)
+			}
+			modes[e.ChatID] = append(modes[e.ChatID], e.Record.Mode)
+			mu.Unlock()
+		}
+		publish(e)
+	}
+	ctx := t.Context()
+	id, err := svc.Start(ctx, "", t.TempDir(), false)
+	testcheck.NoErr(t, err)
+	c := svc.chats[id]
+	agent.updates = []acp.SessionUpdate{chunk("m1", "ok")}
+	testcheck.NoErr(t, svc.Prompt(ctx, id, model.Message{Text: "one"}, SendIdle))
+	eventually(t, c, func() bool { return !c.busy })
+	fork, err := svc.ForkAsChat(ctx, id, "")
+	testcheck.NoErr(t, err)
+	mu.Lock()
+	defer mu.Unlock()
+	if len(unknown) > 0 {
+		t.Errorf("stored before the service knew them: %v", unknown)
+	}
+	if got := modes[fork]; len(got) == 0 || slices.ContainsFunc(got, func(m string) bool { return m != "plan" }) {
+		t.Errorf("the fork's stored modes %v, want plan", got)
 	}
 }

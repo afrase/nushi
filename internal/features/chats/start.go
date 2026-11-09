@@ -73,11 +73,24 @@ func (s *Service) StartOn(ctx context.Context, agent, folder string, opts StartO
 	c.mu.Lock()
 	c.record = model.ChatRecord{ID: c.id, SessionID: o.sid, Agent: k.Name, Folder: folder, Created: time.Now(), Worktree: wt, Scratch: scratch, Issue: opts.Issue, GitHub: opts.GitHub}
 	s.useLocked(c, o)
+	c.busy = true // until reapply: no prompt before its picks are on it
 	c.mu.Unlock()
+	s.register(c)
 	if err := c.reapply(ctx, o.agent, o.sid, s.remembered.Mode(k.Name), s.remembered.Picks(k.Name)); err != nil {
 		c.log().Warn("starting mode", "err", err) // the chat keeps the agent's default
 	}
-	s.register(c)
+	c.settled()
 	c.log().Info("chat created", "scratch", scratch, "worktree", wt != nil)
 	return c.id, nil
+}
+
+// settled ends a new chat's reapply: it stores the mode its session is
+// on, and takes prompts.
+func (c *chat) settled() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.busy = false
+	c.saveLocked(c.modeLocked)
+	c.statusChangedLocked()
+	c.deliverLocked()
 }
