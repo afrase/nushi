@@ -7,15 +7,18 @@
 
 // nushi/browser: "open" (a url) opens an http, https or file address with
 // the app that opens https, so a file is never run by the app its type has
-// (ADR 0068, 0094), and "browserName" answers that app's name or null.
+// (ADR 0068, 0094), "browserName" answers that app's name or null, and
+// "openMail" (a url) opens a mailto: address with the default app for
+// mailto:.
 // nushi/desktop: "openAsText" (an absolute path) opens a file with the
 // default app for plain text, whatever its type, and "openFolder" (an
 // absolute path) a folder with the default app for folders. All go through
 // GIO's default apps, never xdg-open, whose script may be missing and, in a
 // VM, may open it on another machine (ADR 0104). A call that opens nothing
 // answers an error: "refused" (not an address or a path), "no-browser",
-// "no-editor" or "no-file-manager" (no default app for it), "failed" (the
-// app didn't start), as the Mac's "refused" and "failed".
+// "no-mail-app", "no-editor" or "no-file-manager" (no default app for
+// it), "failed" (the app didn't start), as the Mac's "refused" and
+// "failed".
 
 // Answers [call] with [response], or says why it couldn't.
 static void gio_respond(FlMethodCall* call, FlMethodResponse* response) {
@@ -119,6 +122,21 @@ static void browser_open(FlMethodCall* call) {
   gio_launch(browser, url, call);
 }
 
+static void browser_open_mail(FlMethodCall* call) {
+  const gchar* url = gio_string_arg(call);
+  if (url == nullptr || !g_uri_is_valid(url, G_URI_FLAGS_NONE, nullptr) ||
+      g_strcmp0(g_uri_peek_scheme(url), "mailto") != 0) {
+    gio_refuse(call, "refused", "Not a mail address to open");
+    return;
+  }
+  g_autoptr(GAppInfo) mail = g_app_info_get_default_for_uri_scheme("mailto");
+  if (mail == nullptr) {
+    gio_refuse(call, "no-mail-app", "No default mail app is set");
+    return;
+  }
+  gio_launch(mail, url, call);
+}
+
 static void browser_name(FlMethodCall* call) {
   g_autoptr(GAppInfo) browser = gio_browser();
   g_autoptr(FlValue) name =
@@ -159,6 +177,9 @@ static void gio_call(FlMethodChannel* channel, FlMethodCall* call,
   } else if (g_strcmp0(name, "nushi/browser") == 0 &&
              g_strcmp0(method, "browserName") == 0) {
     browser_name(call);
+  } else if (g_strcmp0(name, "nushi/browser") == 0 &&
+             g_strcmp0(method, "openMail") == 0) {
+    browser_open_mail(call);
   } else if (g_strcmp0(name, "nushi/desktop") == 0 &&
              g_strcmp0(method, "openAsText") == 0) {
     desktop_open_with(call, "text/plain", "no-editor",

@@ -37,6 +37,11 @@ class MacWebViews implements WebViews {
   @override
   Future<void> openMail(Uri url) => launchUrl(url);
 
+  /// Launch Services' default app for the link, as the app always opened
+  /// links.
+  @override
+  Future<void> openLink(Uri url) => launchUrl(url);
+
   /// The Swift side's event monitor sees the presses (the plugin doesn't
   /// give WebKit's navigation type either).
   @override

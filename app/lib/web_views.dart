@@ -5,6 +5,7 @@ import 'package:nushi/diagram_page.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Where the app's web views come from, and the default browser (ADR 0068,
 /// 0094, 0097): on the Mac, WKWebViews and the Swift side
@@ -34,6 +35,14 @@ abstract interface class WebViews {
   /// Opens [url], a mailto: address, with the mail app.
   Future<void> openMail(Uri url);
 
+  /// Opens [url], a web link the user clicked (http or https, a
+  /// `webLink`), in the default browser as the platform opens links: on
+  /// the Mac through url_launcher (Launch Services), on Linux through the
+  /// runner, whose launch gives the browser none of Nushi's variables
+  /// (ADR 0104). Linux's opens nothing else, and throws nothing: a failure
+  /// is logged, as a click on a link has nowhere to say it.
+  Future<void> openLink(Uri url);
+
   /// How long ago the user last pressed, let go, or hit Return, Enter or
   /// Space in a web view in the window, null if never or since the last
   /// ask (each press lets one navigation out); with [pointerOnly], null
@@ -54,6 +63,18 @@ abstract interface class WebViews {
 /// phone's web app, which shares the widgets but has no native edge, has
 /// frames of its own instead.
 bool get webEmbedded => !kIsWeb && native.web.embedded;
+
+/// Opens [url], a web link the user clicked (Jira's, GitHub's, a
+/// terminal's, the agents' or an account's page), in the default browser:
+/// the platform's [WebViews.openLink], or, in the phone's web app, which
+/// has no native edge, a new tab (url_launcher).
+Future<void> openInDefaultBrowser(Uri url) async {
+  if (kIsWeb) {
+    await launchUrl(url);
+  } else {
+    await native.web.openLink(url);
+  }
+}
 
 /// Why the default browser didn't open a page, in words to show as they
 /// are ("No default browser is set…").

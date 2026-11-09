@@ -64,12 +64,14 @@ EOF
 fake browser %u 'x-scheme-handler/http;x-scheme-handler/https;'
 fake editor %f 'text/plain;'
 fake files %u 'inode/directory;'
+fake mail %u 'x-scheme-handler/mailto;'
 cat >"$probe/config/mimeapps.list" <<EOF
 [Default Applications]
 x-scheme-handler/http=nushi-fake-browser.desktop
 x-scheme-handler/https=nushi-fake-browser.desktop
 text/plain=nushi-fake-editor.desktop
 inode/directory=nushi-fake-files.desktop
+x-scheme-handler/mailto=nushi-fake-mail.desktop
 EOF
 
 # Whether gdk-pixbuf decodes a picture here: where it decodes through

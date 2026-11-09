@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nushi/conventions.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_views.dart' show openInDefaultBrowser;
 import 'package:nushi/widgets.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 // Settings › Jira's sites and Settings › GitHub's hosts: each one's row,
 // and the form that adds a token.
@@ -208,7 +208,7 @@ class _TokenFormState extends State<TokenForm> {
               LinkText(
                 'Make a token',
                 size: 12,
-                onTap: () => unawaited(launchUrl(widget.tokensPage)),
+                onTap: () => unawaited(openInDefaultBrowser(widget.tokensPage)),
               ),
               const Spacer(),
               if (widget.onCancel case final cancel?)

@@ -5,7 +5,7 @@ import 'package:nushi/skills_list.dart' show revealInFinder;
 import 'package:nushi/terminals.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/transcript_find.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:nushi/web_views.dart' show openInDefaultBrowser;
 import 'package:xterm2/xterm.dart';
 
 /// The terminal's text: the picked font, then the bundled Nerd Font
@@ -69,7 +69,7 @@ Future<void> openLink(
 ) async {
   final link = linkOf(word, folder);
   if (link.url case final url?) {
-    await launchUrl(url);
+    await openInDefaultBrowser(url);
   } else if (link.path case final path?) {
     if (!await showChange(path)) await revealInFinder(path);
   }

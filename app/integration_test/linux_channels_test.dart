@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nushi/clipboard_files_linux.dart';
 import 'package:nushi/desktop_linux.dart';
+import 'package:nushi/web_views_linux.dart';
 import 'package:nushi/window_drag_linux.dart';
 
 // The Linux runner's own channels (linux/runner: clipboard.cc, gio.cc,
@@ -37,7 +38,8 @@ final Object _pixbuf = Platform.environment['NUSHI_PROBE_PIXBUF'] == '0'
 const _browser = MethodChannel('nushi/browser');
 const _desktop = MethodChannel('nushi/desktop');
 
-/// What the fake default app [app] (browser, editor or files) was given,
+/// What the fake default app [app] (browser, editor, files or mail) was
+/// given,
 /// one launch a line.
 List<String> _launched(String app) {
   final f = File('$_probe/launched-$app');
@@ -188,6 +190,41 @@ void main() {
       expect(_launched('editor'), isEmpty);
       expect(Platform.environment, contains('NUSHI_DATA'));
       expect(_inherited('browser'), isEmpty);
+    });
+
+    test('opens a clicked link, and only a web one, without Nushi’s '
+        'variables', () async {
+      final before = _launched('browser').length;
+      const web = LinuxWebViews();
+      await web.openLink(Uri.parse('https://example.com/pull/7'));
+      await web.openLink(Uri.file('${work.path}/run me.sh'));
+      await _until('the browser', () => _launched('browser').length > before);
+      expect(_launched('browser').sublist(before), [
+        'https://example.com/pull/7',
+      ]);
+      expect(_inherited('browser'), isEmpty);
+    });
+
+    test('opens mail with the default app for mailto:, and nothing else '
+        'there', () async {
+      await const LinuxWebViews().openMail(
+        Uri.parse('mailto:me@example.com?subject=Hi%20there'),
+      );
+      await _until('the mail app', () => _launched('mail').isNotEmpty);
+      expect(
+        _launched('mail').single,
+        'mailto:me@example.com?subject=Hi%20there',
+      );
+      expect(_inherited('mail'), isEmpty);
+      for (final url in ['https://example.com/', 'file:///etc/hosts', '']) {
+        expect(
+          await _refusal(_browser.invokeMethod<void>('openMail', url)),
+          'refused',
+          reason: url,
+        );
+      }
+      expect(_launched('mail'), hasLength(1));
+      expect(_launched('browser').where((l) => l.contains('mailto')), isEmpty);
     });
 
     test('refuses what is no web address or file, opening nothing', () async {

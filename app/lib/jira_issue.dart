@@ -14,8 +14,8 @@ import 'package:nushi/jira_issue_parts.dart';
 import 'package:nushi/jira_work.dart';
 import 'package:nushi/markdown.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_views.dart' show openInDefaultBrowser;
 import 'package:nushi/widgets.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// How often the issue shown is asked for again.
 const issuePoll = Duration(seconds: 60);
@@ -258,7 +258,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
                     r.title.isEmpty ? r.url : r.title,
                     tooltip: r.url,
                     onTap: switch (webLink(r.url)) {
-                      final u? => () => unawaited(launchUrl(u)),
+                      final u? => () => unawaited(openInDefaultBrowser(u)),
                       null => null,
                     },
                   ),
@@ -384,7 +384,7 @@ class _JiraIssuePaneState extends State<JiraIssuePane> {
           tooltip: 'Open in the browser',
           onTap: webLink(i.url) == null
               ? null
-              : () => unawaited(launchUrl(webLink(i.url)!)),
+              : () => unawaited(openInDefaultBrowser(webLink(i.url)!)),
         ),
       ],
     );

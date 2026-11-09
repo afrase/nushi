@@ -1,11 +1,11 @@
 import 'package:flutter/services.dart';
+import 'package:nushi/app_log.dart';
 import 'package:nushi/browser_page.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/outside_page.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/web_page.dart';
 import 'package:nushi/web_views.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 const _browser = MethodChannel('nushi/browser');
 
@@ -13,7 +13,9 @@ const _browser = MethodChannel('nushi/browser');
 /// are placeholders (`outside_page.dart`) whose button opens the page in the
 /// default browser, through the runner's `nushi/browser`
 /// (`linux/runner/gio.cc`: GIO's app for https, never `xdg-open`). A
-/// Mermaid file shows its source.
+/// Mermaid file shows its source. Links and mail go through the runner
+/// too, never url_launcher, so the app they start gets none of Nushi's
+/// variables.
 class LinuxWebViews implements WebViews {
   const new();
 
@@ -48,8 +50,44 @@ class LinuxWebViews implements WebViews {
     }
   }
 
+  /// The runner's default app for mailto:, which refuses any other
+  /// scheme; an error has words to show, as [openWithBrowser]'s.
   @override
-  Future<void> openMail(Uri url) => launchUrl(url);
+  Future<void> openMail(Uri url) async {
+    try {
+      await _browser.invokeMethod<void>('openMail', '$url');
+    } on PlatformException catch (e) {
+      throw BrowserError(switch (e.code) {
+        'no-mail-app' =>
+          'No default mail app is set: choose one in your system’s settings.',
+        _ => 'Couldn’t open your mail app: ${e.message ?? e.code}',
+      });
+    } on MissingPluginException {
+      throw const BrowserError('Couldn’t open your mail app.');
+    }
+  }
+
+  /// The browser that opens https, as [openWithBrowser], for http and
+  /// https alone (never a file, whatever a caller passes); a link that
+  /// opens nothing is logged by why, never the link.
+  @override
+  Future<void> openLink(Uri url) async {
+    if (url.scheme != 'http' && url.scheme != 'https') {
+      _noLink('refused');
+      return;
+    }
+    try {
+      await _browser.invokeMethod<void>('open', '$url');
+    } on PlatformException catch (e) {
+      _noLink(e.code);
+    } on MissingPluginException {
+      _noLink('not-implemented');
+    }
+  }
+
+  /// Logs that a link opened nothing, by the runner's error [code].
+  static void _noLink(String code) =>
+      appLog.warn('the browser opened no link', {'code': code});
 
   /// No web view takes presses.
   @override

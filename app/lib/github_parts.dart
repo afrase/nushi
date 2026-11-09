@@ -14,8 +14,8 @@ import 'package:nushi/menu.dart';
 import 'package:nushi/new_chat.dart';
 import 'package:nushi/pull_states.dart';
 import 'package:nushi/theme/theme.dart';
+import 'package:nushi/web_views.dart' show openInDefaultBrowser;
 import 'package:nushi/widgets.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 export 'package:nushi/markdown.dart' show openWeb;
 export 'package:nushi/pull_states.dart' show checksIcon, itemColor, itemState;
@@ -222,7 +222,7 @@ Widget githubImage(Uri uri, String? alt) {
     '[image${alt == null || alt.isEmpty ? '' : ': $alt'}]',
     size: 12.5,
     tooltip: link == null ? '' : 'Open the image in the browser',
-    onTap: link == null ? null : () => unawaited(launchUrl(link)),
+    onTap: link == null ? null : () => unawaited(openInDefaultBrowser(link)),
   );
 }
 

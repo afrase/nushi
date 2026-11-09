@@ -27,6 +27,9 @@ class FakeWebViews implements WebViews {
   /// Opens an address in the default browser, or mail with the mail app.
   Future<void> Function(Uri url)? open;
 
+  /// Opens a web link the user clicked, as the platform opens links.
+  Future<void> Function(Uri url)? link;
+
   /// Says how long ago the user pressed in a page.
   Future<Duration?> Function({bool pointerOnly})? since;
 
@@ -56,6 +59,9 @@ class FakeWebViews implements WebViews {
 
   @override
   Future<void> openMail(Uri url) => open?.call(url) ?? _mac.openMail(url);
+
+  @override
+  Future<void> openLink(Uri url) => link?.call(url) ?? _mac.openLink(url);
 
   @override
   Future<Duration?> sincePress({bool pointerOnly = false}) =>

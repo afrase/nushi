@@ -13,9 +13,8 @@ import 'package:nushi/settings.dart' show linksInBrowserTab;
 import 'package:nushi/syntax.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/web_page.dart' show openInBrowserOrSay;
-import 'package:nushi/web_views.dart' show webEmbedded;
+import 'package:nushi/web_views.dart' show openInDefaultBrowser, webEmbedded;
 import 'package:nushi/widgets.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// [href] as a link the app opens: http and https only. A file:, a
 /// javascript: or an app's own scheme (an issue's text, an agent's reply)
@@ -63,11 +62,11 @@ bool linkInTab(Uri url, {required bool setting, required bool fits}) =>
     setting && fits && isWebPage(url) && isLocalNetwork(url.host);
 
 /// Opens a web link in the default browser. Tests set their own.
-Future<void> Function(Uri url) openWebOutside = launchUrl;
+Future<void> Function(Uri url) openWebOutside = openInDefaultBrowser;
 
 /// Opens [url] in the browser, when it's a [webLink].
 void openWeb(String url) {
-  if (webLink(url) case final u?) unawaited(launchUrl(u));
+  if (webLink(url) case final u?) unawaited(openInDefaultBrowser(u));
 }
 
 /// The host a link's [text] names when it reads as an address on another
