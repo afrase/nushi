@@ -2,31 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:nushi/chat.dart';
-import 'package:nushi/controls.dart';
-import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/diagram_page.dart';
 import 'package:nushi/edit_bars.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/file_text.dart';
-import 'package:nushi/files_pane.dart';
-import 'package:nushi/menu.dart';
 import 'package:nushi/native.dart';
-import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
-import 'package:nushi/preview_entry.dart';
+import 'package:nushi/preview_header.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_path.dart';
 import 'package:nushi/preview_tabs.dart';
-import 'package:nushi/settings.dart';
 import 'package:nushi/skills_list.dart';
 import 'package:nushi/source_editor.dart';
 import 'package:nushi/theme/theme.dart';
-import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart';
 import 'package:nushi/web_views.dart';
 
-/// A file the agent wrote, beside the chat where a subagent's pane opens:
+/// A file the agent wrote, beside the chat where a subagent's pane opens.
+/// Its header ([PreviewHeader]):
 /// its name (a click shows it in the Files pane; with several files open,
 /// the tabs of them all, [PreviewTabs]), Live while the daemon keeps it
 /// current, wrapping the lines or not while it shows a source
@@ -59,19 +53,6 @@ class PreviewPane extends StatefulWidget {
   @override
   State<PreviewPane> createState() => _PreviewPaneState();
 }
-
-/// Below this width the pane's header has no room for every button (a page
-/// has three and Close, beside Live and the switch): they fold into a ⋯.
-const double _foldsBelow = 380;
-
-/// From this wide the pane's header has the gutters and leaves the name about
-/// what it had: a page's has two more buttons.
-const double _roomyFrom = 460;
-const double _roomyWithPageFrom = 520;
-
-/// From this wide it has 24 between groups too. Below, at the pane's 560 to
-/// start with, that room is three short names' tabs (ADR 0072).
-const double _gapsFrom = 640;
 
 class _PreviewPaneState extends State<PreviewPane> {
   late final _watch = FileWatch(widget.daemon, widget.chat.id, widget.path);
@@ -217,163 +198,18 @@ class _PreviewPaneState extends State<PreviewPane> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LayoutBuilder(
-            builder: (context, pane) {
-              // The gutters where the row has room for them, and the bar's
-              // full gaps where it has more (ADR 0072). Narrower, what it has
-              // always had, so it keeps the name's room and folds where it did.
-              final roomy =
-                  pane.maxWidth >=
-                  (page == null ? _roomyFrom : _roomyWithPageFrom);
-              final wide = pane.maxWidth >= _gapsFrom;
-              // What a group adds to the row's 8. The tabs' end needs none
-              // short of wide: a last tab keeps a ✕'s room.
-              final group = wide
-                  ? NushiTheme.groupGap - 8
-                  : roomy
-                  ? NushiTheme.barGap - 8
-                  : 0.0;
-              return ValueListenableBuilder(
-                valueListenable: widget.chat.previewTabs,
-                // Beside a browser tab its row's ends are the browser's, so
-                // going from one tab to the other moves no chip (ADR 0094).
-                builder: (context, open, row) {
-                  final chips = open.length > 1 && previewChips(open);
-                  return PaneHeader(
-                    inset: chips
-                        ? previewChipInset
-                        : roomy
-                        ? NushiTheme.gutter
-                        : 12,
-                    end: _end(pane.maxWidth, open),
-                    child: row!,
-                  );
-                },
-                child: LayoutBuilder(
-                  builder: (context, box) => ListenableBuilder(
-                    listenable: Listenable.merge([
-                      _watch,
-                      widget.chat.previewTabs,
-                      wrapLines,
-                    ]),
-                    builder: (context, _) {
-                      final open = widget.chat.previewTabs.value;
-                      final tabs = open.length > 1;
-                      // A tab's file on its way keeps Live's room: a pick
-                      // would otherwise widen the tabs' row for a moment,
-                      // and move it.
-                      final coming =
-                          tabs && _watch.file == null && _watch.error.isEmpty;
-                      final folds = box.maxWidth < _foldsBelow;
-                      final wraps = _showsSource;
-                      return Row(
-                        spacing: 8,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(right: wide ? group : 0),
-                              child: Row(
-                                spacing: roomy ? 6 : 8,
-                                children: [
-                                  // A chip has its own icon.
-                                  if (!tabs || !previewChips(open))
-                                    Icon(
-                                      kind.icon,
-                                      size: 14,
-                                      color: t.textSecondary,
-                                    ),
-                                  // The name shows the file in the Files
-                                  // pane; several open, their tabs take its
-                                  // place.
-                                  Expanded(
-                                    child: tabs
-                                        ? _tabs(open)
-                                        : Align(
-                                            alignment: Alignment.centerLeft,
-                                            child: _Name(
-                                              daemon: widget.daemon,
-                                              chat: widget.chat,
-                                              path: widget.path,
-                                              tooltip:
-                                                  _watch.file?.path ??
-                                                  widget.path,
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (_watch.live || coming)
-                            Visibility.maintain(
-                              visible: _watch.live,
-                              child: LiveMark(version: _watch.file),
-                            ),
-                          if (wraps && !folds) const WrapButton(),
-                          Padding(
-                            padding: EdgeInsets.only(left: group),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: wide ? NushiTheme.iconGap : 0,
-                              children: [
-                                if (folds)
-                                  MenuIcon.line(
-                                    LineIcon.more,
-                                    tooltip: 'More',
-                                    filter: false,
-                                    entries: [
-                                      if (wraps)
-                                        MenuEntry(
-                                          wrapLabel(wrap: wrapLines.value),
-                                          icon: Icons.wrap_text,
-                                          onPick: toggleWrap,
-                                        ),
-                                      for (final (icon, tooltip, _, onTap)
-                                          in actions)
-                                        MenuEntry(
-                                          tooltip,
-                                          icon: icon,
-                                          onPick: onTap,
-                                        ),
-                                      MenuEntry(
-                                        conventions.reveal,
-                                        line: LineIcon.folderOpen,
-                                        onPick: _reveal,
-                                      ),
-                                    ],
-                                  )
-                                else ...[
-                                  for (final (icon, tooltip, size, onTap)
-                                      in actions)
-                                    IconTap(
-                                      icon,
-                                      tooltip: tooltip,
-                                      size: size,
-                                      onTap: onTap,
-                                    ),
-                                  IconTap.line(
-                                    LineIcon.folderOpen,
-                                    tooltip: conventions.reveal,
-                                    size: 14,
-                                    onTap: _reveal,
-                                  ),
-                                ],
-                                IconTap.line(
-                                  LineIcon.close,
-                                  tooltip: 'Close',
-                                  size: 15,
-                                  onTap: widget.onClose,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
+          PreviewHeader(
+            daemon: widget.daemon,
+            chat: widget.chat,
+            path: widget.path,
+            tabsKey: widget.tabsKey,
+            watch: _watch,
+            kind: kind,
+            page: page != null,
+            actions: actions,
+            wraps: () => _showsSource,
+            onReveal: _reveal,
+            onClose: widget.onClose,
           ),
           LayoutBuilder(
             builder: (context, pane) => ValueListenableBuilder(
@@ -382,7 +218,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                 folder: widget.chat.folder,
                 path: widget.path,
                 // The source button under Close.
-                end: _end(pane.maxWidth, open),
+                end: previewHeaderEnd(pane.maxWidth, open, page: page != null),
                 trailing: _switches
                     ? SourceButton(source: _source, onChanged: _showSource)
                     : null,
@@ -440,97 +276,6 @@ class _PreviewPaneState extends State<PreviewPane> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// The room right of the header's last button (Close) in a pane [width]
-  /// wide with [open]'s tabs: the path line's ends there too.
-  double _end(double width, List<PreviewEntry> open) {
-    if (open.length > 1 && previewChips(open)) return previewChipInset;
-    final roomy = width >= (_page == null ? _roomyFrom : _roomyWithPageFrom);
-    return roomy ? NushiTheme.gutter : 4;
-  }
-
-  /// The tabs of [open], this file's showing; as chips, the + after them,
-  /// as a browser tab's title row has it, so the row keeps its shape as
-  /// you move between the two.
-  Widget _tabs(List<PreviewEntry> open) {
-    final tabs = PreviewTabs(
-      key: widget.tabsKey,
-      chat: widget.chat,
-      tabs: open,
-      current: PreviewFile(widget.path),
-    );
-    if (!previewChips(open)) return tabs;
-    return Row(
-      spacing: 2,
-      children: [
-        Flexible(child: tabs),
-        NewBrowserTab(chat: widget.chat),
-      ],
-    );
-  }
-}
-
-/// The one file's name, plain, its absolute path ([tooltip]) in a tooltip:
-/// a click shows it in the Files pane ([showInFiles]) when the file is in
-/// the chat's folder, and does nothing otherwise. Its text sits where a
-/// tab's would ([PreviewTabs]), so a second file opening moves nothing.
-class _Name extends StatelessWidget {
-  const new({
-    required this.daemon,
-    required this.chat,
-    required this.path,
-    required this.tooltip,
-  });
-
-  final Daemon daemon;
-  final ChatState chat;
-  final String path;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final inside = inFiles(daemon, chat, path);
-    return Pressable(
-      onTap: inside == null ? null : () => showInFiles(chat, inside),
-      tooltip: plainPath(tooltip),
-      // Tinted under the pointer and ringed with the keys on it, as a
-      // control is; the text stays where a tab's is.
-      builder: (context, look) => Container(
-        padding: const EdgeInsets.fromLTRB(previewNameInset, 3, 3, 3),
-        decoration: look.hover
-            ? BoxDecoration(
-                color: look.pressed ? t.pressed : t.hover,
-                borderRadius: BorderRadius.circular(NushiTheme.control),
-              )
-            : null,
-        foregroundDecoration: focusRing(t, look),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 7,
-          children: [
-            Flexible(
-              child: Text(
-                plainPath(baseName(path)),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.code(t.text, size: 12),
-              ),
-            ),
-            // Its unsaved edits' dot (ADR 0096).
-            EditedMark(
-              chat: chat,
-              path: path,
-              close: const SizedBox.shrink(),
-              shown: false,
-              hover: false,
-            ),
-          ],
-        ),
       ),
     );
   }
