@@ -128,8 +128,8 @@ func (s *session) setOption(ctx context.Context, id, value string) ([]acp.Sessio
 
 // updateModel changes the session's model or its effort (UpdateSession),
 // then asks Ante how full the context is again (ContextReport, which
-// handle keeps): another model has another limit, which SessionUpdated
-// doesn't say and an image's room goes by (imageRoom).
+// handle keeps): another model has another limit, and an image's room
+// goes by it (imageRoom).
 func (s *session) updateModel(ctx context.Context, model map[string]any) (event, error) {
 	ev, err := s.await(ctx, map[string]any{"UpdateSession": map[string]any{"model": model}}, "SessionUpdated")
 	if err != nil {
