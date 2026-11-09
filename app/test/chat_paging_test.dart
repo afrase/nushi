@@ -88,6 +88,20 @@ void main() {
     expect(asked, 1);
   });
 
+  test('a new item at the first loaded place goes first, not at the end', () {
+    // A reopen's compaction mark sent at the page's edge (older == index),
+    // or at 0 in a chat held whole.
+    final chat = _recent()
+      ..apply(
+        _item(6, Item(id: 'mark', kind: ItemKind.ITEM_KIND_NOTICE), index: 100),
+      );
+    expect(chat.items.first.id, 'mark');
+    final whole = ChatState('c', '/f')
+      ..load(GetChatResponse(items: [_msg(0), _msg(1)], seq: Int64(5)))
+      ..apply(_item(6, Item(id: 'mark', kind: ItemKind.ITEM_KIND_NOTICE)));
+    expect(whole.items.map((i) => i.id), ['mark', 'i0', 'i1']);
+  });
+
   test('an older page goes before; an item it has that came as new moves', () {
     final chat = _recent()
       ..apply(_item(6, _msg(95), index: 110)) // came at the end meanwhile

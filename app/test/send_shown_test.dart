@@ -80,12 +80,13 @@ Future<(FakeDaemon, _Sends, Daemon)> _app(
   return (fake, sends, d);
 }
 
-/// The daemon's echo of [text], at [seq].
+/// The daemon's echo of [text], at [seq], after the chat's items.
 EventsResponse _echo(String text, int seq) => EventsResponse(
   chatId: 'a',
   seq: Int64(seq),
   item: ItemEvent(
     item: Item(id: 'u-$seq', kind: ItemKind.ITEM_KIND_USER_MESSAGE, text: text),
+    index: _items.length,
   ),
 );
 

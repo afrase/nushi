@@ -40,7 +40,7 @@ func (w *watcher) event(e model.Event) {
 			w.items[i].Text += e.Item.Text
 		case i >= 0:
 			w.items[i] = *e.Item
-		case e.Index > 0 && e.Index < len(w.items):
+		case !e.Append && e.Index >= 0 && e.Index < len(w.items):
 			w.items = slices.Insert(w.items, e.Index, *e.Item)
 		default:
 			w.items = append(w.items, *e.Item)

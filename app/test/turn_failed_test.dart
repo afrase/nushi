@@ -363,7 +363,10 @@ void main() {
       EventsResponse(
         chatId: 'c',
         seq: Int64(3),
-        item: ItemEvent(item: _notice('b', 'branch_renamed', 'Branch renamed')),
+        item: ItemEvent(
+          item: _notice('b', 'branch_renamed', 'Branch renamed'),
+          index: 2,
+        ),
       ),
     );
     await tester.pump();
