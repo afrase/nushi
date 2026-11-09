@@ -222,7 +222,7 @@ func (s *server) Events(ctx context.Context, req *connect.Request[nushiv1.Events
 	behind := s.Hub.Subscribe(ctx, func(e model.Event) bool {
 		if e.Item != nil && !req.Msg.ImageRefs {
 			it := []model.Item{*e.Item} // the chat's, perhaps shared: inline gives it new images
-			s.inline(e.ChatID, it, false)
+			s.Chats.Inline(e.ChatID, it)
 			e.Item = &it[0]
 		}
 		err = stream.Send(toProto(e, req.Msg.ImageRefs))

@@ -82,6 +82,12 @@ func TestImagesAsReferences(t *testing.T) {
 	last := must(phone.c.GetChat(ctx, connect.NewRequest(&nushiv1.GetChatRequest{ChatId: id, Recent: 1})))
 	page := must(phone.c.GetChatItems(ctx, connect.NewRequest(&nushiv1.GetChatItemsRequest{ChatId: id, Before: last.Items[0].Id, ImageRefs: true})))
 	checkRefs(t, "GetChatItems", page.Items[0].Images, big, small)
+	// A page without the flag: the image the chat holds as a reference
+	// (ADR 0105) read back whole.
+	page = must(mac.c.GetChatItems(ctx, connect.NewRequest(&nushiv1.GetChatItemsRequest{ChatId: id, Before: last.Items[0].Id})))
+	if imgs := page.Items[0].Images; len(imgs) != 2 || !bytes.Equal(imgs[0].Data, big) || !bytes.Equal(imgs[1].Data, small) {
+		t.Fatalf("GetChatItems without image_refs: %v", imgs)
+	}
 
 	// The reference brings the bytes, over the device's API (not macOnly),
 	// from that chat only.

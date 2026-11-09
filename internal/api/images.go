@@ -46,13 +46,19 @@ func imageProto(img model.Image, refs bool) *nushiv1.ImageData {
 		Width: int32(w), Height: int32(h)} // imagesize keeps a side under 1<<30
 }
 
-// inline gives items, the caller's copies of chatID's, the bytes of the
-// images the chat holds as references, unless the client takes
-// references (refs).
-func (s *server) inline(chatID string, items []model.Item, refs bool) {
+// itemsProto is items, the caller's copies of chatID's, for the API: a
+// client that doesn't take references (refs) has the bytes of the images
+// the chat holds as references read back first (ADR 0105). Every page
+// and snapshot of items goes through it, so none can miss that.
+func (s *server) itemsProto(chatID string, items []model.Item, refs bool) []*nushiv1.Item {
 	if !refs {
 		s.Chats.Inline(chatID, items)
 	}
+	var out []*nushiv1.Item
+	for i := range items {
+		out = append(out, itemProto(&items[i], refs))
+	}
+	return out
 }
 
 var sha256Hex = regexp.MustCompile(`^[0-9a-f]{64}$`)

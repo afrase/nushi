@@ -44,14 +44,8 @@ func (s *server) GetChat(_ context.Context, req *connect.Request[nushiv1.GetChat
 	resp := &nushiv1.GetChatResponse{Chat: chatProto(c.Record), Config: configProto(c.Config),
 		Status: statusProto(c.Status), Seq: c.Seq, Commands: commandsProto(c.Commands), Usage: usageProto(c.Usage),
 		Queue: queueProto(c.Queue), Older: int32(start)}
-	s.inline(req.Msg.ChatId, c.Items, req.Msg.ImageRefs)
-	s.inline(req.Msg.ChatId, part.Running, req.Msg.ImageRefs)
-	for _, it := range c.Items {
-		resp.Items = append(resp.Items, itemProto(&it, req.Msg.ImageRefs))
-	}
-	for _, it := range part.Running {
-		resp.Running = append(resp.Running, itemProto(&it, req.Msg.ImageRefs))
-	}
+	resp.Items = s.itemsProto(req.Msg.ChatId, c.Items, req.Msg.ImageRefs)
+	resp.Running = s.itemsProto(req.Msg.ChatId, part.Running, req.Msg.ImageRefs)
 	return connect.NewResponse(resp), nil
 }
 
@@ -64,12 +58,7 @@ func (s *server) GetChatItems(_ context.Context, req *connect.Request[nushiv1.Ge
 	if err != nil {
 		return nil, notFound(err)
 	}
-	resp := &nushiv1.GetChatItemsResponse{Older: int32(start)}
-	s.inline(req.Msg.ChatId, items, req.Msg.ImageRefs)
-	for _, it := range items {
-		resp.Items = append(resp.Items, itemProto(&it, req.Msg.ImageRefs))
-	}
-	return connect.NewResponse(resp), nil
+	return connect.NewResponse(&nushiv1.GetChatItemsResponse{Older: int32(start), Items: s.itemsProto(req.Msg.ChatId, items, req.Msg.ImageRefs)}), nil
 }
 
 func (s *server) StartChat(ctx context.Context, req *connect.Request[nushiv1.StartChatRequest]) (*connect.Response[nushiv1.StartChatResponse], error) {
