@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/afrase/nushi/internal/atomicfile"
+	"github.com/afrase/nushi/internal/imagesize"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -94,9 +95,15 @@ type stored struct {
 	Pictures []picture `json:"pictures,omitempty"`
 }
 
+// picture is an image as written: its file's hash, and its length and
+// pixels as it was written (an older daemon's records have neither, which
+// reading takes from the file: read.go).
 type picture struct {
 	MimeType string `json:"mime"`
 	Hash     string `json:"hash"`
+	Size     int64  `json:"size,omitempty"`
+	Width    int    `json:"w,omitempty"`
+	Height   int    `json:"h,omitempty"`
 }
 
 // Append adds items to chat's copy, or replaces an item written before.
@@ -229,22 +236,48 @@ func wholeLines(f *os.File, size int64) (int64, error) {
 }
 
 // storeImagesLocked writes an item's images beside chat's file (each once,
-// by its hash) and returns the item as written.
+// by its hash) and returns the item as written. An image held as a
+// reference (model.Image.Ref) must be one of chat's files already: one
+// that isn't fails the write, never an empty file in its place.
 func (s *Store) storeImagesLocked(chat string, it model.Item) (*stored, error) {
 	st := &stored{Item: it}
 	st.Images = nil
 	for _, img := range it.Images {
-		hash := img.Hash // taken as the image came in
-		if hash == "" {
-			sum := sha256.Sum256(img.Data)
-			hash = hex.EncodeToString(sum[:])
+		p := picture{MimeType: img.MimeType, Hash: img.Hash, Size: img.Size, Width: img.Width, Height: img.Height}
+		if img.Ref() {
+			if err := s.hasImageLocked(chat, p.Hash); err != nil {
+				return nil, err
+			}
+			st.Pictures = append(st.Pictures, p)
+			continue
 		}
-		if err := s.writeImageLocked(chat, hash, img.Data); err != nil {
+		if p.Hash == "" { // else taken as the image came in
+			sum := sha256.Sum256(img.Data)
+			p.Hash = hex.EncodeToString(sum[:])
+		}
+		if p.Size = int64(len(img.Data)); p.Width == 0 {
+			p.Width, p.Height = imagesize.OfBytes(img.Data)
+		}
+		if err := s.writeImageLocked(chat, p.Hash, img.Data); err != nil {
 			return nil, err
 		}
-		st.Pictures = append(st.Pictures, picture{MimeType: img.MimeType, Hash: hash})
+		st.Pictures = append(st.Pictures, p)
 	}
 	return st, nil
+}
+
+// hasImageLocked says chat's copy has the image of hash, or why not.
+func (s *Store) hasImageLocked(chat, hash string) error {
+	if err := checkChat(chat); err != nil {
+		return err
+	}
+	if !validHash.MatchString(hash) {
+		return fmt.Errorf("an image held by %q, not a hash", hash)
+	}
+	if _, err := s.root.Lstat(path.Join(chat, imagesDir, hash)); err != nil {
+		return fmt.Errorf("an image held as a reference isn't in the transcript copy: %w", err)
+	}
+	return nil
 }
 
 // writeImageLocked writes an image under its hash, whole or not at all

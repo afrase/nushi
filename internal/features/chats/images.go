@@ -6,6 +6,7 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/afrase/nushi/internal/imagesize"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -32,16 +33,28 @@ func HashOf(img model.Image) string {
 	return ImageHash(img.Data)
 }
 
-// hashed is images with their hashes taken (model.Image.Hash): a new
-// slice, so the caller's isn't changed under it.
+// described is img with its hash, length and pixels taken from its bytes,
+// where they weren't; one held as a reference has them.
+func described(img model.Image) model.Image {
+	if img.Ref() {
+		return img
+	}
+	img.Hash, img.Size = HashOf(img), int64(len(img.Data))
+	if img.Width == 0 {
+		img.Width, img.Height = imagesize.OfBytes(img.Data)
+	}
+	return img
+}
+
+// hashed is images described: a new slice, so the caller's isn't changed
+// under it.
 func hashed(images []model.Image) []model.Image {
 	if len(images) == 0 {
 		return images
 	}
 	out := make([]model.Image, len(images))
 	for i, img := range images {
-		img.Hash = HashOf(img)
-		out[i] = img
+		out[i] = described(img)
 	}
 	return out
 }

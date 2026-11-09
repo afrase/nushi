@@ -10,6 +10,7 @@ import (
 	"path"
 	"regexp"
 
+	"github.com/afrase/nushi/internal/imagesize"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -169,7 +170,8 @@ func (s *Store) replayLocked(chat string, decode func(line []byte, at int64) (ch
 }
 
 // withImagesLocked is st as an item, its images read back from their
-// files.
+// files, with their length and pixels (an older daemon's record has none:
+// read from the bytes).
 func (s *Store) withImagesLocked(chat string, st *stored) model.Item {
 	it := st.Item
 	for _, p := range st.Pictures {
@@ -177,7 +179,11 @@ func (s *Store) withImagesLocked(chat string, st *stored) model.Item {
 			continue
 		}
 		if data, err := s.root.ReadFile(path.Join(chat, imagesDir, p.Hash)); err == nil {
-			it.Images = append(it.Images, model.Image{MimeType: p.MimeType, Data: data, Hash: p.Hash})
+			img := model.Image{MimeType: p.MimeType, Data: data, Hash: p.Hash, Size: int64(len(data)), Width: p.Width, Height: p.Height}
+			if p.Size == 0 {
+				img.Width, img.Height = imagesize.OfBytes(data)
+			}
+			it.Images = append(it.Images, img)
 		}
 	}
 	return it
