@@ -49,6 +49,7 @@ func execLogin() error {
 		return err
 	}
 	argv, env := loginCommand(loginShell(), bin, dir, os.Environ())
+	keepOnlyStdio()
 	return syscall.Exec(argv[0], argv, env) //nolint:gosec // the login shell, running this nushid
 }
 
