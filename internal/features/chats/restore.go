@@ -190,7 +190,8 @@ func sameItem(a, b model.Item) bool {
 
 // saveCopyLocked makes the copy (it had copied) what the chat shows, but
 // for what only shows: the items at its end it lacks are added, or it is
-// written anew. One that couldn't be read (unread) is left as it is.
+// written anew, and the chat holds their images as references
+// (images.go). One that couldn't be read (unread) is left as it is.
 func (c *chat) saveCopyLocked(copied, shown []model.Item) {
 	if c.copies == nil {
 		return
@@ -217,5 +218,11 @@ func (c *chat) saveCopyLocked(copied, shown []model.Item) {
 	c.mirrored = err == nil
 	if err != nil {
 		c.logLocked().Warn("transcript copy not written", "items", len(want), "err", err)
+		return
+	}
+	for i := range c.items { // the copy has them all: their images are held as references
+		if !shownOnly(c.items[i]) {
+			c.byRefLocked(i)
+		}
 	}
 }

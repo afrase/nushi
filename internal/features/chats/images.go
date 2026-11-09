@@ -68,6 +68,28 @@ func hashed(images []model.Image) []model.Image {
 	return out
 }
 
+// heavy says an image is held as a reference once the copy has it.
+func heavy(img model.Image) bool { return len(img.Data) > model.SmallImage }
+
+// byRefLocked holds the heavy images of the chat's item i as references:
+// the caller has just written it to the copy. The item takes a new
+// slice, as an event or a snapshot may share the one it had.
+func (c *chat) byRefLocked(i int) {
+	imgs := c.items[i].Images
+	if !slices.ContainsFunc(imgs, heavy) {
+		return
+	}
+	out := make([]model.Image, len(imgs))
+	for j, img := range imgs {
+		if heavy(img) {
+			img = described(img)
+			img.Data = nil
+		}
+		out[j] = img
+	}
+	c.items[i].Images = out
+}
+
 // unrefLocked reads back every image the chat holds as a reference: its
 // copy is about to go. One that can't be read stays a reference, with a
 // warning.
