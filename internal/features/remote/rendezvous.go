@@ -90,7 +90,7 @@ func (s *Service) moved(device string) {
 	if !changed {
 		return
 	}
-	if s.prune() {
+	if s.prune() && s.settings.On { // off, the keys are only saved
 		s.relink()
 	}
 	_ = s.saveKey(s.listen, s.moving) // else it moves again next time
