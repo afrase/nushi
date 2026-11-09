@@ -41,8 +41,12 @@ type Inbox struct {
 
 // Inbox asks the host for its inbox (f says which); poll says the app
 // asks on its timer, so a rate limit running low holds it back (the last
-// inbox stays).
+// inbox stays). An answer from a token replaced while it was asked is
+// dropped: it may be another account's.
 func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilter, poll bool) (Inbox, error) {
+	if h, ok := normalHost(name); ok {
+		name = h // as the token's host is kept, and dropped
+	}
 	key := fmt.Sprint(name, " ", inboxKey(f))
 	s.mu.Lock()
 	kept, ok := s.inboxes[key]
@@ -50,14 +54,14 @@ func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilte
 	if ok && time.Since(kept.at) < inboxFresh {
 		return Inbox{Inbox: kept.inbox, At: kept.at}, nil
 	}
-	c, err := s.client(ctx, name)
+	h, err := s.host(ctx, name, false)
 	if err != nil {
 		return Inbox{}, err
 	}
 	if poll {
 		ctx = githubapi.Poll(ctx)
 	}
-	in, err := c.Inbox(ctx, f)
+	in, err := h.c.Inbox(ctx, f)
 	if err != nil {
 		if ok {
 			return Inbox{Inbox: kept.inbox, At: kept.at, Stale: err}, nil
@@ -65,13 +69,16 @@ func (s *Service) Inbox(ctx context.Context, name string, f githubapi.InboxFilte
 		return Inbox{}, err
 	}
 	now := time.Now()
-	s.keep(name, inboxKey(f), in)
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.clients[name] != h {
+		return Inbox{}, fmt.Errorf("the token for %s changed: ask again", name)
+	}
+	s.keep(name, inboxKey(f), in) // under s.mu, so a forget can't come between
 	s.inboxes[key] = inboxCache{at: now, inbox: in}
 	for _, it := range slices.Concat(in.Review, in.Mine, in.Assigned) {
 		s.states[it.ID] = stateCache{at: now, item: it}
 	}
-	s.mu.Unlock()
 	return Inbox{Inbox: in, At: now}, nil
 }
 
@@ -97,9 +104,22 @@ func (s *Service) keep(name, key string, v any) {
 	}
 }
 
+// forget drops what the host's token was shown, on disk and here (its
+// inboxes, its items' states): another token may be another account's.
+// s.mu is held.
 func (s *Service) forget(name string) {
 	if err := s.Store.ForgetCache(cacheArea, name); err != nil {
 		slog.Warn("dropping github's cache", "host", name, "err", err)
+	}
+	for key := range s.inboxes {
+		if strings.HasPrefix(key, name+" ") {
+			delete(s.inboxes, key)
+		}
+	}
+	for id, st := range s.states {
+		if st.item.Host == name {
+			delete(s.states, id)
+		}
 	}
 }
 
@@ -141,16 +161,20 @@ func (s *Service) States(ctx context.Context, items []model.ChatGitHub, poll boo
 		ctx = githubapi.Poll(ctx)
 	}
 	for name, ids := range ask {
-		c, err := s.client(ctx, name)
+		h, err := s.host(ctx, name, false)
 		if err != nil {
 			continue
 		}
-		got, err := c.Status(ctx, ids)
+		got, err := h.c.Status(ctx, ids)
 		if err != nil {
 			continue // the last known state stays
 		}
 		now := time.Now()
 		s.mu.Lock()
+		if n, _ := normalHost(name); s.clients[n] != h {
+			s.mu.Unlock()
+			continue // the token changed meanwhile: perhaps another account's
+		}
 		for id, it := range got {
 			s.states[id] = stateCache{at: now, item: it}
 			out[id] = it
