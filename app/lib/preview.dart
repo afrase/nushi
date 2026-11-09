@@ -11,7 +11,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/history_table.dart' show diskSize;
 import 'package:nushi/images.dart';
-import 'package:nushi/markdown.dart';
+import 'package:nushi/markdown_outline.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_sniff.dart';
 import 'package:nushi/preview_text.dart';
@@ -44,7 +44,7 @@ enum PreviewKind {
   bool get page =>
       this == html || this == svg || this == pdf || this == mermaid;
 
-  /// Has Preview and Source.
+  /// Renders, and has the source button (ADR 0106).
   bool get rendered =>
       this == markdown ||
       this == html ||
@@ -322,8 +322,9 @@ class PreviewNote extends StatelessWidget {
 }
 
 /// What a preview shows of [watch]'s file, by its kind ([previewKind]):
-/// Markdown rendered, an image, a CSV's table, a page through [page] (the
-/// Mac's web view or the phone's frame, which follow [watch] themselves),
+/// Markdown rendered with its outline ([OutlinedMarkdown]), an image, a
+/// CSV's table, a page through [page] (the Mac's web view or the phone's
+/// frame, which follow [watch] themselves),
 /// or, for code and with [source], its text highlighted ([SourceView]),
 /// its lines wrapped as [wrapLines] says.
 class PreviewBody extends StatelessWidget {
@@ -445,20 +446,10 @@ class PreviewBody extends StatelessWidget {
             },
           );
         }
-        return SelectionArea(
-          child: SingleChildScrollView(
-            padding: padding,
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: AgentMarkdown(
-                  text,
-                  images: (uri, alt) => _image(f.path, uri, alt),
-                ),
-              ),
-            ),
-          ),
+        return OutlinedMarkdown(
+          text,
+          padding: padding,
+          images: (uri, alt) => _image(f.path, uri, alt),
         );
       },
     );

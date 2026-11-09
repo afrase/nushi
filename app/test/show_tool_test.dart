@@ -241,7 +241,7 @@ void main() {
       final (fake, d) = await _app(tester, asked: asked);
       await _shows(tester, fake, 'docs/report.md');
       expect(find.byType(PreviewPane), findsOneWidget);
-      expect(find.text('The release report'), findsOneWidget);
+      expect(find.textContaining('The release report'), findsOneWidget);
       expect(asked, ['docs/report.md']);
       expect(_chat(d).showAsked.value, isNull);
       // Closed, it stays closed until the agent asks again.

@@ -18,28 +18,40 @@ import 'package:nushi/theme/theme.dart';
 // goes there. The pins rail (ADR 0085, message_pins.dart) has a pinned
 // message's.
 
-/// One of the rail's entries: what [Rail.onPick] gets, and its title.
+/// One of the rail's entries: what [Rail.onPick] gets, its title, and in an
+/// outline how deep it stands (0, 1 or 2).
 @immutable
 class RailEntry {
-  const new(this.id, this.title);
+  const new(this.id, this.title, {this.depth = 0});
 
   /// What a pick of it gives [Rail.onPick].
   final String id;
+
+  /// Its level under the outline's top ([Rail.outline]); 0 for the top.
+  final int depth;
 
   /// What the menu lists it by: plain text, at most a line.
   final String title;
 
   @override
   bool operator ==(Object other) =>
-      other is RailEntry && other.id == id && other.title == title;
+      other is RailEntry &&
+      other.id == id &&
+      other.title == title &&
+      other.depth == depth;
 
   @override
-  int get hashCode => Object.hash(id, title);
+  int get hashCode => Object.hash(id, title, depth);
 }
 
 /// The room between the dashes, and their thickness.
 const _pitch = 8.0;
 const _thick = 2.0;
+
+/// How far right a dash stands, and how much shorter it is, for each level
+/// of an outline's entry.
+const _step = 3.0;
+const _shorter = 2.0;
 
 /// Where the rail's dashes stand and how long they are, given the room
 /// beside the transcript's text ([margin], its left inset): as Claude's
@@ -90,7 +102,9 @@ class RailFit {
 /// and bright. Its menu lists them; [onPick] goes to the one picked (its
 /// id). [before] runs as it opens, the menu showing once it's done
 /// (`pinTitlesApi`). [fit] is where the dashes stand from its left edge,
-/// which is the text's, and how long they are.
+/// which is the text's, and how long they are. An [outline]'s (a Markdown
+/// preview's headings) draws the current dash in the accent, each other one
+/// by its entry's depth, and its menu lines the titles up, indented by it.
 class Rail extends StatefulWidget {
   const new({
     required this.entries,
@@ -100,6 +114,7 @@ class Rail extends StatefulWidget {
     required this.label,
     super.key,
     this.before,
+    this.outline = false,
   });
 
   /// What a screen reader calls it ("Pinned messages").
@@ -109,6 +124,7 @@ class Rail extends StatefulWidget {
   final void Function(String id) onPick;
   final RailFit fit;
   final Future<void> Function()? before;
+  final bool outline;
 
   /// How long the menu stays once the pointer has left it and the rail.
   static const linger = Duration(milliseconds: 150);
@@ -241,7 +257,8 @@ class _RailState extends State<Rail> {
           builder: (context, look) => _Dashes(
             // The menu over it has them, a little to the right.
             shown: !_menu.isShowing,
-            count: widget.entries.length,
+            entries: widget.entries,
+            outline: widget.outline,
             current: current,
             fit: widget.fit,
             look: look,
@@ -314,6 +331,7 @@ class _RailState extends State<Rail> {
                             current: widget.current,
                             lit: _lit,
                             fit: widget.fit,
+                            outline: widget.outline,
                             room: _room(context),
                             onPick: _pick,
                           ),
@@ -367,7 +385,8 @@ const railMost = 12;
 class _Dashes extends StatelessWidget {
   const new({
     required this.shown,
-    required this.count,
+    required this.entries,
+    required this.outline,
     required this.current,
     required this.fit,
     required this.look,
@@ -375,7 +394,8 @@ class _Dashes extends StatelessWidget {
   });
 
   final bool shown;
-  final int count;
+  final List<RailEntry> entries;
+  final bool outline;
   final int current;
   final RailFit fit;
   final ControlLook look;
@@ -384,7 +404,10 @@ class _Dashes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    final from = (current - railMost ~/ 2).clamp(0, max(0, count - railMost));
+    final count = entries.length;
+    final from = (current - railMost ~/ 2)
+        .clamp(0, max(0, count - railMost))
+        .toInt();
     return Container(
       padding: padding,
       foregroundDecoration: focusRing(t, look),
@@ -396,7 +419,12 @@ class _Dashes extends StatelessWidget {
           spacing: _pitch - _thick,
           children: [
             for (var i = from; i < min(count, from + railMost); i++)
-              RailDash(on: i == current, fit: fit),
+              RailDash(
+                on: i == current,
+                fit: fit,
+                accent: outline,
+                depth: outline ? entries[i].depth : 0,
+              ),
           ],
         ),
       ),
@@ -404,36 +432,49 @@ class _Dashes extends StatelessWidget {
   }
 }
 
-/// One entry's dash: long and bright for the current one ([on]), short and
-/// dim otherwise; between the two if [bright] (its row under the pointer or
-/// the keys), as Claude's hovered row has it.
+/// One entry's dash: long and bright for the current one ([on]; the
+/// accent's if [accent]), short and dim otherwise; between the two if
+/// [bright] (its row under the pointer or the keys), as Claude's hovered
+/// row has it. Other than the current one, a [depth] deeper stands
+/// further right and is shorter.
 class RailDash extends StatelessWidget {
   const new({
     required this.on,
     super.key,
     this.fit = RailFit.wide,
     this.bright = false,
+    this.accent = false,
+    this.depth = 0,
   });
 
   final bool on;
   final RailFit fit;
   final bool bright;
+  final bool accent;
+  final int depth;
 
   @override
   Widget build(BuildContext context) {
     final t = NushiTheme.of(context).t;
-    return AnimatedContainer(
+    final deep = on ? 0 : depth;
+    final dash = AnimatedContainer(
       duration: reduceMotion(context) ? Duration.zero : Motion.quick,
-      width: fit.dash(on: on),
+      width: max(_thick * 2, fit.dash(on: on) - deep * _shorter),
       height: _thick,
       decoration: BoxDecoration(
         color: on
-            ? t.text
+            ? (accent ? t.accentInk : t.text)
             : bright
             ? Color.lerp(t.borderStrong, t.text, 0.5)
             : t.borderStrong,
         borderRadius: BorderRadius.circular(_thick / 2),
       ),
     );
+    return deep == 0
+        ? dash
+        : Padding(
+            padding: EdgeInsets.only(left: deep * _step),
+            child: dash,
+          );
   }
 }

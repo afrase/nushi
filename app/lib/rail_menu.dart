@@ -34,12 +34,17 @@ class RailMenu extends StatelessWidget {
     required this.room,
     required this.onPick,
     super.key,
+    this.outline = false,
   });
 
   final List<RailEntry> entries;
   final ValueListenable<int> current;
   final ValueNotifier<int?> lit;
   final RailFit fit;
+
+  /// It's an outline's ([Rail.outline]): titles lined up, indented by
+  /// their depth.
+  final bool outline;
 
   /// How tall it can be: down to the window's bottom, from the rail.
   final double room;
@@ -95,6 +100,7 @@ class RailMenu extends StatelessWidget {
                         // The dashes line up with the rail's under them.
                         inset: max(4, fit.inset - _pad - 1 - shift),
                         fit: fit,
+                        outline: outline,
                         current: i == current.value,
                         lit: i == lit.value,
                         onHover: (on) {
@@ -117,6 +123,9 @@ class RailMenu extends StatelessWidget {
   }
 }
 
+/// How far an outline's title stands right for each level of its entry.
+const _indent = 14.0;
+
 /// One row of the rail's menu.
 class _MenuRow extends StatelessWidget {
   const new({
@@ -124,6 +133,7 @@ class _MenuRow extends StatelessWidget {
     required this.height,
     required this.inset,
     required this.fit,
+    required this.outline,
     required this.current,
     required this.lit,
     required this.onHover,
@@ -134,6 +144,7 @@ class _MenuRow extends StatelessWidget {
   final double height;
   final double inset;
   final RailFit fit;
+  final bool outline;
   final bool current;
   final bool lit;
   final ValueChanged<bool> onHover;
@@ -174,15 +185,34 @@ class _MenuRow extends StatelessWidget {
           child: Row(
             spacing: 10,
             children: [
-              RailDash(on: current, fit: fit, bright: bright),
+              if (outline)
+                // The longest dash's room, so the titles line up.
+                SizedBox(
+                  width: fit.long,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: RailDash(
+                      on: current,
+                      fit: fit,
+                      bright: bright,
+                      accent: true,
+                      depth: entry.depth,
+                    ),
+                  ),
+                )
+              else
+                RailDash(on: current, fit: fit, bright: bright),
               Flexible(
-                child: Text(
-                  entry.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.ui(
-                    bright ? t.text : railTitleDim(t),
-                    size: 13.5,
+                child: Padding(
+                  padding: EdgeInsets.only(left: entry.depth * _indent),
+                  child: Text(
+                    entry.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.ui(
+                      bright ? t.text : railTitleDim(t),
+                      size: 13.5,
+                    ),
                   ),
                 ),
               ),
