@@ -267,9 +267,9 @@ final Pref<bool> dockBadge = _plain('dockBadge', true);
 final Pref<bool> checkSpelling = _plain('checkSpelling', true);
 
 /// Whether a web link the user clicks in a chat (its messages, its tool
-/// calls' output) opens in a browser tab beside it (on at first, as Claude
-/// desktop's "Open links in built-in browser"; ADR 0094), rather than in
-/// the default browser; `openWebLink`.
+/// calls' output) to this Mac or the local network opens in a browser tab
+/// beside it (on at first; ADR 0094), rather than in the default browser,
+/// which has every other site; `openWebLink`.
 final Pref<bool> linksInBrowserTab = _plain('linksInBrowserTab', true);
 
 /// The sites (hosts, lowercase) whose pages in a browser tab may reach

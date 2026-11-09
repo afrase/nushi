@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:markdown_view/markdown_view.dart';
 import 'package:nushi/browser_address.dart' show isWebPage;
+import 'package:nushi/browser_local.dart' show isLocalNetwork;
 import 'package:nushi/images.dart';
 import 'package:nushi/mermaid.dart';
 import 'package:nushi/paced.dart';
@@ -26,8 +27,9 @@ Uri? webLink(String href) {
 }
 
 /// Opens a web link the user clicked in a chat (its messages, its tool
-/// calls' output: what [AgentMarkdown] shows): in a browser tab beside the
-/// chat ([linkInTab]), else in the default browser ([openWebOutside]).
+/// calls' output: what [AgentMarkdown] shows): a page on this Mac or the
+/// local network in a browser tab beside the chat ([linkInTab]), else in
+/// the default browser ([openWebOutside]).
 /// Outside a chat's [Previews] (Jira, GitHub, the phone) it's the browser.
 Future<void> openWebLink(BuildContext context, Uri url) async {
   final previews = context.getInheritedWidgetOfExactType<Previews>();
@@ -41,12 +43,14 @@ Future<void> openWebLink(BuildContext context, Uri url) async {
   await openWebOutside(url);
 }
 
-/// Whether a web link opens in a browser tab (ADR 0094): with Open links in
-/// built-in browser on ([setting]), the pane able to show beside the chat
-/// ([fits]: a window too narrow for it would put it over the box), and a
-/// page a tab loads (`isWebPage`: no user name); else in the browser.
+/// Whether a web link opens in a browser tab (ADR 0094): with Open local
+/// links in built-in browser on ([setting]), the pane able to show beside
+/// the chat ([fits]: a window too narrow for it would put it over the box),
+/// and a page a tab loads (`isWebPage`: no user name) on this Mac or the
+/// local network (`isLocalNetwork`: a dev server, a device). A site on the
+/// internet opens in the browser (the owner, 2026-11-09).
 bool linkInTab(Uri url, {required bool setting, required bool fits}) =>
-    setting && fits && isWebPage(url);
+    setting && fits && isWebPage(url) && isLocalNetwork(url.host);
 
 /// Opens a web link in the default browser. Tests set their own.
 Future<void> Function(Uri url) openWebOutside = launchUrl;
