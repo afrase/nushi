@@ -247,29 +247,26 @@ class SplitButton extends StatelessWidget {
 }
 
 /// Send to agent's button, wherever something goes into the chat's box
-/// as a reply card (Send, Fix checks, Address): its arrow and [label] in
-/// the accent's ink on its tint, edged in that ink; [primary], the
-/// accent's fill (Send all).
+/// as a reply card (Send, Fix checks, Address, Send all): its arrow and
+/// [label] on the accent's fill, as a primary [Button]. Every one looks
+/// alike; a tint read as a disabled button (the owner, 2026-11-09), so
+/// only one that can't be pressed is faded.
 class SendButton extends StatelessWidget {
   const new({
     required this.label,
     required this.onPressed,
     super.key,
     this.tooltip = '',
-    this.primary = false,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final String tooltip;
-  final bool primary;
 
   @override
   Widget build(BuildContext context) {
     final theme = NushiTheme.of(context);
     final t = theme.t;
-    final fg = primary ? t.onAccent : t.accentInk;
-    final fill = primary ? t.accent : t.accentSoft;
     return Pressable(
       onTap: onPressed,
       tooltip: tooltip,
@@ -277,38 +274,29 @@ class SendButton extends StatelessWidget {
         look,
         Container(
           height: controlHeight,
-          // The edge takes a pixel of the padding on each side.
-          padding: primary
-              ? const EdgeInsets.fromLTRB(7, 0, 9, 0)
-              : const EdgeInsets.fromLTRB(6, 0, 8, 0),
-          decoration: BoxDecoration(
-            color: look.hover
-                ? Color.alphaBlend(
-                    fg.withValues(alpha: look.pressed ? 0.24 : 0.12),
-                    fill,
-                  )
-                : fill,
-            // An edge in the accent's ink, as a button has one: the tint
-            // alone read as a disabled one (the owner, 2026-11-09).
-            border: primary
-                ? null
-                : Border.all(
-                    color: fg.withValues(alpha: look.hover ? 0.85 : 0.55),
-                  ),
-            borderRadius: BorderRadius.circular(NushiTheme.control),
+          padding: const EdgeInsets.fromLTRB(7, 0, 9, 0),
+          decoration: _buttonBox(
+            t,
+            ButtonKind.primary,
+            look,
+            BorderRadius.circular(NushiTheme.control),
           ),
           foregroundDecoration: focusRing(t, look),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.subdirectory_arrow_right, size: 14, color: fg),
+              Icon(Icons.subdirectory_arrow_right, size: 14, color: t.onAccent),
               const SizedBox(width: 5),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.ui(fg, size: 12.5, weight: FontWeight.w500),
+                  style: theme.ui(
+                    t.onAccent,
+                    size: 12.5,
+                    weight: FontWeight.w500,
+                  ),
                 ),
               ),
             ],

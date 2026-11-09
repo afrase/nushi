@@ -162,7 +162,6 @@ class _PullTodoState extends State<PullTodo> {
                     label: items.length == 1
                         ? 'Send to agent'
                         : 'Send all ${items.length} to agent',
-                    primary: true,
                     tooltip:
                         "Each as a reply card in the chat's box, to send "
                         'with your message',
