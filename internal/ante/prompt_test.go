@@ -63,6 +63,56 @@ func TestImageTooBigNoted(t *testing.T) {
 	}
 }
 
+// A model change asks for the context's fill again, so an image's room
+// follows the new model's limit: from the fake's 1M "big" to its 1000-token
+// m1, through the config option and through /model, the same image goes
+// from fitting to too big.
+func TestImageRoomFollowsTheModel(t *testing.T) {
+	c := start(t, &antetest.Store{Home: t.TempDir()})
+	s, err := c.NewSession(t.Context(), &acp.NewSessionRequest{Cwd: "/work"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sid := s.SessionID
+	img := base64.StdEncoding.EncodeToString(screenshot(t, 300, 200, 255))
+	notes := func(after string) int {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(t.Context(), turnTimeout)
+		defer cancel()
+		if _, err := c.Prompt(ctx, &acp.PromptRequest{SessionID: sid, Prompt: []acp.ContentBlock{
+			{Type: "image", Image: &acp.ImageContent{Data: img, MimeType: "image/png"}}}}); err != nil {
+			t.Fatalf("%s: %v", after, err)
+		}
+		n := 0
+		for _, m := range c.texts(sid) {
+			if strings.HasPrefix(m, "agent:images-") {
+				n++
+			}
+		}
+		return n
+	}
+	prompt(t, c, sid, "/model big")
+	if n := notes("/model big"); n != 0 {
+		t.Fatalf("on big: %d notes", n)
+	}
+	if _, err := c.SetSessionConfigOption(t.Context(), &acp.SetSessionConfigOptionRequest{SessionID: sid, ConfigID: "model",
+		ValueID: &acp.SetSessionConfigOptionRequestValueID{Value: "m1"}}); err != nil {
+		t.Fatal(err)
+	}
+	if n := notes("the option m1"); n != 1 {
+		t.Errorf("after the option: %d notes, want 1", n)
+	}
+	prompt(t, c, sid, "/model big")
+	prompt(t, c, sid, "a turn on big")
+	if n := notes("big again"); n != 1 {
+		t.Fatalf("on big again: %d notes, want still 1", n)
+	}
+	prompt(t, c, sid, "/model m1")
+	if n := notes("/model m1"); n != 2 {
+		t.Errorf("after /model: %d notes, want 2", n)
+	}
+}
+
 // screenshot is a w×h PNG with enough detail not to compress away;
 // alpha < 255 makes its top see-through.
 func screenshot(t *testing.T, w, h int, alpha uint8) []byte {

@@ -108,7 +108,7 @@ func (b *bridge) configUpdates(in info) []acp.SessionUpdate {
 // takes either from the next turn on, without writing its settings.
 func (s *session) setOption(ctx context.Context, id, value string) ([]acp.SessionConfigOption, error) {
 	s.mu.Lock()
-	model := map[string]string{"id": s.info.Model.ID}
+	model := map[string]any{"id": s.info.Model.ID}
 	s.mu.Unlock()
 	switch id {
 	case "model":
@@ -118,12 +118,25 @@ func (s *session) setOption(ctx context.Context, id, value string) ([]acp.Sessio
 	default:
 		return nil, fmt.Errorf("no option %q", id)
 	}
-	if _, err := s.await(ctx, map[string]any{"UpdateSession": map[string]any{"model": model}}, "SessionUpdated"); err != nil {
+	if _, err := s.updateModel(ctx, model); err != nil {
 		return nil, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.b.options(s.info), nil
+}
+
+// updateModel changes the session's model or its effort (UpdateSession),
+// then asks Ante how full the context is again (ContextReport, which
+// handle keeps): another model has another limit, which SessionUpdated
+// doesn't say and an image's room goes by (imageRoom).
+func (s *session) updateModel(ctx context.Context, model map[string]any) (event, error) {
+	ev, err := s.await(ctx, map[string]any{"UpdateSession": map[string]any{"model": model}}, "SessionUpdated")
+	if err != nil {
+		return ev, err
+	}
+	_, _ = s.await(ctx, "ContextReport", "ContextReport") // the change is made; without an answer the old limit stays
+	return ev, nil
 }
 
 // setMode changes the permission mode, at once.

@@ -9,6 +9,7 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
+	"os"
 	"testing"
 )
 
@@ -50,8 +51,12 @@ func TestFit(t *testing.T) {
 		t.Fatal(err)
 	}
 	seeThrough := pngOf(t, screen(1650, 1100, 128))
-	var anim bytes.Buffer
-	if err := gif.Encode(&anim, screen(900, 600, 255), nil); err != nil {
+	var still bytes.Buffer
+	if err := gif.Encode(&still, screen(900, 600, 255), nil); err != nil {
+		t.Fatal(err)
+	}
+	webp, err := os.ReadFile("testdata/gradient.webp") // 400×200, cwebp -lossless
+	if err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range []struct {
@@ -70,7 +75,8 @@ func TestFit(t *testing.T) {
 		{"over the long edge alone it's scaled too", big, "image/png", len(big), 1200, "image/jpeg", true, false, 1200, 2},
 		{"a small one stays as it is", flat.Bytes(), "image/jpeg", 400_000, 2000, "image/jpeg", true, true, 400, 4.0 / 3},
 		{"a transparent one stays PNG", seeThrough, "image/png", len(seeThrough) / 2, 2000, "image/png", true, false, 1568, 1.5},
-		{"a GIF's first frame", anim.Bytes(), "image/gif", 60_000, 2000, "image/jpeg", true, false, 900, 1.5},
+		{"a GIF", still.Bytes(), "image/gif", 60_000, 2000, "image/jpeg", true, false, 900, 1.5},
+		{"a WebP", webp, "image/webp", 20_000, 300, "image/jpeg", true, false, 300, 2},
 		{"what can't fit comes out as small as it gets", big, "image/png", 1000, 2000, "image/jpeg", false, false, 768, 2},
 		{"bad bytes stay as they are", []byte("not a png"), "image/png", 400_000, 2000, "image/png", true, true, 0, 0},
 		{"too big and bad: as they are, not ok", []byte("not a png"), "image/png", 3, 2000, "image/png", false, true, 0, 0},
@@ -105,18 +111,56 @@ func TestFit(t *testing.T) {
 	}
 }
 
-// A header that says more pixels than it decodes leaves the image as it
-// is, decoding nothing.
-func TestTooManyPixels(t *testing.T) {
+// An animated GIF comes out as its first frame.
+func TestGIFFirstFrame(t *testing.T) {
+	frame := func(c color.Color) *image.Paletted {
+		return image.NewPaletted(image.Rect(0, 0, 300, 200), color.Palette{c})
+	}
+	var anim bytes.Buffer
+	red, blue := color.RGBA{255, 0, 0, 255}, color.RGBA{0, 0, 255, 255}
+	if err := gif.EncodeAll(&anim, &gif.GIF{Image: []*image.Paletted{frame(red), frame(blue)}, Delay: []int{10, 10}}); err != nil {
+		t.Fatal(err)
+	}
+	out, typ, ok := Fit(anim.Bytes(), "image/gif", 400_000, 150)
+	if typ != "image/jpeg" || !ok {
+		t.Fatalf("Fit = %s, %v", typ, ok)
+	}
+	m, err := jpeg.Decode(bytes.NewReader(out))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, _, b, _ := m.At(75, 50).RGBA(); r>>8 < 200 || b>>8 > 50 {
+		t.Errorf("the middle is %v, want the first frame's red", m.At(75, 50))
+	}
+}
+
+// pngSaying is a 1×1 PNG whose header says it's w×h.
+func pngSaying(t *testing.T, w, h uint32) []byte {
+	t.Helper()
 	data := pngOf(t, image.NewGray(image.Rect(0, 0, 1, 1)))
 	ihdr := data[12:29] // its type, then width, height and the rest
-	binary.BigEndian.PutUint32(ihdr[4:], 6001)
-	binary.BigEndian.PutUint32(ihdr[8:], 6000)
+	binary.BigEndian.PutUint32(ihdr[4:], w)
+	binary.BigEndian.PutUint32(ihdr[8:], h)
 	binary.BigEndian.PutUint32(data[29:], crc32.ChecksumIEEE(ihdr))
-	if c, err := png.DecodeConfig(bytes.NewReader(data)); err != nil || c.Width != 6001 {
+	if c, err := png.DecodeConfig(bytes.NewReader(data)); err != nil || c.Width != int(w) || c.Height != int(h) {
 		t.Fatalf("the header: %+v, %v", c, err)
 	}
-	if out, typ, ok := Fit(data, "image/png", 1, 2000); !bytes.Equal(out, data) || typ != "image/png" || ok {
-		t.Errorf("Fit = %d bytes, %s, %v", len(out), typ, ok)
+	return data
+}
+
+// An image of up to 36 megapixels is decoded; a header that says more
+// is refused before any decoding, and Fit leaves that image as it is.
+func TestTooManyPixels(t *testing.T) {
+	if _, err := config(pngSaying(t, 6000, 6000), "image/png"); err != nil {
+		t.Errorf("6000×6000: %v", err)
+	}
+	for _, size := range [][2]uint32{{6001, 6000}, {1, 6000*6000 + 1}} {
+		data := pngSaying(t, size[0], size[1])
+		if _, err := config(data, "image/png"); err == nil {
+			t.Errorf("%d×%d: no error", size[0], size[1])
+		}
+		if out, typ, ok := Fit(data, "image/png", 1, 2000); !bytes.Equal(out, data) || typ != "image/png" || ok {
+			t.Errorf("Fit = %d bytes, %s, %v", len(out), typ, ok)
+		}
 	}
 }
