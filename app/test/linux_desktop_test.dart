@@ -117,15 +117,8 @@ void main() {
     final service = client();
     await service.requestName('org.freedesktop.FileManager1');
     await service.registerObject(manager);
-    final opened = <Uri>[];
-    final desktop = LinuxDesktop(
-      bus: client(),
-      launch: (url) async {
-        opened.add(url);
-        return true;
-      },
-    );
-    await desktop.reveal('/home/me/my notes/a#1.md');
+    final opened = _answer('nushi/desktop', (_) => null);
+    await LinuxDesktop(bus: client()).reveal('/home/me/my notes/a#1.md');
     expect(manager.shown, [
       ['file:///home/me/my%20notes/a%231.md', ''],
     ]);
@@ -135,44 +128,44 @@ void main() {
   test('with no file manager on the bus, or no bus, the folder opens '
       'instead', () async {
     final (_, client) = await _bus();
-    final opened = <Uri>[];
-    Future<bool> launch(Uri url) async {
-      opened.add(url);
-      return true;
-    }
-
-    await LinuxDesktop(bus: client(), launch: launch).reveal('/home/me/a.txt');
+    final opened = _answer('nushi/desktop', (_) => null);
+    await LinuxDesktop(bus: client()).reveal('/home/me/a.txt');
     final gone = DBusClient(
       DBusAddress.unix(path: '${Directory.systemTemp.path}/nushi-no-bus'),
       authClient: DBusAuthClient(uid: '0'),
     );
     addTearDown(gone.close);
-    await LinuxDesktop(bus: gone, launch: launch).reveal('/srv/x/b.txt');
-    expect(opened, [Uri.directory('/home/me'), Uri.directory('/srv/x')]);
+    await LinuxDesktop(bus: gone).reveal('/srv/x/b.txt');
+    expect(
+      [for (final c in opened) (c.method, c.arguments)],
+      [('openFolder', '/home/me'), ('openFolder', '/srv/x')],
+    );
   });
 
-  test('a folder opens with its default app; one that opens nothing is '
+  test('a folder opens through the runner; one that opens nothing is '
       'logged without its path, never thrown', () async {
-    final opened = <Uri>[];
-    var works = true;
-    final desktop = LinuxDesktop(
-      launch: (url) async {
-        opened.add(url);
-        if (!works) {
-          throw PlatformException(code: 'Launch Error', message: 'no app');
-        }
-        return true;
-      },
+    var files = true;
+    final calls = _answer(
+      'nushi/desktop',
+      (c) => files
+          ? null
+          : throw PlatformException(
+              code: 'no-file-manager',
+              message: 'No default app for folders is set',
+            ),
     );
     final before = _nothingOpened().length;
+    const desktop = LinuxDesktop();
     await desktop.openFolder('/home/me/themes');
-    expect(opened, [Uri.directory('/home/me/themes')]);
     expect(_nothingOpened(), hasLength(before));
-    works = false;
+    files = false;
     await desktop.openFolder('/home/me/themes');
+    expect([
+      for (final c in calls) (c.method, c.arguments),
+    ], List.filled(2, ('openFolder', '/home/me/themes')));
     expect(_nothingOpened(), hasLength(before + 1));
     expect(_nothingOpened().last, contains('call=openFolder'));
-    expect(_nothingOpened().last, contains('code="Launch Error"'));
+    expect(_nothingOpened().last, contains('code=no-file-manager'));
     expect(_nothingOpened().last, isNot(contains('/home/me')));
   });
 

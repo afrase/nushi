@@ -3,10 +3,11 @@
 # own channels (app/linux/runner) against the real GTK and GIO (ADR 0104),
 # on a virtual X display (xvfb-run) and a private session bus
 # (dbus-run-session), with throwaway XDG folders whose only default apps are
-# fakes that write down what they were given. Nothing on the machine opens,
-# no xdg-open runs, and the app's data folder is throwaway too. Needs
-# xvfb-run, dbus-run-session, xclip and flutter; extra arguments go to
-# flutter test.
+# fakes that write down what they were given and which of Nushi's variables
+# they got (NUSHI_DATA and NUSHI_PROBE are set here: an app must get none).
+# Nothing on the machine opens, no xdg-open runs, and the app's data folder
+# is throwaway too. Needs xvfb-run, dbus-run-session, xclip and flutter;
+# extra arguments go to flutter test.
 set -eu
 fail() { echo "linux-channels: $*" >&2; exit 1; }
 [ "$(uname -s)" = Linux ] || fail "Linux only"
@@ -40,9 +41,12 @@ EOF
 
 cat >"$probe/record" <<'EOF'
 #!/bin/sh
-# A fake default app: writes down what it was given, a line a launch.
+# A fake default app: writes down which of Nushi's variables it was
+# started with (none, as it should be), then what it was given, a line a
+# launch: the test waits for that line, so the variables are written first.
 app=$1
 shift
+env | grep -E '^NUSHID?_' >>"$(dirname "$0")/environment-$app"
 printf '%s\n' "$*" >>"$(dirname "$0")/launched-$app"
 EOF
 chmod +x "$probe/record"

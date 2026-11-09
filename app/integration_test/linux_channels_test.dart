@@ -44,6 +44,13 @@ List<String> _launched(String app) {
   return f.existsSync() ? f.readAsLinesSync() : [];
 }
 
+/// Nushi's variables (NUSHI_*, NUSHID_*) the fake default app [app] was
+/// started with: none, though the app has NUSHI_DATA and NUSHI_PROBE.
+List<String> _inherited(String app) {
+  final f = File('$_probe/environment-$app');
+  return f.existsSync() ? f.readAsLinesSync() : [];
+}
+
 /// Waits on the real clock, 10 s at most, until [done]: a launch and a
 /// clipboard's owner answer in their own time.
 Future<void> _until(String what, FutureOr<bool> Function() done) async {
@@ -172,9 +179,15 @@ void main() {
       await _browser.invokeMethod<void>('open', 'https://example.com/a?b=1');
       await _until('the browser', () => _launched('browser').length == 2);
       // GIO gives a local file to an app's %u as its path, as a browser
-      // takes it.
-      expect(_launched('browser'), [page.path, 'https://example.com/a?b=1']);
+      // takes it. Each launch ends once the app has started, so the two
+      // write their lines in either order.
+      expect(
+        _launched('browser'),
+        unorderedEquals([page.path, 'https://example.com/a?b=1']),
+      );
       expect(_launched('editor'), isEmpty);
+      expect(Platform.environment, contains('NUSHI_DATA'));
+      expect(_inherited('browser'), isEmpty);
     });
 
     test('refuses what is no web address or file, opening nothing', () async {
@@ -227,6 +240,7 @@ void main() {
       await const LinuxDesktop().openAsText(script.path);
       await _until('the editor', () => _launched('editor').isNotEmpty);
       expect(_launched('editor').last, script.path);
+      expect(_inherited('editor'), isEmpty);
       expect(
         await _refusal(_desktop.invokeMethod<void>('openAsText', 'a/b.txt')),
         'refused',
@@ -234,7 +248,7 @@ void main() {
     });
 
     test('shows a file in the file manager on the bus, else opens its '
-        'folder', () async {
+        'folder with the default app for folders', () async {
       final file = File('${work.path}/a b.txt')..writeAsStringSync('x');
       final bus = DBusClient.session();
       addTearDown(bus.close);
@@ -252,7 +266,12 @@ void main() {
       await const LinuxDesktop().reveal(file.path);
       await _until('the folder', () => _launched('files').isNotEmpty);
       expect(_launched('files').single, work.path);
+      expect(_inherited('files'), isEmpty);
       expect(manager.shown, hasLength(1));
+      expect(
+        await _refusal(_desktop.invokeMethod<void>('openFolder', 'a/b')),
+        'refused',
+      );
     });
   }, skip: _skip);
 

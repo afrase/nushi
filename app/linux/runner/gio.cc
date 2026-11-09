@@ -1,18 +1,21 @@
 #include <gio/gio.h>
 #include <gtk/gtk.h>
 
+#include <cstring>
+
 #include "channels.h"
 
 // nushi/browser: "open" (a url) opens an http, https or file address with
 // the app that opens https, so a file is never run by the app its type has
 // (ADR 0068, 0094), and "browserName" answers that app's name or null.
 // nushi/desktop: "openAsText" (an absolute path) opens a file with the
-// default app for plain text, whatever its type. Both go through GIO's
-// default apps, never xdg-open, whose script may be missing and, in a VM,
-// may open it on another machine (ADR 0104). A call that opens nothing
-// answers an error: "refused" (not an address or a path), "no-browser" or
-// "no-editor" (no default app for it), "failed" (the app didn't start), as
-// the Mac's "refused" and "failed".
+// default app for plain text, whatever its type, and "openFolder" (an
+// absolute path) a folder with the default app for folders. All go through
+// GIO's default apps, never xdg-open, whose script may be missing and, in a
+// VM, may open it on another machine (ADR 0104). A call that opens nothing
+// answers an error: "refused" (not an address or a path), "no-browser",
+// "no-editor" or "no-file-manager" (no default app for it), "failed" (the
+// app didn't start), as the Mac's "refused" and "failed".
 
 // Answers [call] with [response], or says why it couldn't.
 static void gio_respond(FlMethodCall* call, FlMethodResponse* response) {
@@ -64,12 +67,28 @@ static void gio_launched(GObject* source, GAsyncResult* result,
   gio_answer(call, none);
 }
 
+// Whether [pair], an environment's NAME=value, is one of Nushi's own
+// variables (NUSHI_*, NUSHID_*).
+static gboolean gio_nushi_variable(const gchar* pair) {
+  return g_str_has_prefix(pair, "NUSHI_") || g_str_has_prefix(pair, "NUSHID_");
+}
+
 // Opens [uri] with [app], answering [call] once it has started. The
 // display's launch context gives the app the display and a startup id, so
-// the desktop brings its window to the front.
+// the desktop brings its window to the front, and the app's environment,
+// without Nushi's own variables: an app started on the Mac gets none of
+// them either, and a terminal it opens later must not take a development
+// run's data folder (security.md).
 static void gio_launch(GAppInfo* app, const gchar* uri, FlMethodCall* call) {
   g_autoptr(GdkAppLaunchContext) context =
       gdk_display_get_app_launch_context(gdk_display_get_default());
+  g_auto(GStrv) environment = g_get_environ();
+  for (gchar** pair = environment; *pair != nullptr; pair++) {
+    if (gio_nushi_variable(*pair)) {
+      g_autofree gchar* name = g_strndup(*pair, strcspn(*pair, "="));
+      g_app_launch_context_unsetenv(G_APP_LAUNCH_CONTEXT(context), name);
+    }
+  }
   GList uris = {const_cast<gchar*>(uri), nullptr, nullptr};
   g_app_info_launch_uris_async(app, &uris, G_APP_LAUNCH_CONTEXT(context),
                                nullptr, gio_launched, g_object_ref(call));
@@ -109,7 +128,11 @@ static void browser_name(FlMethodCall* call) {
   gio_answer(call, name);
 }
 
-static void desktop_open_as_text(FlMethodCall* call) {
+// Opens the absolute path [call] carries with the default app for
+// [content_type], whatever the path is; [missing] is the error's code when
+// there's no such app, [message] its words.
+static void desktop_open_with(FlMethodCall* call, const gchar* content_type,
+                              const gchar* missing, const gchar* message) {
   const gchar* path = gio_string_arg(call);
   g_autofree gchar* uri = path != nullptr && g_path_is_absolute(path)
                               ? g_filename_to_uri(path, nullptr, nullptr)
@@ -118,13 +141,13 @@ static void desktop_open_as_text(FlMethodCall* call) {
     gio_refuse(call, "refused", "Not a file to open");
     return;
   }
-  g_autoptr(GAppInfo) editor =
-      g_app_info_get_default_for_type("text/plain", FALSE);
-  if (editor == nullptr) {
-    gio_refuse(call, "no-editor", "No default app for text is set");
+  g_autoptr(GAppInfo) app =
+      g_app_info_get_default_for_type(content_type, FALSE);
+  if (app == nullptr) {
+    gio_refuse(call, missing, message);
     return;
   }
-  gio_launch(editor, uri, call);
+  gio_launch(app, uri, call);
 }
 
 static void gio_call(FlMethodChannel* channel, FlMethodCall* call,
@@ -138,7 +161,12 @@ static void gio_call(FlMethodChannel* channel, FlMethodCall* call,
     browser_name(call);
   } else if (g_strcmp0(name, "nushi/desktop") == 0 &&
              g_strcmp0(method, "openAsText") == 0) {
-    desktop_open_as_text(call);
+    desktop_open_with(call, "text/plain", "no-editor",
+                      "No default app for text is set");
+  } else if (g_strcmp0(name, "nushi/desktop") == 0 &&
+             g_strcmp0(method, "openFolder") == 0) {
+    desktop_open_with(call, "inode/directory", "no-file-manager",
+                      "No default app for folders is set");
   } else {
     g_autoptr(FlMethodResponse) response =
         FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
