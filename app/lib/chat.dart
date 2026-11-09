@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart'
     show TextEditingController, WidgetsBinding;
 
 import 'package:nushi/agents.dart';
+import 'package:nushi/browser_address.dart' show isWebPage;
 import 'package:nushi/chat_colors.dart';
 import 'package:nushi/chat_look.dart';
 import 'package:nushi/clock.dart';
@@ -445,10 +446,12 @@ class ChatState extends ChangeNotifier {
   /// couldn't load (the server wasn't up), else a new one (Servers menu,
   /// ADR 0098), on the Chat tab.
   void showServer(String url) {
-    final origin = Uri.tryParse(url)?.origin;
+    // Uri.origin throws for any page but http(s) to a host (about:blank).
+    final server = Uri.tryParse(url);
+    final origin = isWebPage(server) ? server!.origin : null;
     final open = previewTabs.value.whereType<BrowserTab>().where((b) {
       final at = Uri.tryParse(b.address.value);
-      return at != null && at.hasScheme && at.origin == origin;
+      return isWebPage(at) && at!.origin == origin;
     }).lastOrNull;
     if (open == null) {
       openBrowserTab(url);

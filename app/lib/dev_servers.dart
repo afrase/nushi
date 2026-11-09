@@ -94,7 +94,15 @@ class DevServers extends ChangeNotifier {
       if (ready == null) continue;
       if (s.state == DevServerState.DEV_SERVER_STATE_RUNNING) {
         _onReady.remove(s.serverId);
-        ready(s.url);
+        try {
+          ready(s.url);
+        } on Object catch (e, stack) {
+          // A page that couldn't open is a fault of its own, not the
+          // listing's error, and the other servers' pages still open.
+          FlutterError.reportError(
+            FlutterErrorDetails(exception: e, stack: stack, library: 'nushi'),
+          );
+        }
       } else if (!runs(s)) {
         _onReady.remove(s.serverId);
       }
