@@ -633,7 +633,7 @@ void main() {
       }, variant: _mac);
     }
 
-    // Linux's words (ADR 0102), in its window, on its platform.
+    // Linux's words (ADR 0104), in its window, on its platform.
     for (final width in [1700.0, 720.0]) {
       testWidgets('the preview’s folded ⋯ on Linux, ${width.toInt()} wide', (
         tester,

@@ -4,7 +4,7 @@
 #include <flutter_linux/flutter_linux.h>
 
 // The runner's own platform channels, the Linux side of the app's native
-// capabilities (ADR 0097, 0102): each answers on [view]'s engine for as long
+// capabilities (ADR 0097, 0104): each answers on [view]'s engine for as long
 // as the view lives. Their names and methods are the Mac's where the Mac has
 // the same call (macos/Runner).
 

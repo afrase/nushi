@@ -13,7 +13,7 @@ import 'package:nushi/window_drag_linux.dart';
 
 // The Linux runner's own channels (linux/runner: clipboard.cc, gio.cc,
 // window.cc) against the real GTK and GIO, through the Dart that uses them
-// (ADR 0102). Run by tools/linux-channels.sh, which gives the app a virtual
+// (ADR 0104). Run by tools/linux-channels.sh, which gives the app a virtual
 // X display, a private session bus and throwaway XDG folders whose only
 // default apps are fakes that write down what they were given
 // (NUSHI_PROBE names that folder): nothing on the machine opens, and

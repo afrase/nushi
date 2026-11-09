@@ -6,7 +6,7 @@ set -eu
 app=$1
 fail() { echo "check-bundle: $*" >&2; exit 1; }
 
-# The Linux package (ADR 0102): nushid in lib/ (the app's AppInstall and the
+# The Linux package (ADR 0104): nushid in lib/ (the app's AppInstall and the
 # daemon's own check of its package look there), of the version the app
 # says it is; the .desktop file, icons and install.sh that install it; and
 # the newest glibc any of its programs or libraries needs, printed, and

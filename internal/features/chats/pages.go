@@ -31,8 +31,27 @@ func (s *Service) Recent(chatID string, n int) (RecentPart, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.inCopy {
+		return c.recentInCopyLocked(n)
+	}
 	start := pageStart(c.items, len(c.items), n)
-	return RecentPart{Chat: c.snapshotLocked(start), Older: start, Running: runningIn(c.items[:start])}, nil
+	return RecentPart{Chat: c.snapshotLocked(slices.Clone(c.items[start:])), Older: start, Running: runningIn(c.items[:start])}, nil
+}
+
+// recentInCopyLocked is Recent for a chat whose items were let go: only
+// the part is read whole from the copy. Nothing before it runs or asks
+// (reading back ends what was under way).
+func (c *chat) recentInCopyLocked(n int) (RecentPart, error) {
+	heads, err := c.headsLocked()
+	if err != nil {
+		return RecentPart{}, err
+	}
+	start := pageStart(heads, len(heads), n)
+	items, err := c.wholeLocked(heads[start:])
+	if err != nil {
+		return RecentPart{}, err
+	}
+	return RecentPart{Chat: c.snapshotLocked(items), Older: start}, nil
 }
 
 // runningIn is those of items whose subagent or background command runs,
@@ -50,7 +69,8 @@ func runningIn(items []model.Item) []model.Item {
 // Items returns the page of a chat's items before the one of id before: n
 // at most, reaching back to the call of a subagent whose steps are in it,
 // and how many items come before the page. Only the page is copied, so a
-// long chat's pages cost what they hold.
+// long chat's pages cost what they hold; one whose items were let go reads
+// only the page whole from its copy (letgo.go).
 func (s *Service) Items(chatID, before string, n int) ([]model.Item, int, error) {
 	c, err := s.open(chatID)
 	if err != nil {
@@ -58,12 +78,22 @@ func (s *Service) Items(chatID, before string, n int) ([]model.Item, int, error)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	end := slices.IndexFunc(c.items, func(it model.Item) bool { return it.ID == before })
+	items := c.items
+	if c.inCopy { // a page of the copy's heads, only it read whole
+		if items, err = c.headsLocked(); err != nil {
+			return nil, 0, err
+		}
+	}
+	end := slices.IndexFunc(items, func(it model.Item) bool { return it.ID == before })
 	if end < 0 {
 		return nil, 0, ErrNoItem
 	}
-	start := pageStart(c.items, end, n)
-	return slices.Clone(c.items[start:end]), start, nil
+	start := pageStart(items, end, n)
+	if c.inCopy {
+		page, err := c.wholeLocked(items[start:end])
+		return page, start, err
+	}
+	return slices.Clone(items[start:end]), start, nil
 }
 
 // maxReach is how far before its n items a page reaches back for a

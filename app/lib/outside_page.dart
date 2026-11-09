@@ -11,7 +11,7 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 import 'package:nushi/web_page.dart';
 
-// Pages where the app has no web view of its own (Linux, ADR 0102): a file's
+// Pages where the app has no web view of its own (Linux, ADR 0104): a file's
 // preview and a browser tab each show a placeholder in the page's place,
 // whose button opens the page in the default browser. Only the user's click
 // opens it: what the agent shows (ADR 0068) and the Servers menu put a
@@ -120,7 +120,7 @@ class OutsideTab implements BrowserHost {
   }
 }
 
-/// What a page's placeholder says (ADR 0102).
+/// What a page's placeholder says (ADR 0104).
 const outsideNote = 'Pages open in your browser.';
 
 /// A page's placeholder: its kind's [icon] (or a drawn [line] one), its

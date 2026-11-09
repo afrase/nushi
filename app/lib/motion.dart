@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -21,7 +23,7 @@ bool reduceMotion(BuildContext context) =>
 ///   the chat, lay out once at the final width and glide by a transform;
 /// - under [reduceMotion], sizes and places jump; feedback such as a press
 ///   tint stays;
-/// - nothing runs at rest: a one-shot run ends, loops are on [loopClock].
+/// - nothing runs at rest: a one-shot run ends, loops are on [pulseClock].
 abstract final class Motion {
   /// Text and color crossfades, a button swapping: barely seen.
   static const quick = Duration(milliseconds: 120);
@@ -45,9 +47,11 @@ abstract final class Motion {
   static const Cubic leave = Cubic(0.4, 0, 1, 1);
 }
 
-/// One clock for everything that loops (a shine, a working chat's ring):
-/// it ticks only while something listens, so they move in step and stop
-/// together, and what listens repaints from it without its own controller.
+/// One clock for the motions that run once ([ClockRun]) and the reply's
+/// pacing, every frame: it ticks only while something listens, so they
+/// move in step and stop together, and what listens repaints from it
+/// without its own controller. What loops for as long as a state lasts is
+/// on [pulseClock].
 class _Clock extends ChangeNotifier {
   Ticker? _ticker;
   Duration now = Duration.zero;
@@ -81,10 +85,102 @@ class _Clock extends ChangeNotifier {
   }
 }
 
-final loopClock = _Clock();
+/// The one clock of what runs once (see [_Clock]).
+final frameClock = _Clock();
+
+/// How many times a second [pulseClock] ticks while Nushi is in front:
+/// about the fewest at which a shine still sweeps rather than steps across
+/// a title (its band moves two text widths in two seconds), and plenty for
+/// the rest (a ring grows under a pixel a tick, a breath or a caret fades).
+const pulseRate = 20;
+
+/// The clock everything that loops for as long as a state lasts repaints
+/// from (a shine, a working chat's ring, work in the background, a pull
+/// request's running checks, a streaming reply's caret, a spinner):
+/// [pulseRate] times a second while Nushi is in front (the window focused,
+/// the phone's page in front; unknown counts as in front), still otherwise,
+/// where each loop draws its rest look ([loopMoving]), as under Reduce
+/// Motion (ADR 0102). A loop can last hours (a command in the background),
+/// and each tick draws the whole window again: at the display's rate, one
+/// chat working in the background kept an idle Nushi at half a core and
+/// the window server at more.
+class _Pulse extends ChangeNotifier {
+  static const _every = Duration(
+    microseconds: Duration.microsecondsPerSecond ~/ pulseRate,
+  );
+
+  // Its time: the ticks it ticked, so every loop is in step within a tick
+  // and a test's fake time moves it.
+  Duration _now = Duration.zero;
+  Timer? _timer;
+  AppLifecycleListener? _lifecycle;
+
+  /// Whether it ticks: something listens and Nushi is in front.
+  bool get running => _timer != null;
+
+  /// Where in a loop of [period] the clock is, from 0 to 1; 0, the loop's
+  /// rest, while it doesn't run.
+  double phase(Duration period) => running
+      ? _now.inMicroseconds % period.inMicroseconds / period.inMicroseconds
+      : 0;
+
+  @override
+  void addListener(VoidCallback listener) {
+    super.addListener(listener);
+    _lifecycle ??= AppLifecycleListener(onStateChange: (_) => _moved());
+    _run();
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    super.removeListener(listener);
+    // Stops once the work at hand is done, if no one came back: a painter
+    // made anew as its widget rebuilds leaves and its successor comes at
+    // once (RenderCustomPaint swaps them), and a spinner rebuilt each
+    // frame would otherwise start the timer again every frame and never
+    // turn. One that leaves as it ticks is gone only then too: a notifier
+    // keeps who leaves while it notifies until it's done.
+    if (!hasListeners) scheduleMicrotask(_run);
+  }
+
+  // The app's state changed: if Nushi came to the front or left it, each
+  // loop repaints once, to move again or to draw its rest look.
+  void _moved() {
+    final was = running;
+    _run();
+    if (running != was) notifyListeners();
+  }
+
+  /// Ticks while something listens and Nushi is in front; with no one
+  /// listening, stops listening to the app's state too.
+  void _run() {
+    final front =
+        (WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed) ==
+        AppLifecycleState.resumed;
+    if (hasListeners && front) {
+      if (_timer != null) return;
+      final from = _now;
+      // A late tick counts the ticks it missed (Timer.tick), so a loop
+      // keeps its pace when the app is busy.
+      _timer = Timer.periodic(_every, (t) {
+        _now = from + _every * t.tick;
+        notifyListeners();
+      });
+      return;
+    }
+    _timer?.cancel();
+    _timer = null;
+    if (hasListeners) return;
+    _lifecycle?.dispose();
+    _lifecycle = null;
+  }
+}
+
+/// The one clock of what loops (see [_Pulse]).
+final pulseClock = _Pulse();
 
 /// A motion that runs once for a while (a call's title typing, a check
-/// drawing, sparks) on [loopClock]: the state rebuilds on each tick until
+/// drawing, sparks) on [frameClock]: the state rebuilds on each tick until
 /// it has run [runFor]'s length, so no ticker of its own runs, and
 /// nothing at rest.
 mixin ClockRun<T extends StatefulWidget> on State<T> {
@@ -98,7 +194,7 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
       ? _length
       : _from == null
       ? Duration.zero
-      : loopClock.now - _from!;
+      : frameClock.now - _from!;
 
   /// [ran] in milliseconds.
   double get ranMs => ran.inMicroseconds / 1000;
@@ -112,14 +208,14 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
     _from = null;
     if (_on) return;
     _on = true;
-    loopClock.addListener(_tick);
+    frameClock.addListener(_tick);
   }
 
   /// Ends the run where it is (as if it had run its length).
   void stopRun() {
     if (!_on) return;
     _on = false;
-    loopClock.removeListener(_tick);
+    frameClock.removeListener(_tick);
   }
 
   /// Called on each tick before the rebuild ([ran] as of this tick; the
@@ -128,8 +224,8 @@ mixin ClockRun<T extends StatefulWidget> on State<T> {
   void ticked() {}
 
   void _tick() {
-    final from = _from ??= loopClock.now;
-    if (loopClock.now - from >= _length) stopRun();
+    final from = _from ??= frameClock.now;
+    if (frameClock.now - from >= _length) stopRun();
     if (!mounted) return;
     ticked();
     setState(() {});
@@ -193,7 +289,8 @@ class Arriving extends InheritedWidget {
 /// Text that is still going (a running call's title, "Thinking…"): a light
 /// band sweeps across it, left to right, every two seconds, in the
 /// theme's shine colors, or [color] with a light of its own (amber text
-/// stays amber). Not [on], or with Reduce Motion, it's [child] as it is.
+/// stays amber). Not [on], with Reduce Motion, or at rest ([loopMoving]),
+/// it's [child] as it is.
 class Shine extends StatelessWidget {
   const new({required this.child, super.key, this.on = true, this.color});
 
@@ -215,38 +312,50 @@ class Shine extends StatelessWidget {
     final band = color == null
         ? t.shineBand
         : Color.lerp(color, t.shineBand, 0.6)!;
-    Widget mask(double v, Widget child) => ShaderMask(
-      blendMode: BlendMode.srcIn,
-      // A band 0.72 of the text wide, its middle running from half a width
-      // before the text to half a width after it.
-      shaderCallback: (b) => LinearGradient(colors: [base, band, base])
-          .createShader(
-            Rect.fromLTWH(
-              (-0.5 + 2 * v) * b.width - 0.36 * b.width,
-              0,
-              0.72 * b.width,
-              b.height,
-            ),
-          ),
-      child: child,
-    );
+    Widget mask(double v, Widget child, {BlendMode blend = BlendMode.srcIn}) =>
+        ShaderMask(
+          blendMode: blend,
+          // A band 0.72 of the text wide, its middle running from half a width
+          // before the text to half a width after it.
+          shaderCallback: (b) => LinearGradient(colors: [base, band, base])
+              .createShader(
+                Rect.fromLTWH(
+                  (-0.5 + 2 * v) * b.width - 0.36 * b.width,
+                  0,
+                  0.72 * b.width,
+                  b.height,
+                ),
+              ),
+          child: child,
+        );
     if (stopAt case final v?) return mask(v, child);
     return ListenableBuilder(
-      listenable: loopClock,
-      builder: (context, child) => mask(loopClock.phase(period), child!),
+      listenable: pulseClock,
+      // At rest ([loopMoving]) the mask lets the text through as it is,
+      // and stays, so what's under it keeps its state.
+      builder: (context, child) => pulseClock.running
+          ? mask(pulseClock.phase(period), child!)
+          : mask(0, child!, blend: BlendMode.dst),
       child: child,
     );
   }
 }
 
-/// Where in a loop of [period] something that loops on [loopClock] is: as
-/// the clock says, or where [Shine.stopAt] stops every shine, for a still
-/// frame.
-double loopPhase(Duration period) => Shine.stopAt ?? loopClock.phase(period);
+/// Where in a loop of [period] something that loops on [pulseClock] is: as
+/// the clock says (0 while it stands still), or where [Shine.stopAt] stops
+/// every shine, for a still frame.
+double loopPhase(Duration period) => Shine.stopAt ?? pulseClock.phase(period);
 
-/// What a looping painter repaints with: [loopClock], unless stopped for a
+/// Whether what loops on [pulseClock] draws as it moves, at [loopPhase]:
+/// while the clock runs, or in a still frame stopped along the loop
+/// ([Shine.stopAt]). Otherwise Nushi isn't in front, and a loop draws its
+/// rest look, as under Reduce Motion (a dot with no ring, a spinner's ring
+/// three parts drawn, a shine's text as it is).
+bool get loopMoving => Shine.stopAt != null || pulseClock.running;
+
+/// What a looping painter repaints with: [pulseClock], unless stopped for a
 /// still frame (see [loopPhase]).
-Listenable? get loopRepaint => Shine.stopAt == null ? loopClock : null;
+Listenable? get loopRepaint => Shine.stopAt == null ? pulseClock : null;
 
 /// [child] easing to its new size as it changes, over [Motion.standard]
 /// from [alignment]; under Reduce Motion at once, with no AnimatedSize (one

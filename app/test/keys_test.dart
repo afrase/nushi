@@ -11,7 +11,7 @@ import 'package:nushi/preview_marks.dart';
 import 'package:nushi/terminal_panel.dart';
 import 'package:nushi/terminal_screen.dart';
 
-// The app's keys on each platform (ADR 0102): the same values held with ⌘
+// The app's keys on each platform (ADR 0104): the same values held with ⌘
 // on the Mac and Control on Linux, written as each platform writes them,
 // none taken twice, and in a focused terminal on Linux only the listed ones
 // passed on.

@@ -31,7 +31,7 @@ type CleanUp struct {
 // would lose, and what stands in the way.
 func (s *Service) CleanUpOf(ctx context.Context, chatID string) (CleanUp, error) {
 	var out CleanUp
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return out, err
 	}

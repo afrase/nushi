@@ -1,6 +1,6 @@
 #!/bin/sh
 # Runs app/integration_test/linux_channels_test.dart on Linux: the runner's
-# own channels (app/linux/runner) against the real GTK and GIO (ADR 0102),
+# own channels (app/linux/runner) against the real GTK and GIO (ADR 0104),
 # on a virtual X display (xvfb-run) and a private session bus
 # (dbus-run-session), with throwaway XDG folders whose only default apps are
 # fakes that write down what they were given. Nothing on the machine opens,

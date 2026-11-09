@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 const _browser = MethodChannel('nushi/browser');
 
-/// Linux's web views, none (ADR 0102): a file's preview and a browser tab
+/// Linux's web views, none (ADR 0104): a file's preview and a browser tab
 /// are placeholders (`outside_page.dart`) whose button opens the page in the
 /// default browser, through the runner's `nushi/browser`
 /// (`linux/runner/gio.cc`: GIO's app for https, never `xdg-open`). A

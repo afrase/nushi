@@ -34,6 +34,7 @@ func (s *Service) Sleep(chatID string) error {
 	defer c.mu.Unlock()
 	c.statusChangedLocked()
 	c.logLocked().Info("chat asleep", "why", "asked")
+	c.letGoLocked()
 	return nil
 }
 
@@ -113,6 +114,9 @@ func (s *Service) doze(c *chat, after time.Duration) {
 	if err := agent.Stop(stopGrace); err != nil {
 		c.log().Warn("stopping the agent to sleep", "err", err)
 	}
+	c.mu.Lock()
+	c.letGoLocked() // once its agent's last updates are in
+	c.mu.Unlock()
 }
 
 // idleLocked says the chat has been idle for after and that stopping its

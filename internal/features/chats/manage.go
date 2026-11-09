@@ -22,10 +22,20 @@ func (s *Service) stored(id string) (*chat, error) {
 	return c, err
 }
 
+// listed is stored without reading the chat's items back (find): for what
+// changes only its record.
+func (s *Service) listed(id string) (*chat, error) {
+	c, err := s.find(id)
+	if err == nil && c.parent != nil {
+		return nil, fmt.Errorf("%q is a side chat", id)
+	}
+	return c, err
+}
+
 // Rename sets the title the user gave a chat, which wins over the agent's.
 // An empty name goes back to the agent's title.
 func (s *Service) Rename(chatID, name string) error {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return err
 	}
@@ -60,7 +70,7 @@ func (s *Service) Session(id string) (model.ChatRecord, error) {
 // set) doesn't take the place of one linked by hand, nor come back once
 // unlinked.
 func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return err
 	}
@@ -100,7 +110,7 @@ func (s *Service) LinkPull(chatID string, pull *model.ChatGitHub) error {
 // DropFoundPull unlinks the pull request found for a branch the chat's
 // folder is no longer on.
 func (s *Service) DropFoundPull(chatID, branch string) {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return
 	}
@@ -293,7 +303,7 @@ func (s *Service) Folder(chatID string) (string, error) {
 // Roots returns the folders a chat's files may be read from: its folder
 // and, for a worktree chat, the worktree (the folder may be inside it).
 func (s *Service) Roots(chatID string) ([]string, error) {
-	c, err := s.lookup(chatID)
+	c, err := s.find(chatID)
 	if err != nil {
 		return nil, err
 	}
@@ -310,14 +320,23 @@ func (s *Service) Roots(chatID string) ([]string, error) {
 // worked on the file at path (absolute), wherever it is: an agent's notes
 // outside the chat's folder can be previewed too. A show call doesn't
 // count, whatever its agent says it touched: asking to show a file can't
-// be what allows it (ADR 0068).
+// be what allows it (ADR 0068). Of a chat whose items were let go, only
+// its tool calls are read from the copy (ADR 0103): a file link asks on
+// every message that names a path outside the chat's folder.
 func (s *Service) Wrote(chatID, path string) bool {
-	c, err := s.lookup(chatID)
+	c, err := s.find(chatID)
 	if err != nil {
 		return false
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	calls := c.items
+	if c.inCopy {
+		if calls, _, err = c.copies.Find(c.id, func(it model.Item) bool { return it.Kind == model.ToolCall }); err != nil {
+			c.logLocked().Warn("transcript copy not read", "err", err)
+			return false
+		}
+	}
 	path = filepath.Clean(path)
 	abs := func(p string) string {
 		if !filepath.IsAbs(p) {
@@ -325,7 +344,7 @@ func (s *Service) Wrote(chatID, path string) bool {
 		}
 		return filepath.Clean(p)
 	}
-	for _, it := range c.items {
+	for _, it := range calls {
 		if it.Kind != model.ToolCall || isShow(it.Title) {
 			continue
 		}

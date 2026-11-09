@@ -25,28 +25,18 @@ var replayKinds = []string{"user_message_chunk", "agent_message_chunk", "agent_t
 // stepKinds are the updates of a subagent's session taken as its steps.
 var stepKinds = []string{"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}
 
-// loadCopyLocked makes a chat's copy its transcript, as a chat looked up
-// after a daemon start shows it: what was under way when it was written
-// can't go on now.
-func (c *chat) loadCopyLocked() {
-	if c.copies == nil {
-		return
-	}
-	items, err := c.copies.Read(c.id)
-	if err != nil {
-		c.logLocked().Warn("transcript copy not read", "err", err)
-		return
-	}
-	for i := range items {
-		ended(&items[i])
-		c.noteID(items[i].ID)
-	}
-	c.items = items
+// underWay says an item has something under way that ended would end.
+func underWay(it model.Item) bool {
+	return it.Kind == model.ToolCall && (it.Status == "pending" || it.Status == "in_progress") ||
+		(it.Kind == model.Permission || it.Kind == model.Question) && it.Status == "pending" ||
+		it.Subagent != nil && it.Subagent.State == "running" ||
+		it.BackgroundCommand != nil && it.BackgroundCommand.State == "running"
 }
 
-// ended marks what an item had under way as over: a tool call fails, a
-// prompt or question is cancelled, a subagent fails, a background command's
-// end can't be known.
+// ended marks what an item had under way as over, as a chat's copy read
+// back after a daemon start shows it (letgo.go): a tool call fails, a
+// prompt or question is cancelled, a subagent fails, a background
+// command's end can't be known.
 func ended(it *model.Item) {
 	switch {
 	case it.Kind == model.ToolCall && (it.Status == "pending" || it.Status == "in_progress"):
@@ -85,14 +75,21 @@ func (c *chat) messageTimes(sid, folder string) map[string]time.Time {
 
 // restoreLocked makes the chat's transcript from its copy and the agent's
 // replay, tells the app what changed, and keeps the copy to what it shows.
-// times is what messageTimes read.
+// times is what messageTimes read. The items, when they are the copy's as
+// it stands (mirrored), stand for it: a long copy isn't read a second time
+// while the transcript holds it (ADR 0103).
 func (c *chat) restoreLocked(replayed []model.Item, times map[string]time.Time) {
 	var copied []model.Item
-	if c.copies != nil {
+	switch {
+	case c.copies == nil:
+	case c.mirrored && len(c.unsaved) == 0:
+		copied = slices.DeleteFunc(slices.Clone(c.items), shownOnly)
+	default:
 		var err error
 		if copied, err = c.copies.Read(c.id); err != nil {
 			c.logLocked().Warn("transcript copy not read", "err", err)
 		}
+		c.unread = err != nil // merged with the replay, the copy may be written again
 	}
 	date := func(it *model.Item) {
 		if (it.Kind == model.UserMessage || it.Kind == model.AgentMessage) && it.Sent.IsZero() {
@@ -193,9 +190,13 @@ func sameItem(a, b model.Item) bool {
 
 // saveCopyLocked makes the copy (it had copied) what the chat shows, but
 // for what only shows: the items at its end it lacks are added, or it is
-// written anew.
+// written anew. One that couldn't be read (unread) is left as it is.
 func (c *chat) saveCopyLocked(copied, shown []model.Item) {
-	if c.copies == nil || !c.copiesOn() {
+	if c.copies == nil {
+		return
+	}
+	if !c.copiesOn() || c.unread {
+		c.mirrored = false
 		return
 	}
 	want := slices.DeleteFunc(slices.Clone(shown), shownOnly)
@@ -213,6 +214,7 @@ func (c *chat) saveCopyLocked(copied, shown []model.Item) {
 	default:
 		err = c.copies.Replace(c.id, want)
 	}
+	c.mirrored = err == nil
 	if err != nil {
 		c.logLocked().Warn("transcript copy not written", "items", len(want), "err", err)
 	}

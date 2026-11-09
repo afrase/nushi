@@ -37,7 +37,7 @@ Future<void> openInBrowser(Uri url) async {
 }
 
 /// [openInBrowser] for the user's click, saying in a snack bar why the page
-/// didn't open (no default browser, ADR 0102) rather than doing nothing.
+/// didn't open (no default browser, ADR 0104) rather than doing nothing.
 Future<void> openInBrowserOrSay(BuildContext context, Uri url) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   try {

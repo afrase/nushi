@@ -7,7 +7,7 @@ BUF := go run github.com/bufbuild/buf/cmd/buf@v1.75.0
 GOLANGCI := bin/golangci-lint
 GOVULNCHECK := bin/govulncheck
 DART_DIRS := app packages/uds_transport packages/noise packages/remote_transport packages/markdown packages/svg_path
-# The machine make runs on: Darwin, or Linux (ADR 0101, 0102).
+# The machine make runs on: Darwin, or Linux (ADR 0101, 0104).
 OS := $(shell uname -s)
 # NUSHI_DATA=<folder> runs a second daemon and app beside the usual ones;
 # else the daemon's own folder (on Linux $XDG_DATA_HOME/nushi when it's an
@@ -90,7 +90,7 @@ package: mermaid
 	codesign --force --deep --timestamp=none --sign "$(SIGN)" "$(RELEASE)"
 	tools/check-bundle.sh "$(RELEASE)"
 
-# Linux's package (ADR 0102), app/build/linux/nushi: Flutter's release
+# Linux's package (ADR 0104), app/build/linux/nushi: Flutter's release
 # bundle with nushid in lib/, its .desktop file, icons and install.sh,
 # checked; what a release's Linux tarball holds (tools/package-linux.sh).
 package-linux:
@@ -219,7 +219,7 @@ lint-linux: $(GOLANGCI)
 
 # The protos' and Dart's, and the native code of the app and its Dart
 # packages only in a platform's *_macos.dart or *_linux.dart files
-# (tools/native-edge, ADR 0097, 0102): anywhere.
+# (tools/native-edge, ADR 0097, 0104): anywhere.
 lint-dart:
 	go run ./tools/native-edge $(addsuffix /lib,$(DART_DIRS))
 	$(BUF) lint

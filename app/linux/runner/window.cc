@@ -8,7 +8,7 @@
 // startup id's time from it; without one the desktop may only mark the
 // window as wanting attention. The Mac's "arm" and "zoom" have no
 // counterpart: the system's title bar moves and zooms the window here
-// (ADR 0102).
+// (ADR 0104).
 
 // Answers [call] with [response], or says why it couldn't.
 static void window_respond(FlMethodCall* call, FlMethodResponse* response) {

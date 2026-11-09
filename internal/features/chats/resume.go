@@ -14,28 +14,40 @@ import (
 	"github.com/afrase/nushi/internal/model"
 )
 
-// lookup returns a chat, open or stored, without reopening it. A stored
-// one's copy is read with only the chat locked: who finds it meanwhile
-// waits for its transcript, the other chats don't.
+// lookup returns a chat, open or stored, without reopening it, its items
+// read back from its copy if they were let go (letgo.go). The copy is read
+// with only the chat locked: who finds it meanwhile waits for its
+// transcript, the other chats don't.
 func (s *Service) lookup(id string) (*chat, error) {
+	c, err := s.find(id)
+	if err != nil {
+		return nil, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.itemsBackLocked()
+	return c, nil
+}
+
+// find returns a chat, open or stored, without reopening it or reading its
+// items back: for what reads only its record, or reads its items from the
+// copy while they're let go. A stored one's transcript is its copy, as
+// read back, until something needs it whole.
+func (s *Service) find(id string) (*chat, error) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if c := s.chats[id]; c != nil {
-		s.mu.Unlock()
 		return c, nil
 	}
 	sess, k, err := s.storedSession(id)
 	if err != nil {
-		s.mu.Unlock()
 		return nil, err
 	}
 	c := s.newChat(k)
 	c.id, c.sid, c.record, c.issue = id, sess.SessionID, sess, sess.Issue
 	c.ultracode.Store(sess.Ultracode)
-	c.mu.Lock() // a new chat's: nobody waits on it
-	defer c.mu.Unlock()
+	c.inCopy = c.copies != nil
 	s.chats[id] = c
-	s.mu.Unlock()
-	c.loadCopyLocked() // its transcript until the agent replays it, or for good when it can't
 	return c, nil
 }
 
@@ -81,12 +93,13 @@ func (s *Service) storedSession(id string) (model.ChatRecord, *kind, error) {
 	return sess, k, nil
 }
 
-// open returns a chat. A stored chat whose agent isn't running (the daemon
-// restarted, or the chat was unarchived) is reopened in the background
-// through session/load; it is busy until its history has been replayed.
-// An archived chat stays as it is.
+// open returns a chat, its items perhaps still let go (find). A stored
+// chat whose agent isn't running (the daemon restarted, or the chat was
+// unarchived) is reopened in the background through session/load; it is
+// busy until its history has been replayed. An archived chat stays as it
+// is.
 func (s *Service) open(id string) (*chat, error) {
-	c, err := s.lookup(id)
+	c, err := s.find(id)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +120,8 @@ func (s *Service) reopenLocked(c *chat) {
 	}
 }
 
-// chat returns an open chat to work with: not an archived one.
+// chat returns an open chat to work with, its items held: not an archived
+// one.
 func (s *Service) chat(id string) (*chat, error) {
 	c, err := s.open(id)
 	if err != nil {
@@ -118,6 +132,7 @@ func (s *Service) chat(id string) (*chat, error) {
 	if c.record.Archived || c.halting {
 		return nil, c.closedLocked()
 	}
+	c.itemsBackLocked()
 	return c, nil
 }
 
@@ -182,7 +197,7 @@ func (c *chat) failedLocked(err error) {
 // folder is gone, its agent isn't ready: the notice says so then). A
 // sleeping or archived chat stays as it is.
 func (s *Service) Reopen(id string) error {
-	c, err := s.lookup(id)
+	c, err := s.find(id) // an asleep chat shown stays let go
 	if err != nil {
 		return err
 	}
@@ -207,7 +222,7 @@ func (s *Service) AgentReady(agent string) {
 	open := s.openChats()
 	for _, c := range open {
 		c.mu.Lock()
-		if i := c.indexLocked(c.failure); c.kind.Name == agent && c.reopenFailed && i >= 0 && c.items[i].Status == "not_ready" {
+		if f := c.failureLocked(); c.kind.Name == agent && c.reopenFailed && f != nil && f.Status == "not_ready" {
 			c.reopenFailed = false
 			c.statusChangedLocked()
 			c.logLocked().Info("chat may reopen", "why", "agent ready")
@@ -224,6 +239,7 @@ func (s *Service) AgentReady(agent string) {
 // has one): it gets a new session instead.
 func (s *Service) load(ctx context.Context, c *chat) error {
 	c.mu.Lock()
+	c.itemsBackLocked()
 	sid, folder, fresh, gone := c.sid, c.record.Folder, !c.record.HasMessages, folderGone(c.record)
 	retired := c.retired
 	c.retired = nil

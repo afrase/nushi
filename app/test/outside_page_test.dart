@@ -14,7 +14,7 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'outside_fixture.dart';
 
-// Linux's web views (ADR 0102): none, so a file's preview and a browser tab
+// Linux's web views (ADR 0104): none, so a file's preview and a browser tab
 // are placeholders whose button opens the page in the default browser,
 // through the runner's nushi/browser.
 

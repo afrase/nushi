@@ -3,7 +3,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:nushi/chat.dart';
 import 'package:nushi/controls.dart';
-import 'package:nushi/motion.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// At the top of a chat's transcript while more of it comes before what it
@@ -48,12 +48,7 @@ class EarlierMessages extends StatelessWidget {
                   label: 'Loading earlier messages',
                   child: SizedBox.square(
                     dimension: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      color: t.textMuted,
-                      // Still with Reduce Motion: a ring three parts drawn.
-                      value: reduceMotion(context) ? 0.75 : null,
-                    ),
+                    child: Spinner(color: t.textMuted),
                   ),
                 ),
         ),

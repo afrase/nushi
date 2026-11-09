@@ -1,5 +1,5 @@
 // The phone's web app shares the desktop's widgets but has no native edge:
-// `native` is never set in the browser (ADR 0097, 0102). A shared widget
+// `native` is never set in the browser (ADR 0097, 0104). A shared widget
 // reads what differs by platform through the getters that answer for the
 // phone too, so the previews the phone opens build without it.
 // Run with: flutter test --platform chrome test/web

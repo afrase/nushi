@@ -243,7 +243,7 @@ class ChecksMark extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2;
-    if (ringing) {
+    if (ringing && loopMoving) {
       final v = Curves.easeOut.transform(loopPhase(period));
       canvas.drawCircle(
         c,

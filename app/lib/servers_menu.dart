@@ -6,7 +6,7 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/dev_servers.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/menu.dart';
-import 'package:nushi/motion.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/tool_parts.dart' show plainPath;
 
@@ -361,11 +361,7 @@ class ServerRow extends StatelessWidget {
           dimension: size,
           child: Padding(
             padding: const EdgeInsets.all(2),
-            child: CircularProgressIndicator(
-              strokeWidth: 1.5,
-              color: color,
-              value: reduceMotion(context) ? 0.7 : null,
-            ),
+            child: Spinner(color: color),
           ),
         ),
         Icons.stop_rounded,

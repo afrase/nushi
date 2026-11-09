@@ -33,7 +33,7 @@ class _FileManager extends DBusObject {
 
 /// A session bus of the test's own, and a client on it. The server takes
 /// any uid (package:dbus finds none to send on the Mac), so it runs on any
-/// host (ADR 0102).
+/// host (ADR 0104).
 Future<(DBusServer, DBusClient Function())> _bus() async {
   final dir = Directory.systemTemp.createTempSync('nushi-bus-');
   final server = DBusServer();

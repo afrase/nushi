@@ -6,7 +6,7 @@ import (
 )
 
 // inApp says whether exe is a daemon inside the Linux app's package (ADR
-// 0102): `lib/nushid`, with the app's binary, `nushi`, in the folder above.
+// 0104): `lib/nushid`, with the app's binary, `nushi`, in the folder above.
 // Removing the package removes both; an upgrade puts them back within
 // seconds.
 func inApp(exe string) bool {

@@ -12,7 +12,7 @@ What isn't built yet and the decisions still open, each checked against the code
 - **The phone's list, arranged** (after the Mac's sidebar got its Arrange menu, 2026-11-04, ADR 0089): Group by and Sort by on the phone's chat list. The grouping and sort are shared code (`arrangement.dart`'s `groupChats`, `sortChats`); missing are a control in the phone's header, the choice kept in the phone's own storage (`platform_web.dart`, as its theme is), and how its Needs you group fits beside a Status grouping.
 - **Opt-in metrics and crash logs** (the owner, 2026-11-01): off unless you turn them on, with nothing sent before that. Stack traces and counts only, never prompts, paths or tokens; what's collected is written down.
 - **A redesign** (the owner, 2026-10-26): a fresh look at the whole app, not piecemeal fixes. Scope it with the owner first: what feels wrong, and which apps' look to learn from. The owner wants it rounder and less dated (2026-11-07), through the theme's radius tokens.
-- **What the Linux app still lacks** (the owner, 2026-10-27; the app runs there since ADR 0102, checked end to end only under Xvfb in a VM):
+- **What the Linux app still lacks** (the owner, 2026-10-27; the app runs there since ADR 0104, checked end to end only under Xvfb in a VM):
   - web views: WebKitGTK behind `PageHost`, `BrowserHost` and `DiagramHost`, a custom URI scheme for a page's root and WebKit's decide-policy signal for what a press opens, as WKWebView does on the Mac; until then a page's preview and a browser tab are placeholders that open the default browser (the owner's direction), and a diagram shows its source;
   - diagrams without a web view: Mermaid run in the default browser (a page of the diagram with the pinned mermaid.js beside it), which means shipping mermaid.js in the package (5 MB, left out for now);
   - the window's chrome drawn in the app as on the Mac, with the rounder redesign (above): for now GTK's header bar on GNOME sits over Nushi's own headers;
@@ -32,6 +32,11 @@ What isn't built yet and the decisions still open, each checked against the code
 - **Usage limits** (session and weekly) for subscription users, if an agent exposes them; nothing shows them. claude-agent-acp 0.94.0 once put `_meta._claude/rateLimit` on a `usage_update` (`docs/facts/claude.md`), not a stable interface; the Go agent passes claude's the same way and nothing reads it.
 
 ### Previews
+
+- **Markdown's outline, path and source, as Claude's desktop app has them** (the owner, 2026-11-09, with screenshots): today a rendered Markdown file has the Preview and Source tabs over it and its name in the pane's tab, with no outline. Three parts:
+  - **The outline**: a rail of short dashes left of the text, one per heading, indented by its level, the current section's dash longer and in the accent color. Hovering the rail opens a floating list of the headings by name, indented the same way, the current one marked; clicking one scrolls there.
+  - **The path**: the file's path (`docs / roadmap.md`, relative to the chat's folder) in a quiet line above the document. Hover highlights it, and a click copies it to the clipboard.
+  - **Source**: a single `</>` icon button at the top right, with the tooltip "View source", in place of the Preview and Source tabs.
 
 - **Dev servers, next** (ADR 0098 shipped the daemon's servers and the Servers menu, 2026-11-07; ADR 0100 the agent's `preview_*` tools, `show {url}` and the output's stream, 2026-11-08, with the app's logs drawer, card and tab): spotting servers an agent started in Bash or a terminal's ▷ started (`internal/listeners` is ready); Claude's quick package.json scan with Use this, and Nushi writing `.agents/launch.json` (`jsonsettings`' one-element edit); starting servers again after a daemon restart, rather than holding it; the details panel's Dev servers widget and a palette item, for when no browser tab is open; `servers_changed` when a launch file is written (the menu reads the files as it opens, and a start of an entry changed since is refused).
 
@@ -69,6 +74,10 @@ What isn't built yet and the decisions still open, each checked against the code
 
 - **Mobile, next**: an `Events` filter for cellular; tool output and diffs fetched on expanding them (the API would need an item's own call); renaming the device after pairing; a native iOS app with the Keychain and Face ID if the developer program ever works out.
 - **After a revoke** (ADR 0034's 2026-11-04 amendment, the relay review's #1 and #6): the Mac shows which devices haven't moved to the new id and key yet, and the devices paired since the revoked one was last seen, with "Pair again" and "Revoke these too"; a "Revoke and reset" for a lost or stolen phone that drops the old ids at once and makes a new VAPID key (the phones subscribe again); the relay closing a replaced listener with a code of its own (4409), so the Mac warns that another holder of the id's key listens (left until the relay's listen allowlist lands, which changes the same code); a new pairing announced by a macOS notification and a push to the other devices.
+
+### The daemon
+
+- **An awake chat's images as references** (round 2 of the memory work, 2026-11-09): an awake chat holds every image in its transcript. On a synthetic chat of 5,600 items with 200 images of 270 KB, 56 MB of its 89 MB live heap awake are image bytes and 20 MB text (asleep it holds none, ADR 0103). Holding an image already in the copy as its hash and size, read when sent, would save most of that, but every way an item leaves `chats` needs the bytes: snapshots, pages and events (the Mac takes images inline, and `imageProto` takes an image's size and pixel size from its bytes, so `model.Image` would need a size and the API a reference without bytes), `GetChatImage`, a message sent again (`messageOf`: rewind, Try again), a fork's copy (another chat's folder) and a side chat's base. That is `model`, `api`, `chats` and `transcripts`, and a path missed shows a blank image. Smaller once the Mac takes images as references (ADR 0099), when only `GetChatImage` and the agent's paths need the bytes.
 
 ## Decisions to revisit
 

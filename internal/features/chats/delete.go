@@ -50,7 +50,7 @@ type WorktreeOptions struct {
 // PlanDelete says what Delete would remove. The first time, it starts the
 // agent to learn whether it can delete its history.
 func (s *Service) PlanDelete(ctx context.Context, chatID string) (DeletePlan, error) {
-	c, err := s.stored(chatID)
+	c, err := s.listed(chatID)
 	if err != nil {
 		return DeletePlan{}, err
 	}
@@ -152,6 +152,9 @@ func (s *Service) Delete(ctx context.Context, chatID string, opts DeleteOptions)
 	}
 	if err == nil && s.copies != nil {
 		err = s.copies.Delete(c.id)
+		c.mu.Lock()
+		c.mirrored = false // if the chat stays, its items can't go to a copy that's gone (letgo.go)
+		c.mu.Unlock()
 	}
 	if err == nil {
 		err = s.removeUploads(c.id)

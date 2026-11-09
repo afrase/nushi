@@ -110,7 +110,7 @@ class _PacedState extends State<Paced> {
 
   @override
   void dispose() {
-    if (_listening) loopClock.removeListener(_tick);
+    if (_listening) frameClock.removeListener(_tick);
     super.dispose();
   }
 
@@ -122,17 +122,17 @@ class _PacedState extends State<Paced> {
     _drawn = Duration.zero;
     _ended = null;
     _steps.clear();
-    loopClock.addListener(_tick);
+    frameClock.addListener(_tick);
   }
 
   void _stop() {
     if (!_listening) return;
     _listening = false;
-    loopClock.removeListener(_tick);
+    frameClock.removeListener(_tick);
   }
 
   void _tick() {
-    final now = loopClock.now;
+    final now = frameClock.now;
     final dt = _last == null
         ? 0.0
         : min(0.25, (now - _last!).inMicroseconds / 1e6);
@@ -184,7 +184,7 @@ class _PacedState extends State<Paced> {
   @override
   Widget build(BuildContext context) {
     final text = widget.text;
-    final now = loopClock.now;
+    final now = frameClock.now;
     final ended = _ended;
     final done = !widget.live && _end >= text.length;
     if (_off || done && ended != null && now - ended >= Paced.caretOut) {

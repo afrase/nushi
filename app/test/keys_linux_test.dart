@@ -25,7 +25,7 @@ import 'fake_shells.dart';
 import 'file_edit_helpers.dart';
 import 'harness.dart';
 
-// The app's keys on Linux (ADR 0102): held with Control where the Mac's
+// The app's keys on Linux (ADR 0104): held with Control where the Mac's
 // take ⌘, written Ctrl+Shift+E, with GNOME Terminal's keys in a terminal
 // and Quit, which no menu bar has, in the palette. Tests pair Linux's
 // conventions and window with its platform, as a Linux machine runs them.

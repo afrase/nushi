@@ -8,7 +8,7 @@ set(BINARY_NAME "nushi")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
 # The Mac's bundle identifier (macos/Runner/Configs/AppInfo.xcconfig), also
-# the .desktop file's name and X11's WM_CLASS (ADR 0102).
+# the .desktop file's name and X11's WM_CLASS (ADR 0104).
 set(APPLICATION_ID "com.nushihq.Nushi")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent

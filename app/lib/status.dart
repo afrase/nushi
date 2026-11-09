@@ -12,7 +12,7 @@ import 'package:nushi/tool_calls.dart';
 /// again every 1.6 seconds, from the shared clock.
 class StatusMark extends CustomPainter {
   new(this.color, {this.ringing = false})
-    : super(repaint: ringing ? loopClock : null);
+    : super(repaint: ringing ? loopRepaint : null);
 
   final Color color;
   final bool ringing;
@@ -23,8 +23,8 @@ class StatusMark extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2 * 0.55;
-    if (ringing) {
-      final v = Curves.easeOut.transform(loopClock.phase(period));
+    if (ringing && loopMoving) {
+      final v = Curves.easeOut.transform(loopPhase(period));
       canvas.drawCircle(
         c,
         r * (1 + 1.6 * v),
@@ -46,7 +46,7 @@ class StatusMark extends CustomPainter {
 /// 2.4 seconds: work runs in the background, no turn.
 class _Ring extends CustomPainter {
   new(this.color, {required this.pulsing})
-    : super(repaint: pulsing ? loopClock : null);
+    : super(repaint: pulsing ? loopRepaint : null);
 
   final Color color;
   final bool pulsing;
@@ -55,7 +55,7 @@ class _Ring extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final v = pulsing ? loopClock.phase(period) : 0.0;
+    final v = pulsing ? loopPhase(period) : 0.0;
     // 1 → 0.35 → 1, eased.
     final alpha = 1 - 0.65 * Curves.easeInOut.transform(1 - (2 * v - 1).abs());
     canvas.drawCircle(

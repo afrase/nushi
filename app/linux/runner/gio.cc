@@ -9,7 +9,7 @@
 // nushi/desktop: "openAsText" (an absolute path) opens a file with the
 // default app for plain text, whatever its type. Both go through GIO's
 // default apps, never xdg-open, whose script may be missing and, in a VM,
-// may open it on another machine (ADR 0102). A call that opens nothing
+// may open it on another machine (ADR 0104). A call that opens nothing
 // answers an error: "refused" (not an address or a path), "no-browser" or
 // "no-editor" (no default app for it), "failed" (the app didn't start), as
 // the Mac's "refused" and "failed".

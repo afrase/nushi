@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:nushi/chat_images.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/image_ref.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -17,6 +18,18 @@ const maxImageSide = 1568;
 /// The most an attached image may weigh once encoded; the API's limit is
 /// 5 MB of base64.
 const maxImageBytes = 3750000;
+
+/// The decoded pixels the Mac's image cache keeps of images no longer
+/// shown (Flutter's default is 100 MB): a chat's thumbnails are decoded at
+/// the size they show, about 1.5 MB a screenshot, so this keeps a few
+/// screens of them to scroll back to; further back they decode again from
+/// the bytes `ChatImages` keeps, or come again from the daemon.
+const int imageCacheBytes = 64 << 20;
+
+/// Holds the image cache to [imageCacheBytes]: the Mac's app does as it
+/// starts.
+void limitImageCache() =>
+    PaintingBinding.instance.imageCache.maximumSizeBytes = imageCacheBytes;
 
 /// The image types sent as they are; others are turned into PNG.
 String? _mimeType(Uint8List b) => switch (b) {
@@ -151,9 +164,7 @@ class Thumbnails extends StatelessWidget {
                 ImageRef(refs.images, refs.chatId, img, size: size)
               else
                 ClickableImage(
-                  image: _provider[img] ??= MemoryImage(
-                    Uint8List.fromList(img.data),
-                  ),
+                  image: _provider[img] ??= MemoryImage(bytesOf(img.data)),
                   size: size,
                   border: t.borderSubtle,
                 ),
@@ -196,38 +207,54 @@ class RemoveBadge extends StatelessWidget {
 
 /// An image that shows large when clicked, [size] tall at most.
 class ClickableImage extends StatelessWidget {
-  const new({required this.image, required this.size, super.key, this.border});
+  const new({
+    required this.image,
+    required this.size,
+    super.key,
+    this.border,
+    this.waiting,
+  });
 
   final ImageProvider image;
   final double size;
   final Color? border;
 
+  /// What shows in its place until the image decodes: an image has no size
+  /// before, so a row in a list would shrink to its border and grow back,
+  /// moving what is below it.
+  final Widget? waiting;
+
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    cursor: SystemMouseCursors.zoomIn,
-    child: GestureDetector(
-      onTap: () => showImagePreview(context, image),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: size, maxWidth: size * 4),
-        decoration: BoxDecoration(
-          border: border == null ? null : Border.all(color: border!),
-          borderRadius: BorderRadius.circular(NushiTheme.control),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Image(
-          // Decoded at the size shown; the preview has it whole.
-          image: ResizeImage(
-            image,
-            height: (size * MediaQuery.devicePixelRatioOf(context)).round(),
-            policy: ResizeImagePolicy.fit,
+  Widget build(BuildContext context) {
+    Widget framed(Widget child) => MouseRegion(
+      cursor: SystemMouseCursors.zoomIn,
+      child: GestureDetector(
+        onTap: () => showImagePreview(context, image),
+        child: Container(
+          constraints: BoxConstraints(maxHeight: size, maxWidth: size * 4),
+          decoration: BoxDecoration(
+            border: border == null ? null : Border.all(color: border!),
+            borderRadius: BorderRadius.circular(NushiTheme.control),
           ),
-          gaplessPlayback: true,
-          fit: BoxFit.contain,
-          errorBuilder: (context, _, _) => const Icon(Icons.broken_image),
+          clipBehavior: Clip.antiAlias,
+          child: child,
         ),
       ),
-    ),
-  );
+    );
+    return Image(
+      // Decoded at the size shown; the preview has it whole.
+      image: ResizeImage(
+        image,
+        height: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+        policy: ResizeImagePolicy.fit,
+      ),
+      gaplessPlayback: true,
+      fit: BoxFit.contain,
+      frameBuilder: (context, child, frame, _) =>
+          frame == null && waiting != null ? waiting! : framed(child),
+      errorBuilder: (context, _, _) => framed(const Icon(Icons.broken_image)),
+    );
+  }
 }
 
 /// The largest local file a markdown image reads.

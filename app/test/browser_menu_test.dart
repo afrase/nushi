@@ -89,7 +89,7 @@ void main() {
     await _open(tester, c, 'https://example.com');
     final rows = [
       'Save screenshot',
-      'Open links in built-in browser',
+      'Open local links in built-in browser',
       'Manage allowed sites…',
       'Local network access',
       'Cookies',
@@ -174,26 +174,30 @@ void main() {
     expect(fakes.hosts.single.snapshots, 1);
   }, variant: macOnly);
 
-  testWidgets('Open links in built-in browser shows the setting and turns it '
-      'off and on', (tester) async {
-    browserFakes();
-    final c = await _pane(tester);
-    await _open(tester, c, 'https://example.com');
-    Finder check() => find.descendant(
-      of: _row('Open links in built-in browser'),
-      matching: find.byIcon(Icons.check),
-    );
-    expect(check(), findsOneWidget);
-    await tester.tap(find.text('Open links in built-in browser'));
-    await tester.pumpAndSettle();
-    expect(linksInBrowserTab.value, isFalse);
-    await tester.tap(find.byTooltip('More'));
-    await tester.pumpAndSettle();
-    expect(check(), findsNothing);
-    await tester.tap(find.text('Open links in built-in browser'));
-    await tester.pumpAndSettle();
-    expect(linksInBrowserTab.value, isTrue);
-  }, variant: macOnly);
+  testWidgets(
+    'Open local links in built-in browser shows the setting and turns it '
+    'off and on',
+    (tester) async {
+      browserFakes();
+      final c = await _pane(tester);
+      await _open(tester, c, 'https://example.com');
+      Finder check() => find.descendant(
+        of: _row('Open local links in built-in browser'),
+        matching: find.byIcon(Icons.check),
+      );
+      expect(check(), findsOneWidget);
+      await tester.tap(find.text('Open local links in built-in browser'));
+      await tester.pumpAndSettle();
+      expect(linksInBrowserTab.value, isFalse);
+      await tester.tap(find.byTooltip('More'));
+      await tester.pumpAndSettle();
+      expect(check(), findsNothing);
+      await tester.tap(find.text('Open local links in built-in browser'));
+      await tester.pumpAndSettle();
+      expect(linksInBrowserTab.value, isTrue);
+    },
+    variant: macOnly,
+  );
 
   group('Local network access', () {
     testWidgets('a site’s page: Blocked, and allowed for it from its '
@@ -313,7 +317,7 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await tester.pumpAndSettle();
     expect(find.text('Save screenshot'), findsOneWidget);
-    // Down to Open links in built-in browser, past the divider.
+    // Down to Open local links in built-in browser, past the divider.
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);

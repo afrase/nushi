@@ -12,7 +12,7 @@ import 'package:nushi/speller.dart';
 import 'package:nushi/web_views.dart';
 import 'package:nushi/window_drag.dart';
 
-/// The app's native edge (ADR 0097, 0102): what it asks of the machine it
+/// The app's native edge (ADR 0097, 0104): what it asks of the machine it
 /// runs on, each capability an interface declared beside what uses it, and
 /// each platform's implementations in files of their own (`*_macos.dart`
 /// and `*_linux.dart`, the only files that may hold platform channels or

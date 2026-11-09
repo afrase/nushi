@@ -6,7 +6,7 @@ import 'package:nushi/file_mode.dart';
 import 'package:nushi/login_item.dart';
 import 'package:nushi/native.dart';
 
-/// What starts the daemon at login on Linux (ADR 0102): an XDG autostart
+/// What starts the daemon at login on Linux (ADR 0104): an XDG autostart
 /// entry, `$XDG_CONFIG_HOME/autostart/com.nushihq.Nushi.daemon.desktop`
 /// (`~/.config` unless that's an absolute path), which the desktop session
 /// runs as you log in, with the session's environment, as the Mac's

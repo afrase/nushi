@@ -9,7 +9,7 @@ typedef RunProcess = Future<ProcessResult> Function(
 );
 
 /// Linux's installed fonts, as fontconfig lists them (`fc-list`, ADR
-/// 0102): the families whose glyphs are all one width.
+/// 0104): the families whose glyphs are all one width.
 class LinuxFonts implements Fonts {
   /// Running `fc-list` with [run].
   const new({this.run = Process.run});

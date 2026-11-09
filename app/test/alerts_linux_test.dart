@@ -11,7 +11,7 @@ import 'package:nushi/window_drag_linux.dart';
 // Linux's notifications against a bus of the test's own (package:dbus's
 // server, in this process) with a fake notification service on it, so
 // they run on the Mac too: the client says its uid, which only Linux's
-// libc would otherwise give (ADR 0102).
+// libc would otherwise give (ADR 0104).
 
 const _service = 'org.freedesktop.Notifications';
 final _path = DBusObjectPath('/org/freedesktop/Notifications');

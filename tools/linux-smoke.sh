@@ -1,6 +1,6 @@
 #!/bin/sh
 # Starts the Linux app as a user would and checks that it comes up (ADR
-# 0102): a release tarball unpacked and installed by its install.sh into a
+# 0104): a release tarball unpacked and installed by its install.sh into a
 # throwaway home, then the installed app run on a virtual X display
 # (xvfb-run) and a private session bus with no NUSHI_DATA, so it finds no
 # daemon in its data folder (the home's ~/.local/share/nushi) and starts

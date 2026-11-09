@@ -17,7 +17,7 @@ import 'package:nushi/window_drag_macos.dart';
 import 'fake_daemon.dart';
 import 'harness.dart';
 
-// Linux's window keeps the system's title bar (ADR 0102): the headers start
+// Linux's window keeps the system's title bar (ADR 0104): the headers start
 // at its inset rather than past the Mac's lights, and neither they nor the
 // band over Settings move or zoom the window. Tests pair Linux's window and
 // conventions with its platform, as a real Linux machine runs them.

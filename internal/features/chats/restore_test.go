@@ -36,9 +36,17 @@ func reopened(t *testing.T, svc *Service, id string) *chat {
 	return c
 }
 
+// shown is what the chat shows, from its copy while its items are let go.
 func shown(c *chat) string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.inCopy {
+		items, err := c.copyItemsLocked()
+		if err != nil {
+			return err.Error()
+		}
+		return describe(items)
+	}
 	return describe(c.items)
 }
 
@@ -270,7 +278,7 @@ func TestLookupReadsTheCopyOutsideTheServiceLock(t *testing.T) {
 		close(copies.held)
 		t.Fatal("another chat's lookup waited for the copy")
 	}
-	again, err := svc.lookup("slow")
+	again, err := svc.find("slow") // lookup would wait for the read
 	testcheck.NoErr(t, err)
 	close(copies.held)
 	if c := <-first; c != again {

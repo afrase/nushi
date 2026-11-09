@@ -14,7 +14,7 @@ import 'package:nushi/speller_linux.dart';
 import 'package:nushi/web_views_linux.dart';
 import 'package:nushi/window_drag_linux.dart';
 
-/// Linux's implementation of each native capability (ADR 0097, 0102), each
+/// Linux's implementation of each native capability (ADR 0097, 0104), each
 /// over GTK's runner in `linux/runner`, D-Bus, libc or a library of the
 /// desktop's (enchant, whose dictionary in the user's language makes the
 /// speller, none without it).

@@ -7,7 +7,7 @@ import 'package:nushi/conventions.dart';
 import 'package:nushi/settings_view.dart';
 import 'package:nushi/terminal_panel.dart';
 
-// The app's shortcuts on each platform (ADR 0102): held with ⌘ on the Mac
+// The app's shortcuts on each platform (ADR 0104): held with ⌘ on the Mac
 // and the phone, with Control on Linux, and written as each writes them
 // (⇧⌘E, Ctrl+Shift+E). Which modifier is read when a key arrives, from
 // `conventions`, never from `defaultTargetPlatform`, which says android

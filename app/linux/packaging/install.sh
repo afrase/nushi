@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installs this Nushi for the user who runs it (ADR 0102), as make install
+# Installs this Nushi for the user who runs it (ADR 0104), as make install
 # does: the package to ~/.local/opt/nushi (replacing one there), its
 # .desktop file, its Exec naming the package there, to
 # $XDG_DATA_HOME/applications, and its icons to $XDG_DATA_HOME/icons/hicolor

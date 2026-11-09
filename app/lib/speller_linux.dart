@@ -15,7 +15,7 @@ external void _free(Pointer<Void> p);
 typedef _Word = Void Function(Pointer<Void>, Pointer<Uint8>, IntPtr);
 typedef _WordDart = void Function(Pointer<Void>, Pointer<Uint8>, int);
 
-/// Linux's spell checker: enchant (libenchant-2, ADR 0102), the library
+/// Linux's spell checker: enchant (libenchant-2, ADR 0104), the library
 /// GNOME's and KDE's apps check with, over the user's own Hunspell, Nuspell
 /// or Aspell dictionary in their language. Ignore lasts the session;
 /// Learn adds the word to enchant's personal list

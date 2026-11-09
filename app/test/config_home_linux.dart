@@ -16,7 +16,7 @@ external int _setenv(Pointer<Uint8> name, Pointer<Uint8> value, int replace);
 /// Sets the test process's `XDG_CONFIG_HOME` to [path] in libc's
 /// environment, which the libraries it loads read (Dart's
 /// `Platform.environment` keeps what it started with): enchant makes its
-/// folder there when a dictionary opens (ADR 0102), and a test writes only
+/// folder there when a dictionary opens (ADR 0104), and a test writes only
 /// in a temp folder. Called before any test, as GLib reads it once.
 void configHomeAt(String path) {
   final name = _cString('XDG_CONFIG_HOME');

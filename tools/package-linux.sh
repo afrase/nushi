@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds the Linux app's package (ADR 0102) into app/build/linux/nushi, for
+# Builds the Linux app's package (ADR 0104) into app/build/linux/nushi, for
 # this machine's architecture (Flutter doesn't cross-build): Flutter's
 # release bundle (the binary nushi, lib/, data/) with nushid in lib/ (no
 # cgo, ADR 0101), the .desktop file and icons under share/, and install.sh;

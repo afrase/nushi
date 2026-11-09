@@ -7,6 +7,7 @@ import 'package:nushi/changes_view.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -68,8 +69,7 @@ void main() {
 
   setUpAll(loadFonts);
 
-  bool spinning() =>
-      find.byType(CircularProgressIndicator).evaluate().isNotEmpty;
+  bool spinning() => find.byType(Spinner).evaluate().isNotEmpty;
   double opacity(WidgetTester tester) => tester
       .widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first)
       .opacity;

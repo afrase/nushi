@@ -181,7 +181,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
 
   /// The field's text on Return: a page loads here (and, without the app's
   /// own web views, opens in the browser too: the user asked for it, ADR
-  /// 0102), a file's address opens the file's preview ([fileAddressOf]), and
+  /// 0104), a file's address opens the file's preview ([fileAddressOf]), and
   /// what isn't an address is refused, saying why (nothing is searched for).
   void _go(String text) {
     if (fileAddressOf(text) case final path?) {
@@ -248,7 +248,7 @@ class _BrowserPaneState extends State<BrowserPane> implements BrowserControls {
                   padding: _boxed(18),
                   collapse: widget.expanded ? expand : null,
                 ),
-              // Its rows are the app's web views' (ADR 0102).
+              // Its rows are the app's web views' (ADR 0104).
               if (webEmbedded)
                 BrowserMenu(
                   tab: _tab,

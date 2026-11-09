@@ -5,7 +5,6 @@
 package transcripts
 
 import (
-	"bufio"
 	"bytes"
 	"cmp"
 	"crypto/sha256"
@@ -35,7 +34,9 @@ const (
 type Store struct {
 	mu       sync.Mutex
 	root     *os.Root
-	repaired map[string]bool // chats whose file's end was checked in this run
+	repaired map[string]bool   // chats whose file's end was checked in this run
+	indexes  map[string]*index // the last chats' indexes (index.go)
+	indexed  []string          // their chats, the latest last
 }
 
 // Open opens the store in dir, made 0700 if it isn't there, and removes
@@ -52,7 +53,7 @@ func Open(dir string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{root: root, repaired: map[string]bool{}}
+	s := &Store{root: root, repaired: map[string]bool{}, indexes: map[string]*index{}}
 	var half []string
 	for _, p := range []string{"*/.nushi-*", "*/" + imagesDir + "/.nushi-*", "*/" + imagesDir + "/*.tmp*", "*/" + itemsFile + ".tmp"} {
 		m, _ := fs.Glob(root.FS(), p)
@@ -160,6 +161,7 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
+	s.forgetIndexLocked(chat)
 	name := path.Join(chat, itemsFile)
 	if !s.repaired[chat] {
 		if err := s.repairLocked(name); err != nil {
@@ -179,24 +181,51 @@ func (s *Store) appendLocked(chat string, recs []record) error {
 }
 
 // repairLocked cuts off a last line a crash left without its end, so the
-// next record starts a line of its own.
+// next record starts a line of its own. It reads only the file's tail: the
+// first write to an asleep chat's copy (EndStalePrompts, at every start)
+// mustn't cost the whole copy.
 func (s *Store) repairLocked(name string) error {
-	b, err := s.root.ReadFile(name)
+	f, err := s.root.OpenFile(name, os.O_RDWR, 0)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
 	}
-	if err != nil || len(b) == 0 || b[len(b)-1] == '\n' {
-		return err
-	}
-	f, err := s.root.OpenFile(name, os.O_WRONLY, 0o600)
 	if err != nil {
 		return err
 	}
-	err = f.Truncate(int64(bytes.LastIndexByte(b, '\n') + 1))
+	fi, err := f.Stat()
+	var whole int64
+	if err == nil {
+		whole, err = wholeLines(f, fi.Size())
+	}
+	if err == nil && whole < fi.Size() {
+		err = f.Truncate(whole)
+	}
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
 	return err
+}
+
+// tailChunk is how much of a copy's end wholeLines reads at a time.
+const tailChunk = 64 << 10
+
+// wholeLines returns how much of f's size bytes are whole lines: all of
+// them when the last is a newline, else up to the last newline. It reads
+// back from the end a chunk at a time, so a long half-written line costs
+// its length and a whole file one chunk.
+func wholeLines(f *os.File, size int64) (int64, error) {
+	buf := make([]byte, min(size, tailChunk))
+	for end := size; end > 0; {
+		b := buf[:min(end, int64(len(buf)))]
+		end -= int64(len(b))
+		if _, err := f.ReadAt(b, end); err != nil {
+			return 0, err
+		}
+		if i := bytes.LastIndexByte(b, '\n'); i >= 0 {
+			return end + int64(i) + 1, nil
+		}
+	}
+	return 0, nil
 }
 
 // storeImagesLocked writes an item's images beside chat's file (each once,
@@ -236,55 +265,6 @@ func (s *Store) writeImageLocked(chat, hash string, data []byte) error {
 	return atomicfile.ReplaceIn(s.root, name, data, 0o600)
 }
 
-var validHash = regexp.MustCompile(`^[0-9a-f]{64}$`)
-
-// Read returns chat's copy as it stands, its images read back; none (nil)
-// when it has no copy. Lines that can't be read (a crash's last line) are
-// skipped. A file mostly of items written again since is written anew.
-func (s *Store) Read(chat string) ([]model.Item, error) {
-	if err := checkChat(chat); err != nil {
-		return nil, err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	b, err := s.root.ReadFile(path.Join(chat, itemsFile))
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var t transcript
-	lines := 0
-	sc := bufio.NewScanner(bytes.NewReader(b))
-	sc.Buffer(nil, len(b)+1)
-	for sc.Scan() {
-		var r record
-		if json.Unmarshal(sc.Bytes(), &r) != nil {
-			continue
-		}
-		lines++
-		t.apply(r)
-	}
-	items := t.items()
-	out := make([]model.Item, len(items))
-	for i, st := range items {
-		out[i] = st.Item
-		for _, p := range st.Pictures {
-			if !validHash.MatchString(p.Hash) {
-				continue
-			}
-			if data, err := s.root.ReadFile(path.Join(chat, imagesDir, p.Hash)); err == nil {
-				out[i].Images = append(out[i].Images, model.Image{MimeType: p.MimeType, Data: data, Hash: p.Hash})
-			}
-		}
-	}
-	if lines > 2*len(out)+16 && len(b) > 1<<20 {
-		_ = s.rewriteLocked(chat, items) // best effort: the file reads the same either way
-	}
-	return out, nil
-}
-
 // Replace writes chat's copy anew as items, in order.
 func (s *Store) Replace(chat string, items []model.Item) error {
 	if err := checkChat(chat); err != nil {
@@ -292,13 +272,13 @@ func (s *Store) Replace(chat string, items []model.Item) error {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := make([]stored, len(items))
+	st := make([]*stored, len(items))
 	for i, it := range items {
 		p, err := s.storeImagesLocked(chat, it)
 		if err != nil {
 			return err
 		}
-		st[i] = *p
+		st[i] = p
 	}
 	return s.rewriteLocked(chat, st)
 }
@@ -306,11 +286,11 @@ func (s *Store) Replace(chat string, items []model.Item) error {
 // rewriteLocked replaces chat's file with items' records, atomically and
 // durably (the file may be the only history left of the chat), and
 // removes the images no item names any more.
-func (s *Store) rewriteLocked(chat string, items []stored) error {
+func (s *Store) rewriteLocked(chat string, items []*stored) error {
 	var buf bytes.Buffer
 	used := map[string]bool{}
 	for i := range items {
-		r := record{Item: &items[i]}
+		r := record{Item: items[i]}
 		if i > 0 {
 			r.After = items[i-1].ID
 		}
@@ -327,6 +307,7 @@ func (s *Store) rewriteLocked(chat string, items []stored) error {
 	if err := s.root.MkdirAll(chat, 0o700); err != nil {
 		return err
 	}
+	s.forgetIndexLocked(chat)
 	if err := atomicfile.ReplaceIn(s.root, path.Join(chat, itemsFile), buf.Bytes(), 0o600); err != nil {
 		return err
 	}
@@ -348,6 +329,7 @@ func (s *Store) Delete(chat string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.repaired, chat)
+	s.forgetIndexLocked(chat)
 	return s.root.RemoveAll(chat)
 }
 

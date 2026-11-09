@@ -9,10 +9,10 @@ import 'package:nushi/web_page.dart';
 /// Where the app's web views come from, and the default browser (ADR 0068,
 /// 0094, 0097): on the Mac, WKWebViews and the Swift side
 /// (`web_views_macos.dart`); on Linux, none, a page's placeholder that
-/// opens it in the default browser (`outside_page.dart`, ADR 0102).
+/// opens it in the default browser (`outside_page.dart`, ADR 0104).
 abstract interface class WebViews {
   /// Whether pages show in the app's own web views: on the Mac; on Linux
-  /// they open in the default browser (ADR 0102).
+  /// they open in the default browser (ADR 0104).
   bool get embedded;
 
   /// A web view for a file's preview.

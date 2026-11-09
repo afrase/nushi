@@ -13,7 +13,7 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
-// Settings in Linux's words and with its fonts (ADR 0102), as a Linux
+// Settings in Linux's words and with its fonts (ADR 0104), as a Linux
 // machine shows them: its conventions, window and platform together.
 
 final _linux = TargetPlatformVariant.only(TargetPlatform.linux);

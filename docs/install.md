@@ -24,7 +24,7 @@ Releases are signed ad hoc, not notarized. The cask clears macOS's quarantine fl
 
 ## On Linux
 
-Nushi runs on x86_64 and arm64 Linux ([ADR 0102](adr/0102-the-app-runs-on-linux.md)) with:
+Nushi runs on x86_64 and arm64 Linux ([ADR 0104](adr/0104-the-app-runs-on-linux.md)) with:
 
 - glibc 2.34 or later (Ubuntu 22.04, Debian 12, Fedora 35, RHEL 9 and later);
 - GTK 3, which every desktop has;

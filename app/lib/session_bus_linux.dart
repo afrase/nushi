@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:dbus/dbus.dart';
 
 /// The user's D-Bus session bus, which Linux's notifications, badge and
-/// Show in Folder reach the desktop over (ADR 0102), or null when there's
+/// Show in Folder reach the desktop over (ADR 0104), or null when there's
 /// none to find.
 /// The client connects on its first call, so a bus it can't reach never
 /// holds up the app's start; `LinuxAlertCenter` pings it before anything

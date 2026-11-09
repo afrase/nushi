@@ -25,7 +25,7 @@ const (
 	amber   = "#F5A524"
 )
 
-// The Linux app's icons (ADR 0102): the same art as the Mac's icon set, in
+// The Linux app's icons (ADR 0104): the same art as the Mac's icon set, in
 // an icon theme's hicolor folders, named for the .desktop file, which the
 // package installs (app/linux/packaging).
 const (

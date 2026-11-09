@@ -8,6 +8,7 @@ import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/related_worktrees.dart';
 import 'package:nushi/review.dart';
 import 'package:nushi/settings.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -89,11 +90,7 @@ class ChangesBar extends StatelessWidget {
                       : related.pickScope(s.name),
                   fill: true,
                 ),
-              if (stale)
-                const SizedBox.square(
-                  dimension: 12,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
-                ),
+              if (stale) const SizedBox.square(dimension: 12, child: Spinner()),
               // A narrow bar gives this line's room to the menu: the list
               // under it shows the files.
               if (n > 0 && (roomy || related.list.isEmpty))

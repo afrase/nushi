@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:nushi/mermaid.dart';
 
 /// Linux draws no diagrams yet: there's no web view to run mermaid.js in
-/// (ADR 0102). A diagram shows its source and says so.
+/// (ADR 0104). A diagram shows its source and says so.
 class LinuxDiagrams implements Diagrams {
   const new();
 

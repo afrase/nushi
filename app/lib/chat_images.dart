@@ -4,10 +4,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:nushi/controls.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
-import 'package:nushi/images.dart' show ClickableImage;
-import 'package:nushi/theme/theme.dart';
 
 /// Whether [image] came as a reference (ADR 0099): its bytes are fetched
 /// on their own.
@@ -18,12 +15,17 @@ bool isImageRef(ImageData image) =>
 /// daemon's `refAbove`, ADR 0099): smaller ones always come inline.
 const int refAbove = 64 << 10;
 
+/// [data] as a [Uint8List] without copying it when it is one already, as
+/// protobuf's bytes are: a screenshot isn't held twice.
+Uint8List bytesOf(List<int> data) =>
+    data is Uint8List ? data : Uint8List.fromList(data);
+
 /// The lowercase hex SHA-256 of [bytes], as the daemon names an image that
 /// came as a reference. Hashed a slice at a time, letting frames through
 /// between them: a screenshot takes a while in the phone's browser.
 Future<String> imageHash(List<int> bytes) async {
   const slice = 256 << 10;
-  final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+  final data = bytesOf(bytes);
   final digest = _Digest();
   final hash = sha256.startChunkedConversion(digest);
   for (var at = 0; at < data.length; at += slice) {
@@ -49,17 +51,35 @@ class _Digest implements Sink<Digest> {
 /// [ChatImages] and the chat they are in.
 typedef ImageRefs = ({ChatImages images, String chatId});
 
-/// The images of chats that came as references (the phone asks for them:
-/// ADR 0099), fetched with [fetch] as they are about to show, [parallel] at
-/// a time, and kept by hash up to [maxBytes], the least recently shown
-/// going first.
+/// The images of chats that came as references (ADR 0099), fetched with
+/// [fetch] as they are about to show, [parallel] at a time, and kept by
+/// hash up to [maxBytes], the least recently shown going first.
 class ChatImages {
-  new(this.fetch, {this.maxBytes = 64 << 20, this.parallel = 3});
+  new(
+    this.fetch, {
+    this.maxBytes = 64 << 20,
+    this.parallel = 3,
+    this.local = false,
+    this.whenBack,
+  });
 
   /// Fetches one of a chat's images by its hash (GetChatImage).
   final Future<Uint8List> Function(String chatId, String sha256) fetch;
   final int maxBytes;
   final int parallel;
+
+  /// Whether a fetch is cheap, the daemon on this machine (the Mac's): a
+  /// row lets its image go once it is far off the screen, so the decoded
+  /// pixels of a long chat's images aren't all held while it shows, and
+  /// takes it back from here, or fetches it again, as it comes near. The
+  /// phone's rows hold theirs: a fetch again goes over the relay.
+  final bool local;
+
+  /// Calls its argument once the daemon is back after it was away
+  /// (`Daemon.whenBack`), and returns what cancels that: a row whose fetch
+  /// failed because the daemon was gone asks again then, rather than keep
+  /// its failure until Try again.
+  final VoidCallback Function(VoidCallback again)? whenBack;
 
   // In insertion order: the first is the least recently shown.
   final _kept = <String, MemoryImage>{};
@@ -69,6 +89,9 @@ class ChatImages {
   final _jobs = <String, _Job>{};
   final _waiting = Queue<_Job>();
   int _running = 0;
+
+  /// The bytes of the images it keeps now.
+  int get bytes => _bytes;
 
   /// The image of [sha256] if it is kept, now the most recently shown.
   MemoryImage? kept(String sha256) {
@@ -210,208 +233,4 @@ class _Job {
   final String sha256;
   final wanted = <bool Function()>[];
   final done = Completer<MemoryImage>();
-}
-
-/// One of a chat's images that came as a reference, [size] tall at most
-/// as [ClickableImage]: while it comes, a box of its size with a spinner;
-/// if it fails, a box that says so with Try again.
-class ImageRef extends StatefulWidget {
-  const new(this.images, this.chatId, this.image, {super.key, this.size = 64});
-
-  final ChatImages images;
-  final String chatId;
-  final ImageData image;
-  final double size;
-
-  @override
-  State<ImageRef> createState() => _ImageRefState();
-}
-
-class _ImageRefState extends State<ImageRef> {
-  MemoryImage? _image;
-  bool _failed = false;
-
-  /// Asked for: on its way, or waiting for its turn.
-  bool _asked = false;
-
-  /// The list it scrolls in, watched until it comes near the screen.
-  ScrollPosition? _position;
-
-  @override
-  void initState() {
-    super.initState();
-    _start();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final position = Scrollable.maybeOf(context, axis: Axis.vertical)?.position;
-    if (position != _position) {
-      _position?.removeListener(_look);
-      _position = position?..addListener(_look);
-    }
-  }
-
-  @override
-  void didUpdateWidget(ImageRef old) {
-    super.didUpdateWidget(old);
-    if (old.image.sha256 != widget.image.sha256) _start();
-  }
-
-  @override
-  void dispose() {
-    _position?.removeListener(_look);
-    super.dispose();
-  }
-
-  /// Shows the image if it's kept, else fetches it once it is near the
-  /// screen (looked at after this frame, once it has its place).
-  void _start() {
-    _failed = _asked = false;
-    _image = widget.images.kept(widget.image.sha256);
-    if (_image == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _look();
-      });
-    }
-  }
-
-  /// Whether it is on the screen or within a screen of it. The transcript
-  /// lays every item out (transcript.dart), so being built isn't enough:
-  /// a chat's images are fetched as it scrolls to them (ADR 0099). Outside
-  /// a scrolling list it shows, so it's near.
-  bool get _near {
-    if (!mounted) return false;
-    final position = _position;
-    if (position == null) return true;
-    final box = context.findRenderObject();
-    final list = position.context.notificationContext?.findRenderObject();
-    if (box is! RenderBox || !box.hasSize || list is! RenderBox) return false;
-    if (!box.attached || !list.attached || !list.hasSize) return false;
-    final top = box.localToGlobal(Offset.zero, ancestor: list).dy;
-    final screen = list.size.height;
-    return top + box.size.height > -screen && top < 2 * screen;
-  }
-
-  void _look() {
-    if (!_asked && _image == null && !_failed && _near) _load();
-  }
-
-  void _load() {
-    final sha = widget.image.sha256;
-    _asked = true;
-    unawaited(
-      widget.images
-          .load(widget.chatId, sha, wanted: () => _near)
-          .then(
-            (image) {
-              if (mounted && widget.image.sha256 == sha) {
-                setState(() => _image = image);
-              }
-            },
-            onError: (Object e) {
-              if (!mounted || widget.image.sha256 != sha) return;
-              // Dropped while it waited, scrolled away: asked again when
-              // it comes near.
-              if (e is ImageNotWanted) {
-                _asked = false;
-              } else {
-                setState(() => _failed = true);
-              }
-            },
-          ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_image case final image?) {
-      final t = NushiTheme.of(context).t;
-      return ClickableImage(
-        image: image,
-        size: widget.size,
-        border: t.borderSubtle,
-      );
-    }
-    return _box(context);
-  }
-
-  /// The image's place: its size when the daemon said it, else a square.
-  Widget _box(BuildContext context) {
-    final theme = NushiTheme.of(context);
-    final t = theme.t;
-    final size = widget.size;
-    final (w, h) = (widget.image.width, widget.image.height);
-    final ratio = w > 0 && h > 0 ? w / h : 1.0;
-    final small = size < 120;
-    final Widget inside;
-    if (!_failed) {
-      inside = SizedBox.square(
-        key: const ValueKey('image-loading'),
-        dimension: small ? 20 : 28,
-        child: CircularProgressIndicator(
-          strokeWidth: small ? 2 : 3,
-          color: t.textSecondary,
-        ),
-      );
-    } else {
-      final said = Text(
-        'Couldn’t load the image',
-        textAlign: TextAlign.center,
-        style: theme.ui(t.text, size: small ? 12 : 13),
-      );
-      final again = Button(
-        label: 'Try again',
-        onPressed: () => setState(() {
-          _failed = false;
-          _load();
-        }),
-      );
-      final icon = Icon(
-        Icons.broken_image_outlined,
-        size: small ? 16 : 24,
-        color: t.crashed,
-      );
-      inside = small
-          ? Row(
-              key: const ValueKey('image-failed'),
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [
-                icon,
-                Flexible(child: said),
-                again,
-              ],
-            )
-          : Column(
-              key: const ValueKey('image-failed'),
-              mainAxisSize: MainAxisSize.min,
-              spacing: 8,
-              children: [icon, said, again],
-            );
-    }
-    final box = DecoratedBox(
-      decoration: BoxDecoration(
-        color: t.selected,
-        border: Border.all(color: t.borderStrong),
-        borderRadius: BorderRadius.circular(NushiTheme.control),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Center(child: inside),
-      ),
-    );
-    // A failure in a small thumbnail's place needs the room for its words.
-    if (_failed && small) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(minHeight: size),
-        child: IntrinsicWidth(child: box),
-      );
-    }
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxHeight: size, maxWidth: size * 4),
-      child: AspectRatio(aspectRatio: ratio, child: box),
-    );
-  }
 }

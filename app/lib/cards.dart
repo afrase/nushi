@@ -259,7 +259,7 @@ class _PermissionCardState extends State<PermissionCard> {
         CardTitle('Permission', detail: pending ? '' : title, waiting: pending),
         if (pending && title.isNotEmpty) FullTitle(title),
         // The host's app shows it: the Mac's own web view runs it unasked,
-        // Linux's browser waits for a click (ADR 0102). The phone can't
+        // Linux's browser waits for a click (ADR 0104). The phone can't
         // tell which app its host has, so it says so.
         if (pending && runs && (kIsWeb || webEmbedded))
           Text('A page runs as it opens in the preview.', style: muted),

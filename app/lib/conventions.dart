@@ -7,7 +7,7 @@ import 'package:nushi/native.dart';
 enum CommandKey { meta, control }
 
 /// What a platform names differently, and the key its shortcuts take
-/// (ADR 0102): plain data on [Native], so a test or a render shows Linux's
+/// (ADR 0104): plain data on [Native], so a test or a render shows Linux's
 /// on the Mac. Widgets read [conventions], never `defaultTargetPlatform`,
 /// which says android under `flutter test`.
 class Conventions {

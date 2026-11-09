@@ -11,7 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 /// The runner's GIO default apps (`linux/runner/gio.cc`).
 const _desktop = MethodChannel('nushi/desktop');
 
-/// Linux's file manager and default apps (ADR 0102), never `xdg-open`:
+/// Linux's file manager and default apps (ADR 0104), never `xdg-open`:
 /// a file is shown selected through the file manager's
 /// `org.freedesktop.FileManager1` on the session bus (Files, Dolphin,
 /// Thunar, Nemo and Caja answer it), else its folder opens; a folder opens

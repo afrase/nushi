@@ -5,7 +5,7 @@
 # (nushid with Chrome); and the app's tests in two shards of test files (its goldens are drawn with macOS's text
 # rendering: on Linux a third of them differ by 1-4%; its end-to-end tests run nushid). Linux for the rest: the
 # protos' and Dart's lint, the Dart packages' tests, and the daemon on Linux (ADR 0101): every Go package's tests,
-# lint, build and vet without cgo; and the Linux app (ADR 0102): its tests in two shards (goldens are compared on macOS
+# lint, build and vet without cgo; and the Linux app (ADR 0104): its tests in two shards (goldens are compared on macOS
 # only), and its package built on each architecture as the release builds it (tools/release.sh's linux part, on the
 # oldest Ubuntu it supports, for the glibc it needs), installed and started on a virtual display (tools/linux-smoke.sh),
 # with the runner's channels tested for real on amd64 (tools/linux-channels.sh). The ACP library,

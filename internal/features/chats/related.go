@@ -41,7 +41,7 @@ const (
 // heads, and returns them. A chat with none that has no subagents costs
 // no run of git.
 func (s *Service) RelatedWorktrees(ctx context.Context, chatID string) ([]model.RelatedWorktree, error) {
-	c, err := s.lookup(chatID)
+	c, err := s.find(chatID) // its steps are read from the copy while its items are let go
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (s *Service) RelatedWorktrees(ctx context.Context, chatID string) ([]model.
 // KnownRelated is the chat's folder and its related worktrees as last
 // looked at: no run of git, for what asks often.
 func (s *Service) KnownRelated(chatID string) (string, []model.RelatedWorktree, error) {
-	c, err := s.lookup(chatID)
+	c, err := s.find(chatID)
 	if err != nil {
 		return "", nil, err
 	}
@@ -163,11 +163,26 @@ type relatedStep struct {
 }
 
 // relatedStepsLocked is what the chat's subagents' tool calls name, in the
-// order they came.
+// order they came; of a chat whose items were let go, only those calls are
+// read from the copy.
 func (c *chat) relatedStepsLocked() []relatedStep {
+	if !c.inCopy {
+		return relatedSteps(c.items)
+	}
+	calls, _, err := c.copies.Find(c.id, func(it model.Item) bool {
+		return it.Kind == model.ToolCall && (it.WorktreePath != "" || it.Parent != "")
+	})
+	if err != nil {
+		c.logLocked().Warn("transcript copy not read", "err", err)
+	}
+	return relatedSteps(calls)
+}
+
+// relatedSteps is what the subagents' tool calls among items name.
+func relatedSteps(items []model.Item) []relatedStep {
 	var steps []relatedStep
-	for i := range c.items {
-		it := &c.items[i]
+	for i := range items {
+		it := &items[i]
 		switch {
 		case it.Kind != model.ToolCall:
 		case it.WorktreePath != "":

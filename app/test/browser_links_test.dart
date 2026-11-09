@@ -16,21 +16,28 @@ import 'fake_daemon.dart';
 import 'harness.dart';
 import 'settings_harness.dart';
 
-// A chat's links open in a browser tab beside it, with Open links in
-// built-in browser on (ADR 0094), else in the default browser.
+// A chat's links to this Mac or the local network open in a browser tab
+// beside it, with Open local links in built-in browser on (ADR 0094); other
+// sites, and every link with it off, in the default browser.
 void main() {
   setUpAll(loadFonts);
 
   test('where a link opens: the setting, the room, the address', () {
-    final site = Uri.parse('https://example.com/docs');
+    final local = Uri.parse('http://localhost:5173/');
     for (final (url, setting, fits, tab) in [
-      (site, true, true, true),
-      (Uri.parse('http://localhost:5173/'), true, true, true),
-      (site, false, true, false), // the setting off
-      (site, true, false, false), // no room for the pane
-      (site, false, false, false),
+      (local, true, true, true),
+      (Uri.parse('http://127.0.0.1:8080/'), true, true, true),
+      (Uri.parse('http://192.168.1.20/'), true, true, true),
+      (Uri.parse('http://printer.local/'), true, true, true),
+      (Uri.parse('http://[::1]:3000/'), true, true, true),
+      // A site on the internet: the browser.
+      (Uri.parse('https://example.com/docs'), true, true, false),
+      (Uri.parse('https://github.com/o/r/pull/1'), true, true, false),
+      (local, false, true, false), // the setting off
+      (local, true, false, false), // no room for the pane
+      (local, false, false, false),
       // A user name: the tab loads none, so the browser has it.
-      (Uri.parse('https://a@example.com/'), true, true, false),
+      (Uri.parse('http://a@localhost:5173/'), true, true, false),
     ]) {
       expect(
         linkInTab(url, setting: setting, fits: fits),
@@ -115,9 +122,8 @@ void main() {
     await closeView(tester, d);
   }, variant: macOnly);
 
-  testWidgets('a tool call’s output’s link too, each its own tab', (
-    tester,
-  ) async {
+  testWidgets('a site’s link, here in a tool call’s output, opens in the '
+      'default browser', (tester) async {
     browserFakes();
     final browser = outside();
     final d = await app(tester);
@@ -126,11 +132,8 @@ void main() {
     await tester.pumpAndSettle();
     await tapLink(tester, 'the list');
     final tabs = d.chats['c']!.previewTabs.value.cast<BrowserTab>();
-    expect(
-      [for (final t in tabs) t.address.value],
-      ['http://localhost:5173/', 'https://tea.example/list'],
-    );
-    expect(browser, isEmpty);
+    expect([for (final t in tabs) t.address.value], ['http://localhost:5173/']);
+    expect(browser, [Uri.parse('https://tea.example/list')]);
     await closeView(tester, d);
   }, variant: macOnly);
 
@@ -192,10 +195,10 @@ void main() {
     final fake = FakeDaemon([])..settings = Settings(sleepAfterMinutes: 30);
     final d = await fake.connect(tester);
     await pumpSettings(tester, d, SettingsSection.general);
-    expect(find.text('Open links in built-in browser'), findsOneWidget);
+    expect(find.text('Open local links in built-in browser'), findsOneWidget);
     expect(linksInBrowserTab.value, isTrue);
     final row = find.ancestor(
-      of: find.text('Open links in built-in browser'),
+      of: find.text('Open local links in built-in browser'),
       matching: find.byType(Row),
     );
     await tester.tap(

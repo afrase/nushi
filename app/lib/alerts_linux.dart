@@ -7,14 +7,14 @@ import 'package:nushi/window_drag.dart';
 const _service = 'org.freedesktop.Notifications';
 final _path = DBusObjectPath('/org/freedesktop/Notifications');
 
-/// The app's id, which names its `.desktop` file and its icon (ADR 0102).
+/// The app's id, which names its `.desktop` file and its icon (ADR 0104).
 const _app = 'com.nushihq.Nushi';
 
 /// Linux's notifications, through the desktop's notification service
 /// (`org.freedesktop.Notifications`: GNOME Shell's, KDE's, dunst, mako)
 /// on the session bus, and the count on the app's icon through Unity's
 /// launcher entry, which Ubuntu's dock, Dash to Dock and KDE's task
-/// manager show (ADR 0102). The service lists nothing it has shown, so
+/// manager show (ADR 0104). The service lists nothing it has shown, so
 /// what was posted is kept here: each name's number from the service
 /// (sent back to replace it) and each chat's names. A click on one opens
 /// its chat and brings the window to the front with the token the desktop

@@ -4,8 +4,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nushi/chat_images.dart' show bytesOf;
+import 'package:nushi/gen/nushi/v1/nushi.connect.client.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/images.dart';
+import 'package:nushi/jira_issue_parts.dart';
+
+import 'fake_daemon.dart';
+import 'harness.dart';
 
 void main() {
   test('a markdown image reads only a regular file of a few MB', () async {
@@ -124,5 +130,48 @@ void main() {
     await adding;
     await Future<void>.delayed(Duration.zero);
     expect((ready, images.value.length), (true, 2));
+  });
+
+  // An image's bytes come from protobuf as a Uint8List already: shown as
+  // they are, they aren't held twice, and an image made again on a
+  // rebuild is the same image (one entry in the image cache, one decode).
+  test('bytesOf passes a Uint8List through and copies only a list', () {
+    final bytes = Uint8List.fromList([1, 2, 3]);
+    expect(bytesOf(bytes), same(bytes));
+    expect(
+      bytesOf([1, 2, 3]),
+      isA<Uint8List>().having((b) => b, 'bytes', [1, 2, 3]),
+    );
+  });
+
+  testWidgets('a message’s image shows the bytes it came with', (tester) async {
+    final image = ImageData(mimeType: 'image/png', data: Uint8List(8));
+    await tester.pumpWidget(themed(Thumbnails([image])));
+    final shown = tester.widget<ClickableImage>(find.byType(ClickableImage));
+    expect((shown.image as MemoryImage).bytes, same(image.data));
+  });
+
+  testWidgets('a Jira attachment is the same image on every build', (
+    tester,
+  ) async {
+    final got = GetJiraAttachmentResponse(
+      mimeType: 'image/png',
+      data: Uint8List(8),
+    );
+    final fake = FakeDaemon([])
+      ..answer = (input) => input is GetJiraAttachmentRequest ? got : null;
+    final client = NushiServiceClient(fake);
+    final shown = <ImageProvider>[];
+    for (var i = 0; i < 2; i++) {
+      await tester.pumpWidget(
+        themed(AttachmentImage(client, 'bytes.example', '1', size: 320)),
+      );
+      await tester.pump();
+      shown.add(
+        tester.widget<ClickableImage>(find.byType(ClickableImage)).image,
+      );
+    }
+    expect((shown.first as MemoryImage).bytes, same(got.data));
+    expect(shown.last, shown.first);
   });
 }

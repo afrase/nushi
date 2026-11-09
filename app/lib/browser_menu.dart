@@ -17,8 +17,9 @@ import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
 // A browser tab's ⋯ menu (ADR 0094), in Claude desktop's order and words
-// where they apply: Save screenshot; Open links in built-in browser, Manage
-// allowed sites…, Local network access; under Cookies, Clear browsing data.
+// where they apply: Save screenshot; Open local links in built-in browser,
+// Manage allowed sites…, Local network access; under Cookies, Clear browsing
+// data.
 // Claude's Import cookies isn't here: it would mean decrypting another
 // browser's stored logins.
 
@@ -78,7 +79,7 @@ class BrowserMenu extends StatelessWidget {
       ),
       MenuEntry.divider,
       MenuEntry(
-        'Open links in built-in browser',
+        'Open local links in built-in browser',
         checked: linksInBrowserTab.value,
         onPick: () => linksInBrowserTab.value = !linksInBrowserTab.value,
       ),

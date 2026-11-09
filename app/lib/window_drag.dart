@@ -9,7 +9,7 @@ import 'package:nushi/native.dart';
 /// The window and the chrome around it: on the Mac, AppKit's
 /// (`window_drag_macos.dart`), whose content runs under the title bar, so
 /// a header stands in for it and moves and zooms the window (ADR 0080); on
-/// Linux the system's title bar, above the content (ADR 0102).
+/// Linux the system's title bar, above the content (ADR 0104).
 abstract interface class AppWindow {
   /// How far from the window's left edge what's in the main area's top
   /// starts with the sidebar hidden: past the Mac's traffic lights, or a

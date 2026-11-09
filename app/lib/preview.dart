@@ -5,6 +5,7 @@ import 'package:connectrpc/connect.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'package:nushi/chat_images.dart' show bytesOf;
 import 'package:nushi/conventions.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
@@ -16,6 +17,7 @@ import 'package:nushi/preview_sniff.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/syntax_languages.dart' show codeNames;
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
@@ -270,10 +272,7 @@ Widget? previewStatus(
   if (watch.error.isNotEmpty) return PreviewNote(watch.error);
   if (f == null) {
     return const Center(
-      child: SizedBox.square(
-        dimension: 16,
-        child: CircularProgressIndicator(strokeWidth: 1.5),
-      ),
+      child: SizedBox.square(dimension: 16, child: Spinner()),
     );
   }
   if (f.missing) return const PreviewNote('The file isn’t there (yet).');
@@ -404,7 +403,7 @@ class PreviewBody extends StatelessWidget {
             padding: padding,
             child: Center(
               child: Image.memory(
-                Uint8List.fromList(f.data),
+                bytesOf(f.data),
                 gaplessPlayback: true,
                 errorBuilder: (_, _, _) => Text(
                   'Not an image Nushi can show.',
@@ -524,10 +523,7 @@ class _ChatImageState extends State<_ChatImage> {
         return Text('[image: ${widget.alt}]', style: muted);
       }
       if (f == null) return const SizedBox(height: 24);
-      return ClickableImage(
-        image: MemoryImage(Uint8List.fromList(f.data)),
-        size: 480,
-      );
+      return ClickableImage(image: MemoryImage(bytesOf(f.data)), size: 480);
     },
   );
 }

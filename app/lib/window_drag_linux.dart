@@ -4,7 +4,7 @@ import 'package:nushi/window_drag.dart';
 
 const _channel = MethodChannel('nushi/window');
 
-/// Linux's window, which keeps the system's title bar (ADR 0102): it moves
+/// Linux's window, which keeps the system's title bar (ADR 0104): it moves
 /// and zooms the window, so a header does neither, and there's no menu bar
 /// for the app's menus. The runner's `nushi/window`
 /// (`linux/runner/window.cc`) presents it.

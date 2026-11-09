@@ -5,7 +5,7 @@ import 'package:nushi/settings_rows.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
-/// What starts the daemon at login (ADR 0036, 0102): on the Mac, the
+/// What starts the daemon at login (ADR 0036, 0104): on the Mac, the
 /// app's launch agent (`login_item_macos.dart`); on Linux, an XDG
 /// autostart entry (`login_item_linux.dart`). Each call answers its state
 /// after it.
@@ -26,7 +26,7 @@ enum LoginItemState { on, needsApproval, off }
 
 /// "Start at login" in Settings › General, a group of its own: the
 /// [LoginItem], which starts the packaged daemon at login (ADR 0036,
-/// 0102). The system keeps whether it's on; the row shows only once the
+/// 0104). The system keeps whether it's on; the row shows only once the
 /// [LoginItem] answers.
 class StartAtLogin extends StatefulWidget {
   const new({super.key});

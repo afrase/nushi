@@ -265,7 +265,7 @@ List<AppAction> appActions(BuildContext context, Daemon d) {
     AppAction(
       .reloadPage,
       'Reload page',
-      // A page in the browser reloads there (ADR 0102).
+      // A page in the browser reloads there (ADR 0104).
       enabled: browser != null && webEmbedded,
       run: () => browser!.reload(),
     ),

@@ -94,7 +94,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 | **Unsaved changes** | What you typed into a file in the preview and haven't saved: a dot in its tab's ✕ place. Save, Discard. Changed on disk (a conflict: Compare, Overwrite with mine, Use theirs), Deleted on disk, Merged a change from disk. Not a draft (a message's). | `FileEdit`, `ChatState.edits`, `EditBars`, `WriteChatFile`, `internal/filesave` | 0096 |
 | **Files pane** | The tree of the chat's folder, in a side pane left of the preview (⇧⌘E); the phone's Files screen. A file opens as a preview. | `FilesPane`, `FolderTree`, `WatchChatFolder`, `internal/folderlist`, the phone's `FilesScreen` | 0090 |
 | **Preview tab** | One of the files or browser tabs open in the preview, when two or more are: names in the side pane's title row, in place of the file's. In memory, and gone with the pane. Only the one showing has a view. | `ChatState.previewTabs`, `PreviewEntry`, `preview_tabs.dart` | 0070 |
-| **Browser tab** | A preview tab that shows a web page at an address, any site or a server on this Mac (`localhost:3000`), with Back, Forward, Reload and its address field. New browser tab: the + at the tab row's end, the header's globe, the palette. Its tab is a chip; Expand gives it the whole chat area, Collapse gives it back; its ⋯ menu is the browser menu. A chat's links open in one, with Open links in built-in browser on. Not the default browser, which the docs call your browser. | `BrowserTab`, `BrowserPane`, `BrowserPage`, `browser_bar.dart`, `browser_address.dart` | 0094 |
+| **Browser tab** | A preview tab that shows a web page at an address, any site or a server on this Mac (`localhost:3000`), with Back, Forward, Reload and its address field. New browser tab: the + at the tab row's end, the header's globe, the palette. Its tab is a chip; Expand gives it the whole chat area, Collapse gives it back; its ⋯ menu is the browser menu. A chat's links to this Mac or the local network open in one, with Open local links in built-in browser on. Not the default browser, which the docs call your browser. | `BrowserTab`, `BrowserPane`, `BrowserPage`, `browser_bar.dart`, `browser_address.dart` | 0094 |
 | **Local network access** | Whether a site's page in a browser tab may reach this Mac (a dev server) and the local network (a router, a printer): blocked, unless the page is there itself or the site is let through. Claude desktop's word. | `localNetworkSites`, `browser_local.dart`, `LocalNetwork` | 0094 |
 | **Allowed sites** | The sites whose pages in a browser tab have Local network access, as you let them through: Manage allowed sites… in the browser's ⋯ menu lists them and adds one. Claude desktop's word (its list also says which sites its agent may use; Nushi's agents don't drive pages). | `localNetworkSites`, `AllowedSites` (`allowed_sites.dart`) | 0094 |
 | **Dev server** | A project's web server for development (`npm run dev`), as its launch files configure it: one entry, which runs a command, or opens a server already running at its address. Running, it's the daemon's, shared by the chats in its folder: starting, running, not answering (no answer in 180 s), failed or stopped. | `launchfile.Entry`, `servers.Service`, `DevServer` | 0095, 0098 |
@@ -164,7 +164,7 @@ Nushi's words, defined once. The UI, the code and the docs use them; a new user-
 
 | Term | Meaning | Code | ADR |
 |---|---|---|---|
-| **Data folder** | `~/Library/Application Support/Nushi` (on Linux `$XDG_DATA_HOME/nushi`, else `~/.local/share/nushi`): socket, token, state, copies, logs, adapters. | `NUSHI_DATA`, `AppInstall.dataFolder` | 0101, 0102 |
+| **Data folder** | `~/Library/Application Support/Nushi` (on Linux `$XDG_DATA_HOME/nushi`, else `~/.local/share/nushi`): socket, token, state, copies, logs, adapters. | `NUSHI_DATA`, `AppInstall.dataFolder` | 0101, 0104 |
 | **Start at login** | A launch agent that opens the daemon at login. | `login_item.dart` | 0036 |
 | **Logs** | `nushid.log` and `app.log`; Settings › Logs & advanced. | `internal/logs` | 0038 |
 | **Shell environment** | Your login shell's variables, which agents start with; read again from Settings › Agents. | `internal/shellenv`, `ShellEnv` | 0048 |
@@ -202,7 +202,7 @@ One line each; the word after the arrow wins.
 - omp → **oh-my-pi** in the UI; `omp` is its command.
 - Nushi Next → **Nushi** (ADR 0018).
 - group, for tool rows → **run**.
-- built-in browser → **browser tab**. Only the setting Open links in built-in browser says it, in Claude desktop's words.
+- built-in browser → **browser tab**. Only the setting Open local links in built-in browser says it, after Claude desktop's words.
 
 ## Renames to do
 

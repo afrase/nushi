@@ -73,7 +73,7 @@ func steps(folder string) []step {
 }
 
 // buildTarget is the desktop app flutter builds here: Linux's on Linux
-// (ADR 0102), else the Mac's.
+// (ADR 0104), else the Mac's.
 func buildTarget() string {
 	if runtime.GOOS == "linux" {
 		return "linux"

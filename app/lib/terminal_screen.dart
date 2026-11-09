@@ -19,7 +19,7 @@ import 'package:xterm2/xterm.dart';
 
 // A terminal's own keys: ⌘ and a letter, as Terminal has them; on Linux
 // Ctrl+Shift and the letter, as GNOME Terminal has them, since Ctrl and a
-// letter is the shell's (ADR 0102).
+// letter is the shell's (ADR 0104).
 
 /// Copies the terminal's selection.
 const terminalCopyKey = Cmd(
@@ -61,7 +61,7 @@ const terminalFindKey = Cmd(
 const _interruptKey = SingleActivator(LogicalKeyboardKey.keyC, control: true);
 
 /// Where the command key is Control, Ctrl+C interrupts with text selected
-/// too, as in GNOME Terminal (ADR 0102): off the Mac xterm2 would copy the
+/// too, as in GNOME Terminal (ADR 0104): off the Mac xterm2 would copy the
 /// selection instead, before its shortcuts, so the selection goes and the
 /// key reaches the shell. Ctrl+Shift+C copies.
 KeyEventResult _interruptWithSelection(KeyEvent event, TermSession s) {

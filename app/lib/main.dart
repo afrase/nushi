@@ -20,6 +20,7 @@ import 'package:nushi/drafts_mac.dart';
 import 'package:nushi/file_edit.dart';
 import 'package:nushi/folder_button.dart';
 import 'package:nushi/github_view.dart';
+import 'package:nushi/images.dart' show limitImageCache;
 import 'package:nushi/jira_view.dart';
 import 'package:nushi/native.dart';
 import 'package:nushi/native_linux.dart';
@@ -46,8 +47,9 @@ import 'package:nushi/widgets.dart' show confirm;
 void main() => runZonedGuarded(() {
   WidgetsFlutterBinding.ensureInitialized();
   // The machine's native edge, the app's one test of the platform (ADR
-  // 0097, 0102), before anything that may reach it.
+  // 0097, 0104), before anything that may reach it.
   native = Platform.isLinux ? linuxNative() : macosNative();
+  limitImageCache();
   catchErrors();
   themeFiles
     ..load()

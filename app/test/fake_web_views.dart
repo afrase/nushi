@@ -9,7 +9,7 @@ import 'package:nushi/web_views_macos.dart';
 
 /// The web views as a test has them (ADR 0097): what it sets, and the
 /// Mac's for the rest, whose channels tests leave unanswered; not
-/// [embedded], Linux's placeholders and no diagrams (ADR 0102).
+/// [embedded], Linux's placeholders and no diagrams (ADR 0104).
 class FakeWebViews implements WebViews {
   /// Whether pages show in the app, as on the Mac.
   @override

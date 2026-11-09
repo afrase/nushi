@@ -18,7 +18,7 @@ import 'package:nushi/web_views.dart';
 /// edit; inside its right end, for a web page, a button that opens the page
 /// in the default browser ([_Outside]). A new tab has no page yet ([host]
 /// null): only its field works. Without the app's own web views (Linux,
-/// ADR 0102) there's no Back, Forward or Reload: the page is the browser's.
+/// ADR 0104) there's no Back, Forward or Reload: the page is the browser's.
 class BrowserBar extends StatelessWidget {
   const new({
     required this.host,

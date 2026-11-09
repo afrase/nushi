@@ -202,6 +202,17 @@ type chat struct {
 	replay     []model.Item
 	quiet      bool // a replayed update is being taken: its events aren't the app's
 
+	// mirrored says the items, but for those unsaved and those that only
+	// show, are the copy's as it stands; inCopy that they were let go, the
+	// copy holding them, but for those set aside (letgo.go).
+	mirrored bool
+	inCopy   bool
+	aside    []asideItem
+	// unread says the copy couldn't be read when the transcript was made
+	// from it: nothing is written to it then, as new items would go at
+	// its start, before the history it holds (letgo.go).
+	unread bool
+
 	// One look at the related worktrees at a time (related.go): looking
 	// holds it across git's runs; relating says a look of the chat's own
 	// runs, relateAgain that another was asked for since, and relatedAt is
@@ -242,7 +253,8 @@ func (c *chat) emitLocked(e model.Event) {
 	}
 }
 
-// Get returns a snapshot of a chat.
+// Get returns a snapshot of a chat; one whose items were let go is read
+// from its copy, without holding them (letgo.go).
 func (s *Service) Get(chatID string) (model.Chat, error) {
 	c, err := s.open(chatID)
 	if err != nil {
@@ -250,14 +262,22 @@ func (s *Service) Get(chatID string) (model.Chat, error) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.snapshotLocked(0), nil
+	if c.inCopy {
+		items, err := c.copyItemsLocked()
+		if err != nil {
+			return model.Chat{}, err
+		}
+		return c.snapshotLocked(items), nil
+	}
+	return c.snapshotLocked(slices.Clone(c.items)), nil
 }
 
-// snapshotLocked is the chat as it is, with its items from start on.
-func (c *chat) snapshotLocked(start int) model.Chat {
+// snapshotLocked is the chat as it is, with items (the caller's copy) as
+// its items.
+func (c *chat) snapshotLocked(items []model.Item) model.Chat {
 	return model.Chat{
 		Record:   c.record,
-		Items:    slices.Clone(c.items[start:]),
+		Items:    items,
 		Config:   slices.Clone(c.config),
 		Commands: c.commandsLocked(),
 		Usage:    c.usage,
@@ -289,7 +309,8 @@ func checkFolder(folder string) error {
 
 func (s *Service) newChat(k *kind) *chat {
 	return &chat{kind: k, remembered: s.remembered, publish: s.publish, sessions: s.sessions, worktrees: s.worktrees, owned: s.ownedWorktrees, copies: s.copies, copiesOn: s.copiesOn, viewers: s.viewers, ctx: s.ctx, serverCommand: s.serverCommand, serverAnswered: s.serverAnswered, waiting: map[string]chan<- string{},
-		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{}}
+		questions: map[string]chan<- []model.Field{}, sides: map[string]*chat{}, children: map[string]*child{}, probes: map[string]*silentRun{}, unsaved: map[string]bool{},
+		mirrored: true} // a new chat's copy is as empty as its transcript
 }
 
 // List returns every stored chat.
@@ -426,8 +447,10 @@ func (c *chat) itemLocked(id string) *model.Item {
 	return nil
 }
 
-// addLocked appends an item, giving it an id if it has none, and publishes it.
+// addLocked appends an item, giving it an id if it has none, and publishes
+// it; the items come back first if they were let go.
 func (c *chat) addLocked(it model.Item) string {
+	c.itemsBackLocked()
 	if it.ID == "" {
 		c.lastItem++
 		it.ID = "item-" + strconv.Itoa(c.lastItem)

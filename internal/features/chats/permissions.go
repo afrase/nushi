@@ -214,20 +214,13 @@ func (s *Service) EndStalePrompts() {
 }
 
 func (s *Service) endStale(id string) {
-	items, err := s.copies.Read(id)
+	ended, after, err := s.copies.Find(id, asking) // not the whole copy: every chat's is looked at
 	if err != nil {
 		slog.Warn("ending stale prompts", "chat", id, "err", err)
 		return
 	}
-	var ended []model.Item
-	var after []string
-	prev := ""
-	for _, it := range items {
-		if asking(it) {
-			it.Status = "cancelled"
-			ended, after = append(ended, it), append(after, prev)
-		}
-		prev = it.ID
+	for i := range ended {
+		ended[i].Status = "cancelled"
 	}
 	if len(ended) == 0 {
 		return

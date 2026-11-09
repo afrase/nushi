@@ -13,7 +13,7 @@ typedef Detach = Future<void> Function(
   Map<String, String> environment,
 );
 
-/// Linux's package (ADR 0102): the binary `nushi` with the daemon in
+/// Linux's package (ADR 0104): the binary `nushi` with the daemon in
 /// `lib/nushid` beside it (where a file manager doesn't show it), the
 /// version Flutter writes into `data/flutter_assets/version.json`, the
 /// data folder nushid picks itself (ADR 0101). The daemon starts detached

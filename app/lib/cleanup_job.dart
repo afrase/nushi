@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:nushi/chat.dart';
 import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
@@ -320,10 +321,7 @@ class CleanUpProgress extends StatelessWidget {
                   lead: SizedBox(
                     width: 11,
                     height: 11,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      color: t.textMuted,
-                    ),
+                    child: Spinner(color: t.textMuted),
                   ),
                 ),
                 StepState.done => line(Icons.check, t.done, s.label),

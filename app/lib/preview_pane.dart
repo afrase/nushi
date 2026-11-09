@@ -157,7 +157,7 @@ class _PreviewPaneState extends State<PreviewPane> {
   void _reveal() => revealInFinder(_abs).ignore();
 
   /// Whether it has Preview and Source: a file that renders, but a diagram
-  /// only with something to draw it (Linux has none, ADR 0102).
+  /// only with something to draw it (Linux has none, ADR 0104).
   bool get _switches =>
       _kind.rendered && (_kind != PreviewKind.mermaid || _diagram != null);
 
@@ -198,7 +198,7 @@ class _PreviewPaneState extends State<PreviewPane> {
     final diagram = _diagram;
     final actions = <(IconData, String, double, VoidCallback)>[
       if (page != null) ...[
-        // A page in the browser reloads there (ADR 0102).
+        // A page in the browser reloads there (ADR 0104).
         if (webEmbedded)
           (Icons.refresh, 'Reload', 15, () => page.reload().ignore()),
         (

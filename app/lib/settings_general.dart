@@ -118,8 +118,8 @@ class _Spelling extends StatelessWidget {
   );
 }
 
-/// Whether a chat's links open in a browser tab beside it (ADR 0094): the
-/// app's own preference, on at first, named as Claude desktop names it.
+/// Whether a chat's links to this Mac or the local network open in a
+/// browser tab beside it (ADR 0094): the app's own preference, on at first.
 class _Links extends StatelessWidget {
   const new();
 
@@ -130,10 +130,11 @@ class _Links extends StatelessWidget {
       title: 'Browser',
       children: [
         SettingsRow(
-          'Open links in built-in browser',
+          'Open local links in built-in browser',
           description:
-              'Links in a chat open in a browser tab beside it, not in your '
-              'browser.',
+              'Links in a chat to this Mac or your local network, such as a '
+              'dev server, open in a browser tab beside it. Other sites open '
+              'in your browser.',
           control: SettingsSwitch(
             value: on,
             onChanged: (v) => linksInBrowserTab.value = v,

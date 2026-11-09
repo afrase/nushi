@@ -324,7 +324,7 @@ class TermSession extends ChangeNotifier {
 }
 
 /// The platform a terminal reads its keys as: the Mac's, or Linux's where
-/// Control is the command key (ADR 0102): its keytab, and AltGr typing its
+/// Control is the command key (ADR 0104): its keytab, and AltGr typing its
 /// character rather than Alt and Control.
 TerminalTargetPlatform get terminalPlatform => switch (commandKey) {
   CommandKey.meta => TerminalTargetPlatform.macos,

@@ -1,4 +1,4 @@
-# 0102. The app runs on Linux
+# 0104. The app runs on Linux
 
 Status: accepted, 2026-11-08. Builds on [0097](0097-native-code-behind-interfaces.md) (a second platform's set behind its interfaces) and [0101](0101-the-daemon-runs-on-linux.md) (the daemon it talks to).
 

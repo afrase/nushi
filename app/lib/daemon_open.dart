@@ -24,8 +24,9 @@ extension DaemonOpen on Daemon {
         GetChatRequest(
           chatId: chat.id,
           recent: max(pageItems, had),
-          // The phone takes larger images on their own (ADR 0099).
-          imageRefs: remote,
+          // Larger images come on their own, fetched as they show (ADR
+          // 0099): a chat of screenshots isn't held whole.
+          imageRefs: true,
         ),
       );
       if (load == chat.loads) {

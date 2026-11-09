@@ -1,4 +1,4 @@
-/// The installed app as the daemon's launcher sees it (ADR 0036, 0102):
+/// The installed app as the daemon's launcher sees it (ADR 0036, 0104):
 /// where the data folder is, the daemon packaged with the app, the app's
 /// version, and starting and stopping that daemon. On the Mac, the
 /// helper app inside the bundle (`app_install_macos.dart`); on Linux,

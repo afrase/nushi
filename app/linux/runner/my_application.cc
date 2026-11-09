@@ -175,7 +175,7 @@ MyApplication* my_application_new() {
   // One Nushi a user, as on the Mac: a second launch activates the first
   // over D-Bus, which presents its window, and exits. A development run
   // (NUSHI_DATA, a data folder of its own, AGENTS.md) runs beside it
-  // instead (ADR 0102).
+  // instead (ADR 0104).
   GApplicationFlags flags = g_getenv("NUSHI_DATA") != nullptr
                                 ? G_APPLICATION_NON_UNIQUE
                                 : G_APPLICATION_FLAGS_NONE;
