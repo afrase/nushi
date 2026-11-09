@@ -36,9 +36,10 @@ func (stuckWorktrees) Found(context.Context, string) *model.Worktree            
 func (stuckWorktrees) Locate(context.Context, string) (string, string, error) {
 	return "", "", nil
 }
-func (stuckWorktrees) MergeBase(context.Context, string, string, string) (string, error) {
+func (stuckWorktrees) MergeBase(context.Context, string, string, ...string) (string, error) {
 	return "", nil
 }
+func (stuckWorktrees) DefaultTips(context.Context, string) []string { return nil }
 func (stuckWorktrees) Merged(context.Context, string, string, []string) ([]string, error) {
 	return nil, nil
 }

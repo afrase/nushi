@@ -100,3 +100,22 @@ func TestBasesOfABranchWithoutAnUpstream(t *testing.T) {
 		t.Errorf("an upstream gone: %q", got)
 	}
 }
+
+// Only main pairs with origin/main: a branch that tracks origin/main, as
+// one made from it does, isn't its other copy, whatever its name.
+func TestBasesPairOnlyTheSameName(t *testing.T) {
+	ctx := context.Background()
+	repo, _ := rebasedOntoUpstream(t)
+	testcheck.Git(t, repo, "branch", "-q", "--track", "a-agent", "origin/main")
+	if got := bases(ctx, repo, "origin/main"); len(got) != 2 || got[1] != "refs/heads/main" {
+		t.Errorf("origin/main: %q", got)
+	}
+	testcheck.Git(t, repo, "switch", "-q", "--detach")
+	testcheck.Git(t, repo, "branch", "-q", "-D", "main")
+	if got := bases(ctx, repo, "origin/main"); len(got) != 1 {
+		t.Errorf("without main: %q", got)
+	}
+	if got := bases(ctx, repo, "a-agent"); len(got) != 2 || got[1] != "refs/remotes/origin/main" {
+		t.Errorf("a local branch's upstream: %q", got)
+	}
+}

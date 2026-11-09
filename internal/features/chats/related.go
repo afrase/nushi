@@ -270,6 +270,7 @@ type relatedLook struct {
 	folder string
 	common string                         // the repository's common folder
 	head   string                         // the commit folder has out
+	tips   []string                       // the default branch's commits (DefaultTips)
 	listed map[string]model.WorktreeEntry // git's worktrees, by path
 }
 
@@ -285,7 +286,7 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 	if err != nil {
 		return nil, err
 	}
-	r := relatedLook{c: c, folder: folder, common: common, listed: map[string]model.WorktreeEntry{}}
+	r := relatedLook{c: c, folder: folder, common: common, tips: c.worktrees.DefaultTips(ctx, folder), listed: map[string]model.WorktreeEntry{}}
 	for _, e := range list {
 		r.listed[e.Path] = e
 		if e.Current {
@@ -297,6 +298,7 @@ func (c *chat) related(ctx context.Context, folder string, known []model.Related
 		if err := r.refresh(ctx, &next[i]); err != nil {
 			return nil, err
 		}
+		r.moveBase(ctx, &next[i])
 	}
 	owned, err := c.owned(c.id)
 	if err != nil {
@@ -360,13 +362,41 @@ func (r relatedLook) refresh(ctx context.Context, k *model.RelatedWorktree) erro
 	return nil
 }
 
-// found is the record of a worktree seen for the first time.
+// moveBase moves k's base on to where its head left the default branch,
+// when that is later: the chat's folder can have an old branch out while
+// an agent's worktree starts from origin/main, and a base taken from that
+// branch counts every commit since as the worktree's (issue #16). Records
+// kept from before are put right the same way. A head on the default
+// branch (merged there) keeps its base, so its work and "merged" stay. One
+// whose first look found no base (git failed then) gets one now.
+func (r relatedLook) moveBase(ctx context.Context, k *model.RelatedWorktree) {
+	if len(r.tips) == 0 || !git.ObjectID(k.LastHead) || k.LastHead == k.BaseCommit {
+		return
+	}
+	from := r.tips
+	if git.ObjectID(k.BaseCommit) {
+		from = append([]string{k.BaseCommit}, r.tips...)
+	}
+	base, err := r.c.worktrees.MergeBase(ctx, r.folder, k.LastHead, from...)
+	if err == nil && base != k.LastHead && git.ObjectID(base) {
+		k.BaseCommit = base
+	}
+}
+
+// found is the record of a worktree seen for the first time. Its base is
+// where it left the chat's branch or the default branch, the later.
 func (r relatedLook) found(ctx context.Context, e model.WorktreeEntry, call string) model.RelatedWorktree {
 	k := model.RelatedWorktree{Path: e.Path, Branch: e.Branch, CallID: call, State: model.RelatedPresent}
 	if git.ObjectID(e.Head) {
 		k.LastHead = e.Head
-		if base, err := r.c.worktrees.MergeBase(ctx, r.folder, e.Head, r.head); err == nil {
-			k.BaseCommit = base
+		from := slices.Clone(r.tips)
+		if git.ObjectID(r.head) {
+			from = append(from, r.head)
+		}
+		if len(from) > 0 {
+			if base, err := r.c.worktrees.MergeBase(ctx, r.folder, e.Head, from...); err == nil {
+				k.BaseCommit = base
+			}
 		}
 	}
 	return k
