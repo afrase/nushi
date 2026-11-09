@@ -90,6 +90,15 @@ func TestSearchSessions(t *testing.T) {
 	}
 }
 
+// A sessions folder that is a link (a dotfiles setup's) is read through.
+func TestSearchSessionsThroughALink(t *testing.T) {
+	link := filepath.Join(t.TempDir(), "sessions")
+	testcheck.NoErr(t, os.Symlink(fixture(t), link))
+	if got := threads(find(t, link, model.SessionSearch{Query: "flaky test"})); got != "1 5 4" {
+		t.Errorf("found %q, want 1 5 4", got)
+	}
+}
+
 // The search stops at Max, saying there's more, and at ctx's end.
 func TestSearchSessionsStops(t *testing.T) {
 	dir := fixture(t)

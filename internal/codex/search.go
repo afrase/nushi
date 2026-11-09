@@ -47,9 +47,13 @@ type rollout struct {
 }
 
 // rollouts lists the rollouts under dir (YYYY/MM/DD/rollout-<time>-<id>.jsonl),
-// the newest first, but those skip names.
+// the newest first, but those skip names. dir may be a link (a dotfiles
+// setup's); links below it aren't followed.
 func rollouts(dir string, skip func(string) bool) []rollout {
 	var out []rollout
+	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = resolved
+	}
 	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil //nolint:nilerr // what can't be read is skipped; the walk goes on
