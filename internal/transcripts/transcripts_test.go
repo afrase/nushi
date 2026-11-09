@@ -237,6 +237,32 @@ func TestCrashMidLongWrite(t *testing.T) {
 	}
 }
 
+// An append that fails (a full disk can leave part of its line) has the
+// next one check the file's end again, so its first record isn't glued to
+// the torn line and lost.
+func TestFailedAppendRepairs(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes a read-only file")
+	}
+	s, dir := open(t)
+	add(t, s, "C", "", msg("a", "A"))
+	name := filepath.Join(dir, "C", itemsFile)
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_APPEND, 0)
+	testcheck.NoErr(t, err)
+	_, err = f.WriteString(`{"item":{"ID":"b","Kind":2,"Te`) // the failed append's part
+	testcheck.NoErr(t, err)
+	testcheck.NoErr(t, f.Close())
+	testcheck.NoErr(t, os.Chmod(name, 0o400))
+	if err := s.Append("C", []model.Item{msg("b", "B")}, []string{"a"}); err == nil {
+		t.Fatal("appended to a read-only file")
+	}
+	testcheck.NoErr(t, os.Chmod(name, 0o600))
+	add(t, s, "C", "a", msg("c", "C"), msg("d", "D"))
+	if got := ids(read(t, s, "C")); got != "a=A c=C d=D" {
+		t.Fatalf("after a failed append: %s", got)
+	}
+}
+
 func TestReplaceAndList(t *testing.T) {
 	s, dir := open(t)
 	img := model.Image{MimeType: "image/png", Data: []byte("old")}
