@@ -172,6 +172,56 @@ void main() {
     await endEditor(tester, d);
   }, variant: onMac);
 
+  testWidgets("× with the focus in the prompt box: the editor doesn't take "
+      "it, and what is typed next doesn't edit the file", (tester) async {
+    final (d, _) = await openEditor(tester, {'main.go': utf8.encode(_source)});
+    await _openFind(tester, d);
+    await _look(tester, 'print', '1 of 5');
+    final prompt = find.byType(EditableText).first;
+    await tester.tap(prompt);
+    await tester.pumpAndSettle();
+    await tester.enterText(prompt, 'half a prompt');
+    expect(
+      FocusManager.instance.primaryFocus?.debugLabel,
+      isNot(anyOf('editor', 'find')),
+    );
+    // The click unfocuses the prompt box (a text field's tap outside, as on
+    // any button) before × closes the bar.
+    await tester.tap(
+      find.descendant(of: _bar, matching: find.byIcon(Icons.close)),
+    );
+    await tester.pumpAndSettle();
+    expect(_bar, findsNothing);
+    expect(FocusManager.instance.primaryFocus?.debugLabel, isNot('editor'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+    await tester.pumpAndSettle();
+    expect(editOf(d).text, _source);
+    await endEditor(tester, d);
+  }, variant: onMac);
+
+  testWidgets('typed fast, the count never says "None" for a text with '
+      'matches while re_editor looks', (tester) async {
+    final (d, _) = await openEditor(tester, {'main.go': utf8.encode(_source)});
+    await _openFind(tester, d);
+    final f = _findOf(tester);
+    final counts = <String>[];
+    f.addListener(() => counts.add(f.count));
+    // As the bar's field does, with no frame between the keys.
+    for (final q in ['p', 'pr', 'pri', 'prin', 'print']) {
+      f.query = q;
+    }
+    expect(f.looking, isTrue);
+    expect(f.count, '');
+    await untilReal(tester, () => !f.looking && f.hits.isNotEmpty);
+    await tester.pumpAndSettle();
+    expect(counts, isNot(contains('None')));
+    expect(counts.last, '1 of 5');
+    expect(f.hits, ['0:16', '0:23', '3:1', '4:1', '5:5']);
+    // Then one with none: "None", once it's looked.
+    await _look(tester, 'nowhere', 'None');
+    await endEditor(tester, d);
+  }, variant: onMac);
+
   testWidgets('an edit while the bar is open is found again', (tester) async {
     final (d, _) = await openEditor(tester, {'main.go': utf8.encode(_source)});
     await _openFind(tester, d);

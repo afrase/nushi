@@ -55,7 +55,7 @@ class _SourceEditorState extends State<SourceEditor> {
   /// The lines as re_editor laid them out, and its line numbers' place:
   /// where Show whitespace marks them.
   late final _lines = EditorLines(_across);
-  late final _find = EditorFind(widget.edit.controller);
+  late final _find = EditorFind(widget.edit.controller, _focus);
   final GlobalKey _gutter = GlobalKey();
   ModalRoute<Object?>? _route;
   bool _following = false;
