@@ -24,8 +24,9 @@ Color railTitleDim(Tokens t) {
 }
 
 /// The rail's menu, over it: [entries] by title, each with its dash, the
-/// current one's long and its title bright, the [lit] row filled.
-class RailMenu extends StatelessWidget {
+/// current one's long and its title bright, the [lit] row filled. Taller
+/// than its [room], it opens scrolled to the current one, in its middle.
+class RailMenu extends StatefulWidget {
   const new({
     required this.entries,
     required this.current,
@@ -58,17 +59,48 @@ class RailMenu extends StatelessWidget {
   static const shift = 6.0;
 
   @override
+  State<RailMenu> createState() => _RailMenuState();
+}
+
+class _RailMenuState extends State<RailMenu> {
+  ScrollController? _scroll;
+
+  @override
+  void dispose() {
+    _scroll?.dispose();
+    super.dispose();
+  }
+
+  /// Where the list starts scrolled to: the current row in the middle of
+  /// a menu [height] tall, as far as the list goes.
+  double _start(double row, double height) {
+    final w = widget;
+    final all = w.entries.length * row + 2 * RailMenu._pad;
+    final top = RailMenu._pad + w.current.value * row;
+    return (top + row / 2 - height / 2).clamp(0.0, max(0.0, all - height));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final w = widget;
+    final entries = w.entries;
+    final current = w.current;
+    final lit = w.lit;
+    final fit = w.fit;
     final theme = NushiTheme.of(context);
     final t = theme.t;
     final phone = TouchTargets.of(context);
     final screen = MediaQuery.sizeOf(context);
-    final row = phone ? TouchTargets.size : _row;
+    final row = phone ? TouchTargets.size : RailMenu._row;
+    final most = max(row + 2 * RailMenu._pad, w.room);
+    final scroll = _scroll ??= ScrollController(
+      initialScrollOffset: _start(row, most),
+    );
     return ConstrainedBox(
       constraints: BoxConstraints(
         minWidth: min(220, screen.width - 16),
         maxWidth: min(340, screen.width - 16),
-        maxHeight: max(row + 2 * _pad, room),
+        maxHeight: most,
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -88,7 +120,8 @@ class RailMenu extends StatelessWidget {
           child: ListenableBuilder(
             listenable: Listenable.merge([current, lit]),
             builder: (context, _) => SingleChildScrollView(
-              padding: const EdgeInsets.all(_pad),
+              controller: scroll,
+              padding: const EdgeInsets.all(RailMenu._pad),
               child: IntrinsicWidth(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -98,9 +131,12 @@ class RailMenu extends StatelessWidget {
                         entry: e,
                         height: row,
                         // The dashes line up with the rail's under them.
-                        inset: max(4, fit.inset - _pad - 1 - shift),
+                        inset: max(
+                          4,
+                          fit.inset - RailMenu._pad - 1 - RailMenu.shift,
+                        ),
                         fit: fit,
-                        outline: outline,
+                        outline: w.outline,
                         current: i == current.value,
                         lit: i == lit.value,
                         onHover: (on) {
@@ -110,7 +146,7 @@ class RailMenu extends StatelessWidget {
                             lit.value = null;
                           }
                         },
-                        onTap: () => onPick(i),
+                        onTap: () => w.onPick(i),
                       ),
                   ],
                 ),

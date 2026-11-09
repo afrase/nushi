@@ -180,6 +180,69 @@ void main() {
     await closeView(tester, d);
   }, variant: mac);
 
+  testWidgets('a long outline opens its menu at the current heading, and '
+      'the keys keep their row in sight', (tester) async {
+    viewport(tester, const Size(360, 300));
+    final current = ValueNotifier(35);
+    addTearDown(current.dispose);
+    await tester.pumpWidget(
+      themed(
+        Align(
+          alignment: Alignment.topLeft,
+          child: Rail(
+            label: 'Outline',
+            outline: true,
+            entries: [
+              for (var i = 0; i < 40; i++) RailEntry('$i', 'Heading $i'),
+            ],
+            current: current,
+            fit: RailFit.wide,
+            onPick: (_) {},
+          ),
+        ),
+      ),
+    );
+    void inSight(String title) {
+      final menu = tester.getRect(find.byType(RailMenu));
+      final row = tester.getRect(find.text(title));
+      expect(menu.top, lessThanOrEqualTo(row.top), reason: title);
+      expect(menu.bottom, greaterThanOrEqualTo(row.bottom), reason: title);
+    }
+
+    final mouse = await hoverRail(tester);
+    inSight('Heading 35');
+    await render(tester, find.byType(MaterialApp), 'outline_long_menu');
+    await mouse.moveTo(const Offset(350, 290));
+    await tester.pump(Rail.linger);
+    await tester.pumpAndSettle();
+    expect(find.byType(RailMenu), findsNothing);
+
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(
+      () => FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic,
+    );
+    Focus.of(
+      tester.element(
+        find.descendant(of: rail, matching: find.byType(GestureDetector)).first,
+      ),
+    ).requestFocus();
+    await tester.pumpAndSettle();
+    inSight('Heading 35');
+    // Down past the last, round to the top.
+    for (var i = 0; i < 6; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+    }
+    inSight('Heading 1');
+    for (var i = 0; i < 3; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pumpAndSettle();
+    }
+    inSight('Heading 38');
+  }, variant: mac);
+
   testWidgets('under Reduce Motion a pick goes there at once', (tester) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
