@@ -284,14 +284,16 @@ class Phone extends ChangeNotifier {
       if (k != null && made != null && !_same(made, k)) {
         await platform.unsubscribe();
         push = await platform.pushState();
-      } else if (k != null && made != null) {
-        // Sent again, as the daemon may not have it (the call that turned
-        // it on failed); one it has is no change there.
+      }
+      notifyListeners();
+      // One made with the daemon's key is sent again, as the daemon may not
+      // have it (the call that turned it on failed); one it has is no
+      // change there.
+      if (k != null && made != null && _same(made, k)) {
         if (await platform.subscription() case final sub?) {
           await d.client.setPushSubscription(_subscription(sub));
         }
       }
-      notifyListeners();
     } on Object {
       // Asked again on the next connection.
     }
