@@ -34,7 +34,7 @@ func (b *bridge) open(ctx context.Context, cwd string, op any, replay bool) (*ac
 	}
 	s, err := b.start(ctx, h, op, replay)
 	if err != nil {
-		h.stop(time.Second)
+		h.abandon()
 		return nil, err
 	}
 	go b.commands(s, replay)
@@ -171,7 +171,7 @@ func (b *bridge) fork(ctx context.Context, from acp.SessionID, cwd, after string
 			return nil, fmt.Errorf("couldn't start ante: %w", err)
 		}
 		if src, err = b.start(ctx, h, resume(from), false); err != nil {
-			h.stop(time.Second)
+			h.abandon()
 			return nil, err
 		}
 		defer func() { src.h.stop(5 * time.Second); <-src.ended }()

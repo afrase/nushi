@@ -199,3 +199,14 @@ func (p *proc) stop(grace time.Duration) {
 	}
 	p.kill()
 }
+
+// abandon stops pi when nobody reads its events (its session didn't
+// open), reading them meanwhile as stop needs: else its reader waits on a
+// full channel for good, and stop waits out its grace.
+func (p *proc) abandon() {
+	go func() {
+		for range p.events {
+		}
+	}()
+	p.stop(time.Second)
+}

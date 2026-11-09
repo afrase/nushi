@@ -312,7 +312,7 @@ func (b *bridge) fork(ctx context.Context, id acp.SessionID, cwd, after string) 
 	defer cancel()
 	s, opts, err := b.forkOn(ctx, p, cwd, after)
 	if err != nil {
-		p.stop(time.Second)
+		p.abandon()
 		return nil, err
 	}
 	return &acp.ForkSessionResponse{SessionID: acp.SessionID(s.id), ConfigOptions: opts}, nil
