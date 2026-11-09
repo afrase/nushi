@@ -79,22 +79,50 @@ func TestALargeImageReadsBackAsAReference(t *testing.T) {
 	}
 }
 
-func TestAReferenceTheCopyLacksIsntWritten(t *testing.T) {
+func TestAReferenceTheCopyLacksIsLeftOut(t *testing.T) {
 	s, dir := open(t)
 	big := noise(t, 200, 100)
 	add(t, s, "A", "", model.Item{ID: "t1", Kind: model.ToolCall, Images: []model.Image{big}})
 	ref := read(t, s, "A")[0].Images[0]
-	// Another chat's copy (a fork's) hasn't the file: the write fails,
-	// and no empty file stands for it.
-	err := s.Append("B", []model.Item{{ID: "t1", Kind: model.ToolCall, Images: []model.Image{ref}}}, []string{""})
-	if err == nil || !strings.Contains(err.Error(), "isn't in the transcript copy") {
-		t.Fatalf("Append = %v", err)
+	// Another chat's copy (a fork's) hasn't the file: the item is written
+	// without it, beside the others, and no empty file stands for it.
+	small := model.Image{MimeType: "image/png", Data: []byte("small")}
+	testcheck.NoErr(t, s.Append("B", []model.Item{{ID: "t1", Kind: model.ToolCall, Images: []model.Image{ref, small}},
+		{ID: "t2", Kind: model.ToolCall}}, []string{"", "t1"}))
+	got := read(t, s, "B")
+	if len(got) != 2 || len(got[0].Images) != 1 || string(got[0].Images[0].Data) != "small" {
+		t.Fatalf("written with a reference the copy lacks: %+v", got)
 	}
-	if err := s.Replace("B", []model.Item{{ID: "t1", Images: []model.Image{ref}}}); err == nil {
-		t.Fatal("Replace wrote a reference the copy lacks")
+	testcheck.NoErr(t, s.Replace("B", []model.Item{{ID: "t1", Images: []model.Image{ref}}}))
+	if got := read(t, s, "B"); len(got) != 1 || len(got[0].Images) != 0 {
+		t.Fatalf("replaced with a reference the copy lacks: %+v", got)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "B", imagesDir, big.Hash)); err == nil {
 		t.Error("an image file was written for a reference")
+	}
+	notHash := model.Image{MimeType: "image/png", Hash: "../x", Size: model.SmallImage + 1}
+	if err := s.Append("B", []model.Item{{ID: "t3", Images: []model.Image{notHash}}}, []string{""}); err == nil || !strings.Contains(err.Error(), "not a hash") {
+		t.Errorf("a reference that isn't a hash: %v", err)
+	}
+}
+
+// A large image whose file went is left out of what's read, as a small
+// one always was, so the copy is still read and written again whole (a
+// move's names, a reopen's write) and only that image is lost.
+func TestALargeImageWhoseFileWentIsLeftOut(t *testing.T) {
+	s, dir := open(t)
+	gone, kept := noise(t, 200, 100), noise(t, 200, 100)
+	add(t, s, "CHAT", "", model.Item{ID: "t1", Kind: model.ToolCall, Images: []model.Image{gone, kept}})
+	add(t, s, "CHAT", "t1", model.Item{ID: "t2", Kind: model.ToolCall})
+	testcheck.NoErr(t, os.Remove(filepath.Join(dir, "CHAT", imagesDir, gone.Hash)))
+	items := read(t, s, "CHAT")
+	if len(items) != 2 || len(items[0].Images) != 1 || items[0].Images[0].Hash != kept.Hash {
+		t.Fatalf("read with a file gone: %+v", items)
+	}
+	items[1].Text = "renamed"
+	testcheck.NoErr(t, s.Replace("CHAT", items))
+	if got := read(t, s, "CHAT"); len(got) != 2 || got[1].Text != "renamed" || len(got[0].Images) != 1 || !got[0].Images[0].Ref() {
+		t.Errorf("written again: %+v", got)
 	}
 }
 

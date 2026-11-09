@@ -7,8 +7,6 @@ package transcripts
 import (
 	"bytes"
 	"cmp"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +18,6 @@ import (
 	"sync"
 
 	"github.com/afrase/nushi/internal/atomicfile"
-	"github.com/afrase/nushi/internal/imagesize"
 	"github.com/afrase/nushi/internal/model"
 )
 
@@ -233,69 +230,6 @@ func wholeLines(f *os.File, size int64) (int64, error) {
 		}
 	}
 	return 0, nil
-}
-
-// storeImagesLocked writes an item's images beside chat's file (each once,
-// by its hash) and returns the item as written. An image held as a
-// reference (model.Image.Ref) must be one of chat's files already: one
-// that isn't fails the write, never an empty file in its place.
-func (s *Store) storeImagesLocked(chat string, it model.Item) (*stored, error) {
-	st := &stored{Item: it}
-	st.Images = nil
-	for _, img := range it.Images {
-		p := picture{MimeType: img.MimeType, Hash: img.Hash, Size: img.Size, Width: img.Width, Height: img.Height}
-		if img.Ref() {
-			if err := s.hasImageLocked(chat, p.Hash); err != nil {
-				return nil, err
-			}
-			st.Pictures = append(st.Pictures, p)
-			continue
-		}
-		if p.Hash == "" { // else taken as the image came in
-			sum := sha256.Sum256(img.Data)
-			p.Hash = hex.EncodeToString(sum[:])
-		}
-		if p.Size = int64(len(img.Data)); p.Width == 0 {
-			p.Width, p.Height = imagesize.OfBytes(img.Data)
-		}
-		if err := s.writeImageLocked(chat, p.Hash, img.Data); err != nil {
-			return nil, err
-		}
-		st.Pictures = append(st.Pictures, p)
-	}
-	return st, nil
-}
-
-// hasImageLocked says chat's copy has the image of hash, or why not.
-func (s *Store) hasImageLocked(chat, hash string) error {
-	if err := checkChat(chat); err != nil {
-		return err
-	}
-	if !validHash.MatchString(hash) {
-		return fmt.Errorf("an image held by %q, not a hash", hash)
-	}
-	if _, err := s.root.Lstat(path.Join(chat, imagesDir, hash)); err != nil {
-		return fmt.Errorf("an image held as a reference isn't in the transcript copy: %w", err)
-	}
-	return nil
-}
-
-// writeImageLocked writes an image under its hash, whole or not at all
-// (atomicfile.ReplaceIn): one there is never written again, so it must
-// never be there empty.
-func (s *Store) writeImageLocked(chat, hash string, data []byte) error {
-	if err := checkChat(chat); err != nil {
-		return err
-	}
-	dir := path.Join(chat, imagesDir)
-	name := path.Join(dir, hash)
-	if _, err := s.root.Lstat(name); err == nil {
-		return nil
-	}
-	if err := s.root.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
-	return atomicfile.ReplaceIn(s.root, name, data, 0o600)
 }
 
 // Replace writes chat's copy anew as items, in order.
