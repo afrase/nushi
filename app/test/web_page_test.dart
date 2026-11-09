@@ -225,6 +225,24 @@ void main() {
     expect(loaded, 2);
   });
 
+  // Deep review 2026-11-10, 19: a preview closed while its cookies were
+  // being turned off still loaded its page in a web view nobody showed.
+  test('a preview closed before its cookies are off loads nothing', () async {
+    final was = blockCookies;
+    addTearDown(() => blockCookies = was);
+    final off = Completer<void>();
+    blockCookies = (id) => off.future;
+    final loads = CookielessLoads(Future.value(), () => 7);
+    var loaded = 0;
+    final waiting = loads.load(() async => loaded++);
+    await pumpEventQueue();
+    loads.stop();
+    off.complete();
+    await waiting;
+    await loads.load(() async => loaded++);
+    expect(loaded, 0);
+  });
+
   // Browser tabs load any site now (ADR 0094) and share WebKit's store
   // with file previews: a site a tab signed in to must never load as a
   // preview's main frame, a press or not (docs/security.md).

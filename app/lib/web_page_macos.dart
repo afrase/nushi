@@ -28,13 +28,19 @@ final class CookielessLoads {
         ..ignore();
 
   final Future<void> _ready;
+  bool _stopped = false;
 
   /// Runs [load] once the cookies are off; throws, loading nothing, if
-  /// they can't be.
+  /// they can't be. After [stop] it loads nothing.
   Future<void> load(Future<void> Function() load) async {
     await _ready;
+    if (_stopped) return;
     await load();
   }
+
+  /// Loads nothing from now on, a load still waiting on the cookies too:
+  /// the web view is gone, and a page loaded in it would run unseen.
+  void stop() => _stopped = true;
 }
 
 /// A WKWebView with only its free defaults (the owner's call), and no
@@ -120,7 +126,9 @@ class WebKitPage implements PageHost {
 
   @override
   void dispose() {
-    // The view goes with its widget; the page stops with it.
+    // The view goes with its widget; the page stops with it, and a load
+    // still waiting on the cookies never starts.
+    _loads.stop();
     unawaited(_c.loadRequest(LoadRequestParams(uri: Uri.parse('about:blank'))));
   }
 }

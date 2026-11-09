@@ -144,6 +144,11 @@ class BrowserPage implements BrowserHost {
             .then((_) => _c.setJavaScriptMode(JavaScriptMode.unrestricted))
             .then((_) => watchCommits(_id = _c.webViewIdentifier, _commit))
             .then((_) => _block())
+            .whenComplete(() {
+              // Closed before it was watched: dispose had no watch to
+              // forget, and the watch would keep this page for good.
+              if (_id case final id? when _gone) forgetCommits(id);
+            })
           // Its error is open's to meet, not the zone's.
           ..ignore();
     localNetworkSites.addListener(_sitesChanged);
@@ -199,6 +204,8 @@ class BrowserPage implements BrowserHost {
       }
       return;
     }
+    // Closed while its rules were made: the page would run unseen.
+    if (_gone) return;
     _source.asked(NavigationSource.typed, '$url');
     await _c.loadRequest(LoadRequestParams(uri: url));
   }
