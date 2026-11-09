@@ -48,6 +48,10 @@ type Copies interface {
 	// those of its items whose ids are ids, whole, reading only them.
 	Heads(chat string) ([]model.Item, error)
 	Pick(chat string, ids []string) ([]model.Item, error)
+	// ImageData returns the bytes of a chat's image of hash, an error if
+	// they aren't size long (0: any); what a chat holds as a reference
+	// (images.go).
+	ImageData(chat, hash string, size int64) ([]byte, error)
 	Delete(chat string) error
 	Has(chat string) bool
 	// List returns every chat's copy, largest first.
@@ -208,9 +212,10 @@ func (s *Service) ClearCopies(ctx context.Context, chats []string) (n int, bytes
 			continue
 		}
 		// An open chat shows on what it has, so items it let go come back
-		// before the copy goes.
+		// before the copy goes, and the images it holds as references.
 		ch.mu.Lock()
 		ch.itemsBackLocked()
+		ch.unrefLocked()
 		err := s.copies.Delete(c.Chat)
 		ch.mirrored, ch.unread = false, ch.unread && err != nil // a new copy starts empty
 		gone := ch.sessionGone

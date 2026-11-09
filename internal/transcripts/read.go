@@ -10,15 +10,15 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/afrase/nushi/internal/imagesize"
 	"github.com/afrase/nushi/internal/model"
 )
 
 var validHash = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
-// Read returns chat's copy as it stands, its images read back; none (nil)
-// when it has no copy. Lines that can't be read (a crash's last line) are
-// skipped. A file mostly of items written again since is written anew.
+// Read returns chat's copy as it stands, its images as the chat holds
+// them (images.go); none (nil) when it has no copy. Lines that can't be
+// read (a crash's last line) are skipped. A file mostly of items written
+// again since is written anew.
 func (s *Store) Read(chat string) ([]model.Item, error) {
 	if err := checkChat(chat); err != nil {
 		return nil, err
@@ -71,18 +71,18 @@ type itemHead struct {
 }
 
 // item is h as a model.Item of only what it has: its images are their
-// MimeType and Hash, without Data.
+// MimeType and Hash (and size, when the record has it), without Data.
 func (h *itemHead) item() model.Item {
 	it := model.Item{ID: h.ID, Kind: h.Kind, Status: h.Status, Parent: h.Parent, WorktreePath: h.WorktreePath}
 	for _, p := range h.Pictures {
-		it.Images = append(it.Images, model.Image{MimeType: p.MimeType, Hash: p.Hash})
+		it.Images = append(it.Images, model.Image{MimeType: p.MimeType, Hash: p.Hash, Size: p.Size, Width: p.Width, Height: p.Height})
 	}
 	return it
 }
 
 // Find returns the items of chat's copy, as it stands, that want picks,
-// their images read back, each with the id of the item before it ("" for
-// the first). want sees an item as Heads has it, and only the items it
+// their images as the chat holds them, each with the id of the item
+// before it ("" for the first). want sees an item as Heads has it, and only the items it
 // picks are read whole: a long copy costs what they hold and its
 // items' ids, not its size (a daemon's start looks through every chat's).
 func (s *Store) Find(chat string, want func(model.Item) bool) (items []model.Item, after []string, err error) {
@@ -167,24 +167,4 @@ func (s *Store) replayLocked(chat string, decode func(line []byte, at int64) (ch
 		return nil, 0, 0, err
 	}
 	return t, n, fi.Size(), nil
-}
-
-// withImagesLocked is st as an item, its images read back from their
-// files, with their length and pixels (an older daemon's record has none:
-// read from the bytes).
-func (s *Store) withImagesLocked(chat string, st *stored) model.Item {
-	it := st.Item
-	for _, p := range st.Pictures {
-		if !validHash.MatchString(p.Hash) {
-			continue
-		}
-		if data, err := s.root.ReadFile(path.Join(chat, imagesDir, p.Hash)); err == nil {
-			img := model.Image{MimeType: p.MimeType, Data: data, Hash: p.Hash, Size: int64(len(data)), Width: p.Width, Height: p.Height}
-			if p.Size == 0 {
-				img.Width, img.Height = imagesize.OfBytes(data)
-			}
-			it.Images = append(it.Images, img)
-		}
-	}
-	return it
 }

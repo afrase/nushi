@@ -114,7 +114,8 @@ func (s *Store) Heads(chat string) ([]model.Item, error) {
 }
 
 // Pick returns the items of chat's copy whose ids are ids, whole, their
-// images read back, in the copy's order: only their own records are read.
+// images as the chat holds them, in the copy's order: only their own
+// records are read.
 func (s *Store) Pick(chat string, ids []string) ([]model.Item, error) {
 	if err := checkChat(chat); err != nil {
 		return nil, err

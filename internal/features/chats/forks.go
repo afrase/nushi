@@ -44,6 +44,9 @@ func (s *Service) ForkAsChat(ctx context.Context, chatID, at string) (string, er
 	of, sid := p.record, p.sid
 	items, at, err := p.forkLocked(at)
 	p.mu.Unlock()
+	if err == nil { // the fork's copy is in its own folder: the chat's references don't reach it
+		err = p.itemsWithBytes(items)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -194,12 +197,18 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	p.mu.Unlock()
 	side.mu.Lock()
 	busy := side.busy || side.ownTurn || side.waitsLocked() || side.backgroundLocked(0)
+	base := slices.Clone(side.base)
 	side.mu.Unlock()
 	switch {
 	case !canLoad:
 		return "", errors.New("the agent can't reopen sessions, so the side chat can't be kept")
 	case busy:
 		return "", errors.New("the side chat is busy; keep it once its turn has ended")
+	}
+	// The side chat's base is the chat's items, which may hold images as
+	// references to the chat's copy; the new chat's copy is its own.
+	if err := p.itemsWithBytes(base); err != nil {
+		return "", fmt.Errorf("couldn't keep the side chat: %w", err)
 	}
 	// Whoever takes it out of its chat's side chats has it: this, its close
 	// (CloseSide) or its chat's agent stopping (dropSides), which delete
@@ -219,7 +228,7 @@ func (s *Service) KeepSide(ctx context.Context, id string) (string, error) {
 	s.mu.Unlock()
 	side.mu.Lock()
 	_ = side.cancelLocked() // a turn begun since it was looked at: it was kept as it was
-	items := append(slices.Clone(side.base), kept(side.items)...)
+	items := slices.Concat(base, kept(side.items))
 	// Its first message came with no agent's before it, in the side chat;
 	// kept, rewinding to it forks after the conversation it follows, or
 	// a new session would forget that.

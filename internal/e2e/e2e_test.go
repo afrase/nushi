@@ -62,6 +62,7 @@ type daemon struct {
 	claudes *claudes // the fake claudes Claude's Go agent ran
 	tools   *tools.Service
 	toolAPI string // the tools' endpoint, as the daemon's socket serves it
+	hub     *events.Hub
 }
 
 // fakeHarness is the "fake" agent's: Claude's notices, as startDaemon says,
@@ -218,7 +219,7 @@ func startDaemon(t *testing.T, dataDir string, history *acptest.History) *daemon
 		svc.Close()
 	}
 	t.Cleanup(stop)
-	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, tools: toolSvc, toolAPI: toolAPI.URL, kill: func() {
+	return &daemon{url: srv.URL, devices: devices.URL, stop: stop, restart: restarts, claudes: cls, tools: toolSvc, toolAPI: toolAPI.URL, hub: hub, kill: func() {
 		mu.Lock()
 		defer mu.Unlock()
 		kill()
