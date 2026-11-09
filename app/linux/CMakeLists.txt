@@ -46,6 +46,12 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
+  # GLib's API as of 2.72, Ubuntu 22.04's, which the release builds on: a
+  # newer call fails here too, not only there, and one deprecated since
+  # (G_APPLICATION_FLAGS_NONE) doesn't trip -Werror.
+  target_compile_definitions(${TARGET} PRIVATE
+    GLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_72
+    GLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_72)
 endfunction()
 
 # Flutter library and tool build rules.
