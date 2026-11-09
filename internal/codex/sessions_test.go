@@ -33,8 +33,11 @@ func TestHeld(t *testing.T) {
 	}
 }
 
+// A fork is found in a sessions folder, and through a link to one (a
+// dotfiles setup's).
 func TestForked(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "2026", "10", "25")
+	sessions := filepath.Join(t.TempDir(), "sessions")
+	dir := filepath.Join(sessions, "2026", "10", "25")
 	testcheck.NoErr(t, os.MkdirAll(dir, 0o700))
 	const fork, plain = "01a17067-b497-76b2-b3c1-aaa7817b86d7", "01a17067-b497-76b2-b3c1-aaa7817b86d8"
 	write := func(id, meta string) {
@@ -44,9 +47,12 @@ func TestForked(t *testing.T) {
 	}
 	write(fork, `{"type":"session_meta","payload":{"id":"`+fork+`","forked_from_id":"01a17067-0000-0000-0000-000000000000"}}`)
 	write(plain, `{"type":"session_meta","payload":{"id":"`+plain+`","base_instructions":"`+strings.Repeat("x", 100000)+`"}}`)
-	got := forked(filepath.Dir(filepath.Dir(filepath.Dir(dir))), []string{fork, plain})
-	if len(got) != 1 || !got[fork] {
-		t.Errorf("forked = %v, want only %s", got, fork)
+	link := filepath.Join(t.TempDir(), "sessions")
+	testcheck.NoErr(t, os.Symlink(sessions, link))
+	for _, root := range []string{sessions, link} {
+		if got := forked(root, []string{fork, plain}); len(got) != 1 || !got[fork] {
+			t.Errorf("forked(%s) = %v, want only %s", root, got, fork)
+		}
 	}
 }
 

@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"cmp"
 	"encoding/json"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/afrase/nushi/internal/filelock"
 )
@@ -44,7 +42,8 @@ func held(dir string, ids []string) map[string]string {
 
 // Forked says which of sessions ids are forks of another thread: a
 // rollout's first record (session_meta) names forked_from_id. Rollouts are
-// $CODEX_HOME/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl.
+// $CODEX_HOME/sessions/YYYY/MM/DD/rollout-<time>-<id>.jsonl, found as
+// search finds them (sessions may be a link).
 func (Local) Forked(ids []string) map[string]bool {
 	return forked(filepath.Join(Home(), "sessions"), ids)
 }
@@ -55,28 +54,16 @@ func forked(sessions string, ids []string) map[string]bool {
 		want[id] = true
 	}
 	out := map[string]bool{}
-	_ = filepath.WalkDir(sessions, func(path string, d fs.DirEntry, err error) error {
-		if err != nil { // d is nil when sessions can't be read
-			return nil //nolint:nilerr // what can't be read is skipped; the walk goes on
-		}
-		name := d.Name()
-		if !d.Type().IsRegular() || !strings.HasPrefix(name, "rollout-") || !strings.HasSuffix(name, ".jsonl") {
-			return nil
-		}
-		id := strings.TrimSuffix(name, ".jsonl")
-		if len(id) < 36 || !want[id[len(id)-36:]] {
-			return nil
-		}
+	for _, r := range rollouts(sessions, func(id string) bool { return !want[id] }) {
 		var meta struct {
 			Payload struct {
 				ForkedFrom string `json:"forked_from_id"`
 			} `json:"payload"`
 		}
-		if json.Unmarshal(firstLine(path), &meta) == nil && meta.Payload.ForkedFrom != "" {
-			out[id[len(id)-36:]] = true
+		if json.Unmarshal(firstLine(r.path), &meta) == nil && meta.Payload.ForkedFrom != "" {
+			out[r.id] = true
 		}
-		return nil
-	})
+	}
 	return out
 }
 
