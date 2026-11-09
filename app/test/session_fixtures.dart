@@ -55,8 +55,13 @@ Future<(FakeDaemon, Daemon, List<FoundSession>, List<bool>)> pumpSessionList(
   WidgetTester tester, {
   Tokens tokens = Tokens.dark,
   String folder = '/Users/me/nushi',
+  int? api,
 }) async {
   final fake = FakeDaemon(const [])..sessions = sessionPages;
+  if (api != null) {
+    fake.answer = (input) =>
+        input is PingRequest ? PingResponse(apiVersion: api) : null;
+  }
   final d = await fake.connect(tester);
   final opened = <FoundSession>[];
   final back = <bool>[];

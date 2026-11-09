@@ -79,10 +79,52 @@ void main() {
     await typeIn(tester, 'flaky');
     await press(tester, LogicalKeyboardKey.enter);
     expect(find.text('Old relay work'), findsOne);
+    // The daemon was told to stop reading for the older text.
+    expect(fake.cancelledSearches, ['fla']);
     late.complete(SearchAgentSessionsResponse(canSearch: true));
     await tester.pumpAndSettle();
     expect(find.text('Old relay work'), findsOne); // still flaky's
     expect(find.textContaining('No sessions mention'), findsNothing);
+    d.dispose();
+  });
+
+  testWidgets('a search still running when the list closes is cancelled', (
+    tester,
+  ) async {
+    final (fake, d, _, _) = await pumpSessionList(tester);
+    final never = Completer<SearchAgentSessionsResponse>();
+    fake.searches = (_) => never.future;
+    await typeIn(tester, 'flaky');
+    await press(tester, LogicalKeyboardKey.enter);
+    expect(fake.cancelledSearches, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+    expect(fake.cancelledSearches, ['flaky']);
+    d.dispose();
+  });
+
+  testWidgets('an older daemon, until it restarts, filters titles only and '
+      'is never asked', (tester) async {
+    viewport(tester, const Size(720, 900), brightness: Brightness.dark);
+    final (fake, d, _, _) = await pumpSessionList(
+      tester,
+      api: searchSessionsApi - 1,
+    );
+    expect(find.text('Filter by title'), findsOne);
+    await typeIn(tester, 'relay');
+    await tester.pump(SessionSearch.pause);
+    await press(tester, LogicalKeyboardKey.enter);
+    expect(fake.searched, isEmpty);
+    expect(find.text('Rename the relay flags'), findsOne);
+    expect(
+      find.text(
+        'Searching what was said comes once the daemon restarts: only '
+        'titles are filtered until then.',
+      ),
+      findsOne,
+    );
+    expectTextInside(tester, 720);
+    await render(tester, find.byType(Dialog), 'session_search_old_daemon');
     d.dispose();
   });
 

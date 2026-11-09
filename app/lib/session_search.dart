@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:connectrpc/connect.dart';
 import 'package:flutter/material.dart';
 
 import 'package:nushi/agents.dart';
@@ -9,14 +10,20 @@ import 'package:nushi/spinner.dart';
 import 'package:nushi/theme/theme.dart';
 import 'package:nushi/widgets.dart';
 
+/// The API from which the daemon searches what was said in an agent's
+/// sessions (SearchAgentSessions). While an older daemon waits to restart
+/// (ADR 0056) the field filters titles only.
+const searchSessionsApi = 113;
+
 /// The agents found to have no search of what was said in their sessions,
 /// while the app runs: their field filters titles only.
 final cantSearchSessions = <String>{};
 
 /// A search of [agent]'s sessions in [folder] for what was said in them
 /// (SearchAgentSessions, ADR 0035), for SessionList's field: asked once
-/// typing pauses for [pause], or at once ([now]). An answer to text the
-/// field no longer says is dropped.
+/// typing pauses for [pause], or at once ([now]). A search asked again,
+/// or left when the dialog closes, is cancelled, which ends the daemon's
+/// read of the transcripts; its answer is dropped.
 class SessionSearch extends ChangeNotifier {
   new(this.daemon, this.agent, this.folder);
 
@@ -30,6 +37,9 @@ class SessionSearch extends ChangeNotifier {
   Timer? _wait;
   bool _gone = false;
 
+  /// The search asked last, while it runs.
+  CancelableSignal? _asking;
+
   /// What the field says, trimmed.
   String text = '';
 
@@ -38,8 +48,12 @@ class SessionSearch extends ChangeNotifier {
   SearchAgentSessionsResponse? found;
   String? error;
 
+  /// Whether the daemon is too old to search; it will search once it has
+  /// restarted.
+  bool get daemonOld => daemon.daemonApi < searchSessionsApi;
+
   /// Whether the agent's sessions can be searched, as far as is known.
-  bool get searches => !cantSearchSessions.contains(agent);
+  bool get searches => !daemonOld && !cantSearchSessions.contains(agent);
 
   /// The search shows: the field says something and the agent searches.
   bool get shown => text.isNotEmpty && searches;
@@ -72,6 +86,8 @@ class SessionSearch extends ChangeNotifier {
   }
 
   Future<void> _ask(String t) async {
+    _asking?.cancel();
+    final signal = _asking = CancelableSignal();
     asked = t;
     found = null;
     error = null;
@@ -79,13 +95,16 @@ class SessionSearch extends ChangeNotifier {
     try {
       final r = await daemon.client.searchAgentSessions(
         SearchAgentSessionsRequest(agent: agent, folder: folder, text: t),
+        signal: signal,
       );
-      if (_gone || t != asked) return;
+      if (_gone || signal != _asking) return;
       if (!r.canSearch) cantSearchSessions.add(agent);
       found = r;
     } on Object catch (e) {
-      if (_gone || t != asked) return;
+      if (_gone || signal != _asking) return;
       error = errorText(e);
+    } finally {
+      if (signal == _asking) _asking = null;
     }
     notifyListeners();
   }
@@ -94,6 +113,7 @@ class SessionSearch extends ChangeNotifier {
   void dispose() {
     _gone = true;
     _wait?.cancel();
+    _asking?.cancel();
     super.dispose();
   }
 }
@@ -169,6 +189,11 @@ class SearchState extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
       child: switch (()) {
+        _ when search.daemonOld => Text(
+          'Searching what was said comes once the daemon restarts: only '
+          'titles are filtered until then.',
+          style: style,
+        ),
         _ when !search.searches => Text(
           "${agentTitle(search.agent)}'s sessions can't be searched for "
           'what was said: only titles are.',
