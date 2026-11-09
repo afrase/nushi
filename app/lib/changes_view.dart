@@ -24,8 +24,9 @@ import 'package:nushi/widgets.dart';
 /// The chat folder's changes in a [Scope]: a toolbar, the changed files
 /// (under the branch's commits in Commits) and the picked one side by
 /// side. It reloads when the agent finishes a turn. With related worktrees
-/// (ADR 0081) the toolbar's menu shows one of them instead, read-only, and
-/// read only on a click.
+/// (ADR 0081) the toolbar's menu shows one of them instead, read only on a
+/// click: its review comments are its own and go to the chat's agent, and
+/// nothing there stages or commits.
 class ChangesView extends StatefulWidget {
   const new({required this.chat, required this.daemon, super.key});
 
@@ -164,9 +165,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     _wanted = shown;
   }
 
-  /// Whether the view shows, or is about to show, what can only be read: the
-  /// span held too, for the moment after switching back to the chat's folder
-  /// while a worktree's files still show.
+  /// Whether the view shows, or is about to show, what can't be staged or
+  /// committed: the span held too, for the moment after switching back to
+  /// the chat's folder while a worktree's files still show.
   bool get _readOnly =>
       chat.related.shown != null || (_span?.readOnly ?? false);
 
@@ -292,19 +293,22 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
     }
   }
 
-  /// Which view the review comments are made in: the scope, and in
-  /// Commits the commits picked.
+  /// Which view the review comments are made in: the scope, in Commits
+  /// the commits picked, and the related worktree read ([whereIn]). Of the
+  /// span, as the files shown are.
   String get _where {
     final p = _picked;
-    return _span?.scope != Scope.commits || p == null
-        ? '${_span?.scope.name}'
-        : 'commits:${_commits[p.$1].hash}:${_commits[p.$2].hash}';
+    return whereIn(
+      _span?.scope != Scope.commits || p == null
+          ? '${_span?.scope.name}'
+          : 'commits:${_commits[p.$1].hash}:${_commits[p.$2].hash}',
+      worktree: _span?.worktree,
+    );
   }
 
   /// How many review comments each file has in this view.
   Map<String, int> _marks() {
     final marks = <String, int>{};
-    if (_readOnly) return marks; // the chat's comments aren't on these files
     for (final c in commentsOf(chat.id).where((c) => c.where == _where)) {
       marks.update(c.path, (n) => n + 1, ifAbsent: () => 1);
     }
@@ -314,10 +318,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
   /// Shows [files], keeping the file shown if it's among them; call in
   /// setState.
   void _show(List<FileChange> files) {
-    // Not on another folder's files, which would look like changed ones.
-    if (!(_span?.readOnly ?? false)) {
-      filesRead(chat, _where, files, idle: !chat.busy);
-    }
+    filesRead(chat, _where, files, idle: !chat.busy);
     _files = files;
     if (_plain case final p? when files.any((f) => f.path == p.path)) {
       _path = p.path;
@@ -447,7 +448,7 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _toolbar(),
-        if (!_readOnly) _cardsWaiting(),
+        _cardsWaiting(),
         Expanded(
           child: Dimmed(
             on: _stale,
@@ -483,12 +484,13 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                                 onPick: _pick,
                               ),
                             ),
-                          if (_span != null && !_readOnly)
+                          if (_span != null)
                             CommentsElsewhere(
                               chat: chat.id,
                               where: _where,
                               paths: {for (final f in _files) f.path},
                               maxHeight: box.maxHeight * 0.4,
+                              related: chat.related.list,
                             ),
                           if (empty.isNotEmpty)
                             Padding(
@@ -608,8 +610,9 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
                   line: _line,
                   find: chat.changesFind,
                   // Comments go with changes, not with a
-                  // file shown as it is.
-                  review: _plain == null && !_readOnly
+                  // file shown as it is. A related worktree's go
+                  // to the chat's agent too (ADR 0081).
+                  review: _plain == null
                       ? (chat: chat.id, where: _where, agent: chat.agentName)
                       : null,
                 ),
@@ -786,7 +789,6 @@ class _ChangesViewState extends State<ChangesView> with FollowsChanges {
       files: files,
       stale: _stale,
       behind: _behind,
-      readOnly: _readOnly,
       reloading: _reloading,
       onAgain: _again,
     );

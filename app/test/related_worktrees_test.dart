@@ -256,7 +256,7 @@ void main() {
       await closeView(tester, daemon);
     });
 
-    testWidgets('a worktree reads, and nothing there writes or comments', (
+    testWidgets('a worktree reads, and nothing there stages or commits', (
       tester,
     ) async {
       await setUpChat(tester);
@@ -273,7 +273,11 @@ void main() {
       expect(find.text('in_worktree.txt  +1', findRichText: true), findsOne);
       expect(find.byType(CommitBox), findsNothing);
       expect(find.byType(Checkbox), findsNothing);
-      expect(tester.widget<DiffBox>(find.byType(DiffBox)).review, isNull);
+      // Comments are its own (related_worktree_comments_test.dart).
+      expect(
+        tester.widget<DiffBox>(find.byType(DiffBox)).review?.where,
+        whereIn('branch', worktree: '/x/.claude/worktrees/a'),
+      );
       await tester.tap(find.text('Uncommitted'));
       await tester.pumpAndSettle();
       expect(find.byType(CommitBox), findsNothing);

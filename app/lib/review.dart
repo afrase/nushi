@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -9,17 +10,19 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/file_mode.dart';
 import 'package:nushi/fnv.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
+import 'package:nushi/plain_text.dart';
 import 'package:nushi/replies.dart';
 import 'package:nushi/syntax.dart';
 
 /// A review comment on lines [start]–[end] (from 1) of a file's [old] or
-/// new side, in the Changes view it was made in ([where]: the scope, and
-/// the commits in Commits). [quote] is those lines as they were, and
-/// [before] and [after] the lines around them: when the file changes, the
-/// comment moves to where they are now ([anchor]), or is [outdated] when
-/// they're gone. Once [sent], it stays (dimmed) until the turn that took
-/// it has ended and its lines are outdated or the side changed: [seen] is
-/// the side's text as last read before it was sent.
+/// new side, in the Changes view it was made in ([where]: the scope, the
+/// commits in Commits, and a related [worktree]'s folder; [whereIn]).
+/// [quote] is those lines as they were, and [before] and [after] the lines
+/// around them: when the file changes, the comment moves to where they are
+/// now ([anchor]), or is [outdated] when they're gone. Once [sent], it
+/// stays (dimmed) until the turn that took it has ended and its lines are
+/// outdated or the side changed: [seen] is the side's text as last read
+/// before it was sent.
 class ReviewComment {
   new({
     required this.id,
@@ -140,7 +143,29 @@ class ReviewComment {
   bool saw(String side) => seen == fnv1a(side.codeUnits);
 
   String get lines => start == end ? 'Line $start' : 'Lines $start–$end';
+
+  /// The related worktree it was made in, by its folder; null for the
+  /// chat's own folder.
+  String? get worktree => worktreeOf(where);
 }
+
+/// A Changes view's [ReviewComment.where]: [scope] (a Scope's name, or the
+/// Commits picked as `commits:<newest>:<oldest>`) of the chat's own folder,
+/// or of the related worktree at [worktree] (ADR 0081). A worktree's
+/// comments are its own: a file of the same path in the chat's folder
+/// shares no comment, draft or sent state with it.
+String whereIn(String scope, {String? worktree}) =>
+    worktree == null ? scope : '$worktree\n$scope';
+
+/// The related worktree's folder [where] names ([whereIn]), null for the
+/// chat's own. A scope has no line break; a folder might.
+String? worktreeOf(String where) {
+  final i = where.lastIndexOf('\n');
+  return i < 0 ? null : where.substring(0, i);
+}
+
+/// The scope part of [where] ([whereIn]).
+String scopeOf(String where) => where.substring(where.lastIndexOf('\n') + 1);
 
 File get _file => File('$dataDir/reviews.json');
 
@@ -231,10 +256,31 @@ void filesRead(
 /// The lead line of the user's own review comments in a message.
 const myReviewComments = 'My review comments on your changes:';
 
+/// The lead line of the cards of a related worktree's comments (ADR 0081):
+/// they go to the chat's own agent, as the subagent has usually exited, so
+/// it names the worktree's folder and branch, which their paths are of.
+String worktreeComments(String folder, RelatedWorktree? w) {
+  final branch = plainName(w?.branch ?? '');
+  final head = w?.lastHead ?? '';
+  final short = head.substring(0, min(7, head.length));
+  return [
+    _worktreeLead(folder),
+    if (branch.isNotEmpty) ' on branch `$branch`',
+    if (w != null && w.state != 'present' && head.isNotEmpty)
+      ' (removed since: its last commit is `$short`)',
+    ', its paths relative to that folder:',
+  ].join();
+}
+
+/// How [worktreeComments] starts for [folder], whatever became of it.
+String _worktreeLead(String folder) =>
+    'My review comments on the changes in the worktree `${plainName(folder)}`';
+
 /// A review comment as a reply card in the chat's box (the reply-card
 /// model the Pull request tab's Send to agent uses): the quote is the
-/// file, the lines and their text in a fence, the reply the comment.
-Reply reviewReply(ReviewComment c) {
+/// file, the lines and their text in a fence, the reply the comment. Its
+/// lead is [from]: a related worktree's names it ([worktreeComments]).
+Reply reviewReply(ReviewComment c, {String from = myReviewComments}) {
   final side = [
     if (c.old) ' (the old version, before the change)',
     if (c.outdated) ' (they have changed since; they were)',
@@ -250,7 +296,7 @@ Reply reviewReply(ReviewComment c) {
         '$fence${languageOf(c.path) ?? ''}\n${c.quote}\n$fence',
     text: c.text,
     // The user's own: Claude took them for a reviewer's once.
-    from: myReviewComments,
+    from: from,
   );
 }
 
@@ -265,7 +311,25 @@ List<ReviewComment> unsentComments(String chat) =>
 void reviewToBox(ChatState chat) {
   final unsent = unsentComments(chat.id);
   if (unsent.isEmpty) return;
-  final cards = {for (final c in unsent) c: _sentAs[c.id] = reviewReply(c)};
+  String lead(ReviewComment c) => switch (c.worktree) {
+    final path? => worktreeComments(
+      path,
+      chat.related.list.where((w) => w.path == path).firstOrNull,
+    ),
+    null => myReviewComments,
+  };
+  // Each worktree's together, after the chat's own: one lead a group.
+  final byPlace = <String?, List<ReviewComment>>{};
+  for (final c in unsent) {
+    (byPlace[c.worktree] ??= []).add(c);
+  }
+  final cards = {
+    for (final c in [
+      ...?byPlace.remove(null),
+      ...byPlace.values.expand((g) => g),
+    ])
+      c: _sentAs[c.id] = reviewReply(c, from: lead(c)),
+  };
   cards.values.forEach(chat.draft.addReply);
   for (final c in unsent) {
     c.sent = true;
@@ -277,13 +341,19 @@ void reviewToBox(ChatState chat) {
 
 /// Whether [c]'s card waits to go to the agent ([_waiting]): its card as it
 /// was put in the box, or (after a restart) any card on its file and lines'
-/// text; the comment may have moved or become outdated since.
+/// text under its place's lead; the comment may have moved or become
+/// outdated since.
 bool _cardWaits(ChatState chat, ReviewComment c) {
   bool of(Reply x) =>
-      x.quote.startsWith('`${c.path}`, ') && x.quote.contains('\n${c.quote}\n');
+      x.quote.startsWith('`${c.path}`, ') &&
+      x.quote.contains('\n${c.quote}\n') &&
+      switch (c.worktree) {
+        final path? => x.from.startsWith(_oneLine(_worktreeLead(path))),
+        null => x.from == myReviewComments,
+      };
   if (_sentAs[c.id] case final r?) return _waiting(chat, r);
-  return chat.draft.replies.value.any(of) ||
-      chat.queue.any((m) => splitReplies(m.text).$1.any(of));
+  return _led(chat.draft.replies.value).any(of) ||
+      chat.queue.any((m) => _led(splitReplies(m.text).$1).any(of));
 }
 
 /// Each comment's card as it was put in the box, by the comment's id: the
@@ -298,16 +368,38 @@ Iterable<String> _said(ChatState chat, Set<String> before) => [
       i.text,
 ];
 
-/// Whether a message in [texts] has the card [r] (by its quote: its text
-/// may be edited).
-bool _carried(Iterable<String> texts, Reply r) => texts.any(
-  (text) => splitReplies(text).$1.any((x) => x.quote == r.quote.trim()),
-);
+/// [cards], each with its group's lead on one line, as [withReplies]
+/// writes it: [splitReplies] gives it to a group's first card only, and a
+/// queued message taken back to edit puts its cards in the box so.
+List<Reply> _led(List<Reply> cards) {
+  var lead = '';
+  return [
+    for (final x in cards)
+      (
+        quote: x.quote,
+        text: x.text,
+        from: lead = x.from.isEmpty ? lead : _oneLine(x.from),
+      ),
+  ];
+}
+
+/// [lead] on one line, as [withReplies] writes it.
+String _oneLine(String lead) => lead.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+/// Whether [x] (its lead as [_led] has it) is the card [r], by its quote and
+/// lead: its text may be edited, and a worktree's file may have the chat's
+/// path and lines.
+bool _isCard(Reply x, Reply r) =>
+    x.quote == r.quote.trim() && x.from == _oneLine(r.from);
+
+/// Whether a message in [texts] has the card [r] ([_isCard]).
+bool _carried(Iterable<String> texts, Reply r) =>
+    texts.any((text) => _led(splitReplies(text).$1).any((x) => _isCard(x, r)));
 
 /// Whether [r] waits to go to the agent: in [chat]'s box, or in a message
 /// in its queue.
 bool _waiting(ChatState chat, Reply r) =>
-    chat.draft.replies.value.any((x) => x.quote == r.quote) ||
+    _led(chat.draft.replies.value).any((x) => _isCard(x, r)) ||
     _carried([for (final m in chat.queue) m.text], r);
 
 /// Follows each comment's card until a message in the transcript has it.

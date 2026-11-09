@@ -48,7 +48,8 @@ class ChangeSpan {
   /// commits are read in the chat's by this. '' for a folder's HEAD.
   final String head;
 
-  /// Whether it can only be read: no staging, commits or comments.
+  /// Whether it can only be read: no staging or commits. Review comments
+  /// are made there, its own (ADR 0081).
   bool get readOnly => worktree != null;
 
   /// What's staged, as the last [files] read it; Uncommitted's only.
