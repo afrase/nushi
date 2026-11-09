@@ -35,29 +35,39 @@ func DefaultBase(ctx context.Context, folder string) string {
 // Either can be ahead (a fetch, a pull in another folder), and a branch
 // rebased onto the newer one left it there, not where it left the older:
 // counting from the older one takes in every commit between the two.
-// It is one run of git on the status's path: a commit or a tag matches no
-// line.
+// Only the branch of the same name pairs with a remote one: an agent's
+// worktree made from origin/main tracks it too, and taking that branch
+// would count its work from its own head. It is one run of git on the
+// status's path; a commit or a tag pairs with nothing.
 func bases(ctx context.Context, folder, base string) []string {
-	out, err := run(ctx, folder, "for-each-ref", "--format=%(refname)%00%(upstream)%00%(upstream:track)", "refs/heads")
+	out, err := run(ctx, folder, "for-each-ref", "--format=%(refname)%00%(upstream)", "refs/heads", "refs/remotes")
 	if err != nil {
 		return []string{base}
 	}
-	names := func(ref string) bool {
-		return base == ref || "refs/heads/"+base == ref || "refs/remotes/"+base == ref
+	upstream := map[string]string{} // every branch, local and remote, by ref
+	for line := range strings.SplitSeq(strings.TrimSpace(string(out)), "\n") {
+		ref, up, _ := strings.Cut(line, "\x00")
+		upstream[ref] = up
 	}
-	for line := range strings.SplitSeq(string(out), "\n") {
-		f := strings.Split(line, "\x00")
-		if len(f) != 3 || f[1] == "" || f[2] == "[gone]" {
-			continue
-		}
-		switch {
-		case names(f[0]):
-			return []string{base, f[1]}
-		case names(f[1]):
-			return []string{base, f[0]}
+	ref := ""
+	for _, r := range []string{base, "refs/heads/" + base, "refs/remotes/" + base} {
+		if _, ok := upstream[r]; ok {
+			ref = r
+			break
 		}
 	}
-	return []string{base}
+	other := ""
+	if strings.HasPrefix(ref, "refs/heads/") {
+		other = upstream[ref]
+	} else if rest, ok := strings.CutPrefix(ref, "refs/remotes/"); ok {
+		if _, name, ok := strings.Cut(rest, "/"); ok && upstream["refs/heads/"+name] == ref {
+			other = "refs/heads/" + name
+		}
+	}
+	if _, ok := upstream[other]; other == "" || !ok { // an upstream can be gone
+		return []string{base}
+	}
+	return []string{base, other}
 }
 
 // Ahead counts the commits head ("" for HEAD) has that base doesn't.
