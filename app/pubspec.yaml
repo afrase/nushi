@@ -11,9 +11,11 @@ dependencies:
   crypto: ^3.0.8
   dbus: ^0.7.15
   desktop_drop: ^0.8.4
-  # Temporary: the unified mode, until diff_view 0.2.0 is published.
+  # 0.2.0 (the unified view) from its repository until it's on pub.dev.
   diff_view:
-    path: /Users/aaron/Developer/diff_view-unified
+    git:
+      url: https://github.com/afrase/diff_view.git
+      ref: e16904e6e33bc788783b0f42a931821ffde4a5eb
   file_selector: ^1.1.0
   fixnum: ^1.1.1
   flutter:

@@ -345,9 +345,14 @@ class SyntaxLines implements DiffLineSource {
 }
 
 /// The diff theme for [t]: its diff colors, with the transcript's code
-/// colors.
+/// colors. A removed line in one column is red, the way an inserted one is
+/// green: side by side its grey sits across from its replacement, but one
+/// above the other it reads like a hover band.
 DiffThemeData diffTheme(Tokens t) {
   final d = t.diff;
+  final dark = t.brightness == Brightness.dark;
+  Color removed(double a) =>
+      Color.alphaBlend(t.crashed.withValues(alpha: a), d.background);
   return DiffThemeData(
     brightness: t.brightness,
     background: d.background,
@@ -359,6 +364,8 @@ DiffThemeData diffTheme(Tokens t) {
     insertedWord: d.insertedWord,
     deletedLine: d.deletedLine,
     deletedWord: d.deletedWord,
+    unifiedDeletedLine: removed(dark ? 0.16 : 0.12),
+    unifiedDeletedWord: removed(dark ? 0.32 : 0.26),
     modifiedLine: d.modifiedLine,
     modifiedWord: d.modifiedWord,
     ribbonInserted: d.ribbonInserted,

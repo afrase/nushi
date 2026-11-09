@@ -108,9 +108,11 @@ packages:
   diff_view:
     dependency: "direct main"
     description:
-      path: "/Users/aaron/Developer/diff_view-unified"
-      relative: false
-    source: path
+      path: "."
+      ref: e16904e6e33bc788783b0f42a931821ffde4a5eb
+      resolved-ref: e16904e6e33bc788783b0f42a931821ffde4a5eb
+      url: "https://github.com/afrase/diff_view.git"
+    source: git
     version: "0.2.0"
   equatable:
     dependency: transitive
