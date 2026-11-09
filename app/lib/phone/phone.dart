@@ -284,6 +284,12 @@ class Phone extends ChangeNotifier {
       if (k != null && made != null && !_same(made, k)) {
         await platform.unsubscribe();
         push = await platform.pushState();
+      } else if (k != null && made != null) {
+        // Sent again, as the daemon may not have it (the call that turned
+        // it on failed); one it has is no change there.
+        if (await platform.subscription() case final sub?) {
+          await d.client.setPushSubscription(_subscription(sub));
+        }
       }
       notifyListeners();
     } on Object {
@@ -353,24 +359,34 @@ class Phone extends ChangeNotifier {
               ? 'Notifications are off for Nushi in Settings › Notifications'
               : 'Notifications were not allowed';
         }
-        await d.client.setPushSubscription(
-          SetPushSubscriptionRequest(
-            endpoint: sub.endpoint,
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          ),
-        );
+        try {
+          await d.client.setPushSubscription(_subscription(sub));
+        } on Object {
+          // The daemon hasn't got it: Off, rather than On with nothing
+          // coming.
+          await platform.unsubscribe();
+          push = await platform.pushState();
+          notifyListeners();
+          rethrow;
+        }
       } else {
         await platform.unsubscribe();
-        await d.client.setPushSubscription(SetPushSubscriptionRequest());
         push = await platform.pushState();
         notifyListeners();
+        await d.client.setPushSubscription(SetPushSubscriptionRequest());
       }
       return null;
     } on Object catch (e) {
       return errorText(e);
     }
   }
+
+  static SetPushSubscriptionRequest _subscription(PushSub sub) =>
+      SetPushSubscriptionRequest(
+        endpoint: sub.endpoint,
+        p256dh: sub.p256dh,
+        auth: sub.auth,
+      );
 
   /// Ends the link to the Mac (the page goes), keeping the pairing.
   Future<void> close() async {

@@ -360,6 +360,19 @@ final class PhonePlatform {
           ),
         )
         .toDart;
+    return _pushSub(sub);
+  }
+
+  /// The push subscription there is, if any, asking nothing.
+  Future<PushSub?> subscription() async {
+    if (!_pushable) return null;
+    final reg = await _registration();
+    final sub = await reg?.pushManager.getSubscription().toDart;
+    return sub == null ? null : _pushSub(sub);
+  }
+
+  /// What the daemon sends to, of [sub].
+  PushSub? _pushSub(web.PushSubscription sub) {
     final p256dh = sub.getKey('p256dh');
     final auth = sub.getKey('auth');
     if (p256dh == null || auth == null) return null;
