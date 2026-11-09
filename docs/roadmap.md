@@ -6,6 +6,7 @@ What isn't built yet and the decisions still open, each checked against the code
 
 ### The app
 
+- **A to-do list shared by you and the agents** (the owner, 2026-11-09: "I often come to the office on Monday and forget what I was working on"): one list in the app that people and agents both add to, check off and read, so the work in flight survives a weekend. Agents would reach it through tools on Nushi's MCP server, which every Claude and Codex chat already has (ADR 0068's `show`), and an item could link to the chat, folder or pull request it's about. Today an agent's plan (its own to-dos) lives only in its chat and ends with it. Open: one list or one a folder, what an agent may do without asking, and how it shows on the phone. Needs a design pass with the owner first.
 - **The empty state as a visualisation** (the owner, 2026-10-26): a gravity toy (an orrery in the empty pane) didn't look good enough and was reverted. Revisit with a fresh agent and stronger visual references (the owner has seen better ones); a prototype in an HTML artifact first, before any Flutter.
 - **The jump button as Nushi's mark** (the owner, 2026-11-01, from Claude Code): while you're scrolled up and the agent works, the round mark animates in place of `JumpChip`; under the pointer it turns into the jump-to-latest arrow. Nushi's icon is already circular.
 - **Icons for chats** (the owner, 2026-11-02): an icon of the user's choice on a chat's row, beside its color, to tell chats apart when the names blend together.
