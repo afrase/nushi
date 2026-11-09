@@ -138,7 +138,7 @@ func scan(ctx context.Context, path string, q textfind.Query) (int, textfind.Exc
 			n = 0
 			return false
 		}
-		if !q.MayHold(line) || !mayBeSaid(line) {
+		if !q.MayHold(line) && !typed(line) || !mayBeSaid(line) {
 			return true
 		}
 		var r entry
@@ -155,6 +155,14 @@ func scan(ctx context.Context, path string, q textfind.Query) (int, textfind.Exc
 		return true
 	})
 	return n, first
+}
+
+// typed says a record may hold a command the user typed, which userText
+// writes with a `!` or `/` the line may not have ("!git" for
+// <bash-input>git status</bash-input>): the query's anchor can't rule it
+// out, so it is decoded.
+func typed(line []byte) bool {
+	return bytes.Contains(line, []byte("<bash-input>")) || bytes.Contains(line, []byte("<command-name>"))
 }
 
 // mayBeSaid says a record may hold text the user or Claude said: a text
