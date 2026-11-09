@@ -18,6 +18,7 @@ import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/preview_text.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
@@ -288,8 +289,8 @@ void main() {
       ('/Users/me/nushi/site/index.html', '/Users/me/nushi'),
     ]);
     expect(_inPane(find.byKey(const Key('page'))), findsOneWidget);
-    // The header: Live, Preview and Source, Reload, Open in browser at its
-    // right edge, before Show in Finder and Close.
+    // The header: Live, Reload, Open in browser at its right edge, before
+    // Show in Finder and Close.
     expect(_inPane(find.text('Live')), findsOneWidget);
     final reload = _inPane(find.byTooltip('Reload'));
     final browser = _inPane(find.byTooltip('Open in browser'));
@@ -317,14 +318,14 @@ void main() {
     await tester.pumpAndSettle();
     expect((host.loads.length, host.reloads), (1, 2));
     // Source: the text, highlighted, the page kept (made once).
-    await tester.tap(_inPane(find.text('Source')));
+    await tester.tap(_inPane(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(_inPane(find.byType(SourceView)), findsOneWidget);
     expect(
       _inPane(find.textContaining('<h1>The Still Pot</h1>')),
       findsOneWidget,
     );
-    await tester.tap(_inPane(find.text('Preview')));
+    await tester.tap(_inPane(find.byTooltip('View preview')));
     await tester.pumpAndSettle();
     expect(host.loads, hasLength(1));
     await tester.tap(_inPane(find.byTooltip('Close')));
@@ -406,11 +407,11 @@ void main() {
     d.chats['c']!.openPreview('site/pic.svg');
     await tester.pumpAndSettle();
     expect(host.loads.single.$1, '/Users/me/nushi/site/pic.svg');
-    expect(_inPane(find.text('Source')), findsOneWidget);
+    expect(_inPane(find.byType(SourceButton)), findsOneWidget);
     d.chats['c']!.openPreview('report.pdf');
     await tester.pumpAndSettle();
     expect(host.loads.last, ('/Users/me/nushi/report.pdf', '/Users/me/nushi'));
-    expect(_inPane(find.text('Source')), findsNothing);
+    expect(_inPane(find.byType(SourceButton)), findsNothing);
     expect(_inPane(find.byTooltip('Reload')), findsOneWidget);
     // Past the daemon's cap a page still shows: the web view reads it.
     streams['report.pdf']!.add(
@@ -439,7 +440,7 @@ void main() {
     expect(isArtifact('config.json'), isFalse);
     d.chats['c']!.openPreview('config.json');
     await tester.pumpAndSettle();
-    expect(_inPane(find.text('Source')), findsNothing);
+    expect(_inPane(find.byType(SourceButton)), findsNothing);
     expect(_inPane(find.byTooltip('Reload')), findsNothing);
     // Pretty-printed, numbered lines.
     expect(_inPane(find.textContaining('"port": 8080,')), findsOneWidget);
@@ -458,7 +459,7 @@ void main() {
     expect(_inPane(find.text('city')), findsOneWidget);
     expect(_inPane(find.text('a note, with a comma')), findsWidgets);
     await render(tester, find.byType(NushiApp), 'preview_csv_dark');
-    await tester.tap(_inPane(find.text('Source')));
+    await tester.tap(_inPane(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(
       _inPane(find.textContaining('1,User 1,Osaka,"a note, with a comma"')),
@@ -478,7 +479,7 @@ void main() {
     expect(diagram.shown, [(_flow, false)]);
     expect(host.loads, isEmpty); // not a page of the agent's
     expect(_inPane(find.byKey(const Key('diagram'))), findsOneWidget);
-    expect(_inPane(find.text('Preview')), findsOneWidget);
+    expect(_inPane(find.byTooltip('View source')), findsOneWidget);
     expect(_inPane(find.byTooltip('Reload')), findsNothing);
     expect(_inPane(find.byTooltip('Open in browser')), findsNothing);
     streams['docs/flow.mmd']!.add(
@@ -489,7 +490,7 @@ void main() {
     await _dark(tester);
     expect(diagram.shown.last.$2, isTrue);
     expect(diagram.shown, hasLength(3));
-    await tester.tap(_inPane(find.text('Source')));
+    await tester.tap(_inPane(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(_inPane(find.textContaining('Plan --> Build')), findsOneWidget);
     d.chats['c']!.preview.value = null;
@@ -539,7 +540,7 @@ void main() {
         findsOneWidget,
       );
       await render(tester, find.byType(PhoneApp), 'preview_phone_html_dark');
-      await tester.tap(find.text('Source'));
+      await tester.tap(find.byType(SourceButton));
       await tester.pumpAndSettle();
       expect(find.textContaining('<h1>The Still Kettle</h1>'), findsOneWidget);
       await end(tester, p);
@@ -560,7 +561,7 @@ void main() {
         find.text('Files beside it (CSS, images) don’t load here.'),
         findsNothing,
       );
-      await tester.tap(find.text('Source'));
+      await tester.tap(find.byType(SourceButton));
       await tester.pumpAndSettle();
       expect(find.textContaining('Plan --> Build'), findsOneWidget);
       await end(tester, p);

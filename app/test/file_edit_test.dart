@@ -10,6 +10,7 @@ import 'package:nushi/main.dart';
 import 'package:nushi/menu.dart';
 import 'package:nushi/palette.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/source_editor.dart';
 import 'package:re_editor/re_editor.dart';
 
@@ -344,7 +345,14 @@ void main() {
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
       addTearDown(mouse.removePointer);
       await mouse.addPointer(location: Offset.zero);
-      await mouse.moveTo(tester.getCenter(find.text('main.go')));
+      await mouse.moveTo(
+        tester.getCenter(
+          find.descendant(
+            of: find.byType(PreviewTabs),
+            matching: find.text('main.go'),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.byTooltip('Unsaved'), findsNothing);
       await mouse.moveTo(Offset.zero);

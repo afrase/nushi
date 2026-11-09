@@ -194,7 +194,7 @@ A file a chat's agent (or one of its subagents) wrote previews beside the chat, 
 - **CSV** as a table (its first 500 rows);
 - **code and text** (JSON, YAML, logs, source files) as their source, highlighted. A tab reaches the next stop of four columns, mid-line too, as it does where you edit the file; copying gives the tab itself. **Show whitespace** (Settings › Appearance, or View › Show Whitespace and the palette; off at first) marks each space with a faint dot and each tab with an arrow across it, in the source and while you edit; the marks are only drawn, never copied or saved.
 
-Markdown, HTML, SVG and CSV have Preview and Source.
+Over the file, its **path line** shows where it is, relative to the chat's folder (`docs / roadmap.md`; a file outside the folder from `~`). Click it to copy the path (as `docs/roadmap.md`, or the full path for a file outside the folder); "Copied" says it worked. Markdown, HTML, SVG, CSV and diagrams have the **source button**, `</>`, at the line's right end: "View source" shows the file's text, and while it does the button is lit and says "View preview". On the Mac each file keeps showing its source or not, per chat, until Nushi quits.
 
 **Editing a file.** On the Mac a file that shows as source (code and text, or the Source of Markdown, HTML, SVG, CSV and diagrams) is editable: click in it and type. There's no Edit button. It saves with ⌘S (File › Save) and when you click into somewhere else that takes typing: the prompt box, a terminal, another file or pane, another tab or chat, another app, or quitting. Opening a menu, the palette or a dialog, finding, or selecting text in the chat or a preview doesn't save; nothing saves on a timer. While a file has unsaved changes its tab's ✕ is a small dot (the ✕ comes back under the pointer), or the dot follows its name when it's the only file open. A file keeps its byte order mark, its line endings (LF or CRLF, as the file has them now) and its last line's newline or lack of one; pasted text takes the file's line endings. In a file indented with tabs (Go, a Makefile, or one whose lines mostly start with a tab) Tab types a tab and Return keeps the line's tabs; elsewhere they indent with spaces. ⌘Z and ⇧⌘Z undo and redo.
 
@@ -218,7 +218,7 @@ The browser's tabs are chips in the pane's title row (a file's tab beside them i
 
 **A file its name doesn't place** (a script with no extension such as `scripts/deploy`, `LICENSE`, a dotfile such as `.envrc` or `.editorconfig`, an unknown extension) opens from the Files pane, Open file and your message's chips, and the preview reads it: text (valid UTF-8, no NUL byte in its first 8 KB) shows as source, highlighted for the program its first line's `#!` names (`#!/bin/bash`, `#!/usr/bin/env python3`, node, deno, ruby, perl, lua, osascript and more), else by its name (`Dockerfile`, `Gemfile`, `.envrc` as shell), else plain. Anything else says "Can’t show this file: it isn’t text." with Show in Finder. Text is editable as any source is (below).
 
-**Wrapping.** A source's long lines wrap at first. The wrap button in the pane's title row (left of Preview and Source; in its ⋯ when the pane is narrow), ⌥Z once you've clicked in the source, View › Wrap Lines or the palette turn it off: long lines run on and the view scrolls sideways (with Shift and the wheel, or the trackpad), the line numbers staying put. It's one choice for every preview, remembered. The phone's preview has the same button; its choice lasts until the page reloads. Rendered Markdown and pages, Changes and the code in messages always wrap.
+**Wrapping.** A source's long lines wrap at first. The wrap button in the pane's title row (in its ⋯ when the pane is narrow), ⌥Z once you've clicked in the source, View › Wrap Lines or the palette turn it off: long lines run on and the view scrolls sideways (with Shift and the wheel, or the trackpad), the line numbers staying put. It's one choice for every preview, remembered. The phone's preview has the same button; its choice lasts until the page reloads. Rendered Markdown and pages, Changes and the code in messages always wrap.
 
 **Artifacts** are the files made to be looked at: everything but code and text, which Changes shows. Open one from:
 
@@ -257,7 +257,7 @@ The preview's file name shows its path when the pointer is over it; a click show
 
 Mermaid diagrams draw where they appear:
 
-- A `.mmd` or `.mermaid` file previews as its diagram, with Preview and Source.
+- A `.mmd` or `.mermaid` file previews as its diagram, with the source button.
 - A ```` ```mermaid ```` block in an agent's message or a Markdown preview shows as the diagram, with Diagram and Source in its bar. It's drawn once complete; one that doesn't parse shows its source and the error.
 - On the phone a file's diagram shows full screen, and a message's block has Show diagram.
 

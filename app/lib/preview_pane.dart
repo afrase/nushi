@@ -16,6 +16,7 @@ import 'package:nushi/panes.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_marks.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/skills_list.dart';
@@ -29,12 +30,13 @@ import 'package:nushi/web_views.dart';
 /// its name (a click shows it in the Files pane; with several files open,
 /// the tabs of them all, [PreviewTabs]), Live while the daemon keeps it
 /// current, wrapping the lines or not while it shows a source
-/// ([WrapButton], and ⌥Z with the focus in the pane), Preview or Source (a
-/// file that renders; not a diagram with nothing to draw it), Reload (in
-/// the app's own web view) and Open in browser (a page, not a diagram),
-/// Show in Finder and Close, which closes every tab (browser tabs too,
-/// `BrowserPane`). Read-only. It's one file's view, made again as its tab
-/// shows.
+/// ([WrapButton], and ⌥Z with the focus in the pane), Reload (in the app's
+/// own web view) and Open in browser (a page, not a diagram), Show in
+/// Finder and Close, which closes every tab (browser tabs too,
+/// `BrowserPane`). Under them its path line ([PathLine]): the path, which a
+/// click copies, and the source button for a file that renders (not a
+/// diagram with nothing to draw it; ADR 0106). It's one file's view, made
+/// again as its tab shows.
 class PreviewPane extends StatefulWidget {
   const new({
     required this.chat,
@@ -156,7 +158,7 @@ class _PreviewPaneState extends State<PreviewPane> {
 
   void _reveal() => revealInFinder(_abs).ignore();
 
-  /// Whether it has Preview and Source: a file that renders, but a diagram
+  /// Whether it has the source button: a file that renders, but a diagram
   /// only with something to draw it (Linux has none, ADR 0104).
   bool get _switches =>
       _kind.rendered && (_kind != PreviewKind.mermaid || _diagram != null);
@@ -243,11 +245,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                         : roomy
                         ? NushiTheme.gutter
                         : 12,
-                    end: chips
-                        ? previewChipInset
-                        : roomy
-                        ? NushiTheme.gutter
-                        : 4,
+                    end: _end(pane.maxWidth, open),
                     child: row!,
                   );
                 },
@@ -311,14 +309,7 @@ class _PreviewPaneState extends State<PreviewPane> {
                               visible: _watch.live,
                               child: LiveMark(version: _watch.file),
                             ),
-                          // Left of the switch, so Source showing it moves
-                          // nothing under the pointer.
                           if (wraps && !folds) const WrapButton(),
-                          if (_switches)
-                            SourceSwitch(
-                              source: _source,
-                              onChanged: _showSource,
-                            ),
                           Padding(
                             padding: EdgeInsets.only(left: group),
                             child: Row(
@@ -384,6 +375,20 @@ class _PreviewPaneState extends State<PreviewPane> {
               );
             },
           ),
+          LayoutBuilder(
+            builder: (context, pane) => ValueListenableBuilder(
+              valueListenable: widget.chat.previewTabs,
+              builder: (context, open, _) => PathLine(
+                folder: widget.chat.folder,
+                path: widget.path,
+                // The source button under Close.
+                end: _end(pane.maxWidth, open),
+                trailing: _switches
+                    ? SourceButton(source: _source, onChanged: _showSource)
+                    : null,
+              ),
+            ),
+          ),
           ListenableBuilder(
             listenable: widget.chat.editsChanged,
             builder: (context, _) => switch (_edit) {
@@ -437,6 +442,14 @@ class _PreviewPaneState extends State<PreviewPane> {
         ],
       ),
     );
+  }
+
+  /// The room right of the header's last button (Close) in a pane [width]
+  /// wide with [open]'s tabs: the path line's ends there too.
+  double _end(double width, List<PreviewEntry> open) {
+    if (open.length > 1 && previewChips(open)) return previewChipInset;
+    final roomy = width >= (_page == null ? _roomyFrom : _roomyWithPageFrom);
+    return roomy ? NushiTheme.gutter : 4;
   }
 
   /// The tabs of [open], this file's showing; as chips, the + after them,

@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:nushi/controls.dart';
 import 'package:nushi/keys.dart';
 import 'package:nushi/motion.dart';
-import 'package:nushi/plain_tabs.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -36,22 +35,6 @@ class WrapButton extends StatelessWidget {
       held: wrap,
       onTap: toggleWrap,
     ),
-  );
-}
-
-/// The Preview and Source tabs over a file that renders.
-class SourceSwitch extends StatelessWidget {
-  const new({required this.source, required this.onChanged, super.key});
-
-  final bool source;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) => PlainTabs(
-    value: source,
-    tabs: const [(false, 'Preview'), (true, 'Source')],
-    onChanged: onChanged,
-    fill: true,
   );
 }
 

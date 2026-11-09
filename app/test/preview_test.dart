@@ -13,6 +13,7 @@ import 'package:nushi/phone/phone.dart';
 import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/tool_calls.dart';
 
@@ -237,11 +238,14 @@ void main() {
     expect(inScreen(find.text('Live')), findsOneWidget);
     expect(
       inScreen(
-        find.text('CI and releases, week of Oct 26', findRichText: true),
+        find.textContaining(
+          'CI and releases, week of Oct 26',
+          findRichText: true,
+        ),
       ),
       findsOneWidget,
     );
-    await tester.tap(inScreen(find.text('Source')));
+    await tester.tap(inScreen(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(inScreen(find.textContaining('| CI on a push |')), findsOneWidget);
     expect(inScreen(find.text('Show in Finder')), findsNothing);
@@ -280,7 +284,12 @@ void main() {
     expect(inPane(find.text('Live')), findsOneWidget);
     // Rendered: the heading's text without its #, the table's cells.
     expect(
-      inPane(find.text('CI and releases, week of Oct 26', findRichText: true)),
+      inPane(
+        find.textContaining(
+          'CI and releases, week of Oct 26',
+          findRichText: true,
+        ),
+      ),
       findsOneWidget,
     );
     expect(
@@ -300,7 +309,7 @@ void main() {
     );
 
     // Source: the text as written.
-    await tester.tap(inPane(find.text('Source')));
+    await tester.tap(inPane(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(
       inPane(find.textContaining('# CI and releases, week of Oct 26')),

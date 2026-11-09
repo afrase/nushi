@@ -84,7 +84,10 @@ enum LineIcon {
   play,
 
   /// Stop a dev server: a square, its corners rounded.
-  stop;
+  stop,
+
+  /// A file's source (ADR 0106): `</>`, as Claude desktop's View source.
+  source;
 
   /// The stroke on the 24 box; it scales with the size.
   static const _stroke = 1.6;
@@ -323,6 +326,16 @@ enum LineIcon {
       Path()..addRRect(
         RRect.fromRectXY(const Rect.fromLTWH(6.5, 6.5, 11, 11), 2, 2),
       ),
+    source =>
+      Path()
+        ..moveTo(7.5, 7)
+        ..lineTo(3, 12)
+        ..lineTo(7.5, 17)
+        ..moveTo(16.5, 7)
+        ..lineTo(21, 12)
+        ..lineTo(16.5, 17)
+        ..moveTo(13.5, 5)
+        ..lineTo(10.5, 19),
   };
 
   static Radius _r(double r) => Radius.circular(r);

@@ -22,6 +22,7 @@ import 'package:nushi/preview.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/preview_tabs.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
@@ -208,8 +209,8 @@ Map<String, Rect> _marks(WidgetTester tester) {
     'pane': at(find.byType(PreviewPane)),
     'title row': at(_inPane(find.byType(PaneHeader))),
     'kind icon': at(_inPane(find.byType(Icon)).first),
-    'Preview': at(_inPane(find.text('Preview'))),
-    'Source': at(_inPane(find.text('Source'))),
+    'path line': at(_inPane(find.byType(PathLine))),
+    'source button': at(_inPane(find.byType(SourceButton))),
     'Live': at(_inPane(find.byType(LiveMark))),
     'Show in Finder': at(_inPane(find.byTooltip('Show in Finder'))),
     'Close': at(_inPane(find.byTooltip('Close'))),
@@ -445,8 +446,8 @@ void main() {
           of: find.byType(TabFace),
           matching: find.byType(Positioned),
         );
-        // Chat, Preview and, with three open, the file showing.
-        expect(lines, findsNWidgets(count == 1 ? 2 : 3));
+        // Chat and, with three open, the file showing.
+        expect(lines, findsNWidgets(count == 1 ? 1 : 2));
         for (final line in lines.evaluate()) {
           final box = line.renderObject! as RenderBox;
           final bottom = box.localToGlobal(box.size.bottomLeft(Offset.zero)).dy;
@@ -477,7 +478,7 @@ void main() {
       await _tap(tester, _inPane(find.text('plan.md')));
       expect(c.previewFile, 'docs/plan.md');
       expect(
-        _inPane(find.text('Title of plan.md', findRichText: true)),
+        _inPane(find.textContaining('Title of plan.md', findRichText: true)),
         findsOneWidget,
       );
       await _tap(tester, _closeOf('plan.md'));
@@ -542,14 +543,14 @@ void main() {
       Finder source(String name) =>
           _inPane(find.textContaining('# Title of $name', findRichText: true));
       await _tap(tester, _inPane(find.text('plan.md')));
-      await _tap(tester, _inPane(find.text('Source')));
+      await _tap(tester, _inPane(find.byType(SourceButton)));
       expect(source('plan.md'), findsOneWidget);
       await _tap(tester, _inPane(find.text('report.md')));
       expect(source('report.md'), findsNothing);
       await _tap(tester, _inPane(find.text('plan.md')));
       expect(source('plan.md'), findsOneWidget);
       expect(
-        tester.widget<SourceSwitch>(_inPane(find.byType(SourceSwitch))).source,
+        tester.widget<SourceButton>(_inPane(find.byType(SourceButton))).source,
         isTrue,
       );
       d.dispose();
@@ -697,7 +698,7 @@ void main() {
       // The row doesn't run under the pane's controls.
       expect(
         rect.right,
-        lessThanOrEqualTo(tester.getTopLeft(find.text('Preview').last).dx),
+        lessThanOrEqualTo(tester.getTopLeft(_inPane(find.byType(LiveMark))).dx),
       );
       d.dispose();
     }, variant: _mac);
@@ -715,7 +716,9 @@ void main() {
       expect(row.width, greaterThan(0));
       expect(
         row.right,
-        lessThanOrEqualTo(tester.getTopLeft(_inPane(find.text('Preview'))).dx),
+        lessThanOrEqualTo(
+          tester.getTopLeft(_inPane(find.byTooltip('More'))).dx,
+        ),
       );
       d.dispose();
     }, variant: _mac);

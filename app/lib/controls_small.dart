@@ -46,7 +46,10 @@ class LinkText extends StatelessWidget {
 
 /// A small icon button: a tint under the pointer and its [tooltip]. Only
 /// where the icon alone says what it does. [held] keeps the tint while what
-/// it toggles is on (a pinned message's pin). [danger] fills it solid red,
+/// it toggles is on (a pinned message's pin); [lit] fills it with the
+/// accent's soft tint and draws it in the accent, a toggle that's on and
+/// must read so at a glance (the preview's source button). [danger] fills
+/// it solid red,
 /// the icon in the window's background, where stopping must stand out (a
 /// running server's Stop).
 class IconTap extends StatelessWidget {
@@ -60,6 +63,7 @@ class IconTap extends StatelessWidget {
     this.padding = 5,
     this.held = false,
     this.danger = false,
+    this.lit = false,
   }) : line = null,
        glyph = null,
        _working = false;
@@ -75,6 +79,7 @@ class IconTap extends StatelessWidget {
     this.padding = 5,
     this.held = false,
     this.danger = false,
+    this.lit = false,
   }) : icon = null,
        glyph = null,
        _working = false;
@@ -93,7 +98,8 @@ class IconTap extends StatelessWidget {
        line = null,
        _working = false,
        held = false,
-       danger = false;
+       danger = false,
+       lit = false;
 
   /// A button for something that runs: held down (tinted) with [glyph]
   /// (a spinner) at rest, and [icon] (✕, to stop it) under the pointer.
@@ -109,7 +115,8 @@ class IconTap extends StatelessWidget {
   }) : line = null,
        _working = true,
        held = false,
-       danger = false;
+       danger = false,
+       lit = false;
 
   final IconData? icon;
   final LineIcon? line;
@@ -117,6 +124,7 @@ class IconTap extends StatelessWidget {
   final bool _working;
   final bool held;
   final bool danger;
+  final bool lit;
   final String tooltip;
   final VoidCallback? onTap;
   final double size;
@@ -136,6 +144,8 @@ class IconTap extends StatelessWidget {
             ? t.textMuted
             : danger
             ? t.base
+            : lit
+            ? t.accentInk
             : color ?? t.textSecondary;
         return Container(
           padding: EdgeInsets.all(padding),
@@ -144,6 +154,10 @@ class IconTap extends StatelessWidget {
                 ? (look.hover
                       ? Color.alphaBlend(_tint(t, look), t.crashed)
                       : t.crashed)
+                : lit
+                ? (look.hover
+                      ? Color.alphaBlend(_tint(t, look), t.accentSoft)
+                      : t.accentSoft)
                 : look.hover
                 ? _tint(t, look)
                 : _working || held

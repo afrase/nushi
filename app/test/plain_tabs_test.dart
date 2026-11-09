@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nushi/plain_tabs.dart';
-import 'package:nushi/preview_marks.dart';
 import 'package:nushi/widgets.dart';
 
 import 'fake_daemon.dart';
@@ -110,23 +109,5 @@ void main() {
       isSemantics(label: 'Changes 12', isSelected: false),
     );
     semantics.dispose();
-  });
-
-  testWidgets('Preview and Source: tabs on the Mac and the phone', (
-    tester,
-  ) async {
-    viewport(tester, const Size(390, 844));
-    final source = SourceSwitch(source: false, onChanged: (_) {});
-    await tester.pumpWidget(_themed(SizedBox(height: 33, child: source)));
-    expect(find.byType(PlainTabs<bool>), findsOneWidget);
-    await tester.pumpWidget(
-      _themed(TouchTargets(child: SizedBox(height: 56, child: source))),
-    );
-    expect(find.byType(PlainTabs<bool>), findsOneWidget);
-    expect(find.byType(Segmented<bool>), findsNothing);
-    expect(
-      tester.getSize(find.byType(Pressable).first).height,
-      greaterThanOrEqualTo(TouchTargets.size),
-    );
   });
 }

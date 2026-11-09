@@ -10,8 +10,8 @@ import 'package:nushi/daemon.dart';
 import 'package:nushi/gen/nushi/v1/nushi.pb.dart';
 import 'package:nushi/main.dart';
 import 'package:nushi/plain_tabs.dart';
-import 'package:nushi/preview_marks.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
@@ -99,7 +99,7 @@ void main() {
         d.chats['c']!.openPreview('docs/plan.md');
         await tester.pumpAndSettle();
         expect(find.byType(PreviewPane), findsOneWidget);
-        expect(find.byType(SourceSwitch), findsOneWidget);
+        expect(find.byType(SourceButton), findsOneWidget);
       }
       expect(tester.takeException(), isNull);
       final header = tester.getRect(find.byType(ChatHeader));

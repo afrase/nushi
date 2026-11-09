@@ -16,6 +16,7 @@ import 'package:nushi/native.dart';
 import 'package:nushi/outside_page.dart';
 import 'package:nushi/preview_entry.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
 import 'package:nushi/web_views.dart';
@@ -120,7 +121,7 @@ void main() {
     await tester.tap(_openButton);
     await tester.pumpAndSettle();
     expect(opened, [Uri.file('/Users/me/nushi/site/index.html')]);
-    await tester.tap(_in<PreviewPane>(find.text('Source')));
+    await tester.tap(_in<PreviewPane>(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(
       _in<PreviewPane>(find.textContaining('The Still Kettle')),
@@ -198,8 +199,7 @@ void main() {
     final (_, d) = await _app(tester);
     d.chats['c']!.openPreview('docs/flow.mmd');
     await tester.pumpAndSettle();
-    expect(_in<PreviewPane>(find.text('Preview')), findsNothing);
-    expect(_in<PreviewPane>(find.text('Source')), findsNothing);
+    expect(_in<PreviewPane>(find.byType(SourceButton)), findsNothing);
     expect(_in<PreviewPane>(find.textContaining('Plan --> Build')), findsOne);
     expect(_in<PreviewPane>(find.byTooltip('Open in browser')), findsNothing);
     await closeView(tester, d);

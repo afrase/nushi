@@ -8,13 +8,15 @@ import 'package:nushi/phone/page_frame.dart';
 import 'package:nushi/phone/ui.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_marks.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/theme/theme.dart';
 
 /// A file the agent wrote, full screen on the phone, from its tool row's
 /// Preview: Back, Live, wrapping the lines or not while it shows a source
-/// ([wrapLines], kept only until the page reloads; no key), and Preview or
-/// Source for a file that renders.
+/// ([wrapLines], kept only until the page reloads; no key); under them the
+/// path line, its source button for a file that renders ([PathLine], ADR
+/// 0106).
 /// A page (HTML, SVG) shows in a sandboxed frame ([PageFrame]) without the
 /// files beside it, a Mermaid diagram in one too ([DiagramFrame]); a PDF
 /// only on the Mac. Read-only.
@@ -97,18 +99,32 @@ class _PreviewScreenState extends State<PreviewScreen> {
               ],
             ),
           ),
-        if (previewKind(widget.path)?.rendered ?? false)
-          SourceSwitch(
-            source: _source,
-            onChanged: (v) => setState(() => _source = v),
-          ),
         const SizedBox(width: 4),
       ],
-      body: PreviewBody(
-        watch: _watch,
-        source: _source,
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        page: previewKind(widget.path) == PreviewKind.pdf ? null : _page,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          PathLine(
+            folder: widget.chat.folder,
+            path: widget.path,
+            inset: 20 - PathLine.textPad,
+            end: 8,
+            trailing: (previewKind(widget.path)?.rendered ?? false)
+                ? SourceButton(
+                    source: _source,
+                    onChanged: (v) => setState(() => _source = v),
+                  )
+                : null,
+          ),
+          Expanded(
+            child: PreviewBody(
+              watch: _watch,
+              source: _source,
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              page: previewKind(widget.path) == PreviewKind.pdf ? null : _page,
+            ),
+          ),
+        ],
       ),
     ),
   );

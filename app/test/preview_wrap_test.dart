@@ -15,6 +15,7 @@ import 'package:nushi/phone/platform.dart';
 import 'package:nushi/phone/preview_screen.dart';
 import 'package:nushi/preview.dart';
 import 'package:nushi/preview_pane.dart';
+import 'package:nushi/preview_path.dart';
 import 'package:nushi/settings.dart';
 import 'package:nushi/source_view.dart';
 import 'package:nushi/theme/theme.dart';
@@ -197,13 +198,14 @@ void main() {
     await tester.tap(find.byType(PreviewBody));
     await _altZ(tester);
     expect(wrapLines.value, isTrue);
-    final source = tester.getRect(_inPane(find.text('Source')));
-    await tester.tap(_inPane(find.text('Source')));
+    final source = tester.getRect(_inPane(find.byType(SourceButton)));
+    await tester.tap(_inPane(find.byType(SourceButton)));
     await tester.pumpAndSettle();
     expect(_wrapButton, findsOneWidget);
-    // Left of the switch: Source didn't move from under the pointer.
-    expect(tester.getRect(_inPane(find.text('Source'))), source);
-    expect(tester.getRect(_wrapButton).right, lessThan(source.left));
+    // In the title row: the source button didn't move from under the
+    // pointer.
+    expect(tester.getRect(_inPane(find.byType(SourceButton))), source);
+    expect(tester.getRect(_wrapButton).bottom, lessThan(source.top));
     await closeView(tester, d);
   }, variant: _mac);
 
@@ -402,7 +404,8 @@ void main() {
       viewport(tester, const Size(700, 200));
       final d = await _fake().connect(tester);
       final c = d.chats['c']!..openPreview('src/tea.go');
-      // The row on its own: the pane, as tall as its title row.
+      // The row on its own: the pane, cut to its title row (the path line
+      // under it has its own golden, markdown_outline_test.dart).
       await tester.pumpWidget(
         MaterialApp(
           theme: NushiTheme(
@@ -412,14 +415,23 @@ void main() {
             body: Center(
               child: RepaintBoundary(
                 key: const ValueKey('row'),
-                child: SizedBox(
-                  width: 560,
-                  height: 44,
-                  child: PreviewPane(
-                    chat: c,
-                    daemon: d,
-                    path: 'src/tea.go',
-                    onClose: () {},
+                child: ClipRect(
+                  child: SizedBox(
+                    width: 560,
+                    height: 44,
+                    child: OverflowBox(
+                      alignment: Alignment.topCenter,
+                      maxHeight: 120,
+                      child: SizedBox(
+                        height: 120,
+                        child: PreviewPane(
+                          chat: c,
+                          daemon: d,
+                          path: 'src/tea.go',
+                          onClose: () {},
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
